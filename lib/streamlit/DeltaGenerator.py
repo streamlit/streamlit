@@ -128,7 +128,8 @@ def _build_duplicate_widget_message(widget_type, user_key=None):
     if user_key is not None:
         message = textwrap.dedent(
             """
-            There are multiple {widget_type} widgets that use the '{user_key}' key.
+            There are multiple identical st.{widget_type} widgets that use the
+             '{user_key}' key.
             
             To fix this, please make sure that the 'key' argument is unique for 
             each st.{widget_type} you create.
@@ -137,7 +138,8 @@ def _build_duplicate_widget_message(widget_type, user_key=None):
     else:
         message = textwrap.dedent(
             """
-            There are multiple st.{widget_type} widgets with the same generated key.
+            There are multiple identical st.{widget_type} widgets with the 
+            same generated key.
             
             (When a widget is created, it's assigned an internal key based on
             its structure. Multiple widgets with an identical structure will
@@ -165,10 +167,11 @@ def _set_widget_id(widget_type, element, user_key=None):
         If this is None, we'll generate an ID by hashing the element.
 
     """
+    element_hash = hash(element.SerializeToString())
     if user_key is not None:
-        widget_id = "%s-%s" % (widget_type, user_key)
+        widget_id = "%s-%s" % (user_key, element_hash)
     else:
-        widget_id = "%s" % hash(element.SerializeToString())
+        widget_id = "%s" % element_hash
 
     ctx = get_report_ctx()
     if ctx is not None:
