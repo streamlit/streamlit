@@ -17,7 +17,7 @@
 
 /// <reference types="cypress" />
 
-describe("st.text_input", () => {
+describe("st.number_input", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");
   });
