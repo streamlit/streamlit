@@ -483,9 +483,20 @@ def file_is_in_folder_glob(filepath, folderpath_glob):
     return fnmatch.fnmatch(file_dir, folderpath_glob)
 
 
-def is_int(x):
+def is_int_value(value):
+    """Test if a given value is int
+    Parameters
+    ----------
+    value: any
+
+    Returns
+    -------
+    bool
+        True if is an int, False if not
+    """
+
     try:
-        a = float(x)
+        a = float(value)
         b = int(a)
     except ValueError:
         return False
