@@ -133,6 +133,7 @@ def _reset(main_dg, sidebar_dg):
     sidebar_dg._reset()
     global sidebar
     sidebar = sidebar_dg
+    get_report_ctx().widget_ids_this_run.clear()
 
 
 # Sidebar

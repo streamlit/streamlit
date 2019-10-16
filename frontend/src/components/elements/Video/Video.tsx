@@ -24,12 +24,35 @@ interface Props {
 }
 
 class Video extends React.PureComponent<Props> {
+  private videoRef = React.createRef<HTMLVideoElement>()
+
+  public componentDidMount = (): void => {
+    this.updateTime()
+  }
+
+  public componentDidUpdate = (): void => {
+    this.updateTime()
+  }
+
+  private updateTime(): void {
+    if (this.videoRef.current) {
+      const startTime = this.props.element.get("startTime")
+      this.videoRef.current.currentTime = startTime
+    }
+  }
+
   public render(): React.ReactNode {
     const { element, width } = this.props
     const dataUrl =
       "data:" + element.get("format") + ";base64," + element.get("data")
     return (
-      <video controls src={dataUrl} className="stVideo" style={{ width }} />
+      <video
+        ref={this.videoRef}
+        controls
+        src={dataUrl}
+        className="stVideo"
+        style={{ width }}
+      />
     )
   }
 }

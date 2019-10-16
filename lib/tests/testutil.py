@@ -22,6 +22,7 @@ from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.ReportQueue import ReportQueue
 from streamlit.ReportThread import REPORT_CONTEXT_ATTR_NAME
 from streamlit.ReportThread import ReportContext
+from streamlit.ReportThread import _WidgetIDSet
 from streamlit.widgets import Widgets
 from streamlit.proto.BlockPath_pb2 import BlockPath
 
@@ -59,7 +60,10 @@ class DeltaGeneratorTestCase(unittest.TestCase):
                 threading.current_thread(),
                 REPORT_CONTEXT_ATTR_NAME,
                 ReportContext(
-                    main_dg=main_dg, sidebar_dg=sidebar_dg, widgets=Widgets()
+                    main_dg=main_dg,
+                    sidebar_dg=sidebar_dg,
+                    widgets=Widgets(),
+                    widget_ids_this_run=_WidgetIDSet(),
                 ),
             )
 

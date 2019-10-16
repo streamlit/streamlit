@@ -53,12 +53,13 @@ def intro():
 # fmt: off
 def mapping_demo():
     import pandas as pd
-    import os
 
     @st.cache
     def from_data_file(filename):
-        GITHUB_DATA = "https://raw.githubusercontent.com/streamlit/streamlit/develop/examples/"
-        return pd.read_json(os.path.join(GITHUB_DATA, "data", filename))
+        url = (
+            "https://raw.githubusercontent.com/streamlit/"
+            "streamlit/develop/examples/data/%s" % filename)
+        return pd.read_json(url)
 
     try:
         ALL_LAYERS = {
@@ -96,8 +97,12 @@ def mapping_demo():
                 "widthMaxPixels": 30,
             }
         }
-    except urllib.error.URLError:
-        st.error("Connection Error. This demo requires internet access")
+    except urllib.error.URLError as e:
+        st.error("""
+            **This demo requires internet access.**
+
+            Connection error: %s
+        """ % e.reason)
         return
 
     st.sidebar.markdown('### Map Layers')
@@ -216,8 +221,12 @@ def data_frame_demo():
 
     try:
         df = get_UN_data()
-    except urllib.error.URLError:
-        st.error("Connection Error. This demo requires internet access")
+    except urllib.error.URLError as e:
+        st.error("""
+            **This demo requires internet access.**
+
+            Connection error: %s
+        """ % e.reason)
         return
 
     countries = st.multiselect(

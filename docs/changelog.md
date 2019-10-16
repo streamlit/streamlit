@@ -23,6 +23,25 @@ See highlights, bug fixes, and known issues for Streamlit releases:
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.48.0
+
+_Release date: October 12, 2019_
+
+**Highlights:**
+
+- 🔧 Ability to set config options as command line flags or in a local config file.
+- ↕️ You can now maximize charts and images!
+- ⚡ Streamlit is now much faster when writing data in quick succession to your app.
+- ✳️ Ability to blacklist folder globs from "run on save" and `@st.cache` hashing.
+- 🎛️ Improved handling of widget state when Python file is modified.
+- 🙈 Improved HTML support in `st.write` and `st.markdown`. HTML is still unsafe, though!
+
+**Notable bug fixes:**
+
+- Fixes `@st.cache` bug related to having your Python environment on current
+  working directory. [Issue #242](https://github.com/streamlit/streamlit/issues/242)
+- Fixes loading of root url `/` on Windows. [Issue #244](https://github.com/streamlit/streamlit/issues/244)
+
 ## Version 0.47.0
 
 _Release date: October 1, 2019_

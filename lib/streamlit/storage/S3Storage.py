@@ -150,8 +150,8 @@ class S3Storage(AbstractStorage):
 
         except botocore.exceptions.NoCredentialsError:
             LOGGER.error(
-                'Please set "AWS_ACCESS_KEY_ID" and "AWS_SECRET_ACCESS_KEY" '
-                "environment variables"
+                'You must set "s3.accessKeyId" and "s3.secretAccessKey", or '
+                '"s3.profile" in your Streamlit configuration.'
             )
             raise errors.S3NoCredentials
 

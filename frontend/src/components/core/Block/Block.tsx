@@ -16,7 +16,6 @@
  */
 
 import React, { PureComponent, ReactNode, Suspense } from "react"
-import { Progress } from "reactstrap"
 import { AutoSizer } from "react-virtualized"
 import { List, Map as ImmutableMap } from "immutable"
 import { dispatchOneOf } from "lib/immutableProto"
@@ -59,6 +58,7 @@ const Button = React.lazy(() => import("components/widgets/Button/"))
 const Checkbox = React.lazy(() => import("components/widgets/Checkbox/"))
 const DateInput = React.lazy(() => import("components/widgets/DateInput/"))
 const Multiselect = React.lazy(() => import("components/widgets/Multiselect/"))
+const Progress = React.lazy(() => import("components/elements/Progress/"))
 const Radio = React.lazy(() => import("components/widgets/Radio/"))
 const Selectbox = React.lazy(() => import("components/widgets/Selectbox/"))
 const Slider = React.lazy(() => import("components/widgets/Slider/"))
@@ -205,14 +205,16 @@ class Block extends PureComponent<Props> {
     }
 
     const metadata = element.get("metadata") as ForwardMsgMetadata
+    let height: number | undefined
 
     // Modify width using the value from the spec as passed with the message when applicable
-    if (
-      metadata &&
-      metadata.elementDimensionSpec &&
-      metadata.elementDimensionSpec.width > 0
-    ) {
-      width = Math.min(metadata.elementDimensionSpec.width, width)
+    if (metadata && metadata.elementDimensionSpec) {
+      if (metadata.elementDimensionSpec.width > 0) {
+        width = Math.min(metadata.elementDimensionSpec.width, width)
+      }
+      if (metadata.elementDimensionSpec.height > 0) {
+        height = metadata.elementDimensionSpec.height
+      }
     }
 
     return dispatchOneOf(element, "type", {
@@ -223,7 +225,7 @@ class Block extends PureComponent<Props> {
       ),
       chart: (el: SimpleElement) => <Chart element={el} width={width} />,
       dataFrame: (el: SimpleElement) => (
-        <DataFrame element={el} width={width} />
+        <DataFrame element={el} width={width} height={height} />
       ),
       deckGlChart: (el: SimpleElement) => (
         <DeckGlChart element={el} width={width} />
@@ -250,13 +252,7 @@ class Block extends PureComponent<Props> {
       plotlyChart: (el: SimpleElement) => (
         <PlotlyChart element={el} width={width} />
       ),
-      progress: (el: SimpleElement) => (
-        <Progress
-          value={el.get("value")}
-          className="stProgress"
-          style={{ width }}
-        />
-      ),
+      progress: (el: SimpleElement) => <Progress element={el} width={width} />,
       table: (el: SimpleElement) => <Table element={el} width={width} />,
       text: (el: SimpleElement) => <Text element={el} width={width} />,
       vegaLiteChart: (el: SimpleElement) => (

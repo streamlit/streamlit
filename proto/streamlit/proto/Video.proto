@@ -23,4 +23,7 @@ message Video {
   // The type attribute of the HTML <video> tag's <source> subtag.
   // ex: "video/mp4"
   string format = 2;
+
+  // The currentTime attribute of the HTML <video> tag's <source> subtag.
+  int32 start_time = 3;
 }

@@ -20,14 +20,20 @@ import ReactDOM from "react-dom"
 import App from "./App"
 
 import { Client as Styletron } from "styletron-engine-atomic"
-import { Provider as StyletronProvider } from "styletron-react"
 import { LightTheme, BaseProvider } from "baseui"
+import { Provider as StyletronProvider } from "styletron-react"
+import { SCSS_VARS } from "autogen/scssVariables"
 
 const engine = new Styletron()
+const popupZIndex = Number(SCSS_VARS["$z-index-popup-menu"])
 
 ReactDOM.render(
   <StyletronProvider value={engine}>
-    <BaseProvider theme={LightTheme}>
+    {/*
+      The BaseProvider type definition doesn't support zIndex, but the object
+      actually does. See: https://baseweb.design/components/base-provider/
+      // @ts-ignore */}
+    <BaseProvider theme={LightTheme} zIndex={popupZIndex}>
       <App />
     </BaseProvider>
   </StyletronProvider>,

@@ -17,22 +17,15 @@
 
 import url from "url"
 import { ConnectionState } from "lib/ConnectionState"
-import { ForwardMsg, Text as TextProto } from "autogen/proto"
+import { ForwardMsg, StaticManifest } from "autogen/proto"
 import { getObject } from "lib/s3helper"
 import { logError } from "lib/log"
-
-interface Manifest {
-  name: string
-  numMessages: number
-  firstDeltaIndex: number
-  numDeltas: number
-}
 
 interface Props {
   reportId: string
 
-  /** Manifest JSON from the server. */
-  manifest: Manifest
+  /** Manifest protobuf from the server. */
+  manifest: StaticManifest
 
   /** Function called when we receive a new message. */
   onMessage: (message: ForwardMsg) => void
@@ -56,26 +49,10 @@ export class StaticConnection {
   }
 
   private static async getAllMessages(props: Props): Promise<void> {
-    const { numMessages, firstDeltaIndex, numDeltas } = props.manifest
+    const { numMessages } = props.manifest
     const { bucket, version } = getBucketAndVersion()
 
     for (let msgIdx = 0; msgIdx < numMessages; msgIdx++) {
-      const isDeltaMsg =
-        msgIdx >= firstDeltaIndex && msgIdx < firstDeltaIndex + numDeltas
-      const deltaID = isDeltaMsg ? msgIdx - firstDeltaIndex : -1
-
-      // If this is a delta message, insert a loading message
-      // for its associated element
-      if (isDeltaMsg) {
-        props.onMessage(
-          textElement({
-            id: deltaID,
-            body: `Loading element ${deltaID}...`,
-            format: TextProto.Format.INFO,
-          })
-        )
-      }
-
       const messageKey = `${version}/reports/${props.reportId}/${msgIdx}.pb`
 
       try {
@@ -83,17 +60,7 @@ export class StaticConnection {
         const arrayBuffer = await response.arrayBuffer()
         props.onMessage(ForwardMsg.decode(new Uint8Array(arrayBuffer)))
       } catch (error) {
-        if (isDeltaMsg) {
-          props.onMessage(
-            textElement({
-              id: deltaID,
-              body: `Error loading element ${deltaID}: ${error}`,
-              format: TextProto.Format.ERROR,
-            })
-          )
-        } else {
-          logError(`Error loading non-delta message ${msgIdx}: ${error}`)
-        }
+        logError(`Error loading message ${msgIdx}: ${error}`)
       }
     }
   }
@@ -108,30 +75,4 @@ function getBucketAndVersion(): { bucket: string; version: string } {
   const bucket = String(hostname)
   const version = pathname != null ? pathname.split("/")[1] : "null"
   return { bucket, version }
-}
-
-/**
- * Returns the json to construct a message which places an element at a
- * particular location in the document.
- */
-function textElement({
-  id,
-  body,
-  format,
-}: {
-  id: number
-  body: string
-  format: TextProto.Format
-}): any {
-  return {
-    type: "delta",
-    delta: {
-      id,
-      type: "newElement",
-      newElement: {
-        type: "text",
-        text: { body, format },
-      },
-    },
-  }
 }

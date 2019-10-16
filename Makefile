@@ -241,6 +241,8 @@ react-build:
 	cd frontend/ ; yarn run build
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/build/ lib/streamlit/static/
+	# If you're debugging sharing, you may want to comment this out so that
+	# sourcemaps exist.
 	find lib/streamlit/static -type 'f' -iname '*.map' | xargs rm -fv
 
 .PHONY: scssvars
@@ -278,7 +280,7 @@ else
 			--format junit \
 			--output-file test-reports/eslint/eslint.xml \
 			./src
-endif CIRCLECI
+endif #CIRCLECI
 
 .PHONY: jsformat
 # Runs "Prettier" on our JavaScript and TypeScript code to fix formatting
