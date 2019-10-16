@@ -762,21 +762,6 @@ class DeltaGenerator(object):
 
         exception_proto.marshall(element.exception, exception, exception_traceback)
 
-    @_with_element
-    def _text_exception(self, element, exception_type, message, stack_trace):
-        """Display an exception.
-
-        Parameters
-        ----------
-        exception_type : str
-        message : str
-        stack_trace : list of str
-
-        """
-        element.exception.type = exception_type
-        element.exception.message = message
-        element.exception.stack_trace.extend(stack_trace)
-
     @_remove_self_from_sig
     def dataframe(self, data=None, width=None, height=None):
         """Display a dataframe as an interactive table.
