@@ -17,6 +17,7 @@ import streamlit as st
 
 st.title("Play Videos from URLs")
 
+st.write("st.video allows a variety of HTML5 supported video links, including YouTube.")
 
 def shorten_vid_option(opt):
     return opt.split("/")[-1]
@@ -27,7 +28,9 @@ def shorten_vid_option(opt):
 vidurl = st.selectbox(
     "Pick a video to play",
     (
-        "https://www.youtube.com/watch?v=YsA3PK8bQd8",
+        "https://youtu.be/12-rsgTrhpI",
+        "https://www.youtube.com/watch?v=kmfC-i9WgH0",
+        "https://www.youtube.com/embed/sSn4e1lLVpA",
         "http://www.rochikahn.com/video/videos/zapatillas.mp4",
         "http://www.marmosetcare.com/video/in-the-wild/intro.webm",
         "https://www.orthopedicone.com/u/home-vid-4.mp4",
