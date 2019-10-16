@@ -17,7 +17,10 @@
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
+
+from streamlit.DeltaGenerator import _build_duplicate_widget_message
 from streamlit.compatibility import setup_2_3_shims
+from streamlit.errors import DuplicateWidgetID
 
 setup_2_3_shims(globals())
 
@@ -207,6 +210,24 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
         st.text_input()
         c = self.get_delta_from_queue().new_element.exception
         self.assertEqual(c.type, "TypeError")
+
+    def test_duplicate_widget_id_error(self):
+        """Multiple widgets with the same key should report an error."""
+        st.button("button")
+        with self.assertRaises(DuplicateWidgetID) as ctx:
+            st.button("button")
+            self.assertIn(
+                _build_duplicate_widget_message(widget_type="button", user_key=None),
+                ctx.exception,
+            )
+
+        st.button("button", key="key")
+        with self.assertRaises(DuplicateWidgetID) as ctx:
+            st.button("button", key="key")
+            self.assertIn(
+                _build_duplicate_widget_message(widget_type="button", user_key="key"),
+                ctx.exception,
+            )
 
 
 class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):

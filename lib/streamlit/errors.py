@@ -22,5 +22,5 @@ class S3NoCredentials(Exception):
     pass
 
 
-class DuplicateWidgetIDException(Exception):
+class DuplicateWidgetID(Exception):
     pass

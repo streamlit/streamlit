@@ -18,7 +18,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
-from streamlit.errors import DuplicateWidgetIDException
+from streamlit.errors import DuplicateWidgetID
 
 setup_2_3_shims(globals())
 
@@ -173,7 +173,7 @@ def _set_widget_id(widget_type, element, user_key=None):
     ctx = get_report_ctx()
     if ctx is not None:
         if widget_id in ctx.widget_ids_this_run:
-            raise DuplicateWidgetIDException(
+            raise DuplicateWidgetID(
                 _build_duplicate_widget_message(widget_type, user_key)
             )
         ctx.widget_ids_this_run.add(widget_id)
