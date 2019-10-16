@@ -15,19 +15,22 @@
 
 import streamlit as st
 
-st.title("Video Play Test")
+st.title("Play Videos from URLs")
+
+def shorten_vid_option(opt):
+    return opt.split('/')[-1]
 
 # A random sampling of videos found around the web.  We should replace
 # these with those sourced from the streamlit community if possible!
 vidurl = st.selectbox(
     "Pick a video to play",
     (
-        "https://www.orthopedicone.com/u/home-vid-4.mp4",
-        "http://www.oznibatista.com.br/video/video.ogg",
+        "http://www.rochikahn.com/video/videos/zapatillas.mp4",
         "http://www.marmosetcare.com/video/in-the-wild/intro.webm",
+        "https://www.orthopedicone.com/u/home-vid-4.mp4",
     ),
+    0,
+    shorten_vid_option
 )
 
-fmt = vidurl.split(".")[1]
-
-st.video(vidurl, format="video/" + fmt)
+st.video(vidurl)

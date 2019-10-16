@@ -57,6 +57,9 @@ with io.open("sound.wav", "rb") as f:
 
 st.title("Audio from a URL")
 
+def shorten_audio_option(opt):
+    return opt.split('/')[-1]
+
 song = st.selectbox(
     "Pick an MP3 to play",
     (
@@ -64,6 +67,8 @@ song = st.selectbox(
         "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
         "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3",
     ),
+    0,
+    shorten_audio_option
 )
 
 st.audio(song)
