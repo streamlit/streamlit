@@ -580,6 +580,21 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.video.url, some_url)
 
+        # Test with sufficiently varied youtube URLs
+        yt_urls = ("https://youtu.be/_T8LGqJtuGc",
+                   "https://www.youtube.com/watch?v=kmfC-i9WgH0",
+                   "https://www.youtube.com/embed/sSn4e1lLVpA",
+                  )
+        yt_embeds = ("https://www.youtube.com/embed/_T8LGqJtuGc",
+                     "https://www.youtube.com/embed/kmfC-i9WgH0",
+                     "https://www.youtube.com/embed/sSn4e1lLVpA",
+                    )   
+        # url should be transformed into an embed link (or left alone).
+        for x in range(0, len(yt_urls)):
+            st.video(yt_urls[x])
+            el = self.get_delta_from_queue().new_element
+            self.assertEqual(el.video.url, yt_embeds[x])
+
         # Test that a non-URL string doesn't work
         non_url = "blah"
         with self.assertRaises(TypeError):
