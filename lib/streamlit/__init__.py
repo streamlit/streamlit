@@ -178,12 +178,11 @@ text = _with_dg(_DeltaGenerator.text)  # noqa: E221
 text_area = _with_dg(_DeltaGenerator.text_area)  # noqa: E221
 text_input = _with_dg(_DeltaGenerator.text_input)  # noqa: E221
 time_input = _with_dg(_DeltaGenerator.time_input)  # noqa: E221
+number_input = _with_dg(_DeltaGenerator.number_input)  # noqa: E221
 title = _with_dg(_DeltaGenerator.title)  # noqa: E221
 vega_lite_chart = _with_dg(_DeltaGenerator.vega_lite_chart)  # noqa: E221
 video = _with_dg(_DeltaGenerator.video)  # noqa: E221
 warning = _with_dg(_DeltaGenerator.warning)  # noqa: E221
-
-number_input = _with_dg(_DeltaGenerator.number_input)  # noqa: E221
 
 _text_exception = _with_dg(_DeltaGenerator._text_exception)  # noqa: E221
 
