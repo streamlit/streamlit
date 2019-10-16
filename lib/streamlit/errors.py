@@ -14,13 +14,23 @@
 # limitations under the License.
 
 
-class NoStaticFiles(Exception):
+class StreamlitException(Exception):
+    """Base class for exceptions that originate in Streamlit.
+
+    Instances of this class can use markdown in their messages, which will get
+    nicely formatted on the frontend.
+    """
+
     pass
 
 
-class S3NoCredentials(Exception):
+class NoStaticFiles(StreamlitException):
     pass
 
 
-class DuplicateWidgetID(Exception):
+class S3NoCredentials(StreamlitException):
+    pass
+
+
+class DuplicateWidgetID(StreamlitException):
     pass

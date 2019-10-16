@@ -15,8 +15,9 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
 import { Map as ImmutableMap } from "immutable"
+import React, { ReactNode } from "react"
 import "./ExceptionElement.scss"
 
 interface Props {
@@ -32,10 +33,20 @@ class ExceptionElement extends React.PureComponent<Props> {
     const { element, width } = this.props
     const type = element.get("type")
     let message = element.get("message")
-    if (message) {
-      message = `: ${message}`
-    }
     const stackTrace = element.get("stackTrace")
+
+    // On the backend, we use the StreamlitException type for errors that
+    // originate from inside Streamlit. These errors have Markdown-formatted
+    // messages, and so we wrap those messages inside our Markdown renderer.
+    let messageNode: ReactNode
+    if (element.get("messageIsMarkdown")) {
+      messageNode = <StreamlitMarkdown source={message} allowHTML={false} />
+    } else {
+      if (message) {
+        message = `: ${message}`
+      }
+      messageNode = message
+    }
 
     // Put it all together into a nice little html view.
     return (
@@ -45,7 +56,7 @@ class ExceptionElement extends React.PureComponent<Props> {
       >
         <div className="message">
           <strong>{type}</strong>
-          {message}
+          {messageNode}
         </div>
         <div className="stack-trace">
           {stackTrace.map((row: string, indx: string) => (

@@ -747,7 +747,9 @@ class DeltaGenerator(object):
         Parameters
         ----------
         exception : Exception
-            The exception to display.
+            The exception to display. If this is a StreamlitException,
+            then its message can contain markdown, which will then be
+            nicely formatted on the frontend.
         exception_traceback : Exception Traceback or None
             If None or False, does not show display the trace. If True,
             tries to capture a trace automatically. If a Traceback object,

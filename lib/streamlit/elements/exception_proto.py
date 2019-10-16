@@ -16,6 +16,7 @@
 import sys
 import traceback
 
+from streamlit.errors import StreamlitException
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
@@ -89,6 +90,9 @@ def marshall(exception_proto, exception, exception_traceback=None):
             exception_proto.message = _format_syntax_error_message(exception)
         else:
             exception_proto.message = str(exception)
+            exception_proto.message_is_markdown = isinstance(
+                exception, StreamlitException
+            )
     except Exception as str_exception:
         # Sometimes the exception's __str__/__unicode__ method itself
         # raises an error.
