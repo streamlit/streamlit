@@ -172,11 +172,11 @@ def _set_widget_id(widget_type, element, user_key=None):
 
     ctx = get_report_ctx()
     if ctx is not None:
-        if widget_id in ctx.widget_ids_this_run:
+        added = ctx.widget_ids_this_run.add(widget_id)
+        if not added:
             raise DuplicateWidgetID(
                 _build_duplicate_widget_message(widget_type, user_key)
             )
-        ctx.widget_ids_this_run.add(widget_id)
     el = getattr(element, widget_type)
     el.id = widget_id
 

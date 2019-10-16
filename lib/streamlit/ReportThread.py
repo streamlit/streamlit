@@ -29,11 +29,46 @@ ReportContext = namedtuple(
         "sidebar_dg",
         # (Widgets) The Widgets state object for the report
         "widgets",
-        # (set) The set of widget IDs that have been assigned in the current
-        # report run. This set is cleared at the start of each run.
+        # (_WidgetIDSet) The set of widget IDs that have been assigned in the
+        # current report run. This set is cleared at the start of each run.
         "widget_ids_this_run",
     ],
 )
+
+
+class _WidgetIDSet(object):
+    """Stores a set of widget IDs. Safe to mutate from multiple threads."""
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._items = set()
+
+    def clear(self):
+        """Clears all items in the set."""
+        with self._lock:
+            self._items.clear()
+
+    def add(self, item):
+        """Adds an item to the set.
+
+        Parameters
+        ----------
+        item : Any
+            The item to add.
+
+        Returns
+        -------
+        bool
+            True if the item was added, and False if it was already in
+            the set.
+
+        """
+        with self._lock:
+            if item in self._items:
+                return False
+            self._items.add(item)
+            return True
+
 
 REPORT_CONTEXT_ATTR_NAME = "streamlit_report_ctx"
 
@@ -43,7 +78,9 @@ class ReportThread(threading.Thread):
 
     def __init__(self, main_dg, sidebar_dg, widgets, target=None, name=None):
         super(ReportThread, self).__init__(target=target, name=name)
-        self.streamlit_report_ctx = ReportContext(main_dg, sidebar_dg, widgets, set())
+        self.streamlit_report_ctx = ReportContext(
+            main_dg, sidebar_dg, widgets, _WidgetIDSet()
+        )
 
 
 def add_report_ctx(thread):
