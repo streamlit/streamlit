@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""slider unit test."""
+"""number_input unit test."""
 
 from tests import testutil
 import streamlit as st
