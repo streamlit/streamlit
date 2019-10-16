@@ -24,6 +24,7 @@ setup_2_3_shims(globals())
 import functools
 import json
 import random
+import re
 import textwrap
 import pandas as pd
 from datetime import datetime
@@ -1378,7 +1379,18 @@ class DeltaGenerator(object):
         element.video.start_time = start_time
 
         if isinstance(data, string_types) and url(data):
-            element.video.url = data
+            # If this is a straight YouTube link, reformat it into an embed link
+            # before it gets shipped to the frontend.
+            # 
+            # Regex covers any youtube URL (incl. shortlinks) that points to a
+            # valid video but needs to be converted to an "embed" link.
+            re_yt_watchlink = re.compile(
+                "http(?:s?):\/\/(?:www\.)?youtu(?:be\.com\/watch\?v=|\.be\/)(?P<code>[\w\-\_]*)(&(amp;)?[\w\?=]*)?")
+            match = re_yt_watchlink.match(data)
+            if match:
+                element.video.url = "https://www.youtube.com/embed/{code}".format(**match.groupdict())
+            else:
+                element.video.url = data
         else:
             generic_binary_proto.marshall(element.video, data)
 
