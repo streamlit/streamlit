@@ -23,7 +23,7 @@ describe("st.text_input", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stNumberInput").should("have.length", 1);
+    cy.get(".stNumberInput").should("have.length", 3);
 
     cy.get(".stNumberInput").each((el, idx) => {
       // @ts-ignore
@@ -32,6 +32,32 @@ describe("st.text_input", () => {
   });
 
   it("has correct default values", () => {
-    cy.get(".stText").should("have.text", 'value: " 3.14 "');
+    cy.get(".stText").should(
+      "have.text",
+      'value 1: " 0 "' + 'value 2: " 1 "' + 'value 3: " 1 "'
+    );
+  });
+
+  it("sets value correctly on enter keypress", () => {
+    cy.get(".stNumberInput input")
+      .first()
+      .type("10{enter}");
+
+    cy.get(".stText").should(
+      "have.text",
+      'value 1: " 10 "' + 'value 2: " 1 "' + 'value 3: " 1 "'
+    );
+  });
+
+  it("sets value correctly on blur", () => {
+    cy.get(".stNumberInput input")
+      .first()
+      .type("10")
+      .blur();
+
+    cy.get(".stText").should(
+      "have.text",
+      'value 1: " 10 "' + 'value 2: " 1 "' + 'value 3: " 1 "'
+    );
   });
 });

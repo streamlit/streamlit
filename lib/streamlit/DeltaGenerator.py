@@ -1820,7 +1820,7 @@ class DeltaGenerator(object):
             A short label explaining to the user what this input is for.
         value : int/float or None
             The value of this widget when it first renders.
-            default: 0
+            default: min_value or 0
         min_value : int/float or None
             The minimum permitted value.
         max_value : int/float or None
@@ -1844,6 +1844,12 @@ class DeltaGenerator(object):
         >>> st.write('The current number is ', number)
 
         """
+
+        if isinstance(value, NoValue):
+            if min_value:
+                value = min_value
+            else:
+                value = 0
 
         value = 0 if isinstance(value, NoValue) else value
         int_value = isinstance(value, int)
