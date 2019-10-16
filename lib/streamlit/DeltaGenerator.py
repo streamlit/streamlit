@@ -1851,7 +1851,6 @@ class DeltaGenerator(object):
             else:
                 value = 0
 
-        value = 0 if isinstance(value, NoValue) else value
         int_value = isinstance(value, int)
         float_value = isinstance(value, float)
 
