@@ -1423,9 +1423,11 @@ class DeltaGenerator(object):
         ----------
         label : str
             A short label explaining to the user what this button is for.
-
         key : str
-            An optional string to use as an ID for the button.
+            An optional string to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. Multiple widgets of the same type may
+            not share the same key.
 
         Returns
         -------
@@ -1448,7 +1450,7 @@ class DeltaGenerator(object):
         return current_value
 
     @_with_element
-    def checkbox(self, element, label, value=False):
+    def checkbox(self, element, label, value=False, key=None):
         """Display a checkbox widget.
 
         Parameters
@@ -1458,6 +1460,11 @@ class DeltaGenerator(object):
         value : bool
             Preselect the checkbox when it first renders. This will be
             cast to bool internally.
+        key : str
+            An optional string to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. Multiple widgets of the same type may
+            not share the same key.
 
         Returns
         -------
@@ -1475,12 +1482,14 @@ class DeltaGenerator(object):
         element.checkbox.label = label
         element.checkbox.default = bool(value)
 
-        ui_value = _get_widget_ui_value("checkbox", element)
+        ui_value = _get_widget_ui_value("checkbox", element, user_key=key)
         current_value = ui_value if ui_value is not None else value
         return bool(current_value)
 
     @_with_element
-    def multiselect(self, element, label, options, default=None, format_func=str):
+    def multiselect(
+        self, element, label, options, default=None, format_func=str, key=None
+    ):
         """Display a multiselect widget.
         The multiselect widget starts as empty.
 
@@ -1496,6 +1505,11 @@ class DeltaGenerator(object):
         format_func : function
             Function to modify the display of the labels. It receives the option
             as an argument and its output will be cast to str.
+        key : str
+            An optional string to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. Multiple widgets of the same type may
+            not share the same key.
 
         Returns
         -------
@@ -1536,12 +1550,12 @@ class DeltaGenerator(object):
             str(format_func(option)) for option in options
         ]
 
-        ui_value = _get_widget_ui_value("multiselect", element)
+        ui_value = _get_widget_ui_value("multiselect", element, user_key=key)
         current_value = ui_value.value if ui_value is not None else default_value
         return [options[i] for i in current_value]
 
     @_with_element
-    def radio(self, element, label, options, index=0, format_func=str):
+    def radio(self, element, label, options, index=0, format_func=str, key=None):
         """Display a radio button widget.
 
         Parameters
@@ -1556,6 +1570,11 @@ class DeltaGenerator(object):
         format_func : function
             Function to modify the display of the labels. It receives the option
             as an argument and its output will be cast to str.
+        key : str
+            An optional string to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. Multiple widgets of the same type may
+            not share the same key.
 
         Returns
         -------
@@ -1584,12 +1603,12 @@ class DeltaGenerator(object):
         element.radio.default = index
         element.radio.options[:] = [str(format_func(option)) for option in options]
 
-        ui_value = _get_widget_ui_value("radio", element)
+        ui_value = _get_widget_ui_value("radio", element, user_key=key)
         current_value = ui_value if ui_value is not None else index
         return options[current_value] if len(options) > 0 else NoValue
 
     @_with_element
-    def selectbox(self, element, label, options, index=0, format_func=str):
+    def selectbox(self, element, label, options, index=0, format_func=str, key=None):
         """Display a select widget.
 
         Parameters
@@ -1604,6 +1623,11 @@ class DeltaGenerator(object):
         format_func : function
             Function to modify the display of the labels. It receives the option
             as an argument and its output will be cast to str.
+        key : str
+            An optional string to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. Multiple widgets of the same type may
+            not share the same key.
 
         Returns
         -------
@@ -1631,7 +1655,7 @@ class DeltaGenerator(object):
         element.selectbox.default = index
         element.selectbox.options[:] = [str(format_func(option)) for option in options]
 
-        ui_value = _get_widget_ui_value("selectbox", element)
+        ui_value = _get_widget_ui_value("selectbox", element, user_key=key)
         current_value = ui_value if ui_value is not None else index
         return options[current_value] if len(options) > 0 else NoValue
 
@@ -1645,6 +1669,7 @@ class DeltaGenerator(object):
         value=None,
         step=None,
         format=None,
+        key=None,
     ):
         """Display a slider widget.
 
@@ -1667,6 +1692,11 @@ class DeltaGenerator(object):
             Defaults to 1 if the value is an int, 0.01 otherwise.
         format : str or None
             Printf/Python format string.
+        key : str
+            An optional string to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. Multiple widgets of the same type may
+            not share the same key.
 
 
         Returns
@@ -1786,7 +1816,7 @@ class DeltaGenerator(object):
         element.slider.step = step
         element.slider.format = format
 
-        ui_value = _get_widget_ui_value("slider", element)
+        ui_value = _get_widget_ui_value("slider", element, user_key=key)
         # Convert the current value to the appropriate type.
         current_value = ui_value if ui_value is not None else value
         # Cast ui_value to the same type as the input arguments
@@ -1802,7 +1832,7 @@ class DeltaGenerator(object):
         return current_value if single_value else tuple(current_value)
 
     @_with_element
-    def text_input(self, element, label, value=""):
+    def text_input(self, element, label, value="", key=None):
         """Display a single-line text input widget.
 
         Parameters
@@ -1812,6 +1842,11 @@ class DeltaGenerator(object):
         value : any
             The text value of this widget when it first renders. This will be
             cast to str internally.
+        key : str
+            An optional string to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. Multiple widgets of the same type may
+            not share the same key.
 
         Returns
         -------
@@ -1827,12 +1862,12 @@ class DeltaGenerator(object):
         element.text_input.label = label
         element.text_input.default = str(value)
 
-        ui_value = _get_widget_ui_value("text_input", element)
+        ui_value = _get_widget_ui_value("text_input", element, user_key=key)
         current_value = ui_value if ui_value is not None else value
         return str(current_value)
 
     @_with_element
-    def text_area(self, element, label, value=""):
+    def text_area(self, element, label, value="", key=None):
         """Display a multi-line text input widget.
 
         Parameters
@@ -1842,6 +1877,11 @@ class DeltaGenerator(object):
         value : any
             The text value of this widget when it first renders. This will be
             cast to str internally.
+        key : str
+            An optional string to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. Multiple widgets of the same type may
+            not share the same key.
 
         Returns
         -------
@@ -1863,12 +1903,12 @@ class DeltaGenerator(object):
         element.text_area.label = label
         element.text_area.default = str(value)
 
-        ui_value = _get_widget_ui_value("text_area", element)
+        ui_value = _get_widget_ui_value("text_area", element, user_key=key)
         current_value = ui_value if ui_value is not None else value
         return str(current_value)
 
     @_with_element
-    def time_input(self, element, label, value=None):
+    def time_input(self, element, label, value=None, key=None):
         """Display a time input widget.
 
         Parameters
@@ -1878,6 +1918,11 @@ class DeltaGenerator(object):
         value : datetime.time/datetime.datetime
             The value of this widget when it first renders. This will be
             cast to str internally. Defaults to the current time.
+        key : str
+            An optional string to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. Multiple widgets of the same type may
+            not share the same key.
 
         Returns
         -------
@@ -1905,7 +1950,7 @@ class DeltaGenerator(object):
         element.time_input.label = label
         element.time_input.default = time.strftime(value, "%H:%M")
 
-        ui_value = _get_widget_ui_value("time_input", element)
+        ui_value = _get_widget_ui_value("time_input", element, user_key=key)
         current_value = (
             datetime.strptime(ui_value, "%H:%M").time()
             if ui_value is not None
@@ -1914,7 +1959,7 @@ class DeltaGenerator(object):
         return current_value
 
     @_with_element
-    def date_input(self, element, label, value=None):
+    def date_input(self, element, label, value=None, key=None):
         """Display a date input widget.
 
         Parameters
@@ -1924,6 +1969,11 @@ class DeltaGenerator(object):
         value : datetime.date/datetime.datetime
             The value of this widget when it first renders. This will be
             cast to str internally. Defaults to today.
+        key : str
+            An optional string to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. Multiple widgets of the same type may
+            not share the same key.
 
         Returns
         -------
@@ -1953,7 +2003,7 @@ class DeltaGenerator(object):
         element.date_input.label = label
         element.date_input.default = date.strftime(value, "%Y/%m/%d")
 
-        ui_value = _get_widget_ui_value("date_input", element)
+        ui_value = _get_widget_ui_value("date_input", element, user_key=key)
         current_value = (
             datetime.strptime(ui_value, "%Y/%m/%d").date()
             if ui_value is not None
