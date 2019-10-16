@@ -574,18 +574,16 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.video.data, "ESIzRFVm")
         self.assertEqual(el.video.format, "video/mp4")
 
-        """
         # Test with an arbitrary URL in place of data
-        some_url = "https://all-free-download.com/free-footage/rain_132_download.html" 
+        some_url = "http://www.marmosetcare.com/video/in-the-wild/intro.webm"
         st.video(some_url)
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.video.data, some_url)
+        self.assertEqual(el.video.url, some_url)
 
         # Test that a non-URL string doesn't work
         non_url = "blah"
         with self.assertRaises(TypeError):
             st.video(non_url)
-        """
 
     def test_st_video_options(self):
         """Test st.video with options."""

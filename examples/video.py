@@ -17,7 +17,7 @@ import streamlit as st
 
 st.title("Video Play Test")
 
-# A random sampling of videos found around the web.  We should replace 
+# A random sampling of videos found around the web.  We should replace
 # these with those sourced from the streamlit community if possible!
 vidurl = st.selectbox(
     "Pick a video to play",
@@ -28,6 +28,6 @@ vidurl = st.selectbox(
     ),
 )
 
-fmt=vidurl.split('.')[1]
+fmt = vidurl.split(".")[1]
 
-st.video(vidurl, format="video/"+fmt)
+st.video(vidurl, format="video/" + fmt)
