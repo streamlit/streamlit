@@ -1861,10 +1861,7 @@ class DeltaGenerator(object):
                 format = "%d" if int_value else "%0.2f"
 
             if step is None:
-                if format is None:
-                    step = 1 if int_value else 0.01
-                else:
-                    step = 1 if is_int_value(format % 0.01) else 0.01
+                step = 1 if is_int_value(format % 0.01) else 0.01
 
         # Ensure that all arguments are of the same type.
         args = [min_value, max_value, step]
