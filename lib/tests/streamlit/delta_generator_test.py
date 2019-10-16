@@ -213,21 +213,42 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
 
     def test_duplicate_widget_id_error(self):
         """Multiple widgets with the same key should report an error."""
-        st.button("button")
-        with self.assertRaises(DuplicateWidgetID) as ctx:
-            st.button("button")
-            self.assertIn(
-                _build_duplicate_widget_message(widget_type="button", user_key=None),
-                ctx.exception,
-            )
+        widgets = {
+            "button": lambda key=None: st.button("", key=key),
+            "checkbox": lambda key=None: st.checkbox("", key=key),
+            "multiselect": lambda key=None: st.multiselect("", options=[1, 2], key=key),
+            "radio": lambda key=None: st.radio("", options=[1, 2], key=key),
+            "selectbox": lambda key=None: st.selectbox("", options=[1, 2], key=key),
+            "slider": lambda key=None: st.slider("", key=key),
+            "text_area": lambda key=None: st.text_area("", key=key),
+            "text_input": lambda key=None: st.text_input("", key=key),
+            "time_input": lambda key=None: st.time_input("", key=key),
+            "date_input": lambda key=None: st.date_input("", key=key),
+        }
 
-        st.button("button", key="key")
-        with self.assertRaises(DuplicateWidgetID) as ctx:
-            st.button("button", key="key")
-            self.assertIn(
-                _build_duplicate_widget_message(widget_type="button", user_key="key"),
-                ctx.exception,
-            )
+        # Iterate each widget type
+        for widget_type, create_widget in widgets.items():
+            # Test duplicate auto-generated widget key
+            create_widget()
+            with self.assertRaises(DuplicateWidgetID) as ctx:
+                create_widget()
+                self.assertIn(
+                    _build_duplicate_widget_message(
+                        widget_type=widget_type, user_key=None
+                    ),
+                    ctx.exception,
+                )
+
+            # Test duplicate user-specified widget key
+            create_widget("key")
+            with self.assertRaises(DuplicateWidgetID) as ctx:
+                create_widget("key")
+                self.assertIn(
+                    _build_duplicate_widget_message(
+                        widget_type=widget_type, user_key="key"
+                    ),
+                    ctx.exception,
+                )
 
 
 class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
