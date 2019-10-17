@@ -14,7 +14,7 @@
 # limitations under the License.
 
 
-def open_source_file(filename):
+def open_python_file(filename):
     """Open a read-only Python file taking proper care of its encoding.
 
     In Python 3, we would like all files to be opened with utf-8 encoding.
