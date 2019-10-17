@@ -48,9 +48,10 @@ def _reshape_youtube_url(url):
     """
     # Regular expression explained at https://regexr.com/4n2l2
     # Covers any youtube URL (incl. shortlinks and embed links) and
-    # extracts its code. 
+    # extracts its code.
     re_youtube_url = re.compile(
-        "http(?:s?):\/\/(?:www\.)?youtu(?:be\.com|\.be)\/(?P<watch>(watch\?v=)|embed\/)?(?P<code>[\w\-\_]*)(&(amp;)?[\w\?=]*)?")
+        "http(?:s?):\/\/(?:www\.)?youtu(?:be\.com|\.be)\/(?P<watch>(watch\?v=)|embed\/)?(?P<code>[\w\-\_]*)(&(amp;)?[\w\?=]*)?"
+    )
     match = re_youtube_url.match(url)
     if match:
         return "https://www.youtube.com/embed/{code}".format(**match.groupdict())
@@ -146,5 +147,3 @@ def marshall_audio(proto, data, format="audio/wav", start_time=0):
         proto.url = data
     else:
         _marshall_binary(proto, data)
-
-
