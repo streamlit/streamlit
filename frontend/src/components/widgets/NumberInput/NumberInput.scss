@@ -15,6 +15,8 @@
  */
 
 .stNumberInput {
+  $controls-width: 45px;
+
   div.input-container {
     display: flex;
     flex-direction: row;
@@ -39,10 +41,11 @@
         height: 100%;
         display: flex;
         cursor: pointer;
-        padding: 0 15px;
         align-items: center;
-        background-color: rgb(230, 234, 241);
+        width: $controls-width;
+        justify-content: center;
         transition: all ease-in 0.2s;
+        background-color: rgb(230, 234, 241);
 
         &:hover {
           color: white;
@@ -57,16 +60,8 @@
     }
   }
 
-  .startEnhancer,
-  .endEnhancer {
-    width: 40px;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
   .instructions {
-    right: 45px;
+    margin-right: 5px;
+    right: $controls-width * 2;
   }
 }

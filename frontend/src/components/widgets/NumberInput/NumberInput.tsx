@@ -197,7 +197,6 @@ class NumberInput extends React.PureComponent<Props, State> {
 
     const label: string = element.get("label")
     const style = { width }
-    const inputValue = value || ""
 
     return (
       <div className="Widget row-widget stNumberInput" style={style}>
@@ -206,7 +205,7 @@ class NumberInput extends React.PureComponent<Props, State> {
           <UIInput
             type="number"
             inputRef={this.inputRef}
-            value={inputValue}
+            value={value}
             onBlur={this.onBlur}
             onChange={this.onChange}
             onKeyPress={this.onKeyPress}

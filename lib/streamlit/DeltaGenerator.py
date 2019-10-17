@@ -2056,7 +2056,7 @@ class DeltaGenerator(object):
             A short label explaining to the user what this input is for.
         value : int/float or None
             The value of this widget when it first renders.
-            default: min_value or 0 is min_value is None
+            default: min_value or 0 if min_value is None
         min_value : int or float or None
             The minimum permitted value.
             If None, there will be no minimum.
