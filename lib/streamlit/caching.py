@@ -429,8 +429,10 @@ def cache(
         Whether to persist the cache on disk.
 
     allow_output_mutation : boolean
-        Disable hashing return values. These hash values are otherwise
-        used to validate that return values are not mutated.
+        Streamlit normally shows a warning when return values are not mutated, as that
+        can have unintended consequences. This is done by hashing the return value internally.
+
+        If you know what you're doing and would like to override this warning, set this to True.
 
     show_spinner : boolean
         Enable the spinner. Default is True to show a spinner when there is
@@ -474,6 +476,7 @@ def cache(
 
     """
     # Help users migrate to the new kwarg
+    # Remove this warning after 2020-03-16.
     if "ignore_hash" in kwargs:
         raise Exception(
             "The `ignore_hash` argument has been renamed to `allow_output_mutation`."
