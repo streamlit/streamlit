@@ -2138,8 +2138,15 @@ class DeltaGenerator(object):
         element.number_input.label = label
         element.number_input.default = value
 
-        element.number_input.min = min_value if min_value else float("-inf")
-        element.number_input.max = max_value if max_value else float("+inf")
+        if min_value is None:
+            element.number_input.min = float("-inf")
+        else:
+            element.number_input.min = min_value
+
+        if max_value is None:
+            element.number_input.max = float("+inf")
+        else:
+            element.number_input.max = max_value
 
         if step is not None:
             element.number_input.step = step
