@@ -54,7 +54,7 @@ else:
     text_utf = u"complete! 👨‍🎤"
     text_no_encoding = (
         u"complete! \xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x8e\xa4")
-    text_latin = u"complete! \xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x8e\xa4"
+    text_latin = text_no_encoding
 
 
 class ScriptRunnerTest(unittest.TestCase):
