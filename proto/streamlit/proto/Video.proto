@@ -17,8 +17,13 @@
 syntax = "proto3";
 
 message Video {
-  // The data in Base64 format.
-  string data = 1;
+  oneof src {
+    // The data in Base64 format.
+    string data = 1;
+
+    // A url pointing to an audio file
+    string url = 4;
+  }
 
   // The type attribute of the HTML <video> tag's <source> subtag.
   // ex: "video/mp4"
@@ -26,7 +31,4 @@ message Video {
 
   // The currentTime attribute of the HTML <video> tag's <source> subtag.
   int32 start_time = 3;
-
-  // A url pointing to a video file
-  string url = 4;
 }
