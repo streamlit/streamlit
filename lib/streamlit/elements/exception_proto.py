@@ -39,20 +39,25 @@ def _format_syntax_error_message(exception):
     str
 
     """
-    return (
-        'File "%(filename)s", line %(lineno)d\n'
-        "  %(text)s\n"
-        "  %(caret_indent)s^\n"
-        "%(errname)s: %(msg)s"
-        % {
-            "filename": exception.filename,
-            "lineno": exception.lineno,
-            "text": exception.text.rstrip(),
-            "caret_indent": " " * max(exception.offset - 1, 0),
-            "errname": type(exception).__name__,
-            "msg": exception.msg,
-        }
-    )
+    if exception.text:
+        return (
+            'File "%(filename)s", line %(lineno)d\n'
+            "  %(text)s\n"
+            "  %(caret_indent)s^\n"
+            "%(errname)s: %(msg)s"
+            % {
+                "filename": exception.filename,
+                "lineno": exception.lineno,
+                "text": exception.text.rstrip(),
+                "caret_indent": " " * max(exception.offset - 1, 0),
+                "errname": type(exception).__name__,
+                "msg": exception.msg,
+            }
+        )
+    # If a few edge cases, SyntaxErrors don't have all these nice fields. So we
+    # have a fall back here.
+    # Example edge case error message: encoding declaration in Unicode string
+    return str(exception)
 
 
 def marshall(exception_proto, exception, exception_traceback=None):

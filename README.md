@@ -47,6 +47,7 @@ streamlit run https://raw.githubusercontent.com/streamlit/demo-self-driving/mast
 - Our lovely [community](https://discuss.streamlit.io/)
 - Streamlit [documentation](https://streamlit.io/docs)
 - More [demo projects](https://github.com/streamlit/)
+- If you would like to contribute, see [instructions here](https://github.com/streamlit/streamlit/wiki/Contributing)
 
 ## Streamlit for Teams
 

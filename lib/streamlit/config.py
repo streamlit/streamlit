@@ -457,7 +457,6 @@ def _gather_usage_stats():
 
 
 @_create_option("browser.serverPort", type_=int)
-@util.memoize
 def _browser_server_port():
     """Port that the browser should use to connect to the server when in
     liveSave mode.
@@ -815,7 +814,7 @@ def parse_config_file():
         if not os.path.exists(filename):
             continue
 
-        with open(filename) as input:
+        with open(filename, "r") as input:
             file_contents = input.read()
 
         _update_config_with_toml(file_contents, filename)

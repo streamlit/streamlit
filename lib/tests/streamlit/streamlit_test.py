@@ -619,24 +619,3 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, "some warning")
         self.assertEqual(el.text.format, Text.WARNING)
-
-    def test_st_text_exception(self):
-        """Test st._text_exception."""
-        data = {
-            "type": "ModuleNotFoundError",
-            "message": "No module named 'numpy'",
-            "stack_trace": [
-                "Traceback (most recent call last):",
-                '  File "<stdin>", line 1, in <module>',
-                "ModuleNotFoundError: No module named 'numpy'",
-            ],
-        }
-
-        st._text_exception(
-            data.get("type"), data.get("message"), data.get("stack_trace")
-        )
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.exception.type, data.get("type"))
-        self.assertEqual(el.exception.message, data.get("message"))
-        self.assertEqual(el.exception.stack_trace, data.get("stack_trace"))

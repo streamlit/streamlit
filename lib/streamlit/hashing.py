@@ -148,7 +148,7 @@ def _key(obj, context):
 def _hashing_error_message(start):
     return textwrap.dedent(
         """
-        %(start)s,
+        %(start)s
 
         **More information:** to prevent unexpected behavior, Streamlit tries
         to detect mutations in cached objects defined in your local files so
@@ -160,7 +160,7 @@ def _hashing_error_message(start):
         understand which files it should check. If you think that's what caused
         this, please add the following to `~/.streamlit/config.toml`:
 
-        ```
+        ```toml
         [server]
         folderWatchBlacklist = ['foldername']
         ```
@@ -175,7 +175,7 @@ def _hashing_error_message(start):
         following:
 
         * **Preferred:** modify your code to avoid using this type of object.
-        * Or add the argument `ignore_hash=True` to the `st.cache` decorator.
+        * Or add the argument `allow_output_mutation=True` to the `st.cache` decorator.
     """
         % {"start": start}
     ).strip("\n")

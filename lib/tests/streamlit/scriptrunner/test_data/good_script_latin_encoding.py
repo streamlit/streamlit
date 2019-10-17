@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: latin-1 -*-
 # Copyright 2018-2019 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,14 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""A test script for ScriptRunnerTest that enqueues a delta."""
 
-class NoStaticFiles(Exception):
-    pass
+import streamlit as st
 
-
-class S3NoCredentials(Exception):
-    pass
-
-
-class DuplicateWidgetID(Exception):
-    pass
+st.text(u"complete! 👨‍🎤")
