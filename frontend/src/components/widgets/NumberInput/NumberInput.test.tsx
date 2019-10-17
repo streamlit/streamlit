@@ -30,6 +30,8 @@ const preventDefault = jest.fn()
 const getProps = (elementProps: object = {}): Props => ({
   element: ImmutableMap({
     label: "Label",
+    min: -Infinity,
+    max: +Infinity,
     ...elementProps,
   }),
   width: 0,
@@ -133,9 +135,9 @@ describe("NumberInput", () => {
         preventDefault: preventDefault,
       })
 
-      expect(wrapper.state("dirty")).toBe(true)
-      expect(wrapper.state("value")).toBe("11")
       expect(preventDefault).toHaveBeenCalled()
+      expect(wrapper.state("value")).toBe("11")
+      expect(wrapper.state("dirty")).toBe(false)
     })
 
     it("Should change the state when ArrowDown", () => {
@@ -153,47 +155,39 @@ describe("NumberInput", () => {
         preventDefault: preventDefault,
       })
 
-      expect(wrapper.state("dirty")).toBe(true)
-      expect(wrapper.state("value")).toBe("9")
       expect(preventDefault).toHaveBeenCalled()
+      expect(wrapper.state("value")).toBe("9")
+      expect(wrapper.state("dirty")).toBe(false)
     })
 
-    it("startEnhancer onClick", () => {
+    it("stepDown button onClick", () => {
       const props = getProps({
         default: 10,
         step: 1,
         format: "%d",
       })
       const wrapper = shallow(<NumberInput {...props} />)
-      const InputWrapper = wrapper.find(UIInput)
+      const enhancer = wrapper.find(".controls .step-down")
 
-      // @ts-ignore
-      const enhancer = shallow(InputWrapper.props().startEnhancer())
+      enhancer.simulate("click")
 
-      // @ts-ignore
-      enhancer.props().onClick()
-
-      expect(wrapper.state("dirty")).toBe(true)
+      expect(wrapper.state("dirty")).toBe(false)
       expect(wrapper.state("value")).toBe("9")
       expect(preventDefault).toHaveBeenCalled()
     })
 
-    it("endEnhancer onClick", () => {
+    it("stepUp button onClick", () => {
       const props = getProps({
         default: 10,
         step: 1,
         format: "%d",
       })
       const wrapper = shallow(<NumberInput {...props} />)
-      const InputWrapper = wrapper.find(UIInput)
+      const enhancer = wrapper.find(".controls .step-up")
 
-      // @ts-ignore
-      const enhancer = shallow(InputWrapper.props().endEnhancer())
+      enhancer.simulate("click")
 
-      // @ts-ignore
-      enhancer.props().onClick()
-
-      expect(wrapper.state("dirty")).toBe(true)
+      expect(wrapper.state("dirty")).toBe(false)
       expect(wrapper.state("value")).toBe("11")
       expect(preventDefault).toHaveBeenCalled()
     })

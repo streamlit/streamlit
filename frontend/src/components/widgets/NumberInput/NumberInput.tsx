@@ -170,7 +170,6 @@ class NumberInput extends React.PureComponent<Props, State> {
               value: sprintf(format, value + step),
             },
             () => {
-              console.log("asd")
               this.setWidgetValue({ fromUi: true })
             }
           )
