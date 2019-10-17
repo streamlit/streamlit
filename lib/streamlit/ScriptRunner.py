@@ -244,7 +244,7 @@ class ScriptRunner(object):
             # Python 3 got rid of the native execfile() command, so we read
             # the file, compile it, and exec() it. This implementation is
             # compatible with both 2 and 3.
-            with open(self._report.script_path) as f:
+            with open(self._report.script_path, encoding="utf-8") as f:
                 filebody = f.read()
 
             if config.get_option("runner.magicEnabled"):
