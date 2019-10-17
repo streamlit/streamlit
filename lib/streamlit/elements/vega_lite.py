@@ -22,8 +22,6 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import json
-import pandas as pd
-from datetime import datetime
 
 import streamlit.elements.lib.dicttools as dicttools
 import streamlit.elements.data_frame_proto as data_frame_proto
