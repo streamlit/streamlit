@@ -17,6 +17,7 @@
 
 import React from "react"
 import { Map as ImmutableMap } from "immutable"
+import { Video as VideoProto } from "autogen/proto"
 
 interface Props {
   width: number
@@ -50,7 +51,7 @@ class Video extends React.PureComponent<Props> {
       /* is this a YouTube link? if so we need a fancier tag. 
          NOTE: This part assumes the URL is already an "embed" link.
       */
-      if (element.get("type") == "YOUTUBE_IFRAME") {
+      if (element.get("type") === VideoProto.Type.YOUTUBE_IFRAME) {
         const height = width * 0.75
         const wid = width
         return (

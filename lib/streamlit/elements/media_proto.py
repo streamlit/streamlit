@@ -26,8 +26,10 @@ import re
 
 from validators import url
 
+from streamlit.proto import Video_pb2
 
-def reshape_youtube_url(url):
+
+def _reshape_youtube_url(url):
     """Return whether URL is any kind of YouTube embed or watch link.  If so,
     reshape URL into an embed link suitable for use in an iframe.
 
@@ -109,10 +111,10 @@ def marshall_video(proto, data, format="video/mp4", start_time=0):
     proto.start_time = start_time
 
     if type(data) in string_types and url(data):
-        youtube_url = reshape_youtube_url(data)
+        youtube_url = _reshape_youtube_url(data)
         if youtube_url:
             proto.url = youtube_url
-            proto.type = "YOUTUBE_IFRAME"
+            proto.type = Video_pb2.Video.Type.YOUTUBE_IFRAME
         else:
             proto.url = data
     else:
