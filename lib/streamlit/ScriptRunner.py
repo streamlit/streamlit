@@ -22,6 +22,7 @@ from blinker import Signal
 
 from streamlit import config
 from streamlit import magic
+from streamlit import source_util
 from streamlit.ReportThread import ReportThread
 from streamlit.ScriptRequestQueue import ScriptRequest
 from streamlit.logger import get_logger
@@ -244,7 +245,7 @@ class ScriptRunner(object):
             # Python 3 got rid of the native execfile() command, so we read
             # the file, compile it, and exec() it. This implementation is
             # compatible with both 2 and 3.
-            with _open_python_source_file(self._report.script_path) as f:
+            with source_util.open_source_file(self._report.script_path) as f:
                 filebody = f.read()
 
             if config.get_option("runner.magicEnabled"):
@@ -425,20 +426,3 @@ def _log_if_error(fn):
         fn()
     except Exception as e:
         LOGGER.warning(e)
-
-
-def _open_python_source_file(filename):
-    """Open a read-only Python file taking proper care of its encoding.
-
-    In Python 3, we would like all files to be opened with utf-8 encoding.
-    However, some author like to specify PEP263 headers in their source files
-    with their own encodings. In that case, we should respect the author's
-    encoding.
-    """
-    import tokenize
-    if hasattr(tokenize, 'open'):  # Added in Python 3.2
-        # Open file respecting PEP263 encoding. If no encoding header is
-        # found, opens as utf-8.
-        return tokenize.open(filename)
-    else:
-        return open(filename, 'r')
