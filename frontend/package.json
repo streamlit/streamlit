@@ -64,13 +64,13 @@
     "styletron-engine-atomic": "^1.4.1",
     "styletron-react": "^5.2.1",
     "typed-signals": "^1.0.5",
-    "vega": "^5.5.3",
-    "vega-embed": "^5.1.2",
-    "vega-lite": "^4.0.0-beta.1",
+    "vega": "^5.7.3",
+    "vega-embed": "^6.0.0",
+    "vega-lite": "^4.0.0-beta.10",
     "xxhashjs": "^0.2.2"
   },
   "devDependencies": {
-    "@craco/craco": "^5.4.0",
+    "@craco/craco": "^5.5.0",
     "@danmarshall/deckgl-typings": "^2.2.5",
     "@types/clipboard": "^2.0.1",
     "@types/d3": "^5.7.2",

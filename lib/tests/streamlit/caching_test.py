@@ -16,6 +16,7 @@
 """st.caching unit tests."""
 import threading
 import unittest
+import pytest
 
 from mock import patch
 
@@ -38,6 +39,18 @@ class CacheTest(unittest.TestCase):
 
         self.assertEqual(foo(), 42)
         self.assertEqual(foo(), 42)
+
+    def test_deprecated_kwarg(self):
+        with pytest.raises(Exception) as e:
+
+            @st.cache(ignore_hash=True)
+            def foo():
+                return 42
+
+        assert (
+            "The `ignore_hash` argument has been renamed to `allow_output_mutation`."
+            in str(e.value)
+        )
 
     @patch.object(st, "warning")
     def test_args(self, warning):
@@ -207,11 +220,11 @@ class CachingObjectTest(unittest.TestCase):
 
             self.assertEqual(c.value, val)
 
-    def off_test_ignore_hash(self):
+    def off_test_allow_output_mutation(self):
         val = 42
 
         for _ in range(2):
-            c = st.Cache(ignore_hash=True)
+            c = st.Cache(allow_output_mutation=True)
             if c:
                 c.value = val
 
