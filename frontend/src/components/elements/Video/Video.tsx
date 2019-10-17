@@ -52,7 +52,7 @@ class Video extends React.PureComponent<Props> {
       */
       if (element.get("url").includes("youtube.com")) {
         const height = width * 0.75
-        const wid = width
+        const wid -> width
         return (
           <iframe
             src={element.get("url")}

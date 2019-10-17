@@ -39,7 +39,13 @@ class Audio extends React.PureComponent<Props> {
     const dataUrl =
       "data:" + element.get("format") + ";base64," + element.get("data")
     return (
-      <audio controls src={dataUrl} className="stAudio" style={{ width }} />
+      <audio
+        ref={this.audioRef}
+        controls
+        src={dataUrl}
+        className="stAudio"
+        style={{ width }}
+      />
     )
   }
 }
