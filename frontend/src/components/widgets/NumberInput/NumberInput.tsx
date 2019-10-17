@@ -21,6 +21,8 @@ import { Input as UIInput } from "baseui/input"
 import { Map as ImmutableMap } from "immutable"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 
+import Icon from "components/shared/Icon"
+
 import "./NumberInput.scss"
 
 export interface Props {
@@ -190,33 +192,6 @@ class NumberInput extends React.PureComponent<Props, State> {
     }
   }
 
-  private startEnhancer = () => {
-    return (
-      <span
-        className="startEnhancer"
-        onClick={this.modifyValueUsingStep("decrement")}
-      >
-        -
-      </span>
-    )
-  }
-
-  private endEnhancer = () => {
-    return (
-      <span
-        className="endEnhancer"
-        onClick={this.modifyValueUsingStep("increment")}
-      >
-        +
-      </span>
-    )
-  }
-
-  private getEnhancersStyle = () => ({
-    cursor: "pointer",
-    padding: 0,
-  })
-
   public render = (): React.ReactNode => {
     const { element, width, disabled } = this.props
     const { value, dirty } = this.state
@@ -228,33 +203,47 @@ class NumberInput extends React.PureComponent<Props, State> {
     return (
       <div className="Widget row-widget stNumberInput" style={style}>
         <label>{label}</label>
-        <UIInput
-          type="number"
-          inputRef={this.inputRef}
-          value={inputValue}
-          onBlur={this.onBlur}
-          onChange={this.onChange}
-          onKeyPress={this.onKeyPress}
-          onKeyDown={this.onKeyDown}
-          disabled={disabled}
-          startEnhancer={this.startEnhancer}
-          endEnhancer={this.endEnhancer}
-          overrides={{
-            StartEnhancer: {
-              style: this.getEnhancersStyle(),
-            },
-            EndEnhancer: {
-              style: this.getEnhancersStyle(),
-            },
-            Input: {
-              props: {
-                step: element.get("step"),
-                min: element.get("min"),
-                max: element.get("max"),
+        <div className="input-container">
+          <UIInput
+            type="number"
+            inputRef={this.inputRef}
+            value={inputValue}
+            onBlur={this.onBlur}
+            onChange={this.onChange}
+            onKeyPress={this.onKeyPress}
+            onKeyDown={this.onKeyDown}
+            disabled={disabled}
+            overrides={{
+              Input: {
+                props: {
+                  step: element.get("step"),
+                  min: element.get("min"),
+                  max: element.get("max"),
+                },
               },
-            },
-          }}
-        />
+              InputContainer: {
+                style: () => ({
+                  borderTopRightRadius: 0,
+                  borderBottomRightRadius: 0,
+                }),
+              },
+            }}
+          />
+          <div className="controls">
+            <span
+              className="control step-down"
+              onClick={this.modifyValueUsingStep("decrement")}
+            >
+              <Icon type="minus" />
+            </span>
+            <span
+              className="control step-up"
+              onClick={this.modifyValueUsingStep("increment")}
+            >
+              <Icon type="plus" />
+            </span>
+          </div>
+        </div>
         {dirty && <div className="instructions">Press Enter to apply</div>}
       </div>
     )
