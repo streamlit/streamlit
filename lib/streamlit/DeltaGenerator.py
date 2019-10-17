@@ -1307,9 +1307,9 @@ class DeltaGenerator(object):
         ----------
         data : str, bytes, BytesIO, numpy.ndarray, or file opened with
                 io.open().
-            If readable as a string, will be checked as a URL first.
-            Otherwise, treated as raw audio data.  Must include headers 
-            and any other bytes required in the actual file.
+            The raw audio data or a string with a URL pointing to the file to load.
+            If passing the raw data, this must include headers and any other bytes 
+            required in the actual file.
         start_time: int
             The time from which this element should start playing.
         format : str
@@ -1349,9 +1349,10 @@ class DeltaGenerator(object):
         ----------
         data : str, bytes, BytesIO, numpy.ndarray, or file opened with
                 io.open().
-            If readable as a string, will be checked as a URL first.
-            Otherwise, treated as raw video data.  Must include headers 
-            and any other bytes required in the actual file.
+            The raw video data or a string with a URL pointing to the video
+            to load. Includes support for YouTube URLs.
+            If passing the raw data, this must include headers and any other 
+            bytes required in the actual file.
         start_time: int
             The time from which this element should start playing.
         format : str
