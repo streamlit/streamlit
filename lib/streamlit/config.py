@@ -814,7 +814,7 @@ def parse_config_file():
         if not os.path.exists(filename):
             continue
 
-        with open(filename) as input:
+        with open(filename, "r") as input:
             file_contents = input.read()
 
         _update_config_with_toml(file_contents, filename)

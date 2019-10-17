@@ -376,7 +376,8 @@ class TestScriptRunner(ScriptRunner):
         )
         self.script_request_queue = ScriptRequestQueue()
 
-        script_path = os.path.join(os.path.dirname(__file__), "test_data", script_name)
+        script_path = os.path.join(
+            os.path.dirname(__file__), "test_data", script_name)
 
         super(TestScriptRunner, self).__init__(
             report=Report(script_path, "test command line"),
