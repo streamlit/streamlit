@@ -22,7 +22,6 @@ from blinker import Signal
 
 from streamlit import config
 from streamlit import magic
-from streamlit import util
 from streamlit.ReportThread import ReportThread
 from streamlit.ScriptRequestQueue import ScriptRequest
 from streamlit.logger import get_logger
