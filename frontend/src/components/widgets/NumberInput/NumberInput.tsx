@@ -49,6 +49,8 @@ class NumberInput extends React.PureComponent<Props, State> {
     value: this.props.element.get("default"),
   }
 
+  private inputRef = React.createRef<HTMLInputElement>()
+
   public componentDidMount(): void {
     this.setWidgetValue({ fromUi: false })
   }
@@ -83,22 +85,30 @@ class NumberInput extends React.PureComponent<Props, State> {
     const defaultValue: number = element.get("default")
     const widgetId: string = element.get("id")
     const format: string = element.get("format")
+    const min: number = element.get("min")
+    const max: number = element.get("max")
 
-    const valueToBeSaved = value === "" ? defaultValue.toString() : value
-    const formattedValue = format
-      ? sprintf(format, valueToBeSaved)
-      : valueToBeSaved
+    if (min > parseFloat(value) || parseFloat(value) > max) {
+      const node = this.inputRef.current
 
-    if (this.strIsInt(valueToBeSaved)) {
-      widgetMgr.setIntValue(widgetId, parseInt(formattedValue), source)
+      node && node.reportValidity()
     } else {
-      widgetMgr.setFloatValue(widgetId, parseFloat(formattedValue), source)
-    }
+      const valueToBeSaved = value === "" ? defaultValue.toString() : value
+      const formattedValue = format
+        ? sprintf(format, valueToBeSaved)
+        : valueToBeSaved
 
-    this.setState({
-      dirty: false,
-      value: formattedValue,
-    })
+      if (this.strIsInt(valueToBeSaved)) {
+        widgetMgr.setIntValue(widgetId, parseInt(formattedValue), source)
+      } else {
+        widgetMgr.setFloatValue(widgetId, parseFloat(formattedValue), source)
+      }
+
+      this.setState({
+        dirty: false,
+        value: formattedValue,
+      })
+    }
   }
 
   private onBlur = (): void => {
@@ -146,19 +156,36 @@ class NumberInput extends React.PureComponent<Props, State> {
     const step = this.getStep()
     const value = this.getValue()
     const format = element.get("format")
+    const min = element.get("min")
+    const max = element.get("max")
 
     switch (modifier) {
       case "increment":
-        this.setState({
-          dirty: true,
-          value: sprintf(format, value + step),
-        })
+        if (value + step <= max) {
+          this.setState(
+            {
+              dirty: true,
+              value: sprintf(format, value + step),
+            },
+            () => {
+              console.log("asd")
+              this.setWidgetValue({ fromUi: true })
+            }
+          )
+        }
         break
       case "decrement":
-        this.setState({
-          dirty: true,
-          value: sprintf(format, value - step),
-        })
+        if (value - step >= min) {
+          this.setState(
+            {
+              dirty: true,
+              value: sprintf(format, value - step),
+            },
+            () => {
+              this.setWidgetValue({ fromUi: true })
+            }
+          )
+        }
         break
     }
   }
@@ -203,6 +230,7 @@ class NumberInput extends React.PureComponent<Props, State> {
         <label>{label}</label>
         <UIInput
           type="number"
+          inputRef={this.inputRef}
           value={inputValue}
           onBlur={this.onBlur}
           onChange={this.onChange}

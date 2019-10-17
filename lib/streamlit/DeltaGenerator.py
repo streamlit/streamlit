@@ -2049,27 +2049,33 @@ class DeltaGenerator(object):
         format=None
     ):
         """Display a single-line numeric input widget.
+
         Parameters
         ----------
         label : str or None
             A short label explaining to the user what this input is for.
         value : int/float or None
             The value of this widget when it first renders.
-            default: min_value or 0
-        min_value : int/float or None
+            default: min_value or 0 is min_value is None
+        min_value : int or float or None
             The minimum permitted value.
-        max_value : int/float or None
+            If None, there will be no minimum.
+        max_value : int or float or None
             The maximum permitted value.
-        step : int/float or None
+            If None, there will be no maximum.
+        step : int or float or None
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
             If the value is not specified, the format parameter will be used.
         format : str or None
             Printf/Python format string.
+
         Returns
         -------
-        int/float
+        int or float
             The current value of the numeric input widget.
+            The return type will match the data type of the value parameter.
+
         Example
         -------
         >>> number = st.number_input('Insert a number')
@@ -2094,7 +2100,7 @@ class DeltaGenerator(object):
                 format = "%d" if int_value else "%0.2f"
 
             if step is None:
-                step = 1 if is_int_value(format % 0.01) else 0.01
+                step = 1 if int_value else 0.01
 
         # Ensure that all arguments are of the same type.
         args = [min_value, max_value, step]
@@ -2147,11 +2153,8 @@ class DeltaGenerator(object):
         element.number_input.label = label
         element.number_input.default = value
 
-        if min_value is not None:
-            element.number_input.min = min_value
-
-        if max_value is not None:
-            element.number_input.max = max_value
+        element.number_input.min = min_value if min_value else float("-inf")
+        element.number_input.max = max_value if max_value else float("+inf")
 
         if step is not None:
             element.number_input.step = step

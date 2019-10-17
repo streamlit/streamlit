@@ -16,24 +16,12 @@
 
 syntax = "proto3";
 
-
-
 message NumberInput {
   string id = 1;
   string label = 2;
   float default = 3;
-
-  oneof optional_min {
-    float min = 5;
-  }
-
-  oneof optional_max {
-    float max = 6;
-  }
-
+  float min = 5;
+  float max = 6;
   float step = 7;
-
-  oneof optional_format {
-    string format = 8;
-  }
+  string format = 8;
 }
