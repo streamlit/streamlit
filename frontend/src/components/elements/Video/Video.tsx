@@ -50,9 +50,9 @@ class Video extends React.PureComponent<Props> {
       /* is this a YouTube link? if so we need a fancier tag. 
          NOTE: This part assumes the URL is already an "embed" link.
       */
-      if (element.get("url").includes("youtube.com")) {
+      if (element.get("type") == "YOUTUBE_IFRAME") {
         const height = width * 0.75
-        const wid -> width
+        const wid = width
         return (
           <iframe
             src={element.get("url")}
