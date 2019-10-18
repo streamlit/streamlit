@@ -18,6 +18,20 @@ syntax = "proto3";
 
 import "streamlit/proto/Widget.proto";
 
+message NewFile {
+  string id = 1;
+  string name = 2;
+  uint64 size = 3;
+  uint64 lastModified = 4;
+  uint32 chunks = 5;
+}
+
+message FileChunk {
+  string id = 1;
+  uint32 index = 2;
+  bytes data = 3;
+}
+
 // A message from the browser to the server.
 message BackMsg {
   oneof type {
@@ -49,5 +63,11 @@ message BackMsg {
 
     // Set to true to ask the server to close the connection
     bool close_connection = 10;
+
+    // Start to upload a new file to the server
+    NewFile new_file = 11;
+
+    // Upload a file chunk to the server
+    FileChunk file_chunk = 12;
   }
 }

@@ -72,29 +72,32 @@ interface Props {
 }
 
 interface State {
-  progress: number
+  status: "READY" | "READING" | "UPLOADING"
 }
 
 class FileUploader extends React.PureComponent<Props, State> {
   public constructor(props: Props) {
     super(props)
     this.state = {
-      progress: 0,
+      status: "READY",
     }
   }
 
-  private handleFileRead = (ev: ProgressEvent<FileReader>): any => {
-    console.log("handleFileRead")
-    console.log(ev.target)
-
+  private handleFileRead = (
+    ev: ProgressEvent<FileReader>,
+    file: File
+  ): any => {
     if (ev.target !== null) {
-      console.log(ev.target.result)
+      if (ev.target.result instanceof ArrayBuffer) {
+        this.props.widgetStateManager.sendUploadFileMessage(
+          this.props.element.get("id"),
+          file.name,
+          file.lastModified,
+          new Uint8Array(ev.target.result)
+        )
+      }
     }
-    this.setState({ progress: 0 })
-  }
-
-  private handleProgress = (ev: ProgressEvent<FileReader>): any => {
-    this.setState({ progress: Math.round((ev.loaded * 100) / ev.total) })
+    this.setState({ status: "UPLOADING" })
   }
 
   private dropHandler = (
@@ -102,28 +105,30 @@ class FileUploader extends React.PureComponent<Props, State> {
     rejectedFiles: File[],
     event: React.SyntheticEvent<HTMLElement>
   ) => {
-    const data = new FormData()
-    data.append("file", acceptedFiles[0])
-    //this.props.widgetStateManager.setFloatValue
-    /*
-        acceptedFiles.forEach((file: File) => {
-            const fileReader = new FileReader();
-            fileReader.onloadend = this.handleFileRead;
-            fileReader.onprogress = this.handleProgress;
-            
-            fileReader.readAsArrayBuffer(file)
-        });*/ //READ FILE
+    this.setState({ status: "READING" })
+    acceptedFiles.forEach((file: File) => {
+      const fileReader = new FileReader()
+      fileReader.onloadend = (ev: ProgressEvent<FileReader>) =>
+        this.handleFileRead(ev, file)
+      fileReader.readAsArrayBuffer(file)
+    })
+  }
+
+  public componentDidUpdate() {
+    const uiValue = this.props.widgetStateManager.getStringValue(
+      this.props.element.get("id")
+    )
+    if (uiValue !== undefined && this.state.status === "UPLOADING") {
+      this.setState({ status: "READY" })
+    }
   }
 
   public render = (): React.ReactNode => {
-    const progressAmount = this.state.progress //this.props.widgetStateManager.set
-
+    const status = this.state.status //this.props.widgetStateManager.set
     return (
       <FileUploaderBaseui //onCancel={stopFakeProgress}
         onDrop={this.dropHandler} // progressAmount is a number from 0 - 100 which indicates the percent of file transfer completed //progressAmount={progressAmount}
-        progressMessage={
-          progressAmount ? `Uploading... ${progressAmount}%` : ""
-        }
+        progressMessage={status !== "READY" ? status : undefined}
       />
     )
   }

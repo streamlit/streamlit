@@ -28,6 +28,7 @@ import "streamlit/proto/DeckGlChart.proto";
 import "streamlit/proto/DocString.proto";
 import "streamlit/proto/Empty.proto";
 import "streamlit/proto/Exception.proto";
+import "streamlit/proto/FileReader.proto";
 import "streamlit/proto/FileUploader.proto";
 import "streamlit/proto/GraphVizChart.proto";
 import "streamlit/proto/Image.proto";
@@ -62,6 +63,7 @@ message Element {
     DocString doc_string = 7;
     Empty empty = 2;
     Exception exception = 8;
+    FileReader file_reader = 30;
     FileUploader file_uploader = 29;
     GraphVizChart graphviz_chart = 18;
     ImageList imgs = 6;

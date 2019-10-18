@@ -37,6 +37,7 @@ from streamlit.ReportSession import ReportSession
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.fileManager import FileManager
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
 from streamlit.server.routes import MessageCacheHandler
@@ -497,9 +498,13 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
 
         try:
             msg.ParseFromString(payload)
-            LOGGER.debug("Received the following back message:\n%s", msg)
-
             msg_type = msg.WhichOneof("type")
+
+
+            if msg_type == "file_chunk":
+                LOGGER.debug("Received the following file_chunk back message:\nfile_uploaded {\n   id: %s\n   index: %s\n   data: #####\n}", msg.file_chunk.id, msg.file_chunk.index)
+            else:
+                LOGGER.debug("Received the following back message:\n%s", msg)
 
             if msg_type == "cloud_upload":
                 yield self._session.handle_save_request(self)
@@ -514,6 +519,14 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
             elif msg_type == "update_widgets":
                 self._session.handle_rerun_script_request(
                     widget_state=msg.update_widgets
+                )
+            elif msg_type == "new_file":
+                self._session.handle_new_file(
+                    new_file=msg.new_file
+                )
+            elif msg_type == "file_chunk":
+                self._session.handle_file_chunk(
+                    file_chunk=msg.file_chunk
                 )
             elif msg_type == "close_connection":
                 if config.get_option("global.developmentMode"):

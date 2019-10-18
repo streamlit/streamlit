@@ -442,6 +442,14 @@ def _server_enable_cors():
     return True
 
 
+@_create_option("server.temporaryFileUploadFolder", type_=str)
+def _server_temporary_file_upload_folder():
+    """Default folder to store temporal files.
+
+    Default: './temp'
+    """
+    return "./temp"
+
 # Config Section: Browser #
 
 _create_section("browser", "Configuration of browser front-end.")

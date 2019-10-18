@@ -25,6 +25,7 @@ from streamlit import __version__
 from streamlit import caching
 from streamlit import config
 from streamlit import util
+from streamlit.fileManager import FileManager
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.Report import Report
 from streamlit.ScriptRequestQueue import RerunData
@@ -36,13 +37,13 @@ from streamlit.credentials import Credentials
 from streamlit.logger import get_logger
 from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.FileUploadStatus_pb2 import FileUploadStatus
 from streamlit.proto.Widget_pb2 import WidgetStates
 from streamlit.server.server_util import serialize_forward_msg
 from streamlit.storage.S3Storage import S3Storage as Storage
 from streamlit.watcher.LocalSourcesWatcher import LocalSourcesWatcher
 
 LOGGER = get_logger(__name__)
-
 
 class ReportSessionState(Enum):
     REPORT_NOT_RUNNING = "REPORT_NOT_RUNNING"
@@ -107,6 +108,8 @@ class ReportSession(object):
 
         self._scriptrunner = None
 
+        self.fileManager = FileManager()
+
         LOGGER.debug("ReportSession initialized (id=%s)", self.id)
 
     def flush_browser_queue(self):
@@ -132,6 +135,7 @@ class ReportSession(object):
         """
         if self._state != ReportSessionState.SHUTDOWN_REQUESTED:
             LOGGER.debug("Shutting down (id=%s)", self.id)
+            self.fileManager.delete_all_files()
 
             # Shut down the ScriptRunner, if one is active.
             # self._state must not be set to SHUTDOWN_REQUESTED until
@@ -430,6 +434,32 @@ class ReportSession(object):
                 return
 
         self.request_rerun(widget_state)
+
+    def handle_new_file(
+        self, new_file=None
+    ):
+
+        self.fileManager.locate_new_file(widgetId=new_file.id, name=new_file.name, size=new_file.size, lastModified=new_file.lastModified, chunks=new_file.chunks)
+        
+
+    def handle_file_chunk(
+        self, file_chunk=None
+    ):
+        progress, fullName = self.fileManager.porcess_chunk(widgetId=file_chunk.id, index=file_chunk.index, data=file_chunk.data)
+        
+        msg = ForwardMsg()
+        msg.file_upload_status.id = file_chunk.id
+        msg.file_upload_status.value = fullName   
+
+        if progress == 1: 
+            msg.file_upload_status.state = FileUploadStatus.FINISHED
+            msg.file_upload_status.progress = 1
+                 
+        else:
+            msg.file_upload_status.state = FileUploadStatus.UPLOADING
+            msg.file_upload_status.progress = progress 
+
+        self.enqueue(msg)
 
     def handle_stop_script_request(self):
         """Tells the ScriptRunner to stop running its report."""

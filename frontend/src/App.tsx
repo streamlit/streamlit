@@ -17,7 +17,7 @@
 
 import React, { Fragment, PureComponent, ReactNode } from "react"
 import { HotKeys } from "react-hotkeys"
-import { fromJS, List } from "immutable"
+import { fromJS, List, Map } from "immutable"
 import classNames from "classnames"
 
 // Other local imports.
@@ -52,6 +52,7 @@ import {
   IBackMsg,
   SessionState,
   Initialize,
+  FileUploadStatus,
 } from "autogen/proto"
 
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
@@ -71,6 +72,7 @@ import "./App.scss"
 import "assets/css/header.scss"
 import "assets/css/open-iconic.scss"
 import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
+import { string } from "prop-types"
 
 interface Props {}
 
@@ -220,6 +222,7 @@ class App extends PureComponent<Props, State> {
   handleMessage(msgProto: ForwardMsg): void {
     // We don't have an immutableProto here, so we can't use
     // the dispatchOneOf helper
+
     const dispatchProto = (obj: any, name: string, funcs: any): any => {
       const whichOne = obj[name]
       if (whichOne in funcs) {
@@ -258,6 +261,20 @@ class App extends PureComponent<Props, State> {
             onClose: () => {},
           }
           this.openDialog(newDialog)
+        },
+        fileUploadStatus: (fileUploadStatus: FileUploadStatus) => {
+          if (!fileUploadStatus.state) {
+            fileUploadStatus.state = 0
+          }
+
+          if (fileUploadStatus.state == 0) {
+            //FINISHED TO UPLOAD
+            this.widgetMgr.setStringValue(
+              fileUploadStatus.id,
+              fileUploadStatus.value,
+              { fromUi: true }
+            )
+          }
         },
       })
     } catch (err) {
@@ -448,6 +465,20 @@ class App extends PureComponent<Props, State> {
     }
   }
 
+  updateFileUploaderWidget = (
+    element: any,
+    widgetId: string,
+    value: string
+  ): any => {
+    let fileUploaderWidget = element.get("fileUploader")
+    if (fileUploaderWidget !== undefined) {
+      if (fileUploaderWidget.get("id") === widgetId) {
+        fileUploaderWidget = fileUploaderWidget.set("value", value)
+        element = element.set("fileUploader", fileUploaderWidget)
+      }
+    }
+    return element
+  }
   /**
    * Removes old elements. The term old is defined as:
    *  - simple elements whose reportIds are no longer current

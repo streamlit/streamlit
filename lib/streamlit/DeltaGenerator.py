@@ -38,6 +38,7 @@ from streamlit.proto import Balloons_pb2
 from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto import Text_pb2
+from streamlit.fileManager import FileManager
 from streamlit import get_report_ctx
 
 # setup logging
@@ -1705,7 +1706,6 @@ class DeltaGenerator(object):
         >>> st.write('Values:', values)
 
         """
-
         # Set value default.
         if value is None:
             value = min_value if min_value is not None else 0
@@ -1825,10 +1825,26 @@ class DeltaGenerator(object):
         label,
         type,
     ):
+
         element.file_uploader.label = label
         element.file_uploader.type[:] = type
-        
-        return "some value"
+        ui_value = _get_widget_ui_value("file_uploader", element)
+        LOGGER.debug(ui_value)
+        return ui_value if ui_value is not None else ""
+
+    
+    def file_reader(
+        self,
+        file,
+    ):
+
+        if len(file) > 0:
+            with open(file, "rb") as f:
+                data = f.read()
+                f.close()
+                return data
+
+        return []
 
     @_with_element
     def text_input(self, element, label, value="", key=None):

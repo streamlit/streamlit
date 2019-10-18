@@ -21,8 +21,9 @@ import {
   FloatArray,
   WidgetState,
   WidgetStates,
+  NewFile,
+  FileChunk,
 } from "autogen/proto"
-
 import { Set as ImmutableSet } from "immutable"
 
 export interface Source {
@@ -191,6 +192,32 @@ export class WidgetStateManager {
         this.deleteWidgetStateProto(key)
       }
     })
+  }
+
+  public sendUploadFileMessage(
+    id: string,
+    name: string,
+    lastModified: number,
+    data: Uint8Array
+  ): void {
+    const limit = 48 * 1e6 //48MB
+
+    let newFileMessage: NewFile = new NewFile()
+    newFileMessage.id = id
+    newFileMessage.name = name
+    newFileMessage.size = data.length
+    newFileMessage.lastModified = lastModified
+    newFileMessage.chunks = Math.ceil(data.length / limit)
+    this.sendBackMsg({ newFile: newFileMessage })
+
+    for (let i = 0; i < newFileMessage.chunks; i++) {
+      let message: FileChunk = new FileChunk()
+      message.id = id
+      message.index = i
+      const dataIndex = i * limit
+      message.data = data.slice(dataIndex, dataIndex + limit)
+      this.sendBackMsg({ fileChunk: message })
+    }
   }
 
   private createWigetStatesMsg(): WidgetStates {
