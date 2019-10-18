@@ -68,6 +68,7 @@ def _marshall_binary(proto, data):
             BytesIO, NumPy array, or a file opened with io.open().
     """
     if type(data) in string_types:
+        # Python3 raises TypeError for unencodable text (but not Python 2.7)
         b64encodable = bytes(data)
     elif type(data) is newbytes:
         b64encodable = data
@@ -96,8 +97,8 @@ def marshall_video(proto, data, format="video/mp4", start_time=0):
     ----------
     proto: the proto to fill. Must have a string field called "data".
     data : str, bytes, BytesIO, numpy.ndarray, or file opened with
-            io.open().
-        The raw video data or a string with a URL pointing to the video
+           io.open().
+        Raw video data or a string with a URL pointing to the video
         to load. Includes support for YouTube URLs.
         If passing the raw data, this must include headers and any other 
         bytes required in the actual file.
@@ -128,9 +129,9 @@ def marshall_audio(proto, data, format="audio/wav", start_time=0):
     Parameters
     ----------
     proto: The proto to fill. Must have a string field called "data".
-    data : str, bytes, BytesIO, numpy.ndarray, or file opened with
-            io.open().
-        The raw audio data or a string with a URL pointing to the file to load.
+    data : str, bytes, BytesIO, numpy.ndarray, or file opened with 
+           io.open()
+        Raw audio data or a string with a URL pointing to the file to load.
         If passing the raw data, this must include headers and any other bytes 
         required in the actual file.
     format : str
