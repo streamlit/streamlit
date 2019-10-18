@@ -46,12 +46,14 @@
         align-items: center;
         width: $controls-width;
         justify-content: center;
-        transition: all ease-in 0.2s;
+        transition: color $normal-animation-duration,
+          background-color $normal-animation-duration;
         background-color: $gray-lighter;
 
         &:hover {
           color: $white;
           background-color: $primary;
+          transition: none;
         }
 
         &:last-child {
