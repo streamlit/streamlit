@@ -1364,7 +1364,7 @@ class DeltaGenerator(object):
         # TODO: Provide API to convert raw NumPy arrays to audio file (with
         # proper headers, etc)?
         from .elements import media_proto
-        media_proto.marshall_audio(element.audio, data, format="audio/wav", start_time=0)
+        media_proto.marshall_audio(element.audio, data, format, start_time)
 
     @_with_element
     def video(self, element, data, format="video/mp4", start_time=0):
