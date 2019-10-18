@@ -26,6 +26,9 @@ export interface BaseUriParts {
   basePath: string
 }
 
+const FINAL_SLASH_RE = /\/+$/
+const INITIAL_SLASH_RE = /^\/+/
+
 /**
  * Return the BaseUriParts for the global window
  */
@@ -45,6 +48,8 @@ export function getWindowBaseUriParts(): BaseUriParts {
         : 80
 
   const basePath = window.location.pathname
+    .replace(FINAL_SLASH_RE, "")
+    .replace(INITIAL_SLASH_RE, "")
 
   return { host, port, basePath }
 }
@@ -74,8 +79,8 @@ export function buildHttpUri(
 }
 
 function makePath(basePath: string, subPath: string): string {
-  basePath = basePath.replace("/", "")
-  subPath = subPath.replace("/", "")
+  basePath = basePath.replace(FINAL_SLASH_RE, "").replace(INITIAL_SLASH_RE, "")
+  subPath = subPath.replace(FINAL_SLASH_RE, "").replace(INITIAL_SLASH_RE, "")
 
   if (basePath.length === 0) {
     return subPath

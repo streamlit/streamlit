@@ -20,7 +20,11 @@ import fetchMock from "fetch-mock"
 import { ForwardMsgCache } from "lib/ForwardMessageCache"
 import { buildHttpUri } from "lib/UriUtil"
 
-const MOCK_SERVER_URI = { host: "streamlit.mock", port: 80 }
+const MOCK_SERVER_URI = {
+  host: "streamlit.mock",
+  port: 80,
+  basePath: "",
+}
 
 interface MockCache {
   cache: ForwardMsgCache
