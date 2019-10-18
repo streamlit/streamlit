@@ -111,7 +111,8 @@ def marshall_video(proto, data, format="video/mp4", start_time=0):
     proto.format = format
     proto.start_time = start_time
 
-    if type(data) in string_types and url(data):
+    #if type(data) in string_types and url(data):
+    if url(data):
         youtube_url = _reshape_youtube_url(data)
         if youtube_url:
             proto.url = youtube_url
@@ -143,7 +144,8 @@ def marshall_audio(proto, data, format="audio/wav", start_time=0):
     proto.format = format
     proto.start_time = start_time
 
-    if type(data) in string_types and url(data):
+    #if type(data) in string_types and url(data):
+    if url(data):
         proto.url = data
     else:
         _marshall_binary(proto, data)

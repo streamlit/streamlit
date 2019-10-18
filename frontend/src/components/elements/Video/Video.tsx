@@ -56,6 +56,7 @@ class Video extends React.PureComponent<Props> {
         const wid = width
         return (
           <iframe
+            title={element.get("url")}
             src={element.get("url")}
             width={wid}
             height={height}
