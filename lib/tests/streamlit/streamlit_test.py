@@ -133,10 +133,12 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.audio.url, some_url)
 
-        # Test that a non-URL string doesn't work
+        # Test that a non-URL string doesn't load into URL param.
         non_url = "blah"
-        with self.assertRaises(TypeError):
-            st.audio(non_url)
+        st.audio(non_url) 
+        el = self.get_delta_from_queue().new_element
+        assert not el.audio.url
+        assert el.audio.data == "YmxhaA=="   #"blah" to base64 encoded payload
 
     def test_st_audio_options(self):
         """Test st.audio with options."""
@@ -595,10 +597,12 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             el = self.get_delta_from_queue().new_element
             self.assertEqual(el.video.url, yt_embeds[x])
 
-        # Test that a non-URL string doesn't work
+        # Test that a non-URL string doesn't load the URL property
         non_url = "blah"
-        with self.assertRaises(TypeError):
-            st.video(non_url)
+        st.video(non_url) 
+        el = self.get_delta_from_queue().new_element
+        assert not el.video.url
+        assert el.video.data == "YmxhaA=="   #"blah" to base64 encoded payload
 
     def test_st_video_options(self):
         """Test st.video with options."""
