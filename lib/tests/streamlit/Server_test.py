@@ -304,7 +304,7 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
     def get_app(self):
         return tornado.web.Application(
-            [(r"/healthz", HealthHandler, dict(health_check=self.is_healthy))]
+            [(r"/healthz", HealthHandler, dict(callback=self.is_healthy))]
         )
 
     def test_healthz(self):
