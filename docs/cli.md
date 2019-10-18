@@ -18,12 +18,17 @@ Below are a few of the most useful commands accepted by Streamlit CLI:
 ## Run Streamlit apps
 
 ```bash
-$ streamlit run your_script.py [script args]
+$ streamlit run your_script.py [-- script args]
 ```
 
 Runs your app. At any time you can kill the server with **Ctrl+c**.
 
-Note that when passing your script args, **they must be passed bare** (`arg`, not `-arg` or `--arg`). This is because the module that interprets Streamlit's command line arguments (`click`) will greedily interpret anything that looks like a flag as an argument belonging to Streamlit itself.
+```eval_rst
+.. note::
+  When passing your script some arguments, **they must be passed after a `--`**
+  (double dash). Otherwise the arguments get interpreted as anything arguments
+  to Streamlit itself.
+```
 
 You can also pass in config options to `streamlit run`. These allow you to do
 things like change the port the app is served from, disable run-on-save, and
