@@ -72,7 +72,7 @@ def _marshall_binary(proto, data):
     elif type(data) is newbytes:
         b64encodable = data
     elif type(data) is bytes:
-        # Must come after str, since byte and str are equivalend in Python 2.7.
+        # Must come after str, since byte and str are equivalent in Python 2.7.
         b64encodable = data
     elif isinstance(data, io.BytesIO):
         data.seek(0)
@@ -111,8 +111,7 @@ def marshall_video(proto, data, format="video/mp4", start_time=0):
     proto.format = format
     proto.start_time = start_time
 
-    #if type(data) in string_types and url(data):
-    if url(data):
+    if isinstance(data, string_types) and url(data):
         youtube_url = _reshape_youtube_url(data)
         if youtube_url:
             proto.url = youtube_url
@@ -144,8 +143,7 @@ def marshall_audio(proto, data, format="audio/wav", start_time=0):
     proto.format = format
     proto.start_time = start_time
 
-    #if type(data) in string_types and url(data):
-    if url(data):
+    if isinstance(data, string_types) and url(data):
         proto.url = data
     else:
         _marshall_binary(proto, data)
