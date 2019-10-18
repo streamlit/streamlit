@@ -47,11 +47,11 @@
         width: $controls-width;
         justify-content: center;
         transition: all ease-in 0.2s;
-        background-color: rgb(230, 234, 241);
+        background-color: $gray-lighter;
 
         &:hover {
-          color: white;
-          background-color: rgb(246, 51, 102);
+          color: $white;
+          background-color: $primary;
         }
 
         &:last-child {
