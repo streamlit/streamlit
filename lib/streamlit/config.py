@@ -450,6 +450,7 @@ def _server_temporary_file_upload_folder():
     """
     return "./temp"
 
+
 # Config Section: Browser #
 
 _create_section("browser", "Configuration of browser front-end.")

@@ -1819,12 +1819,7 @@ class DeltaGenerator(object):
         return current_value if single_value else tuple(current_value)
 
     @_with_element
-    def file_uploader(
-        self,
-        element,
-        label,
-        type,
-    ):
+    def file_uploader(self, element, label, type):
 
         element.file_uploader.label = label
         element.file_uploader.type[:] = type
@@ -1832,11 +1827,7 @@ class DeltaGenerator(object):
         LOGGER.debug(ui_value)
         return ui_value if ui_value is not None else ""
 
-    
-    def file_reader(
-        self,
-        file,
-    ):
+    def file_reader(self, file):
 
         if len(file) > 0:
             with open(file, "rb") as f:

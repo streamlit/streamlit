@@ -45,6 +45,7 @@ from streamlit.watcher.LocalSourcesWatcher import LocalSourcesWatcher
 
 LOGGER = get_logger(__name__)
 
+
 class ReportSessionState(Enum):
     REPORT_NOT_RUNNING = "REPORT_NOT_RUNNING"
     REPORT_IS_RUNNING = "REPORT_IS_RUNNING"
@@ -435,29 +436,32 @@ class ReportSession(object):
 
         self.request_rerun(widget_state)
 
-    def handle_new_file(
-        self, new_file=None
-    ):
+    def handle_new_file(self, new_file=None):
 
-        self.fileManager.locate_new_file(widgetId=new_file.id, name=new_file.name, size=new_file.size, lastModified=new_file.lastModified, chunks=new_file.chunks)
-        
+        self.fileManager.locate_new_file(
+            widgetId=new_file.id,
+            name=new_file.name,
+            size=new_file.size,
+            lastModified=new_file.lastModified,
+            chunks=new_file.chunks,
+        )
 
-    def handle_file_chunk(
-        self, file_chunk=None
-    ):
-        progress, fullName = self.fileManager.porcess_chunk(widgetId=file_chunk.id, index=file_chunk.index, data=file_chunk.data)
-        
+    def handle_file_chunk(self, file_chunk=None):
+        progress, fullName = self.fileManager.porcess_chunk(
+            widgetId=file_chunk.id, index=file_chunk.index, data=file_chunk.data
+        )
+
         msg = ForwardMsg()
         msg.file_upload_status.id = file_chunk.id
-        msg.file_upload_status.value = fullName   
+        msg.file_upload_status.value = fullName
 
-        if progress == 1: 
+        if progress == 1:
             msg.file_upload_status.state = FileUploadStatus.FINISHED
             msg.file_upload_status.progress = 1
-                 
+
         else:
             msg.file_upload_status.state = FileUploadStatus.UPLOADING
-            msg.file_upload_status.progress = progress 
+            msg.file_upload_status.progress = progress
 
         self.enqueue(msg)
 
