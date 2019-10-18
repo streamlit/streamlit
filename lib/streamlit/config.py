@@ -428,7 +428,7 @@ _create_option(
     description="""
         The base path for the URL where Streamlit should be served from.
         """,
-    default_val="/",
+    default_val="",
     type_=str,
 )
 

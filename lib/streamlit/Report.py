@@ -51,13 +51,13 @@ class Report(object):
             The URL.
         """
         port = _get_browser_address_bar_port()
-        base_path = config.get_option('server.baseUrlPath')
+        base_path = config.get_option('server.baseUrlPath').strip('/')
 
-        if len(base_path) > 1:
-            base_path.rstrip('/')
+        if base_path:
+            base_path = '/' + base_path
 
-        return "http://%(host_ip)s:%(port)s/%(base_path)s" % {
-            "host_ip": host_ip.rstrip('/'),
+        return "http://%(host_ip)s:%(port)s%(base_path)s" % {
+            "host_ip": host_ip.strip('/'),
             "port": port,
             "base_path": base_path,
         }
