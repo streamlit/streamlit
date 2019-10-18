@@ -23,6 +23,7 @@ import { IS_DEV_ENV, WEBSOCKET_PORT_DEV } from "lib/baseconsts"
 export interface BaseUriParts {
   host: string
   port: number
+  basePath: string
 }
 
 /**
@@ -33,36 +34,54 @@ export function getWindowBaseUriParts(): BaseUriParts {
   // server's port 3000.
   // If changed, also change config.py
   const host = window.location.hostname
+
+  // prettier-ignore
   const port = IS_DEV_ENV
     ? WEBSOCKET_PORT_DEV
     : window.location.port
-    ? Number(window.location.port)
-    : isHttps()
-    ? 443
-    : 80
-  return { host, port }
+      ? Number(window.location.port)
+      : isHttps()
+        ? 443
+        : 80
+
+  const basePath = window.location.pathname
+
+  return { host, port, basePath }
 }
 
 /**
  * Create a ws:// or wss:// URI for the given path.
  */
 export function buildWsUri(
-  { host, port }: BaseUriParts,
+  { host, port, basePath }: BaseUriParts,
   path: string
 ): string {
   const protocol = isHttps() ? "wss" : "ws"
-  return `${protocol}://${host}:${port}/${path}`
+  const fullPath = makePath(basePath, path)
+  return `${protocol}://${host}:${port}/${fullPath}`
 }
 
 /**
  * Create an HTTP URI for the given path.
  */
 export function buildHttpUri(
-  { host, port }: BaseUriParts,
+  { host, port, basePath }: BaseUriParts,
   path: string
 ): string {
   const protocol = isHttps() ? "https" : "http"
-  return `${protocol}://${host}:${port}/${path}`
+  const fullPath = makePath(basePath, path)
+  return `${protocol}://${host}:${port}/${fullPath}`
+}
+
+function makePath(basePath: string, subPath: string): string {
+  basePath = basePath.replace("/", "")
+  subPath = subPath.replace("/", "")
+
+  if (basePath.length === 0) {
+    return subPath
+  }
+
+  return `${basePath}/${subPath}`
 }
 
 /**

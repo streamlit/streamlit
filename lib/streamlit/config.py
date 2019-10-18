@@ -423,6 +423,16 @@ def _server_port():
     return 8501
 
 
+_create_option(
+    "server.baseUrlPath",
+    description="""
+        The base path for the URL where Streamlit should be served from.
+        """,
+    default_val="/",
+    type_=str,
+)
+
+
 @_create_option("server.enableCORS", type_=bool)
 def _server_enable_cors():
     """Enables support for Cross-Origin Request Sharing, for added security.

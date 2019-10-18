@@ -83,19 +83,19 @@ class _SpecialRequestHandler(tornado.web.RequestHandler):
 
 
 class HealthHandler(_SpecialRequestHandler):
-    def initialize(self, health_check):
+    def initialize(self, callback):
         """Initialize the handler
 
         Parameters
         ----------
-        health_check : callable
+        callback : callable
             A function that returns True if the server is healthy
 
         """
-        self._health_check = health_check
+        self._callback = callback
 
     def get(self):
-        if self._health_check():
+        if self._callback():
             self.write("ok")
             self.set_status(200)
         else:

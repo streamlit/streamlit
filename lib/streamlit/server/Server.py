@@ -45,6 +45,7 @@ from streamlit.server.routes import StaticFileHandler
 from streamlit.server.server_util import MESSAGE_SIZE_LIMIT
 from streamlit.server.server_util import is_cacheable_msg
 from streamlit.server.server_util import is_url_from_allowed_origins
+from streamlit.server.server_util import make_url_path_regex
 from streamlit.server.server_util import serialize_forward_msg
 
 LOGGER = get_logger(__name__)
@@ -227,16 +228,31 @@ class Server(object):
         tornado.web.Application
 
         """
+        base = config.get_option('server.baseUrlPath')
         routes = [
-            (r"/stream", _BrowserWebSocketHandler, dict(server=self)),
             (
-                r"/healthz",
+                make_url_path_regex(base, 'stream'),
+                _BrowserWebSocketHandler,
+                dict(server=self)),
+            (
+                make_url_path_regex(base, 'healthz'),
                 HealthHandler,
-                dict(health_check=lambda: self.is_ready_for_browser_connection),
+                dict(callback=lambda: self.is_ready_for_browser_connection),
             ),
-            (r"/debugz", DebugHandler, dict(server=self)),
-            (r"/metrics", MetricsHandler),
-            (r"/message", MessageCacheHandler, dict(cache=self._message_cache)),
+            (
+                make_url_path_regex(base, 'debugz'),
+                DebugHandler,
+                dict(server=self),
+            ),
+            (
+                make_url_path_regex(base, 'metrics'),
+                MetricsHandler,
+            ),
+            (
+                make_url_path_regex(base, 'message'),
+                MessageCacheHandler,
+                dict(cache=self._message_cache),
+            ),
         ]
 
         if config.get_option("global.developmentMode") and config.get_option(
@@ -250,7 +266,7 @@ class Server(object):
             routes.extend(
                 [
                     (
-                        r"/(.*)",
+                        make_url_path_regex(base, '(.*)'),
                         StaticFileHandler,
                         {"path": "%s/" % static_path, "default_filename": "index.html"},
                     )
