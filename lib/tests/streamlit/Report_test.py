@@ -113,28 +113,27 @@ class ReportTest(unittest.TestCase):
         self.assertEqual("external_ip", manifest.external_server_ip)
         self.assertEqual("internal_ip", manifest.internal_server_ip)
 
-    @parameterized.expand([
-        (None, None, 'http://the_ip_address:8501'),
-        (None, 9988, 'http://the_ip_address:9988'),
-        ('foo', None, 'http://the_ip_address:8501/foo'),
-        ('/foo/bar/', None, 'http://the_ip_address:8501/foo/bar'),
-        ('/foo/bar/', 9988, 'http://the_ip_address:9988/foo/bar'),
-    ])
+    @parameterized.expand(
+        [
+            (None, None, "http://the_ip_address:8501"),
+            (None, 9988, "http://the_ip_address:9988"),
+            ("foo", None, "http://the_ip_address:8501/foo"),
+            ("/foo/bar/", None, "http://the_ip_address:8501/foo/bar"),
+            ("/foo/bar/", 9988, "http://the_ip_address:9988/foo/bar"),
+        ]
+    )
     def test_get_url(self, baseUrl, port, expected_url):
-        options = {
-            'global.useNode': False,
-            'server.headless': False,
-        }
+        options = {"global.useNode": False, "server.headless": False}
 
         if baseUrl:
-            options['server.baseUrlPath'] = baseUrl
+            options["server.baseUrlPath"] = baseUrl
 
         if port:
-            options['server.port'] = port
+            options["server.port"] = port
 
         mock_get_option = testutil.build_mock_config_get_option(options)
 
-        with patch.object(config, 'get_option', new=mock_get_option):
-            actual_url = Report.get_url('the_ip_address')
+        with patch.object(config, "get_option", new=mock_get_option):
+            actual_url = Report.get_url("the_ip_address")
 
         self.assertEqual(expected_url, actual_url)

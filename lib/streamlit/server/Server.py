@@ -228,28 +228,22 @@ class Server(object):
         tornado.web.Application
 
         """
-        base = config.get_option('server.baseUrlPath')
+        base = config.get_option("server.baseUrlPath")
         routes = [
             (
-                make_url_path_regex(base, 'stream'),
+                make_url_path_regex(base, "stream"),
                 _BrowserWebSocketHandler,
-                dict(server=self)),
-            (
-                make_url_path_regex(base, 'healthz'),
-                HealthHandler,
-                dict(callback=lambda: self.is_ready_for_browser_connection),
-            ),
-            (
-                make_url_path_regex(base, 'debugz'),
-                DebugHandler,
                 dict(server=self),
             ),
             (
-                make_url_path_regex(base, 'metrics'),
-                MetricsHandler,
+                make_url_path_regex(base, "healthz"),
+                HealthHandler,
+                dict(callback=lambda: self.is_ready_for_browser_connection),
             ),
+            (make_url_path_regex(base, "debugz"), DebugHandler, dict(server=self)),
+            (make_url_path_regex(base, "metrics"), MetricsHandler),
             (
-                make_url_path_regex(base, 'message'),
+                make_url_path_regex(base, "message"),
                 MessageCacheHandler,
                 dict(cache=self._message_cache),
             ),
@@ -266,7 +260,7 @@ class Server(object):
             routes.extend(
                 [
                     (
-                        make_url_path_regex(base, '(.*)'),
+                        make_url_path_regex(base, "(.*)"),
                         StaticFileHandler,
                         {"path": "%s/" % static_path, "default_filename": "index.html"},
                     )

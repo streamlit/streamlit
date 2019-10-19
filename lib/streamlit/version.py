@@ -32,7 +32,7 @@ CHECK_PYPI_PROBABILITY = 0.10
 
 
 def _version_str_to_tuple(version_str):
-    return tuple(int(x) for x in version_str.split('.'))
+    return tuple(int(x) for x in version_str.split("."))
 
 
 def _get_installed_streamlit_version():

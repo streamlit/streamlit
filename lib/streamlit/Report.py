@@ -51,13 +51,13 @@ class Report(object):
             The URL.
         """
         port = _get_browser_address_bar_port()
-        base_path = config.get_option('server.baseUrlPath').strip('/')
+        base_path = config.get_option("server.baseUrlPath").strip("/")
 
         if base_path:
-            base_path = '/' + base_path
+            base_path = "/" + base_path
 
         return "http://%(host_ip)s:%(port)s%(base_path)s" % {
-            "host_ip": host_ip.strip('/'),
+            "host_ip": host_ip.strip("/"),
             "port": port,
             "base_path": base_path,
         }
@@ -252,9 +252,7 @@ class Report(object):
             # websocket port, not the web server port. (These are the same in
             # prod, but different in dev)
             manifest.server_port = config.get_option("browser.serverPort")
-            manifest.server_base_path = config.get_option(
-                "server.baseUrlPath"
-            )
+            manifest.server_base_path = config.get_option("server.baseUrlPath")
         else:
             manifest.num_messages = num_messages
 
