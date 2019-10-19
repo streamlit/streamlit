@@ -49,7 +49,7 @@ def _reshape_youtube_url(url):
 
     Parameters
     ----------
-    url : str, bytes
+        url : str or bytes
     
     Example
     -------
@@ -69,9 +69,9 @@ def _marshall_binary(proto, data):
 
     Parameters 
     ----------
-        proto : the proto to fill. Must have a string field called "data".
-        data : a buffer with the binary data. Supported formats: str, bytes,
-            BytesIO, NumPy array, or a file opened with io.open().
+    proto : the proto to fill. Must have a string field called "data".
+    data : a buffer with the binary data. Supported formats: str, bytes,
+        BytesIO, NumPy array, or a file opened with io.open().
     """
     if type(data) in string_types:
         # Python3 raises TypeError for unencodable text (but not Python 2.7)
