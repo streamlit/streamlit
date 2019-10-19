@@ -17,6 +17,7 @@
 
 import React from "react"
 import { Map as ImmutableMap } from "immutable"
+import { Video as VideoProto } from "autogen/proto"
 
 interface Props {
   width: number
@@ -42,7 +43,41 @@ class Video extends React.PureComponent<Props> {
   }
 
   public render(): React.ReactNode {
+    /* Element may contain "url" or "data" property. */
+
     const { element, width } = this.props
+
+    if (element.get("url")) {
+      /* is this a YouTube link? if so we need a fancier tag. 
+         NOTE: This part assumes the URL is already an "embed" link.
+      */
+      if (element.get("type") === VideoProto.Type.YOUTUBE_IFRAME) {
+        const height = width * 0.75
+        const wid = width
+        return (
+          <iframe
+            title={element.get("url")}
+            src={element.get("url")}
+            width={wid}
+            height={height}
+            frameBorder="0"
+            allow="autoplay; encrypted-media"
+            allowFullScreen
+          ></iframe>
+        )
+      } else {
+        return (
+          <video
+            ref={this.videoRef}
+            controls
+            src={element.get("url")}
+            className="stVideo"
+            style={{ width }}
+          />
+        )
+      }
+    }
+
     const dataUrl =
       "data:" + element.get("format") + ";base64," + element.get("data")
     return (

@@ -126,6 +126,25 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.audio.data, "ESIzRFVm")
         self.assertEqual(el.audio.format, "audio/wav")
 
+        # test using a URL instead of data
+        some_url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
+        st.audio(some_url)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.audio.url, some_url)
+
+        # Test that a non-URL string doesn't load into URL param.
+        non_url = "blah"
+        try:
+            # Python 2 behavior
+            st.audio(non_url)
+            el = self.get_delta_from_queue().new_element
+            assert not el.audio.url
+            assert el.audio.data == "YmxhaA=="  # "blah" to base64 encoded payload
+        except TypeError:
+            # Python 3 behavior
+            assert True
+
     def test_st_audio_options(self):
         """Test st.audio with options."""
         fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
@@ -561,6 +580,41 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         # base64.b64encode(bytes('\x11\x22\x33\x44\x55\x66'.encode('utf-8')))
         self.assertEqual(el.video.data, "ESIzRFVm")
         self.assertEqual(el.video.format, "video/mp4")
+
+        # Test with an arbitrary URL in place of data
+        some_url = "http://www.marmosetcare.com/video/in-the-wild/intro.webm"
+        st.video(some_url)
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.video.url, some_url)
+
+        # Test with sufficiently varied youtube URLs
+        yt_urls = (
+            "https://youtu.be/_T8LGqJtuGc",
+            "https://www.youtube.com/watch?v=kmfC-i9WgH0",
+            "https://www.youtube.com/embed/sSn4e1lLVpA",
+        )
+        yt_embeds = (
+            "https://www.youtube.com/embed/_T8LGqJtuGc",
+            "https://www.youtube.com/embed/kmfC-i9WgH0",
+            "https://www.youtube.com/embed/sSn4e1lLVpA",
+        )
+        # url should be transformed into an embed link (or left alone).
+        for x in range(0, len(yt_urls)):
+            st.video(yt_urls[x])
+            el = self.get_delta_from_queue().new_element
+            self.assertEqual(el.video.url, yt_embeds[x])
+
+        # Test that a non-URL string doesn't load the URL property
+        non_url = "blah"
+        try:
+            # Python 2 behavior
+            st.video(non_url)
+            el = self.get_delta_from_queue().new_element
+            assert not el.video.url
+            assert el.video.data == "YmxhaA=="  # "blah" to base64 encoded payload
+        except TypeError:
+            # Python 3 behavior
+            assert True
 
     def test_st_video_options(self):
         """Test st.video with options."""
