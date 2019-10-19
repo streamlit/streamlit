@@ -221,11 +221,14 @@ def data_frame_demo():
     try:
         df = get_UN_data()
     except urllib.error.URLError as e:
-        st.error("""
+        st.error(
+            """
             **This demo requires internet access.**
 
             Connection error: %s
-        """ % e.reason)
+        """
+            % e.reason
+        )
         return
 
     countries = st.multiselect(

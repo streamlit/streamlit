@@ -23,5 +23,5 @@ st.write("Value 1:", w1)
 w2 = st.sidebar.date_input("Label 2", datetime(2019, 7, 6, 21, 15))
 st.write("Value 2:", w2)
 
-x = st.sidebar.text('overwrite me')
-x.text('overwritten')
+x = st.sidebar.text("overwrite me")
+x.text("overwritten")

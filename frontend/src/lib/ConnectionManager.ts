@@ -177,13 +177,16 @@ export class ConnectionManager {
       internalServerIP,
       externalServerIP,
       serverPort,
+      serverBasePath,
     } = manifest
 
+    const parts = { port: serverPort, basePath: serverBasePath }
+
     const baseUriPartsList = configuredServerAddress
-      ? [{ host: configuredServerAddress, port: serverPort }]
+      ? [{ ...parts, host: configuredServerAddress }]
       : [
-          { host: externalServerIP, port: serverPort },
-          { host: internalServerIP, port: serverPort },
+          { ...parts, host: externalServerIP },
+          { ...parts, host: internalServerIP },
         ]
 
     return new WebsocketConnection({

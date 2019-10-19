@@ -1305,7 +1305,8 @@ class DeltaGenerator(object):
             `image[:, :, 2]` is blue. For images coming from libraries like
             OpenCV you should set this to 'BGR', instead.
         format : 'JPEG' or 'PNG'
-            This parameter specifies the image format. Defaults to 'JPEG'.
+            This parameter specifies the image format to use when transferring
+            the image data. Defaults to 'JPEG'.
 
         Example
         -------
