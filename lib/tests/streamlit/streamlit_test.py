@@ -137,10 +137,10 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         non_url = "blah"
         try:
             # Python 2 behavior
-            st.audio(non_url) 
+            st.audio(non_url)
             el = self.get_delta_from_queue().new_element
             assert not el.audio.url
-            assert el.audio.data == "YmxhaA=="   #"blah" to base64 encoded payload
+            assert el.audio.data == "YmxhaA=="  # "blah" to base64 encoded payload
         except TypeError:
             # Python 3 behavior
             assert True
@@ -588,14 +588,16 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.video.url, some_url)
 
         # Test with sufficiently varied youtube URLs
-        yt_urls = ("https://youtu.be/_T8LGqJtuGc",
-                   "https://www.youtube.com/watch?v=kmfC-i9WgH0",
-                   "https://www.youtube.com/embed/sSn4e1lLVpA",
-                  )
-        yt_embeds = ("https://www.youtube.com/embed/_T8LGqJtuGc",
-                     "https://www.youtube.com/embed/kmfC-i9WgH0",
-                     "https://www.youtube.com/embed/sSn4e1lLVpA",
-                    )   
+        yt_urls = (
+            "https://youtu.be/_T8LGqJtuGc",
+            "https://www.youtube.com/watch?v=kmfC-i9WgH0",
+            "https://www.youtube.com/embed/sSn4e1lLVpA",
+        )
+        yt_embeds = (
+            "https://www.youtube.com/embed/_T8LGqJtuGc",
+            "https://www.youtube.com/embed/kmfC-i9WgH0",
+            "https://www.youtube.com/embed/sSn4e1lLVpA",
+        )
         # url should be transformed into an embed link (or left alone).
         for x in range(0, len(yt_urls)):
             st.video(yt_urls[x])
@@ -606,10 +608,10 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         non_url = "blah"
         try:
             # Python 2 behavior
-            st.video(non_url) 
+            st.video(non_url)
             el = self.get_delta_from_queue().new_element
             assert not el.video.url
-            assert el.video.data == "YmxhaA=="   #"blah" to base64 encoded payload
+            assert el.video.data == "YmxhaA=="  # "blah" to base64 encoded payload
         except TypeError:
             # Python 3 behavior
             assert True
