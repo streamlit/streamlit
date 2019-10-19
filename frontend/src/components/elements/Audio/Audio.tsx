@@ -24,6 +24,23 @@ interface Props {
 }
 
 class Audio extends React.PureComponent<Props> {
+  private audioRef = React.createRef<HTMLAudioElement>()
+
+  public componentDidMount = (): void => {
+    this.updateTime()
+  }
+
+  public componentDidUpdate = (): void => {
+    this.updateTime()
+  }
+
+  private updateTime(): void {
+    if (this.audioRef.current) {
+      const startTime = this.props.element.get("startTime")
+      this.audioRef.current.currentTime = startTime
+    }
+  }
+
   public render(): React.ReactNode {
     const { element, width } = this.props
     if (element.get("url")) {
@@ -39,9 +56,15 @@ class Audio extends React.PureComponent<Props> {
     const dataUrl =
       "data:" + element.get("format") + ";base64," + element.get("data")
     return (
-      <audio controls src={dataUrl} className="stAudio" style={{ width }} />
+      <audio
+        ref={this.audioRef}
+        controls
+        src={dataUrl}
+        className="stAudio"
+        style={{ width }}
+      />
     )
   }
-} /* ref={this.audioRef}  */
+}
 
 export default Audio
