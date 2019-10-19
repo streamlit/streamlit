@@ -29,6 +29,18 @@ from validators import url
 from streamlit.proto import Video_pb2
 
 
+# Regular expression explained at https://regexr.com/4n2l2 Covers any youtube
+# URL (incl. shortlinks and embed links) and extracts its code.
+YOUTUBE_RE = re.compile(
+      # Protocol
+      "http(?:s?):\/\/"
+      # Domain
+      "(?:www\.)?youtu(?:be\.com|\.be)\/"
+      # Path and query string
+      "(?P<watch>(watch\?v=)|embed\/)?(?P<code>[\w\-\_]*)(&(amp;)?[\w\?=]*)?"
+)
+
+
 def _reshape_youtube_url(url):
     """Return whether URL is any kind of YouTube embed or watch link.  If so,
     reshape URL into an embed link suitable for use in an iframe.
@@ -46,13 +58,7 @@ def _reshape_youtube_url(url):
     .. output::
         https://www.youtube.com/embed/_T8LGqJtuGc
     """
-    # Regular expression explained at https://regexr.com/4n2l2
-    # Covers any youtube URL (incl. shortlinks and embed links) and
-    # extracts its code.
-    re_youtube_url = re.compile(
-        "http(?:s?):\/\/(?:www\.)?youtu(?:be\.com|\.be)\/(?P<watch>(watch\?v=)|embed\/)?(?P<code>[\w\-\_]*)(&(amp;)?[\w\?=]*)?"
-    )
-    match = re_youtube_url.match(url)
+    match = YOUTUBE_RE.match(url)
     if match:
         return "https://www.youtube.com/embed/{code}".format(**match.groupdict())
     return None
@@ -111,6 +117,7 @@ def marshall_video(proto, data, format="video/mp4", start_time=0):
 
     proto.format = format
     proto.start_time = start_time
+    proto.type = Video_pb2.Video.Type.NATIVE
 
     if isinstance(data, string_types) and url(data):
         youtube_url = _reshape_youtube_url(data)
