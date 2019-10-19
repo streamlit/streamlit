@@ -61,10 +61,10 @@ def _reshape_youtube_url(url):
 def _marshall_binary(proto, data):
     """Marshals a proto with binary data (converts to base64).
 
-    Args
-    ----
-        proto: the proto to fill. Must have a string field called "data".
-        data: a buffer with the binary data. Supported formats: str, bytes,
+    Parameters 
+    ----------
+        proto : the proto to fill. Must have a string field called "data".
+        data : a buffer with the binary data. Supported formats: str, bytes,
             BytesIO, NumPy array, or a file opened with io.open().
     """
     if type(data) in string_types:
@@ -95,7 +95,7 @@ def marshall_video(proto, data, format="video/mp4", start_time=0):
 
     Parameters 
     ----------
-    proto: the proto to fill. Must have a string field called "data".
+    proto : the proto to fill. Must have a string field called "data".
     data : str, bytes, BytesIO, numpy.ndarray, or file opened with
            io.open().
         Raw video data or a string with a URL pointing to the video
@@ -105,7 +105,7 @@ def marshall_video(proto, data, format="video/mp4", start_time=0):
     format : str
         The mime type for the video file. Defaults to 'video/mp4'.
         See https://tools.ietf.org/html/rfc4281 for more info.
-    start_time: int
+    start_time : int
         The time from which this element should start playing. (default: 0)
     """
 
@@ -128,16 +128,16 @@ def marshall_audio(proto, data, format="audio/wav", start_time=0):
     
     Parameters
     ----------
-    proto: The proto to fill. Must have a string field called "data".
+    proto : The proto to fill. Must have a string field called "data".
     data : str, bytes, BytesIO, numpy.ndarray, or file opened with 
-           io.open()
+            io.open()
         Raw audio data or a string with a URL pointing to the file to load.
         If passing the raw data, this must include headers and any other bytes 
         required in the actual file.
     format : str
         The mime type for the audio file. Defaults to "audio/wav".
         See https://tools.ietf.org/html/rfc4281 for more info.
-    start_time: int
+    start_time : int
         The time from which this element should start playing. (default: 0)
     """
 
