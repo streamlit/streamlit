@@ -52,7 +52,7 @@ NEW_VERSION_TEXT = """
 }
 
 
-@click.group()
+@click.group(context_settings={'auto_envvar_prefix':'STREAMLIT'})
 @click.option("--log_level", show_default=True, type=click.Choice(LOG_LEVELS))
 @click.version_option(prog_name="Streamlit")
 @click.pass_context
