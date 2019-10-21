@@ -19,7 +19,6 @@ import traceback
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
-from streamlit.errors import StreamlitException
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
@@ -100,12 +99,11 @@ def marshall(exception_proto, exception, exception_traceback=None):
 
     # If this is a StreamlitAPIException, we prune all Streamlit entries
     # from the exception's stack trace.
-    strip_streamlit_stack_entries = isinstance(exception, StreamlitAPIException)
+    is_api_exception = isinstance(exception, StreamlitAPIException)
 
     stack_trace = get_stack_trace(
-        exception,
-        exception_traceback,
-        strip_streamlit_stack_entries)
+        exception, exception_traceback, strip_streamlit_stack_entries=is_api_exception
+    )
 
     exception_proto.stack_trace.extend(stack_trace)
 
@@ -117,9 +115,7 @@ def marshall(exception_proto, exception, exception_traceback=None):
             exception_proto.message = _format_syntax_error_message(exception)
         else:
             exception_proto.message = str(exception)
-            exception_proto.message_is_markdown = isinstance(
-                exception, StreamlitException
-            )
+            exception_proto.message_is_markdown = is_api_exception
     except Exception as str_exception:
         # Sometimes the exception's __str__/__unicode__ method itself
         # raises an error.
@@ -199,6 +195,7 @@ def get_stack_trace(
         ]
     else:
         if strip_streamlit_stack_entries:
+
             def get_stackframe_filename(frame):
                 # Python 3 has a frame.filename variable, but frames in
                 # Python 2 are just tuples. This code works in both versions.

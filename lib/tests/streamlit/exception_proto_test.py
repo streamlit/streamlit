@@ -18,10 +18,10 @@ import os
 import unittest
 
 import streamlit as st
+from streamlit import errors
 from streamlit.elements import exception_proto
 from streamlit.elements.exception_proto import _format_syntax_error_message
 from streamlit.errors import StreamlitAPIException
-from streamlit.errors import StreamlitException
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 
 
@@ -41,15 +41,19 @@ SyntaxError: invalid syntax
         self.assertEqual(expected.strip(), _format_syntax_error_message(err))
 
     def test_markdown_flag(self):
-        """Test that ExceptionProtos for StreamlitExceptions (and subclasses)
-        have the "message_is_markdown" flag set.
+        """Test that ExceptionProtos for StreamlitAPIExceptions (and
+        subclasses) have the "message_is_markdown" flag set.
         """
         proto = ExceptionProto()
         exception_proto.marshall(proto, RuntimeError("oh no!"))
         self.assertFalse(proto.message_is_markdown)
 
         proto = ExceptionProto()
-        exception_proto.marshall(proto, StreamlitException("oh no!"))
+        exception_proto.marshall(proto, StreamlitAPIException("oh no!"))
+        self.assertTrue(proto.message_is_markdown)
+
+        proto = ExceptionProto()
+        exception_proto.marshall(proto, errors.DuplicateWidgetID("oh no!"))
         self.assertTrue(proto.message_is_markdown)
 
     def test_strip_streamlit_stack_entries(self):
@@ -73,5 +77,4 @@ SyntaxError: invalid syntax
         streamlit_dir = os.path.dirname(st.__file__)
         streamlit_dir = os.path.join(os.path.realpath(streamlit_dir), "")
         for line in proto.stack_trace:
-            self.assertNotIn(streamlit_dir, line,
-                             "Streamlit stack entry not stripped")
+            self.assertNotIn(streamlit_dir, line, "Streamlit stack entry not stripped")
