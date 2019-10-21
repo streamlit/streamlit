@@ -26,6 +26,7 @@ setup_2_3_shims(globals())
 import functools
 import json
 import random
+import re
 import textwrap
 import pandas as pd
 from datetime import datetime
@@ -1315,7 +1316,8 @@ class DeltaGenerator(object):
             `image[:, :, 2]` is blue. For images coming from libraries like
             OpenCV you should set this to 'BGR', instead.
         format : 'JPEG' or 'PNG'
-            This parameter specifies the image format. Defaults to 'JPEG'.
+            This parameter specifies the image format to use when transferring
+            the image data. Defaults to 'JPEG'.
 
         Example
         -------
@@ -1350,8 +1352,9 @@ class DeltaGenerator(object):
         ----------
         data : str, bytes, BytesIO, numpy.ndarray, or file opened with
                 io.open().
-            The audio data. Must include headers and any other bytes required
-            in the actual file.
+            Raw audio data or a string with a URL pointing to the file to load.
+            If passing the raw data, this must include headers and any other bytes 
+            required in the actual file.
         start_time: int
             The time from which this element should start playing.
         format : str
@@ -1372,11 +1375,8 @@ class DeltaGenerator(object):
         """
         # TODO: Provide API to convert raw NumPy arrays to audio file (with
         # proper headers, etc)?
-        import streamlit.elements.generic_binary_proto as generic_binary_proto
-
-        generic_binary_proto.marshall(element.audio, data)
-        element.audio.format = format
-        element.audio.start_time = start_time
+        from .elements import media_proto
+        media_proto.marshall_audio(element.audio, data, format, start_time)
 
     @_with_element
     def video(self, element, data, format="video/mp4", start_time=0):
@@ -1386,13 +1386,15 @@ class DeltaGenerator(object):
         ----------
         data : str, bytes, BytesIO, numpy.ndarray, or file opened with
                 io.open().
-            Must include headers and any other bytes required in the actual
-            file.
-        start_time: int
-            The time from which this element should start playing.
+            Raw video data or a string with a URL pointing to the video
+            to load. Includes support for YouTube URLs.
+            If passing the raw data, this must include headers and any other 
+            bytes required in the actual file.
         format : str
             The mime type for the video file. Defaults to 'video/mp4'.
             See https://tools.ietf.org/html/rfc4281 for more info.
+        start_time: int
+            The time from which this element should start playing.
 
         Example
         -------
@@ -1408,11 +1410,8 @@ class DeltaGenerator(object):
         """
         # TODO: Provide API to convert raw NumPy arrays to video file (with
         # proper headers, etc)?
-        import streamlit.elements.generic_binary_proto as generic_binary_proto
-
-        generic_binary_proto.marshall(element.video, data)
-        element.video.format = format
-        element.video.start_time = start_time
+        from .elements import media_proto
+        media_proto.marshall_video(element.video, data, format, start_time)
 
     @_with_element
     def button(self, element, label, key=None):

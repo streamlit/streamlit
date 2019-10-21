@@ -623,8 +623,9 @@ class Cache(dict):
         context_indent = len(code_context) - len(code_context.lstrip())
 
         lines = []
-        # TODO: Memoize open(filename, 'r') in a way that clears the memoized version with each
-        # run of the user's script. Then use the memoized text here, in st.echo, and other places.
+        # TODO: Memoize open(filename, 'r') in a way that clears the memoized
+        # version with each run of the user's script. Then use the memoized
+        # text here, in st.echo, and other places.
         with open(filename, "r") as f:
             for line in f.readlines()[caller_lineno:]:
                 if line.strip() == "":

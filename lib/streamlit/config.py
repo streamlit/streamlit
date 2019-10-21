@@ -423,6 +423,16 @@ def _server_port():
     return 8501
 
 
+_create_option(
+    "server.baseUrlPath",
+    description="""
+        The base path for the URL where Streamlit should be served from.
+        """,
+    default_val="",
+    type_=str,
+)
+
+
 @_create_option("server.enableCORS", type_=bool)
 def _server_enable_cors():
     """Enables support for Cross-Origin Request Sharing, for added security.
@@ -814,7 +824,7 @@ def parse_config_file():
         if not os.path.exists(filename):
             continue
 
-        with open(filename) as input:
+        with open(filename, "r") as input:
             file_contents = input.read()
 
         _update_config_with_toml(file_contents, filename)

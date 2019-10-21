@@ -92,6 +92,7 @@ import numpy as _np
 
 from streamlit import code_util as _code_util
 from streamlit import util as _util
+from streamlit import source_util as _source_util
 from streamlit.ReportThread import get_report_ctx, add_report_ctx
 from streamlit.DeltaGenerator import DeltaGenerator as _DeltaGenerator
 
@@ -538,7 +539,7 @@ def echo():
         else:
             end_line = frame[1]
         lines_to_display = []
-        with open(filename) as source_file:
+        with source_util.open_python_file(filename) as source_file:
             source_lines = source_file.readlines()
             lines_to_display.extend(source_lines[start_line:end_line])
             initial_spaces = _SPACES_RE.match(lines_to_display[0]).end()

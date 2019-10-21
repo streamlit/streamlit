@@ -87,10 +87,10 @@ class ReportSession(object):
 
         self._state = ReportSessionState.REPORT_NOT_RUNNING
 
-        self._main_dg = DeltaGenerator(
-            enqueue=self.enqueue, container=BlockPath.MAIN)
+        self._main_dg = DeltaGenerator(enqueue=self.enqueue, container=BlockPath.MAIN)
         self._sidebar_dg = DeltaGenerator(
-            enqueue=self.enqueue, container=BlockPath.SIDEBAR)
+            enqueue=self.enqueue, container=BlockPath.SIDEBAR
+        )
 
         self._widget_states = WidgetStates()
         self._local_sources_watcher = LocalSourcesWatcher(
@@ -526,6 +526,7 @@ class ReportSession(object):
             The report's websocket handler.
 
         """
+
         @tornado.gen.coroutine
         def progress(percent):
             progress_msg = ForwardMsg()

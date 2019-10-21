@@ -22,6 +22,7 @@ from blinker import Signal
 
 from streamlit import config
 from streamlit import magic
+from streamlit import source_util
 from streamlit.ReportThread import ReportThread
 from streamlit.ScriptRequestQueue import ScriptRequest
 from streamlit.logger import get_logger
@@ -244,7 +245,7 @@ class ScriptRunner(object):
             # Python 3 got rid of the native execfile() command, so we read
             # the file, compile it, and exec() it. This implementation is
             # compatible with both 2 and 3.
-            with open(self._report.script_path) as f:
+            with source_util.open_python_file(self._report.script_path) as f:
                 filebody = f.read()
 
             if config.get_option("runner.magicEnabled"):

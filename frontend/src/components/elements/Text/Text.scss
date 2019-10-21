@@ -70,6 +70,10 @@
     .markdown-text-container {
       margin: 0;
 
+      & :last-child {
+        margin-bottom: 0;
+      }
+
       code,
       pre {
         background: $white-a50;

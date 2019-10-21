@@ -21,6 +21,9 @@ import wave
 st.title("Audio test")
 
 
+st.title("Generated audio (440Hz sine wave)")
+
+
 def note(freq, length, amp, rate):
     t = np.linspace(0, length, length * rate)
     data = np.sin(2 * np.pi * freq * t) * amp
@@ -51,3 +54,23 @@ f.close()
 with io.open("sound.wav", "rb") as f:
     x.text("Sending wave...")
     x.audio(f)
+
+st.title("Audio from a URL")
+
+
+def shorten_audio_option(opt):
+    return opt.split("/")[-1]
+
+
+song = st.selectbox(
+    "Pick an MP3 to play",
+    (
+        "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+        "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+        "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3",
+    ),
+    0,
+    shorten_audio_option,
+)
+
+st.audio(song)
