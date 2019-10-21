@@ -189,20 +189,28 @@ def main_run(file_or_url, args=None, **kwargs):
         import tempfile
         import requests
 
-        with tempfile.NamedTemporaryFile() as fp:
-            try:
-                resp = requests.get(file_or_url)
-                resp.raise_for_status()
-                fp.write(resp.content)
-                # flush since we are reading the file within the with block
-                fp.flush()
-            except requests.exceptions.RequestException as e:
-                raise click.BadParameter(
-                    ("Unable to fetch {}.\n{}".format(file_or_url, e))
-                )
-            # this is called within the with block to make sure the temp file
-            # is not deleted
-            _main_run(fp.name, args)
+        # As documented in https://github.com/streamlit/streamlit/issues/301,
+        # in Windows, we can't actually open a file opened by NamedTemporaryFile
+        # with delete=True (the default) until the NamedTemporaryFile is closed
+        # For this reason we wrap NamedTemporaryFile in a try catch as suggested
+        # in https://stackoverflow.com/a/49868505
+        fp = None
+        try:
+            with tempfile.NamedTemporaryFile(delete=False) as fp:
+                try:
+                    resp = requests.get(file_or_url)
+                    resp.raise_for_status()
+                    fp.write(resp.content)
+                    # flush since we are reading the file within the with block
+                    fp.flush()
+                except requests.exceptions.RequestException as e:
+                    raise click.BadParameter(
+                        ("Unable to fetch {}.\n{}".format(file_or_url, e))
+                    )
+                _main_run(fp.name, args)
+        finally:
+            if fp is not None:
+                os.remove(fp.name)
 
     else:
         if not os.path.exists(file_or_url):
