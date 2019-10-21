@@ -131,22 +131,22 @@ def _build_duplicate_widget_message(widget_type, user_key=None):
             """
             There are multiple identical st.{widget_type} widgets that use the
              '{user_key}' key.
-            
-            To fix this, please make sure that the 'key' argument is unique for 
+
+            To fix this, please make sure that the 'key' argument is unique for
             each st.{widget_type} you create.
             """
         )
     else:
         message = textwrap.dedent(
             """
-            There are multiple identical st.{widget_type} widgets with the 
+            There are multiple identical st.{widget_type} widgets with the
             same generated key.
-            
+
             (When a widget is created, it's assigned an internal key based on
             its structure. Multiple widgets with an identical structure will
             result in the same internal key, which causes this error.)
-            
-            To fix this, please pass a unique 'key' argument to 
+
+            To fix this, please pass a unique 'key' argument to
             st.{widget_type}().
             """
         )
@@ -499,7 +499,6 @@ class DeltaGenerator(object):
         Example
         -------
         >>> st.markdown('Streamlit is **_really_ cool**.')
-        >>> st.markdown('Solve $ax^2 + bx + c = 0$.')
 
         .. output::
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=PXz9xgY8aB88eziDVEZLyS
@@ -512,7 +511,7 @@ class DeltaGenerator(object):
 
     @_with_element
     def latex(self, element, body):
-        """Display text as LaTeX.
+        """Display string formatted as LaTeX.
 
         Parameters
         ----------
@@ -1366,7 +1365,7 @@ class DeltaGenerator(object):
         data : str, bytes, BytesIO, numpy.ndarray, or file opened with
                 io.open().
             Raw audio data or a string with a URL pointing to the file to load.
-            If passing the raw data, this must include headers and any other bytes 
+            If passing the raw data, this must include headers and any other bytes
             required in the actual file.
         start_time: int
             The time from which this element should start playing.
@@ -1401,7 +1400,7 @@ class DeltaGenerator(object):
                 io.open().
             Raw video data or a string with a URL pointing to the video
             to load. Includes support for YouTube URLs.
-            If passing the raw data, this must include headers and any other 
+            If passing the raw data, this must include headers and any other
             bytes required in the actual file.
         format : str
             The mime type for the video file. Defaults to 'video/mp4'.

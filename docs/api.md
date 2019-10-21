@@ -69,6 +69,7 @@ also use [magic commands](api.html#magic-commands) in place of `st.write`.
 ```eval_rst
 .. autofunction:: streamlit.text
 .. autofunction:: streamlit.markdown
+.. autofunction:: streamlit.latex
 .. autofunction:: streamlit.write
 .. autofunction:: streamlit.title
 .. autofunction:: streamlit.header
