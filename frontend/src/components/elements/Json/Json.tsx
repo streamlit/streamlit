@@ -65,8 +65,6 @@ class Json extends React.PureComponent<Props> {
         />
       </div>
     )
-
-    }
   }
 }
 

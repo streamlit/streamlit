@@ -100,8 +100,6 @@ class Markdown extends React.PureComponent<Props> {
       </div>
     )
   }
-
-  }
 }
 
 export default Markdown

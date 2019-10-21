@@ -91,7 +91,6 @@ class Alert extends React.PureComponent<Props> {
     const body = element.get("body")
     const format = element.get("format")
     const renderers = {
-      code: CodeBlock,
       link: linkWithTargetBlank,
       linkReference: linkReferenceHasParens,
     }
@@ -108,8 +107,6 @@ class Alert extends React.PureComponent<Props> {
       </div>
     )
   }
-
-  }
 }
 
-export default Text
+export default Alert
