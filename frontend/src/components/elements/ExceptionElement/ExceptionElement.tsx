@@ -55,7 +55,7 @@ class ExceptionElement extends React.PureComponent<Props> {
         style={{ width }}
       >
         <div className="message">
-          <strong>{type}</strong>
+          <div className="type">{type}</div>
           {messageNode}
         </div>
         <div className="stack-trace">
