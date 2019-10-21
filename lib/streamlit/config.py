@@ -451,6 +451,15 @@ def _server_temporary_file_upload_folder():
     return "./temp"
 
 
+@_create_option("server.maxUploadSize", type_=int)
+def _server_max_upload_size():
+    """Default max size in MBs to upload files.
+
+    Default: '50'
+    """
+    return 50
+
+
 # Config Section: Browser #
 
 _create_section("browser", "Configuration of browser front-end.")

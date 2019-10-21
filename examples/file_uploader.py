@@ -13,13 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-class NoStaticFiles(Exception):
-    pass
+"""Example of file uploader."""
 
+# Python 2/3 compatibility
+from __future__ import print_function, division, unicode_literals, absolute_import
+from streamlit.compatibility import setup_2_3_shims
 
-class S3NoCredentials(Exception):
-    pass
+setup_2_3_shims(globals())
 
+import streamlit as st
 
-class DuplicateWidgetID(Exception):
-    pass
+st.header("File Uploader Demo")
+
+file = st.file_uploader("Upload a file", type=(".png", ".jpg", ".csv"))
+
+if file:
+    file_bytes = st.file_reader(file)
+    if len(file_bytes) > 0:
+        st.write(len(file_bytes))

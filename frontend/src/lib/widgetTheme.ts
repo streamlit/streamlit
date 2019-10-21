@@ -18,6 +18,7 @@
 import { createTheme, lightThemePrimitives } from "baseui"
 import { logMessage } from "lib/log"
 import { SCSS_VARS } from "autogen/scssVariables"
+import { FileUploaderOverrides, StyleProps } from "baseui/file-uploader"
 
 const black = SCSS_VARS["$black"]
 const borderRadius = SCSS_VARS["$border-radius"]
@@ -124,6 +125,23 @@ export const sliderOverrides = {
   InnerTrack: {
     style: ({ $disabled }: any) =>
       $disabled ? { background: grayLighter } : {},
+  },
+}
+
+export const fileUploaderOverrides: FileUploaderOverrides<StyleProps> = {
+  FileDragAndDrop: {
+    style: (props: any) => ({
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center",
+      padding: "1rem",
+      height: "10rem",
+      outline: 0,
+      borderColor: props.$isDragActive
+        ? SCSS_VARS["$primary"]
+        : SCSS_VARS["$gray-dark"],
+      backgroundColor: SCSS_VARS["$gray-lightest"],
+    }),
   },
 }
 

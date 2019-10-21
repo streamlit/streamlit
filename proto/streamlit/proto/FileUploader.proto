@@ -20,4 +20,5 @@ message FileUploader {
   string id = 1;
   string label = 2;
   repeated string type = 3;
+  int32 max_upload_size = 4;
 }

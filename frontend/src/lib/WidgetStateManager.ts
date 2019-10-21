@@ -200,7 +200,7 @@ export class WidgetStateManager {
     lastModified: number,
     data: Uint8Array
   ): void {
-    const limit = 48 * 1e6 //48MB
+    const limit = 10 * 1e6 //10MB
 
     let newFileMessage: NewFile = new NewFile()
     newFileMessage.id = id

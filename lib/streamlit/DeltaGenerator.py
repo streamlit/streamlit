@@ -34,6 +34,7 @@ from datetime import time
 
 from streamlit import caching
 from streamlit import metrics
+from streamlit import config
 from streamlit.proto import Balloons_pb2
 from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
@@ -1819,10 +1820,11 @@ class DeltaGenerator(object):
         return current_value if single_value else tuple(current_value)
 
     @_with_element
-    def file_uploader(self, element, label, type):
-
+    def file_uploader(self, element, label, type=['*']):
+         
         element.file_uploader.label = label
         element.file_uploader.type[:] = type
+        element.file_uploader.max_upload_size = config.get_option("server.maxUploadSize")
         ui_value = _get_widget_ui_value("file_uploader", element)
         LOGGER.debug(ui_value)
         return ui_value if ui_value is not None else ""
