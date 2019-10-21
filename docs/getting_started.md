@@ -69,7 +69,9 @@ Streamlit.
    Whenever you need to view the app, you can use this command.
    ```eval_rst
    .. tip::
-      Did you know that you can pass either a local python script or a URL to `$ streamlit run` as an argument.
+      Did you know you can also pass a URL to `streamlit run`? This is great when combined with Github Gists. For example:
+
+      `$ streamlit run https://raw.githubusercontent.com/streamlit/demo-uber-nyc-pickups/master/app.py`
    ```
 
 4. You can kill the app at any time by typing **Ctrl+c** in the terminal.
