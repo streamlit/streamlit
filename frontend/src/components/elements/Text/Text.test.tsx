@@ -25,7 +25,7 @@ it("renders without crashing", () => {
   const mountPoint = document.createElement("div")
   const props = {
     element: ImmutableMap({
-      body: "foo",
+      body: "",
       format: TextProto.Format.PLAIN,
     }),
     width: 0,
