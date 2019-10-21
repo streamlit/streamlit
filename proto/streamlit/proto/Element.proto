@@ -16,6 +16,7 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/Alert.proto";
 import "streamlit/proto/Audio.proto";
 import "streamlit/proto/Balloons.proto";
 import "streamlit/proto/BokehChart.proto";
@@ -30,6 +31,8 @@ import "streamlit/proto/Empty.proto";
 import "streamlit/proto/Exception.proto";
 import "streamlit/proto/GraphVizChart.proto";
 import "streamlit/proto/Image.proto";
+import "streamlit/proto/Json.proto";
+import "streamlit/proto/Markdown.proto";
 import "streamlit/proto/MultiSelect.proto";
 import "streamlit/proto/PlotlyChart.proto";
 import "streamlit/proto/Progress.proto";
@@ -48,6 +51,7 @@ message Element {
 
   // An element can be one of the following element types.
   oneof type {
+    Alert alert = 30;
     Audio audio = 13;
     Balloons balloons = 12;
     BokehChart bokeh_chart = 17;
@@ -63,6 +67,8 @@ message Element {
     Exception exception = 8;
     GraphVizChart graphviz_chart = 18;
     ImageList imgs = 6;
+    Json json = 31;
+    Markdown markdown = 29;
     MultiSelect multiselect = 28;
     PlotlyChart plotly_chart = 16;
     Progress progress = 5;
