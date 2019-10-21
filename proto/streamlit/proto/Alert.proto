@@ -25,29 +25,22 @@ message Alert {
   // Content format
   enum Format {
     // Plain, fixed width text.
-    PLAIN = 0;
-
-    // Markdown.
-    MARKDOWN = 1;
-
-    // A JSON object. Stored as a string.
-    JSON = 2;
+    UNUSED = 0;
 
     // Shows an error message.
-    ERROR = 6;
+    ERROR = 1;
 
     // Shows a warning message.
-    WARNING = 7;
+    WARNING = 2;
 
     // Shows an info log.
-    INFO = 8;
+    INFO = 3;
 
     // Shows a success message.
-    SUCCESS = 9;
+    SUCCESS = 4;
 
   }
 
   Format format = 2;
 
-  bool allow_html = 3;
 }
