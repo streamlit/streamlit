@@ -51,6 +51,10 @@ interface State {
 }
 
 class DeckGlChart extends React.PureComponent<PropsWithHeight, State> {
+  static defaultProps = {
+    height: 500,
+  }
+
   private initialViewState: {
     width: number
     height: number

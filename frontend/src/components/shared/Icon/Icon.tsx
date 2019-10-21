@@ -25,7 +25,7 @@ interface Props {
 }
 const Icon = ({ type, className }: Props): ReactElement => (
   <span
-    className={classNames("oi", className)}
+    className={classNames("open-iconic", className)}
     data-glyph={type}
     title={type}
     aria-hidden="true"

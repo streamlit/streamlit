@@ -33,7 +33,7 @@ interface State {
 
 // Bootstrap medium breakpoint. See
 // https://getbootstrap.com/docs/4.3/layout/overview/.
-const MEDIUM_BREAKPOINT_PX = 767.98
+const MEDIUM_BREAKPOINT_PX = 991.98
 
 class Sidebar extends PureComponent<Props, State> {
   public static defaultProps: Partial<Props> = {

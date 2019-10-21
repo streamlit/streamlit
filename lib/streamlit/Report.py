@@ -15,7 +15,6 @@
 
 import base58
 import copy
-import json
 import os
 import uuid
 
@@ -24,6 +23,7 @@ from streamlit.ReportQueue import ReportQueue
 from streamlit import util
 
 from streamlit.logger import get_logger
+from streamlit.proto.StaticManifest_pb2 import StaticManifest
 
 LOGGER = get_logger(__name__)
 
@@ -51,7 +51,16 @@ class Report(object):
             The URL.
         """
         port = _get_browser_address_bar_port()
-        return "http://%(host_ip)s:%(port)s" % {"host_ip": host_ip, "port": port}
+        base_path = config.get_option("server.baseUrlPath").strip("/")
+
+        if base_path:
+            base_path = "/" + base_path
+
+        return "http://%(host_ip)s:%(port)s%(base_path)s" % {
+            "host_ip": host_ip.strip("/"),
+            "port": port,
+            "base_path": base_path,
+        }
 
     def __init__(self, script_path, command_line):
         """Constructor.
@@ -140,14 +149,14 @@ class Report(object):
         LOGGER.debug("Serializing running report")
 
         manifest = self._build_manifest(
-            status="running",
+            status=StaticManifest.RUNNING,
             external_server_ip=util.get_external_ip(),
             internal_server_ip=util.get_internal_ip(),
         )
 
-        manifest_json = json.dumps(manifest).encode("utf-8")
-
-        return [("reports/%s/manifest.json" % self.report_id, manifest_json)]
+        return [
+            ("reports/%s/manifest.pb" % self.report_id, manifest.SerializeToString())
+        ]
 
     def serialize_final_report_to_files(self):
         """Return the report as an easily-serializable list of tuples.
@@ -172,19 +181,13 @@ class Report(object):
         num_deltas = 0
         for idx in range(len(messages)):
             if messages[idx].HasField("delta"):
-                messages[idx].metadata.delta_id = num_deltas
                 if num_deltas == 0:
                     first_delta_index = idx
                 num_deltas += 1
 
         manifest = self._build_manifest(
-            status="done",
-            num_messages=len(messages),
-            first_delta_index=first_delta_index,
-            num_deltas=num_deltas,
+            status=StaticManifest.DONE, num_messages=len(messages)
         )
-
-        manifest_json = json.dumps(manifest).encode("utf-8")
 
         # Build a list of message tuples: (message_location, serialized_message)
         message_tuples = [
@@ -196,7 +199,10 @@ class Report(object):
         ]
 
         manifest_tuples = [
-            ("reports/%(id)s/manifest.json" % {"id": self.report_id}, manifest_json)
+            (
+                "reports/%(id)s/manifest.pb" % {"id": self.report_id},
+                manifest.SerializeToString(),
+            )
         ]
 
         # Manifest must be at the end, so clients don't connect and read the
@@ -207,8 +213,6 @@ class Report(object):
         self,
         status,
         num_messages=None,
-        first_delta_index=None,
-        num_deltas=None,
         external_server_ip=None,
         internal_server_ip=None,
     ):
@@ -216,16 +220,12 @@ class Report(object):
 
         Parameters
         ----------
-        status : 'done' or 'running'
+        status : StaticManifest.ServerStatus
             The report status. If the script is still executing, then the
             status should be RUNNING. Otherwise, DONE.
         num_messages : int or None
             Set only when status is DONE. The number of ForwardMsgs that this report
             is made of.
-        first_delta_index : int or None
-            Set only when status is DONE. The index of our first Delta message
-        num_deltas : int or None
-            Set only when status is DONE. The number of Delta messages in the report
         external_server_ip : str or None
             Only when status is RUNNING. The IP of the Server's websocket.
         internal_server_ip : str or None
@@ -233,37 +233,30 @@ class Report(object):
 
         Returns
         -------
-        dict
-            The actual manifest. Schema:
-            - localId: str,
-            - numMessages: int or None,
-            - firstDeltaIndex: int or None,
-            - numDeltas: int or None,
-            - serverStatus: 'running' or 'done',
-            - externalServerIP: str or None,
-            - internalServerIP: str or None,
-            - serverPort: int
+        StaticManifest
+            A StaticManifest protobuf message
 
         """
-        if status == "running":
-            configured_server_address = config.get_option("browser.serverAddress")
-        else:
-            configured_server_address = None
 
-        return dict(
-            name=self.name,
-            numMessages=num_messages,
-            firstDeltaIndex=first_delta_index,
-            numDeltas=num_deltas,
-            serverStatus=status,
-            configuredServerAddress=configured_server_address,
-            externalServerIP=external_server_ip,
-            internalServerIP=internal_server_ip,
+        manifest = StaticManifest()
+        manifest.name = self.name
+        manifest.server_status = status
+
+        if status == StaticManifest.RUNNING:
+            manifest.external_server_ip = external_server_ip
+            manifest.internal_server_ip = internal_server_ip
+            manifest.configured_server_address = config.get_option(
+                "browser.serverAddress"
+            )
             # Don't use _get_browser_address_bar_port() here, since we want the
             # websocket port, not the web server port. (These are the same in
             # prod, but different in dev)
-            serverPort=config.get_option("browser.serverPort"),
-        )
+            manifest.server_port = config.get_option("browser.serverPort")
+            manifest.server_base_path = config.get_option("server.baseUrlPath")
+        else:
+            manifest.num_messages = num_messages
+
+        return manifest
 
 
 def _should_save_report_msg(msg):

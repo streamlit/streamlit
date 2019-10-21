@@ -17,10 +17,26 @@
 syntax = "proto3";
 
 message Video {
-  // The data in Base64 format.
-  string data = 1;
+  oneof src {
+    // The data in Base64 format.
+    string data = 1;
+
+    // A url pointing to a video file
+    string url = 4;
+  }
+
+  enum Type {
+    UNUSED = 0;  // This should always exist.
+    NATIVE = 1;
+    YOUTUBE_IFRAME = 2;
+  }
+
+  Type type = 5;
 
   // The type attribute of the HTML <video> tag's <source> subtag.
   // ex: "video/mp4"
   string format = 2;
+
+  // The currentTime attribute of the HTML <video> tag's <source> subtag.
+  int32 start_time = 3;
 }

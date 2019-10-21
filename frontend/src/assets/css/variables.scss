@@ -51,6 +51,7 @@ $light: $gray-100;
 $dark: $gray;
 
 $primary-a50: change-color($primary, $alpha: 0.5);
+$white-a50: #ffffff88;
 
 // Overwrite some theme fonts settings.
 $font-family-sans-serif: "IBM Plex Sans", sans-serif;
@@ -82,7 +83,7 @@ $m2-3-font-size-sm: $font-size-sm * 2 / 3; // m2-3 = multiply by 2/3
 $m1-2-font-size-base: $font-size-base / 2; // m1-2 = multiply by 1/2
 
 // Layout sizing
-$sidebar-width: 250px;
+$sidebar-width: 21rem;
 $content-max-width: 730px; // This number comes from bootstrap.
 $header-height: 3.5rem;
 

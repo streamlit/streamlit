@@ -101,7 +101,7 @@ class UtilTest(unittest.TestCase):
         ) as makedirs, util.streamlit_write(FILENAME) as output:
             output.write("some data")
             open().write.assert_called_once_with("some data")
-            makedirs.assert_called_once_with(dirname, exist_ok=True)
+            makedirs.assert_called_once_with(dirname)
 
     @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
     def test_streamlit_write_exception(self):

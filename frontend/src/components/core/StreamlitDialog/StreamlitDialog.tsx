@@ -305,12 +305,27 @@ function uploadedDialog(props: UploadedProps): ReactElement {
     <BasicDialog onClose={props.onClose}>
       <ModalBody>
         <div className="streamlit-upload-first-line">App saved to:</div>
-        <div id="streamlit-upload-url"> {props.url} </div>
+        <pre id="streamlit-upload-url">
+          <a href={props.url} target="_blank" rel="noopener noreferrer">
+            {props.url}
+          </a>
+        </pre>
       </ModalBody>
       <ModalFooter>
         <CopyToClipboard text={props.url} onCopy={props.onClose}>
-          <Button outline>Copy to clipboard</Button>
+          <Button outline className="mr-auto">
+            Copy to clipboard
+          </Button>
         </CopyToClipboard>{" "}
+        <Button
+          outline
+          onClick={() => {
+            window.open(props.url, "_blank")
+            props.onClose()
+          }}
+        >
+          Open
+        </Button>
         <Button outline onClick={props.onClose}>
           Done
         </Button>

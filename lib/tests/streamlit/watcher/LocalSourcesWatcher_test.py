@@ -78,6 +78,18 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         self.assertEqual(fob.call_count, 1)  # __init__.py
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
+    def test_permission_error(self, fob):
+        from streamlit import compatibility
+
+        if compatibility.is_running_py3():
+            ErrorType = PermissionError
+        else:
+            ErrorType = OSError
+
+        fob.side_effect = ErrorType('This error should be caught!')
+        lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
+
+    @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
     def test_script_and_2_modules_at_once(self, fob):
         lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
 

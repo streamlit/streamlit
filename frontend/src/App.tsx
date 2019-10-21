@@ -137,7 +137,7 @@ class App extends PureComponent<Props, State> {
     this.stopReport = this.stopReport.bind(this)
     this.openClearCacheDialog = this.openClearCacheDialog.bind(this)
     this.clearCache = this.clearCache.bind(this)
-    this.saveReport = this.saveReport.bind(this)
+    this.shareReport = this.shareReport.bind(this)
     this.saveSettings = this.saveSettings.bind(this)
     this.handleDeltaMsg = this.handleDeltaMsg.bind(this)
     this.settingsCallback = this.settingsCallback.bind(this)
@@ -558,9 +558,9 @@ class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Callback to call when we want to save the report.
+   * Callback to call when we want to share the report.
    */
-  saveReport(): void {
+  public shareReport(): void {
     if (this.isServerConnected()) {
       if (this.state.sharingEnabled) {
         MetricsManager.current.enqueue("shareReport")
@@ -786,8 +786,9 @@ class App extends PureComponent<Props, State> {
                 stopReport={this.stopReport}
               />
               <MainMenu
+                sharingEnabled={this.state.sharingEnabled === true}
                 isServerConnected={this.isServerConnected}
-                saveCallback={this.saveReport}
+                shareCallback={this.shareReport}
                 quickRerunCallback={this.rerunScript}
                 clearCacheCallback={this.openClearCacheDialog}
                 settingsCallback={this.settingsCallback}

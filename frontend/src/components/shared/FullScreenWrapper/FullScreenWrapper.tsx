@@ -33,6 +33,7 @@ export type Size = {
 interface Props {
   children: (props: Size) => React.ReactNode
   width: number
+  height?: number
 }
 
 interface State {
@@ -106,7 +107,7 @@ class FullScreenWrapper extends PureComponent<Props, State> {
 
   public render(): JSX.Element {
     const { expanded, fullwidth, fullheight } = this.state
-    const { children, width } = this.props
+    const { children, width, height } = this.props
 
     let buttonClassName = "overlayBtn stButton-enter"
     let buttonImage = "fullscreen-enter"
@@ -121,7 +122,7 @@ class FullScreenWrapper extends PureComponent<Props, State> {
     }
 
     return (
-      <div className={`stFullScreenFrame${expanded ? "--expanded" : ""}`}>
+      <div className={`fullScreenFrame${expanded ? "--expanded" : ""}`}>
         <button
           className={buttonClassName}
           onClick={buttonOnClick}
@@ -131,7 +132,7 @@ class FullScreenWrapper extends PureComponent<Props, State> {
         </button>
         {expanded
           ? children({ width: fullwidth, height: fullheight })
-          : children({ width })}
+          : children({ width, height })}
       </div>
     )
   }

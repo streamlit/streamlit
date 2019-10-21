@@ -50,7 +50,7 @@ class TextArea extends React.PureComponent<Props, State> {
     this.setWidgetValue({ fromUi: false })
   }
 
-  private isFromMac = (): boolean => /Mac/i.test(navigator.platform)
+  private isFromMac = /Mac/i.test(navigator.platform)
 
   private setWidgetValue = (source: Source): void => {
     const widgetId: string = this.props.element.get("id")

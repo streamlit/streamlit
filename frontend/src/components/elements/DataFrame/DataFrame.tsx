@@ -51,11 +51,8 @@ const MAX_LONELY_CELL_WIDTH_PX = 400
 
 interface Props {
   width: number
-  element: ImmutableMap<string, any>
-}
-
-interface PropsWithHeight extends Props {
   height: number | undefined
+  element: ImmutableMap<string, any>
 }
 
 interface State {
@@ -113,13 +110,14 @@ interface CellRenderer {
 }
 
 const DEFAULT_HEIGHT = 300
+
 /**
  * Functional element representing a DataFrame.
  */
-class DataFrame extends React.PureComponent<PropsWithHeight, State> {
+class DataFrame extends React.PureComponent<Props, State> {
   private multiGridRef = React.createRef<MultiGrid>()
 
-  public constructor(props: PropsWithHeight) {
+  public constructor(props: Props) {
     super(props)
     this.state = {
       /**
@@ -281,7 +279,7 @@ class DataFrame extends React.PureComponent<PropsWithHeight, State> {
       rowHeight,
       headerHeight,
       border,
-      height: Math.min(rows * rowHeight + border, height || DEFAULT_HEIGHT),
+      height: Math.min(rows * rowHeight, height || DEFAULT_HEIGHT),
       elementWidth,
       columnWidth,
       headerWidth,
@@ -355,7 +353,7 @@ class DataFrame extends React.PureComponent<PropsWithHeight, State> {
           columnCount={cols}
           enableFixedColumnScroll
           enableFixedRowScroll
-          height={height - border}
+          height={height}
           rowHeight={rowHeight}
           rowCount={rows}
           width={elementWidth}
@@ -523,9 +521,9 @@ function getWidths(
 
 class WithFullScreenWrapper extends React.Component<Props> {
   render(): JSX.Element {
-    const { element, width } = this.props
+    const { element, width, height } = this.props
     return (
-      <FullScreenWrapper width={width}>
+      <FullScreenWrapper width={width} height={height}>
         {({ width, height }) => (
           <DataFrame element={element} width={width} height={height} />
         )}

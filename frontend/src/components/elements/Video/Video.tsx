@@ -17,6 +17,7 @@
 
 import React from "react"
 import { Map as ImmutableMap } from "immutable"
+import { Video as VideoProto } from "autogen/proto"
 
 interface Props {
   width: number
@@ -24,12 +25,61 @@ interface Props {
 }
 
 class Video extends React.PureComponent<Props> {
+  private videoRef = React.createRef<HTMLVideoElement>()
+
+  public componentDidMount = (): void => {
+    this.updateTime()
+  }
+
+  public componentDidUpdate = (): void => {
+    this.updateTime()
+  }
+
+  private updateTime(): void {
+    if (this.videoRef.current) {
+      const startTime = this.props.element.get("startTime")
+      this.videoRef.current.currentTime = startTime
+    }
+  }
+
   public render(): React.ReactNode {
+    /* Element may contain "url" or "data" property. */
+
     const { element, width } = this.props
-    const dataUrl =
-      "data:" + element.get("format") + ";base64," + element.get("data")
+
+    /* Is this a YouTube link? If so we need a fancier tag.
+       NOTE: This part assumes the URL is already an "embed" link.
+    */
+    if (element.get("type") === VideoProto.Type.YOUTUBE_IFRAME) {
+      const height = width * 0.75
+      const src = element.get("startTime")
+        ? `${element.get("url")}?start=${element.get("startTime")}`
+        : element.get("url")
+      return (
+        <iframe
+          title={element.get("url")}
+          src={src}
+          width={width}
+          height={height}
+          frameBorder="0"
+          allow="autoplay; encrypted-media"
+          allowFullScreen
+        ></iframe>
+      )
+    }
+
+    const src = element.get("url")
+      ? element.get("url")
+      : "data:" + element.get("format") + ";base64," + element.get("data")
+
     return (
-      <video controls src={dataUrl} className="stVideo" style={{ width }} />
+      <video
+        ref={this.videoRef}
+        controls
+        src={src}
+        className="stVideo"
+        style={{ width }}
+      />
     )
   }
 }

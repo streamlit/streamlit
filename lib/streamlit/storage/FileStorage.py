@@ -21,15 +21,13 @@ from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
 
+import errno
 import math
 import os
 
-from tornado import gen, concurrent
+from tornado import gen
 
-from streamlit import config
-from streamlit import errors
 from streamlit.storage.AbstractStorage import AbstractStorage
-
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
@@ -89,7 +87,7 @@ def _recursively_create_folder(path):
     try:
         os.makedirs(path)
     except OSError as e:
-        if e.errno == os.errno.EEXIST and os.path.isdir(path):
+        if e.errno == errno.EEXIST and os.path.isdir(path):
             pass
         else:
             raise e
