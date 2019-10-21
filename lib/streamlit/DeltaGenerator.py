@@ -1388,6 +1388,7 @@ class DeltaGenerator(object):
         # TODO: Provide API to convert raw NumPy arrays to audio file (with
         # proper headers, etc)?
         from .elements import media_proto
+
         media_proto.marshall_audio(element.audio, data, format, start_time)
 
     @_with_element
@@ -1423,6 +1424,7 @@ class DeltaGenerator(object):
         # TODO: Provide API to convert raw NumPy arrays to video file (with
         # proper headers, etc)?
         from .elements import media_proto
+
         media_proto.marshall_video(element.video, data, format, start_time)
 
     @_with_element
