@@ -29,8 +29,10 @@ st.markdown("[][]")
 
 st.markdown("Inline math with $\KaTeX$")
 
-st.markdown("""
+st.markdown(
+    """
 $$
 ax^2 + bx + c = 0
 $$
-""")
+"""
+)
