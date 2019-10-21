@@ -21,15 +21,18 @@ import classNames from "classnames"
 import ReactJson from "react-json-view"
 import ReactMarkdown from "react-markdown"
 import { Map as ImmutableMap } from "immutable"
-import { Text as TextProto } from "autogen/proto"
-
 // Ignoring typeScript for this module as it has no ts support
 // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
 // @ts-ignore
 import htmlParser from "react-markdown/plugins/html-parser"
+// @ts-ignore
+import { InlineMath, BlockMath } from "react-katex"
+// @ts-ignore
+import RemarkMathPlugin from "remark-math"
 
+import { Text as TextProto } from "autogen/proto"
 import CodeBlock from "../CodeBlock"
-
+import "katex/dist/katex.min.css"
 import "./Text.scss"
 
 function getAlertCSSClass(format: TextProto.Format): string | undefined {
@@ -97,15 +100,19 @@ class Text extends React.PureComponent<Props> {
       code: CodeBlock,
       link: linkWithTargetBlank,
       linkReference: linkReferenceHasParens,
+      inlineMath: (props: { value: string }) => (
+        <InlineMath>{props.value}</InlineMath>
+      ),
+      math: (props: { value: string }) => <BlockMath>{props.value}</BlockMath>,
     }
-    const styleProp = { width }
+    const plugins = [RemarkMathPlugin]
 
     switch (format) {
       // Plain, fixed width text.
       case TextProto.Format.PLAIN: {
         const props = {
           className: classNames("fixed-width", "stText"),
-          style: styleProp,
+          style: { width },
         }
 
         return <div {...props}>{body}</div>
@@ -117,11 +124,12 @@ class Text extends React.PureComponent<Props> {
         const astPlugins = allowHTML ? [htmlParser()] : []
 
         return (
-          <div className="markdown-text-container stText" style={styleProp}>
+          <div className="markdown-text-container stText" style={{ width }}>
             <ReactMarkdown
               source={body}
               escapeHtml={!allowHTML}
               astPlugins={astPlugins}
+              plugins={plugins}
               renderers={renderers}
             />
           </div>
@@ -139,7 +147,7 @@ class Text extends React.PureComponent<Props> {
           throw e
         }
         return (
-          <div className="json-text-container stText" style={styleProp}>
+          <div className="json-text-container stText" style={{ width }}>
             <ReactJson
               src={bodyObject}
               displayDataTypes={false}
@@ -151,6 +159,14 @@ class Text extends React.PureComponent<Props> {
         )
       }
 
+      case TextProto.Format.LATEX: {
+        return (
+          <div className="latex-text-container stText" style={{ width }}>
+            <BlockMath math={body} />
+          </div>
+        )
+      }
+
       case TextProto.Format.ERROR:
       case TextProto.Format.WARNING:
       case TextProto.Format.INFO:
@@ -158,16 +174,19 @@ class Text extends React.PureComponent<Props> {
         return (
           <div
             className={classNames("alert", getAlertCSSClass(format), "stText")}
-            style={styleProp}
+            style={{ width }}
           >
             <div className="markdown-text-container">
-              <ReactMarkdown source={body} renderers={renderers} />
+              <ReactMarkdown
+                source={body}
+                renderers={renderers}
+                plugins={plugins}
+              />
             </div>
           </div>
         )
       }
 
-      // Default
       default:
         throw new Error(`Invalid Text format:${format}`)
     }

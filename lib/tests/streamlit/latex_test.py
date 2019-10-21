@@ -13,24 +13,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""LaTeX unit test."""
+
+import sympy as s
+
+from tests import testutil
 import streamlit as st
 
-st.markdown("This **markdown** is awesome!")
 
-st.markdown("This <b>HTML tag</b> is escaped!")
+class LatexTest(testutil.DeltaGeneratorTestCase):
+    """Test ability to marshall latex protos."""
 
-st.markdown("This <b>HTML tag</b> is not escaped!", unsafe_allow_html=True)
+    def test_latex(self):
+        st.latex("ax^2 + bx + c = 0")
 
-st.markdown("[text]")
+        c = self.get_delta_from_queue().new_element.text
+        self.assertEqual(c.body, "ax^2 + bx + c = 0")
 
-st.markdown("[link](href)")
+    def test_sympy_expression(self):
+        import sympy as s
 
-st.markdown("[][]")
+        a, b = s.symbols("a b")
+        out = a + b
+        st.latex(out)
 
-st.markdown("Inline math with $\KaTeX$")
-
-st.markdown("""
-$$
-ax^2 + bx + c = 0
-$$
-""")
+        c = self.get_delta_from_queue().new_element.text
+        self.assertEqual(c.body, "a + b")

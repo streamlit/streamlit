@@ -25,10 +25,11 @@ import DeckGL, {
   ScatterplotLayer,
   ScreenGridLayer,
   TextLayer,
+  // @ts-ignore
 } from "deck.gl"
 import Immutable from "immutable"
 import { StaticMap } from "react-map-gl"
-import { dataFrameToArrayOfDicts } from "../../../lib/dataFrameProto"
+import { dataFrameToArrayOfDicts } from "lib/dataFrameProto"
 import FullScreenWrapper from "components/shared/FullScreenWrapper"
 import "mapbox-gl/dist/mapbox-gl.css"
 import "./DeckGlChart.scss"

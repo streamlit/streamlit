@@ -17,8 +17,6 @@
 
 from bokeh.plotting import figure
 
-from streamlit.DeltaGenerator import DeltaGenerator
-from streamlit.ReportQueue import ReportQueue
 from tests import testutil
 import streamlit as st
 
