@@ -14,9 +14,21 @@
  * limitations under the License.
  */
 
+@import "src/assets/css/variables";
+
 .reportview-container {
   .exception .message {
     margin-bottom: 0.5rem;
+  }
+
+  .exception .message .type {
+    font-size: larger;
+    font-weight: bold;
+    //margin-bottom: 0.5rem;
+  }
+
+  .exception .message code {
+    color: $primary;
   }
 
   .exception .stack-trace {

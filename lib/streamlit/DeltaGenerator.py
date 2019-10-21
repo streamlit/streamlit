@@ -19,13 +19,13 @@
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
 from streamlit.errors import DuplicateWidgetID
+from streamlit.errors import StreamlitException
 
 setup_2_3_shims(globals())
 
 import functools
 import json
 import random
-import re
 import textwrap
 import pandas as pd
 from datetime import datetime
@@ -311,7 +311,7 @@ class DeltaGenerator(object):
                     "name": name
                 }
 
-            raise AttributeError(message)
+            raise StreamlitException(message)
 
         return wrapper
 
@@ -1330,7 +1330,7 @@ class DeltaGenerator(object):
         elif width is None:
             width = -1
         elif width <= 0:
-            raise RuntimeError("Image width must be positive.")
+            raise StreamlitException("Image width must be positive.")
         image_proto.marshall_images(
             image, caption, width, element.imgs, clamp, channels, format
         )
@@ -1367,6 +1367,7 @@ class DeltaGenerator(object):
         # TODO: Provide API to convert raw NumPy arrays to audio file (with
         # proper headers, etc)?
         from .elements import media_proto
+
         media_proto.marshall_audio(element.audio, data, format, start_time)
 
     @_with_element
@@ -1402,6 +1403,7 @@ class DeltaGenerator(object):
         # TODO: Provide API to convert raw NumPy arrays to video file (with
         # proper headers, etc)?
         from .elements import media_proto
+
         media_proto.marshall_video(element.video, data, format, start_time)
 
     @_with_element
@@ -1519,12 +1521,12 @@ class DeltaGenerator(object):
         def _check_and_convert_to_indices(default_values):
             for value in default_values:
                 if not isinstance(value, string_types):  # noqa: F821
-                    raise TypeError(
-                        "A Multiselect default value has invalid type: %s"
+                    raise StreamlitException(
+                        "Multiselect default value has invalid type: %s"
                         % type(value).__name__
                     )
                 if value not in options:
-                    raise ValueError(
+                    raise StreamlitException(
                         "Every Multiselect default value must exist in options"
                     )
             return [options.index(value) for value in default]
@@ -1583,10 +1585,14 @@ class DeltaGenerator(object):
 
         """
         if not isinstance(index, int):
-            raise TypeError("Radio Value has invalid type: %s" % type(index).__name__)
+            raise StreamlitException(
+                "Radio Value has invalid type: %s" % type(index).__name__
+            )
 
         if len(options) > 0 and not 0 <= index < len(options):
-            raise ValueError("Radio index must be between 0 and length of options")
+            raise StreamlitException(
+                "Radio index must be between 0 and length of options"
+            )
 
         element.radio.label = label
         element.radio.default = index
@@ -1633,12 +1639,14 @@ class DeltaGenerator(object):
 
         """
         if not isinstance(index, int):
-            raise TypeError(
+            raise StreamlitException(
                 "Selectbox Value has invalid type: %s" % type(index).__name__
             )
 
         if len(options) > 0 and not 0 <= index < len(options):
-            raise ValueError("Selectbox index must be between 0 and length of options")
+            raise StreamlitException(
+                "Selectbox index must be between 0 and length of options"
+            )
 
         element.selectbox.label = label
         element.selectbox.default = index
@@ -1716,8 +1724,8 @@ class DeltaGenerator(object):
         single_value = isinstance(value, (int, float))
         range_value = isinstance(value, (list, tuple)) and len(value) == 2
         if not single_value and not range_value:
-            raise ValueError(
-                "The value should either be an int/float or a list/tuple of "
+            raise StreamlitException(
+                "Slider value should either be an int/float or a list/tuple of "
                 "int/float"
             )
 
@@ -1730,7 +1738,9 @@ class DeltaGenerator(object):
             float_value = all(map(lambda v: isinstance(v, float), value))
 
         if not int_value and not float_value:
-            raise TypeError("Tuple/list components must be of the same type.")
+            raise StreamlitException(
+                "Slider tuple/list components must be of the same type."
+            )
 
         # Set corresponding defaults.
         if min_value is None:
@@ -1745,8 +1755,8 @@ class DeltaGenerator(object):
         int_args = all(map(lambda a: isinstance(a, int), args))
         float_args = all(map(lambda a: isinstance(a, float), args))
         if not int_args and not float_args:
-            raise TypeError(
-                "All arguments must be of the same type."
+            raise StreamlitException(
+                "Slider value arguments must be of the same type."
                 "\n`value` has %(value_type)s type."
                 "\n`min_value` has %(min_type)s type."
                 "\n`max_value` has %(max_type)s type."
@@ -1761,7 +1771,7 @@ class DeltaGenerator(object):
         all_ints = int_value and int_args
         all_floats = float_value and float_args
         if not all_ints and not all_floats:
-            raise TypeError(
+            raise StreamlitException(
                 "Both value and arguments must be of the same type."
                 "\n`value` has %(value_type)s type."
                 "\n`min_value` has %(min_type)s type."
@@ -1776,7 +1786,7 @@ class DeltaGenerator(object):
         # Ensure that min <= value <= max.
         if single_value:
             if not min_value <= value <= max_value:
-                raise ValueError(
+                raise StreamlitException(
                     "The default `value` of %(value)s "
                     "must lie between the `min_value` of %(min)s "
                     "and the `max_value` of %(max)s, inclusively."
@@ -1785,7 +1795,7 @@ class DeltaGenerator(object):
         else:
             start, end = value
             if not min_value <= start <= end <= max_value:
-                raise ValueError("The value and/or arguments are out of range.")
+                raise StreamlitException("The value and/or arguments are out of range.")
 
         # Set format default.
         if format is None:
@@ -1930,7 +1940,9 @@ class DeltaGenerator(object):
 
         # Ensure that the value is either datetime/time
         if not isinstance(value, datetime) and not isinstance(value, time):
-            raise TypeError("The type of the value should be either datetime or time.")
+            raise StreamlitException(
+                "The type of the value should be either datetime or time."
+            )
 
         # Convert datetime to time
         if isinstance(value, datetime):
@@ -1983,7 +1995,9 @@ class DeltaGenerator(object):
 
         # Ensure that the value is either datetime/time
         if not isinstance(value, datetime) and not isinstance(value, date):
-            raise TypeError("The type of the value should be either datetime or date.")
+            raise StreamlitException(
+                "The type of the date_input value should be either `datetime` or `date`."
+            )
 
         # Convert datetime to date
         if isinstance(value, datetime):
@@ -2027,18 +2041,18 @@ class DeltaGenerator(object):
             if 0.0 <= value <= 1.0:
                 element.progress.value = int(value * 100)
             else:
-                raise ValueError(
+                raise StreamlitException(
                     "Progress Value has invalid value [0.0, 1.0]: %f" % value
                 )
         elif value_type == "int":
             if 0 <= value <= 100:
                 element.progress.value = value
             else:
-                raise ValueError(
+                raise StreamlitException(
                     "Progress Value has invalid value [0, 100]: %d" % value
                 )
         else:
-            raise TypeError("Progress Value has invalid type: %s" % value_type)
+            raise StreamlitException("Progress Value has invalid type: %s" % value_type)
 
     @_with_element
     def empty(self, element):
@@ -2305,7 +2319,7 @@ class DeltaGenerator(object):
             return self
 
         if self._is_root:
-            raise RuntimeError("Only existing elements can add_rows.")
+            raise StreamlitException("Only existing elements can `add_rows`.")
 
         # Accept syntax st.add_rows(df).
         if data is not None and len(kwargs) == 0:
@@ -2315,7 +2329,7 @@ class DeltaGenerator(object):
             name, data = kwargs.popitem()
         # Raise error otherwise.
         else:
-            raise RuntimeError(
+            raise StreamlitException(
                 "Wrong number of arguments to add_rows()."
                 "Method requires exactly one dataset"
             )
@@ -2362,7 +2376,7 @@ def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
             old_stop = _get_pandas_index_attr(data, "stop")
 
             if old_step is None or old_stop is None:
-                raise AttributeError("'RangeIndex' object has no attribute " "'step'")
+                raise StreamlitException("'RangeIndex' object has no attribute 'step'")
 
             start = last_index + old_step
             stop = last_index + old_step + old_stop
