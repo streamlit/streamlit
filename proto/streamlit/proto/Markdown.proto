@@ -17,7 +17,7 @@
 syntax = "proto3";
 
 // Formatted text
-message Text {
+message Markdown {
 
   // Content to display.
   string body = 1;
