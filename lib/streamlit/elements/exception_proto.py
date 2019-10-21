@@ -199,10 +199,15 @@ def get_stack_trace(
         ]
     else:
         if strip_streamlit_stack_entries:
+            def get_stackframe_filename(frame):
+                # Python 3 has a frame.filename variable, but frames in
+                # Python 2 are just tuples. This code works in both versions.
+                return frame[0]
+
             extracted_traceback = [
                 frame
                 for frame in extracted_traceback
-                if not _is_in_streamlit_package(frame.filename)
+                if not _is_in_streamlit_package(get_stackframe_filename(frame))
             ]
         stack_trace = traceback.format_list(extracted_traceback)
 
