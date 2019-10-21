@@ -17,7 +17,7 @@
 
 import React from "react"
 import { Map as ImmutableMap } from "immutable"
-import { WidgetStateManager, Source } from "lib/WidgetStateManager"
+import { WidgetStateManager } from "lib/WidgetStateManager"
 import { FileUploader as FileUploaderBaseui } from "baseui/file-uploader"
 import { fileUploaderOverrides } from "lib/widgetTheme"
 import "./FileUploader.scss"

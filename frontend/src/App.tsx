@@ -17,7 +17,7 @@
 
 import React, { Fragment, PureComponent, ReactNode } from "react"
 import { HotKeys } from "react-hotkeys"
-import { fromJS, List, Map } from "immutable"
+import { fromJS, List } from "immutable"
 import classNames from "classnames"
 
 // Other local imports.
@@ -72,7 +72,6 @@ import "./App.scss"
 import "assets/css/header.scss"
 import "assets/css/open-iconic.scss"
 import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
-import { string } from "prop-types"
 
 interface Props {}
 
@@ -267,8 +266,8 @@ class App extends PureComponent<Props, State> {
             fileUploadStatus.state = 0
           }
 
-          if (fileUploadStatus.state == 0) {
-            //FINISHED TO UPLOAD
+          if (fileUploadStatus.state === 0) {
+            // FINISHED TO UPLOAD
             this.widgetMgr.setStringValue(
               fileUploadStatus.id,
               fileUploadStatus.value,
