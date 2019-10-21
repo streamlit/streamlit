@@ -29,7 +29,7 @@ interface Props {
 }
 
 class Button extends React.PureComponent<Props> {
-  private handleClick = () => {
+  private handleClick = (): void => {
     const widgetId = this.props.element.get("id")
     this.props.widgetMgr.setTriggerValue(widgetId, { fromUi: true })
   }
