@@ -19,8 +19,19 @@ class StreamlitException(Exception):
 
     Instances of this class can use markdown in their messages, which will get
     nicely formatted on the frontend.
-    """
 
+    """
+    pass
+
+
+class StreamlitAPIException(StreamlitException):
+    """Base class for Streamlit API exceptions.
+
+    When displaying these exceptions on the frontend, we strip Streamlit
+    entries from the stack trace so that the user doesn't see a bunch of
+    noise related to Streamlit internals.
+
+    """
     pass
 
 
@@ -32,5 +43,5 @@ class S3NoCredentials(StreamlitException):
     pass
 
 
-class DuplicateWidgetID(StreamlitException):
+class DuplicateWidgetID(StreamlitAPIException):
     pass
