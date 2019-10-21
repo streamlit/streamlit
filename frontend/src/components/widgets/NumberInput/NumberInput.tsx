@@ -228,18 +228,18 @@ class NumberInput extends React.PureComponent<Props, State> {
             }}
           />
           <div className="controls">
-            <span
+            <button
               className="control step-down"
               onClick={this.modifyValueUsingStep("decrement")}
             >
               <Icon type="minus" />
-            </span>
-            <span
+            </button>
+            <button
               className="control step-up"
               onClick={this.modifyValueUsingStep("increment")}
             >
               <Icon type="plus" />
-            </span>
+            </button>
           </div>
         </div>
         {dirty && <div className="instructions">Press Enter to apply</div>}
