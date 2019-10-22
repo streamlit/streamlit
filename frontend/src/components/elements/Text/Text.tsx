@@ -23,6 +23,7 @@ import ReactMarkdown from "react-markdown"
 import { Map as ImmutableMap } from "immutable"
 import { Text as TextProto } from "autogen/proto"
 
+// react-markdown doesn't have a @types file.
 // @ts-ignore
 import htmlParser from "react-markdown/plugins/html-parser"
 
