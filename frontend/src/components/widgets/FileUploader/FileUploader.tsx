@@ -83,7 +83,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     })
   }
 
-  public componentDidUpdate() {
+  public componentDidUpdate(): void {
     const uiValue = this.props.widgetStateManager.getStringValue(
       this.props.element.get("id")
     )

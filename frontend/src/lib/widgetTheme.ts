@@ -134,7 +134,10 @@ export const fileUploaderOverrides: FileUploaderOverrides<StyleProps> = {
       display: "flex",
       flexDirection: "column",
       justifyContent: "center",
-      padding: "1rem",
+      paddingTop: "1rem",
+      paddingButtom: "1rem",
+      paddingLeft: "1rem",
+      paddingRight: "1rem",
       height: "10rem",
       outline: 0,
       borderColor: props.$isDragActive

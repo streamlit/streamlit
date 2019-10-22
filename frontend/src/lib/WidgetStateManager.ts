@@ -202,7 +202,7 @@ export class WidgetStateManager {
   ): void {
     const limit = 10 * 1e6 //10MB
 
-    let newFileMessage: NewFile = new NewFile()
+    const newFileMessage: NewFile = new NewFile()
     newFileMessage.id = id
     newFileMessage.name = name
     newFileMessage.size = data.length
@@ -211,7 +211,7 @@ export class WidgetStateManager {
     this.sendBackMsg({ newFile: newFileMessage })
 
     for (let i = 0; i < newFileMessage.chunks; i++) {
-      let message: FileChunk = new FileChunk()
+      const message: FileChunk = new FileChunk()
       message.id = id
       message.index = i
       const dataIndex = i * limit

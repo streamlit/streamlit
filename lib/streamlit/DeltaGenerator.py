@@ -1821,7 +1821,31 @@ class DeltaGenerator(object):
 
     @_with_element
     def file_uploader(self, element, label, type=['*']):
-         
+
+        """Display a file uploader widget.
+
+        Parameters
+        ----------
+        label : str or None
+            A short label explaining to the user what this file uploader is for.
+        type : string[] or None
+            Array of allowed extensions. (['.png', '.jpg'])
+            Default value: ['*']
+
+        Returns
+        -------
+        str 
+            The id of stored file or empty if no one file is loaded.
+
+        Examples
+        --------
+        >>> file = st.file_uploader("Upload a image", type=([".png"]))
+        >>> if file:
+        >>>     file_bytes = st.file_reader(file)
+        >>>     st.image(file_bytes)
+
+        """
+
         element.file_uploader.label = label
         element.file_uploader.type[:] = type
         element.file_uploader.max_upload_size = config.get_option("server.maxUploadSize")
@@ -1829,7 +1853,29 @@ class DeltaGenerator(object):
         LOGGER.debug(ui_value)
         return ui_value if ui_value is not None else ""
 
+
     def file_reader(self, file):
+
+        """Display a file uploader widget.
+
+        Parameters
+        ----------
+        file : str
+            A file id loaded with file_uploader widget.
+
+        Returns
+        -------
+        bytes [] 
+            The bytes of readed file
+
+        Examples
+        --------
+        >>> file = st.file_uploader("Upload a image", type=([".png"]))
+        >>> if file:
+        >>>     file_bytes = st.file_reader(file)
+        >>>     st.image(file_bytes)
+
+        """
 
         if len(file) > 0:
             with open(file, "rb") as f:

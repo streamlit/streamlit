@@ -22,12 +22,27 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import streamlit as st
+import csv
 
-st.header("File Uploader Demo")
+st.title("Streamlit file_uploader widget")
 
-file = st.file_uploader("Upload a file", type=(".png", ".jpg", ".csv"))
+file_csv = st.file_uploader("Upload a CSV file", type=([".csv"]))
 
-if file:
-    file_bytes = st.file_reader(file)
-    if len(file_bytes) > 0:
-        st.write(len(file_bytes))
+if file_csv:
+    
+    file_csv_bytes = st.file_reader(file_csv)
+    data_csv = file_csv_bytes.decode('utf-8').splitlines()
+    reader = csv.reader(data_csv, quoting=csv.QUOTE_MINIMAL)
+    
+    results = []
+    for row in reader: # each row is a list
+        results.append(row)
+
+    st.dataframe(results)
+
+
+file_png = st.file_uploader("Upload a PNG image", type=([".png"]))
+
+if file_png:
+    file_png_bytes = st.file_reader(file_png)
+    st.image(file_png_bytes)
