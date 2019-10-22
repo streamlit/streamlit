@@ -50,7 +50,7 @@ class Radio extends React.PureComponent<Props, State> {
     this.props.widgetMgr.setIntValue(widgetId, this.state.value, source)
   }
 
-  private onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  private onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const value = parseInt(e.target.value, 10)
     this.setState({ value }, () => this.setWidgetValue({ fromUi: true }))
   }

@@ -70,20 +70,24 @@
     .markdown-text-container {
       margin: 0;
 
+      & :last-child {
+        margin-bottom: 0;
+      }
+    }
+
+    code,
+    pre {
+      background: $white-a50;
+
       code,
       pre {
-        background: $white-a50;
-
-        code,
-        pre {
-          background: none;
-        }
+        background: none;
       }
+    }
 
-      a {
-        color: inherit;
-        text-decoration: underline;
-      }
+    a {
+      color: inherit;
+      text-decoration: underline;
     }
   }
 }

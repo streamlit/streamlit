@@ -335,7 +335,7 @@ class Block extends PureComponent<Props> {
     })
   }
 
-  public render = () => (
+  public render = (): ReactNode => (
     <AutoSizer disableHeight={true}>
       {({ width }) => this.renderElements(width)}
     </AutoSizer>
