@@ -15,11 +15,10 @@
  * limitations under the License.
  */
 
-import React, { ReactNode, ReactElement } from "react"
+import React, { ReactNode } from "react"
 
 import classNames from "classnames"
 import { Map as ImmutableMap } from "immutable"
-import { Text as TextProto } from "autogen/proto"
 
 // Ignoring typeScript for this module as it has no ts support
 // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
