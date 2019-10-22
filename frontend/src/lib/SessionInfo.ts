@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-interface Args {
+export interface Args {
   streamlitVersion: string
   pythonVersion: string
   installationId: string
