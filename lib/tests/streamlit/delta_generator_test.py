@@ -91,7 +91,6 @@ class FakeDeltaGenerator(object):
     def fake_text(self, element, body):
         """Fake text delta generator."""
         element.text.body = str(body)
-        element.text.format = Text.PLAIN
 
     def fake_dataframe(self, arg0, data=None):
         """Fake dataframe."""
@@ -319,40 +318,8 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(msg.delta.new_element.text.body, test_data)
 
 
-class DeltaGeneratorTextTest(testutil.DeltaGeneratorTestCase):
-    """Test DeltaGenerator Text Proto Class."""
-
-    def test_generic_text(self):
-        """Test Text generic str(body) stuff."""
-        test_data = {
-            "text": Text.PLAIN,
-            "error": Text.ERROR,
-            "warning": Text.WARNING,
-            "info": Text.INFO,
-            "success": Text.SUCCESS,
-        }
-
-        # Test with string input.
-        input_data = "    Some string  "
-        cleaned_data = "Some string"
-        for name, format in test_data.items():
-            method = getattr(st, name)
-            method(input_data)
-
-            element = self.get_delta_from_queue().new_element
-            self.assertEqual(cleaned_data, getattr(element, "text").body)
-            self.assertEqual(format, getattr(element, "text").format)
-
-        # Test with non-string input.
-        input_data = 123
-        cleaned_data = "123"
-        for name, format in test_data.items():
-            method = getattr(st, name)
-            method(input_data)
-
-            element = self.get_delta_from_queue().new_element
-            self.assertEqual(str(cleaned_data), getattr(element, "text").body)
-            self.assertEqual(format, getattr(element, "text").format)
+class DeltaGeneratorWriteTest(testutil.DeltaGeneratorTestCase):
+    """Test DeltaGenerator Text, Alert, Json, and Markdown Classes."""
 
     def test_json_object(self):
         """Test Text.JSON object."""
@@ -364,8 +331,7 @@ class DeltaGeneratorTextTest(testutil.DeltaGeneratorTestCase):
         json_string = json.dumps(json_data)
 
         element = self.get_delta_from_queue().new_element
-        self.assertEqual(json_string, element.text.body)
-        self.assertEqual(Text.JSON, element.text.format)
+        self.assertEqual(json_string, element.json.body)
 
     def test_json_string(self):
         """Test Text.JSON string."""
@@ -375,8 +341,7 @@ class DeltaGeneratorTextTest(testutil.DeltaGeneratorTestCase):
         st.json(json_string)
 
         element = self.get_delta_from_queue().new_element
-        self.assertEqual(json_string, element.text.body)
-        self.assertEqual(Text.JSON, element.text.format)
+        self.assertEqual(json_string, element.json.body)
 
     def test_json_unserializable(self):
         """Test Text.JSON with unserializable object."""
@@ -387,20 +352,24 @@ class DeltaGeneratorTextTest(testutil.DeltaGeneratorTestCase):
 
         element = self.get_delta_from_queue().new_element
         if sys.version_info >= (3, 0):
-            self.assertEqual("\"<class 'module'>\"", element.text.body)
+            self.assertEqual("\"<class 'module'>\"", element.json.body)
         else:
-            self.assertEqual("\"<type 'module'>\"", element.text.body)
-        self.assertEqual(Text.JSON, element.text.format)
+            self.assertEqual("\"<type 'module'>\"", element.json.body)
 
     def test_markdown(self):
-        """Test Text.MARKDOWN."""
+        """Test Markdown element."""
         test_string = "    data         "
 
         st.markdown(test_string)
 
         element = self.get_delta_from_queue().new_element
-        self.assertEqual("data", element.text.body)
-        self.assertEqual(Text.MARKDOWN, element.text.format)
+        self.assertEqual("data", element.markdown.body)
+
+        test_string = "    <a#data>data</a>   "
+        st.markdown(test_string)        #, allow_html_unsafe=True)
+        element = self.get_delta_from_queue().new_element
+
+        assert element.markdown.body.startswith("<a#data>")
 
     def test_code(self):
         """Test st.code()"""
@@ -412,8 +381,7 @@ class DeltaGeneratorTextTest(testutil.DeltaGeneratorTestCase):
 
         # st.code() creates a MARKDOWN text object that wraps
         # the body inside a codeblock declaration
-        self.assertEqual(element.text.format, Text.MARKDOWN)
-        self.assertEqual(element.text.body, expected_body)
+        self.assertEqual(element.markdown.body, expected_body)
 
     def test_empty(self):
         """Test Empty."""
