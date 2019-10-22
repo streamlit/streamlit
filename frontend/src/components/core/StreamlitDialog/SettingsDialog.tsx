@@ -93,28 +93,28 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
     )
   }
 
-  private handleDialogOpen = () => {
+  private handleDialogOpen = (): void => {
     this.setState({ ...this._settings })
   }
 
-  private changeSingleSetting = (name: string, value: boolean) => {
+  private changeSingleSetting = (name: string, value: boolean): void => {
     // TypeScript doesn't currently have a good solution for setState with
     // a dynamic key name:
     // https://github.com/DefinitelyTyped/DefinitelyTyped/issues/26635
     this.setState(state => ({ ...state, [name]: value }))
   }
 
-  private handleCheckboxChange = (e: ChangeEvent<HTMLInputElement>) => {
+  private handleCheckboxChange = (e: ChangeEvent<HTMLInputElement>): void => {
     this.changeSingleSetting(e.target.name, e.target.checked)
   }
 
-  private handleCancelButtonClick = () => {
+  private handleCancelButtonClick = (): void => {
     // Discard settings from this.state by not saving them in this.settings.
     // this.settings = {...this.state};
     this.props.onClose()
   }
 
-  private handleSaveButtonClick = () => {
+  private handleSaveButtonClick = (): void => {
     this._settings = { ...this.state }
     this.props.onSave(this._settings)
     this.props.onClose()

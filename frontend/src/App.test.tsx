@@ -17,7 +17,7 @@
 
 import React from "react"
 import ReactDOM from "react-dom"
-import { SessionInfo } from "./lib/SessionInfo"
+import { SessionInfo, Args as SessionInfoArgs } from "./lib/SessionInfo"
 import { MetricsManager } from "./lib/MetricsManager"
 import { getMetricsManagerForTest } from "./lib/MetricsManagerTestUtils"
 import App from "./App"
@@ -29,12 +29,12 @@ beforeEach(() => {
     authorEmail: "ae",
     maxCachedMessageAge: 2,
     commandLine: "command line",
-  })
+  } as SessionInfoArgs)
   MetricsManager.current = getMetricsManagerForTest()
 })
 
 afterEach(() => {
-  SessionInfo["singleton"] = null
+  SessionInfo["singleton"] = undefined
 })
 
 it("renders without crashing", () => {

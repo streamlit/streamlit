@@ -63,7 +63,7 @@ class FullScreenWrapper extends PureComponent<Props, State> {
     document.removeEventListener("keydown", this.controlKeys, false)
   }
 
-  controlKeys = (event: any) => {
+  controlKeys = (event: any): void => {
     const { expanded } = this.state
 
     if (event.keyCode === 27 && expanded) {
@@ -72,19 +72,19 @@ class FullScreenWrapper extends PureComponent<Props, State> {
     }
   }
 
-  zoomIn = () => {
+  zoomIn = (): void => {
     document.body.style.overflow = "hidden"
     FullScreenWrapper.isFullScreen = true
     this.setState({ expanded: true })
   }
 
-  zoomOut = () => {
+  zoomOut = (): void => {
     document.body.style.overflow = "unset"
     FullScreenWrapper.isFullScreen = false
     this.setState({ expanded: false })
   }
 
-  convertScssRemValueToPixels = (scssValue: string) => {
+  convertScssRemValueToPixels = (scssValue: string): number => {
     const remValue = parseFloat(scssValue)
     return (
       remValue *
@@ -92,7 +92,7 @@ class FullScreenWrapper extends PureComponent<Props, State> {
     )
   }
 
-  updateWindowDimensions = () => {
+  updateWindowDimensions = (): void => {
     const padding = this.convertScssRemValueToPixels(
       SCSS_VARS["$fullscreen-padding"]
     )
@@ -128,7 +128,7 @@ class FullScreenWrapper extends PureComponent<Props, State> {
           onClick={buttonOnClick}
           title={buttonTitle}
         >
-          <Icon type={buttonImage}></Icon>
+          <Icon type={buttonImage} />
         </button>
         {expanded
           ? children({ width: fullwidth, height: fullheight })

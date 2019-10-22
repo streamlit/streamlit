@@ -83,7 +83,7 @@ class Multiselect extends React.PureComponent<Props, State> {
     }
   }
 
-  private onChange = (params: OnChangeParams) => {
+  private onChange = (params: OnChangeParams): void => {
     const newState = this.generateNewState(params)
     this.setState(newState, () => this.setWidgetValue({ fromUi: true }))
   }
