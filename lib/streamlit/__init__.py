@@ -168,6 +168,7 @@ line_chart = _with_dg(_DeltaGenerator.line_chart)  # noqa: E221
 map = _with_dg(_DeltaGenerator.map)  # noqa: E221
 markdown = _with_dg(_DeltaGenerator.markdown)  # noqa: E221
 multiselect = _with_dg(_DeltaGenerator.multiselect)  # noqa: E221
+number_input = _with_dg(_DeltaGenerator.number_input)  # noqa: E221
 plotly_chart = _with_dg(_DeltaGenerator.plotly_chart)  # noqa: E221
 progress = _with_dg(_DeltaGenerator.progress)  # noqa: E221
 pyplot = _with_dg(_DeltaGenerator.pyplot)  # noqa: E221

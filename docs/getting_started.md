@@ -68,6 +68,13 @@ Streamlit.
    Running a Streamlit app is no different than any other Python script.
    Whenever you need to view the app, you can use this command.
 
+   ```eval_rst
+   .. tip::
+      Did you know you can also pass a URL to `streamlit run`? This is great when combined with Github Gists. For example:
+
+      `$ streamlit run https://raw.githubusercontent.com/streamlit/demo-uber-nyc-pickups/master/app.py`
+   ```
+
 4. You can kill the app at any time by typing **Ctrl+c** in the terminal.
 
 ## Add text and data

@@ -28,14 +28,14 @@ class CopyButton extends PureComponent<Props> {
   private button = React.createRef<HTMLButtonElement>()
   private clipboard: ClipboardJS | null = null
 
-  public componentDidMount = () => {
+  public componentDidMount = (): void => {
     const node = this.button.current
     if (node !== null) {
       this.clipboard = new Clipboard(node)
     }
   }
 
-  public componentWillUnmount = () => {
+  public componentWillUnmount = (): void => {
     if (this.clipboard !== null) {
       this.clipboard.destroy()
     }
