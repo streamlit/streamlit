@@ -51,14 +51,15 @@
           background-color $normal-animation-duration;
         background-color: $gray-lighter;
 
-        &:hover {
+        &:hover,
+        &:focus {
           color: $white;
           background-color: $primary;
           transition: none;
+          outline: none;
         }
 
-        &:active,
-        &:focus {
+        &:active {
           outline: none;
           border: none;
         }
