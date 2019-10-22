@@ -91,7 +91,6 @@ class FakeDeltaGenerator(object):
     def fake_text(self, element, body):
         """Fake text delta generator."""
         element.text.body = str(body)
-        element.text.format = Text.PLAIN
 
     def fake_dataframe(self, arg0, data=None):
         """Fake dataframe."""
@@ -192,7 +191,7 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
         dg = FakeDeltaGenerator()
         data = "some_text"
         # This would really look like st.text(data) but since we're
-        # testng the wrapper, it looks like this.
+        # testing the wrapper, it looks like this.
         element = wrapped(dg, data)
         self.assertEqual(element.new_element.text.body, data)
 
