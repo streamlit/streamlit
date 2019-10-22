@@ -32,6 +32,7 @@ import "streamlit/proto/Exception.proto";
 import "streamlit/proto/GraphVizChart.proto";
 import "streamlit/proto/Image.proto";
 import "streamlit/proto/Json.proto";
+import "streamlit/proto/NumberInput.proto";
 import "streamlit/proto/Markdown.proto";
 import "streamlit/proto/MultiSelect.proto";
 import "streamlit/proto/PlotlyChart.proto";
@@ -45,7 +46,6 @@ import "streamlit/proto/TextInput.proto";
 import "streamlit/proto/TimeInput.proto";
 import "streamlit/proto/VegaLiteChart.proto";
 import "streamlit/proto/Video.proto";
-import "streamlit/proto/NumberInput.proto";
 
 // An element which can be displayed on the screen.
 message Element {
@@ -82,8 +82,8 @@ message Element {
     TimeInput time_input = 26;
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
-    NumberInput number_input = 29;
+    NumberInput number_input = 32;
 
-    // Next ID: 29
+    // Next ID: 33 
   }
 }
