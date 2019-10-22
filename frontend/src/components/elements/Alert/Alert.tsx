@@ -25,7 +25,6 @@ import { Alert as AlertProto } from "autogen/proto"
 // Ignoring typeScript for this module as it has no ts support
 // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
 // @ts-ignore
-import htmlParser from "react-markdown/plugins/html-parser"
 
 import "./Alert.scss"
 
@@ -83,7 +82,7 @@ interface Props {
 }
 
 /**
- * Functional element representing formatted text.
+ * Functional element representing error/warning/info text.
  */
 class Alert extends React.PureComponent<Props> {
   public render(): ReactNode {

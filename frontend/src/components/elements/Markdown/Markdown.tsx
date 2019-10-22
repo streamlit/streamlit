@@ -17,10 +17,8 @@
 
 import React, { ReactNode, ReactElement } from "react"
 
-import classNames from "classnames"
 import ReactMarkdown from "react-markdown"
 import { Map as ImmutableMap } from "immutable"
-import { Markdown as MarkdownProto } from "autogen/proto"
 
 // Ignoring typeScript for this module as it has no ts support
 // eslint-disable-next-line @typescript-eslint/ban-ts-ignore

@@ -15,12 +15,10 @@
  * limitations under the License.
  */
 
-import React, { ReactNode, ReactElement } from "react"
+import React, { ReactNode } from "react"
 
-import classNames from "classnames"
 import ReactJson from "react-json-view"
 import { Map as ImmutableMap } from "immutable"
-import { Json as JsonProto } from "autogen/proto"
 
 // Ignoring typeScript for this module as it has no ts support
 // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
@@ -34,13 +32,12 @@ interface Props {
 }
 
 /**
- * Functional element representing formatted text.
+ * Functional element representing JSON structured text.
  */
 class Json extends React.PureComponent<Props> {
   public render(): ReactNode {
     const { element, width } = this.props
     const body = element.get("body")
-    const format = element.get("format")
     const styleProp = { width }
 
     let bodyObject = undefined
