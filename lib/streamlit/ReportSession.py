@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys, time
+import sys
 from enum import Enum
 
 import tornado.gen

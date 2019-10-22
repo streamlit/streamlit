@@ -292,6 +292,8 @@ class ConfigTest(unittest.TestCase):
                 u"server.liveSave",
                 u"server.port",
                 u"server.runOnSave",
+                u"server.temporaryFileUploadFolder",
+                u"server.maxUploadSize",
             ]
         )
         keys = sorted(config._config_options.keys())
@@ -600,3 +602,7 @@ class ConfigLoadingTest(unittest.TestCase):
 
             # s3.accessKeyId is set in local and not in global
             self.assertEqual(u"local_accessKeyId", config.get_option("s3.accessKeyId"))
+
+    def test_upload_file_default_values(self):
+        self.assertEqual('./temp', config.get_option("server.temporaryFileUploadFolder"))
+        self.assertEqual(50, config.get_option("server.maxUploadSize"))
