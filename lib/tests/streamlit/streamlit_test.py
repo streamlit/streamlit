@@ -203,7 +203,6 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         """
         )
 
-        # TODO / CHECK: does code route to markdown element?
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.markdown.body, expected.strip())
 
@@ -397,6 +396,14 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.markdown.body, "some markdown")
+
+        # test the unsafe_allow_html keyword 
+        st.markdown("    some markdown  ", unsafe_allow_html=True)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.markdown.body, "some markdown")
+        self.assertTrue(el.markdown.allow_html) 
+
 
     def test_st_progress(self):
         """Test st.progress."""
