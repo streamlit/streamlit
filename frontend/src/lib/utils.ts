@@ -66,7 +66,7 @@ export function makeElementWithInfoText(
   return fromJS({
     type: "text",
     text: {
-      format: TextProto.Format.INFO,
+      /* format: TextProto.Format.INFO, */
       body: text,
     },
   })

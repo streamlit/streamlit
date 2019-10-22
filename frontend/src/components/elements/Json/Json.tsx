@@ -19,7 +19,6 @@ import React, { ReactNode, ReactElement } from "react"
 
 import classNames from "classnames"
 import ReactJson from "react-json-view"
-import ReactMarkdown from "react-markdown"
 import { Map as ImmutableMap } from "immutable"
 import { Json as JsonProto } from "autogen/proto"
 
@@ -27,9 +26,12 @@ import { Json as JsonProto } from "autogen/proto"
 // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
 // @ts-ignore
 
-import CodeBlock from "../CodeBlock"
-
 import "./Json.scss"
+
+interface Props {
+  width: number
+  element: ImmutableMap<string, any>
+}
 
 /**
  * Functional element representing formatted text.
@@ -39,11 +41,6 @@ class Json extends React.PureComponent<Props> {
     const { element, width } = this.props
     const body = element.get("body")
     const format = element.get("format")
-    const renderers = {
-      code: CodeBlock,
-      link: linkWithTargetBlank,
-      linkReference: linkReferenceHasParens,
-    }
     const styleProp = { width }
 
     let bodyObject = undefined
