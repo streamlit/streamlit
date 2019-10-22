@@ -63,7 +63,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     acceptedFiles: File[],
     rejectedFiles: File[],
     event: React.SyntheticEvent<HTMLElement>
-  ) => {
+  ): void => {
     const { element } = this.props
     const maxSize = element.get("maxUploadSize")
     this.setState({ status: "READING" })
