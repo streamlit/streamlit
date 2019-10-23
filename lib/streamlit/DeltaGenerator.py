@@ -134,21 +134,21 @@ def _build_duplicate_widget_message(widget_type, user_key=None):
             There are multiple identical st.{widget_type} widgets that use the
              '{user_key}' key.
 
-            To fix this, please make sure that the 'key' argument is unique for 
+            To fix this, please make sure that the 'key' argument is unique for
             each st.{widget_type} you create.
             """
         )
     else:
         message = textwrap.dedent(
             """
-            There are multiple identical st.{widget_type} widgets with the 
+            There are multiple identical st.{widget_type} widgets with the
             same generated key.
 
             (When a widget is created, it's assigned an internal key based on
             its structure. Multiple widgets with an identical structure will
             result in the same internal key, which causes this error.)
 
-            To fix this, please pass a unique 'key' argument to 
+            To fix this, please pass a unique 'key' argument to
             st.{widget_type}().
             """
         )
@@ -239,8 +239,40 @@ class NoValue(object):
 
 
 class DeltaGenerator(object):
-    """Creator of Delta protobuf messages."""
+    """Creator of Delta protobuf messages.
 
+    Parameters
+    ----------
+    enqueue: callable or None
+      Function that (maybe) enqueues ForwardMsg's and returns True if
+        enqueued or False if not.
+    id: int or None
+      ID for deltas, or None to create the root DeltaGenerator (which
+        produces DeltaGenerators with incrementing IDs)
+    delta_type: string or None
+      The name of the element passed in Element.proto's oneof.
+      This is needed so we can transform dataframes for some elements when
+      performing an `add_rows`.
+    last_index: int or None
+      The last index of the DataFrame for the element this DeltaGenerator
+      created. Only applies to elements that transform dataframes,
+      like line charts.
+    is_root: bool
+      If True, this will behave like a root DeltaGenerator which an
+      auto-incrementing ID (in which case, `id` should be None).
+      If False, this will have a fixed ID as determined
+      by the `id` argument.
+    container: BlockPath
+      The root container for this DeltaGenerator. Can be MAIN or SIDEBAR.
+    path: tuple of ints
+      The full path of this DeltaGenerator, consisting of the IDs of
+      all ancestors. The 0th item is the topmost ancestor.
+
+    """
+
+    # The pydoc below is for user consumption, so it doesn't talk about
+    # DeltaGenerator constructor parameters (which users should never use). For
+    # those, see above.
     def __init__(
         self,
         enqueue,
@@ -251,34 +283,18 @@ class DeltaGenerator(object):
         container=BlockPath_pb2.BlockPath.MAIN,
         path=(),
     ):
-        """Constructor.
+        """Inserts or updates elements in Streamlit apps.
 
-        Parameters
-        ----------
-        enqueue: callable or None
-          Function that (maybe) enqueues ForwardMsg's and returns True if
-            enqueued or False if not.
-        id: int or None
-          ID for deltas, or None to create the root DeltaGenerator (which
-            produces DeltaGenerators with incrementing IDs)
-        delta_type: string or None
-          The name of the element passed in Element.proto's oneof.
-          This is needed so we can transform dataframes for some elements when
-          performing an `add_rows`.
-        last_index: int or None
-          The last index of the DataFrame for the element this DeltaGenerator
-          created. Only applies to elements that transform dataframes,
-          like line charts.
-        is_root: bool
-          If True, this will behave like a root DeltaGenerator which an
-          auto-incrementing ID (in which case, `id` should be None).
-          If False, this will have a fixed ID as determined
-          by the `id` argument.
-        container: BlockPath
-          The root container for this DeltaGenerator. Can be MAIN or SIDEBAR.
-        path: tuple of ints
-          The full path of this DeltaGenerator, consisting of the IDs of
-          all ancestors. The 0th item is the topmost ancestor.
+        As a user, you should never initialize this object by hand. Instead,
+        DeltaGenerator objects are initialized for you in two places:
+
+        1) When you call `dg = st.foo()` for some method "foo", sometimes `dg`
+        is a DeltaGenerator object. You can call methods on the `dg` object to
+        update the element `foo` that appears in the Streamlit app.
+
+        2) This is an internal detail, but `st.sidebar` itself is a
+        DeltaGenerator. That's why you can call `st.sidebar.foo()` to place
+        an element `foo` inside the sidebar.
 
         """
         self._enqueue = enqueue
@@ -1353,7 +1369,7 @@ class DeltaGenerator(object):
         data : str, bytes, BytesIO, numpy.ndarray, or file opened with
                 io.open().
             Raw audio data or a string with a URL pointing to the file to load.
-            If passing the raw data, this must include headers and any other bytes 
+            If passing the raw data, this must include headers and any other bytes
             required in the actual file.
         start_time: int
             The time from which this element should start playing.
@@ -1388,7 +1404,7 @@ class DeltaGenerator(object):
                 io.open().
             Raw video data or a string with a URL pointing to the video
             to load. Includes support for YouTube URLs.
-            If passing the raw data, this must include headers and any other 
+            If passing the raw data, this must include headers and any other
             bytes required in the actual file.
         format : str
             The mime type for the video file. Defaults to 'video/mp4'.
