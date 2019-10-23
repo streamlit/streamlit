@@ -17,7 +17,7 @@ all: init install build develop
 all-devel: init install develop
 	@echo ""
 	@echo "    The frontend has *not* been rebuilt."
-	@echo "    If you need to make a pipfile or test S3 sharing, run:"
+	@echo "    If you need to make a wheel file or test S3 sharing, run:"
 	@echo ""
 	@echo "    make build"
 	@echo ""
