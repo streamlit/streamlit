@@ -37,4 +37,3 @@ class TemporaryFileTest(unittest.TestCase):
         with TemporaryDirectory(dir=dir.path) as temp_fname:
             self.assertTrue(os.path.exists(temp_fname))
         self.assertFalse(os.path.exists(temp_fname))
-

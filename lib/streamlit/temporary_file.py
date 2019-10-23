@@ -48,6 +48,7 @@ class TemporaryFile(object):
         self._kwargs = kwargs
 
     """Context Manager """
+
     def __enter__(self):
         fd, self._path = tempfile.mkstemp(*self._args, **self._kwargs)
         # We close the file descriptor since mkstemp opens it by default.
@@ -75,6 +76,7 @@ class TemporaryDirectory(object):
         Enclosing directory.
 
     """
+
     def __init__(self, *args, **kwargs):
         self._args = args
         self._kwargs = kwargs
@@ -85,4 +87,3 @@ class TemporaryDirectory(object):
 
     def __exit__(self, *exec):
         shutil.rmtree(self._path)
-

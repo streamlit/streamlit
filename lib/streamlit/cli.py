@@ -188,6 +188,7 @@ def main_run(file_or_url, args=None, **kwargs):
     if url(file_or_url):
         import requests
         from streamlit.temporary_file import TemporaryDirectory
+
         with TemporaryDirectory() as temp_dir:
             script_path = os.path.join(temp_dir, os.path.basename(file_or_url))
             with open(script_path, "wb") as fp:
