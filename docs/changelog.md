@@ -19,9 +19,29 @@ See highlights, bug fixes, and known issues for Streamlit releases:
 
    .. code-block:: bash
 
-      # PIP
       $ pip install --upgrade streamlit
 ```
+
+## Version 0.49.0
+
+_Release date: October 23, 2019_
+
+**Highlights:**
+
+- 💯 New input widget for entering numbers with the keyboard: `st.number_input()`
+- 📺 Audio/video improvements: ability to load from a URL, to embed YouTube
+  videos, and to set the start position.
+- 🤝 You can now (once again) share static snapshots of your apps to S3! See
+  the S3 section of `streamlit config show` to set it up. Then share from
+  top-right menu.
+- ⚙️ Use `server.baseUrlPath` config option to set Streamlit's URL to something
+  like `http://domain.com/customPath`.
+
+**Notable bug fixes:**
+
+- Fixes numerous Windows bugs, including [Issues
+  #339](https://github.com/streamlit/streamlit/issues/399) and
+  [#401](https://github.com/streamlit/streamlit/issues/301).
 
 ## Version 0.48.0
 
