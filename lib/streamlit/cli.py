@@ -173,7 +173,7 @@ def _apply_config_options_from_cli(kwargs):
 
 @main.command("run")
 @configurator_options
-@click.argument("file_or_url", required=True)
+@click.argument("file_or_url", required=True, envvar="STREAMLIT_RUN_FILE_OR_URL")
 @click.argument("args", nargs=-1)
 def main_run(file_or_url, args=None, **kwargs):
     """Run a Python script, piping stderr to Streamlit.
