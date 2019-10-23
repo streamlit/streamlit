@@ -16,7 +16,7 @@
 import tempfile
 import shutil
 
-# We provide our own context managers for temporary directory that wraps
+# We provide our own context manager for temporary directory that wraps
 # tempfile.mkdtemp
 
 
