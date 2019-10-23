@@ -147,6 +147,7 @@ def configurator_options(func):
             parsed_parameter["param"],
             help=parsed_parameter["description"],
             type=parsed_parameter["type"],
+            envvar='STREAMLIT_CONFIG_{}'.format(parsed_parameter["param"].upper()),
         )
         func = config_option(func)
     return func
