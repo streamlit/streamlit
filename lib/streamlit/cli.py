@@ -173,15 +173,14 @@ def _apply_config_options_from_cli(kwargs):
 # Fetch remote file at url_path to script_path
 def _download_remote(script_path, url_path):
     import requests
+
     with open(script_path, "wb") as fp:
         try:
             resp = requests.get(url_path)
             resp.raise_for_status()
             fp.write(resp.content)
         except requests.exceptions.RequestException as e:
-            raise click.BadParameter(
-                ("Unable to fetch {}.\n{}".format(url_path, e))
-            )
+            raise click.BadParameter(("Unable to fetch {}.\n{}".format(url_path, e)))
 
 
 @main.command("run")
@@ -201,6 +200,7 @@ def main_run(file_or_url, args=None, **kwargs):
 
     if url(file_or_url):
         from streamlit.temporary_directory import TemporaryDirectory
+
         with TemporaryDirectory() as temp_dir:
             script_path = os.path.join(temp_dir, os.path.basename(file_or_url))
             _download_remote(script_path, file_or_url)
