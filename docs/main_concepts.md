@@ -53,11 +53,32 @@ While these limitations are important to keep in mind, most of the time, they ar
 
 When you've got the data or model into the state that you want to explore, you can add in widgets like [`st.slider()`](api.html#streamlit.slider), [`st.button()`](api.html#streamlit.button) or [`st.selectbox()`](api.html#streamlit.selectbox). It's really straightforward - just treat widgets as variables. There are no callbacks in Streamlit! Every interaction simply reruns the script from top-to-bottom. Streamlit assigns each variable an up-to-date value given the app state. This approach leads to really clean code:
 
-```
+```python
 import streamlit as st
 x = st.slider('x')
 st.write(x, 'squared is', x * x)
 
+```
+
+## Sidebar
+
+Streamlit makes it easy to organize your widgets with `st.sidebar`. You can use `st.sidebar` with almost any element. The only elements that aren't supported are: `st.write` (you
+should use `st.sidebar.markdown()` instead), `st.echo`, and `st.spinner`.
+
+Each element that's passed to `st.sidebar` is pinned to the left, allowing readers to focus on the main area in your app. Let's take a look at a few examples:
+
+```python
+import streamlit as st
+
+add_selectbox = st.sidebar.checkbox(
+    'How would you like to be contacted?',
+    ('Email', 'Home phone', 'Mobile phone'))
+)
+
+add_slider = st.sidebar.slider(
+    'Select a range of values',
+    0.0, 100.0, (25.0, 75.0))
+)
 ```
 
 ## App model
