@@ -59,7 +59,9 @@
       "warn",
       { "allowExpressions": true }
     ],
-    "@typescript-eslint/ban-ts-ignore": 0
+    // It's OK to use ts-ignore when we're missing type definitions
+    // for a JS library.
+    "@typescript-eslint/ban-ts-ignore": "off"
   },
   "settings": {
     "react": {

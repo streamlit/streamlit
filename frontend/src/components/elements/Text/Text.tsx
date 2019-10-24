@@ -20,8 +20,7 @@ import React, { ReactNode } from "react"
 import classNames from "classnames"
 import { Map as ImmutableMap } from "immutable"
 
-// Ignoring typeScript for this module as it has no ts support
-// eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+// react-markdown doesn't have a @types file.
 // @ts-ignore
 
 import "./Text.scss"
