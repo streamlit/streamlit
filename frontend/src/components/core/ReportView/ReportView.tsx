@@ -28,10 +28,11 @@ import { ThemeProvider } from "baseui"
 import { mainWidgetTheme, sidebarWidgetTheme } from "lib/widgetTheme"
 import "./ReportView.scss"
 import "./Widget.scss"
+import { ElementWrapper } from "../../../lib/DeltaParser"
 
 type SimpleElement = ImmutableMap<string, any>
 type Element = SimpleElement | BlockElement
-interface BlockElement extends List<Element> {}
+interface BlockElement extends List<ElementWrapper> {}
 
 interface Elements {
   main: BlockElement

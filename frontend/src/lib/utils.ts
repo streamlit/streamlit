@@ -24,7 +24,7 @@ import {
   Set as ImmutableSet,
 } from "immutable"
 import { Text as TextProto } from "autogen/proto"
-import { BlockElement, Element, SimpleElement } from "./DeltaParser"
+import { BlockElement, ElementWrapper, SimpleElement } from "./DeltaParser"
 
 /**
  * Wraps a function to allow it to be called, at most, once per interval
@@ -99,11 +99,13 @@ export function flattenElements(
   elements: BlockElement
 ): ImmutableSet<SimpleElement> {
   return elements.reduce(
-    (acc: ImmutableSet<SimpleElement>, element: Element) => {
-      if (element instanceof List) {
-        return flattenElements(element as BlockElement)
+    (acc: ImmutableSet<SimpleElement>, elementWrapper: ElementWrapper) => {
+      if (elementWrapper.element instanceof List) {
+        return flattenElements(elementWrapper.element as BlockElement)
       }
-      return acc.union(ImmutableSet.of(element as SimpleElement))
+      return acc.union(
+        ImmutableSet.of(elementWrapper.element as SimpleElement)
+      )
     },
     ImmutableSet.of<SimpleElement>()
   )

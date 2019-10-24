@@ -455,12 +455,15 @@ class App extends PureComponent<Props, State> {
    */
   clearOldElements = (elements: any, reportId: string): BlockElement => {
     return elements
-      .map((element: any) => {
-        if (element instanceof List) {
-          const clearedElements = this.clearOldElements(element, reportId)
+      .map((elementWrapper: any) => {
+        if (elementWrapper.element instanceof List) {
+          const clearedElements = this.clearOldElements(
+            elementWrapper.element,
+            reportId
+          )
           return clearedElements.size > 0 ? clearedElements : null
         }
-        return element.get("reportId") === reportId ? element : null
+        return elementWrapper.reportId === reportId ? elementWrapper : null
       })
       .filter((element: any) => element !== null)
   }

@@ -30,11 +30,17 @@ import { requireNonNull } from "lib/utils"
 type Container = "main" | "sidebar"
 export type SimpleElement = ImmutableMap<string, any>
 export type Element = SimpleElement | BlockElement
-export interface BlockElement extends List<Element> {}
+export interface BlockElement extends List<ElementWrapper> {}
 
 export interface Elements {
   main: BlockElement
   sidebar: BlockElement
+}
+
+export interface ElementWrapper {
+  reportId: string
+  element: Element
+  metadata: ForwardMsgMetadata
 }
 
 export function applyDelta(
@@ -54,10 +60,30 @@ export function applyDelta(
 
   dispatchOneOf(delta, "type", {
     newElement: (element: SimpleElement) => {
-      elements[container] = elements[container].setIn(
-        deltaPath,
-        handleNewElementMessage(container, element, reportId, metadata)
+      const currentElement: ElementWrapper = elements[container].getIn(
+        deltaPath
       )
+
+      if (
+        currentElement &&
+        currentElement.element &&
+        currentElement.element.equals(element)
+      ) {
+        elements[container] = elements[container].updateIn(
+          deltaPath,
+          (elementWrapper: ElementWrapper) => {
+            elementWrapper.reportId = reportId
+            elementWrapper.metadata = metadata
+
+            return elementWrapper
+          }
+        )
+      } else {
+        elements[container] = elements[container].setIn(
+          deltaPath,
+          handleNewElementMessage(container, element, reportId, metadata)
+        )
+      }
     },
     newBlock: () => {
       elements[container] = elements[container].updateIn(deltaPath, element =>
@@ -79,13 +105,19 @@ function handleNewElementMessage(
   element: SimpleElement,
   reportId: string,
   metadata: ForwardMsgMetadata
-): SimpleElement {
+): ElementWrapper {
   MetricsManager.current.incrementDeltaCounter(container)
   MetricsManager.current.incrementDeltaCounter(element.get("type"))
   // Set reportId on elements so we can clear old elements
   // when the report script is re-executed.
   // Set metadata on elements so that we can use them downstream.
-  return element.set("reportId", reportId).set("metadata", metadata)
+  // return element.set("reportId", reportId).set("metadata", metadata)
+
+  return {
+    reportId,
+    element,
+    metadata,
+  }
 }
 
 function handleNewBlockMessage(
