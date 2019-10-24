@@ -52,6 +52,56 @@ NEW_VERSION_TEXT = """
 }
 
 
+def _convert_config_option_to_click_option(config_option):
+    """Composes given config option options as options for click lib."""
+    option = "--{}".format(config_option.key)
+    param = config_option.key.replace(".", "_")
+    description = config_option.description
+    if config_option.deprecated:
+        description += "\n {} - {}".format(
+            config_option.deprecation_text, config_option.deprecation_date
+        )
+
+    return {
+        "param": param,
+        "description": description,
+        "type": config_option.type,
+        "option": option,
+    }
+
+
+def configurator_options(func):
+    """Decorator that adds config param keys to click dynamically."""
+    for _, value in reversed(_config._config_options.items()):
+        parsed_parameter = _convert_config_option_to_click_option(value)
+        config_option = click.option(
+            parsed_parameter["option"],
+            parsed_parameter["param"],
+            help=parsed_parameter["description"],
+            type=parsed_parameter["type"],
+        )
+        func = config_option(func)
+    return func
+
+
+def _apply_config_options_from_cli(kwargs):
+    """The "streamlit run" command supports passing Streamlit's config options
+    as flags.
+
+    This function reads through all config flags, massage them, and
+    pass them to _set_config() overriding default values and values set via
+    config.toml file
+
+    """
+    for config_option in kwargs:
+        if kwargs[config_option] is not None:
+            config_option_def_key = config_option.replace("_", ".")
+
+            _config._set_option(
+                config_option_def_key, kwargs[config_option], "cli call option"
+            )
+
+
 @click.group()
 @click.option("--log_level", show_default=True, type=click.Choice(LOG_LEVELS))
 @click.version_option(prog_name="Streamlit")
@@ -106,9 +156,12 @@ def main_docs():
 
 
 @main.command("hello")
-def main_hello():
+@configurator_options
+def main_hello(**kwargs):
     """Runs the Hello World script."""
     from streamlit.hello import hello
+
+    _apply_config_options_from_cli(kwargs)
 
     filename = hello.__file__
 
@@ -118,56 +171,6 @@ def main_hello():
         filename = "%s.py" % filename[:-4]
 
     _main_run(filename)
-
-
-def _convert_config_option_to_click_option(config_option):
-    """Composes given config option options as options for click lib."""
-    option = "--{}".format(config_option.key)
-    param = config_option.key.replace(".", "_")
-    description = config_option.description
-    if config_option.deprecated:
-        description += "\n {} - {}".format(
-            config_option.deprecation_text, config_option.deprecation_date
-        )
-
-    return {
-        "param": param,
-        "description": description,
-        "type": config_option.type,
-        "option": option,
-    }
-
-
-def configurator_options(func):
-    """Decorator that adds config param keys to click dynamically."""
-    for _, value in reversed(_config._config_options.items()):
-        parsed_parameter = _convert_config_option_to_click_option(value)
-        config_option = click.option(
-            parsed_parameter["option"],
-            parsed_parameter["param"],
-            help=parsed_parameter["description"],
-            type=parsed_parameter["type"],
-        )
-        func = config_option(func)
-    return func
-
-
-def _apply_config_options_from_cli(kwargs):
-    """The "streamlit run" command supports passing Streamlit's config options
-    as flags.
-
-    This function reads through all config flags, massage them, and
-    pass them to _set_config() overriding default values and values set via
-    config.toml file
-
-    """
-    for config_option in kwargs:
-        if kwargs[config_option] is not None:
-            config_option_def_key = config_option.replace("_", ".")
-
-            _config._set_option(
-                config_option_def_key, kwargs[config_option], "cli call option"
-            )
 
 
 @main.command("run")
