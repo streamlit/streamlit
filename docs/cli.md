@@ -61,14 +61,26 @@ $ streamlit config show
 ```
 
 Shows all config options available for Streamlit, including their current
-values. You can set these options in three different ways:
+values. You can set these options in four different ways:
 
-- **Globally:** `~/.streamlit/config.toml`.
+- **In a global config file at `~/.streamlit/config.toml`.** For instance:
+  ```toml
+  [server]
+  port = 80
+  ```
 
-- **Per project:** `$CWD/.streamlit/config.toml`, where `$CWD` is
-  the folder you're running Streamlit from.
+- **In a per-project config file at `$CWD/.streamlit/config.toml`,** where
+  `$CWD` is the folder you're running Streamlit from.
 
-- **Per execution:** just pass the options as flags when running `streamlit run`. See more info above.
+- **Through `STREAMLIT_CONFIG_*` environment variables,** such as:
+  ```bash
+  $ export STREAMLIT_CONFIG_SERVER_PORT=80
+  ```
+
+- **As flags in the command line** when running `streamlit run`. For example:
+  ```bash
+  $ streamlit run your_script.py --server.port 80
+  ```
 
 ## Clear the cache
 
