@@ -149,5 +149,5 @@ def _get_s3_url_host_if_manually_set():
 
 def make_url_path_regex(*path):
     """Get a regex of the form ^/foo/bar/baz/?$ for a path (foo, bar, baz)."""
-    path = [x for x in path if x]  # Filter out falsy components.
+    path = [x.strip("/") for x in path if x]  # Filter out falsy components.
     return r"^/%s/?$" % "/".join(path)
