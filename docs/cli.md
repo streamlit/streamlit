@@ -25,9 +25,9 @@ Runs your app. At any time you can kill the server with **Ctrl+c**.
 
 ```eval_rst
 .. note::
-  When passing your script some arguments, **they must be passed after a `--`**
-  (double dash). Otherwise the arguments get interpreted as anything arguments
-  to Streamlit itself.
+  When passing your script some custom arguments, **they must be passed after a
+  "--"** (double dash). Otherwise the arguments get interpreted as arguments to
+  Streamlit itself.
 ```
 
 You can also pass in config options to `streamlit run`. These allow you to do
