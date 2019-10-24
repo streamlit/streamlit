@@ -85,8 +85,6 @@ class Block extends PureComponent<Props> {
   private renderElements = (width: number): ReactNode[] => {
     const elementsToRender = this.getElements()
 
-    // console.log(elementsToRender.toJSON())
-    // return []
     // Transform Streamlit elements into ReactNodes.
     return elementsToRender
       .toArray()
