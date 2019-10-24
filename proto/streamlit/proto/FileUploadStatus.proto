@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 
-// A python empty.
+// Message to share the file upload progress
 message FileUploadStatus {
     enum FileUploadState {
         // The report compiled and ran.
@@ -27,8 +27,15 @@ message FileUploadStatus {
         ERROR = 2;
       }
       
+    // widget Id
     string id = 1;
+
+    // Current state (FINISHED | UPLOADING| ERROR)
     FileUploadState state = 2;
+
+    // Current progress (btw 0 and 1)
     float progress = 3;
-    string value = 4;
+
+    // File id (full name on the server)
+    string file_id = 4;
 }

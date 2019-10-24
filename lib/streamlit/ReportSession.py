@@ -109,7 +109,7 @@ class ReportSession(object):
 
         self._scriptrunner = None
 
-        self.fileManager = FileManager()
+        self._file_manager = FileManager()
 
         LOGGER.debug("ReportSession initialized (id=%s)", self.id)
 
@@ -136,7 +136,7 @@ class ReportSession(object):
         """
         if self._state != ReportSessionState.SHUTDOWN_REQUESTED:
             LOGGER.debug("Shutting down (id=%s)", self.id)
-            self.fileManager.delete_all_files()
+            self._file_manager.delete_all_files()
 
             # Shut down the ScriptRunner, if one is active.
             # self._state must not be set to SHUTDOWN_REQUESTED until
@@ -438,7 +438,7 @@ class ReportSession(object):
 
     def handle_new_file(self, new_file=None):
 
-        self.fileManager.locate_new_file(
+        self._file_manager.locate_new_file(
             widgetId=new_file.id,
             name=new_file.name,
             size=new_file.size,
@@ -447,13 +447,13 @@ class ReportSession(object):
         )
 
     def handle_file_chunk(self, file_chunk=None):
-        progress, fullName = self.fileManager.porcess_chunk(
+        progress, fullName = self._file_manager.porcess_chunk(
             widgetId=file_chunk.id, index=file_chunk.index, data=file_chunk.data
         )
 
         msg = ForwardMsg()
         msg.file_upload_status.id = file_chunk.id
-        msg.file_upload_status.value = fullName
+        msg.file_upload_status.file_id = fullName
 
         if progress == 1:
             msg.file_upload_status.state = FileUploadStatus.FINISHED

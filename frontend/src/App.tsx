@@ -262,15 +262,14 @@ class App extends PureComponent<Props, State> {
           this.openDialog(newDialog)
         },
         fileUploadStatus: (fileUploadStatus: FileUploadStatus) => {
-          if (!fileUploadStatus.state) {
-            fileUploadStatus.state = 0
-          }
-
-          if (fileUploadStatus.state === 0) {
+          if (
+            fileUploadStatus.state ===
+            FileUploadStatus.FileUploadState.FINISHED
+          ) {
             // FINISHED TO UPLOAD
             this.widgetMgr.setStringValue(
               fileUploadStatus.id,
-              fileUploadStatus.value,
+              fileUploadStatus.fileId,
               { fromUi: true }
             )
           }
@@ -464,20 +463,6 @@ class App extends PureComponent<Props, State> {
     }
   }
 
-  updateFileUploaderWidget = (
-    element: any,
-    widgetId: string,
-    value: string
-  ): any => {
-    let fileUploaderWidget = element.get("fileUploader")
-    if (fileUploaderWidget !== undefined) {
-      if (fileUploaderWidget.get("id") === widgetId) {
-        fileUploaderWidget = fileUploaderWidget.set("value", value)
-        element = element.set("fileUploader", fileUploaderWidget)
-      }
-    }
-    return element
-  }
   /**
    * Removes old elements. The term old is defined as:
    *  - simple elements whose reportIds are no longer current

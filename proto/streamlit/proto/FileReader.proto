@@ -16,7 +16,13 @@
 
 syntax = "proto3";
 
+// file_reader api
+// When upload a file with the file_uploader widget, you get a fileId.
+// With this endpoint you get the bytes of that file 
 message FileReader {
+  // widget Id 
   string id = 1;
-  string file = 2;
+
+  // file Id (result of file_uploader widget)
+  string file_id = 2;
 }

@@ -16,9 +16,17 @@
 
 syntax = "proto3";
 
+// file_uploader widget
 message FileUploader {
+  // The widget id
   string id = 1;
+
+  // Text to be displayed before the widget
   string label = 2;
+
+  // Supported types: ['.png','.jpg','.img']
   repeated string type = 3;
+
+  // Max file size allowed by server config
   int32 max_upload_size = 4;
 }

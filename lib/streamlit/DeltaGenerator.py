@@ -1875,13 +1875,13 @@ class DeltaGenerator(object):
         return ui_value if ui_value is not None else ""
 
 
-    def file_reader(self, file):
+    def file_reader(self, file_id):
 
         """Display a file uploader widget.
 
         Parameters
         ----------
-        file : str
+        file_id : str
             A file id loaded with file_uploader widget.
 
         Returns
@@ -1898,8 +1898,8 @@ class DeltaGenerator(object):
 
         """
 
-        if len(file) > 0:
-            with open(file, "rb") as f:
+        if len(file_id) > 0:
+            with open(file_id, "rb") as f:
                 data = f.read()
                 f.close()
                 return data
