@@ -129,12 +129,14 @@ def _convert_config_option_to_click_option(config_option):
         description += "\n {} - {}".format(
             config_option.deprecation_text, config_option.deprecation_date
         )
+    envvar = "STREAMLIT_CONFIG_{}".format(param.upper())
 
     return {
         "param": param,
         "description": description,
         "type": config_option.type,
         "option": option,
+        "envvar": envvar,
     }
 
 
@@ -147,7 +149,7 @@ def configurator_options(func):
             parsed_parameter["param"],
             help=parsed_parameter["description"],
             type=parsed_parameter["type"],
-            envvar='STREAMLIT_CONFIG_{}'.format(parsed_parameter["param"].upper()),
+            envvar=parsed_parameter["envvar"],
         )
         func = config_option(func)
     return func
