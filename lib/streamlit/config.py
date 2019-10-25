@@ -201,7 +201,6 @@ _create_option(
     type_=bool,
 )
 
-
 _create_option(
     "global.sharingMode",
     description="""
@@ -372,6 +371,22 @@ _create_option(
     Example: ['/home/user1/env', 'relative/path/to/folder']
     """,
     default_val=[],
+)
+
+_create_option(
+    "server.fileWatcherType",
+    description="""
+        By default, Streamlit detects file changes with the Python watchdog
+        module. Optionally, you can force Streamlit to use Polling even if 
+        watchdog is available. 
+        There are four supported types at the moment:
+        "none": means no file watch at all,
+        "auto": would start from watchdog, and fall back to polling if watchdog  is not available,
+        "watchdog":  would always try to use watchdog,
+        "poll": would always try to use polling
+    """,
+    default_val="auto",
+    type_=str,
 )
 
 

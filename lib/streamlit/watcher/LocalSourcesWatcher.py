@@ -33,16 +33,13 @@ from streamlit.folder_black_list import FolderBlackList
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
+errorImportEventBasedWatcher = False
 
 try:
     # If the watchdog module is installed.
-    from streamlit.watcher.EventBasedFileWatcher import (
-        EventBasedFileWatcher as FileWatcher,
-    )
+    from streamlit.watcher.EventBasedFileWatcher import EventBasedFileWatcher
 except ImportError:
-    # Fallback that doesn't use watchdog.
-    from streamlit.watcher.PollingFileWatcher import PollingFileWatcher as FileWatcher
-
+    errorImportEventBasedWatcher = True
     if not config.get_option("global.disableWatchdogWarning"):
         msg = "\n  $ xcode-select --install" if util.is_darwin() else ""
 
@@ -56,6 +53,19 @@ except ImportError:
             % msg
         )
 
+watcherType = config.get_option("server.fileWatcherType")
+from streamlit.watcher.PollingFileWatcher import PollingFileWatcher
+
+if watcherType == "auto":
+    if errorImportEventBasedWatcher:
+        FileWatcher = PollingFileWatcher
+    else:
+        FileWatcher = EventBasedFileWatcher
+elif watcherType == "watchdog":
+    FileWatcher = EventBasedFileWatcher
+elif watcherType == "poll":
+    FileWatcher = PollingFileWatcher
+
 
 # Streamlit never watches files in the folders below.
 DEFAULT_FOLDER_BLACKLIST = [
@@ -65,7 +75,6 @@ DEFAULT_FOLDER_BLACKLIST = [
     "**/miniconda2",
     "**/miniconda3",
 ]
-
 
 WatchedModule = collections.namedtuple("WatchedModule", ["watcher", "module_name"])
 
