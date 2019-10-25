@@ -85,11 +85,10 @@ def configurator_options(func):
 
 
 def _apply_config_options_from_cli(kwargs):
-    """The "streamlit run" command supports passing Streamlit's config options
-    as flags.
+    """Set Streamlit config options from command-line flags.
 
-    This function reads through all config flags, massage them, and
-    pass them to _set_config() overriding default values and values set via
+    This function reads through all config flags, massages them, and
+    passes them to _set_config() overriding default values and values set via
     config.toml file
 
     """
@@ -98,7 +97,7 @@ def _apply_config_options_from_cli(kwargs):
             config_option_def_key = config_option.replace("_", ".")
 
             _config._set_option(
-                config_option_def_key, kwargs[config_option], "cli call option"
+                config_option_def_key, kwargs[config_option], "command-line argument"
             )
 
 
@@ -290,8 +289,12 @@ def config():
 
 
 @config.command("show")
-def config_show():
+@configurator_options
+def config_show(**kwargs):
     """Show all of Streamlit's config settings."""
+
+    _apply_config_options_from_cli(kwargs)
+
     _config.show_config()
 
 
