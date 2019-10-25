@@ -33,7 +33,6 @@ from streamlit.credentials import Credentials
 from streamlit import version
 import streamlit.bootstrap as bootstrap
 
-
 LOG_LEVELS = ["error", "warning", "info", "debug"]
 
 NEW_VERSION_TEXT = """
@@ -200,9 +199,10 @@ def main_run(file_or_url, args=None, **kwargs):
 
     if url(file_or_url):
         from streamlit.temporary_directory import TemporaryDirectory
-
         with TemporaryDirectory() as temp_dir:
-            script_path = os.path.join(temp_dir, os.path.basename(file_or_url))
+            from urllib.parse import urlparse
+            path = urlparse(file_or_url).path
+            script_path = os.path.join(temp_dir, path.rsplit('/', 1)[-1])
             _download_remote(script_path, file_or_url)
             _main_run(script_path, args)
 
