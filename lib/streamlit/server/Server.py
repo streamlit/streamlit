@@ -38,6 +38,7 @@ from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.fileManager import FileManager
+from streamlit.server.routes import AddSlashHandler
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
 from streamlit.server.routes import MessageCacheHandler
@@ -264,6 +265,10 @@ class Server(object):
                         make_url_path_regex(base, "(.*)"),
                         StaticFileHandler,
                         {"path": "%s/" % static_path, "default_filename": "index.html"},
+                    ),
+                    (
+                        make_url_path_regex(base, trailing_slash=False),
+                        AddSlashHandler
                     )
                 ]
             )
