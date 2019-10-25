@@ -147,7 +147,8 @@ def _get_s3_url_host_if_manually_set():
         return util.get_hostname(config.get_option("s3.url"))
 
 
-def make_url_path_regex(*path):
+def make_url_path_regex(*path, **kwargs):
     """Get a regex of the form ^/foo/bar/baz/?$ for a path (foo, bar, baz)."""
-    path = [x for x in path if x]  # Filter out falsy components.
-    return r"^/%s/?$" % "/".join(path)
+    path = [x.strip("/") for x in path if x]  # Filter out falsy components.
+    path_format = r"^/%s/?$" if kwargs.get("trailing_slash", True) else r"^/%s$"
+    return path_format % "/".join(path)

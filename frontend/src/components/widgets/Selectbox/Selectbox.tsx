@@ -55,7 +55,7 @@ class Selectbox extends React.PureComponent<Props, State> {
     this.props.widgetMgr.setIntValue(widgetId, this.state.value, source)
   }
 
-  private onChange = (params: OnChangeParams) => {
+  private onChange = (params: OnChangeParams): void => {
     if (params.value.length === 0) {
       logWarning("No value selected!")
       return

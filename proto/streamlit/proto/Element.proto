@@ -42,6 +42,7 @@ import "streamlit/proto/TextInput.proto";
 import "streamlit/proto/TimeInput.proto";
 import "streamlit/proto/VegaLiteChart.proto";
 import "streamlit/proto/Video.proto";
+import "streamlit/proto/NumberInput.proto";
 
 // An element which can be displayed on the screen.
 message Element {
@@ -75,6 +76,7 @@ message Element {
     TimeInput time_input = 26;
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
+    NumberInput number_input = 29;
 
     // Next ID: 29
   }

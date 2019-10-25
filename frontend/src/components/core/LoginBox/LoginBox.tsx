@@ -74,20 +74,20 @@ class LoginBox extends PureComponent<Props, State> {
     )
   }
 
-  onRequest = () => {
+  onRequest = (): void => {
     this.setState({ loginInProgress: true })
   }
 
   onSuccess = (
     googleUser: GoogleLoginResponse | GoogleLoginResponseOffline
-  ) => {
+  ): void => {
     if ("getAuthResponse" in googleUser) {
       const authResult = googleUser.getAuthResponse()
       this.props.onSuccess(authResult["access_token"], authResult["id_token"])
     }
   }
 
-  onFailure = (response: any) => {
+  onFailure = (response: any): void => {
     this.props.onFailure(`Error: ${response.error}. ${response.details}`)
   }
 }
