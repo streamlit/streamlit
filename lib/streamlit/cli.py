@@ -175,9 +175,9 @@ def _apply_config_options_from_cli(kwargs):
 
 @main.command("run")
 @configurator_options
-@click.argument("file_or_url", required=True, envvar="STREAMLIT_RUN_FILE_OR_URL")
+@click.argument("target", required=True, envvar="STREAMLIT_RUN_TARGET")
 @click.argument("args", nargs=-1)
-def main_run(file_or_url, args=None, **kwargs):
+def main_run(target, args=None, **kwargs):
     """Run a Python script, piping stderr to Streamlit.
 
     The script can be local or it can be an url. In the latter case, Streamlit
@@ -188,29 +188,29 @@ def main_run(file_or_url, args=None, **kwargs):
 
     _apply_config_options_from_cli(kwargs)
 
-    if url(file_or_url):
+    if url(target):
         import tempfile
         import requests
 
         with tempfile.NamedTemporaryFile() as fp:
             try:
-                resp = requests.get(file_or_url)
+                resp = requests.get(target)
                 resp.raise_for_status()
                 fp.write(resp.content)
                 # flush since we are reading the file within the with block
                 fp.flush()
             except requests.exceptions.RequestException as e:
                 raise click.BadParameter(
-                    ("Unable to fetch {}.\n{}".format(file_or_url, e))
+                    ("Unable to fetch {}.\n{}".format(target, e))
                 )
             # this is called within the with block to make sure the temp file
             # is not deleted
             _main_run(fp.name, args)
 
     else:
-        if not os.path.exists(file_or_url):
-            raise click.BadParameter("File does not exist: {}".format(file_or_url))
-        _main_run(file_or_url, args)
+        if not os.path.exists(target):
+            raise click.BadParameter("File does not exist: {}".format(target))
+        _main_run(target, args)
 
 
 # Utility function to compute the command line as a string
