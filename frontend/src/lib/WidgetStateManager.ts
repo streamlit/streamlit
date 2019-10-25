@@ -221,7 +221,7 @@ export class WidgetStateManager {
     }
   }
 
-  public sendDeleteFileMessage(id: string) {
+  public sendDeleteFileMessage(id: string): void {
     const deleteFileMessage = new DeleteFile()
     deleteFileMessage.id = id
     this.sendBackMsg({ deleteFile: deleteFileMessage })
