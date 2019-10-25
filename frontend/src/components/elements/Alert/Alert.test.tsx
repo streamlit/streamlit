@@ -18,12 +18,27 @@
 import React from "react"
 import ReactDOM from "react-dom"
 import { Map as ImmutableMap } from "immutable"
-import Text from "./Text"
+import Alert from "./Alert"
 import renderer from "react-test-renderer"
 
-describe("Text Element Test (preformatted text)", () => {
-  it("renders plain text", () => {
-    const component = renderer.create(<Text />)
+describe("Alert Element Test", () => {
+  it("renders an ERROR box", () => {
+    const component = renderer.create(<Alert format="error" />)
+    let tree = component.toJSON()
+    expect(tree).toMatchSnapshot()
+  })
+  it("renders an INFO box", () => {
+    const component = renderer.create(<Alert format="info" />)
+    let tree = component.toJSON()
+    expect(tree).toMatchSnapshot()
+  })
+  it("renders a WARNING box", () => {
+    const component = renderer.create(<Alert format="warning" />)
+    let tree = component.toJSON()
+    expect(tree).toMatchSnapshot()
+  })
+  it("renders a SUCCESS box", () => {
+    const component = renderer.create(<Alert format="success" />)
     let tree = component.toJSON()
     expect(tree).toMatchSnapshot()
   })

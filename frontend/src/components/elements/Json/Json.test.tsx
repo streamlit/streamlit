@@ -18,12 +18,12 @@
 import React from "react"
 import ReactDOM from "react-dom"
 import { Map as ImmutableMap } from "immutable"
-import Text from "./Text"
+import Json from "./Json"
 import renderer from "react-test-renderer"
 
-describe("Text Element Test (preformatted text)", () => {
-  it("renders plain text", () => {
-    const component = renderer.create(<Text />)
+describe("JSON Element Test", () => {
+  it("renders json as expected", () => {
+    const component = renderer.create(<Json />)
     let tree = component.toJSON()
     expect(tree).toMatchSnapshot()
   })
