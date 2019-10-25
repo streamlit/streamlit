@@ -203,6 +203,19 @@ _create_option(
 
 
 _create_option(
+    "global.disableWatchdog",
+    description="""
+        By default, Streamlit detects file changes with the Python watchdog
+        module. Optionally, you can force Streamlit to use Polling even if 
+        watchdog is available. This is not recommended.
+
+        If you'd like to use polling, set this to True.
+    """,
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
     "global.sharingMode",
     description="""
         Configure the ability to share apps to the cloud.

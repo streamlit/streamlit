@@ -35,15 +35,15 @@ from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 try:
-    # If the watchdog module is installed.
-    from streamlit.watcher.EventBasedFileWatcher import (
-        EventBasedFileWatcher as FileWatcher,
-    )
+    # Watchdog-based file watcher
+    from streamlit.watcher.EventBasedFileWatcher import EventBasedFileWatcher
 except ImportError:
-    # Fallback that doesn't use watchdog.
-    from streamlit.watcher.PollingFileWatcher import PollingFileWatcher as FileWatcher
+    # Polling-based file watcher
+    from streamlit.watcher.PollingFileWatcher import PollingFileWatcher
 
-    if not config.get_option("global.disableWatchdogWarning"):
+    if not config.get_option("global.disableWatchdogWarning") and not config.get_option(
+        "global.disableWatchdog"
+    ):
         msg = "\n  $ xcode-select --install" if util.is_darwin() else ""
 
         LOGGER.warning(
@@ -56,6 +56,13 @@ except ImportError:
             % msg
         )
 
+# If we have not disabled watchdog and it is available, use it for watching files
+# Otherwise, fallback to polling
+FileWatcher = (
+    not config.get_option("global.disableWatchdog")
+    and EventBasedFileWatcher
+    or PollingFileWatcher
+)
 
 # Streamlit never watches files in the folders below.
 DEFAULT_FOLDER_BLACKLIST = [
@@ -115,7 +122,8 @@ class LocalSourcesWatcher(object):
 
         try:
             wm = WatchedModule(
-                watcher=FileWatcher(filepath, self.on_file_changed), module_name=module_name
+                watcher=FileWatcher(filepath, self.on_file_changed),
+                module_name=module_name,
             )
         except ErrorType:
             # If you don't have permission to read this file, don't even add it

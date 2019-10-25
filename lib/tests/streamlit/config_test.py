@@ -266,6 +266,7 @@ class ConfigTest(unittest.TestCase):
                 u"client.displayEnabled",
                 u"global.developmentMode",
                 u"global.disableWatchdogWarning",
+                u"global.disableWatchdog",
                 u"global.logLevel",
                 u"global.maxCachedMessageAge",
                 u"global.minCachedMessageSize",
