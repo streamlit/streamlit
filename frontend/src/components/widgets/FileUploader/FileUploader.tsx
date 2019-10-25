@@ -66,6 +66,15 @@ class FileUploader extends React.PureComponent<Props, State> {
   ): void => {
     const { element } = this.props
     const maxSize = element.get("maxUploadSize")
+
+    if (rejectedFiles.length > 0) {
+      this.setState({
+        status: "READY",
+        errorMessage: `${rejectedFiles[0].type} files are not allowed`,
+      })
+      return
+    }
+
     this.setState({ status: "READING" })
     acceptedFiles.forEach((file: File) => {
       const fileSilzeMB = file.size / 1024 / 1024
@@ -108,6 +117,12 @@ class FileUploader extends React.PureComponent<Props, State> {
           onRetry={() =>
             this.setState({ status: "READY", errorMessage: undefined })
           }
+          onCancel={() => {
+            this.setState({ status: "READY", errorMessage: undefined })
+            this.props.widgetStateManager.sendDeleteFileMessage(
+              this.props.element.get("id")
+            )
+          }}
           overrides={fileUploaderOverrides}
         />
       </div>

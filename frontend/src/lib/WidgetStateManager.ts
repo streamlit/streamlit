@@ -22,6 +22,7 @@ import {
   WidgetState,
   WidgetStates,
   NewFile,
+  DeleteFile,
   FileChunk,
 } from "autogen/proto"
 import { Set as ImmutableSet } from "immutable"
@@ -218,6 +219,12 @@ export class WidgetStateManager {
       message.data = data.slice(dataIndex, dataIndex + limit)
       this.sendBackMsg({ fileChunk: message })
     }
+  }
+
+  public sendDeleteFileMessage(id: string) {
+    const deleteFileMessage = new DeleteFile()
+    deleteFileMessage.id = id
+    this.sendBackMsg({ deleteFile: deleteFileMessage })
   }
 
   private createWigetStatesMsg(): WidgetStates {

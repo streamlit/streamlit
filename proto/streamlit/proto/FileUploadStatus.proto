@@ -25,12 +25,14 @@ message FileUploadStatus {
         UPLOADING = 1;
     
         ERROR = 2;
+
+        DELETED = 3;
       }
       
     // widget Id
     string id = 1;
 
-    // Current state (FINISHED | UPLOADING| ERROR)
+    // Current state (FINISHED | UPLOADING| ERROR | DELETED)
     FileUploadState state = 2;
 
     // Current progress (btw 0 and 1)

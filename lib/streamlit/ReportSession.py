@@ -439,16 +439,16 @@ class ReportSession(object):
     def handle_new_file(self, new_file=None):
 
         self._file_manager.locate_new_file(
-            widgetId=new_file.id,
+            widget_id=new_file.id,
             name=new_file.name,
             size=new_file.size,
-            lastModified=new_file.lastModified,
+            last_modified=new_file.lastModified,
             chunks=new_file.chunks,
         )
 
     def handle_file_chunk(self, file_chunk=None):
         progress, fullName = self._file_manager.porcess_chunk(
-            widgetId=file_chunk.id, index=file_chunk.index, data=file_chunk.data
+            widget_id=file_chunk.id, index=file_chunk.index, data=file_chunk.data
         )
 
         msg = ForwardMsg()
@@ -463,6 +463,16 @@ class ReportSession(object):
             msg.file_upload_status.state = FileUploadStatus.UPLOADING
             msg.file_upload_status.progress = progress
 
+        self.enqueue(msg)
+
+    def handle_delete_file(self, delete_file=None):
+        self._file_manager.delete_file(widget_id=delete_file.id)
+
+        msg = ForwardMsg()
+        msg.file_upload_status.id = delete_file.id
+        msg.file_upload_status.file_id = ""        
+        msg.file_upload_status.state = FileUploadStatus.DELETED
+        msg.file_upload_status.progress = 0
         self.enqueue(msg)
 
     def handle_stop_script_request(self):

@@ -264,7 +264,8 @@ class App extends PureComponent<Props, State> {
         fileUploadStatus: (fileUploadStatus: FileUploadStatus) => {
           if (
             fileUploadStatus.state ===
-            FileUploadStatus.FileUploadState.FINISHED
+              FileUploadStatus.FileUploadState.FINISHED ||
+            fileUploadStatus.state === FileUploadStatus.FileUploadState.DELETED
           ) {
             // FINISHED TO UPLOAD
             this.widgetMgr.setStringValue(

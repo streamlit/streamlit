@@ -22,7 +22,7 @@ LOGGER = get_logger(__name__)
 
 
 class File(object):
-    def __init__(self, widgetId, name, size, lastModified, chunks):
+    def __init__(self, widget_id, name, size, last_modified, chunks):
 
         folder = config.get_option("server.temporaryFileUploadFolder")
         if not os.path.exists(folder):
@@ -32,59 +32,63 @@ class File(object):
                 if e.errno != errno.EEXIST:
                     raise
 
-        self.widgetId = widgetId
+        self.widget_id = widget_id
         self.name = name
-        self.fullName = folder + "/" + uuid1().hex
+        self.full_name = folder + "/" + uuid1().hex
         self.size = size
-        self.lastModified = lastModified
-        self.totalChunks = chunks
-        self.missingChunks = chunks
+        self.last_modified = last_modified
+        self.total_chunks = chunks
+        self.received_chunks = 0
         self.buffers = {}
 
 
 class FileManager(object):
     def __init__(self):
-        self.fileList = {}
+        self._file_list = {}
 
     def delete_all_files(self):
-        for widgetId in self.fileList:
-            self.delete_file(widgetId)
+        for widget_id in list(self._file_list):
+            self.delete_file(widget_id)
 
-    def delete_file(self, widgetId):
-        os.remove(self.fileList[widgetId].fullName)
-        self.fileList[widgetId] = None
+    def delete_file(self, widget_id):
+        os.remove(self._file_list[widget_id].full_name)
+        del self._file_list[widget_id]
 
-    def locate_new_file(self, widgetId, name, size, lastModified, chunks):
+    def locate_new_file(self, widget_id, name, size, last_modified, chunks):
 
-        file = self.fileList.get(widgetId)
+        file = self._file_list.get(widget_id)
         if file != None:
-            self.delete_file(widgetId)
+            self.delete_file(widget_id)
 
         file = File(
-            widgetId=widgetId,
+            widget_id=widget_id,
             name=name,
             size=size,
-            lastModified=lastModified,
+            last_modified=last_modified,
             chunks=chunks,
         )
-        self.fileList[widgetId] = file
+        self._file_list[widget_id] = file
 
-    def porcess_chunk(self, widgetId, index, data):
-        file = self.fileList.get(widgetId)
+    def porcess_chunk(self, widget_id, index, data):
+        file = self._file_list.get(widget_id)
         if file != None:
             file.buffers[index] = data
-            file.missingChunks = file.missingChunks - 1
+            file.received_chunks = file.received_chunks + 1
 
-            if file.missingChunks == 0:
-                f = open(file.fullName, "wb")
+            if file.received_chunks == file.total_chunks:
+                f = open(file.full_name, "wb")
                 index = 0
                 while file.buffers.get(index) != None:
                     f.write(file.buffers[index])
-                    file.buffers[index] = None
+                    del file.buffers[index]
                     index = index + 1
 
                 f.close()
                 file.buffers = None
-                return 1, file.fullName
+                return 1, file.full_name
 
-        return (file.totalChunks / file.missingChunks), file.fullName
+        progress = 0 
+        if file.received_chunks > 0:
+            progress = file.received_chunks/file.total_chunks
+
+        return progress, file.full_name

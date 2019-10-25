@@ -32,6 +32,10 @@ message FileChunk {
   bytes data = 3;
 }
 
+message DeleteFile {
+  string id = 1;
+}
+
 // A message from the browser to the server.
 message BackMsg {
   oneof type {
@@ -69,5 +73,8 @@ message BackMsg {
 
     // Upload a file chunk to the server
     FileChunk file_chunk = 12;
+
+    // Delete uploaded file
+    DeleteFile delete_file = 13;
   }
 }

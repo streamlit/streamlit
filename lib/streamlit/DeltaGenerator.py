@@ -28,6 +28,7 @@ import json
 import random
 import re
 import textwrap
+import os
 import pandas as pd
 from datetime import datetime
 from datetime import date
@@ -1871,7 +1872,7 @@ class DeltaGenerator(object):
         element.file_uploader.type[:] = type
         element.file_uploader.max_upload_size = config.get_option("server.maxUploadSize")
         ui_value = _get_widget_ui_value("file_uploader", element)
-        LOGGER.debug(ui_value)
+        
         return ui_value if ui_value is not None else ""
 
 
@@ -1898,6 +1899,9 @@ class DeltaGenerator(object):
 
         """
 
+        if not os.path.isfile(file_id):
+            return []
+            
         if len(file_id) > 0:
             with open(file_id, "rb") as f:
                 data = f.read()
