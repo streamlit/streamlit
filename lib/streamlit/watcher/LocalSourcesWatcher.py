@@ -95,7 +95,7 @@ class LocalSourcesWatcher(object):
             return
 
         # Workaround:
-        # Delete all imported modules so we can guarantee changes to the
+        # Delete all watched modules so we can guarantee changes to the
         # updated module are reflected on reload.
         #
         # In principle, for reloading a given module, we only need to unload 
