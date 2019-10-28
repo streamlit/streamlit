@@ -115,7 +115,8 @@ class LocalSourcesWatcher(object):
 
         try:
             wm = WatchedModule(
-                watcher=FileWatcher(filepath, self.on_file_changed), module_name=module_name
+                watcher=FileWatcher(filepath, self.on_file_changed),
+                module_name=module_name,
             )
         except ErrorType:
             # If you don't have permission to read this file, don't even add it

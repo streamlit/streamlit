@@ -83,7 +83,7 @@ const linkReferenceHasParens = (props: LinkReferenceProps): any => {
   )
 }
 
-interface Props {
+export interface Props {
   width: number
   element: ImmutableMap<string, any>
 }

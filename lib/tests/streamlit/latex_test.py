@@ -28,7 +28,7 @@ class LatexTest(testutil.DeltaGeneratorTestCase):
         st.latex("ax^2 + bx + c = 0")
 
         c = self.get_delta_from_queue().new_element.text
-        self.assertEqual(c.body, "ax^2 + bx + c = 0")
+        self.assertEqual(c.body, "$$\nax^2 + bx + c = 0\n$$")
 
     def test_sympy_expression(self):
         import sympy as s
@@ -38,4 +38,4 @@ class LatexTest(testutil.DeltaGeneratorTestCase):
         st.latex(out)
 
         c = self.get_delta_from_queue().new_element.text
-        self.assertEqual(c.body, "a + b")
+        self.assertEqual(c.body, "$$\na + b\n$$")

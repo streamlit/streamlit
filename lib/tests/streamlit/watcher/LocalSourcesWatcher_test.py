@@ -86,7 +86,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         else:
             ErrorType = OSError
 
-        fob.side_effect = ErrorType('This error should be caught!')
+        fob.side_effect = ErrorType("This error should be caught!")
         lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")

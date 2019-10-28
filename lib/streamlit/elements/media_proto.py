@@ -32,12 +32,12 @@ from streamlit.proto import Video_pb2
 # Regular expression explained at https://regexr.com/4n2l2 Covers any youtube
 # URL (incl. shortlinks and embed links) and extracts its code.
 YOUTUBE_RE = re.compile(
-      # Protocol
-      "http(?:s?):\/\/"
-      # Domain
-      "(?:www\.)?youtu(?:be\.com|\.be)\/"
-      # Path and query string
-      "(?P<watch>(watch\?v=)|embed\/)?(?P<code>[\w\-\_]*)(&(amp;)?[\w\?=]*)?"
+    # Protocol
+    "http(?:s?):\/\/"
+    # Domain
+    "(?:www\.)?youtu(?:be\.com|\.be)\/"
+    # Path and query string
+    "(?P<watch>(watch\?v=)|embed\/)?(?P<code>[\w\-\_]*)(&(amp;)?[\w\?=]*)?"
 )
 
 

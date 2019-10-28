@@ -52,7 +52,7 @@ NEW_VERSION_TEXT = """
 }
 
 
-@click.group(context_settings={'auto_envvar_prefix':'STREAMLIT'})
+@click.group(context_settings={"auto_envvar_prefix": "STREAMLIT"})
 @click.option("--log_level", show_default=True, type=click.Choice(LOG_LEVELS))
 @click.version_option(prog_name="Streamlit")
 @click.pass_context
@@ -200,9 +200,7 @@ def main_run(target, args=None, **kwargs):
                 # flush since we are reading the file within the with block
                 fp.flush()
             except requests.exceptions.RequestException as e:
-                raise click.BadParameter(
-                    ("Unable to fetch {}.\n{}".format(target, e))
-                )
+                raise click.BadParameter(("Unable to fetch {}.\n{}".format(target, e)))
             # this is called within the with block to make sure the temp file
             # is not deleted
             _main_run(fp.name, args)

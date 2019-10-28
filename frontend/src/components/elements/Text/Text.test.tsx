@@ -16,20 +16,22 @@
  */
 
 import React from "react"
-import ReactDOM from "react-dom"
+import { shallow } from "enzyme"
 import { Map as ImmutableMap } from "immutable"
 import { Text as TextProto } from "autogen/proto"
-import Text from "."
+import Text, { Props } from "./Text"
+
+const getProps = (props: object = {}): Props => ({
+  element: ImmutableMap({
+    body: "",
+    format: TextProto.Format.PLAIN,
+    ...props,
+  }),
+  width: 0,
+})
 
 it("renders without crashing", () => {
-  const mountPoint = document.createElement("div")
-  const props = {
-    element: ImmutableMap({
-      body: "",
-      format: TextProto.Format.PLAIN,
-    }),
-    width: 0,
-  }
-  ReactDOM.render(<Text {...props} />, mountPoint)
-  ReactDOM.unmountComponentAtNode(mountPoint)
+  const props = getProps()
+  const wrapper = shallow(<Text {...props} />)
+  expect(wrapper).toBeDefined()
 })
