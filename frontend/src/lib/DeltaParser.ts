@@ -86,13 +86,24 @@ export function applyDelta(
       }
     },
     newBlock: () => {
-      elements[container] = elements[container].updateIn(deltaPath, element =>
-        handleNewBlockMessage(container, element)
+      elements[container] = elements[container].updateIn(
+        deltaPath,
+        elementWrapper => handleNewBlockMessage(container, elementWrapper)
       )
     },
     addRows: (namedDataSet: NamedDataSet) => {
-      elements[container] = elements[container].updateIn(deltaPath, element =>
-        handleAddRowsMessage(container, element, namedDataSet)
+      // debugger
+      elements[container] = elements[container].updateIn(
+        deltaPath,
+        elementWrapper => {
+          if (elementWrapper && elementWrapper.element) {
+            return handleAddRowsMessage(
+              container,
+              elementWrapper.element,
+              namedDataSet
+            )
+          }
+        }
       )
     },
   })
@@ -122,22 +133,31 @@ function handleNewElementMessage(
 
 function handleNewBlockMessage(
   container: Container,
-  element: BlockElement
-): BlockElement {
+  elementWrapper: ElementWrapper
+): ElementWrapper {
   MetricsManager.current.incrementDeltaCounter(container)
   MetricsManager.current.incrementDeltaCounter("new block")
-  if (element instanceof List) {
-    return element
+
+  if (elementWrapper.element instanceof List) {
+    return elementWrapper
   }
-  return List()
+
+  elementWrapper.element = List()
+
+  return elementWrapper
 }
 
 function handleAddRowsMessage(
   container: Container,
-  element: SimpleElement,
+  elementWrapper: ElementWrapper,
   namedDataSet: NamedDataSet
-): SimpleElement {
+): ElementWrapper {
   MetricsManager.current.incrementDeltaCounter(container)
   MetricsManager.current.incrementDeltaCounter("add rows")
-  return addRows(element, namedDataSet)
+
+  console.log("handleAddRowsMessage", elementWrapper)
+
+  elementWrapper.element = addRows(elementWrapper.element, namedDataSet)
+
+  return elementWrapper
 }

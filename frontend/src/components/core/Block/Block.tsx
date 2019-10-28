@@ -177,7 +177,12 @@ class Block extends PureComponent<Props> {
       return null
     }
 
-    const component = this.renderElement(element, index, width)
+    const component = this.renderElement(
+      element,
+      index,
+      width,
+      elementWrapper.metadata
+    )
 
     if (!component) {
       // Do not transform an empty element into a ReactNode.
@@ -214,7 +219,8 @@ class Block extends PureComponent<Props> {
   private renderElement = (
     element: SimpleElement,
     index: number,
-    width: number
+    width: number,
+    metadata: ForwardMsgMetadata
   ): ReactNode | undefined => {
     if (!element) {
       throw new Error("Transmission error.")
@@ -225,7 +231,6 @@ class Block extends PureComponent<Props> {
       disabled: this.props.widgetsDisabled,
     }
 
-    const metadata = element.get("metadata") as ForwardMsgMetadata
     let height: number | undefined
 
     // Modify width using the value from the spec as passed with the message when applicable

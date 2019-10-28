@@ -16,7 +16,7 @@
  */
 
 import { flattenElements } from "./utils"
-import { BlockElement } from "lib/DeltaParser"
+import { BlockElement, ElementWrapper } from "lib/DeltaParser"
 import { List, Set as ImmutableSet, Map as ImmutableMap } from "immutable"
 
 describe("flattenElements", () => {
@@ -24,12 +24,20 @@ describe("flattenElements", () => {
   const simpleElement2 = ImmutableMap({ key3: "value3", key4: "value4" })
   const simpleElement3 = ImmutableMap({ key5: "value5", key6: "value6" })
   const simpleBlockElement: BlockElement = List([
-    simpleElement1,
-    simpleElement2,
+    {
+      element: simpleElement1,
+    } as ElementWrapper,
+    {
+      element: simpleElement2,
+    } as ElementWrapper,
   ])
   const nestedBlockElement: BlockElement = List([
-    List(simpleBlockElement),
-    simpleElement3,
+    {
+      element: List(simpleBlockElement),
+    } as ElementWrapper,
+    {
+      element: simpleElement3,
+    } as ElementWrapper,
   ])
 
   it("should walk down a simple BlockElement", () => {
