@@ -27,6 +27,7 @@ from streamlit import config as _config
 
 import os
 import click
+import re
 
 import streamlit
 from streamlit.credentials import Credentials
@@ -52,10 +53,16 @@ NEW_VERSION_TEXT = """
 }
 
 
+def _to_snake_case(text):
+    s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", text)
+    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).upper()
+
+
 def _convert_config_option_to_click_option(config_option):
     """Composes given config option options as options for click lib."""
     option = "--{}".format(config_option.key)
     param = config_option.key.replace(".", "_")
+    envvar = _to_snake_case("STREAMLIT_{}".format(param))
     description = config_option.description
     if config_option.deprecated:
         description += "\n {} - {}".format(
@@ -67,6 +74,7 @@ def _convert_config_option_to_click_option(config_option):
         "description": description,
         "type": config_option.type,
         "option": option,
+        "envvar": envvar,
     }
 
 
@@ -79,6 +87,8 @@ def configurator_options(func):
             parsed_parameter["param"],
             help=parsed_parameter["description"],
             type=parsed_parameter["type"],
+            show_envvar=True,
+            envvar=parsed_parameter["envvar"],
         )
         func = config_option(func)
     return func
@@ -97,7 +107,9 @@ def _apply_config_options_from_cli(kwargs):
             config_option_def_key = config_option.replace("_", ".")
 
             _config._set_option(
-                config_option_def_key, kwargs[config_option], "command-line argument or environment variable"
+                config_option_def_key,
+                kwargs[config_option],
+                "command-line argument or environment variable",
             )
 
 

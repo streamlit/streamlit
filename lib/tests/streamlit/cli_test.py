@@ -152,6 +152,7 @@ class CliTest(unittest.TestCase):
         self.assertEqual(result["param"], "server_customKey")
         self.assertEqual(result["type"], config_option.type)
         self.assertEqual(result["description"], config_option.description)
+        self.assertEqual(result["envvar"], "STREAMLIT_SERVER_CUSTOM_KEY")
 
     @patch("streamlit.cli._config._set_option")
     def test_apply_config_options_from_cli(self, patched__set_option):
@@ -170,9 +171,19 @@ class CliTest(unittest.TestCase):
 
         patched__set_option.assert_has_calls(
             [
-                mock.call("server.port", 3005, "cli call option"),
-                mock.call("server.headless", True, "cli call option"),
-                mock.call("browser.serverAddress", "localhost", "cli call option"),
+                mock.call(
+                    "server.port", 3005, "command-line argument or environment variable"
+                ),
+                mock.call(
+                    "server.headless",
+                    True,
+                    "command-line argument or environment variable",
+                ),
+                mock.call(
+                    "browser.serverAddress",
+                    "localhost",
+                    "command-line argument or environment variable",
+                ),
             ],
             any_order=True,
         )
