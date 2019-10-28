@@ -120,7 +120,7 @@ class Block extends PureComponent<Props> {
   ): ReactNode | null {
     const component = this.renderElement(element, index, width)
 
-    if (!element) {
+    if (!component) {
       // Do not transform an empty element into a ReactNode.
       return null
     }
