@@ -92,18 +92,10 @@ export function applyDelta(
       )
     },
     addRows: (namedDataSet: NamedDataSet) => {
-      // debugger
       elements[container] = elements[container].updateIn(
         deltaPath,
-        elementWrapper => {
-          if (elementWrapper && elementWrapper.element) {
-            return handleAddRowsMessage(
-              container,
-              elementWrapper.element,
-              namedDataSet
-            )
-          }
-        }
+        elementWrapper =>
+          handleAddRowsMessage(container, elementWrapper, namedDataSet)
       )
     },
   })
@@ -122,7 +114,6 @@ function handleNewElementMessage(
   // Set reportId on elements so we can clear old elements
   // when the report script is re-executed.
   // Set metadata on elements so that we can use them downstream.
-  // return element.set("reportId", reportId).set("metadata", metadata)
 
   return {
     reportId,
@@ -154,8 +145,6 @@ function handleAddRowsMessage(
 ): ElementWrapper {
   MetricsManager.current.incrementDeltaCounter(container)
   MetricsManager.current.incrementDeltaCounter("add rows")
-
-  console.log("handleAddRowsMessage", elementWrapper)
 
   elementWrapper.element = addRows(elementWrapper.element, namedDataSet)
 
