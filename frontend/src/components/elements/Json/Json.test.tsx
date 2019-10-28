@@ -21,9 +21,21 @@ import { Map as ImmutableMap } from "immutable"
 import Json from "./Json"
 import renderer from "react-test-renderer"
 
+const getProps = (elementProps: object = {}): Props => ({
+  element: ImmutableMap({
+    body:
+      '{ "proper": [1,2,3],' +
+      '  "nested": { "thing1": "cat", "thing2": "hat" },' +
+      '  "json": "structure" }',
+    ...elementProps,
+  }),
+  width: 100,
+})
+
 describe("JSON Element Test", () => {
   it("renders json as expected", () => {
-    const component = renderer.create(<Json />)
+    const props = getProps()
+    const component = renderer.create(<Json {...props} />)
     let tree = component.toJSON()
     expect(tree).toMatchSnapshot()
   })
