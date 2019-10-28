@@ -202,7 +202,7 @@ def main_run(file_or_url, args=None, **kwargs):
         with TemporaryDirectory() as temp_dir:
             from urllib.parse import urlparse
             path = urlparse(file_or_url).path
-            script_path = os.path.join(temp_dir, path.rsplit('/', 1)[-1])
+            script_path = os.path.join(temp_dir, path.strip('/').rsplit('/', 1)[-1])
             _download_remote(script_path, file_or_url)
             _main_run(script_path, args)
 
