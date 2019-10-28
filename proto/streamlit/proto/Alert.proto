@@ -42,5 +42,4 @@ message Alert {
   }
 
   Format format = 2;
-
 }
