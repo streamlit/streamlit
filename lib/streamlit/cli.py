@@ -189,7 +189,7 @@ def _download_remote(script_path, url_path):
 @configurator_options
 @click.argument("target", required=True, envvar="STREAMLIT_RUN_TARGET")
 @click.argument("args", nargs=-1)
-def main_run(target, args=None, **kwargs):Å
+def main_run(target, args=None, **kwargs):
     """Run a Python script, piping stderr to Streamlit.
 
     The script can be local or it can be an url. In the latter case, Streamlit
@@ -200,13 +200,13 @@ def main_run(target, args=None, **kwargs):Å
 
     _apply_config_options_from_cli(kwargs)
 
-    if url(file_or_url):
+    if url(target):
         from streamlit.temporary_directory import TemporaryDirectory
         with TemporaryDirectory() as temp_dir:
             from urllib.parse import urlparse
-            path = urlparse(file_or_url).path
+            path = urlparse(target).path
             script_path = os.path.join(temp_dir, path.strip('/').rsplit('/', 1)[-1])
-            _download_remote(script_path, file_or_url)
+            _download_remote(script_path, target)
             _main_run(script_path, args)
     else:
         if not os.path.exists(target):
