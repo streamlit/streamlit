@@ -1,4 +1,4 @@
-## Before contributing
+## Before contributing (PLEASE READ!)
 
 **As with most projects, prior to starting to code on a bug fix or feature request, please post in the issue saying you want to volunteer, and then wait for a positive response.** And if there is no issue for it yet, create it first.
 
