@@ -36,7 +36,6 @@ from tests import testutil
 import streamlit as st
 
 
-# TODO: allow_html
 
 
 def get_version():

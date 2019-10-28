@@ -366,7 +366,7 @@ class DeltaGeneratorWriteTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual("data", element.markdown.body)
 
         test_string = "    <a#data>data</a>   "
-        st.markdown(test_string)        #, allow_html_unsafe=True)
+        st.markdown(test_string)
         element = self.get_delta_from_queue().new_element
 
         assert element.markdown.body.startswith("<a#data>")

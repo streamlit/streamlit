@@ -20,9 +20,6 @@ import React, { ReactNode } from "react"
 import classNames from "classnames"
 import { Map as ImmutableMap } from "immutable"
 
-// react-markdown doesn't have a @types file.
-// @ts-ignore
-
 import "./Text.scss"
 
 interface Props {
