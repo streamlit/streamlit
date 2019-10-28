@@ -21,9 +21,21 @@ import { Map as ImmutableMap } from "immutable"
 import Markdown from "./Markdown"
 import renderer from "react-test-renderer"
 
+const getProps = (elementProps: object = {}): Props => ({
+  element: ImmutableMap({
+    body:
+      "Emphasis, aka italics, with *asterisks* or _underscores_." +
+      "Combined emphasis with **asterisks and _underscores_**." +
+      "[I'm an inline-style link with title](https://www.https://streamlit.io/ Streamlit",
+    ...elementProps,
+  }),
+  width: 100,
+})
+
 describe("Markdown Element Test", () => {
   it("renders markdown as expected", () => {
-    const component = renderer.create(<Markdown />)
+    const props = getProps()
+    const component = renderer.create(<Markdown {...props} />)
     let tree = component.toJSON()
     expect(tree).toMatchSnapshot()
   })
