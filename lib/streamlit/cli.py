@@ -51,7 +51,7 @@ NEW_VERSION_TEXT = """
 }
 
 
-@click.group()
+@click.group(context_settings={'auto_envvar_prefix':'STREAMLIT'})
 @click.option("--log_level", show_default=True, type=click.Choice(LOG_LEVELS))
 @click.version_option(prog_name="Streamlit")
 @click.pass_context
@@ -128,12 +128,14 @@ def _convert_config_option_to_click_option(config_option):
         description += "\n {} - {}".format(
             config_option.deprecation_text, config_option.deprecation_date
         )
+    envvar = "STREAMLIT_CONFIG_{}".format(param.upper())
 
     return {
         "param": param,
         "description": description,
         "type": config_option.type,
         "option": option,
+        "envvar": envvar,
     }
 
 
@@ -146,6 +148,7 @@ def configurator_options(func):
             parsed_parameter["param"],
             help=parsed_parameter["description"],
             type=parsed_parameter["type"],
+            envvar=parsed_parameter["envvar"],
         )
         func = config_option(func)
     return func
@@ -184,9 +187,9 @@ def _download_remote(script_path, url_path):
 
 @main.command("run")
 @configurator_options
-@click.argument("file_or_url", required=True)
+@click.argument("target", required=True, envvar="STREAMLIT_RUN_TARGET")
 @click.argument("args", nargs=-1)
-def main_run(file_or_url, args=None, **kwargs):
+def main_run(target, args=None, **kwargs):Å
     """Run a Python script, piping stderr to Streamlit.
 
     The script can be local or it can be an url. In the latter case, Streamlit
@@ -205,11 +208,10 @@ def main_run(file_or_url, args=None, **kwargs):
             script_path = os.path.join(temp_dir, path.strip('/').rsplit('/', 1)[-1])
             _download_remote(script_path, file_or_url)
             _main_run(script_path, args)
-
     else:
-        if not os.path.exists(file_or_url):
-            raise click.BadParameter("File does not exist: {}".format(file_or_url))
-        _main_run(file_or_url, args)
+        if not os.path.exists(target):
+            raise click.BadParameter("File does not exist: {}".format(target))
+        _main_run(target, args)
 
 
 # Utility function to compute the command line as a string

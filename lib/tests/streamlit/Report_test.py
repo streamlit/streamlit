@@ -118,6 +118,7 @@ class ReportTest(unittest.TestCase):
             (None, None, "http://the_ip_address:8501"),
             (None, 9988, "http://the_ip_address:9988"),
             ("foo", None, "http://the_ip_address:8501/foo"),
+            ("foo/", None, "http://the_ip_address:8501/foo"),
             ("/foo/bar/", None, "http://the_ip_address:8501/foo/bar"),
             ("/foo/bar/", 9988, "http://the_ip_address:9988/foo/bar"),
         ]
