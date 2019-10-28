@@ -39,12 +39,11 @@ class Text extends React.PureComponent<Props> {
     const body = element.get("body")
     const styleProp = { width }
 
-    const props = {
-      className: classNames("fixed-width", "stText"),
-      style: styleProp,
-    }
-
-    return <div {...props}>{body}</div>
+    return (
+      <div className={classNames("fixed-width", "stText")} style={styleProp}>
+        {body}
+      </div>
+    )
   }
 }
 
