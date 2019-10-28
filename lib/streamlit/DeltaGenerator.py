@@ -459,7 +459,7 @@ class DeltaGenerator(object):
 
     @_with_element
     def text(self, element, body):
-        """Write fixed-width text (preformatted).
+        """Write fixed-width and preformatted text.
 
         Parameters
         ----------
