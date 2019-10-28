@@ -527,6 +527,7 @@ class DeltaGenerator(object):
 
         if is_sympy_expession(body):
             import sympy
+
             body = sympy.latex(body)
 
         element.text.body = "$$\n%s\n$$" % _clean_text(body)
