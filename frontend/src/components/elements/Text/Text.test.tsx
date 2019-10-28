@@ -21,9 +21,18 @@ import { Map as ImmutableMap } from "immutable"
 import Text from "./Text"
 import renderer from "react-test-renderer"
 
+const getProps = (elementProps: object = {}): Props => ({
+  element: ImmutableMap({
+    body: "some plain text",
+    ...elementProps,
+  }),
+  width: 100,
+})
+
 describe("Text Element Test (preformatted text)", () => {
   it("renders plain text", () => {
-    const component = renderer.create(<Text />)
+    const props = getProps()
+    const component = renderer.create(<Text {...props} />)
     let tree = component.toJSON()
     expect(tree).toMatchSnapshot()
   })
