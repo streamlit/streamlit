@@ -18,54 +18,16 @@
 import React, { PureComponent, ReactNode, Suspense } from "react"
 import { AutoSizer } from "react-virtualized"
 import { List, Map as ImmutableMap } from "immutable"
-import { dispatchOneOf } from "lib/immutableProto"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { makeElementWithInfoText } from "lib/utils"
 import { ForwardMsgMetadata } from "autogen/proto"
 
-// Load (non-lazy) elements.
-import Chart from "components/elements/Chart/"
-import DocString from "components/elements/DocString/"
+import Element from "components/shared/Element"
 import ErrorBoundary from "components/shared/ErrorBoundary/"
 import FullScreenWrapper from "components/shared/FullScreenWrapper/"
-import ExceptionElement from "components/elements/ExceptionElement/"
-import Table from "components/elements/Table/"
+
 import Text from "components/elements/Text/"
-
-// Lazy-load elements.
-const Audio = React.lazy(() => import("components/elements/Audio/"))
-const Balloons = React.lazy(() => import("components/elements/Balloons/"))
-const BokehChart = React.lazy(() => import("components/elements/BokehChart/"))
-const DataFrame = React.lazy(() => import("components/elements/DataFrame/"))
-const DeckGlChart = React.lazy(() =>
-  import("components/elements/DeckGlChart/")
-)
-const ImageList = React.lazy(() => import("components/elements/ImageList/"))
-const GraphVizChart = React.lazy(() =>
-  import("components/elements/GraphVizChart/")
-)
-const PlotlyChart = React.lazy(() =>
-  import("components/elements/PlotlyChart/")
-)
-const VegaLiteChart = React.lazy(() =>
-  import("components/elements/VegaLiteChart/")
-)
-const Video = React.lazy(() => import("components/elements/Video/"))
-
-// Lazy-load widgets.
-const Button = React.lazy(() => import("components/widgets/Button/"))
-const Checkbox = React.lazy(() => import("components/widgets/Checkbox/"))
-const DateInput = React.lazy(() => import("components/widgets/DateInput/"))
-const Multiselect = React.lazy(() => import("components/widgets/Multiselect/"))
-const Progress = React.lazy(() => import("components/elements/Progress/"))
-const Radio = React.lazy(() => import("components/widgets/Radio/"))
-const Selectbox = React.lazy(() => import("components/widgets/Selectbox/"))
-const Slider = React.lazy(() => import("components/widgets/Slider/"))
-const TextArea = React.lazy(() => import("components/widgets/TextArea/"))
-const TextInput = React.lazy(() => import("components/widgets/TextInput/"))
-const TimeInput = React.lazy(() => import("components/widgets/TimeInput/"))
-const NumberInput = React.lazy(() => import("components/widgets/NumberInput/"))
 
 type SimpleElement = ImmutableMap<string, any>
 type StElement = SimpleElement | BlockElement
@@ -158,7 +120,7 @@ class Block extends PureComponent<Props> {
   ): ReactNode | null {
     const component = this.renderElement(element, index, width)
 
-    if (!component) {
+    if (!element) {
       // Do not transform an empty element into a ReactNode.
       return null
     }
@@ -198,11 +160,7 @@ class Block extends PureComponent<Props> {
     if (!element) {
       throw new Error("Transmission error.")
     }
-
-    const widgetProps = {
-      widgetMgr: this.props.widgetMgr,
-      disabled: this.props.widgetsDisabled,
-    }
+    const { widgetsDisabled, widgetMgr } = this.props
 
     const metadata = element.get("metadata") as ForwardMsgMetadata
     let height: number | undefined
@@ -217,125 +175,16 @@ class Block extends PureComponent<Props> {
       }
     }
 
-    return dispatchOneOf(element, "type", {
-      audio: (el: SimpleElement) => <Audio element={el} width={width} />,
-      balloons: (el: SimpleElement) => <Balloons element={el} width={width} />,
-      bokehChart: (el: SimpleElement) => (
-        <BokehChart element={el} index={index} width={width} />
-      ),
-      chart: (el: SimpleElement) => <Chart element={el} width={width} />,
-      dataFrame: (el: SimpleElement) => (
-        <DataFrame element={el} width={width} height={height} />
-      ),
-      deckGlChart: (el: SimpleElement) => (
-        <DeckGlChart element={el} width={width} />
-      ),
-      docString: (el: SimpleElement) => (
-        <DocString element={el} width={width} />
-      ),
-      empty: () => undefined,
-      exception: (el: SimpleElement) => (
-        <ExceptionElement element={el} width={width} />
-      ),
-      graphvizChart: (el: SimpleElement) => (
-        <GraphVizChart element={el} index={index} width={width} />
-      ),
-      imgs: (el: SimpleElement) => <ImageList element={el} width={width} />,
-      multiselect: (el: SimpleElement) => (
-        <Multiselect
-          key={el.get("id")}
-          element={el}
-          width={width}
-          {...widgetProps}
-        />
-      ),
-      plotlyChart: (el: SimpleElement) => (
-        <PlotlyChart element={el} width={width} />
-      ),
-      progress: (el: SimpleElement) => <Progress element={el} width={width} />,
-      table: (el: SimpleElement) => <Table element={el} width={width} />,
-      text: (el: SimpleElement) => <Text element={el} width={width} />,
-      vegaLiteChart: (el: SimpleElement) => (
-        <VegaLiteChart element={el} width={width} />
-      ),
-      video: (el: SimpleElement) => <Video element={el} width={width} />,
-      // Widgets
-      button: (el: SimpleElement) => (
-        <Button element={el} width={width} {...widgetProps} />
-      ),
-      checkbox: (el: SimpleElement) => (
-        <Checkbox
-          key={el.get("id")}
-          element={el}
-          width={width}
-          {...widgetProps}
-        />
-      ),
-      dateInput: (el: SimpleElement) => (
-        <DateInput
-          key={el.get("id")}
-          element={el}
-          width={width}
-          {...widgetProps}
-        />
-      ),
-      radio: (el: SimpleElement) => (
-        <Radio
-          key={el.get("id")}
-          element={el}
-          width={width}
-          {...widgetProps}
-        />
-      ),
-      selectbox: (el: SimpleElement) => (
-        <Selectbox
-          key={el.get("id")}
-          element={el}
-          width={width}
-          {...widgetProps}
-        />
-      ),
-      slider: (el: SimpleElement) => (
-        <Slider
-          key={el.get("id")}
-          element={el}
-          width={width}
-          {...widgetProps}
-        />
-      ),
-      textArea: (el: SimpleElement) => (
-        <TextArea
-          key={el.get("id")}
-          element={el}
-          width={width}
-          {...widgetProps}
-        />
-      ),
-      textInput: (el: SimpleElement) => (
-        <TextInput
-          key={el.get("id")}
-          element={el}
-          width={width}
-          {...widgetProps}
-        />
-      ),
-      timeInput: (el: SimpleElement) => (
-        <TimeInput
-          key={el.get("id")}
-          element={el}
-          width={width}
-          {...widgetProps}
-        />
-      ),
-      numberInput: (el: SimpleElement) => (
-        <NumberInput
-          key={el.get("id")}
-          element={el}
-          width={width}
-          {...widgetProps}
-        />
-      ),
-    })
+    return (
+      <Element
+        index={index}
+        disabled={widgetsDisabled}
+        element={element}
+        widgetMgr={widgetMgr}
+        width={width}
+        height={height}
+      />
+    )
   }
 
   public render = (): ReactNode => (
