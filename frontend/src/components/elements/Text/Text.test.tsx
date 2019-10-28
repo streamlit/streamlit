@@ -16,7 +16,6 @@
  */
 
 import React from "react"
-import ReactDOM from "react-dom"
 import { Map as ImmutableMap } from "immutable"
 import Text from "./Text"
 import renderer from "react-test-renderer"

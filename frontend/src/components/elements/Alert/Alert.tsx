@@ -22,10 +22,6 @@ import ReactMarkdown from "react-markdown"
 import { Map as ImmutableMap } from "immutable"
 import { Alert as AlertProto } from "autogen/proto"
 
-// Ignoring typeScript for this module as it has no ts support
-// eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-// @ts-ignore
-
 import "./Alert.scss"
 
 function getAlertCSSClass(format: AlertProto.Format): string | undefined {
