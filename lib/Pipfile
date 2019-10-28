@@ -46,8 +46,7 @@ click = ">=7.0"
 enum-compat = "*"
 # python3 code backported to python2
 future = "*"
-# 5.1.0 has compatibility issues https://github.com/python-pillow/Pillow/issues/3068
-pillow = "!=5.1.0"
+pillow = ">=6.2.0"
 # Set protobuf version based on the protoc version on the release machine
 # (i.e. Thiago's machine)
 protobuf = ">=3.6.0"

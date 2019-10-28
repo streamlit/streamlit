@@ -17,7 +17,7 @@ all: init install build develop
 all-devel: init install develop
 	@echo ""
 	@echo "    The frontend has *not* been rebuilt."
-	@echo "    If you need to make a pipfile or test S3 sharing, run:"
+	@echo "    If you need to make a wheel file or test S3 sharing, run:"
 	@echo ""
 	@echo "    make build"
 	@echo ""
@@ -258,8 +258,6 @@ scssvars: react-init
 # Lint the JS code. Saves results to test-reports/eslint/eslint.xml.
 jslint:
 	@# max-warnings 0 means we'll exit with a non-zero status on any lint warning
-	@# HK: I'm removing `max-warnings 0` until we convert all our JavaScript
-	@# files to TypeScript.
 ifndef CIRCLECI
 	cd frontend; \
 		./node_modules/.bin/eslint \
@@ -268,6 +266,7 @@ ifndef CIRCLECI
 			--ext .ts \
 			--ext .tsx \
 			--ignore-pattern 'src/autogen/*' \
+			--max-warnings 0 \
 			./src
 else
 	cd frontend; \
@@ -277,6 +276,7 @@ else
 			--ext .ts \
 			--ext .tsx \
 			--ignore-pattern 'src/autogen/*' \
+			--max-warnings 0 \
 			--format junit \
 			--output-file test-reports/eslint/eslint.xml \
 			./src

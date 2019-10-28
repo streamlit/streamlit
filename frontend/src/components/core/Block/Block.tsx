@@ -65,6 +65,7 @@ const Slider = React.lazy(() => import("components/widgets/Slider/"))
 const TextArea = React.lazy(() => import("components/widgets/TextArea/"))
 const TextInput = React.lazy(() => import("components/widgets/TextInput/"))
 const TimeInput = React.lazy(() => import("components/widgets/TimeInput/"))
+const NumberInput = React.lazy(() => import("components/widgets/NumberInput/"))
 
 type SimpleElement = ImmutableMap<string, any>
 type StElement = SimpleElement | BlockElement
@@ -326,10 +327,18 @@ class Block extends PureComponent<Props> {
           {...widgetProps}
         />
       ),
+      numberInput: (el: SimpleElement) => (
+        <NumberInput
+          key={el.get("id")}
+          element={el}
+          width={width}
+          {...widgetProps}
+        />
+      ),
     })
   }
 
-  public render = () => (
+  public render = (): ReactNode => (
     <AutoSizer disableHeight={true}>
       {({ width }) => this.renderElements(width)}
     </AutoSizer>

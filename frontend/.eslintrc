@@ -58,7 +58,10 @@
     "@typescript-eslint/explicit-function-return-type": [
       "warn",
       { "allowExpressions": true }
-    ]
+    ],
+    // It's OK to use ts-ignore when we're missing type definitions
+    // for a JS library.
+    "@typescript-eslint/ban-ts-ignore": "off"
   },
   "settings": {
     "react": {
