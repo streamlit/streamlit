@@ -236,8 +236,40 @@ class NoValue(object):
 
 
 class DeltaGenerator(object):
-    """Creator of Delta protobuf messages."""
+    """Creator of Delta protobuf messages.
 
+    Parameters
+    ----------
+    enqueue: callable or None
+      Function that (maybe) enqueues ForwardMsg's and returns True if
+        enqueued or False if not.
+    id: int or None
+      ID for deltas, or None to create the root DeltaGenerator (which
+        produces DeltaGenerators with incrementing IDs)
+    delta_type: string or None
+      The name of the element passed in Element.proto's oneof.
+      This is needed so we can transform dataframes for some elements when
+      performing an `add_rows`.
+    last_index: int or None
+      The last index of the DataFrame for the element this DeltaGenerator
+      created. Only applies to elements that transform dataframes,
+      like line charts.
+    is_root: bool
+      If True, this will behave like a root DeltaGenerator which an
+      auto-incrementing ID (in which case, `id` should be None).
+      If False, this will have a fixed ID as determined
+      by the `id` argument.
+    container: BlockPath
+      The root container for this DeltaGenerator. Can be MAIN or SIDEBAR.
+    path: tuple of ints
+      The full path of this DeltaGenerator, consisting of the IDs of
+      all ancestors. The 0th item is the topmost ancestor.
+
+    """
+
+    # The pydoc below is for user consumption, so it doesn't talk about
+    # DeltaGenerator constructor parameters (which users should never use). For
+    # those, see above.
     def __init__(
         self,
         enqueue,
@@ -248,34 +280,18 @@ class DeltaGenerator(object):
         container=BlockPath_pb2.BlockPath.MAIN,
         path=(),
     ):
-        """Constructor.
+        """Inserts or updates elements in Streamlit apps.
 
-        Parameters
-        ----------
-        enqueue: callable or None
-          Function that (maybe) enqueues ForwardMsg's and returns True if
-            enqueued or False if not.
-        id: int or None
-          ID for deltas, or None to create the root DeltaGenerator (which
-            produces DeltaGenerators with incrementing IDs)
-        delta_type: string or None
-          The name of the element passed in Element.proto's oneof.
-          This is needed so we can transform dataframes for some elements when
-          performing an `add_rows`.
-        last_index: int or None
-          The last index of the DataFrame for the element this DeltaGenerator
-          created. Only applies to elements that transform dataframes,
-          like line charts.
-        is_root: bool
-          If True, this will behave like a root DeltaGenerator which an
-          auto-incrementing ID (in which case, `id` should be None).
-          If False, this will have a fixed ID as determined
-          by the `id` argument.
-        container: BlockPath
-          The root container for this DeltaGenerator. Can be MAIN or SIDEBAR.
-        path: tuple of ints
-          The full path of this DeltaGenerator, consisting of the IDs of
-          all ancestors. The 0th item is the topmost ancestor.
+        As a user, you should never initialize this object by hand. Instead,
+        DeltaGenerator objects are initialized for you in two places:
+
+        1) When you call `dg = st.foo()` for some method "foo", sometimes `dg`
+        is a DeltaGenerator object. You can call methods on the `dg` object to
+        update the element `foo` that appears in the Streamlit app.
+
+        2) This is an internal detail, but `st.sidebar` itself is a
+        DeltaGenerator. That's why you can call `st.sidebar.foo()` to place
+        an element `foo` inside the sidebar.
 
         """
         self._enqueue = enqueue
@@ -1517,8 +1533,10 @@ class DeltaGenerator(object):
         default: [str] or None
             List of default values.
         format_func : function
-            Function to modify the display of the labels. It receives the option
-            as an argument and its output will be cast to str.
+            Function to modify the display of selectbox options. It receives
+            the raw option as an argument and should output the label to be
+            shown for that option. This has no impact on the return value of
+            the selectbox.
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -1583,8 +1601,10 @@ class DeltaGenerator(object):
         index : int
             The index of the preselected option on first render.
         format_func : function
-            Function to modify the display of the labels. It receives the option
-            as an argument and its output will be cast to str.
+            Function to modify the display of selectbox options. It receives
+            the raw option as an argument and should output the label to be
+            shown for that option. This has no impact on the return value of
+            the selectbox.
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -1706,19 +1726,19 @@ class DeltaGenerator(object):
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
         format : str or None
-            Printf/Python format string.
+            Printf/Python format string controlling how the interface should
+            display numbers. This does not impact the return value.
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
 
-
         Returns
         -------
-        int/float or a tuple of int/float
-            The current value of the slider widget. The return type follows
-            the type of the value argument.
+        int/float or tuple of int/float
+            The current value of the slider widget. The return type will match
+            the data type of the value parameter.
 
         Examples
         --------
@@ -2031,39 +2051,40 @@ class DeltaGenerator(object):
         self,
         element,
         label,
-        value=NoValue(),
         min_value=None,
         max_value=None,
+        value=NoValue(),
         step=None,
         format=None,
     ):
-        """Display a single-line numeric input widget.
+        """Display a numeric input widget.
 
         Parameters
         ----------
         label : str or None
             A short label explaining to the user what this input is for.
-        value : int or float or None
-            The value of this widget when it first renders.
-            default: min_value or 0 if min_value is None
         min_value : int or float or None
             The minimum permitted value.
             If None, there will be no minimum.
         max_value : int or float or None
             The maximum permitted value.
             If None, there will be no maximum.
+        value : int or float or None
+            The value of this widget when it first renders.
+            Defaults to min_value, or 0 if min_value is None
         step : int or float or None
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
             If the value is not specified, the format parameter will be used.
         format : str or None
-            Printf/Python format string.
+            Printf/Python format string controlling how the interface should
+            display numbers. This does not impact the return value.
 
         Returns
         -------
         int or float
-            The current value of the numeric input widget.
-            The return type will match the data type of the value parameter.
+            The current value of the numeric input widget. The return type
+            will match the data type of the value parameter.
 
         Example
         -------

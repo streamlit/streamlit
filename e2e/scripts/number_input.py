@@ -19,8 +19,8 @@ import streamlit as st
 i1 = st.number_input("number input 1")
 st.write('value 1: "', i1, '"')
 
-i2 = st.number_input("number input 2", 1)
+i2 = st.number_input("number input 2", value=1)
 st.write('value 2: "', i2, '"')
 
-i3 = st.number_input("number input 3", min_value=1, max_value=10)
+i3 = st.number_input("number input 3", 1, 10)
 st.write('value 3: "', i3, '"')

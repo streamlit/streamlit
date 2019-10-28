@@ -25,9 +25,9 @@ Runs your app. At any time you can kill the server with **Ctrl+c**.
 
 ```eval_rst
 .. note::
-  When passing your script some arguments, **they must be passed after a `--`**
-  (double dash). Otherwise the arguments get interpreted as anything arguments
-  to Streamlit itself.
+  When passing your script some custom arguments, **they must be passed after a
+  "--"** (double dash). Otherwise the arguments get interpreted as arguments to
+  Streamlit itself.
 ```
 
 You can also pass in config options to `streamlit run`. These allow you to do
@@ -61,14 +61,28 @@ $ streamlit config show
 ```
 
 Shows all config options available for Streamlit, including their current
-values. You can set these options in three different ways:
+values. You can set these options in four different ways:
 
-- **Globally:** `~/.streamlit/config.toml`.
+- **In a global config file at `~/.streamlit/config.toml`.** For instance:
 
-- **Per project:** `$CWD/.streamlit/config.toml`, where `$CWD` is
-  the folder you're running Streamlit from.
+  ```toml
+  [server]
+  port = 80
+  ```
 
-- **Per execution:** just pass the options as flags when running `streamlit run`. See more info above.
+- **In a per-project config file at `$CWD/.streamlit/config.toml`,** where
+  `$CWD` is the folder you're running Streamlit from.
+
+- **Through `STREAMLIT_CONFIG_*` environment variables,** such as:
+
+  ```bash
+  $ export STREAMLIT_CONFIG_SERVER_PORT=80
+  ```
+
+- **As flags in the command line** when running `streamlit run`. For example:
+  ```bash
+  $ streamlit run your_script.py --server.port 80
+  ```
 
 ## Clear the cache
 
