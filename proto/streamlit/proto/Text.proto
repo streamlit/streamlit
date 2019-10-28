@@ -33,9 +33,6 @@ message Text {
     // A JSON object. Stored as a string.
     JSON = 2;
 
-    // LaTeX
-    LATEX = 3;
-
     // Shows an error message.
     ERROR = 6;
 

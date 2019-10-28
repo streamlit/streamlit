@@ -159,14 +159,6 @@ class Text extends React.PureComponent<Props> {
         )
       }
 
-      case TextProto.Format.LATEX: {
-        return (
-          <div className="latex-text-container stText" style={{ width }}>
-            <BlockMath math={body} />
-          </div>
-        )
-      }
-
       case TextProto.Format.ERROR:
       case TextProto.Format.WARNING:
       case TextProto.Format.INFO:
