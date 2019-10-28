@@ -86,7 +86,7 @@ class Markdown extends React.PureComponent<Props> {
     const astPlugins = allowHTML ? [htmlParser()] : []
 
     return (
-      <div className="markdown-text-container stText" style={styleProp}>
+      <div className="markdown-text-container stMarkdown" style={styleProp}>
         <ReactMarkdown
           source={body}
           escapeHtml={!allowHTML}
