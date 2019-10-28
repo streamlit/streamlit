@@ -21,21 +21,15 @@ import classNames from "classnames"
 import ReactMarkdown from "react-markdown"
 import { Map as ImmutableMap } from "immutable"
 import { Alert as AlertProto } from "autogen/proto"
+// TODO move Markdown functions into util module.
 
 import "./Alert.scss"
 
-function getAlertCSSClass(format: AlertProto.Format): string | undefined {
-  switch (format) {
-    case AlertProto.Format.ERROR:
-      return "alert-danger"
-    case AlertProto.Format.WARNING:
-      return "alert-warning"
-    case AlertProto.Format.INFO:
-      return "alert-info"
-    case AlertProto.Format.SUCCESS:
-      return "alert-success"
-  }
-  return undefined
+var ALERT_CSS_CLASS: ImmutableMap = {
+  [AlertProto.Format.ERROR]: "alert-danger",
+  [AlertProto.Format.WARNING]: "alert-warning",
+  [AlertProto.Format.INFO]: "alert-warning",
+  [AlertProto.Format.SUCCESS]: "alert-success",
 }
 
 interface LinkProps {
@@ -93,7 +87,7 @@ class Alert extends React.PureComponent<Props> {
 
     return (
       <div
-        className={classNames("alert", getAlertCSSClass(format), "stText")}
+        className={classNames("alert", ALERT_CSS_CLASS[format], "stText")}
         style={styleProp}
       >
         <div className="markdown-text-container">
