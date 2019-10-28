@@ -106,7 +106,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     this.setState({ status: "READY", errorMessage: undefined })
   }
 
-  renderErrorMessage = () => {
+  renderErrorMessage = (): React.ReactNode => {
     const { errorMessage } = this.state
     return (
       <div className="file-uploader-error">
