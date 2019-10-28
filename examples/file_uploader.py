@@ -40,10 +40,3 @@ file_png = st.file_uploader("Upload a PNG image", type=([".png"]))
 if file_png:
     file_png_bytes = st.file_reader(file_png)
     st.image(file_png_bytes)
-
-
-file_mkv = st.file_uploader("Upload a MKV image", type=([".mkv"]))
-
-if file_mkv:
-    file_mkv_bytes = st.file_reader(file_mkv)
-    st.write(len(file_mkv_bytes))

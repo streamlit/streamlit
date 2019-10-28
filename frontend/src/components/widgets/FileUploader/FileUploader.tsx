@@ -21,6 +21,7 @@ import { WidgetStateManager } from "lib/WidgetStateManager"
 import { FileUploader as FileUploaderBaseui } from "baseui/file-uploader"
 import { fileUploaderOverrides } from "lib/widgetTheme"
 import "./FileUploader.scss"
+import { Button } from "reactstrap"
 
 interface Props {
   disabled: boolean
@@ -101,6 +102,26 @@ class FileUploader extends React.PureComponent<Props, State> {
     }
   }
 
+  closeErrorMessage = (): void => {
+    this.setState({ status: "READY", errorMessage: undefined })
+  }
+
+  renderErrorMessage = () => {
+    const { errorMessage } = this.state
+    return (
+      <div className="file-uploader-error">
+        <span className="file-uploader-error__text">{errorMessage}</span>
+        <Button
+          className="file-uploader-error__button"
+          outline
+          onClick={this.closeErrorMessage}
+        >
+          Ok
+        </Button>
+      </div>
+    )
+  }
+
   public render = (): React.ReactNode => {
     const { status, errorMessage } = this.state
     const { element } = this.props
@@ -109,22 +130,26 @@ class FileUploader extends React.PureComponent<Props, State> {
     return (
       <div className="file-uploader">
         <label>{label}</label>
-        <FileUploaderBaseui
-          onDrop={this.dropHandler}
-          errorMessage={errorMessage}
-          accept={accept}
-          progressMessage={status !== "READY" ? status : undefined}
-          onRetry={() =>
-            this.setState({ status: "READY", errorMessage: undefined })
-          }
-          onCancel={() => {
-            this.setState({ status: "READY", errorMessage: undefined })
-            this.props.widgetStateManager.sendDeleteFileMessage(
-              this.props.element.get("id")
-            )
-          }}
-          overrides={fileUploaderOverrides}
-        />
+        {errorMessage ? (
+          this.renderErrorMessage()
+        ) : (
+          <FileUploaderBaseui
+            onDrop={this.dropHandler}
+            errorMessage={errorMessage}
+            accept={accept}
+            progressMessage={status !== "READY" ? status : undefined}
+            onRetry={() =>
+              this.setState({ status: "READY", errorMessage: undefined })
+            }
+            onCancel={() => {
+              this.setState({ status: "READY", errorMessage: undefined })
+              this.props.widgetStateManager.sendDeleteFileMessage(
+                this.props.element.get("id")
+              )
+            }}
+            overrides={fileUploaderOverrides}
+          />
+        )}
       </div>
     )
   }
