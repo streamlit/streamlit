@@ -21,24 +21,36 @@ import { Map as ImmutableMap } from "immutable"
 import Alert from "./Alert"
 import renderer from "react-test-renderer"
 
+const getProps = (elementProps: object = {}): Props => ({
+  element: ImmutableMap({
+    body: "Something happened!",
+    ...elementProps,
+  }),
+  width: 100,
+})
+
 describe("Alert Element Test", () => {
   it("renders an ERROR box", () => {
-    const component = renderer.create(<Alert format="error" />)
+    const props = getProps()
+    const component = renderer.create(<Alert format="error" {...props} />)
     let tree = component.toJSON()
     expect(tree).toMatchSnapshot()
   })
   it("renders an INFO box", () => {
-    const component = renderer.create(<Alert format="info" />)
+    const props = getProps()
+    const component = renderer.create(<Alert format="info" {...props} />)
     let tree = component.toJSON()
     expect(tree).toMatchSnapshot()
   })
   it("renders a WARNING box", () => {
-    const component = renderer.create(<Alert format="warning" />)
+    const props = getProps()
+    const component = renderer.create(<Alert format="warning" {...props} />)
     let tree = component.toJSON()
     expect(tree).toMatchSnapshot()
   })
   it("renders a SUCCESS box", () => {
-    const component = renderer.create(<Alert format="success" />)
+    const props = getProps()
+    const component = renderer.create(<Alert format="success" {...props} />)
     let tree = component.toJSON()
     expect(tree).toMatchSnapshot()
   })

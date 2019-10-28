@@ -1,0 +1,77 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Alert Element Test renders a SUCCESS box 1`] = `
+<div
+  className="alert stText"
+  style={
+    Object {
+      "width": 100,
+    }
+  }
+>
+  <div
+    className="markdown-text-container"
+  >
+    <p>
+      Something happened!
+    </p>
+  </div>
+</div>
+`;
+
+exports[`Alert Element Test renders a WARNING box 1`] = `
+<div
+  className="alert stText"
+  style={
+    Object {
+      "width": 100,
+    }
+  }
+>
+  <div
+    className="markdown-text-container"
+  >
+    <p>
+      Something happened!
+    </p>
+  </div>
+</div>
+`;
+
+exports[`Alert Element Test renders an ERROR box 1`] = `
+<div
+  className="alert stText"
+  style={
+    Object {
+      "width": 100,
+    }
+  }
+>
+  <div
+    className="markdown-text-container"
+  >
+    <p>
+      Something happened!
+    </p>
+  </div>
+</div>
+`;
+
+exports[`Alert Element Test renders an INFO box 1`] = `
+<div
+  className="alert stText"
+  style={
+    Object {
+      "width": 100,
+    }
+  }
+>
+  <div
+    className="markdown-text-container"
+  >
+    <p>
+      Something happened!
+    </p>
+  </div>
+</div>
+`;
