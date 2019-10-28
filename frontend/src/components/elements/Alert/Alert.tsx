@@ -87,7 +87,7 @@ class Alert extends React.PureComponent<Props> {
 
     return (
       <div
-        className={classNames("alert", ALERT_CSS_CLASS[format], "stText")}
+        className={classNames("alert", ALERT_CSS_CLASS[format], "stAlert")}
         style={styleProp}
       >
         <div className="markdown-text-container">
