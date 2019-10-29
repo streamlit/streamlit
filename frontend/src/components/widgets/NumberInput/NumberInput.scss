@@ -1,0 +1,87 @@
+/**
+ * Copyright 2018-2019 Streamlit Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@import "src/assets/css/variables";
+
+.stNumberInput {
+  $controls-width: 45px;
+
+  div.input-container {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+
+    input[type="number"] {
+      &::-webkit-inner-spin-button,
+      &::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+    }
+
+    div.controls {
+      height: 49px;
+      display: flex;
+      flex-direction: row;
+
+      .control {
+        margin: 0;
+        border: 0;
+        height: 100%;
+        display: flex;
+        cursor: pointer;
+        align-items: center;
+        width: $controls-width;
+        justify-content: center;
+        transition: color $normal-animation-duration,
+          background-color $normal-animation-duration;
+        background-color: $gray-lighter;
+
+        &:hover,
+        &:focus {
+          color: $white;
+          background-color: $primary;
+          transition: none;
+          outline: none;
+        }
+
+        &:active {
+          outline: none;
+          border: none;
+        }
+
+        &:last-child {
+          border-top-right-radius: 4px;
+          border-bottom-right-radius: 4px;
+        }
+
+        .open-iconic {
+          font-size: $font-size-base / 2;
+
+          svg {
+            fill: $gray;
+          }
+        }
+      }
+    }
+  }
+
+  .instructions {
+    margin-right: 5px;
+    right: $controls-width * 2;
+  }
+}

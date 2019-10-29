@@ -63,7 +63,7 @@ class GraphVizChart extends React.PureComponent<PropsWithHeight> {
     return { width, height }
   }
 
-  private updateChart = () => {
+  private updateChart = (): void => {
     try {
       // Layout and render the graph
       const graph = select("#" + this.chartId)
@@ -97,11 +97,11 @@ class GraphVizChart extends React.PureComponent<PropsWithHeight> {
     }
   }
 
-  public componentDidMount = () => {
+  public componentDidMount = (): void => {
     this.updateChart()
   }
 
-  public componentDidUpdate = () => {
+  public componentDidUpdate = (): void => {
     this.updateChart()
   }
 

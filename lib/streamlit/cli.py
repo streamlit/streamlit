@@ -33,7 +33,6 @@ from streamlit.credentials import Credentials
 from streamlit import version
 import streamlit.bootstrap as bootstrap
 
-
 LOG_LEVELS = ["error", "warning", "info", "debug"]
 
 NEW_VERSION_TEXT = """
@@ -52,7 +51,7 @@ NEW_VERSION_TEXT = """
 }
 
 
-@click.group()
+@click.group(context_settings={'auto_envvar_prefix':'STREAMLIT'})
 @click.option("--log_level", show_default=True, type=click.Choice(LOG_LEVELS))
 @click.version_option(prog_name="Streamlit")
 @click.pass_context
@@ -129,12 +128,14 @@ def _convert_config_option_to_click_option(config_option):
         description += "\n {} - {}".format(
             config_option.deprecation_text, config_option.deprecation_date
         )
+    envvar = "STREAMLIT_CONFIG_{}".format(param.upper())
 
     return {
         "param": param,
         "description": description,
         "type": config_option.type,
         "option": option,
+        "envvar": envvar,
     }
 
 
@@ -147,6 +148,7 @@ def configurator_options(func):
             parsed_parameter["param"],
             help=parsed_parameter["description"],
             type=parsed_parameter["type"],
+            envvar=parsed_parameter["envvar"],
         )
         func = config_option(func)
     return func
@@ -170,11 +172,24 @@ def _apply_config_options_from_cli(kwargs):
             )
 
 
+# Fetch remote file at url_path to script_path
+def _download_remote(script_path, url_path):
+    import requests
+
+    with open(script_path, "wb") as fp:
+        try:
+            resp = requests.get(url_path)
+            resp.raise_for_status()
+            fp.write(resp.content)
+        except requests.exceptions.RequestException as e:
+            raise click.BadParameter(("Unable to fetch {}.\n{}".format(url_path, e)))
+
+
 @main.command("run")
 @configurator_options
-@click.argument("file_or_url", required=True)
+@click.argument("target", required=True, envvar="STREAMLIT_RUN_TARGET")
 @click.argument("args", nargs=-1)
-def main_run(file_or_url, args=None, **kwargs):
+def main_run(target, args=None, **kwargs):
     """Run a Python script, piping stderr to Streamlit.
 
     The script can be local or it can be an url. In the latter case, Streamlit
@@ -185,29 +200,18 @@ def main_run(file_or_url, args=None, **kwargs):
 
     _apply_config_options_from_cli(kwargs)
 
-    if url(file_or_url):
-        import tempfile
-        import requests
-
-        with tempfile.NamedTemporaryFile() as fp:
-            try:
-                resp = requests.get(file_or_url)
-                resp.raise_for_status()
-                fp.write(resp.content)
-                # flush since we are reading the file within the with block
-                fp.flush()
-            except requests.exceptions.RequestException as e:
-                raise click.BadParameter(
-                    ("Unable to fetch {}.\n{}".format(file_or_url, e))
-                )
-            # this is called within the with block to make sure the temp file
-            # is not deleted
-            _main_run(fp.name, args)
-
+    if url(target):
+        from streamlit.temporary_directory import TemporaryDirectory
+        with TemporaryDirectory() as temp_dir:
+            from urllib.parse import urlparse
+            path = urlparse(target).path
+            script_path = os.path.join(temp_dir, path.strip('/').rsplit('/', 1)[-1])
+            _download_remote(script_path, target)
+            _main_run(script_path, args)
     else:
-        if not os.path.exists(file_or_url):
-            raise click.BadParameter("File does not exist: {}".format(file_or_url))
-        _main_run(file_or_url, args)
+        if not os.path.exists(target):
+            raise click.BadParameter("File does not exist: {}".format(target))
+        _main_run(target, args)
 
 
 # Utility function to compute the command line as a string

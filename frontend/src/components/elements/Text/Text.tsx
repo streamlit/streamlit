@@ -22,7 +22,6 @@ import classNames from "classnames"
 import ReactJson from "react-json-view"
 import { Map as ImmutableMap } from "immutable"
 import { Text as TextProto } from "autogen/proto"
-
 import "./Text.scss"
 
 function getAlertCSSClass(format: TextProto.Format): string | undefined {

@@ -16,7 +16,8 @@
 """A bunch of useful utilities."""
 
 # Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
+from __future__ import print_function, division, unicode_literals, \
+    absolute_import
 from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
@@ -348,7 +349,8 @@ def is_plotly_chart(obj):
 
 def is_graphviz_chart(obj):
     """True if input looks like a GraphViz chart."""
-    return is_type(obj, "graphviz.dot.Graph") or is_type(obj, "graphviz.dot.Digraph")
+    return is_type(obj, "graphviz.dot.Graph") or is_type(obj,
+                                                         "graphviz.dot.Digraph")
 
 
 def _is_plotly_obj(obj):
@@ -372,7 +374,8 @@ def _is_probably_plotly_dict(obj):
     if len(obj.keys()) == 0:
         return False
 
-    if any(k not in ["config", "data", "frames", "layout"] for k in obj.keys()):
+    if any(
+        k not in ["config", "data", "frames", "layout"] for k in obj.keys()):
         return False
 
     if any(_is_plotly_obj(v) for v in obj.values()):
@@ -484,3 +487,24 @@ def file_is_in_folder_glob(filepath, folderpath_glob):
 
     file_dir = os.path.dirname(filepath) + "/"
     return fnmatch.fnmatch(file_dir, folderpath_glob)
+
+
+def is_int_value(value):
+    """Test if a given value is int
+    Parameters
+    ----------
+    value: any
+
+    Returns
+    -------
+    bool
+        True if is an int, False if not
+    """
+
+    try:
+        a = float(value)
+        b = int(a)
+    except ValueError:
+        return False
+    else:
+        return a == b
