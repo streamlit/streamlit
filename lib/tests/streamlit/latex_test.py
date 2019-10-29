@@ -15,8 +15,6 @@
 
 """LaTeX unit test."""
 
-import sympy as s
-
 from tests import testutil
 import streamlit as st
 
@@ -31,10 +29,14 @@ class LatexTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.body, "$$\nax^2 + bx + c = 0\n$$")
 
     def test_sympy_expression(self):
-        import sympy as s
+        try:
+            import sympy
 
-        a, b = s.symbols("a b")
-        out = a + b
+            a, b = sympy.symbols("a b")
+            out = a + b
+        except:
+            out = "a + b"
+
         st.latex(out)
 
         c = self.get_delta_from_queue().new_element.text
