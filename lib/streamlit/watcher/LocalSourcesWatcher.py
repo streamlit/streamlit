@@ -94,10 +94,21 @@ class LocalSourcesWatcher(object):
             LOGGER.error("Received event for non-watched file", filepath)
             return
 
-        wm = self._watched_modules[filepath]
-
-        if wm.module_name is not None and wm.module_name in sys.modules:
-            del sys.modules[wm.module_name]
+        # Workaround:
+        # Delete all watched modules so we can guarantee changes to the
+        # updated module are reflected on reload.
+        #
+        # In principle, for reloading a given module, we only need to unload
+        # the module itself and all of the modules which import it (directly
+        # or indirectly) such that when we exec the application code, the
+        # changes are reloaded and reflected in the running application.
+        #
+        # However, determining all import paths for a given loaded module is
+        # non-trivial, and so as a workaround we simply unload all watched
+        # modules.
+        for wm in self._watched_modules.values():
+            if wm.module_name is not None and wm.module_name in sys.modules:
+                del sys.modules[wm.module_name]
 
         self._on_file_changed()
 
@@ -115,7 +126,8 @@ class LocalSourcesWatcher(object):
 
         try:
             wm = WatchedModule(
-                watcher=FileWatcher(filepath, self.on_file_changed), module_name=module_name
+                watcher=FileWatcher(filepath, self.on_file_changed),
+                module_name=module_name,
             )
         except ErrorType:
             # If you don't have permission to read this file, don't even add it
