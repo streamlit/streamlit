@@ -1,12 +1,13 @@
 import streamlit as st
-import sympy as s
 
 st.latex(r"\LaTeX")
 
-a, b = s.symbols("a b")
-out = a + b
-st.latex(out)
+try:
+    import sympy
 
-x, y = s.symbols("x y")
-out = x + 2 * y
-st.write(out)
+    a, b = sympy.symbols("a b")
+    out = a + b
+except:
+    out = "a + b"
+
+st.latex(out)
