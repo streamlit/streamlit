@@ -78,7 +78,7 @@ class TextInput extends React.PureComponent<Props, State> {
   public render = (): React.ReactNode => {
     const label: string = this.props.element.get("label")
     const style = { width: this.props.width }
-    console.log("rendering", label)
+
     return (
       <div className="Widget row-widget stTextInput" style={style}>
         <label>{label}</label>
