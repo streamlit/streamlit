@@ -16,7 +16,7 @@
  */
 
 import { flattenElements } from "./utils"
-import { BlockElement, ElementWrapper } from "lib/DeltaParser"
+import { BlockElement } from "lib/DeltaParser"
 import { List, Set as ImmutableSet, Map as ImmutableMap } from "immutable"
 
 describe("flattenElements", () => {
