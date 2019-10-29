@@ -330,7 +330,7 @@ def is_sympy_expession(obj):
     try:
         import sympy
 
-        if isinstance(body, sympy.Expr):
+        if isinstance(obj, sympy.Expr):
             return True
     except:
         return False
