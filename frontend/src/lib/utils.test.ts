@@ -24,20 +24,20 @@ describe("flattenElements", () => {
   const simpleElement2 = ImmutableMap({ key3: "value3", key4: "value4" })
   const simpleElement3 = ImmutableMap({ key5: "value5", key6: "value6" })
   const simpleBlockElement: BlockElement = List([
-    {
+    ImmutableMap({
       element: simpleElement1,
-    } as ElementWrapper,
-    {
+    }),
+    ImmutableMap({
       element: simpleElement2,
-    } as ElementWrapper,
+    }),
   ])
   const nestedBlockElement: BlockElement = List([
-    {
+    ImmutableMap({
       element: List(simpleBlockElement),
-    } as ElementWrapper,
-    {
+    }),
+    ImmutableMap({
       element: simpleElement3,
-    } as ElementWrapper,
+    }),
   ])
 
   it("should walk down a simple BlockElement", () => {

@@ -90,12 +90,10 @@ class Block extends PureComponent<Props> {
       .toArray()
       .map(
         (elementWrapper: ElementWrapper, index: number): ReactNode | null => {
-          if (elementWrapper.element instanceof List) {
-            return this.renderBlock(
-              elementWrapper.element as BlockElement,
-              index,
-              width
-            )
+          const element = elementWrapper.get("element")
+
+          if (element instanceof List) {
+            return this.renderBlock(element as BlockElement, index, width)
           } else {
             return this.renderElementWithErrorBoundary(
               elementWrapper,
@@ -116,10 +114,11 @@ class Block extends PureComponent<Props> {
       // of rendered elements as placeholders for any empty elements we encounter.
       elementsToRender = this.props.elements.map(
         (elementWrapper: ElementWrapper, index: number): ElementWrapper => {
-          if (elementWrapper.element instanceof ImmutableMap) {
+          const element = elementWrapper.get("element")
+
+          if (element instanceof ImmutableMap) {
             // Repeat the old element if we encounter st.empty()
-            const isEmpty =
-              (elementWrapper.element as SimpleElement).get("type") === "empty"
+            const isEmpty = (element as SimpleElement).get("type") === "empty"
 
             return isEmpty
               ? elementsToRender.get(index, elementWrapper)
@@ -139,7 +138,7 @@ class Block extends PureComponent<Props> {
       // are about to become stale.
       return true
     } else if (this.props.reportRunState === ReportRunState.RUNNING) {
-      return elementWrapper.reportId !== this.props.reportId
+      return elementWrapper.get("reportId") !== this.props.reportId
     } else {
       return false
     }
@@ -169,8 +168,8 @@ class Block extends PureComponent<Props> {
     index: number,
     width: number
   ): ReactNode | null {
-    const element = elementWrapper.element
-      ? (elementWrapper.element as SimpleElement)
+    const element = elementWrapper.get("element")
+      ? (elementWrapper.get("element") as SimpleElement)
       : null
 
     if (!element) {
@@ -181,7 +180,7 @@ class Block extends PureComponent<Props> {
       element,
       index,
       width,
-      elementWrapper.metadata
+      elementWrapper.get("metadata")
     )
 
     if (!component) {

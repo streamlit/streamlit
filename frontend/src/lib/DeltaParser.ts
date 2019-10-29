@@ -37,11 +37,7 @@ export interface Elements {
   sidebar: BlockElement
 }
 
-export interface ElementWrapper {
-  reportId: string
-  element: Element
-  metadata: ForwardMsgMetadata
-}
+export type ElementWrapper = ImmutableMap<string, any>
 
 export function applyDelta(
   elements: Elements,
@@ -66,17 +62,16 @@ export function applyDelta(
 
       if (
         currentElement &&
-        currentElement.element &&
-        currentElement.element.equals(element)
+        currentElement.get("element") &&
+        currentElement.get("element").equals(element)
       ) {
         elements[container] = elements[container].updateIn(
           deltaPath,
-          (elementWrapper: ElementWrapper) => {
-            elementWrapper.reportId = reportId
-            elementWrapper.metadata = metadata
-
-            return elementWrapper
-          }
+          (elementWrapper: ElementWrapper) =>
+            elementWrapper.withMutations(map => {
+              map.set("reportId", reportId)
+              map.set("metadata", metadata)
+            })
         )
       } else {
         elements[container] = elements[container].setIn(
@@ -115,11 +110,11 @@ function handleNewElementMessage(
   // when the report script is re-executed.
   // Set metadata on elements so that we can use them downstream.
 
-  return {
+  return ImmutableMap({
     reportId,
     element,
     metadata,
-  }
+  })
 }
 
 function handleNewBlockMessage(
@@ -129,13 +124,11 @@ function handleNewBlockMessage(
   MetricsManager.current.incrementDeltaCounter(container)
   MetricsManager.current.incrementDeltaCounter("new block")
 
-  if (elementWrapper.element instanceof List) {
+  if (elementWrapper.get("element") instanceof List) {
     return elementWrapper
   }
 
-  elementWrapper.element = List()
-
-  return elementWrapper
+  return elementWrapper.set("element", List())
 }
 
 function handleAddRowsMessage(
@@ -146,7 +139,7 @@ function handleAddRowsMessage(
   MetricsManager.current.incrementDeltaCounter(container)
   MetricsManager.current.incrementDeltaCounter("add rows")
 
-  elementWrapper.element = addRows(elementWrapper.element, namedDataSet)
-
-  return elementWrapper
+  return elementWrapper.update("element", element =>
+    addRows(element, namedDataSet)
+  )
 }

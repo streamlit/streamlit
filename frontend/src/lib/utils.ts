@@ -100,12 +100,12 @@ export function flattenElements(
 ): ImmutableSet<SimpleElement> {
   return elements.reduce(
     (acc: ImmutableSet<SimpleElement>, elementWrapper: ElementWrapper) => {
-      if (elementWrapper.element instanceof List) {
-        return flattenElements(elementWrapper.element as BlockElement)
+      const element = elementWrapper.get("element")
+
+      if (element instanceof List) {
+        return flattenElements(element as BlockElement)
       }
-      return acc.union(
-        ImmutableSet.of(elementWrapper.element as SimpleElement)
-      )
+      return acc.union(ImmutableSet.of(element as SimpleElement))
     },
     ImmutableSet.of<SimpleElement>()
   )
