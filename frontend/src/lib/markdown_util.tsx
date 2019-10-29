@@ -15,12 +15,7 @@
  * limitations under the License.
  */
 
-import React, { ReactNode, ReactElement } from "react"
-
-import classNames from "classnames"
-import ReactMarkdown from "react-markdown"
-import { Map as ImmutableMap } from "immutable"
-
+import React, { ReactElement } from "react"
 
 interface LinkProps {
   href: string

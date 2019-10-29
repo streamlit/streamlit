@@ -38,7 +38,8 @@ interface Props {
 }
 
 /**
- * Functional element representing error/warning/info text.
+ * Functional element representing error/warning/info/success boxes
+ * which are allowed to be formatted in Markdown.
  */
 class Alert extends React.PureComponent<Props> {
   public render(): ReactNode {

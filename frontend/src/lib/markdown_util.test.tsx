@@ -15,15 +15,55 @@
  * limitations under the License.
  */
 
-import React, { ReactNode, ReactElement } from "react"
-
-import classNames from "classnames"
+import React, { ReactElement } from "react"
 import ReactMarkdown from "react-markdown"
-import { Map as ImmutableMap } from "immutable"
-import { linkWithTargetBlank, linkReferenceHasParens } from "markdown_util"
 
+import { Map as ImmutableMap } from "immutable"
+import { linkWithTargetBlank, linkReferenceHasParens } from "./markdown_util"
+import { create } from "react-test-renderer"
+
+// var props = getProps_HasParams()
+// expect(linkReferenceHasParams).toBeA(any)
+
+// Fixture Generators
+
+const getMarkdownElement = (body): ReactElement => {
+  const renderers = {
+    link: linkWithTargetBlank,
+    linkReference: linkReferenceHasParens,
+  }
+  return <ReactMarkdown source={body} renderers={renderers} />
+}
 
 describe("linkReference", () => {
-    // linkWithTargetBlank,  linkReferenceHasParens
-    expect True
-} 
+  it("renders a link with _blank target", () => {
+    const body =
+      'Some random URL like [Streamlit](https://streamlit.io" target="_blank")'
+    const component = create(getMarkdownElement(body))
+    const instance = component.root
+    expect(instance.findByType(linkWithTargetBlank).props.href).toBe(
+      "https://streamlit.io"
+    )
+  })
+  it("renders a link without title", () => {
+    const body =
+      "Everybody loves [The Internet Archive](https://archive.org/)."
+    const component = create(getMarkdownElement(body))
+    const instance = component.root
+    expect(instance.findByType(linkWithTargetBlank).props.href).toBe(
+      "https://archive.org/"
+    )
+  })
+  it("renders a link containing a title", () => {
+    const body =
+      "My favorite search engine is " +
+      "[Duck Duck Go](https://duckduckgo.com " +
+      '"The best search engine for privacy").'
+    const component = create(getMarkdownElement(body))
+    const instance = component.root
+    console.log(component.toJSON())
+    expect(instance.findByType(linkWithTargetBlank).props.href).toBe(
+      "https://duckduckgo.com"
+    )
+  })
+})
