@@ -16,6 +16,6 @@
 import sys
 
 if sys.version_info[0] == 2:
-    import test_data.nested_module_child as NESTED_MODULE_CHILD
+    import nested_module_child as NESTED_MODULE_CHILD
 else:
     import tests.streamlit.watcher.test_data.nested_module_child as NESTED_MODULE_CHILD
