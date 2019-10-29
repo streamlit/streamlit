@@ -32,20 +32,17 @@ class ExceptionElement extends React.PureComponent<Props> {
   public render(): React.ReactNode {
     const { element, width } = this.props
     const type = element.get("type")
-    let message = element.get("message")
+    const message = element.get("message")
     const stackTrace = element.get("stackTrace")
 
     // On the backend, we use the StreamlitException type for errors that
     // originate from inside Streamlit. These errors have Markdown-formatted
     // messages, and so we wrap those messages inside our Markdown renderer.
-    let messageNode: ReactNode
+    let messageNode: ReactNode = message
     if (element.get("messageIsMarkdown")) {
       messageNode = <StreamlitMarkdown source={message} allowHTML={false} />
-    } else {
-      if (message) {
-        message = `: ${message}`
-      }
-      messageNode = message
+    } else if (message) {
+      messageNode = `: ${message}`
     }
 
     // Put it all together into a nice little html view.
