@@ -135,12 +135,11 @@ With widgets, Streamlit allows you to bake interactivity directly into your apps
 .. autofunction:: streamlit.text_area
 .. autofunction:: streamlit.date_input
 .. autofunction:: streamlit.time_input
-.. autofunction:: streamlit.sidebar
 ```
 
 ## Add widgets to sidebar
 
-Not only can you add interactivity to your report with widgets, you can organize them into a sidebar with `st.write.[element_name]`. Each element that's passed to `st.sidebar` is pinned to the left, allowing readers to focus on the content in your app. The only elements that aren't supported are: `st.write` (you
+Not only can you add interactivity to your report with widgets, you can organize them into a sidebar with `st.write.[element_name]`. Each element that's passed to `st.sidebar` is pinned to the left, allowing users to focus on the content in your app. The only elements that aren't supported are: `st.write` (you
 should use `st.sidebar.markdown()` instead), `st.echo`, and `st.spinner`.
 
 Here's an example of how you'd add a checkbox to your sidebar.

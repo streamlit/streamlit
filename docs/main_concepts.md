@@ -62,7 +62,7 @@ st.write(x, 'squared is', x * x)
 
 ## Sidebar
 
-Streamlit makes it easy to organize your widgets in a left panel sidebar with [`st.sidebar`](api.html#add-widgets-to-sidebar). Each element that's passed to [`st.sidebar`](api.html#add-widgets-to-sidebar) is pinned to the left, allowing readers to focus on the content in your app. The only elements that aren't supported are: `st.write` (you
+Streamlit makes it easy to organize your widgets in a left panel sidebar with [`st.sidebar`](api.html#add-widgets-to-sidebar). Each element that's passed to [`st.sidebar`](api.html#add-widgets-to-sidebar) is pinned to the left, allowing users to focus on the content in your app. The only elements that aren't supported are: `st.write` (you
 should use `st.sidebar.markdown()` instead), `st.echo`, and `st.spinner`.
 
 ```python
