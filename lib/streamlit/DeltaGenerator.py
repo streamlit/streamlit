@@ -18,6 +18,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 import functools
@@ -762,9 +763,7 @@ class DeltaGenerator(object):
         Parameters
         ----------
         exception : Exception
-            The exception to display. If this is a StreamlitException,
-            then its message can contain markdown, which will then be
-            nicely formatted on the frontend.
+            The exception to display.
         exception_traceback : Exception Traceback or None
             If None or False, does not show display the trace. If True,
             tries to capture a trace automatically. If a Traceback object,
@@ -1815,7 +1814,9 @@ class DeltaGenerator(object):
         else:
             start, end = value
             if not min_value <= start <= end <= max_value:
-                raise StreamlitAPIException("The value and/or arguments are out of range.")
+                raise StreamlitAPIException(
+                    "The value and/or arguments are out of range."
+                )
 
         # Set format default.
         if format is None:
@@ -2209,7 +2210,9 @@ class DeltaGenerator(object):
                     "Progress Value has invalid value [0, 100]: %d" % value
                 )
         else:
-            raise StreamlitAPIException("Progress Value has invalid type: %s" % value_type)
+            raise StreamlitAPIException(
+                "Progress Value has invalid type: %s" % value_type
+            )
 
     @_with_element
     def empty(self, element):
@@ -2533,7 +2536,9 @@ def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
             old_stop = _get_pandas_index_attr(data, "stop")
 
             if old_step is None or old_stop is None:
-                raise StreamlitAPIException("'RangeIndex' object has no attribute 'step'")
+                raise StreamlitAPIException(
+                    "'RangeIndex' object has no attribute 'step'"
+                )
 
             start = last_index + old_step
             stop = last_index + old_step + old_stop
