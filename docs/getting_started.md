@@ -227,7 +227,7 @@ option = st.selectbox(
 
 For a cleaner look, you can move your widgets into a sidebar. This keeps your
 app central, while widgets are pinned to the left. Let's take a look at how you
-can use [`st.sidebar()`](api.html#streamlit.sidebar) in your app.
+can use [`st.sidebar`](api.html#add-widgets-to-sidebar) in your app.
 
 ```Python
 option = st.sidebar.selectbox(
@@ -237,9 +237,8 @@ option = st.sidebar.selectbox(
 'You selected:', option
 ```
 
-Most of the elements you can put into the main part of your app with an
-`st.something()` call can also be put into a sidebar with
-`st.sidebar.something()`. The only exceptions right now are `st.write` (you
+Most of the elements you can put into your app can also be put into a sidebar with
+`st.sidebar.[element_name]()`. The only exceptions right now are `st.write` (you
 should use `st.sidebar.markdown()` instead), `st.echo`, and `st.spinner`. Rest
 assured, though, we're currently working on adding support for those too!
 
