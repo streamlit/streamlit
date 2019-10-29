@@ -22,12 +22,7 @@
   }
 
   .exception .message .type {
-    font-size: larger;
     font-weight: bold;
-  }
-
-  .exception .message code {
-    color: $primary;
   }
 
   .exception .stack-trace {
