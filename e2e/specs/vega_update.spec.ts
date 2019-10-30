@@ -23,9 +23,9 @@ describe("add lots of data to vega chart", () => {
   });
 
   it("updates the x-axis values", () => {
-    cy.get(".stVegaLiteChart").should("have.length", 1);
-
     cy.get("#ReportStatus").contains("Running...");
+
+    cy.get(".stVegaLiteChart").should("have.length", 1);
 
     cy.get("#ReportStatus").should("not.exist");
 
