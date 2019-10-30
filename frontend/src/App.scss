@@ -103,3 +103,12 @@ pre {
 .underlineFirstLetter::first-letter {
   text-decoration: underline;
 }
+
+@media print {
+  .stApp {
+    height: 100%;
+    position: static;
+    overflow-y: visible;
+    overflow-x: visible;
+  }
+}

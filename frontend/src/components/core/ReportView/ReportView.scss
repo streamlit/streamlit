@@ -243,3 +243,12 @@
     background: #fff;
   }
 }
+
+@media print {
+  .reportview-container {
+    height: 100%;
+    position: static;
+    overflow-y: visible;
+    overflow-x: visible;
+  }
+}
