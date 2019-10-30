@@ -41,7 +41,7 @@ import {
   Elements,
   BlockElement,
   SimpleElement,
-  ElementWrapper,
+  ReportElement,
 } from "lib/DeltaParser"
 import {
   ForwardMsg,
@@ -456,8 +456,8 @@ class App extends PureComponent<Props, State> {
    */
   clearOldElements = (elements: any, reportId: string): BlockElement => {
     return elements
-      .map((elementWrapper: ElementWrapper) => {
-        const simpleElement = elementWrapper.get("element")
+      .map((reportElement: ReportElement) => {
+        const simpleElement = reportElement.get("element")
 
         if (simpleElement instanceof List) {
           const clearedElements = this.clearOldElements(
@@ -467,11 +467,11 @@ class App extends PureComponent<Props, State> {
           return clearedElements.size > 0 ? clearedElements : null
         }
 
-        return elementWrapper.get("reportId") === reportId
-          ? elementWrapper
+        return reportElement.get("reportId") === reportId
+          ? reportElement
           : null
       })
-      .filter((elementWrapper: any) => elementWrapper !== null)
+      .filter((reportElement: any) => reportElement !== null)
   }
 
   /**

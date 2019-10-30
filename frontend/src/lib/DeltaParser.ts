@@ -30,14 +30,14 @@ import { requireNonNull } from "lib/utils"
 type Container = "main" | "sidebar"
 export type SimpleElement = ImmutableMap<string, any>
 export type Element = SimpleElement | BlockElement
-export interface BlockElement extends List<ElementWrapper> {}
+export interface BlockElement extends List<ReportElement> {}
 
 export interface Elements {
   main: BlockElement
   sidebar: BlockElement
 }
 
-export type ElementWrapper = ImmutableMap<string, any>
+export type ReportElement = ImmutableMap<string, any>
 
 export function applyDelta(
   elements: Elements,
@@ -56,7 +56,7 @@ export function applyDelta(
 
   dispatchOneOf(delta, "type", {
     newElement: (element: SimpleElement) => {
-      const currentElement: ElementWrapper = elements[container].getIn(
+      const currentElement: ReportElement = elements[container].getIn(
         deltaPath
       )
 
@@ -67,8 +67,8 @@ export function applyDelta(
       ) {
         elements[container] = elements[container].updateIn(
           deltaPath,
-          (elementWrapper: ElementWrapper) =>
-            elementWrapper.withMutations(map => {
+          (reportElement: ReportElement) =>
+            reportElement.withMutations(map => {
               map.set("reportId", reportId)
               map.set("metadata", metadata)
             })
@@ -83,14 +83,14 @@ export function applyDelta(
     newBlock: () => {
       elements[container] = elements[container].updateIn(
         deltaPath,
-        elementWrapper => handleNewBlockMessage(container, elementWrapper)
+        reportElement => handleNewBlockMessage(container, reportElement)
       )
     },
     addRows: (namedDataSet: NamedDataSet) => {
       elements[container] = elements[container].updateIn(
         deltaPath,
-        elementWrapper =>
-          handleAddRowsMessage(container, elementWrapper, namedDataSet)
+        reportElement =>
+          handleAddRowsMessage(container, reportElement, namedDataSet)
       )
     },
   })
@@ -103,7 +103,7 @@ function handleNewElementMessage(
   element: SimpleElement,
   reportId: string,
   metadata: ForwardMsgMetadata
-): ElementWrapper {
+): ReportElement {
   MetricsManager.current.incrementDeltaCounter(container)
   MetricsManager.current.incrementDeltaCounter(element.get("type"))
   // Set reportId on elements so we can clear old elements
@@ -119,27 +119,27 @@ function handleNewElementMessage(
 
 function handleNewBlockMessage(
   container: Container,
-  elementWrapper: ElementWrapper
-): ElementWrapper {
+  reportElement: ReportElement
+): ReportElement {
   MetricsManager.current.incrementDeltaCounter(container)
   MetricsManager.current.incrementDeltaCounter("new block")
 
-  if (elementWrapper.get("element") instanceof List) {
-    return elementWrapper
+  if (reportElement.get("element") instanceof List) {
+    return reportElement
   }
 
-  return elementWrapper.set("element", List())
+  return reportElement.set("element", List())
 }
 
 function handleAddRowsMessage(
   container: Container,
-  elementWrapper: ElementWrapper,
+  reportElement: ReportElement,
   namedDataSet: NamedDataSet
-): ElementWrapper {
+): ReportElement {
   MetricsManager.current.incrementDeltaCounter(container)
   MetricsManager.current.incrementDeltaCounter("add rows")
 
-  return elementWrapper.update("element", element =>
+  return reportElement.update("element", element =>
     addRows(element, namedDataSet)
   )
 }

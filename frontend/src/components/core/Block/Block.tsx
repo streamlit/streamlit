@@ -32,7 +32,7 @@ import FullScreenWrapper from "components/shared/FullScreenWrapper/"
 import ExceptionElement from "components/elements/ExceptionElement/"
 import Table from "components/elements/Table/"
 import Text from "components/elements/Text/"
-import { ElementWrapper } from "lib/DeltaParser"
+import { ReportElement } from "lib/DeltaParser"
 
 // Lazy-load elements.
 const Audio = React.lazy(() => import("components/elements/Audio/"))
@@ -70,7 +70,7 @@ const NumberInput = React.lazy(() => import("components/widgets/NumberInput/"))
 
 type SimpleElement = ImmutableMap<string, any>
 type StElement = SimpleElement | BlockElement
-interface BlockElement extends List<ElementWrapper> {}
+interface BlockElement extends List<ReportElement> {}
 
 interface Props {
   elements: BlockElement
@@ -88,21 +88,19 @@ class Block extends PureComponent<Props> {
     // Transform Streamlit elements into ReactNodes.
     return elementsToRender
       .toArray()
-      .map(
-        (elementWrapper: ElementWrapper, index: number): ReactNode | null => {
-          const element = elementWrapper.get("element")
+      .map((reportElement: ReportElement, index: number): ReactNode | null => {
+        const element = reportElement.get("element")
 
-          if (element instanceof List) {
-            return this.renderBlock(element as BlockElement, index, width)
-          } else {
-            return this.renderElementWithErrorBoundary(
-              elementWrapper,
-              index,
-              width
-            )
-          }
+        if (element instanceof List) {
+          return this.renderBlock(element as BlockElement, index, width)
+        } else {
+          return this.renderElementWithErrorBoundary(
+            reportElement,
+            index,
+            width
+          )
         }
-      )
+      })
       .filter((node: ReactNode | null): ReactNode => node != null)
   }
 
@@ -113,32 +111,32 @@ class Block extends PureComponent<Props> {
       // (BUG #739) When the report is running, use our most recent list
       // of rendered elements as placeholders for any empty elements we encounter.
       elementsToRender = this.props.elements.map(
-        (elementWrapper: ElementWrapper, index: number): ElementWrapper => {
-          const element = elementWrapper.get("element")
+        (reportElement: ReportElement, index: number): ReportElement => {
+          const element = reportElement.get("element")
 
           if (element instanceof ImmutableMap) {
             // Repeat the old element if we encounter st.empty()
             const isEmpty = (element as SimpleElement).get("type") === "empty"
 
             return isEmpty
-              ? elementsToRender.get(index, elementWrapper)
-              : elementWrapper
+              ? elementsToRender.get(index, reportElement)
+              : reportElement
           }
 
-          return elementWrapper
+          return reportElement
         }
       )
     }
     return elementsToRender
   }
 
-  private isElementStale(elementWrapper: ElementWrapper): boolean {
+  private isElementStale(reportElement: ReportElement): boolean {
     if (this.props.reportRunState === ReportRunState.RERUN_REQUESTED) {
       // If a rerun was just requested, all of our current elements
       // are about to become stale.
       return true
     } else if (this.props.reportRunState === ReportRunState.RUNNING) {
-      return elementWrapper.get("reportId") !== this.props.reportId
+      return reportElement.get("reportId") !== this.props.reportId
     } else {
       return false
     }
@@ -164,20 +162,20 @@ class Block extends PureComponent<Props> {
   }
 
   private renderElementWithErrorBoundary(
-    elementWrapper: ElementWrapper,
+    reportElement: ReportElement,
     index: number,
     width: number
   ): ReactNode | null {
-    if (!elementWrapper.has("element")) {
+    if (!reportElement.has("element")) {
       return null
     }
 
-    const element = elementWrapper.get("element")
+    const element = reportElement.get("element")
     const component = this.renderElement(
       element,
       index,
       width,
-      elementWrapper.get("metadata")
+      reportElement.get("metadata")
     )
 
     if (!component) {
@@ -187,7 +185,7 @@ class Block extends PureComponent<Props> {
 
     const isStale =
       this.props.showStaleElementIndicator &&
-      this.isElementStale(elementWrapper)
+      this.isElementStale(reportElement)
 
     const className =
       isStale && !FullScreenWrapper.isFullScreen

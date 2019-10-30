@@ -25,13 +25,13 @@ import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import { ThemeProvider } from "baseui"
-import { ElementWrapper } from "lib/DeltaParser"
+import { ReportElement } from "lib/DeltaParser"
 import { mainWidgetTheme, sidebarWidgetTheme } from "lib/widgetTheme"
 
 import "./ReportView.scss"
 import "./Widget.scss"
 
-interface BlockElement extends List<ElementWrapper> {}
+interface BlockElement extends List<ReportElement> {}
 
 interface Elements {
   main: BlockElement
