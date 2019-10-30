@@ -29,28 +29,37 @@ const getProps = (elementProps: object = {}): Props => ({
 })
 
 describe("Alert Element Test", () => {
-  it("renders an ERROR box", () => {
-    const props = getProps()
-    const component = renderer.create(<Alert format="error" {...props} />)
+  it("renders an ERROR box as expected", () => {
+    const props = getProps({ format: "error", body: "what in the world?" })
+    const component = renderer.create(<Alert {...props} />)
     let tree = component.toJSON()
     expect(tree).toMatchSnapshot()
   })
-  it("renders an INFO box", () => {
-    const props = getProps()
-    const component = renderer.create(<Alert format="info" {...props} />)
+  it("renders an INFO box as expected", () => {
+    const props = getProps({ format: "info" })
+    const component = renderer.create(<Alert {...props} />)
     let tree = component.toJSON()
     expect(tree).toMatchSnapshot()
   })
-  it("renders a WARNING box", () => {
-    const props = getProps()
-    const component = renderer.create(<Alert format="warning" {...props} />)
+  it("renders a WARNING box as expected", () => {
+    const props = getProps({ format: "warning" })
+    const component = renderer.create(<Alert {...props} />)
     let tree = component.toJSON()
     expect(tree).toMatchSnapshot()
   })
-  it("renders a SUCCESS box", () => {
-    const props = getProps()
-    const component = renderer.create(<Alert format="success" {...props} />)
+  it("renders a SUCCESS box as expected", () => {
+    const props = getProps({ format: "success" })
+    const component = renderer.create(<Alert {...props} />)
     let tree = component.toJSON()
     expect(tree).toMatchSnapshot()
   })
+  /* TODO:
+  There are some behaviors that you can check with jest and enzyme here.
+    For instance:
+
+    1- Should render without exploding
+    2- Should show body ( rendering ReactMarkdown with body properly passed as a prop )
+    3- Should have the proper className
+    4- Should have styleProp
+  */
 })

@@ -38,4 +38,12 @@ describe("JSON Element Test", () => {
     let tree = component.toJSON()
     expect(tree).toMatchSnapshot()
   })
+  /* TODO:
+    Same here as before, here you can check a few things:
+
+    1- Should render without exploding
+    2- Should have a bodyObject
+    3- Should raise an exception if it has an invalid JSON
+    4- Should have have styleProp
+  */
 })

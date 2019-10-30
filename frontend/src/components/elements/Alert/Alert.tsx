@@ -25,7 +25,7 @@ import { linkWithTargetBlank, linkReferenceHasParens } from "lib/markdown_util"
 
 import "./Alert.scss"
 
-var ALERT_CSS_CLASS: ImmutableMap = {
+const ALERT_CSS_CLASS = {
   [AlertProto.Format.ERROR]: "alert-danger",
   [AlertProto.Format.WARNING]: "alert-warning",
   [AlertProto.Format.INFO]: "alert-warning",
@@ -39,7 +39,7 @@ interface Props {
 
 /**
  * Functional element representing error/warning/info/success boxes
- * which are allowed to be formatted in Markdown.
+ * which may be formatted in Markdown.
  */
 class Alert extends React.PureComponent<Props> {
   public render(): ReactNode {
@@ -51,10 +51,11 @@ class Alert extends React.PureComponent<Props> {
       linkReference: linkReferenceHasParens,
     }
     const styleProp = { width }
+    console.log(format)
 
     return (
       <div
-        className={classNames("alert", ALERT_CSS_CLASS[format], "stAlert")}
+        className={classNames("alert", ALERT_CSS_CLASS[format], "stAlert")} //
         style={styleProp}
       >
         <div className="markdown-text-container">

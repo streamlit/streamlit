@@ -39,4 +39,13 @@ describe("Markdown Element Test", () => {
     let tree = component.toJSON()
     expect(tree).toMatchSnapshot()
   })
+  /* TODO:
+  There are some behaviors that you can check with jest and enzyme here.
+    For instance:
+
+    1- Should render without exploding
+    2- Should show body ( rendering ReactMarkdown with body properly passed as a prop )
+    3- Should have the proper className
+    4- Should have styleProp
+  */
 })
