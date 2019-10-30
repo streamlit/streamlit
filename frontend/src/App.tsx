@@ -471,7 +471,7 @@ class App extends PureComponent<Props, State> {
           ? elementWrapper
           : null
       })
-      .filter((element: any) => element !== null || element)
+      .filter((elementWrapper: any) => elementWrapper !== null)
   }
 
   /**

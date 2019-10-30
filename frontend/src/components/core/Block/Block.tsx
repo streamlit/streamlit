@@ -168,14 +168,11 @@ class Block extends PureComponent<Props> {
     index: number,
     width: number
   ): ReactNode | null {
-    const element = elementWrapper.get("element")
-      ? (elementWrapper.get("element") as SimpleElement)
-      : null
-
-    if (!element) {
+    if (!elementWrapper.has("element")) {
       return null
     }
 
+    const element = elementWrapper.get("element")
     const component = this.renderElement(
       element,
       index,
