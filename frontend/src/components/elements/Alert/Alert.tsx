@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { ReactNode, ReactElement } from "react"
+import React, { ReactNode } from "react"
 
 import classNames from "classnames"
 import ReactMarkdown from "react-markdown"

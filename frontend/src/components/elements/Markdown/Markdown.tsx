@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { ReactNode, ReactElement } from "react"
+import React, { ReactNode } from "react"
 
 import ReactMarkdown from "react-markdown"
 import { Map as ImmutableMap } from "immutable"
