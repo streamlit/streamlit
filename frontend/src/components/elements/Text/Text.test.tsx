@@ -32,7 +32,7 @@ describe("Text Element Test (preformatted text)", () => {
   it("renders plain text", () => {
     const props = getProps()
     const component = renderer.create(<Text {...props} />)
-    let tree = component.toJSON()
+    const tree = component.toJSON()
     expect(tree).toMatchSnapshot()
   })
 })

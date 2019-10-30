@@ -32,25 +32,25 @@ describe("Alert Element Test", () => {
   it("renders an ERROR box as expected", () => {
     const props = getProps({ format: "error", body: "what in the world?" })
     const component = renderer.create(<Alert {...props} />)
-    let tree = component.toJSON()
+    const tree = component.toJSON()
     expect(tree).toMatchSnapshot()
   })
   it("renders an INFO box as expected", () => {
     const props = getProps({ format: "info" })
     const component = renderer.create(<Alert {...props} />)
-    let tree = component.toJSON()
+    const tree = component.toJSON()
     expect(tree).toMatchSnapshot()
   })
   it("renders a WARNING box as expected", () => {
     const props = getProps({ format: "warning" })
     const component = renderer.create(<Alert {...props} />)
-    let tree = component.toJSON()
+    const tree = component.toJSON()
     expect(tree).toMatchSnapshot()
   })
   it("renders a SUCCESS box as expected", () => {
     const props = getProps({ format: "success" })
     const component = renderer.create(<Alert {...props} />)
-    let tree = component.toJSON()
+    const tree = component.toJSON()
     expect(tree).toMatchSnapshot()
   })
   /* TODO:

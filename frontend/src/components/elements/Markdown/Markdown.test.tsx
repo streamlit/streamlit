@@ -35,7 +35,7 @@ describe("Markdown Element Test", () => {
   it("renders markdown as expected", () => {
     const props = getProps()
     const component = renderer.create(<Markdown {...props} />)
-    let tree = component.toJSON()
+    const tree = component.toJSON()
     expect(tree).toMatchSnapshot()
   })
   /* TODO:

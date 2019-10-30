@@ -35,7 +35,7 @@ describe("JSON Element Test", () => {
   it("renders json as expected", () => {
     const props = getProps()
     const component = renderer.create(<Json {...props} />)
-    let tree = component.toJSON()
+    const tree = component.toJSON()
     expect(tree).toMatchSnapshot()
   })
   /* TODO:
