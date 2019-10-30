@@ -2073,8 +2073,6 @@ class DeltaGenerator(object):
         >>> st.write('The current number is ', number)
         """
 
-        from streamlit.util import is_int_value
-
         if isinstance(value, NoValue):
             if min_value:
                 value = min_value

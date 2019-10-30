@@ -224,6 +224,7 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
             "text_input": lambda key=None: st.text_input("", key=key),
             "time_input": lambda key=None: st.time_input("", key=key),
             "date_input": lambda key=None: st.date_input("", key=key),
+            "number_input": lambda key=None: st.number_input("", key=key),
         }
 
         # Iterate each widget type
