@@ -26,7 +26,7 @@ describe("st.radio", () => {
     cy.get(".stRadio").should("have.length", 3);
 
     cy.get(".stRadio").each((el, idx) => {
-      cy.wrap(el).matchImageSnapshot("radio" + idx);
+      return cy.wrap(el).matchImageSnapshot("radio" + idx);
     });
   });
 
@@ -56,7 +56,8 @@ describe("st.radio", () => {
 
   it("sets value correctly when user clicks", () => {
     cy.get(".stRadio").each((el, idx) => {
-      cy.wrap(el)
+      return cy
+        .wrap(el)
         .find("input")
         .last()
         .click({ force: true });

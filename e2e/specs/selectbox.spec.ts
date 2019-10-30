@@ -26,7 +26,7 @@ describe("st.selectbox", () => {
     cy.get(".stSelectbox").should("have.length", 3);
 
     cy.get(".stSelectbox").each((el, idx) => {
-      cy.wrap(el).matchImageSnapshot("selectbox" + idx);
+      return cy.wrap(el).matchImageSnapshot("selectbox" + idx);
     });
   });
 

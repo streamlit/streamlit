@@ -56,9 +56,9 @@ describe("st.table styling", () => {
       .find("td")
       .each((el, i) => {
         if (i < 3) {
-          cy.wrap(el).should("have.css", "color", "rgb(0, 0, 0)");
+          return cy.wrap(el).should("have.css", "color", "rgb(0, 0, 0)");
         } else {
-          cy.wrap(el).should("have.css", "color", "rgb(255, 0, 0)");
+          return cy.wrap(el).should("have.css", "color", "rgb(255, 0, 0)");
         }
       });
 

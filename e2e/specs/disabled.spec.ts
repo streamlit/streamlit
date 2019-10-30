@@ -59,7 +59,7 @@ describe("disable widgets", () => {
       cy.get(".stText").should("have.text", "Value 1: 25");
 
       cy.get(".element-container").each((el, i) => {
-        cy.get(el).matchImageSnapshot(`disabled-widgets-${i}`);
+        return cy.get(el).matchImageSnapshot(`disabled-widgets-${i}`);
       });
     });
   });

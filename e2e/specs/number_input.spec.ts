@@ -27,7 +27,7 @@ describe("st.number_input", () => {
 
     cy.get(".stNumberInput").each((el, idx) => {
       // @ts-ignore
-      cy.wrap(el).matchImageSnapshot("number_input" + idx);
+      return cy.wrap(el).matchImageSnapshot("number_input" + idx);
     });
   });
 

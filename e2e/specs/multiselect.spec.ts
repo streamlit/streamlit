@@ -27,7 +27,7 @@ describe("st.multiselect", () => {
       cy.get(".stMultiSelect").should("have.length", 4);
 
       cy.get(".stMultiSelect").each((el, idx) => {
-        cy.wrap(el).matchImageSnapshot("multiselect" + idx);
+        return cy.wrap(el).matchImageSnapshot("multiselect" + idx);
       });
     });
 
@@ -61,14 +61,17 @@ describe("st.multiselect", () => {
       cy.get(".stMultiSelect")
         .eq(0)
         .then(el => {
-          cy.wrap(el)
+          return cy
+            .wrap(el)
             .find("input")
             .click()
             .get("li")
             .should("have.length", 2)
             .should("have.text", "malefemale")
             .each((el, idx) => {
-              cy.wrap(el).matchImageSnapshot("multiselect-dropdown-" + idx);
+              return cy
+                .wrap(el)
+                .matchImageSnapshot("multiselect-dropdown-" + idx);
             });
         });
     });

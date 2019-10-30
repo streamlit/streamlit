@@ -63,7 +63,7 @@ describe("st.vega_lite_chart", () => {
     cy.get(".stVegaLiteChart")
       .filter(idx => idx >= 4 && idx <= 7)
       .each(el => {
-        cy.wrap(el).matchImageSnapshot();
+        return scy.wrap(el).matchImageSnapshot();
       });
   });
 });
