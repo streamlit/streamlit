@@ -18,15 +18,10 @@
 import React, { ReactElement } from "react"
 import ReactMarkdown from "react-markdown"
 
-import { Map as ImmutableMap } from "immutable"
 import { linkWithTargetBlank, linkReferenceHasParens } from "./markdown_util"
 import { create } from "react-test-renderer"
 
-// var props = getProps_HasParams()
-// expect(linkReferenceHasParams).toBeA(any)
-
-// Fixture Generators
-
+// Fixture Generator
 const getMarkdownElement = (body): ReactElement => {
   const renderers = {
     link: linkWithTargetBlank,
@@ -61,9 +56,30 @@ describe("linkReference", () => {
       '"The best search engine for privacy").'
     const component = create(getMarkdownElement(body))
     const instance = component.root
-    console.log(component.toJSON())
     expect(instance.findByType(linkWithTargetBlank).props.href).toBe(
       "https://duckduckgo.com"
     )
+  })
+  it("renders a link containing parentheses", () => {
+    const body =
+      "Here's a link containing parentheses [Yikes](http://msdn.microsoft.com/en-us/library/aa752574(VS.85).aspx)"
+    const component = create(getMarkdownElement(body))
+    const instance = component.root
+    console.log(component.toJSON())
+    const hrefobj = instance.findByType(linkWithTargetBlank)
+    expect(hrefobj.props.href).toBe(
+      "http://msdn.microsoft.com/en-us/library/aa752574(VS.85).aspx"
+    )
+  })
+  it("does not render a link if only [text] and no (href)", () => {
+    const body = "Don't convert to a link if only [text] and missing (href)"
+    const component = create(getMarkdownElement(body))
+    const instance = component.root
+    // there should not be a linkWithTargetBlank element.
+    try {
+      expect(instance.findByType(linkWithTargetBlank).props.href).toThrow()
+    } catch (err) {
+      //pass
+    }
   })
 })
