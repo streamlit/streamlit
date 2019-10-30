@@ -2056,6 +2056,7 @@ class DeltaGenerator(object):
         value=NoValue(),
         step=None,
         format=None,
+        key=None,
     ):
         """Display a numeric input widget.
 
@@ -2079,6 +2080,11 @@ class DeltaGenerator(object):
         format : str or None
             Printf/Python format string controlling how the interface should
             display numbers. This does not impact the return value.
+        key : str
+            An optional string to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. Multiple widgets of the same type may
+            not share the same key.
 
         Returns
         -------
@@ -2091,8 +2097,6 @@ class DeltaGenerator(object):
         >>> number = st.number_input('Insert a number')
         >>> st.write('The current number is ', number)
         """
-
-        from streamlit.util import is_int_value
 
         if isinstance(value, NoValue):
             if min_value:
@@ -2179,7 +2183,7 @@ class DeltaGenerator(object):
         if format is not None:
             element.number_input.format = format
 
-        ui_value = _get_widget_ui_value("number_input", element)
+        ui_value = _get_widget_ui_value("number_input", element, user_key=key)
 
         return ui_value if ui_value is not None else value
 
