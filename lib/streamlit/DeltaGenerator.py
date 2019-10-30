@@ -488,6 +488,7 @@ class DeltaGenerator(object):
         body : str
             The string to display as Github-flavored Markdown. Syntax
             information can be found at: https://github.github.com/gfm.
+            Inline and block math are supported by KaTeX and remark-math.
 
         unsafe_allow_html : bool
             By default, any HTML tags found in the body will be escaped and
@@ -523,6 +524,30 @@ class DeltaGenerator(object):
         element.text.body = _clean_text(body)
         element.text.format = Text_pb2.Text.MARKDOWN
         element.text.allow_html = unsafe_allow_html
+
+    @_with_element
+    def latex(self, element, body):
+        """Display string formatted as LaTeX.
+
+        Parameters
+        ----------
+        body : str
+            The string to display as LaTeX.
+
+        Example
+        -------
+        >>> st.latex("ax^2 + bx + c = 0")
+
+        """
+        from streamlit.util import is_sympy_expession
+
+        if is_sympy_expession(body):
+            import sympy
+
+            body = sympy.latex(body)
+
+        element.text.body = "$$\n%s\n$$" % _clean_text(body)
+        element.text.format = Text_pb2.Text.MARKDOWN
 
     @_with_element
     def code(self, element, body, language="python"):

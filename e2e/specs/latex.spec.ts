@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2019 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,41 +13,24 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
-syntax = "proto3";
+/// <reference types="cypress" />
 
-// Formatted text
-message Text {
+describe("st.latex", () => {
+  before(() => {
+    cy.visit("http://localhost:3000/");
+  });
 
-  // Content to display.
-  string body = 1;
+  it("displays LaTeX symbol", () => {
+    cy.get(".element-container .stText")
+      .eq(0)
+      .should("contain", "LATE​X");
+  });
 
-  // Content format
-  enum Format {
-    // Plain, fixed width text.
-    PLAIN = 0;
-
-    // Markdown.
-    MARKDOWN = 1;
-
-    // A JSON object. Stored as a string.
-    JSON = 2;
-
-    // Shows an error message.
-    ERROR = 6;
-
-    // Shows a warning message.
-    WARNING = 7;
-
-    // Shows an info log.
-    INFO = 8;
-
-    // Shows a success message.
-    SUCCESS = 9;
-  }
-
-  Format format = 2;
-
-  bool allow_html = 3;
-}
+  it("displays Sympy expression as LaTeX", () => {
+    cy.get(".element-container .stText")
+      .eq(1)
+      .should("contain", "a + b");
+  });
+});

@@ -19,11 +19,11 @@ import React from "react"
 import { shallow } from "enzyme"
 import { Input as UIInput } from "baseui/input"
 import { Map as ImmutableMap } from "immutable"
-import { WidgetStateManager } from "../../../lib/WidgetStateManager"
+import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import NumberInput, { Props } from "./NumberInput"
 
-jest.mock("../../../lib/WidgetStateManager")
+jest.mock("lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
 const preventDefault = jest.fn()
