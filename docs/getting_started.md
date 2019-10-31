@@ -89,8 +89,8 @@ Let's add a title to test things out:
 st.title('My first app')
 ```
 
-That's it! Your report has a title. You can use specific text functions to add
-content to your report, or you can use [`st.write()`](api.html#streamlit.write)
+That's it! Your app has a title. You can use specific text functions to add
+content to your app, or you can use [`st.write()`](api.html#streamlit.write)
 and add your own markdown.
 
 ### Write a data frame
