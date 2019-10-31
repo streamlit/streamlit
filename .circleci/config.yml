@@ -184,6 +184,7 @@ jobs:
               fi
               source venv/bin/activate
               make setup && echo "Made setup"
+              false
               make pipenv-lock
               deactivate
             else
