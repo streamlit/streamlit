@@ -64,6 +64,7 @@ Shows all config options available for Streamlit, including their current
 values. You can set these options in four different ways:
 
 - **In a global config file at `~/.streamlit/config.toml`.** For instance:
+
   ```toml
   [server]
   port = 80
@@ -73,6 +74,7 @@ values. You can set these options in four different ways:
   `$CWD` is the folder you're running Streamlit from.
 
 - **Through `STREAMLIT_CONFIG_*` environment variables,** such as:
+
   ```bash
   $ export STREAMLIT_CONFIG_SERVER_PORT=80
   ```
