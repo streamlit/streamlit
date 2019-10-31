@@ -183,7 +183,7 @@ jobs:
                 python -m venv venv
               fi
               source venv/bin/activate
-              make setup
+              make setup && echo "Made setup"
               make pipenv-lock
               deactivate
             else
