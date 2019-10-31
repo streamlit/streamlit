@@ -168,7 +168,13 @@ jobs:
           name: Run make pipenv-lock and create virtualenv
           command: |
             echo 'Checking for virtualenv'
-            mv venv disable-venv-cache
+            # Exit script if you try to use an uninitialized variable.
+            set -o nounset
+            # Exit script if a statement returns a non-true return value.
+            set -o errexit
+            # Use the error status of the first failure, rather than that of the last item in a pipeline.
+            set -o pipefail
+            mv venv disable-venv-cache || true
             if [ ! -d venv ] ; then
               if [ "${CIRCLE_JOB}" == "python-2.7.16" ] ; then
                 pip install virtualenv
