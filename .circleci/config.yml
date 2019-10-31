@@ -168,6 +168,7 @@ jobs:
           name: Run make pipenv-lock and create virtualenv
           command: |
             echo 'Checking for virtualenv'
+            mv venv disable-venv-cache
             if [ ! -d venv ] ; then
               if [ "${CIRCLE_JOB}" == "python-2.7.16" ] ; then
                 pip install virtualenv
