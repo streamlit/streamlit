@@ -238,7 +238,8 @@ protobuf:
 
 .PHONY: react-init
 react-init:
-	cd frontend/ ; yarn install --frozen-lockfile
+	echo ${PATH}
+	cd frontend/ ; yarn install --frozen-lockfile --network-timeout 100000
 
 .PHONY: react-build
 react-build:

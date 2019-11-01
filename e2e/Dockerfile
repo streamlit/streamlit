@@ -32,7 +32,7 @@ RUN curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh
 
 # node vars
 ARG NVM_DIR=$HOME/.nvm
-ARG NODE_VERSION=v10.16.3
+ARG NODE_VERSION=v10.17.0
 
 # install yarn
 RUN source $NVM_DIR/nvm.sh \
@@ -53,9 +53,13 @@ RUN python -m venv venv \
 
 # python path
 ENV PATH $APP/venv/bin:$PATH
+# ENV PATH $HOME/.nvm/versions/node/v10.17.0/lib/node_modules/yarn/bin/:$PATH
+RUN echo $NVM_DIR/versions/node/$NODE_VERSION/bin
 
 # copy package.json
 COPY --chown=$USER frontend/package.json frontend/yarn.lock ./frontend/
+
+# RUN find / -iname yarn -executable -type f
 
 # install node modules
 RUN make react-init
