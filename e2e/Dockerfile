@@ -80,6 +80,8 @@ RUN make scssvars
 RUN make protobuf
 RUN make develop
 RUN make build
+RUN make install
+RUN make pycoverage
 
 # register streamlit user
 RUN mkdir $HOME/.streamlit \
