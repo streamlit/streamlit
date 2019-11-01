@@ -25,19 +25,22 @@ describe("Dataframes", () => {
     // http://gs.statcounter.com/screen-resolution-stats/desktop/worldwide
     cy.visit("http://localhost:3000/");
 
-    cy.wait(1000);
+    // Make the decoration line disappear
+    // This prevents us from occasionally getting the little multi-colored
+    // ribbon at the top of our screenshots.
+    cy.get(".decoration").invoke("css", "display", "none");
 
-    // Force our header to scroll with the page, rather than
-    // remaining fixed. This prevents us from occasionally getting
-    // the little multi-colored ribbon at the top of our screenshots.
-    cy.get(".stApp > header").invoke("css", "position", "absolute");
+    // Wait for the site to be fully loaded
+    cy.get(".element-container").should($els => {
+      expect($els).to.have.length.of.at.least(10);
+    });
   });
 
   it("have consistent empty list visuals", () => {
     cy.get(".element-container")
       .eq(1)
       .each(el => {
-        cy.wrap(el).matchImageSnapshot();
+        return cy.wrap(el).matchImageSnapshot();
       });
   });
 
@@ -45,7 +48,7 @@ describe("Dataframes", () => {
     cy.get(DF_SELECTOR)
       .filter(idx => idx >= 0 && idx <= 5)
       .each(el => {
-        cy.wrap(el).matchImageSnapshot();
+        return cy.wrap(el).matchImageSnapshot();
       });
   });
 
@@ -55,7 +58,8 @@ describe("Dataframes", () => {
       .each(el => {
         // Snapshot the parent instead of `.stDataFrame` so we have a larger
         // bounding box and a lower percentage difference on the snapshot diff
-        cy.wrap(el)
+        return cy
+          .wrap(el)
           .parent()
           .matchImageSnapshot();
       });
@@ -65,23 +69,23 @@ describe("Dataframes", () => {
     cy.get(DF_SELECTOR)
       .filter(idx => idx >= 8 && idx <= 9)
       .each(el => {
-        cy.wrap(el).matchImageSnapshot();
+        return cy.wrap(el).matchImageSnapshot();
       });
   });
 
   it("have consistent empty table visuals", () => {
     cy.get(TABLE_SELECTOR)
       .filter(idx => idx >= 0 && idx <= 3)
-      .each(el => {
-        cy.wrap(el).matchImageSnapshot();
+      .each((el, idx) => {
+        return cy.wrap(el).matchImageSnapshot();
       });
   });
 
   it("have consistent empty one-column table visuals", () => {
     cy.get(TABLE_SELECTOR)
       .eq(4)
-      .each(el => {
-        cy.wrap(el).matchImageSnapshot();
+      .each((el, idx) => {
+        return cy.wrap(el).matchImageSnapshot();
       });
   });
 
@@ -89,7 +93,7 @@ describe("Dataframes", () => {
     cy.get(TABLE_SELECTOR)
       .eq(5)
       .each(el => {
-        cy.wrap(el).matchImageSnapshot();
+        return cy.wrap(el).matchImageSnapshot();
       });
   });
 });
