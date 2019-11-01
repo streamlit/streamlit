@@ -23,6 +23,9 @@ describe("Dataframes", () => {
 
   before(() => {
     cy.visit("http://localhost:3000/");
+
+    // Make the ribbon decoration line disappear
+    cy.get(".decoration").invoke("css", "display", "none");
   });
 
   it("show a tooltip for each cell", () => {

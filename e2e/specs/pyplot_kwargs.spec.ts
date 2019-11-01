@@ -25,6 +25,9 @@ describe("st.pyplot with kwargs", () => {
     cy.contains("Done!", { timeout: 100000 }).should($els => {
       expect($els).to.have.length.of.at.least(1);
     });
+
+    // Make the ribbon decoration line disappear
+    cy.get(".decoration").invoke("css", "display", "none");
   });
 
   it("draws long text strings correctly", () => {

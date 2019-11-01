@@ -20,6 +20,9 @@
 describe("st.radio", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");
+
+    // Make the ribbon decoration line disappear
+    cy.get(".decoration").invoke("css", "display", "none");
   });
 
   it("shows widget correctly", () => {

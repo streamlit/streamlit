@@ -22,6 +22,9 @@ describe("st.table styling", () => {
     cy.visit("http://localhost:3000/");
 
     cy.get(".stTable").should("have.length", 4);
+
+    // Make the ribbon decoration line disappear
+    cy.get(".decoration").invoke("css", "display", "none");
   });
 
   it("displays unstyled table", () => {

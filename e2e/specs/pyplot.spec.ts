@@ -35,9 +35,6 @@ describe("st.pyplot", () => {
       which: 82 // "r"
     });
 
-    // Wait for 'stale-element' class to go away, so the snapshot looks right.
-    cy.get(".element-container").should("not.have.class", "stale-element");
-
     cy.get(".stImage > img").matchImageSnapshot("pyplot-check-if-cleared");
   });
 });
