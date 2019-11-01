@@ -534,6 +534,10 @@ function doHealthPing(
         resolver.resolve(uriNumber)
       })
       .catch(error => {
+        if (error.code === "ECONNABORTED") {
+          return retry("Connection timed out.")
+        }
+
         if (error.response) {
           // The request was made and the server responded with a status code
           // that falls out of the range of 2xx
@@ -541,11 +545,11 @@ function doHealthPing(
           const { data, status } = error.response
 
           if (status === /* NO RESPONSE */ 0) {
-            retryWhenTheresNoResponse()
+            return retryWhenTheresNoResponse()
           } else if (status === 403) {
-            retryWhenIsForbidden()
+            return retryWhenIsForbidden()
           } else {
-            retry(
+            return retry(
               `Connection failed with status ${status}, ` +
                 `and response "${data}".`
             )
@@ -554,10 +558,10 @@ function doHealthPing(
           // The request was made but no response was received
           // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
           // http.ClientRequest in node.js
-          retryWhenTheresNoResponse()
+          return retryWhenTheresNoResponse()
         } else {
           // Something happened in setting up the request that triggered an Error
-          retry(error.message)
+          return retry(error.message)
         }
       })
   }

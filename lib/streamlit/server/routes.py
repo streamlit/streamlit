@@ -102,8 +102,8 @@ class HealthHandler(_SpecialRequestHandler):
 
     def get(self):
         if self._callback():
-            # self.write("ok")
-            self.set_status(403)
+            self.write("ok")
+            self.set_status(200)
         else:
             # 503 = SERVICE_UNAVAILABLE
             self.set_status(503)
