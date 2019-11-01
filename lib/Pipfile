@@ -30,11 +30,10 @@ seaborn = "*"
 prometheus-client = "*"
 opencv-python = "*"
 requests-mock = "*"
-
-
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if something is only required for testing, but not anything else, please
 # add to the dev dependencies above, instead.
+
 [packages]
 altair = ">=3.2.0"
 astor = "*"
@@ -58,13 +57,13 @@ tornado = ">=5.0,<6.0"
 tzlocal = "*"
 validators = "*"
 watchdog = "*"
-
 # Only Python 3.x packages
+
 [python3]
 pandas = "*"
 numpy = "*"
-
 # Only Python 2.x packages
+
 [python2]
 futures = "*"
 pandas = "<0.25.0"

@@ -1,10 +1,9 @@
 ---
 name: Documentation improvement request
 about: Let us know how our docs could be better
-title: ''
+title: ""
 labels: docs
-assignees: ''
-
+assignees: ""
 ---
 
 **Link to doc page in question (if any):**

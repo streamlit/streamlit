@@ -1,3 +1,7 @@
+# Make uses /bin/sh by default, but we are using some bash features.  On Ubuntu
+# /bin/sh is POSIX compliant, ie it's not bash.  So let's be explicit:
+SHELL=/bin/bash
+
 # Black magic to get module directories
 PYTHON_MODULES := $(foreach initpy, $(foreach dir, $(wildcard lib/*), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
 PY_VERSION := $(shell python -c 'import platform; print(platform.python_version())')

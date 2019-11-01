@@ -27,13 +27,12 @@ from streamlit import config as _config
 
 import os
 import click
-import re
 
 import streamlit
 from streamlit.credentials import Credentials
 from streamlit import version
 import streamlit.bootstrap as bootstrap
-
+from streamlit.case_converters import to_snake_case
 
 LOG_LEVELS = ["error", "warning", "info", "debug"]
 
@@ -53,21 +52,16 @@ NEW_VERSION_TEXT = """
 }
 
 
-def _to_snake_case(text):
-    s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", text)
-    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).upper()
-
-
 def _convert_config_option_to_click_option(config_option):
     """Composes given config option options as options for click lib."""
     option = "--{}".format(config_option.key)
     param = config_option.key.replace(".", "_")
-    envvar = _to_snake_case("STREAMLIT_{}".format(param))
     description = config_option.description
     if config_option.deprecated:
         description += "\n {} - {}".format(
             config_option.deprecation_text, config_option.deprecation_date
         )
+    envvar = "STREAMLIT_{}".format(to_snake_case(param).upper())
 
     return {
         "param": param,
@@ -95,10 +89,11 @@ def configurator_options(func):
 
 
 def _apply_config_options_from_cli(kwargs):
-    """Set Streamlit config options from command-line flags.
+    """The "streamlit run" command supports passing Streamlit's config options
+    as flags.
 
-    This function reads through all config flags, massages them, and
-    passes them to _set_config() overriding default values and values set via
+    This function reads through all config flags, massage them, and
+    pass them to _set_config() overriding default values and values set via
     config.toml file
 
     """
@@ -111,6 +106,19 @@ def _apply_config_options_from_cli(kwargs):
                 kwargs[config_option],
                 "command-line argument or environment variable",
             )
+
+
+# Fetch remote file at url_path to script_path
+def _download_remote(script_path, url_path):
+    import requests
+
+    with open(script_path, "wb") as fp:
+        try:
+            resp = requests.get(url_path)
+            resp.raise_for_status()
+            fp.write(resp.content)
+        except requests.exceptions.RequestException as e:
+            raise click.BadParameter(("Unable to fetch {}.\n{}".format(url_path, e)))
 
 
 @click.group(context_settings={"auto_envvar_prefix": "STREAMLIT"})
@@ -200,22 +208,13 @@ def main_run(target, args=None, **kwargs):
     _apply_config_options_from_cli(kwargs)
 
     if url(target):
-        import tempfile
-        import requests
-
-        with tempfile.NamedTemporaryFile() as fp:
-            try:
-                resp = requests.get(target)
-                resp.raise_for_status()
-                fp.write(resp.content)
-                # flush since we are reading the file within the with block
-                fp.flush()
-            except requests.exceptions.RequestException as e:
-                raise click.BadParameter(("Unable to fetch {}.\n{}".format(target, e)))
-            # this is called within the with block to make sure the temp file
-            # is not deleted
-            _main_run(fp.name, args)
-
+        from streamlit.temporary_directory import TemporaryDirectory
+        with TemporaryDirectory() as temp_dir:
+            from urllib.parse import urlparse
+            path = urlparse(target).path
+            script_path = os.path.join(temp_dir, path.strip('/').rsplit('/', 1)[-1])
+            _download_remote(script_path, target)
+            _main_run(script_path, args)
     else:
         if not os.path.exists(target):
             raise click.BadParameter("File does not exist: {}".format(target))

@@ -13,22 +13,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Bokeh unit test."""
-
-from bokeh.plotting import figure
+"""LaTeX unit test."""
 
 from tests import testutil
 import streamlit as st
 
 
-class BokehTest(testutil.DeltaGeneratorTestCase):
-    """Test ability to marshall bokeh_chart protos."""
+class LatexTest(testutil.DeltaGeneratorTestCase):
+    """Test ability to marshall latex protos."""
 
-    def test_figure(self):
-        """Test that it can be called with figure."""
-        plot = figure()
-        plot.line([1], [1])
-        st.bokeh_chart(plot)
+    def test_latex(self):
+        st.latex("ax^2 + bx + c = 0")
 
-        c = self.get_delta_from_queue().new_element.bokeh_chart
-        self.assertEqual(hasattr(c, "figure"), True)
+        c = self.get_delta_from_queue().new_element.text
+        self.assertEqual(c.body, "$$\nax^2 + bx + c = 0\n$$")
+
+    def test_sympy_expression(self):
+        try:
+            import sympy
+
+            a, b = sympy.symbols("a b")
+            out = a + b
+        except:
+            out = "a + b"
+
+        st.latex(out)
+
+        c = self.get_delta_from_queue().new_element.text
+        self.assertEqual(c.body, "$$\na + b\n$$")

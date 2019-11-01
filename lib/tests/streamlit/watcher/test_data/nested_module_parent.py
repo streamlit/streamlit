@@ -13,14 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
 
-class NoStaticFiles(Exception):
-    pass
-
-
-class S3NoCredentials(Exception):
-    pass
-
-
-class DuplicateWidgetID(Exception):
-    pass
+if sys.version_info[0] == 2:
+    import nested_module_child as NESTED_MODULE_CHILD
+else:
+    import tests.streamlit.watcher.test_data.nested_module_child as NESTED_MODULE_CHILD

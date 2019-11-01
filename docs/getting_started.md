@@ -67,6 +67,7 @@ Streamlit.
 
    Running a Streamlit app is no different than any other Python script.
    Whenever you need to view the app, you can use this command.
+
    ```eval_rst
    .. tip::
       Did you know you can also pass a URL to `streamlit run`? This is great when combined with Github Gists. For example:

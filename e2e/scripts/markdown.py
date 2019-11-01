@@ -26,3 +26,13 @@ st.markdown("[text]")
 st.markdown("[link](href)")
 
 st.markdown("[][]")
+
+st.markdown("Inline math with $\KaTeX$")
+
+st.markdown(
+    """
+$$
+ax^2 + bx + c = 0
+$$
+"""
+)
