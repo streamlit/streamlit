@@ -225,14 +225,11 @@ class CredentialsClassTest(unittest.TestCase):
                 str(p.error.call_args_list[1])[0:27], "call('Activation not valid."
             )
 
-    @parameterized.expand([(True,), (False,)])
     @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
-    def test_Credentials_activate(self, headless_mode):
+    def test_Credentials_activate(self):
         """Test Credentials.activate()"""
         c = Credentials.get_current()
         c.activation = None
-
-        config.set_option("server.headless", headless_mode)
 
         with patch.object(
             c, "load", side_effect=RuntimeError("Some error")
@@ -242,11 +239,7 @@ class CredentialsClassTest(unittest.TestCase):
             c.activate()
             patched_save.assert_called_once()
 
-            if headless_mode:
-                self.assertEqual(c.activation.email, "")
-            else:
-                self.assertEqual(c.activation.email, "user@domain.com")
-
+            self.assertEqual(c.activation.email, "user@domain.com")
             self.assertEqual(c.activation.is_valid, True)
 
     @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)

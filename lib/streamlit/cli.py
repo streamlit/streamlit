@@ -230,6 +230,15 @@ def _get_command_line_as_string():
     return subprocess.list2cmdline(cmd_line_as_list)
 
 
+def _check_credentials():
+    from streamlit import config
+    # If there is no credential file and we are in headless mode, we should not
+    # check, since credential would be automatically set to an empty string.
+    config_does_not_exist = all([not os.path.exists(filename) for filename in config.get_config_filenames()])
+    if config_does_not_exist and not config.get_option("server.headless"):
+        Credentials.get_current().check_activated(auto_resolve=True)
+
+
 def _main_run(file, args=[]):
     command_line = _get_command_line_as_string()
 
@@ -237,7 +246,7 @@ def _main_run(file, args=[]):
     streamlit._is_running_with_streamlit = True
 
     # Check credentials.
-    Credentials.get_current().check_activated(auto_resolve=True)
+    _check_credentials()
 
     # Notify if streamlit is out of date.
     if version.should_show_new_version_notice():

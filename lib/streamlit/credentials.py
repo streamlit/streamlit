@@ -111,6 +111,7 @@ class Credentials(object):
             return
 
         try:
+            # why exception?
             with open(self._conf_file, "r") as f:
                 data = toml.load(f).get("general")
             self.activation = _verify_email(data.get("email"))
@@ -199,19 +200,12 @@ class Credentials(object):
             activated = False
 
             while not activated:
-
-                # Don't stop execution to show an interactive prompt
-                # when in headless mode, as this makes it harder for
-                # people to deploy Streamlit apps.
-                if config.get_option("server.headless"):
-                    email = ""
-                else:
-                    email = click.prompt(
-                        text=EMAIL_PROMPT,
-                        prompt_suffix="",
-                        default="",
-                        show_default=False,
-                    )
+                email = click.prompt(
+                    text=EMAIL_PROMPT,
+                    prompt_suffix="",
+                    default="",
+                    show_default=False,
+                )
 
                 self.activation = _verify_email(email)
                 if self.activation.is_valid:
