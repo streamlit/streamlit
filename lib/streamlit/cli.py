@@ -209,10 +209,12 @@ def main_run(target, args=None, **kwargs):
 
     if url(target):
         from streamlit.temporary_directory import TemporaryDirectory
+
         with TemporaryDirectory() as temp_dir:
             from urllib.parse import urlparse
+
             path = urlparse(target).path
-            script_path = os.path.join(temp_dir, path.strip('/').rsplit('/', 1)[-1])
+            script_path = os.path.join(temp_dir, path.strip("/").rsplit("/", 1)[-1])
             _download_remote(script_path, target)
             _main_run(script_path, args)
     else:
@@ -232,9 +234,12 @@ def _get_command_line_as_string():
 
 def _check_credentials():
     from streamlit import config
+
     # If there is no credential file and we are in headless mode, we should not
     # check, since credential would be automatically set to an empty string.
-    config_does_not_exist = all([not os.path.exists(filename) for filename in config.get_config_filenames()])
+    config_does_not_exist = all(
+        [not os.path.exists(filename) for filename in config.get_config_filenames()]
+    )
     if config_does_not_exist and not config.get_option("server.headless"):
         Credentials.get_current().check_activated(auto_resolve=True)
 
