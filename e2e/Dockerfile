@@ -83,6 +83,7 @@ RUN make develop
 RUN make build
 RUN make install
 RUN make pycoverage
+RUN make wheel
 
 # register streamlit user
 RUN mkdir $HOME/.streamlit \
