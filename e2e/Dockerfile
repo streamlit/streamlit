@@ -76,6 +76,7 @@ COPY --chown=$USER . .
 
 # install streamlit
 RUN make develop
+RUN make build
 
 # register streamlit user
 RUN mkdir $HOME/.streamlit \
