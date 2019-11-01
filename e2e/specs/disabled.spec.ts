@@ -24,6 +24,9 @@
 describe("disable widgets", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");
+
+    // Make the ribbon decoration line disappear
+    cy.get(".decoration").invoke("css", "display", "none");
   });
 
   it("disconnects the client and disables widgets", () => {
@@ -59,7 +62,7 @@ describe("disable widgets", () => {
       cy.get(".stText").should("have.text", "Value 1: 25");
 
       cy.get(".element-container").each((el, i) => {
-        cy.get(el).matchImageSnapshot(`disabled-widgets-${i}`);
+        return cy.get(el).matchImageSnapshot(`disabled-widgets-${i}`);
       });
     });
   });

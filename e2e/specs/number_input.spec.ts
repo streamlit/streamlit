@@ -20,6 +20,9 @@
 describe("st.number_input", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");
+
+    // Make the ribbon decoration line disappear
+    cy.get(".decoration").invoke("css", "display", "none");
   });
 
   it("shows widget correctly", () => {
@@ -27,7 +30,7 @@ describe("st.number_input", () => {
 
     cy.get(".stNumberInput").each((el, idx) => {
       // @ts-ignore
-      cy.wrap(el).matchImageSnapshot("number_input" + idx);
+      return cy.wrap(el).matchImageSnapshot("number_input" + idx);
     });
   });
 
