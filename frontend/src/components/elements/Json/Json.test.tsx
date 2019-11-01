@@ -19,6 +19,7 @@ import React from "react"
 import { Map as ImmutableMap } from "immutable"
 import Json from "./Json"
 import renderer from "react-test-renderer"
+import { shallow } from "enzyme"
 
 const getProps = (elementProps: object = {}): Props => ({
   element: ImmutableMap({
@@ -37,13 +38,12 @@ describe("JSON Element Test", () => {
     const component = renderer.create(<Json {...props} />)
     const tree = component.toJSON()
     expect(tree).toMatchSnapshot()
-  })
-  /* TODO:
-    Same here as before, here you can check a few things:
-
-    1- Should render without exploding
-    2- Should have a bodyObject
-    3- Should raise an exception if it has an invalid JSON
-    4- Should have have styleProp
-  */
+    // check for body and style props
+  }),
+    it("should raise an exception with invalid JSON", () => {
+      const props = getProps({ body: "invalid JSON" })
+      expect(() => {
+        shallow(<Json {...props} />)
+      }).toThrow(SyntaxError)
+    })
 })
