@@ -17,7 +17,10 @@
 
 import React from "react"
 import { Map as ImmutableMap } from "immutable"
+
 import Alert from "./Alert"
+import ALERT_CSS_CLASS from "./Alert"
+import { Alert as AlertProto } from "autogen/proto"
 import renderer from "react-test-renderer"
 
 const getProps = (elementProps: object = {}): Props => ({
@@ -28,27 +31,46 @@ const getProps = (elementProps: object = {}): Props => ({
   width: 100,
 })
 
+/*
+const checkStyle = (alertobj: object, format: int): Null => ({
+  cssStyle = ALERT_CSS_CLASS[format]
+  //expect(alertobj.props.style).Contains(cssStyle)
+})
+*/
+
 describe("Alert Element Test", () => {
   it("renders an ERROR box as expected", () => {
-    const props = getProps({ format: "error", body: "what in the world?" })
+    const props = getProps({
+      format: AlertProto.Format.ERROR,
+      body: "#what in the world?",
+    })
     const component = renderer.create(<Alert {...props} />)
     const tree = component.toJSON()
     expect(tree).toMatchSnapshot()
   })
   it("renders an INFO box as expected", () => {
-    const props = getProps({ format: "info" })
+    const props = getProps({
+      format: AlertProto.Format.INFO,
+      body: "It's dangerous to go alone.",
+    })
     const component = renderer.create(<Alert {...props} />)
     const tree = component.toJSON()
     expect(tree).toMatchSnapshot()
   })
   it("renders a WARNING box as expected", () => {
-    const props = getProps({ format: "warning" })
+    const props = getProps({
+      format: AlertProto.Format.WARNING,
+      body: "Are you sure?",
+    })
     const component = renderer.create(<Alert {...props} />)
     const tree = component.toJSON()
     expect(tree).toMatchSnapshot()
   })
   it("renders a SUCCESS box as expected", () => {
-    const props = getProps({ format: "success" })
+    const props = getProps({
+      format: AlertProto.Format.SUCCESS,
+      body: "But our princess was in another castle!",
+    })
     const component = renderer.create(<Alert {...props} />)
     const tree = component.toJSON()
     expect(tree).toMatchSnapshot()

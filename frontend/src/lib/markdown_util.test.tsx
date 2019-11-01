@@ -65,7 +65,6 @@ describe("linkReference", () => {
       "Here's a link containing parentheses [Yikes](http://msdn.microsoft.com/en-us/library/aa752574(VS.85).aspx)"
     const component = create(getMarkdownElement(body))
     const instance = component.root
-    console.log(component.toJSON())
     const hrefobj = instance.findByType(linkWithTargetBlank)
     expect(hrefobj.props.href).toBe(
       "http://msdn.microsoft.com/en-us/library/aa752574(VS.85).aspx"
@@ -75,11 +74,9 @@ describe("linkReference", () => {
     const body = "Don't convert to a link if only [text] and missing (href)"
     const component = create(getMarkdownElement(body))
     const instance = component.root
-    // there should not be a linkWithTargetBlank element.
-    try {
-      expect(instance.findByType(linkWithTargetBlank).props.href).toThrow()
-    } catch (err) {
-      //pass
-    }
+    // should be no link object
+    expect(() => {
+      instance.findByType(linkWithTargetBlank).props.href
+    }).toThrow()
   })
 })

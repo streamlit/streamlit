@@ -26,7 +26,7 @@ import { linkWithTargetBlank, linkReferenceHasParens } from "lib/markdown_util"
 import "assets/css/write.scss"
 
 // classes defined in assets/css/theme.scss
-const ALERT_CSS_CLASS = ImmutableMap({
+export const ALERT_CSS_CLASS = ImmutableMap({
   [AlertProto.Format.SUCCESS]: "alert-success",
   [AlertProto.Format.INFO]: "alert-info",
   [AlertProto.Format.WARNING]: "alert-warning",
