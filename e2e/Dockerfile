@@ -75,6 +75,7 @@ RUN source venv/bin/activate && make pipenv-lock CIRCLECI=true
 COPY --chown=$USER . .
 
 # install streamlit
+RUN make init
 RUN make develop
 RUN make build
 
