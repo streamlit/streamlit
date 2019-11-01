@@ -30,6 +30,9 @@ describe("st.add_rows", () => {
 
     // Wait for 'stale-element' class to go away, so the snapshot looks right.
     cy.get(".element-container").should("not.have.class", "stale-element");
+
+    // Make the ribbon decoration line disappear
+    cy.get(".decoration").invoke("css", "display", "none");
   });
 
   it("works for all elements that support it", () => {
