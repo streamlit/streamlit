@@ -181,7 +181,7 @@ def _hashing_error_message(start):
     ).strip("\n")
 
 
-class CodeHasher:
+class CodeHasher(object):
     """A hasher that can hash code objects including dependencies."""
 
     def __init__(self, name="md5", hasher=None):
@@ -238,7 +238,10 @@ class CodeHasher:
     def _update(self, hasher, obj, context=None):
         """Update the provided hasher with the hash of an object."""
         b = self.to_bytes(obj, context)
-        hasher.update(b)
+
+        # The only time to_bytes returns None is when we get an exception
+        if b is not None:
+            hasher.update(b)
 
     def _to_bytes(self, obj, context):
         """Hash objects to bytes, including code with dependencies.
@@ -374,12 +377,14 @@ class CodeHasher:
                             "Streamlit cannot hash an object of type %s." % type(obj)
                         )
                     )
+                    return None
         except:
             st.warning(
                 _hashing_error_message(
                     "Streamlit failed to hash an object of type %s." % type(obj)
                 )
             )
+            return None
 
     def _code_to_bytes(self, code, context):
         h = hashlib.new(self.name)
