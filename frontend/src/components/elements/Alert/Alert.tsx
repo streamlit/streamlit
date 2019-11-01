@@ -23,14 +23,15 @@ import { Map as ImmutableMap } from "immutable"
 import { Alert as AlertProto } from "autogen/proto"
 import { linkWithTargetBlank, linkReferenceHasParens } from "lib/markdown_util"
 
-import "./Alert.scss"
+import "assets/css/write.scss"
 
-const ALERT_CSS_CLASS = {
-  [AlertProto.Format.ERROR]: "alert-danger",
-  [AlertProto.Format.WARNING]: "alert-warning",
-  [AlertProto.Format.INFO]: "alert-warning",
+// classes defined in assets/css/theme.scss
+const ALERT_CSS_CLASS = ImmutableMap({
   [AlertProto.Format.SUCCESS]: "alert-success",
-}
+  [AlertProto.Format.INFO]: "alert-info",
+  [AlertProto.Format.WARNING]: "alert-warning",
+  [AlertProto.Format.ERROR]: "alert-danger",
+})
 
 interface Props {
   width: number
@@ -51,11 +52,11 @@ class Alert extends React.PureComponent<Props> {
       linkReference: linkReferenceHasParens,
     }
     const styleProp = { width }
-    console.log(format)
+    const cssClass = ALERT_CSS_CLASS.get(format.toString())
 
     return (
       <div
-        className={classNames("alert", ALERT_CSS_CLASS[format], "stAlert")} //
+        className={classNames("alert", cssClass, "stAlert")}
         style={styleProp}
       >
         <div className="markdown-text-container">

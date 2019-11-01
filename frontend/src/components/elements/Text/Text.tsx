@@ -20,7 +20,7 @@ import React, { ReactNode } from "react"
 import classNames from "classnames"
 import { Map as ImmutableMap } from "immutable"
 
-import "./Text.scss"
+import "assets/css/write.scss"
 
 interface Props {
   width: number

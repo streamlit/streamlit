@@ -20,11 +20,7 @@ import React, { ReactNode } from "react"
 import ReactJson from "react-json-view"
 import { Map as ImmutableMap } from "immutable"
 
-// Ignoring typeScript for this module as it has no ts support
-// eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-// @ts-ignore
-
-import "./Json.scss"
+import "assets/css/write.scss"
 
 interface Props {
   width: number

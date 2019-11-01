@@ -20,12 +20,13 @@ import React, { ReactNode } from "react"
 import ReactMarkdown from "react-markdown"
 import { Map as ImmutableMap } from "immutable"
 import { linkWithTargetBlank, linkReferenceHasParens } from "lib/markdown_util"
-
-import htmlParser from "react-markdown/plugins/html-parser"
-
 import CodeBlock from "../CodeBlock"
 
-import "./Markdown.scss"
+// html-parser has no Typescript definitions.
+// @ts-ignore
+import htmlParser from "react-markdown/plugins/html-parser"
+
+import "assets/css/write.scss"
 
 interface Props {
   width: number
