@@ -25,6 +25,7 @@ RUN echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty m
 RUN sudo apt-get update && sudo apt-get install -y \
     make graphviz gnupg protobuf-compiler \
     xvfb libgtk2.0-0 libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2 \
+    rsync \
     && sudo rm -rf /var/lib/apt/lists/*
 
 # install nvm
