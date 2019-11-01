@@ -414,6 +414,7 @@ def cache(
     allow_output_mutation=False,
     show_spinner=True,
     suppress_st_warning=False,
+    hash_funcs=None,
     **kwargs
 ):
     """Function decorator to memoize function executions.
@@ -441,6 +442,9 @@ def cache(
     suppress_st_warning : boolean
         Suppress warnings about calling Streamlit functions from within
         the cached function.
+
+    hash_funcs : dict
+        Escape hatch for objects that we can't hash
 
     Example
     -------
@@ -491,6 +495,7 @@ def cache(
             allow_output_mutation=allow_output_mutation,
             show_spinner=show_spinner,
             suppress_st_warning=suppress_st_warning,
+            hash_funcs=hash_funcs,
         )
 
     @wraps(func)
