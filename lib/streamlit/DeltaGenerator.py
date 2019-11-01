@@ -1869,42 +1869,19 @@ class DeltaGenerator(object):
         >>>     st.image(file_bytes)
 
         """
-
+        
         element.file_uploader.label = label
         element.file_uploader.type[:] = type
-        element.file_uploader.max_upload_size = config.get_option("server.maxUploadSize")
-        ui_value = _get_widget_ui_value("file_uploader", element)
-        
-        return ui_value if ui_value is not None else ""
+        element.file_uploader.max_upload_size = config.get_option("server.maxUploadSize")        
 
+        file_id = _get_widget_ui_value("file_uploader", element)
+        file_id = file_id if file_id is not None else ""
+        element.file_uploader.file_id = file_id
 
-    def file_reader(self, file_id):
-
-        """Display a file uploader widget.
-
-        Parameters
-        ----------
-        file_id : str
-            A file id loaded with file_uploader widget.
-
-        Returns
-        -------
-        bytes [] 
-            The bytes of readed file
-
-        Examples
-        --------
-        >>> file = st.file_uploader("Upload a image", type=([".png"]))
-        >>> if file:
-        >>>     file_bytes = st.file_reader(file)
-        >>>     st.image(file_bytes)
-
-        """
-
-        if not os.path.isfile(file_id):
-            return []
-            
         if len(file_id) > 0:
+            if not os.path.isfile(file_id):
+                return []
+
             with open(file_id, "rb") as f:
                 data = f.read()
                 f.close()

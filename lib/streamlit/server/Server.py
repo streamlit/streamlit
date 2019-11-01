@@ -505,11 +505,11 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
             msg.ParseFromString(payload)
             msg_type = msg.WhichOneof("type")
 
-            if msg_type == "file_chunk":
+            if msg_type == "upload_file_chunk":
                 LOGGER.debug(
-                    "Received the following file_chunk back message:\nfile_uploaded {\n   id: %s\n   index: %s\n   data: #####\n}",
-                    msg.file_chunk.id,
-                    msg.file_chunk.index,
+                    "Received the following upload_file_chunk back message:\nfile_uploaded {\n   widget_id: %s\n   index: %s\n   data: #####\n}",
+                    msg.upload_file_chunk.widget_id,
+                    msg.upload_file_chunk.index,
                 )
             else:
                 LOGGER.debug("Received the following back message:\n%s", msg)
@@ -528,12 +528,12 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
                 self._session.handle_rerun_script_request(
                     widget_state=msg.update_widgets
                 )
-            elif msg_type == "new_file":
-                self._session.handle_new_file(new_file=msg.new_file)
-            elif msg_type == "file_chunk":
-                self._session.handle_file_chunk(file_chunk=msg.file_chunk)
-            elif msg_type == "delete_file":
-                self._session.handle_delete_file(delete_file=msg.delete_file)
+            elif msg_type == "upload_file":
+                self._session.handle_upload_file(upload_file=msg.upload_file)
+            elif msg_type == "upload_file_chunk":
+                self._session.handle_upload_file_chunk(upload_file_chunk=msg.upload_file_chunk)
+            elif msg_type == "upload_file_delete":
+                self._session.handle_upload_file_delete(upload_file_delete=msg.upload_file_delete)
             elif msg_type == "close_connection":
                 if config.get_option("global.developmentMode"):
                     Server.get_current().stop()

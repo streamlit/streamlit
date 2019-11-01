@@ -29,4 +29,7 @@ message FileUploader {
 
   // Max file size allowed by server config
   int32 max_upload_size = 4;
+
+  // The file id on server side
+  string file_id = 5;
 }

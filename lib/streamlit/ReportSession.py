@@ -38,7 +38,7 @@ from streamlit.logger import get_logger
 from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.FileUploadStatus_pb2 import FileUploadStatus
-from streamlit.proto.Widget_pb2 import WidgetStates
+from streamlit.proto.Widget_pb2 import WidgetStates, WidgetState
 from streamlit.server.server_util import serialize_forward_msg
 from streamlit.storage.S3Storage import S3Storage as Storage
 from streamlit.watcher.LocalSourcesWatcher import LocalSourcesWatcher
@@ -436,44 +436,42 @@ class ReportSession(object):
 
         self.request_rerun(widget_state)
 
-    def handle_new_file(self, new_file=None):
-
+    def handle_upload_file(self, upload_file=None):
         self._file_manager.locate_new_file(
-            widget_id=new_file.id,
-            name=new_file.name,
-            size=new_file.size,
-            last_modified=new_file.lastModified,
-            chunks=new_file.chunks,
+            widget_id=upload_file.widget_id,
+            name=upload_file.name,
+            size=upload_file.size,
+            last_modified=upload_file.lastModified,
+            chunks=upload_file.chunks,
         )
 
-    def handle_file_chunk(self, file_chunk=None):
+        self._update_file_uploader_state(upload_file.widget_id, "")
+
+    def handle_upload_file_chunk(self, upload_file_chunk=None):
         progress, fullName = self._file_manager.porcess_chunk(
-            widget_id=file_chunk.id, index=file_chunk.index, data=file_chunk.data
+            widget_id=upload_file_chunk.widget_id, index=upload_file_chunk.index, data=upload_file_chunk.data
         )
 
-        msg = ForwardMsg()
-        msg.file_upload_status.id = file_chunk.id
-        msg.file_upload_status.file_id = fullName
+        if progress==1:
+            self._update_file_uploader_state(upload_file_chunk.widget_id, fullName)
 
-        if progress == 1:
-            msg.file_upload_status.state = FileUploadStatus.FINISHED
-            msg.file_upload_status.progress = 1
+    def handle_upload_file_delete(self, upload_file_delete=None):
+        self._file_manager.delete_file(widget_id=upload_file_delete.widget_id)
+        self._update_file_uploader_state(upload_file_delete.widget_id, "")
 
-        else:
-            msg.file_upload_status.state = FileUploadStatus.UPLOADING
-            msg.file_upload_status.progress = progress
+    def _update_file_uploader_state(self, widget_id, value): 
+        widget_state = WidgetStates()
+        old_widgets = getattr(self._widget_states, "widgets")
+        for widget in old_widgets:
+            if widget.id != widget_id:
+                widget_state.widgets.append(widget)
+            
 
-        self.enqueue(msg)
-
-    def handle_delete_file(self, delete_file=None):
-        self._file_manager.delete_file(widget_id=delete_file.id)
-
-        msg = ForwardMsg()
-        msg.file_upload_status.id = delete_file.id
-        msg.file_upload_status.file_id = ""        
-        msg.file_upload_status.state = FileUploadStatus.DELETED
-        msg.file_upload_status.progress = 0
-        self.enqueue(msg)
+        widget = WidgetState()
+        widget.id = widget_id
+        widget.string_value = value
+        widget_state.widgets.append(widget)
+        self.handle_rerun_script_request(widget_state=widget_state)
 
     def handle_stop_script_request(self):
         """Tells the ScriptRunner to stop running its report."""

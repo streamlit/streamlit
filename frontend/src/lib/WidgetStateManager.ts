@@ -21,9 +21,9 @@ import {
   FloatArray,
   WidgetState,
   WidgetStates,
-  NewFile,
-  DeleteFile,
-  FileChunk,
+  UploadFile,
+  UploadFileChunk,
+  UploadFileDelete,
 } from "autogen/proto"
 import { Set as ImmutableSet } from "immutable"
 
@@ -196,35 +196,35 @@ export class WidgetStateManager {
   }
 
   public sendUploadFileMessage(
-    id: string,
+    widgetId: string,
     name: string,
     lastModified: number,
     data: Uint8Array
   ): void {
     const limit = 10 * 1e6 //10MB
 
-    const newFileMessage = new NewFile()
-    newFileMessage.id = id
-    newFileMessage.name = name
-    newFileMessage.size = data.length
-    newFileMessage.lastModified = lastModified
-    newFileMessage.chunks = Math.ceil(data.length / limit)
-    this.sendBackMsg({ newFile: newFileMessage })
+    const uploadFileMessage = new UploadFile()
+    uploadFileMessage.widgetId = widgetId
+    uploadFileMessage.name = name
+    uploadFileMessage.size = data.length
+    uploadFileMessage.lastModified = lastModified
+    uploadFileMessage.chunks = Math.ceil(data.length / limit)
+    this.sendBackMsg({ uploadFile: uploadFileMessage })
 
-    for (let i = 0; i < newFileMessage.chunks; i++) {
-      const message = new FileChunk()
-      message.id = id
+    for (let i = 0; i < uploadFileMessage.chunks; i++) {
+      const message = new UploadFileChunk()
+      message.widgetId = widgetId
       message.index = i
       const dataIndex = i * limit
       message.data = data.slice(dataIndex, dataIndex + limit)
-      this.sendBackMsg({ fileChunk: message })
+      this.sendBackMsg({ uploadFileChunk: message })
     }
   }
 
-  public sendDeleteFileMessage(id: string): void {
-    const deleteFileMessage = new DeleteFile()
-    deleteFileMessage.id = id
-    this.sendBackMsg({ deleteFile: deleteFileMessage })
+  public sendDeleteFileMessage(widgetId: string): void {
+    const uploadFileDeleteMessage = new UploadFileDelete()
+    uploadFileDeleteMessage.widgetId = widgetId
+    this.sendBackMsg({ uploadFileDelete: uploadFileDeleteMessage })
   }
 
   private createWigetStatesMsg(): WidgetStates {

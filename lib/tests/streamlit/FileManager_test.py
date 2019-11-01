@@ -23,8 +23,6 @@ import os
 
 class FileManagerTest(unittest.TestCase):
     def test_msg_hash(self):
-        
-        
         """Test that ForwardMsg hash generation works as expected"""
 
         widget_idA = 'A0123456789'
@@ -51,7 +49,6 @@ class FileManagerTest(unittest.TestCase):
             data = f.read()
             f.close()
             self.assertEqual(file_bytes, data)
-
         
         file_manager.delete_file(widget_idA)
         self.assertFalse(os.path.isfile(name_fileA))

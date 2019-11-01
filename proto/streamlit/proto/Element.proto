@@ -28,7 +28,6 @@ import "streamlit/proto/DeckGlChart.proto";
 import "streamlit/proto/DocString.proto";
 import "streamlit/proto/Empty.proto";
 import "streamlit/proto/Exception.proto";
-import "streamlit/proto/FileReader.proto";
 import "streamlit/proto/FileUploader.proto";
 import "streamlit/proto/GraphVizChart.proto";
 import "streamlit/proto/Image.proto";
@@ -51,37 +50,37 @@ message Element {
 
   // An element can be one of the following element types.
   oneof type {
-    Audio audio = 13;
-    Balloons balloons = 12;
-    BokehChart bokeh_chart = 17;
-    Button button = 19;
-    Chart chart = 4;
-    Checkbox checkbox = 20;
-    DataFrame data_frame = 3;
-    DataFrame table = 11;
-    DateInput date_input = 27;
-    DeckGlChart deck_gl_chart = 15;
-    DocString doc_string = 7;
-    Empty empty = 2;
-    Exception exception = 8;
-    FileReader file_reader = 30;
-    FileUploader file_uploader = 29;
-    GraphVizChart graphviz_chart = 18;
-    ImageList imgs = 6;
-    MultiSelect multiselect = 28;
-    PlotlyChart plotly_chart = 16;
-    Progress progress = 5;
-    Radio radio = 23;
-    Selectbox selectbox = 25;
-    Slider slider = 21;
     Text text = 1;
-    TextArea text_area = 22;
-    TextInput text_input = 24;
-    TimeInput time_input = 26;
-    VegaLiteChart vega_lite_chart = 10;
-    Video video = 14;
-    NumberInput number_input = 31;
+    Empty empty = 2;
+    DataFrame data_frame = 3;
+    Chart chart = 4;
+    Progress progress = 5;
+    ImageList imgs = 6;
+    DocString doc_string = 7;
+    Exception exception = 8;
 
-    // Next ID: 29
+    VegaLiteChart vega_lite_chart = 10;
+    DataFrame table = 11;
+    Balloons balloons = 12;
+    Audio audio = 13;
+    Video video = 14;
+    DeckGlChart deck_gl_chart = 15;
+    PlotlyChart plotly_chart = 16;
+    BokehChart bokeh_chart = 17;
+    GraphVizChart graphviz_chart = 18;
+    Button button = 19;
+    Checkbox checkbox = 20;
+    Slider slider = 21;
+    TextArea text_area = 22;
+    Radio radio = 23;
+    TextInput text_input = 24;
+    Selectbox selectbox = 25;
+    TimeInput time_input = 26;
+    DateInput date_input = 27;
+    MultiSelect multiselect = 28;    
+    NumberInput number_input = 29;
+    FileUploader file_uploader = 30;
+    
+    // Next ID: 31
   }
 }

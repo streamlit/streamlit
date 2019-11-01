@@ -69,6 +69,9 @@ class FileManager(object):
         )
         self._file_list[widget_id] = file
 
+    def check_file(self, widget_id):
+        return self._file_list[widget_id]
+
     def porcess_chunk(self, widget_id, index, data):
         file = self._file_list.get(widget_id)
         if file != None:

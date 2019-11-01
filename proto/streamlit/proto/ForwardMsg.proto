@@ -22,7 +22,6 @@ import "streamlit/proto/NewReport.proto";
 import "streamlit/proto/SessionEvent.proto";
 import "streamlit/proto/SessionState.proto";
 import "streamlit/proto/BlockPath.proto";
-import "streamlit/proto/FileUploadStatus.proto";
 
 // A message sent from Proxy to the browser
 message ForwardMsg {
@@ -73,9 +72,6 @@ message ForwardMsg {
     // for this one. If the client does not have the referenced message
     // in its cache, it can retrieve it from the server.
     string ref_hash = 11;
-
-
-    FileUploadStatus file_upload_status = 12;
   }
 }
 

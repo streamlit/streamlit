@@ -52,7 +52,6 @@ import {
   IBackMsg,
   SessionState,
   Initialize,
-  FileUploadStatus,
 } from "autogen/proto"
 
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
@@ -131,6 +130,10 @@ class App extends PureComponent<Props, State> {
       this
     )
     this.handleMessage = this.handleMessage.bind(this)
+    this.handleUploadReportProgress = this.handleUploadReportProgress.bind(
+      this
+    )
+    this.handleReportUploaded = this.handleReportUploaded.bind(this)
     this.isServerConnected = this.isServerConnected.bind(this)
     this.onLogInError = this.onLogInError.bind(this)
     this.onLogInSuccess = this.onLogInSuccess.bind(this)
@@ -245,41 +248,32 @@ class App extends PureComponent<Props, State> {
           this.handleDeltaMsg(deltaMsg, msgProto.metadata),
         reportFinished: (status: ForwardMsg.ReportFinishedStatus) =>
           this.handleReportFinished(status),
-        uploadReportProgress: (progress: string | number) => {
-          const newDialog: DialogProps = {
-            type: DialogType.UPLOAD_PROGRESS,
-            progress: progress,
-            onClose: () => {},
-          }
-          this.openDialog(newDialog)
-        },
-        reportUploaded: (url: string) => {
-          const newDialog: DialogProps = {
-            type: DialogType.UPLOADED,
-            url: url,
-            onClose: () => {},
-          }
-          this.openDialog(newDialog)
-        },
-        fileUploadStatus: (fileUploadStatus: FileUploadStatus) => {
-          if (
-            fileUploadStatus.state ===
-              FileUploadStatus.FileUploadState.FINISHED ||
-            fileUploadStatus.state === FileUploadStatus.FileUploadState.DELETED
-          ) {
-            // FINISHED TO UPLOAD
-            this.widgetMgr.setStringValue(
-              fileUploadStatus.id,
-              fileUploadStatus.fileId,
-              { fromUi: true }
-            )
-          }
-        },
+        uploadReportProgress: (progress: string | number) =>
+          this.handleUploadReportProgress(progress),
+        reportUploaded: (url: string) => this.handleReportUploaded(url),
       })
     } catch (err) {
       logError(err)
       this.showError("Bad message format", err.message)
     }
+  }
+
+  handleUploadReportProgress(progress: string | number): void {
+    const newDialog: DialogProps = {
+      type: DialogType.UPLOAD_PROGRESS,
+      progress: progress,
+      onClose: () => {},
+    }
+    this.openDialog(newDialog)
+  }
+
+  handleReportUploaded(url: string): void {
+    const newDialog: DialogProps = {
+      type: DialogType.UPLOADED,
+      url: url,
+      onClose: () => {},
+    }
+    this.openDialog(newDialog)
   }
 
   /**

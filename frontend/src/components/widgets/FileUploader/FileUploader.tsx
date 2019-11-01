@@ -94,10 +94,13 @@ class FileUploader extends React.PureComponent<Props, State> {
   }
 
   public componentDidUpdate(): void {
-    const uiValue = this.props.widgetStateManager.getStringValue(
-      this.props.element.get("id")
-    )
-    if (uiValue !== undefined && this.state.status === "UPLOADING") {
+    const fileId = this.props.element.get("fileId")
+    const widgetStateManager = this.props.widgetStateManager
+
+    if (fileId !== "" && this.state.status === "UPLOADING") {
+      widgetStateManager.setStringValue(this.props.element.get("id"), fileId, {
+        fromUi: false,
+      })
       this.setState({ status: "READY" })
     }
   }
@@ -127,6 +130,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     const { element } = this.props
     const accept: string[] = element.get("type").toArray()
     const label: string = element.get("label")
+
     return (
       <div className="file-uploader">
         <label>{label}</label>
