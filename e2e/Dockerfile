@@ -69,13 +69,13 @@ COPY --chown=$USER lib/Pipfile.locks/python-3.7.4 ./lib/Pipfile.locks/
 COPY --chown=$USER lib/Pipfile ./lib/
 
 # install python modules
-RUN source venv/bin/activate && make pipenv-lock CIRCLECI=true
+RUN source venv/bin/activate && make setup && make pipenv-lock CIRCLECI=true && deactivate
 
 # copy streamlit code
 COPY --chown=$USER . .
 
 # install streamlit
-RUN make init
+# RUN make init
 RUN make develop
 RUN make build
 
