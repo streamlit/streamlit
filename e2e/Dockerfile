@@ -76,6 +76,8 @@ COPY --chown=$USER . .
 
 # install streamlit
 # RUN make init
+RUN make scssvars
+RUN make protobuf
 RUN make develop
 RUN make build
 
