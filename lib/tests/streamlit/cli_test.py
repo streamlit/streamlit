@@ -196,3 +196,22 @@ class CliTest(unittest.TestCase):
             ],
             any_order=True,
         )
+
+    def test_credentials_headless(self):
+        """The correct command line should be passed downstream"""
+        from streamlit import config
+        config.set_option("server.headless", True)
+
+        with patch("validators.url", return_value=False), patch(
+            "os.path.exists", return_value=True
+        ):
+            result = self.runner.invoke(    
+                cli,
+                [
+                    "run",
+                    "some script.py",
+                    "argument with space",
+                    "argument with another space",
+                ],
+            )
+        self.assertEqual(0, result.exit_code)

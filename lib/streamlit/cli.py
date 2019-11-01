@@ -240,8 +240,9 @@ def _check_credentials():
     config_does_not_exist = all(
         [not os.path.exists(filename) for filename in config.get_config_filenames()]
     )
-    if config_does_not_exist and not config.get_option("server.headless"):
-        Credentials.get_current().check_activated(auto_resolve=True)
+    if config_does_not_exist and config.get_option("server.headless"):
+        return
+    Credentials.get_current().check_activated(auto_resolve=True)
 
 
 def _main_run(file, args=[]):
