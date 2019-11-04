@@ -21,12 +21,14 @@ DEFAULT_FOLDER_BLACKLIST = [
     "**/anaconda",
     "**/anaconda2",
     "**/anaconda3",
+    "**/dist-packages",
     "**/miniconda",
     "**/miniconda2",
     "**/miniconda3",
+    "**/pyenv",
+    "**/site-packages",
     "**/venv",
     "**/virtualenv",
-    "**/pyenv",
 ]
 
 

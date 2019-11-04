@@ -23,6 +23,9 @@ describe("Dataframes", () => {
 
   before(() => {
     cy.visit("http://localhost:3000/");
+
+    // Make the ribbon decoration line disappear
+    cy.get(".decoration").invoke("css", "display", "none");
   });
 
   it("show a tooltip for each cell", () => {
@@ -39,13 +42,13 @@ describe("Dataframes", () => {
 
   it("have consistent st.dataframe visuals", () => {
     cy.get(DF_SELECTOR).each((el, idx) => {
-      cy.wrap(el).matchImageSnapshot("dataframe-visuals" + idx);
+      return cy.wrap(el).matchImageSnapshot("dataframe-visuals" + idx);
     });
   });
 
   it("have consistent st.table visuals", () => {
     cy.get(TABLE_SELECTOR).each((el, idx) => {
-      cy.wrap(el).matchImageSnapshot("table-visuals" + idx);
+      return cy.wrap(el).matchImageSnapshot("table-visuals" + idx);
     });
   });
 });

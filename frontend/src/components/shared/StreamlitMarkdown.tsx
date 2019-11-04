@@ -2,10 +2,14 @@ import CodeBlock from "components/elements/CodeBlock"
 import React, { ReactElement, ReactNode } from "react"
 import ReactMarkdown from "react-markdown"
 
-// Ignoring typeScript for this module as it has no ts support
-// eslint-disable-next-line @typescript-eslint/ban-ts-ignore
 // @ts-ignore
 import htmlParser from "react-markdown/plugins/html-parser"
+// @ts-ignore
+import { InlineMath, BlockMath } from "react-katex"
+// @ts-ignore
+import RemarkMathPlugin from "remark-math"
+
+import "katex/dist/katex.min.css"
 
 export interface Props {
   /**
@@ -30,7 +34,13 @@ export class StreamlitMarkdown extends React.PureComponent<Props> {
       code: CodeBlock,
       link: linkWithTargetBlank,
       linkReference: linkReferenceHasParens,
+      inlineMath: (props: { value: string }) => (
+        <InlineMath>{props.value}</InlineMath>
+      ),
+      math: (props: { value: string }) => <BlockMath>{props.value}</BlockMath>,
     }
+
+    const plugins = [RemarkMathPlugin]
 
     const astPlugins = this.props.allowHTML ? [htmlParser()] : []
 
@@ -39,6 +49,7 @@ export class StreamlitMarkdown extends React.PureComponent<Props> {
         source={this.props.source}
         escapeHtml={!this.props.allowHTML}
         astPlugins={astPlugins}
+        plugins={plugins}
         renderers={renderers}
       />
     )

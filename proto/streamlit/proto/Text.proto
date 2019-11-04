@@ -44,7 +44,6 @@ message Text {
 
     // Shows a success message.
     SUCCESS = 9;
-
   }
 
   Format format = 2;

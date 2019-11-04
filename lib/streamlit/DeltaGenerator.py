@@ -488,6 +488,7 @@ class DeltaGenerator(object):
         body : str
             The string to display as Github-flavored Markdown. Syntax
             information can be found at: https://github.github.com/gfm.
+            Inline and block math are supported by KaTeX and remark-math.
 
         unsafe_allow_html : bool
             By default, any HTML tags found in the body will be escaped and
@@ -523,6 +524,30 @@ class DeltaGenerator(object):
         element.text.body = _clean_text(body)
         element.text.format = Text_pb2.Text.MARKDOWN
         element.text.allow_html = unsafe_allow_html
+
+    @_with_element
+    def latex(self, element, body):
+        """Display string formatted as LaTeX.
+
+        Parameters
+        ----------
+        body : str
+            The string to display as LaTeX.
+
+        Example
+        -------
+        >>> st.latex("ax^2 + bx + c = 0")
+
+        """
+        from streamlit.util import is_sympy_expession
+
+        if is_sympy_expession(body):
+            import sympy
+
+            body = sympy.latex(body)
+
+        element.text.body = "$$\n%s\n$$" % _clean_text(body)
+        element.text.format = Text_pb2.Text.MARKDOWN
 
     @_with_element
     def code(self, element, body, language="python"):
@@ -2045,6 +2070,7 @@ class DeltaGenerator(object):
         value=NoValue(),
         step=None,
         format=None,
+        key=None,
     ):
         """Display a numeric input widget.
 
@@ -2068,6 +2094,11 @@ class DeltaGenerator(object):
         format : str or None
             Printf/Python format string controlling how the interface should
             display numbers. This does not impact the return value.
+        key : str
+            An optional string to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. Multiple widgets of the same type may
+            not share the same key.
 
         Returns
         -------
@@ -2080,8 +2111,6 @@ class DeltaGenerator(object):
         >>> number = st.number_input('Insert a number')
         >>> st.write('The current number is ', number)
         """
-
-        from streamlit.util import is_int_value
 
         if isinstance(value, NoValue):
             if min_value:
@@ -2168,7 +2197,7 @@ class DeltaGenerator(object):
         if format is not None:
             element.number_input.format = format
 
-        ui_value = _get_widget_ui_value("number_input", element)
+        ui_value = _get_widget_ui_value("number_input", element, user_key=key)
 
         return ui_value if ui_value is not None else value
 

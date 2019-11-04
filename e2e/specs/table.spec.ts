@@ -43,7 +43,7 @@ describe("st.table", () => {
 
   it("contains all numbers from 0..99", () => {
     cy.get("@cells").each(($element, index) => {
-      cy.wrap($element).should("contain", index);
+      return cy.wrap($element).should("contain", index);
     });
   });
 

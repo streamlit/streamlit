@@ -58,7 +58,7 @@ class Text extends React.PureComponent<Props> {
       case TextProto.Format.PLAIN: {
         const props = {
           className: classNames("fixed-width", "stText"),
-          style: styleProp,
+          style: { width },
         }
 
         return <div {...props}>{body}</div>
@@ -85,7 +85,7 @@ class Text extends React.PureComponent<Props> {
           throw e
         }
         return (
-          <div className="json-text-container stText" style={styleProp}>
+          <div className="json-text-container stText" style={{ width }}>
             <ReactJson
               src={bodyObject}
               displayDataTypes={false}
@@ -104,7 +104,7 @@ class Text extends React.PureComponent<Props> {
         return (
           <div
             className={classNames("alert", getAlertCSSClass(format), "stText")}
-            style={styleProp}
+            style={{ width }}
           >
             <div className="markdown-text-container">
               <StreamlitMarkdown source={body} allowHTML={false} />
