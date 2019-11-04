@@ -321,7 +321,10 @@ def _read_from_mem_cache(key, allow_output_mutation, hash_funcs):
     if key in _mem_cache:
         entry = _mem_cache[key]
 
-        if allow_output_mutation or get_hash(entry.value, hash_funcs=hash_funcs) == entry.hash:
+        if (
+            allow_output_mutation
+            or get_hash(entry.value, hash_funcs=hash_funcs) == entry.hash
+        ):
             LOGGER.debug("Memory cache HIT: %s", type(entry.value))
             return entry.value, entry.args_mutated
         else:
@@ -374,7 +377,9 @@ def _write_to_disk_cache(key, value, args_mutated):
         raise CacheError("Unable to write to cache: %s" % e)
 
 
-def _read_from_cache(key, persisted, allow_output_mutation, func_or_code, message_opts, hash_funcs):
+def _read_from_cache(
+    key, persisted, allow_output_mutation, func_or_code, message_opts, hash_funcs
+):
     """
     Read the value from the cache. Our goal is to read from memory
     if possible. If the data was mutated (hash changed), we show a
@@ -397,12 +402,16 @@ def _read_from_cache(key, persisted, allow_output_mutation, func_or_code, messag
 
         if persisted:
             value, args_mutated = _read_from_disk_cache(key)
-            _write_to_mem_cache(key, value, allow_output_mutation, args_mutated, hash_funcs)
+            _write_to_mem_cache(
+                key, value, allow_output_mutation, args_mutated, hash_funcs
+            )
             return value, args_mutated
         raise e
 
 
-def _write_to_cache(key, value, persist, allow_output_mutation, args_mutated, hash_funcs):
+def _write_to_cache(
+    key, value, persist, allow_output_mutation, args_mutated, hash_funcs
+):
     _write_to_mem_cache(key, value, allow_output_mutation, args_mutated, hash_funcs)
     if persist:
         _write_to_disk_cache(key, value, args_mutated)
@@ -534,8 +543,7 @@ def cache(
             caller_frame = inspect.currentframe().f_back
             try:
                 return_value, args_mutated = _read_from_cache(
-                    key, persist, allow_output_mutation, func, caller_frame,
-                    hash_funcs
+                    key, persist, allow_output_mutation, func, caller_frame, hash_funcs
                 )
             except (CacheKeyNotFoundError, CachedObjectWasMutatedError):
                 with _calling_cached_function():
@@ -550,8 +558,12 @@ def cache(
                 args_mutated = args_digest_before != args_hasher_after.digest()
 
                 _write_to_cache(
-                    key, return_value, persist, allow_output_mutation, args_mutated,
-                    hash_funcs
+                    key,
+                    return_value,
+                    persist,
+                    allow_output_mutation,
+                    args_mutated,
+                    hash_funcs,
                 )
 
             if args_mutated:
@@ -667,7 +679,7 @@ class Cache(dict):
                 self._allow_output_mutation,
                 code,
                 [caller_lineno + 1, caller_lineno + len(lines)],
-                hash_funcs
+                hash_funcs,
             )
             self.update(value)
         except (CacheKeyNotFoundError, CachedObjectWasMutatedError):
@@ -678,7 +690,14 @@ class Cache(dict):
                 return True
 
             exec(code, caller_frame.f_globals, caller_frame.f_locals)
-            _write_to_cache(key, self, self._persist, self._allow_output_mutation, None, self._hash_funcs)
+            _write_to_cache(
+                key,
+                self,
+                self._persist,
+                self._allow_output_mutation,
+                None,
+                self._hash_funcs,
+            )
 
         # Return False so that we have control over the execution.
         return False
