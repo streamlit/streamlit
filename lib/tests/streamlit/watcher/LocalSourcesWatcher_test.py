@@ -29,22 +29,39 @@ if sys.version_info[0] == 2:
     import test_data.dummy_module1 as DUMMY_MODULE_1
     import test_data.dummy_module2 as DUMMY_MODULE_2
     import test_data.misbehaved_module as MISBEHAVED_MODULE
+
+    import test_data.nested_module_parent as NESTED_MODULE_PARENT
+    import test_data.nested_module_child as NESTED_MODULE_CHILD
 else:
     import tests.streamlit.watcher.test_data.dummy_module1 as DUMMY_MODULE_1
     import tests.streamlit.watcher.test_data.dummy_module2 as DUMMY_MODULE_2
     import tests.streamlit.watcher.test_data.misbehaved_module as MISBEHAVED_MODULE
 
+    import tests.streamlit.watcher.test_data.nested_module_parent as NESTED_MODULE_PARENT
+    import tests.streamlit.watcher.test_data.nested_module_child as NESTED_MODULE_CHILD
+
 REPORT_PATH = os.path.join(os.path.dirname(__file__), "test_data/not_a_real_script.py")
 REPORT = Report(REPORT_PATH, "test command line")
-NOOP_CALLBACK = lambda x: x
 
 DUMMY_MODULE_1_FILE = os.path.abspath(DUMMY_MODULE_1.__file__)
 DUMMY_MODULE_2_FILE = os.path.abspath(DUMMY_MODULE_2.__file__)
 
+NESTED_MODULE_CHILD_FILE = os.path.abspath(NESTED_MODULE_CHILD.__file__)
+
+
+def NOOP_CALLBACK():
+    pass
+
 
 class LocalSourcesWatcherTest(unittest.TestCase):
     def setUp(self):
-        modules = ["DUMMY_MODULE_1", "DUMMY_MODULE_2", "MISBEHAVED_MODULE"]
+        modules = [
+            "DUMMY_MODULE_1",
+            "DUMMY_MODULE_2",
+            "MISBEHAVED_MODULE",
+            "NESTED_MODULE_PARENT",
+            "NESTED_MODULE_CHILD",
+        ]
 
         the_globals = globals()
 
@@ -86,7 +103,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         else:
             ErrorType = OSError
 
-        fob.side_effect = ErrorType('This error should be caught!')
+        fob.side_effect = ErrorType("This error should be caught!")
         lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
@@ -166,6 +183,29 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         lso.update_watched_modules()
 
         fob.assert_called_once()  # Just __init__.py
+
+    @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
+    def test_nested_module_parent_unloaded(self, fob):
+        lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
+
+        fob.assert_called_once()
+
+        with patch(
+            "sys.modules",
+            {
+                "DUMMY_MODULE_1": DUMMY_MODULE_1,
+                "NESTED_MODULE_PARENT": NESTED_MODULE_PARENT,
+                "NESTED_MODULE_CHILD": NESTED_MODULE_CHILD,
+            },
+        ):
+            lso.update_watched_modules()
+
+            # Simulate a change to the child module
+            lso.on_file_changed(NESTED_MODULE_CHILD_FILE)
+
+            # Assert that both the parent and child are unloaded, ready for reload
+            self.assertNotIn("NESTED_MODULE_CHILD", sys.modules)
+            self.assertNotIn("NESTED_MODULE_PARENT", sys.modules)
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
     def test_config_blacklist(self, fob):

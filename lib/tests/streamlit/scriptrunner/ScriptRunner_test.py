@@ -46,14 +46,14 @@ def _create_widget(id, states):
 
 
 import tokenize
-if hasattr(tokenize, 'open'):
+
+if hasattr(tokenize, "open"):
     text_utf = "complete! 👨‍🎤"
     text_no_encoding = text_utf
     text_latin = "complete! ð\x9f\x91¨â\x80\x8dð\x9f\x8e¤"
 else:
     text_utf = u"complete! 👨‍🎤"
-    text_no_encoding = (
-        u"complete! \xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x8e\xa4")
+    text_no_encoding = u"complete! \xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x8e\xa4"
     text_latin = text_no_encoding
 
 
@@ -68,11 +68,13 @@ class ScriptRunnerTest(unittest.TestCase):
         self._assert_events(scriptrunner, [ScriptRunnerEvent.SHUTDOWN])
         self._assert_text_deltas(scriptrunner, [])
 
-    @parameterized.expand([
-        ("good_script.py", text_utf),
-        ("good_script_no_encoding.py", text_no_encoding),
-        ("good_script_latin_encoding.py", text_latin),
-        ])
+    @parameterized.expand(
+        [
+            ("good_script.py", text_utf),
+            ("good_script_no_encoding.py", text_no_encoding),
+            ("good_script_latin_encoding.py", text_latin),
+        ]
+    )
     def test_run_script(self, filename, text):
         """Tests that we can run a script to completion."""
         scriptrunner = TestScriptRunner(filename)
@@ -371,8 +373,7 @@ class ScriptRunnerTest(unittest.TestCase):
             [
                 delta.new_element.text.body
                 for delta in scriptrunner.deltas()
-                if delta.HasField("new_element")
-                and delta.new_element.HasField("text")
+                if delta.HasField("new_element") and delta.new_element.HasField("text")
             ],
         )
 
@@ -396,8 +397,7 @@ class TestScriptRunner(ScriptRunner):
         )
         self.script_request_queue = ScriptRequestQueue()
 
-        script_path = os.path.join(
-            os.path.dirname(__file__), "test_data", script_name)
+        script_path = os.path.join(os.path.dirname(__file__), "test_data", script_name)
 
         super(TestScriptRunner, self).__init__(
             report=Report(script_path, "test command line"),

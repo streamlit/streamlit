@@ -17,12 +17,14 @@
 
 import unittest
 
+import os
+
 import requests
 import requests_mock
 import mock
 from click.testing import CliRunner
 from mock import patch, MagicMock
-import click
+from testfixtures import tempdir
 
 import streamlit
 from streamlit import cli
@@ -63,20 +65,26 @@ class CliTest(unittest.TestCase):
         self.assertNotEqual(0, result.exit_code)
         self.assertTrue("File does not exist" in result.output)
 
-    def test_run_valid_url(self):
+    @tempdir()
+    def test_run_valid_url(self, temp_dir):
         """streamlit run succeeds if an existing url is passed"""
 
         with patch("validators.url", return_value=True), patch(
             "streamlit.cli._main_run"
         ), requests_mock.mock() as m:
 
-            m.get("http://url", content=b"content")
-            with patch("tempfile.NamedTemporaryFile"):
-                result = self.runner.invoke(cli, ["run", "http://url"])
+            file_content = b"content"
+            m.get("http://url/app.py", content=file_content)
+            with patch("streamlit.temporary_directory.TemporaryDirectory") as mock_tmp:
+                mock_tmp.return_value.__enter__.return_value = temp_dir.path
+                result = self.runner.invoke(cli, ["run", "http://url/app.py"])
+                with open(os.path.join(temp_dir.path, "app.py"), "rb") as f:
+                    self.assertEqual(file_content, f.read())
 
         self.assertEqual(0, result.exit_code)
 
-    def test_run_non_existing_url(self):
+    @tempdir()
+    def test_run_non_existing_url(self, temp_dir):
         """streamlit run should fail if a non existing but valid
          url is passed
          """
@@ -85,9 +93,10 @@ class CliTest(unittest.TestCase):
             "streamlit.cli._main_run"
         ), requests_mock.mock() as m:
 
-            m.get("http://url", exc=requests.exceptions.RequestException)
-            with patch("tempfile.NamedTemporaryFile"):
-                result = self.runner.invoke(cli, ["run", "http://url"])
+            m.get("http://url/app.py", exc=requests.exceptions.RequestException)
+            with patch("streamlit.temporary_directory.TemporaryDirectory") as mock_tmp:
+                mock_tmp.return_value.__enter__.return_value = temp_dir.path
+                result = self.runner.invoke(cli, ["run", "http://url/app.py"])
 
         self.assertNotEqual(0, result.exit_code)
         self.assertTrue("Unable to fetch" in result.output)
@@ -152,6 +161,7 @@ class CliTest(unittest.TestCase):
         self.assertEqual(result["param"], "server_customKey")
         self.assertEqual(result["type"], config_option.type)
         self.assertEqual(result["description"], config_option.description)
+        self.assertEqual(result["envvar"], "STREAMLIT_SERVER_CUSTOM_KEY")
 
     @patch("streamlit.cli._config._set_option")
     def test_apply_config_options_from_cli(self, patched__set_option):
@@ -170,9 +180,19 @@ class CliTest(unittest.TestCase):
 
         patched__set_option.assert_has_calls(
             [
-                mock.call("server.port", 3005, "cli call option"),
-                mock.call("server.headless", True, "cli call option"),
-                mock.call("browser.serverAddress", "localhost", "cli call option"),
+                mock.call(
+                    "server.port", 3005, "command-line argument or environment variable"
+                ),
+                mock.call(
+                    "server.headless",
+                    True,
+                    "command-line argument or environment variable",
+                ),
+                mock.call(
+                    "browser.serverAddress",
+                    "localhost",
+                    "command-line argument or environment variable",
+                ),
             ],
             any_order=True,
         )

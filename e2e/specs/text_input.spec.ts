@@ -20,13 +20,16 @@
 describe("st.text_input", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");
+
+    // Make the ribbon decoration line disappear
+    cy.get(".decoration").invoke("css", "display", "none");
   });
 
   it("shows widget correctly", () => {
     cy.get(".stTextInput").should("have.length", 4);
 
     cy.get(".stTextInput").each((el, idx) => {
-      cy.wrap(el).matchImageSnapshot("text_input" + idx);
+      return cy.wrap(el).matchImageSnapshot("text_input" + idx);
     });
   });
 

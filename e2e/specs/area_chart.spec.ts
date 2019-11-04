@@ -20,6 +20,9 @@
 describe("st.area_chart", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
+
+    // Make the ribbon decoration line disappear
+    cy.get(".decoration").invoke("css", "display", "none");
   });
 
   it("displays an area chart", () => {

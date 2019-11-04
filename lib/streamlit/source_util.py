@@ -22,9 +22,10 @@ def open_python_file(filename):
     encoding.
     """
     import tokenize
-    if hasattr(tokenize, 'open'):  # Added in Python 3.2
+
+    if hasattr(tokenize, "open"):  # Added in Python 3.2
         # Open file respecting PEP263 encoding. If no encoding header is
         # found, opens as utf-8.
         return tokenize.open(filename)
     else:
-        return open(filename, 'r')
+        return open(filename, "r")

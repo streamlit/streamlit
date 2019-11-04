@@ -20,12 +20,20 @@
 describe("handles empty charts", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
+
+    // Wait for the site to be fully loaded
+    cy.get(".element-container").should($els => {
+      expect($els).to.have.length.of.at.least(10);
+    });
+
+    // Make the ribbon decoration line disappear
+    cy.get(".decoration").invoke("css", "display", "none");
   });
 
   it("gracefully handles no data", () => {
     // vega lite
     cy.get(".element-container .stVegaLiteChart").each((el, i) => {
-      cy.get(el).matchImageSnapshot(`stVegaLiteChart-${i}`);
+      return cy.wrap(el).matchImageSnapshot(`stVegaLiteChart-${i}`);
     });
 
     // pyplot

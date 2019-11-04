@@ -38,6 +38,9 @@ describe("st.pyplot", () => {
     // Wait for 'stale-element' class to go away, so the snapshot looks right.
     cy.get(".element-container").should("not.have.class", "stale-element");
 
+    // Make the ribbon decoration line disappear
+    cy.get(".decoration").invoke("css", "display", "none");
+
     cy.get(".stImage > img").matchImageSnapshot("pyplot-check-if-cleared");
   });
 });

@@ -266,10 +266,7 @@ class Server(object):
                         StaticFileHandler,
                         {"path": "%s/" % static_path, "default_filename": "index.html"},
                     ),
-                    (
-                        make_url_path_regex(base, trailing_slash=False),
-                        AddSlashHandler
-                    )
+                    (make_url_path_regex(base, trailing_slash=False), AddSlashHandler),
                 ]
             )
 

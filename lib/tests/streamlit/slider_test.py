@@ -15,6 +15,7 @@
 
 """slider unit test."""
 
+from streamlit.errors import StreamlitAPIException
 from tests import testutil
 import streamlit as st
 from parameterized import parameterized
@@ -53,7 +54,7 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.default, proto_value)
 
     def test_value_greater_than_min(self):
-        with pytest.raises(ValueError) as exc_slider:
+        with pytest.raises(StreamlitAPIException) as exc_slider:
             st.slider("Slider label", 10, 100, 0)
         assert (
             "The default `value` of 0 must lie between the `min_value` of "
@@ -61,7 +62,7 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         )
 
     def test_value_smaller_than_max(self):
-        with pytest.raises(ValueError) as exc_slider:
+        with pytest.raises(StreamlitAPIException) as exc_slider:
             st.slider("Slider label", 10, 100, 101)
         assert (
             "The default `value` of 101 "
@@ -70,7 +71,7 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         )
 
     def test_max_min(self):
-        with pytest.raises(ValueError) as exc_slider:
+        with pytest.raises(StreamlitAPIException) as exc_slider:
             st.slider("Slider label", 101, 100, 101)
         assert (
             "The default `value` of 101 "
