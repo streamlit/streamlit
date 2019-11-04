@@ -15,24 +15,13 @@
  * limitations under the License.
  */
 
-import React, { ReactNode, ReactElement } from "react"
+import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
+import React, { ReactNode } from "react"
 
 import classNames from "classnames"
 import ReactJson from "react-json-view"
-import ReactMarkdown from "react-markdown"
 import { Map as ImmutableMap } from "immutable"
-// Ignoring typeScript for this module as it has no ts support
-// eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-// @ts-ignore
-import htmlParser from "react-markdown/plugins/html-parser"
-// @ts-ignore
-import { InlineMath, BlockMath } from "react-katex"
-// @ts-ignore
-import RemarkMathPlugin from "remark-math"
-
 import { Text as TextProto } from "autogen/proto"
-import CodeBlock from "../CodeBlock"
-import "katex/dist/katex.min.css"
 import "./Text.scss"
 
 function getAlertCSSClass(format: TextProto.Format): string | undefined {
@@ -49,41 +38,7 @@ function getAlertCSSClass(format: TextProto.Format): string | undefined {
   return undefined
 }
 
-interface LinkProps {
-  href: string
-  children: ReactElement
-}
-
-interface LinkReferenceProps {
-  href: string
-  children: [ReactElement]
-}
-
-// Using target="_blank" without rel="noopener noreferrer" is a security risk:
-// see https://mathiasbynens.github.io/rel-noopener
-const linkWithTargetBlank = (props: LinkProps): ReactElement => (
-  <a href={props.href} target="_blank" rel="noopener noreferrer">
-    {props.children}
-  </a>
-)
-
-// Handle rendering a link through a reference, ex [text](href)
-// Don't convert to a link if only `[text]` and missing `(href)`
-const linkReferenceHasParens = (props: LinkReferenceProps): any => {
-  const { href, children } = props
-
-  if (!href) {
-    return children.length ? `[${children[0].props.children}]` : ""
-  }
-
-  return (
-    <a href={href} target="_blank" rel="noopener noreferrer">
-      {children}
-    </a>
-  )
-}
-
-export interface Props {
+interface Props {
   width: number
   element: ImmutableMap<string, any>
 }
@@ -96,16 +51,7 @@ class Text extends React.PureComponent<Props> {
     const { element, width } = this.props
     const body = element.get("body")
     const format = element.get("format")
-    const renderers = {
-      code: CodeBlock,
-      link: linkWithTargetBlank,
-      linkReference: linkReferenceHasParens,
-      inlineMath: (props: { value: string }) => (
-        <InlineMath>{props.value}</InlineMath>
-      ),
-      math: (props: { value: string }) => <BlockMath>{props.value}</BlockMath>,
-    }
-    const plugins = [RemarkMathPlugin]
+    const styleProp = { width }
 
     switch (format) {
       // Plain, fixed width text.
@@ -121,17 +67,9 @@ class Text extends React.PureComponent<Props> {
       // Markdown.
       case TextProto.Format.MARKDOWN: {
         const allowHTML = element.get("allowHtml")
-        const astPlugins = allowHTML ? [htmlParser()] : []
-
         return (
-          <div className="markdown-text-container stText" style={{ width }}>
-            <ReactMarkdown
-              source={body}
-              escapeHtml={!allowHTML}
-              astPlugins={astPlugins}
-              plugins={plugins}
-              renderers={renderers}
-            />
+          <div className="markdown-text-container stText" style={styleProp}>
+            <StreamlitMarkdown source={body} allowHTML={allowHTML} />
           </div>
         )
       }
@@ -169,11 +107,7 @@ class Text extends React.PureComponent<Props> {
             style={{ width }}
           >
             <div className="markdown-text-container">
-              <ReactMarkdown
-                source={body}
-                renderers={renderers}
-                plugins={plugins}
-              />
+              <StreamlitMarkdown source={body} allowHTML={false} />
             </div>
           </div>
         )

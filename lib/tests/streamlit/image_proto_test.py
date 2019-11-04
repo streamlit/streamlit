@@ -18,6 +18,8 @@
 import pytest
 from PIL import Image, ImageDraw
 from parameterized import parameterized
+
+from streamlit.errors import StreamlitAPIException
 from tests import testutil
 import cv2
 import numpy as np
@@ -179,14 +181,17 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         * check shape 3 but dims 1, 3, 4
         * if only one channel convert to just 2 dimensions.
         """
-        with pytest.raises(RuntimeError) as shape_exc:
+        with pytest.raises(StreamlitAPIException) as shape_exc:
             st.image(np.ndarray(shape=1))
-        assert "Numpy shape has to be of length 2 or 3." == str(shape_exc.value)
+        self.assertEqual(
+            "Numpy shape has to be of length 2 or 3.", str(shape_exc.value)
+        )
 
-        with pytest.raises(AssertionError) as shape2_exc:
+        with pytest.raises(StreamlitAPIException) as shape2_exc:
             st.image(np.ndarray(shape=(1, 2, 2)))
-        assert "Channel can only be 1, 3, or 4 got 2. Shape is (1, 2, 2)" == str(
-            shape2_exc.value
+        self.assertEqual(
+            "Channel can only be 1, 3, or 4 got 2. Shape is (1, 2, 2)",
+            str(shape2_exc.value),
         )
 
     def test_bytes_to_b64(self):
