@@ -27,10 +27,13 @@ import "assets/css/write.scss"
 // html-parser has no Typescript definitions.
 // @ts-ignore
 import htmlParser from "react-markdown/plugins/html-parser"
+// react-katext has no Typescript definitions.
+// @ts-ignore
 import { InlineMath, BlockMath } from "react-katex"
 // RemarkMath has no Typescript definitions.
 // @ts-ignore
 import RemarkMathPlugin from "remark-math"
+
 import "katex/dist/katex.min.css"
 
 interface Props {

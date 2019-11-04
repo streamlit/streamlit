@@ -544,8 +544,7 @@ class DeltaGenerator(object):
 
             body = sympy.latex(body)
 
-        element.text.body = "$$\n%s\n$$" % _clean_text(body)
-        element.text.format = Text_pb2.Text.MARKDOWN
+        element.markdown.body = "$$\n%s\n$$" % _clean_text(body)
 
     @_with_element
     def code(self, element, body, language="python"):
