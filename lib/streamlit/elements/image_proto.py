@@ -24,6 +24,8 @@ import numpy as np
 import six
 
 from PIL import Image, ImageFile
+
+from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from urllib.parse import urlparse
 
@@ -80,9 +82,9 @@ def _4d_to_list_3d(array):
 
 def _verify_np_shape(array):
     if len(array.shape) not in (2, 3):
-        raise RuntimeError("Numpy shape has to be of length 2 or 3.")
-    if len(array.shape) == 3:
-        assert array.shape[-1] in (1, 3, 4), (
+        raise StreamlitAPIException("Numpy shape has to be of length 2 or 3.")
+    if len(array.shape) == 3 and array.shape[-1] not in (1, 3, 4):
+        raise StreamlitAPIException(
             "Channel can only be 1, 3, or 4 got %d. Shape is %s"
             % (array.shape[-1], str(array.shape))
         )
@@ -201,7 +203,7 @@ def marshall_images(
                 if len(data.shape) == 3:
                     data = data[:, :, [2, 1, 0]]
                 else:
-                    raise RuntimeError(
+                    raise StreamlitAPIException(
                         'When using `channels="BGR"`, the input image should '
                         "have exactly 3 color channels"
                     )

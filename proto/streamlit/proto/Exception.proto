@@ -23,8 +23,11 @@ message Exception {
   // Python exception type, like 'RuntimeError'.
   string type = 1;
 
-  // The exception's message:
+  // The exception's message.
   string message = 2;
+
+  // If true, the exception message should be rendered as Markdown text.
+  bool message_is_markdown = 4;
 
   // The stack trace to print.
   repeated string stack_trace = 3;
