@@ -21,6 +21,7 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from streamlit.DeltaGenerator import _build_duplicate_widget_message
 from streamlit.compatibility import setup_2_3_shims
 from streamlit.errors import DuplicateWidgetID
+from streamlit.errors import StreamlitAPIException
 
 setup_2_3_shims(globals())
 
@@ -417,10 +418,10 @@ class DeltaGeneratorProgressTest(testutil.DeltaGeneratorTestCase):
         """Test Progress with bad values."""
         values = [-1, 101, -0.01, 1.01]
         for value in values:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(StreamlitAPIException):
                 st.progress(value)
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(StreamlitAPIException):
             st.progress("some string")
 
 
