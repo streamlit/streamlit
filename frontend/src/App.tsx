@@ -384,8 +384,10 @@ class App extends PureComponent<Props, State> {
    * @param newReportProto a NewReport protobuf
    */
   handleNewReport(newReportProto: NewReport): void {
+    const { reportHash } = this.state
     const { name: reportName, scriptPath } = newReportProto
-    const reportHash = hashString(
+
+    const newReportHash = hashString(
       SessionInfo.current.installationId + scriptPath
     )
 
@@ -401,11 +403,12 @@ class App extends PureComponent<Props, State> {
       reportHash,
     })
 
-    if (reportHash !== this.state.reportHash) {
+    if (reportHash !== newReportHash) {
       this.setState(
         {
-          reportId: newReportProto.id,
           reportName,
+          reportHash: newReportHash,
+          reportId: newReportProto.id,
           elements: {
             main: fromJS([]),
             sidebar: fromJS([]),
@@ -418,9 +421,8 @@ class App extends PureComponent<Props, State> {
       )
     } else {
       this.setState({
-        reportId: newReportProto.id,
         reportName,
-        reportHash,
+        reportId: newReportProto.id,
       })
     }
   }
