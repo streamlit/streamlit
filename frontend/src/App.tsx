@@ -79,6 +79,7 @@ interface State {
   elements: Elements
   reportId: string
   reportName: string | null
+  reportHash: string | null
   reportRunState: ReportRunState
   showLoginBox: boolean
   userSettings: UserSettings
@@ -114,6 +115,7 @@ class App extends PureComponent<Props, State> {
       },
       reportId: "<null>",
       reportName: null,
+      reportHash: null,
       reportRunState: ReportRunState.NOT_RUNNING,
       showLoginBox: false,
       userSettings: {
@@ -382,10 +384,12 @@ class App extends PureComponent<Props, State> {
    * @param newReportProto a NewReport protobuf
    */
   handleNewReport(newReportProto: NewReport): void {
-    const name = newReportProto.name
-    const scriptPath = newReportProto.scriptPath
+    const { name: reportName, scriptPath } = newReportProto
+    const reportHash = hashString(
+      SessionInfo.current.installationId + scriptPath
+    )
 
-    document.title = `${name} · Streamlit`
+    document.title = `${reportName} · Streamlit`
 
     MetricsManager.current.clearDeltaCounter()
 
@@ -394,13 +398,31 @@ class App extends PureComponent<Props, State> {
       // how many projects are being created with Streamlit while still keeping
       // possibly-sensitive info like the scriptPath outside of our metrics
       // services.
-      reportHash: hashString(SessionInfo.current.installationId + scriptPath),
+      reportHash,
     })
 
-    this.setState({
-      reportId: newReportProto.id,
-      reportName: name,
-    })
+    if (reportHash !== this.state.reportHash) {
+      this.setState(
+        {
+          reportId: newReportProto.id,
+          reportName,
+          elements: {
+            main: fromJS([]),
+            sidebar: fromJS([]),
+          },
+        },
+        () => {
+          this.elementListBuffer = this.state.elements
+          this.widgetMgr.clean(fromJS([]))
+        }
+      )
+    } else {
+      this.setState({
+        reportId: newReportProto.id,
+        reportName,
+        reportHash,
+      })
+    }
   }
 
   /**
