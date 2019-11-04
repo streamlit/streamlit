@@ -13,14 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.logger import get_logger
-from streamlit import config
-from uuid import uuid1
-import os
-
-LOGGER = get_logger(__name__)
-
-
 class File(object):
     """Thread-safe queue that smartly accumulates the report's messages."""
 
@@ -80,7 +72,7 @@ class FileManager(object):
                 return 1
 
             if file.received_chunks > 0:
-                return file.received_chunks/file.total_chunks
+                return float(file.received_chunks)/float(file.total_chunks)
 
         return 0
 
@@ -91,6 +83,6 @@ class FileManager(object):
             if file.received_chunks == file.total_chunks:
                 return 1, file.data
             else:
-                return file.received_chunks/file.total_chunks, None
+                return float(file.received_chunks)/float(file.total_chunks), None
 
         return 0, None
