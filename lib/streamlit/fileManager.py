@@ -91,6 +91,6 @@ class FileManager(object):
             if file.received_chunks == file.total_chunks:
                 return 1, file.data
             else:
-                file.received_chunks/file.total_chunks, None
+                return file.received_chunks/file.total_chunks, None
 
         return 0, None
