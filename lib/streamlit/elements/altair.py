@@ -34,7 +34,6 @@ def generate_chart(chart_type, data):
     if not isinstance(data, pd.DataFrame):
         data = convert_anything_to_df(data)
 
-    n_cols = len(data.columns)
     data = pd.melt(data.reset_index(), id_vars=["index"])
 
     if chart_type == "area":
@@ -45,8 +44,14 @@ def generate_chart(chart_type, data):
     chart = (
         getattr(alt.Chart(data), "mark_" + chart_type)()
         .encode(
-            alt.X("index", title=""),
-            alt.Y("value", title=""),
+            # Set the X and Y axes' scale to `type="utc"`. This is meaningful
+            # only for date/time values, but it means that time data will be
+            # shown in UTC, rather the user's local time zone. (By default,
+            # vega-lite displays time data in the browser's local time zone,
+            # regardless of which time zone the data specifies:
+            # https://vega.github.io/vega-lite/docs/timeunit.html#output).
+            alt.X("index", title="", scale=alt.Scale(type="utc")),
+            alt.Y("value", title="", scale=alt.Scale(type="utc")),
             alt.Color("variable", title="", type="nominal"),
             alt.Tooltip(["index", "value", "variable"]),
             opacity=opacity,
