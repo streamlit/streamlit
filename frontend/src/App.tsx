@@ -400,7 +400,7 @@ class App extends PureComponent<Props, State> {
       // how many projects are being created with Streamlit while still keeping
       // possibly-sensitive info like the scriptPath outside of our metrics
       // services.
-      reportHash,
+      reportHash: newReportHash,
     })
 
     if (reportHash !== newReportHash) {
