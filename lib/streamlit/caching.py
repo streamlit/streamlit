@@ -452,8 +452,9 @@ def cache(
         Suppress warnings about calling Streamlit functions from within
         the cached function.
 
-    hash_funcs : dict
-        Escape hatch for objects that we can't hash
+    hash_funcs : dict or None
+        Mapping of types to functions for objects that we can't hash. The function should
+        accept an object as a parameter.
 
     Example
     -------

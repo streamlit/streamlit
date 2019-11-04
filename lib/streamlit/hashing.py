@@ -367,8 +367,8 @@ class CodeHasher:
                 self._update(h, obj.keywords, hash_funcs=hash_funcs)
                 return h.digest()
             elif type(obj) in hash_funcs:
-                # TODO: add some comment
-                return self.to_bytes(hash_funcs[type(obj)](obj))
+                # Escape hatch for unsupported objects
+                return self.to_bytes(hash_funcs[type(obj)](obj), hash_funcs=hash_funcs)
             else:
                 try:
                     # As a last resort, we pickle the object to hash it.
