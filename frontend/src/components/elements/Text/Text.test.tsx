@@ -16,6 +16,7 @@
  */
 
 import React from "react"
+/* <<<<<<< HEAD
 import { Map as ImmutableMap } from "immutable"
 import Text from "./Text"
 import renderer from "react-test-renderer"
@@ -35,4 +36,24 @@ describe("Text Element Test (preformatted text)", () => {
     const tree = component.toJSON()
     expect(tree).toMatchSnapshot()
   })
+=======
+*/
+import { shallow } from "enzyme"
+import { Map as ImmutableMap } from "immutable"
+import { Text as TextProto } from "autogen/proto"
+import Text, { Props } from "./Text"
+
+const getProps = (props: object = {}): Props => ({
+  element: ImmutableMap({
+    body: "",
+    format: TextProto.Format.PLAIN,
+    ...props,
+  }),
+  width: 0,
+})
+
+it("renders without crashing", () => {
+  const props = getProps()
+  const wrapper = shallow(<Text {...props} />)
+  expect(wrapper).toBeDefined()
 })

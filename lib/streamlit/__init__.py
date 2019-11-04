@@ -163,6 +163,7 @@ help = _with_dg(_DeltaGenerator.help)  # noqa: E221
 image = _with_dg(_DeltaGenerator.image)  # noqa: E221
 info = _with_dg(_DeltaGenerator.info)  # noqa: E221
 json = _with_dg(_DeltaGenerator.json)  # noqa: E221
+latex = _with_dg(_DeltaGenerator.latex)  # noqa: E221
 line_chart = _with_dg(_DeltaGenerator.line_chart)  # noqa: E221
 map = _with_dg(_DeltaGenerator.map)  # noqa: E221
 markdown = _with_dg(_DeltaGenerator.markdown)  # noqa: E221
@@ -247,6 +248,7 @@ def write(*args, **kwargs):
             - write(graphviz)   : Displays a Graphviz graph.
             - write(plotly_fig) : Displays a Plotly figure.
             - write(bokeh_fig)  : Displays a Bokeh figure.
+            - write(sympy_expr) : Prints SymPy expression using LaTeX
 
     unsafe_allow_html : bool
         This is a keyword-only argument that defaults to False.
@@ -372,6 +374,9 @@ def write(*args, **kwargs):
             elif _util.is_graphviz_chart(arg):
                 flush_buffer()
                 graphviz_chart(arg)
+            elif _util.is_sympy_expession(arg):
+                flush_buffer()
+                latex(arg)
             elif _util.is_keras_model(arg):
                 from tensorflow.python.keras.utils import vis_utils
 
