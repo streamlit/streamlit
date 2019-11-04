@@ -22,11 +22,16 @@ import { Map as ImmutableMap } from "immutable"
 import { linkWithTargetBlank, linkReferenceHasParens } from "lib/markdown_util"
 import CodeBlock from "../CodeBlock"
 
+import "assets/css/write.scss"
+
 // html-parser has no Typescript definitions.
 // @ts-ignore
 import htmlParser from "react-markdown/plugins/html-parser"
-
-import "assets/css/write.scss"
+import { InlineMath, BlockMath } from "react-katex"
+// RemarkMath has no Typescript definitions.
+// @ts-ignore
+import RemarkMathPlugin from "remark-math"
+import "katex/dist/katex.min.css"
 
 interface Props {
   width: number
@@ -44,9 +49,13 @@ class Markdown extends React.PureComponent<Props> {
       code: CodeBlock,
       link: linkWithTargetBlank,
       linkReference: linkReferenceHasParens,
+      inlineMath: (props: { value: string }) => (
+        <InlineMath>{props.value}</InlineMath>
+      ),
+      math: (props: { value: string }) => <BlockMath>{props.value}</BlockMath>,
     }
     const styleProp = { width }
-
+    const plugins = [RemarkMathPlugin]
     const allowHTML = element.get("allowHtml")
     const astPlugins = allowHTML ? [htmlParser()] : []
 

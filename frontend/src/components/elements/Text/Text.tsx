@@ -22,14 +22,6 @@ import { Map as ImmutableMap } from "immutable"
 
 import "assets/css/write.scss"
 
-/* Move to MARKDOWN
-// @ts-ignore
-import { InlineMath, BlockMath } from "react-katex"
-// @ts-ignore
-import RemarkMathPlugin from "remark-math"
-import "katex/dist/katex.min.css"
-*/
-
 export interface Props {
   width: number
   element: ImmutableMap<string, any>
@@ -49,34 +41,6 @@ class Text extends React.PureComponent<Props> {
         {body}
       </div>
     )
-
-    /* move to Markdown
-    const renderers = {
-      code: CodeBlock,
-      link: linkWithTargetBlank,
-      linkReference: linkReferenceHasParens,
-      inlineMath: (props: { value: string }) => (
-        <InlineMath>{props.value}</InlineMath>
-      ),
-      math: (props: { value: string }) => <BlockMath>{props.value}</BlockMath>,
-    }
-    const plugins = [RemarkMathPlugin]
-      
-        const allowHTML = element.get("allowHtml")
-        const astPlugins = allowHTML ? [htmlParser()] : []
-
-        return (
-          <div className="markdown-text-container stText" style={{ width }}>
-            <ReactMarkdown
-              source={body}
-              escapeHtml={!allowHTML}
-              astPlugins={astPlugins}
-              plugins={plugins}
-              renderers={renderers}
-            />
-          </div>
-        )
-    */
   }
 }
 
