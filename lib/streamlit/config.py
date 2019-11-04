@@ -448,7 +448,7 @@ def _server_max_upload_size():
 
     Default: '50'
     """
-    return 500
+    return 50
 
 
 # Config Section: Browser #
