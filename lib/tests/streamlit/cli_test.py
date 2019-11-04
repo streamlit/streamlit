@@ -205,17 +205,11 @@ class CliTest(unittest.TestCase):
         config.set_option("server.headless", True)
 
         with patch("validators.url", return_value=False), patch(
-            "streamlit.bootstrap.run"), patch(
-            "os.path.exists", side_effect=[True, False, False]
-        ):
-            result = self.runner.invoke(
-                cli,
-                [
-                    "run",
-                    "some script.py",
-                ],
-            )
+            "streamlit.bootstrap.run"
+        ), patch("os.path.exists", side_effect=[True, False, False]):
+            result = self.runner.invoke(cli, ["run", "some script.py"])
         from streamlit.credentials import Credentials
+
         credentials = Credentials.get_current()
         self.assertIsNone(credentials.activation)
         self.assertEqual(0, result.exit_code)
@@ -229,16 +223,10 @@ class CliTest(unittest.TestCase):
         config.set_option("server.headless", True)
 
         with patch("validators.url", return_value=False), patch(
-            "streamlit.bootstrap.run"), patch(
-            "os.path.exists", side_effect=[True, True, False]), mock.patch(
+            "streamlit.bootstrap.run"
+        ), patch("os.path.exists", side_effect=[True, True, False]), mock.patch(
             "streamlit.credentials.Credentials.check_activated"
         ) as mock_check:
-            result = self.runner.invoke(
-                cli,
-                [
-                    "run",
-                    "some script.py",
-                ],
-            )
+            result = self.runner.invoke(cli, ["run", "some script.py"])
         self.assertTrue(mock_check.called)
         self.assertEqual(0, result.exit_code)
