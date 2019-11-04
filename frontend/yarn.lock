@@ -1061,9 +1061,9 @@
   integrity sha512-1dVNHT76Uu5N3eJNTYcvxee+jzX4Z9lfciqRRHCU27ihbUcYi+iSc2iml5Ke1LXe1SyJCLA0+14Jh4tXJgOppA==
 
 "@hapi/hoek@8.x.x", "@hapi/hoek@^8.3.0":
-  version "8.4.0"
-  resolved "https://registry.yarnpkg.com/@hapi/hoek/-/hoek-8.4.0.tgz#3f2153d9eea8942dfe217e1642a420f1fe4087f3"
-  integrity sha512-JLK+vNrtZSQy1PiAAvtaPGiZhFQo+BLywJkD4EHG8vCzlW9w7Y9yfb2be1GFKnZKczLgzHBpgMOBUZs1qBNB5g==
+  version "8.5.0"
+  resolved "https://registry.yarnpkg.com/@hapi/hoek/-/hoek-8.5.0.tgz#2f9ce301c8898e1c3248b0a8564696b24d1a9a5a"
+  integrity sha512-7XYT10CZfPsH7j9F1Jmg1+d0ezOux2oM2GfArAzLwWe4mE2Dr3hVjsAL6+TFY49RRJlCdJDMw3nJsLFroTc8Kw==
 
 "@hapi/joi@^15.0.0", "@hapi/joi@^15.0.3":
   version "15.1.1"
@@ -2047,14 +2047,14 @@
     moment "*"
 
 "@types/node@*", "@types/node@^12.7.4":
-  version "12.12.0"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-12.12.0.tgz#ff3201972d6dc851a9275308a17b9b5094e68057"
-  integrity sha512-6N8Sa5AaENRtJnpKXZgvc119PKxT1Lk9VPy4kfT8JF23tIe1qDfaGkBR2DRKJFIA7NptMz+fps//C6aLi1Uoug==
+  version "12.12.3"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-12.12.3.tgz#ebfe83507ac506bc3486314a8aa395be66af8d23"
+  integrity sha512-opgSsy+cEF9N8MgaVPnWVtdJ3o4mV2aMHvDq7thkQUFt0EuOHJon4rQpJfhjmNHB+ikl0Cd6WhWIErOyQ+f7tw==
 
 "@types/node@^10.1.0":
-  version "10.17.0"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-10.17.0.tgz#537c61a1df699a8331c79dab2ccc2c8799873c66"
-  integrity sha512-wuJwN2KV4tIRz1bu9vq5kSPasJ8IsEjZaP1ZR7KlmdUZvGF/rXy8DmXOVwUD0kAtvtJ7aqMKPqUXC0NUTDbrDg==
+  version "10.17.2"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-10.17.2.tgz#41b5afbcde1a5a805302a4da3cf399499f1bbf64"
+  integrity sha512-sAh60KDol+MpwOr1RTK0+HgBEYejKsxdpmrOS1Wts5bI03dLzq8F7T0sRXDKeaEK8iWDlGfdzxrzg6vx/c5pNA==
 
 "@types/normalize-package-data@^2.4.0":
   version "2.4.0"
@@ -2067,9 +2067,9 @@
   integrity sha512-DwCsRqeOWopdEsm5KLTxKVKDSDoj+pzZD1vlwu1GQJ6IF3RhjuleYlRwyRH6MJLGaf3v8wFTnC6wo3yYfz0bnA==
 
 "@types/plotly.js@*", "@types/plotly.js@^1.44.8":
-  version "1.44.14"
-  resolved "https://registry.yarnpkg.com/@types/plotly.js/-/plotly.js-1.44.14.tgz#33d0d4740da0605207f15e49b3c7717b58d19dc1"
-  integrity sha512-2D73+F5z9cl1mssZAbLBMm50m2pekUdksAuhINBVInPjFD57yUZLPUCRz6/VA1lwvA0GMrSsWJTPC/hTU9genA==
+  version "1.44.15"
+  resolved "https://registry.yarnpkg.com/@types/plotly.js/-/plotly.js-1.44.15.tgz#14d5f72fa1f08c57b1c84666ff5732cbf9b1b534"
+  integrity sha512-hsoML6JX6WnArYbol2xfqRxMPf7x9h7ZhgQ4Ni/jQqDXh+r3XhS0jjnWTsrU+DS2AK872xJ8YjU42KaLhYrmRg==
   dependencies:
     "@types/d3" "^3"
 
@@ -2157,9 +2157,9 @@
   integrity sha512-HR/PrCcxYb2YHviTqH7CMdL1TUhUZLTUKzfrkMhxm1HTa5mg/QtP8XMiuSPz6dZ6wecazAOu8aYZ5DqkNlgHHQ==
 
 "@types/recharts@^1.1.20":
-  version "1.8.0"
-  resolved "https://registry.yarnpkg.com/@types/recharts/-/recharts-1.8.0.tgz#27bedfc500910b49786722628bb3060c86270ba4"
-  integrity sha512-2ipTUXqDNmKdxOrLfD/QWv2YBe22z2mP25sPDBo5DSBDSnzWK+LJMWpWKYr4aXEKDf3sDr5luByWsUDwQaHeqw==
+  version "1.8.1"
+  resolved "https://registry.yarnpkg.com/@types/recharts/-/recharts-1.8.1.tgz#57c694ddb4b94cf23097188c3e084d4de3df7880"
+  integrity sha512-Fw4JsSs1ePnkzq+Opvtg1Y6W7NTYjQzuuiRsZjPa9jLsh8NN33WmiiacnpPzBggl/ZGWXNBjIw75R45RPONBng==
   dependencies:
     "@types/d3-shape" "*"
     "@types/react" "*"
@@ -2972,9 +2972,9 @@ autoprefixer@^9.6.1:
     postcss-value-parser "^4.0.2"
 
 aws-sdk@^2.524.0:
-  version "2.559.0"
-  resolved "https://registry.yarnpkg.com/aws-sdk/-/aws-sdk-2.559.0.tgz#2f39dad7428839b4fc7a87f943eef1c94a110aec"
-  integrity sha512-hRbomjpfj+rSaWYO/FHRqMMRw0TubZlqQXDbghgEvdJzQGZJfduJqckUgtAvDX0TGnLj2mKkGp3bqtwCfSH5sg==
+  version "2.561.0"
+  resolved "https://registry.yarnpkg.com/aws-sdk/-/aws-sdk-2.561.0.tgz#d96fb509b902768eb5105b67742ea5485c6ffa3e"
+  integrity sha512-UXsjWDZFIIcfXULAEBeE42Eae1xHq4mkDfhPIw1VBlfsIzOVB2Bp+Y3+EvxH31OzO5SN0x03VracLlZFo4HElQ==
   dependencies:
     buffer "4.9.1"
     events "1.1.1"
@@ -4427,9 +4427,9 @@ copy-to-clipboard@^3:
     toggle-selection "^1.0.6"
 
 core-js-compat@^3.1.1:
-  version "3.3.5"
-  resolved "https://registry.yarnpkg.com/core-js-compat/-/core-js-compat-3.3.5.tgz#7abf70778b73dc74aa99d4075aefcd99b76f2c3a"
-  integrity sha512-44ZORuapx0MUht0MUk0p9lcQPh7n/LDXehimTmjCs0CYblpKZcqVd5w0OQDUDq5OQjEbazWObHDQJWvvHYPNTg==
+  version "3.3.6"
+  resolved "https://registry.yarnpkg.com/core-js-compat/-/core-js-compat-3.3.6.tgz#70c30dbeb582626efe9ecd6f49daa9ff4aeb136c"
+  integrity sha512-YnwZG/+0/f7Pf6Lr3jxtVAFjtGBW9lsLYcqrxhYJai1GfvrP8DEyEpnNzj/FRQfIkOOfk1j5tTBvPBLWVVJm4A==
   dependencies:
     browserslist "^4.7.2"
     semver "^6.3.0"
@@ -4911,9 +4911,9 @@ cypress-image-snapshot@^3.1.1:
     term-img "^4.0.0"
 
 cypress@^3.4.1:
-  version "3.5.0"
-  resolved "https://registry.yarnpkg.com/cypress/-/cypress-3.5.0.tgz#e188bc8f48782953f6865d8830a4dc342334b81c"
-  integrity sha512-I1iSReD2C8CTP6s4BvQky4gEqHBnKLmhBIqFyCUZdj6BQ6ZDxGnmIbQPM5g79E2iP60KTIbTK99ZPSDVtsNUUg==
+  version "3.6.0"
+  resolved "https://registry.yarnpkg.com/cypress/-/cypress-3.6.0.tgz#b7c88c169970aeb74a00182a1e8dc43a355d9eea"
+  integrity sha512-ODhbOrH1XZx0DUoYmJSvOSbEQjycNOpFYe7jOnHkT1+sdsn2+uqwAjZ1x982q3H4R/5iZjpSd50gd/iw2bofzg==
   dependencies:
     "@cypress/listr-verbose-renderer" "0.4.1"
     "@cypress/xvfb" "1.2.4"
@@ -6933,9 +6933,9 @@ flatten-vertex-data@^1.0.2:
     dtype "^2.0.0"
 
 flatten@^1.0.2:
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/flatten/-/flatten-1.0.2.tgz#dae46a9d78fbe25292258cc1e780a41d95c03782"
-  integrity sha1-2uRqnXj74lKSJYzB54CkHZXAN4I=
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/flatten/-/flatten-1.0.3.tgz#c1283ac9f27b368abc1e36d1ff7b04501a30356b"
+  integrity sha512-dVsPA/UwQ8+2uoFe5GHtiBMu48dWLTdsuEd7CKGlZlD78r1TTWBvDuFaFGKCo/ZfEr95Uk56vZoX86OsHkUeIg==
 
 flip-pixels@^1.0.2:
   version "1.0.2"
@@ -12508,9 +12508,9 @@ postcss-image-set-function@^3.0.1:
     postcss-values-parser "^2.0.0"
 
 postcss-initial@^3.0.0:
-  version "3.0.1"
-  resolved "https://registry.yarnpkg.com/postcss-initial/-/postcss-initial-3.0.1.tgz#99d319669a13d6c06ef8e70d852f68cb1b399b61"
-  integrity sha512-I2Sz83ZSHybMNh02xQDK609lZ1/QOyYeuizCjzEhlMgeV/HcDJapQiH4yTqLjZss0X6/6VvKFXUeObaHpJoINw==
+  version "3.0.2"
+  resolved "https://registry.yarnpkg.com/postcss-initial/-/postcss-initial-3.0.2.tgz#f018563694b3c16ae8eaabe3c585ac6319637b2d"
+  integrity sha512-ugA2wKonC0xeNHgirR4D3VWHs2JcU08WAi1KFLVcnb7IN89phID6Qtg2RIctWbnvp1TM2BOmDtX8GGLCKdR8YA==
   dependencies:
     lodash.template "^4.5.0"
     postcss "^7.0.2"
@@ -13569,16 +13569,16 @@ react-lifecycles-compat@^3.0.4:
   integrity sha512-fBASbA6LnOU9dOU2eW7aQ8xmYBSXUIWr+UmF9b1efZBazGNO+rcXT/icdKnYm2pTwcRylVUYwW7H1PHfLekVzA==
 
 react-map-gl@^5.0.7:
-  version "5.0.12"
-  resolved "https://registry.yarnpkg.com/react-map-gl/-/react-map-gl-5.0.12.tgz#6f94d4570fab339a936262c51c43c2493004b014"
-  integrity sha512-b2+OU/U8T8kAGoSP3GXBkSWQKkBHq8IyZYMUCBEFZ9gH7dyRtCwjy9Vanzek7PmZs668q2+896fYQ3Z9eO6X0A==
+  version "5.1.0"
+  resolved "https://registry.yarnpkg.com/react-map-gl/-/react-map-gl-5.1.0.tgz#1fc343779620ba3b9dea38e198dcee7bdfb163f3"
+  integrity sha512-RWxXLWKoo6j9gF8P5d3NyRALCcfshQABDXhGCVPcbJBC+Ut1P2ItzU72tu1zcZPJQCX3b1V6EcD1NcWVg5oKqw==
   dependencies:
     "@babel/runtime" "^7.0.0"
     mapbox-gl "^1.0.0"
     mjolnir.js "^2.2.0"
     prop-types "^15.7.2"
     react-virtualized-auto-sizer "^1.0.2"
-    viewport-mercator-project "^6.1.0"
+    viewport-mercator-project "^6.2.1"
 
 react-markdown@^4.2.2:
   version "4.2.2"
@@ -15754,9 +15754,9 @@ svg-path-sdf@^1.1.3:
     svg-path-bounds "^1.0.1"
 
 svgo@^1.0.0, svgo@^1.2.2:
-  version "1.3.1"
-  resolved "https://registry.yarnpkg.com/svgo/-/svgo-1.3.1.tgz#115c1f9d7e3294dfc66288c8499e65c2a1479729"
-  integrity sha512-2iv3AHKL+x2/nAvkg+vTv01aK94OFU6wTRbnv/K43mf1OdKEEA8xaQl7Wjs5Vrh9AlyXvyPd8fg6s6YzYdQTnQ==
+  version "1.3.2"
+  resolved "https://registry.yarnpkg.com/svgo/-/svgo-1.3.2.tgz#b6dc511c063346c9e415b81e43401145b96d4167"
+  integrity sha512-yhy/sQYxR5BkC98CY7o31VGsg014AKLEPxdfhora76l36hD9Rdy5NZA/Ocn6yayNPgSamYdtX2rFJdcv07AYVw==
   dependencies:
     chalk "^2.4.1"
     coa "^2.0.2"
@@ -15851,9 +15851,9 @@ tcomb@^3.0.0, tcomb@^3.2.17:
   integrity sha512-di2Hd1DB2Zfw6StGv861JoAF5h/uQVu/QJp2g8KVbtfKnoHdBQl5M32YWq6mnSYBQ1vFFrns5B1haWJL7rKaOQ==
 
 temp@^0.9.0:
-  version "0.9.0"
-  resolved "https://registry.yarnpkg.com/temp/-/temp-0.9.0.tgz#61391795a11bd9738d4c4d7f55f012cb8f55edaa"
-  integrity sha512-YfUhPQCJoNQE5N+FJQcdPz63O3x3sdT4Xju69Gj4iZe0lBKOtnAMi0SLj9xKhGkcGhsxThvTJ/usxtFPo438zQ==
+  version "0.9.1"
+  resolved "https://registry.yarnpkg.com/temp/-/temp-0.9.1.tgz#2d666114fafa26966cd4065996d7ceedd4dd4697"
+  integrity sha512-WMuOgiua1xb5R56lE0eH6ivpVmg/lq2OHm4+LtT/xtEtPQ+sz6N3bBM6WZ5FvO1lO4IKIOb43qnhoc4qxP5OeA==
   dependencies:
     rimraf "~2.6.2"
 
@@ -17104,7 +17104,7 @@ vfile@^2.0.0:
     unist-util-stringify-position "^1.0.0"
     vfile-message "^1.0.0"
 
-viewport-mercator-project@^6.1.0:
+viewport-mercator-project@^6.1.0, viewport-mercator-project@^6.2.1:
   version "6.2.2"
   resolved "https://registry.yarnpkg.com/viewport-mercator-project/-/viewport-mercator-project-6.2.2.tgz#f524819ad53fcc009b46136a59f73461bfcf1604"
   integrity sha512-vs9pjDZxDwoiEqr+GgdpRAUogEQRoZ9D9COVLSr4+h/WdcUWhYN36SQr3n5jaTKrl/wlfdRj+TYU8wTk05grbg==
