@@ -27,7 +27,6 @@ import json
 import random
 import re
 import textwrap
-import os
 import pandas as pd
 from datetime import datetime
 from datetime import date
@@ -267,7 +266,8 @@ class DeltaGenerator(object):
     path: tuple of ints
       The full path of this DeltaGenerator, consisting of the IDs of
       all ancestors. The 0th item is the topmost ancestor.
-
+    file_manager: File_manager
+      The File_manager instance of ReportSession
     """
 
     # The pydoc below is for user consumption, so it doesn't talk about
@@ -282,6 +282,7 @@ class DeltaGenerator(object):
         is_root=True,
         container=BlockPath_pb2.BlockPath.MAIN,
         path=(),
+        file_manager=None
     ):
         """Inserts or updates elements in Streamlit apps.
 
@@ -304,6 +305,7 @@ class DeltaGenerator(object):
         self._is_root = is_root
         self._container = container
         self._path = path
+        self._file_manager = file_manager
 
     def __getattr__(self, name):
         import streamlit as st
@@ -1731,6 +1733,7 @@ class DeltaGenerator(object):
         >>> st.write('Values:', values)
 
         """
+
         # Set value default.
         if value is None:
             value = min_value if min_value is not None else 0
@@ -1844,7 +1847,7 @@ class DeltaGenerator(object):
         return current_value if single_value else tuple(current_value)
 
     @_with_element
-    def file_uploader(self, element, label, type=['*']):
+    def file_uploader(self, element, label, type=['*'], key=None):
 
         """Display a file uploader widget.
 
@@ -1858,36 +1861,23 @@ class DeltaGenerator(object):
 
         Returns
         -------
-        str 
-            The id of stored file or empty if no one file is loaded.
+        byte[] or None
+            The byte array of uploaded file or None if no one file is loaded.
 
         Examples
         --------
         >>> file = st.file_uploader("Upload a image", type=([".png"]))
-        >>> if file:
-        >>>     file_bytes = st.file_reader(file)
-        >>>     st.image(file_bytes)
+        >>> if file != None:
+        >>>     st.image(file)
 
         """
-        
         element.file_uploader.label = label
         element.file_uploader.type[:] = type
-        element.file_uploader.max_upload_size = config.get_option("server.maxUploadSize")        
-
-        file_id = _get_widget_ui_value("file_uploader", element)
-        file_id = file_id if file_id is not None else ""
-        element.file_uploader.file_id = file_id
-
-        if len(file_id) > 0:
-            if not os.path.isfile(file_id):
-                return []
-
-            with open(file_id, "rb") as f:
-                data = f.read()
-                f.close()
-                return data
-
-        return []
+        element.file_uploader.max_upload_size = config.get_option("server.maxUploadSize")
+        _set_widget_id("file_uploader", element, user_key=key)
+        progress, data = self._file_manager.get_data(element.file_uploader.id)
+        element.file_uploader.progress = progress
+        return data if data != None else NoValue
 
     @_with_element
     def text_input(self, element, label, value="", key=None):

@@ -88,10 +88,10 @@ class ReportSession(object):
 
         self._state = ReportSessionState.REPORT_NOT_RUNNING
 
-        self._main_dg = DeltaGenerator(enqueue=self.enqueue, container=BlockPath.MAIN)
-        self._sidebar_dg = DeltaGenerator(
-            enqueue=self.enqueue, container=BlockPath.SIDEBAR
-        )
+        self._file_manager = FileManager()
+
+        self._main_dg = DeltaGenerator(enqueue=self.enqueue, container=BlockPath.MAIN, file_manager=self._file_manager)
+        self._sidebar_dg = DeltaGenerator(enqueue=self.enqueue, container=BlockPath.SIDEBAR, file_manager=self._file_manager)
 
         self._widget_states = WidgetStates()
         self._local_sources_watcher = LocalSourcesWatcher(
@@ -106,9 +106,7 @@ class ReportSession(object):
         # with the active ScriptRunner.
         self._script_request_queue = ScriptRequestQueue()
 
-        self._scriptrunner = None
-
-        self._file_manager = FileManager()
+        self._scriptrunner = None        
 
         LOGGER.debug("ReportSession initialized (id=%s)", self.id)
 
@@ -444,33 +442,20 @@ class ReportSession(object):
             chunks=upload_file.chunks,
         )
 
-        self._update_file_uploader_state(upload_file.widget_id, "")
+        self.handle_rerun_script_request(widget_state=self._widget_states)
 
     def handle_upload_file_chunk(self, upload_file_chunk=None):
-        progress, fullName = self._file_manager.porcess_chunk(
+        progress = self._file_manager.porcess_chunk(
             widget_id=upload_file_chunk.widget_id, index=upload_file_chunk.index, data=upload_file_chunk.data
         )
 
         if progress==1:
-            self._update_file_uploader_state(upload_file_chunk.widget_id, fullName)
+            self.handle_rerun_script_request(widget_state=self._widget_states)
 
     def handle_upload_file_delete(self, upload_file_delete=None):
         self._file_manager.delete_file(widget_id=upload_file_delete.widget_id)
-        self._update_file_uploader_state(upload_file_delete.widget_id, "")
-
-    def _update_file_uploader_state(self, widget_id, value): 
-        widget_state = WidgetStates()
-        old_widgets = getattr(self._widget_states, "widgets")
-        for widget in old_widgets:
-            if widget.id != widget_id:
-                widget_state.widgets.append(widget)
-            
-
-        widget = WidgetState()
-        widget.id = widget_id
-        widget.string_value = value
-        widget_state.widgets.append(widget)
-        self.handle_rerun_script_request(widget_state=widget_state)
+        self.handle_rerun_script_request(widget_state=self._widget_states)
+        
 
     def handle_stop_script_request(self):
         """Tells the ScriptRunner to stop running its report."""

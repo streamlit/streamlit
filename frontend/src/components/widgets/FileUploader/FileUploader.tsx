@@ -46,7 +46,7 @@ class FileUploader extends React.PureComponent<Props, State> {
   private handleFileRead = (
     ev: ProgressEvent<FileReader>,
     file: File
-  ): any => {
+  ): void => {
     if (ev.target !== null) {
       if (ev.target.result instanceof ArrayBuffer) {
         this.props.widgetStateManager.sendUploadFileMessage(
@@ -55,6 +55,8 @@ class FileUploader extends React.PureComponent<Props, State> {
           file.lastModified,
           new Uint8Array(ev.target.result)
         )
+      } else {
+        console.warn("This file is not ArrayBuffer type.")
       }
     }
     this.setState({ status: "UPLOADING" })
@@ -78,8 +80,8 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     this.setState({ status: "READING" })
     acceptedFiles.forEach((file: File) => {
-      const fileSilzeMB = file.size / 1024 / 1024
-      if (fileSilzeMB < maxSize) {
+      const fileSizeMB = file.size / 1024 / 1024
+      if (fileSizeMB < maxSize) {
         const fileReader = new FileReader()
         fileReader.onloadend = (ev: ProgressEvent<FileReader>) =>
           this.handleFileRead(ev, file)
@@ -93,14 +95,14 @@ class FileUploader extends React.PureComponent<Props, State> {
     })
   }
 
-  public componentDidUpdate(): void {
-    const fileId = this.props.element.get("fileId")
-    const widgetStateManager = this.props.widgetStateManager
-
-    if (fileId !== "" && this.state.status === "UPLOADING") {
-      widgetStateManager.setStringValue(this.props.element.get("id"), fileId, {
-        fromUi: false,
-      })
+  public componentDidUpdate(oldProps: Props): void {
+    const progress = this.props.element.get("progress")
+    const oldProgress = oldProps.element.get("progress")
+    if (
+      oldProgress !== 1 &&
+      progress === 1 &&
+      this.state.status === "UPLOADING"
+    ) {
       this.setState({ status: "READY" })
     }
   }
@@ -142,9 +144,9 @@ class FileUploader extends React.PureComponent<Props, State> {
             errorMessage={errorMessage}
             accept={accept}
             progressMessage={status !== "READY" ? status : undefined}
-            onRetry={() =>
+            onRetry={() => {
               this.setState({ status: "READY", errorMessage: undefined })
-            }
+            }}
             onCancel={() => {
               this.setState({ status: "READY", errorMessage: undefined })
               this.props.widgetStateManager.sendDeleteFileMessage(

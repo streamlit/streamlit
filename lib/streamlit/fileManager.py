@@ -22,24 +22,18 @@ LOGGER = get_logger(__name__)
 
 
 class File(object):
-    def __init__(self, widget_id, name, size, last_modified, chunks):
+    """Thread-safe queue that smartly accumulates the report's messages."""
 
-        folder = config.get_option("server.temporaryFileUploadFolder")
-        if not os.path.exists(folder):
-            try:
-                os.makedirs(folder)
-            except OSError as e:
-                if e.errno != errno.EEXIST:
-                    raise
+    def __init__(self, widget_id, name, size, last_modified, chunks):
 
         self.widget_id = widget_id
         self.name = name
-        self.full_name = folder + "/" + uuid1().hex
         self.size = size
         self.last_modified = last_modified
         self.total_chunks = chunks
         self.received_chunks = 0
         self.buffers = {}
+        self.data = None
 
 
 class FileManager(object):
@@ -51,7 +45,6 @@ class FileManager(object):
             self.delete_file(widget_id)
 
     def delete_file(self, widget_id):
-        os.remove(self._file_list[widget_id].full_name)
         del self._file_list[widget_id]
 
     def locate_new_file(self, widget_id, name, size, last_modified, chunks):
@@ -69,9 +62,6 @@ class FileManager(object):
         )
         self._file_list[widget_id] = file
 
-    def check_file(self, widget_id):
-        return self._file_list[widget_id]
-
     def porcess_chunk(self, widget_id, index, data):
         file = self._file_list.get(widget_id)
         if file != None:
@@ -79,19 +69,28 @@ class FileManager(object):
             file.received_chunks = file.received_chunks + 1
 
             if file.received_chunks == file.total_chunks:
-                f = open(file.full_name, "wb")
+                file.data = bytearray()
                 index = 0
                 while file.buffers.get(index) != None:
-                    f.write(file.buffers[index])
+                    file.data.extend(file.buffers[index])
                     del file.buffers[index]
                     index = index + 1
 
-                f.close()
                 file.buffers = None
-                return 1, file.full_name
+                return 1
 
-        progress = 0 
-        if file.received_chunks > 0:
-            progress = file.received_chunks/file.total_chunks
+            if file.received_chunks > 0:
+                return file.received_chunks/file.total_chunks
 
-        return progress, file.full_name
+        return 0
+
+    def get_data(self, widget_id):
+
+        file = self._file_list.get(widget_id)
+        if file != None:
+            if file.received_chunks == file.total_chunks:
+                return 1, file.data
+            else:
+                file.received_chunks/file.total_chunks, None
+
+        return 0, None

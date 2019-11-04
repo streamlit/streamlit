@@ -442,22 +442,13 @@ def _server_enable_cors():
     return True
 
 
-@_create_option("server.temporaryFileUploadFolder", type_=str)
-def _server_temporary_file_upload_folder():
-    """Default folder to store temporal files.
-
-    Default: './temp'
-    """
-    return "./temp"
-
-
 @_create_option("server.maxUploadSize", type_=int)
 def _server_max_upload_size():
-    """Default max size in MBs to upload files.
+    """Max size, in megabytes, for files uploaded with the file_uploader.
 
     Default: '50'
     """
-    return 50
+    return 500
 
 
 # Config Section: Browser #

@@ -19,7 +19,6 @@ import unittest
 
 from streamlit.fileManager import FileManager
 from datetime import date
-import os
 
 class FileManagerTest(unittest.TestCase):
     def test_msg_hash(self):
@@ -34,24 +33,31 @@ class FileManagerTest(unittest.TestCase):
         file_manager.locate_new_file(widget_idA, file_name, len(file_bytes), date.today(), 1)
         file_manager.locate_new_file(widget_idB, file_name, len(file_bytes), date.today(), 2)
 
-        progress, name_fileA = file_manager.porcess_chunk(widget_idA, 0, file_bytes)
+        progress = file_manager.porcess_chunk(widget_idA, 0, file_bytes)
         self.assertEqual(progress, 1)
-        self.assertTrue(os.path.isfile(name_fileA))
 
-        progress, name_fileB = file_manager.porcess_chunk(widget_idB, 0, file_bytes[0:50])
+        progress = file_manager.porcess_chunk(widget_idB, 0, file_bytes[0:50])
         self.assertEqual(progress, 0.5)
 
-        progress, name_fileB = file_manager.porcess_chunk(widget_idB, 1, file_bytes[50:100])
+        progress = file_manager.porcess_chunk(widget_idB, 1, file_bytes[50:100])
         self.assertEqual(progress, 1)
-        self.assertTrue(os.path.isfile(name_fileB))
 
-        with open(name_fileB, "rb") as f:
-            data = f.read()
-            f.close()
-            self.assertEqual(file_bytes, data)
+        progress_a, data_a = file_manager.get_data(widget_idA)
+        progress_b, data_b = file_manager.get_data(widget_idB)
+        self.assertEqual(progress_a, 1)
+        self.assertEqual(progress_b, 1)
+        self.assertEqual(len(data_a), len(file_bytes))
+        self.assertEqual(data_a, file_bytes)
+        self.assertEqual(data_a, data_b)
         
         file_manager.delete_file(widget_idA)
-        self.assertFalse(os.path.isfile(name_fileA))
+        
+        progress_a, data_a = file_manager.get_data(widget_idA)
+        self.assertEqual(progress_a, 0)
+        self.assertEqual(data_a, None)
 
         file_manager.delete_all_files()
-        self.assertFalse(os.path.isfile(name_fileB))
+        progress_b, data_b = file_manager.get_data(widget_idB)
+        self.assertEqual(progress_b, 0)
+        self.assertEqual(data_b, None)
+        
