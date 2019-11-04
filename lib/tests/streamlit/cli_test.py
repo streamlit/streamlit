@@ -39,6 +39,7 @@ class CliTest(unittest.TestCase):
     def setUp(self):
         cli.name = "test"
         self.runner = CliRunner()
+        streamlit._is_running_with_streamlit = False
 
     def test_run_no_arguments(self):
         """streamlit run should fail if run with no arguments"""
@@ -138,7 +139,7 @@ class CliTest(unittest.TestCase):
         """
         self.assertFalse(streamlit._is_running_with_streamlit)
         with patch("streamlit.cli.bootstrap.run"), patch(
-            "streamlit.credentials.Credentials"
+            "streamlit.cli._check_credentials"
         ), patch("streamlit.cli._get_command_line_as_string"):
 
             cli._main_run("/not/a/file", None)
@@ -197,22 +198,47 @@ class CliTest(unittest.TestCase):
             any_order=True,
         )
 
-    def test_credentials_headless(self):
-        """The correct command line should be passed downstream"""
+    def test_credentials_headless_no_config(self):
+        """If headless mode and no config is present, activation should be None."""
         from streamlit import config
 
         config.set_option("server.headless", True)
 
         with patch("validators.url", return_value=False), patch(
-            "os.path.exists", return_value=True
+            "streamlit.bootstrap.run"), patch(
+            "os.path.exists", side_effect=[True, False, False]
         ):
             result = self.runner.invoke(
                 cli,
                 [
                     "run",
                     "some script.py",
-                    "argument with space",
-                    "argument with another space",
                 ],
             )
+        from streamlit.credentials import Credentials
+        credentials = Credentials.get_current()
+        self.assertIsNone(credentials.activation)
+        self.assertEqual(0, result.exit_code)
+
+    def test_credentials_headless_with_config(self):
+        """If headless, but a cofig file is present, activation should be defined.
+        So we call `check_activated`.
+        """
+        from streamlit import config
+
+        config.set_option("server.headless", True)
+
+        with patch("validators.url", return_value=False), patch(
+            "streamlit.bootstrap.run"), patch(
+            "os.path.exists", side_effect=[True, True, False]), mock.patch(
+            "streamlit.credentials.Credentials.check_activated"
+        ) as mock_check:
+            result = self.runner.invoke(
+                cli,
+                [
+                    "run",
+                    "some script.py",
+                ],
+            )
+        self.assertTrue(mock_check.called)
         self.assertEqual(0, result.exit_code)

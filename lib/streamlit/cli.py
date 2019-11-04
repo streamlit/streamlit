@@ -237,8 +237,8 @@ def _check_credentials():
 
     # If there is no credential file and we are in headless mode, we should not
     # check, since credential would be automatically set to an empty string.
-    config_does_not_exist = all(
-        [not os.path.exists(filename) for filename in config.get_config_filenames()]
+    config_does_not_exist = not any(
+        os.path.exists(filename) for filename in config.get_config_filenames()
     )
     if config_does_not_exist and config.get_option("server.headless"):
         return
