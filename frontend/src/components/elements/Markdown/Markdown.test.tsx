@@ -19,6 +19,8 @@ import React from "react"
 import { shallow } from "enzyme"
 import { Map as ImmutableMap } from "immutable"
 import Markdown from "./Markdown"
+
+//TODO: RESOLVE CONFLICT w/ Henrikh's markdown refactor
 import { linkWithTargetBlank, linkReferenceHasParens } from "lib/markdown_util"
 
 const getProps = (elementProps: object = {}): Props => ({
@@ -39,7 +41,6 @@ describe("Markdown Element Test", () => {
     expect(wrap).toBeDefined()
     // expect('body' in wrap.props()).toEqual(true)
     expect(wrap.find({ prop: "body" }).toBeDefined())
-
     expect(wrap.find({ prop: "width" }).toEqual(100))
     //expect(wrap.find('a').props.href).toBe('https://www.https://streamlit.io/')
   })
