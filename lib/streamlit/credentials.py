@@ -245,3 +245,22 @@ def _exit(message):  # pragma: nocover
     """Exit program with error."""
     LOGGER.error(message)
     sys.exit(-1)
+
+
+def check_and_maybe_activate():
+    """Check credentials and potentially activate.
+
+    Note
+    ----
+    If there is no credential file and we are in headless mode, we should not
+    check, since credential would be automatically set to an empty string.
+
+    """
+    from streamlit import config
+
+    config_does_not_exist = not any(
+        os.path.exists(filename) for filename in config.get_config_filenames()
+    )
+    if config_does_not_exist and config.get_option("server.headless"):
+        return
+    Credentials.get_current().check_activated(auto_resolve=True)

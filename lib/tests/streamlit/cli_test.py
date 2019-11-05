@@ -24,6 +24,7 @@ import requests_mock
 import mock
 from click.testing import CliRunner
 from mock import patch, MagicMock
+from parameterized import parameterized
 from testfixtures import tempdir
 
 import streamlit
@@ -138,8 +139,8 @@ class CliTest(unittest.TestCase):
         calling `streamlit run...`, and false otherwise.
         """
         self.assertFalse(streamlit._is_running_with_streamlit)
-        with patch("streamlit.cli.bootstrap.run"), patch(
-            "streamlit.cli._check_credentials"
+        with patch("streamlit.cli.bootstrap.run"), mock.patch(
+            "streamlit.credentials.Credentials.check_activated"
         ), patch("streamlit.cli._get_command_line_as_string"):
 
             cli._main_run("/not/a/file", None)
@@ -214,13 +215,14 @@ class CliTest(unittest.TestCase):
         self.assertIsNone(credentials.activation)
         self.assertEqual(0, result.exit_code)
 
-    def test_credentials_headless_with_config(self):
+    @parameterized.expand([(True,), (False,)])
+    def test_credentials_headless_with_config(self, headless_mode):
         """If headless, but a cofig file is present, activation should be defined.
         So we call `check_activated`.
         """
         from streamlit import config
 
-        config.set_option("server.headless", True)
+        config.set_option("server.headless", headless_mode)
 
         with patch("validators.url", return_value=False), patch(
             "streamlit.bootstrap.run"
