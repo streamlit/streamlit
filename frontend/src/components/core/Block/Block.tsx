@@ -41,6 +41,9 @@ const DataFrame = React.lazy(() => import("components/elements/DataFrame/"))
 const DeckGlChart = React.lazy(() =>
   import("components/elements/DeckGlChart/")
 )
+const DeckJsonChart = React.lazy(() =>
+  import("components/elements/DeckJsonChart/")
+)
 const ImageList = React.lazy(() => import("components/elements/ImageList/"))
 const GraphVizChart = React.lazy(() =>
   import("components/elements/GraphVizChart/")
@@ -229,6 +232,9 @@ class Block extends PureComponent<Props> {
       ),
       deckGlChart: (el: SimpleElement) => (
         <DeckGlChart element={el} width={width} />
+      ),
+      deckJsonChart: (el: SimpleElement) => (
+        <DeckJsonChart element={el} width={width} />
       ),
       docString: (el: SimpleElement) => (
         <DocString element={el} width={width} />

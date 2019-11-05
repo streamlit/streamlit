@@ -58,6 +58,7 @@ tzlocal = "*"
 validators = "*"
 watchdog = "*"
 # Only Python 3.x packages
+pydeck = "*"
 
 [python3]
 pandas = "*"
@@ -68,3 +69,6 @@ numpy = "*"
 futures = "*"
 pandas = "<0.25.0"
 numpy = "<1.17.0"
+
+[pipenv]
+allow_prereleases = true

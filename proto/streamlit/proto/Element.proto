@@ -25,6 +25,7 @@ import "streamlit/proto/Checkbox.proto";
 import "streamlit/proto/DataFrame.proto";
 import "streamlit/proto/DateInput.proto";
 import "streamlit/proto/DeckGlChart.proto";
+import "streamlit/proto/DeckJsonChart.proto";
 import "streamlit/proto/DocString.proto";
 import "streamlit/proto/Empty.proto";
 import "streamlit/proto/Exception.proto";
@@ -77,7 +78,7 @@ message Element {
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
     NumberInput number_input = 29;
-
-    // Next ID: 29
+    DeckJsonChart deck_json_chart = 30;
+    // Next ID: 31
   }
 }

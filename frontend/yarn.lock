@@ -901,6 +901,14 @@
   dependencies:
     d3-dsv "^1.0.8"
 
+"@deck.gl/json@^7.3.4":
+  version "7.3.4"
+  resolved "https://registry.yarnpkg.com/@deck.gl/json/-/json-7.3.4.tgz#b21e902c9fe2a1211f5973aab5f49222956a46b8"
+  integrity sha512-5yZ2Wr4EcVliIHrA9pQIz6QH31FGxY2Wqfdjf97ILdjT0Z0D1fawpzxZPBz4LL2LrAVSg6RWUYdMycvc1iIwpQ==
+  dependencies:
+    d3-dsv "^1.0.8"
+    expression-eval "^2.0.0"
+
 "@deck.gl/layers@7.2.3":
   version "7.2.3"
   resolved "https://registry.yarnpkg.com/@deck.gl/layers/-/layers-7.2.3.tgz#129bf2af15a2dffb58abd71ca684aaa2c61a30d8"
@@ -5769,6 +5777,13 @@ express@^4.16.2:
     utils-merge "1.0.1"
     vary "~1.1.2"
 
+expression-eval@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/expression-eval/-/expression-eval-2.0.0.tgz#156bc71a700b0c7797f47d8a7167ce4fba5c060c"
+  integrity sha512-8cFzfco37CdZQd4DTyZ+ncxQtPUTE0dcxvbGXYc17Ji+3MQSBkT+11GdfC7eO2duvLNuWjN7Ejqb0kLX/u2bBw==
+  dependencies:
+    jsep "^0.3.0"
+
 extend-shallow@^2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/extend-shallow/-/extend-shallow-2.0.1.tgz#51af7d614ad9a9f610ea1bafbb989d6b1c56890f"
@@ -8468,6 +8483,11 @@ jsdom@^14.0.0:
     whatwg-url "^7.0.0"
     ws "^6.1.2"
     xml-name-validator "^3.0.0"
+
+jsep@^0.3.0:
+  version "0.3.4"
+  resolved "https://registry.yarnpkg.com/jsep/-/jsep-0.3.4.tgz#55ebd4400c5c5861cb1ff949a7a4cd97fcaacaa0"
+  integrity sha512-ovGD9wE+wvudIIYxZGrRcZCxNyZ3Cl1N7Bzyp7/j4d/tA0BaUwcVM9bu0oZaSrefMiNwv6TwZ9X15gvZosteCQ==
 
 jsesc@^2.5.1:
   version "2.5.2"

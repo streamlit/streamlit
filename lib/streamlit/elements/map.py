@@ -13,14 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""A Python wrapper around DeckGl."""
 import pandas as pd
-from math import sqrt
+import json
 
-from streamlit.logger import get_logger
-import streamlit.elements.deck_gl as deck_gl
-
-LOGGER = get_logger(__name__)
-
+DEFAULT_MAP = '{"initialViewState":{"latitude":0,"longitude":0,"pitch":0,"zoom":1},"mapStyle":["mapbox://styles/mapbox/light-v10"]}'
+DEFAULT_COLOR = [200, 30, 0, 160]
 ZOOM_LEVELS = [
     360,
     180,
@@ -44,7 +42,6 @@ ZOOM_LEVELS = [
     0.0005,
 ]
 
-
 def _get_zoom_level(distance):
     """Get the zoom level for a given distance in degrees.
 
@@ -64,19 +61,12 @@ def _get_zoom_level(distance):
 
     for i in range(len(ZOOM_LEVELS) - 1):
         if ZOOM_LEVELS[i + 1] < distance <= ZOOM_LEVELS[i]:
-            return i + 1
+            return i
 
+def embed_data(data, zoom):
 
-def marshall(element, data, zoom=None):
-    """Marshall a proto with DeckGL chart info.
-
-    This is a shorthand for DeltaGenerator.deck_gl_chart,
-    which will auto center and auto zoom the chart.
-    If it is needed you can specify the zoom param.
-
-    See DeltaGenerator.deck_gl_chart for docs.
-
-    """
+    if data.empty:
+        return DEFAULT_MAP
 
     if "lat" in data:
         lat = "lat"
@@ -101,28 +91,35 @@ def marshall(element, data, zoom=None):
     max_lat = data[lat].max()
     min_lon = data[lon].min()
     max_lon = data[lon].max()
-
     center_lat = (max_lat + min_lat) / 2.0
     center_lon = (max_lon + min_lon) / 2.0
+    range_lon = abs(max_lon - min_lon)
+    range_lat = abs(max_lat - min_lat)
 
-    if zoom is None:
-        range_lon = abs(max_lon - min_lon)
-        range_lat = abs(max_lat - min_lat)
-
+    if zoom == None:
         if range_lon > range_lat:
             longitude_distance = range_lon
         else:
             longitude_distance = range_lat
-
         zoom = _get_zoom_level(longitude_distance)
 
-    deck_gl.marshall(
-        element.deck_gl_chart,
-        viewport={
-            "latitude": center_lat,
-            "longitude": center_lon,
-            "zoom": zoom,
-            "pitch": 0,
-        },
-        layers=[{"type": "ScatterplotLayer", "data": data}],
-    )
+    lon_col_index = data.columns.get_loc(lon)
+    lat_col_index = data.columns.get_loc(lat)
+    final_data = []
+    for _, row in data.iterrows():
+        final_data.append({'lon': float(row[lon_col_index]), 'lat': float(row[lat_col_index])})
+        
+    default = json.loads(DEFAULT_MAP)
+    default['initialViewState']['latitude'] = center_lat
+    default['initialViewState']['longitude'] = center_lon
+    default['initialViewState']['zoom'] = zoom
+    layer = {
+        "type":"ScatterplotLayer",
+        "getPosition": "[lon, lat]",
+        "getRadius": 10,
+        "radiusScale": 10,
+        "getFillColor": DEFAULT_COLOR,
+        "data": final_data
+    }
+    default['layers'] = [layer]
+    return json.dumps(default)

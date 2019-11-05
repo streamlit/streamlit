@@ -74,6 +74,7 @@
     "xxhashjs": "^0.2.2"
   },
   "devDependencies": {
+    "@deck.gl/json": "^7.3.4",
     "@craco/craco": "^5.5.0",
     "@danmarshall/deckgl-typings": "^2.2.5",
     "@types/clipboard": "^2.0.1",

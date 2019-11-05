@@ -33,6 +33,7 @@ import { dataFrameToArrayOfDicts } from "lib/dataFrameProto"
 import FullScreenWrapper from "components/shared/FullScreenWrapper"
 import "mapbox-gl/dist/mapbox-gl.css"
 import "./DeckGlChart.scss"
+import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
 
 const MAPBOX_ACCESS_TOKEN =
   "pk.eyJ1IjoidGhpYWdvdCIsImEiOiJjamh3bm85NnkwMng4M3dydnNveWwzeWNzIn0.vCBDzNsEF2uFSFk2AM0WZQ"
@@ -96,33 +97,73 @@ class DeckGlChart extends React.PureComponent<PropsWithHeight, State> {
     setTimeout(this.fixHexLayerBug_bound, 0)
   }
 
+  updateInitialViewState = () => {
+    const specStr = this.props.element.get("spec")
+    const spec = specStr ? JSON.parse(specStr) : {}
+    const v = spec.viewport || {}
+    const { width, height } = this.props
+    this.initialViewState = {
+      width: v.width || width,
+      height: v.height || height,
+      longitude: v.longitude || 0,
+      latitude: v.latitude || 0,
+      pitch: v.pitch || 0,
+      bearing: v.bearing || 0,
+      zoom: v.zoom || 1,
+    }
+
+    this.mapStyle = getStyleUrl(v.mapStyle)
+  }
+
   fixHexLayerBug(): void {
     this.setState({ initialized: true })
   }
 
   render(): JSX.Element {
+    this.updateInitialViewState()
     return (
       <div
-        className="deckglchart stDeckGlChart"
+        className="deckglchart"
         style={{
-          height: this.initialViewState.height,
+          height: this.initialViewState.height + 60,
           width: this.initialViewState.width,
         }}
       >
-        <DeckGL
-          initialViewState={this.initialViewState}
-          height={this.initialViewState.height}
-          width={this.initialViewState.width}
-          controller
-          layers={this.state.initialized ? this.buildLayers() : []}
+        <div
+          className="stDeckGlChart"
+          style={{
+            height: this.initialViewState.height,
+            width: this.initialViewState.width,
+          }}
         >
-          <StaticMap
+          <DeckGL
+            initialViewState={this.initialViewState}
             height={this.initialViewState.height}
             width={this.initialViewState.width}
-            mapStyle={this.mapStyle}
-            mapboxApiAccessToken={MAPBOX_ACCESS_TOKEN}
-          />
-        </DeckGL>
+            controller
+            layers={this.state.initialized ? this.buildLayers() : []}
+          >
+            <StaticMap
+              height={this.initialViewState.height}
+              width={this.initialViewState.width}
+              mapStyle={this.mapStyle}
+              mapboxApiAccessToken={MAPBOX_ACCESS_TOKEN}
+            />
+          </DeckGL>
+        </div>
+        <div
+          className={"alert alert-warning stText"}
+          style={{ width: this.initialViewState.width }}
+        >
+          <div className="markdown-text-container">
+            <StreamlitMarkdown
+              source={
+                "st.deck_gl_chart will be deprecated. Please use st.write(pydeck_obj) instead of."
+              }
+              allowHTML={false}
+            />
+          </div>
+        </div>
       </div>
     )
   }

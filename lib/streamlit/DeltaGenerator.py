@@ -39,6 +39,7 @@ from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto import Text_pb2
 from streamlit import get_report_ctx
+import streamlit.elements.map as streamlit_map
 
 # setup logging
 from streamlit.logger import get_logger
@@ -2298,9 +2299,7 @@ class DeltaGenerator(object):
 
         """
 
-        import streamlit.elements.map as map
-
-        map.marshall(element, data, zoom)
+        element.deck_json_chart.json = streamlit_map.embed_data(data, zoom)
 
     @_with_element
     def deck_gl_chart(self, element, spec=None, **kwargs):
@@ -2421,6 +2420,51 @@ class DeltaGenerator(object):
         import streamlit.elements.deck_gl as deck_gl
 
         deck_gl.marshall(element.deck_gl_chart, spec, **kwargs)
+
+    @_with_element
+    def deck_json_chart(self, element, pydeck_obj=None):
+        """Draw a map chart using the Deck.GL library.
+
+        This API closely follows Deck.GL's JavaScript API
+        (https://deck.gl/#/documentation), with a few small adaptations and
+        some syntax sugar.
+
+        Parameters
+        ----------
+
+        pydeck_obj : pydeck intance or None (https://deckgl.readthedocs.io/en/latest/index.html)
+
+        Example
+        -------
+        >>> df = pd.DataFrame(
+        ...    np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
+        ...    columns=['lat', 'lon'])
+        ...
+        >>> view_state = pdk.ViewState(
+        ...    longitude=-122.4,
+        ...    latitude=37.76,
+        ...    zoom=11,
+        ...    pitch=50)
+        >>> scatterplot_layer2 = pdk.Layer(
+        ...    type='ScatterplotLayer',
+        ...    data=df,
+        ...    get_position="[lon, lat]",
+        ...    get_radius=100,
+        ...    get_fill_color=[200, 30, 0, 160])
+        >>> pydeck_obj = pdk.Deck(initial_view_state=view_state, layers=[scatterplot_layer2], map_style="mapbox://styles/mapbox/light-v10")
+        >>> st.write(pydeck_obj)
+
+        .. output::
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=ahGZBy2qjzmWwPxMatHoB9
+
+        The dataframe must have columns used in get_position layer param.
+
+        """
+
+        if pydeck_obj == None:
+            element.deck_json_chart.json = streamlit_map.DEFAULT_MAP
+        else: 
+            element.deck_json_chart.json = pydeck_obj.to_json()
 
     @_with_element
     def table(self, element, data=None):
