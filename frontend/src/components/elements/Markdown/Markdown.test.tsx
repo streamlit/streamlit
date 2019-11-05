@@ -16,9 +16,10 @@
  */
 
 import React from "react"
+import { shallow } from "enzyme"
 import { Map as ImmutableMap } from "immutable"
 import Markdown from "./Markdown"
-import renderer from "react-test-renderer"
+import { linkWithTargetBlank, linkReferenceHasParens } from "lib/markdown_util"
 
 const getProps = (elementProps: object = {}): Props => ({
   element: ImmutableMap({
@@ -34,17 +35,16 @@ const getProps = (elementProps: object = {}): Props => ({
 describe("Markdown Element Test", () => {
   it("renders markdown as expected", () => {
     const props = getProps()
-    const component = renderer.create(<Markdown {...props} />)
-    const tree = component.toJSON()
-    expect(tree).toMatchSnapshot()
+    const wrap = shallow(<Markdown {...props} />)
+    expect(wrap).toBeDefined()
+    // expect('body' in wrap.props()).toEqual(true)
+    expect(wrap.find({ prop: "body" }).toBeDefined())
+
+    expect(wrap.find({ prop: "width" }).toEqual(100))
+    //expect(wrap.find('a').props.href).toBe('https://www.https://streamlit.io/')
   })
   /* TODO:
-  There are some behaviors that you can check with jest and enzyme here.
-    For instance:
-
-    1- Should render without exploding
-    2- Should show body ( rendering ReactMarkdown with body properly passed as a prop )
-    3- Should have the proper className
-    4- Should have styleProp
+  a) unit tests with different Markdown formatted text
+  b) check for className, styleProp
   */
 })
