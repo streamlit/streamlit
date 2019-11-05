@@ -805,8 +805,8 @@ def _maybe_convert_to_number(v):
     return v
 
 
-def get_config_filenames():
-    """Return possible config filenames"""
+def get_config_file_paths():
+    """Return possible paths to config files."""
     return [
         util.get_streamlit_file_path("config.toml"),
         util.get_project_streamlit_file_path("config.toml"),
@@ -822,7 +822,7 @@ def parse_config_file():
 
     # Read ~/.streamlit/config.toml, and then overlay
     # $CWD/.streamlit/config.toml if it exists.
-    config_filenames = get_config_filenames()
+    config_filenames = get_config_file_paths()
 
     for filename in config_filenames:
         # Parse the config file.

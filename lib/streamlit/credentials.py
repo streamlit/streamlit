@@ -259,7 +259,7 @@ def check_and_maybe_activate():
     from streamlit import config
 
     config_does_not_exist = not any(
-        os.path.exists(filename) for filename in config.get_config_filenames()
+        os.path.exists(filename) for filename in config.get_config_file_paths()
     )
     if config_does_not_exist and config.get_option("server.headless"):
         return
