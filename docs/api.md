@@ -27,7 +27,7 @@ data to your app with very few keypresses. Here's an example:
 This is some _markdown_.
 '''
 
-df = pandas.DataFrame({'col1': [1,2,3]})
+df = pd.DataFrame({'col1': [1,2,3]})
 df  # <-- Draw the dataframe
 
 x = 10
