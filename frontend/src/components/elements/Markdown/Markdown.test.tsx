@@ -40,7 +40,7 @@ describe("Markdown Element Test", () => {
     const wrap = shallow(<Markdown {...props} />)
     expect(wrap).toBeDefined()
     // expect('body' in wrap.props()).toEqual(true)
-    expect(wrap.find({ prop: "body" }).toBeDefined())
+    //expect(wrap.find({ prop: "body" }).toBeDefined())
     expect(wrap.find({ prop: "width" }).toEqual(100))
     //expect(wrap.find('a').props.href).toBe('https://www.https://streamlit.io/')
   })
