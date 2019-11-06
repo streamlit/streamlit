@@ -265,8 +265,6 @@ def check_and_maybe_activate():
     """
     from streamlit import config
 
-    if not _check_credential_file_exists() and config.get_option(
-        "server.headless"
-    ):
+    if not _check_credential_file_exists() and config.get_option("server.headless"):
         return
     Credentials.get_current().check_activated(auto_resolve=True)
