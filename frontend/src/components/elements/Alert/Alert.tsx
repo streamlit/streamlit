@@ -18,7 +18,6 @@
 import React, { ReactNode } from "react"
 
 import classNames from "classnames"
-import ReactMarkdown from "react-markdown"
 import { Map as ImmutableMap } from "immutable"
 import { Alert as AlertProto } from "autogen/proto"
 import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
