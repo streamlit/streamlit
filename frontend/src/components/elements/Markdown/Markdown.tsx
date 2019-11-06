@@ -15,26 +15,11 @@
  * limitations under the License.
  */
 
+import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
 import React, { ReactNode } from "react"
-
-import ReactMarkdown from "react-markdown"
 import { Map as ImmutableMap } from "immutable"
-import { linkWithTargetBlank, linkReferenceHasParens } from "lib/markdown_util"
-import CodeBlock from "../CodeBlock"
 
 import "assets/css/write.scss"
-
-// html-parser has no Typescript definitions.
-// @ts-ignore
-import htmlParser from "react-markdown/plugins/html-parser"
-// react-katext has no Typescript definitions.
-// @ts-ignore
-import { InlineMath, BlockMath } from "react-katex"
-// RemarkMath has no Typescript definitions.
-// @ts-ignore
-import RemarkMathPlugin from "remark-math"
-
-import "katex/dist/katex.min.css"
 
 interface Props {
   width: number
@@ -48,28 +33,12 @@ class Markdown extends React.PureComponent<Props> {
   public render(): ReactNode {
     const { element, width } = this.props
     const body = element.get("body")
-    const renderers = {
-      code: CodeBlock,
-      link: linkWithTargetBlank,
-      linkReference: linkReferenceHasParens,
-      inlineMath: (props: { value: string }) => (
-        <InlineMath>{props.value}</InlineMath>
-      ),
-      math: (props: { value: string }) => <BlockMath>{props.value}</BlockMath>,
-    }
     const styleProp = { width }
-    const plugins = [RemarkMathPlugin]
-    const allowHTML = element.get("allowHtml")
-    const astPlugins = allowHTML ? [htmlParser()] : []
 
+    const allowHTML = element.get("allowHtml")
     return (
-      <div className="markdown-text-container stMarkdown" style={styleProp}>
-        <ReactMarkdown
-          source={body}
-          escapeHtml={!allowHTML}
-          astPlugins={astPlugins}
-          renderers={renderers}
-        />
+      <div className="markdown-text-container stText" style={styleProp}>
+        <StreamlitMarkdown source={body} allowHTML={allowHTML} />
       </div>
     )
   }

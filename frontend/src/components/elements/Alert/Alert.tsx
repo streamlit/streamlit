@@ -21,7 +21,7 @@ import classNames from "classnames"
 import ReactMarkdown from "react-markdown"
 import { Map as ImmutableMap } from "immutable"
 import { Alert as AlertProto } from "autogen/proto"
-import { linkWithTargetBlank, linkReferenceHasParens } from "lib/markdown_util"
+import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
 
 import "assets/css/write.scss"
 
@@ -47,20 +47,18 @@ class Alert extends React.PureComponent<Props> {
     const { element, width } = this.props
     const body = element.get("body")
     const format = element.get("format")
-    const renderers = {
-      link: linkWithTargetBlank,
-      linkReference: linkReferenceHasParens,
-    }
-    const styleProp = { width }
-    const cssClass = ALERT_CSS_CLASS.get(format.toString())
 
     return (
       <div
-        className={classNames("alert", cssClass, "stAlert")}
-        style={styleProp}
+        className={classNames(
+          "alert",
+          ALERT_CSS_CLASS.get(format.toString()),
+          "stText"
+        )}
+        style={{ width }}
       >
         <div className="markdown-text-container">
-          <ReactMarkdown source={body} renderers={renderers} />
+          <StreamlitMarkdown source={body} allowHTML={false} />
         </div>
       </div>
     )

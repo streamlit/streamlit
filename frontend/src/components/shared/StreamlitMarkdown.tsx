@@ -26,7 +26,7 @@ export interface Props {
 
 /**
  * Wraps the <ReactMarkdown> component to include our standard
- * renderers and AST plugins (for syntax hiliting, HTML support, etc).
+ * renderers and AST plugins (for syntax highlighting, HTML support, etc).
  */
 export class StreamlitMarkdown extends React.PureComponent<Props> {
   public render(): ReactNode {
