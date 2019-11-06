@@ -100,7 +100,7 @@ class Credentials(object):
             )
 
         self.activation = None
-        self._conf_file = util.get_streamlit_file_path("credentials.toml")
+        self._conf_file = _get_credential_file_path()
 
         Credentials._singleton = self
 
@@ -247,6 +247,10 @@ def _exit(message):  # pragma: nocover
     sys.exit(-1)
 
 
+def _get_credential_file_path():
+    return util.get_streamlit_file_path("credentials.toml")
+
+
 def check_and_maybe_activate():
     """Check credentials and potentially activate.
 
@@ -258,9 +262,6 @@ def check_and_maybe_activate():
     """
     from streamlit import config
 
-    config_does_not_exist = not any(
-        os.path.exists(filename) for filename in config.get_config_file_paths()
-    )
-    if config_does_not_exist and config.get_option("server.headless"):
+    if not os.path.exists(_get_credential_file_path()) and config.get_option("server.headless"):
         return
     Credentials.get_current().check_activated(auto_resolve=True)

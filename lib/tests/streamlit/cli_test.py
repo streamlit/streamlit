@@ -207,7 +207,7 @@ class CliTest(unittest.TestCase):
 
         with patch("validators.url", return_value=False), patch(
             "streamlit.bootstrap.run"
-        ), patch("os.path.exists", side_effect=[True, False, False]):
+        ), patch("os.path.exists", side_effect=[True, False ]):
             result = self.runner.invoke(cli, ["run", "some script.py"])
         from streamlit.credentials import Credentials
 
@@ -226,7 +226,7 @@ class CliTest(unittest.TestCase):
 
         with patch("validators.url", return_value=False), patch(
             "streamlit.bootstrap.run"
-        ), patch("os.path.exists", side_effect=[True, True, False]), mock.patch(
+        ), patch("os.path.exists", side_effect=[True, True]), mock.patch(
             "streamlit.credentials.Credentials.check_activated"
         ) as mock_check:
             result = self.runner.invoke(cli, ["run", "some script.py"])
