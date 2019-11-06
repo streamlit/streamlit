@@ -111,7 +111,6 @@ class Credentials(object):
             return
 
         try:
-            # why exception?
             with open(self._conf_file, "r") as f:
                 data = toml.load(f).get("general")
             self.activation = _verify_email(data.get("email"))
