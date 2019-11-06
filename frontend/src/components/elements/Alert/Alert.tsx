@@ -53,7 +53,7 @@ class Alert extends React.PureComponent<Props> {
         className={classNames(
           "alert",
           ALERT_CSS_CLASS.get(format.toString()),
-          "stText"
+          "stAlert"
         )}
         style={{ width }}
       >

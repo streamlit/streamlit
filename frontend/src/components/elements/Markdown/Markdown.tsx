@@ -37,7 +37,7 @@ class Markdown extends React.PureComponent<Props> {
 
     const allowHTML = element.get("allowHtml")
     return (
-      <div className="markdown-text-container stText" style={styleProp}>
+      <div className="markdown-text-container stMarkdown" style={styleProp}>
         <StreamlitMarkdown source={body} allowHTML={allowHTML} />
       </div>
     )

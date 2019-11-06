@@ -18,7 +18,10 @@
 import React, { ReactElement } from "react"
 import ReactMarkdown from "react-markdown"
 
-import { linkWithTargetBlank, linkReferenceHasParens } from "./markdown_util"
+import {
+  linkWithTargetBlank,
+  linkReferenceHasParens,
+} from "./StreamlitMarkdown"
 import { create } from "react-test-renderer"
 
 // Fixture Generator
