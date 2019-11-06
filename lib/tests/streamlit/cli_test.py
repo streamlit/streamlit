@@ -207,7 +207,7 @@ class CliTest(unittest.TestCase):
 
         with patch("validators.url", return_value=False), patch(
             "streamlit.bootstrap.run"
-        ), patch("os.path.exists", side_effect=[True, False ]):
+        ), patch("os.path.exists", side_effect=[True, False]):
             result = self.runner.invoke(cli, ["run", "some script.py"])
         from streamlit.credentials import Credentials
 
