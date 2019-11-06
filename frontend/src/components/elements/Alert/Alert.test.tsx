@@ -19,7 +19,6 @@ import React from "react"
 import { Map as ImmutableMap } from "immutable"
 
 import Alert from "./Alert"
-import ALERT_CSS_CLASS from "./Alert"
 import { Alert as AlertProto } from "autogen/proto"
 import renderer from "react-test-renderer"
 
@@ -30,14 +29,6 @@ const getProps = (elementProps: object = {}): Props => ({
   }),
   width: 100,
 })
-
-/*
-const checkStyle = (alertobj: object, format: int): Null => ({
-
-  cssStyle = ALERT_CSS_CLASS[format]
-  //expect(alertobj.props.style).Contains(cssStyle)
-})
-*/
 
 describe("Alert Element Test", () => {
   it("renders an ERROR box as expected", () => {

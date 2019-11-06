@@ -19,7 +19,6 @@ import React from "react"
 import { shallow } from "enzyme"
 import { Map as ImmutableMap } from "immutable"
 import Markdown from "./Markdown"
-import StreamlitMarkdown from "../../shared/StreamlitMarkdown"
 
 const getProps = (elementProps: object = {}): Props => ({
   element: ImmutableMap({
