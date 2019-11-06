@@ -29,6 +29,8 @@ import os
 import sys
 import textwrap
 
+from six import string_types
+
 import streamlit as st
 from streamlit import config
 from streamlit import util

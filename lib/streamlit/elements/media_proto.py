@@ -24,6 +24,8 @@ import io
 import base64
 import re
 
+from six import string_types
+
 from validators import url
 
 from streamlit.proto import Video_pb2
