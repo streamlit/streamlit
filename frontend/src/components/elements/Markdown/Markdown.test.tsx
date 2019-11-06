@@ -25,7 +25,8 @@ const getProps = (elementProps: object = {}): Props => ({
     body:
       "Emphasis, aka italics, with *asterisks* or _underscores_." +
       "Combined emphasis with **asterisks and _underscores_**." +
-      "[I'm an inline-style link with title](https://www.https://streamlit.io/ Streamlit",
+      "[I'm an inline-style link with title](https://www.https://streamlit.io/ Streamlit)",
+    allowHTML: false,
     ...elementProps,
   }),
   width: 100,
@@ -36,14 +37,22 @@ describe("Markdown Element Test", () => {
     const props = getProps()
     const wrap = shallow(<Markdown {...props} />)
     expect(wrap).toBeDefined()
-    expect(wrap.find(<Markdown>).hasClass('stMarkdown'))
-    // expect('body' in wrap.props()).toEqual(true)
-    //expect(wrap.find({ prop: "body" }).toBeDefined())
-    expect(wrap.find({ prop: "width" }).toEqual(100))
-    //expect(wrap.find('a').props.href).toBe('https://www.https://streamlit.io/')
+
+    const elem = wrap.get(0)
+    console.log(elem.props)
+    // console.log(elem.style)
+
+    //const elemstyle = elem.get(0).style
+
+    // check for className, style properties
+    // expect(elem(prop: "width" })).toEqual(100)
+    // expect(wrap.find(Markdown).hasClass('stMarkdown'))
+
+    // check for proper conversion of link into href object
+    // expect(wrap.find('a').props.href).toBe('https://www.https://streamlit.io/')
   })
   /* TODO:
   a) unit tests with different Markdown formatted text
-  b) check for className, styleProp
+  b) allow_html property
   */
 })
