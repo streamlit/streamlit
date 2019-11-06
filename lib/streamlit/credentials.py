@@ -250,6 +250,10 @@ def _get_credential_file_path():
     return util.get_streamlit_file_path("credentials.toml")
 
 
+def _check_credential_file_exists():
+    return os.path.exists(_get_credential_file_path())
+
+
 def check_and_maybe_activate():
     """Check credentials and potentially activate.
 
@@ -261,7 +265,7 @@ def check_and_maybe_activate():
     """
     from streamlit import config
 
-    if not os.path.exists(_get_credential_file_path()) and config.get_option(
+    if not _check_credential_file_exists() and config.get_option(
         "server.headless"
     ):
         return
