@@ -20,6 +20,7 @@ import numpy as np
 import json
 
 from tests import testutil
+from streamlit.elements.map import DEFAULT_MAP
 import streamlit as st
 
 df1 = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
@@ -40,24 +41,17 @@ class StMapTest(testutil.DeltaGeneratorTestCase):
         """Test that deck_gl_chart can be called with lat/lon."""
         st.map(df1)
 
-        c = self.get_delta_from_queue().new_element.deck_gl_chart
-
-        self.assertEqual(c.HasField("data"), False)
-        self.assertEqual(len(c.layers), 1)
-
-        deck_gl_spec = json.loads(c.spec)
-
-        assert "viewport" in deck_gl_spec
-
-        self.assertEqual(deck_gl_spec["viewport"]["latitude"], 2.5)
-        self.assertEqual(deck_gl_spec["viewport"]["longitude"], 25)
-        self.assertEqual(deck_gl_spec["viewport"]["zoom"], 4)
-        self.assertEqual(deck_gl_spec["viewport"]["pitch"], 0)
-
-        layer = c.layers[0]
-        spec = json.loads(layer.spec)
-        isScatterplotLayer = spec["type"] == "ScatterplotLayer"
-        assert isScatterplotLayer
+        c = json.loads(self.get_delta_from_queue().new_element.deck_json_chart.json)
+        
+        self.assertIsNotNone(c.get('initialViewState'))
+        self.assertIsNotNone(c.get('layers'))
+        self.assertIsNotNone(c.get('mapStyle'))
+        self.assertEqual(len(c.get('layers')), 1)
+        self.assertEqual(c.get('initialViewState').get("latitude"), 2.5)
+        self.assertEqual(c.get('initialViewState').get("longitude"), 25)
+        self.assertEqual(c.get('initialViewState').get("zoom"), 3)
+        self.assertEqual(c.get('initialViewState').get("pitch"), 0)
+        self.assertEqual(c.get('layers')[0].get('type'), "ScatterplotLayer")
 
     def test_missing_column(self):
         """Test st.map with wrong column label."""

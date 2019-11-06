@@ -97,7 +97,7 @@ class DeckGlChart extends React.PureComponent<PropsWithHeight, State> {
     setTimeout(this.fixHexLayerBug_bound, 0)
   }
 
-  updateInitialViewState = () => {
+  updateInitialViewState = (): void => {
     const specStr = this.props.element.get("spec")
     const spec = specStr ? JSON.parse(specStr) : {}
     const v = spec.viewport || {}
