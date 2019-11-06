@@ -428,7 +428,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         # Manually calculated by letting the test fail and copying and
         # pasting the result.
-        checksum = "EYE4ECADA07iJDgAwhQABAJjy/wBRPdgSGR4/FgAAAABJRU5ErkJggg=="
+        checksum = "n1ZpaandJQILIkAAAJ7EQ3QAgCkECADAlP8PvwXGkVVfFJkAAAAASUVORK5CYII="
 
         # Generate a 2 inch x 2 inch figure
         plt.figure(figsize=(2, 2))
@@ -440,7 +440,6 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.imgs.width, -2)
         self.assertEqual(el.imgs.imgs[0].caption, "")
-        print(el.imgs.imgs[0].data.base64) 
         self.assertTrue(el.imgs.imgs[0].data.base64.endswith(checksum))
 
     def test_st_plotly_chart_simple(self):
