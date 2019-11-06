@@ -19,6 +19,7 @@ import React from "react"
 import { shallow } from "enzyme"
 import { Map as ImmutableMap } from "immutable"
 import Markdown from "./Markdown"
+import StreamlitMarkdown from "../../shared/StreamlitMarkdown"
 
 const getProps = (elementProps: object = {}): Props => ({
   element: ImmutableMap({
@@ -36,22 +37,11 @@ describe("Markdown Element Test", () => {
   it("renders markdown as expected", () => {
     const props = getProps()
     const wrap = shallow(<Markdown {...props} />)
-    expect(wrap).toBeDefined()
-
     const elem = wrap.get(0)
-    console.log(elem.props)
-    // console.log(elem.style)
-
-    //const elemstyle = elem.get(0).style
-
-    // check for className, style properties
-    // expect(elem(prop: "width" })).toEqual(100)
-    // expect(wrap.find(Markdown).hasClass('stMarkdown'))
-
-    // check for proper conversion of link into href object
-    // expect(wrap.find('a').props.href).toBe('https://www.https://streamlit.io/')
+    expect(elem.props.className.includes("stMarkdown"))
+    expect(elem.props.style["width"] === "100")
   })
-  /* TODO:
+  /* TODO TESTS:
   a) unit tests with different Markdown formatted text
   b) allow_html property
   */
