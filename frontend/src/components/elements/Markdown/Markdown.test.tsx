@@ -19,13 +19,15 @@ import React from "react"
 import { shallow } from "enzyme"
 import { Map as ImmutableMap } from "immutable"
 import Markdown from "./Markdown"
+import StreamlitMarkdown from "../../shared/StreamlitMarkdown"
 
 const getProps = (elementProps: object = {}): Props => ({
   element: ImmutableMap({
     body:
       "Emphasis, aka italics, with *asterisks* or _underscores_." +
       "Combined emphasis with **asterisks and _underscores_**." +
-      "[I'm an inline-style link with title](https://www.https://streamlit.io/ Streamlit",
+      "[I'm an inline-style link with title](https://www.https://streamlit.io/ Streamlit)",
+    allowHTML: false,
     ...elementProps,
   }),
   width: 100,
@@ -35,15 +37,12 @@ describe("Markdown Element Test", () => {
   it("renders markdown as expected", () => {
     const props = getProps()
     const wrap = shallow(<Markdown {...props} />)
-    expect(wrap).toBeDefined()
-    expect(wrap.find(<Markdown>).hasClass('stMarkdown'))
-    // expect('body' in wrap.props()).toEqual(true)
-    //expect(wrap.find({ prop: "body" }).toBeDefined())
-    expect(wrap.find({ prop: "width" }).toEqual(100))
-    //expect(wrap.find('a').props.href).toBe('https://www.https://streamlit.io/')
+    const elem = wrap.get(0)
+    expect(elem.props.className.includes("stMarkdown"))
+    expect(elem.props.style["width"] === "100")
   })
-  /* TODO:
+  /* TODO TESTS:
   a) unit tests with different Markdown formatted text
-  b) check for className, styleProp
+  b) allow_html property
   */
 })
