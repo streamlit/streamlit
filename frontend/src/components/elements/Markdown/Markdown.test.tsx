@@ -20,9 +20,6 @@ import { shallow } from "enzyme"
 import { Map as ImmutableMap } from "immutable"
 import Markdown from "./Markdown"
 
-//TODO: RESOLVE CONFLICT w/ Henrikh's markdown refactor
-import { linkWithTargetBlank, linkReferenceHasParens } from "lib/markdown_util"
-
 const getProps = (elementProps: object = {}): Props => ({
   element: ImmutableMap({
     body:
@@ -39,6 +36,7 @@ describe("Markdown Element Test", () => {
     const props = getProps()
     const wrap = shallow(<Markdown {...props} />)
     expect(wrap).toBeDefined()
+    expect(wrap.find(<Markdown>).hasClass('stMarkdown'))
     // expect('body' in wrap.props()).toEqual(true)
     //expect(wrap.find({ prop: "body" }).toBeDefined())
     expect(wrap.find({ prop: "width" }).toEqual(100))

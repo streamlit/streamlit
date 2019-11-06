@@ -33,6 +33,7 @@ const getProps = (elementProps: object = {}): Props => ({
 
 /*
 const checkStyle = (alertobj: object, format: int): Null => ({
+
   cssStyle = ALERT_CSS_CLASS[format]
   //expect(alertobj.props.style).Contains(cssStyle)
 })
