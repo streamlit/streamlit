@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import copy
-import os
+from urllib.parse import urljoin
 import pandas as pd
 import streamlit as st
 
@@ -33,8 +33,8 @@ st.write(
 
 @st.cache
 def from_data_file(filename):
-    dirname = "https://raw.githubusercontent.com/streamlit/streamlit/develop/examples/"
-    url = os.path.join(dirname, "data", filename)
+    dirname = "https://raw.githubusercontent.com/streamlit/streamlit/develop/examples/data/"    
+    url = urljoin(dirname, filename)
     return pd.read_json(url)
 
 
