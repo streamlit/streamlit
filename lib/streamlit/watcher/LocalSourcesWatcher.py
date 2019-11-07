@@ -61,7 +61,7 @@ if watcherType == "auto":
         FileWatcher = PollingFileWatcher
     else:
         FileWatcher = EventBasedFileWatcher
-elif watcherType == "watchdog":
+elif watcherType == "watchdog" and not errorImportEventBasedWatcher:
     FileWatcher = EventBasedFileWatcher
 elif watcherType == "poll":
     FileWatcher = PollingFileWatcher
