@@ -451,6 +451,19 @@ def print_url(title, url):
     click.secho(url, bold=True)
 
 
+def process_gitblob_url(url):
+    """Checks url to see if it describes a github gist "blob" URL.  
+    If so, returns a new URL to get the "raw" script. 
+    If not, returns URL unchanged.
+    """
+    if "github" in url:
+        if "blob" in url:
+            return url.replace("blob", "raw")
+        elif "gist" in url:
+            return url + "/raw"
+    return url
+
+
 def get_hostname(url):
     """Return the hostname of a URL (with or without protocol)."""
     # Just so urllib can parse the URL, make sure there's a protocol.
