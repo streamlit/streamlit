@@ -2436,23 +2436,70 @@ class DeltaGenerator(object):
 
         Example
         -------
-        >>> df = pd.DataFrame(
-        ...    np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
-        ...    columns=['lat', 'lon'])
-        ...
-        >>> view_state = pdk.ViewState(
-        ...    longitude=-122.4,
-        ...    latitude=37.76,
+
+        >>> import pandas as pd
+        >>> import pydeck as pdk
+        >>> import streamlit as st
+
+        >>> DATA_URL = "https://raw.githubusercontent.com/uber-common/deck.gl-data/master/examples/geojson/vancouver-blocks.json"
+        >>> LAND_COVER = [[[-123.0, 49.196], [-123.0, 49.324], [-123.306, 49.324], [-123.306, 49.196]]]
+        
+        >>> INITIAL_VIEW_STATE = pdk.ViewState(
+        ...    latitude=49.254,
+        ...    longitude=-123.13,
         ...    zoom=11,
+        ...    max_zoom=16,
+        ...    pitch=45,
+        ...    bearing=0)
+
+        >>> polygon = pdk.Layer(
+        ...    'PolygonLayer',
+        ...    LAND_COVER,
+        ...    stroked=False,
+        ...    # processes the data as a flat longitude-latitude pair
+        ...    get_polygon='-',
+        ...    get_fill_color=[0, 0, 0, 20])
+
+        >>> geojson = pdk.Layer(
+        ...    'GeoJsonLayer',
+        ...    DATA_URL,
+        ...    opacity=0.8,
+        ...    stroked=False,
+        ...    filled=True,
+        ...    extruded=True,
+        ...    wireframe=True,
+        ...    get_elevation='properties.valuePerSqm / 20',
+        ...    get_fill_color='[255, 255, properties.growth * 255]',
+        ...    get_line_color=[255, 255, 255],
+        ...    pickable=True)
+
+        >>> r = pdk.Deck(layers=[polygon, geojson],initial_view_state=INITIAL_VIEW_STATE)
+        >>> st.write(r)
+
+        >>> icon_data = { "url":"https://img.icons8.com/plasticine/100/000000/marker.png", "width":128, "height":128, "anchorY": 128 }
+        >>> data = pd.read_json("https://raw.githubusercontent.com/uber-common/deck.gl-data/master/website/bart-stations.json")
+        >>> data['icon_data']=None
+        >>> for i in data.index:
+        >>>      data['icon_data'][i]=icon_data
+
+        >>> view_state = pdk.ViewState(
+        ...    longitude=-122.22,
+        ...    latitude=37.76,
+        ...    zoom=9,
         ...    pitch=50)
-        >>> scatterplot_layer2 = pdk.Layer(
-        ...    type='ScatterplotLayer',
-        ...    data=df,
-        ...    get_position="[lon, lat]",
-        ...    get_radius=100,
-        ...    get_fill_color=[200, 30, 0, 160])
-        >>> pydeck_obj = pdk.Deck(initial_view_state=view_state, layers=[scatterplot_layer2], map_style="mapbox://styles/mapbox/light-v10")
-        >>> st.write(pydeck_obj)
+
+
+        >>> icon_layer2 = pdk.Layer(
+        ...    type='IconLayer',
+        ...    data=data,
+        ...    get_icon='icon_data',
+        ...    get_size=4,
+        ...    pickable= True,
+        ...    size_scale= 15,
+        ...    get_position= 'coordinates')
+
+        >>> r2 = pdk.Deck(layers=[icon_layer2],initial_view_state=view_state)
+        >>> st.write(r2)
 
         .. output::
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=ahGZBy2qjzmWwPxMatHoB9
