@@ -23,4 +23,4 @@ Is your feature request related to a problem? Please describe the problem here. 
 
 ### Additional context
 
-Add any other context or screenshots about the feature request here.
+Add any other context or screenshots about the feature request here. For exmaple, did this FR come from https://discuss.streamlit.io or another site? Link the original source here!
