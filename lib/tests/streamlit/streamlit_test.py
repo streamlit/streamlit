@@ -37,8 +37,6 @@ from tests import testutil
 import streamlit as st
 
 
-
-
 def get_version():
     """Get version by parsing out setup.py."""
     dirname = os.path.dirname(__file__)
