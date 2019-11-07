@@ -25,12 +25,16 @@ import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
 import "assets/css/write.scss"
 
 // classes defined in assets/css/theme.scss
-export const ALERT_CSS_CLASS = ImmutableMap({
+const ALERT_CSS_CLASS = ImmutableMap({
   [AlertProto.Format.SUCCESS]: "alert-success",
   [AlertProto.Format.INFO]: "alert-info",
   [AlertProto.Format.WARNING]: "alert-warning",
   [AlertProto.Format.ERROR]: "alert-danger",
 })
+
+export function getAlertCSSClass(format: number): string {
+  return ALERT_CSS_CLASS.get(format.toString())
+}
 
 interface Props {
   width: number
@@ -49,11 +53,7 @@ class Alert extends React.PureComponent<Props> {
 
     return (
       <div
-        className={classNames(
-          "alert",
-          ALERT_CSS_CLASS.get(format.toString()),
-          "stAlert"
-        )}
+        className={classNames("alert", getAlertCSSClass(format), "stAlert")}
         style={{ width }}
       >
         <div className="markdown-text-container">

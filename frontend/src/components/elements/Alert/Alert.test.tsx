@@ -15,12 +15,12 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { ReactElement } from "react"
+import { shallow } from "enzyme"
 import { Map as ImmutableMap } from "immutable"
 
-import Alert from "./Alert"
+import Alert, { getAlertCSSClass } from "./Alert"
 import { Alert as AlertProto } from "autogen/proto"
-import renderer from "react-test-renderer"
 
 const getProps = (elementProps: object = {}): Props => ({
   element: ImmutableMap({
@@ -30,50 +30,53 @@ const getProps = (elementProps: object = {}): Props => ({
   width: 100,
 })
 
+function elementClassIsCorrect(element: ReactElement, format: number): Bool {
+  return element.props.className.includes(getAlertCSSClass(format))
+}
+
 describe("Alert Element Test", () => {
   it("renders an ERROR box as expected", () => {
+    const format = AlertProto.Format.ERROR
     const props = getProps({
-      format: AlertProto.Format.ERROR,
+      format: format,
       body: "#what in the world?",
     })
-    const component = renderer.create(<Alert {...props} />)
-    const tree = component.toJSON()
-    expect(tree).toMatchSnapshot()
+    const wrap = shallow(<Alert {...props} />)
+    const elem = wrap.get(0)
+    expect(elem.props.className.includes("stAlert"))
+    expect(elementClassIsCorrect(elem, format))
   })
   it("renders an INFO box as expected", () => {
+    const format = AlertProto.Format.INFO
     const props = getProps({
-      format: AlertProto.Format.INFO,
+      format: format,
       body: "It's dangerous to go alone.",
     })
-    const component = renderer.create(<Alert {...props} />)
-    const tree = component.toJSON()
-    expect(tree).toMatchSnapshot()
+    const wrap = shallow(<Alert {...props} />)
+    const elem = wrap.get(0)
+    expect(elem.props.className.includes("stAlert"))
+    expect(elementClassIsCorrect(elem, format))
   })
   it("renders a WARNING box as expected", () => {
+    const format = AlertProto.Format.WARNING
     const props = getProps({
-      format: AlertProto.Format.WARNING,
-      body: "Are you sure?",
+      format: format,
+      body: "Are you *sure*?",
     })
-    const component = renderer.create(<Alert {...props} />)
-    const tree = component.toJSON()
-    expect(tree).toMatchSnapshot()
+    const wrap = shallow(<Alert {...props} />)
+    const elem = wrap.get(0)
+    expect(elem.props.className.includes("stAlert"))
+    expect(elementClassIsCorrect(elem, format))
   })
   it("renders a SUCCESS box as expected", () => {
+    const format = AlertProto.Format.SUCCESS
     const props = getProps({
-      format: AlertProto.Format.SUCCESS,
+      format: format,
       body: "But our princess was in another castle!",
     })
-    const component = renderer.create(<Alert {...props} />)
-    const tree = component.toJSON()
-    expect(tree).toMatchSnapshot()
+    const wrap = shallow(<Alert {...props} />)
+    const elem = wrap.get(0)
+    expect(elem.props.className.includes("stAlert"))
+    expect(elementClassIsCorrect(elem, format))
   })
-  /* TODO:
-  There are some behaviors that you can check with jest and enzyme here.
-    For instance:
-
-    1- Should render without exploding
-    2- Should show body ( rendering ReactMarkdown with body properly passed as a prop )
-    3- Should have the proper className
-    4- Should have styleProp
-  */
 })
