@@ -171,14 +171,20 @@ def _apply_config_options_from_cli(kwargs):
 
 
 
-def urlCheck(url):
-    newUrl = url
+def process_cli_url(url):
+    """Checks url to see if it goes to github or describes a gist.  If so,
+    returns a URL
+
+    :param url: (str)
+    :returns: processed url
+    :rtype: str
+    """
     if "github" in url:
         if "blob" in url:
-            newUrl = url.replace("blob","raw")
+            return url.replace("blob","raw")
         elif "gist" in url:
-            newUrl = url+"/raw"
-    return newUrl
+            return url+"/raw"
+    return url
 
 
 @main.command("run")
@@ -202,7 +208,7 @@ def main_run(file_or_url, args=None, **kwargs):
 
         with tempfile.NamedTemporaryFile() as fp:
             try:
-                file_or_url = urlCheck(file_or_url)
+                file_or_url = process_cli_url(file_or_url)
                 resp = requests.get(file_or_url)
                 resp.raise_for_status()
                 fp.write(resp.content)
