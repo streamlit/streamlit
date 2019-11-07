@@ -78,7 +78,6 @@ interface State {
   connectionState: ConnectionState
   elements: Elements
   reportId: string
-  reportName: string | null
   reportHash: string | null
   reportRunState: ReportRunState
   showLoginBox: boolean
@@ -114,7 +113,6 @@ class App extends PureComponent<Props, State> {
         sidebar: fromJS([]),
       },
       reportId: "<null>",
-      reportName: null,
       reportHash: null,
       reportRunState: ReportRunState.NOT_RUNNING,
       showLoginBox: false,
@@ -403,27 +401,12 @@ class App extends PureComponent<Props, State> {
       reportHash: newReportHash,
     })
 
-    if (reportHash !== newReportHash) {
-      this.setState(
-        {
-          reportName,
-          reportHash: newReportHash,
-          reportId: newReportProto.id,
-          elements: {
-            main: fromJS([]),
-            sidebar: fromJS([]),
-          },
-        },
-        () => {
-          this.elementListBuffer = this.state.elements
-          this.widgetMgr.clean(fromJS([]))
-        }
-      )
-    } else {
+    if (reportHash === newReportHash) {
       this.setState({
-        reportName,
         reportId: newReportProto.id,
       })
+    } else {
+      this.clearAppState(newReportHash, newReportProto.id)
     }
   }
 
@@ -487,6 +470,26 @@ class App extends PureComponent<Props, State> {
         return element.get("reportId") === reportId ? element : null
       })
       .filter((element: any) => element !== null)
+  }
+
+  /*
+   * Clear all elements from the state.
+   */
+  clearAppState(reportHash: string, reportId: string): void {
+    this.setState(
+      {
+        reportHash,
+        reportId,
+        elements: {
+          main: fromJS([]),
+          sidebar: fromJS([]),
+        },
+      },
+      () => {
+        this.elementListBuffer = this.state.elements
+        this.widgetMgr.clean(fromJS([]))
+      }
+    )
   }
 
   /**
