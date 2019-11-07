@@ -34,13 +34,13 @@ export interface Source {
  */
 export class WidgetStateManager {
   // Called to deliver a message to the server
-  private sendBackMsg: (msg: IBackMsg) => void
-  private widgetStates: Map<string, WidgetState> = new Map<
+  private readonly sendBackMsg: (msg: IBackMsg) => void
+  private readonly widgetStates: Map<string, WidgetState> = new Map<
     string,
     WidgetState
   >()
 
-  public constructor(sendBackMsg: (msg: IBackMsg) => void) {
+  constructor(sendBackMsg: (msg: IBackMsg) => void) {
     this.sendBackMsg = sendBackMsg
   }
 

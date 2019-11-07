@@ -41,7 +41,7 @@ interface Props {
  * loading ForwardMsgs over an HTTP connection (as opposed to with websockets).
  */
 export class StaticConnection {
-  public constructor(props: Props) {
+  constructor(props: Props) {
     props.onConnectionStateChange(ConnectionState.STATIC)
 
     // This method returns a promise, but we don't care about its result.

@@ -109,7 +109,7 @@ export class StatusWidget extends PureComponent<Props, State> {
     [key: string]: (keyEvent?: KeyboardEvent) => void
   }
 
-  public constructor(props: Props) {
+  constructor(props: Props) {
     super(props)
 
     this.state = {
