@@ -47,7 +47,7 @@ import threading
 from blinker import Signal, ANY
 
 from streamlit.watcher import util
-from watchdogXX import events
+from watchdog import events
 from watchdog.observers import Observer
 
 from streamlit.logger import get_logger
