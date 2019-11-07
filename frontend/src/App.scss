@@ -129,6 +129,12 @@ pre {
       .element-container {
         @-moz-document url-prefix() {
           display: block;
+
+          .table {
+            th {
+              font-weight: normal;
+            }
+          }
         }
 
         overflow: visible;
