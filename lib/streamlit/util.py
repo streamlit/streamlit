@@ -458,16 +458,17 @@ def process_gitblob_url(url):
     """
     # Matches github.com and gist.github.com.  Will not match githubusercontent.com.
     # See this regex with explainer and sample text here: https://regexr.com/4odk3
-    re_github_or_gist = re.compile("(?P<base>https:\/\/?(gist.)?github.com\/)(\w+\/){1,2}(?P<blob_or_raw>(blob|raw))?(.+)?")
+    re_github_or_gist = re.compile("(?P<base>https:\/\/?(gist.)?github.com\/)(?P<account>([\w\.]+\/){1,2})(?P<blob_or_raw>(blob|raw))?(?P<suffix>(.+)?)")
 
     match = re_github_or_gist.match(url)
     if match:
+        mdict = match.groupdict()
         # if it has "blob" in the url, replace this with "raw" and we're done.
-        if match.groupdict()["blob_or_raw"] == "blob":
-            return url.replace("blob", "raw")
+        if mdict["blob_or_raw"] == "blob":
+            return "{base}{account}raw{suffix}".format(**mdict)
 
         # if it is a "raw" url already, return untouched.
-        if match.groupdict()["blob_or_raw"] == "raw":
+        if mdict["blob_or_raw"] == "raw":
             return url
 
         # it's a gist. Just tack "raw" on the end.
