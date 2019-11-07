@@ -249,20 +249,25 @@ class FileIsInFolderTest(unittest.TestCase):
 
 
 class GitHubUrlTest(unittest.TestCase):
-    GITHUB_URLS = [()]
-    GIST_URLS = [()]
-    INVALID_URLS = ['blah', 'google.com', 'http://homestarrunner.com']
+    GITHUB_URLS = [('https://github.com/aritropaul/streamlit/blob/b72adbcf00c91775db14e739e2ea33d6df9079c3/lib/streamlit/cli.py', 'https://github.com/aritropaul/streamlit/raw/b72adbcf00c91775db14e739e2ea33d6df9079c3/lib/streamlit/cli.py'),
+                  ]
+
+    GIST_URLS = [('https://gist.github.com/nthmost/b521b80fbd834e67b3f5e271e9548232', 'https://gist.github.com/nthmost/b521b80fbd834e67b3f5e271e9548232/raw'),
+                 ('https://gist.github.com/scottyallen/1888e058261fc21f184f6be192bbe131', 'https://gist.github.com/scottyallen/1888e058261fc21f184f6be192bbe131/raw')
+                ]
+
+    INVALID_URLS = ['blah', 'google.com', 'http://homestarrunner.com',
+                    'http://github.com/theblob/123', 
+                    'https://somethinglikegithub.com/withablob',
+                   ]
 
     def test_github_url_is_replaced(self):
-        ret = util.process_gitblob_url("sample")
-        
-        #TODO
-        pass
+        for (target, processed) in self.GITHUB_URLS:
+            assert util.process_gitblob_url(target) == processed
 
     def test_gist_url_is_replaced(self):
-        pass
-        #TODO
-        # do test here
+        for (target, processed) in self.GIST_URLS:
+            assert util.process_gitblob_url(target) == processed
 
     def test_nonmatching_url_is_not_replaced(self):
         for url in self.INVALID_URLS:
