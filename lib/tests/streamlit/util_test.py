@@ -249,15 +249,22 @@ class FileIsInFolderTest(unittest.TestCase):
 
 
 class GitHubUrlTest(unittest.TestCase):
+    GITHUB_URLS = [()]
+    GIST_URLS = [()]
+    INVALID_URLS = ['blah', 'google.com', 'http://homestarrunner.com']
+
     def test_github_url_is_replaced(self):
+        ret = util.process_gitblob_url("sample")
+        
         #TODO
         pass
 
     def test_gist_url_is_replaced(self):
+        pass
         #TODO
         # do test here
 
-    def test_nonmatching_url_is_not replaced(self):
-        #TODO
-        # do test here
+    def test_nonmatching_url_is_not_replaced(self):
+        for url in self.INVALID_URLS:
+            assert url == util.process_gitblob_url(url)
 

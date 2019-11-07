@@ -32,7 +32,7 @@ import streamlit
 from streamlit.credentials import Credentials
 from streamlit import version
 import streamlit.bootstrap as bootstrap
-from streamlit.util import process_gitblob_url 
+from streamlit import util
 
 
 LOG_LEVELS = ["error", "warning", "info", "debug"]
@@ -192,7 +192,7 @@ def main_run(file_or_url, args=None, **kwargs):
 
         with tempfile.NamedTemporaryFile() as fp:
             try:
-                file_or_url = process_gitblob_url(file_or_url)
+                #file_or_url = util.process_gitblob_url(file_or_url)
                 resp = requests.get(file_or_url)
                 resp.raise_for_status()
                 fp.write(resp.content)

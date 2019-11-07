@@ -458,9 +458,9 @@ def process_gitblob_url(url):
     """
     if "github" in url:
         if "blob" in url:
-            return url.replace("blob","raw")
+            return url.replace("blob", "raw")
         elif "gist" in url:
-            return url+"/raw"
+            return url + "/raw"
     return url
 
 
