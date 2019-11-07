@@ -246,3 +246,18 @@ class FileIsInFolderTest(unittest.TestCase):
     def test_rel_file_not_in_folder_glob(self):
         ret = util.file_is_in_folder_glob("foo.py", "**/f")
         self.assertFalse(ret)
+
+
+class GitHubUrlTest(unittest.TestCase):
+    def test_github_url_is_replaced(self):
+        #TODO
+        pass
+
+    def test_gist_url_is_replaced(self):
+        #TODO
+        # do test here
+
+    def test_nonmatching_url_is_not replaced(self):
+        #TODO
+        # do test here
+
