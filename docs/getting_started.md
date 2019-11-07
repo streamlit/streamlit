@@ -55,8 +55,8 @@ Streamlit.
    import streamlit as st
    # To make things easier later, we're also importing numpy and pandas for
    # working with sample data.
-   import numpy
-   import pandas
+   import numpy as np
+   import pandas as pd
    ```
 3. Run your app. A new tab will open in your default browser. It'll be blank
    for now. That's OK.
@@ -104,7 +104,7 @@ will figure it out and render things the right way.
 
 ```Python
 st.write("Here's our first attempt at using data to create a table:")
-st.write(pandas.DataFrame({
+st.write(pd.DataFrame({
     'first column': [1, 2, 3, 4],
     'second column': [10, 20, 30, 40]
 }))
@@ -139,7 +139,7 @@ with this snippet:
 Here's our first attempt at using data to create a table:
 """
 
-df = pandas.DataFrame({
+df = pd.DataFrame({
   'first column': [1, 2, 3, 4],
   'second column': [10, 20, 30, 40]
 })
@@ -165,8 +165,8 @@ You can easily add a line chart to your app with
 sample using Numpy and then chart it.
 
 ```Python
-chart_data = pandas.DataFrame(
-     numpy.random.randn(20, 3),
+chart_data = pd.DataFrame(
+     np.random.randn(20, 3),
      columns=['a', 'b', 'c'])
 
 st.line_chart(chart_data)
@@ -179,8 +179,8 @@ Let's use Numpy to generate some sample data and plot it on a map of
 San Francisco.
 
 ```Python
-map_data = pandas.DataFrame(
-    numpy.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
+map_data = pd.DataFrame(
+    np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
     columns=['lat', 'lon'])
 
 st.map(map_data)
@@ -201,8 +201,8 @@ conditional statement.
 
 ```Python
 if st.checkbox('Show dataframe'):
-    chart_data = pandas.DataFrame(
-       numpy.random.randn(20, 3),
+    chart_data = pd.DataFrame(
+       np.random.randn(20, 3),
        columns=['a', 'b', 'c'])
 
     st.line_chart(chart_data)
