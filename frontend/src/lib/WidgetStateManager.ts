@@ -34,8 +34,8 @@ export interface Source {
  */
 export class WidgetStateManager {
   // Called to deliver a message to the server
-  private readonly sendBackMsg: (msg: IBackMsg) => void
-  private readonly widgetStates: Map<string, WidgetState> = new Map<
+  private sendBackMsg: (msg: IBackMsg) => void
+  private widgetStates: Map<string, WidgetState> = new Map<
     string,
     WidgetState
   >()
