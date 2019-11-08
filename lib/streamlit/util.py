@@ -54,6 +54,13 @@ _AWS_CHECK_IP = "http://checkip.amazonaws.com"
 # URL of Streamlit's help page.
 HELP_DOC = "https://streamlit.io/docs/"
 
+# Regular expression for process_gitblob_url
+GITBLOB_RE = re.compile(
+    "(?P<base>https:\/\/?(gist.)?github.com\/)"
+    "(?P<account>([\w\.]+\/){1,2})"
+    "(?P<blob_or_raw>(blob|raw))?"
+    "(?P<suffix>(.+)?)")
+
 
 def _decode_ascii(string):
     """Decodes a string as ascii."""
@@ -452,26 +459,25 @@ def print_url(title, url):
 
 
 def process_gitblob_url(url):
-    """Checks url to see if it describes a github gist "blob" URL.  
+    """Check url to see if it describes a GitHub Gist "blob" URL.  
+
     If so, returns a new URL to get the "raw" script. 
     If not, returns URL unchanged.
     """
     # Matches github.com and gist.github.com.  Will not match githubusercontent.com.
     # See this regex with explainer and sample text here: https://regexr.com/4odk3
-    re_github_or_gist = re.compile("(?P<base>https:\/\/?(gist.)?github.com\/)(?P<account>([\w\.]+\/){1,2})(?P<blob_or_raw>(blob|raw))?(?P<suffix>(.+)?)")
-
-    match = re_github_or_gist.match(url)
+    match = GITBLOB_RE.match(url)
     if match:
         mdict = match.groupdict()
-        # if it has "blob" in the url, replace this with "raw" and we're done.
+        # If it has "blob" in the url, replace this with "raw" and we're done.
         if mdict["blob_or_raw"] == "blob":
             return "{base}{account}raw{suffix}".format(**mdict)
 
-        # if it is a "raw" url already, return untouched.
+        # If it is a "raw" url already, return untouched.
         if mdict["blob_or_raw"] == "raw":
             return url
 
-        # it's a gist. Just tack "raw" on the end.
+        # It's a gist. Just tack "raw" on the end.
         return url + "/raw"
 
     return url
