@@ -32,7 +32,7 @@ message UploadFileChunk {
   bytes data = 3;
 }
 
-message UploadFileDelete {
+message DeleteUploadedFile {
   string widget_id = 1;
 }
 
@@ -75,6 +75,6 @@ message BackMsg {
     UploadFileChunk upload_file_chunk = 12;
 
     // Delete uploaded file
-    UploadFileDelete upload_file_delete = 13;
+    DeleteUploadedFile delete_uploaded_file = 13;
   }
 }

@@ -149,7 +149,7 @@ class FileUploader extends React.PureComponent<Props, State> {
             }}
             onCancel={() => {
               this.setState({ status: "READY", errorMessage: undefined })
-              this.props.widgetStateManager.sendDeleteFileMessage(
+              this.props.widgetStateManager.sendDeleteUploadedFileMessage(
                 this.props.element.get("id")
               )
             }}

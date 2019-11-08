@@ -50,37 +50,35 @@ message Element {
 
   // An element can be one of the following element types.
   oneof type {
-    Text text = 1;
-    Empty empty = 2;
-    DataFrame data_frame = 3;
-    Chart chart = 4;
-    Progress progress = 5;
-    ImageList imgs = 6;
-    DocString doc_string = 7;
-    Exception exception = 8;
-
-    VegaLiteChart vega_lite_chart = 10;
-    DataFrame table = 11;
-    Balloons balloons = 12;
     Audio audio = 13;
-    Video video = 14;
-    DeckGlChart deck_gl_chart = 15;
-    PlotlyChart plotly_chart = 16;
+    Balloons balloons = 12;
     BokehChart bokeh_chart = 17;
-    GraphVizChart graphviz_chart = 18;
     Button button = 19;
+    Chart chart = 4;
     Checkbox checkbox = 20;
-    Slider slider = 21;
-    TextArea text_area = 22;
-    Radio radio = 23;
-    TextInput text_input = 24;
-    Selectbox selectbox = 25;
-    TimeInput time_input = 26;
+    DataFrame data_frame = 3;
+    DataFrame table = 11;
     DateInput date_input = 27;
-    MultiSelect multiselect = 28;    
-    NumberInput number_input = 29;
+    DeckGlChart deck_gl_chart = 15;
+    DocString doc_string = 7;
+    Empty empty = 2;
+    Exception exception = 8;
     FileUploader file_uploader = 30;
-    
+    GraphVizChart graphviz_chart = 18;
+    ImageList imgs = 6;
+    MultiSelect multiselect = 28;
+    NumberInput number_input = 29;
+    PlotlyChart plotly_chart = 16;
+    Progress progress = 5;
+    Radio radio = 23;
+    Selectbox selectbox = 25;
+    Slider slider = 21;
+    Text text = 1;
+    TextArea text_area = 22;
+    TextInput text_input = 24;
+    TimeInput time_input = 26;
+    VegaLiteChart vega_lite_chart = 10;
+    Video video = 14;
     // Next ID: 31
   }
 }

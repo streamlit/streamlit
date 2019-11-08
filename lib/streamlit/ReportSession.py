@@ -106,7 +106,7 @@ class ReportSession(object):
         # with the active ScriptRunner.
         self._script_request_queue = ScriptRequestQueue()
 
-        self._scriptrunner = None        
+        self._scriptrunner = None
 
         LOGGER.debug("ReportSession initialized (id=%s)", self.id)
 
@@ -452,10 +452,9 @@ class ReportSession(object):
         if progress==1:
             self.handle_rerun_script_request(widget_state=self._widget_states)
 
-    def handle_upload_file_delete(self, upload_file_delete=None):
-        self._file_manager.delete_file(widget_id=upload_file_delete.widget_id)
+    def handle_delete_uploaded_file(self, delete_uploaded_file=None):
+        self._file_manager.delete_file(widget_id=delete_uploaded_file.widget_id)
         self.handle_rerun_script_request(widget_state=self._widget_states)
-        
 
     def handle_stop_script_request(self):
         """Tells the ScriptRunner to stop running its report."""

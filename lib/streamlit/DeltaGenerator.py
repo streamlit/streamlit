@@ -266,8 +266,8 @@ class DeltaGenerator(object):
     path: tuple of ints
       The full path of this DeltaGenerator, consisting of the IDs of
       all ancestors. The 0th item is the topmost ancestor.
-    file_manager: File_manager
-      The File_manager instance of ReportSession
+    file_manager: FileManager
+      The FileManager instance of ReportSession
     """
 
     # The pydoc below is for user consumption, so it doesn't talk about
@@ -1912,7 +1912,7 @@ class DeltaGenerator(object):
         _set_widget_id("file_uploader", element, user_key=key)
         progress, data = self._file_manager.get_data(element.file_uploader.id)
         element.file_uploader.progress = progress
-        return data if data != None else NoValue
+        return NoValue if data  is None else data
 
     @_with_element
     def text_input(self, element, label, value="", key=None):

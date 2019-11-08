@@ -529,8 +529,8 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
                 self._session.handle_upload_file(upload_file=msg.upload_file)
             elif msg_type == "upload_file_chunk":
                 self._session.handle_upload_file_chunk(upload_file_chunk=msg.upload_file_chunk)
-            elif msg_type == "upload_file_delete":
-                self._session.handle_upload_file_delete(upload_file_delete=msg.upload_file_delete)
+            elif msg_type == "delete_uploaded_file":
+                self._session.handle_delete_uploaded_file(delete_uploaded_file=msg.delete_uploaded_file)
             elif msg_type == "close_connection":
                 if config.get_option("global.developmentMode"):
                     Server.get_current().stop()

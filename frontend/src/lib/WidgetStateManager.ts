@@ -23,7 +23,7 @@ import {
   WidgetStates,
   UploadFile,
   UploadFileChunk,
-  UploadFileDelete,
+  DeleteUploadedFile,
 } from "autogen/proto"
 
 import { Set as ImmutableSet } from "immutable"
@@ -228,10 +228,10 @@ export class WidgetStateManager {
     }
   }
 
-  public sendDeleteFileMessage(widgetId: string): void {
-    const uploadFileDeleteMessage = new UploadFileDelete()
-    uploadFileDeleteMessage.widgetId = widgetId
-    this.sendBackMsg({ uploadFileDelete: uploadFileDeleteMessage })
+  public sendDeleteUploadedFileMessage(widgetId: string): void {
+    const deleteUploadedFileMessage = new DeleteUploadedFile()
+    deleteUploadedFileMessage.widgetId = widgetId
+    this.sendBackMsg({ deleteUploadedFile: deleteUploadedFileMessage })
   }
 
   private createWigetStatesMsg(): WidgetStates {
