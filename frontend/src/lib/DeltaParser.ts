@@ -56,29 +56,10 @@ export function applyDelta(
 
   dispatchOneOf(delta, "type", {
     newElement: (element: SimpleElement) => {
-      const currentElement: ReportElement = elements[container].getIn(
-        deltaPath
+      elements[container] = elements[container].mergeDeepIn(
+        deltaPath,
+        handleNewElementMessage(container, element, reportId, metadata)
       )
-
-      if (
-        currentElement &&
-        currentElement.get("element") &&
-        currentElement.get("element").equals(element)
-      ) {
-        elements[container] = elements[container].updateIn(
-          deltaPath,
-          (reportElement: ReportElement) =>
-            reportElement.withMutations(map => {
-              map.set("reportId", reportId)
-              map.set("metadata", metadata)
-            })
-        )
-      } else {
-        elements[container] = elements[container].setIn(
-          deltaPath,
-          handleNewElementMessage(container, element, reportId, metadata)
-        )
-      }
     },
     newBlock: () => {
       elements[container] = elements[container].updateIn(

@@ -166,10 +166,6 @@ class Block extends PureComponent<Props> {
     index: number,
     width: number
   ): ReactNode | null {
-    if (!reportElement.has("element")) {
-      return null
-    }
-
     const element = reportElement.get("element")
     const component = this.renderElement(
       element,
@@ -177,11 +173,6 @@ class Block extends PureComponent<Props> {
       width,
       reportElement.get("metadata")
     )
-
-    if (!component) {
-      // Do not transform an empty element into a ReactNode.
-      return null
-    }
 
     const isStale =
       this.props.showStaleElementIndicator &&

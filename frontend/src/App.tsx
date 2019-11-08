@@ -17,7 +17,7 @@
 
 import React, { Fragment, PureComponent, ReactNode } from "react"
 import { HotKeys } from "react-hotkeys"
-import { fromJS, List } from "immutable"
+import { fromJS, List, Map } from "immutable"
 import classNames from "classnames"
 
 // Other local imports.
@@ -110,7 +110,13 @@ class App extends PureComponent<Props, State> {
     this.state = {
       connectionState: ConnectionState.INITIAL,
       elements: {
-        main: fromJS([makeElementWithInfoText("Please wait...")]),
+        main: fromJS([
+          Map({
+            element: makeElementWithInfoText("Loading..."),
+            metadata: {},
+            reportId: "<null>",
+          }),
+        ]),
         sidebar: fromJS([]),
       },
       reportId: "<null>",
