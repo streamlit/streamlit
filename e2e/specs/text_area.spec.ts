@@ -26,9 +26,9 @@ describe("st.text_area", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stMarkdownArea").should("have.length", 4);
+    cy.get(".stTextArea").should("have.length", 4);
 
-    cy.get(".stMarkdownArea").each((el, idx) => {
+    cy.get(".stTextArea").each((el, idx) => {
       return cy.wrap(el).matchImageSnapshot("text_area" + idx);
     });
   });
@@ -44,7 +44,7 @@ describe("st.text_area", () => {
   });
 
   it("sets value correctly when user types", () => {
-    cy.get(".stMarkdownArea textarea")
+    cy.get(".stTextArea textarea")
       .first()
       .type("test area{enter}");
 
@@ -58,7 +58,7 @@ describe("st.text_area", () => {
   });
 
   it("sets value correctly on ctrl-enter keypress", () => {
-    cy.get(".stMarkdownArea textarea")
+    cy.get(".stTextArea textarea")
       .first()
       .type("test area{ctrl}{enter}");
 
@@ -72,7 +72,7 @@ describe("st.text_area", () => {
   });
 
   it("sets value correctly on command-enter keypress", () => {
-    cy.get(".stMarkdownArea textarea")
+    cy.get(".stTextArea textarea")
       .first()
       .type("test area{command}{enter}");
 
@@ -86,7 +86,7 @@ describe("st.text_area", () => {
   });
 
   it("sets value correctly on blur", () => {
-    cy.get(".stMarkdownArea textarea")
+    cy.get(".stTextArea textarea")
       .first()
       .type("test area")
       .blur();

@@ -47,9 +47,9 @@ describe("disable widgets", () => {
 
       cy.get(".stSelectbox input").should("be.disabled");
 
-      cy.get(".stMarkdownArea textarea").should("be.disabled");
+      cy.get(".stTextArea textarea").should("be.disabled");
 
-      cy.get(".stMarkdownInput input").should("be.disabled");
+      cy.get(".stTextInput input").should("be.disabled");
 
       cy.get(".stTimeInput input").should("be.disabled");
 
