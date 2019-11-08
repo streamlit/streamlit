@@ -1908,7 +1908,7 @@ class DeltaGenerator(object):
         """
         element.file_uploader.label = label
         element.file_uploader.type[:] = type
-        element.file_uploader.max_upload_size = config.get_option("server.maxUploadSize")
+        element.file_uploader.max_upload_size_mb = config.get_option("server.maxUploadSize")
         _set_widget_id("file_uploader", element, user_key=key)
         progress, data = self._file_manager.get_data(element.file_uploader.id)
         element.file_uploader.progress = progress

@@ -445,7 +445,7 @@ class ReportSession(object):
         self.handle_rerun_script_request(widget_state=self._widget_states)
 
     def handle_upload_file_chunk(self, upload_file_chunk=None):
-        progress = self._file_manager.porcess_chunk(
+        progress = self._file_manager.process_chunk(
             widget_id=upload_file_chunk.widget_id, index=upload_file_chunk.index, data=upload_file_chunk.data
         )
 

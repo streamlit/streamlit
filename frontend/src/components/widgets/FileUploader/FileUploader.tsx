@@ -68,7 +68,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     event: React.SyntheticEvent<HTMLElement>
   ): void => {
     const { element } = this.props
-    const maxSize = element.get("maxUploadSize")
+    const maxSizeMb = element.get("maxUploadSizeMb")
 
     if (rejectedFiles.length > 0) {
       this.setState({
@@ -81,7 +81,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     this.setState({ status: "READING" })
     acceptedFiles.forEach((file: File) => {
       const fileSizeMB = file.size / 1024 / 1024
-      if (fileSizeMB < maxSize) {
+      if (fileSizeMB < maxSizeMb) {
         const fileReader = new FileReader()
         fileReader.onloadend = (ev: ProgressEvent<FileReader>) =>
           this.handleFileRead(ev, file)
@@ -89,7 +89,7 @@ class FileUploader extends React.PureComponent<Props, State> {
       } else {
         this.setState({
           status: "READY",
-          errorMessage: `The max file size allowed is ${maxSize}MB`,
+          errorMessage: `The max file size allowed is ${maxSizeMb}MB`,
         })
       }
     })

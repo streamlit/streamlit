@@ -28,7 +28,7 @@ message FileUploader {
   repeated string type = 3;
 
   // Max file size allowed by server config
-  int32 max_upload_size = 4;
+  int32 max_upload_size_mb = 4;
 
   // The current progress of upload
   float progress = 5;

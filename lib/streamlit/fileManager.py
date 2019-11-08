@@ -23,10 +23,8 @@ class File(object):
         self.size = size
         self.last_modified = last_modified
         self.total_chunks = chunks
-        self.received_chunks = 0
         self.buffers = {}
         self.data = None
-
 
 class FileManager(object):
     def __init__(self):
@@ -40,7 +38,6 @@ class FileManager(object):
         del self._file_list[widget_id]
 
     def locate_new_file(self, widget_id, name, size, last_modified, chunks):
-
         file = self._file_list.get(widget_id)
         if file != None:
             self.delete_file(widget_id)
@@ -54,35 +51,32 @@ class FileManager(object):
         )
         self._file_list[widget_id] = file
 
-    def porcess_chunk(self, widget_id, index, data):
+    def process_chunk(self, widget_id, index, data):
         file = self._file_list.get(widget_id)
         if file != None:
             file.buffers[index] = data
-            file.received_chunks = file.received_chunks + 1
-
-            if file.received_chunks == file.total_chunks:
+            if len(file.buffers) == file.total_chunks:
                 file.data = bytearray()
                 index = 0
                 while file.buffers.get(index) != None:
                     file.data.extend(file.buffers[index])
                     del file.buffers[index]
-                    index = index + 1
+                    index += 1
 
                 file.buffers = None
                 return 1
 
-            if file.received_chunks > 0:
-                return float(file.received_chunks)/float(file.total_chunks)
+            if len(file.buffers) > 0:
+                return float(len(file.buffers))/float(file.total_chunks)
 
         return 0
 
     def get_data(self, widget_id):
-
         file = self._file_list.get(widget_id)
         if file != None:
-            if file.received_chunks == file.total_chunks:
+            if file.data is not None:
                 return 1, file.data
             else:
-                return float(file.received_chunks)/float(file.total_chunks), None
+                return float(len(file.buffers))/float(file.total_chunks), None
 
         return 0, None

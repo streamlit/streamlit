@@ -205,7 +205,7 @@ export class WidgetStateManager {
     // We send the file in severals chunks to avoid server webservices freezing.
 
     // The default file size allowed by server config is 50MB.
-    //The best message size to don't freeze the server is 10MB
+    // The best message size to don't freeze the server is 10MB
     const chunkByteLimit = 10 * 1e6 //10MB
     const sendBackMsg = this.sendBackMsg
     const uploadFileMessage = new UploadFile()
@@ -213,6 +213,7 @@ export class WidgetStateManager {
     uploadFileMessage.name = name
     uploadFileMessage.size = data.length
     uploadFileMessage.lastModified = lastModified
+    // The number of chunks the server should be wait
     uploadFileMessage.chunks = Math.ceil(data.length / chunkByteLimit)
     sendBackMsg({ uploadFile: uploadFileMessage })
 

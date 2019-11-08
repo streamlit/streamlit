@@ -20,15 +20,27 @@ import "streamlit/proto/Widget.proto";
 
 message UploadFile {
   string widget_id = 1;
+
+  // The name (with extension) of the file on client pc
   string name = 2;
+
+  // The size (in bytes) of the file on client pc
   uint64 size = 3;
+
+  // The date of last modified of the file on client pc
   uint64 lastModified = 4;
+
+  // Number of chunks the server should wait for
   uint32 chunks = 5;
 }
 
 message UploadFileChunk {
   string widget_id = 1;
+
+  // Index of the chunk
   uint32 index = 2;
+
+  // Byte array with the data
   bytes data = 3;
 }
 
