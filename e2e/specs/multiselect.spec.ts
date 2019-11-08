@@ -35,7 +35,7 @@ describe("st.multiselect", () => {
     });
 
     it("should show the correct text", () => {
-      cy.get(".stText")
+      cy.get(".stMarkdown")
         .should("have.length", 8)
         .should(
           "have.text",
@@ -106,7 +106,7 @@ describe("st.multiselect", () => {
     });
 
     it("outputs the correct value", () => {
-      cy.get(".stText")
+      cy.get(".stMarkdown")
         .should("have.length", 8)
         .should(
           "have.text",
@@ -118,7 +118,7 @@ describe("st.multiselect", () => {
       beforeEach(() => selectOption(0));
 
       it("outputs the correct value", () => {
-        cy.get(".stText")
+        cy.get(".stMarkdown")
           .should("have.length", 8)
           .should(
             "have.text",
@@ -133,7 +133,7 @@ describe("st.multiselect", () => {
             .click();
         });
         it("outputs the correct value", () => {
-          cy.get(".stText")
+          cy.get(".stMarkdown")
             .should("have.length", 8)
             .should(
               "have.text",
@@ -149,7 +149,7 @@ describe("st.multiselect", () => {
             .click();
         });
         it("outputs the correct value", () => {
-          cy.get(".stText")
+          cy.get(".stMarkdown")
             .should("have.length", 8)
             .should(
               "have.text",

@@ -34,7 +34,7 @@ describe("st.checkbox", () => {
   });
 
   it("has correct initial values", () => {
-    cy.get(".stText").should(
+    cy.get(".stMarkdown").should(
       "have.text",
       "value 1: True" + "value 2: False" + "value 3: False"
     );
@@ -43,7 +43,7 @@ describe("st.checkbox", () => {
   it("sets value correctly when user clicks", () => {
     cy.get(".stCheckbox").click({ multiple: true });
 
-    cy.get(".stText").should(
+    cy.get(".stMarkdown").should(
       "have.text",
       "value 1: False" + "value 2: True" + "value 3: True"
     );

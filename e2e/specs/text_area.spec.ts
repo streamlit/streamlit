@@ -26,15 +26,15 @@ describe("st.text_area", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stTextArea").should("have.length", 4);
+    cy.get(".stMarkdownArea").should("have.length", 4);
 
-    cy.get(".stTextArea").each((el, idx) => {
+    cy.get(".stMarkdownArea").each((el, idx) => {
       return cy.wrap(el).matchImageSnapshot("text_area" + idx);
     });
   });
 
   it("has correct default values", () => {
-    cy.get(".stText").should(
+    cy.get(".stMarkdown").should(
       "have.text",
       'value 1: "  "' +
         'value 2: " default text "' +
@@ -44,11 +44,11 @@ describe("st.text_area", () => {
   });
 
   it("sets value correctly when user types", () => {
-    cy.get(".stTextArea textarea")
+    cy.get(".stMarkdownArea textarea")
       .first()
       .type("test area{enter}");
 
-    cy.get(".stText").should(
+    cy.get(".stMarkdown").should(
       "have.text",
       'value 1: "  "' +
         'value 2: " default text "' +
@@ -58,11 +58,11 @@ describe("st.text_area", () => {
   });
 
   it("sets value correctly on ctrl-enter keypress", () => {
-    cy.get(".stTextArea textarea")
+    cy.get(".stMarkdownArea textarea")
       .first()
       .type("test area{ctrl}{enter}");
 
-    cy.get(".stText").should(
+    cy.get(".stMarkdown").should(
       "have.text",
       'value 1: " test area "' +
         'value 2: " default text "' +
@@ -72,11 +72,11 @@ describe("st.text_area", () => {
   });
 
   it("sets value correctly on command-enter keypress", () => {
-    cy.get(".stTextArea textarea")
+    cy.get(".stMarkdownArea textarea")
       .first()
       .type("test area{command}{enter}");
 
-    cy.get(".stText").should(
+    cy.get(".stMarkdown").should(
       "have.text",
       'value 1: " test area "' +
         'value 2: " default text "' +
@@ -86,12 +86,12 @@ describe("st.text_area", () => {
   });
 
   it("sets value correctly on blur", () => {
-    cy.get(".stTextArea textarea")
+    cy.get(".stMarkdownArea textarea")
       .first()
       .type("test area")
       .blur();
 
-    cy.get(".stText").should(
+    cy.get(".stMarkdown").should(
       "have.text",
       'value 1: " test area "' +
         'value 2: " default text "' +

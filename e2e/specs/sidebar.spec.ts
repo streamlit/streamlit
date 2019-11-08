@@ -38,6 +38,6 @@ describe("st.sidebar", () => {
   });
 
   it("handles overwriting elements", () => {
-    cy.get(".sidebar .stText").contains("overwritten");
+    cy.get(".sidebar .stMarkdown").contains("overwritten");
   });
 });
