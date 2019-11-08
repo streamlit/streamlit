@@ -112,7 +112,7 @@ class App extends PureComponent<Props, State> {
       elements: {
         main: fromJS([
           Map({
-            element: makeElementWithInfoText("Loading..."),
+            element: makeElementWithInfoText("Please wait..."),
             metadata: {},
             reportId: "<null>",
           }),
