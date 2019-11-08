@@ -26,9 +26,9 @@ describe("st.text_input", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stMarkdownInput").should("have.length", 4);
+    cy.get(".stTextInput").should("have.length", 4);
 
-    cy.get(".stMarkdownInput").each((el, idx) => {
+    cy.get(".stTextInput").each((el, idx) => {
       return cy.wrap(el).matchImageSnapshot("text_input" + idx);
     });
   });
@@ -44,7 +44,7 @@ describe("st.text_input", () => {
   });
 
   it("sets value correctly when user types", () => {
-    cy.get(".stMarkdownInput input")
+    cy.get(".stTextInput input")
       .first()
       .type("test input");
 
@@ -58,7 +58,7 @@ describe("st.text_input", () => {
   });
 
   it("sets value correctly on enter keypress", () => {
-    cy.get(".stMarkdownInput input")
+    cy.get(".stTextInput input")
       .first()
       .type("test input{enter}");
 
@@ -72,7 +72,7 @@ describe("st.text_input", () => {
   });
 
   it("sets value correctly on blur", () => {
-    cy.get(".stMarkdownInput input")
+    cy.get(".stTextInput input")
       .first()
       .type("test input")
       .blur();
