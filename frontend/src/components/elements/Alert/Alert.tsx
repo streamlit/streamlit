@@ -33,7 +33,12 @@ const ALERT_CSS_CLASS = ImmutableMap({
 })
 
 export function getAlertCSSClass(format: number): string {
-  return ALERT_CSS_CLASS.get(format.toString())
+  const cname = ALERT_CSS_CLASS.get(format.toString())
+  if (cname) {
+    return cname
+  } else {
+    return "invalid-alert"
+  }
 }
 
 interface Props {
