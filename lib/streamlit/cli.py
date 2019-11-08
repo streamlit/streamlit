@@ -31,6 +31,7 @@ import click
 import streamlit
 from streamlit.credentials import Credentials
 from streamlit import version
+from streamlit import util
 import streamlit.bootstrap as bootstrap
 from streamlit.case_converters import to_snake_case
 
@@ -215,6 +216,8 @@ def main_run(target, args=None, **kwargs):
 
             path = urlparse(target).path
             script_path = os.path.join(temp_dir, path.strip("/").rsplit("/", 1)[-1])
+            # if this is a GitHub/Gist blob url, convert to a raw URL first.
+            target = util.process_gitblob_url(target)
             _download_remote(script_path, target)
             _main_run(script_path, args)
     else:
