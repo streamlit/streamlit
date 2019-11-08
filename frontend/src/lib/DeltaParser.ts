@@ -55,9 +55,19 @@ export function applyDelta(
 
   dispatchOneOf(delta, "type", {
     newElement: (element: SimpleElement) => {
-      elements[container] = elements[container].mergeDeepIn(
+      const currentElement: ReportElement = elements[container].getIn(
+        deltaPath
+      )
+
+      elements[container] = elements[container].setIn(
         deltaPath,
-        handleNewElementMessage(container, element, reportId, metadata)
+        handleNewElementMessage(
+          container,
+          currentElement,
+          element,
+          reportId,
+          metadata
+        )
       )
     },
     newBlock: () => {
@@ -80,6 +90,7 @@ export function applyDelta(
 
 function handleNewElementMessage(
   container: Container,
+  reportElement: ReportElement,
   element: SimpleElement,
   reportId: string,
   metadata: ForwardMsgMetadata
@@ -89,6 +100,10 @@ function handleNewElementMessage(
   // Set reportId on elements so we can clear old elements
   // when the report script is re-executed.
   // Set metadata on elements so that we can use them downstream.
+
+  if (reportElement && reportElement.get("element").equals(element)) {
+    return reportElement.set("reportId", reportId).set("metadata", metadata)
+  }
 
   return ImmutableMap({
     reportId,
