@@ -90,8 +90,8 @@ def _get_context(func):
 
 def get_hash(f, context=None, hash_funcs=None):
     """Quick utility function that computes a hash of an arbitrary object."""
-    hasher = CodeHasher("md5")
-    hasher.update(f, context, hash_funcs)
+    hasher = CodeHasher("md5", hash_funcs=hash_funcs)
+    hasher.update(f, context)
     return hasher.digest()
 
 
@@ -184,7 +184,7 @@ def _hashing_error_message(start):
 class CodeHasher:
     """A hasher that can hash code objects including dependencies."""
 
-    def __init__(self, name="md5", hasher=None):
+    def __init__(self, name="md5", hasher=None, hash_funcs=None):
         self.hashes = dict()
 
         self.name = name
@@ -204,9 +204,11 @@ class CodeHasher:
             config.get_option("server.folderWatchBlacklist")
         )
 
-    def update(self, obj, context=None, hash_funcs=None):
+        self.hash_funcs = hash_funcs or {}
+
+    def update(self, obj, context=None):
         """Update the hash with the provided object."""
-        self._update(self.hasher, obj, context, hash_funcs)
+        self._update(self.hasher, obj, context)
 
     def digest(self):
         return self.hasher.digest()
@@ -214,7 +216,7 @@ class CodeHasher:
     def hexdigest(self):
         return self.hasher.hexdigest()
 
-    def to_bytes(self, obj, context=None, hash_funcs=None):
+    def to_bytes(self, obj, context=None):
         """Add memoization to _to_bytes."""
         key = _key(obj, context)
 
@@ -226,7 +228,7 @@ class CodeHasher:
             self._counter += 1
             self.hashes[key] = _int_to_bytes(self._counter)
 
-        b = self._to_bytes(obj, context, hash_funcs)
+        b = self._to_bytes(obj, context)
 
         self.size += sys.getsizeof(b)
 
@@ -235,17 +237,15 @@ class CodeHasher:
 
         return b
 
-    def _update(self, hasher, obj, context=None, hash_funcs=None):
+    def _update(self, hasher, obj, context=None):
         """Update the provided hasher with the hash of an object."""
-        b = self.to_bytes(obj, context, hash_funcs)
+        b = self.to_bytes(obj, context)
         hasher.update(b)
 
-    def _to_bytes(self, obj, context, hash_funcs):
+    def _to_bytes(self, obj, context):
         """Hash objects to bytes, including code with dependencies.
         Python's built in `hash` does not produce consistent results across
         runs."""
-
-        hash_funcs = hash_funcs or {}
 
         try:
             if _is_magicmock(obj):
@@ -254,6 +254,9 @@ class CodeHasher:
                 return self.to_bytes(id(obj))
             elif isinstance(obj, bytes) or isinstance(obj, bytearray):
                 return obj
+            elif type(obj) in self.hash_funcs:
+                # Escape hatch for unsupported objects
+                return self.to_bytes(self.hash_funcs[type(obj)](obj))
             elif isinstance(obj, string_types):
                 return obj.encode()
             elif isinstance(obj, float):
@@ -265,7 +268,7 @@ class CodeHasher:
                 # add type to distingush x from [x]
                 self._update(h, type(obj).__name__.encode() + b":")
                 for e in obj:
-                    self._update(h, e, context, hash_funcs)
+                    self._update(h, e, context)
                 return h.digest()
             elif obj is None:
                 # Special string since hashes change between sessions.
@@ -316,7 +319,7 @@ class CodeHasher:
             elif inspect.isroutine(obj):
                 if hasattr(obj, "__wrapped__"):
                     # Ignore the wrapper of wrapped functions.
-                    return self.to_bytes(obj.__wrapped__, hash_funcs=hash_funcs)
+                    return self.to_bytes(obj.__wrapped__)
 
                 if obj.__module__.startswith("streamlit"):
                     # Ignore streamlit modules even if they are in the CWD
@@ -331,15 +334,15 @@ class CodeHasher:
                 ) and not self._folder_black_list.is_blacklisted(filepath):
                     context = _get_context(obj)
                     if obj.__defaults__:
-                        self._update(h, obj.__defaults__, context, hash_funcs)
-                    h.update(self._code_to_bytes(obj.__code__, context, hash_funcs))
+                        self._update(h, obj.__defaults__, context)
+                    h.update(self._code_to_bytes(obj.__code__, context))
                 else:
                     # Don't hash code that is not in the current working directory.
                     self._update(h, obj.__module__)
                     self._update(h, obj.__name__)
                 return h.digest()
             elif inspect.iscode(obj):
-                return self._code_to_bytes(obj, context, hash_funcs)
+                return self._code_to_bytes(obj, context)
             elif inspect.ismodule(obj):
                 # TODO: Figure out how to best show this kind of warning to the
                 # user. In the meantime, show nothing. This scenario is too common,
@@ -362,13 +365,10 @@ class CodeHasher:
                 # it's a callable object that remembers the original function plus
                 # the values you pickled into it. So here we need to special-case it.
                 h = hashlib.new(self.name)
-                self._update(h, obj.args, hash_funcs=hash_funcs)
-                self._update(h, obj.func, hash_funcs=hash_funcs)
-                self._update(h, obj.keywords, hash_funcs=hash_funcs)
+                self._update(h, obj.args)
+                self._update(h, obj.func)
+                self._update(h, obj.keywords)
                 return h.digest()
-            elif type(obj) in hash_funcs:
-                # Escape hatch for unsupported objects
-                return self.to_bytes(hash_funcs[type(obj)](obj), hash_funcs=hash_funcs)
             else:
                 try:
                     # As a last resort, we pickle the object to hash it.
@@ -386,7 +386,7 @@ class CodeHasher:
                 )
             )
 
-    def _code_to_bytes(self, code, context, hash_funcs):
+    def _code_to_bytes(self, code, context):
         h = hashlib.new(self.name)
 
         # Hash the bytecode.
@@ -403,25 +403,25 @@ class CodeHasher:
         # Hash non-local names and functions referenced by the bytecode.
         if hasattr(dis, "get_instructions"):  # get_instructions is new since Python 3.4
             for ref in get_referenced_objects(code, context):
-                self._update(h, ref, context, hash_funcs)
+                self._update(h, ref, context)
         else:
             # This won't correctly follow nested calls like `foo.bar.baz()`.
             for name in code.co_names:
                 if name in context.globals:
                     try:
-                        self._update(h, context.globals[name], context, hash_funcs)
+                        self._update(h, context.globals[name], context)
                     except Exception:
                         self._update(h, name)
                 else:
                     try:
                         module = importlib.import_module(name)
-                        self._update(h, module, context, hash_funcs)
+                        self._update(h, module, context)
                     except ImportError:
                         self._update(h, name, context)
 
             for name, value in context.cells.items():
                 try:
-                    self._update(h, value, context, hash_funcs)
+                    self._update(h, value, context)
                 except Exception:
                     self._update(h, name)
 

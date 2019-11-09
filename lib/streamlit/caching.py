@@ -336,9 +336,14 @@ def _read_from_mem_cache(key, allow_output_mutation, hash_funcs):
 
 
 def _write_to_mem_cache(key, value, allow_output_mutation, args_mutated, hash_funcs):
+    if allow_output_mutation:
+        hash = None
+    else:
+        hash = get_hash(value, hash_funcs=hash_funcs)
+
     _mem_cache[key] = CacheEntry(
         value=value,
-        hash=None if allow_output_mutation else get_hash(value, hash_funcs=hash_funcs),
+        hash=hash,
         args_mutated=args_mutated,
     )
 
@@ -453,8 +458,10 @@ def cache(
         the cached function.
 
     hash_funcs : dict or None
-        Mapping of types to functions for objects that we can't hash. The function should
-        accept an object as a parameter.
+        Mapping of types to hash functions. This is used to override the behavior of the hasher
+        inside Streamlit's caching mechanism: when the hasher encounters an object, it will first
+        check to see if its type matches a key in this dict and, if so, will use the provided
+        function to generate a hash for it. See below for an example of how this can be used.
 
     Example
     -------
@@ -487,6 +494,13 @@ def cache(
     ... def fetch_and_clean_data(url):
     ...     # Fetch data from URL here, and then clean it up.
     ...     return data
+
+
+    To override the default hashing behavior, pass a mapping of type to hash function:
+
+    >>> @st.cache(hash_funcs={MongoClient: id})
+    ... def connect_to_database(url):
+    ...     return MongoClient(url)
 
     """
     # Help users migrate to the new kwarg
@@ -528,14 +542,14 @@ def cache(
         def get_or_set_cache():
             hasher = hashlib.new("md5")
 
-            args_hasher = CodeHasher("md5", hasher)
-            args_hasher.update([args, kwargs], hash_funcs=hash_funcs)
+            args_hasher = CodeHasher("md5", hasher, hash_funcs)
+            args_hasher.update([args, kwargs])
             LOGGER.debug("Hashing arguments to %s of %i bytes.", name, args_hasher.size)
 
             args_digest_before = args_hasher.digest()
 
-            code_hasher = CodeHasher("md5", hasher)
-            code_hasher.update(func, hash_funcs=hash_funcs)
+            code_hasher = CodeHasher("md5", hasher, hash_funcs)
+            code_hasher.update(func)
             LOGGER.debug("Hashing function %s in %i bytes.", name, code_hasher.size)
 
             key = hasher.hexdigest()
@@ -554,17 +568,17 @@ def cache(
                     else:
                         return_value = func(*args, **kwargs)
 
-                args_hasher_after = CodeHasher("md5")
-                args_hasher_after.update([args, kwargs], hash_funcs=hash_funcs)
+                args_hasher_after = CodeHasher("md5", hash_funcs=hash_funcs)
+                args_hasher_after.update([args, kwargs])
                 args_mutated = args_digest_before != args_hasher_after.digest()
 
                 _write_to_cache(
-                    key,
-                    return_value,
-                    persist,
-                    allow_output_mutation,
-                    args_mutated,
-                    hash_funcs,
+                    key=key,
+                    value=return_value,
+                    persist=persist,
+                    allow_output_mutation=allow_output_mutation,
+                    args_mutated=args_mutated,
+                    hash_funcs=hash_funcs,
                 )
 
             if args_mutated:
@@ -666,8 +680,8 @@ class Cache(dict):
         context = Context(dict(caller_frame.f_globals, **caller_frame.f_locals), {}, {})
         code = compile(program, filename, "exec")
 
-        code_hasher = CodeHasher("md5")
-        code_hasher.update(code, context, self._hash_funcs)
+        code_hasher = CodeHasher("md5", hash_funcs=self._hash_funcs)
+        code_hasher.update(code, context)
         LOGGER.debug("Hashing block in %i bytes.", code_hasher.size)
 
         key = code_hasher.hexdigest()
@@ -680,24 +694,24 @@ class Cache(dict):
                 self._allow_output_mutation,
                 code,
                 [caller_lineno + 1, caller_lineno + len(lines)],
-                hash_funcs,
+                self._hash_funcs,
             )
             self.update(value)
         except (CacheKeyNotFoundError, CachedObjectWasMutatedError):
             if self._allow_output_mutation and not self._persist:
                 # If we don't hash the results, we don't need to use exec and just return True.
                 # This way line numbers will be correct.
-                _write_to_cache(key, self, False, True, None, None)
+                _write_to_cache(key=key, value=self, persist=False, allow_output_mutation=True, args_mutated=None, hash_funcs=None)
                 return True
 
             exec(code, caller_frame.f_globals, caller_frame.f_locals)
             _write_to_cache(
-                key,
-                self,
-                self._persist,
-                self._allow_output_mutation,
-                None,
-                self._hash_funcs,
+                key=key,
+                value=self,
+                persist=self._persist,
+                allow_output_mutation=self._allow_output_mutation,
+                args_mutated=None,
+                hash_funcs=self._hash_funcs,
             )
 
         # Return False so that we have control over the execution.
