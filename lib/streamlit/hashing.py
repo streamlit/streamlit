@@ -114,8 +114,7 @@ def _key(obj, context):
         return (
             isinstance(obj, bytes)
             or isinstance(obj, bytearray)
-            or isinstance(obj, bytes)
-            or isinstance(obj, string_types)
+            or isinstance(obj, string_types)  # noqa: F821
             or isinstance(obj, float)
             or isinstance(obj, int)
             or isinstance(obj, bool)
@@ -252,7 +251,7 @@ class CodeHasher:
                 return self.to_bytes(id(obj))
             elif isinstance(obj, bytes) or isinstance(obj, bytearray):
                 return obj
-            elif isinstance(obj, string_types):
+            elif isinstance(obj, string_types):  # noqa: F821
                 return obj.encode()
             elif isinstance(obj, float):
                 return self.to_bytes(hash(obj))
@@ -303,7 +302,8 @@ class CodeHasher:
                 return self.to_bytes(obj.__name__)
             elif hasattr(obj, "name") and (
                 isinstance(obj, io.IOBase)
-                or (isinstance(obj.name, string_types) and os.path.exists(obj.name))
+                or (isinstance(obj.name, string_types)  # noqa: F821
+                    and os.path.exists(obj.name))
             ):
                 # Hash files as name + last modification date + offset.
                 h = hashlib.new(self.name)
@@ -391,7 +391,8 @@ class CodeHasher:
         consts = [
             n
             for n in code.co_consts
-            if not isinstance(n, string_types) or not n.endswith(".<lambda>")
+            if not isinstance(n, string_types)  # noqa: F821
+            or not n.endswith(".<lambda>")
         ]
         self._update(h, consts, context)
 
