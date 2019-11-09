@@ -376,14 +376,15 @@ _create_option(
 _create_option(
     "server.fileWatcherType",
     description="""
-        By default, Streamlit detects file changes with the Python watchdog
-        module. Optionally, you can force Streamlit to use Polling even if 
-        watchdog is available. 
-        There are four supported types at the moment:
-        "none": means no file watch at all,
-        "auto": would start from watchdog, and fall back to polling if watchdog  is not available,
-        "watchdog":  would always try to use watchdog,
-        "poll": would always try to use polling
+        Change the type of file watcher used by Streamlit, or turn it off
+        completely.
+
+        Allowed values:
+        * "auto"     : Streamlit will attempt to use the watchdog module, and
+                       falls back to polling if watchdog is not available.
+        * "watchdog" : Force Streamlit to use the watchdog module.
+        * "poll"     : Force Streamlit to always use polling.
+        * "none"     : Streamlit will not watch files.
     """,
     default_val="auto",
     type_=str,
