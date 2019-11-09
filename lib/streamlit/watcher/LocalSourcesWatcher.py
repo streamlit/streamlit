@@ -33,13 +33,13 @@ from streamlit.folder_black_list import FolderBlackList
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
-errorImportEventBasedWatcher = False
+errorImportingEventBasedWatcher = False
 
 try:
     # If the watchdog module is installed.
     from streamlit.watcher.EventBasedFileWatcher import EventBasedFileWatcher
 except ImportError:
-    errorImportEventBasedWatcher = True
+    errorImportingEventBasedWatcher = True
     if not config.get_option("global.disableWatchdogWarning"):
         msg = "\n  $ xcode-select --install" if util.is_darwin() else ""
 
@@ -54,16 +54,17 @@ except ImportError:
         )
 
 watcherType = config.get_option("server.fileWatcherType")
-from streamlit.watcher.PollingFileWatcher import PollingFileWatcher
 
 if watcherType == "auto":
-    if errorImportEventBasedWatcher:
+    if errorImportingEventBasedWatcher:
+        from streamlit.watcher.PollingFileWatcher import PollingFileWatcher
         FileWatcher = PollingFileWatcher
     else:
         FileWatcher = EventBasedFileWatcher
-elif watcherType == "watchdog" and not errorImportEventBasedWatcher:
+elif watcherType == "watchdog" and not errorImportingEventBasedWatcher:
     FileWatcher = EventBasedFileWatcher
 elif watcherType == "poll":
+    from streamlit.watcher.PollingFileWatcher import PollingFileWatcher
     FileWatcher = PollingFileWatcher
 
 
