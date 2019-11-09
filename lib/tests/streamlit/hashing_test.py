@@ -391,7 +391,7 @@ class CodeHashTest(unittest.TestCase):
         self.assertNotEqual(get_hash(f), get_hash(n))
 
     def test_class(self):
-        """Test hash for classes is we call different functions."""
+        """Test hash for classes if we call different functions."""
 
         x = 12
         y = 13

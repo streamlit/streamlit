@@ -701,7 +701,14 @@ class Cache(dict):
             if self._allow_output_mutation and not self._persist:
                 # If we don't hash the results, we don't need to use exec and just return True.
                 # This way line numbers will be correct.
-                _write_to_cache(key=key, value=self, persist=False, allow_output_mutation=True, args_mutated=None, hash_funcs=None)
+                _write_to_cache(
+                    key=key,
+                    value=self,
+                    persist=False,
+                    allow_output_mutation=True,
+                    args_mutated=None,
+                    hash_funcs=None,
+                )
                 return True
 
             exec(code, caller_frame.f_globals, caller_frame.f_locals)
