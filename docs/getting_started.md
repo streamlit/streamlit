@@ -90,8 +90,8 @@ Let's add a title to test things out:
 st.title('My first app')
 ```
 
-That's it! Your report has a title. You can use specific text functions to add
-content to your report, or you can use [`st.write()`](api.html#streamlit.write)
+That's it! Your app has a title. You can use specific text functions to add
+content to your app, or you can use [`st.write()`](api.html#streamlit.write)
 and add your own markdown.
 
 ### Write a data frame
@@ -228,7 +228,7 @@ option = st.selectbox(
 
 For a cleaner look, you can move your widgets into a sidebar. This keeps your
 app central, while widgets are pinned to the left. Let's take a look at how you
-can use [`st.sidebar()`](api.html#streamlit.sidebar) in your app.
+can use [`st.sidebar`](api.html#add-widgets-to-sidebar) in your app.
 
 ```Python
 option = st.sidebar.selectbox(
@@ -238,9 +238,11 @@ option = st.sidebar.selectbox(
 'You selected:', option
 ```
 
-Most of the elements you can put into the main part of your app with an
-`st.something()` call can also be put into a sidebar with
-`st.sidebar.something()`. The only exceptions right now are `st.write` (you
+Most of the elements you can put into your app can also be put into a sidebar using this syntax:
+`st.sidebar.[element_name]()`. Here are a few examples that show how it's used: `st.sidebar.markdown()`, `st.sidebar.slider()`, `st.sidebar.line_chart()`.
+
+
+The only exceptions right now are `st.write` (you
 should use `st.sidebar.markdown()` instead), `st.echo`, and `st.spinner`. Rest
 assured, though, we're currently working on adding support for those too!
 
