@@ -129,7 +129,7 @@ def _build_duplicate_widget_message(widget_type, user_key=None):
     if user_key is not None:
         message = textwrap.dedent(
             """
-            There are multiple identical `st.{widget_type}` widgets with 
+            There are multiple identical `st.{widget_type}` widgets with
             `key='{user_key}'`.
 
             To fix this, please make sure that the `key` argument is unique for
@@ -490,6 +490,10 @@ class DeltaGenerator(object):
             information can be found at: https://github.github.com/gfm.
             Inline and block math are supported by KaTeX and remark-math.
 
+            The body also support LaTeX expressions, by just wrapping them in
+            "$" or "$$" (the "$$" must be on their own lines). Supported LaTeX
+            functions are listed at https://katex.org/docs/supported.html.
+
         unsafe_allow_html : bool
             By default, any HTML tags found in the body will be escaped and
             therefore treated as pure text. This behavior may be turned off by
@@ -527,16 +531,26 @@ class DeltaGenerator(object):
 
     @_with_element
     def latex(self, element, body):
-        """Display string formatted as LaTeX.
+        """Display mathematical expressions formatted as LaTeX.
+
+        Supported LaTeX functions are listed at
+        https://katex.org/docs/supported.html.
 
         Parameters
         ----------
-        body : str
-            The string to display as LaTeX.
+        body : str or SymPy expression
+            The string or SymPy expression to display as LaTeX. If str, it's
+            a good idea to use raw Python strings since LaTeX uses backslashes
+            a lot.
+
 
         Example
         -------
-        >>> st.latex("ax^2 + bx + c = 0")
+        >>> st.latex(r'''
+        ...     a + ar + a r^2 + a r^3 + \cdots + a r^{n-1} =
+        ...     \sum_{k=0}^{n-1} ar^k =
+        ...     a \left(\frac{1-r^{n}}{1-r}\right)
+        ...     ''')
 
         """
         from streamlit.util import is_sympy_expession
