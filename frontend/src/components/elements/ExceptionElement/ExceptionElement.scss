@@ -16,19 +16,28 @@
 
 @import "src/assets/css/variables";
 
-.reportview-container {
-  .exception .message .type {
+.reportview-container .stException {
+  .message .type {
     font-weight: bold;
   }
 
-  .exception .stack-trace-row {
+  .stack-trace-row {
     margin-top: 0.5rem;
   }
 
-  .exception .stack-trace-title {
+  .stack-trace-title {
     font-family: "IBM Plex Mono", monospace;
     font-size: 0.8rem;
     margin-top: 0.5rem;
     margin-bottom: 0.5rem;
+  }
+
+  &.alert pre,
+  &.alert pre code {
+    background: none;
+    padding: 0;
+    color: inherit;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
   }
 }
