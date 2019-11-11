@@ -33,13 +33,13 @@ class FileManagerTest(unittest.TestCase):
         file_manager.locate_new_file(widget_idA, file_name, len(file_bytes), date.today(), 1)
         file_manager.locate_new_file(widget_idB, file_name, len(file_bytes), date.today(), 2)
 
-        progress_a = file_manager.porcess_chunk(widget_idA, 0, file_bytes)
+        progress_a = file_manager.process_chunk(widget_idA, 0, file_bytes)
         self.assertEqual(progress_a, 1)
 
-        progress_b = file_manager.porcess_chunk(widget_idB, 0, file_bytes[0:50])
+        progress_b = file_manager.process_chunk(widget_idB, 0, file_bytes[0:50])
         self.assertEqual(progress_b, 0.5)
 
-        progress_b = file_manager.porcess_chunk(widget_idB, 1, file_bytes[50:100])
+        progress_b = file_manager.process_chunk(widget_idB, 1, file_bytes[50:100])
         self.assertEqual(progress_b, 1)
 
         progress_a, data_a = file_manager.get_data(widget_idA)
