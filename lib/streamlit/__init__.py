@@ -92,6 +92,7 @@ import numpy as _np
 
 from streamlit import code_util as _code_util
 from streamlit import util as _util
+from streamlit import type_util as _type_util
 from streamlit import source_util as _source_util
 from streamlit.ReportThread import get_report_ctx, add_report_ctx
 from streamlit.DeltaGenerator import DeltaGenerator as _DeltaGenerator
@@ -359,25 +360,25 @@ def write(*args, **kwargs):
             elif isinstance(arg, _HELP_TYPES):
                 flush_buffer()
                 help(arg)
-            elif _util.is_altair_chart(arg):
+            elif _type_util.is_altair_chart(arg):
                 flush_buffer()
                 altair_chart(arg)
-            elif _util.is_type(arg, "matplotlib.figure.Figure"):
+            elif _type_util.is_type(arg, "matplotlib.figure.Figure"):
                 flush_buffer()
                 pyplot(arg)
-            elif _util.is_plotly_chart(arg):
+            elif _type_util.is_plotly_chart(arg):
                 flush_buffer()
                 plotly_chart(arg)
-            elif _util.is_type(arg, "bokeh.plotting.figure.Figure"):
+            elif _type_util.is_type(arg, "bokeh.plotting.figure.Figure"):
                 flush_buffer()
                 bokeh_chart(arg)
-            elif _util.is_graphviz_chart(arg):
+            elif _type_util.is_graphviz_chart(arg):
                 flush_buffer()
                 graphviz_chart(arg)
-            elif _util.is_sympy_expession(arg):
+            elif _type_util.is_sympy_expession(arg):
                 flush_buffer()
                 latex(arg)
-            elif _util.is_keras_model(arg):
+            elif _type_util.is_keras_model(arg):
                 from tensorflow.python.keras.utils import vis_utils
 
                 flush_buffer()
@@ -386,7 +387,7 @@ def write(*args, **kwargs):
             elif (type(arg) in dict_types) or (isinstance(arg, list)):  # noqa: F821
                 flush_buffer()
                 json(arg)
-            elif _util.is_namedtuple(arg):
+            elif _type_util.is_namedtuple(arg):
                 flush_buffer()
                 json(_json.dumps(arg._asdict()))
             else:

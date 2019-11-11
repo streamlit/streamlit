@@ -129,7 +129,7 @@ def _build_duplicate_widget_message(widget_type, user_key=None):
     if user_key is not None:
         message = textwrap.dedent(
             """
-            There are multiple identical `st.{widget_type}` widgets with 
+            There are multiple identical `st.{widget_type}` widgets with
             `key='{user_key}'`.
 
             To fix this, please make sure that the `key` argument is unique for
@@ -539,7 +539,7 @@ class DeltaGenerator(object):
         >>> st.latex("ax^2 + bx + c = 0")
 
         """
-        from streamlit.util import is_sympy_expession
+        from streamlit.type_util import is_sympy_expession
 
         if is_sympy_expession(body):
             import sympy
