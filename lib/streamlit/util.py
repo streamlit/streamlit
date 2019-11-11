@@ -59,7 +59,8 @@ GITBLOB_RE = re.compile(
     "(?P<base>https:\/\/?(gist.)?github.com\/)"
     "(?P<account>([\w\.]+\/){1,2})"
     "(?P<blob_or_raw>(blob|raw))?"
-    "(?P<suffix>(.+)?)")
+    "(?P<suffix>(.+)?)"
+)
 
 
 def _decode_ascii(string):

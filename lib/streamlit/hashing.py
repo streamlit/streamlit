@@ -64,9 +64,9 @@ Context = namedtuple("Context", ["globals", "cells", "varnames"])
 
 
 def _is_magicmock(obj):
-    return (
-        type_util.is_type(obj, "unittest.mock.MagicMock") or
-        type_util.is_type(obj, "mock.mock.MagicMock"))
+    return type_util.is_type(obj, "unittest.mock.MagicMock") or type_util.is_type(
+        obj, "mock.mock.MagicMock"
+    )
 
 
 def _get_context(func):
@@ -274,9 +274,9 @@ class CodeHasher:
                 return b"bool:1"
             elif obj is False:
                 return b"bool:0"
-            elif (
-                    type_util.is_type(obj, "pandas.core.frame.DataFrame") or
-                    type_util.is_type(obj, "pandas.core.series.Series")):
+            elif type_util.is_type(
+                obj, "pandas.core.frame.DataFrame"
+            ) or type_util.is_type(obj, "pandas.core.series.Series"):
                 import pandas as pd
 
                 if len(obj) >= PANDAS_ROWS_LARGE:
@@ -303,8 +303,10 @@ class CodeHasher:
                 return self.to_bytes(obj.__name__)
             elif hasattr(obj, "name") and (
                 isinstance(obj, io.IOBase)
-                or (isinstance(obj.name, string_types)  # noqa: F821
-                    and os.path.exists(obj.name))
+                or (
+                    isinstance(obj.name, string_types)  # noqa: F821
+                    and os.path.exists(obj.name)
+                )
             ):
                 # Hash files as name + last modification date + offset.
                 h = hashlib.new(self.name)
