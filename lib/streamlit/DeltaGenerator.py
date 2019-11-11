@@ -32,13 +32,13 @@ from datetime import time
 
 from streamlit import caching
 from streamlit import metrics
+from streamlit.ReportThread import get_report_ctx
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Balloons_pb2
 from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto import Text_pb2
-from streamlit import get_report_ctx
 
 # setup logging
 from streamlit.logger import get_logger
@@ -129,7 +129,7 @@ def _build_duplicate_widget_message(widget_type, user_key=None):
     if user_key is not None:
         message = textwrap.dedent(
             """
-            There are multiple identical `st.{widget_type}` widgets with 
+            There are multiple identical `st.{widget_type}` widgets with
             `key='{user_key}'`.
 
             To fix this, please make sure that the `key` argument is unique for

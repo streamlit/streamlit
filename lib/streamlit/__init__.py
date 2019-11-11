@@ -93,7 +93,8 @@ import numpy as _np
 from streamlit import code_util as _code_util
 from streamlit import util as _util
 from streamlit import source_util as _source_util
-from streamlit.ReportThread import get_report_ctx, add_report_ctx
+from streamlit.ReportThread import get_report_ctx as _get_report_ctx
+from streamlit.ReportThread import add_report_ctx as _add_report_ctx
 from streamlit.DeltaGenerator import DeltaGenerator as _DeltaGenerator
 
 # Modules that the user should have access to.
@@ -122,7 +123,7 @@ _config.on_config_parsed(_set_log_level)
 def _with_dg(method):
     @_functools.wraps(method)
     def wrapped_method(*args, **kwargs):
-        ctx = get_report_ctx()
+        ctx = _get_report_ctx()
         dg = ctx.main_dg if ctx is not None else _NULL_DELTA_GENERATOR
         return method(dg, *args, **kwargs)
 
@@ -134,7 +135,7 @@ def _reset(main_dg, sidebar_dg):
     sidebar_dg._reset()
     global sidebar
     sidebar = sidebar_dg
-    get_report_ctx().widget_ids_this_run.clear()
+    _get_report_ctx().widget_ids_this_run.clear()
 
 
 # Sidebar
@@ -504,7 +505,7 @@ def spinner(text="In progress..."):
                     with caching.suppress_cached_st_function_warning():
                         message.warning(str(text))
 
-        add_report_ctx(_threading.Timer(DELAY_SECS, set_message)).start()
+        _add_report_ctx(_threading.Timer(DELAY_SECS, set_message)).start()
 
         # Yield control back to the context.
         yield
