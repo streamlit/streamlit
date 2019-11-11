@@ -19,6 +19,7 @@ import functools
 import os
 import sys
 import tempfile
+import time
 import unittest
 
 import altair as alt
@@ -33,8 +34,8 @@ from streamlit.hashing import NP_SIZE_LARGE, PANDAS_ROWS_LARGE, CodeHasher
 get_main_script_director = MagicMock(return_value=os.getcwd())
 
 # Get code hasher and mock the main script directory.
-def get_hash(f, context=None):
-    hasher = CodeHasher("md5")
+def get_hash(f, context=None, hash_funcs=None):
+    hasher = CodeHasher("md5", hash_funcs=hash_funcs)
     hasher._get_main_script_directory = MagicMock()
     hasher._get_main_script_directory.return_value = os.getcwd()
     hasher.update(f, context)
@@ -54,6 +55,7 @@ class HashTest(unittest.TestCase):
         self.assertNotEqual(get_hash(2 ** 7), get_hash(2 ** 7 + 1))
 
     def test_list(self):
+        # Todo: some reason we're not calling get_hash here and in test_tuple?
         self.assertEqual([1, 2], [1, 2])
         self.assertNotEqual([1, 2], [2, 2])
         self.assertNotEqual([1], 1)
@@ -160,6 +162,54 @@ class HashTest(unittest.TestCase):
         # (This also tests that MagicMock can hash at all, without blowing the
         # stack due to an infinite recursion.)
         self.assertNotEqual(get_hash(MagicMock()), get_hash(MagicMock()))
+
+
+    def test_non_hashable(self):
+        """Test user provided hash functions."""
+
+        # Unhashable object raises an error
+        with self.assertRaises(TypeError):
+            get_hash(os.environ)
+
+        id_hash_func = {os._Environ: id}
+
+        self.assertEqual(
+            get_hash(os.environ, hash_funcs=id_hash_func),
+            get_hash(os.environ, hash_funcs=id_hash_func)
+        )
+
+        unique_hash_func = {os._Environ: lambda x: time.time()}
+
+        self.assertNotEqual(
+            get_hash(os.environ, hash_funcs=unique_hash_func),
+            get_hash(os.environ, hash_funcs=unique_hash_func)
+        )
+
+    def test_override_streamlit_hash_func(self):
+        """Test that a user provided hash function has priority over a streamlit one."""
+
+        self.assertNotEqual(
+            get_hash("hello"),
+            get_hash("hello", hash_funcs={str: id})
+        )
+
+    def test_multiple_hash_funcs(self):
+        """Test that the output of a user provided hash function will be hashed
+        by another user provided hash function if appropriate
+        """
+
+        def hash_string(x):
+            return os.environ
+
+        hash_funcs = {
+            str: hash_string,
+            os._Environ: id
+        }
+
+        self.assertEqual(
+            get_hash("hello", hash_funcs=hash_funcs),
+            get_hash(os.environ, hash_funcs=hash_funcs)
+        )
 
 
 class CodeHashTest(unittest.TestCase):
@@ -581,3 +631,23 @@ class CodeHashTest(unittest.TestCase):
         # TODO: Enable test. f and h are not the same since the co_consts
         # contains the name of the function in the closure.
         # self.assertEqual(get_hash(f), get_hash(h))
+
+    def test_non_hashable(self):
+        """Test the hash of functions that return non hashable objects."""
+
+        def f(x):
+            return os.environ
+
+        def g(y):
+            return os.environ
+
+        # Unhashable object raises an error
+        with self.assertRaises(TypeError):
+            get_hash(f)
+
+        hash_funcs = {os._Environ: id}
+
+        self.assertEqual(
+            get_hash(f, hash_funcs=hash_funcs),
+            get_hash(g, hash_funcs=hash_funcs)
+        )
