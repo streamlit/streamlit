@@ -89,5 +89,12 @@
       color: inherit;
       text-decoration: underline;
     }
+
+    div.code-block {
+      button.overlayBtn {
+        top: 0;
+        right: 0;
+      }
+    }
   }
 }

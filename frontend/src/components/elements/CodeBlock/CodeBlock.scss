@@ -21,6 +21,10 @@
   See https://prismjs.com/download.html#themes=prism&languages=markup+css+clike+javascript
 */
 
+div.code-block {
+  margin: 0 0 1rem 0;
+}
+
 .token.comment,
 .token.prolog,
 .token.doctype,
