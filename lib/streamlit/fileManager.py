@@ -12,6 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from streamlit.logger import get_logger
+
+LOGGER = get_logger(__name__)
 
 class File(object):
     """Thread-safe queue that smartly accumulates the report's messages."""
@@ -54,6 +57,9 @@ class FileManager(object):
     def process_chunk(self, widget_id, index, data):
         file = self._file_list.get(widget_id)
         if file != None:
+            if file.buffers.get(index) is not None:
+                LOGGER.error("File chunk was already processed")
+
             file.buffers[index] = data
             if len(file.buffers) == file.total_chunks:
                 file.data = bytearray()

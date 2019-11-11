@@ -90,8 +90,8 @@ class ReportSession(object):
 
         self._file_manager = FileManager()
 
-        self._main_dg = DeltaGenerator(enqueue=self.enqueue, container=BlockPath.MAIN, file_manager=self._file_manager)
-        self._sidebar_dg = DeltaGenerator(enqueue=self.enqueue, container=BlockPath.SIDEBAR, file_manager=self._file_manager)
+        self._main_dg = DeltaGenerator(enqueue=self.enqueue, container=BlockPath.MAIN)
+        self._sidebar_dg = DeltaGenerator(enqueue=self.enqueue, container=BlockPath.SIDEBAR)
 
         self._widget_states = WidgetStates()
         self._local_sources_watcher = LocalSourcesWatcher(
@@ -532,6 +532,7 @@ class ReportSession(object):
             sidebar_dg=self._sidebar_dg,
             widget_states=self._widget_states,
             request_queue=self._script_request_queue,
+            file_manager=self._file_manager
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()

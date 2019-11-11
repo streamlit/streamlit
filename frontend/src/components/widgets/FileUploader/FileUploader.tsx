@@ -132,7 +132,6 @@ class FileUploader extends React.PureComponent<Props, State> {
     const { element } = this.props
     const accept: string[] = element.get("type").toArray()
     const label: string = element.get("label")
-
     return (
       <div className="file-uploader">
         <label>{label}</label>
@@ -142,7 +141,7 @@ class FileUploader extends React.PureComponent<Props, State> {
           <FileUploaderBaseui
             onDrop={this.dropHandler}
             errorMessage={errorMessage}
-            accept={accept}
+            accept={accept.length === 0 ? undefined : accept}
             progressMessage={status !== "READY" ? status : undefined}
             onRetry={() => {
               this.setState({ status: "READY", errorMessage: undefined })

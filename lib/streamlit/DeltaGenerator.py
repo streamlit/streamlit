@@ -266,8 +266,6 @@ class DeltaGenerator(object):
     path: tuple of ints
       The full path of this DeltaGenerator, consisting of the IDs of
       all ancestors. The 0th item is the topmost ancestor.
-    file_manager: FileManager
-      The FileManager instance of ReportSession
     """
 
     # The pydoc below is for user consumption, so it doesn't talk about
@@ -282,7 +280,6 @@ class DeltaGenerator(object):
         is_root=True,
         container=BlockPath_pb2.BlockPath.MAIN,
         path=(),
-        file_manager=None
     ):
         """Inserts or updates elements in Streamlit apps.
 
@@ -305,7 +302,6 @@ class DeltaGenerator(object):
         self._is_root = is_root
         self._container = container
         self._path = path
-        self._file_manager = file_manager
 
     def __getattr__(self, name):
         import streamlit as st
@@ -1882,17 +1878,18 @@ class DeltaGenerator(object):
         return current_value if single_value else tuple(current_value)
 
     @_with_element
-    def file_uploader(self, element, label, type=['*'], key=None):
+    def file_uploader(self, element, label, type=None, key=None):
 
         """Display a file uploader widget.
+
+        By default, uploaded files are limited to 50MB but you can configure that using the `server.maxUploadSize` config option.
 
         Parameters
         ----------
         label : str or None
             A short label explaining to the user what this file uploader is for.
         type : string[] or None
-            Array of allowed extensions. (['.png', '.jpg'])
-            Default value: ['*']
+            Array of allowed extensions. ['.png', 'jpg']
 
         Returns
         -------
@@ -1901,18 +1898,30 @@ class DeltaGenerator(object):
 
         Examples
         --------
-        >>> file = st.file_uploader("Upload a image", type=([".png"]))
+        >>> file = st.file_uploader("Upload a image", type=[".png"])
         >>> if file != None:
         >>>     st.image(file)
-
         """
         element.file_uploader.label = label
-        element.file_uploader.type[:] = type
+
+        if type is not None:
+            total_len = sum([len(i) for i in type])
+            if len(type) == total_len: # If all elements are single chars, is a string
+                if type[0] == '.':
+                    element.file_uploader.type[:] = [''.join(type)] # example: type=".csv"
+                else:
+                    element.file_uploader.type[:] = ['.' + ''.join(type)] # example: type="csv"
+            else:
+                element.file_uploader.type[:] = map(lambda x: x if x[0] == '.' else '.' + x , type) # example: type=["png", ".jpeg"]
+
         element.file_uploader.max_upload_size_mb = config.get_option("server.maxUploadSize")
         _set_widget_id("file_uploader", element, user_key=key)
-        progress, data = self._file_manager.get_data(element.file_uploader.id)
-        element.file_uploader.progress = progress
-        return NoValue if data  is None else data
+        ctx = get_report_ctx()
+        if ctx is not None:
+            progress, data = ctx.file_manager.get_data(element.file_uploader.id)
+            element.file_uploader.progress = progress
+
+        return NoValue if data is None else data
 
     @_with_element
     def text_input(self, element, label, value="", key=None):
