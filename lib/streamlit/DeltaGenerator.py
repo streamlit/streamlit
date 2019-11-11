@@ -559,7 +559,7 @@ class DeltaGenerator(object):
            height: 75px
 
         """
-        from streamlit.util import is_sympy_expession
+        from streamlit.type_util import is_sympy_expession
 
         if is_sympy_expession(body):
             import sympy
