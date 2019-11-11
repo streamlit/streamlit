@@ -341,11 +341,7 @@ def _write_to_mem_cache(key, value, allow_output_mutation, args_mutated, hash_fu
     else:
         hash = get_hash(value, hash_funcs=hash_funcs)
 
-    _mem_cache[key] = CacheEntry(
-        value=value,
-        hash=hash,
-        args_mutated=args_mutated,
-    )
+    _mem_cache[key] = CacheEntry(value=value, hash=hash, args_mutated=args_mutated)
 
 
 def _read_from_disk_cache(key):
