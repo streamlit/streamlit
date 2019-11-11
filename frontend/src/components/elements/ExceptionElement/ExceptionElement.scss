@@ -32,8 +32,8 @@
     margin-bottom: 0.5rem;
   }
 
-  &.alert pre,
-  &.alert pre code {
+  &.alert pre.stack-trace,
+  &.alert pre.stack-trace code {
     background: none;
     padding: 0;
     color: inherit;
