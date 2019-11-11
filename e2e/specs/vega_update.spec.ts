@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2019 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,30 +15,22 @@
  * limitations under the License.
  */
 
-@import "src/assets/css/variables";
+/// <reference types="cypress" />
 
-.reportview-container .stException {
-  .message .type {
-    font-weight: bold;
-  }
+describe("add lots of data to vega chart", () => {
+  before(() => {
+    cy.visit("http://localhost:3000/");
+  });
 
-  .stack-trace-row {
-    margin-top: 0.5rem;
-  }
+  it("updates the x-axis values", () => {
+    cy.get("#ReportStatus").contains("Running...");
 
-  .stack-trace-title {
-    font-family: $font-family-monospace;
-    font-size: $font-size-sm;
-    margin-top: 0.5rem;
-    margin-bottom: 0.5rem;
-  }
+    cy.get(".stVegaLiteChart").should("have.length", 1);
 
-  &.alert pre.stack-trace,
-  &.alert pre.stack-trace code {
-    background: none;
-    padding: 0;
-    color: inherit;
-    white-space: pre-wrap;
-    overflow-wrap: break-word;
-  }
-}
+    cy.get("#ReportStatus").should("not.exist");
+
+    cy.get(".stVegaLiteChart").matchImageSnapshot(
+      "vega-updates-x-axis-values"
+    );
+  });
+});
