@@ -23,6 +23,7 @@
     "@types/classnames": "^2.2.9",
     "@types/katex": "^0.10.2",
     "aws-sdk": "^2.524.0",
+    "axios": "^0.19.0",
     "baseui": "^8.17.1",
     "bokehjs": "^1.2.0",
     "bootstrap": "^4.3.1",

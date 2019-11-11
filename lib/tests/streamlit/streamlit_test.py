@@ -29,6 +29,7 @@ import numpy as np
 import pandas as pd
 
 from streamlit import __version__
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Balloons_pb2 import Balloons
 from streamlit.proto.Text_pb2 import Text
 from tests import testutil
@@ -347,7 +348,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_image_bad_width(self):
         """Test st.image with bad width."""
-        with self.assertRaises(RuntimeError) as ctx:
+        with self.assertRaises(StreamlitAPIException) as ctx:
             st.image("does/not/exist", width=-1234)
 
         self.assertTrue("Image width must be positive." in str(ctx.exception))

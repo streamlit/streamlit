@@ -20,13 +20,16 @@
 describe("st.checkbox", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");
+
+    // Make the ribbon decoration line disappear
+    cy.get(".decoration").invoke("css", "display", "none");
   });
 
   it("shows widget correctly", () => {
     cy.get(".stCheckbox").should("have.length", 3);
 
     cy.get(".stCheckbox").each((el, idx) => {
-      cy.wrap(el).matchImageSnapshot("checkbox" + idx);
+      return cy.wrap(el).matchImageSnapshot("checkbox" + idx);
     });
   });
 

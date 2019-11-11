@@ -33,7 +33,8 @@ describe("Dataframes with different sizes", () => {
     cy.get(".element-container .stDataFrame")
       .should("have.length", 4)
       .each((el, idx) => {
-        cy.wrap(el)
+        return cy
+          .wrap(el)
           .should("have.css", "width", expected[idx].width)
           .should("have.css", "height", expected[idx].height);
       });

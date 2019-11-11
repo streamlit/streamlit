@@ -31,7 +31,9 @@ import click
 import streamlit
 from streamlit.credentials import Credentials
 from streamlit import version
+from streamlit import util
 import streamlit.bootstrap as bootstrap
+from streamlit.case_converters import to_snake_case
 
 LOG_LEVELS = ["error", "warning", "info", "debug"]
 
@@ -49,6 +51,75 @@ NEW_VERSION_TEXT = """
     "prompt": click.style("$", fg="blue"),
     "command": click.style("pip install streamlit --upgrade", bold=True),
 }
+
+
+def _convert_config_option_to_click_option(config_option):
+    """Composes given config option options as options for click lib."""
+    option = "--{}".format(config_option.key)
+    param = config_option.key.replace(".", "_")
+    description = config_option.description
+    if config_option.deprecated:
+        description += "\n {} - {}".format(
+            config_option.deprecation_text, config_option.deprecation_date
+        )
+    envvar = "STREAMLIT_{}".format(to_snake_case(param).upper())
+
+    return {
+        "param": param,
+        "description": description,
+        "type": config_option.type,
+        "option": option,
+        "envvar": envvar,
+    }
+
+
+def configurator_options(func):
+    """Decorator that adds config param keys to click dynamically."""
+    for _, value in reversed(_config._config_options.items()):
+        parsed_parameter = _convert_config_option_to_click_option(value)
+        config_option = click.option(
+            parsed_parameter["option"],
+            parsed_parameter["param"],
+            help=parsed_parameter["description"],
+            type=parsed_parameter["type"],
+            show_envvar=True,
+            envvar=parsed_parameter["envvar"],
+        )
+        func = config_option(func)
+    return func
+
+
+def _apply_config_options_from_cli(kwargs):
+    """The "streamlit run" command supports passing Streamlit's config options
+    as flags.
+
+    This function reads through all config flags, massage them, and
+    pass them to _set_config() overriding default values and values set via
+    config.toml file
+
+    """
+    for config_option in kwargs:
+        if kwargs[config_option] is not None:
+            config_option_def_key = config_option.replace("_", ".")
+
+            _config._set_option(
+                config_option_def_key,
+                kwargs[config_option],
+                "command-line argument or environment variable",
+            )
+
+
+# Fetch remote file at url_path to script_path
+def _download_remote(script_path, url_path):
+    import requests
+
+    with open(script_path, "wb") as fp:
+        try:
+            resp = requests.get(url_path)
+            resp.raise_for_status()
+            fp.write(resp.content)
+        except requests.exceptions.RequestException as e:
+            raise click.BadParameter(("Unable to fetch {}.\n{}".format(url_path, e)))
 
 
 @click.group(context_settings={"auto_envvar_prefix": "STREAMLIT"})
@@ -105,9 +176,12 @@ def main_docs():
 
 
 @main.command("hello")
-def main_hello():
+@configurator_options
+def main_hello(**kwargs):
     """Runs the Hello World script."""
     from streamlit.hello import hello
+
+    _apply_config_options_from_cli(kwargs)
 
     filename = hello.__file__
 
@@ -117,72 +191,6 @@ def main_hello():
         filename = "%s.py" % filename[:-4]
 
     _main_run(filename)
-
-
-def _convert_config_option_to_click_option(config_option):
-    """Composes given config option options as options for click lib."""
-    option = "--{}".format(config_option.key)
-    param = config_option.key.replace(".", "_")
-    description = config_option.description
-    if config_option.deprecated:
-        description += "\n {} - {}".format(
-            config_option.deprecation_text, config_option.deprecation_date
-        )
-    envvar = "STREAMLIT_CONFIG_{}".format(param.upper())
-
-    return {
-        "param": param,
-        "description": description,
-        "type": config_option.type,
-        "option": option,
-        "envvar": envvar,
-    }
-
-
-def configurator_options(func):
-    """Decorator that adds config param keys to click dynamically."""
-    for _, value in reversed(_config._config_options.items()):
-        parsed_parameter = _convert_config_option_to_click_option(value)
-        config_option = click.option(
-            parsed_parameter["option"],
-            parsed_parameter["param"],
-            help=parsed_parameter["description"],
-            type=parsed_parameter["type"],
-            envvar=parsed_parameter["envvar"],
-        )
-        func = config_option(func)
-    return func
-
-
-def _apply_config_options_from_cli(kwargs):
-    """The "streamlit run" command supports passing Streamlit's config options
-    as flags.
-
-    This function reads through all config flags, massage them, and
-    pass them to _set_config() overriding default values and values set via
-    config.toml file
-
-    """
-    for config_option in kwargs:
-        if kwargs[config_option] is not None:
-            config_option_def_key = config_option.replace("_", ".")
-
-            _config._set_option(
-                config_option_def_key, kwargs[config_option], "cli call option"
-            )
-
-
-# Fetch remote file at url_path to script_path
-def _download_remote(script_path, url_path):
-    import requests
-
-    with open(script_path, "wb") as fp:
-        try:
-            resp = requests.get(url_path)
-            resp.raise_for_status()
-            fp.write(resp.content)
-        except requests.exceptions.RequestException as e:
-            raise click.BadParameter(("Unable to fetch {}.\n{}".format(url_path, e)))
 
 
 @main.command("run")
@@ -208,6 +216,8 @@ def main_run(target, args=None, **kwargs):
 
             path = urlparse(target).path
             script_path = os.path.join(temp_dir, path.strip("/").rsplit("/", 1)[-1])
+            # if this is a GitHub/Gist blob url, convert to a raw URL first.
+            target = util.process_gitblob_url(target)
             _download_remote(script_path, target)
             _main_run(script_path, args)
     else:
@@ -293,8 +303,12 @@ def config():
 
 
 @config.command("show")
-def config_show():
+@configurator_options
+def config_show(**kwargs):
     """Show all of Streamlit's config settings."""
+
+    _apply_config_options_from_cli(kwargs)
+
     _config.show_config()
 
 
