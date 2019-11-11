@@ -163,7 +163,6 @@ class HashTest(unittest.TestCase):
         # stack due to an infinite recursion.)
         self.assertNotEqual(get_hash(MagicMock()), get_hash(MagicMock()))
 
-
     def test_non_hashable(self):
         """Test user provided hash functions."""
 
@@ -175,23 +174,20 @@ class HashTest(unittest.TestCase):
 
         self.assertEqual(
             get_hash(os.environ, hash_funcs=id_hash_func),
-            get_hash(os.environ, hash_funcs=id_hash_func)
+            get_hash(os.environ, hash_funcs=id_hash_func),
         )
 
         unique_hash_func = {os._Environ: lambda x: time.time()}
 
         self.assertNotEqual(
             get_hash(os.environ, hash_funcs=unique_hash_func),
-            get_hash(os.environ, hash_funcs=unique_hash_func)
+            get_hash(os.environ, hash_funcs=unique_hash_func),
         )
 
     def test_override_streamlit_hash_func(self):
         """Test that a user provided hash function has priority over a streamlit one."""
 
-        self.assertNotEqual(
-            get_hash("hello"),
-            get_hash("hello", hash_funcs={str: id})
-        )
+        self.assertNotEqual(get_hash("hello"), get_hash("hello", hash_funcs={str: id}))
 
     def test_multiple_hash_funcs(self):
         """Test that the output of a user provided hash function will be hashed
@@ -201,14 +197,11 @@ class HashTest(unittest.TestCase):
         def hash_string(x):
             return os.environ
 
-        hash_funcs = {
-            str: hash_string,
-            os._Environ: id
-        }
+        hash_funcs = {str: hash_string, os._Environ: id}
 
         self.assertEqual(
             get_hash("hello", hash_funcs=hash_funcs),
-            get_hash(os.environ, hash_funcs=hash_funcs)
+            get_hash(os.environ, hash_funcs=hash_funcs),
         )
 
 
@@ -648,6 +641,5 @@ class CodeHashTest(unittest.TestCase):
         hash_funcs = {os._Environ: id}
 
         self.assertEqual(
-            get_hash(f, hash_funcs=hash_funcs),
-            get_hash(g, hash_funcs=hash_funcs)
+            get_hash(f, hash_funcs=hash_funcs), get_hash(g, hash_funcs=hash_funcs)
         )
