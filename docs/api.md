@@ -104,6 +104,9 @@ finally we also provide a few chart types that are "native" to Streamlit,
 like `st.line_chart` and `st.area_chart`.
 
 ```eval_rst
+.. autofunction:: streamlit.line_chart
+.. autofunction:: streamlit.area_chart
+.. autofunction:: streamlit.bar_chart
 .. autofunction:: streamlit.pyplot
 .. autofunction:: streamlit.altair_chart
 .. autofunction:: streamlit.vega_lite_chart
@@ -111,9 +114,6 @@ like `st.line_chart` and `st.area_chart`.
 .. autofunction:: streamlit.bokeh_chart
 .. autofunction:: streamlit.deck_gl_chart
 .. autofunction:: streamlit.graphviz_chart
-.. autofunction:: streamlit.line_chart
-.. autofunction:: streamlit.area_chart
-.. autofunction:: streamlit.bar_chart
 .. autofunction:: streamlit.map
 .. autofunction:: streamlit.image
 .. autofunction:: streamlit.audio

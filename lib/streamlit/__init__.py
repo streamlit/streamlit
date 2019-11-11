@@ -248,7 +248,7 @@ def write(*args, **kwargs):
             - write(graphviz)   : Displays a Graphviz graph.
             - write(plotly_fig) : Displays a Plotly figure.
             - write(bokeh_fig)  : Displays a Bokeh figure.
-            - write(sympy_expr) : Prints SymPy expression using LaTeX
+            - write(sympy_expr) : Prints SymPy expression using LaTeX.
 
     unsafe_allow_html : bool
         This is a keyword-only argument that defaults to False.
