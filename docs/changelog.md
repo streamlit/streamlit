@@ -22,6 +22,24 @@ See highlights, bug fixes, and known issues for Streamlit releases:
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.50.1
+
+_Release date: November 19, 2019_
+
+**Highlights:**
+
+- 👩‍🎓 SymPy support and ability to draw mathematical expressions using LaTeX! See
+  [`st.latex`](api.html#streamlit.latex),
+  [`st.markdown`](api.html#streamlit.markdown),
+  and
+  [`st.write`](api.html#streamlit.write).
+- 🌄 You can now set config options using environment variables. For example,
+  `export STREAMLIT_SERVER_PORT=9876`.
+- 🐱 Ability to call `streamlit run` directly with Github and Gist URLs. No
+  need to grab the "raw" URL first!
+- 📃 Cleaner exception stack traces. We now remove all Streamlit-specific code
+  from stack traces generating from the user's app.
+
 ## Version 0.49.0
 
 _Release date: October 23, 2019_
