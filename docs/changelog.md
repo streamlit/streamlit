@@ -24,7 +24,7 @@ See highlights, bug fixes, and known issues for Streamlit releases:
 
 ## Version 0.50.1
 
-_Release date: November 19, 2019_
+_Release date: November 10, 2019_
 
 **Highlights:**
 
