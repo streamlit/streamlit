@@ -21,7 +21,7 @@ import urllib.parse
 from six import string_types
 
 from streamlit import caching
-from streamlit import util
+from streamlit import type_util
 
 from streamlit.logger import get_logger
 
@@ -52,7 +52,7 @@ def marshall(proto, figure_or_data, width, height, sharing, **kwargs):
 
     import plotly.tools
 
-    if util.is_type(figure_or_data, "matplotlib.figure.Figure"):
+    if type_util.is_type(figure_or_data, "matplotlib.figure.Figure"):
         figure = plotly.tools.mpl_to_plotly(figure_or_data)
 
     else:

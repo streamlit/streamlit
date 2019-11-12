@@ -282,7 +282,9 @@ function uploadProgressDialog(props: UploadProgressProps): ReactElement {
   return (
     <BasicDialog onClose={props.onClose}>
       <ModalBody>
-        <div className="streamlit-upload-first-line">Saving app...</div>
+        <div className="streamlit-upload-first-line">
+          Saving app snapshot...
+        </div>
         <div>
           <Progress animated value={props.progress} />
         </div>
@@ -304,7 +306,9 @@ function uploadedDialog(props: UploadedProps): ReactElement {
   return (
     <BasicDialog onClose={props.onClose}>
       <ModalBody>
-        <div className="streamlit-upload-first-line">App saved to:</div>
+        <div className="streamlit-upload-first-line">
+          App snapshot saved to:
+        </div>
         <pre id="streamlit-upload-url">
           <a href={props.url} target="_blank" rel="noopener noreferrer">
             {props.url}

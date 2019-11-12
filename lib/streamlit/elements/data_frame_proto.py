@@ -20,7 +20,7 @@ import tzlocal
 
 from collections import namedtuple
 
-from streamlit import util
+from streamlit import type_util
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
@@ -67,7 +67,7 @@ def convert_anything_to_df(df):
     pandas.DataFrame
 
     """
-    if util.is_type(df, "pandas.core.frame.DataFrame"):
+    if type_util.is_type(df, "pandas.core.frame.DataFrame"):
         return df
 
     if _is_pandas_styler(df):
@@ -75,7 +75,7 @@ def convert_anything_to_df(df):
 
     import pandas as pd
 
-    if util.is_type(df, "numpy.ndarray") and len(df.shape) == 0:
+    if type_util.is_type(df, "numpy.ndarray") and len(df.shape) == 0:
         return pd.DataFrame([])
 
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
@@ -84,7 +84,7 @@ def convert_anything_to_df(df):
 
 
 def _is_pandas_styler(obj):
-    return util.is_type(obj, "pandas.io.formats.style.Styler")
+    return type_util.is_type(obj, "pandas.io.formats.style.Styler")
 
 
 def _marshall_styles(proto_table_style, df, styler=None):

@@ -490,6 +490,10 @@ class DeltaGenerator(object):
             information can be found at: https://github.github.com/gfm.
             Inline and block math are supported by KaTeX and remark-math.
 
+            The body also support LaTeX expressions, by just wrapping them in
+            "$" or "$$" (the "$$" must be on their own lines). Supported LaTeX
+            functions are listed at https://katex.org/docs/supported.html.
+
         unsafe_allow_html : bool
             By default, any HTML tags found in the body will be escaped and
             therefore treated as pure text. This behavior may be turned off by
@@ -527,19 +531,35 @@ class DeltaGenerator(object):
 
     @_with_element
     def latex(self, element, body):
-        """Display string formatted as LaTeX.
+        # This docstring needs to be "raw" because of the backslashes in the
+        # example below.
+        r"""Display mathematical expressions formatted as LaTeX.
+
+        Supported LaTeX functions are listed at
+        https://katex.org/docs/supported.html.
 
         Parameters
         ----------
-        body : str
-            The string to display as LaTeX.
+        body : str or SymPy expression
+            The string or SymPy expression to display as LaTeX. If str, it's
+            a good idea to use raw Python strings since LaTeX uses backslashes
+            a lot.
+
 
         Example
         -------
-        >>> st.latex("ax^2 + bx + c = 0")
+        >>> st.latex(r'''
+        ...     a + ar + a r^2 + a r^3 + \cdots + a r^{n-1} =
+        ...     \sum_{k=0}^{n-1} ar^k =
+        ...     a \left(\frac{1-r^{n}}{1-r}\right)
+        ...     ''')
+
+        .. output::
+           https://share.streamlit.io/0.50.0-td2L/index.html?id=NJFsy6NbGTsH2RF9W6ioQ4
+           height: 75px
 
         """
-        from streamlit.util import is_sympy_expession
+        from streamlit.type_util import is_sympy_expession
 
         if is_sympy_expession(body):
             import sympy
@@ -867,6 +887,11 @@ class DeltaGenerator(object):
     def line_chart(self, element, data=None, width=0, height=0):
         """Display a line chart.
 
+        This is just syntax-sugar around st.altair_chart. The main difference
+        is this command uses the data's own column and indices to figure out
+        the chart's spec. As a result this is easier to use for many "just plot
+        this" scenarios, while being less customizable.
+
         Parameters
         ----------
         data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict
@@ -888,8 +913,8 @@ class DeltaGenerator(object):
         >>> st.line_chart(chart_data)
 
         .. output::
-            https://share.streamlit.io/0.26.1-2LpAr/index.html?id=FjPACu1ham1Jx96YD1o7Pg
-            height: 200px
+           https://share.streamlit.io/0.50.0-td2L/index.html?id=BdxXG3MmrVBfJyqS2R2ki8
+           height: 220px
 
         """
 
@@ -901,6 +926,11 @@ class DeltaGenerator(object):
     @_with_element
     def area_chart(self, element, data=None, width=0, height=0):
         """Display a area chart.
+
+        This is just syntax-sugar around st.altair_chart. The main difference
+        is this command uses the data's own column and indices to figure out
+        the chart's spec. As a result this is easier to use for many "just plot
+        this" scenarios, while being less customizable.
 
         Parameters
         ----------
@@ -922,8 +952,8 @@ class DeltaGenerator(object):
         >>> st.area_chart(chart_data)
 
         .. output::
-            https://share.streamlit.io/0.26.1-2LpAr/index.html?id=BYLQrnN1tHonosFUj3Q4xm
-            height: 200px
+           https://share.streamlit.io/0.50.0-td2L/index.html?id=Pp65STuFj65cJRDfhGh4Jt
+           height: 220px
 
         """
         import streamlit.elements.altair as altair
@@ -934,6 +964,11 @@ class DeltaGenerator(object):
     @_with_element
     def bar_chart(self, element, data=None, width=0, height=0):
         """Display a bar chart.
+
+        This is just syntax-sugar around st.altair_chart. The main difference
+        is this command uses the data's own column and indices to figure out
+        the chart's spec. As a result this is easier to use for many "just plot
+        this" scenarios, while being less customizable.
 
         Parameters
         ----------
@@ -949,14 +984,14 @@ class DeltaGenerator(object):
         Example
         -------
         >>> chart_data = pd.DataFrame(
-        ...     [[20, 30, 50]],
-        ...     columns=['a', 'b', 'c'])
+        ...     np.random.randn(50, 3),
+        ...     columns=["a", "b", "c"])
         ...
         >>> st.bar_chart(chart_data)
 
         .. output::
-            https://share.streamlit.io/0.26.1-2LpAr/index.html?id=B8pQsaSjGyo1372MTnX9rk
-            height: 200px
+           https://share.streamlit.io/0.50.0-td2L/index.html?id=5U5bjR2b3jFwnJdDfSvuRk
+           height: 220px
 
         """
         import streamlit.elements.altair as altair
@@ -2414,7 +2449,7 @@ class DeltaGenerator(object):
         ...
 
         .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=ASTdExBpJ1WxbGceneKN1i
+           https://share.streamlit.io/0.50.0-td2L/index.html?id=3GfRygWqxuqB5UitZLjz9i
            height: 530px
 
         """

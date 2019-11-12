@@ -17,6 +17,7 @@
 
 from streamlit import config
 from streamlit import util
+from streamlit import type_util
 from streamlit.ForwardMsgCache import populate_hash_if_needed
 
 # Largest message that can be sent via the WebSocket connection.
@@ -125,7 +126,7 @@ def is_url_from_allowed_origins(url):
     ]
 
     for allowed_domain in allowed_domains:
-        if util.is_function(allowed_domain):
+        if type_util.is_function(allowed_domain):
             allowed_domain = allowed_domain()
 
         if allowed_domain is None:

@@ -61,7 +61,7 @@ class ExceptionElement extends React.PureComponent<Props> {
       stackTraceNode = (
         <>
           <div className="stack-trace-title">Traceback:</div>
-          <pre>
+          <pre className="stack-trace">
             <code>
               {stackTrace.map((row: string, indx: string) => (
                 <div className="stack-trace-row" key={indx}>
