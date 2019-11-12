@@ -92,8 +92,10 @@ import numpy as _np
 
 from streamlit import code_util as _code_util
 from streamlit import util as _util
+from streamlit import type_util as _type_util
 from streamlit import source_util as _source_util
-from streamlit.ReportThread import get_report_ctx, add_report_ctx
+from streamlit.ReportThread import get_report_ctx as _get_report_ctx
+from streamlit.ReportThread import add_report_ctx as _add_report_ctx
 from streamlit.DeltaGenerator import DeltaGenerator as _DeltaGenerator
 
 # Modules that the user should have access to.
@@ -122,7 +124,7 @@ _config.on_config_parsed(_set_log_level)
 def _with_dg(method):
     @_functools.wraps(method)
     def wrapped_method(*args, **kwargs):
-        ctx = get_report_ctx()
+        ctx = _get_report_ctx()
         dg = ctx.main_dg if ctx is not None else _NULL_DELTA_GENERATOR
         return method(dg, *args, **kwargs)
 
@@ -134,7 +136,7 @@ def _reset(main_dg, sidebar_dg):
     sidebar_dg._reset()
     global sidebar
     sidebar = sidebar_dg
-    get_report_ctx().widget_ids_this_run.clear()
+    _get_report_ctx().widget_ids_this_run.clear()
 
 
 # Sidebar
@@ -248,7 +250,7 @@ def write(*args, **kwargs):
             - write(graphviz)   : Displays a Graphviz graph.
             - write(plotly_fig) : Displays a Plotly figure.
             - write(bokeh_fig)  : Displays a Bokeh figure.
-            - write(sympy_expr) : Prints SymPy expression using LaTeX
+            - write(sympy_expr) : Prints SymPy expression using LaTeX.
 
     unsafe_allow_html : bool
         This is a keyword-only argument that defaults to False.
@@ -359,25 +361,25 @@ def write(*args, **kwargs):
             elif isinstance(arg, _HELP_TYPES):
                 flush_buffer()
                 help(arg)
-            elif _util.is_altair_chart(arg):
+            elif _type_util.is_altair_chart(arg):
                 flush_buffer()
                 altair_chart(arg)
-            elif _util.is_type(arg, "matplotlib.figure.Figure"):
+            elif _type_util.is_type(arg, "matplotlib.figure.Figure"):
                 flush_buffer()
                 pyplot(arg)
-            elif _util.is_plotly_chart(arg):
+            elif _type_util.is_plotly_chart(arg):
                 flush_buffer()
                 plotly_chart(arg)
-            elif _util.is_type(arg, "bokeh.plotting.figure.Figure"):
+            elif _type_util.is_type(arg, "bokeh.plotting.figure.Figure"):
                 flush_buffer()
                 bokeh_chart(arg)
-            elif _util.is_graphviz_chart(arg):
+            elif _type_util.is_graphviz_chart(arg):
                 flush_buffer()
                 graphviz_chart(arg)
-            elif _util.is_sympy_expession(arg):
+            elif _type_util.is_sympy_expession(arg):
                 flush_buffer()
                 latex(arg)
-            elif _util.is_keras_model(arg):
+            elif _type_util.is_keras_model(arg):
                 from tensorflow.python.keras.utils import vis_utils
 
                 flush_buffer()
@@ -386,7 +388,7 @@ def write(*args, **kwargs):
             elif (type(arg) in dict_types) or (isinstance(arg, list)):  # noqa: F821
                 flush_buffer()
                 json(arg)
-            elif _util.is_namedtuple(arg):
+            elif _type_util.is_namedtuple(arg):
                 flush_buffer()
                 json(_json.dumps(arg._asdict()))
             else:
@@ -504,7 +506,7 @@ def spinner(text="In progress..."):
                     with caching.suppress_cached_st_function_warning():
                         message.warning(str(text))
 
-        add_report_ctx(_threading.Timer(DELAY_SECS, set_message)).start()
+        _add_report_ctx(_threading.Timer(DELAY_SECS, set_message)).start()
 
         # Yield control back to the context.
         yield
