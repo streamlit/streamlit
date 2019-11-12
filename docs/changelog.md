@@ -38,7 +38,7 @@ _Release date: November 10, 2019_
 - 🐱 Ability to call `streamlit run` directly with Github and Gist URLs. No
   need to grab the "raw" URL first!
 - 📃 Cleaner exception stack traces. We now remove all Streamlit-specific code
-  from stack traces generating from the user's app.
+  from stack traces originating from the user's app.
 
 ## Version 0.49.0
 
