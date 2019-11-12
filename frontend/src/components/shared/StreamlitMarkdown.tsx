@@ -8,6 +8,8 @@ import htmlParser from "react-markdown/plugins/html-parser"
 import { InlineMath, BlockMath } from "react-katex"
 // @ts-ignore
 import RemarkMathPlugin from "remark-math"
+// @ts-ignore
+import RemarkEmoji from "remark-emoji"
 
 import "katex/dist/katex.min.css"
 
@@ -40,7 +42,7 @@ export class StreamlitMarkdown extends React.PureComponent<Props> {
       math: (props: { value: string }) => <BlockMath>{props.value}</BlockMath>,
     }
 
-    const plugins = [RemarkMathPlugin]
+    const plugins = [RemarkMathPlugin, RemarkEmoji]
 
     const astPlugins = this.props.allowHTML ? [htmlParser()] : []
 
