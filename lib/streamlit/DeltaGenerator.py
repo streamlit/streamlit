@@ -39,6 +39,7 @@ from streamlit.proto import Balloons_pb2
 from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto import Text_pb2
+from streamlit.proto import Alert_pb2
 
 # setup logging
 from streamlit.logger import get_logger
