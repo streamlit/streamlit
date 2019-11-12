@@ -70,7 +70,7 @@ def _fix_matplotlib_crash():
     This fix is OS-independent. We didn't see a good reason to make this
     Mac-only. Consistency within Streamlit seemed more important.
     """
-    if sys.platform == "darwin" and config.get_option("runner.fixMatplotlib"):
+    if config.get_option("runner.fixMatplotlib"):
         try:
             # TODO: a better option may be to set
             #  os.environ["MPLBACKEND"] = "Agg". We'd need to do this towards

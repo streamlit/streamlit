@@ -89,7 +89,7 @@ class StreamlitWriteTest(unittest.TestCase):
 
             p.assert_called_once()
 
-    @patch("streamlit.util.is_type")
+    @patch("streamlit.type_util.is_type")
     def test_altair_chart(self, is_type):
         """Test st.write with altair_chart."""
         is_type.return_value = True
@@ -102,7 +102,7 @@ class StreamlitWriteTest(unittest.TestCase):
 
             p.assert_called_once()
 
-    @patch("streamlit.util.is_type")
+    @patch("streamlit.type_util.is_type")
     def test_pyplot(self, is_type):
         """Test st.write with matplotlib."""
         is_type.side_effect = [False, True]
