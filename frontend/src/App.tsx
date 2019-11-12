@@ -165,6 +165,9 @@ class App extends PureComponent<Props, State> {
 
     // The c key clears the cache.
     c: () => this.openClearCacheDialog(),
+
+    // The s key stop the script from running.
+    s: () => this.stopReport(),
   }
 
   componentDidMount(): void {

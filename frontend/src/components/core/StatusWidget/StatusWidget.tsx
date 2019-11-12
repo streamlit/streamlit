@@ -276,7 +276,11 @@ export class StatusWidget extends PureComponent<Props, State> {
     const stopRequested =
       this.props.reportRunState === ReportRunState.STOP_REQUESTED
     const stopButton = StatusWidget.promptButton(
-      stopRequested ? "Stopping..." : "Stop",
+      stopRequested ? (
+        "Stopping..."
+      ) : (
+        <div className="underlineFirstLetter">Stop</div>
+      ),
       stopRequested,
       this.handleStopReportClick
     )
