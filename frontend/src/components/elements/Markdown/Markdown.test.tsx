@@ -37,10 +37,10 @@ describe("Markdown Element Test", () => {
     const props = getProps()
     const wrap = shallow(<Markdown {...props} />)
     const elem = wrap.get(0)
-    expect(elem.props.className.includes("stMarkdown"))
-    expect(elem.props.style["width"] === "100")
+    expect(elem.props.className.includes("stMarkdown")).toBeTruthy()
+    expect(elem.props.style["width"]).toBe(100)
   })
-  /* TODO TESTS:
+  /* MAYBE ADD TESTS?
   a) unit tests with different Markdown formatted text
   b) allow_html property
   */
