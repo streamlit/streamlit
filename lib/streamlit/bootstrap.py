@@ -86,7 +86,7 @@ def _fix_matplotlib_crash():
             pass
 
 
-def _init_asyncio_patch():
+def _fix_tornado_crash():
     """set default asyncio policy to be compatible with tornado
     Tornado 6 (at least) is not compatible with the default
     asyncio implementation on Windows
@@ -200,7 +200,7 @@ def run(script_path, command_line, args):
     """
     _fix_sys_path(script_path)
     _fix_matplotlib_crash()
-    _init_asyncio_patch()
+    _fix_tornado_crash()
     _fix_sys_argv(script_path, args)
 
     # Install a signal handler that will shut down the ioloop
