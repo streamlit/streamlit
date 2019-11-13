@@ -123,8 +123,7 @@ class VegaLiteChart extends React.PureComponent<PropsWithHeight, State> {
     //          0 : use full width
     //         >0 : use given width
     // See docs for DeltaGenerator.vega_lite_chart().
-    const width =
-      specWidth === 0 ? this.props.width - EMBED_PADDING : specWidth
+    const width = !specWidth ? this.props.width - EMBED_PADDING : specWidth
 
     const height = this.props.height ? this.props.height : DEFAULT_HEIGHT
 

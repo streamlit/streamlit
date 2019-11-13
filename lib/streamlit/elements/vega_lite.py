@@ -65,8 +65,9 @@ def marshall(proto, data=None, spec=None, width=0, **kwargs):
     # like composed charts, for example.
     if width >= 0 and "width" not in spec:
         spec["width"] = width
-        if "autosize" not in spec:
-            spec["autosize"] = {"type": "fit", "contains": "padding"}
+
+    if "autosize" not in spec:
+        spec["autosize"] = {"type": "fit", "contains": "padding"}
 
     # Pull data out of spec dict when it's in a 'dataset' key:
     #   marshall(proto, {datasets: {foo: df1, bar: df2}, ...})
