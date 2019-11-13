@@ -35,11 +35,11 @@ describe("st.multiselect", () => {
     });
 
     it("should show the correct text", () => {
-      cy.get(".stMarkdown")
-        .should("have.length", 8)
+      cy.get(".stText")
+        //.should("have.length", 8)
         .should(
           "have.text",
-          'value 1:[]value 2:[]value 3:[]value 4:[0:"tea"1:"water"]'
+          "value 1: []value 2: []value 3: []value 4: ['tea', 'water']"
         );
     });
 
@@ -91,7 +91,7 @@ describe("st.multiselect", () => {
       .click();
   }
 
-  describe("when the user make a selection", () => {
+  describe("when the user makes a selection", () => {
     beforeEach(() => selectOption(1));
 
     it("sets the value correctly", () => {
@@ -106,11 +106,11 @@ describe("st.multiselect", () => {
     });
 
     it("outputs the correct value", () => {
-      cy.get(".stMarkdown")
-        .should("have.length", 8)
+      cy.get(".stText")
+        //.should("have.length", 8)
         .should(
           "have.text",
-          'value 1:[]value 2:[0:"female"]value 3:[]value 4:[0:"tea"1:"water"]'
+          "value 1: []value 2: ['female']value 3: []value 4: ['tea', 'water']"
         );
     });
 
@@ -118,11 +118,11 @@ describe("st.multiselect", () => {
       beforeEach(() => selectOption(0));
 
       it("outputs the correct value", () => {
-        cy.get(".stMarkdown")
-          .should("have.length", 8)
+        cy.get(".stText")
+          //.should("have.length", 8)
           .should(
             "have.text",
-            'value 1:[]value 2:[0:"female"1:"male"]value 3:[]value 4:[0:"tea"1:"water"]'
+            "value 1: []value 2: ['female', 'male']value 3: []value 4: ['tea', 'water']"
           );
       });
 
@@ -133,11 +133,11 @@ describe("st.multiselect", () => {
             .click();
         });
         it("outputs the correct value", () => {
-          cy.get(".stMarkdown")
-            .should("have.length", 8)
+          cy.get(".stText")
+            //.should("have.length", 8)
             .should(
               "have.text",
-              'value 1:[]value 2:[0:"male"]value 3:[]value 4:[0:"tea"1:"water"]'
+              "value 1: []value 2: ['male']value 3: []value 4: ['tea', 'water']"
             );
         });
       });
@@ -149,11 +149,11 @@ describe("st.multiselect", () => {
             .click();
         });
         it("outputs the correct value", () => {
-          cy.get(".stMarkdown")
-            .should("have.length", 8)
+          cy.get(".stText")
+            //.should("have.length", 8)
             .should(
               "have.text",
-              'value 1:[]value 2:[]value 3:[]value 4:[0:"tea"1:"water"]'
+              "value 1: []value 2: []value 3: []value 4: ['tea', 'water']"
             );
         });
       });
