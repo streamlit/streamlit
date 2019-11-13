@@ -50,7 +50,8 @@ describe("Alert Element Test", () => {
     const elem = wrap.get(0)
     expect(elem.props.className.includes("stAlert")).toBeTruthy()
     expect(elementClassIsCorrect(elem, format)).toBeTruthy()
-    expect(wrap.find(<StreamlitMarkdown>).props().source).toBe("#what in the world?")
+    expect(wrap.find(<StreamlitMarkdown>).props().source).toBe(
+                                    "#what in the world?")
   })
   it("renders an INFO box as expected", () => {
     const format = AlertProto.Format.INFO
@@ -62,7 +63,8 @@ describe("Alert Element Test", () => {
     const elem = wrap.get(0)
     expect(elem.props.className.includes("stAlert")).toBeTruthy()
     expect(elementClassIsCorrect(elem, format)).toBeTruthy()
-    expect(wrap.find(<StreamlitMarkdown>).props().source).toBe("It's dangerous to go alone.")
+    expect(wrap.find(<StreamlitMarkdown>).props().source).toBe(
+                                    "It's dangerous to go alone.")
   })
   it("renders a WARNING box as expected", () => {
     const format = AlertProto.Format.WARNING
@@ -74,7 +76,8 @@ describe("Alert Element Test", () => {
     const elem = wrap.get(0)
     expect(elem.props.className.includes("stAlert")).toBeTruthy()
     expect(elementClassIsCorrect(elem, format)).toBeTruthy()
-    expect(wrap.find(<StreamlitMarkdown>).props().source).toBe("Are you *sure*?")
+    expect(wrap.find(<StreamlitMarkdown>).props().source).toBe(
+                                    "Are you *sure*?")
   })
   it("renders a SUCCESS box as expected", () => {
     const format = AlertProto.Format.SUCCESS
@@ -86,6 +89,7 @@ describe("Alert Element Test", () => {
     const elem = wrap.get(0)
     expect(elem.props.className.includes("stAlert")).toBeTruthy()
     expect(elementClassIsCorrect(elem, format)).toBeTruthy()
-    expect(wrap.find(<StreamlitMarkdown>).props().source).toBe("But our princess was in another castle!")
+    expect(wrap.find(<StreamlitMarkdown>).props().source).toBe(
+                        "But our princess was in another castle!")
   })
 })
