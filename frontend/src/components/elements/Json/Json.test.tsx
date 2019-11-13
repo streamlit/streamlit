@@ -36,7 +36,8 @@ describe("JSON Element Test", () => {
     const props = getProps()
     const wrapper = shallow(<Json {...props} />)
     expect(wrapper).toBeDefined()
-    // TODO: check for body and style props
+    const elem = wrapper.get(0)
+    expect(elem.props.className.includes("stJson")).toBeTruthy()
   }),
     it("should raise an exception with invalid JSON", () => {
       const props = getProps({ body: "invalid JSON" })
