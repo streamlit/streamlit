@@ -184,22 +184,22 @@ class VegaLiteTest(testutil.DeltaGeneratorTestCase):
         st.vega_lite_chart(df1, {"mark": "rect"}, width=-1)
 
         c = self.get_delta_from_queue().new_element.vega_lite_chart
-        self.assertDictEqual(json.loads(c.spec), {"mark": "rect"})
+        self.assertDictEqual(json.loads(c.spec), {"mark": "rect", "autosize": {"type": "fit", "contains": "padding"}})
 
     def test_width_inside_spec(self):
         """Test that {width:-1} leaves the width up to Vega-Lite."""
         st.vega_lite_chart(df1, {"mark": "rect", "width": 500})
 
         c = self.get_delta_from_queue().new_element.vega_lite_chart
-        self.assertDictEqual(json.loads(c.spec), {"mark": "rect", "width": 500})
+        self.assertDictEqual(json.loads(c.spec), {"mark": "rect", "autosize": {"type": "fit", "contains": "padding"}, "width": 500})
 
     def test_autosize_set(self):
         """Test that autosize doesn't get overriden."""
-        st.vega_lite_chart(df1, {"mark": "rect", "autosize": None}, width=500)
+        st.vega_lite_chart(df1, {"mark": "rect", "autosize": {"type": "fit", "contains": "padding"}}, width=500)
 
         c = self.get_delta_from_queue().new_element.vega_lite_chart
         self.assertDictEqual(
-            json.loads(c.spec), {"mark": "rect", "autosize": None, "width": 500}
+            json.loads(c.spec), {"mark": "rect", "autosize": {"type": "fit", "contains": "padding"}, "width": 500}
         )
 
 
