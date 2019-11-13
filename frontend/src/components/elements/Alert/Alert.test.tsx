@@ -19,10 +19,12 @@ import React, { ReactElement } from "react"
 import { shallow } from "enzyme"
 import { Map as ImmutableMap } from "immutable"
 
+import { StreamlitMarkdown } from "../../shared/<StreamlitMarkdown>"
 import Alert, { getAlertCSSClass } from "./Alert"
+import { Props as AlertProps } from "./Alert"
 import { Alert as AlertProto } from "autogen/proto"
 
-const getProps = (elementProps: object = {}): Props => ({
+const getProps = (elementProps: object = {}): AlertProps => ({
   element: ImmutableMap({
     body: "Something happened!",
     ...elementProps,
@@ -46,8 +48,9 @@ describe("Alert Element Test", () => {
     })
     const wrap = shallow(<Alert {...props} />)
     const elem = wrap.get(0)
-    expect(elem.props.className.includes("stAlert"))
-    expect(elementClassIsCorrect(elem, format))
+    expect(elem.props.className.includes("stAlert")).toBeTruthy()
+    expect(elementClassIsCorrect(elem, format)).toBeTruthy()
+    expect(wrap.find(<StreamlitMarkdown>).props().source).toBe("#what in the world?")
   })
   it("renders an INFO box as expected", () => {
     const format = AlertProto.Format.INFO
@@ -57,8 +60,9 @@ describe("Alert Element Test", () => {
     })
     const wrap = shallow(<Alert {...props} />)
     const elem = wrap.get(0)
-    expect(elem.props.className.includes("stAlert"))
-    expect(elementClassIsCorrect(elem, format))
+    expect(elem.props.className.includes("stAlert")).toBeTruthy()
+    expect(elementClassIsCorrect(elem, format)).toBeTruthy()
+    expect(wrap.find(<StreamlitMarkdown>).props().source).toBe("It's dangerous to go alone.")
   })
   it("renders a WARNING box as expected", () => {
     const format = AlertProto.Format.WARNING
@@ -68,8 +72,9 @@ describe("Alert Element Test", () => {
     })
     const wrap = shallow(<Alert {...props} />)
     const elem = wrap.get(0)
-    expect(elem.props.className.includes("stAlert"))
-    expect(elementClassIsCorrect(elem, format))
+    expect(elem.props.className.includes("stAlert")).toBeTruthy()
+    expect(elementClassIsCorrect(elem, format)).toBeTruthy()
+    expect(wrap.find(<StreamlitMarkdown>).props().source).toBe("Are you *sure*?")
   })
   it("renders a SUCCESS box as expected", () => {
     const format = AlertProto.Format.SUCCESS
@@ -79,7 +84,8 @@ describe("Alert Element Test", () => {
     })
     const wrap = shallow(<Alert {...props} />)
     const elem = wrap.get(0)
-    expect(elem.props.className.includes("stAlert"))
-    expect(elementClassIsCorrect(elem, format))
+    expect(elem.props.className.includes("stAlert")).toBeTruthy()
+    expect(elementClassIsCorrect(elem, format)).toBeTruthy()
+    expect(wrap.find(<StreamlitMarkdown>).props().source).toBe("But our princess was in another castle!")
   })
 })

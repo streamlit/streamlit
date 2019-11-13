@@ -41,7 +41,7 @@ export function getAlertCSSClass(format: number): string {
   }
 }
 
-interface Props {
+export interface Props {
   width: number
   element: ImmutableMap<string, any>
 }

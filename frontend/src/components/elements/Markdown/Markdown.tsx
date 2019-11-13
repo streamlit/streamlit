@@ -21,7 +21,7 @@ import { Map as ImmutableMap } from "immutable"
 
 import "assets/css/write.scss"
 
-interface Props {
+export interface Props {
   width: number
   element: ImmutableMap<string, any>
 }

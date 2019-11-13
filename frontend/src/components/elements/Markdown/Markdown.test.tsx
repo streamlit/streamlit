@@ -19,8 +19,9 @@ import React from "react"
 import { shallow } from "enzyme"
 import { Map as ImmutableMap } from "immutable"
 import Markdown from "./Markdown"
+import { Props as MarkdownProps } from "./Markdown"
 
-const getProps = (elementProps: object = {}): Props => ({
+const getProps = (elementProps: object = {}): MarkdownProps => ({
   element: ImmutableMap({
     body:
       "Emphasis, aka italics, with *asterisks* or _underscores_." +
