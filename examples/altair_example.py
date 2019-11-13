@@ -25,7 +25,7 @@ c = alt.Chart(df).mark_circle().encode(x="a", y="b", size="c", color="c").intera
 st.title("These two should look exactly the same")
 
 st.write("Altair chart using `st.altair_chart`:")
-st.altair_chart(c, width=300)
+st.altair_chart(c)
 
 st.write("And the same chart using `st.write`:")
 st.write(c)
