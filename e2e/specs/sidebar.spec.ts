@@ -38,7 +38,6 @@ describe("st.sidebar", () => {
   });
 
   it("handles overwriting elements", () => {
-    // DEBUG  -- what class should be here, if not .stText or .stMarkdown?
     cy.get(".sidebar .stText").contains("overwritten");
   });
 });
