@@ -18,14 +18,12 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
-from streamlit.errors import DuplicateWidgetID
 
 setup_2_3_shims(globals())
 
 import functools
 import json
 import random
-import re
 import textwrap
 import pandas as pd
 from datetime import datetime
@@ -34,11 +32,13 @@ from datetime import time
 
 from streamlit import caching
 from streamlit import metrics
+from streamlit.ReportThread import get_report_ctx
+from streamlit.errors import DuplicateWidgetID
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Balloons_pb2
 from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto import Text_pb2
-from streamlit import get_report_ctx
 
 # setup logging
 from streamlit.logger import get_logger
@@ -129,25 +129,25 @@ def _build_duplicate_widget_message(widget_type, user_key=None):
     if user_key is not None:
         message = textwrap.dedent(
             """
-            There are multiple identical st.{widget_type} widgets that use the
-             '{user_key}' key.
+            There are multiple identical `st.{widget_type}` widgets with
+            `key='{user_key}'`.
 
-            To fix this, please make sure that the 'key' argument is unique for
-            each st.{widget_type} you create.
+            To fix this, please make sure that the `key` argument is unique for
+            each `st.{widget_type}` you create.
             """
         )
     else:
         message = textwrap.dedent(
             """
-            There are multiple identical st.{widget_type} widgets with the
+            There are multiple identical `st.{widget_type}` widgets with the
             same generated key.
 
             (When a widget is created, it's assigned an internal key based on
             its structure. Multiple widgets with an identical structure will
             result in the same internal key, which causes this error.)
 
-            To fix this, please pass a unique 'key' argument to
-            st.{widget_type}().
+            To fix this, please pass a unique `key` argument to
+            `st.{widget_type}`.
             """
         )
 
@@ -327,7 +327,7 @@ class DeltaGenerator(object):
                     "name": name
                 }
 
-            raise AttributeError(message)
+            raise StreamlitAPIException(message)
 
         return wrapper
 
@@ -488,6 +488,11 @@ class DeltaGenerator(object):
         body : str
             The string to display as Github-flavored Markdown. Syntax
             information can be found at: https://github.github.com/gfm.
+            Inline and block math are supported by KaTeX and remark-math.
+
+            The body also support LaTeX expressions, by just wrapping them in
+            "$" or "$$" (the "$$" must be on their own lines). Supported LaTeX
+            functions are listed at https://katex.org/docs/supported.html.
 
         unsafe_allow_html : bool
             By default, any HTML tags found in the body will be escaped and
@@ -523,6 +528,46 @@ class DeltaGenerator(object):
         element.text.body = _clean_text(body)
         element.text.format = Text_pb2.Text.MARKDOWN
         element.text.allow_html = unsafe_allow_html
+
+    @_with_element
+    def latex(self, element, body):
+        # This docstring needs to be "raw" because of the backslashes in the
+        # example below.
+        r"""Display mathematical expressions formatted as LaTeX.
+
+        Supported LaTeX functions are listed at
+        https://katex.org/docs/supported.html.
+
+        Parameters
+        ----------
+        body : str or SymPy expression
+            The string or SymPy expression to display as LaTeX. If str, it's
+            a good idea to use raw Python strings since LaTeX uses backslashes
+            a lot.
+
+
+        Example
+        -------
+        >>> st.latex(r'''
+        ...     a + ar + a r^2 + a r^3 + \cdots + a r^{n-1} =
+        ...     \sum_{k=0}^{n-1} ar^k =
+        ...     a \left(\frac{1-r^{n}}{1-r}\right)
+        ...     ''')
+
+        .. output::
+           https://share.streamlit.io/0.50.0-td2L/index.html?id=NJFsy6NbGTsH2RF9W6ioQ4
+           height: 75px
+
+        """
+        from streamlit.type_util import is_sympy_expession
+
+        if is_sympy_expession(body):
+            import sympy
+
+            body = sympy.latex(body)
+
+        element.text.body = "$$\n%s\n$$" % _clean_text(body)
+        element.text.format = Text_pb2.Text.MARKDOWN
 
     @_with_element
     def code(self, element, body, language="python"):
@@ -842,6 +887,11 @@ class DeltaGenerator(object):
     def line_chart(self, element, data=None, width=0, height=0):
         """Display a line chart.
 
+        This is just syntax-sugar around st.altair_chart. The main difference
+        is this command uses the data's own column and indices to figure out
+        the chart's spec. As a result this is easier to use for many "just plot
+        this" scenarios, while being less customizable.
+
         Parameters
         ----------
         data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict
@@ -863,8 +913,8 @@ class DeltaGenerator(object):
         >>> st.line_chart(chart_data)
 
         .. output::
-            https://share.streamlit.io/0.26.1-2LpAr/index.html?id=FjPACu1ham1Jx96YD1o7Pg
-            height: 200px
+           https://share.streamlit.io/0.50.0-td2L/index.html?id=BdxXG3MmrVBfJyqS2R2ki8
+           height: 220px
 
         """
 
@@ -876,6 +926,11 @@ class DeltaGenerator(object):
     @_with_element
     def area_chart(self, element, data=None, width=0, height=0):
         """Display a area chart.
+
+        This is just syntax-sugar around st.altair_chart. The main difference
+        is this command uses the data's own column and indices to figure out
+        the chart's spec. As a result this is easier to use for many "just plot
+        this" scenarios, while being less customizable.
 
         Parameters
         ----------
@@ -897,8 +952,8 @@ class DeltaGenerator(object):
         >>> st.area_chart(chart_data)
 
         .. output::
-            https://share.streamlit.io/0.26.1-2LpAr/index.html?id=BYLQrnN1tHonosFUj3Q4xm
-            height: 200px
+           https://share.streamlit.io/0.50.0-td2L/index.html?id=Pp65STuFj65cJRDfhGh4Jt
+           height: 220px
 
         """
         import streamlit.elements.altair as altair
@@ -909,6 +964,11 @@ class DeltaGenerator(object):
     @_with_element
     def bar_chart(self, element, data=None, width=0, height=0):
         """Display a bar chart.
+
+        This is just syntax-sugar around st.altair_chart. The main difference
+        is this command uses the data's own column and indices to figure out
+        the chart's spec. As a result this is easier to use for many "just plot
+        this" scenarios, while being less customizable.
 
         Parameters
         ----------
@@ -924,14 +984,14 @@ class DeltaGenerator(object):
         Example
         -------
         >>> chart_data = pd.DataFrame(
-        ...     [[20, 30, 50]],
-        ...     columns=['a', 'b', 'c'])
+        ...     np.random.randn(50, 3),
+        ...     columns=["a", "b", "c"])
         ...
         >>> st.bar_chart(chart_data)
 
         .. output::
-            https://share.streamlit.io/0.26.1-2LpAr/index.html?id=B8pQsaSjGyo1372MTnX9rk
-            height: 200px
+           https://share.streamlit.io/0.50.0-td2L/index.html?id=5U5bjR2b3jFwnJdDfSvuRk
+           height: 220px
 
         """
         import streamlit.elements.altair as altair
@@ -1344,7 +1404,7 @@ class DeltaGenerator(object):
         elif width is None:
             width = -1
         elif width <= 0:
-            raise RuntimeError("Image width must be positive.")
+            raise StreamlitAPIException("Image width must be positive.")
         image_proto.marshall_images(
             image, caption, width, element.imgs, clamp, channels, format
         )
@@ -1538,12 +1598,12 @@ class DeltaGenerator(object):
         def _check_and_convert_to_indices(default_values):
             for value in default_values:
                 if not isinstance(value, string_types):  # noqa: F821
-                    raise TypeError(
-                        "A Multiselect default value has invalid type: %s"
+                    raise StreamlitAPIException(
+                        "Multiselect default value has invalid type: %s"
                         % type(value).__name__
                     )
                 if value not in options:
-                    raise ValueError(
+                    raise StreamlitAPIException(
                         "Every Multiselect default value must exist in options"
                     )
             return [options.index(value) for value in default]
@@ -1604,10 +1664,14 @@ class DeltaGenerator(object):
 
         """
         if not isinstance(index, int):
-            raise TypeError("Radio Value has invalid type: %s" % type(index).__name__)
+            raise StreamlitAPIException(
+                "Radio Value has invalid type: %s" % type(index).__name__
+            )
 
         if len(options) > 0 and not 0 <= index < len(options):
-            raise ValueError("Radio index must be between 0 and length of options")
+            raise StreamlitAPIException(
+                "Radio index must be between 0 and length of options"
+            )
 
         element.radio.label = label
         element.radio.default = index
@@ -1654,12 +1718,14 @@ class DeltaGenerator(object):
 
         """
         if not isinstance(index, int):
-            raise TypeError(
+            raise StreamlitAPIException(
                 "Selectbox Value has invalid type: %s" % type(index).__name__
             )
 
         if len(options) > 0 and not 0 <= index < len(options):
-            raise ValueError("Selectbox index must be between 0 and length of options")
+            raise StreamlitAPIException(
+                "Selectbox index must be between 0 and length of options"
+            )
 
         element.selectbox.label = label
         element.selectbox.default = index
@@ -1737,8 +1803,8 @@ class DeltaGenerator(object):
         single_value = isinstance(value, (int, float))
         range_value = isinstance(value, (list, tuple)) and len(value) == 2
         if not single_value and not range_value:
-            raise ValueError(
-                "The value should either be an int/float or a list/tuple of "
+            raise StreamlitAPIException(
+                "Slider value should either be an int/float or a list/tuple of "
                 "int/float"
             )
 
@@ -1751,7 +1817,9 @@ class DeltaGenerator(object):
             float_value = all(map(lambda v: isinstance(v, float), value))
 
         if not int_value and not float_value:
-            raise TypeError("Tuple/list components must be of the same type.")
+            raise StreamlitAPIException(
+                "Slider tuple/list components must be of the same type."
+            )
 
         # Set corresponding defaults.
         if min_value is None:
@@ -1766,8 +1834,8 @@ class DeltaGenerator(object):
         int_args = all(map(lambda a: isinstance(a, int), args))
         float_args = all(map(lambda a: isinstance(a, float), args))
         if not int_args and not float_args:
-            raise TypeError(
-                "All arguments must be of the same type."
+            raise StreamlitAPIException(
+                "Slider value arguments must be of the same type."
                 "\n`value` has %(value_type)s type."
                 "\n`min_value` has %(min_type)s type."
                 "\n`max_value` has %(max_type)s type."
@@ -1782,7 +1850,7 @@ class DeltaGenerator(object):
         all_ints = int_value and int_args
         all_floats = float_value and float_args
         if not all_ints and not all_floats:
-            raise TypeError(
+            raise StreamlitAPIException(
                 "Both value and arguments must be of the same type."
                 "\n`value` has %(value_type)s type."
                 "\n`min_value` has %(min_type)s type."
@@ -1797,7 +1865,7 @@ class DeltaGenerator(object):
         # Ensure that min <= value <= max.
         if single_value:
             if not min_value <= value <= max_value:
-                raise ValueError(
+                raise StreamlitAPIException(
                     "The default `value` of %(value)s "
                     "must lie between the `min_value` of %(min)s "
                     "and the `max_value` of %(max)s, inclusively."
@@ -1806,7 +1874,9 @@ class DeltaGenerator(object):
         else:
             start, end = value
             if not min_value <= start <= end <= max_value:
-                raise ValueError("The value and/or arguments are out of range.")
+                raise StreamlitAPIException(
+                    "The value and/or arguments are out of range."
+                )
 
         # Set format default.
         if format is None:
@@ -1951,7 +2021,9 @@ class DeltaGenerator(object):
 
         # Ensure that the value is either datetime/time
         if not isinstance(value, datetime) and not isinstance(value, time):
-            raise TypeError("The type of the value should be either datetime or time.")
+            raise StreamlitAPIException(
+                "The type of the value should be either datetime or time."
+            )
 
         # Convert datetime to time
         if isinstance(value, datetime):
@@ -2004,7 +2076,9 @@ class DeltaGenerator(object):
 
         # Ensure that the value is either datetime/time
         if not isinstance(value, datetime) and not isinstance(value, date):
-            raise TypeError("The type of the value should be either datetime or date.")
+            raise StreamlitAPIException(
+                "The type of the date_input value should be either `datetime` or `date`."
+            )
 
         # Convert datetime to date
         if isinstance(value, datetime):
@@ -2031,6 +2105,7 @@ class DeltaGenerator(object):
         value=NoValue(),
         step=None,
         format=None,
+        key=None,
     ):
         """Display a numeric input widget.
 
@@ -2054,6 +2129,11 @@ class DeltaGenerator(object):
         format : str or None
             Printf/Python format string controlling how the interface should
             display numbers. This does not impact the return value.
+        key : str
+            An optional string to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. Multiple widgets of the same type may
+            not share the same key.
 
         Returns
         -------
@@ -2066,8 +2146,6 @@ class DeltaGenerator(object):
         >>> number = st.number_input('Insert a number')
         >>> st.write('The current number is ', number)
         """
-
-        from streamlit.util import is_int_value
 
         if isinstance(value, NoValue):
             if min_value:
@@ -2154,7 +2232,7 @@ class DeltaGenerator(object):
         if format is not None:
             element.number_input.format = format
 
-        ui_value = _get_widget_ui_value("number_input", element)
+        ui_value = _get_widget_ui_value("number_input", element, user_key=key)
 
         return ui_value if ui_value is not None else value
 
@@ -2185,18 +2263,20 @@ class DeltaGenerator(object):
             if 0.0 <= value <= 1.0:
                 element.progress.value = int(value * 100)
             else:
-                raise ValueError(
+                raise StreamlitAPIException(
                     "Progress Value has invalid value [0.0, 1.0]: %f" % value
                 )
         elif value_type == "int":
             if 0 <= value <= 100:
                 element.progress.value = value
             else:
-                raise ValueError(
+                raise StreamlitAPIException(
                     "Progress Value has invalid value [0, 100]: %d" % value
                 )
         else:
-            raise TypeError("Progress Value has invalid type: %s" % value_type)
+            raise StreamlitAPIException(
+                "Progress Value has invalid type: %s" % value_type
+            )
 
     @_with_element
     def empty(self, element):
@@ -2369,7 +2449,7 @@ class DeltaGenerator(object):
         ...
 
         .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=ASTdExBpJ1WxbGceneKN1i
+           https://share.streamlit.io/0.50.0-td2L/index.html?id=3GfRygWqxuqB5UitZLjz9i
            height: 530px
 
         """
@@ -2463,7 +2543,7 @@ class DeltaGenerator(object):
             return self
 
         if self._is_root:
-            raise RuntimeError("Only existing elements can add_rows.")
+            raise StreamlitAPIException("Only existing elements can `add_rows`.")
 
         # Accept syntax st.add_rows(df).
         if data is not None and len(kwargs) == 0:
@@ -2473,7 +2553,7 @@ class DeltaGenerator(object):
             name, data = kwargs.popitem()
         # Raise error otherwise.
         else:
-            raise RuntimeError(
+            raise StreamlitAPIException(
                 "Wrong number of arguments to add_rows()."
                 "Method requires exactly one dataset"
             )
@@ -2520,7 +2600,9 @@ def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
             old_stop = _get_pandas_index_attr(data, "stop")
 
             if old_step is None or old_stop is None:
-                raise AttributeError("'RangeIndex' object has no attribute " "'step'")
+                raise StreamlitAPIException(
+                    "'RangeIndex' object has no attribute 'step'"
+                )
 
             start = last_index + old_step
             stop = last_index + old_step + old_stop

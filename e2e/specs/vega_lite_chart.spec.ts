@@ -25,6 +25,9 @@ describe("st.vega_lite_chart", () => {
     // remaining fixed. This prevents us from occasionally getting
     // the little multi-colored ribbon at the top of our screenshots.
     cy.get(".stApp > header").invoke("css", "position", "absolute");
+
+    // Make the ribbon decoration line disappear
+    cy.get(".decoration").invoke("css", "display", "none");
   });
 
   it("displays charts on the DOM", () => {
@@ -63,7 +66,7 @@ describe("st.vega_lite_chart", () => {
     cy.get(".stVegaLiteChart")
       .filter(idx => idx >= 4 && idx <= 7)
       .each(el => {
-        cy.wrap(el).matchImageSnapshot();
+        return cy.wrap(el).matchImageSnapshot();
       });
   });
 });

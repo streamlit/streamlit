@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 class NoStaticFiles(Exception):
     pass
 
@@ -21,5 +22,24 @@ class S3NoCredentials(Exception):
     pass
 
 
-class DuplicateWidgetID(Exception):
+class StreamlitAPIException(Exception):
+    """Base class for Streamlit API exceptions.
+
+    An API exception should be thrown when user code interacts with the
+    Streamlit API incorrectly. (That is, when we throw an exception as a
+    result of a user's malformed `st.foo` call, it should be a
+    StreamlitAPIException or subclass.)
+
+    Instances of this class can use markdown in their messages, which will get
+    nicely formatted on the frontend.
+
+    When displaying these exceptions on the frontend, we strip Streamlit
+    entries from the stack trace so that the user doesn't see a bunch of
+    noise related to Streamlit internals.
+    """
+
+    pass
+
+
+class DuplicateWidgetID(StreamlitAPIException):
     pass

@@ -32,12 +32,12 @@ from streamlit.proto import Video_pb2
 # Regular expression explained at https://regexr.com/4n2l2 Covers any youtube
 # URL (incl. shortlinks and embed links) and extracts its code.
 YOUTUBE_RE = re.compile(
-      # Protocol
-      "http(?:s?):\/\/"
-      # Domain
-      "(?:www\.)?youtu(?:be\.com|\.be)\/"
-      # Path and query string
-      "(?P<watch>(watch\?v=)|embed\/)?(?P<code>[\w\-\_]*)(&(amp;)?[\w\?=]*)?"
+    # Protocol
+    "http(?:s?):\/\/"
+    # Domain
+    "(?:www\.)?youtu(?:be\.com|\.be)\/"
+    # Path and query string
+    "(?P<watch>(watch\?v=)|embed\/)?(?P<code>[\w\-\_]*)(&(amp;)?[\w\?=]*)?"
 )
 
 
@@ -50,7 +50,7 @@ def _reshape_youtube_url(url):
     Parameters
     ----------
         url : str or bytes
-    
+
     Example
     -------
     >>> print(process_video_url('https://youtu.be/_T8LGqJtuGc'))
@@ -67,13 +67,13 @@ def _reshape_youtube_url(url):
 def _marshall_binary(proto, data):
     """Marshals a proto with binary data (converts to base64).
 
-    Parameters 
+    Parameters
     ----------
     proto : the proto to fill. Must have a string field called "data".
     data : a buffer with the binary data. Supported formats: str, bytes,
         BytesIO, NumPy array, or a file opened with io.open().
     """
-    if type(data) in string_types:
+    if type(data) in string_types:  # noqa: F821
         # Python3 raises TypeError for unencodable text (but not Python 2.7)
         b64encodable = bytes(data)
     elif type(data) is newbytes:
@@ -99,14 +99,14 @@ def _marshall_binary(proto, data):
 def marshall_video(proto, data, format="video/mp4", start_time=0):
     """Marshalls a video proto, using data and url processors as needed.
 
-    Parameters 
+    Parameters
     ----------
     proto : the proto to fill. Must have a string field called "data".
     data : str, bytes, BytesIO, numpy.ndarray, or file opened with
            io.open().
         Raw video data or a string with a URL pointing to the video
         to load. Includes support for YouTube URLs.
-        If passing the raw data, this must include headers and any other 
+        If passing the raw data, this must include headers and any other
         bytes required in the actual file.
     format : str
         The mime type for the video file. Defaults to 'video/mp4'.
@@ -119,7 +119,7 @@ def marshall_video(proto, data, format="video/mp4", start_time=0):
     proto.start_time = start_time
     proto.type = Video_pb2.Video.Type.NATIVE
 
-    if isinstance(data, string_types) and url(data):
+    if isinstance(data, string_types) and url(data):  # noqa: F821
         youtube_url = _reshape_youtube_url(data)
         if youtube_url:
             proto.url = youtube_url
@@ -132,14 +132,14 @@ def marshall_video(proto, data, format="video/mp4", start_time=0):
 
 def marshall_audio(proto, data, format="audio/wav", start_time=0):
     """Marshalls an audio proto, using data and url processors as needed.
-    
+
     Parameters
     ----------
     proto : The proto to fill. Must have a string field called "data".
-    data : str, bytes, BytesIO, numpy.ndarray, or file opened with 
+    data : str, bytes, BytesIO, numpy.ndarray, or file opened with
             io.open()
         Raw audio data or a string with a URL pointing to the file to load.
-        If passing the raw data, this must include headers and any other bytes 
+        If passing the raw data, this must include headers and any other bytes
         required in the actual file.
     format : str
         The mime type for the audio file. Defaults to "audio/wav".
@@ -151,7 +151,7 @@ def marshall_audio(proto, data, format="audio/wav", start_time=0):
     proto.format = format
     proto.start_time = start_time
 
-    if isinstance(data, string_types) and url(data):
+    if isinstance(data, string_types) and url(data):  # noqa: F821
         proto.url = data
     else:
         _marshall_binary(proto, data)

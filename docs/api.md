@@ -27,7 +27,7 @@ data to your app with very few keypresses. Here's an example:
 This is some _markdown_.
 '''
 
-df = pandas.DataFrame({'col1': [1,2,3]})
+df = pd.DataFrame({'col1': [1,2,3]})
 df  # <-- Draw the dataframe
 
 x = 10
@@ -69,6 +69,7 @@ also use [magic commands](api.html#magic-commands) in place of `st.write`.
 ```eval_rst
 .. autofunction:: streamlit.text
 .. autofunction:: streamlit.markdown
+.. autofunction:: streamlit.latex
 .. autofunction:: streamlit.write
 .. autofunction:: streamlit.title
 .. autofunction:: streamlit.header
@@ -103,6 +104,9 @@ finally we also provide a few chart types that are "native" to Streamlit,
 like `st.line_chart` and `st.area_chart`.
 
 ```eval_rst
+.. autofunction:: streamlit.line_chart
+.. autofunction:: streamlit.area_chart
+.. autofunction:: streamlit.bar_chart
 .. autofunction:: streamlit.pyplot
 .. autofunction:: streamlit.altair_chart
 .. autofunction:: streamlit.vega_lite_chart
@@ -110,9 +114,6 @@ like `st.line_chart` and `st.area_chart`.
 .. autofunction:: streamlit.bokeh_chart
 .. autofunction:: streamlit.deck_gl_chart
 .. autofunction:: streamlit.graphviz_chart
-.. autofunction:: streamlit.line_chart
-.. autofunction:: streamlit.area_chart
-.. autofunction:: streamlit.bar_chart
 .. autofunction:: streamlit.map
 .. autofunction:: streamlit.image
 .. autofunction:: streamlit.audio
@@ -135,6 +136,22 @@ With widgets, Streamlit allows you to bake interactivity directly into your apps
 .. autofunction:: streamlit.text_area
 .. autofunction:: streamlit.date_input
 .. autofunction:: streamlit.time_input
+```
+
+## Add widgets to sidebar
+
+Not only can you add interactivity to your report with widgets, you can organize them into a sidebar with `st.write.[element_name]`. Each element that's passed to `st.sidebar` is pinned to the left, allowing users to focus on the content in your app. The only elements that aren't supported are: `st.write` (you
+should use `st.sidebar.markdown()` instead), `st.echo`, and `st.spinner`.
+
+Here's an example of how you'd add a checkbox to your sidebar.
+
+```python
+import streamlit as st
+
+add_selectbox = st.sidebar.checkbox(
+    'How would you like to be contacted?',
+    ('Email', 'Home phone', 'Mobile phone'))
+)
 ```
 
 ## Display code

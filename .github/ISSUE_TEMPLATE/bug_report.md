@@ -35,4 +35,4 @@ yes / no
 - Browser version:
 
 # Additional information
-If needed, add any other context about the problem here.
+If needed, add any other context about the problem here. For exmaple, did this bug come from https://discuss.streamlit.io  or another site? Link the original source here!

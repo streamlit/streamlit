@@ -22,6 +22,9 @@ describe("st.table styling", () => {
     cy.visit("http://localhost:3000/");
 
     cy.get(".stTable").should("have.length", 4);
+
+    // Make the ribbon decoration line disappear
+    cy.get(".decoration").invoke("css", "display", "none");
   });
 
   it("displays unstyled table", () => {
@@ -56,9 +59,9 @@ describe("st.table styling", () => {
       .find("td")
       .each((el, i) => {
         if (i < 3) {
-          cy.wrap(el).should("have.css", "color", "rgb(0, 0, 0)");
+          return cy.wrap(el).should("have.css", "color", "rgb(0, 0, 0)");
         } else {
-          cy.wrap(el).should("have.css", "color", "rgb(255, 0, 0)");
+          return cy.wrap(el).should("have.css", "color", "rgb(255, 0, 0)");
         }
       });
 

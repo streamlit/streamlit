@@ -53,6 +53,12 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
             self.set_header("Cache-Control", "public")
 
 
+class AddSlashHandler(tornado.web.RequestHandler):
+    @tornado.web.addslash
+    def get(self):
+        pass
+
+
 class _SpecialRequestHandler(tornado.web.RequestHandler):
     """Superclass for "special" endpoints, like /healthz."""
 
