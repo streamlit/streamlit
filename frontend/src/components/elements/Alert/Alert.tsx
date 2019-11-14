@@ -37,7 +37,7 @@ export function getAlertCSSClass(format: number): string {
   if (cname) {
     return cname
   } else {
-    return "invalid-alert"
+    throw new Error(`Unexpected alert type: ${format}`)
   }
 }
 
