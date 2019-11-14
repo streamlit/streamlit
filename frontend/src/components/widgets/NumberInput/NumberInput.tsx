@@ -48,7 +48,9 @@ interface State {
 class NumberInput extends React.PureComponent<Props, State> {
   public state: State = {
     dirty: false,
-    value: this.props.element.get("default"),
+    // Question: should we format this value before setting it so that
+    // we can correctly call `strIsInt` on it?
+    value: String(this.props.element.get("default")),
   }
 
   private inputRef = React.createRef<HTMLInputElement>()
@@ -57,7 +59,7 @@ class NumberInput extends React.PureComponent<Props, State> {
     this.setWidgetValue({ fromUi: false })
   }
 
-  private strIsInt = (value: string): boolean => Number(value) % 1 === 0
+  private strIsInt = (value: string): boolean => value.indexOf(".") === -1
 
   private getValue = (): number => {
     const { value } = this.state
@@ -100,7 +102,7 @@ class NumberInput extends React.PureComponent<Props, State> {
         ? sprintf(format, valueToBeSaved)
         : valueToBeSaved
 
-      if (this.strIsInt(valueToBeSaved)) {
+      if (this.strIsInt(formattedValue)) {
         widgetMgr.setIntValue(widgetId, parseInt(formattedValue), source)
       } else {
         widgetMgr.setFloatValue(widgetId, parseFloat(formattedValue), source)
