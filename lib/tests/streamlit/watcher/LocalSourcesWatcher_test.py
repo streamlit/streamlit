@@ -239,13 +239,15 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         config.set_option("server.fileWatcherType", "poll")
         if LocalSourcesWatcher.get_file_watcher_class() is not None:
             self.assertEquals(
-                LocalSourcesWatcher.get_file_watcher_class().__name__, "PollingFileWatcher"
+                LocalSourcesWatcher.get_file_watcher_class().__name__,
+                "PollingFileWatcher",
             )
 
         config.set_option("server.fileWatcherType", "watchdog")
         if LocalSourcesWatcher.get_file_watcher_class() is not None:
             self.assertEquals(
-                LocalSourcesWatcher.get_file_watcher_class().__name__, "EventBasedFileWatcher"
+                LocalSourcesWatcher.get_file_watcher_class().__name__,
+                "EventBasedFileWatcher",
             )
 
         config.set_option("server.fileWatcherType", "auto")
@@ -253,11 +255,13 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         if sys.modules["streamlit.watcher.EventBasedFileWatcher"] is not None:
             self.assertEquals(
-                LocalSourcesWatcher.get_file_watcher_class().__name__, "EventBasedFileWatcher"
+                LocalSourcesWatcher.get_file_watcher_class().__name__,
+                "EventBasedFileWatcher",
             )
         else:
             self.assertEquals(
-                LocalSourcesWatcher.get_file_watcher_class().__name__, "PollingFileWatcher"
+                LocalSourcesWatcher.get_file_watcher_class().__name__,
+                "PollingFileWatcher",
             )
 
 

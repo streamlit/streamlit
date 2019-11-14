@@ -63,11 +63,13 @@ def get_file_watcher_class():
             return EventBasedFileWatcher
         else:
             from streamlit.watcher.PollingFileWatcher import PollingFileWatcher
+
             return PollingFileWatcher
     elif watcher_type == "watchdog" and watchdog_available:
         return EventBasedFileWatcher
     elif watcher_type == "poll":
         from streamlit.watcher.PollingFileWatcher import PollingFileWatcher
+
         return PollingFileWatcher
 
 
@@ -82,8 +84,7 @@ DEFAULT_FOLDER_BLACKLIST = [
     "**/miniconda3",
 ]
 
-WatchedModule = collections.namedtuple("WatchedModule",
-                                       ["watcher", "module_name"])
+WatchedModule = collections.namedtuple("WatchedModule", ["watcher", "module_name"])
 
 
 class LocalSourcesWatcher(object):
