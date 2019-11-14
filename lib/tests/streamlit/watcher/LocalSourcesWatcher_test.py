@@ -38,7 +38,6 @@ else:
     import tests.streamlit.watcher.test_data.misbehaved_module as MISBEHAVED_MODULE
     import tests.streamlit.watcher.test_data.nested_module_parent as NESTED_MODULE_PARENT
     import tests.streamlit.watcher.test_data.nested_module_child as NESTED_MODULE_CHILD
-    from importlib import reload
 
 REPORT_PATH = os.path.join(os.path.dirname(__file__), "test_data/not_a_real_script.py")
 REPORT = Report(REPORT_PATH, "test command line")
