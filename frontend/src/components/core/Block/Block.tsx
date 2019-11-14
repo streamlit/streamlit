@@ -180,8 +180,8 @@ class Block extends PureComponent<Props> {
         <ErrorBoundary width={width}>
           <Suspense
             fallback={
-              <Text
-                element={makeElementWithInfoText("Loading...").get("text")}
+              <Alert
+                element={makeElementWithInfoText("Loading...").get("alert")}
                 width={width}
               />
             }
