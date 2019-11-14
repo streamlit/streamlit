@@ -23,7 +23,7 @@ describe("st.success", () => {
   });
 
   it("displays a success message", () => {
-    cy.get(".element-container .stText").should(
+    cy.get(".element-container .stAlert").should(
       "contain",
       "This success message is awesome!"
     );

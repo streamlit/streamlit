@@ -23,7 +23,7 @@ describe("st.code", () => {
   });
 
   it("displays a code block", () => {
-    cy.get(".element-container .stText pre").should(
+    cy.get(".element-container .stMarkdown pre").should(
       "contain",
       "This code is awesome!"
     );
