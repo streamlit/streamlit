@@ -18,8 +18,6 @@ syntax = "proto3";
 
 // Preformatted text
 message Text {
-
   // Content to display.
   string body = 1;
-
 }

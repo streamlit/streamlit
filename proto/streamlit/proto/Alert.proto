@@ -16,13 +16,11 @@
 
 syntax = "proto3";
 
-// Formatted text
 message Alert {
-
   // Content to display.
   string body = 1;
 
-  // Content format
+  // Type of Alert
   enum Format {
     // Plain, fixed width text.
     UNUSED = 0;
@@ -38,8 +36,6 @@ message Alert {
 
     // Shows a success message.
     SUCCESS = 4;
-
   }
-
   Format format = 2;
 }

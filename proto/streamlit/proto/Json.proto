@@ -16,9 +16,7 @@
 
 syntax = "proto3";
 
-// Formatted text
 message Json {
-
   // Content to display.
   string body = 1;
 }
