@@ -40,6 +40,8 @@ class Json extends React.PureComponent<Props> {
     try {
       bodyObject = JSON.parse(body)
     } catch (e) {
+      // If content fails to parse as Json, rebuild the error message
+      // to show where the problem occurred.
       const pos = parseInt(e.message.replace(/[^0-9]/g, ""), 10)
       e.message += `\n${body.substr(0, pos + 1)} ← here`
       throw e

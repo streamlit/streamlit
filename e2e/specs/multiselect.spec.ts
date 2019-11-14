@@ -36,7 +36,7 @@ describe("st.multiselect", () => {
 
     it("should show the correct text", () => {
       cy.get(".stText")
-        //.should("have.length", 8)
+        .should("have.length", 4)
         .should(
           "have.text",
           "value 1: []value 2: []value 3: []value 4: ['tea', 'water']"
@@ -107,7 +107,7 @@ describe("st.multiselect", () => {
 
     it("outputs the correct value", () => {
       cy.get(".stText")
-        //.should("have.length", 8)
+        .should("have.length", 4)
         .should(
           "have.text",
           "value 1: []value 2: ['female']value 3: []value 4: ['tea', 'water']"
@@ -119,7 +119,7 @@ describe("st.multiselect", () => {
 
       it("outputs the correct value", () => {
         cy.get(".stText")
-          //.should("have.length", 8)
+          .should("have.length", 4)
           .should(
             "have.text",
             "value 1: []value 2: ['female', 'male']value 3: []value 4: ['tea', 'water']"
@@ -134,7 +134,7 @@ describe("st.multiselect", () => {
         });
         it("outputs the correct value", () => {
           cy.get(".stText")
-            //.should("have.length", 8)
+            .should("have.length", 4)
             .should(
               "have.text",
               "value 1: []value 2: ['male']value 3: []value 4: ['tea', 'water']"
@@ -150,7 +150,7 @@ describe("st.multiselect", () => {
         });
         it("outputs the correct value", () => {
           cy.get(".stText")
-            //.should("have.length", 8)
+            .should("have.length", 4)
             .should(
               "have.text",
               "value 1: []value 2: []value 3: []value 4: ['tea', 'water']"
