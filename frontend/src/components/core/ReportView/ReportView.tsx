@@ -16,7 +16,6 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
-import { List } from "immutable"
 import classNames from "classnames"
 
 import Block from "components/core/Block/"
@@ -25,13 +24,11 @@ import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import { ThemeProvider } from "baseui"
-import { ReportElement } from "lib/DeltaParser"
+import { BlockElement } from "lib/DeltaParser"
 import { mainWidgetTheme, sidebarWidgetTheme } from "lib/widgetTheme"
 
 import "./ReportView.scss"
 import "./Widget.scss"
-
-interface BlockElement extends List<ReportElement> {}
 
 interface Elements {
   main: BlockElement
