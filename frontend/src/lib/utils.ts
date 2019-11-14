@@ -23,8 +23,8 @@ import {
   Map as ImmutableMap,
   Set as ImmutableSet,
 } from "immutable"
+import { Alert as AlertProto } from "autogen/proto"
 import { BlockElement, Element, SimpleElement } from "./DeltaParser"
-import { Alert as AlertProto } from "../autogen/proto"
 
 /**
  * Wraps a function to allow it to be called, at most, once per interval
