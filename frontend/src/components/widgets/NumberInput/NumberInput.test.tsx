@@ -62,7 +62,7 @@ describe("NumberInput", () => {
       const wrapper = shallow(<NumberInput {...props} />)
 
       expect(wrapper.find(UIInput).props().value).toBe(
-        props.element.get("default")
+        String(props.element.get("default"))
       )
     })
 
