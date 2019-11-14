@@ -46,23 +46,38 @@ interface State {
 }
 
 class NumberInput extends React.PureComponent<Props, State> {
-  public state: State = {
-    dirty: false,
-    value: this.props.element.get("default"),
-  }
-
   private inputRef = React.createRef<HTMLInputElement>()
+
+  constructor(props: Props) {
+    super(props)
+
+    this.state = {
+      dirty: false,
+      value: this.getFormattedValue(),
+    }
+  }
 
   public componentDidMount(): void {
     this.setWidgetValue({ fromUi: false })
   }
 
-  private strIsInt = (value: string): boolean => Number(value) % 1 === 0
+  private strIsInt = (value: string): boolean => value.indexOf(".") === -1
 
   private getValue = (): number => {
     const { value } = this.state
 
     return this.strIsInt(value) ? parseInt(value) : parseFloat(value)
+  }
+
+  private getFormattedValue = (value = ""): string => {
+    const { element } = this.props
+
+    const defaultValue: number = element.get("default")
+    const format: string = element.get("format")
+
+    const valueToBeSaved = value === "" ? String(defaultValue) : value
+
+    return format ? sprintf(format, valueToBeSaved) : valueToBeSaved
   }
 
   private getStep = (): number => {
@@ -86,7 +101,6 @@ class NumberInput extends React.PureComponent<Props, State> {
     const { element, widgetMgr } = this.props
     const defaultValue: number = element.get("default")
     const widgetId: string = element.get("id")
-    const format: string = element.get("format")
     const min: number = element.get("min")
     const max: number = element.get("max")
 
@@ -96,11 +110,9 @@ class NumberInput extends React.PureComponent<Props, State> {
       node && node.reportValidity()
     } else {
       const valueToBeSaved = value === "" ? defaultValue.toString() : value
-      const formattedValue = format
-        ? sprintf(format, valueToBeSaved)
-        : valueToBeSaved
+      const formattedValue = this.getFormattedValue(valueToBeSaved)
 
-      if (this.strIsInt(valueToBeSaved)) {
+      if (this.strIsInt(formattedValue)) {
         widgetMgr.setIntValue(widgetId, parseInt(formattedValue), source)
       } else {
         widgetMgr.setFloatValue(widgetId, parseFloat(formattedValue), source)
