@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
+import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
 import React, { ReactNode } from "react"
-import classNames from "classnames"
 import { Map as ImmutableMap } from "immutable"
 
 import "assets/css/write.scss"
@@ -27,20 +27,21 @@ export interface Props {
 }
 
 /**
- * Functional element representing preformatted (plain) text.
+ * Functional element representing Markdown formatted text.
  */
-class Text extends React.PureComponent<Props> {
+class Markdown extends React.PureComponent<Props> {
   public render(): ReactNode {
     const { element, width } = this.props
     const body = element.get("body")
     const styleProp = { width }
 
+    const allowHTML = element.get("allowHtml")
     return (
-      <div className={classNames("fixed-width", "stText")} style={styleProp}>
-        {body}
+      <div className="markdown-text-container stMarkdown" style={styleProp}>
+        <StreamlitMarkdown source={body} allowHTML={allowHTML} />
       </div>
     )
   }
 }
 
-export default Text
+export default Markdown

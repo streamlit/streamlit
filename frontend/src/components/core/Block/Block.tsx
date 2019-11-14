@@ -25,11 +25,14 @@ import { makeElementWithInfoText } from "lib/utils"
 import { ForwardMsgMetadata } from "autogen/proto"
 
 // Load (non-lazy) elements.
+import Alert from "components/elements/Alert/"
 import Chart from "components/elements/Chart/"
 import DocString from "components/elements/DocString/"
 import ErrorBoundary from "components/shared/ErrorBoundary/"
 import FullScreenWrapper from "components/shared/FullScreenWrapper/"
 import ExceptionElement from "components/elements/ExceptionElement/"
+import Json from "components/elements/Json/"
+import Markdown from "components/elements/Markdown/"
 import Table from "components/elements/Table/"
 import Text from "components/elements/Text/"
 import { ReportElement } from "lib/DeltaParser"
@@ -229,6 +232,7 @@ class Block extends PureComponent<Props> {
     }
 
     return dispatchOneOf(element, "type", {
+      alert: (el: SimpleElement) => <Alert element={el} width={width} />,
       audio: (el: SimpleElement) => <Audio element={el} width={width} />,
       balloons: (el: SimpleElement) => <Balloons element={el} width={width} />,
       bokehChart: (el: SimpleElement) => (
@@ -252,6 +256,8 @@ class Block extends PureComponent<Props> {
         <GraphVizChart element={el} index={index} width={width} />
       ),
       imgs: (el: SimpleElement) => <ImageList element={el} width={width} />,
+      json: (el: SimpleElement) => <Json element={el} width={width} />,
+      markdown: (el: SimpleElement) => <Markdown element={el} width={width} />,
       multiselect: (el: SimpleElement) => (
         <Multiselect
           key={el.get("id")}

@@ -16,23 +16,33 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
 import { Map as ImmutableMap } from "immutable"
-import Text, { Props } from "./Text"
+import Json from "./Json"
+import { shallow } from "enzyme"
 
 const getProps = (elementProps: object = {}): Props => ({
   element: ImmutableMap({
-    body: "some plain text",
+    body:
+      '{ "proper": [1,2,3],' +
+      '  "nested": { "thing1": "cat", "thing2": "hat" },' +
+      '  "json": "structure" }',
     ...elementProps,
   }),
   width: 100,
 })
 
-it("renders preformatted text as expected", () => {
-  const props = getProps()
-  const wrap = shallow(<Text {...props} />)
-  expect(wrap).toBeDefined()
-  const elem = wrap.get(0)
-  expect(wrap.text()).toBe("some plain text")
-  expect(elem.props.className.includes("stText")).toBeTruthy()
+describe("JSON Element Test", () => {
+  it("renders json as expected", () => {
+    const props = getProps()
+    const wrapper = shallow(<Json {...props} />)
+    expect(wrapper).toBeDefined()
+    const elem = wrapper.get(0)
+    expect(elem.props.className.includes("stJson")).toBeTruthy()
+  }),
+    it("should raise an exception with invalid JSON", () => {
+      const props = getProps({ body: "invalid JSON" })
+      expect(() => {
+        shallow(<Json {...props} />)
+      }).toThrow(SyntaxError)
+    })
 })
