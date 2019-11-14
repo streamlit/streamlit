@@ -232,41 +232,33 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
     def test_config_watcherType(self):
         """Test server.fileWatcherType"""
-        watcher = LocalSourcesWatcher.FileWatcher
 
-        LocalSourcesWatcher.FileWatcher = None
         config.set_option("server.fileWatcherType", "none")
-        reload(LocalSourcesWatcher)
-        self.assertIsNone(LocalSourcesWatcher.FileWatcher)
+        self.assertIsNone(LocalSourcesWatcher.get_file_watcher_class())
 
         config.set_option("server.fileWatcherType", "poll")
-        reload(LocalSourcesWatcher)
-        if LocalSourcesWatcher.FileWatcher is not None:
+        if LocalSourcesWatcher.get_file_watcher_class() is not None:
             self.assertEquals(
-                LocalSourcesWatcher.FileWatcher.__name__, "PollingFileWatcher"
+                LocalSourcesWatcher.get_file_watcher_class().__name__, "PollingFileWatcher"
             )
 
         config.set_option("server.fileWatcherType", "watchdog")
-        reload(LocalSourcesWatcher)
-        if LocalSourcesWatcher.FileWatcher is not None:
+        if LocalSourcesWatcher.get_file_watcher_class() is not None:
             self.assertEquals(
-                LocalSourcesWatcher.FileWatcher.__name__, "EventBasedFileWatcher"
+                LocalSourcesWatcher.get_file_watcher_class().__name__, "EventBasedFileWatcher"
             )
 
         config.set_option("server.fileWatcherType", "auto")
-        reload(LocalSourcesWatcher)
-        self.assertIsNotNone(LocalSourcesWatcher.FileWatcher)
+        self.assertIsNotNone(LocalSourcesWatcher.get_file_watcher_class())
 
         if sys.modules["streamlit.watcher.EventBasedFileWatcher"] is not None:
             self.assertEquals(
-                LocalSourcesWatcher.FileWatcher.__name__, "EventBasedFileWatcher"
+                LocalSourcesWatcher.get_file_watcher_class().__name__, "EventBasedFileWatcher"
             )
         else:
             self.assertEquals(
-                LocalSourcesWatcher.FileWatcher.__name__, "PollingFileWatcher"
+                LocalSourcesWatcher.get_file_watcher_class().__name__, "PollingFileWatcher"
             )
-
-        LocalSourcesWatcher.FileWatcher = watcher
 
 
 def sort_args_list(args_list):

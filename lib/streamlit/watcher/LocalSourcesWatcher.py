@@ -37,6 +37,7 @@ LOGGER = get_logger(__name__)
 try:
     # If the watchdog module is installed.
     from streamlit.watcher.EventBasedFileWatcher import EventBasedFileWatcher
+
     watchdog_available = True
 except ImportError:
     watchdog_available = False
@@ -53,20 +54,24 @@ except ImportError:
             % msg
         )
 
-watcherType = config.get_option("server.fileWatcherType")
 
-if watcherType == "auto":
-    if watchdog_available:
-        FileWatcher = EventBasedFileWatcher
-    else:
+def get_file_watcher_class():
+    watcher_type = config.get_option("server.fileWatcherType")
+
+    if watcher_type == "auto":
+        if watchdog_available:
+            return EventBasedFileWatcher
+        else:
+            from streamlit.watcher.PollingFileWatcher import PollingFileWatcher
+            return PollingFileWatcher
+    elif watcher_type == "watchdog" and watchdog_available:
+        return EventBasedFileWatcher
+    elif watcher_type == "poll":
         from streamlit.watcher.PollingFileWatcher import PollingFileWatcher
-        FileWatcher = PollingFileWatcher
-elif watcherType == "watchdog" and watchdog_available:
-    FileWatcher = EventBasedFileWatcher
-elif watcherType == "poll":
-    from streamlit.watcher.PollingFileWatcher import PollingFileWatcher
-    FileWatcher = PollingFileWatcher
+        return PollingFileWatcher
 
+
+FileWatcher = get_file_watcher_class()
 
 # Streamlit never watches files in the folders below.
 DEFAULT_FOLDER_BLACKLIST = [
@@ -77,7 +82,8 @@ DEFAULT_FOLDER_BLACKLIST = [
     "**/miniconda3",
 ]
 
-WatchedModule = collections.namedtuple("WatchedModule", ["watcher", "module_name"])
+WatchedModule = collections.namedtuple("WatchedModule",
+                                       ["watcher", "module_name"])
 
 
 class LocalSourcesWatcher(object):
