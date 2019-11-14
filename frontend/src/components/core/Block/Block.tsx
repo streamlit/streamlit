@@ -23,6 +23,7 @@ import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { makeElementWithInfoText } from "lib/utils"
 import { ForwardMsgMetadata } from "autogen/proto"
+import { ReportElement, BlockElement, SimpleElement } from "lib/DeltaParser"
 
 // Load (non-lazy) elements.
 import Alert from "components/elements/Alert/"
@@ -35,7 +36,6 @@ import Json from "components/elements/Json/"
 import Markdown from "components/elements/Markdown/"
 import Table from "components/elements/Table/"
 import Text from "components/elements/Text/"
-import { ReportElement } from "lib/DeltaParser"
 
 // Lazy-load elements.
 const Audio = React.lazy(() => import("components/elements/Audio/"))
@@ -70,10 +70,6 @@ const TextArea = React.lazy(() => import("components/widgets/TextArea/"))
 const TextInput = React.lazy(() => import("components/widgets/TextInput/"))
 const TimeInput = React.lazy(() => import("components/widgets/TimeInput/"))
 const NumberInput = React.lazy(() => import("components/widgets/NumberInput/"))
-
-type SimpleElement = ImmutableMap<string, any>
-type StElement = SimpleElement | BlockElement
-interface BlockElement extends List<ReportElement> {}
 
 interface Props {
   elements: BlockElement
