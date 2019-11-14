@@ -24,6 +24,7 @@ import {
   Set as ImmutableSet,
 } from "immutable"
 import { BlockElement, Element, SimpleElement } from "./DeltaParser"
+import { Alert as AlertProto } from "../autogen/proto"
 
 /**
  * Wraps a function to allow it to be called, at most, once per interval
@@ -63,9 +64,10 @@ export function makeElementWithInfoText(
   text: string
 ): ImmutableMap<string, any> {
   return fromJS({
-    type: "text",
-    text: {
+    type: "alert",
+    alert: {
       body: text,
+      format: AlertProto.Format.INFO,
     },
   })
 }
