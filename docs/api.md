@@ -115,6 +115,15 @@ like `st.line_chart` and `st.area_chart`.
 .. autofunction:: streamlit.deck_gl_chart
 .. autofunction:: streamlit.graphviz_chart
 .. autofunction:: streamlit.map
+```
+
+## Display media
+
+
+
+It's easy to embed images, videos, and audio files directly into your Streamlit apps.
+
+```eval_rst
 .. autofunction:: streamlit.image
 .. autofunction:: streamlit.audio
 .. autofunction:: streamlit.video
