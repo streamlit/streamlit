@@ -140,7 +140,7 @@ class CliTest(unittest.TestCase):
         """
         self.assertFalse(streamlit._is_running_with_streamlit)
         with patch("streamlit.cli.bootstrap.run"), mock.patch(
-            "streamlit.credentials.Credentials.check_activated"
+            "streamlit.credentials.Credentials._check_activated"
         ), patch("streamlit.cli._get_command_line_as_string"):
 
             cli._main_run("/not/a/file", None)
@@ -220,7 +220,7 @@ class CliTest(unittest.TestCase):
     @parameterized.expand([(True,), (False,)])
     def test_credentials_headless_with_config(self, headless_mode):
         """If headless, but a cofig file is present, activation should be defined.
-        So we call `check_activated`.
+        So we call `_check_activated`.
         """
         from streamlit import config
 
@@ -229,7 +229,7 @@ class CliTest(unittest.TestCase):
         with patch("validators.url", return_value=False), patch(
             "streamlit.bootstrap.run"
         ), patch("os.path.exists", side_effect=[True, True]), mock.patch(
-            "streamlit.credentials.Credentials.check_activated"
+            "streamlit.credentials.Credentials._check_activated"
         ) as mock_check, patch(
             "streamlit.credentials._check_credential_file_exists", return_value=True
         ):
