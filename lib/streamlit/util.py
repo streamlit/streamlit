@@ -258,7 +258,8 @@ def open_browser(url):
 
     system = platform.system()
 
-    if system == "Windows" or system == "Linux" and not _is_executable_in_path("xdg-open"):
+    if (system == "Windows"
+        or system == "Linux" and not _is_executable_in_path("xdg-open")):
         # Treat Windows separately because:
         # 1. /dev/null doesn't exist.
         # 2. subprocess.Popen(['start', url]) doesn't actually pop up the
