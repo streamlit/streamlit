@@ -99,7 +99,6 @@ class NumberInput extends React.PureComponent<Props, State> {
   private setWidgetValue = (source: Source): void => {
     const { value } = this.state
     const { element, widgetMgr } = this.props
-    const defaultValue: number = element.get("default")
     const widgetId: string = element.get("id")
     const min: number = element.get("min")
     const max: number = element.get("max")
@@ -109,8 +108,7 @@ class NumberInput extends React.PureComponent<Props, State> {
 
       node && node.reportValidity()
     } else {
-      const valueToBeSaved = value === "" ? defaultValue.toString() : value
-      const formattedValue = this.getFormattedValue(valueToBeSaved)
+      const formattedValue = this.getFormattedValue(value)
 
       if (this.strIsInt(formattedValue)) {
         widgetMgr.setIntValue(widgetId, parseInt(formattedValue), source)
