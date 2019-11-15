@@ -97,6 +97,7 @@ from streamlit import source_util as _source_util
 from streamlit.ReportThread import get_report_ctx as _get_report_ctx
 from streamlit.ReportThread import add_report_ctx as _add_report_ctx
 from streamlit.DeltaGenerator import DeltaGenerator as _DeltaGenerator
+from streamlit.errors import StreamlitAPIException
 
 # Modules that the user should have access to.
 from streamlit.caching import cache  # noqa: F401
@@ -190,8 +191,37 @@ video = _with_dg(_DeltaGenerator.video)  # noqa: E221
 warning = _with_dg(_DeltaGenerator.warning)  # noqa: E221
 
 # Config
-set_option = _config.set_option
+
 get_option = _config.get_option
+
+def set_option(key, value):
+    """Set config option.
+
+    Run `streamlit config show` in the terminal to see all available options.
+
+    Some options cannot be set at runtime and will raise StreamlitAPIException 
+    if used.
+
+    Parameters
+    ----------
+    key : str
+        The config option key of the form "section.optionName". To see all
+        available options, run `streamlit config show` on a terminal.
+
+    value
+        The new value to assign to this config option.
+
+    """
+    # Check for "scriptable" flag; if False, bring this to user's attention.
+    #opt = get_option(key)
+    opt = _config._config_options[key]
+    if opt.scriptable:
+        _config.set_option(key, value)
+        return 
+
+    # TODO improve this error message
+    raise StreamlitAPIException(f'{key} cannot be set on the fly. Set in command line options or config.toml instead.')
+
 
 # Special methods:
 
