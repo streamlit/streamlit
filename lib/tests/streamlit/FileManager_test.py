@@ -30,8 +30,8 @@ class FileManagerTest(unittest.TestCase):
         file_bytes = bytearray('0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789', 'utf-8')
         file_manager = FileManager()
         
-        file_manager.locate_new_file(widget_idA, file_name, len(file_bytes), date.today(), 1)
-        file_manager.locate_new_file(widget_idB, file_name, len(file_bytes), date.today(), 2)
+        file_manager.create_or_clear_file(widget_idA, file_name, len(file_bytes), date.today(), 1)
+        file_manager.create_or_clear_file(widget_idB, file_name, len(file_bytes), date.today(), 2)
 
         progress_a = file_manager.process_chunk(widget_idA, 0, file_bytes)
         self.assertEqual(progress_a, 1)

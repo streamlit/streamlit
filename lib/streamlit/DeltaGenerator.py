@@ -47,6 +47,9 @@ from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
+# Save the type built-in for when we override the name "type".
+_type = type
+
 MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
 
 # List of Streamlit commands that perform a Pandas "melt" operation on
@@ -1923,8 +1926,9 @@ class DeltaGenerator(object):
         ----------
         label : str or None
             A short label explaining to the user what this file uploader is for.
-        type : string[] or None
-            Array of allowed extensions. ['.png', 'jpg']
+        type : list of string or None
+            Array of allowed extensions. ['png', 'jpg']
+            By default, all extensions are allowed.
 
         Returns
         -------
@@ -1933,24 +1937,20 @@ class DeltaGenerator(object):
 
         Examples
         --------
-        >>> file = st.file_uploader("Upload a image", type=[".png"])
+        >>> file = st.file_uploader("Upload a image", type=["png"])
         >>> if file != None:
         >>>     st.image(file)
         """
+
+        if _type(type) in string_types:
+            type = [type]
+
         element.file_uploader.label = label
-
-        if type is not None:
-            total_len = sum([len(i) for i in type])
-            if len(type) == total_len: # If all elements are single chars, is a string
-                if type[0] == '.':
-                    element.file_uploader.type[:] = [''.join(type)] # example: type=".csv"
-                else:
-                    element.file_uploader.type[:] = ['.' + ''.join(type)] # example: type="csv"
-            else:
-                element.file_uploader.type[:] = map(lambda x: x if x[0] == '.' else '.' + x , type) # example: type=["png", ".jpeg"]
-
+        element.file_uploader.type[:] = type if type is not None else []
         element.file_uploader.max_upload_size_mb = config.get_option("server.maxUploadSize")
         _set_widget_id("file_uploader", element, user_key=key)
+
+        data = None
         ctx = get_report_ctx()
         if ctx is not None:
             progress, data = ctx.file_manager.get_data(element.file_uploader.id)

@@ -24,7 +24,7 @@ message FileUploader {
   // Text to be displayed before the widget
   string label = 2;
 
-  // Supported types: ['.png','.jpg','.img']
+  // Supported types: ["png","jpg","img"]
   repeated string type = 3;
 
   // Max file size allowed by server config

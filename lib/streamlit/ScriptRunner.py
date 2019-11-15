@@ -72,6 +72,9 @@ class ScriptRunner(object):
             ScriptRunner will continue running until the queue is empty,
             and then shut down.
 
+        file_manager : FileManager
+            The File manager to store the data uploaded by the file_uplpader widget.
+
         """
         self._report = report
         self._main_dg = main_dg

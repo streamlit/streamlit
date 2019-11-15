@@ -29,6 +29,30 @@ class File(object):
         self.buffers = {}
         self.data = None
 
+    def process_chunk(self, index, data):
+        """Process an incoming file chunk and return percent done."""
+
+        if index in self.buffers:
+            LOGGER.error("File chunk was already processed")
+
+        self.buffers[index] = data
+        if len(self.buffers) == self.total_chunks:
+            self._coalesce_chunks()
+            return 1
+
+        if len(self.buffers) > 0:
+            return float(len(self.buffers))/self.total_chunks
+
+    def _coalesce_chunks(self):
+        self.data = bytearray()
+        index = 0
+        while self.buffers.get(index) != None:
+            self.data.extend(self.buffers[index])
+            del self.buffers[index]
+            index += 1
+
+        self.buffers = {}
+
 class FileManager(object):
     def __init__(self):
         self._file_list = {}
@@ -40,9 +64,8 @@ class FileManager(object):
     def delete_file(self, widget_id):
         del self._file_list[widget_id]
 
-    def locate_new_file(self, widget_id, name, size, last_modified, chunks):
-        file = self._file_list.get(widget_id)
-        if file != None:
+    def create_or_clear_file(self, widget_id, name, size, last_modified, chunks):
+        if widget_id in self._file_list:
             self.delete_file(widget_id)
 
         file = File(
@@ -55,34 +78,25 @@ class FileManager(object):
         self._file_list[widget_id] = file
 
     def process_chunk(self, widget_id, index, data):
-        file = self._file_list.get(widget_id)
-        if file != None:
-            if file.buffers.get(index) is not None:
-                LOGGER.error("File chunk was already processed")
+        """Process an incoming file chunk and return percent done."""
 
-            file.buffers[index] = data
-            if len(file.buffers) == file.total_chunks:
-                file.data = bytearray()
-                index = 0
-                while file.buffers.get(index) != None:
-                    file.data.extend(file.buffers[index])
-                    del file.buffers[index]
-                    index += 1
+        if widget_id not in self._file_list:
+            # Handle possible race condition when you cancel an upload
+            # and an old file chunk is received.
+            return
 
-                file.buffers = None
-                return 1
-
-            if len(file.buffers) > 0:
-                return float(len(file.buffers))/float(file.total_chunks)
-
-        return 0
+        return self._file_list[widget_id].process_chunk(index, data)
 
     def get_data(self, widget_id):
-        file = self._file_list.get(widget_id)
-        if file != None:
-            if file.data is not None:
-                return 1, file.data
-            else:
-                return float(len(file.buffers))/float(file.total_chunks), None
+        """Get a tuple with file progress and data bytes (or None)."""
 
-        return 0, None
+        if widget_id not in self._file_list:
+            return 0, None
+
+        file = self._file_list[widget_id]
+
+        progress = 1
+        if file.data is None:
+            progress = float(len(file.buffers)) / file.total_chunks
+
+        return progress, file.data

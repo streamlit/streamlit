@@ -114,10 +114,10 @@ class FileUploader extends React.PureComponent<Props, State> {
   renderErrorMessage = (): React.ReactNode => {
     const { errorMessage } = this.state
     return (
-      <div className="file-uploader-error">
-        <span className="file-uploader-error__text">{errorMessage}</span>
+      <div className="stFileUploaderError">
+        <span className="stFileUploaderError__text">{errorMessage}</span>
         <Button
-          className="file-uploader-error__button"
+          className="stFileUploaderError__button"
           outline
           onClick={this.closeErrorMessage}
         >
@@ -130,10 +130,13 @@ class FileUploader extends React.PureComponent<Props, State> {
   public render = (): React.ReactNode => {
     const { status, errorMessage } = this.state
     const { element } = this.props
-    const accept: string[] = element.get("type").toArray()
+    const accept: string[] = element
+      .get("type")
+      .toArray()
+      .map((value: string) => "." + value)
     const label: string = element.get("label")
     return (
-      <div className="file-uploader">
+      <div className="Widget stFileUploader">
         <label>{label}</label>
         {errorMessage ? (
           this.renderErrorMessage()

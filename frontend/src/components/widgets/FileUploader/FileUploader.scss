@@ -16,11 +16,11 @@
 
 @import "src/assets/css/variables";
 
-.file-uploader button:focus {
+.stFileUploader button:focus {
   outline: 0;
 }
 
-.file-uploader-error {
+.stFileUploaderError {
   outline: 0;
   line-height: 1.6;
   font-weight: normal;
@@ -48,7 +48,7 @@
   align-items: center;
 }
 
-.file-uploader-error__text {
+.stFileUploaderError__text {
   line-height: 1.6;
   font-weight: normal;
   font-size: 1rem;
@@ -62,7 +62,7 @@
   color: $red;
 }
 
-.file-uploader-error__button {
+.stFileUploaderError__button {
   margin-top: 2rem;
   color: $red;
 }
