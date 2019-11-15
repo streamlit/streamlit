@@ -12,9 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from streamlit.logger import get_logger
-
-LOGGER = get_logger(__name__)
 
 class File(object):
     """Thread-safe queue that smartly accumulates the report's messages."""
@@ -33,7 +30,7 @@ class File(object):
         """Process an incoming file chunk and return percent done."""
 
         if index in self.buffers:
-            LOGGER.error("File chunk was already processed")
+            raise RuntimeError("File chunk was already processed")
 
         self.buffers[index] = data
         if len(self.buffers) == self.total_chunks:
@@ -83,7 +80,7 @@ class FileManager(object):
         if widget_id not in self._file_list:
             # Handle possible race condition when you cancel an upload
             # and an old file chunk is received.
-            return
+            return 0
 
         return self._file_list[widget_id].process_chunk(index, data)
 
