@@ -258,12 +258,13 @@ def open_browser(url):
 
     system = platform.system()
 
-    if system == "Windows":
+    if system == "Windows" or system == "Linux" and not _is_tool_in_path("xdg-open"):
         # Treat Windows separately because:
         # 1. /dev/null doesn't exist.
         # 2. subprocess.Popen(['start', url]) doesn't actually pop up the
         #    browser even though 'start url' works from the command prompt.
         # Fun!
+        # Also, use webbrowser if we are on Linux and xdg-open is not installed.
         import webbrowser
 
         webbrowser.open(url)
@@ -287,6 +288,12 @@ def open_browser(url):
 
 class Error(Exception):
     pass
+
+
+def _is_tool_in_path(name):
+    from shutil import which
+
+    return which(name) is not None
 
 
 def is_pex():
