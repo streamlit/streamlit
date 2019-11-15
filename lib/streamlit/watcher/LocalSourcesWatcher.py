@@ -71,6 +71,8 @@ def get_file_watcher_class():
         from streamlit.watcher.PollingFileWatcher import PollingFileWatcher
 
         return PollingFileWatcher
+    else:
+        return None
 
 
 FileWatcher = get_file_watcher_class()
@@ -136,6 +138,9 @@ class LocalSourcesWatcher(object):
         self._is_closed = True
 
     def _register_watcher(self, filepath, module_name):
+        if FileWatcher is None:
+            return
+
         if compatibility.is_running_py3():
             ErrorType = PermissionError
         else:
