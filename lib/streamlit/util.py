@@ -258,7 +258,7 @@ def open_browser(url):
 
     system = platform.system()
 
-    if system == "Windows" or system == "Linux" and not _is_tool_in_path("xdg-open"):
+    if system == "Windows" or system == "Linux" and not _is_executable_in_path("xdg-open"):
         # Treat Windows separately because:
         # 1. /dev/null doesn't exist.
         # 2. subprocess.Popen(['start', url]) doesn't actually pop up the
@@ -290,10 +290,10 @@ class Error(Exception):
     pass
 
 
-def _is_tool_in_path(name):
-    from shutil import which
+def _is_executable_in_path(name):
+    from distutils.spawn import find_executable
 
-    return which(name) is not None
+    return find_executable(name) is not None
 
 
 def is_pex():
