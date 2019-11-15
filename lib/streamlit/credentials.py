@@ -134,7 +134,7 @@ class Credentials(object):
                 % (self._conf_file)
             )
 
-    def check_activated(self, auto_resolve=False):
+    def _check_activated(self, auto_resolve=True):
         """Check if streamlit is activated.
 
         Used by `streamlit run script.py`
@@ -254,7 +254,7 @@ def _check_credential_file_exists():
     return os.path.exists(_get_credential_file_path())
 
 
-def check_and_maybe_activate():
+def check_credentials():
     """Check credentials and potentially activate.
 
     Note
@@ -267,4 +267,4 @@ def check_and_maybe_activate():
 
     if not _check_credential_file_exists() and config.get_option("server.headless"):
         return
-    Credentials.get_current().check_activated(auto_resolve=True)
+    Credentials.get_current()._check_activated()

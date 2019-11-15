@@ -155,7 +155,7 @@ class CredentialsClassTest(unittest.TestCase):
         c = Credentials.get_current()
         c.activation = Activation("some_email", True)
         with patch("streamlit.credentials._exit") as p:
-            c.check_activated()
+            c._check_activated(auto_resolve=False)
             p.assert_not_called()
 
     @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
@@ -164,7 +164,7 @@ class CredentialsClassTest(unittest.TestCase):
         c = Credentials.get_current()
         c.activation = Activation("some_email", False)
         with patch("streamlit.credentials._exit") as p:
-            c.check_activated()
+            c._check_activated(auto_resolve=False)
             p.assert_called_once_with("Activation email not valid.")
 
     @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
@@ -175,7 +175,7 @@ class CredentialsClassTest(unittest.TestCase):
         with patch.object(c, "load", side_effect=Exception("Some error")), patch(
             "streamlit.credentials._exit"
         ) as p:
-            c.check_activated()
+            c._check_activated(auto_resolve=False)
             p.assert_called_once_with("Some error")
 
     @patch("streamlit.credentials.util.get_streamlit_file_path", mock_get_path)
