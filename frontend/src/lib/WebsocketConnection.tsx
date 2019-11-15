@@ -169,7 +169,7 @@ export class WebsocketConnection {
    */
   private wsConnectionTimeoutId?: number
 
-  public constructor(props: Args) {
+  constructor(props: Args) {
     this.args = props
     this.cache = new ForwardMsgCache(() => this.getBaseUriParts())
     this.stepFsm("INITIALIZED")

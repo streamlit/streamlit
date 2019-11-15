@@ -64,7 +64,7 @@ export class ConnectionManager {
   private connection?: WebsocketConnection | StaticConnection
   private connectionState: ConnectionState = ConnectionState.INITIAL
 
-  public constructor(props: Props) {
+  constructor(props: Props) {
     this.props = props
 
     // This method returns a promise, but we don't care about its result.

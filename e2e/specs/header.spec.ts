@@ -23,7 +23,7 @@ describe("st.header", () => {
   });
 
   it("displays a header", () => {
-    cy.get(".element-container .stText h2").should(
+    cy.get(".element-container .stMarkdown h2").should(
       "contain",
       "This header is awesome!"
     );

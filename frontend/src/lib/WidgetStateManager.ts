@@ -43,7 +43,7 @@ export class WidgetStateManager {
     WidgetState
   >()
 
-  public constructor(sendBackMsg: (msg: IBackMsg) => void) {
+  constructor(sendBackMsg: (msg: IBackMsg) => void) {
     this.sendBackMsg = sendBackMsg
   }
 

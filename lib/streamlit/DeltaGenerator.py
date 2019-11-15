@@ -41,6 +41,7 @@ from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto import Text_pb2
 from streamlit.fileManager import FileManager
+from streamlit.proto import Alert_pb2
 
 # setup logging
 from streamlit.logger import get_logger
@@ -463,7 +464,7 @@ class DeltaGenerator(object):
 
     @_with_element
     def text(self, element, body):
-        """Write fixed-width text.
+        """Write fixed-width and preformatted text.
 
         Parameters
         ----------
@@ -481,7 +482,6 @@ class DeltaGenerator(object):
         """
 
         element.text.body = _clean_text(body)
-        element.text.format = Text_pb2.Text.PLAIN
 
     @_with_element
     def markdown(self, element, body, unsafe_allow_html=False):
@@ -529,9 +529,8 @@ class DeltaGenerator(object):
            height: 50px
 
         """
-        element.text.body = _clean_text(body)
-        element.text.format = Text_pb2.Text.MARKDOWN
-        element.text.allow_html = unsafe_allow_html
+        element.markdown.body = _clean_text(body)
+        element.markdown.allow_html = unsafe_allow_html
 
     @_with_element
     def latex(self, element, body):
@@ -570,8 +569,7 @@ class DeltaGenerator(object):
 
             body = sympy.latex(body)
 
-        element.text.body = "$$\n%s\n$$" % _clean_text(body)
-        element.text.format = Text_pb2.Text.MARKDOWN
+        element.markdown.body = "$$\n%s\n$$" % _clean_text(body)
 
     @_with_element
     def code(self, element, body, language="python"):
@@ -603,8 +601,7 @@ class DeltaGenerator(object):
             "language": language or "",
             "body": body,
         }
-        element.text.body = _clean_text(markdown)
-        element.text.format = Text_pb2.Text.MARKDOWN
+        element.markdown.body = _clean_text(markdown)
 
     @_with_element
     def json(self, element, body):
@@ -635,12 +632,11 @@ class DeltaGenerator(object):
            height: 280px
 
         """
-        element.text.body = (
+        element.json.body = (
             body
             if isinstance(body, string_types)  # noqa: F821
             else json.dumps(body, default=lambda o: str(type(o)))
         )
-        element.text.format = Text_pb2.Text.JSON
 
     @_with_element
     def title(self, element, body):
@@ -663,8 +659,7 @@ class DeltaGenerator(object):
            height: 100px
 
         """
-        element.text.body = "# %s" % _clean_text(body)
-        element.text.format = Text_pb2.Text.MARKDOWN
+        element.markdown.body = "# %s" % _clean_text(body)
 
     @_with_element
     def header(self, element, body):
@@ -684,8 +679,7 @@ class DeltaGenerator(object):
            height: 100px
 
         """
-        element.text.body = "## %s" % _clean_text(body)
-        element.text.format = Text_pb2.Text.MARKDOWN
+        element.markdown.body = "## %s" % _clean_text(body)
 
     @_with_element
     def subheader(self, element, body):
@@ -705,8 +699,7 @@ class DeltaGenerator(object):
            height: 100px
 
         """
-        element.text.body = "### %s" % _clean_text(body)
-        element.text.format = Text_pb2.Text.MARKDOWN
+        element.markdown.body = "### %s" % _clean_text(body)
 
     @_with_element
     def error(self, element, body):
@@ -722,8 +715,8 @@ class DeltaGenerator(object):
         >>> st.error('This is an error')
 
         """
-        element.text.body = _clean_text(body)
-        element.text.format = Text_pb2.Text.ERROR
+        element.alert.body = _clean_text(body)
+        element.alert.format = Alert_pb2.Alert.ERROR
 
     @_with_element
     def warning(self, element, body):
@@ -739,8 +732,8 @@ class DeltaGenerator(object):
         >>> st.warning('This is a warning')
 
         """
-        element.text.body = _clean_text(body)
-        element.text.format = Text_pb2.Text.WARNING
+        element.alert.body = _clean_text(body)
+        element.alert.format = Alert_pb2.Alert.WARNING
 
     @_with_element
     def info(self, element, body):
@@ -756,8 +749,8 @@ class DeltaGenerator(object):
         >>> st.info('This is a purely informational message')
 
         """
-        element.text.body = _clean_text(body)
-        element.text.format = Text_pb2.Text.INFO
+        element.alert.body = _clean_text(body)
+        element.alert.format = Alert_pb2.Alert.INFO
 
     @_with_element
     def success(self, element, body):
@@ -773,8 +766,8 @@ class DeltaGenerator(object):
         >>> st.success('This is a success message!')
 
         """
-        element.text.body = _clean_text(body)
-        element.text.format = Text_pb2.Text.SUCCESS
+        element.alert.body = _clean_text(body)
+        element.alert.format = Alert_pb2.Alert.SUCCESS
 
     @_with_element
     def help(self, element, obj):
