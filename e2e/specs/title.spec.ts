@@ -23,7 +23,7 @@ describe("st.title", () => {
   });
 
   it("displays a title", () => {
-    cy.get(".element-container .stText h1").should(
+    cy.get(".element-container .stMarkdown h1").should(
       "contain",
       "This title is awesome!"
     );

@@ -44,7 +44,7 @@ class BootstrapTest(unittest.TestCase):
         # TODO: Find a proper way to mock sys.platform
         ORIG_PLATFORM = sys.platform
 
-        for platform, do_fix in [("darwin", True), ("linux2", False)]:
+        for platform, do_fix in [("darwin", True), ("linux2", True)]:
             sys.platform = platform
 
             matplotlib.use("tkagg")

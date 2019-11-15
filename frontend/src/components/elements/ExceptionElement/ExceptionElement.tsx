@@ -15,8 +15,9 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
 import { Map as ImmutableMap } from "immutable"
+import React, { ReactNode } from "react"
 import "./ExceptionElement.scss"
 
 interface Props {
@@ -31,29 +32,55 @@ class ExceptionElement extends React.PureComponent<Props> {
   public render(): React.ReactNode {
     const { element, width } = this.props
     const type = element.get("type")
-    let message = element.get("message")
-    if (message) {
-      message = `: ${message}`
-    }
+    const message = element.get("message")
     const stackTrace = element.get("stackTrace")
 
-    // Put it all together into a nice little html view.
+    // Build the message display.
+    // On the backend, we use the StreamlitException type for errors that
+    // originate from inside Streamlit. These errors have Markdown-formatted
+    // messages, and so we wrap those messages inside our Markdown renderer.
+    let messageNode: ReactNode
+    if (element.get("messageIsMarkdown")) {
+      let markdown = `**${type}**`
+      if (message) {
+        markdown += `: ${message}`
+      }
+      messageNode = <StreamlitMarkdown source={markdown} allowHTML={false} />
+    } else {
+      messageNode = (
+        <>
+          <span className="type">{type}</span>
+          {message != null ? `: ${message}` : null}
+        </>
+      )
+    }
+
+    // Build the stack trace display, if we got a stack trace.
+    let stackTraceNode: ReactNode = null
+    if (stackTrace && stackTrace.size > 0) {
+      stackTraceNode = (
+        <>
+          <div className="stack-trace-title">Traceback:</div>
+          <pre className="stack-trace">
+            <code>
+              {stackTrace.map((row: string, indx: string) => (
+                <div className="stack-trace-row" key={indx}>
+                  {row}
+                </div>
+              ))}
+            </code>
+          </pre>
+        </>
+      )
+    }
+
     return (
       <div
         className="alert alert-danger exception stException"
         style={{ width }}
       >
-        <div className="message">
-          <strong>{type}</strong>
-          {message}
-        </div>
-        <div className="stack-trace">
-          {stackTrace.map((row: string, indx: string) => (
-            <div className="row" key={indx}>
-              {row}
-            </div>
-          ))}
-        </div>
+        <div className="message">{messageNode}</div>
+        {stackTraceNode}
       </div>
     )
   }

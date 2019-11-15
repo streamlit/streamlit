@@ -35,7 +35,7 @@ describe("st.number_input", () => {
   });
 
   it("has correct default values", () => {
-    cy.get(".stText").should(
+    cy.get(".stMarkdown").should(
       "have.text",
       'value 1: " 0 "' + 'value 2: " 1 "' + 'value 3: " 1 "'
     );
@@ -46,7 +46,7 @@ describe("st.number_input", () => {
       .first()
       .type("10{enter}");
 
-    cy.get(".stText").should(
+    cy.get(".stMarkdown").should(
       "have.text",
       'value 1: " 10 "' + 'value 2: " 1 "' + 'value 3: " 1 "'
     );
@@ -58,7 +58,7 @@ describe("st.number_input", () => {
       .type("10")
       .blur();
 
-    cy.get(".stText").should(
+    cy.get(".stMarkdown").should(
       "have.text",
       'value 1: " 10 "' + 'value 2: " 1 "' + 'value 3: " 1 "'
     );

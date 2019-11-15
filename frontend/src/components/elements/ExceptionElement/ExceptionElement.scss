@@ -14,19 +14,30 @@
  * limitations under the License.
  */
 
-.reportview-container {
-  .exception .message {
+@import "src/assets/css/variables";
+
+.reportview-container .stException {
+  .message .type {
+    font-weight: bold;
+  }
+
+  .stack-trace-row {
+    margin-top: 0.5rem;
+  }
+
+  .stack-trace-title {
+    font-family: $font-family-monospace;
+    font-size: $font-size-sm;
+    margin-top: 0.5rem;
     margin-bottom: 0.5rem;
   }
 
-  .exception .stack-trace {
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 0.8rem;
-    margin-left: 1rem;
-    margin-right: 1rem;
-  }
-
-  .exception .stack-trace .row {
-    margin-top: 0.5rem;
+  &.alert pre.stack-trace,
+  &.alert pre.stack-trace code {
+    background: none;
+    padding: 0;
+    color: inherit;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
   }
 }

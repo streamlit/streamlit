@@ -202,7 +202,7 @@ class VegaLiteChart extends React.PureComponent<PropsWithHeight, State> {
       }
     }
 
-    this.vegaView.runAsync()
+    this.vegaView.resize().runAsync()
   }
 
   /**
@@ -330,7 +330,11 @@ class VegaLiteChart extends React.PureComponent<PropsWithHeight, State> {
 
     this.vegaView = view
 
-    await view.resize().runAsync()
+    await view.runAsync()
+
+    // Fix bug where the "..." menu button overlaps with charts where width is
+    // set to -1 on first load.
+    this.vegaView.resize().runAsync()
   }
 }
 

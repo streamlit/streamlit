@@ -16,9 +16,13 @@
 import streamlit as st
 import sys
 
-# # Uncomment this as a block.
-# # This tests that errors before the first st call get caught.
-# a = not_a_real_variable  # EXPECTED: inline exception
+# Uncomment this as a block.
+# This tests that errors before the first st call get caught.
+def foo():
+    a = not_a_real_variable  # EXPECTED: inline exception
+
+
+foo()
 
 # # Uncomment this as a block.
 # # This tests that errors before the first st call get caught.
