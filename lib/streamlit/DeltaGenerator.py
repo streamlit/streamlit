@@ -1740,7 +1740,8 @@ class DeltaGenerator(object):
         format=None,
         key=None,
     ):
-        """Display a slider widget.
+        """Display a slider widget. Integers, floats, and tuples/lists of
+        integers are supported.
 
         Parameters
         ----------
@@ -1753,8 +1754,8 @@ class DeltaGenerator(object):
             The maximum permitted value.
             Defaults 100 if the value is an int, 1.0 otherwise.
         value : int/float or a tuple/list of int/float or None
-            The value of this widget when it first renders. In case the value
-            is passed as a tuple/list a range slider will be used.
+            The value of this widget when it first renders. A range slider
+            is used to support tuples/lists.
             Defaults to min_value.
         step : int/float or None
             The stepping interval.
