@@ -368,7 +368,10 @@ class ReportSession(object):
         )
 
         imsg.user_info.installation_id = __installation_id__
-        imsg.user_info.email = Credentials.get_current().activation.email
+        if Credentials.get_current().activation:
+            imsg.user_info.email = Credentials.get_current().activation.email
+        else:
+            imsg.user_info.email = ""
 
         imsg.command_line = self._report.command_line
 

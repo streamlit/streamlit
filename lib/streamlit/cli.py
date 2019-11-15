@@ -29,7 +29,7 @@ import os
 import click
 
 import streamlit
-from streamlit.credentials import Credentials
+from streamlit.credentials import Credentials, check_credentials
 from streamlit import version
 from streamlit import util
 import streamlit.bootstrap as bootstrap
@@ -242,7 +242,7 @@ def _main_run(file, args=[]):
     streamlit._is_running_with_streamlit = True
 
     # Check credentials.
-    Credentials.get_current().check_activated(auto_resolve=True)
+    check_credentials()
 
     # Notify if streamlit is out of date.
     if version.should_show_new_version_notice():
