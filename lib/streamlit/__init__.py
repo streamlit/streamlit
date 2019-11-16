@@ -212,13 +212,12 @@ def set_option(key, value):
         The new value to assign to this config option.
 
     """
-    # Check for "scriptable" flag; if False, bring this to user's attention.
     opt = _config._config_options[key]
-    #from IPython import embed; embed()
     if opt.scriptable:
         _config.set_option(key, value)
         return 
 
+    # Most options are not functionally settable in-script.
     # TODO improve this error message
     raise StreamlitAPIException(f'{key} cannot be set on the fly. Set in command line options or config.toml instead.')
 

@@ -156,7 +156,7 @@ def _create_option(
         key,
         description=description,
         default_val=default_val,
-        scriptable=False,
+        scriptable=scriptable,
         visibility=visibility,
         deprecated=deprecated,
         deprecation_text=deprecation_text,
