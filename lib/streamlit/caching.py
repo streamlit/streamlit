@@ -347,7 +347,7 @@ def _write_to_mem_cache(key, value, allow_output_mutation, args_mutated):
 def _read_from_disk_cache(key):
     path = file_util.get_streamlit_file_path("cache", "%s.pickle" % key)
     try:
-        with util.streamlit_read(path, binary=True) as input:
+        with file_util.streamlit_read(path, binary=True) as input:
             value, args_mutated = pickle.load(input)
             LOGGER.debug("Disk cache HIT: %s", type(value))
     except util.Error as e:
