@@ -66,8 +66,7 @@ class UtilTest(unittest.TestCase):
 
     def test_decode_ascii(self):
         """Test streamlit.util.decode_ascii."""
-        self.assertEqual(
-            "test string.", string_util.decode_ascii(b"test string."))
+        self.assertEqual("test string.", string_util.decode_ascii(b"test string."))
 
     @patch("streamlit.file_util.get_streamlit_file_path", mock_get_path)
     @patch("streamlit.file_util.open", mock_open(read_data="data"))
@@ -111,11 +110,13 @@ class UtilTest(unittest.TestCase):
     @patch("streamlit.env_util.IS_DARWIN", True)
     def test_streamlit_write_exception(self):
         """Test streamlit.util.streamlit.write."""
-        with patch("streamlit.file_util.open", mock_open()) as p, \
-                patch("streamlit.util.os.makedirs"):
+        with patch("streamlit.file_util.open", mock_open()) as p, patch(
+            "streamlit.util.os.makedirs"
+        ):
             p.side_effect = OSError(errno.EINVAL, "[Errno 22] Invalid argument")
-            with pytest.raises(util.Error) as e, \
-                    file_util.streamlit_write(FILENAME) as output:
+            with pytest.raises(util.Error) as e, file_util.streamlit_write(
+                FILENAME
+            ) as output:
                 output.write("some data")
             error_msg = (
                 "Unable to write file: /some/cache/file\n"
@@ -140,17 +141,15 @@ class UtilTest(unittest.TestCase):
             self.assertEqual(None, net_util.get_external_ip())
 
     def test_get_project_streamlit_file_path(self):
-        expected = os.path.join(
-            os.getcwd(), CONFIG_FOLDER_NAME, "some/random/file")
+        expected = os.path.join(os.getcwd(), CONFIG_FOLDER_NAME, "some/random/file")
 
         self.assertEqual(
-            expected,
-            file_util.get_project_streamlit_file_path("some/random/file")
+            expected, file_util.get_project_streamlit_file_path("some/random/file")
         )
 
         self.assertEqual(
             expected,
-            file_util.get_project_streamlit_file_path("some", "random", "file")
+            file_util.get_project_streamlit_file_path("some", "random", "file"),
         )
 
 

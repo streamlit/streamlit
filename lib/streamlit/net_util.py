@@ -20,6 +20,7 @@ import requests
 from streamlit import util
 
 from streamlit.logger import get_logger
+
 LOGGER = get_logger(__name__)
 
 # URL for checking the current machine's external IP address.
@@ -46,8 +47,10 @@ def get_external_ip():
 
     if response is None:
         LOGGER.warning(
+            # fmt: off
             "Did not auto detect external IP.\n"
             "Please go to %s for debugging hints.",
+            # fmt: on
             util.HELP_DOC,
         )
     else:
