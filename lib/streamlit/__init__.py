@@ -213,8 +213,8 @@ def set_option(key, value):
 
     """
     # Check for "scriptable" flag; if False, bring this to user's attention.
-    #opt = get_option(key)
     opt = _config._config_options[key]
+    #from IPython import embed; embed()
     if opt.scriptable:
         _config.set_option(key, value)
         return 

@@ -60,13 +60,22 @@ class StreamlitTest(unittest.TestCase):
         # This is set in lib/tests/conftest.py to False
         self.assertEqual(False, st.get_option("browser.gatherUsageStats"))
 
-    def test_set_option(self):
-        """Test streamlit.set_option."""
+    def test_set_option_scriptable(self):
+        """Test that scriptable options can be set from API."""
         # This is set in lib/tests/conftest.py to off
-        self.assertEqual("off", st.get_option("global.sharingMode"))
+        self.assertEqual(True, st.get_option("client.displayEnabled"))
 
-        st.set_option("global.sharingMode", "s3")
-        self.assertEqual("s3", st.get_option("global.sharingMode"))
+        # client.displayEnabled and client.caching can be set after run starts.
+        st.set_option("client.displayEnabled", False)
+        self.assertEqual(False, st.get_option("client.displayEnabled"))
+
+    def test_set_option_unscriptable(self):
+        """Test that unscriptable options cannot be set with st.set_option."""
+        # This is set in lib/tests/conftest.py to off
+        self.assertEqual(True, st.get_option("server.enableCORS"))
+
+        with self.assertRaises(StreamlitAPIException):
+            st.set_option("server.enableCORS", False)
 
 
 class StreamlitAPITest(testutil.DeltaGeneratorTestCase):

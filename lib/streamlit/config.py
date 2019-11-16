@@ -313,6 +313,7 @@ _create_option(
     description="Whether to enable st.cache.",
     default_val=True,
     type_=bool,
+    scriptable=True,
 )
 
 _create_option(
@@ -321,6 +322,7 @@ _create_option(
         Streamlit app.""",
     default_val=True,
     type_=bool,
+    scriptable=True,
 )
 
 
