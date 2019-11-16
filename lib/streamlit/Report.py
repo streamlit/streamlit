@@ -21,7 +21,6 @@ import uuid
 from streamlit import config
 from streamlit.ReportQueue import ReportQueue
 from streamlit import net_util
-from streamlit import util
 
 from streamlit.logger import get_logger
 from streamlit.proto.StaticManifest_pb2 import StaticManifest

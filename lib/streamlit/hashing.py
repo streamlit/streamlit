@@ -32,7 +32,6 @@ import textwrap
 import streamlit as st
 from streamlit import config
 from streamlit import file_util
-from streamlit import util
 from streamlit import type_util
 from streamlit.folder_black_list import FolderBlackList
 from streamlit.compatibility import setup_2_3_shims

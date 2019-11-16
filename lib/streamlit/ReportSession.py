@@ -25,7 +25,6 @@ from streamlit import __version__
 from streamlit import caching
 from streamlit import config
 from streamlit import url_util
-from streamlit import util
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.Report import Report
 from streamlit.ScriptRequestQueue import RerunData

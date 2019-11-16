@@ -19,7 +19,6 @@ from streamlit import config
 from streamlit import net_util
 from streamlit import type_util
 from streamlit import url_util
-from streamlit import util
 from streamlit.ForwardMsgCache import populate_hash_if_needed
 
 # Largest message that can be sent via the WebSocket connection.

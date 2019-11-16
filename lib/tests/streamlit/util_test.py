@@ -52,7 +52,7 @@ class UtilTest(unittest.TestCase):
     def setUp(self):
         self.patch1 = patch("streamlit.util.os.stat")
         self.os_stat = self.patch1.start()
-        util._external_ip = None
+        net_util._external_ip = None
 
     def tearDown(self):
         self.patch1.stop()
@@ -71,7 +71,7 @@ class UtilTest(unittest.TestCase):
     @patch("streamlit.file_util.get_streamlit_file_path", mock_get_path)
     @patch("streamlit.file_util.open", mock_open(read_data="data"))
     def test_streamlit_read(self):
-        """Test streamlit.util.streamlit.read."""
+        """Test streamlitfile_util.streamlit_read."""
         with file_util.streamlit_read(FILENAME) as input:
             data = input.read()
         self.assertEqual("data", data)
@@ -79,7 +79,7 @@ class UtilTest(unittest.TestCase):
     @patch("streamlit.file_util.get_streamlit_file_path", mock_get_path)
     @patch("streamlit.file_util.open", mock_open(read_data=b"\xaa\xbb"))
     def test_streamlit_read_binary(self):
-        """Test streamlit.util.streamlit.read."""
+        """Test streamlitfile_util.streamlit_read."""
         with file_util.streamlit_read(FILENAME, binary=True) as input:
             data = input.read()
         self.assertEqual(b"\xaa\xbb", data)
@@ -87,7 +87,7 @@ class UtilTest(unittest.TestCase):
     @patch("streamlit.file_util.get_streamlit_file_path", mock_get_path)
     @patch("streamlit.file_util.open", mock_open(read_data="data"))
     def test_streamlit_read_zero_bytes(self):
-        """Test streamlit.util.streamlit.read."""
+        """Test streamlitfile_util.streamlit_read."""
         self.os_stat.return_value.st_size = 0
         with pytest.raises(util.Error) as e:
             with file_util.streamlit_read(FILENAME) as input:
@@ -96,7 +96,7 @@ class UtilTest(unittest.TestCase):
 
     @patch("streamlit.file_util.get_streamlit_file_path", mock_get_path)
     def test_streamlit_write(self):
-        """Test streamlit.util.streamlit.write."""
+        """Test streamlitfile_util.streamlit_write."""
 
         dirname = os.path.dirname(file_util.get_streamlit_file_path(FILENAME))
         with patch("streamlit.file_util.open", mock_open()) as open, patch(
@@ -109,7 +109,7 @@ class UtilTest(unittest.TestCase):
     @patch("streamlit.file_util.get_streamlit_file_path", mock_get_path)
     @patch("streamlit.env_util.IS_DARWIN", True)
     def test_streamlit_write_exception(self):
-        """Test streamlit.util.streamlit.write."""
+        """Test streamlitfile_util.streamlit_write."""
         with patch("streamlit.file_util.open", mock_open()) as p, patch(
             "streamlit.util.os.makedirs"
         ):
@@ -128,7 +128,6 @@ class UtilTest(unittest.TestCase):
     def test_get_external_ip(self):
         # Test success
         with requests_mock.mock() as m:
-            net_util._external_ip = None
             m.get(net_util._AWS_CHECK_IP, text="1.2.3.4")
             self.assertEqual("1.2.3.4", net_util.get_external_ip())
 
@@ -136,7 +135,6 @@ class UtilTest(unittest.TestCase):
 
         # Test failure
         with requests_mock.mock() as m:
-            net_util._external_ip = None
             m.get(net_util._AWS_CHECK_IP, exc=requests.exceptions.ConnectTimeout)
             self.assertEqual(None, net_util.get_external_ip())
 

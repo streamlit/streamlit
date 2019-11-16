@@ -363,7 +363,7 @@ def _write_to_disk_cache(key, value, args_mutated):
     path = file_util.get_streamlit_file_path("cache", "%s.pickle" % key)
 
     try:
-        with util.streamlit_write(path, binary=True) as output:
+        with file_util.streamlit_write(path, binary=True) as output:
             entry = DiskCacheEntry(value=value, args_mutated=args_mutated)
             pickle.dump(entry, output, pickle.HIGHEST_PROTOCOL)
     # In python 2, it's pickle struct error.

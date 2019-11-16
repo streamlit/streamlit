@@ -92,7 +92,6 @@ import numpy as _np
 
 from streamlit import code_util as _code_util
 from streamlit import env_util as _env_util
-from streamlit import util as _util
 from streamlit import string_util as _string_util
 from streamlit import type_util as _type_util
 from streamlit import source_util as _source_util
