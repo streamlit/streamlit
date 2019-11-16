@@ -100,7 +100,7 @@ class Credentials(object):
             )
 
         self.activation = None
-        self._conf_file = file_util.get_streamlit_file_path("credentials.toml")
+        self._conf_file = _get_credential_file_path()
 
         Credentials._singleton = self
 
@@ -134,7 +134,7 @@ class Credentials(object):
                 % (self._conf_file)
             )
 
-    def check_activated(self, auto_resolve=False):
+    def _check_activated(self, auto_resolve=True):
         """Check if streamlit is activated.
 
         Used by `streamlit run script.py`
@@ -199,19 +199,9 @@ class Credentials(object):
             activated = False
 
             while not activated:
-
-                # Don't stop execution to show an interactive prompt
-                # when in headless mode, as this makes it harder for
-                # people to deploy Streamlit apps.
-                if config.get_option("server.headless"):
-                    email = ""
-                else:
-                    email = click.prompt(
-                        text=EMAIL_PROMPT,
-                        prompt_suffix="",
-                        default="",
-                        show_default=False,
-                    )
+                email = click.prompt(
+                    text=EMAIL_PROMPT, prompt_suffix="", default="", show_default=False
+                )
 
                 self.activation = _verify_email(email)
                 if self.activation.is_valid:
@@ -254,3 +244,27 @@ def _exit(message):  # pragma: nocover
     """Exit program with error."""
     LOGGER.error(message)
     sys.exit(-1)
+
+
+def _get_credential_file_path():
+    return file_util.get_streamlit_file_path("credentials.toml")
+
+
+def _check_credential_file_exists():
+    return os.path.exists(_get_credential_file_path())
+
+
+def check_credentials():
+    """Check credentials and potentially activate.
+
+    Note
+    ----
+    If there is no credential file and we are in headless mode, we should not
+    check, since credential would be automatically set to an empty string.
+
+    """
+    from streamlit import config
+
+    if not _check_credential_file_exists() and config.get_option("server.headless"):
+        return
+    Credentials.get_current()._check_activated()
