@@ -13,18 +13,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import random
 import unittest
 
-from streamlit import util
+import requests
+import requests_mock
+
+from streamlit import net_util
 
 
 class UtilTest(unittest.TestCase):
-    """Test Streamlit utility functions."""
+    def setUp(self):
+        net_util._external_ip = None
 
-    def test_memoization(self):
-        """Test that util.memoize works."""
-        non_memoized_func = lambda: random.randint(0, 1000000)
-        yes_memoized_func = util.memoize(non_memoized_func)
-        self.assertNotEqual(non_memoized_func(), non_memoized_func())
-        self.assertEqual(yes_memoized_func(), yes_memoized_func())
+    def test_get_external_ip(self):
+        # Test success
+        with requests_mock.mock() as m:
+            m.get(net_util._AWS_CHECK_IP, text="1.2.3.4")
+            self.assertEqual("1.2.3.4", net_util.get_external_ip())
+
+        net_util._external_ip = None
+
+        # Test failure
+        with requests_mock.mock() as m:
+            m.get(net_util._AWS_CHECK_IP, exc=requests.exceptions.ConnectTimeout)
+            self.assertEqual(None, net_util.get_external_ip())

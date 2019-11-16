@@ -13,18 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import random
 import unittest
 
-from streamlit import util
+from streamlit import string_util
 
 
-class UtilTest(unittest.TestCase):
-    """Test Streamlit utility functions."""
-
-    def test_memoization(self):
-        """Test that util.memoize works."""
-        non_memoized_func = lambda: random.randint(0, 1000000)
-        yes_memoized_func = util.memoize(non_memoized_func)
-        self.assertNotEqual(non_memoized_func(), non_memoized_func())
-        self.assertEqual(yes_memoized_func(), yes_memoized_func())
+class StringUtilTest(unittest.TestCase):
+    def test_decode_ascii(self):
+        """Test streamlit.util.decode_ascii."""
+        self.assertEqual("test string.", string_util.decode_ascii(b"test string."))

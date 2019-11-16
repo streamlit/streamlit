@@ -38,6 +38,7 @@ class StreamlitAPIException(Exception):
     noise related to Streamlit internals.
 
     """
+
     pass
 
 
