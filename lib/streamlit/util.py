@@ -84,5 +84,6 @@ def open_browser(url):
         subprocess.Popen(cmd, stdout=devnull, stderr=subprocess.STDOUT)
 
 
+# TODO: Move this into errors.py? Replace with StreamlitAPIException?
 class Error(Exception):
     pass
