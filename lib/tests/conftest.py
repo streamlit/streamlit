@@ -24,7 +24,7 @@ import os
 
 from mock import patch, mock_open
 from streamlit import config
-from streamlit import util
+from streamlit import file_util
 
 os.environ["HOME"] = "/mock/home/folder"
 
@@ -37,7 +37,7 @@ unitTest = true
 gatherUsageStats = false
 """
 
-config_path = util.get_streamlit_file_path("config.toml")
+config_path = file_util.get_streamlit_file_path("config.toml")
 
 with patch(
     "streamlit.config.open", mock_open(read_data=CONFIG_FILE_CONTENTS), create=True

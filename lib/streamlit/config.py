@@ -30,6 +30,8 @@ import click
 from blinker import Signal
 
 from streamlit import development
+from streamlit import env_util
+from streamlit import file_util
 from streamlit import util
 from streamlit.ConfigOption import ConfigOption
 
@@ -235,7 +237,7 @@ def _global_development_mode():
     normally.
     """
     return (
-        not util.is_pex()
+        not env_util.is_pex()
         and "site-packages" not in __file__
         and "dist-packages" not in __file__
     )
@@ -384,7 +386,7 @@ def _server_headless():
     (2) server.liveSave is set.
     """
     is_live_save_on = get_option("server.liveSave")
-    is_linux = platform.system() == "Linux"
+    is_linux = env_util.IS_LINUX_OR_BSD
     has_display_env = not os.getenv("DISPLAY")
     is_running_in_editor_plugin = (
         os.getenv("IS_RUNNING_IN_STREAMLIT_EDITOR_PLUGIN") is not None
@@ -815,8 +817,8 @@ def parse_config_file():
     # Read ~/.streamlit/config.toml, and then overlay
     # $CWD/.streamlit/config.toml if it exists.
     config_filenames = [
-        util.get_streamlit_file_path("config.toml"),
-        util.get_project_streamlit_file_path("config.toml"),
+        file_util.get_streamlit_file_path("config.toml"),
+        file_util.get_project_streamlit_file_path("config.toml"),
     ]
 
     for filename in config_filenames:

@@ -87,10 +87,12 @@ class ReportTest(unittest.TestCase):
         _enqueue(report, EMPTY_DELTA_MSG)
 
         get_external_ip_patch = patch(
-            "streamlit.Report.util.get_external_ip", return_value="external_ip"
+            "streamlit.Report.net_util.get_external_ip",
+            return_value="external_ip"
         )
         get_internal_ip_patch = patch(
-            "streamlit.Report.util.get_internal_ip", return_value="internal_ip"
+            "streamlit.Report.net_util.get_internal_ip",
+            return_value="internal_ip"
         )
         with get_external_ip_patch, get_internal_ip_patch:
             files = report.serialize_running_report_to_files()

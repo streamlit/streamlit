@@ -31,9 +31,13 @@ from collections import namedtuple
 from functools import wraps
 
 import streamlit as st
-from streamlit import config, util
+from streamlit import config
+from streamlit import file_util
+from streamlit import util
 from streamlit.compatibility import setup_2_3_shims
-from streamlit.hashing import CodeHasher, Context, get_hash
+from streamlit.hashing import CodeHasher
+from streamlit.hashing import Context
+from streamlit.hashing import get_hash
 from streamlit.logger import get_logger
 
 setup_2_3_shims(globals())
@@ -341,7 +345,7 @@ def _write_to_mem_cache(key, value, allow_output_mutation, args_mutated):
 
 
 def _read_from_disk_cache(key):
-    path = util.get_streamlit_file_path("cache", "%s.pickle" % key)
+    path = file_util.get_streamlit_file_path("cache", "%s.pickle" % key)
     try:
         with util.streamlit_read(path, binary=True) as input:
             value, args_mutated = pickle.load(input)
@@ -356,7 +360,7 @@ def _read_from_disk_cache(key):
 
 
 def _write_to_disk_cache(key, value, args_mutated):
-    path = util.get_streamlit_file_path("cache", "%s.pickle" % key)
+    path = file_util.get_streamlit_file_path("cache", "%s.pickle" % key)
 
     try:
         with util.streamlit_write(path, binary=True) as output:
@@ -704,7 +708,7 @@ def clear_cache():
 
 
 def get_cache_path():
-    return util.get_streamlit_file_path("cache")
+    return file_util.get_streamlit_file_path("cache")
 
 
 def _clear_disk_cache():

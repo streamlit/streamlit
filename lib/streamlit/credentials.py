@@ -23,7 +23,7 @@ from collections import namedtuple
 import click
 import toml
 
-from streamlit import util
+from streamlit import file_util
 from streamlit import config
 from streamlit.logger import get_logger
 
@@ -100,7 +100,7 @@ class Credentials(object):
             )
 
         self.activation = None
-        self._conf_file = util.get_streamlit_file_path("credentials.toml")
+        self._conf_file = file_util.get_streamlit_file_path("credentials.toml")
 
         Credentials._singleton = self
 
