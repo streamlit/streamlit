@@ -194,6 +194,7 @@ warning = _with_dg(_DeltaGenerator.warning)  # noqa: E221
 
 get_option = _config.get_option
 
+
 def set_option(key, value):
     """Set config option.
 
@@ -215,11 +216,13 @@ def set_option(key, value):
     opt = _config._config_options[key]
     if opt.scriptable:
         _config.set_option(key, value)
-        return 
+        return
 
     # Most options are not functionally settable in-script.
     # TODO improve this error message
-    raise StreamlitAPIException(f'{key} cannot be set on the fly. Set in command line options or config.toml instead.')
+    raise StreamlitAPIException(
+        f"{key} cannot be set on the fly. Set in command line options or config.toml instead."
+    )
 
 
 # Special methods:
