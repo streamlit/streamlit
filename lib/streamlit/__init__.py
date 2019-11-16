@@ -194,14 +194,16 @@ warning = _with_dg(_DeltaGenerator.warning)  # noqa: E221
 
 get_option = _config.get_option
 
-
 def set_option(key, value):
     """Set config option.
 
-    Run `streamlit config show` in the terminal to see all available options.
+    Currently, only two config options can be set within the script itself:
+        * client.caching 
+        * client.displayEnabled 
 
-    Some options cannot be set at runtime and will raise StreamlitAPIException 
-    if used.
+    Calling with any other options will raise StreamlitAPIException.
+
+    Run `streamlit config show` in the terminal to see all available options.
 
     Parameters
     ----------
@@ -218,10 +220,8 @@ def set_option(key, value):
         _config.set_option(key, value)
         return
 
-    # Most options are not functionally settable in-script.
-    # TODO improve this error message
     raise StreamlitAPIException(
-        f"{key} cannot be set on the fly. Set in command line options or config.toml instead."
+        f"{key} cannot be set on the fly. Set as command line option, e.g. streamlit run script.py --{key}, or in config.toml instead."
     )
 
 
