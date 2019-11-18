@@ -35,9 +35,10 @@ def generate_chart(chart_type, data):
         data = convert_anything_to_df(data)
 
     n_cols = len(data.columns)
-    index_name = "index"
-    if data.index.name is not None:
-        index_name = data.index.name
+    
+    index_name = data.index.name
+    if index_name is None:
+       index_name = "index" 
         
     data = pd.melt(data.reset_index(), id_vars=[index_name])
 
