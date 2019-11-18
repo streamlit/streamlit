@@ -19,8 +19,8 @@ import sys
 # Uncomment this as a block.
 # This tests that errors before the first st call get caught.
 def foo():
-    a = not_a_real_variable  # EXPECTED: inline exception
-
+    # EXPECTED: inline exception
+    a = not_a_real_variable  # noqa: F821 pylint:disable=undefined-variable,unused-variable 
 
 foo()
 
