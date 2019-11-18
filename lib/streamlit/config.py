@@ -203,7 +203,6 @@ _create_option(
     type_=bool,
 )
 
-
 _create_option(
     "global.sharingMode",
     description="""
@@ -374,6 +373,23 @@ _create_option(
     Example: ['/home/user1/env', 'relative/path/to/folder']
     """,
     default_val=[],
+)
+
+_create_option(
+    "server.fileWatcherType",
+    description="""
+        Change the type of file watcher used by Streamlit, or turn it off
+        completely.
+
+        Allowed values:
+        * "auto"     : Streamlit will attempt to use the watchdog module, and
+                       falls back to polling if watchdog is not available.
+        * "watchdog" : Force Streamlit to use the watchdog module.
+        * "poll"     : Force Streamlit to always use polling.
+        * "none"     : Streamlit will not watch files.
+    """,
+    default_val="auto",
+    type_=str,
 )
 
 

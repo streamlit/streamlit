@@ -37,13 +37,11 @@ LOGGER = get_logger(__name__)
 
 try:
     # If the watchdog module is installed.
-    from streamlit.watcher.EventBasedFileWatcher import (
-        EventBasedFileWatcher as FileWatcher,
-    )
-except ImportError:
-    # Fallback that doesn't use watchdog.
-    from streamlit.watcher.PollingFileWatcher import PollingFileWatcher as FileWatcher
+    from streamlit.watcher.EventBasedFileWatcher import EventBasedFileWatcher
 
+    watchdog_available = True
+except ImportError:
+    watchdog_available = False
     if not config.get_option("global.disableWatchdogWarning"):
         msg = "\n  $ xcode-select --install" if env_util.IS_DARWIN else ""
 
@@ -58,6 +56,28 @@ except ImportError:
         )
 
 
+def get_file_watcher_class():
+    watcher_type = config.get_option("server.fileWatcherType")
+
+    if watcher_type == "auto":
+        if watchdog_available:
+            return EventBasedFileWatcher
+        else:
+            from streamlit.watcher.PollingFileWatcher import PollingFileWatcher
+
+            return PollingFileWatcher
+    elif watcher_type == "watchdog" and watchdog_available:
+        return EventBasedFileWatcher
+    elif watcher_type == "poll":
+        from streamlit.watcher.PollingFileWatcher import PollingFileWatcher
+
+        return PollingFileWatcher
+    else:
+        return None
+
+
+FileWatcher = get_file_watcher_class()
+
 # Streamlit never watches files in the folders below.
 DEFAULT_FOLDER_BLACKLIST = [
     "**/.*",
@@ -66,7 +86,6 @@ DEFAULT_FOLDER_BLACKLIST = [
     "**/miniconda2",
     "**/miniconda3",
 ]
-
 
 WatchedModule = collections.namedtuple("WatchedModule", ["watcher", "module_name"])
 
@@ -120,6 +139,9 @@ class LocalSourcesWatcher(object):
         self._is_closed = True
 
     def _register_watcher(self, filepath, module_name):
+        if FileWatcher is None:
+            return
+
         if compatibility.is_running_py3():
             ErrorType = PermissionError
         else:
