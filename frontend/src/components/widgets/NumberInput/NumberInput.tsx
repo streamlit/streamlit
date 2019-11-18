@@ -61,18 +61,34 @@ class NumberInput extends React.PureComponent<Props, State> {
     this.setWidgetValue({ fromUi: false })
   }
 
+  private getDataFromElement(
+    e: ImmutableMap<string, any>
+  ): ImmutableMap<string, any> {
+    return e.get("intData") || e.get("floatData")
+  }
+
   private strIsInt = (value: string): boolean => value.indexOf(".") === -1
+
+  private dataIsInt = (): boolean => {
+    if (this.props.element.get("intData")) {
+      return true
+    } else {
+      return false
+    }
+  }
 
   private getValue = (): number => {
     const { value } = this.state
 
-    return this.strIsInt(value) ? parseInt(value) : parseFloat(value)
+    return this.dataIsInt() ? parseInt(value) : parseFloat(value)
   }
 
   private getFormattedValue = (value = ""): string => {
     const { element } = this.props
 
-    const defaultValue: number = element.get("default")
+    const defaultValue: number = this.getDataFromElement(element).get(
+      "default"
+    )
     const format: string = element.get("format")
 
     const valueToBeSaved = value === "" ? String(defaultValue) : value
@@ -83,12 +99,12 @@ class NumberInput extends React.PureComponent<Props, State> {
   private getStep = (): number => {
     const { element } = this.props
     const { value } = this.state
-    const step = element.get("step")
+    const step = this.getDataFromElement(element).get("step")
 
     if (step) {
       return step
     } else {
-      if (this.strIsInt(value)) {
+      if (this.dataIsInt()) {
         return 1
       } else {
         return 0.01
@@ -100,8 +116,8 @@ class NumberInput extends React.PureComponent<Props, State> {
     const { value } = this.state
     const { element, widgetMgr } = this.props
     const widgetId: string = element.get("id")
-    const min: number = element.get("min")
-    const max: number = element.get("max")
+    const min: number = this.getDataFromElement(element).get("min")
+    const max: number = this.getDataFromElement(element).get("max")
 
     if (min > parseFloat(value) || parseFloat(value) > max) {
       const node = this.inputRef.current
@@ -110,7 +126,7 @@ class NumberInput extends React.PureComponent<Props, State> {
     } else {
       const formattedValue = this.getFormattedValue(value)
 
-      if (this.strIsInt(formattedValue)) {
+      if (this.dataIsInt()) {
         widgetMgr.setIntValue(widgetId, parseInt(formattedValue), source)
       } else {
         widgetMgr.setFloatValue(widgetId, parseFloat(formattedValue), source)
@@ -168,8 +184,8 @@ class NumberInput extends React.PureComponent<Props, State> {
     const step = this.getStep()
     const value = this.getValue()
     const format = element.get("format")
-    const min = element.get("min")
-    const max = element.get("max")
+    const min = this.getDataFromElement(element).get("min")
+    const max = this.getDataFromElement(element).get("max")
 
     switch (modifier) {
       case "increment":
@@ -224,9 +240,9 @@ class NumberInput extends React.PureComponent<Props, State> {
             overrides={{
               Input: {
                 props: {
-                  step: element.get("step"),
-                  min: element.get("min"),
-                  max: element.get("max"),
+                  step: this.getDataFromElement(element).get("step"),
+                  min: this.getDataFromElement(element).get("min"),
+                  max: this.getDataFromElement(element).get("max"),
                 },
               },
               InputContainer: {

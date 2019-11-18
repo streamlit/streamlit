@@ -19,9 +19,25 @@ syntax = "proto3";
 message NumberInput {
   string id = 1;
   string label = 2;
-  float default = 3;
-  float min = 5;
-  float max = 6;
-  float step = 7;
-  string format = 8;
+
+  oneof data {
+    IntNumberInput int_data = 3;
+    FloatNumberInput float_data = 4;
+  }
+
+  string format = 5;
+}
+
+message IntNumberInput {
+  int64 default = 1;
+  int64 min = 2;
+  int64 max = 3;
+  int64 step = 4;
+}
+
+message FloatNumberInput {
+  float default = 1;
+  float min = 2;
+  float max = 3;
+  float step = 4;
 }
