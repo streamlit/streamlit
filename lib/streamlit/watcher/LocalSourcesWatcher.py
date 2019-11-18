@@ -27,7 +27,8 @@ except ImportError:
 
 from streamlit import compatibility
 from streamlit import config
-from streamlit import util
+from streamlit import env_util
+from streamlit import file_util
 from streamlit.folder_black_list import FolderBlackList
 
 from streamlit.logger import get_logger
@@ -44,7 +45,7 @@ except ImportError:
     from streamlit.watcher.PollingFileWatcher import PollingFileWatcher as FileWatcher
 
     if not config.get_option("global.disableWatchdogWarning"):
-        msg = "\n  $ xcode-select --install" if util.is_darwin() else ""
+        msg = "\n  $ xcode-select --install" if env_util.IS_DARWIN else ""
 
         LOGGER.warning(
             """
@@ -91,7 +92,7 @@ class LocalSourcesWatcher(object):
 
     def on_file_changed(self, filepath):
         if filepath not in self._watched_modules:
-            LOGGER.error("Received event for non-watched file", filepath)
+            LOGGER.error("Received event for non-watched file: %s", filepath)
             return
 
         # Workaround:
@@ -187,7 +188,7 @@ class LocalSourcesWatcher(object):
                     continue
 
                 file_is_new = filepath not in self._watched_modules
-                file_is_local = util.file_is_in_folder_glob(
+                file_is_local = file_util.file_is_in_folder_glob(
                     filepath, self._report.script_folder
                 )
 

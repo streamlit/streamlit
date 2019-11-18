@@ -23,7 +23,7 @@ from collections import namedtuple
 import click
 import toml
 
-from streamlit import util
+from streamlit import file_util
 from streamlit import config
 from streamlit.logger import get_logger
 
@@ -247,7 +247,7 @@ def _exit(message):  # pragma: nocover
 
 
 def _get_credential_file_path():
-    return util.get_streamlit_file_path("credentials.toml")
+    return file_util.get_streamlit_file_path("credentials.toml")
 
 
 def _check_credential_file_exists():

@@ -24,7 +24,7 @@ from streamlit import __installation_id__
 from streamlit import __version__
 from streamlit import caching
 from streamlit import config
-from streamlit import util
+from streamlit import url_util
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.Report import Report
 from streamlit.ScriptRequestQueue import RerunData
@@ -562,7 +562,7 @@ class ReportSession(object):
         url = yield self._get_storage().save_report_files(self._report.report_id, files)
 
         if config.get_option("server.liveSave"):
-            util.print_url("Saved running app", url)
+            url_util.print_url("Saved running app", url)
 
         raise tornado.gen.Return(url)
 
@@ -574,7 +574,7 @@ class ReportSession(object):
         )
 
         if config.get_option("server.liveSave"):
-            util.print_url("Saved final app", url)
+            url_util.print_url("Saved final app", url)
 
         raise tornado.gen.Return(url)
 
