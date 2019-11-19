@@ -108,15 +108,7 @@ class NumberInput extends React.PureComponent<Props, State> {
       const node = this.inputRef.current
       node && node.reportValidity()
     } else {
-      let formattedValue
-      let valueToBeSaved = value
-
-      if (value) {
-        formattedValue = this.formatValue(value)
-      } else {
-        formattedValue = this.formatValue(this.getData().get("default"))
-        valueToBeSaved = this.getData().get("default")
-      }
+      let valueToBeSaved = value || this.getData().get("default")
 
       if (this.isIntData()) {
         widgetMgr.setIntValue(widgetId, valueToBeSaved, source)
@@ -127,7 +119,7 @@ class NumberInput extends React.PureComponent<Props, State> {
       this.setState({
         dirty: false,
         value: valueToBeSaved,
-        formattedValue,
+        formattedValue: this.formatValue(valueToBeSaved),
       })
     }
   }
