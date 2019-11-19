@@ -43,23 +43,22 @@ interface State {
    * widget's UI, the default value is used.
    */
   value: number
+
+  formattedValue: string
 }
 
 class NumberInput extends React.PureComponent<Props, State> {
   private inputRef = React.createRef<HTMLInputElement>()
 
-  private formatValue = false
-
   constructor(props: Props) {
     super(props)
 
-    this.onChange = this.onChange.bind(this)
-    this.onKeyDown = this.onKeyDown.bind(this)
-    this.onKeyPress = this.onKeyPress.bind(this)
+    console.log("element", props.element.toJS())
 
     this.state = {
       dirty: false,
       value: this.getData().get("default"),
+      formattedValue: this.formatValue(this.getData().get("default")),
     }
   }
 
@@ -72,8 +71,15 @@ class NumberInput extends React.PureComponent<Props, State> {
     return element.get("intData") || element.get("floatData")
   }
 
+  private formatValue = (value: number): string => {
+    const { element } = this.props
+    const format: string = element.get("format")
+
+    return value ? sprintf(format, value) : String(value)
+  }
+
   private isIntData = (): boolean => {
-    return this.props.element.get("intData") ? true : false
+    return !!this.props.element.get("intData")
   }
 
   private getStep = (): number => {
@@ -107,8 +113,17 @@ class NumberInput extends React.PureComponent<Props, State> {
         widgetMgr.setFloatValue(widgetId, value, source)
       }
 
-      this.setState({ dirty: false }, () => {
-        this.formatValue = true
+      let formattedValue
+
+      if (value) {
+        formattedValue = this.formatValue(value)
+      } else {
+        formattedValue = this.formatValue(this.getData().get("default"))
+      }
+
+      this.setState({
+        dirty: false,
+        formattedValue,
       })
     }
   }
@@ -120,14 +135,7 @@ class NumberInput extends React.PureComponent<Props, State> {
   }
 
   private onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    debugger
-
-    const { value } = e.target
-
-    // If the user enters an invalid number, don't update the state, ex 1..
-    if (!value) {
-      return
-    }
+    let { value } = e.target
 
     let numValue = null
 
@@ -140,6 +148,7 @@ class NumberInput extends React.PureComponent<Props, State> {
     this.setState({
       dirty: true,
       value: numValue,
+      formattedValue: value,
     })
   }
 
@@ -206,18 +215,12 @@ class NumberInput extends React.PureComponent<Props, State> {
 
   public render = (): React.ReactNode => {
     const { element, width, disabled } = this.props
-    const { value, dirty } = this.state
+    const { formattedValue, dirty } = this.state
 
-    const format: string = element.get("format")
     const label: string = element.get("label")
     const style = { width }
 
     const data = this.getData()
-
-    const displayValue = this.formatValue
-      ? sprintf(format, value)
-      : String(value)
-    this.formatValue = false
 
     return (
       <div className="Widget row-widget stNumberInput" style={style}>
@@ -226,7 +229,7 @@ class NumberInput extends React.PureComponent<Props, State> {
           <UIInput
             type="number"
             inputRef={this.inputRef}
-            value={displayValue}
+            value={formattedValue}
             onBlur={this.onBlur}
             onChange={this.onChange}
             onKeyPress={this.onKeyPress}
