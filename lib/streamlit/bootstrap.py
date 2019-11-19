@@ -23,6 +23,7 @@ import tornado.ioloop
 from streamlit import config
 from streamlit import net_util
 from streamlit import url_util
+from streamlit import env_util
 from streamlit import util
 from streamlit.Report import Report
 from streamlit.logger import get_logger
@@ -104,7 +105,7 @@ def _fix_tornado_crash():
         FIXME: if/when tornado supports the defaults in asyncio,
         remove and bump tornado requirement for py38
     """
-    if sys.platform.startswith("win") and sys.version_info >= (3, 8):
+    if env_util.IS_WINDOWS and sys.version_info >= (3, 8):
         import asyncio
         try:
             from asyncio import (
