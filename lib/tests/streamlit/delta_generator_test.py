@@ -37,13 +37,15 @@ except ImportError:
 
 from parameterized import parameterized
 
-from streamlit.proto.Text_pb2 import Text
+from streamlit.proto.Element_pb2 import Element
+from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.DeltaGenerator import (
     _wraps_with_cleaned_sig,
     _remove_self_from_sig,
     _with_element,
+    _set_widget_id,
 )
 from tests import testutil
 import streamlit as st
@@ -185,6 +187,16 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
         dg = FakeDeltaGenerator()
         result = wrapped(dg, "foo", data="bar")
         self.assertEqual(result, ("foo", "bar"))
+
+    def test_set_widget_id(self):
+        text_input = TextInput()
+        text_input.label = 'some_label'
+
+        element = Element()
+        element.text_input.CopyFrom(text_input)
+        _set_widget_id('text_input', element, user_key='some_key')
+        
+        self.assertEqual(element.text_input.id, 'some_key-text_input')
 
     def test_with_element(self):
         wrapped = _with_element(FakeDeltaGenerator.fake_text)
