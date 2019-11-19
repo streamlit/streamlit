@@ -18,7 +18,7 @@
 import url from "url"
 import { ConnectionState } from "lib/ConnectionState"
 import { ForwardMsg, StaticManifest } from "autogen/proto"
-import { getObject } from "lib/s3helper"
+import { getBucketAndResourceRoot, getObject } from "lib/s3helper"
 import { logError } from "lib/log"
 
 interface Props {
@@ -50,10 +50,10 @@ export class StaticConnection {
 
   private static async getAllMessages(props: Props): Promise<void> {
     const { numMessages } = props.manifest
-    const { bucket, version } = getBucketAndVersion()
+    const { bucket, resourceRoot } = getBucketAndResourceRoot()
 
     for (let msgIdx = 0; msgIdx < numMessages; msgIdx++) {
-      const messageKey = `${version}/reports/${props.reportId}/${msgIdx}.pb`
+      const messageKey = `${resourceRoot}/reports/${props.reportId}/${msgIdx}.pb`
 
       try {
         const response = await getObject({ Bucket: bucket, Key: messageKey })
@@ -64,15 +64,4 @@ export class StaticConnection {
       }
     }
   }
-}
-
-/**
- * Parses the S3 data bucket name and report version from the window location href
- */
-function getBucketAndVersion(): { bucket: string; version: string } {
-  // TODO: Unify with ConnectionManager.ts
-  const { hostname, pathname } = url.parse(window.location.href, true)
-  const bucket = String(hostname)
-  const version = pathname != null ? pathname.split("/")[1] : "null"
-  return { bucket, version }
 }

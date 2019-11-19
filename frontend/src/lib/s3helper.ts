@@ -23,9 +23,33 @@ import {
   COGNITO_IDENTITY_POOL_ID,
 } from "./baseconsts"
 import { logError } from "./log"
+import url from "url"
 
 let s3: any = null
 let haveCredentials = false
+
+/**
+ * Parses the S3 data bucket name and the resource root for the current
+ * report from the window location href.
+ */
+export function getBucketAndResourceRoot(): {
+  bucket: string
+  resourceRoot?: string
+} {
+  const { hostname, pathname } = url.parse(window.location.href, true)
+
+  // Bucket name is always equal to the hostname
+  const bucket = String(hostname)
+
+  // Our pathname will look something like some/s3/path/0.49.0-HdbX/index.html?id=9zttR9BsCpG6YP1fMD8rjj
+  // Everything before that final '/' is the resource root.
+  const resourceRoot =
+    pathname != null
+      ? pathname.substring(0, pathname.lastIndexOf("/"))
+      : undefined
+
+  return { bucket, resourceRoot }
+}
 
 /**
  * Set up AWS credentials, given an OAuth ID token from Google.
