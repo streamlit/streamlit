@@ -16,7 +16,6 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
-import { List, Map as ImmutableMap } from "immutable"
 import classNames from "classnames"
 
 import Block from "components/core/Block/"
@@ -25,13 +24,11 @@ import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import { ThemeProvider } from "baseui"
+import { BlockElement } from "lib/DeltaParser"
 import { mainWidgetTheme, sidebarWidgetTheme } from "lib/widgetTheme"
+
 import "./ReportView.scss"
 import "./Widget.scss"
-
-type SimpleElement = ImmutableMap<string, any>
-type Element = SimpleElement | BlockElement
-interface BlockElement extends List<Element> {}
 
 interface Elements {
   main: BlockElement
