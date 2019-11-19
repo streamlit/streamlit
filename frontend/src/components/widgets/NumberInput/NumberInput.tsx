@@ -48,6 +48,8 @@ interface State {
 class NumberInput extends React.PureComponent<Props, State> {
   private inputRef = React.createRef<HTMLInputElement>()
 
+  private formatValue = false
+
   constructor(props: Props) {
     super(props)
 
@@ -89,7 +91,6 @@ class NumberInput extends React.PureComponent<Props, State> {
   }
 
   private setWidgetValue = (source: Source): void => {
-    debugger
     const { value } = this.state
     const { element, widgetMgr } = this.props
     const widgetId: string = element.get("id")
@@ -98,7 +99,6 @@ class NumberInput extends React.PureComponent<Props, State> {
 
     if (min > value || value > max) {
       const node = this.inputRef.current
-      debugger
       node && node.reportValidity()
     } else {
       if (this.isIntData()) {
@@ -107,26 +107,34 @@ class NumberInput extends React.PureComponent<Props, State> {
         widgetMgr.setFloatValue(widgetId, value, source)
       }
 
-      this.setState({ dirty: false })
+      this.setState({ dirty: false }, () => {
+        this.formatValue = true
+      })
     }
   }
 
   private onBlur = (): void => {
     if (this.state.dirty) {
-      debugger
       this.setWidgetValue({ fromUi: true })
     }
   }
 
   private onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     debugger
-    const val = e.target.value
+
+    const { value } = e.target
+
+    // If the user enters an invalid number, don't update the state, ex 1..
+    if (!value) {
+      return
+    }
+
     let numValue = null
 
     if (this.isIntData()) {
-      numValue = parseInt(val)
+      numValue = parseInt(value)
     } else {
-      numValue = parseFloat(val)
+      numValue = parseFloat(value)
     }
 
     this.setState({
@@ -200,13 +208,16 @@ class NumberInput extends React.PureComponent<Props, State> {
     const { element, width, disabled } = this.props
     const { value, dirty } = this.state
 
-    const label: string = element.get("label")
     const format: string = element.get("format")
+    const label: string = element.get("label")
     const style = { width }
 
-    // const formattedValue = sprintf(format, value)
-    const formattedValue = String(value)
     const data = this.getData()
+
+    const displayValue = this.formatValue
+      ? sprintf(format, value)
+      : String(value)
+    this.formatValue = false
 
     return (
       <div className="Widget row-widget stNumberInput" style={style}>
@@ -215,7 +226,7 @@ class NumberInput extends React.PureComponent<Props, State> {
           <UIInput
             type="number"
             inputRef={this.inputRef}
-            value={formattedValue}
+            value={displayValue}
             onBlur={this.onBlur}
             onChange={this.onChange}
             onKeyPress={this.onKeyPress}
