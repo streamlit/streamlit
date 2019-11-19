@@ -2121,7 +2121,7 @@ class DeltaGenerator(object):
             If None, there will be no maximum.
         value : int or float or None
             The value of this widget when it first renders.
-            Defaults to min_value, or 0 if min_value is None
+            Defaults to min_value, or 0.0 if min_value is None
         step : int or float or None
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
@@ -2151,7 +2151,7 @@ class DeltaGenerator(object):
             if min_value:
                 value = min_value
             else:
-                value = 0
+                value = 0.0  # We set a float as default
 
         int_value = isinstance(value, int)
         float_value = isinstance(value, float)

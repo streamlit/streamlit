@@ -44,6 +44,9 @@ interface State {
    */
   value: number
 
+  /**
+   * The value with applied format that is going to be Shown to the user
+   */
   formattedValue: string
 }
 
@@ -52,8 +55,6 @@ class NumberInput extends React.PureComponent<Props, State> {
 
   constructor(props: Props) {
     super(props)
-
-    console.log("element", props.element.toJS())
 
     this.state = {
       dirty: false,
@@ -75,7 +76,7 @@ class NumberInput extends React.PureComponent<Props, State> {
     const { element } = this.props
     const format: string = element.get("format")
 
-    return value ? sprintf(format, value) : String(value)
+    return format ? sprintf(format, value) : String(value)
   }
 
   private isIntData = (): boolean => {
@@ -107,22 +108,25 @@ class NumberInput extends React.PureComponent<Props, State> {
       const node = this.inputRef.current
       node && node.reportValidity()
     } else {
-      if (this.isIntData()) {
-        widgetMgr.setIntValue(widgetId, value, source)
-      } else {
-        widgetMgr.setFloatValue(widgetId, value, source)
-      }
-
       let formattedValue
+      let valueToBeSaved = value
 
       if (value) {
         formattedValue = this.formatValue(value)
       } else {
         formattedValue = this.formatValue(this.getData().get("default"))
+        valueToBeSaved = this.getData().get("default")
+      }
+
+      if (this.isIntData()) {
+        widgetMgr.setIntValue(widgetId, valueToBeSaved, source)
+      } else {
+        widgetMgr.setFloatValue(widgetId, valueToBeSaved, source)
       }
 
       this.setState({
         dirty: false,
+        value: valueToBeSaved,
         formattedValue,
       })
     }
