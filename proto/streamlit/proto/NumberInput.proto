@@ -30,8 +30,8 @@ message NumberInput {
 
 message IntNumberInput {
   int64 default = 1;
-  int64 min = 2;
-  int64 max = 3;
+  float min = 2;
+  float max = 3;
   int64 step = 4;
 }
 

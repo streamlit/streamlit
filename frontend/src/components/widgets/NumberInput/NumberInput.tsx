@@ -42,7 +42,7 @@ interface State {
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, the default value is used.
    */
-  value: string
+  value: number
 }
 
 class NumberInput extends React.PureComponent<Props, State> {
@@ -51,9 +51,13 @@ class NumberInput extends React.PureComponent<Props, State> {
   constructor(props: Props) {
     super(props)
 
+    this.onChange = this.onChange.bind(this)
+    this.onKeyDown = this.onKeyDown.bind(this)
+    this.onKeyPress = this.onKeyPress.bind(this)
+
     this.state = {
       dirty: false,
-      value: this.getFormattedValue(),
+      value: this.getData().get("default"),
     }
   }
 
@@ -61,50 +65,22 @@ class NumberInput extends React.PureComponent<Props, State> {
     this.setWidgetValue({ fromUi: false })
   }
 
-  private getDataFromElement(
-    e: ImmutableMap<string, any>
-  ): ImmutableMap<string, any> {
-    return e.get("intData") || e.get("floatData")
-  }
-
-  private strIsInt = (value: string): boolean => value.indexOf(".") === -1
-
-  private dataIsInt = (): boolean => {
-    if (this.props.element.get("intData")) {
-      return true
-    } else {
-      return false
-    }
-  }
-
-  private getValue = (): number => {
-    const { value } = this.state
-
-    return this.dataIsInt() ? parseInt(value) : parseFloat(value)
-  }
-
-  private getFormattedValue = (value = ""): string => {
+  private getData = (): ImmutableMap<string, any> => {
     const { element } = this.props
+    return element.get("intData") || element.get("floatData")
+  }
 
-    const defaultValue: number = this.getDataFromElement(element).get(
-      "default"
-    )
-    const format: string = element.get("format")
-
-    const valueToBeSaved = value === "" ? String(defaultValue) : value
-
-    return format ? sprintf(format, valueToBeSaved) : valueToBeSaved
+  private isIntData = (): boolean => {
+    return this.props.element.get("intData") ? true : false
   }
 
   private getStep = (): number => {
-    const { element } = this.props
-    const { value } = this.state
-    const step = this.getDataFromElement(element).get("step")
+    const step = this.getData().get("step")
 
     if (step) {
       return step
     } else {
-      if (this.dataIsInt()) {
+      if (this.isIntData()) {
         return 1
       } else {
         return 0.01
@@ -113,44 +89,49 @@ class NumberInput extends React.PureComponent<Props, State> {
   }
 
   private setWidgetValue = (source: Source): void => {
+    debugger
     const { value } = this.state
     const { element, widgetMgr } = this.props
     const widgetId: string = element.get("id")
-    const min: number = this.getDataFromElement(element).get("min")
-    const max: number = this.getDataFromElement(element).get("max")
+    const min: number = this.getData().get("min")
+    const max: number = this.getData().get("max")
 
-    if (min > parseFloat(value) || parseFloat(value) > max) {
+    if (min > value || value > max) {
       const node = this.inputRef.current
-
+      debugger
       node && node.reportValidity()
     } else {
-      const formattedValue = this.getFormattedValue(value)
-
-      if (this.dataIsInt()) {
-        widgetMgr.setIntValue(widgetId, parseInt(formattedValue), source)
+      if (this.isIntData()) {
+        widgetMgr.setIntValue(widgetId, value, source)
       } else {
-        widgetMgr.setFloatValue(widgetId, parseFloat(formattedValue), source)
+        widgetMgr.setFloatValue(widgetId, value, source)
       }
 
-      this.setState({
-        dirty: false,
-        value: formattedValue,
-      })
+      this.setState({ dirty: false })
     }
   }
 
   private onBlur = (): void => {
     if (this.state.dirty) {
+      debugger
       this.setWidgetValue({ fromUi: true })
     }
   }
 
   private onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    const { value } = e.target
+    debugger
+    const val = e.target.value
+    let numValue = null
+
+    if (this.isIntData()) {
+      numValue = parseInt(val)
+    } else {
+      numValue = parseFloat(val)
+    }
 
     this.setState({
       dirty: true,
-      value,
+      value: numValue,
     })
   }
 
@@ -180,12 +161,10 @@ class NumberInput extends React.PureComponent<Props, State> {
   private modifyValueUsingStep = (
     modifier: "increment" | "decrement"
   ): any => (): void => {
-    const { element } = this.props
+    const { value } = this.state
     const step = this.getStep()
-    const value = this.getValue()
-    const format = element.get("format")
-    const min = this.getDataFromElement(element).get("min")
-    const max = this.getDataFromElement(element).get("max")
+    const min = this.getData().get("min")
+    const max = this.getData().get("max")
 
     switch (modifier) {
       case "increment":
@@ -193,7 +172,7 @@ class NumberInput extends React.PureComponent<Props, State> {
           this.setState(
             {
               dirty: true,
-              value: sprintf(format, value + step),
+              value: value + step,
             },
             () => {
               this.setWidgetValue({ fromUi: true })
@@ -206,7 +185,7 @@ class NumberInput extends React.PureComponent<Props, State> {
           this.setState(
             {
               dirty: true,
-              value: sprintf(format, value - step),
+              value: value - step,
             },
             () => {
               this.setWidgetValue({ fromUi: true })
@@ -222,7 +201,12 @@ class NumberInput extends React.PureComponent<Props, State> {
     const { value, dirty } = this.state
 
     const label: string = element.get("label")
+    const format: string = element.get("format")
     const style = { width }
+
+    // const formattedValue = sprintf(format, value)
+    const formattedValue = String(value)
+    const data = this.getData()
 
     return (
       <div className="Widget row-widget stNumberInput" style={style}>
@@ -231,7 +215,7 @@ class NumberInput extends React.PureComponent<Props, State> {
           <UIInput
             type="number"
             inputRef={this.inputRef}
-            value={value}
+            value={formattedValue}
             onBlur={this.onBlur}
             onChange={this.onChange}
             onKeyPress={this.onKeyPress}
@@ -240,9 +224,9 @@ class NumberInput extends React.PureComponent<Props, State> {
             overrides={{
               Input: {
                 props: {
-                  step: this.getDataFromElement(element).get("step"),
-                  min: this.getDataFromElement(element).get("min"),
-                  max: this.getDataFromElement(element).get("max"),
+                  step: data.get("step"),
+                  min: data.get("min"),
+                  max: data.get("max"),
                 },
               },
               InputContainer: {
