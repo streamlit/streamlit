@@ -5,8 +5,8 @@
   "homepage": ".",
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
-    "start": "export NODE_OPTIONS=--max_old_space_size=4096 && ./scripts/preload.sh && craco start",
-    "build": "export NODE_OPTIONS=--max_old_space_size=4096 && ./scripts/preload.sh && craco build",
+    "start": "export NODE_OPTIONS=--max_old_space_size=4096 && craco start",
+    "build": "export NODE_OPTIONS=--max_old_space_size=4096 && craco build",
     "test": "export NODE_OPTIONS=--max_old_space_size=4096 && craco test --env=jsdom",
     "cy:open": "unset NODE_OPTIONS && cypress open --env devicePixelRatio=1",
     "cy:run": "unset NODE_OPTIONS && cypress run",

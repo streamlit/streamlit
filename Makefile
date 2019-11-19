@@ -150,7 +150,6 @@ clean: clean-docs
 	find . -name .pytest_cache -exec rm -rfv {} \; || true
 	cd frontend; rm -rf build node_modules
 	rm -f lib/streamlit/proto/*_pb2.py
-	rm -rf frontend/public/vendor
 	rm -f frontend/src/autogen/proto.js
 	rm -f frontend/src/autogen/proto.d.ts
 	rm -f frontend/src/autogen/scssVariables.ts
