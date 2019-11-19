@@ -91,7 +91,8 @@ import json as _json
 import numpy as _np
 
 from streamlit import code_util as _code_util
-from streamlit import util as _util
+from streamlit import env_util as _env_util
+from streamlit import string_util as _string_util
 from streamlit import type_util as _type_util
 from streamlit import source_util as _source_util
 from streamlit.ReportThread import get_report_ctx as _get_report_ctx
@@ -453,7 +454,7 @@ def show(*args):
 
         # Escape markdown and add deltas
         for idx, input in enumerate(inputs):
-            escaped = _util.escape_markdown(input)
+            escaped = _string_util.escape_markdown(input)
 
             markdown("**%s**" % escaped)
             write(args[idx])
@@ -581,7 +582,7 @@ def _maybe_print_repl_warning():
     if not _repl_warning_has_been_displayed:
         _repl_warning_has_been_displayed = True
 
-        if _util.is_repl():
+        if _env_util.is_repl():
             _LOGGER.warning(
                 _textwrap.dedent(
                     """

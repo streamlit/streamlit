@@ -16,6 +16,7 @@
  */
 
 import { createTheme, lightThemePrimitives } from "baseui"
+import { PLACEMENT as POPOVER_PLACEMENT } from "baseui/popover"
 import { logMessage } from "lib/log"
 import { SCSS_VARS } from "autogen/scssVariables"
 
@@ -128,6 +129,11 @@ export const sliderOverrides = {
 }
 
 export const datePickerOverrides = {
+  Popover: {
+    props: {
+      placement: POPOVER_PLACEMENT.bottomLeft,
+    },
+  },
   CalendarContainer: {
     style: {
       fontSize: fontSizeSm,

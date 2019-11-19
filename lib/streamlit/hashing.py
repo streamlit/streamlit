@@ -31,7 +31,7 @@ import textwrap
 
 import streamlit as st
 from streamlit import config
-from streamlit import util
+from streamlit import file_util
 from streamlit import type_util
 from streamlit.folder_black_list import FolderBlackList
 from streamlit.compatibility import setup_2_3_shims
@@ -327,7 +327,7 @@ class CodeHasher:
                 h = hashlib.new(self.name)
                 filepath = os.path.abspath(obj.__code__.co_filename)
 
-                if util.file_is_in_folder_glob(
+                if file_util.file_is_in_folder_glob(
                     filepath, self._get_main_script_directory()
                 ) and not self._folder_black_list.is_blacklisted(filepath):
                     context = _get_context(obj)

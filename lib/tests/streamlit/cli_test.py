@@ -24,6 +24,7 @@ import requests_mock
 import mock
 from click.testing import CliRunner
 from mock import patch, MagicMock
+from parameterized import parameterized
 from testfixtures import tempdir
 
 import streamlit
@@ -39,6 +40,7 @@ class CliTest(unittest.TestCase):
     def setUp(self):
         cli.name = "test"
         self.runner = CliRunner()
+        streamlit._is_running_with_streamlit = False
 
     def test_run_no_arguments(self):
         """streamlit run should fail if run with no arguments"""
@@ -137,8 +139,8 @@ class CliTest(unittest.TestCase):
         calling `streamlit run...`, and false otherwise.
         """
         self.assertFalse(streamlit._is_running_with_streamlit)
-        with patch("streamlit.cli.bootstrap.run"), patch(
-            "streamlit.credentials.Credentials"
+        with patch("streamlit.cli.bootstrap.run"), mock.patch(
+            "streamlit.credentials.Credentials._check_activated"
         ), patch("streamlit.cli._get_command_line_as_string"):
 
             cli._main_run("/not/a/file", None)
@@ -196,3 +198,41 @@ class CliTest(unittest.TestCase):
             ],
             any_order=True,
         )
+
+    def test_credentials_headless_no_config(self):
+        """If headless mode and no config is present, activation should be None."""
+        from streamlit import config
+
+        config.set_option("server.headless", True)
+
+        with patch("validators.url", return_value=False), patch(
+            "streamlit.bootstrap.run"
+        ), patch("os.path.exists", return_value=True), patch(
+            "streamlit.credentials._check_credential_file_exists", return_value=False
+        ):
+            result = self.runner.invoke(cli, ["run", "some script.py"])
+        from streamlit.credentials import Credentials
+
+        credentials = Credentials.get_current()
+        self.assertIsNone(credentials.activation)
+        self.assertEqual(0, result.exit_code)
+
+    @parameterized.expand([(True,), (False,)])
+    def test_credentials_headless_with_config(self, headless_mode):
+        """If headless, but a cofig file is present, activation should be defined.
+        So we call `_check_activated`.
+        """
+        from streamlit import config
+
+        config.set_option("server.headless", headless_mode)
+
+        with patch("validators.url", return_value=False), patch(
+            "streamlit.bootstrap.run"
+        ), patch("os.path.exists", side_effect=[True, True]), mock.patch(
+            "streamlit.credentials.Credentials._check_activated"
+        ) as mock_check, patch(
+            "streamlit.credentials._check_credential_file_exists", return_value=True
+        ):
+            result = self.runner.invoke(cli, ["run", "some script.py"])
+        self.assertTrue(mock_check.called)
+        self.assertEqual(0, result.exit_code)
