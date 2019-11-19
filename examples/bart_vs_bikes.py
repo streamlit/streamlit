@@ -33,7 +33,9 @@ st.write(
 
 @st.cache
 def from_data_file(filename):
-    dirname = "https://raw.githubusercontent.com/streamlit/streamlit/develop/examples/data/"    
+    dirname = (
+        "https://raw.githubusercontent.com/streamlit/streamlit/develop/examples/data/"
+    )
     url = urljoin(dirname, filename)
     return pd.read_json(url)
 
