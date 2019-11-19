@@ -31,7 +31,8 @@ import pandas as pd
 from streamlit import __version__
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Balloons_pb2 import Balloons
-from streamlit.proto.Text_pb2 import Text
+
+from streamlit.proto.Alert_pb2 import Alert
 from tests import testutil
 import streamlit as st
 
@@ -59,13 +60,22 @@ class StreamlitTest(unittest.TestCase):
         # This is set in lib/tests/conftest.py to False
         self.assertEqual(False, st.get_option("browser.gatherUsageStats"))
 
-    def test_set_option(self):
-        """Test streamlit.set_option."""
+    def test_set_option_scriptable(self):
+        """Test that scriptable options can be set from API."""
         # This is set in lib/tests/conftest.py to off
-        self.assertEqual("off", st.get_option("global.sharingMode"))
+        self.assertEqual(True, st.get_option("client.displayEnabled"))
 
-        st.set_option("global.sharingMode", "s3")
-        self.assertEqual("s3", st.get_option("global.sharingMode"))
+        # client.displayEnabled and client.caching can be set after run starts.
+        st.set_option("client.displayEnabled", False)
+        self.assertEqual(False, st.get_option("client.displayEnabled"))
+
+    def test_set_option_unscriptable(self):
+        """Test that unscriptable options cannot be set with st.set_option."""
+        # This is set in lib/tests/conftest.py to off
+        self.assertEqual(True, st.get_option("server.enableCORS"))
+
+        with self.assertRaises(StreamlitAPIException):
+            st.set_option("server.enableCORS", False)
 
 
 class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
@@ -201,8 +211,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         )
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.text.body, expected.strip())
-        self.assertEqual(el.text.format, Text.MARKDOWN)
+        self.assertEqual(el.markdown.body, expected.strip())
 
     def test_st_dataframe(self):
         """Test st.dataframe."""
@@ -228,8 +237,8 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         st.error("some error")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.text.body, "some error")
-        self.assertEqual(el.text.format, Text.ERROR)
+        self.assertEqual(el.alert.body, "some error")
+        self.assertEqual(el.alert.format, Alert.ERROR)
 
     def test_st_exception(self):
         """Test st.exception."""
@@ -257,8 +266,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         st.header("some header")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.text.body, "## some header")
-        self.assertEqual(el.text.format, Text.MARKDOWN)
+        self.assertEqual(el.markdown.body, "## some header")
 
     def test_st_help(self):
         """Test st.help."""
@@ -358,16 +366,15 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         st.info("some info")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.text.body, "some info")
-        self.assertEqual(el.text.format, Text.INFO)
+        self.assertEqual(el.alert.body, "some info")
+        self.assertEqual(el.alert.format, Alert.INFO)
 
     def test_st_json(self):
         """Test st.json."""
         st.json('{"some": "json"}')
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.text.body, '{"some": "json"}')
-        self.assertEqual(el.text.format, Text.JSON)
+        self.assertEqual(el.json.body, '{"some": "json"}')
 
     def test_st_line_chart(self):
         """Test st.line_chart."""
@@ -395,8 +402,14 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         st.markdown("    some markdown  ")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.text.body, "some markdown")
-        self.assertEqual(el.text.format, Text.MARKDOWN)
+        self.assertEqual(el.markdown.body, "some markdown")
+
+        # test the unsafe_allow_html keyword
+        st.markdown("    some markdown  ", unsafe_allow_html=True)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.markdown.body, "some markdown")
+        self.assertTrue(el.markdown.allow_html)
 
     def test_st_progress(self):
         """Test st.progress."""
@@ -524,16 +537,15 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         st.subheader("some subheader")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.text.body, "### some subheader")
-        self.assertEqual(el.text.format, Text.MARKDOWN)
+        self.assertEqual(el.markdown.body, "### some subheader")
 
     def test_st_success(self):
         """Test st.success."""
         st.success("some success")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.text.body, "some success")
-        self.assertEqual(el.text.format, Text.SUCCESS)
+        self.assertEqual(el.alert.body, "some success")
+        self.assertEqual(el.alert.format, Alert.SUCCESS)
 
     def test_st_table(self):
         """Test st.table."""
@@ -554,15 +566,13 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, "some text")
-        self.assertEqual(el.text.format, Text.PLAIN)
 
     def test_st_title(self):
         """Test st.title."""
         st.title("some title")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.text.body, "# some title")
-        self.assertEqual(el.text.format, Text.MARKDOWN)
+        self.assertEqual(el.markdown.body, "# some title")
 
     def test_st_vega_lite_chart(self):
         """Test st.vega_lite_chart."""
@@ -634,5 +644,5 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         st.warning("some warning")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.text.body, "some warning")
-        self.assertEqual(el.text.format, Text.WARNING)
+        self.assertEqual(el.alert.body, "some warning")
+        self.assertEqual(el.alert.format, Alert.WARNING)

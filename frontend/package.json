@@ -1,12 +1,12 @@
 {
   "name": "streamlit-browser",
-  "version": "0.49.0",
+  "version": "0.50.2",
   "private": true,
   "homepage": ".",
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
-    "start": "export NODE_OPTIONS=--max_old_space_size=4096 && ./scripts/preload.sh && craco start",
-    "build": "export NODE_OPTIONS=--max_old_space_size=4096 && ./scripts/preload.sh && craco build",
+    "start": "export NODE_OPTIONS=--max_old_space_size=4096 && craco start",
+    "build": "export NODE_OPTIONS=--max_old_space_size=4096 && craco build",
     "test": "export NODE_OPTIONS=--max_old_space_size=4096 && craco test --env=jsdom",
     "cy:open": "unset NODE_OPTIONS && cypress open --env devicePixelRatio=1",
     "cy:run": "unset NODE_OPTIONS && cypress run",
@@ -23,6 +23,7 @@
     "@types/classnames": "^2.2.9",
     "@types/katex": "^0.10.2",
     "aws-sdk": "^2.524.0",
+    "axios": "^0.19.0",
     "baseui": "^8.17.1",
     "bokehjs": "^1.2.0",
     "bootstrap": "^4.3.1",

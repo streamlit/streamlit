@@ -21,13 +21,15 @@ import click
 import tornado.ioloop
 
 from streamlit import config
+from streamlit import net_util
+from streamlit import url_util
+from streamlit import env_util
 from streamlit import util
 from streamlit.Report import Report
 from streamlit.logger import get_logger
 from streamlit.server.Server import Server
 
 LOGGER = get_logger(__name__)
-
 
 # Wait for 1 second before opening a browser. This gives old tabs a chance to
 # reconnect.
@@ -70,7 +72,7 @@ def _fix_matplotlib_crash():
     This fix is OS-independent. We didn't see a good reason to make this
     Mac-only. Consistency within Streamlit seemed more important.
     """
-    if sys.platform == "darwin" and config.get_option("runner.fixMatplotlib"):
+    if config.get_option("runner.fixMatplotlib"):
         try:
             # TODO: a better option may be to set
             #  os.environ["MPLBACKEND"] = "Agg". We'd need to do this towards
@@ -85,6 +87,43 @@ def _fix_matplotlib_crash():
             matplotlib.use("Agg")
         except ImportError:
             pass
+
+
+def _fix_tornado_crash():
+    """Set default asyncio policy to be compatible with Tornado 6.
+
+        Tornado 6 (at least) is not compatible with the default
+        asyncio implementation on Windows. So here we
+        pick the older SelectorEventLoopPolicy when the OS is Windows
+        if the known-incompatible default policy is in use.
+
+        This has to happen as early as possible to make it a low priority and
+        overrideable
+
+        See: https://github.com/tornadoweb/tornado/issues/2608
+
+        FIXME: if/when tornado supports the defaults in asyncio,
+        remove and bump tornado requirement for py38
+    """
+    if env_util.IS_WINDOWS and sys.version_info >= (3, 8):
+        import asyncio
+        try:
+            from asyncio import (
+                WindowsProactorEventLoopPolicy,
+                WindowsSelectorEventLoopPolicy,
+            )
+        except ImportError:
+            pass
+            # Not affected
+        else:
+            if (
+                type(asyncio.get_event_loop_policy()) is
+                    WindowsProactorEventLoopPolicy
+            ):
+                # WindowsProactorEventLoopPolicy is not compatible with
+                # Tornado 6 fallback to the pre-3.8 default of Selector
+                asyncio.set_event_loop_policy(
+                    WindowsSelectorEventLoopPolicy())
 
 
 def _fix_sys_argv(script_path, args):
@@ -134,14 +173,14 @@ def _print_url():
 
     elif config.get_option("server.headless"):
         named_urls = [
-            ("Network URL", Report.get_url(util.get_internal_ip())),
-            ("External URL", Report.get_url(util.get_external_ip())),
+            ("Network URL", Report.get_url(net_util.get_internal_ip())),
+            ("External URL", Report.get_url(net_util.get_external_ip())),
         ]
 
     else:
         named_urls = [
             ("Local URL", Report.get_url("localhost")),
-            ("Network URL", Report.get_url(util.get_internal_ip())),
+            ("Network URL", Report.get_url(net_util.get_internal_ip())),
         ]
 
     click.secho("")
@@ -149,7 +188,7 @@ def _print_url():
     click.secho("")
 
     for url_name, url in named_urls:
-        util.print_url(url_name, url)
+        url_util.print_url(url_name, url)
 
     click.secho("")
 
@@ -168,6 +207,7 @@ def run(script_path, command_line, args):
     """
     _fix_sys_path(script_path)
     _fix_matplotlib_crash()
+    _fix_tornado_crash()
     _fix_sys_argv(script_path, args)
 
     # Install a signal handler that will shut down the ioloop

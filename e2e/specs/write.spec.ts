@@ -27,19 +27,19 @@ describe("st.write", () => {
   });
 
   it("displays markdown", () => {
-    cy.get(".element-container .stText p")
+    cy.get(".element-container .stMarkdown p")
       .first()
       .contains("This markdown is awesome!");
   });
 
   it("escapes HTML", () => {
-    cy.get(".element-container .stText p")
+    cy.get(".element-container .stMarkdown p")
       .eq(1)
       .contains("This <b>HTML tag</b> is escaped!");
   });
 
   it("allows HTML if defined explicitly", () => {
-    cy.get(".element-container .stText p")
+    cy.get(".element-container .stMarkdown p")
       .last()
       .contains("This HTML tag is not escaped!");
   });

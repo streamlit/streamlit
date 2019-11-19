@@ -1,5 +1,4 @@
 /**
- * @license
  * Copyright 2018-2019 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,24 +12,14 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+*/
 
-/// <reference types="cypress" />
+syntax = "proto3";
 
-describe("add lots of data to vega chart", () => {
-  before(() => {
-    cy.visit("http://localhost:3000/");
-  });
+// Formatted text
+message Markdown {
+  // Content to display.
+  string body = 1;
 
-  it("updates the x-axis values", () => {
-    cy.get("#ReportStatus").contains("Running...");
-
-    cy.get(".stVegaLiteChart").should("have.length", 1);
-
-    cy.get("#ReportStatus").should("not.exist");
-
-    cy.get(".stVegaLiteChart").matchImageSnapshot(
-      "vega-updates-x-axis-values"
-    );
-  });
-});
+  bool allow_html = 2;
+}

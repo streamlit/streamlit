@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit import util
+from streamlit import file_util
 
 # The files in the folders below should always be blacklisted.
 DEFAULT_FOLDER_BLACKLIST = [
@@ -63,6 +63,6 @@ class FolderBlackList(object):
 
         """
         return any(
-            util.file_is_in_folder_glob(filepath, blacklisted_folder)
+            file_util.file_is_in_folder_glob(filepath, blacklisted_folder)
             for blacklisted_folder in self._folder_blacklist
         )

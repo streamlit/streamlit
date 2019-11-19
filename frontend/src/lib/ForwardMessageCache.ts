@@ -27,7 +27,7 @@ class CacheEntry {
     return curReportRunCount - this.reportRunCount
   }
 
-  public constructor(msg: ForwardMsg, reportRunCount: number) {
+  constructor(msg: ForwardMsg, reportRunCount: number) {
     this.msg = msg
     this.reportRunCount = reportRunCount
   }
@@ -51,7 +51,7 @@ export class ForwardMsgCache {
    */
   private reportRunCount = 0
 
-  public constructor(getServerUri: () => BaseUriParts | undefined) {
+  constructor(getServerUri: () => BaseUriParts | undefined) {
     this.getServerUri = getServerUri
   }
 

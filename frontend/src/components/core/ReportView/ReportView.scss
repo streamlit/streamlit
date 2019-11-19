@@ -243,3 +243,17 @@
     background: #fff;
   }
 }
+
+body.embedded .reportview-container {
+  .main {
+    overflow: hidden;
+
+    .block-container {
+      padding: 0;
+    }
+
+    footer {
+      display: none;
+    }
+  }
+}

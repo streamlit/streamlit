@@ -103,3 +103,42 @@ pre {
 .underlineFirstLetter::first-letter {
   text-decoration: underline;
 }
+
+@media print {
+  .stApp {
+    float: none;
+    height: 100%;
+    position: static;
+    overflow: visible;
+
+    .reportview-container {
+      display: block;
+      float: none;
+      height: 100%;
+      position: static;
+      overflow: visible;
+
+      .main {
+        @-moz-document url-prefix() {
+          display: block;
+        }
+
+        overflow: visible;
+      }
+
+      .element-container {
+        @-moz-document url-prefix() {
+          display: block;
+
+          .table {
+            th {
+              font-weight: normal;
+            }
+          }
+        }
+
+        overflow: visible;
+      }
+    }
+  }
+}
