@@ -111,6 +111,7 @@ def _create_option(
     key,
     description=None,
     default_val=None,
+    scriptable=False,
     visibility="visible",
     deprecated=False,
     deprecation_text=None,
@@ -157,6 +158,7 @@ def _create_option(
         key,
         description=description,
         default_val=default_val,
+        scriptable=scriptable,
         visibility=visibility,
         deprecated=deprecated,
         deprecation_text=deprecation_text,
@@ -312,6 +314,7 @@ _create_option(
     description="Whether to enable st.cache.",
     default_val=True,
     type_=bool,
+    scriptable=True,
 )
 
 _create_option(
@@ -320,6 +323,7 @@ _create_option(
         Streamlit app.""",
     default_val=True,
     type_=bool,
+    scriptable=True,
 )
 
 
