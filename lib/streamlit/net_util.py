@@ -51,7 +51,7 @@ def get_external_ip():
             "Did not auto detect external IP.\n"
             "Please go to %s for debugging hints.",
             # fmt: on
-            util.HELP_DOC,
+            util.HELP_DOC
         )
     else:
         _external_ip = response.strip()

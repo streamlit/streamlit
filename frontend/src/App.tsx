@@ -41,6 +41,7 @@ import {
   Elements,
   BlockElement,
   SimpleElement,
+  ReportElement,
 } from "lib/DeltaParser"
 import {
   ForwardMsg,
@@ -109,7 +110,13 @@ class App extends PureComponent<Props, State> {
     this.state = {
       connectionState: ConnectionState.INITIAL,
       elements: {
-        main: fromJS([makeElementWithInfoText("Please wait...")]),
+        main: fromJS([
+          {
+            element: makeElementWithInfoText("Please wait..."),
+            metadata: {},
+            reportId: "no report",
+          },
+        ]),
         sidebar: fromJS([]),
       },
       reportId: "<null>",
@@ -462,14 +469,22 @@ class App extends PureComponent<Props, State> {
    */
   clearOldElements = (elements: any, reportId: string): BlockElement => {
     return elements
-      .map((element: any) => {
-        if (element instanceof List) {
-          const clearedElements = this.clearOldElements(element, reportId)
+      .map((reportElement: ReportElement) => {
+        const simpleElement = reportElement.get("element")
+
+        if (simpleElement instanceof List) {
+          const clearedElements = this.clearOldElements(
+            simpleElement,
+            reportId
+          )
           return clearedElements.size > 0 ? clearedElements : null
         }
-        return element.get("reportId") === reportId ? element : null
+
+        return reportElement.get("reportId") === reportId
+          ? reportElement
+          : null
       })
-      .filter((element: any) => element !== null)
+      .filter((reportElement: any) => reportElement !== null)
   }
 
   /*
