@@ -488,6 +488,10 @@ class DeltaGenerator(object):
         body : str
             The string to display as Github-flavored Markdown. Syntax
             information can be found at: https://github.github.com/gfm.
+
+            Emoji syntax is supported,
+            more information: https://www.webfx.com/tools/emoji-cheat-sheet/
+
             Inline and block math are supported by KaTeX and remark-math.
 
             The body also support LaTeX expressions, by just wrapping them in
