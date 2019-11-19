@@ -17,13 +17,8 @@
 syntax = "proto3";
 
 message Video {
-  oneof src {
-    // The data in Base64 format.
-    string data = 1;
-
-    // A url pointing to a video file
-    string url = 4;
-  }
+  // A url pointing to a video file
+  string url = 1;
 
   enum Type {
     UNUSED = 0;  // This should always exist.
@@ -31,7 +26,7 @@ message Video {
     YOUTUBE_IFRAME = 2;
   }
 
-  Type type = 5;
+  Type type = 4;
 
   // The type attribute of the HTML <video> tag's <source> subtag.
   // ex: "video/mp4"
