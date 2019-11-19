@@ -21,6 +21,8 @@ import click
 import tornado.ioloop
 
 from streamlit import config
+from streamlit import net_util
+from streamlit import url_util
 from streamlit import util
 from streamlit.Report import Report
 from streamlit.logger import get_logger
@@ -134,14 +136,14 @@ def _print_url():
 
     elif config.get_option("server.headless"):
         named_urls = [
-            ("Network URL", Report.get_url(util.get_internal_ip())),
-            ("External URL", Report.get_url(util.get_external_ip())),
+            ("Network URL", Report.get_url(net_util.get_internal_ip())),
+            ("External URL", Report.get_url(net_util.get_external_ip())),
         ]
 
     else:
         named_urls = [
             ("Local URL", Report.get_url("localhost")),
-            ("Network URL", Report.get_url(util.get_internal_ip())),
+            ("Network URL", Report.get_url(net_util.get_internal_ip())),
         ]
 
     click.secho("")
@@ -149,7 +151,7 @@ def _print_url():
     click.secho("")
 
     for url_name, url in named_urls:
-        util.print_url(url_name, url)
+        url_util.print_url(url_name, url)
 
     click.secho("")
 

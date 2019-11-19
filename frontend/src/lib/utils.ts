@@ -23,6 +23,7 @@ import {
   Map as ImmutableMap,
   Set as ImmutableSet,
 } from "immutable"
+import { Alert as AlertProto } from "autogen/proto"
 import { BlockElement, ReportElement, SimpleElement } from "./DeltaParser"
 
 /**
@@ -63,9 +64,10 @@ export function makeElementWithInfoText(
   text: string
 ): ImmutableMap<string, any> {
   return fromJS({
-    type: "text",
-    text: {
+    type: "alert",
+    alert: {
       body: text,
+      format: AlertProto.Format.INFO,
     },
   })
 }
