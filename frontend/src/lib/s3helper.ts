@@ -34,19 +34,23 @@ let haveCredentials = false
  */
 export function getBucketAndResourceRoot(): {
   bucket: string
-  resourceRoot?: string
+  resourceRoot: string
 } {
   const { hostname, pathname } = url.parse(window.location.href, true)
 
   // Bucket name is always equal to the hostname
   const bucket = String(hostname)
 
-  // Our pathname will look something like some/s3/path/0.49.0-HdbX/index.html?id=9zttR9BsCpG6YP1fMD8rjj
-  // Everything before that final '/' is the resource root.
-  const resourceRoot =
-    pathname != null
-      ? pathname.substring(0, pathname.lastIndexOf("/"))
-      : undefined
+  // We may not have a pathname
+  if (pathname == null || pathname === "/") {
+    return { bucket, resourceRoot: "" }
+  }
+
+  // Our pathname will look something like /some/s3/path/0.49.0-HdbX/index.html?id=9zttR9BsCpG6YP1fMD8rjj
+  // Everything after that initial '/ and before the final '/' is the resource root.
+  const startIdx = pathname.startsWith("/") ? 1 : 0
+  const endIdx = pathname.lastIndexOf("/")
+  const resourceRoot = pathname.substring(startIdx, endIdx)
 
   return { bucket, resourceRoot }
 }
