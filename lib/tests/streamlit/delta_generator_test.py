@@ -189,13 +189,18 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(result, ("foo", "bar"))
 
     def test_set_widget_id(self):
+        # Create a new TextInput proto
         text_input = TextInput()
         text_input.label = 'some_label'
 
+        # Create a new Element protoand set the TextInput message
         element = Element()
         element.text_input.CopyFrom(text_input)
+
+        # Send to set the widget_id for the new element
         _set_widget_id('text_input', element, user_key='some_key')
         
+        # Check widget_id with user_key format
         self.assertEqual(element.text_input.id, 'some_key-text_input')
 
     def test_with_element(self):
