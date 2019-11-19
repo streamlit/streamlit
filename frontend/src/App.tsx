@@ -17,7 +17,7 @@
 
 import React, { Fragment, PureComponent, ReactNode } from "react"
 import { HotKeys } from "react-hotkeys"
-import { fromJS, List, Map } from "immutable"
+import { fromJS, List } from "immutable"
 import classNames from "classnames"
 
 // Other local imports.
