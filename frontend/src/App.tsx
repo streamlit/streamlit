@@ -111,11 +111,11 @@ class App extends PureComponent<Props, State> {
       connectionState: ConnectionState.INITIAL,
       elements: {
         main: fromJS([
-          Map({
+          {
             element: makeElementWithInfoText("Please wait..."),
             metadata: {},
-            reportId: "<null>",
-          }),
+            reportId: "no report",
+          },
         ]),
         sidebar: fromJS([]),
       },
