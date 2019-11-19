@@ -238,7 +238,8 @@ def write(*args, **kwargs):
 
         Arguments are handled as follows:
 
-            - write(string)     : Prints the formatted Markdown string.
+            - write(string)     : Prints the formatted Markdown string with
+                                  Emoji support.
             - write(data_frame) : Displays the DataFrame as a table.
             - write(error)      : Prints an exception specially.
             - write(func)       : Displays information about a function.
@@ -283,10 +284,10 @@ def write(*args, **kwargs):
     Its simplest use case is to draw Markdown-formatted text, whenever the
     input is a string:
 
-    >>> write('Hello, *World!*')
+    >>> write('Hello, *World!* :sunglasses:')
 
     .. output::
-       https://share.streamlit.io/0.25.0-2JkNY/index.html?id=DUJaq97ZQGiVAFi6YvnihF
+       https://share.streamlit.io/0.50.2-ZWk9/index.html?id=Pn5sjhgNs4a8ZbiUoSTRxE
        height: 50px
 
     As mentioned earlier, `st.write()` also accepts other data formats, such as
