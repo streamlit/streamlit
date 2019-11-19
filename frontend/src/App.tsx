@@ -41,6 +41,7 @@ import {
   Elements,
   BlockElement,
   SimpleElement,
+  ReportElement,
 } from "lib/DeltaParser"
 import {
   ForwardMsg,
@@ -78,7 +79,7 @@ interface State {
   connectionState: ConnectionState
   elements: Elements
   reportId: string
-  reportName: string | null
+  reportHash: string | null
   reportRunState: ReportRunState
   showLoginBox: boolean
   userSettings: UserSettings
@@ -109,11 +110,17 @@ class App extends PureComponent<Props, State> {
     this.state = {
       connectionState: ConnectionState.INITIAL,
       elements: {
-        main: fromJS([makeElementWithInfoText("Please wait...")]),
+        main: fromJS([
+          {
+            element: makeElementWithInfoText("Please wait..."),
+            metadata: {},
+            reportId: "no report",
+          },
+        ]),
         sidebar: fromJS([]),
       },
       reportId: "<null>",
-      reportName: null,
+      reportHash: null,
       reportRunState: ReportRunState.NOT_RUNNING,
       showLoginBox: false,
       userSettings: {
@@ -382,10 +389,14 @@ class App extends PureComponent<Props, State> {
    * @param newReportProto a NewReport protobuf
    */
   handleNewReport(newReportProto: NewReport): void {
-    const name = newReportProto.name
-    const scriptPath = newReportProto.scriptPath
+    const { reportHash } = this.state
+    const { name: reportName, scriptPath } = newReportProto
 
-    document.title = `${name} · Streamlit`
+    const newReportHash = hashString(
+      SessionInfo.current.installationId + scriptPath
+    )
+
+    document.title = `${reportName} · Streamlit`
 
     MetricsManager.current.clearDeltaCounter()
 
@@ -394,13 +405,16 @@ class App extends PureComponent<Props, State> {
       // how many projects are being created with Streamlit while still keeping
       // possibly-sensitive info like the scriptPath outside of our metrics
       // services.
-      reportHash: hashString(SessionInfo.current.installationId + scriptPath),
+      reportHash: newReportHash,
     })
 
-    this.setState({
-      reportId: newReportProto.id,
-      reportName: name,
-    })
+    if (reportHash === newReportHash) {
+      this.setState({
+        reportId: newReportProto.id,
+      })
+    } else {
+      this.clearAppState(newReportHash, newReportProto.id)
+    }
   }
 
   /**
@@ -455,14 +469,42 @@ class App extends PureComponent<Props, State> {
    */
   clearOldElements = (elements: any, reportId: string): BlockElement => {
     return elements
-      .map((element: any) => {
-        if (element instanceof List) {
-          const clearedElements = this.clearOldElements(element, reportId)
+      .map((reportElement: ReportElement) => {
+        const simpleElement = reportElement.get("element")
+
+        if (simpleElement instanceof List) {
+          const clearedElements = this.clearOldElements(
+            simpleElement,
+            reportId
+          )
           return clearedElements.size > 0 ? clearedElements : null
         }
-        return element.get("reportId") === reportId ? element : null
+
+        return reportElement.get("reportId") === reportId
+          ? reportElement
+          : null
       })
-      .filter((element: any) => element !== null)
+      .filter((reportElement: any) => reportElement !== null)
+  }
+
+  /*
+   * Clear all elements from the state.
+   */
+  clearAppState(reportHash: string, reportId: string): void {
+    this.setState(
+      {
+        reportHash,
+        reportId,
+        elements: {
+          main: fromJS([]),
+          sidebar: fromJS([]),
+        },
+      },
+      () => {
+        this.elementListBuffer = this.state.elements
+        this.widgetMgr.clean(fromJS([]))
+      }
+    )
   }
 
   /**

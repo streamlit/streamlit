@@ -34,7 +34,7 @@ describe("st.text_area", () => {
   });
 
   it("has correct default values", () => {
-    cy.get(".stText").should(
+    cy.get(".stMarkdown").should(
       "have.text",
       'value 1: "  "' +
         'value 2: " default text "' +
@@ -48,7 +48,7 @@ describe("st.text_area", () => {
       .first()
       .type("test area{enter}");
 
-    cy.get(".stText").should(
+    cy.get(".stMarkdown").should(
       "have.text",
       'value 1: "  "' +
         'value 2: " default text "' +
@@ -62,7 +62,7 @@ describe("st.text_area", () => {
       .first()
       .type("test area{ctrl}{enter}");
 
-    cy.get(".stText").should(
+    cy.get(".stMarkdown").should(
       "have.text",
       'value 1: " test area "' +
         'value 2: " default text "' +
@@ -76,7 +76,7 @@ describe("st.text_area", () => {
       .first()
       .type("test area{command}{enter}");
 
-    cy.get(".stText").should(
+    cy.get(".stMarkdown").should(
       "have.text",
       'value 1: " test area "' +
         'value 2: " default text "' +
@@ -91,7 +91,7 @@ describe("st.text_area", () => {
       .type("test area")
       .blur();
 
-    cy.get(".stText").should(
+    cy.get(".stMarkdown").should(
       "have.text",
       'value 1: " test area "' +
         'value 2: " default text "' +

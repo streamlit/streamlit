@@ -288,6 +288,7 @@ class ConfigTest(unittest.TestCase):
                 u"server.enableCORS",
                 u"server.baseUrlPath",
                 u"server.folderWatchBlacklist",
+                u"server.fileWatcherType",
                 u"server.headless",
                 u"server.liveSave",
                 u"server.port",

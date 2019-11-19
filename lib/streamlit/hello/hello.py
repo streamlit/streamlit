@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A "Hello World" app."""
-
 from __future__ import division, unicode_literals
 
 import inspect

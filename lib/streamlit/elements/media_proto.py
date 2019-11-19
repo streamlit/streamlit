@@ -33,11 +33,11 @@ from streamlit.proto import Video_pb2
 # URL (incl. shortlinks and embed links) and extracts its code.
 YOUTUBE_RE = re.compile(
     # Protocol
-    "http(?:s?):\/\/"
+    r"http(?:s?):\/\/"
     # Domain
-    "(?:www\.)?youtu(?:be\.com|\.be)\/"
+    r"(?:www\.)?youtu(?:be\.com|\.be)\/"
     # Path and query string
-    "(?P<watch>(watch\?v=)|embed\/)?(?P<code>[\w\-\_]*)(&(amp;)?[\w\?=]*)?"
+    r"(?P<watch>(watch\?v=)|embed\/)?(?P<code>[\w\-\_]*)(&(amp;)?[\w\?=]*)?"
 )
 
 
@@ -73,7 +73,7 @@ def _marshall_binary(proto, data):
     data : a buffer with the binary data. Supported formats: str, bytes,
         BytesIO, NumPy array, or a file opened with io.open().
     """
-    if type(data) in string_types:
+    if type(data) in string_types:  # noqa: F821
         # Python3 raises TypeError for unencodable text (but not Python 2.7)
         b64encodable = bytes(data)
     elif type(data) is newbytes:
@@ -119,7 +119,7 @@ def marshall_video(proto, data, format="video/mp4", start_time=0):
     proto.start_time = start_time
     proto.type = Video_pb2.Video.Type.NATIVE
 
-    if isinstance(data, string_types) and url(data):
+    if isinstance(data, string_types) and url(data):  # noqa: F821
         youtube_url = _reshape_youtube_url(data)
         if youtube_url:
             proto.url = youtube_url
@@ -151,7 +151,7 @@ def marshall_audio(proto, data, format="audio/wav", start_time=0):
     proto.format = format
     proto.start_time = start_time
 
-    if isinstance(data, string_types) and url(data):
+    if isinstance(data, string_types) and url(data):  # noqa: F821
         proto.url = data
     else:
         _marshall_binary(proto, data)

@@ -16,7 +16,9 @@
 """Server related utility functions"""
 
 from streamlit import config
-from streamlit import util
+from streamlit import net_util
+from streamlit import type_util
+from streamlit import url_util
 from streamlit.ForwardMsgCache import populate_hash_if_needed
 
 # Largest message that can be sent via the WebSocket connection.
@@ -107,7 +109,7 @@ def is_url_from_allowed_origins(url):
         # Allow everything when CORS is disabled.
         return True
 
-    hostname = util.get_hostname(url)
+    hostname = url_util.get_hostname(url)
 
     allowed_domains = [
         # Check localhost first.
@@ -119,13 +121,13 @@ def is_url_from_allowed_origins(url):
         _get_server_address_if_manually_set,
         _get_s3_url_host_if_manually_set,
         # Then try the options that depend on HTTP requests or opening sockets.
-        util.get_internal_ip,
-        util.get_external_ip,
+        net_util.get_internal_ip,
+        net_util.get_external_ip,
         lambda: config.get_option("s3.bucket"),
     ]
 
     for allowed_domain in allowed_domains:
-        if util.is_function(allowed_domain):
+        if type_util.is_function(allowed_domain):
             allowed_domain = allowed_domain()
 
         if allowed_domain is None:
@@ -139,12 +141,12 @@ def is_url_from_allowed_origins(url):
 
 def _get_server_address_if_manually_set():
     if config.is_manually_set("browser.serverAddress"):
-        return util.get_hostname(config.get_option("browser.serverAddress"))
+        return url_util.get_hostname(config.get_option("browser.serverAddress"))
 
 
 def _get_s3_url_host_if_manually_set():
     if config.is_manually_set("s3.url"):
-        return util.get_hostname(config.get_option("s3.url"))
+        return url_util.get_hostname(config.get_option("s3.url"))
 
 
 def make_url_path_regex(*path, **kwargs):

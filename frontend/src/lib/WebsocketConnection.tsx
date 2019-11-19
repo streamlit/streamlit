@@ -15,14 +15,16 @@
  * limitations under the License.
  */
 
-import { BackMsg, ForwardMsg, IBackMsg } from "autogen/proto"
+import React, { Fragment } from "react"
+
+import axios from "axios"
+import Resolver from "lib/Resolver"
+import { SessionInfo } from "lib/SessionInfo"
 import { ConnectionState } from "lib/ConnectionState"
 import { ForwardMsgCache } from "lib/ForwardMessageCache"
 import { logError, logMessage, logWarning } from "lib/log"
-import Resolver from "lib/Resolver"
+import { BackMsg, ForwardMsg, IBackMsg } from "autogen/proto"
 import { BaseUriParts, buildHttpUri, buildWsUri } from "lib/UriUtil"
-import { SessionInfo } from "lib/SessionInfo"
-import React, { Fragment } from "react"
 
 /**
  * Name of the logger.
@@ -167,7 +169,7 @@ export class WebsocketConnection {
    */
   private wsConnectionTimeoutId?: number
 
-  public constructor(props: Args) {
+  constructor(props: Args) {
     this.args = props
     this.cache = new ForwardMsgCache(() => this.getBaseUriParts())
     this.stepFsm("INITIALIZED")
@@ -479,14 +481,6 @@ function doHealthPing(
     window.setTimeout(retryImmediately, retryTimeout)
   }
 
-  // Using XHR because it supports timeouts.
-  // The location of this declaration matters, as XMLHttpRequests can lead to a
-  // memory leak when initialized inside a callback. See
-  // https://stackoverflow.com/a/40532229 for more info.
-  const xhr = new XMLHttpRequest()
-
-  xhr.timeout = timeoutMs
-
   const retryWhenTheresNoResponse = (): void => {
     const uri = new URL(uriList[uriNumber])
 
@@ -523,40 +517,53 @@ function doHealthPing(
     )
   }
 
-  xhr.onreadystatechange = () => {
-    if (xhr.readyState !== /* DONE */ 4) {
-      return
-    }
-
-    if (xhr.responseText === "ok") {
-      resolver.resolve(uriNumber)
-    } else if (xhr.status === /* NO RESPONSE */ 0) {
-      retryWhenTheresNoResponse()
-    } else if (xhr.status === 403) {
-      retryWhenIsForbidden()
-    } else {
-      retry(
-        `Connection failed with status ${xhr.status}, ` +
-          `and response "${xhr.responseText}".`
-      )
-    }
-  }
-
-  xhr.ontimeout = e => {
-    retry("Connection timed out.")
-  }
-
   connect = () => {
     const uri = uriList[uriNumber]
     logMessage(LOG, `Attempting to connect to ${uri}.`)
     tryTimestamp = Date.now()
-    xhr.open("GET", uri, true)
 
     if (uriNumber === 0) {
       totalTries++
     }
 
-    xhr.send(null)
+    axios
+      .get(uri, {
+        timeout: timeoutMs,
+      })
+      .then(() => {
+        resolver.resolve(uriNumber)
+      })
+      .catch(error => {
+        if (error.code === "ECONNABORTED") {
+          return retry("Connection timed out.")
+        }
+
+        if (error.response) {
+          // The request was made and the server responded with a status code
+          // that falls out of the range of 2xx
+
+          const { data, status } = error.response
+
+          if (status === /* NO RESPONSE */ 0) {
+            return retryWhenTheresNoResponse()
+          } else if (status === 403) {
+            return retryWhenIsForbidden()
+          } else {
+            return retry(
+              `Connection failed with status ${status}, ` +
+                `and response "${data}".`
+            )
+          }
+        } else if (error.request) {
+          // The request was made but no response was received
+          // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
+          // http.ClientRequest in node.js
+          return retryWhenTheresNoResponse()
+        } else {
+          // Something happened in setting up the request that triggered an Error
+          return retry(error.message)
+        }
+      })
   }
 
   connect()
