@@ -222,7 +222,7 @@ def set_option(key, value):
         return
 
     raise StreamlitAPIException(
-        '{key} cannot be set on the fly. Set as command line option, e.g. streamlit run script.py --{key}, or in config.toml instead.'.format(key=key)
+        "{key} cannot be set on the fly. Set as command line option, e.g. streamlit run script.py --{key}, or in config.toml instead.".format(key=key)
     )
 
 
