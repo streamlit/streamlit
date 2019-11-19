@@ -59,6 +59,7 @@ class NumberInput extends React.PureComponent<Props, State> {
 
     this.state = {
       dirty: false,
+      // Todo: format the value here in case the user passed in something crazy
       value: this.getData().get("default"),
     }
   }
