@@ -21,6 +21,7 @@ from parameterized import parameterized
 
 from streamlit import util
 
+
 class UtilTest(unittest.TestCase):
     """Test Streamlit utility functions."""
 
@@ -31,7 +32,9 @@ class UtilTest(unittest.TestCase):
         self.assertNotEqual(non_memoized_func(), non_memoized_func())
         self.assertEqual(yes_memoized_func(), yes_memoized_func())
 
-    @parameterized.expand([("Linux", False, True), ("Windows", True, False), ("Darwin", False, True)])
+    @parameterized.expand(
+        [("Linux", False, True), ("Windows", True, False), ("Darwin", False, True)]
+    )
     def test_open_browser(self, os_type, webbrowser_expect, popen_expect):
         """Test web browser opening scenarios."""
         from streamlit import env_util
@@ -53,8 +56,7 @@ class UtilTest(unittest.TestCase):
 
         env_util.IS_LINUX_OR_BSD = True
 
-        with patch("streamlit.env_util.is_executable_in_path",
-                   return_value=False):
+        with patch("streamlit.env_util.is_executable_in_path", return_value=False):
             with patch("webbrowser.open") as webbrowser_open:
                 with patch("subprocess.Popen") as subprocess_popen:
                     util.open_browser("http://some-url")
