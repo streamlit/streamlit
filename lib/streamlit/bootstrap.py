@@ -87,15 +87,20 @@ def _fix_matplotlib_crash():
 
 
 def _fix_tornado_crash():
-    """set default asyncio policy to be compatible with tornado
-    Tornado 6 (at least) is not compatible with the default
-    asyncio implementation on Windows
-    Pick the older SelectorEventLoopPolicy on Windows
-    if the known-incompatible default policy is in use.
-    do this as early as possible to make it a low priority and overrideable
-    ref: https://github.com/tornadoweb/tornado/issues/2608
-    FIXME: if/when tornado supports the defaults in asyncio,
-           remove and bump tornado requirement for py38
+    """Set default asyncio policy to be compatible with Tornado 6.
+
+        Tornado 6 (at least) is not compatible with the default
+        asyncio implementation on Windows. So here we
+        pick the older SelectorEventLoopPolicy when the OS is Windows
+        if the known-incompatible default policy is in use.
+
+        This has to happen as early as possible to make it a low priority and
+        overrideable
+
+        See: https://github.com/tornadoweb/tornado/issues/2608
+
+        FIXME: if/when tornado supports the defaults in asyncio,
+        remove and bump tornado requirement for py38
     """
     if sys.platform.startswith("win") and sys.version_info >= (3, 8):
         import asyncio
@@ -106,15 +111,14 @@ def _fix_tornado_crash():
             )
         except ImportError:
             pass
-            # not affected
+            # Not affected
         else:
             if (
                 type(asyncio.get_event_loop_policy()) is
                     WindowsProactorEventLoopPolicy
             ):
-                # WindowsProactorEventLoopPolicy
-                # is not compatible with tornado 6
-                # fallback to the pre-3.8 default of Selector
+                # WindowsProactorEventLoopPolicy is not compatible with
+                # Tornado 6 fallback to the pre-3.8 default of Selector
                 asyncio.set_event_loop_policy(
                     WindowsSelectorEventLoopPolicy())
 
