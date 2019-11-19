@@ -86,6 +86,8 @@ $m1-2-font-size-base: $font-size-base / 2; // m1-2 = multiply by 1/2
 $sidebar-width: 21rem;
 $content-max-width: 730px; // This number comes from bootstrap.
 $header-height: 3.5rem;
+$top-margin: 5rem;
+$bottom-margin: $top-margin * 2;
 
 // Custom values for full screen use.
 $fullscreen-button: 2rem;
@@ -96,8 +98,6 @@ $overlayBtn-height: 2.5rem;
 $overlayBtn-width: 2.5rem;
 $overlayBtn-opacity-visible: 0.25;
 $overlayBtn-opacity-active: 0.75;
-$top-margin: 5rem;
-$bottom-margin: $top-margin * 2;
 
 // Animation settings
 $normal-animation-duration: 300ms;

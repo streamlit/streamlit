@@ -57,7 +57,7 @@ export class SessionInfo {
     return SessionInfo.singleton != null
   }
 
-  public constructor({
+  constructor({
     streamlitVersion,
     pythonVersion,
     installationId,
