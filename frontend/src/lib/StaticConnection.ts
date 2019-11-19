@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-import url from "url"
 import { ConnectionState } from "lib/ConnectionState"
 import { ForwardMsg, StaticManifest } from "autogen/proto"
 import { getBucketAndResourceRoot, getObject } from "lib/s3helper"
