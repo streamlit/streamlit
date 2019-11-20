@@ -68,9 +68,8 @@ class Video extends React.PureComponent<Props> {
       )
     }
 
+    // TODO: simplify after checking no more to do here
     const src = element.get("url")
-      ? element.get("url")
-      : "data:" + element.get("format") + ";base64," + element.get("data")
 
     return (
       <video

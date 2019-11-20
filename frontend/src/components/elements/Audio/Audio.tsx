@@ -43,9 +43,9 @@ class Audio extends React.PureComponent<Props> {
 
   public render(): React.ReactNode {
     const { element, width } = this.props
+
+    // TODO: simplify after checking no more to do here.
     const src = element.get("url")
-      ? element.get("url")
-      : "data:" + element.get("format") + ";base64," + element.get("data")
 
     return (
       <audio
