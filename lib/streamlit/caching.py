@@ -629,10 +629,9 @@ class Cache(dict):
 
     """
 
-    def __init__(self, persist=False, allow_output_mutation=False, hash_funcs=None):
+    def __init__(self, persist=False, allow_output_mutation=False):
         self._persist = persist
         self._allow_output_mutation = allow_output_mutation
-        self._hash_funcs = hash_funcs
 
         dict.__init__(self)
 
@@ -676,7 +675,7 @@ class Cache(dict):
         context = Context(dict(caller_frame.f_globals, **caller_frame.f_locals), {}, {})
         code = compile(program, filename, "exec")
 
-        code_hasher = CodeHasher("md5", hash_funcs=self._hash_funcs)
+        code_hasher = CodeHasher("md5")
         code_hasher.update(code, context)
         LOGGER.debug("Hashing block in %i bytes.", code_hasher.size)
 
@@ -690,7 +689,6 @@ class Cache(dict):
                 self._allow_output_mutation,
                 code,
                 [caller_lineno + 1, caller_lineno + len(lines)],
-                self._hash_funcs,
             )
             self.update(value)
         except (CacheKeyNotFoundError, CachedObjectWasMutatedError):
@@ -703,7 +701,6 @@ class Cache(dict):
                     persist=False,
                     allow_output_mutation=True,
                     args_mutated=None,
-                    hash_funcs=None,
                 )
                 return True
 
@@ -714,7 +711,6 @@ class Cache(dict):
                 persist=self._persist,
                 allow_output_mutation=self._allow_output_mutation,
                 args_mutated=None,
-                hash_funcs=self._hash_funcs,
             )
 
         # Return False so that we have control over the execution.
