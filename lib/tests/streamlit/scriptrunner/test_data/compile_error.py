@@ -19,4 +19,4 @@ import streamlit as st
 
 placeholder = st.text('this will never run!')
 
-because i am a compile error!
+because i am a compile error! # noqa: E999 pylint:disable=syntax-error
