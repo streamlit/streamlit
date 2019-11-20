@@ -101,6 +101,7 @@ class App extends PureComponent<Props, State> {
   connectionManager: ConnectionManager | null
   widgetMgr: WidgetStateManager
   elementListBuffer: Elements | null
+  oldElementListBuffer: Elements | null
   elementListBufferTimerIsSet: boolean
 
   constructor(props: Props) {
@@ -151,6 +152,7 @@ class App extends PureComponent<Props, State> {
     })
     this.elementListBufferTimerIsSet = false
     this.elementListBuffer = null
+    this.oldElementListBuffer = null
 
     window.streamlitDebug = {}
     window.streamlitDebug.closeConnection = this.closeConnection.bind(this)
@@ -427,6 +429,7 @@ class App extends PureComponent<Props, State> {
           },
         }),
         () => {
+          this.oldElementListBuffer = this.elementListBuffer
           this.elementListBuffer = this.state.elements
         }
       )
@@ -833,6 +836,7 @@ class App extends PureComponent<Props, State> {
             <ReportView
               wide={this.state.userSettings.wideMode}
               elements={this.state.elements}
+              elementListBuffer={this.oldElementListBuffer}
               reportId={this.state.reportId}
               reportRunState={this.state.reportRunState}
               showStaleElementIndicator={
