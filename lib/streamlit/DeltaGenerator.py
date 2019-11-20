@@ -1421,21 +1421,22 @@ class DeltaGenerator(object):
 
         Example
         -------
-        >>> audio_file = open('myaudio.ogg', 'rb')
-        >>> audio_bytes = audio_file.read()
-        >>>
-        >>> st.audio(audio_bytes, format='audio/ogg')
+        >>> st.audio('myaudio.ogg', format='audio/ogg')
 
         .. output::
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=Dv3M9sA7Cg8gwusgnVNTHb
            height: 400px
 
         """
-        # TODO: Provide API to convert raw NumPy arrays to audio file (with
-        # proper headers, etc)?
         from .elements import media_proto
 
-        media_proto.marshall_audio(element.audio, data, format, start_time)
+        # TODO: write bytes to file.
+        url = data
+        media_proto.marshall_audio(element.audio, url, format, start_time)
+
+        # TODO: Get rid of the following TODO.
+        # TODO: Provide API to convert raw NumPy arrays to audio file (with
+        # proper headers, etc)?
 
     @_with_element
     def video(self, element, data, format="video/mp4", start_time=0):
@@ -1457,10 +1458,7 @@ class DeltaGenerator(object):
 
         Example
         -------
-        >>> video_file = open('myvideo.mp4', 'rb')
-        >>> video_bytes = video_file.read()
-        >>>
-        >>> st.video(video_bytes)
+        >>> st.video('myvideo.mp4')
 
         .. output::
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=Wba9sZELKfKwXH4nDCCbMv
@@ -1471,7 +1469,9 @@ class DeltaGenerator(object):
         # proper headers, etc)?
         from .elements import media_proto
 
-        media_proto.marshall_video(element.video, data, format, start_time)
+        # TODO: write bytes to file.
+        url = data
+        media_proto.marshall_video(element.video, url, format, start_time)
 
     @_with_element
     def button(self, element, label, key=None):
