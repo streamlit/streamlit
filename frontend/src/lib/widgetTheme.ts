@@ -239,6 +239,14 @@ export const buttonOverrides = {
   },
 }
 
+export const multiSelectOverrides = {
+  ValueContainer: {
+    style: () => ({
+      height: "44px", // Fixing height in order to prevent some changing height
+    }),
+  },
+}
+
 export const radioOverrides = {
   Root: {
     style: ({ $isFocused }: any) => ({
