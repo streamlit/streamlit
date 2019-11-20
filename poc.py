@@ -7,6 +7,7 @@ import wave
 
 st.title("Audio test")
 
+
 def generated():
     st.title("Generated audio (440Hz sine wave)")
 
@@ -14,7 +15,6 @@ def generated():
         t = np.linspace(0, length, length * rate)
         data = np.sin(2 * np.pi * freq * t) * amp
         return data.astype(np.int16)
-
 
     frequency = 440  # hertz
     nchannels = 1
@@ -37,14 +37,16 @@ def generated():
 
     f.close()
     x.text("Sending wave...")
-    #x.audio("sound.wav")
-    #x.audio("file:///Users/nthmost/projects/git/STREAMLIT/streamlit/sound.wav")
+    # x.audio("sound.wav")
+    # x.audio("file:///Users/nthmost/projects/git/STREAMLIT/streamlit/sound.wav")
     x.audio("http://localhost:8000/sound.wav")
+
 
 generated()
 
 
 st.title("Audio from a URL")
+
 
 def shorten_audio_option(opt):
     return opt.split("/")[-1]
