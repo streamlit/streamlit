@@ -53,7 +53,7 @@ def _reshape_youtube_url(url):
 
     Example
     -------
-    >>> print(process_video_url('https://youtu.be/_T8LGqJtuGc'))
+    >>> print(_reshape_youtube_url('https://youtu.be/_T8LGqJtuGc'))
 
     .. output::
         https://www.youtube.com/embed/_T8LGqJtuGc
@@ -64,50 +64,14 @@ def _reshape_youtube_url(url):
     return None
 
 
-def _marshall_binary(proto, data):
-    """Marshals a proto with binary data (converts to base64).
+def marshall_video(proto, url, format="video/mp4", start_time=0):
+    """Marshalls a video proto, using url processors as needed.
 
     Parameters
     ----------
     proto : the proto to fill. Must have a string field called "data".
-    data : a buffer with the binary data. Supported formats: str, bytes,
-        BytesIO, NumPy array, or a file opened with io.open().
-    """
-    if type(data) in string_types:  # noqa: F821
-        # Python3 raises TypeError for unencodable text (but not Python 2.7)
-        b64encodable = bytes(data)
-    elif type(data) is newbytes:
-        b64encodable = data
-    elif type(data) is bytes:
-        # Must come after str, since byte and str are equivalent in Python 2.7.
-        b64encodable = data
-    elif isinstance(data, io.BytesIO):
-        data.seek(0)
-        b64encodable = data.getvalue()
-    elif isinstance(data, io.IOBase):
-        data.seek(0)
-        b64encodable = data.read()
-    elif type(data).__name__ == "ndarray":
-        b64encodable = data
-    else:
-        raise RuntimeError("Invalid binary data format: %s" % type(data))
-
-    data_b64 = base64.b64encode(b64encodable)
-    proto.data = data_b64.decode("utf-8")
-
-
-def marshall_video(proto, data, format="video/mp4", start_time=0):
-    """Marshalls a video proto, using data and url processors as needed.
-
-    Parameters
-    ----------
-    proto : the proto to fill. Must have a string field called "data".
-    data : str, bytes, BytesIO, numpy.ndarray, or file opened with
-           io.open().
-        Raw video data or a string with a URL pointing to the video
-        to load. Includes support for YouTube URLs.
-        If passing the raw data, this must include headers and any other
-        bytes required in the actual file.
+    url : str
+        String with a URL pointing to the file to load.
     format : str
         The mime type for the video file. Defaults to 'video/mp4'.
         See https://tools.ietf.org/html/rfc4281 for more info.
@@ -119,28 +83,22 @@ def marshall_video(proto, data, format="video/mp4", start_time=0):
     proto.start_time = start_time
     proto.type = Video_pb2.Video.Type.NATIVE
 
-    if isinstance(data, string_types) and url(data):  # noqa: F821
-        youtube_url = _reshape_youtube_url(data)
-        if youtube_url:
-            proto.url = youtube_url
-            proto.type = Video_pb2.Video.Type.YOUTUBE_IFRAME
-        else:
-            proto.url = data
+    youtube_url = _reshape_youtube_url(url)
+    if youtube_url:
+        proto.url = youtube_url
+        proto.type = Video_pb2.Video.Type.YOUTUBE_IFRAME
     else:
-        _marshall_binary(proto, data)
+        proto.url = url 
 
 
-def marshall_audio(proto, data, format="audio/wav", start_time=0):
+def marshall_audio(proto, url, format="audio/wav", start_time=0):
     """Marshalls an audio proto, using data and url processors as needed.
 
     Parameters
     ----------
-    proto : The proto to fill. Must have a string field called "data".
-    data : str, bytes, BytesIO, numpy.ndarray, or file opened with
-            io.open()
-        Raw audio data or a string with a URL pointing to the file to load.
-        If passing the raw data, this must include headers and any other bytes
-        required in the actual file.
+    proto : The proto to fill. Must have a string field called "url".
+    url : str  
+        String with a URL pointing to the file to load.
     format : str
         The mime type for the audio file. Defaults to "audio/wav".
         See https://tools.ietf.org/html/rfc4281 for more info.
@@ -150,8 +108,5 @@ def marshall_audio(proto, data, format="audio/wav", start_time=0):
 
     proto.format = format
     proto.start_time = start_time
+    proto.url = url
 
-    if isinstance(data, string_types) and url(data):  # noqa: F821
-        proto.url = data
-    else:
-        _marshall_binary(proto, data)
