@@ -30,9 +30,9 @@ const preventDefault = jest.fn()
 const getProps = (elementProps: object = {}): Props => ({
   element: fromJS({
     label: "Label",
+    min: -Infinity,
+    max: +Infinity,
     intData: {
-      min: -Infinity,
-      max: +Infinity,
       default: 0,
     },
     ...elementProps,
@@ -60,9 +60,9 @@ describe("NumberInput", () => {
   describe("Value", () => {
     it("Should pass a default value", () => {
       const props = getProps({
+        min: -Infinity,
+        max: +Infinity,
         intData: {
-          min: -Infinity,
-          max: +Infinity,
           default: 10,
         },
       })
@@ -73,9 +73,9 @@ describe("NumberInput", () => {
 
     it("Should call onChange", () => {
       const props = getProps({
+        min: -Infinity,
+        max: +Infinity,
         intData: {
-          min: -Infinity,
-          max: +Infinity,
           default: 10,
         },
       })
@@ -97,9 +97,9 @@ describe("NumberInput", () => {
 
     it("Should set value on Enter", () => {
       const props = getProps({
+        min: -Infinity,
+        max: +Infinity,
         intData: {
-          min: -Infinity,
-          max: +Infinity,
           default: 10,
         },
       })
@@ -124,9 +124,9 @@ describe("NumberInput", () => {
   describe("Step", () => {
     it("Should have an step", () => {
       const props = getProps({
+        min: -Infinity,
+        max: +Infinity,
         intData: {
-          min: -Infinity,
-          max: +Infinity,
           default: 10,
           step: 1,
         },
@@ -139,12 +139,12 @@ describe("NumberInput", () => {
 
     it("Should change the state when ArrowUp", () => {
       const props = getProps({
+        min: -Infinity,
+        max: +Infinity,
+        format: "%d",
         intData: {
-          min: -Infinity,
-          max: +Infinity,
           default: 10,
           step: 1,
-          format: "%d",
         },
       })
       const wrapper = shallow(<NumberInput {...props} />)
@@ -163,12 +163,12 @@ describe("NumberInput", () => {
 
     it("Should change the state when ArrowDown", () => {
       const props = getProps({
+        min: -Infinity,
+        max: +Infinity,
+        format: "%d",
         intData: {
-          min: -Infinity,
-          max: +Infinity,
           default: 10,
           step: 1,
-          format: "%d",
         },
       })
       const wrapper = shallow(<NumberInput {...props} />)
@@ -187,12 +187,12 @@ describe("NumberInput", () => {
 
     it("stepDown button onClick", () => {
       const props = getProps({
+        min: -Infinity,
+        max: +Infinity,
+        format: "%d",
         intData: {
-          min: -Infinity,
-          max: +Infinity,
           default: 10,
           step: 1,
-          format: "%d",
         },
       })
       const wrapper = shallow(<NumberInput {...props} />)
@@ -207,12 +207,12 @@ describe("NumberInput", () => {
 
     it("stepUp button onClick", () => {
       const props = getProps({
+        min: -Infinity,
+        max: +Infinity,
+        format: "%d",
         intData: {
-          min: -Infinity,
-          max: +Infinity,
           default: 10,
           step: 1,
-          format: "%d",
         },
       })
       const wrapper = shallow(<NumberInput {...props} />)

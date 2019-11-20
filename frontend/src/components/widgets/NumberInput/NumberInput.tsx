@@ -45,7 +45,7 @@ interface State {
   value: number
 
   /**
-   * The value with applied format that is going to be Shown to the user
+   * The value with applied format that is going to be shown to the user
    */
   formattedValue: string
 }
@@ -56,11 +56,12 @@ class NumberInput extends React.PureComponent<Props, State> {
   constructor(props: Props) {
     super(props)
 
+    const defaultValue = this.getData().get("default")
+
     this.state = {
       dirty: false,
-      // Todo: format the value here in case the user passed in something crazy
-      value: this.getData().get("default"),
-      formattedValue: this.formatValue(this.getData().get("default")),
+      value: defaultValue,
+      formattedValue: this.formatValue(defaultValue),
     }
   }
 
@@ -74,8 +75,7 @@ class NumberInput extends React.PureComponent<Props, State> {
   }
 
   private formatValue = (value: number): string => {
-    const { element } = this.props
-    const format: string = element.get("format")
+    const format: string = this.props.element.get("format")
 
     return format ? sprintf(format, value) : String(value)
   }
@@ -102,14 +102,15 @@ class NumberInput extends React.PureComponent<Props, State> {
     const { value } = this.state
     const { element, widgetMgr } = this.props
     const widgetId: string = element.get("id")
-    const min: number = this.getData().get("min")
-    const max: number = this.getData().get("max")
+    const min: number = element.get("min")
+    const max: number = element.get("max")
 
     if (min > value || value > max) {
       const node = this.inputRef.current
       node && node.reportValidity()
     } else {
-      let valueToBeSaved = value || this.getData().get("default")
+      const valueToBeSaved =
+        value || value == 0 ? value : this.getData().get("default")
 
       if (this.isIntData()) {
         widgetMgr.setIntValue(widgetId, valueToBeSaved, source)
@@ -176,9 +177,10 @@ class NumberInput extends React.PureComponent<Props, State> {
     modifier: "increment" | "decrement"
   ): any => (): void => {
     const { value } = this.state
+    const { element } = this.props
     const step = this.getStep()
-    const min = this.getData().get("min")
-    const max = this.getData().get("max")
+    const min = element.get("min")
+    const max = element.get("max")
 
     switch (modifier) {
       case "increment":
@@ -217,8 +219,6 @@ class NumberInput extends React.PureComponent<Props, State> {
     const label: string = element.get("label")
     const style = { width }
 
-    const data = this.getData()
-
     return (
       <div className="Widget row-widget stNumberInput" style={style}>
         <label>{label}</label>
@@ -235,9 +235,9 @@ class NumberInput extends React.PureComponent<Props, State> {
             overrides={{
               Input: {
                 props: {
-                  step: data.get("step"),
-                  min: data.get("min"),
-                  max: data.get("max"),
+                  step: this.getStep(),
+                  min: element.get("min"),
+                  max: element.get("max"),
                 },
               },
               InputContainer: {

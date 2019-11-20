@@ -25,19 +25,17 @@ message NumberInput {
     FloatNumberInput float_data = 4;
   }
 
-  string format = 5;
+  float min = 5;
+  float max = 6;
+  string format = 7;
 }
 
 message IntNumberInput {
   int64 default = 1;
-  float min = 2;
-  float max = 3;
-  int64 step = 4;
+  int64 step = 2;
 }
 
 message FloatNumberInput {
   float default = 1;
-  float min = 2;
-  float max = 3;
-  float step = 4;
+  float step = 2;
 }
