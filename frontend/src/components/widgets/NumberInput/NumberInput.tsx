@@ -133,7 +133,7 @@ class NumberInput extends React.PureComponent<Props, State> {
   }
 
   private onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    let { value } = e.target
+    const { value } = e.target
 
     let numValue = null
 

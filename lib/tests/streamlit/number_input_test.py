@@ -28,21 +28,21 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.number_input
         self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, 0.0)
+        self.assertEqual(c.float_data.default, 0.0)
 
     def test_default_value_when_min_is_passed(self):
         st.number_input("the label", min_value=1, max_value=10)
 
         c = self.get_delta_from_queue().new_element.number_input
         self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, 1)
+        self.assertEqual(c.int_data.default, 1)
 
     def test_value_between_range(self):
         st.number_input("the label", 0, 11, 10)
 
         c = self.get_delta_from_queue().new_element.number_input
         self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, 10)
+        self.assertEqual(c.int_data.default, 10)
         self.assertEqual(c.min, 0)
         self.assertEqual(c.max, 11)
 
@@ -50,13 +50,13 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
         st.number_input("the label", value=10)
 
         c = self.get_delta_from_queue().new_element.number_input
-        self.assertEqual(c.step, 1.0)
+        self.assertEqual(c.int_data.step, 1.0)
 
     def test_default_step_when_a_value_is_float(self):
         st.number_input("the label", value=10.5)
 
         c = self.get_delta_from_queue().new_element.number_input
-        self.assertEqual("%0.2f" % c.step, "0.01")
+        self.assertEqual("%0.2f" % c.float_data.step, "0.01")
 
     def test_default_format_int(self):
         st.number_input("the label", value=10)
@@ -75,14 +75,14 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.number_input
         self.assertEqual(c.format, "%d")
-        self.assertEqual(c.step, 1)
+        self.assertEqual(c.int_data.step, 1)
 
     def test_format_float_and_default_step(self):
         st.number_input("the label", value=10.0, format="%f")
 
         c = self.get_delta_from_queue().new_element.number_input
         self.assertEqual(c.format, "%f")
-        self.assertEqual("%0.2f" % c.step, "0.01")
+        self.assertEqual("%0.2f" % c.float_data.step, "0.01")
 
     def test_value_outrange(self):
         with pytest.raises(ValueError) as exc_message:
