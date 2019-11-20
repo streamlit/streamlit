@@ -38,7 +38,7 @@ def marshall(proto, data=None, spec=None, width=0, **kwargs):
     """
     # Support passing data inside spec['datasets'] and spec['data'].
     # (The data gets pulled out of the spec dict later on.)
-    if type(data) in dict_types and spec is None:
+    if type(data) in dict_types and spec is None: # noqa: F821 pylint:disable=undefined-variable
         spec = data
         data = None
 
@@ -86,7 +86,7 @@ def marshall(proto, data=None, spec=None, width=0, **kwargs):
     if "data" in spec:
         data_spec = spec["data"]
 
-        if type(data_spec) in dict_types:
+        if type(data_spec) in dict_types: # noqa: F821 pylint:disable=undefined-variable
             if "values" in data_spec:
                 data = data_spec["values"]
                 del data_spec["values"]

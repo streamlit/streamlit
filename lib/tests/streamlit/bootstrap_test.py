@@ -93,8 +93,8 @@ class BootstrapPrintTest(unittest.TestCase):
         out = sys.stdout.getvalue()
         self.assertTrue("URL: http://the-address" in out)
 
-    @patch("streamlit.bootstrap.util.get_external_ip")
-    @patch("streamlit.bootstrap.util.get_internal_ip")
+    @patch("streamlit.net_util.get_external_ip")
+    @patch("streamlit.net_util.get_internal_ip")
     def test_print_urls_remote(self, mock_get_internal_ip, mock_get_external_ip):
 
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(
@@ -116,7 +116,7 @@ class BootstrapPrintTest(unittest.TestCase):
         self.assertTrue("Network URL: http://internal-ip" in out)
         self.assertTrue("External URL: http://external-ip" in out)
 
-    @patch("streamlit.bootstrap.util.get_internal_ip")
+    @patch("streamlit.net_util.get_internal_ip")
     def test_print_urls_local(self, mock_get_internal_ip):
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(
             {"browser.serverAddress": False}
@@ -136,7 +136,7 @@ class BootstrapPrintTest(unittest.TestCase):
         self.assertTrue("Local URL: http://localhost" in out)
         self.assertTrue("Network URL: http://internal-ip" in out)
 
-    @patch("streamlit.bootstrap.util.get_internal_ip")
+    @patch("streamlit.net_util.get_internal_ip")
     def test_print_urls_port(self, mock_get_internal_ip):
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(
             {"browser.serverAddress": False}
@@ -156,7 +156,7 @@ class BootstrapPrintTest(unittest.TestCase):
         self.assertTrue("Local URL: http://localhost:9988" in out)
         self.assertTrue("Network URL: http://internal-ip:9988" in out)
 
-    @patch("streamlit.bootstrap.util.get_internal_ip")
+    @patch("streamlit.net_util.get_internal_ip")
     def test_print_urls_base(self, mock_get_internal_ip):
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(
             {"browser.serverAddress": False}

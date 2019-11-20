@@ -60,11 +60,11 @@ watchdog = "*"
 # Only Python 3.x packages
 
 [python3]
-pandas = "*"
+pandas = ">=0.21.0"
 numpy = "*"
 # Only Python 2.x packages
 
 [python2]
 futures = "*"
-pandas = "<0.25.0"
+pandas = ">=0.21.0,<0.25.0"
 numpy = "<1.17.0"

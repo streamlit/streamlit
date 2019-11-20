@@ -104,6 +104,9 @@ finally we also provide a few chart types that are "native" to Streamlit,
 like `st.line_chart` and `st.area_chart`.
 
 ```eval_rst
+.. autofunction:: streamlit.line_chart
+.. autofunction:: streamlit.area_chart
+.. autofunction:: streamlit.bar_chart
 .. autofunction:: streamlit.pyplot
 .. autofunction:: streamlit.altair_chart
 .. autofunction:: streamlit.vega_lite_chart
@@ -111,9 +114,6 @@ like `st.line_chart` and `st.area_chart`.
 .. autofunction:: streamlit.bokeh_chart
 .. autofunction:: streamlit.deck_gl_chart
 .. autofunction:: streamlit.graphviz_chart
-.. autofunction:: streamlit.line_chart
-.. autofunction:: streamlit.area_chart
-.. autofunction:: streamlit.bar_chart
 .. autofunction:: streamlit.map
 .. autofunction:: streamlit.image
 .. autofunction:: streamlit.audio
@@ -140,7 +140,7 @@ With widgets, Streamlit allows you to bake interactivity directly into your apps
 
 ## Add widgets to sidebar
 
-Not only can you add interactivity to your report with widgets, you can organize them into a sidebar with `st.write.[element_name]`. Each element that's passed to `st.sidebar` is pinned to the left, allowing users to focus on the content in your app. The only elements that aren't supported are: `st.write` (you
+Not only can you add interactivity to your report with widgets, you can organize them into a sidebar with `st.sidebar.[element_name]`. Each element that's passed to `st.sidebar` is pinned to the left, allowing users to focus on the content in your app. The only elements that aren't supported are: `st.write` (you
 should use `st.sidebar.markdown()` instead), `st.echo`, and `st.spinner`.
 
 Here's an example of how you'd add a checkbox to your sidebar.
