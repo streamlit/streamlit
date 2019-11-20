@@ -88,7 +88,7 @@ def marshall_video(proto, url, format="video/mp4", start_time=0):
         proto.url = youtube_url
         proto.type = Video_pb2.Video.Type.YOUTUBE_IFRAME
     else:
-        proto.url = url 
+        proto.url = url
 
 
 def marshall_audio(proto, url, format="audio/wav", start_time=0):
@@ -109,4 +109,3 @@ def marshall_audio(proto, url, format="audio/wav", start_time=0):
     proto.format = format
     proto.start_time = start_time
     proto.url = url
-
