@@ -26,6 +26,7 @@ import altair as alt
 import numpy as np
 import pandas as pd
 import pytest
+import tensorflow as tf
 from mock import MagicMock
 
 import streamlit as st
@@ -166,22 +167,26 @@ class HashTest(unittest.TestCase):
     def test_non_hashable(self):
         """Test user provided hash functions."""
 
+        tf_config = tf.compat.v1.ConfigProto()
+        tf_session = tf.compat.v1.Session(config=tf_config)
+        tf_session_class = type(tf_session)
+
         # Unhashable object raises an error
         with self.assertRaises(TypeError):
-            get_hash(os.environ)
+            get_hash(tf_session)
 
-        id_hash_func = {os._Environ: id}
+        id_hash_func = {tf_session_class: id}
 
         self.assertEqual(
-            get_hash(os.environ, hash_funcs=id_hash_func),
-            get_hash(os.environ, hash_funcs=id_hash_func),
+            get_hash(tf_session, hash_funcs=id_hash_func),
+            get_hash(tf_session, hash_funcs=id_hash_func),
         )
 
-        unique_hash_func = {os._Environ: lambda x: time.time()}
+        unique_hash_func = {tf_session_class: lambda x: time.time()}
 
         self.assertNotEqual(
-            get_hash(os.environ, hash_funcs=unique_hash_func),
-            get_hash(os.environ, hash_funcs=unique_hash_func),
+            get_hash(tf_session, hash_funcs=unique_hash_func),
+            get_hash(tf_session, hash_funcs=unique_hash_func),
         )
 
     def test_override_streamlit_hash_func(self):
@@ -194,14 +199,18 @@ class HashTest(unittest.TestCase):
         by another user provided hash function if appropriate
         """
 
-        def hash_string(x):
-            return os.environ
+        tf_config = tf.compat.v1.ConfigProto()
+        tf_session = tf.compat.v1.Session(config=tf_config)
+        tf_session_class = type(tf_session)
 
-        hash_funcs = {str: hash_string, os._Environ: id}
+        def hash_string(x):
+            return tf_session
+
+        hash_funcs = {str: hash_string, tf_session_class: id}
 
         self.assertEqual(
             get_hash("hello", hash_funcs=hash_funcs),
-            get_hash(os.environ, hash_funcs=hash_funcs),
+            get_hash(tf_session, hash_funcs=hash_funcs),
         )
 
 
@@ -628,17 +637,21 @@ class CodeHashTest(unittest.TestCase):
     def test_non_hashable(self):
         """Test the hash of functions that return non hashable objects."""
 
+        tf_config = tf.compat.v1.ConfigProto()
+        tf_session = tf.compat.v1.Session(config=tf_config)
+        tf_session_class = type(tf_session)
+
         def f(x):
-            return os.environ
+            return tf_session
 
         def g(y):
-            return os.environ
+            return tf_session
 
         # Unhashable object raises an error
         with self.assertRaises(TypeError):
             get_hash(f)
 
-        hash_funcs = {os._Environ: id}
+        hash_funcs = {tf_session_class: id}
 
         self.assertEqual(
             get_hash(f, hash_funcs=hash_funcs), get_hash(g, hash_funcs=hash_funcs)
