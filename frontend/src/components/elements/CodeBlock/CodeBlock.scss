@@ -21,8 +21,12 @@
   See https://prismjs.com/download.html#themes=prism&languages=markup+css+clike+javascript
 */
 
-div.stCodeBlock {
-  margin: 0 0 1em 0;
+@import "src/assets/css/mixins";
+
+.stCodeBlock {
+  //code blocks can be used used inside an Alert
+  @include element-margin-bottom;
+
   position: relative;
 
   pre {
