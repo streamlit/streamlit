@@ -367,3 +367,8 @@ run-circleci:
 # Connect to running circleci container
 connect-circleci:
 	docker exec -it streamlit_circleci /bin/bash
+
+.PHONY: flake8
+# Run flake8 and show errors: E9,F63,F7,F82
+flake8:
+	flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=./frontend,./lib/build

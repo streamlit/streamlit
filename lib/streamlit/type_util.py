@@ -48,7 +48,7 @@ def is_type(obj, fqn_type_pattern):
     module = the_type.__module__
     name = the_type.__name__
     actual_fqn = "%s.%s" % (module, name)
-    if isinstance(fqn_type_pattern, string_types):
+    if isinstance(fqn_type_pattern, string_types): # noqa: F821 pylint:disable=undefined-variable
         return fqn_type_pattern == actual_fqn
     else:
         return fqn_type_pattern.match(actual_fqn) is not None
@@ -118,7 +118,7 @@ def _is_list_of_plotly_objs(obj):
 
 
 def _is_probably_plotly_dict(obj):
-    if type(obj) not in dict_types:
+    if type(obj) not in dict_types: # noqa: F821 pylint:disable=undefined-variable
         return False
 
     if len(obj.keys()) == 0:

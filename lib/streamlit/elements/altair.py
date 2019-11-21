@@ -34,7 +34,11 @@ def generate_chart(chart_type, data):
     if not isinstance(data, pd.DataFrame):
         data = convert_anything_to_df(data)
 
-    data = pd.melt(data.reset_index(), id_vars=["index"])
+    index_name = data.index.name
+    if index_name is None:
+        index_name = "index"
+
+    data = pd.melt(data.reset_index(), id_vars=[index_name])
 
     if chart_type == "area":
         opacity = {"value": 0.7}
@@ -50,10 +54,10 @@ def generate_chart(chart_type, data):
             # vega-lite displays time data in the browser's local time zone,
             # regardless of which time zone the data specifies:
             # https://vega.github.io/vega-lite/docs/timeunit.html#output).
-            alt.X("index", title="", scale=alt.Scale(type="utc")),
+            alt.X(index_name, title="", scale=alt.Scale(type="utc")),
             alt.Y("value", title="", scale=alt.Scale(type="utc")),
             alt.Color("variable", title="", type="nominal"),
-            alt.Tooltip(["index", "value", "variable"]),
+            alt.Tooltip([index_name, "value", "variable"]),
             opacity=opacity,
         )
         .interactive()
