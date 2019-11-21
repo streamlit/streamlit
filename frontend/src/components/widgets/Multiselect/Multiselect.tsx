@@ -20,7 +20,6 @@ import * as _ from "lodash"
 import { Map as ImmutableMap } from "immutable"
 import { multiSelectOverrides } from "lib/widgetTheme"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
-
 import { TYPE, Select as UISelect, OnChangeParams } from "baseui/select"
 
 interface Props {
