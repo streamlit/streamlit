@@ -41,7 +41,7 @@ interface Elements {
 interface Props {
   elements: Elements
 
-  elementListBuffer: Elements | null
+  previousElements: Elements | null
 
   // The unique ID for the most recent run of the report.
   reportId: string
@@ -88,8 +88,8 @@ class ReportView extends PureComponent<Props> {
                 <Block
                   elements={this.props.elements.sidebar}
                   elementListBuffer={
-                    this.props.elementListBuffer
-                      ? this.props.elementListBuffer.sidebar
+                    this.props.previousElements
+                      ? this.props.previousElements.sidebar
                       : null
                   }
                   reportId={this.props.reportId}
@@ -110,8 +110,8 @@ class ReportView extends PureComponent<Props> {
               <Block
                 elements={this.props.elements.main}
                 elementListBuffer={
-                  this.props.elementListBuffer
-                    ? this.props.elementListBuffer.main
+                  this.props.previousElements
+                    ? this.props.previousElements.main
                     : null
                 }
                 reportId={this.props.reportId}

@@ -77,6 +77,7 @@ interface Props {}
 interface State {
   connectionState: ConnectionState
   elements: Elements
+  previousElements: Elements | null
   reportId: string
   reportHash: string | null
   reportRunState: ReportRunState
@@ -101,7 +102,6 @@ class App extends PureComponent<Props, State> {
   connectionManager: ConnectionManager | null
   widgetMgr: WidgetStateManager
   elementListBuffer: Elements | null
-  oldElementListBuffer: Elements | null
   elementListBufferTimerIsSet: boolean
 
   constructor(props: Props) {
@@ -113,6 +113,7 @@ class App extends PureComponent<Props, State> {
         main: fromJS([makeElementWithInfoText("Please wait...")]),
         sidebar: fromJS([]),
       },
+      previousElements: null,
       reportId: "<null>",
       reportHash: null,
       reportRunState: ReportRunState.NOT_RUNNING,
@@ -152,7 +153,6 @@ class App extends PureComponent<Props, State> {
     })
     this.elementListBufferTimerIsSet = false
     this.elementListBuffer = null
-    this.oldElementListBuffer = null
 
     window.streamlitDebug = {}
     window.streamlitDebug.closeConnection = this.closeConnection.bind(this)
@@ -427,9 +427,9 @@ class App extends PureComponent<Props, State> {
             main: this.clearOldElements(elements.main, reportId),
             sidebar: this.clearOldElements(elements.sidebar, reportId),
           },
+          previousElements: this.elementListBuffer,
         }),
         () => {
-          this.oldElementListBuffer = this.elementListBuffer
           this.elementListBuffer = this.state.elements
         }
       )
@@ -836,7 +836,7 @@ class App extends PureComponent<Props, State> {
             <ReportView
               wide={this.state.userSettings.wideMode}
               elements={this.state.elements}
-              elementListBuffer={this.oldElementListBuffer}
+              previousElements={this.state.previousElements}
               reportId={this.state.reportId}
               reportRunState={this.state.reportRunState}
               showStaleElementIndicator={
