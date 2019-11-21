@@ -67,13 +67,13 @@ message Element {
     DocString doc_string = 7;
     Empty empty = 2;
     Exception exception = 8;
-    FileUploader file_uploader = 32;
+    FileUploader file_uploader = 33;
     GraphVizChart graphviz_chart = 18;
     ImageList imgs = 6;
     Json json = 31;
     Markdown markdown = 29;
     MultiSelect multiselect = 28;
-    NumberInput number_input = 33;
+    NumberInput number_input = 32;
     PlotlyChart plotly_chart = 16;
     Progress progress = 5;
     Radio radio = 23;
