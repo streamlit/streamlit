@@ -87,7 +87,7 @@ class ReportView extends PureComponent<Props> {
               <ThemeProvider theme={sidebarWidgetTheme}>
                 <Block
                   elements={this.props.elements.sidebar}
-                  elementListBuffer={
+                  previousElements={
                     this.props.previousElements
                       ? this.props.previousElements.sidebar
                       : null
@@ -109,7 +109,7 @@ class ReportView extends PureComponent<Props> {
             <ThemeProvider theme={mainWidgetTheme}>
               <Block
                 elements={this.props.elements.main}
-                elementListBuffer={
+                previousElements={
                   this.props.previousElements
                     ? this.props.previousElements.main
                     : null

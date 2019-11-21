@@ -81,7 +81,7 @@ interface Elements {
 
 interface Props {
   elements: BlockElement
-  elementListBuffer: BlockElement | null
+  previousElements: BlockElement | null
   reportId: string
   reportRunState: ReportRunState
   showStaleElementIndicator: boolean
@@ -112,7 +112,7 @@ class Block extends PureComponent<Props> {
 
   private getElements = (): BlockElement => {
     let elementsToRender = this.props.elements
-    const elementListBuffer = this.props.elementListBuffer
+    const previousElements = this.props.previousElements
     if (this.props.reportRunState === ReportRunState.RUNNING) {
       // (BUG #739) When the report is running, use our most recent list
       // of rendered elements as placeholders for any empty elements we encounter.
@@ -120,16 +120,12 @@ class Block extends PureComponent<Props> {
         (element: StElement, index: number): StElement => {
           if (element instanceof ImmutableMap) {
             // Repeat the old element if we encounter st.empty()
-            if (elementListBuffer) {
-              console.log(elementListBuffer)
-            }
             const isEmpty = (element as SimpleElement).get("type") === "empty"
-            if (elementListBuffer != null) {
-              return isEmpty
-                ? (elementListBuffer.get(index, element) as BlockElement)
+            if (isEmpty) {
+              return previousElements
+                ? (previousElements.get(index, element) as BlockElement)
                 : element
             }
-            return isEmpty ? elementsToRender.get(index, element) : element
           }
           return element
         }
@@ -159,7 +155,7 @@ class Block extends PureComponent<Props> {
       <div key={index} className="stBlock" style={{ width }}>
         <Block
           elements={element}
-          elementListBuffer={this.props.elementListBuffer}
+          previousElements={this.props.previousElements}
           reportId={this.props.reportId}
           reportRunState={this.props.reportRunState}
           showStaleElementIndicator={this.props.showStaleElementIndicator}
