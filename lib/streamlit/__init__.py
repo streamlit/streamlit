@@ -65,6 +65,7 @@ _LOGGER = _logger.get_logger("root")
 # Give the package a version.
 import pkg_resources as _pkg_resources
 import uuid as _uuid
+import os
 
 # This used to be pkg_resources.require('streamlit') but it would cause
 # pex files to fail. See #394 for more details.
@@ -73,7 +74,17 @@ __version__ = _pkg_resources.get_distribution("streamlit").version
 # Deterministic Unique Streamlit User ID
 # The try/except is needed for python 2/3 compatibility
 try:
-    __installation_id__ = str(_uuid.uuid5(_uuid.NAMESPACE_DNS, str(_uuid.getnode())))
+
+    machine_id = _uuid.getnode()
+    if os.path.isfile('/etc/machine-id'):
+        with open("/etc/machine-id", "r") as f:
+            machine_id = f.read()
+    elif os.path.isfile('/var/lib/dbus/machine-id'):
+        with open("/var/lib/dbus/machine-id", "r") as f:
+            machine_id = f.read()
+
+    __installation_id__ = str(_uuid.uuid5(_uuid.NAMESPACE_DNS, str(machine_id)))
+    
 except UnicodeDecodeError:
     __installation_id__ = str(
         _uuid.uuid5(_uuid.NAMESPACE_DNS, str(_uuid.getnode()).encode("utf-8"))
