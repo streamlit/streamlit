@@ -242,7 +242,7 @@ export const buttonOverrides = {
 export const multiSelectOverrides = {
   ValueContainer: {
     style: () => ({
-      height: "44px", // Fixing height in order to prevent some changing height
+      minHeight: "44px", // Fixing minimum height in order to prevent some changing height
     }),
   },
 }
