@@ -418,7 +418,6 @@ function parseGetters(type: any, spec: any): void {
     spec.getColor = (d: any) => [d[rField], d[gField], d[bField], d[aField]]
   }
 
-  // TODO test this with an example
   // Same as the above, but for getSourceColor/getTargetColor.
   if (
     SOURCE_TARGET_COLOR_LAYER_TYPES.has(type) &&
