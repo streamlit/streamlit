@@ -1740,8 +1740,9 @@ class DeltaGenerator(object):
         format=None,
         key=None,
     ):
-        """Display a slider widget. Integers, floats, and tuples/lists of
-        integers are supported.
+        """Display a slider widget.
+
+        This also allows you to render a range slider by passing a two-element tuple or list as the `value`.
 
         Parameters
         ----------
@@ -1754,8 +1755,11 @@ class DeltaGenerator(object):
             The maximum permitted value.
             Defaults 100 if the value is an int, 1.0 otherwise.
         value : int/float or a tuple/list of int/float or None
-            The value of this widget when it first renders. A range slider
-            is used to support tuples/lists.
+            The value of the slider when it first renders. If a tuple/list
+            of two values is passed to the widget, then a range slider with the
+            lower and upper bounds is rendered. For example, if `[1, 10]` or
+            `(1, 10)` is passed to the widget, the slider will have a
+            selectable range between 1 and 10.
             Defaults to min_value.
         step : int/float or None
             The stepping interval.
@@ -1780,7 +1784,7 @@ class DeltaGenerator(object):
         >>> age = st.slider('How old are you?', 0, 130, 25)
         >>> st.write("I'm ", age, 'years old')
 
-        And here's an example of a range selector:
+        And here's an example of a range slider:
 
         >>> values = st.slider(
         ...     'Select a range of values',

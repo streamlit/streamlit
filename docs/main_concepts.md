@@ -54,9 +54,6 @@ While these limitations are important to keep in mind, most of the time, they ar
 When you've got the data or model into the state that you want to explore, you can add in widgets like [`st.slider()`](api.html#streamlit.slider), [`st.button()`](api.html#streamlit.button) or [`st.selectbox()`](api.html#streamlit.selectbox). It's really straightforward - just treat widgets as variables. There are no callbacks in Streamlit! Every interaction simply reruns the script from top-to-bottom. Streamlit assigns each variable an up-to-date value given the app state. This approach leads to really clean code:
 
 ```python
-# Pass integers, floats, or tuples/lists of
-# integers to streamlit.slider.
-
 import streamlit as st
 x = st.slider('x')
 st.write(x, 'squared is', x * x)
