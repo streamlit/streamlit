@@ -29,7 +29,7 @@ import tornado.web
 import tornado.websocket
 
 from streamlit import config
-from streamlit import util
+from streamlit import file_util
 from streamlit.ForwardMsgCache import ForwardMsgCache
 from streamlit.ForwardMsgCache import create_reference_msg
 from streamlit.ForwardMsgCache import populate_hash_if_needed
@@ -256,7 +256,7 @@ class Server(object):
         ):
             LOGGER.debug("Serving static content from the Node dev server")
         else:
-            static_path = util.get_static_dir()
+            static_path = file_util.get_static_dir()
             LOGGER.debug("Serving static content from %s", static_path)
 
             routes.extend(

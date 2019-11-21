@@ -91,12 +91,14 @@ import json as _json
 import numpy as _np
 
 from streamlit import code_util as _code_util
-from streamlit import util as _util
+from streamlit import env_util as _env_util
+from streamlit import string_util as _string_util
 from streamlit import type_util as _type_util
 from streamlit import source_util as _source_util
 from streamlit.ReportThread import get_report_ctx as _get_report_ctx
 from streamlit.ReportThread import add_report_ctx as _add_report_ctx
 from streamlit.DeltaGenerator import DeltaGenerator as _DeltaGenerator
+from streamlit.errors import StreamlitAPIException
 
 # Modules that the user should have access to.
 from streamlit.caching import cache  # noqa: F401
@@ -191,8 +193,40 @@ video = _with_dg(_DeltaGenerator.video)  # noqa: E221
 warning = _with_dg(_DeltaGenerator.warning)  # noqa: E221
 
 # Config
-set_option = _config.set_option
+
 get_option = _config.get_option
+
+
+def set_option(key, value):
+    """Set config option.
+
+    Currently, only two config options can be set within the script itself:
+        * client.caching 
+        * client.displayEnabled 
+
+    Calling with any other options will raise StreamlitAPIException.
+
+    Run `streamlit config show` in the terminal to see all available options.
+
+    Parameters
+    ----------
+    key : str
+        The config option key of the form "section.optionName". To see all
+        available options, run `streamlit config show` on a terminal.
+
+    value
+        The new value to assign to this config option.
+
+    """
+    opt = _config._config_options[key]
+    if opt.scriptable:
+        _config.set_option(key, value)
+        return
+
+    raise StreamlitAPIException(
+        "{key} cannot be set on the fly. Set as command line option, e.g. streamlit run script.py --{key}, or in config.toml instead.".format(key=key)
+    )
+
 
 # Special methods:
 
@@ -454,7 +488,7 @@ def show(*args):
 
         # Escape markdown and add deltas
         for idx, input in enumerate(inputs):
-            escaped = _util.escape_markdown(input)
+            escaped = _string_util.escape_markdown(input)
 
             markdown("**%s**" % escaped)
             write(args[idx])
@@ -582,7 +616,7 @@ def _maybe_print_repl_warning():
     if not _repl_warning_has_been_displayed:
         _repl_warning_has_been_displayed = True
 
-        if _util.is_repl():
+        if _env_util.is_repl():
             _LOGGER.warning(
                 _textwrap.dedent(
                     """

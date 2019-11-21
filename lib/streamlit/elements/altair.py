@@ -35,7 +35,12 @@ def generate_chart(chart_type, data):
         data = convert_anything_to_df(data)
 
     n_cols = len(data.columns)
-    data = pd.melt(data.reset_index(), id_vars=["index"])
+    
+    index_name = data.index.name
+    if index_name is None:
+       index_name = "index" 
+        
+    data = pd.melt(data.reset_index(), id_vars=[index_name])
 
     if chart_type == "area":
         opacity = {"value": 0.7}
@@ -45,10 +50,10 @@ def generate_chart(chart_type, data):
     chart = (
         getattr(alt.Chart(data), "mark_" + chart_type)()
         .encode(
-            alt.X("index", title=""),
+            alt.X(index_name, title=""),
             alt.Y("value", title=""),
             alt.Color("variable", title="", type="nominal"),
-            alt.Tooltip(["index", "value", "variable"]),
+            alt.Tooltip([index_name, "value", "variable"]),
             opacity=opacity,
         )
         .interactive()

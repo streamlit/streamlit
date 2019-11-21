@@ -13,10 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A script that won't compile, for ScriptRunnerTest."""
+import unittest
 
-import streamlit as st
+from streamlit import string_util
 
-placeholder = st.text('this will never run!')
 
-because i am a compile error! # noqa: E999 pylint:disable=syntax-error
+class StringUtilTest(unittest.TestCase):
+    def test_decode_ascii(self):
+        """Test streamlit.util.decode_ascii."""
+        self.assertEqual("test string.", string_util.decode_ascii(b"test string."))

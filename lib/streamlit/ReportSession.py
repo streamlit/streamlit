@@ -24,7 +24,7 @@ from streamlit import __installation_id__
 from streamlit import __version__
 from streamlit import caching
 from streamlit import config
-from streamlit import util
+from streamlit import url_util
 from streamlit.fileManager import FileManager
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.Report import Report
@@ -370,7 +370,10 @@ class ReportSession(object):
         )
 
         imsg.user_info.installation_id = __installation_id__
-        imsg.user_info.email = Credentials.get_current().activation.email
+        if Credentials.get_current().activation:
+            imsg.user_info.email = Credentials.get_current().activation.email
+        else:
+            imsg.user_info.email = ""
 
         imsg.command_line = self._report.command_line
 
@@ -585,7 +588,7 @@ class ReportSession(object):
         url = yield self._get_storage().save_report_files(self._report.report_id, files)
 
         if config.get_option("server.liveSave"):
-            util.print_url("Saved running app", url)
+            url_util.print_url("Saved running app", url)
 
         raise tornado.gen.Return(url)
 
@@ -597,7 +600,7 @@ class ReportSession(object):
         )
 
         if config.get_option("server.liveSave"):
-            util.print_url("Saved final app", url)
+            url_util.print_url("Saved final app", url)
 
         raise tornado.gen.Return(url)
 
