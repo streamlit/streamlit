@@ -119,8 +119,6 @@ like `st.line_chart` and `st.area_chart`.
 
 ## Display media
 
-
-
 It's easy to embed images, videos, and audio files directly into your Streamlit apps.
 
 ```eval_rst
