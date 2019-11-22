@@ -65,6 +65,8 @@ _LOGGER = _logger.get_logger("root")
 # Give the package a version.
 import pkg_resources as _pkg_resources
 import uuid as _uuid
+import subprocess
+import platform
 import os
 
 # This used to be pkg_resources.require('streamlit') but it would cause
@@ -75,6 +77,10 @@ __version__ = _pkg_resources.get_distribution("streamlit").version
 # The try/except is needed for python 2/3 compatibility
 try:
 
+    if platform.system() == 'Linux' and os.path.isfile('/etc/machine-id') == False and os.path.isfile('/var/lib/dbus/machine-id') == False:
+        print("Generate machine-id")
+        subprocess.run(["sudo", "dbus-uuidgen", "--ensure"])   
+    
     machine_id = _uuid.getnode()
     if os.path.isfile('/etc/machine-id'):
         with open("/etc/machine-id", "r") as f:
