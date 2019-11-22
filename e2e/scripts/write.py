@@ -15,7 +15,7 @@
 
 import streamlit as st
 
-st.write("This **markdown** is awesome!")
+st.write("This **markdown** is awesome! :sunglasses:")
 
 st.write("This <b>HTML tag</b> is escaped!")
 

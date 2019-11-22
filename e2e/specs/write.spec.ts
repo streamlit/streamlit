@@ -29,7 +29,7 @@ describe("st.write", () => {
   it("displays markdown", () => {
     cy.get(".element-container .stMarkdown p")
       .first()
-      .contains("This markdown is awesome!");
+      .contains("This markdown is awesome! 😎");
   });
 
   it("escapes HTML", () => {
