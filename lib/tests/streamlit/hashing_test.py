@@ -203,8 +203,7 @@ class HashTest(unittest.TestCase):
         hash_funcs = {list: len, int: str}
 
         self.assertEqual(
-            get_hash([], hash_funcs=hash_funcs),
-            get_hash(0, hash_funcs=hash_funcs),
+            get_hash([], hash_funcs=hash_funcs), get_hash(0, hash_funcs=hash_funcs)
         )
 
 
