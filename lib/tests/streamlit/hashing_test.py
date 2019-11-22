@@ -192,25 +192,19 @@ class HashTest(unittest.TestCase):
     def test_override_streamlit_hash_func(self):
         """Test that a user provided hash function has priority over a streamlit one."""
 
-        self.assertNotEqual(get_hash("hello"), get_hash("hello", hash_funcs={str: id}))
+        hash_funcs = {int: lambda x: "hello"}
+        self.assertNotEqual(get_hash(1), get_hash(1, hash_funcs=hash_funcs))
 
     def test_multiple_hash_funcs(self):
         """Test that the output of a user provided hash function will be hashed
         by another user provided hash function if appropriate
         """
 
-        tf_config = tf.compat.v1.ConfigProto()
-        tf_session = tf.compat.v1.Session(config=tf_config)
-        tf_session_class = type(tf_session)
-
-        def hash_string(x):
-            return tf_session
-
-        hash_funcs = {str: hash_string, tf_session_class: id}
+        hash_funcs = {list: len, int: str}
 
         self.assertEqual(
-            get_hash("hello", hash_funcs=hash_funcs),
-            get_hash(tf_session, hash_funcs=hash_funcs),
+            get_hash([], hash_funcs=hash_funcs),
+            get_hash(0, hash_funcs=hash_funcs),
         )
 
 

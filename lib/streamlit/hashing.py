@@ -254,11 +254,14 @@ class CodeHasher:
                 return self.to_bytes(id(obj))
             elif isinstance(obj, bytes) or isinstance(obj, bytearray):
                 return obj
+            elif isinstance(obj, string_types):  # noqa: F821
+                # Todo: explain why this is above hash_funcs
+                # and the user can't override string
+                # str == bytes on python 2
+                return obj.encode()
             elif type(obj) in self.hash_funcs:
                 # Escape hatch for unsupported objects
                 return self.to_bytes(self.hash_funcs[type(obj)](obj))
-            elif isinstance(obj, string_types):  # noqa: F821
-                return obj.encode()
             elif isinstance(obj, float):
                 return self.to_bytes(hash(obj))
             elif isinstance(obj, int):
