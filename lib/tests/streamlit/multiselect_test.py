@@ -65,7 +65,7 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.options, proto_options)
 
     def test_default_string(self):
-        """Test if the default value is a single string."""
+        """Test if works when the default value is not a list."""
         arg_options = ["some str", 123, None, {}]
         proto_options = ["some str", "123", "None", "{}"]
 
