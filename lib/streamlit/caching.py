@@ -82,7 +82,7 @@ DiskCacheEntry = namedtuple("DiskCacheEntry", ["value", "args_mutated"])
 
 
 # The in memory cache.
-_mem_cache = {}  # type: Dict[string, CacheEntry]
+_mem_cache = {}  # Type: Dict[string, CacheEntry]
 
 
 # A thread-local counter that's incremented when we enter @st.cache

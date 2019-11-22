@@ -23,7 +23,11 @@ import { IS_SHARED_REPORT } from "./baseconsts"
 
 import { ConnectionState } from "./ConnectionState"
 import { logError } from "./log"
-import { configureCredentials, getObject } from "./s3helper"
+import {
+  configureCredentials,
+  getBucketAndResourceRoot,
+  getObject,
+} from "./s3helper"
 import { StaticConnection } from "./StaticConnection"
 import { WebsocketConnection } from "./WebsocketConnection"
 
@@ -246,15 +250,12 @@ export class ConnectionManager {
 }
 
 async function fetchManifest(reportId: string): Promise<StaticManifest> {
-  const { hostname, pathname } = url.parse(window.location.href, true)
-  if (pathname == null) {
-    throw new Error(`No pathname in URL ${window.location.href}`)
+  const { bucket, resourceRoot } = getBucketAndResourceRoot()
+  if (resourceRoot == null) {
+    throw new Error(`No resourceRoot in URL ${window.location.href}`)
   }
 
-  // IMPORTANT: The bucket name must match the host name!
-  const bucket = hostname
-  const version = pathname.split("/")[1]
-  const manifestKey = `${version}/reports/${reportId}/manifest.pb`
+  const manifestKey = `${resourceRoot}/reports/${reportId}/manifest.pb`
   const data = await getObject({ Bucket: String(bucket), Key: manifestKey })
   const arrayBuffer = await data.arrayBuffer()
   return StaticManifest.decode(new Uint8Array(arrayBuffer))

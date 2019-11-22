@@ -169,11 +169,10 @@ def _set_widget_id(widget_type, element, user_key=None):
         If this is None, we'll generate an ID by hashing the element.
 
     """
-    element_hash = hash(element.SerializeToString())
-    if user_key is not None:
-        widget_id = "%s-%s" % (user_key, element_hash)
+    if user_key is None:
+        widget_id = "%s" % hash(element.SerializeToString())
     else:
-        widget_id = "%s" % element_hash
+        widget_id = "%s-%s" % (user_key, widget_type)
 
     ctx = get_report_ctx()
     if ctx is not None:

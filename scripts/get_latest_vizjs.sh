@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2019 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,10 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A script that won't compile, for ScriptRunnerTest."""
-
-import streamlit as st
-
-placeholder = st.text('this will never run!')
-
-because i am a compile error! # noqa: E999 pylint:disable=syntax-error
+# Download the latest version of viz.js from npm.
+# We don't manage viz via node_modules, so we should run this script
+# from time to time to update it.
+wget "https://unpkg.com/viz.js/viz.js" -O "viz.min.js"
