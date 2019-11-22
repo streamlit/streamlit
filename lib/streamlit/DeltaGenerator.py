@@ -1588,15 +1588,10 @@ class DeltaGenerator(object):
 
         # Perform validation checks and return indices base on the default values.
         def _check_and_convert_to_indices(default_values):
-            if isinstance(default_values, string_types):  # noqa: F821
+            if not isinstance(default_values, list):
                 default_values = [default_values]
 
-            for value in default_values:
-                if not isinstance(value, string_types):  # noqa: F821
-                    raise StreamlitAPIException(
-                        "Multiselect default value has invalid type: %s"
-                        % type(value).__name__
-                    )
+            for value in default_values:                
                 if value not in options:
                     raise StreamlitAPIException(
                         "Every Multiselect default value must exist in options"
