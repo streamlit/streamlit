@@ -1,7 +1,3 @@
-```eval_rst
-:tocdepth: 1
-```
-
 # Troubleshooting
 
 Sometimes you hit a roadblock. That's natural, in coding.

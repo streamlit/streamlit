@@ -57,7 +57,7 @@ Ignore the URLs that print on your terminal. Instead, since you're using
 port-forwarding you should open your browser at <http://localhost:8501>.
 
 If you see the Streamlit Hello page, everything is working! Otherwise, check
-out the [Troubleshooting page](/troubleshooting).
+out the [Troubleshooting page](/troubleshooting/troubleshooting).
 
 ## Run your own code remotely
 
