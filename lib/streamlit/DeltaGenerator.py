@@ -1587,7 +1587,10 @@ class DeltaGenerator(object):
         """
 
         # Perform validation checks and return indices base on the default values.
-        def _check_and_convert_to_indices(default_values):
+        def _check_and_convert_to_indices(options, default_values):
+            if default_values is None and None not in options:
+                return None
+
             if not isinstance(default_values, list):
                 default_values = [default_values]
 
@@ -1599,9 +1602,7 @@ class DeltaGenerator(object):
 
             return [options.index(value) for value in default_values]
 
-        indices = (
-            _check_and_convert_to_indices(default) if default is not None else None
-        )
+        indices = _check_and_convert_to_indices(options, default)
         element.multiselect.label = label
         default_value = [] if indices is None else indices
         element.multiselect.default[:] = default_value

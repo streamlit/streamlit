@@ -57,11 +57,11 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
         arg_options = ["some str", 123, None, {}]
         proto_options = ["some str", "123", "None", "{}"]
 
-        st.multiselect("the label", arg_options)
+        st.multiselect("the label", arg_options, default=None)
 
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
-        self.assertListEqual(c.default[:], [])
+        self.assertListEqual(c.default[:], [2])
         self.assertEqual(c.options, proto_options)
 
     def test_default_string(self):
@@ -99,7 +99,7 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.options, [])
 
     @parameterized.expand(
-        [(None, []), ([], []), (["Tea", "Water"], [1, 2]), (("Tea", "Water"), [1, 2])]
+        [(None, []), ([], []), (["Tea", "Water"], [1, 2])]
     )
     def test_defaults(self, defaults, expected):
         """Test that valid default can be passed as expected."""
@@ -111,7 +111,7 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.options, ["Coffee", "Tea", "Water"])
 
     @parameterized.expand(
-        [(["Tea", "Vodka"], StreamlitAPIException), ([1, 2], StreamlitAPIException)]
+        [(["Tea", "Vodka", None], StreamlitAPIException), ([1, 2], StreamlitAPIException)]
     )
     def test_invalid_defaults(self, defaults, expected):
         """Test that invalid default trigger the expected exception."""
