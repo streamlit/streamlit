@@ -909,7 +909,7 @@ class DeltaGenerator(object):
            height: 220px
 
         """
-
+        
         import streamlit.elements.altair as altair
 
         chart = altair.generate_chart("line", data)
@@ -2531,7 +2531,7 @@ class DeltaGenerator(object):
 
         if self._is_root:
             raise StreamlitAPIException("Only existing elements can `add_rows`.")
-
+                
         # Accept syntax st.add_rows(df).
         if data is not None and len(kwargs) == 0:
             name = ""
@@ -2544,6 +2544,15 @@ class DeltaGenerator(object):
                 "Wrong number of arguments to add_rows()."
                 "Method requires exactly one dataset"
             )
+
+        # Re run the 
+        if self._last_index == 0:
+            if self._delta_type == 'line_chart':
+                self.line_chart(data)
+            elif self._delta_type == 'bar_chart':
+                self.bar_chart(data)
+            elif self._delta_type == 'area_chart':
+                self.area_chart(data)
 
         data, self._last_index = _maybe_melt_data_for_add_rows(
             data, self._delta_type, self._last_index
