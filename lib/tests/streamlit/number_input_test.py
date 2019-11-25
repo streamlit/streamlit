@@ -32,7 +32,6 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.has_min, False)
         self.assertEqual(c.has_max, False)
 
-
     def test_default_value_when_min_is_passed(self):
         st.number_input("the label", min_value=1, max_value=10)
 
