@@ -2545,7 +2545,7 @@ class DeltaGenerator(object):
                 "Method requires exactly one dataset"
             )
 
-        # Re run the 
+        # Regenerate chart with data
         if self._last_index == 0:
             if self._delta_type == 'line_chart':
                 self.line_chart(data)
