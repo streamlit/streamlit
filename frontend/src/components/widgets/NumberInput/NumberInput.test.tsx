@@ -30,11 +30,8 @@ const preventDefault = jest.fn()
 const getProps = (elementProps: object = {}): Props => ({
   element: fromJS({
     label: "Label",
-    intData: {
-      default: 0,
-      min: -Infinity,
-      max: +Infinity,
-    },
+    has_min: false,
+    has_max: false,
     ...elementProps,
   }),
   width: 0,
@@ -42,28 +39,126 @@ const getProps = (elementProps: object = {}): Props => ({
   widgetMgr: new WidgetStateManager(sendBackMsg),
 })
 
+const getIntProps = (elementProps: object = {}): Props => {
+  return getProps({
+    intData: {
+      default: 10,
+      min: 0,
+      max: 0,
+    },
+    ...elementProps,
+  })
+}
+
+const getFloatProps = (elementProps: object = {}): Props => {
+  return getProps({
+    floatData: {
+      default: 10.0,
+      min: 0.0,
+      max: 0.0,
+    },
+    ...elementProps,
+  })
+}
+
 describe("NumberInput", () => {
   it("renders without crashing", () => {
-    const props = getProps()
+    const props = getIntProps()
     const wrapper = shallow(<NumberInput {...props} />)
 
     expect(wrapper).toBeDefined()
   })
 
   it("Should show a label", () => {
-    const props = getProps()
+    const props = getIntProps()
     const wrapper = shallow(<NumberInput {...props} />)
 
     expect(wrapper.find("label").text()).toBe(props.element.get("label"))
   })
 
+  describe("MinMax", () => {
+    it("Should set a default min and max", () => {
+      const props = getIntProps()
+      const wrapper = shallow(<NumberInput {...props} />)
+
+      expect(wrapper.instance().getMin()).toBe(Number.MIN_SAFE_INTEGER)
+      expect(wrapper.instance().getMax()).toBe(Number.MAX_SAFE_INTEGER)
+    })
+
+    it("Should handle large int values", () => {
+      const props = getIntProps({
+        intData: {
+          default: Number.MAX_SAFE_INTEGER,
+          step: 1,
+        },
+      })
+      const wrapper = shallow(<NumberInput {...props} />)
+
+      const InputWrapper = wrapper.find(UIInput)
+
+      // @ts-ignore
+      InputWrapper.props().onKeyDown({
+        key: "ArrowDown",
+        preventDefault: preventDefault,
+      })
+
+      expect(preventDefault).toHaveBeenCalled()
+      expect(wrapper.state("value")).toBe(Number.MAX_SAFE_INTEGER - 1)
+      expect(wrapper.state("dirty")).toBe(false)
+    })
+
+    it("Should handle large float values", () => {
+      const props = getFloatProps({
+        floatData: {
+          default: Number.MAX_SAFE_INTEGER,
+          step: 1.0,
+        },
+      })
+      const wrapper = shallow(<NumberInput {...props} />)
+
+      const InputWrapper = wrapper.find(UIInput)
+
+      // @ts-ignore
+      InputWrapper.props().onKeyDown({
+        key: "ArrowDown",
+        preventDefault: preventDefault,
+      })
+
+      expect(preventDefault).toHaveBeenCalled()
+      expect(wrapper.state("value")).toBe(Number.MAX_SAFE_INTEGER - 1)
+      expect(wrapper.state("dirty")).toBe(false)
+    })
+  })
+
+  describe("FloatData", () => {
+    it("Should change the state when ArrowDown", () => {
+      const props = getFloatProps({
+        format: "%0.2f",
+        floatData: {
+          default: 11,
+          step: 0.1,
+        },
+      })
+      const wrapper = shallow(<NumberInput {...props} />)
+      const InputWrapper = wrapper.find(UIInput)
+
+      // @ts-ignore
+      InputWrapper.props().onKeyDown({
+        key: "ArrowDown",
+        preventDefault: preventDefault,
+      })
+
+      expect(preventDefault).toHaveBeenCalled()
+      expect(wrapper.state("value")).toBe(10.9)
+      expect(wrapper.state("dirty")).toBe(false)
+    })
+  })
+
   describe("Value", () => {
     it("Should pass a default value", () => {
-      const props = getProps({
+      const props = getIntProps({
         intData: {
           default: 10,
-          min: -Infinity,
-          max: +Infinity,
         },
       })
       const wrapper = shallow(<NumberInput {...props} />)
@@ -72,11 +167,9 @@ describe("NumberInput", () => {
     })
 
     it("Should call onChange", () => {
-      const props = getProps({
+      const props = getIntProps({
         intData: {
           default: 10,
-          min: -Infinity,
-          max: +Infinity,
         },
       })
       const wrapper = shallow(<NumberInput {...props} />)
@@ -96,11 +189,9 @@ describe("NumberInput", () => {
     })
 
     it("Should set value on Enter", () => {
-      const props = getProps({
+      const props = getIntProps({
         intData: {
           default: 10,
-          min: -Infinity,
-          max: +Infinity,
         },
       })
       const wrapper = shallow(<NumberInput {...props} />)
@@ -123,12 +214,10 @@ describe("NumberInput", () => {
 
   describe("Step", () => {
     it("Should have an step", () => {
-      const props = getProps({
+      const props = getIntProps({
         intData: {
           default: 10,
           step: 1,
-          min: -Infinity,
-          max: +Infinity,
         },
       })
       const wrapper = shallow(<NumberInput {...props} />)
@@ -138,13 +227,11 @@ describe("NumberInput", () => {
     })
 
     it("Should change the state when ArrowUp", () => {
-      const props = getProps({
+      const props = getIntProps({
         format: "%d",
         intData: {
           default: 10,
           step: 1,
-          min: -Infinity,
-          max: +Infinity,
         },
       })
       const wrapper = shallow(<NumberInput {...props} />)
@@ -162,13 +249,11 @@ describe("NumberInput", () => {
     })
 
     it("Should change the state when ArrowDown", () => {
-      const props = getProps({
+      const props = getIntProps({
         format: "%d",
         intData: {
           default: 10,
           step: 1,
-          min: -Infinity,
-          max: +Infinity,
         },
       })
       const wrapper = shallow(<NumberInput {...props} />)
@@ -186,13 +271,11 @@ describe("NumberInput", () => {
     })
 
     it("stepDown button onClick", () => {
-      const props = getProps({
+      const props = getIntProps({
         format: "%d",
         intData: {
           default: 10,
           step: 1,
-          min: -Infinity,
-          max: +Infinity,
         },
       })
       const wrapper = shallow(<NumberInput {...props} />)
@@ -206,13 +289,11 @@ describe("NumberInput", () => {
     })
 
     it("stepUp button onClick", () => {
-      const props = getProps({
+      const props = getIntProps({
         format: "%d",
         intData: {
           default: 10,
           step: 1,
-          min: -Infinity,
-          max: +Infinity,
         },
       })
       const wrapper = shallow(<NumberInput {...props} />)
@@ -227,7 +308,7 @@ describe("NumberInput", () => {
   })
 
   it("Should show a message when it's dirty", () => {
-    const props = getProps()
+    const props = getIntProps()
     const wrapper = shallow(<NumberInput {...props} />)
 
     wrapper.setState({
