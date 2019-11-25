@@ -84,6 +84,18 @@ class NumberInput extends React.PureComponent<Props, State> {
     return !!this.props.element.get("intData")
   }
 
+  private getMin = (): number => {
+    return this.props.element.get("has_min")
+      ? this.getData().get("min")
+      : Number.MIN_SAFE_INTEGER
+  }
+
+  private getMax = (): number => {
+    return this.props.element.get("has_max")
+      ? this.getData().get("max")
+      : Number.MAX_SAFE_INTEGER
+  }
+
   private getStep = (): number => {
     const step = this.getData().get("step")
 
@@ -101,16 +113,17 @@ class NumberInput extends React.PureComponent<Props, State> {
   private setWidgetValue = (source: Source): void => {
     const { value } = this.state
     const { element, widgetMgr } = this.props
+    const data = this.getData()
+
     const widgetId: string = element.get("id")
-    const min: number = element.get("min")
-    const max: number = element.get("max")
+    const min: number = this.getMin()
+    const max: number = this.getMax()
 
     if (min > value || value > max) {
       const node = this.inputRef.current
       node && node.reportValidity()
     } else {
-      const valueToBeSaved =
-        value || value == 0 ? value : this.getData().get("default")
+      const valueToBeSaved = value || value === 0 ? value : data.get("default")
 
       if (this.isIntData()) {
         widgetMgr.setIntValue(widgetId, valueToBeSaved, source)
@@ -177,10 +190,9 @@ class NumberInput extends React.PureComponent<Props, State> {
     modifier: "increment" | "decrement"
   ): any => (): void => {
     const { value } = this.state
-    const { element } = this.props
     const step = this.getStep()
-    const min = element.get("min")
-    const max = element.get("max")
+    const min = this.getMin()
+    const max = this.getMax()
 
     switch (modifier) {
       case "increment":
@@ -236,8 +248,8 @@ class NumberInput extends React.PureComponent<Props, State> {
               Input: {
                 props: {
                   step: this.getStep(),
-                  min: element.get("min"),
-                  max: element.get("max"),
+                  min: this.getMin(),
+                  max: this.getMax(),
                 },
               },
               InputContainer: {

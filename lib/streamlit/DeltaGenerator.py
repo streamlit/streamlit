@@ -2213,29 +2213,28 @@ class DeltaGenerator(object):
                 % {"value": value, "min": min_value, "max": max_value}
             )
 
+        number_input = element.number_input
         if all_ints:
-            data = element.number_input.int_data
+            data = number_input.int_data
         else:
-            data = element.number_input.float_data
+            data = number_input.float_data
 
-        element.number_input.label = label
+        number_input.label = label
         data.default = value
 
-        if min_value is None:
-            element.number_input.min = float("-inf")
-        else:
-            element.number_input.min = min_value
+        if min_value is not None:
+            data.min = min_value
+            number_input.has_min = True
 
-        if max_value is None:
-            element.number_input.max = float("+inf")
-        else:
-            element.number_input.max = max_value
+        if max_value is not None:
+            data.max = max_value
+            number_input.has_max = True
 
         if step is not None:
             data.step = step
 
         if format is not None:
-            element.number_input.format = format
+            number_input.format = format
 
         ui_value = _get_widget_ui_value("number_input", element, user_key=key)
 

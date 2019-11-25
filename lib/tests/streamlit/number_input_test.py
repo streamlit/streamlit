@@ -43,8 +43,8 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.number_input
         self.assertEqual(c.label, "the label")
         self.assertEqual(c.int_data.default, 10)
-        self.assertEqual(c.min, 0)
-        self.assertEqual(c.max, 11)
+        self.assertEqual(c.int_data.min, 0)
+        self.assertEqual(c.int_data.max, 11)
 
     def test_default_step_when_a_value_is_int(self):
         st.number_input("the label", value=10)

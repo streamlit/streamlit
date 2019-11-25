@@ -25,17 +25,21 @@ message NumberInput {
     FloatNumberInput float_data = 4;
   }
 
-  float min = 5;
-  float max = 6;
-  string format = 7;
+  string format = 5;
+  bool has_min = 6;
+  bool has_max = 7;
 }
 
 message IntNumberInput {
-  int64 default = 1;
+  sint64 default = 1;
   int64 step = 2;
+  sint64 min = 3;
+  sint64 max = 4;
 }
 
 message FloatNumberInput {
   float default = 1;
   float step = 2;
+  float min = 3;
+  float max = 4;
 }
