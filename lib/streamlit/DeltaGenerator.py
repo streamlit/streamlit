@@ -909,6 +909,7 @@ class DeltaGenerator(object):
            height: 220px
 
         """
+
         import streamlit.elements.altair as altair
 
         chart = altair.generate_chart("line", data)
@@ -2530,6 +2531,7 @@ class DeltaGenerator(object):
 
         if self._is_root:
             raise StreamlitAPIException("Only existing elements can `add_rows`.")
+
         # Accept syntax st.add_rows(df).
         if data is not None and len(kwargs) == 0:
             name = ""
