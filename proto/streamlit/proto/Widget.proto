@@ -35,7 +35,7 @@ message WidgetState {
     bool trigger_value = 2;
 
     bool bool_value = 3;
-    float float_value = 4;
+    double float_value = 4;
     sint64 int_value = 5;
     string string_value = 6;
     IntArray int_array_value = 8;

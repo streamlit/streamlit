@@ -38,8 +38,8 @@ message IntNumberInput {
 }
 
 message FloatNumberInput {
-  float default = 1;
-  float step = 2;
-  float min = 3;
-  float max = 4;
+  double default = 1;
+  double step = 2;
+  double min = 3;
+  double max = 4;
 }
