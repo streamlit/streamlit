@@ -60,7 +60,10 @@ const CORS_ERROR_MESSAGE_DOCUMENTATION_LINK =
   "https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS"
 
 type OnMessage = (ForwardMsg: any) => void
-type OnConnectionStateChange = (connectionState: ConnectionState) => void
+type OnConnectionStateChange = (
+  connectionState: ConnectionState,
+  errMsg?: string
+) => void
 type OnRetry = (totalTries: number, errorNode: React.ReactNode) => void
 
 interface Args {
@@ -191,10 +194,10 @@ export class WebsocketConnection {
   }
 
   // This should only be called inside stepFsm().
-  private setFsmState(state: ConnectionState): void {
+  private setFsmState(state: ConnectionState, errMsg?: string): void {
     logMessage(LOG, `New state: ${state}`)
     this.state = state
-    this.args.onConnectionStateChange(state)
+    this.args.onConnectionStateChange(state, errMsg)
 
     // Perform actions when entering certain states.
     switch (this.state) {
@@ -217,7 +220,15 @@ export class WebsocketConnection {
     }
   }
 
-  private stepFsm(event: Event): void {
+  /**
+   * Process an event in our FSM.
+   *
+   * @param event The event to process.
+   * @param errMsg an optional error message to send to the OnStateChanged
+   * callback. This is meaningful only for the FATAL_ERROR event. The message
+   * will be displayed to the user in a "Connection Error" dialog.
+   */
+  private stepFsm(event: Event, errMsg?: string): void {
     logMessage(LOG, `State: ${this.state}; Event: ${event}`)
 
     if (
@@ -226,7 +237,7 @@ export class WebsocketConnection {
     ) {
       // If we get a fatal error, we transition to DISCONNECTED_FOREVER
       // regardless of our current state.
-      this.setFsmState(ConnectionState.DISCONNECTED_FOREVER)
+      this.setFsmState(ConnectionState.DISCONNECTED_FOREVER, errMsg)
       return
     }
 
@@ -327,8 +338,9 @@ export class WebsocketConnection {
     this.websocket.onmessage = (event: MessageEvent) => {
       if (checkWebsocket()) {
         this.handleMessage(event.data).catch(reason => {
-          logError(LOG, `Fatal error from handleMessage: ${reason}`)
-          this.stepFsm("FATAL_ERROR")
+          const err = `Failed to process a Websocket message (${reason})`
+          logError(LOG, err)
+          this.stepFsm("FATAL_ERROR", err)
         })
       }
     }
@@ -382,7 +394,7 @@ export class WebsocketConnection {
         // setConnectionTimeout() should be immediately before setting
         // this.websocket.
         this.cancelConnectionAttempt()
-        this.stepFsm("FATAL_ERROR")
+        this.stepFsm("FATAL_ERROR", "Null Websocket in setConnectionTimeout")
         return
       }
 

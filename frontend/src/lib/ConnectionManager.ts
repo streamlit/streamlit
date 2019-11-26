@@ -154,7 +154,7 @@ export class ConnectionManager {
     return new WebsocketConnection({
       baseUriPartsList: [baseUriParts],
       onMessage: this.props.onMessage,
-      onConnectionStateChange: s => this.setConnectionState(s),
+      onConnectionStateChange: this.setConnectionState,
       onRetry: this.showRetryError,
     })
   }
