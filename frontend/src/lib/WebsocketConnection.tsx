@@ -241,7 +241,7 @@ export class WebsocketConnection {
       return
     }
 
-    // Anything combination of state+event that is not explicitly called out
+    // Any combination of state+event that is not explicitly called out
     // below is illegal and raises an error.
 
     switch (this.state) {
