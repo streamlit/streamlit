@@ -283,7 +283,8 @@ export class WebsocketConnection {
       case ConnectionState.DISCONNECTED_FOREVER:
         // If we're in the DISCONNECTED_FOREVER state, we can't reasonably
         // process any events, and it's possible we're in this state because
-        // of a fatal error. Rather than throwing another exception
+        // of a fatal error. Just log these events rather than throwing more
+        // exceptions.
         logWarning(
           LOG,
           `Discarding ${event} while in ${ConnectionState.DISCONNECTED_FOREVER}`
