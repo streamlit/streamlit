@@ -78,15 +78,6 @@ def get_file_watcher_class():
 
 FileWatcher = get_file_watcher_class()
 
-# Streamlit never watches files in the folders below.
-DEFAULT_FOLDER_BLACKLIST = [
-    "**/.*",
-    "**/anaconda2",
-    "**/anaconda3",
-    "**/miniconda2",
-    "**/miniconda3",
-]
-
 WatchedModule = collections.namedtuple("WatchedModule", ["watcher", "module_name"])
 
 
