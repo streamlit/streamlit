@@ -18,11 +18,35 @@
 # Python 2/3 compatibility
 from __future__ import absolute_import
 
+from datetime import date
 
 from streamlit.elements.data_frame_proto import convert_anything_to_df
 import streamlit.elements.vega_lite as vega_lite
 import altair as alt
 import pandas as pd
+
+
+def _is_date_column(df, name):
+    """True if the column with the given name stores datetime.date values.
+
+    This function just checks the first value in the given column, so
+    it's meaningful only for columns whose values all share the same type.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+    name : str
+        The column name
+
+    Returns
+    -------
+    bool
+
+    """
+    column = df[name]
+    if column.size == 0:
+        return False
+    return isinstance(column[0], date)
 
 
 def generate_chart(chart_type, data):
@@ -45,17 +69,21 @@ def generate_chart(chart_type, data):
     else:
         opacity = {"value": 1.0}
 
+    # Set the X and Y axes' scale to "utc" if they contain date values.
+    # This causes time data to be displayed in UTC, rather the user's local
+    # time zone. (By default, vega-lite displays time data in the browser's
+    # local time zone, regardless of which time zone the data specifies:
+    # https://vega.github.io/vega-lite/docs/timeunit.html#output).
+    x_scale = (
+        alt.Scale(type="utc") if _is_date_column(data, index_name) else alt.Undefined
+    )
+    y_scale = alt.Scale(type="utc") if _is_date_column(data, "value") else alt.Undefined
+
     chart = (
         getattr(alt.Chart(data), "mark_" + chart_type)()
         .encode(
-            # Set the X and Y axes' scale to `type="utc"`. This is meaningful
-            # only for date/time values, but it means that time data will be
-            # shown in UTC, rather the user's local time zone. (By default,
-            # vega-lite displays time data in the browser's local time zone,
-            # regardless of which time zone the data specifies:
-            # https://vega.github.io/vega-lite/docs/timeunit.html#output).
-            alt.X(index_name, title="", scale=alt.Scale(type="utc")),
-            alt.Y("value", title="", scale=alt.Scale(type="utc")),
+            alt.X(index_name, title="", scale=x_scale),
+            alt.Y("value", title="", scale=y_scale),
             alt.Color("variable", title="", type="nominal"),
             alt.Tooltip([index_name, "value", "variable"]),
             opacity=opacity,
