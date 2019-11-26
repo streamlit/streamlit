@@ -15,16 +15,16 @@
  * limitations under the License.
  */
 
-import React, { Fragment } from "react"
+import { BackMsg, ForwardMsg, IBackMsg } from "autogen/proto"
 
 import axios from "axios"
-import Resolver from "lib/Resolver"
-import { SessionInfo } from "lib/SessionInfo"
 import { ConnectionState } from "lib/ConnectionState"
 import { ForwardMsgCache } from "lib/ForwardMessageCache"
 import { logError, logMessage, logWarning } from "lib/log"
-import { BackMsg, ForwardMsg, IBackMsg } from "autogen/proto"
+import Resolver from "lib/Resolver"
+import { SessionInfo } from "lib/SessionInfo"
 import { BaseUriParts, buildHttpUri, buildWsUri } from "lib/UriUtil"
+import React, { Fragment } from "react"
 
 /**
  * Name of the logger.
@@ -106,15 +106,19 @@ interface MessageQueue {
  *     │:on timeout/error/closed     │
  *     v  │                          │:on error/closed
  *   PINGING_SERVER <────────────────┘
+ *
+ *                    on fatal error
+ *                    :
+ *   <ANY_STATE> ──────────────> DISCONNECTED_FOREVER
  */
 type Event =
   | "INITIALIZED"
   | "CONNECTION_CLOSED"
   | "CONNECTION_ERROR"
-  | "CONNECTION_WTF"
   | "CONNECTION_SUCCEEDED"
   | "CONNECTION_TIMED_OUT"
   | "SERVER_PING_SUCCEEDED"
+  | "FATAL_ERROR" // Unrecoverable error. This should never happen!
 
 /**
  * This class is the "brother" of StaticConnection. The class connects to the
@@ -202,6 +206,10 @@ export class WebsocketConnection {
         this.connectToWebSocket()
         break
 
+      case ConnectionState.DISCONNECTED_FOREVER:
+        this.cancelConnectionAttempt()
+        break
+
       case ConnectionState.CONNECTED:
       case ConnectionState.INITIAL:
       default:
@@ -211,6 +219,16 @@ export class WebsocketConnection {
 
   private stepFsm(event: Event): void {
     logMessage(LOG, `State: ${this.state}; Event: ${event}`)
+
+    if (
+      event === "FATAL_ERROR" &&
+      this.state !== ConnectionState.DISCONNECTED_FOREVER
+    ) {
+      // If we get a fatal error, we transition to DISCONNECTED_FOREVER
+      // regardless of our current state.
+      this.setFsmState(ConnectionState.DISCONNECTED_FOREVER)
+      return
+    }
 
     // Anything combination of state+event that is not explicitly called out
     // below is illegal and raises an error.
@@ -250,6 +268,16 @@ export class WebsocketConnection {
           return
         }
         break
+
+      case ConnectionState.DISCONNECTED_FOREVER:
+        // If we're in the DISCONNECTED_FOREVER state, we can't reasonably
+        // process any events, and it's possible we're in this state because
+        // of a fatal error. Rather than throwing another exception
+        logWarning(
+          LOG,
+          `Discarding ${event} while in ${ConnectionState.DISCONNECTED_FOREVER}`
+        )
+        return
 
       default:
         break
@@ -299,9 +327,8 @@ export class WebsocketConnection {
     this.websocket.onmessage = (event: MessageEvent) => {
       if (checkWebsocket()) {
         this.handleMessage(event.data).catch(reason => {
-          // TODO: do something reasonable here, beyond simply logging.
-          //  Lots of stuff is likely to be broken!
-          logError(LOG, reason)
+          logError(LOG, `Fatal error from handleMessage: ${reason}`)
+          this.stepFsm("FATAL_ERROR")
         })
       }
     }
@@ -355,7 +382,7 @@ export class WebsocketConnection {
         // setConnectionTimeout() should be immediately before setting
         // this.websocket.
         this.cancelConnectionAttempt()
-        this.stepFsm("CONNECTION_WTF")
+        this.stepFsm("FATAL_ERROR")
         return
       }
 
