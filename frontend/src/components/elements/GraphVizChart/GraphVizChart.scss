@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-@import 'src/assets/css/variables';
-
+@import "src/assets/css/variables";
 
 .stGraphVizChart {
   * {
@@ -25,5 +24,8 @@
     // 12px in the SVG looks like 1rem outside, so 9.6px ~= 0.8rem.
     font-size: 9.6px;
   }
-}
 
+  svg {
+    max-width: 100%;
+  }
+}
