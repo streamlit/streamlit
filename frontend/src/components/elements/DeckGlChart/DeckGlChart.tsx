@@ -278,6 +278,19 @@ const POSITION_LAYER_TYPES = new Set([
 // getLatitude/getTargetLatitude and getLongitude/getTargetLongitude instead.
 const SOURCE_TARGET_POSITION_LAYER_TYPES = new Set(["arclayer", "linelayer"])
 
+// Set of DeckGL Layers that take a getColor argument. We'll allow users to
+// specify color columns via getColorR, getColorB, ggetColorG and getColorA instead.
+const COLOR_LAYER_TYPES = new Set([
+  "pointcloudlayer",
+  "scatterplotlayer",
+  "textlayer",
+])
+
+// Set of DeckGL Layers that take a getSourceColor/getTargetColor argument.
+// We'll allow users to specify color columns via getColorR/getTargetColorR,
+// getColorG/getTargetColorG, etc. instead
+const SOURCE_TARGET_COLOR_LAYER_TYPES = new Set(["arclayer"])
+
 /**
  * Take a short "map style" string and convert to the full URL for the style.
  * (And it only does this if the input string is not already a URL.)
@@ -388,6 +401,53 @@ function parseGetters(type: any, spec: any): void {
     const lonField2 = spec.getTargetLongitude
     spec.getSourcePosition = (d: any) => [d[lonField], d[latField]]
     spec.getTargetPosition = (d: any) => [d[lonField2], d[latField2]]
+  }
+
+  // If this is a layer that accepts a getColor argument, build that
+  // argument from getColorR, getColorG and getColorB.
+  if (
+    COLOR_LAYER_TYPES.has(type) &&
+    spec.getColorR &&
+    spec.getColorG &&
+    spec.getColorB
+  ) {
+    const rField = spec.getColorR
+    const gField = spec.getColorG
+    const bField = spec.getColorB
+    const aField = spec.getColorA
+    spec.getColor = (d: any) => [d[rField], d[gField], d[bField], d[aField]]
+  }
+
+  // Same as the above, but for getSourceColor/getTargetColor.
+  if (
+    SOURCE_TARGET_COLOR_LAYER_TYPES.has(type) &&
+    spec.getColorR &&
+    spec.getColorG &&
+    spec.getColorB &&
+    spec.getTargetColorR &&
+    spec.getTargetColorG &&
+    spec.getTargetColorB
+  ) {
+    const rField = spec.getColorR
+    const gField = spec.getColorG
+    const bField = spec.getColorB
+    const aField = spec.getColorA
+    const rField2 = spec.getTargetColorR
+    const gField2 = spec.getTargetColorG
+    const bField2 = spec.getTargetColorB
+    const aField2 = spec.getTargetColorA
+    spec.getSourceColor = (d: any) => [
+      d[rField],
+      d[gField],
+      d[bField],
+      d[aField],
+    ]
+    spec.getTargetColor = (d: any) => [
+      d[rField2],
+      d[gField2],
+      d[bField2],
+      d[aField2],
+    ]
   }
 
   Object.keys(spec).forEach(key => {
