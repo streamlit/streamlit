@@ -44,4 +44,4 @@ with patch(
 ), patch("streamlit.config.os.path.exists") as path_exists:
 
     path_exists.side_effect = lambda path: path == config_path
-    config.parse_config_file()
+    config.parse_config_file(force=True)

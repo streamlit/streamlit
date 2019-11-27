@@ -836,11 +836,11 @@ def _maybe_convert_to_number(v):
     return v
 
 
-def parse_config_file():
+def parse_config_file(force=False):
     """Parse the config file and update config parameters."""
     global _config_file_has_been_parsed
 
-    if _config_file_has_been_parsed:
+    if _config_file_has_been_parsed and force == False:
         return
 
     # Read ~/.streamlit/config.toml, and then overlay
