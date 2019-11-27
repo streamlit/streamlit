@@ -169,10 +169,11 @@ def _set_widget_id(widget_type, element, user_key=None):
         If this is None, we'll generate an ID by hashing the element.
 
     """
-    if user_key is None:
-        widget_id = "%s" % hash(element.SerializeToString())
+    element_hash = hash(element.SerializeToString())
+    if user_key is not None:
+        widget_id = "%s-%s" % (user_key, element_hash)
     else:
-        widget_id = "%s-%s" % (user_key, widget_type)
+        widget_id = "%s" % element_hash
 
     ctx = get_report_ctx()
     if ctx is not None:
@@ -1587,22 +1588,22 @@ class DeltaGenerator(object):
         """
 
         # Perform validation checks and return indices base on the default values.
-        def _check_and_convert_to_indices(default_values):
-            for value in default_values:
-                if not isinstance(value, string_types):  # noqa: F821
-                    raise StreamlitAPIException(
-                        "Multiselect default value has invalid type: %s"
-                        % type(value).__name__
-                    )
+        def _check_and_convert_to_indices(options, default_values):
+            if default_values is None and None not in options:
+                return None
+
+            if not isinstance(default_values, list):
+                default_values = [default_values]
+
+            for value in default_values:                
                 if value not in options:
                     raise StreamlitAPIException(
                         "Every Multiselect default value must exist in options"
                     )
-            return [options.index(value) for value in default]
 
-        indices = (
-            _check_and_convert_to_indices(default) if default is not None else None
-        )
+            return [options.index(value) for value in default_values]
+
+        indices = _check_and_convert_to_indices(options, default)
         element.multiselect.label = label
         default_value = [] if indices is None else indices
         element.multiselect.default[:] = default_value
@@ -1741,6 +1742,8 @@ class DeltaGenerator(object):
     ):
         """Display a slider widget.
 
+        This also allows you to render a range slider by passing a two-element tuple or list as the `value`.
+
         Parameters
         ----------
         label : str or None
@@ -1752,8 +1755,10 @@ class DeltaGenerator(object):
             The maximum permitted value.
             Defaults 100 if the value is an int, 1.0 otherwise.
         value : int/float or a tuple/list of int/float or None
-            The value of this widget when it first renders. In case the value
-            is passed as a tuple/list a range slider will be used.
+            The value of the slider when it first renders. If a tuple/list
+            of two values is passed here, then a range slider with those lower
+            and upper bounds is rendered. For example, if set to `(1, 10)` the
+            slider will have a selectable range between 1 and 10.
             Defaults to min_value.
         step : int/float or None
             The stepping interval.
@@ -1778,7 +1783,7 @@ class DeltaGenerator(object):
         >>> age = st.slider('How old are you?', 0, 130, 25)
         >>> st.write("I'm ", age, 'years old')
 
-        And here's an example of a range selector:
+        And here's an example of a range slider:
 
         >>> values = st.slider(
         ...     'Select a range of values',
@@ -2544,6 +2549,15 @@ class DeltaGenerator(object):
                 "Wrong number of arguments to add_rows()."
                 "Method requires exactly one dataset"
             )
+
+        # Regenerate chart with data
+        if self._last_index == 0:
+            if self._delta_type == 'line_chart':
+                self.line_chart(data)
+            elif self._delta_type == 'bar_chart':
+                self.bar_chart(data)
+            elif self._delta_type == 'area_chart':
+                self.area_chart(data)
 
         data, self._last_index = _maybe_melt_data_for_add_rows(
             data, self._delta_type, self._last_index
