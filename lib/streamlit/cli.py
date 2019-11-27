@@ -34,6 +34,8 @@ from streamlit import version
 import streamlit.bootstrap as bootstrap
 from streamlit.case_converters import to_snake_case
 
+ACCEPTED_FILE_EXTENSIONS = ('py', 'py3')
+
 LOG_LEVELS = ["error", "warning", "info", "debug"]
 
 NEW_VERSION_TEXT = """
@@ -206,6 +208,10 @@ def main_run(target, args=None, **kwargs):
     from validators import url
 
     _apply_config_options_from_cli(kwargs)
+
+    file_extension = target.split(".")[-1]
+    if file_extension not in ACCEPTED_FILE_EXTENSIONS:
+        raise click.BadArgumentUsage("Streamlit requires raw Python (.py) files, not %s.\nFor more information, please see https://streamlit.io/docs" % file_extension)
 
     if url(target):
         from streamlit.temporary_directory import TemporaryDirectory

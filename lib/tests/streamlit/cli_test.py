@@ -67,6 +67,15 @@ class CliTest(unittest.TestCase):
         self.assertNotEqual(0, result.exit_code)
         self.assertTrue("File does not exist" in result.output)
 
+    def test_run_not_allowed_file_extension(self):
+        """streamlit run should fail if a not allowed file extension is passed"""
+
+        result = self.runner.invoke(cli, ["run", "file_name.doc"])
+        print(result.output)
+        self.assertNotEqual(0, result.exit_code)
+        self.assertTrue("Streamlit requires raw Python (.py) files, not doc."
+                        in result.output)
+
     @tempdir()
     def test_run_valid_url(self, temp_dir):
         """streamlit run succeeds if an existing url is passed"""
