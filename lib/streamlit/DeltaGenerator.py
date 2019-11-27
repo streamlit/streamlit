@@ -1647,13 +1647,13 @@ class DeltaGenerator(object):
         Example
         -------
         >>> genre = st.radio(
-        ...     'What\'s your favorite movie genre',
+        ...     "What\'s your favorite movie genre",
         ...     ('Comedy', 'Drama', 'Documentary'))
         >>>
         >>> if genre == 'Comedy':
         ...     st.write('You selected comedy.')
         ... else:
-        ...     st.write('You didn\'t select comedy.')
+        ...     st.write("You didn\'t select comedy.")
 
         """
         if not isinstance(index, int):
@@ -2062,7 +2062,7 @@ class DeltaGenerator(object):
         Example
         -------
         >>> d = st.date_input(
-        ...     'When\'s your birthday',
+        ...     "When\'s your birthday",
         ...     datetime.date(2019, 7, 6))
         >>> st.write('Your birthday is:', d)
 
