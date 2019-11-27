@@ -1756,10 +1756,9 @@ class DeltaGenerator(object):
             Defaults 100 if the value is an int, 1.0 otherwise.
         value : int/float or a tuple/list of int/float or None
             The value of the slider when it first renders. If a tuple/list
-            of two values is passed to the widget, then a range slider with the
-            lower and upper bounds is rendered. For example, if `[1, 10]` or
-            `(1, 10)` is passed to the widget, the slider will have a
-            selectable range between 1 and 10.
+            of two values is passed here, then a range slider with those lower
+            and upper bounds is rendered. For example, if set to `(1, 10)` the
+            slider will have a selectable range between 1 and 10.
             Defaults to min_value.
         step : int/float or None
             The stepping interval.
