@@ -640,9 +640,11 @@ class CodeHashTest(unittest.TestCase):
         def g(y):
             return tf_session
 
-        # Unhashable object raises an error
-        with self.assertRaises(TypeError):
-            get_hash(f)
+        # Function with unhashable object raises an error in python 3
+        # In python 2 we fallback to hashing the function name
+        if sys.version_info >= (3, 0):
+            with self.assertRaises(TypeError):
+                get_hash(f)
 
         hash_funcs = {tf_session_class: id}
 
