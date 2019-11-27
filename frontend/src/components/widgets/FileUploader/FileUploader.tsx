@@ -114,13 +114,9 @@ class FileUploader extends React.PureComponent<Props, State> {
   renderErrorMessage = (): React.ReactNode => {
     const { errorMessage } = this.state
     return (
-      <div className="stFileUploaderError">
-        <span className="stFileUploaderError__text">{errorMessage}</span>
-        <Button
-          className="stFileUploaderError__button"
-          outline
-          onClick={this.closeErrorMessage}
-        >
+      <div className="uploadError">
+        <span className="text">{errorMessage}</span>
+        <Button className="button" outline onClick={this.closeErrorMessage}>
           Ok
         </Button>
       </div>

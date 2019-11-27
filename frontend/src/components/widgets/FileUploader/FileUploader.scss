@@ -16,53 +16,48 @@
 
 @import "src/assets/css/variables";
 
-.stFileUploader button:focus {
-  outline: 0;
-}
+.stFileUploader {
+  button:focus {
+    outline: 0;
+  }
 
-.stFileUploaderError {
-  outline: 0;
-  line-height: 1.6;
-  font-weight: normal;
-  font-size: 1rem;
-  font-family: "IBM Plex Sans", sans-serif;
+  .uploadError {
+    outline: 0;
+    line-height: 1.6;
+    font-weight: normal;
+    font-size: 1rem;
+    font-family: "IBM Plex Sans", sans-serif;
+    height: 10rem;
+    justify-content: center;
+    width: 100%;
+    padding-left: 1rem;
+    padding-bottom: 32px;
+    padding-right: 1rem;
+    padding-top: 1rem;
+    outline: 0px;
+    flex-direction: column;
+    display: flex;
+    box-sizing: border-box;
+    border-width: 2px;
+    border-color: rgb(128, 132, 149);
+    background-color: rgb(240, 242, 246);
+    align-items: center;
 
-  height: 10rem;
-  -webkit-box-pack: center;
-  justify-content: center;
-  width: 100%;
-  padding-left: 1rem;
-  padding-bottom: 32px;
-  padding-right: 1rem;
-  padding-top: 1rem;
-  outline: 0px;
-  -webkit-box-orient: vertical;
-  -webkit-box-direction: normal;
-  flex-direction: column;
-  display: flex;
-  box-sizing: border-box;
-  border-width: 2px;
-  border-color: rgb(128, 132, 149);
-  background-color: rgb(240, 242, 246);
-  -webkit-box-align: center;
-  align-items: center;
-}
+    .text {
+      line-height: 1.6;
+      font-weight: normal;
+      font-size: 1rem;
+      font-family: "IBM Plex Sans", sans-serif;
+      box-sizing: border-box;
+      box-sizing: border-box;
+      display: block;
+      flex-direction: column;
+      color: $red;
+    }
 
-.stFileUploaderError__text {
-  line-height: 1.6;
-  font-weight: normal;
-  font-size: 1rem;
-  font-family: "IBM Plex Sans", sans-serif;
-  box-sizing: border-box;
-  box-sizing: border-box;
-  display: block;
-  -webkit-box-orient: vertical;
-  -webkit-box-direction: normal;
-  flex-direction: column;
-  color: $red;
-}
-
-.stFileUploaderError__button {
-  margin-top: 2rem;
-  color: $red;
+    .button {
+      margin-top: 2rem;
+      color: $red;
+    }
+  }
 }

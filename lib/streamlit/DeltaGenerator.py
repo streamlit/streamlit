@@ -1918,7 +1918,7 @@ class DeltaGenerator(object):
         ----------
         label : str or None
             A short label explaining to the user what this file uploader is for.
-        type : list of string or None
+        type : str or list of str or None
             Array of allowed extensions. ['png', 'jpg']
             By default, all extensions are allowed.
 
@@ -1929,8 +1929,8 @@ class DeltaGenerator(object):
 
         Examples
         --------
-        >>> file = st.file_uploader("Upload a image", type=["png"])
-        >>> if file != None:
+        >>> file = st.file_uploader("Upload a image", type="png")
+        >>> if file is not None:
         >>>     st.image(file)
         """
 
