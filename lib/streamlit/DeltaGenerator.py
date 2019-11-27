@@ -174,10 +174,11 @@ def _set_widget_id(widget_type, element, user_key=None):
         If this is None, we'll generate an ID by hashing the element.
 
     """
-    if user_key is None:
-        widget_id = "%s" % hash(element.SerializeToString())
+    element_hash = hash(element.SerializeToString())
+    if user_key is not None:
+        widget_id = "%s-%s" % (user_key, element_hash)
     else:
-        widget_id = "%s-%s" % (user_key, widget_type)
+        widget_id = "%s" % element_hash
 
     ctx = get_report_ctx()
     if ctx is not None:
@@ -2405,17 +2406,16 @@ class DeltaGenerator(object):
                   PointCloudLayer, ScatterplotLayer, ScreenGridLayer,
                   TextLayer.
 
-                - "encoding" : dict
-                  A mapping connecting specific fields in the dataset to
-                  properties of the chart. The exact keys that are accepted
-                  depend on the "type" field, above.
+                - Plus anything accepted by that layer type. The exact keys that
+                  are accepted depend on the "type" field, above. For example, for
+                  ScatterplotLayer you can set fields like "opacity", "filled",
+                  "stroked", and so on.
 
-                  For example, Deck.GL"s documentation for ScatterplotLayer
+                  In addition, Deck.GL"s documentation for ScatterplotLayer
                   shows you can use a "getRadius" field to individually set
                   the radius of each circle in the plot. So here you would
-                  set "encoding": {"getRadius": "my_column"} where
-                  "my_column" is the name of the column containing the radius
-                  data.
+                  set "getRadius": "my_column" where "my_column" is the name
+                  of the column containing the radius data.
 
                   For things like "getPosition", which expect an array rather
                   than a scalar value, we provide alternates that make the
@@ -2432,10 +2432,6 @@ class DeltaGenerator(object):
                     green, blue and alpha.
                   - Instead of "getSourceColor" : use the same as above.
                   - Instead of "getTargetColor" : use "getTargetColorR", etc.
-
-                - Plus anything accepted by that layer type. For example, for
-                  ScatterplotLayer you can set fields like "opacity", "filled",
-                  "stroked", and so on.
 
         **kwargs : any
             Same as spec, but as keywords. Keys are "unflattened" at the
