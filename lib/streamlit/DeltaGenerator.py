@@ -2550,6 +2550,15 @@ class DeltaGenerator(object):
                 "Method requires exactly one dataset"
             )
 
+        # Regenerate chart with data
+        if self._last_index == 0:
+            if self._delta_type == 'line_chart':
+                self.line_chart(data)
+            elif self._delta_type == 'bar_chart':
+                self.bar_chart(data)
+            elif self._delta_type == 'area_chart':
+                self.area_chart(data)
+
         data, self._last_index = _maybe_melt_data_for_add_rows(
             data, self._delta_type, self._last_index
         )
