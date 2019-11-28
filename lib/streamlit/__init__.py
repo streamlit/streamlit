@@ -145,7 +145,7 @@ def _with_dg(method):
     def wrapped_method(*args, **kwargs):
         ctx = _get_report_ctx()
         dg = ctx.main_dg if ctx is not None else _NULL_DELTA_GENERATOR
-        return method(dg, *args, **kwargs)
+        return method.__get__(dg)(*args, **kwargs)
 
     return wrapped_method
 
@@ -217,8 +217,8 @@ def set_option(key, value):
     """Set config option.
 
     Currently, only two config options can be set within the script itself:
-        * client.caching 
-        * client.displayEnabled 
+        * client.caching
+        * client.displayEnabled
 
     Calling with any other options will raise StreamlitAPIException.
 
@@ -240,7 +240,9 @@ def set_option(key, value):
         return
 
     raise StreamlitAPIException(
-        "{key} cannot be set on the fly. Set as command line option, e.g. streamlit run script.py --{key}, or in config.toml instead.".format(key=key)
+        "{key} cannot be set on the fly. Set as command line option, e.g. streamlit run script.py --{key}, or in config.toml instead.".format(
+            key=key
+        )
     )
 
 

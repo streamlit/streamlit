@@ -89,9 +89,9 @@ def _get_context(func):
     return Context(globals=func.__globals__, cells=cells, varnames=varnames)
 
 
-def get_hash(f, context=None):
+def get_hash(f, context=None, hash_funcs=None):
     """Quick utility function that computes a hash of an arbitrary object."""
-    hasher = CodeHasher("md5")
+    hasher = CodeHasher("md5", hash_funcs=hash_funcs)
     hasher.update(f, context)
     return hasher.digest()
 
@@ -184,7 +184,7 @@ def _hashing_error_message(start):
 class CodeHasher:
     """A hasher that can hash code objects including dependencies."""
 
-    def __init__(self, name="md5", hasher=None):
+    def __init__(self, name="md5", hasher=None, hash_funcs=None):
         self.hashes = dict()
 
         self.name = name
@@ -203,6 +203,8 @@ class CodeHasher:
         self._folder_black_list = FolderBlackList(
             config.get_option("server.folderWatchBlacklist")
         )
+
+        self.hash_funcs = hash_funcs or {}
 
     def update(self, obj, context=None):
         """Update the hash with the provided object."""
@@ -253,7 +255,12 @@ class CodeHasher:
             elif isinstance(obj, bytes) or isinstance(obj, bytearray):
                 return obj
             elif isinstance(obj, string_types):  # noqa: F821
+                # Don't allow the user to override string since
+                # str == bytes on python 2
                 return obj.encode()
+            elif type(obj) in self.hash_funcs:
+                # Escape hatch for unsupported objects
+                return self.to_bytes(self.hash_funcs[type(obj)](obj))
             elif isinstance(obj, float):
                 return self.to_bytes(hash(obj))
             elif isinstance(obj, int):
