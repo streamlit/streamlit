@@ -48,6 +48,5 @@ message FloatArray {
 }
 
 message IntArray {
-  // Todo: use sint64
   repeated int32 value = 1;
 }
