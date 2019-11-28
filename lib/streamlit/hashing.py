@@ -255,8 +255,7 @@ class CodeHasher:
             elif isinstance(obj, bytes) or isinstance(obj, bytearray):
                 return obj
             elif isinstance(obj, string_types):  # noqa: F821
-                # Todo: explain why this is above hash_funcs
-                # and the user can't override string
+                # Don't allow the user to override string since
                 # str == bytes on python 2
                 return obj.encode()
             elif type(obj) in self.hash_funcs:

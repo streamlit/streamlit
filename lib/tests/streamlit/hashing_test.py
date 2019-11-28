@@ -56,16 +56,15 @@ class HashTest(unittest.TestCase):
         self.assertNotEqual(get_hash(2 ** 7), get_hash(2 ** 7 + 1))
 
     def test_list(self):
-        # Todo: some reason we're not calling get_hash here and in test_tuple?
-        self.assertEqual([1, 2], [1, 2])
-        self.assertNotEqual([1, 2], [2, 2])
-        self.assertNotEqual([1], 1)
+        self.assertEqual(get_hash([1, 2]), get_hash([1, 2]))
+        self.assertNotEqual(get_hash([1, 2]), get_hash([2, 2]))
+        self.assertNotEqual(get_hash([1]), get_hash(1))
 
     def test_tuple(self):
-        self.assertEqual((1, 2), (1, 2))
-        self.assertNotEqual((1, 2), (2, 2))
-        self.assertNotEqual((1,), 1)
-        self.assertNotEqual((1,), [1])
+        self.assertEqual(get_hash((1, 2)), get_hash((1, 2)))
+        self.assertNotEqual(get_hash((1, 2)), get_hash((2, 2)))
+        self.assertNotEqual(get_hash((1,)), get_hash(1))
+        self.assertNotEqual(get_hash((1,)), get_hash([1]))
 
     def test_float(self):
         self.assertEqual(get_hash(0.1), get_hash(0.1))
