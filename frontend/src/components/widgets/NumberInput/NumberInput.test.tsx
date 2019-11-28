@@ -76,58 +76,12 @@ describe("NumberInput", () => {
     expect(wrapper.find("label").text()).toBe(props.element.get("label"))
   })
 
-  describe("MinMax", () => {
-    it("Should set a default min and max", () => {
-      const props = getIntProps()
-      const wrapper = shallow(<NumberInput {...props} />)
+  it("Should set min/max defaults", () => {
+    const props = getIntProps()
+    const wrapper = shallow(<NumberInput {...props} />)
 
-      expect(wrapper.instance().getMin()).toBe(Number.MIN_SAFE_INTEGER)
-      expect(wrapper.instance().getMax()).toBe(Number.MAX_SAFE_INTEGER)
-    })
-
-    it("Should handle large int values", () => {
-      const props = getIntProps({
-        intData: {
-          default: Number.MAX_SAFE_INTEGER,
-          step: 1,
-        },
-      })
-      const wrapper = shallow(<NumberInput {...props} />)
-
-      const InputWrapper = wrapper.find(UIInput)
-
-      // @ts-ignore
-      InputWrapper.props().onKeyDown({
-        key: "ArrowDown",
-        preventDefault: preventDefault,
-      })
-
-      expect(preventDefault).toHaveBeenCalled()
-      expect(wrapper.state("value")).toBe(Number.MAX_SAFE_INTEGER - 1)
-      expect(wrapper.state("dirty")).toBe(false)
-    })
-
-    it("Should handle large float values", () => {
-      const props = getFloatProps({
-        floatData: {
-          default: Number.MAX_SAFE_INTEGER,
-          step: 1.0,
-        },
-      })
-      const wrapper = shallow(<NumberInput {...props} />)
-
-      const InputWrapper = wrapper.find(UIInput)
-
-      // @ts-ignore
-      InputWrapper.props().onKeyDown({
-        key: "ArrowDown",
-        preventDefault: preventDefault,
-      })
-
-      expect(preventDefault).toHaveBeenCalled()
-      expect(wrapper.state("value")).toBe(Number.MAX_SAFE_INTEGER - 1)
-      expect(wrapper.state("dirty")).toBe(false)
-    })
+    expect(wrapper.instance().getMin()).toBe(-Infinity)
+    expect(wrapper.instance().getMax()).toBe(+Infinity)
   })
 
   describe("FloatData", () => {
@@ -135,7 +89,7 @@ describe("NumberInput", () => {
       const props = getFloatProps({
         format: "%0.2f",
         floatData: {
-          default: 11,
+          default: 11.0,
           step: 0.1,
         },
       })

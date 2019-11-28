@@ -87,13 +87,13 @@ class NumberInput extends React.PureComponent<Props, State> {
   private getMin = (): number => {
     return this.props.element.get("has_min")
       ? this.getData().get("min")
-      : Number.MIN_SAFE_INTEGER
+      : -Infinity
   }
 
   private getMax = (): number => {
     return this.props.element.get("has_max")
       ? this.getData().get("max")
-      : Number.MAX_SAFE_INTEGER
+      : +Infinity
   }
 
   private getStep = (): number => {
