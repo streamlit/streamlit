@@ -71,9 +71,9 @@ class CliTest(unittest.TestCase):
         """streamlit run should fail if a not allowed file extension is passed"""
 
         result = self.runner.invoke(cli, ["run", "file_name.doc"])
-        print(result.output)
+
         self.assertNotEqual(0, result.exit_code)
-        self.assertTrue("Streamlit requires raw Python (.py) files, not doc."
+        self.assertTrue("Streamlit requires raw Python (.py) files, not .doc."
                         in result.output)
 
     @tempdir()
