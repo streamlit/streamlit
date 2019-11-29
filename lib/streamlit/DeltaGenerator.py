@@ -1595,7 +1595,7 @@ class DeltaGenerator(object):
             if not isinstance(default_values, list):
                 default_values = [default_values]
 
-            for value in default_values:                
+            for value in default_values:
                 if value not in options:
                     raise StreamlitAPIException(
                         "Every Multiselect default value must exist in options"
@@ -1647,13 +1647,13 @@ class DeltaGenerator(object):
         Example
         -------
         >>> genre = st.radio(
-        ...     'What\'s your favorite movie genre',
+        ...     "What\'s your favorite movie genre",
         ...     ('Comedy', 'Drama', 'Documentary'))
         >>>
         >>> if genre == 'Comedy':
         ...     st.write('You selected comedy.')
         ... else:
-        ...     st.write('You didn\'t select comedy.')
+        ...     st.write("You didn\'t select comedy.")
 
         """
         if not isinstance(index, int):
@@ -2062,7 +2062,7 @@ class DeltaGenerator(object):
         Example
         -------
         >>> d = st.date_input(
-        ...     'When\'s your birthday',
+        ...     "When\'s your birthday",
         ...     datetime.date(2019, 7, 6))
         >>> st.write('Your birthday is:', d)
 
@@ -2118,7 +2118,7 @@ class DeltaGenerator(object):
             If None, there will be no maximum.
         value : int or float or None
             The value of this widget when it first renders.
-            Defaults to min_value, or 0 if min_value is None
+            Defaults to min_value, or 0.0 if min_value is None
         step : int or float or None
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
@@ -2148,7 +2148,7 @@ class DeltaGenerator(object):
             if min_value:
                 value = min_value
             else:
-                value = 0
+                value = 0.0  # We set a float as default
 
         int_value = isinstance(value, int)
         float_value = isinstance(value, float)
@@ -2210,24 +2210,28 @@ class DeltaGenerator(object):
                 % {"value": value, "min": min_value, "max": max_value}
             )
 
-        element.number_input.label = label
-        element.number_input.default = value
-
-        if min_value is None:
-            element.number_input.min = float("-inf")
+        number_input = element.number_input
+        if all_ints:
+            data = number_input.int_data
         else:
-            element.number_input.min = min_value
+            data = number_input.float_data
 
-        if max_value is None:
-            element.number_input.max = float("+inf")
-        else:
-            element.number_input.max = max_value
+        number_input.label = label
+        data.default = value
+
+        if min_value is not None:
+            data.min = min_value
+            number_input.has_min = True
+
+        if max_value is not None:
+            data.max = max_value
+            number_input.has_max = True
 
         if step is not None:
-            element.number_input.step = step
+            data.step = step
 
         if format is not None:
-            element.number_input.format = format
+            number_input.format = format
 
         ui_value = _get_widget_ui_value("number_input", element, user_key=key)
 
@@ -2549,15 +2553,6 @@ class DeltaGenerator(object):
                 "Wrong number of arguments to add_rows()."
                 "Method requires exactly one dataset"
             )
-
-        # Regenerate chart with data
-        if self._last_index == 0:
-            if self._delta_type == 'line_chart':
-                self.line_chart(data)
-            elif self._delta_type == 'bar_chart':
-                self.bar_chart(data)
-            elif self._delta_type == 'area_chart':
-                self.area_chart(data)
 
         data, self._last_index = _maybe_melt_data_for_add_rows(
             data, self._delta_type, self._last_index

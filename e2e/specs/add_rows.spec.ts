@@ -35,6 +35,11 @@ describe("st.add_rows", () => {
     cy.get(".decoration").invoke("css", "display", "none");
   });
 
+  beforeEach(() => {
+    // Check that the app is fully loaded
+    return cy.get(".element-container").should("have.length", 26);
+  });
+
   it("works for all elements that support it", () => {
     cy.get(".element-container .stTable").should("have.length", 3);
     cy.get(".element-container .stDataFrame").should("have.length", 4);
