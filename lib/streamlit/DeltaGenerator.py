@@ -1595,7 +1595,7 @@ class DeltaGenerator(object):
             if not isinstance(default_values, list):
                 default_values = [default_values]
 
-            for value in default_values:                
+            for value in default_values:
                 if value not in options:
                     raise StreamlitAPIException(
                         "Every Multiselect default value must exist in options"
@@ -2553,15 +2553,6 @@ class DeltaGenerator(object):
                 "Wrong number of arguments to add_rows()."
                 "Method requires exactly one dataset"
             )
-
-        # Regenerate chart with data
-        if self._last_index == 0:
-            if self._delta_type == 'line_chart':
-                self.line_chart(data)
-            elif self._delta_type == 'bar_chart':
-                self.bar_chart(data)
-            elif self._delta_type == 'area_chart':
-                self.area_chart(data)
 
         data, self._last_index = _maybe_melt_data_for_add_rows(
             data, self._delta_type, self._last_index
