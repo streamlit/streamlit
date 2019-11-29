@@ -2118,7 +2118,7 @@ class DeltaGenerator(object):
             If None, there will be no maximum.
         value : int or float or None
             The value of this widget when it first renders.
-            Defaults to min_value, or 0 if min_value is None
+            Defaults to min_value, or 0.0 if min_value is None
         step : int or float or None
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
@@ -2148,7 +2148,7 @@ class DeltaGenerator(object):
             if min_value:
                 value = min_value
             else:
-                value = 0
+                value = 0.0  # We set a float as default
 
         int_value = isinstance(value, int)
         float_value = isinstance(value, float)
@@ -2210,24 +2210,28 @@ class DeltaGenerator(object):
                 % {"value": value, "min": min_value, "max": max_value}
             )
 
-        element.number_input.label = label
-        element.number_input.default = value
-
-        if min_value is None:
-            element.number_input.min = float("-inf")
+        number_input = element.number_input
+        if all_ints:
+            data = number_input.int_data
         else:
-            element.number_input.min = min_value
+            data = number_input.float_data
 
-        if max_value is None:
-            element.number_input.max = float("+inf")
-        else:
-            element.number_input.max = max_value
+        number_input.label = label
+        data.default = value
+
+        if min_value is not None:
+            data.min = min_value
+            number_input.has_min = True
+
+        if max_value is not None:
+            data.max = max_value
+            number_input.has_max = True
 
         if step is not None:
-            element.number_input.step = step
+            data.step = step
 
         if format is not None:
-            element.number_input.format = format
+            number_input.format = format
 
         ui_value = _get_widget_ui_value("number_input", element, user_key=key)
 
