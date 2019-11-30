@@ -21,13 +21,15 @@ message NumberInput {
   string label = 2;
 
   oneof data {
-    IntNumberInput int_data = 3;
-    FloatNumberInput float_data = 4;
+    IntNumberInput int_data = 9;
+    FloatNumberInput float_data = 10;
   }
 
-  string format = 5;
-  bool has_min = 6;
-  bool has_max = 7;
+  string format = 8;
+  bool has_min = 11;
+  bool has_max = 12;
+
+  // deprecated: 3, 5, 6, 7
 }
 
 message IntNumberInput {
