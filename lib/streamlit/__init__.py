@@ -77,20 +77,24 @@ __version__ = _pkg_resources.get_distribution("streamlit").version
 # The try/except is needed for python 2/3 compatibility
 try:
 
-    if platform.system() == 'Linux' and os.path.isfile('/etc/machine-id') == False and os.path.isfile('/var/lib/dbus/machine-id') == False:
+    if (
+        platform.system() == "Linux"
+        and os.path.isfile("/etc/machine-id") == False
+        and os.path.isfile("/var/lib/dbus/machine-id") == False
+    ):
         print("Generate machine-id")
-        subprocess.run(["sudo", "dbus-uuidgen", "--ensure"])   
-    
+        subprocess.run(["sudo", "dbus-uuidgen", "--ensure"])
+
     machine_id = _uuid.getnode()
-    if os.path.isfile('/etc/machine-id'):
+    if os.path.isfile("/etc/machine-id"):
         with open("/etc/machine-id", "r") as f:
             machine_id = f.read()
-    elif os.path.isfile('/var/lib/dbus/machine-id'):
+    elif os.path.isfile("/var/lib/dbus/machine-id"):
         with open("/var/lib/dbus/machine-id", "r") as f:
             machine_id = f.read()
 
     __installation_id__ = str(_uuid.uuid5(_uuid.NAMESPACE_DNS, str(machine_id)))
-    
+
 except UnicodeDecodeError:
     __installation_id__ = str(
         _uuid.uuid5(_uuid.NAMESPACE_DNS, str(_uuid.getnode()).encode("utf-8"))

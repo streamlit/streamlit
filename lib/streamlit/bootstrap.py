@@ -107,6 +107,7 @@ def _fix_tornado_crash():
     """
     if env_util.IS_WINDOWS and sys.version_info >= (3, 8):
         import asyncio
+
         try:
             from asyncio import (
                 WindowsProactorEventLoopPolicy,
@@ -116,14 +117,10 @@ def _fix_tornado_crash():
             pass
             # Not affected
         else:
-            if (
-                type(asyncio.get_event_loop_policy()) is
-                    WindowsProactorEventLoopPolicy
-            ):
+            if type(asyncio.get_event_loop_policy()) is WindowsProactorEventLoopPolicy:
                 # WindowsProactorEventLoopPolicy is not compatible with
                 # Tornado 6 fallback to the pre-3.8 default of Selector
-                asyncio.set_event_loop_policy(
-                    WindowsSelectorEventLoopPolicy())
+                asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())
 
 
 def _fix_sys_argv(script_path, args):
