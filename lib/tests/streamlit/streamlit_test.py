@@ -471,7 +471,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         # clear_fig is True
         for clear_fig in [True, False]:
             plt.hist(np.random.normal(1, 1, size=100), bins=20)
-            with mock.patch.object(plt, "clf", wraps=plt.clf) as plt_clf:
+            with mock.patch.object(plt, "clf", wraps=plt.clf, autospec=True) as plt_clf:
                 st.pyplot(clear_fig=clear_fig)
 
                 if clear_fig:
@@ -488,7 +488,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             fig = plt.figure()
             ax1 = fig.add_subplot(111)
             ax1.hist(np.random.normal(1, 1, size=100), bins=20)
-            with mock.patch.object(fig, "clf", wraps=fig.clf) as fig_clf:
+            with mock.patch.object(fig, "clf", wraps=fig.clf, autospec=True) as fig_clf:
                 st.pyplot(fig, clear_fig=clear_fig)
 
                 if clear_fig:
