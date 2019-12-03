@@ -200,8 +200,8 @@ def set_option(key, value):
     """Set config option.
 
     Currently, only two config options can be set within the script itself:
-        * client.caching 
-        * client.displayEnabled 
+        * client.caching
+        * client.displayEnabled
 
     Calling with any other options will raise StreamlitAPIException.
 
@@ -271,8 +271,9 @@ def write(*args, **kwargs):
 
         Arguments are handled as follows:
 
-            - write(string)     : Prints the formatted Markdown string with
-                                  Emoji support.
+            - write(string)     : Prints the formatted Markdown string, with
+            support for LaTeX expression and emoji shortcodes.
+            See docs for st.markdown for more.
             - write(data_frame) : Displays the DataFrame as a table.
             - write(error)      : Prints an exception specially.
             - write(func)       : Displays information about a function.
