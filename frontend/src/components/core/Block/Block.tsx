@@ -36,6 +36,8 @@ import Markdown from "components/elements/Markdown/"
 import Table from "components/elements/Table/"
 import Text from "components/elements/Text/"
 
+import Maybe from "components/core/Maybe/"
+
 // Lazy-load elements.
 const Audio = React.lazy(() => import("components/elements/Audio/"))
 const Balloons = React.lazy(() => import("components/elements/Balloons/"))
@@ -89,6 +91,15 @@ interface Props {
   widgetsDisabled: boolean
 }
 
+interface MaybeProps {
+  enable: boolean
+}
+
+export interface MaybeState {
+  // count: number
+  // oldElement: ReactElement | null
+}
+
 class Block extends PureComponent<Props> {
   private renderElements = (width: number): ReactNode[] => {
     const elementsToRender = this.getElements()
@@ -111,27 +122,27 @@ class Block extends PureComponent<Props> {
   }
 
   private getElements = (): BlockElement => {
-    let elementsToRender = this.props.elements
-    const previousElements = this.props.previousElements
-    if (this.props.reportRunState === ReportRunState.RUNNING) {
-      // (BUG #739) When the report is running, use our most recent list
-      // of rendered elements as placeholders for any empty elements we encounter.
-      elementsToRender = this.props.elements.map(
-        (element: StElement, index: number): StElement => {
-          if (element instanceof ImmutableMap) {
-            // Repeat the old element if we encounter st.empty()
-            const isEmpty = (element as SimpleElement).get("type") === "empty"
-            if (isEmpty) {
-              return previousElements
-                ? (previousElements.get(index, element) as BlockElement)
-                : element
-            }
-          }
-          return element
-        }
-      )
-    }
-    return elementsToRender
+    // let elementsToRender = this.props.elements
+    // const previousElements = this.props.previousElements
+    // if (this.props.reportRunState === ReportRunState.RUNNING) {
+    //   // (BUG #739) When the report is running, use our most recent list
+    //   // of rendered elements as placeholders for any empty elements we encounter.
+    //   elementsToRender = this.props.elements.map(
+    //     (element: StElement, index: number): StElement => {
+    //       if (element instanceof ImmutableMap) {
+    //         // Repeat the old element if we encounter st.empty()
+    //         const isEmpty = (element as SimpleElement).get("type") === "empty"
+    //         if (isEmpty) {
+    //           return previousElements
+    //             ? (this.props.elements.get(index, element) as BlockElement)
+    //             : element
+    //         }
+    //       }
+    //       return element
+    //     }
+    //   )
+    // }
+    return this.props.elements
   }
 
   private isElementStale(element: SimpleElement): boolean {
@@ -173,10 +184,15 @@ class Block extends PureComponent<Props> {
   ): ReactNode | null {
     const component = this.renderElement(element, index, width)
 
-    if (!component) {
-      // Do not transform an empty element into a ReactNode.
-      return null
-    }
+    // if (this.props.reportRunState !== ReportRunState.RUNNING && !component) {
+    //   return null
+    // }
+
+    // const component = (
+    //   <Maybe enable={true} reportRunState={this.props.reportRunState} element={element}>
+    //     {renderedElement}
+    //   </Maybe>
+    // )
 
     const isStale =
       this.props.showStaleElementIndicator &&
@@ -232,7 +248,7 @@ class Block extends PureComponent<Props> {
       }
     }
 
-    return dispatchOneOf(element, "type", {
+    const dispatched = dispatchOneOf(element, "type", {
       alert: (el: SimpleElement) => <Alert element={el} width={width} />,
       audio: (el: SimpleElement) => <Audio element={el} width={width} />,
       balloons: (el: SimpleElement) => <Balloons element={el} width={width} />,
@@ -249,7 +265,10 @@ class Block extends PureComponent<Props> {
       docString: (el: SimpleElement) => (
         <DocString element={el} width={width} />
       ),
-      empty: () => undefined,
+      empty: () => {
+        console.log("undefined")
+        return undefined
+      },
       exception: (el: SimpleElement) => (
         <ExceptionElement element={el} width={width} />
       ),
@@ -354,6 +373,29 @@ class Block extends PureComponent<Props> {
         />
       ),
     })
+
+    // const withMaybe = <P extends object>(
+    //   Component: React.ComponentType<P>
+    // ): React.ReactNode =>
+    //   class Maybe extends React.Component<P & MaybeProps, MaybeState> {
+    //     public shouldComponentUpdate(
+    //       nextProps: Readonly<MaybeProps>,
+    //       nextState: Readonly<MaybeState>,
+    //       nextContext: any
+    //     ): boolean {
+    //       console.log("state", this.state)
+    //       console.log("props", this.props)
+    //       console.log("nextState", nextState)
+    //       console.log("nextProps", nextProps)
+    //       return false
+    //     }
+    //     render(): React.ReactNode {
+    //       const { enable, ...props } = this.props
+    //       return <Component {...(props as P)} />
+    //     }
+    //   }
+
+    return <Maybe enable={dispatched != undefined}> {dispatched} </Maybe>
   }
 
   public render = (): ReactNode => (

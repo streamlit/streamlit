@@ -109,6 +109,14 @@ class VegaLiteChart extends React.PureComponent<PropsWithHeight, State> {
     )
   }
 
+  // public shouldComponentUpdate(
+  //   nextProps: Readonly<PropsWithHeight>,
+  //   nextState: Readonly<State>,
+  //   nextContext: any
+  // ): boolean {
+  //   return false
+  // }
+
   public async componentDidMount(): Promise<void> {
     try {
       await this.createView()
