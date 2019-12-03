@@ -145,8 +145,10 @@ class Block extends PureComponent<Props> {
     const component = this.renderElement(element, index, width)
     const componentWithMaybe = (
       <Maybe
-        enable={component !== undefined}
-        reportRunState={this.props.reportRunState}
+        enable={
+          component !== undefined ||
+          this.props.reportRunState !== ReportRunState.RUNNING
+        }
       >
         {" "}
         {component}{" "}

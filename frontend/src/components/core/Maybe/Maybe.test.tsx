@@ -16,25 +16,19 @@
  */
 
 import React from "react"
+import { shallow } from "enzyme"
+import { Map as ImmutableMap } from "immutable"
+import Maybe, { Props } from "./Maybe"
 
-export interface Props {
-  enable: boolean
-}
+const getProps = (enable: boolean): Props => ({
+  enable: enable,
+})
 
-export interface State {}
-
-class Maybe extends React.Component<Props, State> {
-  public shouldComponentUpdate(
-    nextProps: Readonly<Props>,
-    nextState: Readonly<State>,
-    nextContext: any
-  ): boolean {
-    return nextProps.enable
-  }
-
-  public render(): React.ReactNode {
-    return this.props.children
-  }
-}
-
-export default Maybe
+it("renders... as expected", () => {
+  const props = getProps(true)
+  const wrap = shallow(<Maybe {...props} />)
+  expect(wrap).toBeDefined()
+  const elem = wrap.get(0)
+  expect(wrap.text()).toBe("some plain text")
+  expect(elem.props.className.includes("stText")).toBeTruthy()
+})
