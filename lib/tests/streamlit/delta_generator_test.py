@@ -26,6 +26,7 @@ from streamlit.errors import StreamlitAPIException
 setup_2_3_shims(globals())
 
 import json
+import mock
 import sys
 import unittest
 
@@ -623,3 +624,26 @@ class DeltaGeneratorImageTest(testutil.DeltaGeneratorTestCase):
         with self.assertRaises(Exception) as ctx:
             st.image([url] * 5, caption=[caption] * 2)
         self.assertTrue("Cannot pair 2 captions with 5 images." in str(ctx.exception))
+
+
+class DeltaGeneratorPyplotTest(testutil.DeltaGeneratorTestCase):
+    """Test DeltaGenerator.pyplot"""
+
+    def test_clear_figure(self):
+        """st.pyplot should clear the passed-in figure"""
+        import matplotlib.pyplot as plt
+        import numpy as np
+
+        # Assert that plt.clf() is called by st.pyplot()
+        plt.hist(np.random.normal(1, 1, size=100), bins=20)
+        with mock.patch.object(plt, "clf", wraps=plt.clf) as plt_clf:
+            st.pyplot()
+            plt_clf.assert_called_once()
+
+        # Assert that fig.clf() is called by st.pyplot(fig)
+        fig = plt.figure()
+        ax1 = fig.add_subplot()
+        ax1.hist(np.random.normal(1, 1, size=100), bins=20)
+        with mock.patch.object(fig, "clf", wraps=fig.clf) as fig_clf:
+            st.pyplot(fig)
+            fig_clf.assert_called_once()

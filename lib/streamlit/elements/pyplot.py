@@ -58,3 +58,7 @@ def marshall(new_element_proto, fig=None, **kwargs):
     image_proto.marshall_images(
         image, None, -2, new_element_proto.imgs, False, channels="RGB", format="PNG"
     )
+
+    # Clear the figure after rendering it. This means that subsequent
+    # plt calls will be starting fresh.
+    fig.clf()
