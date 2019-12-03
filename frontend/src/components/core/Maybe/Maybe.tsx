@@ -16,9 +16,11 @@
  */
 
 import React from "react"
+import { ReportRunState } from "../../../lib/ReportRunState"
 
 export interface Props {
   enable: boolean
+  reportRunState: ReportRunState
 }
 
 export interface State {}
@@ -29,7 +31,11 @@ class Maybe extends React.Component<Props, State> {
     nextState: Readonly<State>,
     nextContext: any
   ): boolean {
-    return nextProps.enable
+    // is this needed ?
+    if (nextProps.reportRunState === ReportRunState.RUNNING) {
+      return nextProps.enable
+    }
+    return true
   }
 
   public render(): React.ReactNode {

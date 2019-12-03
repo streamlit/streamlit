@@ -143,15 +143,20 @@ class Block extends PureComponent<Props> {
     width: number
   ): ReactNode | null {
     const component = this.renderElement(element, index, width)
-
-    if (!component) {
-      // Do not transform an empty element into a ReactNode.
-      return null
-    }
+    const componentWithMaybe = (
+      <Maybe
+        enable={component !== undefined}
+        reportRunState={this.props.reportRunState}
+      >
+        {" "}
+        {component}{" "}
+      </Maybe>
+    )
 
     const isStale =
-      this.props.showStaleElementIndicator &&
-      this.isElementStale(element as SimpleElement)
+      !componentWithMaybe.props.enable ||
+      (this.props.showStaleElementIndicator &&
+        this.isElementStale(element as SimpleElement))
 
     const className =
       isStale && !FullScreenWrapper.isFullScreen
@@ -169,7 +174,7 @@ class Block extends PureComponent<Props> {
               />
             }
           >
-            {component}
+            {componentWithMaybe}
           </Suspense>
         </ErrorBoundary>
       </div>
@@ -180,7 +185,7 @@ class Block extends PureComponent<Props> {
     element: SimpleElement,
     index: number,
     width: number
-  ): ReactNode | undefined => {
+  ): ReactNode | null => {
     if (!element) {
       throw new Error("Transmission error.")
     }
@@ -203,7 +208,7 @@ class Block extends PureComponent<Props> {
       }
     }
 
-    const dispatched = dispatchOneOf(element, "type", {
+    return dispatchOneOf(element, "type", {
       alert: (el: SimpleElement) => <Alert element={el} width={width} />,
       audio: (el: SimpleElement) => <Audio element={el} width={width} />,
       balloons: (el: SimpleElement) => <Balloons element={el} width={width} />,
@@ -325,8 +330,6 @@ class Block extends PureComponent<Props> {
         />
       ),
     })
-
-    return <Maybe enable={dispatched !== undefined}> {dispatched} </Maybe>
   }
 
   public render = (): ReactNode => (
