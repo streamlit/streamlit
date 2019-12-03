@@ -41,8 +41,6 @@ interface Elements {
 interface Props {
   elements: Elements
 
-  previousElements: Elements | null
-
   // The unique ID for the most recent run of the report.
   reportId: string
 
@@ -87,11 +85,6 @@ class ReportView extends PureComponent<Props> {
               <ThemeProvider theme={sidebarWidgetTheme}>
                 <Block
                   elements={this.props.elements.sidebar}
-                  previousElements={
-                    this.props.previousElements
-                      ? this.props.previousElements.sidebar
-                      : null
-                  }
                   reportId={this.props.reportId}
                   reportRunState={this.props.reportRunState}
                   showStaleElementIndicator={
@@ -109,11 +102,6 @@ class ReportView extends PureComponent<Props> {
             <ThemeProvider theme={mainWidgetTheme}>
               <Block
                 elements={this.props.elements.main}
-                previousElements={
-                  this.props.previousElements
-                    ? this.props.previousElements.main
-                    : null
-                }
                 reportId={this.props.reportId}
                 reportRunState={this.props.reportRunState}
                 showStaleElementIndicator={

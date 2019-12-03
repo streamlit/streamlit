@@ -76,14 +76,8 @@ type SimpleElement = ImmutableMap<string, any>
 type StElement = SimpleElement | BlockElement
 interface BlockElement extends List<StElement> {}
 
-interface Elements {
-  main: BlockElement
-  sidebar: BlockElement
-}
-
 interface Props {
   elements: BlockElement
-  previousElements: BlockElement | null
   reportId: string
   reportRunState: ReportRunState
   showStaleElementIndicator: boolean
@@ -91,18 +85,9 @@ interface Props {
   widgetsDisabled: boolean
 }
 
-interface MaybeProps {
-  enable: boolean
-}
-
-export interface MaybeState {
-  // count: number
-  // oldElement: ReactElement | null
-}
-
 class Block extends PureComponent<Props> {
   private renderElements = (width: number): ReactNode[] => {
-    const elementsToRender = this.getElements()
+    const elementsToRender = this.props.elements
 
     // Transform Streamlit elements into ReactNodes.
     return elementsToRender
@@ -119,30 +104,6 @@ class Block extends PureComponent<Props> {
         }
       })
       .filter((node: ReactNode | null): ReactNode => node != null)
-  }
-
-  private getElements = (): BlockElement => {
-    // let elementsToRender = this.props.elements
-    // const previousElements = this.props.previousElements
-    // if (this.props.reportRunState === ReportRunState.RUNNING) {
-    //   // (BUG #739) When the report is running, use our most recent list
-    //   // of rendered elements as placeholders for any empty elements we encounter.
-    //   elementsToRender = this.props.elements.map(
-    //     (element: StElement, index: number): StElement => {
-    //       if (element instanceof ImmutableMap) {
-    //         // Repeat the old element if we encounter st.empty()
-    //         const isEmpty = (element as SimpleElement).get("type") === "empty"
-    //         if (isEmpty) {
-    //           return previousElements
-    //             ? (this.props.elements.get(index, element) as BlockElement)
-    //             : element
-    //         }
-    //       }
-    //       return element
-    //     }
-    //   )
-    // }
-    return this.props.elements
   }
 
   private isElementStale(element: SimpleElement): boolean {
@@ -166,7 +127,6 @@ class Block extends PureComponent<Props> {
       <div key={index} className="stBlock" style={{ width }}>
         <Block
           elements={element}
-          previousElements={this.props.previousElements}
           reportId={this.props.reportId}
           reportRunState={this.props.reportRunState}
           showStaleElementIndicator={this.props.showStaleElementIndicator}
@@ -184,15 +144,10 @@ class Block extends PureComponent<Props> {
   ): ReactNode | null {
     const component = this.renderElement(element, index, width)
 
-    // if (this.props.reportRunState !== ReportRunState.RUNNING && !component) {
-    //   return null
-    // }
-
-    // const component = (
-    //   <Maybe enable={true} reportRunState={this.props.reportRunState} element={element}>
-    //     {renderedElement}
-    //   </Maybe>
-    // )
+    if (!component) {
+      // Do not transform an empty element into a ReactNode.
+      return null
+    }
 
     const isStale =
       this.props.showStaleElementIndicator &&
@@ -265,10 +220,7 @@ class Block extends PureComponent<Props> {
       docString: (el: SimpleElement) => (
         <DocString element={el} width={width} />
       ),
-      empty: () => {
-        console.log("undefined")
-        return undefined
-      },
+      empty: () => undefined,
       exception: (el: SimpleElement) => (
         <ExceptionElement element={el} width={width} />
       ),
@@ -374,7 +326,7 @@ class Block extends PureComponent<Props> {
       ),
     })
 
-    return <Maybe enable={dispatched != undefined}> {dispatched} </Maybe>
+    return <Maybe enable={dispatched !== undefined}> {dispatched} </Maybe>
   }
 
   public render = (): ReactNode => (

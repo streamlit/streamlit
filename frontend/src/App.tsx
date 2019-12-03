@@ -77,7 +77,6 @@ interface Props {}
 interface State {
   connectionState: ConnectionState
   elements: Elements
-  previousElements: Elements | null
   reportId: string
   reportHash: string | null
   reportRunState: ReportRunState
@@ -113,7 +112,6 @@ class App extends PureComponent<Props, State> {
         main: fromJS([makeElementWithInfoText("Please wait...")]),
         sidebar: fromJS([]),
       },
-      previousElements: null,
       reportId: "<null>",
       reportHash: null,
       reportRunState: ReportRunState.NOT_RUNNING,
@@ -427,7 +425,6 @@ class App extends PureComponent<Props, State> {
             main: this.clearOldElements(elements.main, reportId),
             sidebar: this.clearOldElements(elements.sidebar, reportId),
           },
-          previousElements: this.elementListBuffer,
         }),
         () => {
           this.elementListBuffer = this.state.elements
@@ -836,7 +833,6 @@ class App extends PureComponent<Props, State> {
             <ReportView
               wide={this.state.userSettings.wideMode}
               elements={this.state.elements}
-              previousElements={this.state.previousElements}
               reportId={this.state.reportId}
               reportRunState={this.state.reportRunState}
               showStaleElementIndicator={
