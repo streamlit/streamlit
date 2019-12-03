@@ -187,7 +187,7 @@ class Block extends PureComponent<Props> {
     element: SimpleElement,
     index: number,
     width: number
-  ): ReactNode | null => {
+  ): ReactNode | undefined => {
     if (!element) {
       throw new Error("Transmission error.")
     }
