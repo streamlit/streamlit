@@ -1255,7 +1255,6 @@ class DeltaGenerator(object):
         fig : Matplotlib Figure
             The figure to plot. When this argument isn't specified, which is
             the usual case, this function will render the global plot.
-            The figure will be cleared after being rendered.
 
         clear_fig : bool
             If True or unspecified, the figure will be cleared after being
