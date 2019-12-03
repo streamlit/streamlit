@@ -497,10 +497,6 @@ class DeltaGenerator(object):
              must be on their own lines). Supported LaTeX functions are listed
              at https://katex.org/docs/supported.html.
 
-            The body also support LaTeX expressions, by just wrapping them in
-            "$" or "$$" (the "$$" must be on their own lines). Supported LaTeX
-            functions are listed at https://katex.org/docs/supported.html.
-
         unsafe_allow_html : bool
             By default, any HTML tags found in the body will be escaped and
             therefore treated as pure text. This behavior may be turned off by
