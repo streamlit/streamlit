@@ -25,6 +25,10 @@ describe("st.graphviz_chart", () => {
     cy.get(".decoration").invoke("css", "display", "none");
   });
 
+  beforeEach(() => {
+    return cy.get(".stGraphVizChart").should("have.length", 3);
+  });
+
   it("displays a graph with two connected nodes", () => {
     cy.get("#graphviz-chart-0 svg").matchImageSnapshot("graphviz-chart-0");
   });

@@ -22,7 +22,6 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import os
-import platform
 import toml
 import collections
 
