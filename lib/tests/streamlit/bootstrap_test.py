@@ -47,7 +47,7 @@ class BootstrapTest(unittest.TestCase):
         for platform, do_fix in [("darwin", True), ("linux2", True)]:
             sys.platform = platform
 
-            matplotlib.use("pdf")
+            matplotlib.use("pdf", force=True)
 
             config._set_option("runner.fixMatplotlib", True, "test")
             bootstrap.run("/not/a/script", "", [])
@@ -57,7 +57,7 @@ class BootstrapTest(unittest.TestCase):
                 self.assertEqual("pdf", matplotlib.get_backend().lower())
 
             # Reset
-            matplotlib.use("pdf")
+            matplotlib.use("pdf", force=True)
 
             config._set_option("runner.fixMatplotlib", False, "test")
             bootstrap.run("/not/a/script", "", [])
