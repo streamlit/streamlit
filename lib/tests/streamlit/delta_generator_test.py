@@ -30,22 +30,14 @@ import mock
 import sys
 import unittest
 
-import matplotlib
-
-# Force this backend immediately upon import, so that other imports don't
-# pre-empt it.
-matplotlib.use("Agg")
-
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-
 try:
     from inspect import signature
 except ImportError:
     from funcsigs import signature
 
 from parameterized import parameterized
+
+import pandas as pd
 
 from streamlit.DeltaGenerator import _build_duplicate_widget_message
 from streamlit.errors import DuplicateWidgetID
@@ -642,9 +634,20 @@ class DeltaGeneratorPyplotTest(testutil.DeltaGeneratorTestCase):
 
     def test_clear_figure(self):
         """st.pyplot should clear the passed-in figure"""
+        if sys.version_info < (3, 0):
+            # Matplotlib importing and backend-setting behave differently
+            # under Python2. Getting this test to run there is horrendously
+            # annoying so we're skipping it.
+            return
 
-        # Use a matplotlib backend that supports headless rendering.
+        import matplotlib
+
+        # Force this backend immediately upon import, so that the
+        # matplotlib.pyplot import doesn't pre-empt it
         matplotlib.use("Agg")
+
+        import matplotlib.pyplot as plt
+        import numpy as np
 
         # Assert that plt.clf() is called by st.pyplot()
         plt.hist(np.random.normal(1, 1, size=100), bins=20)
