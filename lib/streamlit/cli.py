@@ -36,7 +36,7 @@ from streamlit.case_converters import to_snake_case
 
 ACCEPTED_FILE_EXTENSIONS = ("py", "py3")
 
-LOG_LEVELS = ["error", "warning", "info", "debug"]
+LOG_LEVELS = ("error", "warning", "info", "debug")
 
 NEW_VERSION_TEXT = """
   %(new_version)s
