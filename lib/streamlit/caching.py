@@ -501,6 +501,9 @@ class Cache(dict):
 
 
     """
+    # Developer Note: We've changed the behavior of @st.cache to stop caching
+    # internal variables, but none of the changes in @st.cache were applied to
+    # to the Cache object herein.  --nm  12/3/2019
 
     def __init__(self, persist=False, allow_output_mutation=False):
         self._persist = persist
