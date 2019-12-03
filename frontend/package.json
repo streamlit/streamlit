@@ -64,6 +64,7 @@
     "react-virtualized": "^9.21.0",
     "reactstrap": "^8.0.1",
     "recharts": "^1.6.2",
+    "remark-emoji": "^2.0.2",
     "remark-math": "^2.0.0",
     "sprintf-js": "^1.1.2",
     "styletron-engine-atomic": "^1.4.1",

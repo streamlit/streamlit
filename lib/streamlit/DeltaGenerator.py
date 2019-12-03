@@ -488,11 +488,14 @@ class DeltaGenerator(object):
         body : str
             The string to display as Github-flavored Markdown. Syntax
             information can be found at: https://github.github.com/gfm.
-            Inline and block math are supported by KaTeX and remark-math.
 
-            The body also support LaTeX expressions, by just wrapping them in
-            "$" or "$$" (the "$$" must be on their own lines). Supported LaTeX
-            functions are listed at https://katex.org/docs/supported.html.
+            This also supports:
+            * Emoji shortcodes, such as `:+1:`  and `:sunglasses:`.
+            For a list of all supported codes,
+            see https://www.webfx.com/tools/emoji-cheat-sheet/.
+            * LaTeX expressions, by just wrapping them in "$" or "$$" (the "$$"
+             must be on their own lines). Supported LaTeX functions are listed
+             at https://katex.org/docs/supported.html.
 
         unsafe_allow_html : bool
             By default, any HTML tags found in the body will be escaped and
