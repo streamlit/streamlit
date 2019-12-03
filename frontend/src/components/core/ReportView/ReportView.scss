@@ -15,6 +15,7 @@
  */
 
 @import "src/assets/css/variables";
+@import "src/assets/css/mixins";
 
 .reportview-container {
   display: flex;
@@ -87,9 +88,10 @@
   }
 
   .element-container {
+    @include element-margin-bottom;
+
     display: flex;
     flex-direction: column;
-    margin-bottom: 1rem;
     // Allows to have absolutely-positioned nodes inside report elements, like
     // floating buttons.
     position: relative;
@@ -196,9 +198,10 @@
   ul,
   ol,
   dl {
-    font-size: 1rem;
-    margin: 0 0 1em 0;
+    @include element-margin-bottom;
+
     padding: 0;
+    font-size: 1rem;
     font-weight: 400;
   }
 

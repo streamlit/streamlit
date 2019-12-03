@@ -15,6 +15,7 @@
  */
 
 @import "src/assets/css/variables";
+@import "src/assets/css/mixins";
 
 body.embedded {
   overflow: hidden;
@@ -50,9 +51,10 @@ code {
 }
 
 pre {
+  @include element-margin-bottom;
+
   background: $gray-faint;
   border-radius: $border-radius;
-  margin: 0 0 1rem 0;
   padding: 1rem;
 
   code {

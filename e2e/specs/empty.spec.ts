@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2019 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,10 +15,17 @@
  * limitations under the License.
  */
 
-@import "src/assets/css/variables";
+/// <reference types="cypress" />
 
-.element-container {
-  .code-block {
-    position: relative;
-  }
-}
+describe("st.empty", () => {
+  before(() => {
+    cy.visit("http://localhost:3000/");
+
+    // Make the ribbon decoration line disappear
+    cy.get(".decoration").invoke("css", "display", "none");
+  });
+
+  it("matches the snapshot", () => {
+    cy.get(".block-container").matchImageSnapshot("stEmpty");
+  });
+});

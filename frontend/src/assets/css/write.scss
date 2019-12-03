@@ -70,7 +70,7 @@
     .markdown-text-container {
       margin: 0;
 
-      & :last-child {
+      :last-child {
         margin-bottom: 0;
       }
     }
@@ -88,6 +88,13 @@
     a {
       color: inherit;
       text-decoration: underline;
+    }
+
+    div.stCodeBlock {
+      button.overlayBtn {
+        top: 0;
+        right: 0;
+      }
     }
   }
 }

@@ -15,14 +15,21 @@
  * limitations under the License.
  */
 
-import * as format from "./format"
+/// <reference types="cypress" />
 
-test("class Duration constructor", () => {
-  const duration = new format.Duration(1234)
-  expect(duration.getTime()).toBe(1234)
-})
+describe("st.area, bar, and line charts", () => {
+  before(() => {
+    cy.visit("http://localhost:3000/");
 
-test("class toFormattedString function with exponential notation", () => {
-  expect(format.toFormattedString(4.2e-9)).toBe("0.0000")
-  expect(format.toFormattedString(4.2657457627118644e-9)).toBe("0.0000")
-})
+    // Make the ribbon decoration line disappear
+    cy.get(".decoration").invoke("css", "display", "none");
+  });
+
+  it("display times in UTC", () => {
+    cy.get(".element-container .stVegaLiteChart")
+      .find("canvas")
+      .each((el, i) => {
+        return cy.get(el).matchImageSnapshot(`chartUTCTime-${i}`);
+      });
+  });
+});

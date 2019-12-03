@@ -115,7 +115,7 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
                 ds.signature,
                 (
                     "(func=None, persist=False, "
-                    "allow_output_mutation=False, show_spinner=True, suppress_st_warning=False, "
+                    "allow_output_mutation=False, show_spinner=True, suppress_st_warning=False, hash_funcs=None, "
                     "**kwargs)"
                 ),
             )
