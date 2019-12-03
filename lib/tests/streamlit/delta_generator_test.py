@@ -31,6 +31,11 @@ import sys
 import unittest
 
 import matplotlib
+
+# Force this backend immediately upon import, so that other imports don't
+# pre-empt it.
+matplotlib.use("Agg")
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
