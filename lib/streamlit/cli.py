@@ -34,7 +34,7 @@ from streamlit import version
 import streamlit.bootstrap as bootstrap
 from streamlit.case_converters import to_snake_case
 
-ACCEPTED_FILE_EXTENSIONS = ('py', 'py3')
+ACCEPTED_FILE_EXTENSIONS = ("py", "py3")
 
 LOG_LEVELS = ["error", "warning", "info", "debug"]
 
