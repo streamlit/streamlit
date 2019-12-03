@@ -21,18 +21,6 @@ config.
 """
 
 import os
-import sys
-
-# Import matplotlib and force its backend to "agg".
-# This will not work in Python 2; we don't run matplotlib tests when running
-# in Python < 3.
-if sys.version_info >= (3, 0):
-    try:
-        import matplotlib
-
-        matplotlib.use("agg", force=True)
-    except:
-        print("Failed to set matplotlib backend for testing!", file=sys.stderr)
 
 from mock import patch, mock_open
 from streamlit import config

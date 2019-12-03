@@ -426,12 +426,15 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         * Passing in a figure.
         """
         # We don't test matplotlib under Python 2, because we're not
-        # able to reliably force the backend to "agg". (conftest.py handles
-        # setting the backend.)
-        if sys.version_info <= (3, 0):
+        # able to reliably force the backend to "agg".
+        if sys.version_info < (3, 0):
             return
 
+        import matplotlib
         import matplotlib.pyplot as plt
+
+        if matplotlib.get_backend().lower() != "agg":
+            plt.switch_backend("agg")
 
         # Make this deterministic
         np.random.seed(19680801)
@@ -484,15 +487,16 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_plotly_chart_mpl(self):
         """Test st.plotly_chart can handle Matplotlib figures."""
-        # Matplotlib backend AGG only seems to work with python3
-        # TODO(armando): Make this test work with python2.7
+        # We don't test matplotlib under Python 2, because we're not
+        # able to reliably force the backend to "agg".
         if sys.version_info < (3, 0):
             return
 
         import matplotlib
-
-        matplotlib.use("AGG")
         import matplotlib.pyplot as plt
+
+        if matplotlib.get_backend().lower() != "agg":
+            plt.switch_backend("agg")
 
         fig = plt.figure()
         plt.plot([10, 20, 30])
