@@ -374,27 +374,6 @@ class Block extends PureComponent<Props> {
       ),
     })
 
-    // const withMaybe = <P extends object>(
-    //   Component: React.ComponentType<P>
-    // ): React.ReactNode =>
-    //   class Maybe extends React.Component<P & MaybeProps, MaybeState> {
-    //     public shouldComponentUpdate(
-    //       nextProps: Readonly<MaybeProps>,
-    //       nextState: Readonly<MaybeState>,
-    //       nextContext: any
-    //     ): boolean {
-    //       console.log("state", this.state)
-    //       console.log("props", this.props)
-    //       console.log("nextState", nextState)
-    //       console.log("nextProps", nextProps)
-    //       return false
-    //     }
-    //     render(): React.ReactNode {
-    //       const { enable, ...props } = this.props
-    //       return <Component {...(props as P)} />
-    //     }
-    //   }
-
     return <Maybe enable={dispatched != undefined}> {dispatched} </Maybe>
   }
 
