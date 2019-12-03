@@ -627,38 +627,3 @@ class DeltaGeneratorImageTest(testutil.DeltaGeneratorTestCase):
         with self.assertRaises(Exception) as ctx:
             st.image([url] * 5, caption=[caption] * 2)
         self.assertTrue("Cannot pair 2 captions with 5 images." in str(ctx.exception))
-
-
-class DeltaGeneratorPyplotTest(testutil.DeltaGeneratorTestCase):
-    """Test DeltaGenerator.pyplot"""
-
-    def test_clear_figure(self):
-        """st.pyplot should clear the passed-in figure"""
-        if sys.version_info < (3, 0):
-            # Matplotlib importing and backend-setting behave differently
-            # under Python2. Getting this test to run there is horrendously
-            # annoying so we're skipping it.
-            return
-
-        import matplotlib
-
-        # Force this backend immediately upon import, so that the
-        # matplotlib.pyplot import doesn't pre-empt it
-        matplotlib.use("Agg")
-
-        import matplotlib.pyplot as plt
-        import numpy as np
-
-        # Assert that plt.clf() is called by st.pyplot()
-        plt.hist(np.random.normal(1, 1, size=100), bins=20)
-        with mock.patch.object(plt, "clf", wraps=plt.clf) as plt_clf:
-            st.pyplot()
-            plt_clf.assert_called_once()
-
-        # Assert that fig.clf() is called by st.pyplot(fig)
-        fig = plt.figure()
-        ax1 = fig.add_subplot()
-        ax1.hist(np.random.normal(1, 1, size=100), bins=20)
-        with mock.patch.object(fig, "clf", wraps=fig.clf) as fig_clf:
-            st.pyplot(fig)
-            fig_clf.assert_called_once()
