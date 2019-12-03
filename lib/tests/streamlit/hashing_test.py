@@ -19,12 +19,14 @@ import functools
 import os
 import sys
 import tempfile
+import time
 import unittest
 
 import altair as alt
 import numpy as np
 import pandas as pd
 import pytest
+import tensorflow as tf
 from mock import MagicMock
 
 import streamlit as st
@@ -33,8 +35,8 @@ from streamlit.hashing import NP_SIZE_LARGE, PANDAS_ROWS_LARGE, CodeHasher
 get_main_script_director = MagicMock(return_value=os.getcwd())
 
 # Get code hasher and mock the main script directory.
-def get_hash(f, context=None):
-    hasher = CodeHasher("md5")
+def get_hash(f, context=None, hash_funcs=None):
+    hasher = CodeHasher("md5", hash_funcs=hash_funcs)
     hasher._get_main_script_directory = MagicMock()
     hasher._get_main_script_directory.return_value = os.getcwd()
     hasher.update(f, context)
@@ -54,15 +56,15 @@ class HashTest(unittest.TestCase):
         self.assertNotEqual(get_hash(2 ** 7), get_hash(2 ** 7 + 1))
 
     def test_list(self):
-        self.assertEqual([1, 2], [1, 2])
-        self.assertNotEqual([1, 2], [2, 2])
-        self.assertNotEqual([1], 1)
+        self.assertEqual(get_hash([1, 2]), get_hash([1, 2]))
+        self.assertNotEqual(get_hash([1, 2]), get_hash([2, 2]))
+        self.assertNotEqual(get_hash([1]), get_hash(1))
 
     def test_tuple(self):
-        self.assertEqual((1, 2), (1, 2))
-        self.assertNotEqual((1, 2), (2, 2))
-        self.assertNotEqual((1,), 1)
-        self.assertNotEqual((1,), [1])
+        self.assertEqual(get_hash((1, 2)), get_hash((1, 2)))
+        self.assertNotEqual(get_hash((1, 2)), get_hash((2, 2)))
+        self.assertNotEqual(get_hash((1,)), get_hash(1))
+        self.assertNotEqual(get_hash((1,)), get_hash([1]))
 
     def test_float(self):
         self.assertEqual(get_hash(0.1), get_hash(0.1))
@@ -160,6 +162,48 @@ class HashTest(unittest.TestCase):
         # (This also tests that MagicMock can hash at all, without blowing the
         # stack due to an infinite recursion.)
         self.assertNotEqual(get_hash(MagicMock()), get_hash(MagicMock()))
+
+    def test_non_hashable(self):
+        """Test user provided hash functions."""
+
+        tf_config = tf.compat.v1.ConfigProto()
+        tf_session = tf.compat.v1.Session(config=tf_config)
+        tf_session_class = type(tf_session)
+
+        # Unhashable object raises an error
+        with self.assertRaises(TypeError):
+            get_hash(tf_session)
+
+        id_hash_func = {tf_session_class: id}
+
+        self.assertEqual(
+            get_hash(tf_session, hash_funcs=id_hash_func),
+            get_hash(tf_session, hash_funcs=id_hash_func),
+        )
+
+        unique_hash_func = {tf_session_class: lambda x: time.time()}
+
+        self.assertNotEqual(
+            get_hash(tf_session, hash_funcs=unique_hash_func),
+            get_hash(tf_session, hash_funcs=unique_hash_func),
+        )
+
+    def test_override_streamlit_hash_func(self):
+        """Test that a user provided hash function has priority over a streamlit one."""
+
+        hash_funcs = {int: lambda x: "hello"}
+        self.assertNotEqual(get_hash(1), get_hash(1, hash_funcs=hash_funcs))
+
+    def test_multiple_hash_funcs(self):
+        """Test that the output of a user provided hash function will be hashed
+        by another user provided hash function if appropriate
+        """
+
+        hash_funcs = {list: len, int: str}
+
+        self.assertEqual(
+            get_hash([], hash_funcs=hash_funcs), get_hash(0, hash_funcs=hash_funcs)
+        )
 
 
 class CodeHashTest(unittest.TestCase):
@@ -391,7 +435,7 @@ class CodeHashTest(unittest.TestCase):
         self.assertNotEqual(get_hash(f), get_hash(n))
 
     def test_class(self):
-        """Test hash for classes is we call different functions."""
+        """Test hash for classes if we call different functions."""
 
         x = 12
         y = 13
@@ -581,3 +625,28 @@ class CodeHashTest(unittest.TestCase):
         # TODO: Enable test. f and h are not the same since the co_consts
         # contains the name of the function in the closure.
         # self.assertEqual(get_hash(f), get_hash(h))
+
+    def test_non_hashable(self):
+        """Test the hash of functions that return non hashable objects."""
+
+        tf_config = tf.compat.v1.ConfigProto()
+        tf_session = tf.compat.v1.Session(config=tf_config)
+        tf_session_class = type(tf_session)
+
+        def f(x):
+            return tf_session
+
+        def g(y):
+            return tf_session
+
+        # Function with unhashable object raises an error in python 3
+        # In python 2 we fallback to hashing the function name
+        if sys.version_info >= (3, 0):
+            with self.assertRaises(TypeError):
+                get_hash(f)
+
+        hash_funcs = {tf_session_class: id}
+
+        self.assertEqual(
+            get_hash(f, hash_funcs=hash_funcs), get_hash(g, hash_funcs=hash_funcs)
+        )

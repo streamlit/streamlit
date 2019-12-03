@@ -68,7 +68,6 @@ cd "$cwd"/frontend
 
 # Generate report on exit
 generate_report() {
-  cd frontend
   npx -q mochawesome-merge --reportDir cypress/mochawesome > mochawesome.json
   npx -q mochawesome-report-generator mochawesome.json
 }

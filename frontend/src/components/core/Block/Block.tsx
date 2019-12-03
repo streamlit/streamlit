@@ -166,6 +166,13 @@ class Block extends PureComponent<Props> {
     width: number
   ): ReactNode | null {
     const element = reportElement.get("element")
+
+    if (element.get("type") === "empty") {
+      // Just a plain div -- so we're sure the rendered element has no
+      // height/margin/padding. Also saves some CPU cycles as a side-effect.
+      return <div className="stEmpty" key={index}></div>
+    }
+
     const component = this.renderElement(
       element,
       index,
@@ -244,7 +251,7 @@ class Block extends PureComponent<Props> {
       docString: (el: SimpleElement) => (
         <DocString element={el} width={width} />
       ),
-      empty: () => undefined,
+      empty: () => undefined, // Should never happen since we handled this earlier.
       exception: (el: SimpleElement) => (
         <ExceptionElement element={el} width={width} />
       ),
