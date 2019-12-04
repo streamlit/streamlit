@@ -17,7 +17,7 @@
 
 import React from "react"
 import { mount, ReactWrapper } from "enzyme"
-import Maybe, { Props } from "./Maybe"
+import Maybe from "./Maybe"
 
 interface OuterProps {
   name: string
@@ -26,14 +26,14 @@ interface OuterProps {
 interface InnerProps {
   name: string
 }
-const Inner = (props: InnerProps) => <div>{props.name}</div>
+const Inner = (props: InnerProps): any => <div>{props.name}</div>
 
 describe("The Maybe component", () => {
   describe("when enable is true", () => {
     let component: ReactWrapper
 
     beforeEach(() => {
-      const Outer = (props: OuterProps) => (
+      const Outer = (props: OuterProps): any => (
         <Maybe enable={true}>
           {" "}
           <Inner name={props.name} />{" "}
@@ -47,7 +47,7 @@ describe("The Maybe component", () => {
       jest.restoreAllMocks()
     })
 
-    it("should invoke the render method", () => {
+    it("should invoke the render method when the props of an enclosing element update", () => {
       const spyShouldComponentUpdate = jest.spyOn(
         Maybe.prototype,
         "shouldComponentUpdate"
@@ -63,7 +63,7 @@ describe("The Maybe component", () => {
     let component: ReactWrapper
 
     beforeEach(() => {
-      const Outer = (props: OuterProps) => (
+      const Outer = (props: OuterProps): any => (
         <Maybe enable={false}>
           {" "}
           <Inner name={props.name} />{" "}
@@ -77,7 +77,7 @@ describe("The Maybe component", () => {
       jest.restoreAllMocks()
     })
 
-    it("should not invoke the render method", () => {
+    it("should not invoke the render method when the props of an enclosing element update", () => {
       const spyShouldComponentUpdate = jest.spyOn(
         Maybe.prototype,
         "shouldComponentUpdate"
