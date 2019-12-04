@@ -20,6 +20,7 @@ import { sprintf } from "sprintf-js"
 import { Input as UIInput } from "baseui/input"
 import { Map as ImmutableMap } from "immutable"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
+import { logWarning } from "lib/log"
 
 import Icon from "components/shared/Icon"
 
@@ -76,8 +77,17 @@ class NumberInput extends React.PureComponent<Props, State> {
 
   private formatValue = (value: number): string => {
     const format: string = this.props.element.get("format")
+    if (format == null) {
+      return String(value)
+    }
 
-    return format ? sprintf(format, value) : String(value)
+    try {
+      return sprintf(format, value)
+    } catch (e) {
+      // Don't explode if we have a malformed format string.
+      logWarning(`Error in sprintf(${format}, ${value}): ${e}`)
+      return String(value)
+    }
   }
 
   private isIntData = (): boolean => {
