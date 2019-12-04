@@ -77,20 +77,24 @@ __version__ = _pkg_resources.get_distribution("streamlit").version
 # The try/except is needed for python 2/3 compatibility
 try:
 
-    if platform.system() == 'Linux' and os.path.isfile('/etc/machine-id') == False and os.path.isfile('/var/lib/dbus/machine-id') == False:
+    if (
+        platform.system() == "Linux"
+        and os.path.isfile("/etc/machine-id") == False
+        and os.path.isfile("/var/lib/dbus/machine-id") == False
+    ):
         print("Generate machine-id")
-        subprocess.run(["sudo", "dbus-uuidgen", "--ensure"])   
-    
+        subprocess.run(["sudo", "dbus-uuidgen", "--ensure"])
+
     machine_id = _uuid.getnode()
-    if os.path.isfile('/etc/machine-id'):
+    if os.path.isfile("/etc/machine-id"):
         with open("/etc/machine-id", "r") as f:
             machine_id = f.read()
-    elif os.path.isfile('/var/lib/dbus/machine-id'):
+    elif os.path.isfile("/var/lib/dbus/machine-id"):
         with open("/var/lib/dbus/machine-id", "r") as f:
             machine_id = f.read()
 
     __installation_id__ = str(_uuid.uuid5(_uuid.NAMESPACE_DNS, str(machine_id)))
-    
+
 except UnicodeDecodeError:
     __installation_id__ = str(
         _uuid.uuid5(_uuid.NAMESPACE_DNS, str(_uuid.getnode()).encode("utf-8"))
@@ -145,7 +149,7 @@ def _with_dg(method):
     def wrapped_method(*args, **kwargs):
         ctx = _get_report_ctx()
         dg = ctx.main_dg if ctx is not None else _NULL_DELTA_GENERATOR
-        return method(dg, *args, **kwargs)
+        return method.__get__(dg)(*args, **kwargs)
 
     return wrapped_method
 
@@ -218,8 +222,8 @@ def set_option(key, value):
     """Set config option.
 
     Currently, only two config options can be set within the script itself:
-        * client.caching 
-        * client.displayEnabled 
+        * client.caching
+        * client.displayEnabled
 
     Calling with any other options will raise StreamlitAPIException.
 
@@ -241,7 +245,9 @@ def set_option(key, value):
         return
 
     raise StreamlitAPIException(
-        "{key} cannot be set on the fly. Set as command line option, e.g. streamlit run script.py --{key}, or in config.toml instead.".format(key=key)
+        "{key} cannot be set on the fly. Set as command line option, e.g. streamlit run script.py --{key}, or in config.toml instead.".format(
+            key=key
+        )
     )
 
 
@@ -289,7 +295,9 @@ def write(*args, **kwargs):
 
         Arguments are handled as follows:
 
-            - write(string)     : Prints the formatted Markdown string.
+            - write(string)     : Prints the formatted Markdown string, with
+            support for LaTeX expression and emoji shortcodes.
+            See docs for st.markdown for more.
             - write(data_frame) : Displays the DataFrame as a table.
             - write(error)      : Prints an exception specially.
             - write(func)       : Displays information about a function.
@@ -334,10 +342,10 @@ def write(*args, **kwargs):
     Its simplest use case is to draw Markdown-formatted text, whenever the
     input is a string:
 
-    >>> write('Hello, *World!*')
+    >>> write('Hello, *World!* :sunglasses:')
 
     .. output::
-       https://share.streamlit.io/0.25.0-2JkNY/index.html?id=DUJaq97ZQGiVAFi6YvnihF
+       https://share.streamlit.io/0.50.2-ZWk9/index.html?id=Pn5sjhgNs4a8ZbiUoSTRxE
        height: 50px
 
     As mentioned earlier, `st.write()` also accepts other data formats, such as

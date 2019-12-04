@@ -25,7 +25,7 @@ describe("st.markdown", () => {
   it("displays markdown", () => {
     cy.get(".element-container .stMarkdown").should("have.length", 8);
     cy.get(".element-container .stMarkdown").then(els => {
-      expect(els[0].textContent).to.eq("This markdown is awesome!");
+      expect(els[0].textContent).to.eq("This markdown is awesome! 😎");
       expect(els[1].textContent).to.eq("This <b>HTML tag</b> is escaped!");
       expect(els[2].textContent).to.eq("This HTML tag is not escaped!");
       expect(els[3].textContent).to.eq("[text]");

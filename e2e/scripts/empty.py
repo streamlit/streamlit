@@ -15,24 +15,7 @@
 
 import streamlit as st
 
-st.markdown("This **markdown** is awesome! :sunglasses:")
-
-st.markdown("This <b>HTML tag</b> is escaped!")
-
-st.markdown("This <b>HTML tag</b> is not escaped!", unsafe_allow_html=True)
-
-st.markdown("[text]")
-
-st.markdown("[link](href)")
-
-st.markdown("[][]")
-
-st.markdown("Inline math with $\KaTeX$")
-
-st.markdown(
-    """
-$$
-ax^2 + bx + c = 0
-$$
-"""
-)
+st.text("The space between this...")
+st.text("..and this should be the same as between this...")
+st.empty()
+st.text("...and this")

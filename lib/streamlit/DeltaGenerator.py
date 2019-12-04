@@ -492,11 +492,14 @@ class DeltaGenerator(object):
         body : str
             The string to display as Github-flavored Markdown. Syntax
             information can be found at: https://github.github.com/gfm.
-            Inline and block math are supported by KaTeX and remark-math.
 
-            The body also support LaTeX expressions, by just wrapping them in
-            "$" or "$$" (the "$$" must be on their own lines). Supported LaTeX
-            functions are listed at https://katex.org/docs/supported.html.
+            This also supports:
+            * Emoji shortcodes, such as `:+1:`  and `:sunglasses:`.
+            For a list of all supported codes,
+            see https://www.webfx.com/tools/emoji-cheat-sheet/.
+            * LaTeX expressions, by just wrapping them in "$" or "$$" (the "$$"
+             must be on their own lines). Supported LaTeX functions are listed
+             at https://katex.org/docs/supported.html.
 
         unsafe_allow_html : bool
             By default, any HTML tags found in the body will be escaped and
@@ -1592,22 +1595,22 @@ class DeltaGenerator(object):
         """
 
         # Perform validation checks and return indices base on the default values.
-        def _check_and_convert_to_indices(default_values):
+        def _check_and_convert_to_indices(options, default_values):
+            if default_values is None and None not in options:
+                return None
+
+            if not isinstance(default_values, list):
+                default_values = [default_values]
+
             for value in default_values:
-                if not isinstance(value, string_types):  # noqa: F821
-                    raise StreamlitAPIException(
-                        "Multiselect default value has invalid type: %s"
-                        % type(value).__name__
-                    )
                 if value not in options:
                     raise StreamlitAPIException(
                         "Every Multiselect default value must exist in options"
                     )
-            return [options.index(value) for value in default]
 
-        indices = (
-            _check_and_convert_to_indices(default) if default is not None else None
-        )
+            return [options.index(value) for value in default_values]
+
+        indices = _check_and_convert_to_indices(options, default)
         element.multiselect.label = label
         default_value = [] if indices is None else indices
         element.multiselect.default[:] = default_value
@@ -1651,13 +1654,13 @@ class DeltaGenerator(object):
         Example
         -------
         >>> genre = st.radio(
-        ...     'What\'s your favorite movie genre',
+        ...     "What\'s your favorite movie genre",
         ...     ('Comedy', 'Drama', 'Documentary'))
         >>>
         >>> if genre == 'Comedy':
         ...     st.write('You selected comedy.')
         ... else:
-        ...     st.write('You didn\'t select comedy.')
+        ...     st.write("You didn\'t select comedy.")
 
         """
         if not isinstance(index, int):
@@ -1746,6 +1749,8 @@ class DeltaGenerator(object):
     ):
         """Display a slider widget.
 
+        This also allows you to render a range slider by passing a two-element tuple or list as the `value`.
+
         Parameters
         ----------
         label : str or None
@@ -1757,8 +1762,10 @@ class DeltaGenerator(object):
             The maximum permitted value.
             Defaults 100 if the value is an int, 1.0 otherwise.
         value : int/float or a tuple/list of int/float or None
-            The value of this widget when it first renders. In case the value
-            is passed as a tuple/list a range slider will be used.
+            The value of the slider when it first renders. If a tuple/list
+            of two values is passed here, then a range slider with those lower
+            and upper bounds is rendered. For example, if set to `(1, 10)` the
+            slider will have a selectable range between 1 and 10.
             Defaults to min_value.
         step : int/float or None
             The stepping interval.
@@ -1783,7 +1790,7 @@ class DeltaGenerator(object):
         >>> age = st.slider('How old are you?', 0, 130, 25)
         >>> st.write("I'm ", age, 'years old')
 
-        And here's an example of a range selector:
+        And here's an example of a range slider:
 
         >>> values = st.slider(
         ...     'Select a range of values',
@@ -2105,7 +2112,7 @@ class DeltaGenerator(object):
         Example
         -------
         >>> d = st.date_input(
-        ...     'When\'s your birthday',
+        ...     "When\'s your birthday",
         ...     datetime.date(2019, 7, 6))
         >>> st.write('Your birthday is:', d)
 
@@ -2161,7 +2168,7 @@ class DeltaGenerator(object):
             If None, there will be no maximum.
         value : int or float or None
             The value of this widget when it first renders.
-            Defaults to min_value, or 0 if min_value is None
+            Defaults to min_value, or 0.0 if min_value is None
         step : int or float or None
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
@@ -2191,7 +2198,7 @@ class DeltaGenerator(object):
             if min_value:
                 value = min_value
             else:
-                value = 0
+                value = 0.0  # We set a float as default
 
         int_value = isinstance(value, int)
         float_value = isinstance(value, float)
@@ -2253,24 +2260,28 @@ class DeltaGenerator(object):
                 % {"value": value, "min": min_value, "max": max_value}
             )
 
-        element.number_input.label = label
-        element.number_input.default = value
-
-        if min_value is None:
-            element.number_input.min = float("-inf")
+        number_input = element.number_input
+        if all_ints:
+            data = number_input.int_data
         else:
-            element.number_input.min = min_value
+            data = number_input.float_data
 
-        if max_value is None:
-            element.number_input.max = float("+inf")
-        else:
-            element.number_input.max = max_value
+        number_input.label = label
+        data.default = value
+
+        if min_value is not None:
+            data.min = min_value
+            number_input.has_min = True
+
+        if max_value is not None:
+            data.max = max_value
+            number_input.has_max = True
 
         if step is not None:
-            element.number_input.step = step
+            data.step = step
 
         if format is not None:
-            element.number_input.format = format
+            number_input.format = format
 
         ui_value = _get_widget_ui_value("number_input", element, user_key=key)
 
