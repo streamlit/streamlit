@@ -18,9 +18,9 @@ If you don't have Anaconda install yet, follow the steps provided on the [Anacon
 
 ### Create a new environment with Streamlit
 
-Next you'll need to set up your environment. 
+Next you'll need to set up your environment.
 
-1. Follow the steps provided by Anaconda to [set up and manage your environment](https://docs.anaconda.com/anaconda/navigator/getting-started/#managing-environments). using the Anaconda Navigator.
+1. Follow the steps provided by Anaconda to [set up and manage your environment](https://docs.anaconda.com/anaconda/navigator/getting-started/#managing-environments) using the Anaconda Navigator.
 
 2. Select the "▶" icon next to your new environment. Then select "Open terminal":
 
@@ -100,7 +100,7 @@ Streamlit's officially-supported environment manager for macOS and Linux is [Pip
    pip install streamlit
    ```
 
-   Or if you want to create an easily-reproducible environment, replace `pip` with `pipenv` every time you instal something:
+   Or if you want to create an easily-reproducible environment, replace `pip` with `pipenv` every time you install something:
    ```sh
    pipenv install streamlit
    ```
