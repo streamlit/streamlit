@@ -32,7 +32,7 @@ from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 
-def marshall(new_element_proto, fig=None, clear_fig=True, **kwargs):
+def marshall(new_element_proto, fig=None, clear_figure=True, **kwargs):
     """Construct a matplotlib.pyplot figure.
 
     See DeltaGenerator.vega_lite_chart for docs.
@@ -61,5 +61,5 @@ def marshall(new_element_proto, fig=None, clear_fig=True, **kwargs):
 
     # Clear the figure after rendering it. This means that subsequent
     # plt calls will be starting fresh.
-    if clear_fig:
+    if clear_figure:
         fig.clf()

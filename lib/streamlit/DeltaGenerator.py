@@ -1247,7 +1247,7 @@ class DeltaGenerator(object):
         )
 
     @_with_element
-    def pyplot(self, element, fig=None, clear_fig=True, **kwargs):
+    def pyplot(self, element, fig=None, clear_figure=True, **kwargs):
         """Display a matplotlib.pyplot figure.
 
         Parameters
@@ -1256,7 +1256,7 @@ class DeltaGenerator(object):
             The figure to plot. When this argument isn't specified, which is
             the usual case, this function will render the global plot.
 
-        clear_fig : bool
+        clear_figure : bool
             If True or unspecified, the figure will be cleared after being
             rendered. (This simulates Jupyter's approach to matplotlib
             rendering.)
@@ -1291,7 +1291,7 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.pyplot as pyplot
 
-        pyplot.marshall(element, fig, clear_fig, **kwargs)
+        pyplot.marshall(element, fig, clear_figure, **kwargs)
 
     @_with_element
     def bokeh_chart(self, element, figure):
