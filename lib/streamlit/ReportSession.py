@@ -349,6 +349,8 @@ class ReportSession(object):
             "global.maxCachedMessageAge"
         )
 
+        imsg.config.mapbox_token = config.get_option("mapbox.token")
+
         LOGGER.debug(
             "New browser connection: "
             "gather_usage_stats=%s, "

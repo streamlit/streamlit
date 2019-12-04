@@ -286,6 +286,7 @@ class App extends PureComponent<Props, State> {
       authorEmail: initializeMsg.userInfo.email,
       maxCachedMessageAge: initializeMsg.config.maxCachedMessageAge,
       commandLine: initializeMsg.commandLine,
+      mapboxToken: initializeMsg.config.mapboxToken,
     })
 
     MetricsManager.current.initialize({
