@@ -116,7 +116,7 @@ def _with_element(method):
         if delta_type in DELTAS_TYPES_THAT_MELT_DATAFRAMES and len(args) > 0:
             data = args[0]
             if isinstance(data, pd.DataFrame):
-                last_index = data.index[-1] if data.index.size > 0 else 0
+                last_index = data.index[-1] if data.index.size > 0 else -1
 
         def marshall_element(element):
             return method(dg, element, *args, **kwargs)
@@ -2557,6 +2557,18 @@ class DeltaGenerator(object):
                 "Method requires exactly one dataset"
             )
 
+        # Regenerate chart with data
+        if self._last_index == -1:
+            if self._delta_type == 'line_chart':
+                self.line_chart(data)
+                return
+            elif self._delta_type == 'bar_chart':
+                self.bar_chart(data)
+                return
+            elif self._delta_type == 'area_chart':
+                self.area_chart(data)
+                return
+  
         data, self._last_index = _maybe_melt_data_for_add_rows(
             data, self._delta_type, self._last_index
         )
