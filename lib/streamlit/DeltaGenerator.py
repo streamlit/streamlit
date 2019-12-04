@@ -916,8 +916,9 @@ class DeltaGenerator(object):
 
         import streamlit.elements.altair as altair
 
-        chart = altair.generate_chart("line", data)
-        altair.marshall(element.vega_lite_chart, chart, width, height=height)
+        chart = altair.generate_chart("line", data, width, height)
+        use_container_width = width == 0
+        altair.marshall(element.vega_lite_chart, chart, use_container_width=use_container_width)
 
     @_with_element
     def area_chart(self, element, data=None, width=0, height=0):
@@ -954,8 +955,9 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.altair as altair
 
-        chart = altair.generate_chart("area", data)
-        altair.marshall(element.vega_lite_chart, chart, width, height=height)
+        chart = altair.generate_chart("area", data, width, height)
+        use_container_width = width == 0
+        altair.marshall(element.vega_lite_chart, chart, use_container_width=use_container_width)
 
     @_with_element
     def bar_chart(self, element, data=None, width=0, height=0):
@@ -992,11 +994,12 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.altair as altair
 
-        chart = altair.generate_chart("bar", data)
-        altair.marshall(element.vega_lite_chart, chart, width, height=height)
+        chart = altair.generate_chart("bar", data, width, height)
+        use_container_width = width == 0
+        altair.marshall(element.vega_lite_chart, chart, use_container_width=use_container_width)
 
     @_with_element
-    def vega_lite_chart(self, element, data=None, spec=None, width=0, **kwargs):
+    def vega_lite_chart(self, element, data=None, spec=None, use_container_width=False, **kwargs):
         """Display a chart using the Vega-Lite library.
 
         Parameters
@@ -1051,10 +1054,10 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.vega_lite as vega_lite
 
-        vega_lite.marshall(element.vega_lite_chart, data, spec, width, **kwargs)
+        vega_lite.marshall(element.vega_lite_chart, data, spec, use_container_width=use_container_width, **kwargs)
 
     @_with_element
-    def altair_chart(self, element, altair_chart, width=0):
+    def altair_chart(self, element, altair_chart, use_container_width=False):
         """Display a chart using the Altair library.
 
         Parameters
@@ -1094,7 +1097,7 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.altair as altair
 
-        altair.marshall(element.vega_lite_chart, altair_chart, width)
+        altair.marshall(element.vega_lite_chart, altair_chart, use_container_width=use_container_width)
 
     @_with_element
     def graphviz_chart(self, element, figure_or_dot, width=0, height=0):
