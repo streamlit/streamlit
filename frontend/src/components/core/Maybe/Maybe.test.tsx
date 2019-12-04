@@ -16,19 +16,76 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
-import { Map as ImmutableMap } from "immutable"
+import { mount, ReactWrapper } from "enzyme"
 import Maybe, { Props } from "./Maybe"
 
-const getProps = (enable: boolean): Props => ({
-  enable: enable,
-})
+interface OuterProps {
+  name: string
+}
 
-it("renders... as expected", () => {
-  const props = getProps(true)
-  const wrap = shallow(<Maybe {...props} />)
-  expect(wrap).toBeDefined()
-  const elem = wrap.get(0)
-  expect(wrap.text()).toBe("some plain text")
-  expect(elem.props.className.includes("stText")).toBeTruthy()
+interface InnerProps {
+  name: string
+}
+const Inner = (props: InnerProps) => <div>{props.name}</div>
+
+describe("The Maybe component", () => {
+  describe("when enable is true", () => {
+    let component: ReactWrapper
+
+    beforeEach(() => {
+      const Outer = (props: OuterProps) => (
+        <Maybe enable={true}>
+          {" "}
+          <Inner name={props.name} />{" "}
+        </Maybe>
+      )
+      component = mount(<Outer name={"old again"} />)
+    })
+
+    afterEach(() => {
+      component.unmount()
+      jest.restoreAllMocks()
+    })
+
+    it("should invoke the render method", () => {
+      const spyShouldComponentUpdate = jest.spyOn(
+        Maybe.prototype,
+        "shouldComponentUpdate"
+      )
+      const spyRender = jest.spyOn(Maybe.prototype, "render")
+      component.setProps({ name: "new name" })
+      expect(spyShouldComponentUpdate).toHaveBeenCalled()
+      expect(spyRender).toHaveBeenCalled()
+    })
+  })
+
+  describe("when enable is false", () => {
+    let component: ReactWrapper
+
+    beforeEach(() => {
+      const Outer = (props: OuterProps) => (
+        <Maybe enable={false}>
+          {" "}
+          <Inner name={props.name} />{" "}
+        </Maybe>
+      )
+      component = mount(<Outer name={"old again"} />)
+    })
+
+    afterEach(() => {
+      component.unmount()
+      jest.restoreAllMocks()
+    })
+
+    it("should not invoke the render method", () => {
+      const spyShouldComponentUpdate = jest.spyOn(
+        Maybe.prototype,
+        "shouldComponentUpdate"
+      )
+      const spyRender = jest.spyOn(Maybe.prototype, "render")
+      component.setProps({ name: "new name" })
+      expect(spyShouldComponentUpdate).toHaveBeenCalled()
+      expect(spyRender).toHaveBeenCalledTimes(0)
+    })
+  })
 })
