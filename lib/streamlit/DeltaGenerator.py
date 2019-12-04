@@ -2609,7 +2609,11 @@ def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
             data.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
             last_index = stop
 
-        data = pd.melt(data.reset_index(), id_vars=["index"])
+        index_name = data.index.name
+        if index_name is None:
+            index_name = "index" 
+
+        data = pd.melt(data.reset_index(), id_vars=[index_name])
 
     return data, last_index
 
