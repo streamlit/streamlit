@@ -2132,7 +2132,7 @@ class DeltaGenerator(object):
             Defaults to 1 if the value is an int, 0.01 otherwise.
             If the value is not specified, the format parameter will be used.
         format : str or None
-            Printf/Python format string controlling how the interface should
+            A printf-style format string controlling how the interface should
             display numbers. This does not impact the return value.
         key : str
             An optional string to use as the unique key for the widget.
@@ -2573,7 +2573,7 @@ class DeltaGenerator(object):
             elif self._delta_type == 'area_chart':
                 self.area_chart(data)
                 return
-  
+
         data, self._last_index = _maybe_melt_data_for_add_rows(
             data, self._delta_type, self._last_index
         )
