@@ -478,7 +478,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
                 else:
                     plt_clf.assert_not_called()
 
-            # Manually clear for the next test
+            # Manually clear for the next loop iteration
             plt.clf()
 
         # Assert that fig.clf() is called by st.pyplot(fig) only if
