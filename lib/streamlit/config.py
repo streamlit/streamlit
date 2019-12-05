@@ -543,16 +543,6 @@ def _s3_secret_access_key():
 
 
 _create_option(
-    "s3.requireLoginToView",
-    description="""Make the shared app visible only to users who have been
-        granted view permission. If you are interested in this option, contact
-        us at support@streamlit.io.
-        """,
-    default_val=False,
-    type_=bool,
-)
-
-_create_option(
     "s3.keyPrefix",
     description="""The "subdirectory" within the S3 bucket where to save
         apps.
