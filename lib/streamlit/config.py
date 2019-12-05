@@ -500,7 +500,6 @@ _create_option("mapbox.token",
                 which has limitations and is not guaranteed to always work. 
                 To get a token for yourself, create an account at 
                 https://mapbox.com. It's free! (for moderate usage levels)""",
-                visibility="obfuscated",
                 default_val="pk.eyJ1IjoidGhpYWdvdCIsImEiOiJjamh3bm85NnkwMng4M3"
                             "dydnNveWwzeWNzIn0.vCBDzNsEF2uFSFk2AM0WZQ")
 
@@ -529,7 +528,7 @@ def _s3_url():
     return None
 
 
-@_create_option("s3.accessKeyId", visibility="obfuscated")
+@_create_option("s3.accessKeyId")
 def _s3_access_key_id():
     """Access key to write to the S3 bucket.
 
@@ -540,7 +539,7 @@ def _s3_access_key_id():
     return None
 
 
-@_create_option("s3.secretAccessKey", visibility="obfuscated")
+@_create_option("s3.secretAccessKey")
 def _s3_secret_access_key():
     """Secret access key to write to the S3 bucket.
 
@@ -735,11 +734,8 @@ def show_config():
 
             toml_setting = toml.dumps({key: option.value})
 
-            if len(toml_setting) == 0 or option.visibility == "obfuscated":
+            if len(toml_setting) == 0:
                 toml_setting = "#%s =\n" % key
-
-            elif option.visibility == "obfuscated":
-                toml_setting = "%s = (value hidden)\n" % key
 
             append_setting(toml_setting)
 
