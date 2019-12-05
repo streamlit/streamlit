@@ -252,7 +252,7 @@ class ConfigTest(unittest.TestCase):
 
     def test_sections_order(self):
         sections = sorted(
-            ["_test", u"browser", u"client", u"global", u"runner", u"s3", u"server"]
+            ["_test", u"browser", u"client", u"global", u"mapbox", u"runner", u"s3", u"server"]
         )
         keys = sorted(list(config._section_descriptions.keys()))
         self.assertEqual(sections, keys)
@@ -278,6 +278,7 @@ class ConfigTest(unittest.TestCase):
                 u"runner.magicEnabled",
                 u"runner.installTracer",
                 u"runner.fixMatplotlib",
+                u"mapbox.token",
                 u"s3.accessKeyId",
                 u"s3.bucket",
                 u"s3.keyPrefix",
