@@ -2310,6 +2310,15 @@ class DeltaGenerator(object):
         This is a wrapper around st.deck_gl_chart to quickly create scatterplot
         charts on top of a map, with auto-centering and auto-zoom.
 
+        When using this method, we advise all users to use a personal Mapbox
+        token. This ensures the map tiles used in this chart are more
+        robust. You can do this with the mapbox.token config option.
+
+        To get a token for yourself, create an account at
+        https://mapbox.com. It's free! (for moderate usage levels) See
+        https://streamlit.io/docs/cli.html#view-all-config-options for more
+        info on how to set config options.
+
         Parameters
         ----------
         data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
@@ -2348,6 +2357,15 @@ class DeltaGenerator(object):
         This API closely follows Deck.GL's JavaScript API
         (https://deck.gl/#/documentation), with a few small adaptations and
         some syntax sugar.
+
+        When using this method, we advise all users to use a personal Mapbox
+        token. This ensures the map tiles used in this chart are more
+        robust. You can do this with the mapbox.token config option.
+
+        To get a token for yourself, create an account at
+        https://mapbox.com. It's free! (for moderate usage levels) See
+        https://streamlit.io/docs/cli.html#view-all-config-options for more
+        info on how to set config options.
 
         Parameters
         ----------

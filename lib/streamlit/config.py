@@ -184,20 +184,6 @@ def _delete_option(key):
         pass
 
 
-# Config Section: Mapbox #
-
-_create_section("mapbox", "Mapbox configuration that is being used by DeckGL.")
-
-
-_create_option("mapbox.token",
-                description="""Mapbox uses access tokens to associate your 
-                account with your requests to Mapbox API resources.
-                """,
-                visibility="obfuscated",
-                default_val="pk.eyJ1IjoidGhpYWdvdCIsImEiOiJjamh3bm85NnkwMng4M3"
-                            "dydnNveWwzeWNzIn0.vCBDzNsEF2uFSFk2AM0WZQ")
-
-
 # Config Section: Global #
 
 _create_section("global", "Global options that apply across all of Streamlit.")
@@ -501,6 +487,22 @@ def _browser_server_port():
     Default: whatever value is set in server.port.
     """
     return get_option("server.port")
+
+
+# Config Section: Mapbox #
+
+_create_section("mapbox", "Mapbox configuration that is being used by DeckGL.")
+
+_create_option("mapbox.token",
+                description="""Configure Streamlit to use a custom Mapbox 
+                token for elements like st.deck_gl_chart and st.map. If you 
+                don't do this you'll be using Streamlit's own token, 
+                which has limitations and is not guaranteed to always work. 
+                To get a token for yourself, create an account at 
+                https://mapbox.com. It's free! (for moderate usage levels)""",
+                visibility="obfuscated",
+                default_val="pk.eyJ1IjoidGhpYWdvdCIsImEiOiJjamh3bm85NnkwMng4M3"
+                            "dydnNveWwzeWNzIn0.vCBDzNsEF2uFSFk2AM0WZQ")
 
 
 # Config Section: S3 #

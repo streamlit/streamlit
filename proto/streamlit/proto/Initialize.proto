@@ -43,6 +43,7 @@ message Config {
   // See config option "global.maxCachedMessageAge".
   int32 max_cached_message_age = 3;
 
+  // See config option "mapbox.token".
   string mapbox_token = 4;
 }
 
