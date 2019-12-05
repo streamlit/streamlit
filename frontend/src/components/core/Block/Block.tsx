@@ -141,10 +141,8 @@ class Block extends PureComponent<Props> {
     index: number,
     width: number
   ): ReactNode | null {
-    const element = reportElement.get("element")
-
     const component = this.renderElement(
-      element,
+      reportElement.get("element"),
       index,
       width,
       reportElement.get("metadata")
@@ -170,6 +168,8 @@ class Block extends PureComponent<Props> {
     const className =
       isStale && !FullScreenWrapper.isFullScreen
         ? "element-container stale-element"
+        : component === undefined
+        ? "element-container stEmpty"
         : "element-container"
 
     return (
