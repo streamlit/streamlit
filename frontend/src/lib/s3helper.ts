@@ -15,41 +15,40 @@
  * limitations under the License.
  */
 
-import AWS from "aws-sdk/global"
-import S3 from "aws-sdk/clients/s3"
-import {
-  FETCH_PARAMS,
-  AWS_REGION,
-  COGNITO_IDENTITY_POOL_ID,
-} from "./baseconsts"
-import { logError } from "./log"
+import { FETCH_PARAMS } from "./baseconsts"
+import url from "url"
 
-let s3: any = null
-let haveCredentials = false
+// For historical reasons, this follows S3's GetObject API.
+interface GetObjectRequest {
+  Bucket: string
+  Key: string
+}
 
 /**
- * Set up AWS credentials, given an OAuth ID token from Google.
- * Only needs to be called once ever.
+ * Parses the S3 data bucket name and the resource root for the current
+ * report from the window location href.
  */
-export async function configureCredentials(idToken: string): Promise<void> {
-  if (haveCredentials) {
-    logError("Grabbing credentials again. This should never happen.")
+export function getBucketAndResourceRoot(): {
+  bucket: string
+  resourceRoot: string
+} {
+  const { hostname, pathname } = url.parse(window.location.href, true)
+
+  // Bucket name is always equal to the hostname
+  const bucket = String(hostname)
+
+  // We may not have a pathname
+  if (pathname == null || pathname === "/") {
+    return { bucket, resourceRoot: "" }
   }
 
-  AWS.config.region = AWS_REGION
+  // Our pathname will look something like /some/s3/path/0.49.0-HdbX/index.html?id=9zttR9BsCpG6YP1fMD8rjj
+  // Everything after that initial '/ and before the final '/' is the resource root.
+  const startIdx = pathname.startsWith("/") ? 1 : 0
+  const endIdx = pathname.lastIndexOf("/")
+  const resourceRoot = pathname.substring(startIdx, endIdx)
 
-  AWS.config.credentials = new AWS.CognitoIdentityCredentials({
-    // These keys are capitalized funnily on purpose. That's the actual API.
-    IdentityPoolId: COGNITO_IDENTITY_POOL_ID,
-    Logins: {
-      "accounts.google.com": idToken,
-    },
-  })
-
-  if ("getPromise" in AWS.config.credentials) {
-    await AWS.config.credentials.getPromise()
-  }
-  haveCredentials = true
+  return { bucket, resourceRoot }
 }
 
 /**
@@ -66,19 +65,7 @@ export async function configureCredentials(idToken: string): Promise<void> {
  *
  * Arguments: {Key: string, Bucket: string}
  */
-export async function getObject(
-  args: S3.Types.GetObjectRequest
-): Promise<any> {
-  if (haveCredentials) {
-    return getObjectViaS3API(args)
-  } else {
-    return getObjectViaFetchAPI(args)
-  }
-}
-
-async function getObjectViaFetchAPI(
-  args: S3.Types.GetObjectRequest
-): Promise<Response> {
+export async function getObject(args: GetObjectRequest): Promise<Response> {
   const response = await fetch(`/${args.Key}`, FETCH_PARAMS)
 
   if (!response.ok) {
@@ -95,19 +82,4 @@ async function getObjectViaFetchAPI(
   }
 
   return response
-}
-
-async function getObjectViaS3API(
-  args: S3.Types.GetObjectRequest
-): Promise<any> {
-  if (!s3) {
-    s3 = new S3()
-  }
-
-  const data = await s3.getObject(args).promise()
-  return {
-    json: () => Promise.resolve(JSON.parse(data.Body.toString("utf-8"))),
-    text: () => Promise.resolve(data.Body.toString("utf-8")),
-    arrayBuffer: () => Promise.resolve(data.Body),
-  }
 }

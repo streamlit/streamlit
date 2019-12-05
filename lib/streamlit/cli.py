@@ -29,13 +29,14 @@ import os
 import click
 
 import streamlit
-from streamlit.credentials import Credentials
+from streamlit.credentials import Credentials, check_credentials
 from streamlit import version
-from streamlit import util
 import streamlit.bootstrap as bootstrap
 from streamlit.case_converters import to_snake_case
 
-LOG_LEVELS = ["error", "warning", "info", "debug"]
+ACCEPTED_FILE_EXTENSIONS = ("py", "py3")
+
+LOG_LEVELS = ("error", "warning", "info", "debug")
 
 NEW_VERSION_TEXT = """
   %(new_version)s
@@ -208,16 +209,24 @@ def main_run(target, args=None, **kwargs):
 
     _apply_config_options_from_cli(kwargs)
 
+    _, extension = os.path.splitext(target)
+    if extension[1:] not in ACCEPTED_FILE_EXTENSIONS:
+        raise click.BadArgumentUsage(
+            "Streamlit requires raw Python (.py) files, not %s.\nFor more information, please see https://streamlit.io/docs"
+            % extension
+        )
+
     if url(target):
         from streamlit.temporary_directory import TemporaryDirectory
 
         with TemporaryDirectory() as temp_dir:
             from urllib.parse import urlparse
+            from streamlit import url_util
 
             path = urlparse(target).path
             script_path = os.path.join(temp_dir, path.strip("/").rsplit("/", 1)[-1])
             # if this is a GitHub/Gist blob url, convert to a raw URL first.
-            target = util.process_gitblob_url(target)
+            target = url_util.process_gitblob_url(target)
             _download_remote(script_path, target)
             _main_run(script_path, args)
     else:
@@ -242,7 +251,7 @@ def _main_run(file, args=[]):
     streamlit._is_running_with_streamlit = True
 
     # Check credentials.
-    Credentials.get_current().check_activated(auto_resolve=True)
+    check_credentials()
 
     # Notify if streamlit is out of date.
     if version.should_show_new_version_notice():

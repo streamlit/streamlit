@@ -36,7 +36,6 @@ else:
     import tests.streamlit.watcher.test_data.dummy_module1 as DUMMY_MODULE_1
     import tests.streamlit.watcher.test_data.dummy_module2 as DUMMY_MODULE_2
     import tests.streamlit.watcher.test_data.misbehaved_module as MISBEHAVED_MODULE
-
     import tests.streamlit.watcher.test_data.nested_module_parent as NESTED_MODULE_PARENT
     import tests.streamlit.watcher.test_data.nested_module_child as NESTED_MODULE_CHILD
 
@@ -229,6 +228,40 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         # Reset the config object.
         config.set_option("server.folderWatchBlacklist", prev_blacklist)
+
+    def test_config_watcherType(self):
+        """Test server.fileWatcherType"""
+
+        config.set_option("server.fileWatcherType", "none")
+        self.assertIsNone(LocalSourcesWatcher.get_file_watcher_class())
+
+        config.set_option("server.fileWatcherType", "poll")
+        if LocalSourcesWatcher.get_file_watcher_class() is not None:
+            self.assertEquals(
+                LocalSourcesWatcher.get_file_watcher_class().__name__,
+                "PollingFileWatcher",
+            )
+
+        config.set_option("server.fileWatcherType", "watchdog")
+        if LocalSourcesWatcher.get_file_watcher_class() is not None:
+            self.assertEquals(
+                LocalSourcesWatcher.get_file_watcher_class().__name__,
+                "EventBasedFileWatcher",
+            )
+
+        config.set_option("server.fileWatcherType", "auto")
+        self.assertIsNotNone(LocalSourcesWatcher.get_file_watcher_class())
+
+        if sys.modules["streamlit.watcher.EventBasedFileWatcher"] is not None:
+            self.assertEquals(
+                LocalSourcesWatcher.get_file_watcher_class().__name__,
+                "EventBasedFileWatcher",
+            )
+        else:
+            self.assertEquals(
+                LocalSourcesWatcher.get_file_watcher_class().__name__,
+                "PollingFileWatcher",
+            )
 
 
 def sort_args_list(args_list):

@@ -24,6 +24,7 @@ from mock import mock_open
 from mock import patch
 
 from streamlit import config
+from streamlit import env_util
 from streamlit.ConfigOption import ConfigOption
 
 SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
@@ -282,12 +283,12 @@ class ConfigTest(unittest.TestCase):
                 u"s3.keyPrefix",
                 u"s3.profile",
                 u"s3.region",
-                u"s3.requireLoginToView",
                 u"s3.secretAccessKey",
                 u"s3.url",
                 u"server.enableCORS",
                 u"server.baseUrlPath",
                 u"server.folderWatchBlacklist",
+                u"server.fileWatcherType",
                 u"server.headless",
                 u"server.liveSave",
                 u"server.port",
@@ -457,10 +458,12 @@ class ConfigTest(unittest.TestCase):
             orig_display = os.environ["DISPLAY"]
             del os.environ["DISPLAY"]
 
-        with patch("streamlit.config.platform.system") as p:
-            p.return_value = "Linux"
-            self.assertEqual(True, config.get_option("server.headless"))
+        orig_is_linux_or_bsd = env_util.IS_LINUX_OR_BSD
+        env_util.IS_LINUX_OR_BSD = True
 
+        self.assertEqual(True, config.get_option("server.headless"))
+
+        env_util.IS_LINUX_OR_BSD = orig_is_linux_or_bsd
         if orig_display:
             os.environ["DISPLAY"] = orig_display
 

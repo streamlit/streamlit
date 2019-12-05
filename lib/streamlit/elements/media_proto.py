@@ -33,11 +33,11 @@ from streamlit.proto import Video_pb2
 # URL (incl. shortlinks and embed links) and extracts its code.
 YOUTUBE_RE = re.compile(
     # Protocol
-    "http(?:s?):\/\/"
+    r"http(?:s?):\/\/"
     # Domain
-    "(?:www\.)?youtu(?:be\.com|\.be)\/"
+    r"(?:www\.)?youtu(?:be\.com|\.be)\/"
     # Path and query string
-    "(?P<watch>(watch\?v=)|embed\/)?(?P<code>[\w\-\_]*)(&(amp;)?[\w\?=]*)?"
+    r"(?P<watch>(watch\?v=)|embed\/)?(?P<code>[\w\-\_]*)(&(amp;)?[\w\?=]*)?"
 )
 
 

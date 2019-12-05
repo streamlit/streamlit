@@ -20,7 +20,7 @@ import uuid
 
 from streamlit import config
 from streamlit.ReportQueue import ReportQueue
-from streamlit import util
+from streamlit import net_util
 
 from streamlit.logger import get_logger
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
@@ -150,8 +150,8 @@ class Report(object):
 
         manifest = self._build_manifest(
             status=StaticManifest.RUNNING,
-            external_server_ip=util.get_external_ip(),
-            internal_server_ip=util.get_internal_ip(),
+            external_server_ip=net_util.get_external_ip(),
+            internal_server_ip=net_util.get_internal_ip(),
         )
 
         return [

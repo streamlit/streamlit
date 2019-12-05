@@ -23,7 +23,8 @@ import {
   Map as ImmutableMap,
   Set as ImmutableSet,
 } from "immutable"
-import { BlockElement, Element, SimpleElement } from "./DeltaParser"
+import { Alert as AlertProto } from "autogen/proto"
+import { BlockElement, ReportElement, SimpleElement } from "./DeltaParser"
 
 /**
  * Wraps a function to allow it to be called, at most, once per interval
@@ -63,9 +64,10 @@ export function makeElementWithInfoText(
   text: string
 ): ImmutableMap<string, any> {
   return fromJS({
-    type: "text",
-    text: {
+    type: "alert",
+    alert: {
       body: text,
+      format: AlertProto.Format.INFO,
     },
   })
 }
@@ -97,7 +99,9 @@ export function flattenElements(
   elements: BlockElement
 ): ImmutableSet<SimpleElement> {
   return elements.reduce(
-    (acc: ImmutableSet<SimpleElement>, element: Element) => {
+    (acc: ImmutableSet<SimpleElement>, reportElement: ReportElement) => {
+      const element = reportElement.get("element")
+
       if (element instanceof List) {
         return flattenElements(element as BlockElement)
       }

@@ -20,7 +20,7 @@
  */
 import moment from "moment"
 import "moment-duration-format"
-import numeral from "numeral"
+import numbro from "numbro"
 
 class Duration {
   private readonly millis: number
@@ -64,7 +64,7 @@ const format = new Format()
  */
 function toFormattedString(x: any): string {
   if (isFloat(x)) {
-    return numeral(x).format("0,0.0000")
+    return numbro(x).format("0,0.0000")
   } else if (x instanceof Date) {
     return format.dateToString(x)
   } else if (x instanceof Duration) {

@@ -24,6 +24,7 @@ import requests_mock
 import mock
 from click.testing import CliRunner
 from mock import patch, MagicMock
+from parameterized import parameterized
 from testfixtures import tempdir
 
 import streamlit
@@ -39,35 +40,47 @@ class CliTest(unittest.TestCase):
     def setUp(self):
         cli.name = "test"
         self.runner = CliRunner()
+        streamlit._is_running_with_streamlit = False
 
     def test_run_no_arguments(self):
-        """streamlit run should fail if run with no arguments"""
+        """streamlit run should fail if run with no arguments."""
         result = self.runner.invoke(cli, ["run"])
         self.assertNotEqual(0, result.exit_code)
 
     def test_run_existing_file_argument(self):
-        """streamlit run succeeds if an existing file is passed"""
+        """streamlit run succeeds if an existing file is passed."""
         with patch("validators.url", return_value=False), patch(
             "streamlit.cli._main_run"
         ), patch("os.path.exists", return_value=True):
 
-            result = self.runner.invoke(cli, ["run", "file_name"])
+            result = self.runner.invoke(cli, ["run", "file_name.py"])
         self.assertEqual(0, result.exit_code)
 
     def test_run_non_existing_file_argument(self):
-        """streamlit run should fail if a non existing file is passed"""
+        """streamlit run should fail if a non existing file is passed."""
 
         with patch("validators.url", return_value=False), patch(
             "streamlit.cli._main_run"
         ), patch("os.path.exists", return_value=False):
 
-            result = self.runner.invoke(cli, ["run", "file_name"])
+            result = self.runner.invoke(cli, ["run", "file_name.py"])
         self.assertNotEqual(0, result.exit_code)
         self.assertTrue("File does not exist" in result.output)
 
+    def test_run_not_allowed_file_extension(self):
+        """streamlit run should fail if a not allowed file extension is passed.
+        """
+
+        result = self.runner.invoke(cli, ["run", "file_name.doc"])
+
+        self.assertNotEqual(0, result.exit_code)
+        self.assertTrue(
+            "Streamlit requires raw Python (.py) files, not .doc." in result.output
+        )
+
     @tempdir()
     def test_run_valid_url(self, temp_dir):
-        """streamlit run succeeds if an existing url is passed"""
+        """streamlit run succeeds if an existing url is passed."""
 
         with patch("validators.url", return_value=True), patch(
             "streamlit.cli._main_run"
@@ -86,7 +99,7 @@ class CliTest(unittest.TestCase):
     @tempdir()
     def test_run_non_existing_url(self, temp_dir):
         """streamlit run should fail if a non existing but valid
-         url is passed
+         url is passed.
          """
 
         with patch("validators.url", return_value=True), patch(
@@ -102,7 +115,7 @@ class CliTest(unittest.TestCase):
         self.assertTrue("Unable to fetch" in result.output)
 
     def test_run_arguments(self):
-        """The correct command line should be passed downstream"""
+        """The correct command line should be passed downstream."""
         with patch("validators.url", return_value=False), patch(
             "os.path.exists", return_value=True
         ):
@@ -137,8 +150,8 @@ class CliTest(unittest.TestCase):
         calling `streamlit run...`, and false otherwise.
         """
         self.assertFalse(streamlit._is_running_with_streamlit)
-        with patch("streamlit.cli.bootstrap.run"), patch(
-            "streamlit.credentials.Credentials"
+        with patch("streamlit.cli.bootstrap.run"), mock.patch(
+            "streamlit.credentials.Credentials._check_activated"
         ), patch("streamlit.cli._get_command_line_as_string"):
 
             cli._main_run("/not/a/file", None)
@@ -166,7 +179,7 @@ class CliTest(unittest.TestCase):
     @patch("streamlit.cli._config._set_option")
     def test_apply_config_options_from_cli(self, patched__set_option):
         """Test that _apply_config_options_from_cli parses the key properly and
-        passes down the parameters
+        passes down the parameters.
         """
 
         kwargs = {
@@ -196,3 +209,43 @@ class CliTest(unittest.TestCase):
             ],
             any_order=True,
         )
+
+    def test_credentials_headless_no_config(self):
+        """If headless mode and no config is present,
+        activation should be None."""
+        from streamlit import config
+
+        config.set_option("server.headless", True)
+
+        with patch("validators.url", return_value=False), patch(
+            "streamlit.bootstrap.run"
+        ), patch("os.path.exists", return_value=True), patch(
+            "streamlit.credentials._check_credential_file_exists", return_value=False
+        ):
+            result = self.runner.invoke(cli, ["run", "some script.py"])
+        from streamlit.credentials import Credentials
+
+        credentials = Credentials.get_current()
+        self.assertIsNone(credentials.activation)
+        self.assertEqual(0, result.exit_code)
+
+    @parameterized.expand([(True,), (False,)])
+    def test_credentials_headless_with_config(self, headless_mode):
+        """If headless, but a config file is present, activation should be
+        defined.
+        So we call `_check_activated`.
+        """
+        from streamlit import config
+
+        config.set_option("server.headless", headless_mode)
+
+        with patch("validators.url", return_value=False), patch(
+            "streamlit.bootstrap.run"
+        ), patch("os.path.exists", side_effect=[True, True]), mock.patch(
+            "streamlit.credentials.Credentials._check_activated"
+        ) as mock_check, patch(
+            "streamlit.credentials._check_credential_file_exists", return_value=True
+        ):
+            result = self.runner.invoke(cli, ["run", "some script.py"])
+        self.assertTrue(mock_check.called)
+        self.assertEqual(0, result.exit_code)

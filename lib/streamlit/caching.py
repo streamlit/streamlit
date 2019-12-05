@@ -31,9 +31,13 @@ from collections import namedtuple
 from functools import wraps
 
 import streamlit as st
-from streamlit import config, util
+from streamlit import config
+from streamlit import file_util
+from streamlit import util
 from streamlit.compatibility import setup_2_3_shims
-from streamlit.hashing import CodeHasher, Context, get_hash
+from streamlit.hashing import CodeHasher
+from streamlit.hashing import Context
+from streamlit.hashing import get_hash
 from streamlit.logger import get_logger
 
 setup_2_3_shims(globals())
@@ -78,7 +82,7 @@ DiskCacheEntry = namedtuple("DiskCacheEntry", ["value", "args_mutated"])
 
 
 # The in memory cache.
-_mem_cache = {}  # type: Dict[string, CacheEntry]
+_mem_cache = {}  # Type: Dict[string, CacheEntry]
 
 
 # A thread-local counter that's incremented when we enter @st.cache
@@ -317,11 +321,14 @@ def _build_args_mutated_message(func):
     return message.format(name=func.__name__)
 
 
-def _read_from_mem_cache(key, allow_output_mutation):
+def _read_from_mem_cache(key, allow_output_mutation, hash_funcs):
     if key in _mem_cache:
         entry = _mem_cache[key]
 
-        if allow_output_mutation or get_hash(entry.value) == entry.hash:
+        if (
+            allow_output_mutation
+            or get_hash(entry.value, hash_funcs=hash_funcs) == entry.hash
+        ):
             LOGGER.debug("Memory cache HIT: %s", type(entry.value))
             return entry.value, entry.args_mutated
         else:
@@ -332,18 +339,19 @@ def _read_from_mem_cache(key, allow_output_mutation):
         raise CacheKeyNotFoundError("Key not found in mem cache")
 
 
-def _write_to_mem_cache(key, value, allow_output_mutation, args_mutated):
-    _mem_cache[key] = CacheEntry(
-        value=value,
-        hash=None if allow_output_mutation else get_hash(value),
-        args_mutated=args_mutated,
-    )
+def _write_to_mem_cache(key, value, allow_output_mutation, args_mutated, hash_funcs):
+    if allow_output_mutation:
+        hash = None
+    else:
+        hash = get_hash(value, hash_funcs=hash_funcs)
+
+    _mem_cache[key] = CacheEntry(value=value, hash=hash, args_mutated=args_mutated)
 
 
 def _read_from_disk_cache(key):
-    path = util.get_streamlit_file_path("cache", "%s.pickle" % key)
+    path = file_util.get_streamlit_file_path("cache", "%s.pickle" % key)
     try:
-        with util.streamlit_read(path, binary=True) as input:
+        with file_util.streamlit_read(path, binary=True) as input:
             value, args_mutated = pickle.load(input)
             LOGGER.debug("Disk cache HIT: %s", type(value))
     except util.Error as e:
@@ -356,10 +364,10 @@ def _read_from_disk_cache(key):
 
 
 def _write_to_disk_cache(key, value, args_mutated):
-    path = util.get_streamlit_file_path("cache", "%s.pickle" % key)
+    path = file_util.get_streamlit_file_path("cache", "%s.pickle" % key)
 
     try:
-        with util.streamlit_write(path, binary=True) as output:
+        with file_util.streamlit_write(path, binary=True) as output:
             entry = DiskCacheEntry(value=value, args_mutated=args_mutated)
             pickle.dump(entry, output, pickle.HIGHEST_PROTOCOL)
     # In python 2, it's pickle struct error.
@@ -374,7 +382,9 @@ def _write_to_disk_cache(key, value, args_mutated):
         raise CacheError("Unable to write to cache: %s" % e)
 
 
-def _read_from_cache(key, persisted, allow_output_mutation, func_or_code, message_opts):
+def _read_from_cache(
+    key, persisted, allow_output_mutation, func_or_code, message_opts, hash_funcs
+):
     """
     Read the value from the cache. Our goal is to read from memory
     if possible. If the data was mutated (hash changed), we show a
@@ -382,7 +392,7 @@ def _read_from_cache(key, persisted, allow_output_mutation, func_or_code, messag
     or rerun the code.
     """
     try:
-        return _read_from_mem_cache(key, allow_output_mutation)
+        return _read_from_mem_cache(key, allow_output_mutation, hash_funcs)
     except (CacheKeyNotFoundError, CachedObjectWasMutatedError) as e:
         if isinstance(e, CachedObjectWasMutatedError):
             if inspect.isroutine(func_or_code):
@@ -397,13 +407,17 @@ def _read_from_cache(key, persisted, allow_output_mutation, func_or_code, messag
 
         if persisted:
             value, args_mutated = _read_from_disk_cache(key)
-            _write_to_mem_cache(key, value, allow_output_mutation, args_mutated)
+            _write_to_mem_cache(
+                key, value, allow_output_mutation, args_mutated, hash_funcs
+            )
             return value, args_mutated
         raise e
 
 
-def _write_to_cache(key, value, persist, allow_output_mutation, args_mutated):
-    _write_to_mem_cache(key, value, allow_output_mutation, args_mutated)
+def _write_to_cache(
+    key, value, persist, allow_output_mutation, args_mutated, hash_funcs
+):
+    _write_to_mem_cache(key, value, allow_output_mutation, args_mutated, hash_funcs)
     if persist:
         _write_to_disk_cache(key, value, args_mutated)
 
@@ -414,6 +428,7 @@ def cache(
     allow_output_mutation=False,
     show_spinner=True,
     suppress_st_warning=False,
+    hash_funcs=None,
     **kwargs
 ):
     """Function decorator to memoize function executions.
@@ -441,6 +456,12 @@ def cache(
     suppress_st_warning : boolean
         Suppress warnings about calling Streamlit functions from within
         the cached function.
+
+    hash_funcs : dict or None
+        Mapping of types to hash functions. This is used to override the behavior of the hasher
+        inside Streamlit's caching mechanism: when the hasher encounters an object, it will first
+        check to see if its type matches a key in this dict and, if so, will use the provided
+        function to generate a hash for it. See below for an example of how this can be used.
 
     Example
     -------
@@ -474,6 +495,13 @@ def cache(
     ...     # Fetch data from URL here, and then clean it up.
     ...     return data
 
+
+    To override the default hashing behavior, pass a mapping of type to hash function:
+
+    >>> @st.cache(hash_funcs={MongoClient: id})
+    ... def connect_to_database(url):
+    ...     return MongoClient(url)
+
     """
     # Help users migrate to the new kwarg
     # Remove this warning after 2020-03-16.
@@ -491,6 +519,7 @@ def cache(
             allow_output_mutation=allow_output_mutation,
             show_spinner=show_spinner,
             suppress_st_warning=suppress_st_warning,
+            hash_funcs=hash_funcs,
         )
 
     @wraps(func)
@@ -513,13 +542,13 @@ def cache(
         def get_or_set_cache():
             hasher = hashlib.new("md5")
 
-            args_hasher = CodeHasher("md5", hasher)
+            args_hasher = CodeHasher("md5", hasher, hash_funcs)
             args_hasher.update([args, kwargs])
             LOGGER.debug("Hashing arguments to %s of %i bytes.", name, args_hasher.size)
 
             args_digest_before = args_hasher.digest()
 
-            code_hasher = CodeHasher("md5", hasher)
+            code_hasher = CodeHasher("md5", hasher, hash_funcs)
             code_hasher.update(func)
             LOGGER.debug("Hashing function %s in %i bytes.", name, code_hasher.size)
 
@@ -529,7 +558,7 @@ def cache(
             caller_frame = inspect.currentframe().f_back
             try:
                 return_value, args_mutated = _read_from_cache(
-                    key, persist, allow_output_mutation, func, caller_frame
+                    key, persist, allow_output_mutation, func, caller_frame, hash_funcs
                 )
             except (CacheKeyNotFoundError, CachedObjectWasMutatedError):
                 with _calling_cached_function():
@@ -539,12 +568,17 @@ def cache(
                     else:
                         return_value = func(*args, **kwargs)
 
-                args_hasher_after = CodeHasher("md5")
+                args_hasher_after = CodeHasher("md5", hash_funcs=hash_funcs)
                 args_hasher_after.update([args, kwargs])
                 args_mutated = args_digest_before != args_hasher_after.digest()
 
                 _write_to_cache(
-                    key, return_value, persist, allow_output_mutation, args_mutated
+                    key=key,
+                    value=return_value,
+                    persist=persist,
+                    allow_output_mutation=allow_output_mutation,
+                    args_mutated=args_mutated,
+                    hash_funcs=hash_funcs,
                 )
 
             if args_mutated:
@@ -665,11 +699,23 @@ class Cache(dict):
             if self._allow_output_mutation and not self._persist:
                 # If we don't hash the results, we don't need to use exec and just return True.
                 # This way line numbers will be correct.
-                _write_to_cache(key, self, False, True, None)
+                _write_to_cache(
+                    key=key,
+                    value=self,
+                    persist=False,
+                    allow_output_mutation=True,
+                    args_mutated=None,
+                )
                 return True
 
             exec(code, caller_frame.f_globals, caller_frame.f_locals)
-            _write_to_cache(key, self, self._persist, self._allow_output_mutation, None)
+            _write_to_cache(
+                key=key,
+                value=self,
+                persist=self._persist,
+                allow_output_mutation=self._allow_output_mutation,
+                args_mutated=None,
+            )
 
         # Return False so that we have control over the execution.
         return False
@@ -704,7 +750,7 @@ def clear_cache():
 
 
 def get_cache_path():
-    return util.get_streamlit_file_path("cache")
+    return file_util.get_streamlit_file_path("cache")
 
 
 def _clear_disk_cache():

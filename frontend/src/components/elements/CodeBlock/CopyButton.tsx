@@ -18,7 +18,6 @@
 import Clipboard from "clipboard"
 import React, { PureComponent } from "react"
 import { Copy as CopyIcon } from "react-feather"
-import "./CopyButton.scss"
 
 interface Props {
   text: string

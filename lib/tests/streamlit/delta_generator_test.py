@@ -16,19 +16,19 @@
 """DeltaGenerator Unittest."""
 
 # Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 
-from streamlit.DeltaGenerator import _build_duplicate_widget_message
 from streamlit.compatibility import setup_2_3_shims
-from streamlit.errors import DuplicateWidgetID
-from streamlit.errors import StreamlitAPIException
 
 setup_2_3_shims(globals())
 
 import json
+import mock
 import sys
-
-import pandas as pd
+import unittest
 
 try:
     from inspect import signature
@@ -37,13 +37,21 @@ except ImportError:
 
 from parameterized import parameterized
 
-from streamlit.proto.Text_pb2 import Text
+import pandas as pd
+
+from streamlit.DeltaGenerator import _build_duplicate_widget_message
+from streamlit.errors import DuplicateWidgetID
+from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Element_pb2 import Element
+from streamlit.proto.TextInput_pb2 import TextInput
+from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.DeltaGenerator import (
     _wraps_with_cleaned_sig,
     _remove_self_from_sig,
     _with_element,
+    _set_widget_id,
 )
 from tests import testutil
 import streamlit as st
@@ -461,6 +469,128 @@ class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
 
         self.assertEqual(chart_spec["mark"], "bar")
         self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 20)
+
+
+class WidgetIdText(unittest.TestCase):
+    def test_ids_are_equal_when_proto_is_equal(self):
+        text_input1 = TextInput()
+        text_input1.label = "Label #1"
+        text_input1.default = "Value #1"
+
+        text_input2 = TextInput()
+        text_input2.label = "Label #1"
+        text_input2.default = "Value #1"
+
+        element1 = Element()
+        element1.text_input.CopyFrom(text_input1)
+
+        element2 = Element()
+        element2.text_input.CopyFrom(text_input2)
+
+        _set_widget_id("text_input", element1)
+        _set_widget_id("text_input", element2)
+
+        self.assertEqual(element1.text_input.id, element2.text_input.id)
+
+    def test_ids_are_diff_when_labels_are_diff(self):
+        text_input1 = TextInput()
+        text_input1.label = "Label #1"
+        text_input1.default = "Value #1"
+
+        text_input2 = TextInput()
+        text_input2.label = "Label #2"
+        text_input2.default = "Value #1"
+
+        element1 = Element()
+        element1.text_input.CopyFrom(text_input1)
+
+        element2 = Element()
+        element2.text_input.CopyFrom(text_input2)
+
+        _set_widget_id("text_input", element1)
+        _set_widget_id("text_input", element2)
+
+        self.assertNotEqual(element1.text_input.id, element2.text_input.id)
+
+    def test_ids_are_diff_when_types_are_diff(self):
+        text_input1 = TextInput()
+        text_input1.label = "Label #1"
+        text_input1.default = "Value #1"
+
+        text_area2 = TextArea()
+        text_area2.label = "Label #1"
+        text_area2.default = "Value #1"
+
+        element1 = Element()
+        element1.text_input.CopyFrom(text_input1)
+
+        element2 = Element()
+        element2.text_area.CopyFrom(text_area2)
+
+        _set_widget_id("text_input", element1)
+        _set_widget_id("text_input", element2)
+
+        self.assertNotEqual(element1.text_input.id, element2.text_area.id)
+
+    def test_ids_are_equal_when_keys_are_equal(self):
+        text_input1 = TextInput()
+        text_input1.label = "Label #1"
+        text_input1.default = "Value #1"
+
+        text_input2 = TextInput()
+        text_input2.label = "Label #1"
+        text_input2.default = "Value #1"
+
+        element1 = Element()
+        element1.text_input.CopyFrom(text_input1)
+
+        element2 = Element()
+        element2.text_input.CopyFrom(text_input2)
+
+        _set_widget_id("text_input", element1, user_key="some_key")
+        _set_widget_id("text_input", element2, user_key="some_key")
+
+        self.assertEqual(element1.text_input.id, element2.text_input.id)
+
+    def test_ids_are_diff_when_keys_are_diff(self):
+        text_input1 = TextInput()
+        text_input1.label = "Label #1"
+        text_input1.default = "Value #1"
+
+        text_input2 = TextInput()
+        text_input2.label = "Label #1"
+        text_input2.default = "Value #1"
+
+        element1 = Element()
+        element1.text_input.CopyFrom(text_input1)
+
+        element2 = Element()
+        element2.text_input.CopyFrom(text_input2)
+
+        _set_widget_id("text_input", element1, user_key="some_key1")
+        _set_widget_id("text_input", element2, user_key="some_key2")
+
+        self.assertNotEqual(element1.text_input.id, element2.text_input.id)
+
+    def test_ids_are_diff_when_values_are_diff(self):
+        text_input1 = TextInput()
+        text_input1.label = "Label #1"
+        text_input1.default = "Value #1"
+
+        text_input2 = TextInput()
+        text_input2.label = "Label #1"
+        text_input2.default = "Value #2"
+
+        element1 = Element()
+        element1.text_input.CopyFrom(text_input1)
+
+        element2 = Element()
+        element2.text_input.CopyFrom(text_input2)
+
+        _set_widget_id("text_input", element1, user_key="some_key1")
+        _set_widget_id("text_input", element2, user_key="some_key1")
+
+        self.assertNotEqual(element1.text_input.id, element2.text_input.id)
 
 
 class DeltaGeneratorImageTest(testutil.DeltaGeneratorTestCase):

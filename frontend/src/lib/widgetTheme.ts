@@ -16,6 +16,7 @@
  */
 
 import { createTheme, lightThemePrimitives } from "baseui"
+import { PLACEMENT as POPOVER_PLACEMENT } from "baseui/popover"
 import { logMessage } from "lib/log"
 import { SCSS_VARS } from "autogen/scssVariables"
 
@@ -128,6 +129,11 @@ export const sliderOverrides = {
 }
 
 export const datePickerOverrides = {
+  Popover: {
+    props: {
+      placement: POPOVER_PLACEMENT.bottomLeft,
+    },
+  },
   CalendarContainer: {
     style: {
       fontSize: fontSizeSm,
@@ -230,6 +236,23 @@ export const buttonOverrides = {
         color: gray,
       },
     },
+  },
+}
+
+export const multiSelectOverrides = {
+  ValueContainer: {
+    style: () => ({
+      /*
+        This minHeight is needed to fix a bug from BaseWeb in which the
+        div that contains the options changes their height from 40px to 44px.
+
+        You could check this behavior in their documentation as well:
+        https://v8-17-1.baseweb.design/components/select/#select-as-multi-pick-search
+
+        Issue related: https://github.com/streamlit/streamlit/issues/590
+       */
+      minHeight: "44px",
+    }),
   },
 }
 

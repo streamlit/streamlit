@@ -27,7 +27,8 @@ except ImportError:
 
 from streamlit import compatibility
 from streamlit import config
-from streamlit import util
+from streamlit import env_util
+from streamlit import file_util
 from streamlit.folder_black_list import FolderBlackList
 
 from streamlit.logger import get_logger
@@ -36,15 +37,13 @@ LOGGER = get_logger(__name__)
 
 try:
     # If the watchdog module is installed.
-    from streamlit.watcher.EventBasedFileWatcher import (
-        EventBasedFileWatcher as FileWatcher,
-    )
-except ImportError:
-    # Fallback that doesn't use watchdog.
-    from streamlit.watcher.PollingFileWatcher import PollingFileWatcher as FileWatcher
+    from streamlit.watcher.EventBasedFileWatcher import EventBasedFileWatcher
 
+    watchdog_available = True
+except ImportError:
+    watchdog_available = False
     if not config.get_option("global.disableWatchdogWarning"):
-        msg = "\n  $ xcode-select --install" if util.is_darwin() else ""
+        msg = "\n  $ xcode-select --install" if env_util.IS_DARWIN else ""
 
         LOGGER.warning(
             """
@@ -57,6 +56,28 @@ except ImportError:
         )
 
 
+def get_file_watcher_class():
+    watcher_type = config.get_option("server.fileWatcherType")
+
+    if watcher_type == "auto":
+        if watchdog_available:
+            return EventBasedFileWatcher
+        else:
+            from streamlit.watcher.PollingFileWatcher import PollingFileWatcher
+
+            return PollingFileWatcher
+    elif watcher_type == "watchdog" and watchdog_available:
+        return EventBasedFileWatcher
+    elif watcher_type == "poll":
+        from streamlit.watcher.PollingFileWatcher import PollingFileWatcher
+
+        return PollingFileWatcher
+    else:
+        return None
+
+
+FileWatcher = get_file_watcher_class()
+
 # Streamlit never watches files in the folders below.
 DEFAULT_FOLDER_BLACKLIST = [
     "**/.*",
@@ -65,7 +86,6 @@ DEFAULT_FOLDER_BLACKLIST = [
     "**/miniconda2",
     "**/miniconda3",
 ]
-
 
 WatchedModule = collections.namedtuple("WatchedModule", ["watcher", "module_name"])
 
@@ -91,7 +111,7 @@ class LocalSourcesWatcher(object):
 
     def on_file_changed(self, filepath):
         if filepath not in self._watched_modules:
-            LOGGER.error("Received event for non-watched file", filepath)
+            LOGGER.error("Received event for non-watched file: %s", filepath)
             return
 
         # Workaround:
@@ -119,6 +139,9 @@ class LocalSourcesWatcher(object):
         self._is_closed = True
 
     def _register_watcher(self, filepath, module_name):
+        if FileWatcher is None:
+            return
+
         if compatibility.is_running_py3():
             ErrorType = PermissionError
         else:
@@ -187,7 +210,7 @@ class LocalSourcesWatcher(object):
                     continue
 
                 file_is_new = filepath not in self._watched_modules
-                file_is_local = util.file_is_in_folder_glob(
+                file_is_local = file_util.file_is_in_folder_glob(
                     filepath, self._report.script_folder
                 )
 

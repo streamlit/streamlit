@@ -65,6 +65,9 @@ _LOGGER = _logger.get_logger("root")
 # Give the package a version.
 import pkg_resources as _pkg_resources
 import uuid as _uuid
+import subprocess
+import platform
+import os
 
 # This used to be pkg_resources.require('streamlit') but it would cause
 # pex files to fail. See #394 for more details.
@@ -73,7 +76,25 @@ __version__ = _pkg_resources.get_distribution("streamlit").version
 # Deterministic Unique Streamlit User ID
 # The try/except is needed for python 2/3 compatibility
 try:
-    __installation_id__ = str(_uuid.uuid5(_uuid.NAMESPACE_DNS, str(_uuid.getnode())))
+
+    if (
+        platform.system() == "Linux"
+        and os.path.isfile("/etc/machine-id") == False
+        and os.path.isfile("/var/lib/dbus/machine-id") == False
+    ):
+        print("Generate machine-id")
+        subprocess.run(["sudo", "dbus-uuidgen", "--ensure"])
+
+    machine_id = _uuid.getnode()
+    if os.path.isfile("/etc/machine-id"):
+        with open("/etc/machine-id", "r") as f:
+            machine_id = f.read()
+    elif os.path.isfile("/var/lib/dbus/machine-id"):
+        with open("/var/lib/dbus/machine-id", "r") as f:
+            machine_id = f.read()
+
+    __installation_id__ = str(_uuid.uuid5(_uuid.NAMESPACE_DNS, str(machine_id)))
+
 except UnicodeDecodeError:
     __installation_id__ = str(
         _uuid.uuid5(_uuid.NAMESPACE_DNS, str(_uuid.getnode()).encode("utf-8"))
@@ -91,12 +112,14 @@ import json as _json
 import numpy as _np
 
 from streamlit import code_util as _code_util
-from streamlit import util as _util
+from streamlit import env_util as _env_util
+from streamlit import string_util as _string_util
 from streamlit import type_util as _type_util
 from streamlit import source_util as _source_util
 from streamlit.ReportThread import get_report_ctx as _get_report_ctx
 from streamlit.ReportThread import add_report_ctx as _add_report_ctx
 from streamlit.DeltaGenerator import DeltaGenerator as _DeltaGenerator
+from streamlit.errors import StreamlitAPIException
 
 # Modules that the user should have access to.
 from streamlit.caching import cache  # noqa: F401
@@ -126,7 +149,7 @@ def _with_dg(method):
     def wrapped_method(*args, **kwargs):
         ctx = _get_report_ctx()
         dg = ctx.main_dg if ctx is not None else _NULL_DELTA_GENERATOR
-        return method(dg, *args, **kwargs)
+        return method.__get__(dg)(*args, **kwargs)
 
     return wrapped_method
 
@@ -190,8 +213,42 @@ video = _with_dg(_DeltaGenerator.video)  # noqa: E221
 warning = _with_dg(_DeltaGenerator.warning)  # noqa: E221
 
 # Config
-set_option = _config.set_option
+
 get_option = _config.get_option
+
+
+def set_option(key, value):
+    """Set config option.
+
+    Currently, only two config options can be set within the script itself:
+        * client.caching
+        * client.displayEnabled
+
+    Calling with any other options will raise StreamlitAPIException.
+
+    Run `streamlit config show` in the terminal to see all available options.
+
+    Parameters
+    ----------
+    key : str
+        The config option key of the form "section.optionName". To see all
+        available options, run `streamlit config show` on a terminal.
+
+    value
+        The new value to assign to this config option.
+
+    """
+    opt = _config._config_options[key]
+    if opt.scriptable:
+        _config.set_option(key, value)
+        return
+
+    raise StreamlitAPIException(
+        "{key} cannot be set on the fly. Set as command line option, e.g. streamlit run script.py --{key}, or in config.toml instead.".format(
+            key=key
+        )
+    )
+
 
 # Special methods:
 
@@ -237,7 +294,9 @@ def write(*args, **kwargs):
 
         Arguments are handled as follows:
 
-            - write(string)     : Prints the formatted Markdown string.
+            - write(string)     : Prints the formatted Markdown string, with
+            support for LaTeX expression and emoji shortcodes.
+            See docs for st.markdown for more.
             - write(data_frame) : Displays the DataFrame as a table.
             - write(error)      : Prints an exception specially.
             - write(func)       : Displays information about a function.
@@ -282,10 +341,10 @@ def write(*args, **kwargs):
     Its simplest use case is to draw Markdown-formatted text, whenever the
     input is a string:
 
-    >>> write('Hello, *World!*')
+    >>> write('Hello, *World!* :sunglasses:')
 
     .. output::
-       https://share.streamlit.io/0.25.0-2JkNY/index.html?id=DUJaq97ZQGiVAFi6YvnihF
+       https://share.streamlit.io/0.50.2-ZWk9/index.html?id=Pn5sjhgNs4a8ZbiUoSTRxE
        height: 50px
 
     As mentioned earlier, `st.write()` also accepts other data formats, such as
@@ -453,7 +512,7 @@ def show(*args):
 
         # Escape markdown and add deltas
         for idx, input in enumerate(inputs):
-            escaped = _util.escape_markdown(input)
+            escaped = _string_util.escape_markdown(input)
 
             markdown("**%s**" % escaped)
             write(args[idx])
@@ -581,7 +640,7 @@ def _maybe_print_repl_warning():
     if not _repl_warning_has_been_displayed:
         _repl_warning_has_been_displayed = True
 
-        if _util.is_repl():
+        if _env_util.is_repl():
             _LOGGER.warning(
                 _textwrap.dedent(
                     """

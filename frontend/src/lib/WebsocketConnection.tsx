@@ -15,16 +15,16 @@
  * limitations under the License.
  */
 
-import React, { Fragment } from "react"
+import { BackMsg, ForwardMsg, IBackMsg } from "autogen/proto"
 
 import axios from "axios"
-import Resolver from "lib/Resolver"
-import { SessionInfo } from "lib/SessionInfo"
 import { ConnectionState } from "lib/ConnectionState"
 import { ForwardMsgCache } from "lib/ForwardMessageCache"
 import { logError, logMessage, logWarning } from "lib/log"
-import { BackMsg, ForwardMsg, IBackMsg } from "autogen/proto"
+import Resolver from "lib/Resolver"
+import { SessionInfo } from "lib/SessionInfo"
 import { BaseUriParts, buildHttpUri, buildWsUri } from "lib/UriUtil"
+import React, { Fragment } from "react"
 
 /**
  * Name of the logger.
@@ -60,7 +60,10 @@ const CORS_ERROR_MESSAGE_DOCUMENTATION_LINK =
   "https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS"
 
 type OnMessage = (ForwardMsg: any) => void
-type OnConnectionStateChange = (connectionState: ConnectionState) => void
+type OnConnectionStateChange = (
+  connectionState: ConnectionState,
+  errMsg?: string
+) => void
 type OnRetry = (totalTries: number, errorNode: React.ReactNode) => void
 
 interface Args {
@@ -106,15 +109,19 @@ interface MessageQueue {
  *     │:on timeout/error/closed     │
  *     v  │                          │:on error/closed
  *   PINGING_SERVER <────────────────┘
+ *
+ *                    on fatal error
+ *                    :
+ *   <ANY_STATE> ──────────────> DISCONNECTED_FOREVER
  */
 type Event =
   | "INITIALIZED"
   | "CONNECTION_CLOSED"
   | "CONNECTION_ERROR"
-  | "CONNECTION_WTF"
   | "CONNECTION_SUCCEEDED"
   | "CONNECTION_TIMED_OUT"
   | "SERVER_PING_SUCCEEDED"
+  | "FATAL_ERROR" // Unrecoverable error. This should never happen!
 
 /**
  * This class is the "brother" of StaticConnection. The class connects to the
@@ -187,10 +194,10 @@ export class WebsocketConnection {
   }
 
   // This should only be called inside stepFsm().
-  private setFsmState(state: ConnectionState): void {
+  private setFsmState(state: ConnectionState, errMsg?: string): void {
     logMessage(LOG, `New state: ${state}`)
     this.state = state
-    this.args.onConnectionStateChange(state)
+    this.args.onConnectionStateChange(state, errMsg)
 
     // Perform actions when entering certain states.
     switch (this.state) {
@@ -202,6 +209,10 @@ export class WebsocketConnection {
         this.connectToWebSocket()
         break
 
+      case ConnectionState.DISCONNECTED_FOREVER:
+        this.cancelConnectionAttempt()
+        break
+
       case ConnectionState.CONNECTED:
       case ConnectionState.INITIAL:
       default:
@@ -209,10 +220,28 @@ export class WebsocketConnection {
     }
   }
 
-  private stepFsm(event: Event): void {
+  /**
+   * Process an event in our FSM.
+   *
+   * @param event The event to process.
+   * @param errMsg an optional error message to send to the OnStateChanged
+   * callback. This is meaningful only for the FATAL_ERROR event. The message
+   * will be displayed to the user in a "Connection Error" dialog.
+   */
+  private stepFsm(event: Event, errMsg?: string): void {
     logMessage(LOG, `State: ${this.state}; Event: ${event}`)
 
-    // Anything combination of state+event that is not explicitly called out
+    if (
+      event === "FATAL_ERROR" &&
+      this.state !== ConnectionState.DISCONNECTED_FOREVER
+    ) {
+      // If we get a fatal error, we transition to DISCONNECTED_FOREVER
+      // regardless of our current state.
+      this.setFsmState(ConnectionState.DISCONNECTED_FOREVER, errMsg)
+      return
+    }
+
+    // Any combination of state+event that is not explicitly called out
     // below is illegal and raises an error.
 
     switch (this.state) {
@@ -250,6 +279,17 @@ export class WebsocketConnection {
           return
         }
         break
+
+      case ConnectionState.DISCONNECTED_FOREVER:
+        // If we're in the DISCONNECTED_FOREVER state, we can't reasonably
+        // process any events, and it's possible we're in this state because
+        // of a fatal error. Just log these events rather than throwing more
+        // exceptions.
+        logWarning(
+          LOG,
+          `Discarding ${event} while in ${ConnectionState.DISCONNECTED_FOREVER}`
+        )
+        return
 
       default:
         break
@@ -299,9 +339,9 @@ export class WebsocketConnection {
     this.websocket.onmessage = (event: MessageEvent) => {
       if (checkWebsocket()) {
         this.handleMessage(event.data).catch(reason => {
-          // TODO: do something reasonable here, beyond simply logging.
-          //  Lots of stuff is likely to be broken!
-          logError(LOG, reason)
+          const err = `Failed to process a Websocket message (${reason})`
+          logError(LOG, err)
+          this.stepFsm("FATAL_ERROR", err)
         })
       }
     }
@@ -355,7 +395,7 @@ export class WebsocketConnection {
         // setConnectionTimeout() should be immediately before setting
         // this.websocket.
         this.cancelConnectionAttempt()
-        this.stepFsm("CONNECTION_WTF")
+        this.stepFsm("FATAL_ERROR", "Null Websocket in setConnectionTimeout")
         return
       }
 

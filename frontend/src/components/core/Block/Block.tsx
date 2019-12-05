@@ -23,6 +23,7 @@ import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { makeElementWithInfoText } from "lib/utils"
 import { ForwardMsgMetadata } from "autogen/proto"
+import { ReportElement, BlockElement, SimpleElement } from "lib/DeltaParser"
 
 // Load (non-lazy) elements.
 import Alert from "components/elements/Alert/"
@@ -72,10 +73,6 @@ const TextInput = React.lazy(() => import("components/widgets/TextInput/"))
 const TimeInput = React.lazy(() => import("components/widgets/TimeInput/"))
 const NumberInput = React.lazy(() => import("components/widgets/NumberInput/"))
 
-type SimpleElement = ImmutableMap<string, any>
-type StElement = SimpleElement | BlockElement
-interface BlockElement extends List<StElement> {}
-
 interface Props {
   elements: BlockElement
   reportId: string
@@ -92,12 +89,14 @@ class Block extends PureComponent<Props> {
     // Transform Streamlit elements into ReactNodes.
     return elementsToRender
       .toArray()
-      .map((element: StElement, index: number): ReactNode | null => {
+      .map((reportElement: ReportElement, index: number): ReactNode | null => {
+        const element = reportElement.get("element")
+
         if (element instanceof List) {
           return this.renderBlock(element as BlockElement, index, width)
         } else {
           return this.renderElementWithErrorBoundary(
-            element as SimpleElement,
+            reportElement,
             index,
             width
           )
@@ -106,13 +105,13 @@ class Block extends PureComponent<Props> {
       .filter((node: ReactNode | null): ReactNode => node != null)
   }
 
-  private isElementStale(element: SimpleElement): boolean {
+  private isElementStale(reportElement: ReportElement): boolean {
     if (this.props.reportRunState === ReportRunState.RERUN_REQUESTED) {
       // If a rerun was just requested, all of our current elements
       // are about to become stale.
       return true
     } else if (this.props.reportRunState === ReportRunState.RUNNING) {
-      return element.get("reportId") !== this.props.reportId
+      return reportElement.get("reportId") !== this.props.reportId
     } else {
       return false
     }
@@ -138,11 +137,19 @@ class Block extends PureComponent<Props> {
   }
 
   private renderElementWithErrorBoundary(
-    element: SimpleElement,
+    reportElement: ReportElement,
     index: number,
     width: number
   ): ReactNode | null {
-    const component = this.renderElement(element, index, width)
+    const element = reportElement.get("element")
+
+    const component = this.renderElement(
+      element,
+      index,
+      width,
+      reportElement.get("metadata")
+    )
+
     const componentWithMaybe = (
       <Maybe
         enable={
@@ -158,7 +165,7 @@ class Block extends PureComponent<Props> {
     const isStale =
       !componentWithMaybe.props.enable ||
       (this.props.showStaleElementIndicator &&
-        this.isElementStale(element as SimpleElement))
+        this.isElementStale(reportElement))
 
     const className =
       isStale && !FullScreenWrapper.isFullScreen
@@ -170,8 +177,8 @@ class Block extends PureComponent<Props> {
         <ErrorBoundary width={width}>
           <Suspense
             fallback={
-              <Text
-                element={makeElementWithInfoText("Loading...").get("text")}
+              <Alert
+                element={makeElementWithInfoText("Loading...").get("alert")}
                 width={width}
               />
             }
@@ -186,7 +193,8 @@ class Block extends PureComponent<Props> {
   private renderElement = (
     element: SimpleElement,
     index: number,
-    width: number
+    width: number,
+    metadata: ForwardMsgMetadata
   ): ReactNode | undefined => {
     if (!element) {
       throw new Error("Transmission error.")
@@ -197,7 +205,6 @@ class Block extends PureComponent<Props> {
       disabled: this.props.widgetsDisabled,
     }
 
-    const metadata = element.get("metadata") as ForwardMsgMetadata
     let height: number | undefined
 
     // Modify width using the value from the spec as passed with the message when applicable
@@ -227,7 +234,7 @@ class Block extends PureComponent<Props> {
       docString: (el: SimpleElement) => (
         <DocString element={el} width={width} />
       ),
-      empty: () => undefined,
+      empty: () => undefined, // Will happen since we moved the handling into the Maybe
       exception: (el: SimpleElement) => (
         <ExceptionElement element={el} width={width} />
       ),
