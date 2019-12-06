@@ -38,7 +38,6 @@ from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
-
 # Config System Global State #
 
 # Descriptions of each of the possible config sections.
@@ -189,7 +188,6 @@ def _delete_option(key):
 
 _create_section("global", "Global options that apply across all of Streamlit.")
 
-
 _create_option(
     "global.disableWatchdogWarning",
     description="""
@@ -216,7 +214,6 @@ _create_option(
         """,
     default_val="off",
 )
-
 
 _create_option(
     "global.showWarningOnDirectExecution",
@@ -273,7 +270,6 @@ _create_option(
     type_=bool,
 )
 
-
 _create_option(
     "global.metrics",
     description="Whether to serve prometheus metrics from /metrics.",
@@ -281,7 +277,6 @@ _create_option(
     default_val=False,
     type_=bool,
 )
-
 
 _create_option(
     "global.minCachedMessageSize",
@@ -292,7 +287,6 @@ _create_option(
     type_=int,
 )  # 10k
 
-
 _create_option(
     "global.maxCachedMessageAge",
     description="""Expire cached ForwardMsgs whose age is greater than this
@@ -302,7 +296,6 @@ _create_option(
     default_val=2,
     type_=int,
 )
-
 
 # Config Section: Client #
 
@@ -324,7 +317,6 @@ _create_option(
     type_=bool,
     scriptable=True,
 )
-
 
 # Config Section: Runner #
 
@@ -364,7 +356,6 @@ _create_option(
 # Config Section: Server #
 
 _create_section("server", "Settings for the Streamlit server")
-
 
 _create_option(
     "server.folderWatchBlacklist",
@@ -411,7 +402,8 @@ def _server_headless():
         os.getenv("IS_RUNNING_IN_STREAMLIT_EDITOR_PLUGIN") is not None
     )
     return (
-        is_live_save_on or (is_linux and has_display_env) or is_running_in_editor_plugin
+        is_live_save_on or (
+            is_linux and has_display_env) or is_running_in_editor_plugin
     )
 
 
@@ -497,9 +489,25 @@ def _browser_server_port():
     return get_option("server.port")
 
 
+# Config Section: Mapbox #
+
+_create_section("mapbox", "Mapbox configuration that is being used by DeckGL.")
+
+_create_option("mapbox.token",
+                description="""Configure Streamlit to use a custom Mapbox 
+                token for elements like st.deck_gl_chart and st.map. If you 
+                don't do this you'll be using Streamlit's own token, 
+                which has limitations and is not guaranteed to always work. 
+                To get a token for yourself, create an account at 
+                https://mapbox.com. It's free! (for moderate usage levels)""",
+                default_val="pk.eyJ1IjoidGhpYWdvdCIsImEiOiJjamh3bm85NnkwMng4M3"
+                            "dydnNveWwzeWNzIn0.vCBDzNsEF2uFSFk2AM0WZQ")
+
+
 # Config Section: S3 #
 
-_create_section("s3", 'Configuration for when global.sharingMode is set to "s3".')
+_create_section("s3",
+                'Configuration for when global.sharingMode is set to "s3".')
 
 
 @_create_option("s3.bucket")
@@ -520,7 +528,7 @@ def _s3_url():
     return None
 
 
-@_create_option("s3.accessKeyId", visibility="obfuscated")
+@_create_option("s3.accessKeyId")
 def _s3_access_key_id():
     """Access key to write to the S3 bucket.
 
@@ -531,7 +539,7 @@ def _s3_access_key_id():
     return None
 
 
-@_create_option("s3.secretAccessKey", visibility="obfuscated")
+@_create_option("s3.secretAccessKey")
 def _s3_secret_access_key():
     """Secret access key to write to the S3 bucket.
 
@@ -541,16 +549,6 @@ def _s3_secret_access_key():
     """
     return None
 
-
-_create_option(
-    "s3.requireLoginToView",
-    description="""Make the shared app visible only to users who have been
-        granted view permission. If you are interested in this option, contact
-        us at support@streamlit.io.
-        """,
-    default_val=False,
-    type_=bool,
-)
 
 _create_option(
     "s3.keyPrefix",
@@ -707,7 +705,8 @@ def show_config():
                 append_comment("#")
                 append_comment("# " + click.style("DEPRECATED.", fg="yellow"))
                 append_comment(
-                    "# %s" % "\n".join(_clean_paragraphs(option.deprecation_text))
+                    "# %s" % "\n".join(
+                        _clean_paragraphs(option.deprecation_text))
                 )
                 append_comment(
                     "# This option will be removed on or after %s."
@@ -720,15 +719,13 @@ def show_config():
             )
 
             if option_is_manually_set:
-                append_comment("# The value below was set in %s" % option.where_defined)
+                append_comment(
+                    "# The value below was set in %s" % option.where_defined)
 
             toml_setting = toml.dumps({key: option.value})
 
-            if len(toml_setting) == 0 or option.visibility == "obfuscated":
+            if len(toml_setting) == 0:
                 toml_setting = "#%s =\n" % key
-
-            elif option.visibility == "obfuscated":
-                toml_setting = "%s = (value hidden)\n" % key
 
             append_setting(toml_setting)
 
@@ -799,8 +796,9 @@ def _maybe_read_env_variable(value):
         variable.
 
     """
-    if isinstance(value, string_types) and value.startswith("env:"):  # noqa F821
-        var_name = value[len("env:") :]
+    if isinstance(value, string_types) and value.startswith(
+        "env:"):  # noqa F821
+        var_name = value[len("env:"):]
         env_var = os.environ.get(var_name)
 
         if env_var is None:
@@ -893,7 +891,8 @@ def _check_conflicts():
         both_are_set = is_manually_set("s3.accessKeyId") and is_manually_set(
             "s3.secretAccessKey"
         )
-        both_are_unset = _is_unset("s3.accessKeyId") and _is_unset("s3.secretAccessKey")
+        both_are_unset = _is_unset("s3.accessKeyId") and _is_unset(
+            "s3.secretAccessKey")
         assert both_are_set or both_are_unset, (
             "In config.toml, s3.accessKeyId and s3.secretAccessKey must "
             "either both be set or both be unset."

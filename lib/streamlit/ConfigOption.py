@@ -72,7 +72,7 @@ class ConfigOption(object):
     where_defined : str
         Indicates which file set this config option.
         ConfigOption.DEFAULT_DEFINITION means this file.
-    visibility : {'visible', 'hidden', 'obfuscated'}
+    visibility : {"visible", "hidden"}
         See __init__.
     scriptable : bool
         See __init__.
@@ -118,7 +118,7 @@ class ConfigOption(object):
             Like a comment for the config option.
         default_val : anything
             The value for this config option.
-        visibility : {'visible', 'hidden', 'obfuscated'}
+        visibility : {"visible", "hidden"}
             Whether this option should be shown to users.
         scriptable : bool
             Whether this config option can be set within a user script.
