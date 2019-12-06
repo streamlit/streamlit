@@ -22,10 +22,10 @@ from streamlit import config
 from streamlit.ReportSession import ReportSession
 from streamlit.ScriptRunner import ScriptRunner
 
-class ReportSessionTest(unittest.TestCase):
 
-    @patch('streamlit.ReportSession.Report')
-    @patch('streamlit.ReportSession.LocalSourcesWatcher')
+class ReportSessionTest(unittest.TestCase):
+    @patch("streamlit.ReportSession.Report")
+    @patch("streamlit.ReportSession.LocalSourcesWatcher")
     def test_enqueue_without_tracer(self, patched_Report, patched_Watcher):
         """Make sure we try to handle execution control requests.
         """
@@ -39,7 +39,7 @@ class ReportSessionTest(unittest.TestCase):
         mock_script_runner._install_tracer = ScriptRunner._install_tracer
         rs._scriptrunner = mock_script_runner
 
-        rs.enqueue({'dontcare': 123})
+        rs.enqueue({"dontcare": 123})
 
         func = mock_script_runner.maybe_handle_execution_control_request
         func.assert_called_once()
@@ -48,9 +48,8 @@ class ReportSessionTest(unittest.TestCase):
         sys.settrace(orig_tracer)
         config.set_option("runner.installTracer", orig_option)
 
-
-    @patch('streamlit.ReportSession.Report')
-    @patch('streamlit.ReportSession.LocalSourcesWatcher')
+    @patch("streamlit.ReportSession.Report")
+    @patch("streamlit.ReportSession.LocalSourcesWatcher")
     def test_enqueue_with_tracer(self, patched_Report, patched_Watcher):
         """Make sure there is no lock contention when tracer is on.
         """
@@ -64,7 +63,7 @@ class ReportSessionTest(unittest.TestCase):
         rs._scriptrunner = mock_script_runner
 
         # ScriptRunner._install_tracer(rs._scriptrunner)
-        rs.enqueue({'dontcare': 123})
+        rs.enqueue({"dontcare": 123})
 
         func = mock_script_runner.maybe_handle_execution_control_request
         func.assert_called_once()
@@ -72,4 +71,3 @@ class ReportSessionTest(unittest.TestCase):
         # Clean up.
         sys.settrace(orig_tracer)
         config.set_option("runner.installTracer", orig_option)
-
