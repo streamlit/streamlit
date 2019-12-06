@@ -28,7 +28,8 @@ import struct
 import textwrap
 import threading
 from collections import namedtuple
-from functools import wraps
+import functools
+import sys
 
 import streamlit as st
 from streamlit import config
@@ -53,6 +54,16 @@ How to resolve this warning:
 to suppress the warning.
 """
 
+if sys.version_info[0:2] >= (3, 4):  # Python v3.4+?
+    wraps = functools.wraps  # built-in has __wrapped__ attribute
+else:
+    def wraps(wrapped, assigned=functools.WRAPPER_ASSIGNMENTS,
+              updated=functools.WRAPPER_UPDATES):
+        def wrapper(f):
+            f = functools.wraps(wrapped, assigned, updated)(f)
+            f.__wrapped__ = wrapped  # set attribute missing in earlier versions
+            return f
+        return wrapper
 
 try:
     # cPickle, if available, is much faster than pickle.
