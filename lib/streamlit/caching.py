@@ -54,6 +54,8 @@ How to resolve this warning:
 to suppress the warning.
 """
 
+# based on: https://stackoverflow.com/questions/43506378/how-to-get-source-code-of-function-that-is-wrapped-by-a-decorator
+# In Python 2, the @functools.wraps() decorator does not set the convenience __wrapped__
 if sys.version_info[0:2] >= (3, 4):  # Python v3.4+?
     wraps = functools.wraps  # built-in has __wrapped__ attribute
 else:
