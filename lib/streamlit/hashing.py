@@ -28,11 +28,13 @@ import io
 import os
 import sys
 import textwrap
+import traceback
 
 import streamlit as st
 from streamlit import config
 from streamlit import file_util
 from streamlit import type_util
+from streamlit.errors import UnhashableType
 from streamlit.folder_black_list import FolderBlackList
 from streamlit.compatibility import setup_2_3_shims
 
@@ -208,7 +210,11 @@ class CodeHasher:
 
     def update(self, obj, context=None):
         """Update the hash with the provided object."""
-        self._update(self.hasher, obj, context)
+        try:
+            self._update(self.hasher, obj, context)
+        except Exception as e:
+            st.warning(_hashing_error_message(str(e)))
+            raise e
 
     def digest(self):
         return self.hasher.digest()
@@ -265,13 +271,6 @@ class CodeHasher:
                 return self.to_bytes(hash(obj))
             elif isinstance(obj, int):
                 return _int_to_bytes(obj)
-            elif isinstance(obj, list) or isinstance(obj, tuple):
-                h = hashlib.new(self.name)
-                # add type to distingush x from [x]
-                self._update(h, type(obj).__name__.encode() + b":")
-                for e in obj:
-                    self._update(h, e, context)
-                return h.digest()
             elif obj is None:
                 # Special string since hashes change between sessions.
                 # We don't use Python's `hash` since hashes are not consistent
@@ -281,6 +280,10 @@ class CodeHasher:
                 return b"bool:1"
             elif obj is False:
                 return b"bool:0"
+            elif isinstance(obj, dict):
+                # Todo: handle dictionaries that point back to themself
+                #       handle for all iterables?
+                return self.to_bytes(obj.items())
             elif type_util.is_type(
                 obj, "pandas.core.frame.DataFrame"
             ) or type_util.is_type(obj, "pandas.core.series.Series"):
@@ -291,6 +294,7 @@ class CodeHasher:
                 try:
                     return pd.util.hash_pandas_object(obj).sum()
                 except TypeError:
+                    # Todo: should we still be pickling in this case?
                     # Use pickle if pandas cannot hash the object for example if
                     # it contains unhashable objects.
                     return pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
@@ -374,22 +378,41 @@ class CodeHasher:
                 self._update(h, obj.func)
                 self._update(h, obj.keywords)
                 return h.digest()
+            elif hasattr(obj,'__iter__'):
+                # Generic iterable handling after custom handling of certain iterables
+                h = hashlib.new(self.name)
+                # add type to distingush x from [x]
+                self._update(h, type(obj).__name__.encode() + b":")
+                for e in obj:
+                    try:
+                        self._update(h, e, context)
+                    except:
+                        msg = "Streamlit failed to hash an object of type %s." % type(e)
+                        raise UnhashableType(msg)
+                return h.digest()
             else:
-                try:
-                    # As a last resort, we pickle the object to hash it.
-                    return pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
-                except:
-                    st.warning(
-                        _hashing_error_message(
-                            "Streamlit cannot hash an object of type %s." % type(obj)
-                        )
-                    )
-        except:
-            st.warning(
-                _hashing_error_message(
-                    "Streamlit failed to hash an object of type %s." % type(obj)
-                )
-            )
+                # As a last resort
+                h = hashlib.new(self.name)
+                # add type to distingush x from [x]
+                self._update(h, type(obj).__name__.encode() + b":")
+                for e in obj.__reduce__():
+                    try:
+                        self._update(h, e, context)
+                    except:
+                        msg = "Streamlit failed to hash an object of type %s." % type(obj)
+                        raise UnhashableType(msg)
+                return h.digest()
+        except UnhashableType as e:
+            raise e
+        except Exception as e:
+            print(e)
+            #if inspect.isroutine(obj):
+            #    raise e
+            #else:
+            msg = "Streamlit failed to hash an object of type %s." % type(obj)
+            raise UnhashableType(msg)
+            # Todo: before we were returning None in this situation
+            # return None
 
     def _code_to_bytes(self, code, context):
         h = hashlib.new(self.name)

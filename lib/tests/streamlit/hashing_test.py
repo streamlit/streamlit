@@ -30,6 +30,7 @@ import tensorflow as tf
 from mock import MagicMock
 
 import streamlit as st
+from streamlit.errors import UnhashableType
 from streamlit.hashing import NP_SIZE_LARGE, PANDAS_ROWS_LARGE, CodeHasher
 
 get_main_script_director = MagicMock(return_value=os.getcwd())
@@ -171,7 +172,7 @@ class HashTest(unittest.TestCase):
         tf_session_class = type(tf_session)
 
         # Unhashable object raises an error
-        with self.assertRaises(TypeError):
+        with self.assertRaises(UnhashableType):
             get_hash(tf_session)
 
         id_hash_func = {tf_session_class: id}
@@ -642,7 +643,7 @@ class CodeHashTest(unittest.TestCase):
         # Function with unhashable object raises an error in python 3
         # In python 2 we fallback to hashing the function name
         if sys.version_info >= (3, 0):
-            with self.assertRaises(TypeError):
+            with self.assertRaises(UnhashableType):
                 get_hash(f)
 
         hash_funcs = {tf_session_class: id}

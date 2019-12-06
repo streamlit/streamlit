@@ -44,3 +44,7 @@ class StreamlitAPIException(Exception):
 
 class DuplicateWidgetID(StreamlitAPIException):
     pass
+
+
+class UnhashableType(StreamlitAPIException):
+    pass
