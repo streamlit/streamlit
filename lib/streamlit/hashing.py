@@ -378,7 +378,7 @@ class CodeHasher:
                 self._update(h, obj.func)
                 self._update(h, obj.keywords)
                 return h.digest()
-            elif hasattr(obj,'__iter__'):
+            elif hasattr(obj, "__iter__"):
                 # Generic iterable handling after custom handling of certain iterables
                 h = hashlib.new(self.name)
                 # add type to distingush x from [x]
@@ -399,16 +399,18 @@ class CodeHasher:
                     try:
                         self._update(h, e, context)
                     except:
-                        msg = "Streamlit failed to hash an object of type %s." % type(obj)
+                        msg = "Streamlit failed to hash an object of type %s." % type(
+                            obj
+                        )
                         raise UnhashableType(msg)
                 return h.digest()
         except UnhashableType as e:
             raise e
         except Exception as e:
             print(e)
-            #if inspect.isroutine(obj):
+            # if inspect.isroutine(obj):
             #    raise e
-            #else:
+            # else:
             msg = "Streamlit failed to hash an object of type %s." % type(obj)
             raise UnhashableType(msg)
             # Todo: before we were returning None in this situation
