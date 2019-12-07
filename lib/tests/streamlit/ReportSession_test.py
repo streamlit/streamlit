@@ -87,8 +87,8 @@ class ReportSessionTest(unittest.TestCase):
 
         # In reality, outside of a testing environment func should be called
         # once. But in this test we're actually not installing a tracer here,
-        # since Report is mocked. So the correct behavior here if to func to
-        # never be called. If you ever see if being called once here it's
-        # likely because there's a bug in the enqueue function, which should
-        # skip func when installTracer is on.
+        # since Report is mocked. So the correct behavior here is for func to
+        # never be called. If you ever see it being called once here it's
+        # likely because there's a bug in the enqueue function (which should
+        # skip func when installTracer is on).
         func.assert_not_called()
