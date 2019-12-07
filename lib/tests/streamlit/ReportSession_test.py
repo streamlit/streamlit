@@ -30,6 +30,7 @@ class ReportSessionTest(unittest.TestCase):
     def test_enqueue_without_tracer(self, _1, _2, patched_config):
         """Make sure we try to handle execution control requests.
         """
+
         def get_option(name):
             if name == "server.runOnSave":
                 # Just to avoid starting the watcher for no reason.
@@ -65,6 +66,7 @@ class ReportSessionTest(unittest.TestCase):
         was a bug in the past where it was called twice: once from the tracer
         and once from the enqueue function. This caused a lock contention.
         """
+
         def get_option(name):
             if name == "server.runOnSave":
                 # Just to avoid starting the watcher for no reason.
@@ -87,8 +89,8 @@ class ReportSessionTest(unittest.TestCase):
 
         # In reality, outside of a testing environment func should be called
         # once. But in this test we're actually not installing a tracer here,
-        # since Report is mocked. So the correct behavior here if to func to
-        # never be called. If you ever see if being called once here it's
-        # likely because there's a bug in the enqueue function, which should
-        # skip func when installTracer is on.
+        # since Report is mocked. So the correct behavior here is for func to
+        # never be called. If you ever see it being called once here it's
+        # likely because there's a bug in the enqueue function (which should
+        # skip func when installTracer is on).
         func.assert_not_called()

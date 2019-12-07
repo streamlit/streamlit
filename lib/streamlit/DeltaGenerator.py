@@ -2582,13 +2582,13 @@ class DeltaGenerator(object):
 
         # Regenerate chart with data
         if self._last_index == -1:
-            if self._delta_type == 'line_chart':
+            if self._delta_type == "line_chart":
                 self.line_chart(data)
                 return
-            elif self._delta_type == 'bar_chart':
+            elif self._delta_type == "bar_chart":
                 self.bar_chart(data)
                 return
-            elif self._delta_type == 'area_chart':
+            elif self._delta_type == "area_chart":
                 self.area_chart(data)
                 return
 
