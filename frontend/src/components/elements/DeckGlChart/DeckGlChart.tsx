@@ -29,13 +29,11 @@ import DeckGL, {
 } from "deck.gl"
 import Immutable from "immutable"
 import { StaticMap } from "react-map-gl"
+import { SessionInfo } from "lib/SessionInfo"
 import { dataFrameToArrayOfDicts } from "lib/dataFrameProto"
 import FullScreenWrapper from "components/shared/FullScreenWrapper"
 import "mapbox-gl/dist/mapbox-gl.css"
 import "./DeckGlChart.scss"
-
-const MAPBOX_ACCESS_TOKEN =
-  "pk.eyJ1IjoidGhpYWdvdCIsImEiOiJjamh3bm85NnkwMng4M3dydnNveWwzeWNzIn0.vCBDzNsEF2uFSFk2AM0WZQ"
 
 interface Props {
   width: number
@@ -120,7 +118,7 @@ class DeckGlChart extends React.PureComponent<PropsWithHeight, State> {
             height={this.initialViewState.height}
             width={this.initialViewState.width}
             mapStyle={this.mapStyle}
-            mapboxApiAccessToken={MAPBOX_ACCESS_TOKEN}
+            mapboxApiAccessToken={SessionInfo.current.mapboxToken}
           />
         </DeckGL>
       </div>

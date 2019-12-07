@@ -69,6 +69,18 @@ describe("NumberInput", () => {
     expect(wrapper).toBeDefined()
   })
 
+  it("Handles malformed format strings without crashing", () => {
+    // This format string is malformed (it should be %0.2f)
+    const props = getFloatProps({
+      floatData: { default: 5.0 },
+      format: "%0.2",
+    })
+    const wrapper = shallow(<NumberInput {...props} />)
+
+    expect(wrapper).toBeDefined()
+    expect(wrapper.state("value")).toBe(5.0)
+  })
+
   it("Should show a label", () => {
     const props = getIntProps()
     const wrapper = shallow(<NumberInput {...props} />)
