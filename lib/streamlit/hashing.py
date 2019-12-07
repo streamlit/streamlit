@@ -415,7 +415,7 @@ class CodeHasher:
         else:
             # This won't correctly follow nested calls like `foo.bar.baz()`.
             for name in code.co_names:
-                if name in context.globals:
+                if name in context.globals and type(context.globals[name]) == "function":
                     try:
                         self._update(h, context.globals[name], context)
                     except Exception:
