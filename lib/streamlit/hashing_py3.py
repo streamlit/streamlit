@@ -41,10 +41,12 @@ def get_referenced_objects(code, context):
 
     for op in dis.get_instructions(code):
         if op.opname in ["LOAD_GLOBAL", "LOAD_NAME"]:
-            if op.argval in context.globals:
-                set_tos(context.globals[op.argval])
-            else:
-                set_tos(op.argval)
+            pass
+            #TODO: verify we're not ignoring things we need.
+            #if op.argval in context.globals:
+            #    set_tos(context.globals[op.argval])
+            #else:
+            #    set_tos(op.argval)
         elif op.opname in ["LOAD_DEREF", "LOAD_CLOSURE"]:
             set_tos(context.cells[op.argval])
         elif op.opname == "IMPORT_NAME":
