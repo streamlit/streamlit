@@ -163,13 +163,18 @@ class ReportSession(object):
         if not config.get_option("client.displayEnabled"):
             return False
 
-        # If we have an active ScriptRunner, signal that it can handle
-        # an execution control request. (Copy the scriptrunner reference
-        # to avoid it being unset from underneath us, as this function can
-        # be called outside the main thread.)
-        scriptrunner = self._scriptrunner
-        if scriptrunner is not None:
-            scriptrunner.maybe_handle_execution_control_request()
+        # Avoid having two maybe_handle_execution_control_request running on
+        # top of each other when tracer is installed. This leads to a lock
+        # contention.
+        if not config.get_option("runner.installTracer"):
+            # If we have an active ScriptRunner, signal that it can handle an
+            # execution control request. (Copy the scriptrunner reference to
+            # avoid it being unset from underneath us, as this function can be
+            # called outside the main thread.)
+            scriptrunner = self._scriptrunner
+
+            if scriptrunner is not None:
+                scriptrunner.maybe_handle_execution_control_request()
 
         self._report.enqueue(msg)
         return True
