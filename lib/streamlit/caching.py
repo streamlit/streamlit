@@ -322,13 +322,8 @@ def cache(
         Whether to persist the cache on disk.
 
     allow_output_mutation : boolean
-<<<<<<< HEAD
         Streamlit normally shows a warning when return values are mutated, as that can have
         unintended consequences. This is done by hashing the return value internally.
-=======
-        Streamlit normally shows a warning when return values are not mutated, as that
-        can have unintended consequences. This is done by hashing the return value internally.
->>>>>>> parent of 6dc3706... not supposed to be in here
 
         If you know what you're doing and would like to override this warning, set this to True.
 
@@ -506,12 +501,9 @@ class Cache(dict):
 
 
     """
-<<<<<<< HEAD
     # Developer Note: We've changed the behavior of @st.cache to stop caching
     # internal variables, but none of the changes in @st.cache were applied to
     # to the Cache object herein.  --nm  12/3/2019
-=======
->>>>>>> parent of 6dc3706... not supposed to be in here
 
     def __init__(self, persist=False, allow_output_mutation=False):
         self._persist = persist
