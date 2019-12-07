@@ -252,7 +252,16 @@ class ConfigTest(unittest.TestCase):
 
     def test_sections_order(self):
         sections = sorted(
-            ["_test", u"browser", u"client", u"global", u"mapbox", u"runner", u"s3", u"server"]
+            [
+                "_test",
+                u"browser",
+                u"client",
+                u"global",
+                u"mapbox",
+                u"runner",
+                u"s3",
+                u"server",
+            ]
         )
         keys = sorted(list(config._section_descriptions.keys()))
         self.assertEqual(sections, keys)

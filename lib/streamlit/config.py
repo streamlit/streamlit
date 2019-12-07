@@ -402,8 +402,7 @@ def _server_headless():
         os.getenv("IS_RUNNING_IN_STREAMLIT_EDITOR_PLUGIN") is not None
     )
     return (
-        is_live_save_on or (
-            is_linux and has_display_env) or is_running_in_editor_plugin
+        is_live_save_on or (is_linux and has_display_env) or is_running_in_editor_plugin
     )
 
 
@@ -493,21 +492,22 @@ def _browser_server_port():
 
 _create_section("mapbox", "Mapbox configuration that is being used by DeckGL.")
 
-_create_option("mapbox.token",
-                description="""Configure Streamlit to use a custom Mapbox 
+_create_option(
+    "mapbox.token",
+    description="""Configure Streamlit to use a custom Mapbox 
                 token for elements like st.deck_gl_chart and st.map. If you 
                 don't do this you'll be using Streamlit's own token, 
                 which has limitations and is not guaranteed to always work. 
                 To get a token for yourself, create an account at 
                 https://mapbox.com. It's free! (for moderate usage levels)""",
-                default_val="pk.eyJ1IjoidGhpYWdvdCIsImEiOiJjamh3bm85NnkwMng4M3"
-                            "dydnNveWwzeWNzIn0.vCBDzNsEF2uFSFk2AM0WZQ")
+    default_val="pk.eyJ1IjoidGhpYWdvdCIsImEiOiJjamh3bm85NnkwMng4M3"
+    "dydnNveWwzeWNzIn0.vCBDzNsEF2uFSFk2AM0WZQ",
+)
 
 
 # Config Section: S3 #
 
-_create_section("s3",
-                'Configuration for when global.sharingMode is set to "s3".')
+_create_section("s3", 'Configuration for when global.sharingMode is set to "s3".')
 
 
 @_create_option("s3.bucket")
@@ -705,8 +705,7 @@ def show_config():
                 append_comment("#")
                 append_comment("# " + click.style("DEPRECATED.", fg="yellow"))
                 append_comment(
-                    "# %s" % "\n".join(
-                        _clean_paragraphs(option.deprecation_text))
+                    "# %s" % "\n".join(_clean_paragraphs(option.deprecation_text))
                 )
                 append_comment(
                     "# This option will be removed on or after %s."
@@ -719,8 +718,7 @@ def show_config():
             )
 
             if option_is_manually_set:
-                append_comment(
-                    "# The value below was set in %s" % option.where_defined)
+                append_comment("# The value below was set in %s" % option.where_defined)
 
             toml_setting = toml.dumps({key: option.value})
 
@@ -796,9 +794,8 @@ def _maybe_read_env_variable(value):
         variable.
 
     """
-    if isinstance(value, string_types) and value.startswith(
-        "env:"):  # noqa F821
-        var_name = value[len("env:"):]
+    if isinstance(value, string_types) and value.startswith("env:"):  # noqa F821
+        var_name = value[len("env:") :]
         env_var = os.environ.get(var_name)
 
         if env_var is None:
@@ -891,8 +888,7 @@ def _check_conflicts():
         both_are_set = is_manually_set("s3.accessKeyId") and is_manually_set(
             "s3.secretAccessKey"
         )
-        both_are_unset = _is_unset("s3.accessKeyId") and _is_unset(
-            "s3.secretAccessKey")
+        both_are_unset = _is_unset("s3.accessKeyId") and _is_unset("s3.secretAccessKey")
         assert both_are_set or both_are_unset, (
             "In config.toml, s3.accessKeyId and s3.secretAccessKey must "
             "either both be set or both be unset."
