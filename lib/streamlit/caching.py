@@ -29,7 +29,6 @@ import textwrap
 import threading
 from collections import namedtuple
 
-
 import streamlit as st
 from streamlit.util import functools_wraps
 from streamlit import config

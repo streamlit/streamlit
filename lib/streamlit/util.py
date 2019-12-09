@@ -31,9 +31,7 @@ from streamlit import env_util
 # URL of Streamlit's help page.
 HELP_DOC = "https://streamlit.io/docs/"
 
-
-# based on: https://stackoverflow.com/questions/43506378/how-to-get-source-code-of-function-that-is-wrapped-by-a-decorator
-# In Python 2, the @functools.wraps() decorator does not set the convenience __wrapped__
+# Make functools.wraps() in Python 2 set the __wrapped__ attribute, as is done in Python 3. This is required in st.cache. Seehttps://stackoverflow.com/questions/43506378/how-to-get-source-code-of-function-that-is-wrapped-by-a-decorator
 if sys.version_info[0:2] >= (3, 4):  # Python v3.4+?
     functools_wraps = functools.wraps  # built-in has __wrapped__ attribute
 else:
