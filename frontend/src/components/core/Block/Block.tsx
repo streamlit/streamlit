@@ -141,8 +141,9 @@ class Block extends PureComponent<Props> {
     index: number,
     width: number
   ): ReactNode | null {
+    const element = reportElement.get("element")
     const component = this.renderElement(
-      reportElement.get("element"),
+      element,
       index,
       width,
       reportElement.get("metadata")
@@ -151,12 +152,14 @@ class Block extends PureComponent<Props> {
     const componentWithMaybe = (
       <Maybe
         enable={
-          component !== undefined ||
+          // Note that this will toggle the shouldComponentUpdate flag.
+          // shouldComponentUpdate is used on the update flow, not on the
+          // mount flow. When mounting this check is effectively skipped.
+          element.get("type") !== "empty" ||
           this.props.reportRunState !== ReportRunState.RUNNING
         }
       >
-        {" "}
-        {component}{" "}
+        {component}
       </Maybe>
     )
 
@@ -168,7 +171,7 @@ class Block extends PureComponent<Props> {
     const className =
       isStale && !FullScreenWrapper.isFullScreen
         ? "element-container stale-element"
-        : component === undefined
+        : element.get("type") === "empty"
         ? "element-container stEmpty"
         : "element-container"
 
@@ -195,7 +198,7 @@ class Block extends PureComponent<Props> {
     index: number,
     width: number,
     metadata: ForwardMsgMetadata
-  ): ReactNode | undefined => {
+  ): ReactNode => {
     if (!element) {
       throw new Error("Transmission error.")
     }
@@ -234,7 +237,7 @@ class Block extends PureComponent<Props> {
       docString: (el: SimpleElement) => (
         <DocString element={el} width={width} />
       ),
-      empty: () => undefined, // Will happen since we moved the handling into the Maybe
+      empty: () => <div className="stEmpty" key={index} />,
       exception: (el: SimpleElement) => (
         <ExceptionElement element={el} width={width} />
       ),
