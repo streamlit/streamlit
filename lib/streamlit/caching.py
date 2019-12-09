@@ -28,9 +28,9 @@ import struct
 import textwrap
 import threading
 from collections import namedtuple
-from functools import wraps
 
 import streamlit as st
+from streamlit.util import functools_wraps
 from streamlit import config
 from streamlit import file_util
 from streamlit import util
@@ -522,7 +522,7 @@ def cache(
             hash_funcs=hash_funcs,
         )
 
-    @wraps(func)
+    @functools_wraps(func)
     def wrapped_func(*args, **kwargs):
         """This function wrapper will only call the underlying function in
         the case of a cache miss. Cached objects are stored in the cache/
