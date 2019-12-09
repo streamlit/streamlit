@@ -65,8 +65,7 @@ describe("The Maybe component", () => {
     beforeEach(() => {
       const Outer = (props: OuterProps): any => (
         <Maybe enable={false}>
-          {" "}
-          <Inner name={props.name} />{" "}
+          <Inner name={props.name} />
         </Maybe>
       )
       component = mount(<Outer name={"old again"} />)

@@ -136,6 +136,32 @@ class Block extends PureComponent<Props> {
     )
   }
 
+  private static wrapWithMaybe(
+    enable: boolean,
+    component: ReactNode
+  ): ReactNode {
+    return <Maybe enable={enable}>{component}</Maybe>
+  }
+
+  private getClassNames(
+    maybeEnableFlag: boolean,
+    reportElement: ReportElement
+  ): string {
+    const isStale =
+      !maybeEnableFlag ||
+      (this.props.showStaleElementIndicator &&
+        this.isElementStale(reportElement))
+    const isStaleAndNotFullScreen = isStale && !FullScreenWrapper.isFullScreen
+    const element = reportElement.get("element")
+    if (isStaleAndNotFullScreen) {
+      return "element-container stale-element"
+    } else {
+      return element.get("type") === "empty"
+        ? "element-container stEmpty"
+        : "element-container"
+    }
+  }
+
   private renderElementWithErrorBoundary(
     reportElement: ReportElement,
     index: number,
@@ -149,31 +175,14 @@ class Block extends PureComponent<Props> {
       reportElement.get("metadata")
     )
 
-    const componentWithMaybe = (
-      <Maybe
-        enable={
-          // Note that this will toggle the shouldComponentUpdate flag.
-          // shouldComponentUpdate is used on the update flow, not on the
-          // mount flow. When mounting this check is effectively skipped.
-          element.get("type") !== "empty" ||
-          this.props.reportRunState !== ReportRunState.RUNNING
-        }
-      >
-        {component}
-      </Maybe>
-    )
-
-    const isStale =
-      !componentWithMaybe.props.enable ||
-      (this.props.showStaleElementIndicator &&
-        this.isElementStale(reportElement))
-
-    const className =
-      isStale && !FullScreenWrapper.isFullScreen
-        ? "element-container stale-element"
-        : element.get("type") === "empty"
-        ? "element-container stEmpty"
-        : "element-container"
+    // Note that the enable condition is passed to shouldComponentUpdate
+    // of Maybe. shouldComponentUpdate is used on the update flow, not on the
+    // mount flow. When mounting this check is effectively skipped.
+    const enable =
+      element.get("type") !== "empty" ||
+      this.props.reportRunState !== ReportRunState.RUNNING
+    const componentWithMaybe = Block.wrapWithMaybe(enable, component)
+    const className = this.getClassNames(enable, reportElement)
 
     return (
       <div key={index} className={className} style={{ width }}>
