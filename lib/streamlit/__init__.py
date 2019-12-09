@@ -610,7 +610,9 @@ def echo():
             lines_to_display.extend(source_lines[start_line:end_line])
             initial_spaces = _SPACES_RE.match(lines_to_display[0]).end()
             for line in source_lines[end_line:]:
-                if _SPACES_RE.match(line).end() < initial_spaces:
+                indentation = _SPACES_RE.match(line).end()
+                # The > 1 is because we want to allow '\n' between sections.
+                if indentation > 1 and indentation < initial_spaces:
                     break
                 lines_to_display.append(line)
         lines_to_display = _textwrap.dedent("".join(lines_to_display))

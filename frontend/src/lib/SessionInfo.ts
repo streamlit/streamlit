@@ -22,6 +22,7 @@ export interface Args {
   authorEmail: string
   maxCachedMessageAge: number
   commandLine: string
+  mapboxToken: string
 }
 
 export class SessionInfo {
@@ -32,6 +33,7 @@ export class SessionInfo {
   public readonly authorEmail: string
   public readonly maxCachedMessageAge: number
   public readonly commandLine: string
+  public readonly mapboxToken: string
 
   /**
    * Singleton SessionInfo object. The reasons we're using a singleton here
@@ -64,6 +66,7 @@ export class SessionInfo {
     authorEmail,
     maxCachedMessageAge,
     commandLine,
+    mapboxToken,
   }: Args) {
     this.streamlitVersion = streamlitVersion
     this.pythonVersion = pythonVersion
@@ -71,5 +74,6 @@ export class SessionInfo {
     this.authorEmail = authorEmail
     this.maxCachedMessageAge = maxCachedMessageAge
     this.commandLine = commandLine
+    this.mapboxToken = mapboxToken
   }
 }
