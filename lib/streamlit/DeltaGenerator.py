@@ -32,7 +32,6 @@ from datetime import time
 
 from streamlit import caching
 from streamlit import metrics
-from streamlit.util import functools_wraps
 from streamlit.ReportThread import get_report_ctx
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException
@@ -72,7 +71,7 @@ def _wraps_with_cleaned_sig(wrapped, num_args_to_remove):
     fake_wrapped.__module__ = wrapped.__module__
     fake_wrapped.__name__ = wrapped.__name__
 
-    return functools_wraps(fake_wrapped)
+    return functools.wraps(fake_wrapped)
 
 
 def _remove_self_from_sig(method):

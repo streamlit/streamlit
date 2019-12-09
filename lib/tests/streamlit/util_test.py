@@ -62,3 +62,15 @@ class UtilTest(unittest.TestCase):
                     util.open_browser("http://some-url")
                     self.assertEqual(True, webbrowser_open.called)
                     self.assertEqual(False, subprocess_popen.called)
+
+    def test_functools_wraps(self):
+        """Test wrap for functools.wraps"""
+        
+        import streamlit as st
+        @st.cache
+        def f():
+            return True
+
+        self.assertEqual(True, hasattr(f, "__wrapped__"))
+
+    
