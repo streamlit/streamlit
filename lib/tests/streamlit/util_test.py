@@ -72,5 +72,3 @@ class UtilTest(unittest.TestCase):
             return True
 
         self.assertEqual(True, hasattr(f, "__wrapped__"))
-
-    
