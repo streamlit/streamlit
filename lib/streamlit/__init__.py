@@ -101,7 +101,6 @@ except UnicodeDecodeError:
     )
 
 import contextlib as _contextlib
-import functools as _functools
 import re as _re
 import sys as _sys
 import textwrap as _textwrap
@@ -111,6 +110,7 @@ import types as _types
 import json as _json
 import numpy as _np
 
+from streamlit.util import functools_wraps
 from streamlit import code_util as _code_util
 from streamlit import env_util as _env_util
 from streamlit import string_util as _string_util
@@ -145,7 +145,7 @@ _config.on_config_parsed(_set_log_level)
 
 
 def _with_dg(method):
-    @_functools.wraps(method)
+    @functools_wraps(method)
     def wrapped_method(*args, **kwargs):
         ctx = _get_report_ctx()
         dg = ctx.main_dg if ctx is not None else _NULL_DELTA_GENERATOR
