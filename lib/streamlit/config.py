@@ -454,6 +454,15 @@ def _server_enable_cors():
     return True
 
 
+@_create_option("server.maxUploadSize", type_=int)
+def _server_max_upload_size():
+    """Max size, in megabytes, for files uploaded with the file_uploader.
+
+    Default: '50'
+    """
+    return 50
+
+
 # Config Section: Browser #
 
 _create_section("browser", "Configuration of browser front-end.")
@@ -821,11 +830,11 @@ def _maybe_convert_to_number(v):
     return v
 
 
-def parse_config_file():
+def parse_config_file(force=False):
     """Parse the config file and update config parameters."""
     global _config_file_has_been_parsed
 
-    if _config_file_has_been_parsed:
+    if _config_file_has_been_parsed and force == False:
         return
 
     # Read ~/.streamlit/config.toml, and then overlay

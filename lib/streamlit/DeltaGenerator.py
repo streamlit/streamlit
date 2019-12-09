@@ -32,6 +32,7 @@ from datetime import time
 
 from streamlit import caching
 from streamlit import metrics
+from streamlit import config
 from streamlit.ReportThread import get_report_ctx
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException
@@ -39,12 +40,16 @@ from streamlit.proto import Balloons_pb2
 from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto import Text_pb2
+from streamlit.fileManager import FileManager
 from streamlit.proto import Alert_pb2
 
 # setup logging
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
+
+# Save the type built-in for when we override the name "type".
+_type = type
 
 MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
 
@@ -265,7 +270,6 @@ class DeltaGenerator(object):
     path: tuple of ints
       The full path of this DeltaGenerator, consisting of the IDs of
       all ancestors. The 0th item is the topmost ancestor.
-
     """
 
     # The pydoc below is for user consumption, so it doesn't talk about
@@ -1915,6 +1919,49 @@ class DeltaGenerator(object):
             # single variable
             current_value = current_value[0] if single_value else current_value
         return current_value if single_value else tuple(current_value)
+
+    @_with_element
+    def file_uploader(self, element, label, type=None, key=None):
+
+        """Display a file uploader widget.
+
+        By default, uploaded files are limited to 50MB but you can configure that using the `server.maxUploadSize` config option.
+
+        Parameters
+        ----------
+        label : str or None
+            A short label explaining to the user what this file uploader is for.
+        type : str or list of str or None
+            Array of allowed extensions. ['png', 'jpg']
+            By default, all extensions are allowed.
+
+        Returns
+        -------
+        byte[] or None
+            The byte array of uploaded file or None if no one file is loaded.
+
+        Examples
+        --------
+        >>> file = st.file_uploader("Upload a image", type="png")
+        >>> if file is not None:
+        >>>     st.image(file)
+        """
+
+        if _type(type) in string_types:
+            type = [type]
+
+        element.file_uploader.label = label
+        element.file_uploader.type[:] = type if type is not None else []
+        element.file_uploader.max_upload_size_mb = config.get_option("server.maxUploadSize")
+        _set_widget_id("file_uploader", element, user_key=key)
+
+        data = None
+        ctx = get_report_ctx()
+        if ctx is not None:
+            progress, data = ctx.file_manager.get_data(element.file_uploader.id)
+            element.file_uploader.progress = progress
+
+        return NoValue if data is None else data
 
     @_with_element
     def text_input(self, element, label, value="", key=None):

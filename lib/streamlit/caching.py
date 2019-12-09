@@ -53,7 +53,6 @@ How to resolve this warning:
 to suppress the warning.
 """
 
-
 try:
     # cPickle, if available, is much faster than pickle.
     # Source: https://pymotw.com/2/pickle/
