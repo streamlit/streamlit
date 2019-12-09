@@ -101,7 +101,6 @@ except UnicodeDecodeError:
     )
 
 import contextlib as _contextlib
-import functools as _functools
 import re as _re
 import sys as _sys
 import textwrap as _textwrap
@@ -111,6 +110,7 @@ import types as _types
 import json as _json
 import numpy as _np
 
+from streamlit.util import functools_wraps as _functools_wraps
 from streamlit import code_util as _code_util
 from streamlit import env_util as _env_util
 from streamlit import string_util as _string_util
@@ -145,7 +145,7 @@ _config.on_config_parsed(_set_log_level)
 
 
 def _with_dg(method):
-    @_functools.wraps(method)
+    @_functools_wraps(method)
     def wrapped_method(*args, **kwargs):
         ctx = _get_report_ctx()
         dg = ctx.main_dg if ctx is not None else _NULL_DELTA_GENERATOR
@@ -611,7 +611,9 @@ def echo():
             lines_to_display.extend(source_lines[start_line:end_line])
             initial_spaces = _SPACES_RE.match(lines_to_display[0]).end()
             for line in source_lines[end_line:]:
-                if _SPACES_RE.match(line).end() < initial_spaces:
+                indentation = _SPACES_RE.match(line).end()
+                # The > 1 is because we want to allow '\n' between sections.
+                if indentation > 1 and indentation < initial_spaces:
                     break
                 lines_to_display.append(line)
         lines_to_display = _textwrap.dedent("".join(lines_to_display))

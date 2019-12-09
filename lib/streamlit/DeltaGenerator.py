@@ -121,7 +121,7 @@ def _with_element(method):
         if delta_type in DELTAS_TYPES_THAT_MELT_DATAFRAMES and len(args) > 0:
             data = args[0]
             if isinstance(data, pd.DataFrame):
-                last_index = data.index[-1] if data.index.size > 0 else 0
+                last_index = data.index[-1] if data.index.size > 0 else -1
 
         def marshall_element(element):
             return method(dg, element, *args, **kwargs)
@@ -1254,7 +1254,7 @@ class DeltaGenerator(object):
         )
 
     @_with_element
-    def pyplot(self, element, fig=None, **kwargs):
+    def pyplot(self, element, fig=None, clear_figure=True, **kwargs):
         """Display a matplotlib.pyplot figure.
 
         Parameters
@@ -1262,6 +1262,11 @@ class DeltaGenerator(object):
         fig : Matplotlib Figure
             The figure to plot. When this argument isn't specified, which is
             the usual case, this function will render the global plot.
+
+        clear_figure : bool
+            If True or unspecified, the figure will be cleared after being
+            rendered. (This simulates Jupyter's approach to matplotlib
+            rendering.)
 
         **kwargs : any
             Arguments to pass to Matplotlib's savefig function.
@@ -1293,7 +1298,7 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.pyplot as pyplot
 
-        pyplot.marshall(element, fig, **kwargs)
+        pyplot.marshall(element, fig, clear_figure, **kwargs)
 
     @_with_element
     def bokeh_chart(self, element, figure):
@@ -2174,7 +2179,7 @@ class DeltaGenerator(object):
             Defaults to 1 if the value is an int, 0.01 otherwise.
             If the value is not specified, the format parameter will be used.
         format : str or None
-            Printf/Python format string controlling how the interface should
+            A printf-style format string controlling how the interface should
             display numbers. This does not impact the return value.
         key : str
             An optional string to use as the unique key for the widget.
@@ -2357,6 +2362,15 @@ class DeltaGenerator(object):
         This is a wrapper around st.deck_gl_chart to quickly create scatterplot
         charts on top of a map, with auto-centering and auto-zoom.
 
+        When using this method, we advise all users to use a personal Mapbox
+        token. This ensures the map tiles used in this chart are more
+        robust. You can do this with the mapbox.token config option.
+
+        To get a token for yourself, create an account at
+        https://mapbox.com. It's free! (for moderate usage levels) See
+        https://streamlit.io/docs/cli.html#view-all-config-options for more
+        info on how to set config options.
+
         Parameters
         ----------
         data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
@@ -2395,6 +2409,15 @@ class DeltaGenerator(object):
         This API closely follows Deck.GL's JavaScript API
         (https://deck.gl/#/documentation), with a few small adaptations and
         some syntax sugar.
+
+        When using this method, we advise all users to use a personal Mapbox
+        token. This ensures the map tiles used in this chart are more
+        robust. You can do this with the mapbox.token config option.
+
+        To get a token for yourself, create an account at
+        https://mapbox.com. It's free! (for moderate usage levels) See
+        https://streamlit.io/docs/cli.html#view-all-config-options for more
+        info on how to set config options.
 
         Parameters
         ----------
@@ -2603,6 +2626,18 @@ class DeltaGenerator(object):
                 "Wrong number of arguments to add_rows()."
                 "Method requires exactly one dataset"
             )
+
+        # Regenerate chart with data
+        if self._last_index == -1:
+            if self._delta_type == "line_chart":
+                self.line_chart(data)
+                return
+            elif self._delta_type == "bar_chart":
+                self.bar_chart(data)
+                return
+            elif self._delta_type == "area_chart":
+                self.area_chart(data)
+                return
 
         data, self._last_index = _maybe_melt_data_for_add_rows(
             data, self._delta_type, self._last_index
