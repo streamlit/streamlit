@@ -104,8 +104,6 @@ class CacheTest(unittest.TestCase):
 
         warning.assert_not_called()
 
-
-
     @patch("streamlit.caching._show_cached_st_function_warning")
     def test_cached_st_function_warning(self, warning):
         st.text("foo")

@@ -389,16 +389,12 @@ def _read_from_cache(
 
         if persisted:
             value = _read_from_disk_cache(key)
-            _write_to_mem_cache(
-                key, value, allow_output_mutation, hash_funcs
-            )
+            _write_to_mem_cache(key, value, allow_output_mutation, hash_funcs)
             return value
         raise e
 
 
-def _write_to_cache(
-    key, value, persist, allow_output_mutation, hash_funcs
-):
+def _write_to_cache(key, value, persist, allow_output_mutation, hash_funcs):
     _write_to_mem_cache(key, value, allow_output_mutation, hash_funcs)
     if persist:
         _write_to_disk_cache(key, value)
@@ -669,10 +665,7 @@ class Cache(dict):
                 # If we don't hash the results, we don't need to use exec and just return True.
                 # This way line numbers will be correct.
                 _write_to_cache(
-                    key=key,
-                    value=self,
-                    persist=False,
-                    allow_output_mutation=True,
+                    key=key, value=self, persist=False, allow_output_mutation=True
                 )
                 return True
 
