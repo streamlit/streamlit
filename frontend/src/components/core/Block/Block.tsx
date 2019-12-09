@@ -143,23 +143,16 @@ class Block extends PureComponent<Props> {
     return <Maybe enable={enable}>{component}</Maybe>
   }
 
-  private getClassNames(
-    maybeEnableFlag: boolean,
-    reportElement: ReportElement
-  ): string {
-    const isStale =
-      !maybeEnableFlag ||
-      (this.props.showStaleElementIndicator &&
-        this.isElementStale(reportElement))
-    const isStaleAndNotFullScreen = isStale && !FullScreenWrapper.isFullScreen
-    const element = reportElement.get("element")
-    if (isStaleAndNotFullScreen) {
-      return "element-container stale-element"
-    } else {
-      return element.get("type") === "empty"
-        ? "element-container stEmpty"
-        : "element-container"
+  private getClassNames(isStale: boolean, element: SimpleElement): string {
+    const classNames = ["element-container"]
+    if (isStale && !FullScreenWrapper.isFullScreen) {
+      classNames.push("stale-element")
+      return classNames.join(" ")
     }
+    if (element.get("type") === "empty") {
+      classNames.push("stEmpty")
+    }
+    return classNames.join(" ")
   }
 
   private renderElementWithErrorBoundary(
@@ -167,7 +160,7 @@ class Block extends PureComponent<Props> {
     index: number,
     width: number
   ): ReactNode | null {
-    const element = reportElement.get("element")
+    const element = reportElement.get("element") as SimpleElement
     const component = this.renderElement(
       element,
       index,
@@ -182,7 +175,13 @@ class Block extends PureComponent<Props> {
       element.get("type") !== "empty" ||
       this.props.reportRunState !== ReportRunState.RUNNING
     const componentWithMaybe = Block.wrapWithMaybe(enable, component)
-    const className = this.getClassNames(enable, reportElement)
+
+    const isStale =
+      !enable ||
+      (this.props.showStaleElementIndicator &&
+        this.isElementStale(reportElement))
+
+    const className = this.getClassNames(isStale, element)
 
     return (
       <div key={index} className={className} style={{ width }}>
