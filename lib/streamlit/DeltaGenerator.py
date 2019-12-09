@@ -1947,7 +1947,7 @@ class DeltaGenerator(object):
         >>>     st.image(file)
         """
 
-        if _type(type) in string_types:
+        if isinstance(type, string_types): # noqa: F821
             type = [type]
 
         element.file_uploader.label = label
