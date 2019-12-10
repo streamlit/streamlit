@@ -144,7 +144,6 @@ class Block extends PureComponent<Props> {
     if (isEmpty) {
       classNames.push("stEmpty")
     }
-
     return classNames.join(" ")
   }
 
