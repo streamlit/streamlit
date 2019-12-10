@@ -148,6 +148,21 @@ class Block extends PureComponent<Props> {
     return classNames.join(" ")
   }
 
+  private shouldComponentBeEnabled(isEmpty: boolean): boolean {
+    return !isEmpty || this.props.reportRunState !== ReportRunState.RUNNING
+  }
+
+  private isComponentStale(
+    enable: boolean,
+    reportElement: ReportElement
+  ): boolean {
+    return (
+      !enable ||
+      (this.props.showStaleElementIndicator &&
+        this.isElementStale(reportElement))
+    )
+  }
+
   private renderElementWithErrorBoundary(
     reportElement: ReportElement,
     index: number,
@@ -162,13 +177,8 @@ class Block extends PureComponent<Props> {
     )
 
     const isEmpty = element.get("type") === "empty"
-    const enable =
-      !isEmpty || this.props.reportRunState !== ReportRunState.RUNNING
-    const isStale =
-      !enable ||
-      (this.props.showStaleElementIndicator &&
-        this.isElementStale(reportElement))
-
+    const enable = this.shouldComponentBeEnabled(isEmpty)
+    const isStale = this.isComponentStale(enable, reportElement)
     const className = Block.getClassNames(isStale, isEmpty)
 
     return (
