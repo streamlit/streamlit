@@ -136,22 +136,15 @@ class Block extends PureComponent<Props> {
     )
   }
 
-  private static wrapWithMaybe(
-    enable: boolean,
-    component: ReactNode
-  ): ReactNode {
-    return <Maybe enable={enable}>{component}</Maybe>
-  }
-
-  private getClassNames(isStale: boolean, element: SimpleElement): string {
+  private static getClassNames(isStale: boolean, isEmpty: boolean): string {
     const classNames = ["element-container"]
     if (isStale && !FullScreenWrapper.isFullScreen) {
       classNames.push("stale-element")
-      return classNames.join(" ")
     }
-    if (element.get("type") === "empty") {
+    if (isEmpty) {
       classNames.push("stEmpty")
     }
+
     return classNames.join(" ")
   }
 
@@ -168,36 +161,33 @@ class Block extends PureComponent<Props> {
       reportElement.get("metadata")
     )
 
-    // Note that the enable condition is passed to shouldComponentUpdate
-    // of Maybe. shouldComponentUpdate is used on the update flow, not on the
-    // mount flow. When mounting this check is effectively skipped.
+    const isEmpty = element.get("type") === "empty"
     const enable =
-      element.get("type") !== "empty" ||
-      this.props.reportRunState !== ReportRunState.RUNNING
-    const componentWithMaybe = Block.wrapWithMaybe(enable, component)
-
+      !isEmpty || this.props.reportRunState !== ReportRunState.RUNNING
     const isStale =
       !enable ||
       (this.props.showStaleElementIndicator &&
         this.isElementStale(reportElement))
 
-    const className = this.getClassNames(isStale, element)
+    const className = Block.getClassNames(isStale, isEmpty)
 
     return (
-      <div key={index} className={className} style={{ width }}>
-        <ErrorBoundary width={width}>
-          <Suspense
-            fallback={
-              <Alert
-                element={makeElementWithInfoText("Loading...").get("alert")}
-                width={width}
-              />
-            }
-          >
-            {componentWithMaybe}
-          </Suspense>
-        </ErrorBoundary>
-      </div>
+      <Maybe enable={enable}>
+        <div key={index} className={className} style={{ width }}>
+          <ErrorBoundary width={width}>
+            <Suspense
+              fallback={
+                <Alert
+                  element={makeElementWithInfoText("Loading...").get("alert")}
+                  width={width}
+                />
+              }
+            >
+              {component}
+            </Suspense>
+          </ErrorBoundary>
+        </div>
+      </Maybe>
     )
   }
 
