@@ -1959,12 +1959,14 @@ class DeltaGenerator(object):
         """
         from streamlit.string_util import is_binary_string
 
-        if isinstance(type, string_types): # noqa: F821
+        if isinstance(type, string_types):  # noqa: F821
             type = [type]
 
         element.file_uploader.label = label
         element.file_uploader.type[:] = type if type is not None else []
-        element.file_uploader.max_upload_size_mb = config.get_option("server.maxUploadSize")
+        element.file_uploader.max_upload_size_mb = config.get_option(
+            "server.maxUploadSize"
+        )
         _set_widget_id("file_uploader", element, user_key=key)
 
         data = None
@@ -1976,14 +1978,14 @@ class DeltaGenerator(object):
         if data is None:
             return NoValue
 
-        if encoding == 'auto':
+        if encoding == "auto":
             if is_binary_string(data):
                 encoding = None
             else:
                 # If the file does not look like a pure binary file, assume
                 # it's utf-8. It would be great if we could guess it a little
                 # more smartly here, but it is what it is!
-                encoding = 'utf-8'
+                encoding = "utf-8"
 
         if encoding:
             return io.StringIO(data.decode(encoding))

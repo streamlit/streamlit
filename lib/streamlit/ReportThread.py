@@ -79,8 +79,13 @@ class ReportThread(threading.Thread):
     """Extends threading.Thread with a ReportContext member"""
 
     def __init__(
-        self, main_dg, sidebar_dg, widgets, target=None, name=None,
-        uploaded_file_mgr=None
+        self,
+        main_dg,
+        sidebar_dg,
+        widgets,
+        target=None,
+        name=None,
+        uploaded_file_mgr=None,
     ):
         super(ReportThread, self).__init__(target=target, name=name)
         self.streamlit_report_ctx = ReportContext(
