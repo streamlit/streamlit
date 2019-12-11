@@ -40,7 +40,7 @@ def get_referenced_objects(code, context):
     # Read more about bytecode at https://docs.python.org/3/library/dis.html
 
     for op in dis.get_instructions(code):
-        #if op.opname in ["LOAD_GLOBAL", "LOAD_NAME"]:
+        # if op.opname in ["LOAD_GLOBAL", "LOAD_NAME"]:
         # skip variables named outside of this function's scope.
         if op.opname in ["LOAD_NAME"]:
             if op.argval in context.globals:
