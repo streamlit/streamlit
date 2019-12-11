@@ -336,7 +336,7 @@ class ConfigTest(unittest.TestCase):
         result = config._clean(" clean    this         text  ")
         self.assertEqual("clean this text", result)
 
-    def test_check_conflicts_2(self):
+    def test_check_conflicts_server_port(self):
         config._set_option("global.developmentMode", True, "test")
         config._set_option("server.port", 1234, "test")
         with pytest.raises(AssertionError) as e:
@@ -346,7 +346,7 @@ class ConfigTest(unittest.TestCase):
             "server.port does not work when global.developmentMode is true.",
         )
 
-    def test_check_conflicts_2a(self):
+    def test_check_conflicts_browser_serverport(self):
         config._set_option("global.developmentMode", True, "test")
         config._set_option("browser.serverPort", 1234, "test")
         with pytest.raises(AssertionError) as e:
@@ -356,7 +356,7 @@ class ConfigTest(unittest.TestCase):
             "browser.serverPort does not work when global.developmentMode is " "true.",
         )
 
-    def test_check_conflicts_3(self):
+    def test_check_conflicts_s3_sharing_mode(self):
         with pytest.raises(AssertionError) as e:
             config._set_option("global.sharingMode", "s3", "test")
             config._set_option("s3.bucket", None, "<default>")
@@ -366,7 +366,7 @@ class ConfigTest(unittest.TestCase):
             'When global.sharingMode is set to "s3", s3.bucket must also be set',
         )
 
-    def test_check_conflicts_4(self):
+    def test_check_conflicts_s3_credentials(self):
         with pytest.raises(AssertionError) as e:
             config._set_option("global.sharingMode", "s3", "test")
             config._set_option("s3.bucket", "some.bucket", "test")
