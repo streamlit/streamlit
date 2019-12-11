@@ -378,6 +378,25 @@ class ConfigTest(unittest.TestCase):
             "In config.toml, s3.accessKeyId and s3.secretAccessKey must either both be set or both be unset.",
         )
 
+    def test_check_conflicts_s3_absolute_url(self):
+        """Test that non-absolute s3.url values get made absolute"""
+        config._set_option("global.sharingMode", "s3", "test")
+        config._set_option("s3.bucket", "some.bucket", "test")
+        config._set_option("s3.accessKeyId", "some.key", "test")
+        config._set_option("s3.secretAccessKey", "some.key", "test")
+
+        # This absolute URL should *not* be modified in check_conflicts:
+        absolute_url = "https://absolute.url"
+        config._set_option("s3.url", absolute_url, "test")
+        config._check_conflicts()
+        self.assertEqual(absolute_url, config.get_option("s3.url"))
+
+        # This non-absolute URL *should* be modified with a '//' prefix:
+        relative_url = "relative.url"
+        config._set_option("s3.url", relative_url, "test")
+        config._check_conflicts()
+        self.assertEqual("//" + relative_url, config.get_option("s3.url"))
+
     def test_maybe_convert_to_number(self):
         self.assertEqual(1234, config._maybe_convert_to_number("1234"))
         self.assertEqual(1234.5678, config._maybe_convert_to_number("1234.5678"))
