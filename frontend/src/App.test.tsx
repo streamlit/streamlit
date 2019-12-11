@@ -22,25 +22,27 @@ import { MetricsManager } from "./lib/MetricsManager"
 import { getMetricsManagerForTest } from "./lib/MetricsManagerTestUtils"
 import App from "./App"
 
-beforeEach(() => {
-  SessionInfo.current = new SessionInfo({
-    streamlitVersion: "sv",
-    installationId: "iid",
-    authorEmail: "ae",
-    maxCachedMessageAge: 2,
-    commandLine: "command line",
-  } as SessionInfoArgs)
-  MetricsManager.current = getMetricsManagerForTest()
-})
+describe("App", () => {
+  beforeEach(() => {
+    SessionInfo.current = new SessionInfo({
+      streamlitVersion: "sv",
+      installationId: "iid",
+      authorEmail: "ae",
+      maxCachedMessageAge: 2,
+      commandLine: "command line",
+    } as SessionInfoArgs)
+    MetricsManager.current = getMetricsManagerForTest()
+  })
 
-afterEach(() => {
-  SessionInfo["singleton"] = undefined
-})
+  afterEach(() => {
+    SessionInfo["singleton"] = undefined
+  })
 
-it("renders without crashing", () => {
-  const mountPoint = document.createElement("div")
-  mountPoint.setAttribute("id", "ConnectionStatus")
-  document.body.appendChild(mountPoint)
-  ReactDOM.render(<App />, mountPoint)
-  ReactDOM.unmountComponentAtNode(mountPoint)
+  it("renders without crashing", () => {
+    const mountPoint = document.createElement("div")
+    mountPoint.setAttribute("id", "ConnectionStatus")
+    document.body.appendChild(mountPoint)
+    ReactDOM.render(<App />, mountPoint)
+    ReactDOM.unmountComponentAtNode(mountPoint)
+  })
 })

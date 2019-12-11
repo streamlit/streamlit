@@ -33,7 +33,7 @@ const getProps = (elementProps: object = {}): MarkdownProps => ({
   width: 100,
 })
 
-describe("Markdown Element Test", () => {
+describe("Markdown element", () => {
   it("renders markdown as expected", () => {
     const props = getProps()
     const wrap = shallow(<Markdown {...props} />)

@@ -40,7 +40,7 @@ const getProps = (elementProps: object = {}): Props => ({
   widgetMgr: new WidgetStateManager(sendBackMsg),
 })
 
-describe("Button", () => {
+describe("Button widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
     const wrapper = shallow(<Button {...props} />)
@@ -48,22 +48,24 @@ describe("Button", () => {
     expect(wrapper).toBeDefined()
   })
 
-  it("Should have correct className and style", () => {
+  it("should have correct className and style", () => {
     const wrapper = shallow(<Button {...getProps()} />)
 
     const wrappedDiv = wrapper.find("div").first()
 
     const { className, style } = wrappedDiv.props()
+    // @ts-ignore
     const splittedClassName = className.split(" ")
 
     expect(splittedClassName).toContain("Widget")
     expect(splittedClassName).toContain("row-widget")
     expect(splittedClassName).toContain("stButton")
 
+    // @ts-ignore
     expect(style.width).toBe(getProps().width)
   })
 
-  it("Should render a label within the button", () => {
+  it("should render a label within the button", () => {
     const wrapper = shallow(<Button {...getProps()} />)
 
     const wrappedUIButton = wrapper.find(UIButton)
