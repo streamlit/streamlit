@@ -88,7 +88,7 @@ class ReportSession(object):
 
         self._state = ReportSessionState.REPORT_NOT_RUNNING
 
-        self._file_manager = UploadedFileManager()
+        self._uploaded_file_mgr = UploadedFileManager()
 
         self._main_dg = DeltaGenerator(enqueue=self.enqueue, container=BlockPath.MAIN)
         self._sidebar_dg = DeltaGenerator(
@@ -135,7 +135,7 @@ class ReportSession(object):
         """
         if self._state != ReportSessionState.SHUTDOWN_REQUESTED:
             LOGGER.debug("Shutting down (id=%s)", self.id)
-            self._file_manager.delete_all_files()
+            self._uploaded_file_mgr.delete_all_files()
 
             # Shut down the ScriptRunner, if one is active.
             # self._state must not be set to SHUTDOWN_REQUESTED until
@@ -446,7 +446,7 @@ class ReportSession(object):
         self.request_rerun(widget_state)
 
     def handle_upload_file(self, upload_file):
-        self._file_manager.create_or_clear_file(
+        self._uploaded_file_mgr.create_or_clear_file(
             widget_id=upload_file.widget_id,
             name=upload_file.name,
             size=upload_file.size,
@@ -457,7 +457,7 @@ class ReportSession(object):
         self.handle_rerun_script_request(widget_state=self._widget_states)
 
     def handle_upload_file_chunk(self, upload_file_chunk):
-        progress = self._file_manager.process_chunk(
+        progress = self._uploaded_file_mgr.process_chunk(
             widget_id=upload_file_chunk.widget_id,
             index=upload_file_chunk.index,
             data=upload_file_chunk.data,
@@ -467,7 +467,7 @@ class ReportSession(object):
             self.handle_rerun_script_request(widget_state=self._widget_states)
 
     def handle_delete_uploaded_file(self, delete_uploaded_file):
-        self._file_manager.delete_file(widget_id=delete_uploaded_file.widget_id)
+        self._uploaded_file_mgr.delete_file(widget_id=delete_uploaded_file.widget_id)
         self.handle_rerun_script_request(widget_state=self._widget_states)
 
     def handle_stop_script_request(self):
@@ -546,7 +546,7 @@ class ReportSession(object):
             sidebar_dg=self._sidebar_dg,
             widget_states=self._widget_states,
             request_queue=self._script_request_queue,
-            file_manager=self._file_manager,
+            uploaded_file_mgr=self._uploaded_file_mgr,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()

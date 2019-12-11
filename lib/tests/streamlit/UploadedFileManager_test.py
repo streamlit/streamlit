@@ -32,39 +32,39 @@ class UploadedFileManagerTest(unittest.TestCase):
             "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789",
             "utf-8",
         )
-        file_manager = UploadedFileManager()
+        uploaded_file_mgr = UploadedFileManager()
 
-        file_manager.create_or_clear_file(
+        uploaded_file_mgr.create_or_clear_file(
             widget_idA, file_name, len(file_bytes), date.today(), 1
         )
-        file_manager.create_or_clear_file(
+        uploaded_file_mgr.create_or_clear_file(
             widget_idB, file_name, len(file_bytes), date.today(), 2
         )
 
-        progress_a = file_manager.process_chunk(widget_idA, 0, file_bytes)
+        progress_a = uploaded_file_mgr.process_chunk(widget_idA, 0, file_bytes)
         self.assertEqual(progress_a, 1)
 
-        progress_b = file_manager.process_chunk(widget_idB, 0, file_bytes[0:50])
+        progress_b = uploaded_file_mgr.process_chunk(widget_idB, 0, file_bytes[0:50])
         self.assertEqual(progress_b, 0.5)
 
-        progress_b = file_manager.process_chunk(widget_idB, 1, file_bytes[50:100])
+        progress_b = uploaded_file_mgr.process_chunk(widget_idB, 1, file_bytes[50:100])
         self.assertEqual(progress_b, 1)
 
-        progress_a, data_a = file_manager.get_data(widget_idA)
-        progress_b, data_b = file_manager.get_data(widget_idB)
+        progress_a, data_a = uploaded_file_mgr.get_data(widget_idA)
+        progress_b, data_b = uploaded_file_mgr.get_data(widget_idB)
         self.assertEqual(progress_a, 1)
         self.assertEqual(progress_b, 1)
         self.assertEqual(len(data_a), len(file_bytes))
         self.assertEqual(data_a, file_bytes)
         self.assertEqual(data_a, data_b)
 
-        file_manager.delete_file(widget_idA)
+        uploaded_file_mgr.delete_file(widget_idA)
 
-        progress_a, data_a = file_manager.get_data(widget_idA)
+        progress_a, data_a = uploaded_file_mgr.get_data(widget_idA)
         self.assertEqual(progress_a, 0)
         self.assertEqual(data_a, None)
 
-        file_manager.delete_all_files()
-        progress_b, data_b = file_manager.get_data(widget_idB)
+        uploaded_file_mgr.delete_all_files()
+        progress_b, data_b = uploaded_file_mgr.get_data(widget_idB)
         self.assertEqual(progress_b, 0)
         self.assertEqual(data_b, None)
