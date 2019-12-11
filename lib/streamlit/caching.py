@@ -28,9 +28,9 @@ import struct
 import textwrap
 import threading
 from collections import namedtuple
-from functools import wraps
 
 import streamlit as st
+from streamlit.util import functools_wraps
 from streamlit import config
 from streamlit import file_util
 from streamlit import util
@@ -52,7 +52,6 @@ How to resolve this warning:
 * Or, if you know what you're doing, use `@st.cache(suppress_st_warning=True)`
 to suppress the warning.
 """
-
 
 try:
     # cPickle, if available, is much faster than pickle.
@@ -522,7 +521,17 @@ def cache(
             hash_funcs=hash_funcs,
         )
 
-    @wraps(func)
+    name = func.__name__
+
+    initial_hasher = hashlib.new("md5")
+
+    code_hasher = CodeHasher("md5", initial_hasher, hash_funcs)
+    code_hasher.update(func)
+    LOGGER.debug("Hashing function %s in %i bytes.", name, code_hasher.size)
+
+    code_hash = initial_hasher.digest()
+
+    @functools_wraps(func)
     def wrapped_func(*args, **kwargs):
         """This function wrapper will only call the underlying function in
         the case of a cache miss. Cached objects are stored in the cache/
@@ -531,8 +540,6 @@ def cache(
         if not config.get_option("client.caching"):
             LOGGER.debug("Purposefully skipping cache")
             return func(*args, **kwargs)
-
-        name = func.__name__
 
         if len(args) == 0 and len(kwargs) == 0:
             message = "Running %s()." % name
@@ -548,9 +555,7 @@ def cache(
 
             args_digest_before = args_hasher.digest()
 
-            code_hasher = CodeHasher("md5", hasher, hash_funcs)
-            code_hasher.update(func)
-            LOGGER.debug("Hashing function %s in %i bytes.", name, code_hasher.size)
+            hasher.update(code_hash)
 
             key = hasher.hexdigest()
             LOGGER.debug("Cache key: %s", key)

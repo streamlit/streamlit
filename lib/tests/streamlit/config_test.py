@@ -303,6 +303,7 @@ class ConfigTest(unittest.TestCase):
                 u"server.liveSave",
                 u"server.port",
                 u"server.runOnSave",
+                u"server.maxUploadSize",
             ]
         )
         keys = sorted(config._config_options.keys())
@@ -335,7 +336,7 @@ class ConfigTest(unittest.TestCase):
         result = config._clean(" clean    this         text  ")
         self.assertEqual("clean this text", result)
 
-    def test_check_conflicts_2(self):
+    def test_check_conflicts_server_port(self):
         config._set_option("global.developmentMode", True, "test")
         config._set_option("server.port", 1234, "test")
         with pytest.raises(AssertionError) as e:
@@ -345,7 +346,7 @@ class ConfigTest(unittest.TestCase):
             "server.port does not work when global.developmentMode is true.",
         )
 
-    def test_check_conflicts_2a(self):
+    def test_check_conflicts_browser_serverport(self):
         config._set_option("global.developmentMode", True, "test")
         config._set_option("browser.serverPort", 1234, "test")
         with pytest.raises(AssertionError) as e:
@@ -355,7 +356,7 @@ class ConfigTest(unittest.TestCase):
             "browser.serverPort does not work when global.developmentMode is " "true.",
         )
 
-    def test_check_conflicts_3(self):
+    def test_check_conflicts_s3_sharing_mode(self):
         with pytest.raises(AssertionError) as e:
             config._set_option("global.sharingMode", "s3", "test")
             config._set_option("s3.bucket", None, "<default>")
@@ -365,7 +366,7 @@ class ConfigTest(unittest.TestCase):
             'When global.sharingMode is set to "s3", s3.bucket must also be set',
         )
 
-    def test_check_conflicts_4(self):
+    def test_check_conflicts_s3_credentials(self):
         with pytest.raises(AssertionError) as e:
             config._set_option("global.sharingMode", "s3", "test")
             config._set_option("s3.bucket", "some.bucket", "test")
@@ -376,6 +377,25 @@ class ConfigTest(unittest.TestCase):
             str(e.value),
             "In config.toml, s3.accessKeyId and s3.secretAccessKey must either both be set or both be unset.",
         )
+
+    def test_check_conflicts_s3_absolute_url(self):
+        """Test that non-absolute s3.url values get made absolute"""
+        config._set_option("global.sharingMode", "s3", "test")
+        config._set_option("s3.bucket", "some.bucket", "test")
+        config._set_option("s3.accessKeyId", "some.key", "test")
+        config._set_option("s3.secretAccessKey", "some.key", "test")
+
+        # This absolute URL should *not* be modified in check_conflicts:
+        absolute_url = "https://absolute.url"
+        config._set_option("s3.url", absolute_url, "test")
+        config._check_conflicts()
+        self.assertEqual(absolute_url, config.get_option("s3.url"))
+
+        # This non-absolute URL *should* be modified with a '//' prefix:
+        relative_url = "relative.url"
+        config._set_option("s3.url", relative_url, "test")
+        config._check_conflicts()
+        self.assertEqual("//" + relative_url, config.get_option("s3.url"))
 
     def test_maybe_convert_to_number(self):
         self.assertEqual(1234, config._maybe_convert_to_number("1234"))
@@ -613,3 +633,6 @@ class ConfigLoadingTest(unittest.TestCase):
 
             # s3.accessKeyId is set in local and not in global
             self.assertEqual(u"local_accessKeyId", config.get_option("s3.accessKeyId"))
+
+    def test_upload_file_default_values(self):
+        self.assertEqual(50, config.get_option("server.maxUploadSize"))
