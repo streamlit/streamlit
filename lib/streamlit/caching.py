@@ -521,6 +521,16 @@ def cache(
             hash_funcs=hash_funcs,
         )
 
+    name = func.__name__
+
+    initial_hasher = hashlib.new("md5")
+
+    code_hasher = CodeHasher("md5", initial_hasher, hash_funcs)
+    code_hasher.update(func)
+    LOGGER.debug("Hashing function %s in %i bytes.", name, code_hasher.size)
+
+    code_hash = initial_hasher.digest()
+
     @functools_wraps(func)
     def wrapped_func(*args, **kwargs):
         """This function wrapper will only call the underlying function in
@@ -530,8 +540,6 @@ def cache(
         if not config.get_option("client.caching"):
             LOGGER.debug("Purposefully skipping cache")
             return func(*args, **kwargs)
-
-        name = func.__name__
 
         if len(args) == 0 and len(kwargs) == 0:
             message = "Running %s()." % name
@@ -547,9 +555,7 @@ def cache(
 
             args_digest_before = args_hasher.digest()
 
-            code_hasher = CodeHasher("md5", hasher, hash_funcs)
-            code_hasher.update(func)
-            LOGGER.debug("Hashing function %s in %i bytes.", name, code_hasher.size)
+            hasher.update(code_hash)
 
             key = hasher.hexdigest()
             LOGGER.debug("Cache key: %s", key)
