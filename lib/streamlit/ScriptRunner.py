@@ -48,7 +48,15 @@ class ScriptRunnerEvent(Enum):
 
 
 class ScriptRunner(object):
-    def __init__(self, report, main_dg, sidebar_dg, widget_states, request_queue, file_manager=None):
+    def __init__(
+        self,
+        report,
+        main_dg,
+        sidebar_dg,
+        widget_states,
+        request_queue,
+        file_manager=None,
+    ):
         """Initialize the ScriptRunner.
 
         (The ScriptRunner won't start executing until start() is called.)
@@ -72,7 +80,7 @@ class ScriptRunner(object):
             ScriptRunner will continue running until the queue is empty,
             and then shut down.
 
-        file_manager : FileManager
+        file_manager : UploadedFileManager
             The File manager to store the data uploaded by the file_uplpader widget.
 
         """

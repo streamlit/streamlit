@@ -13,8 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 class File(object):
-    """Thread-safe queue that smartly accumulates the report's messages."""
+    """Queue that smartly accumulates the report's messages."""
 
     def __init__(self, widget_id, name, size, last_modified, chunks):
 
@@ -38,7 +39,7 @@ class File(object):
             return 1
 
         if len(self.buffers) > 0:
-            return float(len(self.buffers))/self.total_chunks
+            return float(len(self.buffers)) / self.total_chunks
 
     def _coalesce_chunks(self):
         self.data = bytearray()
@@ -50,7 +51,8 @@ class File(object):
 
         self.buffers = {}
 
-class FileManager(object):
+
+class UploadedFileManager(object):
     def __init__(self):
         self._file_list = {}
 

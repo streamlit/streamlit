@@ -25,7 +25,7 @@ from streamlit import __version__
 from streamlit import caching
 from streamlit import config
 from streamlit import url_util
-from streamlit.fileManager import FileManager
+from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.Report import Report
 from streamlit.ScriptRequestQueue import RerunData
@@ -88,10 +88,12 @@ class ReportSession(object):
 
         self._state = ReportSessionState.REPORT_NOT_RUNNING
 
-        self._file_manager = FileManager()
+        self._file_manager = UploadedFileManager()
 
         self._main_dg = DeltaGenerator(enqueue=self.enqueue, container=BlockPath.MAIN)
-        self._sidebar_dg = DeltaGenerator(enqueue=self.enqueue, container=BlockPath.SIDEBAR)
+        self._sidebar_dg = DeltaGenerator(
+            enqueue=self.enqueue, container=BlockPath.SIDEBAR
+        )
 
         self._widget_states = WidgetStates()
         self._local_sources_watcher = LocalSourcesWatcher(
@@ -456,10 +458,12 @@ class ReportSession(object):
 
     def handle_upload_file_chunk(self, upload_file_chunk):
         progress = self._file_manager.process_chunk(
-            widget_id=upload_file_chunk.widget_id, index=upload_file_chunk.index, data=upload_file_chunk.data
+            widget_id=upload_file_chunk.widget_id,
+            index=upload_file_chunk.index,
+            data=upload_file_chunk.data,
         )
 
-        if progress==1:
+        if progress == 1:
             self.handle_rerun_script_request(widget_state=self._widget_states)
 
     def handle_delete_uploaded_file(self, delete_uploaded_file):
@@ -542,7 +546,7 @@ class ReportSession(object):
             sidebar_dg=self._sidebar_dg,
             widget_states=self._widget_states,
             request_queue=self._script_request_queue,
-            file_manager=self._file_manager
+            file_manager=self._file_manager,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()
