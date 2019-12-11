@@ -7,25 +7,9 @@ def called_by_cached_function():
     return number + 2
 
 
-# TODO/ FIXME
-#def test_lambdas_calls(self):
-#    """Test code with lambdas that call functions."""
-#
-#    def f_lower():
-#        lambda x: x.lower()
-#
-#    def f_upper():
-#        lambda x: x.upper()
-#
-#    def f_lower2():
-#        lambda x: x.lower()
-#
-#    self.assertNotEqual(get_hash(f_lower), get_hash(f_upper))
-#    self.assertEqual(get_hash(f_lower), get_hash(f_lower2))
-
-
 def make_funcy():
     return lambda inp: sorted(inp)
+
 
 @st.cache
 def add(num):
@@ -37,16 +21,17 @@ def add(num):
     resultd["dkey_second_add"] = anothervar
     resultd["dkey_number_from_called_function"] = called_by_cached_function()
     resultd["dkey_internal_lambda"] = square()(num)
-    #resultd["dkey_external_lambda"] = make_funcy()
+    # resultd["dkey_external_lambda"] = make_funcy()
     return resultd
 
 
 @st.cache
 def hash_dicts(inp):
-    outd = {"dkey_things": things, 
-            "dkey_inp": inp,
-           }
-           # "dkey_used_lambda": make_funcy()(inp)
+    outd = {
+        "dkey_things": things,
+        "dkey_inp": inp,
+    }
+    # "dkey_used_lambda": make_funcy()(inp)
     return outd
 
 
