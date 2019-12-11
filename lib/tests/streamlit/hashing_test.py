@@ -368,7 +368,11 @@ class CodeHashTest(unittest.TestCase):
         def f2():
             lambda x: v123
 
+        def f3():
+            lambda x: v123
+
         self.assertNotEqual(get_hash(f1), get_hash(f2))
+        self.assertEqual(get_hash(f2), get_hash(f3))  # NEW
 
     def test_lambdas_calls(self):
         """Test code with lambdas that call functions."""
