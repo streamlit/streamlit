@@ -23,6 +23,7 @@ setup_2_3_shims(globals())
 
 import functools
 import os
+import sys
 import subprocess
 
 from streamlit import env_util
@@ -30,12 +31,25 @@ from streamlit import env_util
 # URL of Streamlit's help page.
 HELP_DOC = "https://streamlit.io/docs/"
 
+# Make functools.wraps() in Python 2 set the __wrapped__ attribute, as 
+# is done in Python 3. This is required in st.cache. 
+# See https://stackoverflow.com/questions/43506378/how-to-get-source-code-of-function-that-is-wrapped-by-a-decorator
+if sys.version_info[0:2] >= (3, 4):  # Python v3.4+?
+    functools_wraps = functools.wraps  # built-in has __wrapped__ attribute
+else:
+    def functools_wraps(wrapped, assigned=functools.WRAPPER_ASSIGNMENTS,
+              updated=functools.WRAPPER_UPDATES):
+        def wrapper(f):
+            f = functools.wraps(wrapped, assigned, updated)(f)
+            f.__wrapped__ = wrapped  # set attribute missing in earlier versions
+            return f
+        return wrapper
 
 def memoize(func):
     """Decorator to memoize the result of a no-args func."""
     result = []
 
-    @functools.wraps(func)
+    @functools_wraps(func)
     def wrapped_func():
         if not result:
             result.append(func())

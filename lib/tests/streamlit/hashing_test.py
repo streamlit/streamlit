@@ -30,6 +30,7 @@ import tensorflow as tf
 from mock import MagicMock
 
 import streamlit as st
+from streamlit.util import functools_wraps
 from streamlit.hashing import NP_SIZE_LARGE, PANDAS_ROWS_LARGE, CodeHasher
 
 get_main_script_director = MagicMock(return_value=os.getcwd())
@@ -550,7 +551,7 @@ class CodeHashTest(unittest.TestCase):
         """Test decorated functions."""
 
         def do(func):
-            @functools.wraps(func)
+            @functools_wraps(func)
             def wrapper_do(*args, **kwargs):
                 return func(*args, **kwargs)
 
