@@ -918,7 +918,7 @@ class DeltaGenerator(object):
 
         chart = altair.generate_chart("line", data, width, height)
         use_container_width = width == 0
-        altair.marshall(element.vega_lite_chart, chart, use_container_width=use_container_width)
+        altair.marshall(element.vega_lite_chart, chart, use_container_width)
 
     @_with_element
     def area_chart(self, element, data=None, width=0, height=0):
@@ -957,7 +957,7 @@ class DeltaGenerator(object):
 
         chart = altair.generate_chart("area", data, width, height)
         use_container_width = width == 0
-        altair.marshall(element.vega_lite_chart, chart, use_container_width=use_container_width)
+        altair.marshall(element.vega_lite_chart, chart, use_container_width)
 
     @_with_element
     def bar_chart(self, element, data=None, width=0, height=0):
@@ -996,10 +996,10 @@ class DeltaGenerator(object):
 
         chart = altair.generate_chart("bar", data, width, height)
         use_container_width = width == 0
-        altair.marshall(element.vega_lite_chart, chart, use_container_width=use_container_width)
+        altair.marshall(element.vega_lite_chart, chart, use_container_width)
 
     @_with_element
-    def vega_lite_chart(self, element, data=None, spec=None, use_container_width=False, **kwargs):
+    def vega_lite_chart(self, element, data=None, spec=None, width=0, use_container_width=False, **kwargs):
         """Display a chart using the Vega-Lite library.
 
         Parameters
@@ -1015,10 +1015,12 @@ class DeltaGenerator(object):
             https://vega.github.io/vega-lite/docs/ for more info.
 
         width : number
-            If 0 (default), stretch chart to the full document width. If -1,
-            use the default from Vega-Lite. If greater than 0, sets the width.
-            Note that if spec['width'] is defined, it takes precedence over
-            this argument.
+            Deprecated, if != 0 (default), will show an alert.
+            The real width should be setted in spec.
+
+        use_container_width : bool (False default)
+            If True, set the chart width to the column width. This overrides
+            vega-lite's native `width` value.
 
         **kwargs : any
             Same as spec, but as keywords.
@@ -1053,11 +1055,14 @@ class DeltaGenerator(object):
 
         """
         import streamlit.elements.vega_lite as vega_lite
+        if width != 0:
+            import streamlit as st
+            st.warning("The `width` argument in `st.vega_lite_chart` is deprecated and will be removed on 2020-03-04. To set the width, you should instead use Vega-Lite's native `width` argument as described at https://vega.github.io/vega-lite/docs/size.html")
 
         vega_lite.marshall(element.vega_lite_chart, data, spec, use_container_width=use_container_width, **kwargs)
 
     @_with_element
-    def altair_chart(self, element, altair_chart, use_container_width=False):
+    def altair_chart(self, element, altair_chart, width=0, use_container_width=False):
         """Display a chart using the Altair library.
 
         Parameters
@@ -1066,10 +1071,12 @@ class DeltaGenerator(object):
             The Altair chart object to display.
 
         width : number
-            If 0 (default), stretch chart to the full document width. If -1,
-            use the default from Altair. If greater than 0, sets the width.
-            Note that if the top-level width  is defined, it takes precedence
-            over this argument.
+            Deprecated, if != 0 (default), will show an alert.
+            The real width should be setted in the altair_chart object.
+
+        use_container_width : bool (False default)
+            If True, set the chart width to the column width. This overrides
+            altair's native `width` value.
 
         Example
         -------
@@ -1096,21 +1103,32 @@ class DeltaGenerator(object):
 
         """
         import streamlit.elements.altair as altair
+        if width != 0:
+            import streamlit as st
+            st.warning("The `width` argument in `st.vega_lite_chart` is deprecated and will be removed on 2020-03-04. To set the width, you should instead use altair's native `width` argument as described at https://altair-viz.github.io/user_guide/generated/toplevel/altair.Chart.html")
 
         altair.marshall(element.vega_lite_chart, altair_chart, use_container_width=use_container_width)
 
     @_with_element
-    def graphviz_chart(self, element, figure_or_dot, width=0, height=0):
+    def graphviz_chart(self, element, figure_or_dot, width=0, height=0, use_container_width=False):
         """Display a graph using the dagre-d3 library.
 
         Parameters
         ----------
         figure_or_dot : graphviz.dot.Graph, graphviz.dot.Digraph, str
             The Graphlib graph object or dot string to display
-        width : type
-            The chart width in pixels, or 0 for full width.
-        height : type
-            The chart height in pixels, or 0 for default height.
+
+        width : number
+            Deprecated, if != 0 (default), will show an alert.
+            The real width should be setted in the graphviz object.
+
+        height : number
+            Deprecated, if != 0 (default), will show an alert.
+            The real height should be setted in the graphviz object.
+
+        use_container_width : bool (False default)
+            If True, set the chart width to the column width. This overrides
+            graphviz's native `width` value.
 
         Example
         -------
@@ -1164,8 +1182,12 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.graphviz_chart as graphviz_chart
 
+        if width != 0:
+            import streamlit as st
+            st.warning("The `width` argument in `st.vega_lite_chart` is deprecated and will be removed on 2020-03-04. To set the width, you should instead use altair's native `width` argument as described at https://altair-viz.github.io/user_guide/generated/toplevel/altair.Chart.html")
+
         graphviz_chart.marshall(
-            element.graphviz_chart, figure_or_dot, width=width, height=height
+            element.graphviz_chart, figure_or_dot, use_container_width=use_container_width
         )
 
     @_with_element

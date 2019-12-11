@@ -23,7 +23,7 @@ from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 
-def marshall(proto, figure_or_dot, width, height):
+def marshall(proto, figure_or_dot, use_container_width):
     """Construct a GraphViz chart object.
 
     See DeltaGenerator.graphviz_chart for docs.
@@ -37,5 +37,4 @@ def marshall(proto, figure_or_dot, width, height):
         raise Exception("Unhandled type for graphviz chart: %s" % type(figure_or_dot))
 
     proto.spec = dot
-    proto.width = width
-    proto.height = height
+    proto.use_container_width = use_container_width
