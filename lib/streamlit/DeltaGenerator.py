@@ -1952,10 +1952,11 @@ class DeltaGenerator(object):
 
         Examples
         --------
-        >>> input_data = st.file_uploader("Choose a CSV file", type="csv")
-        >>> if input_data is not None:
-        ...     data = pd.read_csv(input_data)
+        >>> uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+        >>> if uploaded_file is not None:
+        ...     data = pd.read_csv(uploaded_file)
         ...     st.write(data)
+
         """
         from streamlit.string_util import is_binary_string
 
