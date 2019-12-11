@@ -909,7 +909,7 @@ def _check_conflicts():
             # An absolute URL starts with either `scheme://` or `//` --
             # if the configured URL does not start with either prefix,
             # prepend it with `//` to make it absolute. (If we don't do this,
-            # and the user enters something `url=myhost.com/reports`, the
+            # and the user enters something like `url=myhost.com/reports`, the
             # browser will assume this is a relative URL, and will prepend
             # the hostname of the Streamlit instance to the configured URL.)
             s3_url = get_option("s3.url")
