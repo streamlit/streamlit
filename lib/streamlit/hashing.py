@@ -398,12 +398,10 @@ class CodeHasher:
         self._update(h, code.co_code)
 
         # Hash constants that are referenced by the bytecode but ignore names of lambdas.
-        # Do not hash variables defined outside the scope of this code, e.g. globals.
         consts = [
             n
             for n in code.co_consts
             if not isinstance(n, string_types)  # noqa: F821
-                or not n in code.co_names
                 or not n.endswith(".<lambda>")
         ]
         self._update(h, consts, context)
