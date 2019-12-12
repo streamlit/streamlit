@@ -16,20 +16,19 @@
 """DeltaGenerator Unittest."""
 
 # Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 
-from streamlit.DeltaGenerator import _build_duplicate_widget_message
 from streamlit.compatibility import setup_2_3_shims
-from streamlit.errors import DuplicateWidgetID
-from streamlit.errors import StreamlitAPIException
 
 setup_2_3_shims(globals())
 
 import json
+import mock
 import sys
 import unittest
-
-import pandas as pd
 
 try:
     from inspect import signature
@@ -38,6 +37,11 @@ except ImportError:
 
 from parameterized import parameterized
 
+import pandas as pd
+
+from streamlit.DeltaGenerator import _build_duplicate_widget_message
+from streamlit.errors import DuplicateWidgetID
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.TextArea_pb2 import TextArea

@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2019 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,18 +15,4 @@
  * limitations under the License.
  */
 
-@import "src/assets/css/variables";
-
-.stGraphVizChart {
-  * {
-    font-family: $font-family-sans-serif;
-    // Font sizes inside the SVG element are getting huge for some reason.
-    // Hacking together a number by eyeballing it:
-    // 12px in the SVG looks like 1rem outside, so 9.6px ~= 0.8rem.
-    font-size: 9.6px;
-  }
-
-  svg {
-    max-width: 100%;
-  }
-}
+export { default } from "./FileUploader"

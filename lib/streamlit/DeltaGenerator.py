@@ -32,6 +32,7 @@ from datetime import time
 
 from streamlit import caching
 from streamlit import metrics
+from streamlit import config
 from streamlit.ReportThread import get_report_ctx
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException
@@ -39,12 +40,16 @@ from streamlit.proto import Balloons_pb2
 from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto import Text_pb2
+from streamlit.fileManager import FileManager
 from streamlit.proto import Alert_pb2
 
 # setup logging
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
+
+# Save the type built-in for when we override the name "type".
+_type = type
 
 MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
 
@@ -116,7 +121,7 @@ def _with_element(method):
         if delta_type in DELTAS_TYPES_THAT_MELT_DATAFRAMES and len(args) > 0:
             data = args[0]
             if isinstance(data, pd.DataFrame):
-                last_index = data.index[-1] if data.index.size > 0 else 0
+                last_index = data.index[-1] if data.index.size > 0 else -1
 
         def marshall_element(element):
             return method(dg, element, *args, **kwargs)
@@ -265,7 +270,6 @@ class DeltaGenerator(object):
     path: tuple of ints
       The full path of this DeltaGenerator, consisting of the IDs of
       all ancestors. The 0th item is the topmost ancestor.
-
     """
 
     # The pydoc below is for user consumption, so it doesn't talk about
@@ -488,11 +492,14 @@ class DeltaGenerator(object):
         body : str
             The string to display as Github-flavored Markdown. Syntax
             information can be found at: https://github.github.com/gfm.
-            Inline and block math are supported by KaTeX and remark-math.
 
-            The body also support LaTeX expressions, by just wrapping them in
-            "$" or "$$" (the "$$" must be on their own lines). Supported LaTeX
-            functions are listed at https://katex.org/docs/supported.html.
+            This also supports:
+            * Emoji shortcodes, such as `:+1:`  and `:sunglasses:`.
+            For a list of all supported codes,
+            see https://www.webfx.com/tools/emoji-cheat-sheet/.
+            * LaTeX expressions, by just wrapping them in "$" or "$$" (the "$$"
+             must be on their own lines). Supported LaTeX functions are listed
+             at https://katex.org/docs/supported.html.
 
         unsafe_allow_html : bool
             By default, any HTML tags found in the body will be escaped and
@@ -1247,7 +1254,7 @@ class DeltaGenerator(object):
         )
 
     @_with_element
-    def pyplot(self, element, fig=None, **kwargs):
+    def pyplot(self, element, fig=None, clear_figure=True, **kwargs):
         """Display a matplotlib.pyplot figure.
 
         Parameters
@@ -1255,6 +1262,11 @@ class DeltaGenerator(object):
         fig : Matplotlib Figure
             The figure to plot. When this argument isn't specified, which is
             the usual case, this function will render the global plot.
+
+        clear_figure : bool
+            If True or unspecified, the figure will be cleared after being
+            rendered. (This simulates Jupyter's approach to matplotlib
+            rendering.)
 
         **kwargs : any
             Arguments to pass to Matplotlib's savefig function.
@@ -1286,7 +1298,7 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.pyplot as pyplot
 
-        pyplot.marshall(element, fig, **kwargs)
+        pyplot.marshall(element, fig, clear_figure, **kwargs)
 
     @_with_element
     def bokeh_chart(self, element, figure):
@@ -1909,6 +1921,49 @@ class DeltaGenerator(object):
         return current_value if single_value else tuple(current_value)
 
     @_with_element
+    def file_uploader(self, element, label, type=None, key=None):
+
+        """Display a file uploader widget.
+
+        By default, uploaded files are limited to 50MB but you can configure that using the `server.maxUploadSize` config option.
+
+        Parameters
+        ----------
+        label : str or None
+            A short label explaining to the user what this file uploader is for.
+        type : str or list of str or None
+            Array of allowed extensions. ['png', 'jpg']
+            By default, all extensions are allowed.
+
+        Returns
+        -------
+        byte[] or None
+            The byte array of uploaded file or None if no one file is loaded.
+
+        Examples
+        --------
+        >>> file = st.file_uploader("Upload a image", type="png")
+        >>> if file is not None:
+        >>>     st.image(file)
+        """
+
+        if isinstance(type, string_types): # noqa: F821
+            type = [type]
+
+        element.file_uploader.label = label
+        element.file_uploader.type[:] = type if type is not None else []
+        element.file_uploader.max_upload_size_mb = config.get_option("server.maxUploadSize")
+        _set_widget_id("file_uploader", element, user_key=key)
+
+        data = None
+        ctx = get_report_ctx()
+        if ctx is not None:
+            progress, data = ctx.file_manager.get_data(element.file_uploader.id)
+            element.file_uploader.progress = progress
+
+        return NoValue if data is None else data
+
+    @_with_element
     def text_input(self, element, label, value="", key=None):
         """Display a single-line text input widget.
 
@@ -2124,7 +2179,7 @@ class DeltaGenerator(object):
             Defaults to 1 if the value is an int, 0.01 otherwise.
             If the value is not specified, the format parameter will be used.
         format : str or None
-            Printf/Python format string controlling how the interface should
+            A printf-style format string controlling how the interface should
             display numbers. This does not impact the return value.
         key : str
             An optional string to use as the unique key for the widget.
@@ -2307,6 +2362,15 @@ class DeltaGenerator(object):
         This is a wrapper around st.deck_gl_chart to quickly create scatterplot
         charts on top of a map, with auto-centering and auto-zoom.
 
+        When using this method, we advise all users to use a personal Mapbox
+        token. This ensures the map tiles used in this chart are more
+        robust. You can do this with the mapbox.token config option.
+
+        To get a token for yourself, create an account at
+        https://mapbox.com. It's free! (for moderate usage levels) See
+        https://streamlit.io/docs/cli.html#view-all-config-options for more
+        info on how to set config options.
+
         Parameters
         ----------
         data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
@@ -2345,6 +2409,15 @@ class DeltaGenerator(object):
         This API closely follows Deck.GL's JavaScript API
         (https://deck.gl/#/documentation), with a few small adaptations and
         some syntax sugar.
+
+        When using this method, we advise all users to use a personal Mapbox
+        token. This ensures the map tiles used in this chart are more
+        robust. You can do this with the mapbox.token config option.
+
+        To get a token for yourself, create an account at
+        https://mapbox.com. It's free! (for moderate usage levels) See
+        https://streamlit.io/docs/cli.html#view-all-config-options for more
+        info on how to set config options.
 
         Parameters
         ----------
@@ -2553,6 +2626,18 @@ class DeltaGenerator(object):
                 "Wrong number of arguments to add_rows()."
                 "Method requires exactly one dataset"
             )
+
+        # Regenerate chart with data
+        if self._last_index == -1:
+            if self._delta_type == "line_chart":
+                self.line_chart(data)
+                return
+            elif self._delta_type == "bar_chart":
+                self.bar_chart(data)
+                return
+            elif self._delta_type == "area_chart":
+                self.area_chart(data)
+                return
 
         data, self._last_index = _maybe_melt_data_for_add_rows(
             data, self._delta_type, self._last_index

@@ -42,6 +42,9 @@ blinker = "*"
 boto3 = "*"
 botocore = "*"
 click = ">=7.0"
+# Pin python-dateutil to work around a botocore issue: https://github.com/boto/botocore/issues/1872
+# TODO: Remove this pin when the above issue is fixed.
+python-dateutil = "<=2.8.0"
 enum-compat = "*"
 # python3 code backported to python2
 future = "*"
@@ -57,13 +60,13 @@ tornado = ">=5.0,<6.0"
 tzlocal = "*"
 validators = "*"
 watchdog = "*"
-# Only Python 3.x packages
 
+# Only Python 3.x packages
 [python3]
 pandas = ">=0.21.0"
 numpy = "*"
-# Only Python 2.x packages
 
+# Only Python 2.x packages
 [python2]
 futures = "*"
 pandas = ">=0.21.0,<0.25.0"
