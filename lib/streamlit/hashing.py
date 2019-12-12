@@ -28,7 +28,6 @@ import io
 import os
 import sys
 import textwrap
-import traceback
 
 import streamlit as st
 from streamlit import config
