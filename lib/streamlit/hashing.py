@@ -212,7 +212,7 @@ class CodeHasher:
         """Update the hash with the provided object."""
         try:
             self._update(self.hasher, obj, context)
-        except Exception as e:
+        except UnhashableType as e:
             st.warning(_hashing_error_message(str(e)))
             raise e
 
@@ -396,9 +396,9 @@ class CodeHasher:
                 return h.digest()
         except Exception as e:
             msg = "Streamlit failed to hash an object of type %s." % type(obj)
-            error = UnhashableType(msg)
-            st.warning(error)
-            raise error
+            st.warning(msg)
+            # st.warning(_hashing_error_message(msg))
+            raise UnhashableType(msg)
 
     def _code_to_bytes(self, code, context):
         h = hashlib.new(self.name)
