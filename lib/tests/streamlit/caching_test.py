@@ -45,16 +45,20 @@ class CacheTest(unittest.TestCase):
         number = 5
         things = [1, 2, 3]
 
+        def return_things():
+            return things
+
         @st.cache
         def score():
-            result = { 'score': number + 2,
-                       'things': things,
-                     }
+            result = {
+                "score": number + 2,
+                "things": return_things(),
+            }
             return result
 
         answer = score()
         number = 6
-        things = [3,4,5]
+        things = [3, 4, 5]
         self.assertEqual(answer, score())
 
     def test_deprecated_kwarg(self):
