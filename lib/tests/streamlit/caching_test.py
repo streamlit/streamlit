@@ -39,6 +39,24 @@ class CacheTest(unittest.TestCase):
         self.assertEqual(foo(), 42)
         self.assertEqual(foo(), 42)
 
+    def test_implicit_inputs(self):
+        # Changing values of closure variables should not change cache value after first cache.
+        # See PR #817 / Issue #789
+        number = 5
+        things = [1, 2, 3]
+
+        @st.cache
+        def score():
+            result = { 'score': number + 2,
+                       'things': things,
+                     }
+            return result
+
+        answer = score()
+        number = 6
+        things = [3,4,5]
+        self.assertEqual(answer, score())
+
     def test_deprecated_kwarg(self):
         with pytest.raises(Exception) as e:
 
