@@ -384,11 +384,7 @@ class CodeHasher:
                 # add type to distingush x from [x]
                 self._update(h, type(obj).__name__.encode() + b":")
                 for e in obj:
-                    try:
-                        self._update(h, e, context)
-                    except:
-                        msg = "Streamlit failed to hash an object of type %s." % type(e)
-                        raise UnhashableType(msg)
+                    self._update(h, e, context)
                 return h.digest()
             else:
                 # As a last resort
@@ -396,25 +392,13 @@ class CodeHasher:
                 # add type to distingush x from [x]
                 self._update(h, type(obj).__name__.encode() + b":")
                 for e in obj.__reduce__():
-                    try:
-                        self._update(h, e, context)
-                    except:
-                        msg = "Streamlit failed to hash an object of type %s." % type(
-                            obj
-                        )
-                        raise UnhashableType(msg)
+                    self._update(h, e, context)
                 return h.digest()
-        except UnhashableType as e:
-            raise e
         except Exception as e:
-            print(e)
-            # if inspect.isroutine(obj):
-            #    raise e
-            # else:
             msg = "Streamlit failed to hash an object of type %s." % type(obj)
-            raise UnhashableType(msg)
-            # Todo: before we were returning None in this situation
-            # return None
+            error = UnhashableType(msg)
+            st.warning(error)
+            raise error
 
     def _code_to_bytes(self, code, context):
         h = hashlib.new(self.name)
