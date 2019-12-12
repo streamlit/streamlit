@@ -468,10 +468,9 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.plotly_chart.HasField("url"), False)
         self.assertNotEqual(el.plotly_chart.figure.spec, "")
         self.assertNotEqual(el.plotly_chart.figure.config, "")
-        self.assertEqual(el.plotly_chart.width, 0)
-        self.assertEqual(el.plotly_chart.height, 0)
+        self.assertEqual(el.plotly_chart.use_container_width, False)
 
-    def test_st_plotly_chart_dimensions(self):
+    def test_st_plotly_chart_use_container_width_true(self):
         """Test st.plotly_chart."""
         import plotly.graph_objs as go
 
@@ -479,14 +478,13 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         data = [trace0]
 
-        st.plotly_chart(data, width=100, height=200)
+        st.plotly_chart(data, use_container_width=True)
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.plotly_chart.HasField("url"), False)
         self.assertNotEqual(el.plotly_chart.figure.spec, "")
         self.assertNotEqual(el.plotly_chart.figure.config, "")
-        self.assertEqual(el.plotly_chart.width, 100)
-        self.assertEqual(el.plotly_chart.height, 200)
+        self.assertEqual(el.plotly_chart.use_container_width, True)
 
     def test_st_plotly_chart_mpl(self):
         """Test st.plotly_chart can handle Matplotlib figures."""
@@ -509,8 +507,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.plotly_chart.HasField("url"), False)
         self.assertNotEqual(el.plotly_chart.figure.spec, "")
         self.assertNotEqual(el.plotly_chart.figure.config, "")
-        self.assertEqual(el.plotly_chart.width, 0)
-        self.assertEqual(el.plotly_chart.height, 0)
+        self.assertEqual(el.plotly_chart.use_container_width, False)
 
     def test_st_plotly_chart_sharing(self):
         """Test st.plotly_chart when sending data to Plotly's service."""
@@ -529,8 +526,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.plotly_chart.HasField("figure"), False)
         self.assertNotEqual(el.plotly_chart.url, "the_url")
-        self.assertEqual(el.plotly_chart.width, 0)
-        self.assertEqual(el.plotly_chart.height, 0)
+        self.assertEqual(el.plotly_chart.use_container_width, False)
 
     def test_st_subheader(self):
         """Test st.subheader."""
