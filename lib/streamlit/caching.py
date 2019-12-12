@@ -73,7 +73,8 @@ class CacheKeyNotFoundError(Exception):
 
 
 class CachedObjectWasMutatedError(ValueError):
-    pass
+    def __init__(self, cached_object):
+        self.cached_object = cached_object
 
 
 CacheEntry = namedtuple("CacheEntry", ["value", "hash"])
@@ -222,7 +223,7 @@ def _read_from_mem_cache(key, allow_output_mutation, hash_funcs):
             return entry.value
         else:
             LOGGER.debug("Cache object was mutated: %s", key)
-            raise CachedObjectWasMutatedError()
+            raise CachedObjectWasMutatedError(entry.value)
     else:
         LOGGER.debug("Memory cache MISS: %s", key)
         raise CacheKeyNotFoundError("Key not found in mem cache")
@@ -282,11 +283,10 @@ def _read_from_cache(
     """
     try:
         return _read_from_mem_cache(key, allow_output_mutation, hash_funcs)
-    except (CacheKeyNotFoundError, CachedObjectWasMutatedError) as e:
-        if isinstance(e, CachedObjectWasMutatedError):
-            message = _get_mutated_output_error_message()
-            st.warning(message)
-
+    except CachedObjectWasMutatedError as e:
+        st.warning(_get_mutated_output_error_message())
+        return e.cached_object
+    except CacheKeyNotFoundError as e:
         if persisted:
             value = _read_from_disk_cache(key)
             _write_to_mem_cache(key, value, allow_output_mutation, hash_funcs)
@@ -436,7 +436,7 @@ def cache(
                 return_value = _read_from_cache(
                     key, persist, allow_output_mutation, func, caller_frame, hash_funcs
                 )
-            except (CacheKeyNotFoundError, CachedObjectWasMutatedError):
+            except CacheKeyNotFoundError:
                 with _calling_cached_function():
                     if suppress_st_warning:
                         with suppress_cached_st_function_warning():
@@ -560,7 +560,7 @@ class Cache(dict):
                 [caller_lineno + 1, caller_lineno + len(lines)],
             )
             self.update(value)
-        except (CacheKeyNotFoundError, CachedObjectWasMutatedError):
+        except CacheKeyNotFoundError:
             if self._allow_output_mutation and not self._persist:
                 # If we don't hash the results, we don't need to use exec and just return True.
                 # This way line numbers will be correct.

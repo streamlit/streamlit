@@ -87,9 +87,11 @@ class CacheTest(unittest.TestCase):
 
         warning.assert_not_called()
 
-        f()
+        r2 = f()
 
         warning.assert_called()
+
+        self.assertEqual(r, r2)
 
     @patch.object(st, "warning")
     def test_mutate_args(self, warning):
