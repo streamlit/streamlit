@@ -317,7 +317,7 @@ class CodeHashTest(unittest.TestCase):
         self.assertNotEqual(hash_prog_1(), hash_prog_2())
 
     def test_builtins(self):
-        """Tes code with builtins."""
+        """Test code with builtins."""
 
         def code_with_print():
             print(12)
