@@ -19,4 +19,7 @@ syntax = "proto3";
 message BokehChart {
   // A JSON-formatted string from the Bokeh chart figure.
   string figure = 1;
+
+  // If True, will overwrite the chart width spec to fit to container.
+  bool use_container_width = 2;
 }
