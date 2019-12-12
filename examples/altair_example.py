@@ -28,4 +28,4 @@ st.write("Altair chart using `st.altair_chart`:")
 st.altair_chart(c)
 
 st.write("And the same chart using `st.write`:")
-st.altair_chart(c, width=200)
+st.write(c)

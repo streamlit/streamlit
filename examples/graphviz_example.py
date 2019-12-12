@@ -74,4 +74,4 @@ st.write("You should see a colorful node within a cluster within a graph.")
 st.graphviz_chart(styled)
 
 st.write("You should see a graph representing a finite state machine.")
-st.graphviz_chart(finite, width = 200)
+st.graphviz_chart(finite)
