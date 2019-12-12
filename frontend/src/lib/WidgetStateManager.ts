@@ -21,6 +21,9 @@ import {
   FloatArray,
   WidgetState,
   WidgetStates,
+  UploadFile,
+  UploadFileChunk,
+  DeleteUploadedFile,
 } from "autogen/proto"
 
 import { Set as ImmutableSet } from "immutable"
@@ -191,6 +194,45 @@ export class WidgetStateManager {
         this.deleteWidgetStateProto(key)
       }
     })
+  }
+
+  public sendUploadFileMessage(
+    widgetId: string,
+    name: string,
+    lastModified: number,
+    data: Uint8Array
+  ): void {
+    // We send the file in severals chunks to avoid server webservices freezing.
+
+    // The default file size allowed by server config is 50MB.
+    // The best message size to don't freeze the server is 10MB
+    const chunkByteLimit = 10 * 1e6 //10MB
+    const sendBackMsg = this.sendBackMsg
+    const uploadFileMessage = new UploadFile()
+    uploadFileMessage.widgetId = widgetId
+    uploadFileMessage.name = name
+    uploadFileMessage.size = data.length
+    uploadFileMessage.lastModified = lastModified
+    // The number of chunks the server should be wait
+    uploadFileMessage.chunks = Math.ceil(data.length / chunkByteLimit)
+    sendBackMsg({ uploadFile: uploadFileMessage })
+
+    for (let i = 0; i < uploadFileMessage.chunks; i++) {
+      const message = new UploadFileChunk()
+      message.widgetId = widgetId
+      message.index = i
+      const dataIndex = i * chunkByteLimit
+      message.data = data.slice(dataIndex, dataIndex + chunkByteLimit)
+      setTimeout(function() {
+        sendBackMsg({ uploadFileChunk: message })
+      }, 1000)
+    }
+  }
+
+  public sendDeleteUploadedFileMessage(widgetId: string): void {
+    const deleteUploadedFileMessage = new DeleteUploadedFile()
+    deleteUploadedFileMessage.widgetId = widgetId
+    this.sendBackMsg({ deleteUploadedFile: deleteUploadedFileMessage })
   }
 
   private createWigetStatesMsg(): WidgetStates {
