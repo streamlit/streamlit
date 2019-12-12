@@ -131,6 +131,10 @@ class App extends PureComponent<Props, State> {
       this
     )
     this.handleMessage = this.handleMessage.bind(this)
+    this.handleUploadReportProgress = this.handleUploadReportProgress.bind(
+      this
+    )
+    this.handleReportUploaded = this.handleReportUploaded.bind(this)
     this.isServerConnected = this.isServerConnected.bind(this)
     this.rerunScript = this.rerunScript.bind(this)
     this.stopReport = this.stopReport.bind(this)
@@ -240,27 +244,32 @@ class App extends PureComponent<Props, State> {
           this.handleDeltaMsg(deltaMsg, msgProto.metadata),
         reportFinished: (status: ForwardMsg.ReportFinishedStatus) =>
           this.handleReportFinished(status),
-        uploadReportProgress: (progress: string | number) => {
-          const newDialog: DialogProps = {
-            type: DialogType.UPLOAD_PROGRESS,
-            progress: progress,
-            onClose: () => {},
-          }
-          this.openDialog(newDialog)
-        },
-        reportUploaded: (url: string) => {
-          const newDialog: DialogProps = {
-            type: DialogType.UPLOADED,
-            url: url,
-            onClose: () => {},
-          }
-          this.openDialog(newDialog)
-        },
+        uploadReportProgress: (progress: string | number) =>
+          this.handleUploadReportProgress(progress),
+        reportUploaded: (url: string) => this.handleReportUploaded(url),
       })
     } catch (err) {
       logError(err)
       this.showError("Bad message format", err.message)
     }
+  }
+
+  handleUploadReportProgress(progress: string | number): void {
+    const newDialog: DialogProps = {
+      type: DialogType.UPLOAD_PROGRESS,
+      progress: progress,
+      onClose: () => {},
+    }
+    this.openDialog(newDialog)
+  }
+
+  handleReportUploaded(url: string): void {
+    const newDialog: DialogProps = {
+      type: DialogType.UPLOADED,
+      url: url,
+      onClose: () => {},
+    }
+    this.openDialog(newDialog)
   }
 
   /**
