@@ -68,7 +68,7 @@ for test_type in ["coalesce in Py", "coalesce in JS", "clear after addrows"]:
                 "x": {"field": "a", "type": "quantitative"},
                 "y": {"field": "b", "type": "quantitative"},
             },
-        }
+        },
         use_container_width=True
     )
     vega_el3 = st.vega_lite_chart(
@@ -80,7 +80,7 @@ for test_type in ["coalesce in Py", "coalesce in JS", "clear after addrows"]:
                 "x": {"field": "a", "type": "quantitative"},
                 "y": {"field": "b", "type": "quantitative"},
             },
-        }
+        },
         use_container_width=True
     )
     altair_el = st.altair_chart(
