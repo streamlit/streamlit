@@ -143,12 +143,15 @@ def file_is_in_folder_glob(filepath, folderpath_glob):
 def file_in_pythonpath(filepath):
     """Test whether a filepath is in the same folder of a path specified in the PYTHONPATH env variable.
 
-    Returns False if PYTHONPATH is not defined or empty.
 
     Parameters
     ----------
     filepath : str
         An absolute file path.
+
+    Returns
+    boolean
+        True if contained in PYTHONPATH, False otherwise. False if PYTHONPATH is not defined or empty.
 
     """
 

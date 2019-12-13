@@ -52,7 +52,7 @@ def NOOP_CALLBACK():
     pass
 
 
-@patch("streamlit.file_util.file_in_pythonpath", return_value=True)
+@patch("streamlit.file_util.file_in_pythonpath", return_value=False)
 class LocalSourcesWatcherTest(unittest.TestCase):
     def setUp(self):
         modules = [
