@@ -16,12 +16,13 @@
  */
 
 import React from "react"
+import Icon from "components/shared/Icon"
+import { Button, Spinner } from "reactstrap"
+import { FileUploader as FileUploaderBaseui } from "baseui/file-uploader"
 import { Map as ImmutableMap } from "immutable"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import { FileUploader as FileUploaderBaseui } from "baseui/file-uploader"
 import { fileUploaderOverrides } from "lib/widgetTheme"
 import "./FileUploader.scss"
-import { Button } from "reactstrap"
 
 interface Props {
   disabled: boolean
@@ -31,8 +32,9 @@ interface Props {
 }
 
 interface State {
-  status: "READY" | "READING" | "UPLOADING"
+  status: "READY" | "READING" | "UPLOADING" | "UPLOADED" | "ERROR"
   errorMessage?: string
+  acceptedFiles: File[]
 }
 
 class FileUploader extends React.PureComponent<Props, State> {
@@ -40,6 +42,8 @@ class FileUploader extends React.PureComponent<Props, State> {
     super(props)
     this.state = {
       status: "READY",
+      errorMessage: undefined,
+      acceptedFiles: [],
     }
   }
 
@@ -71,14 +75,19 @@ class FileUploader extends React.PureComponent<Props, State> {
     const maxSizeMb = element.get("maxUploadSizeMb")
 
     if (rejectedFiles.length > 0) {
+      // TODO XXX Tell user which files *are* allowed.
       this.setState({
-        status: "READY",
+        status: "ERROR",
         errorMessage: `${rejectedFiles[0].type} files are not allowed`,
       })
       return
     }
 
-    this.setState({ status: "READING" })
+    this.setState({
+      acceptedFiles,
+      status: "READING",
+    })
+
     acceptedFiles.forEach((file: File) => {
       const fileSizeMB = file.size / 1024 / 1024
       if (fileSizeMB < maxSizeMb) {
@@ -88,7 +97,7 @@ class FileUploader extends React.PureComponent<Props, State> {
         fileReader.readAsArrayBuffer(file)
       } else {
         this.setState({
-          status: "READY",
+          status: "ERROR",
           errorMessage: `The max file size allowed is ${maxSizeMb}MB`,
         })
       }
@@ -99,61 +108,112 @@ class FileUploader extends React.PureComponent<Props, State> {
     const progress = this.props.element.get("progress")
     const oldProgress = oldProps.element.get("progress")
     if (
-      oldProgress !== 1 &&
-      progress === 1 &&
+      oldProgress < 1 &&
+      progress >= 1 &&
       this.state.status === "UPLOADING"
     ) {
-      this.setState({ status: "READY" })
+      this.setState({ status: "UPLOADED" })
     }
   }
 
-  closeErrorMessage = (): void => {
-    this.setState({ status: "READY", errorMessage: undefined })
+  reset = (): void => {
+    this.setState({
+      status: "READY",
+      errorMessage: undefined,
+      acceptedFiles: [],
+    })
   }
 
   renderErrorMessage = (): React.ReactNode => {
     const { errorMessage } = this.state
     return (
-      <div className="uploadError">
-        <span className="text">{errorMessage}</span>
-        <Button className="button" outline onClick={this.closeErrorMessage}>
-          Ok
+      <div className="uploadStatus uploadError">
+        <span className="body">
+          <Icon className="icon" type="warning" /> {errorMessage}
+        </span>
+        <Button outline size="sm" onClick={this.reset}>
+          OK
         </Button>
       </div>
     )
   }
 
-  public render = (): React.ReactNode => {
+  renderUploadingMessage = (): React.ReactNode => {
+    return (
+      <div className="uploadStatus uploadProgress">
+        <span className="body">
+          <Spinner color="secondary" size="sm" /> Uploading...
+        </span>
+        <Button
+          outline
+          size="sm"
+          onClick={() => {
+            this.setState({ status: "UPLOADED", errorMessage: undefined })
+            this.props.widgetStateManager.sendDeleteUploadedFileMessage(
+              this.props.element.get("id")
+            )
+          }}
+        >
+          Cancel
+        </Button>
+      </div>
+    )
+  }
+
+  renderFileUploader = (): React.ReactNode => {
     const { status, errorMessage } = this.state
     const { element } = this.props
     const accept: string[] = element
       .get("type")
       .toArray()
       .map((value: string) => "." + value)
+
+    // Hack to hide drag-and-drop message and leave space for filename.
+    let overrides: any = fileUploaderOverrides
+
+    if (status === "UPLOADED") {
+      overrides = { ...overrides }
+      overrides.ContentMessage = { ...overrides.ContentMessage }
+      overrides.ContentMessage.style = { ...overrides.ContentMessage.style }
+      overrides.ContentMessage.style.visibility = "hidden"
+      overrides.ContentMessage.style.overflow = "hidden"
+      overrides.ContentMessage.style.height = "0.625rem" // half of lineHeightTight
+    }
+
+    return (
+      <>
+        {status === "UPLOADED" ? (
+          <div className="uploadOverlay uploadDone">
+            <span className="body">{this.state.acceptedFiles[0].name}</span>
+          </div>
+        ) : null}
+        <FileUploaderBaseui
+          onDrop={this.dropHandler}
+          errorMessage={errorMessage}
+          accept={accept.length === 0 ? undefined : accept}
+          disabled={this.props.disabled}
+          overrides={overrides}
+        />
+      </>
+    )
+  }
+
+  public render = (): React.ReactNode => {
+    const { status } = this.state
+    const { element } = this.props
     const label: string = element.get("label")
+
+    // The BaseWeb file uploader is not particularly configurable, so we hack it here by replacing
+    // the uploader with our own UI where appropriate.
     return (
       <div className="Widget stFileUploader">
         <label>{label}</label>
-        {errorMessage ? (
-          this.renderErrorMessage()
-        ) : (
-          <FileUploaderBaseui
-            onDrop={this.dropHandler}
-            errorMessage={errorMessage}
-            accept={accept.length === 0 ? undefined : accept}
-            progressMessage={status !== "READY" ? status : undefined}
-            onRetry={() => {
-              this.setState({ status: "READY", errorMessage: undefined })
-            }}
-            onCancel={() => {
-              this.setState({ status: "READY", errorMessage: undefined })
-              this.props.widgetStateManager.sendDeleteUploadedFileMessage(
-                this.props.element.get("id")
-              )
-            }}
-            overrides={fileUploaderOverrides}
-          />
-        )}
+
+        {status === "ERROR"
+          ? this.renderErrorMessage()
+          : status === "UPLOADING"
+          ? this.renderUploadingMessage()
+          : this.renderFileUploader()}
       </div>
     )
   }
