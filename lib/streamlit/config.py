@@ -24,6 +24,7 @@ setup_2_3_shims(globals())
 import os
 import toml
 import collections
+import urllib
 
 import click
 from blinker import Signal
@@ -503,11 +504,11 @@ _create_section("mapbox", "Mapbox configuration that is being used by DeckGL.")
 
 _create_option(
     "mapbox.token",
-    description="""Configure Streamlit to use a custom Mapbox 
-                token for elements like st.deck_gl_chart and st.map. If you 
-                don't do this you'll be using Streamlit's own token, 
-                which has limitations and is not guaranteed to always work. 
-                To get a token for yourself, create an account at 
+    description="""Configure Streamlit to use a custom Mapbox
+                token for elements like st.deck_gl_chart and st.map. If you
+                don't do this you'll be using Streamlit's own token,
+                which has limitations and is not guaranteed to always work.
+                To get a token for yourself, create an account at
                 https://mapbox.com. It's free! (for moderate usage levels)""",
     default_val="pk.eyJ1IjoidGhpYWdvdCIsImEiOiJjamh3bm85NnkwMng4M3"
     "dydnNveWwzeWNzIn0.vCBDzNsEF2uFSFk2AM0WZQ",
@@ -902,6 +903,19 @@ def _check_conflicts():
             "In config.toml, s3.accessKeyId and s3.secretAccessKey must "
             "either both be set or both be unset."
         )
+
+        if is_manually_set("s3.url"):
+            # If s3.url is set, ensure that it's an absolute URL.
+            # An absolute URL starts with either `scheme://` or `//` --
+            # if the configured URL does not start with either prefix,
+            # prepend it with `//` to make it absolute. (If we don't do this,
+            # and the user enters something like `url=myhost.com/reports`, the
+            # browser will assume this is a relative URL, and will prepend
+            # the hostname of the Streamlit instance to the configured URL.)
+            s3_url = get_option("s3.url")
+            parsed = urllib.parse.urlparse(s3_url)
+            if parsed.netloc == "":
+                _set_option("s3.url", "//" + s3_url, get_where_defined("s3.url"))
 
 
 def _set_development_mode():
