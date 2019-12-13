@@ -8,6 +8,6 @@ These articles are designed to get you "unstuck" when something goes wrong. If y
    :titlesonly:
    :glob:
 
-   troubleshooting
    clean-install
+   common-issues
 ```
