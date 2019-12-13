@@ -152,3 +152,45 @@ class FileIsInFolderTest(unittest.TestCase):
     def test_rel_file_not_in_folder_glob(self):
         ret = file_util.file_is_in_folder_glob("foo.py", "**/f")
         self.assertFalse(ret)
+
+
+class FileInPythonPathTest(unittest.TestCase):
+    @staticmethod
+    def _make_it_absolute(path):
+        # Use manual join instead of os.abspath to test against non normalized paths
+        return os.path.join(os.getcwd(), path)
+
+    def test_no_pythonpath(self):
+        with patch.dict("os.environ", {}):
+            self.assertTrue(file_util.file_in_pythonpath(self._make_it_absolute("../something/dir1/dir2/module")))
+
+    def test_empty_pythonpath(self):
+        with patch.dict("os.environ", {"PYTHONPATH": ""}):
+            self.assertTrue(file_util.file_in_pythonpath(self._make_it_absolute("../something/dir1/dir2/module")))
+
+
+    def test_python_path_relative(self):
+        with patch.dict("os.environ", {"PYTHONPATH": "something"}):
+            self.assertTrue(file_util.file_in_pythonpath(self._make_it_absolute("something/dir1/dir2/module")))
+            self.assertFalse(file_util.file_in_pythonpath(self._make_it_absolute("something_else/module")))
+            self.assertFalse(file_util.file_in_pythonpath(self._make_it_absolute("../something/dir1/dir2/module")))
+
+    def test_python_path_absolute(self):
+        with patch.dict("os.environ", {"PYTHONPATH": self._make_it_absolute("something")}):
+            self.assertTrue(file_util.file_in_pythonpath(self._make_it_absolute("something/dir1/dir2/module")))
+            self.assertFalse(file_util.file_in_pythonpath(self._make_it_absolute("something_else/module")))
+            self.assertFalse(file_util.file_in_pythonpath(self._make_it_absolute("../something/dir1/dir2/module")))
+
+    def test_python_path_mixed(self):
+        with patch.dict("os.environ",
+                        {
+                            "PYTHONPATH": os.pathsep.join([self._make_it_absolute("something"), "something"])
+                        }):
+            self.assertTrue(file_util.file_in_pythonpath(self._make_it_absolute("something/dir1/dir2/module")))
+            self.assertFalse(file_util.file_in_pythonpath(self._make_it_absolute("something_else/module")))
+
+    def test_current_directory(self):
+        with patch.dict("os.environ", {"PYTHONPATH": "."}):
+            self.assertTrue(file_util.file_in_pythonpath(self._make_it_absolute("something/dir1/dir2/module")))
+            self.assertTrue(file_util.file_in_pythonpath(self._make_it_absolute("something_else/module")))
+            self.assertFalse(file_util.file_in_pythonpath(self._make_it_absolute("../something_else/module")))

@@ -201,13 +201,14 @@ class LocalSourcesWatcher(object):
                     continue
 
                 file_is_new = filepath not in self._watched_modules
+                file_is_in_pythonpath = file_util.file_in_pythonpath(filepath)
                 file_is_local = file_util.file_is_in_folder_glob(
                     filepath, self._report.script_folder
                 )
 
                 local_filepaths.append(filepath)
 
-                if file_is_local and file_is_new:
+                if (file_is_local or file_is_in_pythonpath) and file_is_new:
                     self._register_watcher(filepath, name)
 
             except Exception:

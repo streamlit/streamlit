@@ -15,6 +15,7 @@
 
 import contextlib
 import errno
+import itertools
 import os
 
 import fnmatch
@@ -137,3 +138,28 @@ def file_is_in_folder_glob(filepath, folderpath_glob):
 
     file_dir = os.path.dirname(filepath) + "/"
     return fnmatch.fnmatch(file_dir, folderpath_glob)
+
+
+def file_in_pythonpath(filepath):
+    """Test whether a filepath is in the same folder of a path specified in the PYTHONPATH env variable.
+
+    Returns True if PYTHONPATH is not defined or empty.
+
+    Parameters
+    ----------
+    filepath : str
+        An absolute file path.
+
+    """
+
+    if "PYTHONPATH" not in os.environ:
+        return True
+    pythonpath = os.environ["PYTHONPATH"]
+    if len(pythonpath) == 0:
+        return True
+    relative_and_absolute_paths = itertools.chain.from_iterable(
+        (path, os.path.abspath(path)) for path in pythonpath.split(os.pathsep)
+    )
+    return any(
+        file_is_in_folder_glob(os.path.normpath(filepath), path) for path in relative_and_absolute_paths
+    )
