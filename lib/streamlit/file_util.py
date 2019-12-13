@@ -140,10 +140,15 @@ def file_is_in_folder_glob(filepath, folderpath_glob):
     return fnmatch.fnmatch(file_dir, folderpath_glob)
 
 
+def _retrieve_pythonpath():
+    return os.environ["PYTHONPATH"]
+
+
 def file_in_pythonpath(filepath):
     """Test whether a filepath is in the same folder of a path specified in the PYTHONPATH env variable.
 
-    Returns True if PYTHONPATH is not defined or empty.
+    Returns False if PYTHONPATH is not defined.
+    If PYTHONPATH is empty it is interpreted as `.`
 
     Parameters
     ----------
@@ -153,13 +158,14 @@ def file_in_pythonpath(filepath):
     """
 
     if "PYTHONPATH" not in os.environ:
-        return True
+        return False
     pythonpath = os.environ["PYTHONPATH"]
-    if len(pythonpath) == 0:
-        return True
-    relative_and_absolute_paths = itertools.chain.from_iterable(
-        (path, os.path.abspath(path)) for path in pythonpath.split(os.pathsep)
-    )
+
+    relative_and_absolute_paths = [
+        (
+            path if os.path.isabs(path) else os.path.abspath(path)
+        ) for path in pythonpath.split(os.pathsep)
+    ]
     return any(
         file_is_in_folder_glob(os.path.normpath(filepath), path)
         for path in relative_and_absolute_paths

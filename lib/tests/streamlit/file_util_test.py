@@ -161,23 +161,28 @@ class FileInPythonPathTest(unittest.TestCase):
         return os.path.join(os.getcwd(), path)
 
     def test_no_pythonpath(self):
-        with patch.dict("os.environ", {}):
-            self.assertTrue(
+        with patch("os.environ", {}) as d:
+            self.assertFalse(
                 file_util.file_in_pythonpath(
                     self._make_it_absolute("../something/dir1/dir2/module")
                 )
             )
 
     def test_empty_pythonpath(self):
-        with patch.dict("os.environ", {"PYTHONPATH": ""}):
+        with patch("os.environ", {"PYTHONPATH": ""}):
             self.assertTrue(
+                file_util.file_in_pythonpath(
+                    self._make_it_absolute("something/dir1/dir2/module")
+                )
+            )
+            self.assertFalse(
                 file_util.file_in_pythonpath(
                     self._make_it_absolute("../something/dir1/dir2/module")
                 )
             )
 
     def test_python_path_relative(self):
-        with patch.dict("os.environ", {"PYTHONPATH": "something"}):
+        with patch("os.environ", {"PYTHONPATH": "something"}):
             self.assertTrue(
                 file_util.file_in_pythonpath(
                     self._make_it_absolute("something/dir1/dir2/module")
@@ -195,7 +200,7 @@ class FileInPythonPathTest(unittest.TestCase):
             )
 
     def test_python_path_absolute(self):
-        with patch.dict(
+        with patch(
             "os.environ", {"PYTHONPATH": self._make_it_absolute("something")}
         ):
             self.assertTrue(
@@ -215,7 +220,7 @@ class FileInPythonPathTest(unittest.TestCase):
             )
 
     def test_python_path_mixed(self):
-        with patch.dict(
+        with patch(
             "os.environ",
             {
                 "PYTHONPATH": os.pathsep.join(
@@ -235,7 +240,7 @@ class FileInPythonPathTest(unittest.TestCase):
             )
 
     def test_current_directory(self):
-        with patch.dict("os.environ", {"PYTHONPATH": "."}):
+        with patch("os.environ", {"PYTHONPATH": "."}):
             self.assertTrue(
                 file_util.file_in_pythonpath(
                     self._make_it_absolute("something/dir1/dir2/module")

@@ -201,7 +201,8 @@ class LocalSourcesWatcher(object):
                     continue
 
                 file_is_new = filepath not in self._watched_modules
-                file_is_in_pythonpath = file_util.file_in_pythonpath(filepath)
+                # file_is_in_pythonpath = file_util.file_in_pythonpath(filepath)
+                file_is_in_pythonpath = False
                 file_is_local = file_util.file_is_in_folder_glob(
                     filepath, self._report.script_folder
                 )

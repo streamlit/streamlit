@@ -338,9 +338,10 @@ class CodeHasher:
                     filepath, self._get_main_script_directory()
                 )
                 file_is_in_pythonpath = file_util.file_in_pythonpath(filepath)
+                file_is_blacklisted = self._folder_black_list.is_blacklisted(filepath)
                 if (
                     file_is_local or file_is_in_pythonpath
-                ) and not self._folder_black_list.is_blacklisted(filepath):
+                ) and not file_is_blacklisted:
                     context = _get_context(obj)
                     if obj.__defaults__:
                         self._update(h, obj.__defaults__, context)
