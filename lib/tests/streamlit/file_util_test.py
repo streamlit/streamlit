@@ -153,6 +153,10 @@ class FileIsInFolderTest(unittest.TestCase):
         ret = file_util.file_is_in_folder_glob("foo.py", "**/f")
         self.assertFalse(ret)
 
+    def test_rel_file_not_in_folder_glob(self):
+        ret = file_util.file_is_in_folder_glob("foo.py", "")
+        self.assertTrue(ret)
+
 
 class FileInPythonPathTest(unittest.TestCase):
     @staticmethod
@@ -170,14 +174,9 @@ class FileInPythonPathTest(unittest.TestCase):
 
     def test_empty_pythonpath(self):
         with patch("os.environ", {"PYTHONPATH": ""}):
-            self.assertTrue(
-                file_util.file_in_pythonpath(
-                    self._make_it_absolute("something/dir1/dir2/module")
-                )
-            )
             self.assertFalse(
                 file_util.file_in_pythonpath(
-                    self._make_it_absolute("../something/dir1/dir2/module")
+                    self._make_it_absolute("something/dir1/dir2/module")
                 )
             )
 
