@@ -42,9 +42,9 @@ spec_with_width = {
     "width": "500",
 }
 
-st.vega_lite_chart(df, spec, use_default_container=True)
-st.vega_lite_chart(df, spec, use_default_container=True)
-st.vega_lite_chart(df, spec, use_default_container=True)
+st.vega_lite_chart(df, spec, use_container_width=True)
+st.vega_lite_chart(df, spec, use_container_width=True)
+st.vega_lite_chart(df, spec, use_container_width=True)
 st.vega_lite_chart(df, spec_with_width)
 
 # Screenshot comparison

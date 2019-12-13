@@ -27,8 +27,8 @@ spec = {
 }
 
 # 5 empty charts
-st.vega_lite_chart(spec, use_default_container=True)
-st.pyplot(use_default_container=True)
+st.vega_lite_chart(spec, use_container_width=True)
+st.pyplot(use_container_width=True)
 st.line_chart()
 st.bar_chart()
 st.area_chart()
@@ -40,27 +40,27 @@ st.area_chart()
 
 # 6 errors
 try:
-    st.vega_lite_chart({}, use_default_container=True)
+    st.vega_lite_chart({}, use_container_width=True)
 except Exception as e:
     st.write(e)
 
 try:
-    st.vega_lite_chart(data, {}, use_default_container=True)
+    st.vega_lite_chart(data, {}, use_container_width=True)
 except Exception as e:
     st.write(e)
 
 try:
-    st.vega_lite_chart(data, use_default_container=True)
+    st.vega_lite_chart(data, use_container_width=True)
 except Exception as e:
     st.write(e)
 
 try:
-    st.vega_lite_chart(use_default_container=True)
+    st.vega_lite_chart(use_container_width=True)
 except Exception as e:
     st.write(e)
 
 try:
-    st.altair_chart(use_default_container=True)
+    st.altair_chart(use_container_width=True)
 except Exception as e:
     st.write(e)
 
