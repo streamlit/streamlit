@@ -161,5 +161,6 @@ def file_in_pythonpath(filepath):
         (path, os.path.abspath(path)) for path in pythonpath.split(os.pathsep)
     )
     return any(
-        file_is_in_folder_glob(os.path.normpath(filepath), path) for path in relative_and_absolute_paths
+        file_is_in_folder_glob(os.path.normpath(filepath), path)
+        for path in relative_and_absolute_paths
     )
