@@ -64,7 +64,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
                     sidebar_dg=sidebar_dg,
                     widgets=Widgets(),
                     widget_ids_this_run=_WidgetIDSet(),
-                    file_manager=None,
+                    uploaded_file_mgr=None,
                 ),
             )
 
