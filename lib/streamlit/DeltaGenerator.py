@@ -999,7 +999,15 @@ class DeltaGenerator(object):
         altair.marshall(element.vega_lite_chart, chart, use_container_width)
 
     @_with_element
-    def vega_lite_chart(self, element, data=None, spec=None, width=0, use_container_width=False, **kwargs):
+    def vega_lite_chart(
+        self,
+        element,
+        data=None,
+        spec=None,
+        width=0,
+        use_container_width=False,
+        **kwargs
+    ):
         """Display a chart using the Vega-Lite library.
 
         Parameters
@@ -1055,11 +1063,21 @@ class DeltaGenerator(object):
 
         """
         import streamlit.elements.vega_lite as vega_lite
+
         if width != 0:
             import streamlit as st
-            st.warning("The `width` argument in `st.vega_lite_chart` is deprecated and will be removed on 2020-03-04. To set the width, you should instead use Vega-Lite's native `width` argument as described at https://vega.github.io/vega-lite/docs/size.html")
 
-        vega_lite.marshall(element.vega_lite_chart, data, spec, use_container_width=use_container_width, **kwargs)
+            st.warning(
+                "The `width` argument in `st.vega_lite_chart` is deprecated and will be removed on 2020-03-04. To set the width, you should instead use Vega-Lite's native `width` argument as described at https://vega.github.io/vega-lite/docs/size.html"
+            )
+
+        vega_lite.marshall(
+            element.vega_lite_chart,
+            data,
+            spec,
+            use_container_width=use_container_width,
+            **kwargs
+        )
 
     @_with_element
     def altair_chart(self, element, altair_chart, width=0, use_container_width=False):
@@ -1103,11 +1121,19 @@ class DeltaGenerator(object):
 
         """
         import streamlit.elements.altair as altair
+
         if width != 0:
             import streamlit as st
-            st.warning("The `width` argument in `st.vega_lite_chart` is deprecated and will be removed on 2020-03-04. To set the width, you should instead use altair's native `width` argument as described at https://altair-viz.github.io/user_guide/generated/toplevel/altair.Chart.html")
 
-        altair.marshall(element.vega_lite_chart, altair_chart, use_container_width=use_container_width)
+            st.warning(
+                "The `width` argument in `st.vega_lite_chart` is deprecated and will be removed on 2020-03-04. To set the width, you should instead use altair's native `width` argument as described at https://altair-viz.github.io/user_guide/generated/toplevel/altair.Chart.html"
+            )
+
+        altair.marshall(
+            element.vega_lite_chart,
+            altair_chart,
+            use_container_width=use_container_width,
+        )
 
     @_with_element
     def graphviz_chart(self, element, figure_or_dot, width=0, height=0):
@@ -1180,21 +1206,35 @@ class DeltaGenerator(object):
 
         if width != 0 and height != 0:
             import streamlit as st
-            st.warning("The `width` and `height` arguments in `st.graphviz` are deprecated and will be removed on 2020-03-04")
+
+            st.warning(
+                "The `width` and `height` arguments in `st.graphviz` are deprecated and will be removed on 2020-03-04"
+            )
         elif width != 0:
             import streamlit as st
-            st.warning("The `width` argument in `st.graphviz` is deprecated and will be removed on 2020-03-04")
+
+            st.warning(
+                "The `width` argument in `st.graphviz` is deprecated and will be removed on 2020-03-04"
+            )
         elif height != 0:
             import streamlit as st
-            st.warning("The `height` argument in `st.graphviz` is deprecated and will be removed on 2020-03-04")
 
-        graphviz_chart.marshall(
-            element.graphviz_chart, figure_or_dot
-        )
+            st.warning(
+                "The `height` argument in `st.graphviz` is deprecated and will be removed on 2020-03-04"
+            )
+
+        graphviz_chart.marshall(element.graphviz_chart, figure_or_dot)
 
     @_with_element
     def plotly_chart(
-        self, element, figure_or_data, width=0, height=0, use_container_width=False, sharing="streamlit", **kwargs
+        self,
+        element,
+        figure_or_data,
+        width=0,
+        height=0,
+        use_container_width=False,
+        sharing="streamlit",
+        **kwargs
     ):
         """Display an interactive Plotly chart.
 
@@ -1280,13 +1320,22 @@ class DeltaGenerator(object):
 
         if width != 0 and height != 0:
             import streamlit as st
-            st.warning("The `width` and `height` arguments in `st.plotly_chart` are deprecated and will be removed on 2020-03-04. To set this values, you should instead use ploty's native arguments as described at https://plot.ly/python/setting-graph-size/")
+
+            st.warning(
+                "The `width` and `height` arguments in `st.plotly_chart` are deprecated and will be removed on 2020-03-04. To set this values, you should instead use ploty's native arguments as described at https://plot.ly/python/setting-graph-size/"
+            )
         elif width != 0:
             import streamlit as st
-            st.warning("The `width` argument in `st.plotly_chart` is deprecated and will be removed on 2020-03-04. To set the width, you should instead use ploty's native `width` argument as described at https://plot.ly/python/setting-graph-size/")
+
+            st.warning(
+                "The `width` argument in `st.plotly_chart` is deprecated and will be removed on 2020-03-04. To set the width, you should instead use ploty's native `width` argument as described at https://plot.ly/python/setting-graph-size/"
+            )
         elif height != 0:
             import streamlit as st
-            st.warning("The `height` argument in `st.plotly_chart` is deprecated and will be removed on 2020-03-04. To set the height, you should instead use ploty's native `height` argument as described at https://plot.ly/python/setting-graph-size/")
+
+            st.warning(
+                "The `height` argument in `st.plotly_chart` is deprecated and will be removed on 2020-03-04. To set the height, you should instead use ploty's native `height` argument as described at https://plot.ly/python/setting-graph-size/"
+            )
 
         plotly_chart.marshall(
             element.plotly_chart, figure_or_data, use_container_width, sharing, **kwargs

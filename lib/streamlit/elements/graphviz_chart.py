@@ -37,4 +37,3 @@ def marshall(proto, figure_or_dot):
         raise Exception("Unhandled type for graphviz chart: %s" % type(figure_or_dot))
 
     proto.spec = dot
-    

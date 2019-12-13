@@ -74,8 +74,9 @@ class CliTest(unittest.TestCase):
         result = self.runner.invoke(cli, ["run", "file_name.doc"])
 
         self.assertNotEqual(0, result.exit_code)
-        self.assertTrue("Streamlit requires raw Python (.py) files, not .doc."
-                        in result.output)
+        self.assertTrue(
+            "Streamlit requires raw Python (.py) files, not .doc." in result.output
+        )
 
     @tempdir()
     def test_run_valid_url(self, temp_dir):
@@ -105,8 +106,7 @@ class CliTest(unittest.TestCase):
             "streamlit.cli._main_run"
         ), requests_mock.mock() as m:
 
-            m.get("http://url/app.py",
-                  exc=requests.exceptions.RequestException)
+            m.get("http://url/app.py", exc=requests.exceptions.RequestException)
             with patch("streamlit.temporary_directory.TemporaryDirectory") as mock_tmp:
                 mock_tmp.return_value.__enter__.return_value = temp_dir.path
                 result = self.runner.invoke(cli, ["run", "http://url/app.py"])
@@ -130,8 +130,7 @@ class CliTest(unittest.TestCase):
                     ],
                 )
         mock_main_run.assert_called_with(
-            "some script.py",
-            ("argument with space", "argument with another space")
+            "some script.py", ("argument with space", "argument with another space")
         )
         self.assertEqual(0, result.exit_code)
 
@@ -142,8 +141,7 @@ class CliTest(unittest.TestCase):
         mock_context = MagicMock()
         mock_context.parent.command_path = "mock_command"
         with patch("click.get_current_context", return_value=mock_context):
-            with patch("click.get_os_args",
-                       return_value=["os_arg1", "os_arg2"]):
+            with patch("click.get_os_args", return_value=["os_arg1", "os_arg2"]):
                 result = cli._get_command_line_as_string()
                 self.assertEqual("mock_command os_arg1 os_arg2", result)
 

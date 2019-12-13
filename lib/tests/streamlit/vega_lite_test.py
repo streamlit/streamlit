@@ -176,16 +176,16 @@ class VegaLiteTest(testutil.DeltaGeneratorTestCase):
         st.vega_lite_chart(df1, {"mark": "rect"})
 
         c = self.get_delta_from_queue().new_element.vega_lite_chart
-        self.assertDictEqual(json.loads(c.spec), merge_dicts(autosize_spec, {"mark": "rect"}))
+        self.assertDictEqual(
+            json.loads(c.spec), merge_dicts(autosize_spec, {"mark": "rect"})
+        )
 
     def test_autosize_set(self):
         """Test that autosize doesn't get overriden."""
         st.vega_lite_chart(df1, {"mark": "rect", "autosize": None})
 
         c = self.get_delta_from_queue().new_element.vega_lite_chart
-        self.assertDictEqual(
-            json.loads(c.spec), {"mark": "rect", "autosize": None}
-        )
+        self.assertDictEqual(json.loads(c.spec), {"mark": "rect", "autosize": None})
 
 
 def merge_dicts(x, y):

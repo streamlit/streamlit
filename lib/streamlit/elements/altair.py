@@ -118,4 +118,9 @@ def marshall(vega_lite_chart, altair_chart, use_container_width=False, **kwargs)
         # transformed.
         chart_dict["datasets"] = datasets
 
-        vega_lite.marshall(vega_lite_chart, chart_dict, use_container_width=use_container_width, **kwargs)
+        vega_lite.marshall(
+            vega_lite_chart,
+            chart_dict,
+            use_container_width=use_container_width,
+            **kwargs
+        )
