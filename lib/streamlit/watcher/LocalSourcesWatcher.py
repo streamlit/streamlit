@@ -165,7 +165,7 @@ class LocalSourcesWatcher(object):
         if self._is_closed:
             return
 
-        registered_filepaths = []
+        local_filepaths = []
 
         # Clone modules dict here because we may alter the original dict inside
         # the loop.
@@ -206,8 +206,9 @@ class LocalSourcesWatcher(object):
                     filepath, self._report.script_folder
                 )
 
+                local_filepaths.append(filepath)
+
                 if (file_is_local or file_is_in_pythonpath) and file_is_new:
-                    registered_filepaths.append(filepath)
                     self._register_watcher(filepath, name)
 
             except Exception:
@@ -225,5 +226,5 @@ class LocalSourcesWatcher(object):
         # Remove no-longer-depended-on files from self._watched_modules
         # Will this ever happen?
         for filepath in watched_modules:
-            if filepath not in registered_filepaths:
+            if filepath not in local_filepaths:
                 self._deregister_watcher(filepath)
