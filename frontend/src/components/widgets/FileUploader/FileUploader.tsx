@@ -75,7 +75,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     const maxSizeMb = element.get("maxUploadSizeMb")
 
     if (rejectedFiles.length > 0) {
-      // TODO XXX Tell user which files *are* allowed.
+      // TODO: Tell user which files *are* allowed.
       this.setState({
         status: "ERROR",
         errorMessage: `${rejectedFiles[0].type} files are not allowed`,
