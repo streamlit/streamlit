@@ -57,6 +57,7 @@ for test_type in ["coalesce in Py", "coalesce in JS", "clear after addrows"]:
                 "y": {"field": "b", "type": "quantitative"},
             },
         },
+        use_default_container=True
     )
     vega_el2 = st.vega_lite_chart(
         {
@@ -68,6 +69,7 @@ for test_type in ["coalesce in Py", "coalesce in JS", "clear after addrows"]:
                 "y": {"field": "b", "type": "quantitative"},
             },
         }
+        use_default_container=True
     )
     vega_el3 = st.vega_lite_chart(
         {
@@ -79,9 +81,10 @@ for test_type in ["coalesce in Py", "coalesce in JS", "clear after addrows"]:
                 "y": {"field": "b", "type": "quantitative"},
             },
         }
+        use_default_container=True
     )
     altair_el = st.altair_chart(
-        alt.Chart(df).mark_line(point=True).encode(x="a", y="b").interactive()
+        alt.Chart(df).mark_line(point=True).encode(x="a", y="b").interactive(), use_default_container=True
     )
 
     for i in range(1, num_rows):

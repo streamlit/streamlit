@@ -30,10 +30,22 @@ spec = {
         "color": {"field": "c", "type": "quantitative"},
     },
 }
-st.vega_lite_chart(df, spec)
-st.vega_lite_chart(df, spec, width=0)
-st.vega_lite_chart(df, spec, width=-1)
-st.vega_lite_chart(df, spec, width=500)
+
+spec_with_width = {
+    "mark": "circle",
+    "encoding": {
+        "x": {"field": "a", "type": "quantitative"},
+        "y": {"field": "b", "type": "quantitative"},
+        "size": {"field": "c", "type": "quantitative"},
+        "color": {"field": "c", "type": "quantitative"},
+    },
+    "width": "500",
+}
+
+st.vega_lite_chart(df, spec, use_default_container=True)
+st.vega_lite_chart(df, spec, use_default_container=True)
+st.vega_lite_chart(df, spec, use_default_container=True)
+st.vega_lite_chart(df, spec_with_width)
 
 # Screenshot comparison
 
