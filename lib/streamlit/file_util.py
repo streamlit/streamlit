@@ -162,9 +162,8 @@ def file_in_pythonpath(filepath):
     pythonpath = os.environ["PYTHONPATH"]
 
     relative_and_absolute_paths = [
-        (
-            path if os.path.isabs(path) else os.path.abspath(path)
-        ) for path in pythonpath.split(os.pathsep)
+        (path if os.path.isabs(path) else os.path.abspath(path))
+        for path in pythonpath.split(os.pathsep)
     ]
     return any(
         file_is_in_folder_glob(os.path.normpath(filepath), path)
