@@ -176,14 +176,18 @@ export const fileUploaderOverrides: FileUploaderOverrides<StyleProps> = {
           style: {
             fontSize: fontSizeSm,
             lineHeight: lineHeightTight,
-            paddingTop: 0,
             paddingBottom: 0,
             paddingLeft: "0.25em",
             paddingRight: "0.25em",
+            paddingTop: 0,
             textTransform: "lowercase",
             ":hover": {
               backgroundColor: "transparent",
               textDecoration: "underline",
+            },
+            ":disabled": {
+              backgroundColor: "transparent",
+              color: grayDark,
             },
           },
         },
