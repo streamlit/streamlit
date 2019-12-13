@@ -76,8 +76,8 @@ class CachedObjectWasMutatedError(ValueError):
     pass
 
 
-CacheEntry = namedtuple("CacheEntry", ["value", "hash", "args_mutated"])
-DiskCacheEntry = namedtuple("DiskCacheEntry", ["value", "args_mutated"])
+CacheEntry = namedtuple("CacheEntry", ["value", "hash"])
+DiskCacheEntry = namedtuple("DiskCacheEntry", ["value"])
 
 
 # The in memory cache.
@@ -302,24 +302,6 @@ def _build_caching_block_error_message(persisted, code, line_number_range):
     )
 
 
-def _build_args_mutated_message(func):
-    message = textwrap.dedent(
-        """
-        **Cached function mutated its input arguments**
-
-        When decorating a function with `@st.cache`, the arguments should not
-        be mutated inside the function body, as that breaks the caching
-        mechanism. Please update the code of `{name}` to bypass the mutation.
-
-        See the [Streamlit
-        docs](https://streamlit.io/docs/tutorial/create_a_data_explorer_app.html) for more
-        info.
-    """
-    ).strip("\n")
-
-    return message.format(name=func.__name__)
-
-
 def _read_from_mem_cache(key, allow_output_mutation, hash_funcs):
     if key in _mem_cache:
         entry = _mem_cache[key]
@@ -329,7 +311,7 @@ def _read_from_mem_cache(key, allow_output_mutation, hash_funcs):
             or get_hash(entry.value, hash_funcs=hash_funcs) == entry.hash
         ):
             LOGGER.debug("Memory cache HIT: %s", type(entry.value))
-            return entry.value, entry.args_mutated
+            return entry.value
         else:
             LOGGER.debug("Cache object was mutated: %s", key)
             raise CachedObjectWasMutatedError()
@@ -338,20 +320,20 @@ def _read_from_mem_cache(key, allow_output_mutation, hash_funcs):
         raise CacheKeyNotFoundError("Key not found in mem cache")
 
 
-def _write_to_mem_cache(key, value, allow_output_mutation, args_mutated, hash_funcs):
+def _write_to_mem_cache(key, value, allow_output_mutation, hash_funcs):
     if allow_output_mutation:
         hash = None
     else:
         hash = get_hash(value, hash_funcs=hash_funcs)
 
-    _mem_cache[key] = CacheEntry(value=value, hash=hash, args_mutated=args_mutated)
+    _mem_cache[key] = CacheEntry(value=value, hash=hash)
 
 
 def _read_from_disk_cache(key):
     path = file_util.get_streamlit_file_path("cache", "%s.pickle" % key)
     try:
         with file_util.streamlit_read(path, binary=True) as input:
-            value, args_mutated = pickle.load(input)
+            value = pickle.load(input)
             LOGGER.debug("Disk cache HIT: %s", type(value))
     except util.Error as e:
         LOGGER.error(e)
@@ -359,15 +341,15 @@ def _read_from_disk_cache(key):
 
     except (OSError, FileNotFoundError):  # Python 2  # Python 3
         raise CacheKeyNotFoundError("Key not found in disk cache")
-    return value, args_mutated
+    return value
 
 
-def _write_to_disk_cache(key, value, args_mutated):
+def _write_to_disk_cache(key, value):
     path = file_util.get_streamlit_file_path("cache", "%s.pickle" % key)
 
     try:
         with file_util.streamlit_write(path, binary=True) as output:
-            entry = DiskCacheEntry(value=value, args_mutated=args_mutated)
+            entry = DiskCacheEntry(value=value)
             pickle.dump(entry, output, pickle.HIGHEST_PROTOCOL)
     # In python 2, it's pickle struct error.
     # In python 3, it's an open error in util.
@@ -405,20 +387,16 @@ def _read_from_cache(
             st.warning(message)
 
         if persisted:
-            value, args_mutated = _read_from_disk_cache(key)
-            _write_to_mem_cache(
-                key, value, allow_output_mutation, args_mutated, hash_funcs
-            )
-            return value, args_mutated
+            value = _read_from_disk_cache(key)
+            _write_to_mem_cache(key, value, allow_output_mutation, hash_funcs)
+            return value
         raise e
 
 
-def _write_to_cache(
-    key, value, persist, allow_output_mutation, args_mutated, hash_funcs
-):
-    _write_to_mem_cache(key, value, allow_output_mutation, args_mutated, hash_funcs)
+def _write_to_cache(key, value, persist, allow_output_mutation, hash_funcs):
+    _write_to_mem_cache(key, value, allow_output_mutation, hash_funcs)
     if persist:
-        _write_to_disk_cache(key, value, args_mutated)
+        _write_to_disk_cache(key, value)
 
 
 def cache(
@@ -553,16 +531,16 @@ def cache(
             args_hasher.update([args, kwargs])
             LOGGER.debug("Hashing arguments to %s of %i bytes.", name, args_hasher.size)
 
-            args_digest_before = args_hasher.digest()
-
-            hasher.update(code_hash)
+            code_hasher = CodeHasher("md5", hasher, hash_funcs)
+            code_hasher.update(func)
+            LOGGER.debug("Hashing function %s in %i bytes.", name, code_hasher.size)
 
             key = hasher.hexdigest()
             LOGGER.debug("Cache key: %s", key)
 
             caller_frame = inspect.currentframe().f_back
             try:
-                return_value, args_mutated = _read_from_cache(
+                return_value = _read_from_cache(
                     key, persist, allow_output_mutation, func, caller_frame, hash_funcs
                 )
             except (CacheKeyNotFoundError, CachedObjectWasMutatedError):
@@ -573,25 +551,14 @@ def cache(
                     else:
                         return_value = func(*args, **kwargs)
 
-                args_hasher_after = CodeHasher("md5", hash_funcs=hash_funcs)
-                args_hasher_after.update([args, kwargs])
-                args_mutated = args_digest_before != args_hasher_after.digest()
-
                 _write_to_cache(
                     key=key,
                     value=return_value,
                     persist=persist,
                     allow_output_mutation=allow_output_mutation,
-                    args_mutated=args_mutated,
                     hash_funcs=hash_funcs,
                 )
 
-            if args_mutated:
-                # If we're inside a _nested_ cached function, our
-                # _within_cached_function_counter will be non-zero.
-                # Suppress the warning about this.
-                with suppress_cached_st_function_warning():
-                    st.warning(_build_args_mutated_message(func))
             return return_value
 
         if show_spinner:
@@ -708,11 +675,7 @@ class Cache(dict):
                 # If we don't hash the results, we don't need to use exec and just return True.
                 # This way line numbers will be correct.
                 _write_to_cache(
-                    key=key,
-                    value=self,
-                    persist=False,
-                    allow_output_mutation=True,
-                    args_mutated=None,
+                    key=key, value=self, persist=False, allow_output_mutation=True
                 )
                 return True
 
@@ -722,7 +685,6 @@ class Cache(dict):
                 value=self,
                 persist=self._persist,
                 allow_output_mutation=self._allow_output_mutation,
-                args_mutated=None,
             )
 
         # Return False so that we have control over the execution.

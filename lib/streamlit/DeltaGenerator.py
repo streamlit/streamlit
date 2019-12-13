@@ -21,6 +21,7 @@ from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
 
+import io
 import functools
 import json
 import random
@@ -31,17 +32,17 @@ from datetime import date
 from datetime import time
 
 from streamlit import caching
-from streamlit import metrics
 from streamlit import config
+from streamlit import metrics
 from streamlit.ReportThread import get_report_ctx
+from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto import Alert_pb2
 from streamlit.proto import Balloons_pb2
 from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto import Text_pb2
-from streamlit.fileManager import FileManager
-from streamlit.proto import Alert_pb2
 
 # setup logging
 from streamlit.logger import get_logger
@@ -1921,7 +1922,7 @@ class DeltaGenerator(object):
         return current_value if single_value else tuple(current_value)
 
     @_with_element
-    def file_uploader(self, element, label, type=None, key=None):
+    def file_uploader(self, element, label, type=None, encoding="auto", key=None):
 
         """Display a file uploader widget.
 
@@ -1934,34 +1935,63 @@ class DeltaGenerator(object):
         type : str or list of str or None
             Array of allowed extensions. ['png', 'jpg']
             By default, all extensions are allowed.
+        encoding : str or None
+            The encoding to use when opening textual files (i.e. non-binary).
+            For example: 'utf-8'. If set to 'auto', will try to guess the
+            encoding. If None, will assume the file is binary.
 
         Returns
         -------
-        byte[] or None
-            The byte array of uploaded file or None if no one file is loaded.
+        BytesIO or StringIO or None
+            The data for the uploaded file. If the file is in a well-known
+            textual format (or if the encoding parameter is set), returns a
+            StringIO. Otherwise BytesIO. If no file is loaded, returns None.
+
+            Note that BytesIO/StringIO are "file-like", which means you can
+            pass them anywhere where a file is expected!
 
         Examples
         --------
-        >>> file = st.file_uploader("Upload a image", type="png")
-        >>> if file is not None:
-        >>>     st.image(file)
-        """
+        >>> uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+        >>> if uploaded_file is not None:
+        ...     data = pd.read_csv(uploaded_file)
+        ...     st.write(data)
 
-        if isinstance(type, string_types): # noqa: F821
+        """
+        from streamlit.string_util import is_binary_string
+
+        if isinstance(type, string_types):  # noqa: F821
             type = [type]
 
         element.file_uploader.label = label
         element.file_uploader.type[:] = type if type is not None else []
-        element.file_uploader.max_upload_size_mb = config.get_option("server.maxUploadSize")
+        element.file_uploader.max_upload_size_mb = config.get_option(
+            "server.maxUploadSize"
+        )
         _set_widget_id("file_uploader", element, user_key=key)
 
         data = None
         ctx = get_report_ctx()
         if ctx is not None:
-            progress, data = ctx.file_manager.get_data(element.file_uploader.id)
+            progress, data = ctx.uploaded_file_mgr.get_data(element.file_uploader.id)
             element.file_uploader.progress = progress
 
-        return NoValue if data is None else data
+        if data is None:
+            return NoValue
+
+        if encoding == "auto":
+            if is_binary_string(data):
+                encoding = None
+            else:
+                # If the file does not look like a pure binary file, assume
+                # it's utf-8. It would be great if we could guess it a little
+                # more smartly here, but it is what it is!
+                encoding = "utf-8"
+
+        if encoding:
+            return io.StringIO(data.decode(encoding))
+
+        return io.BytesIO(data)
 
     @_with_element
     def text_input(self, element, label, value="", key=None):
