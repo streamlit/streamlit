@@ -17,47 +17,59 @@
 @import "src/assets/css/variables";
 
 .stFileUploader {
-  button:focus {
-    outline: 0;
+  // Important: these must match the ones in widgetTheme.ts!
+
+  .uploadStatus {
+    align-items: center;
+    background-color: $gray-lightest;
+    border-color: transparent;
+    border-radius: $border-radius;
+    border-width: 1px;
+    display: flex;
+    flex-direction: column;
+    font-size: $font-size-sm;
+    height: 4.25rem;
+    justify-content: center;
+    line-height: 1.25rem;
+    width: 100%;
+
+    .btn {
+      color: $primary;
+      font-size: $font-size-sm;
+      margin: 0.25em 0;
+      padding: 0.125em 0.5em;
+    }
+
+    .btn:hover {
+      color: $primary;
+    }
   }
 
-  .uploadError {
-    outline: 0;
-    line-height: 1.6;
-    font-weight: normal;
-    font-size: 1rem;
-    font-family: "IBM Plex Sans", sans-serif;
-    height: 10rem;
-    justify-content: center;
-    width: 100%;
-    padding-left: 1rem;
-    padding-bottom: 32px;
-    padding-right: 1rem;
-    padding-top: 1rem;
-    outline: 0px;
-    flex-direction: column;
-    display: flex;
-    box-sizing: border-box;
-    border-width: 2px;
-    border-color: rgb(128, 132, 149);
-    background-color: rgb(240, 242, 246);
+  .uploadOverlay {
     align-items: center;
+    display: flex;
+    flex-direction: column;
+    left: 0;
+    line-height: 1.25rem;
+    padding-top: 0.75rem;
+    pointer-events: none;
+    position: absolute;
+    right: 0;
+  }
 
-    .text {
-      line-height: 1.6;
-      font-weight: normal;
-      font-size: 1rem;
-      font-family: "IBM Plex Sans", sans-serif;
-      box-sizing: border-box;
-      box-sizing: border-box;
-      display: block;
-      flex-direction: column;
-      color: $red;
-    }
-
-    .button {
-      margin-top: 2rem;
-      color: $red;
-    }
+  .uploadStatus .body,
+  .uploadOverlay .body {
+    box-sizing: border-box;
+    color: $gray-dark;
+    display: block;
+    flex-direction: column;
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: $font-size-sm;
+    margin-bottom: -0.25rem;
+    max-width: 100%;
+    overflow: hidden;
+    padding: 0.25rem 0.5rem 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
