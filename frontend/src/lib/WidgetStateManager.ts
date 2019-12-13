@@ -204,28 +204,31 @@ export class WidgetStateManager {
   ): void {
     // We send the file in severals chunks to avoid server webservices freezing.
 
-    // The default file size allowed by server config is 50MB.
-    // The best message size to don't freeze the server is 10MB
-    const chunkByteLimit = 10 * 1e6 //10MB
     const sendBackMsg = this.sendBackMsg
     const uploadFileMessage = new UploadFile()
+
     uploadFileMessage.widgetId = widgetId
     uploadFileMessage.name = name
     uploadFileMessage.size = data.length
     uploadFileMessage.lastModified = lastModified
     // The number of chunks the server should be wait
-    uploadFileMessage.chunks = Math.ceil(data.length / chunkByteLimit)
+    uploadFileMessage.chunks = Math.ceil(
+      data.length / FILE_UPLOAD_MAX_CHUNK_SIZE_BYTES
+    )
     sendBackMsg({ uploadFile: uploadFileMessage })
 
     for (let i = 0; i < uploadFileMessage.chunks; i++) {
       const message = new UploadFileChunk()
       message.widgetId = widgetId
       message.index = i
-      const dataIndex = i * chunkByteLimit
-      message.data = data.slice(dataIndex, dataIndex + chunkByteLimit)
+      const dataIndex = i * FILE_UPLOAD_MAX_CHUNK_SIZE_BYTES
+      message.data = data.slice(
+        dataIndex,
+        dataIndex + FILE_UPLOAD_MAX_CHUNK_SIZE_BYTES
+      )
       setTimeout(function() {
         sendBackMsg({ uploadFileChunk: message })
-      }, 1000)
+      }, 0)
     }
   }
 
@@ -265,3 +268,10 @@ export class WidgetStateManager {
     return this.widgetStates.get(id)
   }
 }
+
+/**
+ * The maximum size of each file upload chunk, measured in bytes. The default
+ * file size allowed by server config is 50MB, but we achieved best results
+ * with 10MB.
+ */
+const FILE_UPLOAD_MAX_CHUNK_SIZE_BYTES = 10e6 // ~10MB
