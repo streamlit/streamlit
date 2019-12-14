@@ -39,7 +39,7 @@ function elementClassIsCorrect(
   return element.props.className.includes(getAlertCSSClass(format))
 }
 
-describe("Alert Element Test", () => {
+describe("Alert element", () => {
   it("renders an ERROR box as expected", () => {
     const format = AlertProto.Format.ERROR
     const props = getProps({
@@ -54,6 +54,7 @@ describe("Alert Element Test", () => {
       "#what in the world?"
     )
   })
+
   it("renders a WARNING box as expected", () => {
     const format = AlertProto.Format.WARNING
     const props = getProps({
@@ -66,6 +67,7 @@ describe("Alert Element Test", () => {
     expect(elementClassIsCorrect(elem, format)).toBeTruthy()
     expect(wrap.find(StreamlitMarkdown).props().source).toBe("Are you *sure*?")
   })
+
   it("renders a SUCCESS box as expected", () => {
     const format = AlertProto.Format.SUCCESS
     const props = getProps({
@@ -80,6 +82,7 @@ describe("Alert Element Test", () => {
       "But our princess was in another castle!"
     )
   })
+
   it("renders an INFO box as expected", () => {
     const format = AlertProto.Format.INFO
     const props = getProps({

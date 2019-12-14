@@ -22,6 +22,29 @@ See highlights, bug fixes, and known issues for Streamlit releases:
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.51.0
+
+_Release date: November 30, 2019_
+
+**Highlights:**
+
+- 🐕 You can now tweak the behavior of the file watcher with the config option `server.fileWatcherType`. Use it to switch between:
+  - `auto` (default) : Streamlit will attempt to use the watchdog module, and
+    falls back to polling if watchdog is not available.
+  - `watchdog` : Force Streamlit to use the watchdog module.
+  - `poll` : Force Streamlit to always use polling.
+  - `none` : Streamlit will not watch files.
+
+**Notable bug fixes:**
+
+- Fix the "keyPrefix" option in static report sharing [#724](https://github.com/streamlit/streamlit/pull/724)
+- Add support for getColorX and getTargetColorX to DeckGL Chart [#718](https://github.com/streamlit/streamlit/pull/718)
+- Fixing Tornado on Windows + Python 3.8 [#682](https://github.com/streamlit/streamlit/pull/682)
+- Fall back on webbrowser if xdg-open is not installed on Linux [#701](https://github.com/streamlit/streamlit/pull/701)
+- Fixing number input spin buttons for Firefox [#683](https://github.com/streamlit/streamlit/pull/683)
+- Fixing CTRL+ENTER on Windows [#699](https://github.com/streamlit/streamlit/pull/699)
+- Do not automatically create credential file when in headless mode [#467](https://github.com/streamlit/streamlit/pull/467)
+
 ## Version 0.50.1
 
 _Release date: November 10, 2019_

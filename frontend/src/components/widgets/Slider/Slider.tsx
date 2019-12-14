@@ -115,9 +115,9 @@ class Slider extends React.PureComponent<Props, State> {
     $value: any
   }): JSX.Element => {
     const format = this.props.element.get("format")
-    const thumbValueStyle = sliderOverrides.ThumbValue.style(
-      this.props.disabled
-    ) as React.CSSProperties
+    const thumbValueStyle = sliderOverrides.ThumbValue.style({
+      $disabled: this.props.disabled,
+    }) as React.CSSProperties
 
     return (
       <div style={thumbValueStyle}>

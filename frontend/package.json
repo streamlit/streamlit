@@ -1,6 +1,6 @@
 {
   "name": "streamlit-browser",
-  "version": "0.50.2",
+  "version": "0.51.0",
   "private": true,
   "homepage": ".",
   "scripts": {
@@ -42,7 +42,7 @@
     "moment-duration-format": "^2.3.2",
     "node-sass": "^4.12.0",
     "numbro": "^2.1.2",
-    "plotly.js": "^1.49.4",
+    "plotly.js": "^1.51.2",
     "prismjs": "^1.15.0",
     "prop-types": "^15.7.2",
     "protobufjs": "^6.8.8",
@@ -57,13 +57,14 @@
     "react-leaflet": "^2.4.0",
     "react-map-gl": "^5.0.7",
     "react-markdown": "^4.2.2",
-    "react-plotly.js": "^2.3.0",
+    "react-plotly.js": "^2.4.0",
     "react-scripts": "^3.0.1",
     "react-test-renderer": "^16.10.2",
     "react-transition-group": "^4.3.0",
     "react-virtualized": "^9.21.0",
     "reactstrap": "^8.0.1",
     "recharts": "^1.6.2",
+    "remark-emoji": "^2.0.2",
     "remark-math": "^2.0.0",
     "sprintf-js": "^1.1.2",
     "styletron-engine-atomic": "^1.4.1",
@@ -133,6 +134,7 @@
   },
   "resolutions": {
     "esm": "^3.1.0",
+    "serialize-javascript": "^2.1.1",
     "static-eval": "^2.0.2"
   },
   "browserslist": [

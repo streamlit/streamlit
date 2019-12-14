@@ -14,7 +14,6 @@
 # limitations under the License.
 
 """Streamlit Unit test."""
-
 from mock import patch
 import json
 import os
@@ -425,23 +424,20 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         * Failed import of matplotlib.
         * Passing in a figure.
         """
-        # Matplotlib backend AGG only seems to work with python3
-        # TODO(armando): Make this test work with python2.7
-        if sys.version_info <= (3, 0):
+        # We don't test matplotlib under Python 2, because we're not
+        # able to reliably force the backend to "agg".
+        if sys.version_info < (3, 0):
             return
 
         import matplotlib
-
-        matplotlib.use("AGG")
         import matplotlib.pyplot as plt
+
+        if matplotlib.get_backend().lower() != "agg":
+            plt.switch_backend("agg")
 
         # Make this deterministic
         np.random.seed(19680801)
         data = np.random.randn(2, 20)
-
-        # Manually calculated by letting the test fail and copying and
-        # pasting the result.
-        checksum = "DTuIkOADCFAAEAmPL/AFE92BIZHj8WAAAAAElFTkSuQmCC"
 
         # Generate a 2 inch x 2 inch figure
         plt.figure(figsize=(2, 2))
@@ -453,7 +449,51 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.imgs.width, -2)
         self.assertEqual(el.imgs.imgs[0].caption, "")
-        self.assertTrue(el.imgs.imgs[0].data.base64.endswith(checksum))
+
+        checksum = "iVBORw0KGgoAAAANSUhEUgAAAZAAAAGQCAYAAACAvzb"
+        self.assertTrue(el.imgs.imgs[0].data.base64.startswith(checksum))
+
+    def test_st_pyplot_clear_figure(self):
+        """st.pyplot should clear the passed-in figure."""
+        if sys.version_info < (3, 0):
+            # We don't test matplotlib under Python 2, because we're not
+            # able to reliably force the backend to "agg".
+            return
+
+        import matplotlib
+        import matplotlib.pyplot as plt
+
+        if matplotlib.get_backend().lower() != "agg":
+            plt.switch_backend("agg")
+
+        # Assert that plt.clf() is called by st.pyplot() only if
+        # clear_fig is True
+        for clear_figure in [True, False]:
+            plt.hist(np.random.normal(1, 1, size=100), bins=20)
+            with patch.object(plt, "clf", wraps=plt.clf, autospec=True) as plt_clf:
+                st.pyplot(clear_figure=clear_figure)
+
+                if clear_figure:
+                    plt_clf.assert_called_once()
+                else:
+                    plt_clf.assert_not_called()
+
+            # Manually clear for the next loop iteration
+            plt.clf()
+
+        # Assert that fig.clf() is called by st.pyplot(fig) only if
+        # clear_figure is True
+        for clear_figure in [True, False]:
+            fig = plt.figure()
+            ax1 = fig.add_subplot(111)
+            ax1.hist(np.random.normal(1, 1, size=100), bins=20)
+            with patch.object(fig, "clf", wraps=fig.clf, autospec=True) as fig_clf:
+                st.pyplot(fig, clear_figure=clear_figure)
+
+                if clear_figure:
+                    fig_clf.assert_called_once()
+                else:
+                    fig_clf.assert_not_called()
 
     def test_st_plotly_chart_simple(self):
         """Test st.plotly_chart."""
@@ -491,15 +531,16 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_plotly_chart_mpl(self):
         """Test st.plotly_chart can handle Matplotlib figures."""
-        # Matplotlib backend AGG only seems to work with python3
-        # TODO(armando): Make this test work with python2.7
-        if sys.version_info <= (3, 0):
+        # We don't test matplotlib under Python 2, because we're not
+        # able to reliably force the backend to "agg".
+        if sys.version_info < (3, 0):
             return
 
         import matplotlib
-
-        matplotlib.use("AGG")
         import matplotlib.pyplot as plt
+
+        if matplotlib.get_backend().lower() != "agg":
+            plt.switch_backend("agg")
 
         fig = plt.figure()
         plt.plot([10, 20, 30])

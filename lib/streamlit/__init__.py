@@ -65,6 +65,9 @@ _LOGGER = _logger.get_logger("root")
 # Give the package a version.
 import pkg_resources as _pkg_resources
 import uuid as _uuid
+import subprocess
+import platform
+import os
 
 # This used to be pkg_resources.require('streamlit') but it would cause
 # pex files to fail. See #394 for more details.
@@ -73,14 +76,31 @@ __version__ = _pkg_resources.get_distribution("streamlit").version
 # Deterministic Unique Streamlit User ID
 # The try/except is needed for python 2/3 compatibility
 try:
-    __installation_id__ = str(_uuid.uuid5(_uuid.NAMESPACE_DNS, str(_uuid.getnode())))
+
+    if (
+        platform.system() == "Linux"
+        and os.path.isfile("/etc/machine-id") == False
+        and os.path.isfile("/var/lib/dbus/machine-id") == False
+    ):
+        print("Generate machine-id")
+        subprocess.run(["sudo", "dbus-uuidgen", "--ensure"])
+
+    machine_id = _uuid.getnode()
+    if os.path.isfile("/etc/machine-id"):
+        with open("/etc/machine-id", "r") as f:
+            machine_id = f.read()
+    elif os.path.isfile("/var/lib/dbus/machine-id"):
+        with open("/var/lib/dbus/machine-id", "r") as f:
+            machine_id = f.read()
+
+    __installation_id__ = str(_uuid.uuid5(_uuid.NAMESPACE_DNS, str(machine_id)))
+
 except UnicodeDecodeError:
     __installation_id__ = str(
         _uuid.uuid5(_uuid.NAMESPACE_DNS, str(_uuid.getnode()).encode("utf-8"))
     )
 
 import contextlib as _contextlib
-import functools as _functools
 import re as _re
 import sys as _sys
 import textwrap as _textwrap
@@ -90,6 +110,7 @@ import types as _types
 import json as _json
 import numpy as _np
 
+from streamlit.util import functools_wraps as _functools_wraps
 from streamlit import code_util as _code_util
 from streamlit import env_util as _env_util
 from streamlit import string_util as _string_util
@@ -124,11 +145,11 @@ _config.on_config_parsed(_set_log_level)
 
 
 def _with_dg(method):
-    @_functools.wraps(method)
+    @_functools_wraps(method)
     def wrapped_method(*args, **kwargs):
         ctx = _get_report_ctx()
         dg = ctx.main_dg if ctx is not None else _NULL_DELTA_GENERATOR
-        return method(dg, *args, **kwargs)
+        return method.__get__(dg)(*args, **kwargs)
 
     return wrapped_method
 
@@ -161,6 +182,7 @@ deck_gl_chart = _with_dg(_DeltaGenerator.deck_gl_chart)  # noqa: E221
 empty = _with_dg(_DeltaGenerator.empty)  # noqa: E221
 error = _with_dg(_DeltaGenerator.error)  # noqa: E221
 exception = _with_dg(_DeltaGenerator.exception)  # noqa: E221
+file_uploader = _with_dg(_DeltaGenerator.file_uploader)  # noqa: E221
 graphviz_chart = _with_dg(_DeltaGenerator.graphviz_chart)  # noqa: E221
 header = _with_dg(_DeltaGenerator.header)  # noqa: E221
 help = _with_dg(_DeltaGenerator.help)  # noqa: E221
@@ -200,8 +222,8 @@ def set_option(key, value):
     """Set config option.
 
     Currently, only two config options can be set within the script itself:
-        * client.caching 
-        * client.displayEnabled 
+        * client.caching
+        * client.displayEnabled
 
     Calling with any other options will raise StreamlitAPIException.
 
@@ -223,7 +245,9 @@ def set_option(key, value):
         return
 
     raise StreamlitAPIException(
-        "{key} cannot be set on the fly. Set as command line option, e.g. streamlit run script.py --{key}, or in config.toml instead.".format(key=key)
+        "{key} cannot be set on the fly. Set as command line option, e.g. streamlit run script.py --{key}, or in config.toml instead.".format(
+            key=key
+        )
     )
 
 
@@ -271,7 +295,9 @@ def write(*args, **kwargs):
 
         Arguments are handled as follows:
 
-            - write(string)     : Prints the formatted Markdown string.
+            - write(string)     : Prints the formatted Markdown string, with
+            support for LaTeX expression and emoji shortcodes.
+            See docs for st.markdown for more.
             - write(data_frame) : Displays the DataFrame as a table.
             - write(error)      : Prints an exception specially.
             - write(func)       : Displays information about a function.
@@ -316,10 +342,10 @@ def write(*args, **kwargs):
     Its simplest use case is to draw Markdown-formatted text, whenever the
     input is a string:
 
-    >>> write('Hello, *World!*')
+    >>> write('Hello, *World!* :sunglasses:')
 
     .. output::
-       https://share.streamlit.io/0.25.0-2JkNY/index.html?id=DUJaq97ZQGiVAFi6YvnihF
+       https://share.streamlit.io/0.50.2-ZWk9/index.html?id=Pn5sjhgNs4a8ZbiUoSTRxE
        height: 50px
 
     As mentioned earlier, `st.write()` also accepts other data formats, such as
@@ -585,7 +611,9 @@ def echo():
             lines_to_display.extend(source_lines[start_line:end_line])
             initial_spaces = _SPACES_RE.match(lines_to_display[0]).end()
             for line in source_lines[end_line:]:
-                if _SPACES_RE.match(line).end() < initial_spaces:
+                indentation = _SPACES_RE.match(line).end()
+                # The > 1 is because we want to allow '\n' between sections.
+                if indentation > 1 and indentation < initial_spaces:
                     break
                 lines_to_display.append(line)
         lines_to_display = _textwrap.dedent("".join(lines_to_display))

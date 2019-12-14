@@ -43,33 +43,44 @@ class CliTest(unittest.TestCase):
         streamlit._is_running_with_streamlit = False
 
     def test_run_no_arguments(self):
-        """streamlit run should fail if run with no arguments"""
+        """streamlit run should fail if run with no arguments."""
         result = self.runner.invoke(cli, ["run"])
         self.assertNotEqual(0, result.exit_code)
 
     def test_run_existing_file_argument(self):
-        """streamlit run succeeds if an existing file is passed"""
+        """streamlit run succeeds if an existing file is passed."""
         with patch("validators.url", return_value=False), patch(
             "streamlit.cli._main_run"
         ), patch("os.path.exists", return_value=True):
 
-            result = self.runner.invoke(cli, ["run", "file_name"])
+            result = self.runner.invoke(cli, ["run", "file_name.py"])
         self.assertEqual(0, result.exit_code)
 
     def test_run_non_existing_file_argument(self):
-        """streamlit run should fail if a non existing file is passed"""
+        """streamlit run should fail if a non existing file is passed."""
 
         with patch("validators.url", return_value=False), patch(
             "streamlit.cli._main_run"
         ), patch("os.path.exists", return_value=False):
 
-            result = self.runner.invoke(cli, ["run", "file_name"])
+            result = self.runner.invoke(cli, ["run", "file_name.py"])
         self.assertNotEqual(0, result.exit_code)
         self.assertTrue("File does not exist" in result.output)
 
+    def test_run_not_allowed_file_extension(self):
+        """streamlit run should fail if a not allowed file extension is passed.
+        """
+
+        result = self.runner.invoke(cli, ["run", "file_name.doc"])
+
+        self.assertNotEqual(0, result.exit_code)
+        self.assertTrue(
+            "Streamlit requires raw Python (.py) files, not .doc." in result.output
+        )
+
     @tempdir()
     def test_run_valid_url(self, temp_dir):
-        """streamlit run succeeds if an existing url is passed"""
+        """streamlit run succeeds if an existing url is passed."""
 
         with patch("validators.url", return_value=True), patch(
             "streamlit.cli._main_run"
@@ -88,7 +99,7 @@ class CliTest(unittest.TestCase):
     @tempdir()
     def test_run_non_existing_url(self, temp_dir):
         """streamlit run should fail if a non existing but valid
-         url is passed
+         url is passed.
          """
 
         with patch("validators.url", return_value=True), patch(
@@ -104,7 +115,7 @@ class CliTest(unittest.TestCase):
         self.assertTrue("Unable to fetch" in result.output)
 
     def test_run_arguments(self):
-        """The correct command line should be passed downstream"""
+        """The correct command line should be passed downstream."""
         with patch("validators.url", return_value=False), patch(
             "os.path.exists", return_value=True
         ):
@@ -168,7 +179,7 @@ class CliTest(unittest.TestCase):
     @patch("streamlit.cli._config._set_option")
     def test_apply_config_options_from_cli(self, patched__set_option):
         """Test that _apply_config_options_from_cli parses the key properly and
-        passes down the parameters
+        passes down the parameters.
         """
 
         kwargs = {
@@ -200,7 +211,8 @@ class CliTest(unittest.TestCase):
         )
 
     def test_credentials_headless_no_config(self):
-        """If headless mode and no config is present, activation should be None."""
+        """If headless mode and no config is present,
+        activation should be None."""
         from streamlit import config
 
         config.set_option("server.headless", True)
@@ -219,7 +231,8 @@ class CliTest(unittest.TestCase):
 
     @parameterized.expand([(True,), (False,)])
     def test_credentials_headless_with_config(self, headless_mode):
-        """If headless, but a cofig file is present, activation should be defined.
+        """If headless, but a config file is present, activation should be
+        defined.
         So we call `_check_activated`.
         """
         from streamlit import config

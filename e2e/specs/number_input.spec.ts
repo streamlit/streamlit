@@ -37,30 +37,32 @@ describe("st.number_input", () => {
   it("has correct default values", () => {
     cy.get(".stMarkdown").should(
       "have.text",
-      'value 1: " 0 "' + 'value 2: " 1 "' + 'value 3: " 1 "'
+      'value 1: " 0.0 "' + 'value 2: " 1 "' + 'value 3: " 1 "'
     );
   });
 
   it("sets value correctly on enter keypress", () => {
     cy.get(".stNumberInput input")
       .first()
+      .clear()
       .type("10{enter}");
 
     cy.get(".stMarkdown").should(
       "have.text",
-      'value 1: " 10 "' + 'value 2: " 1 "' + 'value 3: " 1 "'
+      'value 1: " 10.0 "' + 'value 2: " 1 "' + 'value 3: " 1 "'
     );
   });
 
   it("sets value correctly on blur", () => {
     cy.get(".stNumberInput input")
       .first()
+      .clear()
       .type("10")
       .blur();
 
     cy.get(".stMarkdown").should(
       "have.text",
-      'value 1: " 10 "' + 'value 2: " 1 "' + 'value 3: " 1 "'
+      'value 1: " 10.0 "' + 'value 2: " 1 "' + 'value 3: " 1 "'
     );
   });
 });

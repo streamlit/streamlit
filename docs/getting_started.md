@@ -248,7 +248,7 @@ assured, though, we're currently working on adding support for those too!
 ## Show progress
 
 When adding long running computations to an app, you can use
-[`st.progess()`](api.html#streamlit.progress) to display status in real time.
+[`st.progress()`](api.html#streamlit.progress) to display status in real time.
 
 First, let's import time. We're going to use the `time.sleep()` method to
 simulate a long running computation:
