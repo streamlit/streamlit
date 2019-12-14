@@ -535,7 +535,7 @@ def cache(
             code_hasher = CodeHasher("md5", hasher, hash_funcs)
             code_hasher.update(func)
             LOGGER.debug("Hashing function %s in %i bytes.", name, code_hasher.size)
-            # /HEAD 
+            # /HEAD
 
             # XXX
             # hash arguments and code first (ahead of executing function) so we only
@@ -612,11 +612,11 @@ class Cache(dict):
     ...     # Fetch data from URL here, and then clean it up. Finally assign to c.
     ...     c.data = ...
 
-
     """
+
     # Developer Note: We've changed the behavior of @st.cache to stop caching
-    # internal variables, but none of the changes in @st.cache were applied to
-    # to the Cache object herein.  --nm  12/3/2019
+    # values from implicit inputs, but none of the changes in @st.cache were 
+    # applied to the Cache object herein.  --@nthmost,  12/3/2019
 
     def __init__(self, persist=False, allow_output_mutation=False):
         self._persist = persist
