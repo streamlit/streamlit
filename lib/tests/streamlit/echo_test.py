@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
+
 from tests import testutil
 import streamlit as st
 
@@ -64,7 +66,10 @@ class MyClass(object):
         self.assertEqual("Hello", element.markdown.body)
 
     def test_root_level_echo(self):
-        import tests.streamlit.echo_test_root_level_echo
+        if sys.version_info[0] == 2:
+            import echo_test_data.root_level_echo
+        else:
+            import tests.streamlit.echo_test_data.root_level_echo
 
         expected = """```python
 a = 123
