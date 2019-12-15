@@ -26,7 +26,6 @@ import functools
 import json
 import random
 import textwrap
-import pandas as pd
 from datetime import datetime
 from datetime import date
 from datetime import time
@@ -34,6 +33,7 @@ from datetime import time
 from streamlit import caching
 from streamlit import config
 from streamlit import metrics
+from streamlit import type_util
 from streamlit.ReportThread import get_report_ctx
 from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.errors import DuplicateWidgetID
@@ -117,12 +117,17 @@ def _with_element(method):
         caching.maybe_show_cached_st_function_warning(dg)
 
         delta_type = method.__name__
-        last_index = -1
+        last_index = None
 
         if delta_type in DELTAS_TYPES_THAT_MELT_DATAFRAMES and len(args) > 0:
             data = args[0]
-            if isinstance(data, pd.DataFrame):
-                last_index = data.index[-1] if data.index.size > 0 else -1
+            if type_util.is_dataframe_compatible(data):
+                data = type_util.convert_anything_to_df(data)
+
+                if data.index.size > 0:
+                    last_index = data.index[-1]
+                else:
+                    last_index = None
 
         def marshall_element(element):
             return method(dg, element, *args, **kwargs)
@@ -566,9 +571,7 @@ class DeltaGenerator(object):
            height: 75px
 
         """
-        from streamlit.type_util import is_sympy_expession
-
-        if is_sympy_expession(body):
+        if type_util.is_sympy_expession(body):
             import sympy
 
             body = sympy.latex(body)
@@ -2657,17 +2660,19 @@ class DeltaGenerator(object):
                 "Method requires exactly one dataset"
             )
 
-        # Regenerate chart with data
-        if self._last_index == -1:
-            if self._delta_type == "line_chart":
-                self.line_chart(data)
-                return
-            elif self._delta_type == "bar_chart":
-                self.bar_chart(data)
-                return
-            elif self._delta_type == "area_chart":
-                self.area_chart(data)
-                return
+        # When doing add_rows on an element that does not already have data
+        # (for example, st.line_chart() without any args), call the original
+        # st.foo() element with new data instead of doing an add_rows().
+        if (
+            self._delta_type in DELTAS_TYPES_THAT_MELT_DATAFRAMES
+            and self._last_index is None
+        ):
+            # IMPORTANT: This assumes delta types and st method names always
+            # match!
+            st_method_name = self._delta_type
+            st_method = getattr(self, st_method_name)
+            st_method(data, **kwargs)
+            return
 
         data, self._last_index = _maybe_melt_data_for_add_rows(
             data, self._delta_type, self._last_index
@@ -2700,7 +2705,7 @@ def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
     # by vega_lite will be different and it will throw an error.
     if delta_type in DELTAS_TYPES_THAT_MELT_DATAFRAMES:
         if not isinstance(data, pd.DataFrame):
-            data = data_frame_proto.convert_anything_to_df(data)
+            data = type_util.convert_anything_to_df(data)
 
         if type(data.index) is pd.RangeIndex:
             old_step = _get_pandas_index_attr(data, "step")

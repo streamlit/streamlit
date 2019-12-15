@@ -253,14 +253,6 @@ def set_option(key, value):
 
 # Special methods:
 
-_DATAFRAME_LIKE_TYPES = (
-    "DataFrame",  # pandas.core.frame.DataFrame
-    "Index",  # pandas.core.indexes.base.Index
-    "Series",  # pandas.core.series.Series
-    "Styler",  # pandas.io.formats.style.Styler
-    "ndarray",  # numpy.ndarray
-)
-
 _HELP_TYPES = (
     _types.BuiltinFunctionType,
     _types.BuiltinMethodType,
@@ -409,7 +401,7 @@ def write(*args, **kwargs):
             # Order matters!
             if isinstance(arg, string_types):  # noqa: F821
                 string_buffer.append(arg)
-            elif type(arg).__name__ in _DATAFRAME_LIKE_TYPES:
+            elif _type_util.is_dataframe_like(arg):
                 flush_buffer()
                 if len(_np.shape(arg)) > 2:
                     text(arg)
