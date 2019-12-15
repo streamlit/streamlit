@@ -62,7 +62,7 @@ def main():
     st.write("This should show a plot with labels and images cut off")
     x = st.info("Loading...")
     with st.echo():
-        x.pyplot(fig)
+        x.pyplot(fig, clear_figure=False)
 
     # generate an image file via matplotlib with kwargs
     fakefile = io.BytesIO()
