@@ -333,7 +333,8 @@ def _read_from_disk_cache(key):
     path = file_util.get_streamlit_file_path("cache", "%s.pickle" % key)
     try:
         with file_util.streamlit_read(path, binary=True) as input:
-            value = pickle.load(input)
+            entry = pickle.load(input)
+            value = entry.value
             LOGGER.debug("Disk cache HIT: %s", type(value))
     except util.Error as e:
         LOGGER.error(e)
