@@ -62,3 +62,15 @@ class MyClass(object):
 
         element = self.get_delta_from_queue(1).new_element
         self.assertEqual("Hello", element.markdown.body)
+
+    def test_root_level_echo(self):
+        import tests.streamlit.echo_test_root_level_echo
+
+        expected = """```python
+a = 123
+
+
+```"""
+
+        element = self.get_delta_from_queue(0).new_element
+        self.assertEqual(expected, element.markdown.body)
