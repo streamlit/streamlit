@@ -52,8 +52,26 @@ export function getBucketAndResourceRoot(): {
 }
 
 /**
- * Get an Object from S3. This smartly chooses whether hit the HTTP server in
- * front of S3 or whether to hit the S3 API server based.
+ * Fetch a static report resource from S3.
+ * @param reportId the report ID of the resource to fetch
+ * @param resourceName the name of the resource to fetch
+ */
+export async function getReportObject(
+  reportId: string,
+  resourceName: string
+): Promise<Response> {
+  const { bucket, resourceRoot } = getBucketAndResourceRoot()
+  if (resourceRoot == null) {
+    throw new Error(`No resourceRoot in URL ${window.location.href}`)
+  }
+
+  const key = `${resourceRoot}/reports/${reportId}/${resourceName}`
+  return getObject({ Bucket: bucket, Key: key })
+}
+
+/**
+ * Get an Object from S3. This smartly chooses whether to hit the HTTP server
+ * in front of S3, or to hit the S3 API server instead.
  *
  * The reason why you'd want to do this is to make setup easier for clients who
  * have their own S3 setups but do not want to use auth (maybe because they're
