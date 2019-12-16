@@ -15,7 +15,6 @@
 
 import contextlib
 import errno
-import itertools
 import os
 
 import fnmatch

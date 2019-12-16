@@ -161,6 +161,14 @@ class LocalSourcesWatcher(object):
         wm.watcher.close()
         del self._watched_modules[filepath]
 
+    def _file_should_be_watched(self, filepath):
+        file_is_new = filepath not in self._watched_modules
+        file_is_in_pythonpath = file_util.file_in_pythonpath(filepath)
+        file_is_local = file_util.file_is_in_folder_glob(
+            filepath, self._report.script_folder
+        )
+        return (file_is_local or file_is_in_pythonpath) and file_is_new
+
     def update_watched_modules(self):
         if self._is_closed:
             return
@@ -200,15 +208,9 @@ class LocalSourcesWatcher(object):
                 if self._folder_black_list.is_blacklisted(filepath):
                     continue
 
-                file_is_new = filepath not in self._watched_modules
-                file_is_in_pythonpath = file_util.file_in_pythonpath(filepath)
-                file_is_local = file_util.file_is_in_folder_glob(
-                    filepath, self._report.script_folder
-                )
-
                 local_filepaths.append(filepath)
 
-                if (file_is_local or file_is_in_pythonpath) and file_is_new:
+                if self._file_should_be_watched(filepath):
                     self._register_watcher(filepath, name)
 
             except Exception:

@@ -242,6 +242,15 @@ class CodeHasher:
         b = self.to_bytes(obj, context)
         hasher.update(b)
 
+    def _file_should_be_hashed(self, filename):
+        filepath = os.path.abspath(filename)
+        file_is_local = file_util.file_is_in_folder_glob(
+            filepath, self._get_main_script_directory()
+        )
+        file_is_in_pythonpath = file_util.file_in_pythonpath(filepath)
+        file_is_blacklisted = self._folder_black_list.is_blacklisted(filepath)
+        return (file_is_local or file_is_in_pythonpath) and not file_is_blacklisted
+
     def _to_bytes(self, obj, context):
         """Hash objects to bytes, including code with dependencies.
         Python's built in `hash` does not produce consistent results across
@@ -332,14 +341,7 @@ class CodeHasher:
                     return self.to_bytes("%s.%s" % (obj.__module__, obj.__name__))
 
                 h = hashlib.new(self.name)
-                filepath = os.path.abspath(obj.__code__.co_filename)
-
-                file_is_local = file_util.file_is_in_folder_glob(
-                    filepath, self._get_main_script_directory()
-                )
-                file_is_in_pythonpath = file_util.file_in_pythonpath(filepath)
-                file_is_blacklisted = self._folder_black_list.is_blacklisted(filepath)
-                if (file_is_local or file_is_in_pythonpath) and not file_is_blacklisted:
+                if self._file_should_be_hashed(obj.__code__.co_filename):
                     context = _get_context(obj)
                     if obj.__defaults__:
                         self._update(h, obj.__defaults__, context)
