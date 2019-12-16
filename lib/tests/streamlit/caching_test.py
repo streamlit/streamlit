@@ -72,7 +72,6 @@ class CacheTest(unittest.TestCase):
         import random
 
         possible_genes = ["ACVRL1", "BRCA1", "BRCA2", "ENG", "FANCA"]
-
         def random_gene():
             return random.choice(possible_genes)
 
