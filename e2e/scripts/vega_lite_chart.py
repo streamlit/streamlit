@@ -70,7 +70,13 @@ st.vega_lite_chart(
 st.write("Using a top-level `df` and keywords as a spec:")
 
 st.vega_lite_chart(
-    df, mark="bar", x_field="a", x_type="ordinal", y_field="b", y_type="quantitative", use_container_width=True,
+    df,
+    mark="bar",
+    x_field="a",
+    x_type="ordinal",
+    y_field="b",
+    y_type="quantitative",
+    use_container_width=True,
 )
 
 st.write("Putting the `df` inside the spec, as a `dataset`:")
