@@ -177,12 +177,9 @@ class Report(object):
             if _should_save_report_msg(msg)
         ]
 
-        first_delta_index = 0
         num_deltas = 0
         for idx in range(len(messages)):
             if messages[idx].HasField("delta"):
-                if num_deltas == 0:
-                    first_delta_index = idx
                 num_deltas += 1
 
         manifest = self._build_manifest(
