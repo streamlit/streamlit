@@ -270,6 +270,13 @@ class CodeHasher:
                 return self.to_bytes(hash(obj))
             elif isinstance(obj, int):
                 return _int_to_bytes(obj)
+            elif isinstance(obj, list) or isinstance(obj, tuple):
+                h = hashlib.new(self.name)
+                # add type to distingush x from [x]
+                self._update(h, type(obj).__name__.encode() + b":")
+                for e in obj:
+                    self._update(h, e, context)
+                return h.digest()
             elif obj is None:
                 # Special string since hashes change between sessions.
                 # We don't use Python's `hash` since hashes are not consistent
@@ -280,8 +287,6 @@ class CodeHasher:
             elif obj is False:
                 return b"bool:0"
             elif isinstance(obj, dict):
-                # Todo: handle dictionaries that point back to themself
-                #       handle for all iterables?
                 return self.to_bytes(obj.items())
             elif type_util.is_type(
                 obj, "pandas.core.frame.DataFrame"
@@ -376,14 +381,6 @@ class CodeHasher:
                 self._update(h, obj.args)
                 self._update(h, obj.func)
                 self._update(h, obj.keywords)
-                return h.digest()
-            elif hasattr(obj, "__iter__"):
-                # Generic iterable handling after custom handling of certain iterables
-                h = hashlib.new(self.name)
-                # add type to distingush x from [x]
-                self._update(h, type(obj).__name__.encode() + b":")
-                for e in obj:
-                    self._update(h, e, context)
                 return h.digest()
             else:
                 # As a last resort
