@@ -212,6 +212,8 @@ _create_option(
         - "off" : turn off sharing.
         - "s3" : share to S3, based on the settings under the [s3] section of
           this config file.
+        - "file" : share to a directory on the local machine. This is
+          meaningful only for debugging.
         """,
     default_val="off",
 )

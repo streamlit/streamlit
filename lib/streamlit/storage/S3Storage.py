@@ -55,7 +55,7 @@ class S3Storage(AbstractStorage):
         log.propagate = False
 
         assert (
-            config.get_option("global.sharingMode") != "off"
+            config.get_option("global.sharingMode") == "s3"
         ), 'Sharing is disabled. See "global.sharingMode".'
 
         self._bucketname = config.get_option("s3.bucket")

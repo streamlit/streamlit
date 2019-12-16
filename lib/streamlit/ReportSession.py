@@ -39,7 +39,8 @@ from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Widget_pb2 import WidgetStates
 from streamlit.server.server_util import serialize_forward_msg
-from streamlit.storage.S3Storage import S3Storage as Storage
+from streamlit.storage.S3Storage import S3Storage
+from streamlit.storage.FileStorage import FileStorage
 from streamlit.watcher.LocalSourcesWatcher import LocalSourcesWatcher
 
 LOGGER = get_logger(__name__)
@@ -622,5 +623,11 @@ class ReportSession(object):
 
     def _get_storage(self):
         if self._storage is None:
-            self._storage = Storage()
+            sharing_mode = config.get_option("global.sharingMode")
+            if sharing_mode == "s3":
+                self._storage = S3Storage()
+            elif sharing_mode == "file":
+                self._storage = FileStorage()
+            else:
+                raise RuntimeError("Unsupported sharing mode '%s'" % sharing_mode)
         return self._storage

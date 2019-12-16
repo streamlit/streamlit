@@ -38,11 +38,8 @@ class FileStorage(AbstractStorage):
 
     def __init__(self):
         """Constructor."""
-        LOGGER.debug("FileStorage __init__")
         super(FileStorage, self).__init__()
-        LOGGER.debug("FileStorage post super")
         self._dir = self._mkdir()
-        LOGGER.debug("mkdir")
 
     def _mkdir(self):
         cwd = os.getcwd()
