@@ -39,27 +39,53 @@ class CacheTest(unittest.TestCase):
         self.assertEqual(foo(), 42)
         self.assertEqual(foo(), 42)
 
-    def test_implicit_inputs(self):
+    def test_ignore_changes_to_global_constants(self):
         # Changing values of closure variables should not change cache value after first cache.
         # See PR #817 / Issue #789
         number = 5
-        things = [1, 2, 3]
-
-        def return_things():
-            return things
 
         @st.cache
         def score():
+            return number + 2
             result = {
                 "score": number + 2,
                 "things": return_things(),
             }
             return result
 
-        answer = score()
+        self.assertEqual(7, score())
         number = 6
+        self.assertEqual(7, score())
+
+    def test_ignore_changes_to_closure_lists(self):
+        # Changing values of closure variables should not change cache value after first cache.
+        # See PR #817 / Issue #789
+        things = [1, 2, 3]
+
+        @st.cache
+        def add_things():
+            return sum(things)
+
+        self.assertEqual(6, add_things())
         things = [3, 4, 5]
-        self.assertEqual(answer, score())
+        self.assertEqual(6, add_things())
+
+    def test_ignore_changes_to_referenced_outputs_if_code_has_not_changed(self):
+        # st.cache should treat referenced code as deterministic, i.e. as if its output does not 
+        # change unless the referenced code itself changes.
+
+        import random
+
+        possible_genes = ['ACVRL1', 'BRCA1', 'BRCA2', 'ENG', 'FANCA']
+        def random_gene():
+            return random.choice(possible_genes)
+
+        @st.cache
+        def get_assay():
+            return set([random_gene(), random_gene()])
+        
+        initial = get_assay()
+        self.assertEqual(initial, get_assay())
 
     def test_deprecated_kwarg(self):
         with pytest.raises(Exception) as e:

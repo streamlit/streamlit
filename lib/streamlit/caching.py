@@ -531,19 +531,7 @@ def cache(
             args_hasher.update([args, kwargs])
             LOGGER.debug("Hashing arguments to %s of %i bytes.", name, args_hasher.size)
 
-            # HEAD
-            code_hasher = CodeHasher("md5", hasher, hash_funcs)
-            code_hasher.update(func)
-            LOGGER.debug("Hashing function %s in %i bytes.", name, code_hasher.size)
-            # /HEAD
-
-            # XXX
-            # hash arguments and code first (ahead of executing function) so we only
-            # have to hash-and-compare once to check if this is a HIT or MISS.
-            args_digest_before = args_hasher.digest()
-
             hasher.update(code_hash)
-            # XXX
 
             key = hasher.hexdigest()
             LOGGER.debug("Cache key: %s", key)
@@ -615,7 +603,7 @@ class Cache(dict):
     """
 
     # Developer Note: We've changed the behavior of @st.cache to stop caching
-    # values from implicit inputs, but none of the changes in @st.cache were 
+    # values from implicit inputs, but none of the changes in @st.cache were
     # applied to the Cache object herein.  --@nthmost,  12/3/2019
 
     def __init__(self, persist=False, allow_output_mutation=False):
