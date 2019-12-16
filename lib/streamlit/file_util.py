@@ -149,6 +149,7 @@ def file_in_pythonpath(filepath):
         An absolute file path.
 
     Returns
+    -------
     boolean
         True if contained in PYTHONPATH, False otherwise. False if PYTHONPATH is not defined or empty.
 
@@ -160,11 +161,10 @@ def file_in_pythonpath(filepath):
     if len(pythonpath) == 0:
         return False
 
-    relative_and_absolute_paths = [
-        (path if os.path.isabs(path) else os.path.abspath(path))
-        for path in pythonpath.split(os.pathsep)
+    absolute_paths = [
+        os.path.abspath(path) for path in pythonpath.split(os.pathsep)
     ]
     return any(
         file_is_in_folder_glob(os.path.normpath(filepath), path)
-        for path in relative_and_absolute_paths
+        for path in absolute_paths
     )
