@@ -209,11 +209,7 @@ class CodeHasher:
 
     def update(self, obj, context=None):
         """Update the hash with the provided object."""
-        try:
-            self._update(self.hasher, obj, context)
-        except UnhashableType as e:
-            st.warning(_hashing_error_message(str(e)))
-            raise e
+        self._update(self.hasher, obj, context)
 
     def digest(self):
         return self.hasher.digest()
@@ -277,6 +273,13 @@ class CodeHasher:
                 for e in obj:
                     self._update(h, e, context)
                 return h.digest()
+            elif isinstance(obj, dict):
+                h = hashlib.new(self.name)
+                # add type to distingush x from [x]
+                self._update(h, type(obj).__name__.encode() + b":")
+                for e in obj.items():
+                    self._update(h, e, context)
+                return h.digest()
             elif obj is None:
                 # Special string since hashes change between sessions.
                 # We don't use Python's `hash` since hashes are not consistent
@@ -286,8 +289,6 @@ class CodeHasher:
                 return b"bool:1"
             elif obj is False:
                 return b"bool:0"
-            elif isinstance(obj, dict):
-                return self.to_bytes(obj.items())
             elif type_util.is_type(
                 obj, "pandas.core.frame.DataFrame"
             ) or type_util.is_type(obj, "pandas.core.series.Series"):
@@ -392,8 +393,7 @@ class CodeHasher:
                 return h.digest()
         except Exception as e:
             msg = "Streamlit failed to hash an object of type %s." % type(obj)
-            st.warning(msg)
-            # st.warning(_hashing_error_message(msg))
+            st.warning(_hashing_error_message(msg))
             raise UnhashableType(msg)
 
     def _code_to_bytes(self, code, context):
