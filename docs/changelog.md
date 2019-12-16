@@ -30,8 +30,8 @@ _Release date: December 15, 2019_
 
 - 📤 Preview release of the file uploader widget. To try it out just call
   [`st.file_uploader`](https://streamlit.io/docs/api.html#streamlit.file_uploader)!
-  _Note that as a **preview release** thing may change in the near future.
-  Looking forward to hearing input from the community before we freeze the
+  _Note that as a **preview release** things may change in the near future.
+  Looking forward to hearing input from the community before we stabilize the
   API!_
 
 - 👋 Support for [emoji codes](https://www.webfx.com/tools/emoji-cheat-sheet/) in
