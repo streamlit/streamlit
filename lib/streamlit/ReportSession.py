@@ -37,7 +37,7 @@ from streamlit.credentials import Credentials
 from streamlit.logger import get_logger
 from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.Widget_pb2 import WidgetStates, WidgetState
+from streamlit.proto.Widget_pb2 import WidgetStates
 from streamlit.server.server_util import serialize_forward_msg
 from streamlit.storage.S3Storage import S3Storage as Storage
 from streamlit.watcher.LocalSourcesWatcher import LocalSourcesWatcher
