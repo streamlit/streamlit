@@ -71,19 +71,20 @@ class CacheTest(unittest.TestCase):
         self.assertEqual(6, add_things())
 
     def test_ignore_changes_to_referenced_outputs_if_code_has_not_changed(self):
-        # st.cache should treat referenced code as deterministic, i.e. as if its output does not 
+        # st.cache should treat referenced code as deterministic, i.e. as if its output does not
         # change unless the referenced code itself changes.
 
         import random
 
-        possible_genes = ['ACVRL1', 'BRCA1', 'BRCA2', 'ENG', 'FANCA']
+        possible_genes = ["ACVRL1", "BRCA1", "BRCA2", "ENG", "FANCA"]
+
         def random_gene():
             return random.choice(possible_genes)
 
         @st.cache
         def get_assay():
             return set([random_gene(), random_gene()])
-        
+
         initial = get_assay()
         self.assertEqual(initial, get_assay())
 
