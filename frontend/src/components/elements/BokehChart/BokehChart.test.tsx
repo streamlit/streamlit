@@ -20,14 +20,16 @@ import ReactDOM from "react-dom"
 import { Map as ImmutableMap } from "immutable"
 import BokehChart from "./BokehChart"
 
-it("renders without crashing", () => {
-  const mountPoint = document.createElement("div")
-  const props = {
-    element: ImmutableMap({ figure: null }),
-    index: 0,
-    width: 0,
-    height: undefined,
-  }
-  ReactDOM.render(<BokehChart {...props} />, mountPoint)
-  ReactDOM.unmountComponentAtNode(mountPoint)
+describe("BokehChart element", () => {
+  it("renders without crashing", () => {
+    const mountPoint = document.createElement("div")
+    const props = {
+      element: ImmutableMap({ figure: null }),
+      index: 0,
+      width: 0,
+      height: undefined,
+    }
+    ReactDOM.render(<BokehChart {...props} />, mountPoint)
+    ReactDOM.unmountComponentAtNode(mountPoint)
+  })
 })

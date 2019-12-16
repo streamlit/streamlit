@@ -1,8 +1,4 @@
-```eval_rst
-:tocdepth: 1
-```
-
-# Troubleshooting
+# Common issues
 
 Sometimes you hit a roadblock. That's natural, in coding.
 
@@ -35,7 +31,7 @@ st.write(st.__version__)
 ```
 
 ...and make sure it says the same version as above. If not the same version,
-[contact us](mailto:help@streamlit.io) for help setting up your
+[contact us](https://discuss.streamlit.io/) for help setting up your
 environment.
 
 One more thing to try: sometimes the browser caches Streamlit's JavaScript code
@@ -53,7 +49,7 @@ port=8765
 ```
 
 See if you can reproduce your bug again now. If the answer is _yes_,
-continue reading this page or [contact us](mailto:help@streamlit.io).
+continue reading this page or [contact us](https://discuss.streamlit.io/).
 
 ## Remote operation: app URL doesn't load
 
@@ -107,10 +103,10 @@ $ pex streamlit foo bar -o mypexbinary.pex
 
 ## Downgrade Streamlit
 
-If you've upgraded to the latest version of Streamlit and things aren't working, you can downgrade at any time using these commands:
-
-You can downgrade at any time with these commands:
+If you've upgraded to the latest version of Streamlit and things aren't working, you can downgrade at any time using this command:
 
 ```bash
-$ pip install --upgrade streamlit==0.37 # <- To downgrade Streamlit!
+$ pip install --upgrade streamlit==0.50.1 # <- To downgrade Streamlit!
 ```
+
+See [Changelog](../changelog.md) for a complete list of Streamlit versions.

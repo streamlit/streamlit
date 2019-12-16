@@ -34,6 +34,7 @@ const grayLighter = SCSS_VARS["$gray-lighter"]
 const grayLightest = SCSS_VARS["$gray-lightest"]
 const labelFontSize = SCSS_VARS["$font-size-sm"]
 const lineHeightBase = SCSS_VARS["$line-height-base"]
+const lineHeightTight = SCSS_VARS["$line-height-tight"]
 const primary = SCSS_VARS["$primary"]
 const primaryA50 = SCSS_VARS["$primary-a50"]
 const smallTextMargin = SCSS_VARS["$m2-3-font-size-sm"]
@@ -55,7 +56,7 @@ export const sliderOverrides = {
     },
   },
   Thumb: {
-    style: ({ $disabled }: any) => ({
+    style: ({ $disabled }: { $disabled: boolean }) => ({
       backgroundColor: $disabled ? gray : primary,
       borderTopLeftRadius: "100%",
       borderTopRightRadius: "100%",
@@ -83,7 +84,7 @@ export const sliderOverrides = {
     },
   },
   ThumbValue: {
-    style: ({ $disabled }: any) => ({
+    style: ({ $disabled }: { $disabled: boolean }) => ({
       fontFamily: fontFamilyMono,
       fontSize: labelFontSize,
       paddingBottom: smallTextMargin,
@@ -124,28 +125,74 @@ export const sliderOverrides = {
     },
   },
   InnerTrack: {
-    style: ({ $disabled }: any) =>
+    style: ({ $disabled }: { $disabled: boolean }) =>
       $disabled ? { background: grayLighter } : {},
   },
 }
 
 export const fileUploaderOverrides: FileUploaderOverrides<StyleProps> = {
+  // Important: these values must match the ones in FileUploader.scss!
   FileDragAndDrop: {
-    style: (props: any) => ({
+    style: ({
+      $theme,
+      $isDragActive,
+    }: {
+      $theme: any
+      $isDragActive: boolean
+    }) => ({
+      borderRadius,
       display: "flex",
       flexDirection: "column",
+      fontSize: fontSizeSm,
       justifyContent: "center",
-      paddingTop: "1rem",
-      paddingButtom: "1rem",
-      paddingLeft: "1rem",
-      paddingRight: "1rem",
-      height: "10rem",
-      outline: 0,
-      borderColor: props.$isDragActive
-        ? SCSS_VARS["$primary"]
-        : SCSS_VARS["$gray-dark"],
-      backgroundColor: SCSS_VARS["$gray-lightest"],
+      paddingTop: "0.25rem",
+      paddingBottom: "0.25rem",
+      paddingLeft: "0.25rem",
+      paddingRight: "0.25rem",
+      height: "4.25rem",
+      borderColor: $isDragActive ? primary : "transparent",
+      backgroundColor: $isDragActive ? primaryA50 : $theme.colors.mono200,
+      borderStyle: "solid",
+      borderWidth: "1px",
+      ":focus": {
+        outline: "none",
+        borderColor: primary,
+      },
+      lineHeight: lineHeightTight,
     }),
+  },
+  ContentMessage: {
+    style: {
+      fontSize: fontSizeSm,
+      color: grayDark,
+      lineHeight: lineHeightTight,
+      display: "",
+    },
+  },
+  ButtonComponent: {
+    props: {
+      overrides: {
+        BaseButton: {
+          style: {
+            fontSize: fontSizeSm,
+            lineHeight: lineHeightTight,
+            paddingBottom: 0,
+            paddingLeft: "0.25em",
+            paddingRight: "0.25em",
+            paddingTop: 0,
+            textTransform: "lowercase",
+            ":hover": {
+              backgroundColor: "transparent",
+              textDecoration: "underline",
+            },
+            ":disabled": {
+              backgroundColor: "transparent",
+              color: grayDark,
+            },
+          },
+        },
+      },
+    },
   },
 }
 
@@ -279,7 +326,7 @@ export const multiSelectOverrides = {
 
 export const radioOverrides = {
   Root: {
-    style: ({ $isFocused }: any) => ({
+    style: ({ $isFocused }: { $isFocused: boolean }) => ({
       marginBottom: 0,
       marginTop: 0,
       paddingRight: smallTextMargin,

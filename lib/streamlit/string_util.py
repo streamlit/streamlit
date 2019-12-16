@@ -53,3 +53,12 @@ def escape_markdown(raw_string):
     for character in metacharacters:
         result = result.replace(character, "\\" + character)
     return result
+
+
+TEXTCHARS = bytearray({7, 8, 9, 10, 12, 13, 27} | set(range(0x20, 0x100)) - {0x7F})
+
+
+def is_binary_string(inp):
+    """Guess if an input bytesarray can be encoded as a string."""
+    # From https://stackoverflow.com/a/7392391
+    return bool(inp.translate(None, TEXTCHARS))
