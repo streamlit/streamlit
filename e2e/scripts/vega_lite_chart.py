@@ -44,7 +44,7 @@ spec_with_width = {
 
 st.vega_lite_chart(df, spec, use_container_width=True)
 st.vega_lite_chart(df, spec, use_container_width=True)
-st.vega_lite_chart(df, spec, use_container_width=True)
+st.vega_lite_chart(df, spec)
 st.vega_lite_chart(df, spec_with_width)
 
 # Screenshot comparison
