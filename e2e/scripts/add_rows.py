@@ -119,6 +119,7 @@ for test_type in ["coalesce in Py", "coalesce in JS", "clear after addrows"]:
                     "y": {"field": "b", "type": "quantitative"},
                 },
             },
+            use_container_width=True,
         )
         vega_el2.vega_lite_chart(
             {
@@ -129,7 +130,8 @@ for test_type in ["coalesce in Py", "coalesce in JS", "clear after addrows"]:
                     "x": {"field": "a", "type": "quantitative"},
                     "y": {"field": "b", "type": "quantitative"},
                 },
-            }
+            },
+            use_container_width=True,
         )
         vega_el3.vega_lite_chart(
             {
@@ -140,13 +142,15 @@ for test_type in ["coalesce in Py", "coalesce in JS", "clear after addrows"]:
                     "x": {"field": "a", "type": "quantitative"},
                     "y": {"field": "b", "type": "quantitative"},
                 },
-            }
+            },
+            use_container_width=True,
         )
         altair_el.altair_chart(
             alt.Chart(pd.DataFrame())
             .mark_line(point=True)
             .encode(x="x:Q", y="y:Q")
-            .interactive()
+            .interactive(),
+            use_container_width=True,
         )
 
 # Test that add_rows errors out when the dataframe dimensions don't
