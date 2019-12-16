@@ -64,12 +64,13 @@ st.vega_lite_chart(
             "y": {"field": "b", "type": "quantitative"},
         },
     },
+    use_container_width=True,
 )
 
 st.write("Using a top-level `df` and keywords as a spec:")
 
 st.vega_lite_chart(
-    df, mark="bar", x_field="a", x_type="ordinal", y_field="b", y_type="quantitative"
+    df, mark="bar", x_field="a", x_type="ordinal", y_field="b", y_type="quantitative", use_container_width=True,
 )
 
 st.write("Putting the `df` inside the spec, as a `dataset`:")
@@ -83,7 +84,8 @@ st.vega_lite_chart(
             "x": {"field": "a", "type": "ordinal"},
             "y": {"field": "b", "type": "quantitative"},
         },
-    }
+    },
+    use_container_width=True,
 )
 
 st.write("Putting the `df` inside the spec, as inline `data`:")
@@ -96,7 +98,8 @@ st.vega_lite_chart(
             "x": {"field": "a", "type": "ordinal"},
             "y": {"field": "b", "type": "quantitative"},
         },
-    }
+    },
+    use_container_width=True,
 )
 
 # st.write("Putting the `df` inside the spec, as inline `data` (different notation):")
