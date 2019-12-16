@@ -47,11 +47,6 @@ class CacheTest(unittest.TestCase):
         @st.cache
         def score():
             return number + 2
-            result = {
-                "score": number + 2,
-                "things": return_things(),
-            }
-            return result
 
         self.assertEqual(7, score())
         number = 6
