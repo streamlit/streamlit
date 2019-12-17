@@ -73,8 +73,8 @@ class CacheKeyNotFoundError(Exception):
 
 
 class CachedObjectWasMutatedError(ValueError):
-    def __init__(self, cached_object):
-        self.cached_object = cached_object
+    def __init__(self, cached_value):
+        self.cached_value = cached_value
 
 
 CacheEntry = namedtuple("CacheEntry", ["value", "hash"])
@@ -285,7 +285,7 @@ def _read_from_cache(
         return _read_from_mem_cache(key, allow_output_mutation, hash_funcs)
     except CachedObjectWasMutatedError as e:
         st.warning(_get_mutated_output_error_message())
-        return e.cached_object
+        return e.cached_value
     except CacheKeyNotFoundError as e:
         if persisted:
             value = _read_from_disk_cache(key)
