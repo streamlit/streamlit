@@ -15,31 +15,33 @@
  * limitations under the License.
  */
 
-import { getBucketAndResourceRoot } from "./s3helper"
+import { getReportObjectPath } from "./s3helper"
 
-describe("getBucketAndResourceRoot", () => {
+describe("getReportObjectPath", () => {
   test("handles no resource root", () => {
     mockWindowLocationHref("https://example.com")
-    expect(getBucketAndResourceRoot()).toStrictEqual({
-      bucket: "example.com",
-      resourceRoot: "",
-    })
+    expect(getReportObjectPath("1", "test.pb")).toStrictEqual(
+      "/reports/1/test.pb"
+    )
 
     mockWindowLocationHref("https://example.com/")
-    expect(getBucketAndResourceRoot()).toStrictEqual({
-      bucket: "example.com",
-      resourceRoot: "",
-    })
+    expect(getReportObjectPath("1", "test.pb")).toStrictEqual(
+      "/reports/1/test.pb"
+    )
+
+    mockWindowLocationHref("https://example.com/index.html?1234")
+    expect(getReportObjectPath("1", "test.pb")).toStrictEqual(
+      "/reports/1/test.pb"
+    )
   })
 
   test("handles resource root", () => {
     mockWindowLocationHref(
       "https://example.com/some/path/0.49.0/index.html?id=1234"
     )
-    expect(getBucketAndResourceRoot()).toStrictEqual({
-      bucket: "example.com",
-      resourceRoot: "some/path/0.49.0",
-    })
+    expect(getReportObjectPath("1", "test.pb")).toStrictEqual(
+      "/some/path/0.49.0/reports/1/test.pb"
+    )
   })
 })
 
