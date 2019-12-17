@@ -17,10 +17,10 @@ function withFullScreenWrapper(
     ReportElementProps
   > {
     render(): ReactNode {
-      const { element, index, width } = this.props
+      const { element, index, width, height } = this.props
 
       return (
-        <FullScreenWrapper width={width}>
+        <FullScreenWrapper width={width} height={height}>
           {({ width, height }) => (
             <WrappedComponent
               element={element}
