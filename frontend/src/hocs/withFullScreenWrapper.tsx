@@ -1,4 +1,4 @@
-import React, { PureComponent, ComponentType } from "react"
+import React, { PureComponent, ComponentType, ReactNode } from "react"
 import { Map as ImmutableMap } from "immutable"
 
 import FullScreenWrapper from "components/shared/FullScreenWrapper"
@@ -10,7 +10,9 @@ interface ReportElementProps {
   index?: number
 }
 
-function withFullScreenWrapper(WrappedComponent: ComponentType<any>) {
+function withFullScreenWrapper(
+  WrappedComponent: ComponentType<any>
+): ComponentType<any> {
   return class ComponentWithPagination extends PureComponent<
     ReportElementProps
   > {
