@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """st.caching unit tests."""
+import os
 import threading
 import unittest
 import pytest
@@ -31,7 +32,10 @@ class CacheTest(unittest.TestCase):
         st.caching._cache_info.within_cached_func = 0
         st.caching._cache_info.suppress_st_function_warning = 0
 
-    def test_simple(self):
+    @patch("streamlit.hashing.CodeHasher._get_main_script_directory")
+    def test_simple(self, gmsd):
+        gmsd.side_effect = os.path.dirname(__file__)
+
         @st.cache
         def foo():
             return 42
@@ -39,9 +43,12 @@ class CacheTest(unittest.TestCase):
         self.assertEqual(foo(), 42)
         self.assertEqual(foo(), 42)
 
-    def test_ignore_changes_to_global_constants(self):
+    @patch("streamlit.hashing.CodeHasher._get_main_script_directory")
+    def test_ignore_changes_to_global_constants(self, gmsd):
         # Changing values of closure variables should not change cache value after first cache.
         # See PR #817 / Issue #789
+        gmsd.side_effect = os.path.dirname(__file__)
+
         number = 5
 
         @st.cache
@@ -52,9 +59,12 @@ class CacheTest(unittest.TestCase):
         number = 6
         self.assertEqual(7, score())
 
-    def test_ignore_changes_to_closure_lists(self):
+    @patch("streamlit.hashing.CodeHasher._get_main_script_directory")
+    def test_ignore_changes_to_closure_lists(self, gmsd):
         # Changing values of closure variables should not change cache value after first cache.
         # See PR #817 / Issue #789
+        gmsd.side_effect = os.path.dirname(__file__)
+
         things = [1, 2, 3]
 
         @st.cache
@@ -65,9 +75,11 @@ class CacheTest(unittest.TestCase):
         things = [3, 4, 5]
         self.assertEqual(6, add_things())
 
-    def test_ignore_changes_to_referenced_outputs_if_code_has_not_changed(self):
+    @patch("streamlit.hashing.CodeHasher._get_main_script_directory")
+    def test_ignore_changes_to_referenced_outputs_if_code_has_not_changed(self, gmsd):
         # st.cache should treat referenced code as deterministic, i.e. as if its output does not
         # change unless the referenced code itself changes.
+        gmsd.side_effect = os.path.dirname(__file__)
 
         import random
 
