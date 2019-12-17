@@ -1,4 +1,4 @@
-import React, { PureComponent, ComponentType, ReactNode } from "react"
+import React, { PureComponent, ComponentType } from "react"
 import { Map as ImmutableMap } from "immutable"
 
 import FullScreenWrapper from "components/shared/FullScreenWrapper"
