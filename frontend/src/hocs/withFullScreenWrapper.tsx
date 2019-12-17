@@ -1,4 +1,4 @@
-import React, { PureComponent, ComponentType } from "react"
+import React, { PureComponent, ComponentType, ReactNode } from "react"
 import { Map as ImmutableMap } from "immutable"
 
 import FullScreenWrapper from "components/shared/FullScreenWrapper"
@@ -16,7 +16,7 @@ function withFullScreenWrapper(
   return class ComponentWithPagination extends PureComponent<
     ReportElementProps
   > {
-    render() {
+    render(): ReactNode {
       const { element, index, width } = this.props
 
       return (
