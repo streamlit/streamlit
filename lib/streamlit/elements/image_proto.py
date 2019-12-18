@@ -33,9 +33,8 @@ LOGGER = get_logger(__name__)
 
 # This constant is related to the frontend maximum content width specified
 # in App.jsx main container
-# 730 is the max width of element-container in the frontend, and 2x is for high
-# DPI.
-MAXIMUM_CONTENT_WIDTH = 2 * 730
+# 730 is the max width of element-container in the frontend
+MAXIMUM_CONTENT_WIDTH = 730
 
 
 def _image_has_alpha_channel(image):
@@ -96,7 +95,7 @@ def _verify_np_shape(array):
     return array
 
 
-def _bytes_to_b64(data, width, format):
+def _bytes_to_b64(data, width, scale, format):
     format = format.lower()
     ext = imghdr.what(None, data)
 
@@ -108,15 +107,13 @@ def _bytes_to_b64(data, width, format):
     image = Image.open(io.BytesIO(data))
     actual_width, actual_height = image.size
 
-    if width < 0 and actual_width > MAXIMUM_CONTENT_WIDTH:
-        width = MAXIMUM_CONTENT_WIDTH
-
-    if width > 0:
-        if actual_width > width:
+    if scale:
+        if width == -2:
+            width = MAXIMUM_CONTENT_WIDTH
+        if width > 0:
             new_height = int(1.0 * actual_height * width / actual_width)
             image = image.resize((width, new_height))
             data = _PIL_to_bytes(image, format=format, quality=90)
-
             if format is None:
                 mime_type = "image/png"
             else:
@@ -146,7 +143,7 @@ def _clip_image(image, clamp):
 
 
 def marshall_images(
-    image, caption, width, proto_imgs, clamp, channels="RGB", format="JPEG"
+    image, caption, width, scale, proto_imgs, clamp, channels="RGB", format="JPEG"
 ):
     channels = channels.upper()
 
@@ -235,7 +232,7 @@ def marshall_images(
         else:
             data = image
 
-        (b64, mime_type) = _bytes_to_b64(data, width, format)
+        (b64, mime_type) = _bytes_to_b64(data, width, scale, format)
 
         proto_img.data.base64 = b64
         proto_img.data.mime_type = mime_type

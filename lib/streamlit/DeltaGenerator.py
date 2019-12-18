@@ -1255,7 +1255,7 @@ class DeltaGenerator(object):
         )
 
     @_with_element
-    def pyplot(self, element, fig=None, clear_figure=True, **kwargs):
+    def pyplot(self, element, fig=None, width=None, use_column_width=False, scale=False, clear_figure=True, **kwargs):
         """Display a matplotlib.pyplot figure.
 
         Parameters
@@ -1263,6 +1263,16 @@ class DeltaGenerator(object):
         fig : Matplotlib Figure
             The figure to plot. When this argument isn't specified, which is
             the usual case, this function will render the global plot.
+
+        width : int or None
+            Image width. None means use the image width.
+
+        use_column_width : bool
+            If True, set the image width to the column width. This overrides
+            the `width` parameter.
+
+        scale : bool
+            If true, the image will be scaled in the webpage.
 
         clear_figure : bool
             If True or unspecified, the figure will be cleared after being
@@ -1299,7 +1309,14 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.pyplot as pyplot
 
-        pyplot.marshall(element, fig, clear_figure, **kwargs)
+        if use_column_width:
+            width = -2
+        elif width is None:
+            width = -1
+        elif width <= 0:
+            raise StreamlitAPIException("Image width must be positive.")
+
+        pyplot.marshall(element, fig, width, scale, clear_figure, **kwargs)
 
     @_with_element
     def bokeh_chart(self, element, figure):
@@ -1353,6 +1370,7 @@ class DeltaGenerator(object):
         caption=None,
         width=None,
         use_column_width=False,
+        scale=False,
         clamp=False,
         channels="RGB",
         format="JPEG",
@@ -1375,6 +1393,8 @@ class DeltaGenerator(object):
         use_column_width : bool
             If True, set the image width to the column width. This overrides
             the `width` parameter.
+        scale : bool
+            If True, the image will be scaled in the webpage.
         clamp : bool
             Clamp image pixel values to a valid range ([0-255] per channel).
             This is only meaningful for byte array images; the parameter is
@@ -1411,8 +1431,9 @@ class DeltaGenerator(object):
             width = -1
         elif width <= 0:
             raise StreamlitAPIException("Image width must be positive.")
+        
         image_proto.marshall_images(
-            image, caption, width, element.imgs, clamp, channels, format
+            image, caption, width, scale, element.imgs, clamp, channels, format
         )
 
     @_with_element

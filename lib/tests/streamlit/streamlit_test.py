@@ -447,10 +447,10 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         st.pyplot()
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.imgs.width, -2)
+        self.assertEqual(el.imgs.width, -1)
         self.assertEqual(el.imgs.imgs[0].caption, "")
 
-        checksum = "iVBORw0KGgoAAAANSUhEUgAAAZAAAAGQCAYAAACAvzb"
+        checksum = "iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYAAACtWK6"
         self.assertTrue(el.imgs.imgs[0].data.base64.startswith(checksum))
 
     def test_st_pyplot_clear_figure(self):

@@ -32,20 +32,17 @@ from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 
-def marshall(new_element_proto, fig=None, clear_figure=True, **kwargs):
+def marshall(new_element_proto, fig, width, scale, clear_figure=True, **kwargs):
     """Construct a matplotlib.pyplot figure.
 
-    See DeltaGenerator.vega_lite_chart for docs.
+    See DeltaGenerator.pyplot for docs.
     """
     # You can call .savefig() on a Figure object or directly on the pyplot
     # module, in which case you're doing it to the latest Figure.
     if not fig:
         fig = plt
 
-    # Normally, dpi is set to 'figure', and the figure's dpi is set to 100.
-    # So here we pick double of that to make things look good in a high
-    # DPI display.
-    options = {"dpi": 200, "format": "png"}
+    options = {"format": "png"}
 
     # If some of the options are passed in from kwargs then replace
     # the values in options with the ones from kwargs
@@ -56,7 +53,7 @@ def marshall(new_element_proto, fig=None, clear_figure=True, **kwargs):
     image = io.BytesIO()
     fig.savefig(image, **kwargs)
     image_proto.marshall_images(
-        image, None, -2, new_element_proto.imgs, False, channels="RGB", format="PNG"
+        image, None, width, scale, new_element_proto.imgs, False, channels="RGB", format="PNG"
     )
 
     # Clear the figure after rendering it. This means that subsequent
