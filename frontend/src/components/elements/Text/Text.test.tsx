@@ -28,11 +28,13 @@ const getProps = (elementProps: object = {}): Props => ({
   width: 100,
 })
 
-it("renders preformatted text as expected", () => {
-  const props = getProps()
-  const wrap = shallow(<Text {...props} />)
-  expect(wrap).toBeDefined()
-  const elem = wrap.get(0)
-  expect(wrap.text()).toBe("some plain text")
-  expect(elem.props.className.includes("stText")).toBeTruthy()
+describe("Text element", () => {
+  it("renders preformatted text as expected", () => {
+    const props = getProps()
+    const wrap = shallow(<Text {...props} />)
+    expect(wrap).toBeDefined()
+    const elem = wrap.get(0)
+    expect(wrap.text()).toBe("some plain text")
+    expect(elem.props.className.includes("stText")).toBeTruthy()
+  })
 })

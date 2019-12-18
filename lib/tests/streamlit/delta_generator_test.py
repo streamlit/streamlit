@@ -16,20 +16,19 @@
 """DeltaGenerator Unittest."""
 
 # Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 
-from streamlit.DeltaGenerator import _build_duplicate_widget_message
 from streamlit.compatibility import setup_2_3_shims
-from streamlit.errors import DuplicateWidgetID
-from streamlit.errors import StreamlitAPIException
 
 setup_2_3_shims(globals())
 
 import json
+import mock
 import sys
 import unittest
-
-import pandas as pd
 
 try:
     from inspect import signature
@@ -38,6 +37,11 @@ except ImportError:
 
 from parameterized import parameterized
 
+import pandas as pd
+
+from streamlit.DeltaGenerator import _build_duplicate_widget_message
+from streamlit.errors import DuplicateWidgetID
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.TextArea_pb2 import TextArea
@@ -442,6 +446,31 @@ class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
         chart_spec = json.loads(element.spec)
         self.assertEqual(chart_spec["mark"], "line")
         self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 20)
+
+    def test_line_chart_with_generic_index(self):
+        """Test dg.line_chart with a generic index."""
+        data = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
+        data.set_index('a', inplace=True)
+
+        st.line_chart(data)
+
+        element = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(element.spec)
+        self.assertEqual(chart_spec["mark"], "line")
+        self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 30)
+
+    def test_line_chart_add_rows_with_generic_index(self):
+        """Test empty dg.line_chart with add_rows funciton and a generic index."""
+        data = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
+        data.set_index('a', inplace=True)
+
+        chart = st.line_chart()
+        chart.add_rows(data)
+
+        element = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(element.spec)
+        self.assertEqual(chart_spec["mark"], "line")
+        self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 30)
 
     def test_area_chart(self):
         """Test dg.area_chart."""

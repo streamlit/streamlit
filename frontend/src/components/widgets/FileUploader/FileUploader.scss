@@ -1,0 +1,75 @@
+/**
+ * Copyright 2018-2019 Streamlit Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@import "src/assets/css/variables";
+
+.stFileUploader {
+  // Important: these must match the ones in widgetTheme.ts!
+
+  .uploadStatus {
+    align-items: center;
+    background-color: $gray-lightest;
+    border-color: transparent;
+    border-radius: $border-radius;
+    border-width: 1px;
+    display: flex;
+    flex-direction: column;
+    font-size: $font-size-sm;
+    height: 4.25rem;
+    justify-content: center;
+    line-height: 1.25rem;
+    width: 100%;
+
+    .btn {
+      color: $primary;
+      font-size: $font-size-sm;
+      margin: 0.25em 0;
+      padding: 0.125em 0.5em;
+    }
+
+    .btn:hover {
+      color: $primary;
+    }
+  }
+
+  .uploadOverlay {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    left: 0;
+    line-height: 1.25rem;
+    padding-top: 0.75rem;
+    pointer-events: none;
+    position: absolute;
+    right: 0;
+  }
+
+  .uploadStatus .body,
+  .uploadOverlay .body {
+    box-sizing: border-box;
+    color: $gray-dark;
+    display: block;
+    flex-direction: column;
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: $font-size-sm;
+    margin-bottom: -0.25rem;
+    max-width: 100%;
+    overflow: hidden;
+    padding: 0.25rem 0.5rem 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

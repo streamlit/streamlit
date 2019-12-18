@@ -8,11 +8,18 @@
     "start": "export NODE_OPTIONS=--max_old_space_size=4096 && craco start",
     "build": "export NODE_OPTIONS=--max_old_space_size=4096 && craco build",
     "test": "export NODE_OPTIONS=--max_old_space_size=4096 && craco test --env=jsdom",
+    "test:coverage": "export NODE_OPTIONS=--max_old_space_size=4096 && craco test --env=jsdom --coverage --watchAll false --watch false ./",
     "cy:open": "unset NODE_OPTIONS && cypress open --env devicePixelRatio=1",
     "cy:run": "unset NODE_OPTIONS && cypress run",
     "cy:run-all": "../scripts/run_e2e_tests.sh -a true -c .. -r",
     "cy:serve-and-run-all": "NODE_OPTIONS=--max_old_space_size=4096 start-server-and-test start http://localhost:3000 cy:run-all",
     "typecheck": "tsc --noEmit"
+  },
+  "jest": {
+    "coverageReporters": [
+      "text",
+      "html"
+    ]
   },
   "husky": {
     "hooks": {
@@ -134,6 +141,7 @@
   },
   "resolutions": {
     "esm": "^3.1.0",
+    "serialize-javascript": "^2.1.1",
     "static-eval": "^2.0.2"
   },
   "browserslist": [

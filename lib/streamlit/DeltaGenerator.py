@@ -21,6 +21,7 @@ from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
 
+import io
 import functools
 import json
 import random
@@ -31,20 +32,25 @@ from datetime import date
 from datetime import time
 
 from streamlit import caching
+from streamlit import config
 from streamlit import metrics
 from streamlit.ReportThread import get_report_ctx
+from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto import Alert_pb2
 from streamlit.proto import Balloons_pb2
 from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto import Text_pb2
-from streamlit.proto import Alert_pb2
 
 # setup logging
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
+
+# Save the type built-in for when we override the name "type".
+_type = type
 
 MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
 
@@ -116,7 +122,7 @@ def _with_element(method):
         if delta_type in DELTAS_TYPES_THAT_MELT_DATAFRAMES and len(args) > 0:
             data = args[0]
             if isinstance(data, pd.DataFrame):
-                last_index = data.index[-1] if data.index.size > 0 else 0
+                last_index = data.index[-1] if data.index.size > 0 else -1
 
         def marshall_element(element):
             return method(dg, element, *args, **kwargs)
@@ -265,7 +271,6 @@ class DeltaGenerator(object):
     path: tuple of ints
       The full path of this DeltaGenerator, consisting of the IDs of
       all ancestors. The 0th item is the topmost ancestor.
-
     """
 
     # The pydoc below is for user consumption, so it doesn't talk about
@@ -1250,7 +1255,7 @@ class DeltaGenerator(object):
         )
 
     @_with_element
-    def pyplot(self, element, fig=None, **kwargs):
+    def pyplot(self, element, fig=None, clear_figure=True, **kwargs):
         """Display a matplotlib.pyplot figure.
 
         Parameters
@@ -1258,6 +1263,11 @@ class DeltaGenerator(object):
         fig : Matplotlib Figure
             The figure to plot. When this argument isn't specified, which is
             the usual case, this function will render the global plot.
+
+        clear_figure : bool
+            If True or unspecified, the figure will be cleared after being
+            rendered. (This simulates Jupyter's approach to matplotlib
+            rendering.)
 
         **kwargs : any
             Arguments to pass to Matplotlib's savefig function.
@@ -1289,7 +1299,7 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.pyplot as pyplot
 
-        pyplot.marshall(element, fig, **kwargs)
+        pyplot.marshall(element, fig, clear_figure, **kwargs)
 
     @_with_element
     def bokeh_chart(self, element, figure):
@@ -1912,6 +1922,78 @@ class DeltaGenerator(object):
         return current_value if single_value else tuple(current_value)
 
     @_with_element
+    def file_uploader(self, element, label, type=None, encoding="auto", key=None):
+
+        """Display a file uploader widget.
+
+        By default, uploaded files are limited to 50MB but you can configure that using the `server.maxUploadSize` config option.
+
+        Parameters
+        ----------
+        label : str or None
+            A short label explaining to the user what this file uploader is for.
+        type : str or list of str or None
+            Array of allowed extensions. ['png', 'jpg']
+            By default, all extensions are allowed.
+        encoding : str or None
+            The encoding to use when opening textual files (i.e. non-binary).
+            For example: 'utf-8'. If set to 'auto', will try to guess the
+            encoding. If None, will assume the file is binary.
+
+        Returns
+        -------
+        BytesIO or StringIO or None
+            The data for the uploaded file. If the file is in a well-known
+            textual format (or if the encoding parameter is set), returns a
+            StringIO. Otherwise BytesIO. If no file is loaded, returns None.
+
+            Note that BytesIO/StringIO are "file-like", which means you can
+            pass them anywhere where a file is expected!
+
+        Examples
+        --------
+        >>> uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+        >>> if uploaded_file is not None:
+        ...     data = pd.read_csv(uploaded_file)
+        ...     st.write(data)
+
+        """
+        from streamlit.string_util import is_binary_string
+
+        if isinstance(type, string_types):  # noqa: F821
+            type = [type]
+
+        element.file_uploader.label = label
+        element.file_uploader.type[:] = type if type is not None else []
+        element.file_uploader.max_upload_size_mb = config.get_option(
+            "server.maxUploadSize"
+        )
+        _set_widget_id("file_uploader", element, user_key=key)
+
+        data = None
+        ctx = get_report_ctx()
+        if ctx is not None:
+            progress, data = ctx.uploaded_file_mgr.get_data(element.file_uploader.id)
+            element.file_uploader.progress = progress
+
+        if data is None:
+            return NoValue
+
+        if encoding == "auto":
+            if is_binary_string(data):
+                encoding = None
+            else:
+                # If the file does not look like a pure binary file, assume
+                # it's utf-8. It would be great if we could guess it a little
+                # more smartly here, but it is what it is!
+                encoding = "utf-8"
+
+        if encoding:
+            return io.StringIO(data.decode(encoding))
+
+        return io.BytesIO(data)
+
+    @_with_element
     def text_input(self, element, label, value="", key=None):
         """Display a single-line text input widget.
 
@@ -2127,7 +2209,7 @@ class DeltaGenerator(object):
             Defaults to 1 if the value is an int, 0.01 otherwise.
             If the value is not specified, the format parameter will be used.
         format : str or None
-            Printf/Python format string controlling how the interface should
+            A printf-style format string controlling how the interface should
             display numbers. This does not impact the return value.
         key : str
             An optional string to use as the unique key for the widget.
@@ -2310,6 +2392,15 @@ class DeltaGenerator(object):
         This is a wrapper around st.deck_gl_chart to quickly create scatterplot
         charts on top of a map, with auto-centering and auto-zoom.
 
+        When using this method, we advise all users to use a personal Mapbox
+        token. This ensures the map tiles used in this chart are more
+        robust. You can do this with the mapbox.token config option.
+
+        To get a token for yourself, create an account at
+        https://mapbox.com. It's free! (for moderate usage levels) See
+        https://streamlit.io/docs/cli.html#view-all-config-options for more
+        info on how to set config options.
+
         Parameters
         ----------
         data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
@@ -2348,6 +2439,15 @@ class DeltaGenerator(object):
         This API closely follows Deck.GL's JavaScript API
         (https://deck.gl/#/documentation), with a few small adaptations and
         some syntax sugar.
+
+        When using this method, we advise all users to use a personal Mapbox
+        token. This ensures the map tiles used in this chart are more
+        robust. You can do this with the mapbox.token config option.
+
+        To get a token for yourself, create an account at
+        https://mapbox.com. It's free! (for moderate usage levels) See
+        https://streamlit.io/docs/cli.html#view-all-config-options for more
+        info on how to set config options.
 
         Parameters
         ----------
@@ -2557,6 +2657,18 @@ class DeltaGenerator(object):
                 "Method requires exactly one dataset"
             )
 
+        # Regenerate chart with data
+        if self._last_index == -1:
+            if self._delta_type == "line_chart":
+                self.line_chart(data)
+                return
+            elif self._delta_type == "bar_chart":
+                self.bar_chart(data)
+                return
+            elif self._delta_type == "area_chart":
+                self.area_chart(data)
+                return
+
         data, self._last_index = _maybe_melt_data_for_add_rows(
             data, self._delta_type, self._last_index
         )
@@ -2609,7 +2721,11 @@ def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
             data.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
             last_index = stop
 
-        data = pd.melt(data.reset_index(), id_vars=["index"])
+        index_name = data.index.name
+        if index_name is None:
+            index_name = "index" 
+
+        data = pd.melt(data.reset_index(), id_vars=[index_name])
 
     return data, last_index
 

@@ -37,6 +37,7 @@ from streamlit.ReportSession import ReportSession
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.server.routes import AddSlashHandler
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
@@ -499,9 +500,16 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
 
         try:
             msg.ParseFromString(payload)
-            LOGGER.debug("Received the following back message:\n%s", msg)
-
             msg_type = msg.WhichOneof("type")
+
+            if msg_type == "upload_file_chunk":
+                LOGGER.debug(
+                    "Received the following upload_file_chunk back message:\nfile_uploaded {\n   widget_id: %s\n   index: %s\n   data: #####\n}",
+                    msg.upload_file_chunk.widget_id,
+                    msg.upload_file_chunk.index,
+                )
+            else:
+                LOGGER.debug("Received the following back message:\n%s", msg)
 
             if msg_type == "cloud_upload":
                 yield self._session.handle_save_request(self)
@@ -516,6 +524,16 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
             elif msg_type == "update_widgets":
                 self._session.handle_rerun_script_request(
                     widget_state=msg.update_widgets
+                )
+            elif msg_type == "upload_file":
+                self._session.handle_upload_file(upload_file=msg.upload_file)
+            elif msg_type == "upload_file_chunk":
+                self._session.handle_upload_file_chunk(
+                    upload_file_chunk=msg.upload_file_chunk
+                )
+            elif msg_type == "delete_uploaded_file":
+                self._session.handle_delete_uploaded_file(
+                    delete_uploaded_file=msg.delete_uploaded_file
                 )
             elif msg_type == "close_connection":
                 if config.get_option("global.developmentMode"):

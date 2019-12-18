@@ -22,7 +22,7 @@
 
   GitHub <https://github.com/streamlit/streamlit>
   Community forum < https://discuss.streamlit.io/>
-  troubleshooting
+  troubleshooting/index
 
 ```
 
