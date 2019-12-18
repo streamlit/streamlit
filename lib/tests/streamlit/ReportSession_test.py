@@ -13,12 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import copy
 import unittest
 from mock import MagicMock, patch
 
-from streamlit import config
 from streamlit.ReportSession import ReportSession
 from streamlit.ScriptRunner import ScriptRunner
 
