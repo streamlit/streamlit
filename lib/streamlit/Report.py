@@ -266,17 +266,6 @@ def _should_save_report_msg(msg):
     """
 
     msg_type = msg.WhichOneof("type")
-
-    # Strip out empty delta messages. These don't have any data in them
-    # by definition, so omitting them can save the user from a potentially
-    # long load time with no downside.
-    if (
-        msg_type == "delta"
-        and msg.delta.WhichOneof("type") == "new_element"
-        and msg.delta.new_element.WhichOneof("type") == "empty"
-    ):
-        return False
-
     return msg_type == "initialize" or msg_type == "new_report" or msg_type == "delta"
 
 
