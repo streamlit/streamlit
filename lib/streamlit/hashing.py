@@ -64,6 +64,7 @@ NP_SAMPLE_SIZE = 100000
 
 Context = namedtuple("Context", ["globals", "cells", "varnames"])
 
+
 class MultithreadStackTracker:
 
     CONST_UUID = "hesamagicalponyflyingthroughthesky"
@@ -259,6 +260,7 @@ class CodeHasher:
     def to_bytes(self, obj, context=None):
         """Add memoization to _to_bytes."""
         key = _key(obj, context)
+        print(key)
 
         if key is not None:
             if key in self.hashes:
@@ -268,15 +270,18 @@ class CodeHasher:
             self._counter += 1
             self.hashes[key] = _int_to_bytes(self._counter)
 
-        # add object to stack
         b = self._to_bytes(obj, context)
-        stack_tracker.add(threading.current_thread().ident, key, b)
+
+        # add object to stack trace
+        stack_tracker.add(threading.current_thread().ident, b, obj)
 
         self.size += sys.getsizeof(b)
 
         if key is not None:
             self.hashes[key] = b
-        stack_tracker.rem(threading.current_thread().ident, key)
+
+        # remove object from stack trace
+        stack_tracker.rem(threading.current_thread().ident, b)
         return b
 
     def _update(self, hasher, obj, context=None):
