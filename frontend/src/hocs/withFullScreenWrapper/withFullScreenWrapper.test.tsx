@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { ComponentType } from "react"
 import { fromJS } from "immutable"
 import { shallow, mount } from "enzyme"
 
@@ -24,7 +24,7 @@ import withFullScreenWrapper, {
   ReportElementProps,
 } from "./withFullScreenWrapper"
 
-const testComponent = () => <div>test</div>
+const testComponent: ComponentType = () => <div>test</div>
 
 const getProps = (props: object = {}): ReportElementProps => ({
   element: fromJS({
