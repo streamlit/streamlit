@@ -35,7 +35,7 @@ const getProps = (props: object = {}): ReportElementProps => ({
   ...props,
 })
 
-describe("Button widget", () => {
+describe("withFullScreenWrapper HOC", () => {
   it("renders without crashing", () => {
     const props = getProps()
     const WithHoc = withFullScreenWrapper(testComponent)
