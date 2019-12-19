@@ -506,17 +506,7 @@ class Cache(dict):
     >>> if c := st.Cache():
     ...     # Fetch data from URL here, and then clean it up. Finally assign to c.
     ...     c.data = ...
-
-
     """
-    # Developer Note: We've changed the behavior of @st.cache to stop caching
-<<<<<<< HEAD
-    # internal variables, but none of the changes in @st.cache were applied to
-    # to the Cache object herein.  --nm  12/3/2019
-=======
-    # values from implicit inputs, but none of the changes in @st.cache were
-    # applied to the Cache object herein.  --@nthmost,  12/3/2019
->>>>>>> added more working tests. completed and verified merge.
 
     def __init__(self, persist=False, allow_output_mutation=False):
         self._persist = persist
