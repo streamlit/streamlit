@@ -16,11 +16,21 @@
  */
 
 import React from "react"
-import ReactDOM from "react-dom"
-import { SessionInfo, Args as SessionInfoArgs } from "./lib/SessionInfo"
+import { mount, CommonWrapper } from "enzyme"
+import { ForwardMsg, Initialize } from "autogen/proto"
 import { MetricsManager } from "./lib/MetricsManager"
 import { getMetricsManagerForTest } from "./lib/MetricsManagerTestUtils"
+import { SessionInfo, Args as SessionInfoArgs } from "./lib/SessionInfo"
+
 import App from "./App"
+
+const getWrapper = (): CommonWrapper => {
+  const mountPoint = document.createElement("div")
+  mountPoint.setAttribute("id", "ConnectionStatus")
+  document.body.appendChild(mountPoint)
+
+  return mount(<App />, { attachTo: mountPoint })
+}
 
 describe("App", () => {
   beforeEach(() => {
@@ -39,10 +49,28 @@ describe("App", () => {
   })
 
   it("renders without crashing", () => {
-    const mountPoint = document.createElement("div")
-    mountPoint.setAttribute("id", "ConnectionStatus")
-    document.body.appendChild(mountPoint)
-    ReactDOM.render(<App />, mountPoint)
-    ReactDOM.unmountComponentAtNode(mountPoint)
+    const wrapper = getWrapper()
+
+    expect(wrapper.html()).not.toBeNull()
+  })
+
+  it("should reload when streamlit server version changes", () => {
+    const wrapper = getWrapper()
+
+    window.location.reload = jest.fn()
+
+    const fwMessage = new ForwardMsg()
+    const initMessage = new Initialize()
+
+    initMessage.environmentInfo = {
+      streamlitVersion: "svv",
+    }
+
+    fwMessage.initialize = initMessage
+
+    // @ts-ignore
+    wrapper.instance().handleMessage(fwMessage)
+
+    expect(window.location.reload).toHaveBeenCalled()
   })
 })

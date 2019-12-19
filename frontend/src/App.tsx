@@ -185,6 +185,30 @@ class App extends PureComponent<Props, State> {
     MetricsManager.current.enqueue("viewReport")
   }
 
+  showError(title: string, errorNode: ReactNode): void {
+    logError(errorNode)
+    const newDialog: DialogProps = {
+      type: DialogType.WARNING,
+      title: title,
+      msg: errorNode,
+      onClose: () => {},
+    }
+    this.openDialog(newDialog)
+  }
+
+  isServerVersionUpdated(initializeMsg: Initialize): boolean {
+    if (SessionInfo.isSet()) {
+      const { streamlitVersion: currentStreamlitVersion } = SessionInfo.current
+      const {
+        streamlitVersion: newStreamlitVersion,
+      } = initializeMsg.environmentInfo
+
+      return currentStreamlitVersion === newStreamlitVersion
+    }
+
+    return true
+  }
+
   /**
    * Called by ConnectionManager when our connection state changes
    */
@@ -202,17 +226,6 @@ class App extends PureComponent<Props, State> {
       this.widgetMgr.sendUpdateWidgetsMessage()
       this.setState({ dialog: null })
     }
-  }
-
-  showError(title: string, errorNode: ReactNode): void {
-    logError(errorNode)
-    const newDialog: DialogProps = {
-      type: DialogType.WARNING,
-      title: title,
-      msg: errorNode,
-      onClose: () => {},
-    }
-    this.openDialog(newDialog)
   }
 
   /**
@@ -278,15 +291,10 @@ class App extends PureComponent<Props, State> {
    */
 
   handleInitialize(initializeMsg: Initialize): void {
-    if (SessionInfo.isSet()) {
-      const { streamlitVersion: currentStreamlitVersion } = SessionInfo.current
-      const {
-        streamlitVersion: newStreamlitVersion,
-      } = initializeMsg.environmentInfo
+    if (!this.isServerVersionUpdated(initializeMsg)) {
+      window.location.reload()
 
-      if (currentStreamlitVersion !== newStreamlitVersion) {
-        window.location.reload()
-      }
+      return
     }
 
     SessionInfo.current = new SessionInfo({
@@ -313,6 +321,8 @@ class App extends PureComponent<Props, State> {
 
     const initialState = initializeMsg.sessionState
     this.handleSessionStateChanged(initialState)
+
+    return
   }
 
   /**
