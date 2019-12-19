@@ -159,9 +159,7 @@ def file_in_pythonpath(filepath):
     if len(pythonpath) == 0:
         return False
 
-    absolute_paths = [
-        os.path.abspath(path) for path in pythonpath.split(os.pathsep)
-    ]
+    absolute_paths = [os.path.abspath(path) for path in pythonpath.split(os.pathsep)]
     return any(
         file_is_in_folder_glob(os.path.normpath(filepath), path)
         for path in absolute_paths
