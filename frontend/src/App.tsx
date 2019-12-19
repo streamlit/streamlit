@@ -278,6 +278,17 @@ class App extends PureComponent<Props, State> {
    */
 
   handleInitialize(initializeMsg: Initialize): void {
+    if (SessionInfo.isSet()) {
+      const { streamlitVersion: currentStreamlitVersion } = SessionInfo.current
+      const {
+        streamlitVersion: newStreamlitVersion,
+      } = initializeMsg.environmentInfo
+
+      if (currentStreamlitVersion !== newStreamlitVersion) {
+        window.location.reload()
+      }
+    }
+
     SessionInfo.current = new SessionInfo({
       streamlitVersion: initializeMsg.environmentInfo.streamlitVersion,
       pythonVersion: initializeMsg.environmentInfo.pythonVersion,
