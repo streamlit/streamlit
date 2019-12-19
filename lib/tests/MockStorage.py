@@ -13,7 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import hashlib
+
 import tornado.gen
+import mock
 
 from streamlit.storage.AbstractStorage import AbstractStorage
 
@@ -21,7 +24,9 @@ from streamlit.storage.AbstractStorage import AbstractStorage
 class MockStorage(AbstractStorage):
     """A mock AbstractStorage implementation, for testing."""
 
-    def __init__(self):
+    @mock.patch("streamlit.storage.AbstractStorage._get_static_files")
+    def __init__(self, static_files_patch):
+        static_files_patch.return_value = [("index.html", "some data")], hashlib.md5()
         super(MockStorage, self).__init__()
         self.files = []
 
