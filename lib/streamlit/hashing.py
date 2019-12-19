@@ -19,6 +19,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from collections import namedtuple
+from collections import OrderedDict
 import dis
 import functools
 import hashlib
@@ -28,6 +29,7 @@ import io
 import os
 import sys
 import textwrap
+import threading
 
 import streamlit as st
 from streamlit import config
@@ -72,21 +74,21 @@ class MultithreadStackTracker:
     def create(self, thread_id):
         """Creates stack for this thread. If already created, clears existing."""
         print("STACK: created for thread ID ", thread_id)
-        self.stack[thread_id] = dict()
+        self.stack[thread_id] = OrderedDict()
 
     def add(self, thread_id, key, val):
         if thread_id not in self.stack:
             self.create(thread_id)
 
-        if self.stack['thread_id'].get(key):
+        if self.stack[thread_id].get(key):
             print("STACK: Duplicate found: ", key)
-            self.stack['thread_id'][CONST_UUID] = val
+            self.stack[thread_id][self.CONST_UUID] = val
         else:
             print("STACK: Adding", key)
-            self.stack[thread+id][key] = val
+            self.stack[thread_id][key] = val
 
     def rem(self, thread_id, key):
-        if self.stack['thread_id'].get(key):
+        if self.stack[thread_id].get(key):
             print("STACK: Dropping", key)
             return True
         print("STACK: Tried to remove but could not find key", key)
@@ -267,8 +269,8 @@ class CodeHasher:
             self.hashes[key] = _int_to_bytes(self._counter)
 
         # add object to stack
-        stack_tracker.add(threading.current_thread().ident, key, b)
         b = self._to_bytes(obj, context)
+        stack_tracker.add(threading.current_thread().ident, key, b)
 
         self.size += sys.getsizeof(b)
 
