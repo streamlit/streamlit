@@ -244,12 +244,13 @@ class CodeHasher:
 
     def _file_should_be_hashed(self, filename):
         filepath = os.path.abspath(filename)
-        file_is_local = file_util.file_is_in_folder_glob(
-            filepath, self._get_main_script_directory()
-        )
-        file_is_in_pythonpath = file_util.file_in_pythonpath(filepath)
         file_is_blacklisted = self._folder_black_list.is_blacklisted(filepath)
-        return (file_is_local or file_is_in_pythonpath) and not file_is_blacklisted
+        # Short circuiting for performance.
+        if file_is_blacklisted:
+            return False
+        return file_util.file_is_in_folder_glob(
+            filepath, self._get_main_script_directory()
+        ) or file_util.file_in_pythonpath(filepath)
 
     def _to_bytes(self, obj, context):
         """Hash objects to bytes, including code with dependencies.

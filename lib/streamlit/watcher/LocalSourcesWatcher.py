@@ -161,13 +161,18 @@ class LocalSourcesWatcher(object):
         wm.watcher.close()
         del self._watched_modules[filepath]
 
+    def _file_is_new(self, filepath):
+        return filepath not in self._watched_modules
+
     def _file_should_be_watched(self, filepath):
-        file_is_new = filepath not in self._watched_modules
-        file_is_in_pythonpath = file_util.file_in_pythonpath(filepath)
-        file_is_local = file_util.file_is_in_folder_glob(
-            filepath, self._report.script_folder
+        # Using short circuiting for performance.
+        return (
+            self._file_is_new(filepath)
+            and (
+                file_util.file_is_in_folder_glob(filepath, self._report.script_folder)
+                or file_util.file_in_pythonpath(filepath)
+            )
         )
-        return (file_is_local or file_is_in_pythonpath) and file_is_new
 
     def update_watched_modules(self):
         if self._is_closed:

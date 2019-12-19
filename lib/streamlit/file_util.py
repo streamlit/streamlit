@@ -155,9 +155,7 @@ def file_in_pythonpath(filepath):
 
     """
 
-    if "PYTHONPATH" not in os.environ:
-        return False
-    pythonpath = os.environ["PYTHONPATH"]
+    pythonpath = os.environ.get("PYTHONPATH", "")
     if len(pythonpath) == 0:
         return False
 
