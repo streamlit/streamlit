@@ -3,7 +3,7 @@ import { Map as ImmutableMap } from "immutable"
 
 import FullScreenWrapper from "components/shared/FullScreenWrapper"
 
-interface ReportElementProps {
+export interface ReportElementProps {
   width: number
   element: ImmutableMap<string, any>
   height?: number
