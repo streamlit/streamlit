@@ -74,6 +74,7 @@ _DATAFRAME_LIKE_TYPES = (
 
 _DATAFRAME_COMPATIBLE_TYPES = (
     dict,
+    type({}),  # For Python 2. See dict_types in compatibility.py.
     list,
     type(None),
 )
