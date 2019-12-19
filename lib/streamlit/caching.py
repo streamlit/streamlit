@@ -503,10 +503,6 @@ class Cache(dict):
 
     """
 
-    # Developer Note: We've changed the behavior of @st.cache to stop caching
-    # values from implicit inputs, but none of the changes in @st.cache were
-    # applied to the Cache object herein.  --@nthmost,  12/3/2019
-
     def __init__(self, persist=False, allow_output_mutation=False):
         self._persist = persist
         self._allow_output_mutation = allow_output_mutation
