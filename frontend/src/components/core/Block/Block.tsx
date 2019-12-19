@@ -185,7 +185,7 @@ class Block extends PureComponent<Props> {
 
     return (
       <Maybe enable={enable} key={index}>
-        <div key={index} className={className} style={{ width }}>
+        <div className={className} style={{ width }}>
           <ErrorBoundary width={width}>
             <Suspense
               fallback={
