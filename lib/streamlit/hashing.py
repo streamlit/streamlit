@@ -62,6 +62,44 @@ NP_SAMPLE_SIZE = 100000
 
 Context = namedtuple("Context", ["globals", "cells", "varnames"])
 
+class MultithreadStackTracker:
+
+    CONST_UUID = "hesamagicalponyflyingthroughthesky"
+
+    def __init__(self):
+        self.stack = {}
+
+    def create(self, thread_id):
+        """Creates stack for this thread. If already created, clears existing."""
+        print("STACK: created for thread ID ", thread_id)
+        self.stack[thread_id] = dict()
+
+    def add(self, thread_id, key, val):
+        if thread_id not in self.stack:
+            self.create(thread_id)
+
+        if self.stack['thread_id'].get(key):
+            print("STACK: Duplicate found: ", key)
+            self.stack['thread_id'][CONST_UUID] = val
+        else:
+            print("STACK: Adding", key)
+            self.stack[thread+id][key] = val
+
+    def rem(self, thread_id, key):
+        if self.stack['thread_id'].get(key):
+            print("STACK: Dropping", key)
+            return True
+        print("STACK: Tried to remove but could not find key", key)
+        return False
+
+    def destroy(self, thread_id):
+        if thread_id in self.stack:
+            print("STACK: destroyed for thread ID", thread_id)
+            self.stack.pop(thread_id)
+
+
+stack_tracker = MultithreadStackTracker()[]
+
 
 def _is_magicmock(obj):
     return type_util.is_type(obj, "unittest.mock.MagicMock") or type_util.is_type(
@@ -228,6 +266,8 @@ class CodeHasher:
             self._counter += 1
             self.hashes[key] = _int_to_bytes(self._counter)
 
+        # add object to stack
+        stack_tracker.add(threading.current_thread().ident, key, b)
         b = self._to_bytes(obj, context)
 
         self.size += sys.getsizeof(b)
