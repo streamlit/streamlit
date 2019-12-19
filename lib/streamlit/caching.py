@@ -73,7 +73,8 @@ class CacheKeyNotFoundError(Exception):
 
 
 class CachedObjectWasMutatedError(ValueError):
-    pass
+    def __init__(self, cached_value):
+        self.cached_value = cached_value
 
 
 CacheEntry = namedtuple("CacheEntry", ["value", "hash"])
@@ -194,112 +195,20 @@ class _AddCopy(ast.NodeTransformer):
         return node
 
 
-def _build_caching_func_error_message(persisted, func, caller_frame):
-    name = func.__name__
-
-    frameinfo = inspect.getframeinfo(caller_frame)
-    caller_file_name, caller_lineno, _, lines, _ = frameinfo
-
-    try:
-        import astor
-
-        # only works if calling code is a single line
-        parsed_context = ast.parse(lines[0].lstrip())
-        parsed_context = _AddCopy(name).visit(parsed_context)
-        copy_code = astor.to_source(parsed_context)
-    except SyntaxError:
-        LOGGER.debug("Could not parse calling code `%s`.", lines[0])
-        copy_code = "... = copy.deepcopy(%s(...))" % name
-
-    if persisted:
-        load_or_rerun = "loading the value back from the disk cache"
-    else:
-        load_or_rerun = "rerunning the function"
-
+def _get_mutated_output_error_message():
     message = textwrap.dedent(
         """
-        **Your code mutated a cached return value**
+        **WARNING: Cached Object Mutated**
 
-        Streamlit detected the mutation of a return value of `{name}`, which is
-        a cached function. This happened in `{file_name}` line {lineno}. Since
-        `persist` is `{persisted}`, Streamlit will make up for this by
-        {load_or_rerun}, so your code will still work, but with reduced
-        performance.
+        By default, Streamlit’s cache is immutable. You received this warning
+        because Streamlit thinks you modified a cached object.
 
-        To dismiss this warning, try one of the following:
-
-        1. *Preferred:* fix the code by removing the mutation. The simplest way
-        to do this is to copy the cached value to a new variable, which you are
-        allowed to mutate. For example, try changing `{caller_file_name}` line
-        {caller_lineno} to:
-
-        ```python
-        import copy
-        {copy_code}
-        ```
-
-        2. Add `allow_output_mutation=True` to the `@streamlit.cache` decorator for
-        `{name}`.  This is an escape hatch for advanced users who really know
-        what they're doing.
-
-        Learn more about caching and copying in the [Streamlit documentation]
-        (https://streamlit.io/docs/tutorial/create_a_data_explorer_app.html).
+        [Click here to see how to fix this issue.]
+        (https://streamlit.io/docs/advanced_concepts.html#advanced-caching)
         """
     ).strip("\n")
 
-    return message.format(
-        name=name,
-        load_or_rerun=load_or_rerun,
-        file_name=os.path.relpath(func.__code__.co_filename),
-        lineno=func.__code__.co_firstlineno,
-        persisted=persisted,
-        caller_file_name=os.path.relpath(caller_file_name),
-        caller_lineno=caller_lineno,
-        copy_code=copy_code,
-    )
-
-
-def _build_caching_block_error_message(persisted, code, line_number_range):
-    if persisted:
-        load_or_rerun = "loading the value back from the disk cache"
-    else:
-        load_or_rerun = "rerunning the code"
-
-    [start, end] = line_number_range
-    if start == end:
-        lines = "line {start}".format(start=start)
-    else:
-        lines = "lines {start} to {end}".format(start=start, end=end)
-
-    message = textwrap.dedent(
-        """
-        **Your code mutated a cached value**
-
-        Streamlit detected the mutation of a cached value in `{file_name}` in
-        {lines}.  Since `persist` is `{persisted}`, Streamlit will make up for
-        this by {load_or_rerun}, so your code will still work, but with reduced
-        performance.
-
-        To dismiss this warning, try one of the following:
-
-        1. *Preferred:* fix the code by removing the mutation. The simplest way
-        to do this is to copy the cached value to a new variable, which you are
-        allowed to mutate.
-        2. Add `allow_output_mutation=True` to the constructor of `streamlit.Cache`. This
-        is an escape hatch for advanced users who really know what they're
-        doing.
-
-        Learn more about caching and copying in the [Streamlit documentation]
-        (https://streamlit.io/docs/tutorial/create_a_data_explorer_app.html).
-    """
-    ).strip("\n")
-
-    return message.format(
-        load_or_rerun=load_or_rerun,
-        file_name=os.path.relpath(code.co_filename),
-        lines=lines,
-        persisted=persisted,
-    )
+    return message
 
 
 def _read_from_mem_cache(key, allow_output_mutation, hash_funcs):
@@ -314,7 +223,7 @@ def _read_from_mem_cache(key, allow_output_mutation, hash_funcs):
             return entry.value
         else:
             LOGGER.debug("Cache object was mutated: %s", key)
-            raise CachedObjectWasMutatedError()
+            raise CachedObjectWasMutatedError(entry.value)
     else:
         LOGGER.debug("Memory cache MISS: %s", key)
         raise CacheKeyNotFoundError("Key not found in mem cache")
@@ -374,18 +283,10 @@ def _read_from_cache(
     """
     try:
         return _read_from_mem_cache(key, allow_output_mutation, hash_funcs)
-    except (CacheKeyNotFoundError, CachedObjectWasMutatedError) as e:
-        if isinstance(e, CachedObjectWasMutatedError):
-            if inspect.isroutine(func_or_code):
-                message = _build_caching_func_error_message(
-                    persisted, func_or_code, message_opts
-                )
-            else:
-                message = _build_caching_block_error_message(
-                    persisted, func_or_code, message_opts
-                )
-            st.warning(message)
-
+    except CachedObjectWasMutatedError as e:
+        st.warning(_get_mutated_output_error_message())
+        return e.cached_value
+    except CacheKeyNotFoundError as e:
         if persisted:
             value = _read_from_disk_cache(key)
             _write_to_mem_cache(key, value, allow_output_mutation, hash_funcs)
@@ -541,7 +442,7 @@ def cache(
                 return_value = _read_from_cache(
                     key, persist, allow_output_mutation, func, caller_frame, hash_funcs
                 )
-            except (CacheKeyNotFoundError, CachedObjectWasMutatedError):
+            except CacheKeyNotFoundError:
                 with _calling_cached_function():
                     if suppress_st_warning:
                         with suppress_cached_st_function_warning():
@@ -668,7 +569,7 @@ class Cache(dict):
                 [caller_lineno + 1, caller_lineno + len(lines)],
             )
             self.update(value)
-        except (CacheKeyNotFoundError, CachedObjectWasMutatedError):
+        except CacheKeyNotFoundError:
             if self._allow_output_mutation and not self._persist:
                 # If we don't hash the results, we don't need to use exec and just return True.
                 # This way line numbers will be correct.
