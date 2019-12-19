@@ -98,7 +98,7 @@ class MultithreadStackTracker:
             self.stack.pop(thread_id)
 
 
-stack_tracker = MultithreadStackTracker()[]
+stack_tracker = MultithreadStackTracker()
 
 
 def _is_magicmock(obj):
@@ -274,7 +274,7 @@ class CodeHasher:
 
         if key is not None:
             self.hashes[key] = b
-
+        stack_tracker.rem(threading.current_thread().ident, key)
         return b
 
     def _update(self, hasher, obj, context=None):
