@@ -66,14 +66,11 @@ class MyCallback(keras.callbacks.Callback):
         self._epoch_summary = st.empty()
 
     def on_batch_end(self, batch, logs=None):
-        rows = pd.DataFrame(
-            [[logs["loss"], logs["accuracy"]]], columns=["loss", "accuracy"]
-        )
         if batch % 10 == 0:
-            self._epoch_chart.add_rows(
-                {"loss": [logs["loss"]], "accuracy": [logs["accuracy"]]}
-            )
+            rows = {"loss": [logs["loss"]], "accuracy": [logs["accuracy"]]}
+            self._epoch_chart.add_rows(rows)
         if batch % 100 == 99:
+            rows = {"loss": [logs["loss"]], "accuracy": [logs["accuracy"]]}
             self._summary_chart.add_rows(rows)
         percent_complete = logs["batch"] * logs["size"] / self.params["samples"]
         self._epoch_progress.progress(math.ceil(percent_complete * 100))

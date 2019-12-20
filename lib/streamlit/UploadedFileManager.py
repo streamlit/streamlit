@@ -94,8 +94,10 @@ class UploadedFileManager(object):
 
         file = self._file_list[widget_id]
 
-        progress = 1
+        progress = 100
+
         if file.data is None:
             progress = float(len(file.buffers)) / file.total_chunks
+            progress = round(100 * progress)
 
         return progress, file.data

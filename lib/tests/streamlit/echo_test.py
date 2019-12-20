@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
+
 from tests import testutil
 import streamlit as st
 
@@ -62,3 +64,18 @@ class MyClass(object):
 
         element = self.get_delta_from_queue(1).new_element
         self.assertEqual("Hello", element.markdown.body)
+
+    def test_root_level_echo(self):
+        if sys.version_info[0] == 2:
+            import echo_test_data.root_level_echo
+        else:
+            import tests.streamlit.echo_test_data.root_level_echo
+
+        expected = """```python
+a = 123
+
+
+```"""
+
+        element = self.get_delta_from_queue(0).new_element
+        self.assertEqual(expected, element.markdown.body)

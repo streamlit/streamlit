@@ -22,6 +22,33 @@ See highlights, bug fixes, and known issues for Streamlit releases:
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.52.0
+
+_Release date: December 20, 2019_
+
+**Highlights:**
+
+- 📤 Preview release of the file uploader widget. To try it out just call
+  [`st.file_uploader`](https://streamlit.io/docs/api.html#streamlit.file_uploader)!
+  _Note that as a **preview release** things may change in the near future.
+  Looking forward to hearing input from the community before we stabilize the
+  API!_
+
+- 👋 Support for [emoji codes](https://www.webfx.com/tools/emoji-cheat-sheet/) in
+  `st.write` and `st.markdown`! Try it out with `st.write("Hello :wave:")`.
+
+**Breaking changes:**
+
+- 🧹 `st.pyplot` now clears figures by default, since that's what you want 99% of
+  the time. This allows you to create two or more Matplotlib charts without
+  having to call
+  [`pyplot.clf`](https://matplotlib.org/3.1.1/api/_as_gen/matplotlib.pyplot.clf.html)
+  every time. If you want to turn this behavior off, use
+  [`st.pyplot(clear_figure=False)`](https://streamlit.io/docs/api.html#streamlit.pyplot)
+- 📣 `st.cache` no longer checks for input mutations. This is the first change
+  of our ongoing effort to simplify the caching system and prepare Streamlit
+  for the launch of other caching primitives like Session State!
+
 ## Version 0.51.0
 
 _Release date: November 30, 2019_
