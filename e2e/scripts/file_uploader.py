@@ -16,4 +16,4 @@
 import streamlit as st
 
 
-st.file_uploader("Drop a file:", type=['txt'])
+st.file_uploader("Drop a file:", type=["txt"])
