@@ -444,7 +444,7 @@ def write(*args, **kwargs):
             elif _type_util.is_namedtuple(arg):
                 flush_buffer()
                 json(_json.dumps(arg._asdict()))
-            elif _util.is_pydeck(arg):
+            elif _type_util.is_pydeck(arg):
                 flush_buffer()
                 deck_json_chart(arg)
             else:

@@ -34,7 +34,6 @@ import { dataFrameToArrayOfDicts } from "lib/dataFrameProto"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import "mapbox-gl/dist/mapbox-gl.css"
 import "./DeckGlChart.scss"
-import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
 
 interface Props {
   width: number
@@ -95,59 +94,33 @@ class DeckGlChart extends React.PureComponent<PropsWithHeight, State> {
     setTimeout(this.fixHexLayerBug_bound, 0)
   }
 
-  updateInitialViewState = (): void => {
-    const specStr = this.props.element.get("spec")
-    const spec = specStr ? JSON.parse(specStr) : {}
-    const v = spec.viewport || {}
-    const { width, height } = this.props
-    this.initialViewState = {
-      width: v.width || width,
-      height: v.height || height,
-      longitude: v.longitude || 0,
-      latitude: v.latitude || 0,
-      pitch: v.pitch || 0,
-      bearing: v.bearing || 0,
-      zoom: v.zoom || 1,
-    }
-
-    this.mapStyle = getStyleUrl(v.mapStyle)
-  }
-
   fixHexLayerBug(): void {
     this.setState({ initialized: true })
   }
 
   render(): JSX.Element {
-    this.updateInitialViewState()
     return (
       <div
-        className="deckglchart"
+        className="deckglchart stDeckGlChart"
         style={{
-          height: this.initialViewState.height + 60,
+          height: this.initialViewState.height,
           width: this.initialViewState.width,
         }}
       >
-        <div
-          className="stDeckGlChart"
-          style={{
-            height: this.initialViewState.height,
-            width: this.initialViewState.width,
-          }}
+        <DeckGL
+          initialViewState={this.initialViewState}
+          height={this.initialViewState.height}
+          width={this.initialViewState.width}
+          controller
+          layers={this.state.initialized ? this.buildLayers() : []}
         >
-          <DeckGL
-            initialViewState={this.initialViewState}
+          <StaticMap
             height={this.initialViewState.height}
             width={this.initialViewState.width}
-            controller
-            layers={this.state.initialized ? this.buildLayers() : []}
-          >
-            <StaticMap
-              height={this.initialViewState.height}
-              width={this.initialViewState.width}
-              mapStyle={this.mapStyle}
-              mapboxApiAccessToken={SessionInfo.current.mapboxToken}
-            />
-          </DeckGL>
+            mapStyle={this.mapStyle}
+            mapboxApiAccessToken={SessionInfo.current.mapboxToken}
+          />
+        </DeckGL>
       </div>
     )
   }
