@@ -28,6 +28,8 @@ describe("st.file_uploader", () => {
   it("shows widget correctly", () => {
     cy.get(".stFileUploader").should("have.length", 1);
     cy.get(".stFileUploader label").should("have.text", "Drop a file:");
+
+    cy.get(".stFileUploader").matchImageSnapshot("file_uploader");
   });
 
   it("shows error message for not allowed files", () => {
@@ -46,6 +48,8 @@ describe("st.file_uploader", () => {
         "have.text",
         " application/json files are not allowedOK"
       );
+
+      cy.get(".stFileUploader").matchImageSnapshot("file_uploader-error");
     });
   });
 
@@ -62,6 +66,8 @@ describe("st.file_uploader", () => {
       );
 
       cy.get(".uploadDone").should("have.text", fileName);
+
+      cy.get(".stFileUploader").matchImageSnapshot("file_uploader-uploaded");
     });
   });
 });
