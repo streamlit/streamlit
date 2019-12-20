@@ -202,11 +202,11 @@ class App extends PureComponent<Props, State> {
   hasStreamlitVersionChanged(initializeMsg: Initialize): boolean {
     if (SessionInfo.isSet()) {
       const { streamlitVersion: currentStreamlitVersion } = SessionInfo.current
-      const {
-        streamlitVersion: newStreamlitVersion,
-      } = initializeMsg.environmentInfo
+      const { environmentInfo } = initializeMsg
 
-      return currentStreamlitVersion !== newStreamlitVersion
+      if (environmentInfo) {
+        return currentStreamlitVersion !== environmentInfo.streamlitVersion
+      }
     }
 
     return false
@@ -294,16 +294,16 @@ class App extends PureComponent<Props, State> {
    */
 
   handleInitialize(initializeMsg: Initialize): void {
-    if (this.hasStreamlitVersionChanged(initializeMsg)) {
-      window.location.reload()
-
-      return
-    }
-
     const { environmentInfo, userInfo, config, sessionState } = initializeMsg
 
     if (!environmentInfo || !userInfo || !config || !sessionState) {
       throw new Error("InitializeMsg is missing a required field")
+    }
+
+    if (this.hasStreamlitVersionChanged(initializeMsg)) {
+      window.location.reload()
+
+      return
     }
 
     SessionInfo.current = new SessionInfo({

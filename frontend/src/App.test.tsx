@@ -17,7 +17,7 @@
 
 import React from "react"
 import { mount, CommonWrapper } from "enzyme"
-import { ForwardMsg, Initialize } from "autogen/proto"
+import { ForwardMsg } from "autogen/proto"
 import { MetricsManager } from "./lib/MetricsManager"
 import { getMetricsManagerForTest } from "./lib/MetricsManagerTestUtils"
 import { SessionInfo, Args as SessionInfoArgs } from "./lib/SessionInfo"
@@ -62,13 +62,15 @@ describe("App", () => {
     window.location.reload = jest.fn()
 
     const fwMessage = new ForwardMsg()
-    const initMessage = new Initialize()
 
-    initMessage.environmentInfo = {
-      streamlitVersion: "svv",
+    fwMessage.initialize = {
+      environmentInfo: {
+        streamlitVersion: "svv",
+      },
+      userInfo: {},
+      config: {},
+      sessionState: {},
     }
-
-    fwMessage.initialize = initMessage
 
     // @ts-ignore
     wrapper.instance().handleMessage(fwMessage)
