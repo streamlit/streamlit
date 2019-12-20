@@ -29,6 +29,7 @@ import * as _ from "lodash"
 
 // https://github.com/palmerhq/cypress-image-snapshot#installation
 import { addMatchImageSnapshotCommand } from "cypress-image-snapshot/command"
+import "cypress-file-upload"
 
 /**
  * Returns an OS and device-pixel-ratio specific snapshot folder, e.g. <rootDir>/cypress/snapshots/darwin/2x
