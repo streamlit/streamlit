@@ -15,4 +15,26 @@
  * limitations under the License.
  */
 
-export { default } from "./LoginBox"
+import React from "react"
+
+export interface Props {
+  enable: boolean
+}
+
+export interface State {}
+
+class Maybe extends React.Component<Props, State> {
+  public shouldComponentUpdate(
+    nextProps: Readonly<Props>,
+    nextState: Readonly<State>,
+    nextContext: any
+  ): boolean {
+    return nextProps.enable
+  }
+
+  public render(): React.ReactNode {
+    return this.props.children
+  }
+}
+
+export default Maybe

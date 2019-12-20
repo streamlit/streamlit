@@ -31,18 +31,19 @@ const getProps = (elementProps: object = {}): Props => ({
   width: 100,
 })
 
-describe("JSON Element Test", () => {
+describe("JSON element", () => {
   it("renders json as expected", () => {
     const props = getProps()
     const wrapper = shallow(<Json {...props} />)
     expect(wrapper).toBeDefined()
     const elem = wrapper.get(0)
     expect(elem.props.className.includes("stJson")).toBeTruthy()
-  }),
-    it("should raise an exception with invalid JSON", () => {
-      const props = getProps({ body: "invalid JSON" })
-      expect(() => {
-        shallow(<Json {...props} />)
-      }).toThrow(SyntaxError)
-    })
+  })
+
+  it("should raise an exception with invalid JSON", () => {
+    const props = getProps({ body: "invalid JSON" })
+    expect(() => {
+      shallow(<Json {...props} />)
+    }).toThrow(SyntaxError)
+  })
 })

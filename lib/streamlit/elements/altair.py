@@ -20,7 +20,7 @@ from __future__ import absolute_import
 
 from datetime import date
 
-from streamlit.elements.data_frame_proto import convert_anything_to_df
+from streamlit import type_util
 import streamlit.elements.vega_lite as vega_lite
 import altair as alt
 import pandas as pd
@@ -56,7 +56,7 @@ def generate_chart(chart_type, data, width=0, height=0):
         data = {"": []}
 
     if not isinstance(data, pd.DataFrame):
-        data = convert_anything_to_df(data)
+        data = type_util.convert_anything_to_df(data)
 
     index_name = data.index.name
     if index_name is None:

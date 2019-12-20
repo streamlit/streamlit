@@ -20,7 +20,7 @@ import { Map as ImmutableMap } from "immutable"
 import { MultiGrid } from "react-virtualized"
 import DataFrameCell from "./DataFrameCell"
 import { SortDirection } from "./SortDirection"
-import FullScreenWrapper from "components/shared/FullScreenWrapper"
+import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import {
   dataFrameGet,
   dataFrameGetDimensions,
@@ -519,17 +519,4 @@ function getWidths(
   return { elementWidth, columnWidth, headerWidth }
 }
 
-class WithFullScreenWrapper extends React.Component<Props> {
-  render(): JSX.Element {
-    const { element, width, height } = this.props
-    return (
-      <FullScreenWrapper width={width} height={height}>
-        {({ width, height }) => (
-          <DataFrame element={element} width={width} height={height} />
-        )}
-      </FullScreenWrapper>
-    )
-  }
-}
-
-export default WithFullScreenWrapper
+export default withFullScreenWrapper(DataFrame)

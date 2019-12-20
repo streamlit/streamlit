@@ -78,15 +78,6 @@ def get_file_watcher_class():
 
 FileWatcher = get_file_watcher_class()
 
-# Streamlit never watches files in the folders below.
-DEFAULT_FOLDER_BLACKLIST = [
-    "**/.*",
-    "**/anaconda2",
-    "**/anaconda3",
-    "**/miniconda2",
-    "**/miniconda3",
-]
-
 WatchedModule = collections.namedtuple("WatchedModule", ["watcher", "module_name"])
 
 
@@ -170,6 +161,16 @@ class LocalSourcesWatcher(object):
         wm.watcher.close()
         del self._watched_modules[filepath]
 
+    def _file_is_new(self, filepath):
+        return filepath not in self._watched_modules
+
+    def _file_should_be_watched(self, filepath):
+        # Using short circuiting for performance.
+        return self._file_is_new(filepath) and (
+            file_util.file_is_in_folder_glob(filepath, self._report.script_folder)
+            or file_util.file_in_pythonpath(filepath)
+        )
+
     def update_watched_modules(self):
         if self._is_closed:
             return
@@ -209,14 +210,9 @@ class LocalSourcesWatcher(object):
                 if self._folder_black_list.is_blacklisted(filepath):
                     continue
 
-                file_is_new = filepath not in self._watched_modules
-                file_is_local = file_util.file_is_in_folder_glob(
-                    filepath, self._report.script_folder
-                )
-
                 local_filepaths.append(filepath)
 
-                if file_is_local and file_is_new:
+                if self._file_should_be_watched(filepath):
                     self._register_watcher(filepath, name)
 
             except Exception:

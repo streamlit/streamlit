@@ -16,10 +16,10 @@
  */
 
 import React from "react"
-import { Map as ImmutableMap } from "immutable"
-import { tableGetRowsAndCols, indexGet, tableGet } from "lib/dataFrameProto"
-import FullScreenWrapper from "components/shared/FullScreenWrapper"
 import { logMessage } from "lib/log"
+import { Map as ImmutableMap } from "immutable"
+import withFullScreenWrapper from "hocs/withFullScreenWrapper"
+import { tableGetRowsAndCols, indexGet, tableGet } from "lib/dataFrameProto"
 import embed from "vega-embed"
 import * as vega from "vega"
 import "./VegaLiteChart.scss"
@@ -434,17 +434,4 @@ function dataIsAnAppendOfPrev(
   return true
 }
 
-class WithFullScreenWrapper extends React.Component<Props> {
-  render(): JSX.Element {
-    const { element, width } = this.props
-    return (
-      <FullScreenWrapper width={width}>
-        {({ width, height }) => (
-          <VegaLiteChart element={element} width={width} height={height} />
-        )}
-      </FullScreenWrapper>
-    )
-  }
-}
-
-export default WithFullScreenWrapper
+export default withFullScreenWrapper(VegaLiteChart)
