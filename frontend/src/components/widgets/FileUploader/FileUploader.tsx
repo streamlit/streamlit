@@ -105,13 +105,9 @@ class FileUploader extends React.PureComponent<Props, State> {
   }
 
   public componentDidUpdate(oldProps: Props): void {
+    // This is the wrong place for this logic! Need to move it somewhere else.
     const progress = this.props.element.get("progress")
-    const oldProgress = oldProps.element.get("progress")
-    if (
-      oldProgress < 1 &&
-      progress >= 1 &&
-      this.state.status === "UPLOADING"
-    ) {
+    if (this.state.status === "UPLOADING" && progress >= 100) {
       this.setState({ status: "UPLOADED" })
     }
   }

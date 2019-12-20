@@ -43,6 +43,18 @@ you're working on.
 - [venv](https://docs.python.org/3/library/venv.html)
 - [pipenv](https://docs.pipenv.org/en/latest/)
 
+## Install Streamlit
+
+```bash
+$ pip install streamlit
+```
+
+Now run the hello world app just to make sure everything it's working:
+
+```bash
+$ streamlit hello
+```
+
 ## Import Streamlit
 
 Now that everything's installed, let's create a new Python script and import

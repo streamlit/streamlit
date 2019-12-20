@@ -21,11 +21,12 @@ import { getMetricsManagerForTest } from "lib/MetricsManagerTestUtils"
 beforeEach(() => {
   SessionInfo.current = new SessionInfo({
     streamlitVersion: "sv",
+    pythonVersion: "pv",
     installationId: "iid",
     authorEmail: "ae",
-    pythonVersion: "pv",
     maxCachedMessageAge: 2,
     commandLine: "command line",
+    mapboxToken: "mbx",
   })
 })
 

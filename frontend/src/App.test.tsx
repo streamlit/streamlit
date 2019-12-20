@@ -36,10 +36,12 @@ describe("App", () => {
   beforeEach(() => {
     SessionInfo.current = new SessionInfo({
       streamlitVersion: "sv",
+      pythonVersion: "pv",
       installationId: "iid",
       authorEmail: "ae",
       maxCachedMessageAge: 2,
       commandLine: "command line",
+      mapboxToken: "mpt",
     } as SessionInfoArgs)
     MetricsManager.current = getMetricsManagerForTest()
   })
