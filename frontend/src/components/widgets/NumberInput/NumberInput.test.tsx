@@ -98,6 +98,24 @@ describe("NumberInput widget", () => {
     expect(wrapper.instance().getMax()).toBe(+Infinity)
   })
 
+  it("should set min/max", () => {
+    const props = getIntProps({
+      hasMin: true,
+      hasMax: true,
+      intData: {
+        default: 10,
+        min: 0,
+        max: 10,
+      },
+    })
+    const wrapper = shallow(<NumberInput {...props} />)
+
+    // @ts-ignore
+    expect(wrapper.instance().getMin()).toBe(0)
+    // @ts-ignore
+    expect(wrapper.instance().getMax()).toBe(10)
+  })
+
   describe("FloatData", () => {
     it("should change the state when ArrowDown", () => {
       const props = getFloatProps({
