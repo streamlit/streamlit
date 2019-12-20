@@ -450,7 +450,7 @@ class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
     def test_line_chart_with_generic_index(self):
         """Test dg.line_chart with a generic index."""
         data = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
-        data.set_index('a', inplace=True)
+        data.set_index("a", inplace=True)
 
         st.line_chart(data)
 
@@ -462,7 +462,7 @@ class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
     def test_line_chart_add_rows_with_generic_index(self):
         """Test empty dg.line_chart with add_rows funciton and a generic index."""
         data = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
-        data.set_index('a', inplace=True)
+        data.set_index("a", inplace=True)
 
         chart = st.line_chart()
         chart.add_rows(data)

@@ -2728,7 +2728,7 @@ def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
 
         index_name = data.index.name
         if index_name is None:
-            index_name = "index" 
+            index_name = "index"
 
         data = pd.melt(data.reset_index(), id_vars=[index_name])
 

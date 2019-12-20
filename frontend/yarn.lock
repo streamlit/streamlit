@@ -4305,6 +4305,11 @@ cyclist@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/cyclist/-/cyclist-1.0.1.tgz#596e9698fd0c80e12038c2b82d6eb1b35b6224d9"
 
+cypress-file-upload@^3.5.1:
+  version "3.5.1"
+  resolved "https://registry.yarnpkg.com/cypress-file-upload/-/cypress-file-upload-3.5.1.tgz#6dcd7a87c93242b8fe917abe39bdda1ff82e23a3"
+  integrity sha512-HUhnoLlhLTHmgRGsoflcGyv3n9WA/Kh96mmBLmTGlg9Fs/CP2fVVc4NdbKeT9fNYk6Qy3upjfUxYaavNnfQb/Q==
+
 cypress-image-snapshot@^3.1.1:
   version "3.1.1"
   resolved "https://registry.yarnpkg.com/cypress-image-snapshot/-/cypress-image-snapshot-3.1.1.tgz#cb7242d8086e0d4cbb7f333f927f71cdb5ff9971"
