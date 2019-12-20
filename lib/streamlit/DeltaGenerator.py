@@ -1936,7 +1936,7 @@ class DeltaGenerator(object):
         label : str or None
             A short label explaining to the user what this file uploader is for.
         type : str or list of str or None
-            Array of allowed extensions. ['png', 'jpg']
+            Allowed file extensions. For example: ['png', 'jpg'].
             By default, all extensions are allowed.
         encoding : str or None
             The encoding to use when opening textual files (i.e. non-binary).
@@ -1946,12 +1946,12 @@ class DeltaGenerator(object):
         Returns
         -------
         BytesIO or StringIO or None
-            The data for the uploaded file. If the file is in a well-known
-            textual format (or if the encoding parameter is set), returns a
-            StringIO. Otherwise BytesIO. If no file is loaded, returns None.
+            The uploaded file. If the file is in a well-known textual format
+            (or if the encoding parameter is set), returns a StringIO.
+            Otherwise BytesIO. If no file is loaded, returns None.
 
             Note that BytesIO/StringIO are "file-like", which means you can
-            pass them anywhere where a file is expected!
+            pass them anywhere where a file is expected.
 
         Examples
         --------
@@ -2728,7 +2728,7 @@ def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
 
         index_name = data.index.name
         if index_name is None:
-            index_name = "index" 
+            index_name = "index"
 
         data = pd.melt(data.reset_index(), id_vars=[index_name])
 
