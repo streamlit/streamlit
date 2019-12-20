@@ -34,7 +34,7 @@ describe("st.selectbox", () => {
   });
 
   it("has correct initial values", () => {
-    cy.get(".stText").should(
+    cy.get(".stMarkdown").should(
       "have.text",
       "value 1: female" + "value 2: male" + "value 3: None"
     );
@@ -69,7 +69,7 @@ describe("st.selectbox", () => {
           .click();
       });
 
-    cy.get(".stText").should(
+    cy.get(".stMarkdown").should(
       "have.text",
       "value 1: female" + "value 2: female" + "value 3: None"
     );

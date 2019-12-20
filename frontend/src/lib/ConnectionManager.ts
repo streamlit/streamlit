@@ -23,7 +23,7 @@ import { IS_SHARED_REPORT } from "./baseconsts"
 
 import { ConnectionState } from "./ConnectionState"
 import { logError } from "./log"
-import { configureCredentials, getObject } from "./s3helper"
+import { getBucketAndResourceRoot, getObject } from "./s3helper"
 import { StaticConnection } from "./StaticConnection"
 import { WebsocketConnection } from "./WebsocketConnection"
 
@@ -34,12 +34,6 @@ import { WebsocketConnection } from "./WebsocketConnection"
 const RETRY_COUNT_FOR_WARNING = 30 // around 15s
 
 interface Props {
-  /**
-   * Function that shows the user a login box and returns a promise which
-   * gets resolved when the user goes through the login flow.
-   */
-  getUserLogin: () => Promise<string>
-
   /**
    * Function to be called when we receive a message from the server.
    */
@@ -64,7 +58,7 @@ export class ConnectionManager {
   private connection?: WebsocketConnection | StaticConnection
   private connectionState: ConnectionState = ConnectionState.INITIAL
 
-  public constructor(props: Props) {
+  constructor(props: Props) {
     this.props = props
 
     // This method returns a promise, but we don't care about its result.
@@ -150,7 +144,7 @@ export class ConnectionManager {
     return new WebsocketConnection({
       baseUriPartsList: [baseUriParts],
       onMessage: this.props.onMessage,
-      onConnectionStateChange: s => this.setConnectionState(s),
+      onConnectionStateChange: this.setConnectionState,
       onRetry: this.showRetryError,
     })
   }
@@ -162,7 +156,7 @@ export class ConnectionManager {
   private async connectBasedOnManifest(
     reportId: string
   ): Promise<WebsocketConnection | StaticConnection> {
-    const manifest = await this.fetchManifestWithPossibleLogin(reportId)
+    const manifest = await this.fetchManifest(reportId)
 
     return manifest.serverStatus === StaticManifest.ServerStatus.RUNNING
       ? this.connectToRunningServerFromManifest(manifest)
@@ -209,53 +203,24 @@ export class ConnectionManager {
     })
   }
 
-  private async fetchManifestWithPossibleLogin(
-    reportId: string
-  ): Promise<StaticManifest> {
-    let manifest
-    let permissionError = false
-
+  private async fetchManifest(reportId: string): Promise<StaticManifest> {
     try {
-      manifest = await fetchManifest(reportId)
+      const { bucket, resourceRoot } = getBucketAndResourceRoot()
+      if (resourceRoot == null) {
+        throw new Error(`No resourceRoot in URL ${window.location.href}`)
+      }
+
+      const manifestKey = `${resourceRoot}/reports/${reportId}/manifest.pb`
+      const data = await getObject({
+        Bucket: String(bucket),
+        Key: manifestKey,
+      })
+      const arrayBuffer = await data.arrayBuffer()
+
+      return StaticManifest.decode(new Uint8Array(arrayBuffer))
     } catch (err) {
-      if (err.message === "PermissionError") {
-        permissionError = true
-      } else {
-        logError(err)
-        throw new Error("Unable to fetch app.")
-      }
+      logError(err)
+      throw new Error("Unable to fetch data.")
     }
-
-    if (permissionError) {
-      const idToken = await this.props.getUserLogin()
-      try {
-        await configureCredentials(idToken)
-        manifest = await fetchManifest(reportId)
-      } catch (err) {
-        logError(err)
-        throw new Error("Unable to log in.")
-      }
-    }
-
-    if (!manifest) {
-      throw new Error("Unknown error fetching app.")
-    }
-
-    return manifest
   }
-}
-
-async function fetchManifest(reportId: string): Promise<StaticManifest> {
-  const { hostname, pathname } = url.parse(window.location.href, true)
-  if (pathname == null) {
-    throw new Error(`No pathname in URL ${window.location.href}`)
-  }
-
-  // IMPORTANT: The bucket name must match the host name!
-  const bucket = hostname
-  const version = pathname.split("/")[1]
-  const manifestKey = `${version}/reports/${reportId}/manifest.pb`
-  const data = await getObject({ Bucket: String(bucket), Key: manifestKey })
-  const arrayBuffer = await data.arrayBuffer()
-  return StaticManifest.decode(new Uint8Array(arrayBuffer))
 }

@@ -16,12 +16,13 @@
  */
 
 export interface Args {
-  streamlitVersion: string
-  pythonVersion: string
-  installationId: string
-  authorEmail: string
-  maxCachedMessageAge: number
-  commandLine: string
+  streamlitVersion?: string | null
+  pythonVersion?: string | null
+  installationId?: string | null
+  authorEmail?: string | null
+  maxCachedMessageAge?: number | null
+  commandLine?: string | null
+  mapboxToken?: string | null
 }
 
 export class SessionInfo {
@@ -32,6 +33,7 @@ export class SessionInfo {
   public readonly authorEmail: string
   public readonly maxCachedMessageAge: number
   public readonly commandLine: string
+  public readonly mapboxToken: string
 
   /**
    * Singleton SessionInfo object. The reasons we're using a singleton here
@@ -57,19 +59,33 @@ export class SessionInfo {
     return SessionInfo.singleton != null
   }
 
-  public constructor({
+  constructor({
     streamlitVersion,
     pythonVersion,
     installationId,
     authorEmail,
     maxCachedMessageAge,
     commandLine,
+    mapboxToken,
   }: Args) {
+    if (
+      !streamlitVersion ||
+      !pythonVersion ||
+      !installationId ||
+      !authorEmail ||
+      !maxCachedMessageAge ||
+      !commandLine ||
+      !mapboxToken
+    ) {
+      throw new Error("SessionInfo arguments must be strings")
+    }
+
     this.streamlitVersion = streamlitVersion
     this.pythonVersion = pythonVersion
     this.installationId = installationId
     this.authorEmail = authorEmail
     this.maxCachedMessageAge = maxCachedMessageAge
     this.commandLine = commandLine
+    this.mapboxToken = mapboxToken
   }
 }

@@ -52,7 +52,7 @@ st.write("Below is an empty pyplot chart (i.e. just a blank image)")
 st.pyplot()
 st.write("...and that was it.")
 
-st.subheader("Here are 2 filled charts")
+st.subheader("Here are 5 filled charts")
 x = st.vega_lite_chart(spec)
 x.vega_lite_chart(data, spec)
 

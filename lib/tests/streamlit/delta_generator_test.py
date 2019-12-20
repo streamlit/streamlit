@@ -16,19 +16,19 @@
 """DeltaGenerator Unittest."""
 
 # Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 
-from streamlit.DeltaGenerator import _build_duplicate_widget_message
 from streamlit.compatibility import setup_2_3_shims
-from streamlit.errors import DuplicateWidgetID
-from streamlit.errors import StreamlitAPIException
 
 setup_2_3_shims(globals())
 
 import json
+import mock
 import sys
-
-import pandas as pd
+import unittest
 
 try:
     from inspect import signature
@@ -37,13 +37,21 @@ except ImportError:
 
 from parameterized import parameterized
 
-from streamlit.proto.Text_pb2 import Text
+import pandas as pd
+
+from streamlit.DeltaGenerator import _build_duplicate_widget_message
+from streamlit.errors import DuplicateWidgetID
+from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Element_pb2 import Element
+from streamlit.proto.TextInput_pb2 import TextInput
+from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.DeltaGenerator import (
     _wraps_with_cleaned_sig,
     _remove_self_from_sig,
     _with_element,
+    _set_widget_id,
 )
 from tests import testutil
 import streamlit as st
@@ -92,7 +100,6 @@ class FakeDeltaGenerator(object):
     def fake_text(self, element, body):
         """Fake text delta generator."""
         element.text.body = str(body)
-        element.text.format = Text.PLAIN
 
     def fake_dataframe(self, arg0, data=None):
         """Fake dataframe."""
@@ -193,7 +200,7 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
         dg = FakeDeltaGenerator()
         data = "some_text"
         # This would really look like st.text(data) but since we're
-        # testng the wrapper, it looks like this.
+        # testing the wrapper, it looks like this.
         element = wrapped(dg, data)
         self.assertEqual(element.new_element.text.body, data)
 
@@ -321,40 +328,8 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(msg.delta.new_element.text.body, test_data)
 
 
-class DeltaGeneratorTextTest(testutil.DeltaGeneratorTestCase):
-    """Test DeltaGenerator Text Proto Class."""
-
-    def test_generic_text(self):
-        """Test Text generic str(body) stuff."""
-        test_data = {
-            "text": Text.PLAIN,
-            "error": Text.ERROR,
-            "warning": Text.WARNING,
-            "info": Text.INFO,
-            "success": Text.SUCCESS,
-        }
-
-        # Test with string input.
-        input_data = "    Some string  "
-        cleaned_data = "Some string"
-        for name, format in test_data.items():
-            method = getattr(st, name)
-            method(input_data)
-
-            element = self.get_delta_from_queue().new_element
-            self.assertEqual(cleaned_data, getattr(element, "text").body)
-            self.assertEqual(format, getattr(element, "text").format)
-
-        # Test with non-string input.
-        input_data = 123
-        cleaned_data = "123"
-        for name, format in test_data.items():
-            method = getattr(st, name)
-            method(input_data)
-
-            element = self.get_delta_from_queue().new_element
-            self.assertEqual(str(cleaned_data), getattr(element, "text").body)
-            self.assertEqual(format, getattr(element, "text").format)
+class DeltaGeneratorWriteTest(testutil.DeltaGeneratorTestCase):
+    """Test DeltaGenerator Text, Alert, Json, and Markdown Classes."""
 
     def test_json_object(self):
         """Test Text.JSON object."""
@@ -366,8 +341,7 @@ class DeltaGeneratorTextTest(testutil.DeltaGeneratorTestCase):
         json_string = json.dumps(json_data)
 
         element = self.get_delta_from_queue().new_element
-        self.assertEqual(json_string, element.text.body)
-        self.assertEqual(Text.JSON, element.text.format)
+        self.assertEqual(json_string, element.json.body)
 
     def test_json_string(self):
         """Test Text.JSON string."""
@@ -377,8 +351,7 @@ class DeltaGeneratorTextTest(testutil.DeltaGeneratorTestCase):
         st.json(json_string)
 
         element = self.get_delta_from_queue().new_element
-        self.assertEqual(json_string, element.text.body)
-        self.assertEqual(Text.JSON, element.text.format)
+        self.assertEqual(json_string, element.json.body)
 
     def test_json_unserializable(self):
         """Test Text.JSON with unserializable object."""
@@ -389,20 +362,24 @@ class DeltaGeneratorTextTest(testutil.DeltaGeneratorTestCase):
 
         element = self.get_delta_from_queue().new_element
         if sys.version_info >= (3, 0):
-            self.assertEqual("\"<class 'module'>\"", element.text.body)
+            self.assertEqual("\"<class 'module'>\"", element.json.body)
         else:
-            self.assertEqual("\"<type 'module'>\"", element.text.body)
-        self.assertEqual(Text.JSON, element.text.format)
+            self.assertEqual("\"<type 'module'>\"", element.json.body)
 
     def test_markdown(self):
-        """Test Text.MARKDOWN."""
+        """Test Markdown element."""
         test_string = "    data         "
 
         st.markdown(test_string)
 
         element = self.get_delta_from_queue().new_element
-        self.assertEqual("data", element.text.body)
-        self.assertEqual(Text.MARKDOWN, element.text.format)
+        self.assertEqual("data", element.markdown.body)
+
+        test_string = "    <a#data>data</a>   "
+        st.markdown(test_string)
+        element = self.get_delta_from_queue().new_element
+
+        assert element.markdown.body.startswith("<a#data>")
 
     def test_code(self):
         """Test st.code()"""
@@ -414,8 +391,7 @@ class DeltaGeneratorTextTest(testutil.DeltaGeneratorTestCase):
 
         # st.code() creates a MARKDOWN text object that wraps
         # the body inside a codeblock declaration
-        self.assertEqual(element.text.format, Text.MARKDOWN)
-        self.assertEqual(element.text.body, expected_body)
+        self.assertEqual(element.markdown.body, expected_body)
 
     def test_empty(self):
         """Test Empty."""
@@ -471,6 +447,31 @@ class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(chart_spec["mark"], "line")
         self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 20)
 
+    def test_line_chart_with_generic_index(self):
+        """Test dg.line_chart with a generic index."""
+        data = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
+        data.set_index('a', inplace=True)
+
+        st.line_chart(data)
+
+        element = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(element.spec)
+        self.assertEqual(chart_spec["mark"], "line")
+        self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 30)
+
+    def test_line_chart_add_rows_with_generic_index(self):
+        """Test empty dg.line_chart with add_rows funciton and a generic index."""
+        data = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
+        data.set_index('a', inplace=True)
+
+        chart = st.line_chart()
+        chart.add_rows(data)
+
+        element = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(element.spec)
+        self.assertEqual(chart_spec["mark"], "line")
+        self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 30)
+
     def test_area_chart(self):
         """Test dg.area_chart."""
         data = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
@@ -493,6 +494,128 @@ class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
 
         self.assertEqual(chart_spec["mark"], "bar")
         self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 20)
+
+
+class WidgetIdText(unittest.TestCase):
+    def test_ids_are_equal_when_proto_is_equal(self):
+        text_input1 = TextInput()
+        text_input1.label = "Label #1"
+        text_input1.default = "Value #1"
+
+        text_input2 = TextInput()
+        text_input2.label = "Label #1"
+        text_input2.default = "Value #1"
+
+        element1 = Element()
+        element1.text_input.CopyFrom(text_input1)
+
+        element2 = Element()
+        element2.text_input.CopyFrom(text_input2)
+
+        _set_widget_id("text_input", element1)
+        _set_widget_id("text_input", element2)
+
+        self.assertEqual(element1.text_input.id, element2.text_input.id)
+
+    def test_ids_are_diff_when_labels_are_diff(self):
+        text_input1 = TextInput()
+        text_input1.label = "Label #1"
+        text_input1.default = "Value #1"
+
+        text_input2 = TextInput()
+        text_input2.label = "Label #2"
+        text_input2.default = "Value #1"
+
+        element1 = Element()
+        element1.text_input.CopyFrom(text_input1)
+
+        element2 = Element()
+        element2.text_input.CopyFrom(text_input2)
+
+        _set_widget_id("text_input", element1)
+        _set_widget_id("text_input", element2)
+
+        self.assertNotEqual(element1.text_input.id, element2.text_input.id)
+
+    def test_ids_are_diff_when_types_are_diff(self):
+        text_input1 = TextInput()
+        text_input1.label = "Label #1"
+        text_input1.default = "Value #1"
+
+        text_area2 = TextArea()
+        text_area2.label = "Label #1"
+        text_area2.default = "Value #1"
+
+        element1 = Element()
+        element1.text_input.CopyFrom(text_input1)
+
+        element2 = Element()
+        element2.text_area.CopyFrom(text_area2)
+
+        _set_widget_id("text_input", element1)
+        _set_widget_id("text_input", element2)
+
+        self.assertNotEqual(element1.text_input.id, element2.text_area.id)
+
+    def test_ids_are_equal_when_keys_are_equal(self):
+        text_input1 = TextInput()
+        text_input1.label = "Label #1"
+        text_input1.default = "Value #1"
+
+        text_input2 = TextInput()
+        text_input2.label = "Label #1"
+        text_input2.default = "Value #1"
+
+        element1 = Element()
+        element1.text_input.CopyFrom(text_input1)
+
+        element2 = Element()
+        element2.text_input.CopyFrom(text_input2)
+
+        _set_widget_id("text_input", element1, user_key="some_key")
+        _set_widget_id("text_input", element2, user_key="some_key")
+
+        self.assertEqual(element1.text_input.id, element2.text_input.id)
+
+    def test_ids_are_diff_when_keys_are_diff(self):
+        text_input1 = TextInput()
+        text_input1.label = "Label #1"
+        text_input1.default = "Value #1"
+
+        text_input2 = TextInput()
+        text_input2.label = "Label #1"
+        text_input2.default = "Value #1"
+
+        element1 = Element()
+        element1.text_input.CopyFrom(text_input1)
+
+        element2 = Element()
+        element2.text_input.CopyFrom(text_input2)
+
+        _set_widget_id("text_input", element1, user_key="some_key1")
+        _set_widget_id("text_input", element2, user_key="some_key2")
+
+        self.assertNotEqual(element1.text_input.id, element2.text_input.id)
+
+    def test_ids_are_diff_when_values_are_diff(self):
+        text_input1 = TextInput()
+        text_input1.label = "Label #1"
+        text_input1.default = "Value #1"
+
+        text_input2 = TextInput()
+        text_input2.label = "Label #1"
+        text_input2.default = "Value #2"
+
+        element1 = Element()
+        element1.text_input.CopyFrom(text_input1)
+
+        element2 = Element()
+        element2.text_input.CopyFrom(text_input2)
+
+        _set_widget_id("text_input", element1, user_key="some_key1")
+        _set_widget_id("text_input", element2, user_key="some_key1")
+
+        self.assertNotEqual(element1.text_input.id, element2.text_input.id)
 
 
 class DeltaGeneratorImageTest(testutil.DeltaGeneratorTestCase):

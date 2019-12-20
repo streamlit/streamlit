@@ -27,7 +27,7 @@ describe("st.slider", () => {
   });
 
   it("has correct values", () => {
-    cy.get(".stText").should(
+    cy.get(".stMarkdown").should(
       "have.text",
       "Value 1: 25" + "Value 2: (25.0, 75.0)"
     );
@@ -40,7 +40,7 @@ describe("st.slider", () => {
       .parent()
       .click();
 
-    cy.get(".stText")
+    cy.get(".stMarkdown")
       .first()
       .should("have.text", "Value 1: 50");
   });
@@ -51,7 +51,7 @@ describe("st.slider", () => {
       .click()
       .type("{rightarrow}");
 
-    cy.get(".stText")
+    cy.get(".stMarkdown")
       .first()
       .should("have.text", "Value 1: 26");
   });
@@ -62,7 +62,7 @@ describe("st.slider", () => {
       .click()
       .type("{leftarrow}");
 
-    cy.get(".stText")
+    cy.get(".stMarkdown")
       .first()
       .should("have.text", "Value 1: 24");
   });

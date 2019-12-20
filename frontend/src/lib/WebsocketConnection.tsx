@@ -16,12 +16,14 @@
  */
 
 import { BackMsg, ForwardMsg, IBackMsg } from "autogen/proto"
+
+import axios from "axios"
 import { ConnectionState } from "lib/ConnectionState"
 import { ForwardMsgCache } from "lib/ForwardMessageCache"
 import { logError, logMessage, logWarning } from "lib/log"
 import Resolver from "lib/Resolver"
-import { BaseUriParts, buildHttpUri, buildWsUri } from "lib/UriUtil"
 import { SessionInfo } from "lib/SessionInfo"
+import { BaseUriParts, buildHttpUri, buildWsUri } from "lib/UriUtil"
 import React, { Fragment } from "react"
 
 /**
@@ -58,7 +60,10 @@ const CORS_ERROR_MESSAGE_DOCUMENTATION_LINK =
   "https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS"
 
 type OnMessage = (ForwardMsg: any) => void
-type OnConnectionStateChange = (connectionState: ConnectionState) => void
+type OnConnectionStateChange = (
+  connectionState: ConnectionState,
+  errMsg?: string
+) => void
 type OnRetry = (totalTries: number, errorNode: React.ReactNode) => void
 
 interface Args {
@@ -104,15 +109,19 @@ interface MessageQueue {
  *     │:on timeout/error/closed     │
  *     v  │                          │:on error/closed
  *   PINGING_SERVER <────────────────┘
+ *
+ *                    on fatal error
+ *                    :
+ *   <ANY_STATE> ──────────────> DISCONNECTED_FOREVER
  */
 type Event =
   | "INITIALIZED"
   | "CONNECTION_CLOSED"
   | "CONNECTION_ERROR"
-  | "CONNECTION_WTF"
   | "CONNECTION_SUCCEEDED"
   | "CONNECTION_TIMED_OUT"
   | "SERVER_PING_SUCCEEDED"
+  | "FATAL_ERROR" // Unrecoverable error. This should never happen!
 
 /**
  * This class is the "brother" of StaticConnection. The class connects to the
@@ -167,7 +176,7 @@ export class WebsocketConnection {
    */
   private wsConnectionTimeoutId?: number
 
-  public constructor(props: Args) {
+  constructor(props: Args) {
     this.args = props
     this.cache = new ForwardMsgCache(() => this.getBaseUriParts())
     this.stepFsm("INITIALIZED")
@@ -185,10 +194,10 @@ export class WebsocketConnection {
   }
 
   // This should only be called inside stepFsm().
-  private setFsmState(state: ConnectionState): void {
+  private setFsmState(state: ConnectionState, errMsg?: string): void {
     logMessage(LOG, `New state: ${state}`)
     this.state = state
-    this.args.onConnectionStateChange(state)
+    this.args.onConnectionStateChange(state, errMsg)
 
     // Perform actions when entering certain states.
     switch (this.state) {
@@ -200,6 +209,10 @@ export class WebsocketConnection {
         this.connectToWebSocket()
         break
 
+      case ConnectionState.DISCONNECTED_FOREVER:
+        this.cancelConnectionAttempt()
+        break
+
       case ConnectionState.CONNECTED:
       case ConnectionState.INITIAL:
       default:
@@ -207,10 +220,28 @@ export class WebsocketConnection {
     }
   }
 
-  private stepFsm(event: Event): void {
+  /**
+   * Process an event in our FSM.
+   *
+   * @param event The event to process.
+   * @param errMsg an optional error message to send to the OnStateChanged
+   * callback. This is meaningful only for the FATAL_ERROR event. The message
+   * will be displayed to the user in a "Connection Error" dialog.
+   */
+  private stepFsm(event: Event, errMsg?: string): void {
     logMessage(LOG, `State: ${this.state}; Event: ${event}`)
 
-    // Anything combination of state+event that is not explicitly called out
+    if (
+      event === "FATAL_ERROR" &&
+      this.state !== ConnectionState.DISCONNECTED_FOREVER
+    ) {
+      // If we get a fatal error, we transition to DISCONNECTED_FOREVER
+      // regardless of our current state.
+      this.setFsmState(ConnectionState.DISCONNECTED_FOREVER, errMsg)
+      return
+    }
+
+    // Any combination of state+event that is not explicitly called out
     // below is illegal and raises an error.
 
     switch (this.state) {
@@ -248,6 +279,17 @@ export class WebsocketConnection {
           return
         }
         break
+
+      case ConnectionState.DISCONNECTED_FOREVER:
+        // If we're in the DISCONNECTED_FOREVER state, we can't reasonably
+        // process any events, and it's possible we're in this state because
+        // of a fatal error. Just log these events rather than throwing more
+        // exceptions.
+        logWarning(
+          LOG,
+          `Discarding ${event} while in ${ConnectionState.DISCONNECTED_FOREVER}`
+        )
+        return
 
       default:
         break
@@ -297,9 +339,9 @@ export class WebsocketConnection {
     this.websocket.onmessage = (event: MessageEvent) => {
       if (checkWebsocket()) {
         this.handleMessage(event.data).catch(reason => {
-          // TODO: do something reasonable here, beyond simply logging.
-          //  Lots of stuff is likely to be broken!
-          logError(LOG, reason)
+          const err = `Failed to process a Websocket message (${reason})`
+          logError(LOG, err)
+          this.stepFsm("FATAL_ERROR", err)
         })
       }
     }
@@ -353,7 +395,7 @@ export class WebsocketConnection {
         // setConnectionTimeout() should be immediately before setting
         // this.websocket.
         this.cancelConnectionAttempt()
-        this.stepFsm("CONNECTION_WTF")
+        this.stepFsm("FATAL_ERROR", "Null Websocket in setConnectionTimeout")
         return
       }
 
@@ -479,14 +521,6 @@ function doHealthPing(
     window.setTimeout(retryImmediately, retryTimeout)
   }
 
-  // Using XHR because it supports timeouts.
-  // The location of this declaration matters, as XMLHttpRequests can lead to a
-  // memory leak when initialized inside a callback. See
-  // https://stackoverflow.com/a/40532229 for more info.
-  const xhr = new XMLHttpRequest()
-
-  xhr.timeout = timeoutMs
-
   const retryWhenTheresNoResponse = (): void => {
     const uri = new URL(uriList[uriNumber])
 
@@ -523,40 +557,53 @@ function doHealthPing(
     )
   }
 
-  xhr.onreadystatechange = () => {
-    if (xhr.readyState !== /* DONE */ 4) {
-      return
-    }
-
-    if (xhr.responseText === "ok") {
-      resolver.resolve(uriNumber)
-    } else if (xhr.status === /* NO RESPONSE */ 0) {
-      retryWhenTheresNoResponse()
-    } else if (xhr.status === 403) {
-      retryWhenIsForbidden()
-    } else {
-      retry(
-        `Connection failed with status ${xhr.status}, ` +
-          `and response "${xhr.responseText}".`
-      )
-    }
-  }
-
-  xhr.ontimeout = e => {
-    retry("Connection timed out.")
-  }
-
   connect = () => {
     const uri = uriList[uriNumber]
     logMessage(LOG, `Attempting to connect to ${uri}.`)
     tryTimestamp = Date.now()
-    xhr.open("GET", uri, true)
 
     if (uriNumber === 0) {
       totalTries++
     }
 
-    xhr.send(null)
+    axios
+      .get(uri, {
+        timeout: timeoutMs,
+      })
+      .then(() => {
+        resolver.resolve(uriNumber)
+      })
+      .catch(error => {
+        if (error.code === "ECONNABORTED") {
+          return retry("Connection timed out.")
+        }
+
+        if (error.response) {
+          // The request was made and the server responded with a status code
+          // that falls out of the range of 2xx
+
+          const { data, status } = error.response
+
+          if (status === /* NO RESPONSE */ 0) {
+            return retryWhenTheresNoResponse()
+          } else if (status === 403) {
+            return retryWhenIsForbidden()
+          } else {
+            return retry(
+              `Connection failed with status ${status}, ` +
+                `and response "${data}".`
+            )
+          }
+        } else if (error.request) {
+          // The request was made but no response was received
+          // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
+          // http.ClientRequest in node.js
+          return retryWhenTheresNoResponse()
+        } else {
+          // Something happened in setting up the request that triggered an Error
+          return retry(error.message)
+        }
+      })
   }
 
   connect()

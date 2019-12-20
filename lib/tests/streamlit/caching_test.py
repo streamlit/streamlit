@@ -22,7 +22,6 @@ from mock import patch
 
 import streamlit as st
 from streamlit import caching
-from streamlit.caching import _build_args_mutated_message
 
 
 class CacheTest(unittest.TestCase):
@@ -88,21 +87,24 @@ class CacheTest(unittest.TestCase):
 
         warning.assert_not_called()
 
-        f()
+        r2 = f()
 
         warning.assert_called()
+
+        self.assertEqual(r, r2)
 
     @patch.object(st, "warning")
     def test_mutate_args(self, warning):
         @st.cache
-        def f(x):
-            x[0] = 2
+        def foo(d):
+            d["answer"] += 1
+            return d["answer"]
+
+        d = {"answer": 0}
+
+        self.assertNotEqual(foo(d), foo(d))
 
         warning.assert_not_called()
-
-        f([1, 2])
-
-        warning.assert_called_with(_build_args_mutated_message(f))
 
     @patch("streamlit.caching._show_cached_st_function_warning")
     def test_cached_st_function_warning(self, warning):

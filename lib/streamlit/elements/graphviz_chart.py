@@ -17,7 +17,7 @@
 
 from six import string_types
 
-from streamlit import util
+from streamlit import type_util
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
@@ -29,7 +29,7 @@ def marshall(proto, figure_or_dot, width, height):
     See DeltaGenerator.graphviz_chart for docs.
     """
 
-    if util.is_graphviz_chart(figure_or_dot):
+    if type_util.is_graphviz_chart(figure_or_dot):
         dot = figure_or_dot.source
     elif isinstance(figure_or_dot, string_types):
         dot = figure_or_dot

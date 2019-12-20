@@ -197,6 +197,7 @@ epub_exclude_files = ["search.html"]
 autodoc_default_flags = ["members"]
 autosummary_generate = True
 html_copy_source = False
+github_doc_root = "https://github.com/streamlit/streamlit/tree/master/docs"
 
 # At the bottom of conf.py
 def setup(app):

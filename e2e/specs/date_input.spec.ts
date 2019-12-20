@@ -27,7 +27,7 @@ describe("st.date_input", () => {
   });
 
   it("has correct values", () => {
-    cy.get(".stText").should(
+    cy.get(".stMarkdown").should(
       "have.text",
       "Value 1: 1970-01-01" + "Value 2: 2019-07-06"
     );
@@ -44,7 +44,7 @@ describe("st.date_input", () => {
       '[data-baseweb="calendar"] [aria-label^="Choose Friday, January 2nd 1970."]'
     ).click();
 
-    cy.get(".stText").should(
+    cy.get(".stMarkdown").should(
       "have.text",
       "Value 1: 1970-01-02" + "Value 2: 2019-07-06"
     );

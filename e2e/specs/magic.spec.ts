@@ -41,7 +41,7 @@ describe("streamlit magic", () => {
       "ASYNC WITH"
     ];
 
-    const selector = ".element-container > .stText > p";
+    const selector = ".element-container > .stMarkdown > p";
 
     cy.get(selector).should("have.length", expected.length);
 

@@ -31,7 +31,8 @@ import textwrap
 
 import streamlit as st
 from streamlit import config
-from streamlit import util
+from streamlit import file_util
+from streamlit import type_util
 from streamlit.folder_black_list import FolderBlackList
 from streamlit.compatibility import setup_2_3_shims
 
@@ -63,7 +64,7 @@ Context = namedtuple("Context", ["globals", "cells", "varnames"])
 
 
 def _is_magicmock(obj):
-    return util.is_type(obj, "unittest.mock.MagicMock") or util.is_type(
+    return type_util.is_type(obj, "unittest.mock.MagicMock") or type_util.is_type(
         obj, "mock.mock.MagicMock"
     )
 
@@ -88,9 +89,9 @@ def _get_context(func):
     return Context(globals=func.__globals__, cells=cells, varnames=varnames)
 
 
-def get_hash(f, context=None):
+def get_hash(f, context=None, hash_funcs=None):
     """Quick utility function that computes a hash of an arbitrary object."""
-    hasher = CodeHasher("md5")
+    hasher = CodeHasher("md5", hash_funcs=hash_funcs)
     hasher.update(f, context)
     return hasher.digest()
 
@@ -114,8 +115,7 @@ def _key(obj, context):
         return (
             isinstance(obj, bytes)
             or isinstance(obj, bytearray)
-            or isinstance(obj, bytes)
-            or isinstance(obj, string_types)
+            or isinstance(obj, string_types)  # noqa: F821
             or isinstance(obj, float)
             or isinstance(obj, int)
             or isinstance(obj, bool)
@@ -134,8 +134,8 @@ def _key(obj, context):
             return ("__l", tuple(obj))
 
     if (
-        util.is_type(obj, "pandas.core.frame.DataFrame")
-        or util.is_type(obj, "numpy.ndarray")
+        type_util.is_type(obj, "pandas.core.frame.DataFrame")
+        or type_util.is_type(obj, "numpy.ndarray")
         or inspect.isbuiltin(obj)
         or inspect.isroutine(obj)
         or inspect.iscode(obj)
@@ -184,7 +184,7 @@ def _hashing_error_message(start):
 class CodeHasher:
     """A hasher that can hash code objects including dependencies."""
 
-    def __init__(self, name="md5", hasher=None):
+    def __init__(self, name="md5", hasher=None, hash_funcs=None):
         self.hashes = dict()
 
         self.name = name
@@ -203,6 +203,8 @@ class CodeHasher:
         self._folder_black_list = FolderBlackList(
             config.get_option("server.folderWatchBlacklist")
         )
+
+        self.hash_funcs = hash_funcs or {}
 
     def update(self, obj, context=None):
         """Update the hash with the provided object."""
@@ -240,6 +242,16 @@ class CodeHasher:
         b = self.to_bytes(obj, context)
         hasher.update(b)
 
+    def _file_should_be_hashed(self, filename):
+        filepath = os.path.abspath(filename)
+        file_is_blacklisted = self._folder_black_list.is_blacklisted(filepath)
+        # Short circuiting for performance.
+        if file_is_blacklisted:
+            return False
+        return file_util.file_is_in_folder_glob(
+            filepath, self._get_main_script_directory()
+        ) or file_util.file_in_pythonpath(filepath)
+
     def _to_bytes(self, obj, context):
         """Hash objects to bytes, including code with dependencies.
         Python's built in `hash` does not produce consistent results across
@@ -252,8 +264,13 @@ class CodeHasher:
                 return self.to_bytes(id(obj))
             elif isinstance(obj, bytes) or isinstance(obj, bytearray):
                 return obj
-            elif isinstance(obj, string_types):
+            elif isinstance(obj, string_types):  # noqa: F821
+                # Don't allow the user to override string since
+                # str == bytes on python 2
                 return obj.encode()
+            elif type(obj) in self.hash_funcs:
+                # Escape hatch for unsupported objects
+                return self.to_bytes(self.hash_funcs[type(obj)](obj))
             elif isinstance(obj, float):
                 return self.to_bytes(hash(obj))
             elif isinstance(obj, int):
@@ -274,9 +291,9 @@ class CodeHasher:
                 return b"bool:1"
             elif obj is False:
                 return b"bool:0"
-            elif util.is_type(obj, "pandas.core.frame.DataFrame") or util.is_type(
-                obj, "pandas.core.series.Series"
-            ):
+            elif type_util.is_type(
+                obj, "pandas.core.frame.DataFrame"
+            ) or type_util.is_type(obj, "pandas.core.series.Series"):
                 import pandas as pd
 
                 if len(obj) >= PANDAS_ROWS_LARGE:
@@ -287,7 +304,7 @@ class CodeHasher:
                     # Use pickle if pandas cannot hash the object for example if
                     # it contains unhashable objects.
                     return pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
-            elif util.is_type(obj, "numpy.ndarray"):
+            elif type_util.is_type(obj, "numpy.ndarray"):
                 h = hashlib.new(self.name)
                 self._update(h, obj.shape)
 
@@ -303,7 +320,10 @@ class CodeHasher:
                 return self.to_bytes(obj.__name__)
             elif hasattr(obj, "name") and (
                 isinstance(obj, io.IOBase)
-                or (isinstance(obj.name, string_types) and os.path.exists(obj.name))
+                or (
+                    isinstance(obj.name, string_types)  # noqa: F821
+                    and os.path.exists(obj.name)
+                )
             ):
                 # Hash files as name + last modification date + offset.
                 h = hashlib.new(self.name)
@@ -322,11 +342,7 @@ class CodeHasher:
                     return self.to_bytes("%s.%s" % (obj.__module__, obj.__name__))
 
                 h = hashlib.new(self.name)
-                filepath = os.path.abspath(obj.__code__.co_filename)
-
-                if util.file_is_in_folder_glob(
-                    filepath, self._get_main_script_directory()
-                ) and not self._folder_black_list.is_blacklisted(filepath):
+                if self._file_should_be_hashed(obj.__code__.co_filename):
                     context = _get_context(obj)
                     if obj.__defaults__:
                         self._update(h, obj.__defaults__, context)
@@ -391,7 +407,8 @@ class CodeHasher:
         consts = [
             n
             for n in code.co_consts
-            if not isinstance(n, string_types) or not n.endswith(".<lambda>")
+            if not isinstance(n, string_types)  # noqa: F821
+            or not n.endswith(".<lambda>")
         ]
         self._update(h, consts, context)
 

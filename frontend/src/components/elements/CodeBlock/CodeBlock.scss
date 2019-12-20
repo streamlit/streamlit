@@ -21,6 +21,19 @@
   See https://prismjs.com/download.html#themes=prism&languages=markup+css+clike+javascript
 */
 
+@import "src/assets/css/mixins";
+
+.stCodeBlock {
+  //code blocks can be used used inside an Alert
+  @include element-margin-bottom;
+
+  position: relative;
+
+  pre {
+    margin: 0;
+  }
+}
+
 .token.comment,
 .token.prolog,
 .token.doctype,

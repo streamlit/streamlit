@@ -23,13 +23,13 @@ describe("st.latex", () => {
   });
 
   it("displays LaTeX symbol", () => {
-    cy.get(".element-container .stText")
+    cy.get(".element-container .stMarkdown")
       .eq(0)
       .should("contain", "LATE​X");
   });
 
   it("displays Sympy expression as LaTeX", () => {
-    cy.get(".element-container .stText")
+    cy.get(".element-container .stMarkdown")
       .eq(1)
       .should("contain", "a + b");
   });

@@ -23,7 +23,7 @@ describe("st.json", () => {
   });
 
   it("displays a json", () => {
-    cy.get(".element-container .stText")
+    cy.get(".element-container .stJson")
       .should("contain", "foo")
       .and("contain", "bar");
   });

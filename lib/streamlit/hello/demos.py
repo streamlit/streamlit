@@ -210,7 +210,7 @@ def data_frame_demo():
     import altair as alt
 
     if sys.version_info[0] < 3:
-        reload(sys)
+        reload(sys) # noqa: F821 pylint:disable=undefined-variable
         sys.setdefaultencoding("utf-8")
 
     @st.cache

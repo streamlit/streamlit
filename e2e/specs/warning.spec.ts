@@ -23,7 +23,7 @@ describe("st.warning", () => {
   });
 
   it("displays a warning message", () => {
-    cy.get(".element-container .stText").should(
+    cy.get(".element-container .stAlert").should(
       "contain",
       "This warning message is awesome!"
     );

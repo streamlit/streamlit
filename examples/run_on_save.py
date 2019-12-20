@@ -65,10 +65,10 @@ elif platform_system == "Darwin":
     )
 
 elif platform_system == "Windows":
-    raise Error("Windows not supported")
+    raise NotImplementedError("Windows not supported")
 
 else:
-    raise Error("Unknown platform")
+    raise Exception("Unknown platform")
 
 os.system(cmd)
 

@@ -150,7 +150,6 @@ clean: clean-docs
 	find . -name .pytest_cache -exec rm -rfv {} \; || true
 	cd frontend; rm -rf build node_modules
 	rm -f lib/streamlit/proto/*_pb2.py
-	rm -rf frontend/public/vendor
 	rm -f frontend/src/autogen/proto.js
 	rm -f frontend/src/autogen/proto.d.ts
 	rm -f frontend/src/autogen/scssVariables.ts
@@ -368,3 +367,8 @@ run-circleci:
 # Connect to running circleci container
 connect-circleci:
 	docker exec -it streamlit_circleci /bin/bash
+
+.PHONY: flake8
+# Run flake8 and show errors: E9,F63,F7,F82
+flake8:
+	flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=./frontend,./lib/build

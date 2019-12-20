@@ -27,7 +27,7 @@ describe("reuse widget label", () => {
 
     cy.get(".stSelectbox").should("not.exist");
 
-    cy.get(".stText")
+    cy.get(".stMarkdown")
       .first()
       .should("have.text", "value 1: 25");
 
@@ -43,7 +43,7 @@ describe("reuse widget label", () => {
 
     cy.get('.stSlider [role="slider"]').should("not.exist");
 
-    cy.get(".stText")
+    cy.get(".stMarkdown")
       .first()
       .should("have.text", "value 1: f");
   });

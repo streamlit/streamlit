@@ -17,7 +17,8 @@
 
 import React from "react"
 import { Map as ImmutableMap } from "immutable"
-import FullScreenWrapper from "components/shared/FullScreenWrapper"
+import withFullScreenWrapper from "hocs/withFullScreenWrapper"
+
 import { select } from "d3"
 import { graphviz } from "d3-graphviz"
 import { logError } from "lib/log"
@@ -119,22 +120,4 @@ class GraphVizChart extends React.PureComponent<PropsWithHeight> {
   }
 }
 
-class WithFullScreenWrapper extends React.Component<Props> {
-  render(): JSX.Element {
-    const { element, index, width } = this.props
-    return (
-      <FullScreenWrapper width={width}>
-        {({ width, height }) => (
-          <GraphVizChart
-            element={element}
-            index={index}
-            width={width}
-            height={height}
-          />
-        )}
-      </FullScreenWrapper>
-    )
-  }
-}
-
-export default WithFullScreenWrapper
+export default withFullScreenWrapper(GraphVizChart)

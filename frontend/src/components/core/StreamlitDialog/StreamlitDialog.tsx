@@ -31,7 +31,7 @@ import {
   ScriptChangedDialog,
   Props as ScriptChangedDialogProps,
 } from "components/core/StreamlitDialog/ScriptChangedDialog"
-import { Exception } from "autogen/proto"
+import { IException } from "autogen/proto"
 import { Props as SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
 import { SessionInfo } from "lib/SessionInfo"
 
@@ -236,7 +236,7 @@ function rerunScriptDialog(props: RerunScriptProps): ReactElement {
 
 interface ScriptCompileErrorProps {
   type: DialogType.SCRIPT_COMPILE_ERROR
-  exception: Exception
+  exception: IException | null | undefined
   onClose: PlainEventHandler
 }
 
@@ -249,7 +249,9 @@ function scriptCompileErrorDialog(
       <ModalBody>
         <div>
           <pre>
-            <code>{props.exception.message}</code>
+            <code>
+              {props.exception ? props.exception.message : "No message"}
+            </code>
           </pre>
         </div>
       </ModalBody>
@@ -282,7 +284,9 @@ function uploadProgressDialog(props: UploadProgressProps): ReactElement {
   return (
     <BasicDialog onClose={props.onClose}>
       <ModalBody>
-        <div className="streamlit-upload-first-line">Saving app...</div>
+        <div className="streamlit-upload-first-line">
+          Saving app snapshot...
+        </div>
         <div>
           <Progress animated value={props.progress} />
         </div>
@@ -304,7 +308,9 @@ function uploadedDialog(props: UploadedProps): ReactElement {
   return (
     <BasicDialog onClose={props.onClose}>
       <ModalBody>
-        <div className="streamlit-upload-first-line">App saved to:</div>
+        <div className="streamlit-upload-first-line">
+          App snapshot saved to:
+        </div>
         <pre id="streamlit-upload-url">
           <a href={props.url} target="_blank" rel="noopener noreferrer">
             {props.url}

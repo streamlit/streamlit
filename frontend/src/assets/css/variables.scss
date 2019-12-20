@@ -57,12 +57,13 @@ $white-a50: #ffffff88;
 $font-family-sans-serif: "IBM Plex Sans", sans-serif;
 $font-family-monospace: "IBM Plex Mono", monospace;
 
-// This should equal 17px since 1rem == 16px.
+// 1rem == 16px
 // (Can't set actual pixels here because it breaks bootstrap)
 $font-size-base: 1rem;
 
 $font-size-sm: 0.8rem;
 $line-height-base: 1.6;
+$line-height-tight: 1.25;
 
 // Overwrite other theme settings.
 $border-radius: 0.25rem;
@@ -86,6 +87,8 @@ $m1-2-font-size-base: $font-size-base / 2; // m1-2 = multiply by 1/2
 $sidebar-width: 21rem;
 $content-max-width: 730px; // This number comes from bootstrap.
 $header-height: 3.5rem;
+$top-margin: 5rem;
+$bottom-margin: $top-margin * 2;
 
 // Custom values for full screen use.
 $fullscreen-button: 2rem;
@@ -96,8 +99,6 @@ $overlayBtn-height: 2.5rem;
 $overlayBtn-width: 2.5rem;
 $overlayBtn-opacity-visible: 0.25;
 $overlayBtn-opacity-active: 0.75;
-$top-margin: 5rem;
-$bottom-margin: $top-margin * 2;
 
 // Animation settings
 $normal-animation-duration: 300ms;

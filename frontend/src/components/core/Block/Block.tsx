@@ -17,21 +17,27 @@
 
 import React, { PureComponent, ReactNode, Suspense } from "react"
 import { AutoSizer } from "react-virtualized"
-import { List, Map as ImmutableMap } from "immutable"
+import { List } from "immutable"
 import { dispatchOneOf } from "lib/immutableProto"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { makeElementWithInfoText } from "lib/utils"
-import { ForwardMsgMetadata } from "autogen/proto"
+import { IForwardMsgMetadata } from "autogen/proto"
+import { ReportElement, BlockElement, SimpleElement } from "lib/DeltaParser"
 
 // Load (non-lazy) elements.
+import Alert from "components/elements/Alert/"
 import Chart from "components/elements/Chart/"
 import DocString from "components/elements/DocString/"
 import ErrorBoundary from "components/shared/ErrorBoundary/"
 import FullScreenWrapper from "components/shared/FullScreenWrapper/"
 import ExceptionElement from "components/elements/ExceptionElement/"
+import Json from "components/elements/Json/"
+import Markdown from "components/elements/Markdown/"
 import Table from "components/elements/Table/"
 import Text from "components/elements/Text/"
+
+import Maybe from "components/core/Maybe/"
 
 // Lazy-load elements.
 const Audio = React.lazy(() => import("components/elements/Audio/"))
@@ -65,14 +71,13 @@ const Progress = React.lazy(() => import("components/elements/Progress/"))
 const Radio = React.lazy(() => import("components/widgets/Radio/"))
 const Selectbox = React.lazy(() => import("components/widgets/Selectbox/"))
 const Slider = React.lazy(() => import("components/widgets/Slider/"))
+const FileUploader = React.lazy(() =>
+  import("components/widgets/FileUploader/")
+)
 const TextArea = React.lazy(() => import("components/widgets/TextArea/"))
 const TextInput = React.lazy(() => import("components/widgets/TextInput/"))
 const TimeInput = React.lazy(() => import("components/widgets/TimeInput/"))
 const NumberInput = React.lazy(() => import("components/widgets/NumberInput/"))
-
-type SimpleElement = ImmutableMap<string, any>
-type StElement = SimpleElement | BlockElement
-interface BlockElement extends List<StElement> {}
 
 interface Props {
   elements: BlockElement
@@ -85,17 +90,19 @@ interface Props {
 
 class Block extends PureComponent<Props> {
   private renderElements = (width: number): ReactNode[] => {
-    const elementsToRender = this.getElements()
+    const elementsToRender = this.props.elements
 
     // Transform Streamlit elements into ReactNodes.
     return elementsToRender
       .toArray()
-      .map((element: StElement, index: number): ReactNode | null => {
+      .map((reportElement: ReportElement, index: number): ReactNode | null => {
+        const element = reportElement.get("element")
+
         if (element instanceof List) {
           return this.renderBlock(element as BlockElement, index, width)
         } else {
           return this.renderElementWithErrorBoundary(
-            element as SimpleElement,
+            reportElement,
             index,
             width
           )
@@ -104,32 +111,13 @@ class Block extends PureComponent<Props> {
       .filter((node: ReactNode | null): ReactNode => node != null)
   }
 
-  private getElements = (): BlockElement => {
-    let elementsToRender = this.props.elements
-    if (this.props.reportRunState === ReportRunState.RUNNING) {
-      // (BUG #739) When the report is running, use our most recent list
-      // of rendered elements as placeholders for any empty elements we encounter.
-      elementsToRender = this.props.elements.map(
-        (element: StElement, index: number): StElement => {
-          if (element instanceof ImmutableMap) {
-            // Repeat the old element if we encounter st.empty()
-            const isEmpty = (element as SimpleElement).get("type") === "empty"
-            return isEmpty ? elementsToRender.get(index, element) : element
-          }
-          return element
-        }
-      )
-    }
-    return elementsToRender
-  }
-
-  private isElementStale(element: SimpleElement): boolean {
+  private isElementStale(reportElement: ReportElement): boolean {
     if (this.props.reportRunState === ReportRunState.RERUN_REQUESTED) {
       // If a rerun was just requested, all of our current elements
       // are about to become stale.
       return true
     } else if (this.props.reportRunState === ReportRunState.RUNNING) {
-      return element.get("reportId") !== this.props.reportId
+      return reportElement.get("reportId") !== this.props.reportId
     } else {
       return false
     }
@@ -154,50 +142,76 @@ class Block extends PureComponent<Props> {
     )
   }
 
+  private static getClassNames(isStale: boolean, isEmpty: boolean): string {
+    const classNames = ["element-container"]
+    if (isStale && !FullScreenWrapper.isFullScreen) {
+      classNames.push("stale-element")
+    }
+    if (isEmpty) {
+      classNames.push("stEmpty")
+    }
+    return classNames.join(" ")
+  }
+
+  private shouldComponentBeEnabled(isEmpty: boolean): boolean {
+    return !isEmpty || this.props.reportRunState !== ReportRunState.RUNNING
+  }
+
+  private isComponentStale(
+    enable: boolean,
+    reportElement: ReportElement
+  ): boolean {
+    return (
+      !enable ||
+      (this.props.showStaleElementIndicator &&
+        this.isElementStale(reportElement))
+    )
+  }
+
   private renderElementWithErrorBoundary(
-    element: SimpleElement,
+    reportElement: ReportElement,
     index: number,
     width: number
   ): ReactNode | null {
-    const component = this.renderElement(element, index, width)
+    const element = reportElement.get("element") as SimpleElement
+    const component = this.renderElement(
+      element,
+      index,
+      width,
+      reportElement.get("metadata")
+    )
 
-    if (!component) {
-      // Do not transform an empty element into a ReactNode.
-      return null
-    }
-
-    const isStale =
-      this.props.showStaleElementIndicator &&
-      this.isElementStale(element as SimpleElement)
-
-    const className =
-      isStale && !FullScreenWrapper.isFullScreen
-        ? "element-container stale-element"
-        : "element-container"
+    const isEmpty = element.get("type") === "empty"
+    const enable = this.shouldComponentBeEnabled(isEmpty)
+    const isStale = this.isComponentStale(enable, reportElement)
+    const className = Block.getClassNames(isStale, isEmpty)
 
     return (
-      <div key={index} className={className} style={{ width }}>
-        <ErrorBoundary width={width}>
-          <Suspense
-            fallback={
-              <Text
-                element={makeElementWithInfoText("Loading...").get("text")}
-                width={width}
-              />
-            }
-          >
-            {component}
-          </Suspense>
-        </ErrorBoundary>
-      </div>
+      <Maybe enable={enable}>
+        <div key={index} className={className} style={{ width }}>
+          <ErrorBoundary width={width}>
+            <Suspense
+              fallback={
+                <Alert
+                  element={makeElementWithInfoText("Loading...").get("alert")}
+                  width={width}
+                />
+              }
+            >
+              {component}
+            </Suspense>
+          </ErrorBoundary>
+        </div>
+      </Maybe>
     )
   }
 
   private renderElement = (
     element: SimpleElement,
     index: number,
-    width: number
-  ): ReactNode | undefined => {
+    width: number,
+    metadata: IForwardMsgMetadata
+  ): ReactNode => {
     if (!element) {
       throw new Error("Transmission error.")
     }
@@ -207,20 +221,30 @@ class Block extends PureComponent<Props> {
       disabled: this.props.widgetsDisabled,
     }
 
-    const metadata = element.get("metadata") as ForwardMsgMetadata
     let height: number | undefined
 
     // Modify width using the value from the spec as passed with the message when applicable
     if (metadata && metadata.elementDimensionSpec) {
-      if (metadata.elementDimensionSpec.width > 0) {
+      if (
+        metadata &&
+        metadata.elementDimensionSpec &&
+        metadata.elementDimensionSpec.width &&
+        metadata.elementDimensionSpec.width > 0
+      ) {
         width = Math.min(metadata.elementDimensionSpec.width, width)
       }
-      if (metadata.elementDimensionSpec.height > 0) {
+      if (
+        metadata &&
+        metadata.elementDimensionSpec &&
+        metadata.elementDimensionSpec.height &&
+        metadata.elementDimensionSpec.height > 0
+      ) {
         height = metadata.elementDimensionSpec.height
       }
     }
 
     return dispatchOneOf(element, "type", {
+      alert: (el: SimpleElement) => <Alert element={el} width={width} />,
       audio: (el: SimpleElement) => <Audio element={el} width={width} />,
       balloons: (el: SimpleElement) => <Balloons element={el} width={width} />,
       bokehChart: (el: SimpleElement) => (
@@ -239,7 +263,7 @@ class Block extends PureComponent<Props> {
       docString: (el: SimpleElement) => (
         <DocString element={el} width={width} />
       ),
-      empty: () => undefined,
+      empty: () => <div className="stEmpty" key={index} />,
       exception: (el: SimpleElement) => (
         <ExceptionElement element={el} width={width} />
       ),
@@ -247,6 +271,8 @@ class Block extends PureComponent<Props> {
         <GraphVizChart element={el} index={index} width={width} />
       ),
       imgs: (el: SimpleElement) => <ImageList element={el} width={width} />,
+      json: (el: SimpleElement) => <Json element={el} width={width} />,
+      markdown: (el: SimpleElement) => <Markdown element={el} width={width} />,
       multiselect: (el: SimpleElement) => (
         <Multiselect
           key={el.get("id")}
@@ -307,6 +333,15 @@ class Block extends PureComponent<Props> {
           element={el}
           width={width}
           {...widgetProps}
+        />
+      ),
+      fileUploader: (el: SimpleElement) => (
+        <FileUploader
+          key={el.get("id")}
+          element={el}
+          width={width}
+          widgetStateManager={widgetProps.widgetMgr}
+          disabled={widgetProps.disabled}
         />
       ),
       textArea: (el: SimpleElement) => (

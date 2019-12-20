@@ -27,7 +27,7 @@ class CacheEntry {
     return curReportRunCount - this.reportRunCount
   }
 
-  public constructor(msg: ForwardMsg, reportRunCount: number) {
+  constructor(msg: ForwardMsg, reportRunCount: number) {
     this.msg = msg
     this.reportRunCount = reportRunCount
   }
@@ -51,7 +51,7 @@ export class ForwardMsgCache {
    */
   private reportRunCount = 0
 
-  public constructor(getServerUri: () => BaseUriParts | undefined) {
+  constructor(getServerUri: () => BaseUriParts | undefined) {
     this.getServerUri = getServerUri
   }
 
@@ -107,6 +107,9 @@ export class ForwardMsgCache {
     }
 
     // Copy the metadata from the refMsg into our new message
+    if (!msg.metadata) {
+      throw new Error("ForwardMsg has no metadata")
+    }
     newMsg.metadata = ForwardMsgMetadata.create(msg.metadata)
     return newMsg
   }
@@ -159,7 +162,7 @@ export class ForwardMsgCache {
       return
     }
 
-    if (!msg.metadata.cacheable) {
+    if (!msg.metadata || !msg.metadata.cacheable) {
       // Don't cache messages that the server hasn't marked as cacheable.
       return
     }
