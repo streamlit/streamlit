@@ -69,13 +69,13 @@ export class SessionInfo {
     mapboxToken,
   }: Args) {
     if (
-      !streamlitVersion ||
-      !pythonVersion ||
-      !installationId ||
-      !authorEmail ||
-      !maxCachedMessageAge ||
-      !commandLine ||
-      !mapboxToken
+      streamlitVersion == null ||
+      pythonVersion == null ||
+      installationId == null ||
+      authorEmail == null ||
+      maxCachedMessageAge == null ||
+      commandLine == null ||
+      mapboxToken == null
     ) {
       throw new Error("SessionInfo arguments must be strings")
     }
