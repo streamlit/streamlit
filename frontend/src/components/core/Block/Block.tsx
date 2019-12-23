@@ -184,8 +184,8 @@ class Block extends PureComponent<Props> {
     const className = Block.getClassNames(isStale, isEmpty)
 
     return (
-      <Maybe enable={enable}>
-        <div key={index} className={className} style={{ width }}>
+      <Maybe enable={enable} key={index}>
+        <div className={className} style={{ width }}>
           <ErrorBoundary width={width}>
             <Suspense
               fallback={

@@ -185,6 +185,33 @@ class App extends PureComponent<Props, State> {
     MetricsManager.current.enqueue("viewReport")
   }
 
+  showError(title: string, errorNode: ReactNode): void {
+    logError(errorNode)
+    const newDialog: DialogProps = {
+      type: DialogType.WARNING,
+      title: title,
+      msg: errorNode,
+      onClose: () => {},
+    }
+    this.openDialog(newDialog)
+  }
+
+  /**
+   * Checks if the code version from the backend is different than the frontend
+   */
+  hasStreamlitVersionChanged(initializeMsg: Initialize): boolean {
+    if (SessionInfo.isSet()) {
+      const { streamlitVersion: currentStreamlitVersion } = SessionInfo.current
+      const { environmentInfo } = initializeMsg
+
+      if (environmentInfo) {
+        return currentStreamlitVersion !== environmentInfo.streamlitVersion
+      }
+    }
+
+    return false
+  }
+
   /**
    * Called by ConnectionManager when our connection state changes
    */
@@ -202,17 +229,6 @@ class App extends PureComponent<Props, State> {
       this.widgetMgr.sendUpdateWidgetsMessage()
       this.setState({ dialog: null })
     }
-  }
-
-  showError(title: string, errorNode: ReactNode): void {
-    logError(errorNode)
-    const newDialog: DialogProps = {
-      type: DialogType.WARNING,
-      title: title,
-      msg: errorNode,
-      onClose: () => {},
-    }
-    this.openDialog(newDialog)
   }
 
   /**
@@ -282,6 +298,12 @@ class App extends PureComponent<Props, State> {
 
     if (!environmentInfo || !userInfo || !config || !sessionState) {
       throw new Error("InitializeMsg is missing a required field")
+    }
+
+    if (this.hasStreamlitVersionChanged(initializeMsg)) {
+      window.location.reload()
+
+      return
     }
 
     SessionInfo.current = new SessionInfo({
