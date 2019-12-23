@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Copyright 2018-2019 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -141,6 +141,9 @@ then
   mv $credentials_file $credentials_file.bak
 fi
 
+# Don't run this due to credentials prompt.
+# run_test hello --server.headless=false
+
 run_test hello --server.headless=true
 
 cat << EOF > $credentials_file
@@ -148,7 +151,7 @@ cat << EOF > $credentials_file
 email = "test@streamlit.io"
 EOF
 
-run_test hello
+run_test hello --server.headless=false
 run_test hello --server.headless=true
 
 rm $credentials_file
