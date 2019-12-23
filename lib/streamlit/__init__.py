@@ -288,8 +288,8 @@ def write(*args, **kwargs):
         Arguments are handled as follows:
 
             - write(string)     : Prints the formatted Markdown string, with
-            support for LaTeX expression and emoji shortcodes.
-            See docs for st.markdown for more.
+              support for LaTeX expression and emoji shortcodes.
+              See docs for st.markdown for more.
             - write(data_frame) : Displays the DataFrame as a table.
             - write(error)      : Prints an exception specially.
             - write(func)       : Displays information about a function.
