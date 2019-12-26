@@ -2560,7 +2560,7 @@ class DeltaGenerator(object):
         deck_gl.marshall(element.deck_gl_chart, spec, **kwargs)
 
     @_with_element
-    def deck_json_chart(self, element, pydeck_obj=None):
+    def py_deck_chart(self, element, pydeck_obj=None):
         """Draw a map chart using the Deck.GL library.
 
         This API closely follows Deck.GL's JavaScript API
@@ -2647,9 +2647,9 @@ class DeltaGenerator(object):
         """
 
         if pydeck_obj == None:
-            element.deck_json_chart.json = streamlit_map.DEFAULT_MAP
+            element.py_deck_chart.json = streamlit_map.DEFAULT_MAP
         else: 
-            element.deck_json_chart.json = pydeck_obj.to_json()
+            element.py_deck_chart.json = pydeck_obj.to_json()
 
     @_with_element
     def table(self, element, data=None):

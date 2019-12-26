@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2019 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,11 +13,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
-syntax = "proto3";
-
-message DeckJsonChart {
-  // The dataframe that will be used as the chart's main data source.
-  string json = 1;
-}
+export { default } from "./PyDeckChart"

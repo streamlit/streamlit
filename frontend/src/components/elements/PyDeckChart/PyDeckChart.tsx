@@ -24,7 +24,7 @@ import Immutable from "immutable"
 import { StaticMap } from "react-map-gl"
 import FullScreenWrapper from "components/shared/FullScreenWrapper"
 import "mapbox-gl/dist/mapbox-gl.css"
-import "./DeckJsonChart.scss"
+import "./PyDeckChart.scss"
 
 const configuration = {
   classes: Object.assign({}, layers, aggregationLayers),
@@ -47,7 +47,7 @@ interface State {
   initialized: boolean
 }
 
-class DeckJsonChart extends React.PureComponent<PropsWithHeight, State> {
+class PyDeckChart extends React.PureComponent<PropsWithHeight, State> {
   static defaultProps = {
     height: 500,
   }
@@ -79,7 +79,7 @@ class DeckJsonChart extends React.PureComponent<PropsWithHeight, State> {
 
     return (
       <div
-        className="deckglchart stDeckJsonChart"
+        className="deckglchart stPyDeckChart"
         style={{
           height: deck.initialViewState.height,
           width: deck.initialViewState.width,
@@ -116,7 +116,7 @@ class WithFullScreenWrapper extends React.Component<Props> {
     return (
       <FullScreenWrapper width={width}>
         {({ width, height }) => (
-          <DeckJsonChart element={element} width={width} height={height} />
+          <PyDeckChart element={element} width={width} height={height} />
         )}
       </FullScreenWrapper>
     )

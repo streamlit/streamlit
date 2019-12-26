@@ -26,7 +26,7 @@ import "streamlit/proto/Checkbox.proto";
 import "streamlit/proto/DataFrame.proto";
 import "streamlit/proto/DateInput.proto";
 import "streamlit/proto/DeckGlChart.proto";
-import "streamlit/proto/DeckJsonChart.proto";
+import "streamlit/proto/PyDeckChart.proto";
 import "streamlit/proto/DocString.proto";
 import "streamlit/proto/Empty.proto";
 import "streamlit/proto/Exception.proto";
@@ -65,7 +65,7 @@ message Element {
     DataFrame table = 11;
     DateInput date_input = 27;
     DeckGlChart deck_gl_chart = 15;
-    DeckJsonChart deck_json_chart = 34;
+    PyDeckChart py_deck_chart = 34;
     DocString doc_string = 7;
     Empty empty = 2;
     Exception exception = 8;
