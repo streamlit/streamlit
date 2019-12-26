@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Copyright 2018-2019 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -77,19 +77,30 @@ trap generate_report EXIT
 rm cypress/mochawesome/* || true
 rm mochawesome.json || true
 
-# Test core streamlit elements
-for file in ../e2e/scripts/*.py
-do
-  snapshots_flag_for_this_run=$snapshots_flag
+
+# Takes as input all the arguments that should be passed to the "streamlit" CLI
+# tool for the test. For example:
+# - run_test run foo.py
+# - run_test run foo.py --server.port=1234
+# - run_test hello
+function run_test {
+  # Get path of test spec to execute.
+  # If the user called "run_test run arg2", then the spec is the one for arg2.
+  # Otherwise, we'll just use the hello spec.
+  if [ $1 = "run" ]
+  then
+    file=$2
+    filename=$(basename $file)
+    specpath="../e2e/specs/${filename%.*}.spec.ts"
+  else
+    specpath="../e2e/specs/hello.spec.ts"
+  fi
 
   # Infinite loop to support retries.
   while true
   do
     # Run next test
-    streamlit run $file &
-
-    filename=$(basename $file)
-    specpath="../e2e/specs/${filename%.*}.spec.ts"
+    streamlit "$@" &
 
     yarn \
       cy:run \
@@ -118,6 +129,45 @@ do
     # If we got to this point, break out of the infite loop. No need to retry.
     break
   done
+}
+
+# Test "streamlit hello" in different combinations.
+
+credentials_file=~/.streamlit/credentials.toml
+mkdir -p $(dirname $credentials_file)
+
+if test -f $credentials_file
+then
+  mv $credentials_file $credentials_file.bak
+fi
+
+# Don't run this due to credentials prompt.
+# run_test hello --server.headless=false
+
+run_test hello --server.headless=true
+
+cat << EOF > $credentials_file
+[general]
+email = "test@streamlit.io"
+EOF
+
+run_test hello --server.headless=false
+run_test hello --server.headless=true
+
+rm $credentials_file
+
+if test -f $credentials_file.bak
+then
+  mv $credentials_file.bak $credentials_file
+fi
+
+
+# Test core streamlit elements
+
+for file in ../e2e/scripts/*.py
+do
+  snapshots_flag_for_this_run=$snapshots_flag
+  run_test run $file
 done
 
 if [ "$any_failed" = "true" ]

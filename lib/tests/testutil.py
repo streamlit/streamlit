@@ -25,6 +25,7 @@ from streamlit.ReportThread import ReportContext
 from streamlit.ReportThread import _WidgetIDSet
 from streamlit.widgets import Widgets
 from streamlit.proto.BlockPath_pb2 import BlockPath
+from streamlit.UploadedFileManager import UploadedFileManager
 
 
 def build_mock_config_get_option(overrides_dict):
@@ -64,7 +65,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
                     sidebar_dg=sidebar_dg,
                     widgets=Widgets(),
                     widget_ids_this_run=_WidgetIDSet(),
-                    uploaded_file_mgr=None,
+                    uploaded_file_mgr=UploadedFileManager(),
                 ),
             )
 

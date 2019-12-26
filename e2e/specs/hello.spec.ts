@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2019 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,13 +13,21 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
-syntax = "proto3";
+/// <reference types="cypress" />
 
-// Specifies any transformation that was/should be applied to the data.
-enum DataTransform {
-  UNKNOWN = 0;
-  NONE = 1;
-  STACK = 2;
-}
+describe("hello", () => {
+  before(() => {
+    cy.visit("http://localhost:3000/");
+  });
+
+  it("displays the welcome message", () => {
+    cy.get(".element-container .stMarkdown h1").should(
+      "contain",
+      "Welcome to Streamlit!"
+    );
+
+    cy.get(".streamlit-dialog").should("not.exist");
+  });
+});

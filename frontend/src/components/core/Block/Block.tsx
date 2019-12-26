@@ -22,7 +22,7 @@ import { dispatchOneOf } from "lib/immutableProto"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { makeElementWithInfoText } from "lib/utils"
-import { ForwardMsgMetadata } from "autogen/proto"
+import { IForwardMsgMetadata } from "autogen/proto"
 import { ReportElement, BlockElement, SimpleElement } from "lib/DeltaParser"
 
 // Load (non-lazy) elements.
@@ -184,8 +184,8 @@ class Block extends PureComponent<Props> {
     const className = Block.getClassNames(isStale, isEmpty)
 
     return (
-      <Maybe enable={enable}>
-        <div key={index} className={className} style={{ width }}>
+      <Maybe enable={enable} key={index}>
+        <div className={className} style={{ width }}>
           <ErrorBoundary width={width}>
             <Suspense
               fallback={
@@ -207,7 +207,7 @@ class Block extends PureComponent<Props> {
     element: SimpleElement,
     index: number,
     width: number,
-    metadata: ForwardMsgMetadata
+    metadata: IForwardMsgMetadata
   ): ReactNode => {
     if (!element) {
       throw new Error("Transmission error.")
@@ -222,10 +222,20 @@ class Block extends PureComponent<Props> {
 
     // Modify width using the value from the spec as passed with the message when applicable
     if (metadata && metadata.elementDimensionSpec) {
-      if (metadata.elementDimensionSpec.width > 0) {
+      if (
+        metadata &&
+        metadata.elementDimensionSpec &&
+        metadata.elementDimensionSpec.width &&
+        metadata.elementDimensionSpec.width > 0
+      ) {
         width = Math.min(metadata.elementDimensionSpec.width, width)
       }
-      if (metadata.elementDimensionSpec.height > 0) {
+      if (
+        metadata &&
+        metadata.elementDimensionSpec &&
+        metadata.elementDimensionSpec.height &&
+        metadata.elementDimensionSpec.height > 0
+      ) {
         height = metadata.elementDimensionSpec.height
       }
     }

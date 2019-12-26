@@ -54,17 +54,6 @@ class DataFrameProtoTest(unittest.TestCase):
         """
         pass
 
-    def test_convert_anything_to_df(self):
-        """Test streamlit.data_frame_proto.convert_anything_to_df.
-
-        Need to test dataframe is:
-        * pandas.core.frame.DataFrame
-        * pandas_styler
-        * numpy.ndaray and has a shape
-        * default
-        """
-        pass
-
     def test_is_pandas_styler(self):
         """Test streamlit.data_frame_proto._is_pandas_styler.
 

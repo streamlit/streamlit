@@ -23,7 +23,7 @@
 import React from "react"
 import { Map as ImmutableMap } from "immutable"
 import { dispatchOneOf } from "lib/immutableProto"
-import FullScreenWrapper from "components/shared/FullScreenWrapper"
+import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import Plot from "react-plotly.js"
 
 interface Props {
@@ -112,17 +112,4 @@ class PlotlyChart extends React.PureComponent<PropsWithHeight> {
   }
 }
 
-class WithFullScreenWrapper extends React.Component<Props> {
-  render(): JSX.Element {
-    const { element, width } = this.props
-    return (
-      <FullScreenWrapper width={width}>
-        {({ width, height }) => (
-          <PlotlyChart element={element} width={width} height={height} />
-        )}
-      </FullScreenWrapper>
-    )
-  }
-}
-
-export default WithFullScreenWrapper
+export default withFullScreenWrapper(PlotlyChart)

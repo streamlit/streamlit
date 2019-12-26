@@ -42,15 +42,15 @@ import {
   ReportElement,
 } from "lib/DeltaParser"
 import {
-  ForwardMsg,
-  SessionEvent,
-  NewReport,
   BackMsg,
   Delta,
-  ForwardMsgMetadata,
+  ForwardMsg,
   IBackMsg,
-  SessionState,
+  IForwardMsgMetadata,
   Initialize,
+  NewReport,
+  SessionEvent,
+  ISessionState,
 } from "autogen/proto"
 
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
@@ -185,6 +185,33 @@ class App extends PureComponent<Props, State> {
     MetricsManager.current.enqueue("viewReport")
   }
 
+  showError(title: string, errorNode: ReactNode): void {
+    logError(errorNode)
+    const newDialog: DialogProps = {
+      type: DialogType.WARNING,
+      title: title,
+      msg: errorNode,
+      onClose: () => {},
+    }
+    this.openDialog(newDialog)
+  }
+
+  /**
+   * Checks if the code version from the backend is different than the frontend
+   */
+  hasStreamlitVersionChanged(initializeMsg: Initialize): boolean {
+    if (SessionInfo.isSet()) {
+      const { streamlitVersion: currentStreamlitVersion } = SessionInfo.current
+      const { environmentInfo } = initializeMsg
+
+      if (environmentInfo) {
+        return currentStreamlitVersion !== environmentInfo.streamlitVersion
+      }
+    }
+
+    return false
+  }
+
   /**
    * Called by ConnectionManager when our connection state changes
    */
@@ -202,17 +229,6 @@ class App extends PureComponent<Props, State> {
       this.widgetMgr.sendUpdateWidgetsMessage()
       this.setState({ dialog: null })
     }
-  }
-
-  showError(title: string, errorNode: ReactNode): void {
-    logError(errorNode)
-    const newDialog: DialogProps = {
-      type: DialogType.WARNING,
-      title: title,
-      msg: errorNode,
-      onClose: () => {},
-    }
-    this.openDialog(newDialog)
   }
 
   /**
@@ -234,7 +250,7 @@ class App extends PureComponent<Props, State> {
       dispatchProto(msgProto, "type", {
         initialize: (initializeMsg: Initialize) =>
           this.handleInitialize(initializeMsg),
-        sessionStateChanged: (msg: SessionState) =>
+        sessionStateChanged: (msg: ISessionState) =>
           this.handleSessionStateChanged(msg),
         sessionEvent: (evtMsg: SessionEvent) =>
           this.handleSessionEvent(evtMsg),
@@ -278,18 +294,30 @@ class App extends PureComponent<Props, State> {
    */
 
   handleInitialize(initializeMsg: Initialize): void {
+    const { environmentInfo, userInfo, config, sessionState } = initializeMsg
+
+    if (!environmentInfo || !userInfo || !config || !sessionState) {
+      throw new Error("InitializeMsg is missing a required field")
+    }
+
+    if (this.hasStreamlitVersionChanged(initializeMsg)) {
+      window.location.reload()
+
+      return
+    }
+
     SessionInfo.current = new SessionInfo({
-      streamlitVersion: initializeMsg.environmentInfo.streamlitVersion,
-      pythonVersion: initializeMsg.environmentInfo.pythonVersion,
-      installationId: initializeMsg.userInfo.installationId,
-      authorEmail: initializeMsg.userInfo.email,
-      maxCachedMessageAge: initializeMsg.config.maxCachedMessageAge,
+      streamlitVersion: environmentInfo.streamlitVersion,
+      pythonVersion: environmentInfo.pythonVersion,
+      installationId: userInfo.installationId,
+      authorEmail: userInfo.email,
+      maxCachedMessageAge: config.maxCachedMessageAge,
       commandLine: initializeMsg.commandLine,
-      mapboxToken: initializeMsg.config.mapboxToken,
+      mapboxToken: config.mapboxToken,
     })
 
     MetricsManager.current.initialize({
-      gatherUsageStats: initializeMsg.config.gatherUsageStats,
+      gatherUsageStats: Boolean(config.gatherUsageStats),
     })
 
     MetricsManager.current.enqueue("createReport", {
@@ -297,18 +325,17 @@ class App extends PureComponent<Props, State> {
     })
 
     this.setState({
-      sharingEnabled: initializeMsg.config.sharingEnabled,
+      sharingEnabled: Boolean(config.sharingEnabled),
     })
 
-    const initialState = initializeMsg.sessionState
-    this.handleSessionStateChanged(initialState)
+    this.handleSessionStateChanged(sessionState)
   }
 
   /**
    * Handler for ForwardMsg.sessionStateChanged messages
    * @param stateChangeProto a SessionState protobuf
    */
-  handleSessionStateChanged(stateChangeProto: SessionState): void {
+  handleSessionStateChanged(stateChangeProto: ISessionState): void {
     this.setState((prevState: State) => {
       // Determine our new ReportRunState
       let reportRunState = prevState.reportRunState
@@ -349,7 +376,7 @@ class App extends PureComponent<Props, State> {
       return {
         userSettings: {
           ...prevState.userSettings,
-          runOnSave: stateChangeProto.runOnSave,
+          runOnSave: Boolean(stateChangeProto.runOnSave),
         },
         dialog,
         reportRunState,
@@ -551,7 +578,10 @@ class App extends PureComponent<Props, State> {
    * receive deltas extremely quickly without spamming React with lots of
    * render() calls.
    */
-  handleDeltaMsg(deltaMsg: Delta, metadataMsg: ForwardMsgMetadata): void {
+  handleDeltaMsg(
+    deltaMsg: Delta,
+    metadataMsg: IForwardMsgMetadata | undefined | null
+  ): void {
     this.elementListBuffer = applyDelta(
       this.state.elements,
       this.state.reportId,

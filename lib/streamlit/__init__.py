@@ -253,14 +253,6 @@ def set_option(key, value):
 
 # Special methods:
 
-_DATAFRAME_LIKE_TYPES = (
-    "DataFrame",  # pandas.core.frame.DataFrame
-    "Index",  # pandas.core.indexes.base.Index
-    "Series",  # pandas.core.series.Series
-    "Styler",  # pandas.io.formats.style.Styler
-    "ndarray",  # numpy.ndarray
-)
-
 _HELP_TYPES = (
     _types.BuiltinFunctionType,
     _types.BuiltinMethodType,
@@ -296,8 +288,8 @@ def write(*args, **kwargs):
         Arguments are handled as follows:
 
             - write(string)     : Prints the formatted Markdown string, with
-            support for LaTeX expression and emoji shortcodes.
-            See docs for st.markdown for more.
+              support for LaTeX expression and emoji shortcodes.
+              See docs for st.markdown for more.
             - write(data_frame) : Displays the DataFrame as a table.
             - write(error)      : Prints an exception specially.
             - write(func)       : Displays information about a function.
@@ -409,7 +401,7 @@ def write(*args, **kwargs):
             # Order matters!
             if isinstance(arg, string_types):  # noqa: F821
                 string_buffer.append(arg)
-            elif type(arg).__name__ in _DATAFRAME_LIKE_TYPES:
+            elif _type_util.is_dataframe_like(arg):
                 flush_buffer()
                 if len(_np.shape(arg)) > 2:
                     text(arg)
@@ -612,8 +604,8 @@ def echo():
             initial_spaces = _SPACES_RE.match(lines_to_display[0]).end()
             for line in source_lines[end_line:]:
                 indentation = _SPACES_RE.match(line).end()
-                # The > 1 is because we want to allow '\n' between sections.
-                if indentation > 1 and indentation < initial_spaces:
+                # The != 1 is because we want to allow '\n' between sections.
+                if indentation != 1 and indentation < initial_spaces:
                     break
                 lines_to_display.append(line)
         lines_to_display = _textwrap.dedent("".join(lines_to_display))

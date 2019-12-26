@@ -52,8 +52,8 @@ class UploadedFileManagerTest(unittest.TestCase):
 
         progress_a, data_a = uploaded_file_mgr.get_data(widget_idA)
         progress_b, data_b = uploaded_file_mgr.get_data(widget_idB)
-        self.assertEqual(progress_a, 1)
-        self.assertEqual(progress_b, 1)
+        self.assertEqual(progress_a, 100)
+        self.assertEqual(progress_b, 100)
         self.assertEqual(len(data_a), len(file_bytes))
         self.assertEqual(data_a, file_bytes)
         self.assertEqual(data_a, data_b)

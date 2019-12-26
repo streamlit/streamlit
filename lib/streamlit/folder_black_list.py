@@ -36,8 +36,9 @@ DEFAULT_FOLDER_BLACKLIST = [
 # Add the Streamlit lib folder when in dev mode, since otherwise we end up with
 # weird situations where the ID of a class in one run is not the same as in another
 # run.
-if config.get_option('global.developmentMode'):
+if config.get_option("global.developmentMode"):
     import os
+
     DEFAULT_FOLDER_BLACKLIST.append(os.path.dirname(__file__))
 
 

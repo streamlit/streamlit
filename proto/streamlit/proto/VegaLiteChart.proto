@@ -17,7 +17,6 @@
 syntax = "proto3";
 
 import "streamlit/proto/DataFrame.proto";
-import "streamlit/proto/DataTransform.proto";
 import "streamlit/proto/NamedDataSet.proto";
 
 message VegaLiteChart {

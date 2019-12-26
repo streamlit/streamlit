@@ -62,3 +62,9 @@ st.write(w8)
 st.subheader("Date Input")
 w9 = st.date_input("A date to celebrate", date(2019, 7, 6))
 st.write(w9)
+
+st.subheader("File Uploader")
+w10 = st.file_uploader("Upload a CSV file", type="csv")
+if w10:
+    data = pd.read_csv(w10)
+    st.write(data)
