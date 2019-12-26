@@ -2433,7 +2433,7 @@ class DeltaGenerator(object):
 
         """
 
-        element.deck_json_chart.json = streamlit_map.embed_data(data, zoom)
+        element.py_deck_chart.json = streamlit_map.embed_data(data, zoom)
 
     @_with_element
     def deck_gl_chart(self, element, spec=None, **kwargs):
@@ -2555,8 +2555,12 @@ class DeltaGenerator(object):
            height: 530px
 
         """
-        import streamlit.elements.deck_gl as deck_gl
+        suppress_deprecation_warning = config.get_option("global.suppressDeprecationWarning")
+        if not suppress_deprecation_warning:
+            import streamlit as st
+            st.warning("""The `deck_gl_chart` widget is deprecated and will be removed on 2020-03-04. To render a map, you should use `st.pyDeckChart` widget.""")
 
+        import streamlit.elements.deck_gl as deck_gl
         deck_gl.marshall(element.deck_gl_chart, spec, **kwargs)
 
     @_with_element

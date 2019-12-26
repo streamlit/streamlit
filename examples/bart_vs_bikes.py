@@ -110,3 +110,28 @@ arc_layer = pdk.Layer(
 # Combined all of it
 pydeck_obj = pdk.Deck(initial_view_state=view_state, layers=[hexagon_layer, scatterplot_layer, text_layer, arc_layer], map_style=map_style)
 st.write(pydeck_obj)
+
+
+
+import numpy as np
+df = pd.DataFrame(np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4], columns=['lat', 'lon'])
+
+st.deck_gl_chart(
+    viewport={
+        'latitude': 37.76,
+        'longitude': -122.4,
+        'zoom': 11,
+        'pitch': 50,
+    },
+    layers=[{
+        'type': 'HexagonLayer',
+        'data': df,
+        'radius': 200,
+        'elevationScale': 4,
+        'elevationRange': [0, 1000],
+        'pickable': True,
+        'extruded': True,
+    }, {
+        'type': 'ScatterplotLayer',
+        'data': df,
+    }])

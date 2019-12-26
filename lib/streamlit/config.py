@@ -252,7 +252,6 @@ def _global_log_level():
     else:
         return "info"
 
-
 @_create_option("global.unitTest", visibility="hidden", type_=bool)
 def _global_unit_test():
     """Are we in a unit test?
@@ -274,6 +273,14 @@ _create_option(
 _create_option(
     "global.metrics",
     description="Whether to serve prometheus metrics from /metrics.",
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
+    "global.suppressDeprecationWarning",
+    description="Hide deprecation warnings in the streamlit app.",
     visibility="hidden",
     default_val=False,
     type_=bool,
