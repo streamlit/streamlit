@@ -435,7 +435,7 @@ def cache(
             try:
                 return_value = _read_from_cache(
                     key, persist, allow_output_mutation, func, caller_frame, hash_funcs
-                )
+               )
             except CacheKeyNotFoundError:
                 with _calling_cached_function():
                     if suppress_st_warning:

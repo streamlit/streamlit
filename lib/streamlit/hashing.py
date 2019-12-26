@@ -74,32 +74,35 @@ class MultithreadStackTracker:
 
     def create(self, thread_id):
         """Creates stack for this thread. If already created, clears existing."""
-        print("STACK: created for thread ID ", thread_id)
+        #print("STACK: created for thread ID ", thread_id)
         self.stack[thread_id] = OrderedDict()
 
     def add(self, thread_id, key, val):
+        if key is None:
+            return
         if thread_id not in self.stack:
             self.create(thread_id)
 
         if self.stack[thread_id].get(key):
-            print("STACK: Duplicate found: ", key)
+            #print("STACK: Duplicate found: ", key)
             self.stack[thread_id][self.CONST_UUID] = val
         else:
-            print("STACK: Adding", key)
+            #print("STACK: Adding", key)
             self.stack[thread_id][key] = val
 
     def rem(self, thread_id, key):
+        if key == b'none:' or key is None:
+            return
         if self.stack[thread_id].get(key):
             print("STACK: Dropping", key)
-            return True
-        print("STACK: Tried to remove but could not find key", key)
-        return False
+            self.stack[thread_id].pop(key)
+            return
+        raise Exception("Tried to remove but could not find key {}".format(key))
 
-    def destroy(self, thread_id):
-        if thread_id in self.stack:
-            print("STACK: destroyed for thread ID", thread_id)
-            self.stack.pop(thread_id)
-
+    #def destroy(self, thread_id):
+    #    if thread_id in self.stack:
+    #        print("STACK: destroyed for thread ID", thread_id)
+    #        self.stack.pop(thread_id)
 
 stack_tracker = MultithreadStackTracker()
 
@@ -150,6 +153,7 @@ def _key(obj, context):
     """Return key for memoization."""
 
     if obj is None:
+        #TODO: replace with consts defined at the top.
         return b"none:"  # special value so we can hash None
 
     def is_simple(obj):
@@ -183,6 +187,7 @@ def _key(obj, context):
     ):
         return id(obj)
 
+    # control-flow improvement, raise Exception?
     return None
 
 
@@ -260,7 +265,6 @@ class CodeHasher:
     def to_bytes(self, obj, context=None):
         """Add memoization to _to_bytes."""
         key = _key(obj, context)
-        print(key)
 
         if key is not None:
             if key in self.hashes:
@@ -272,8 +276,8 @@ class CodeHasher:
 
         b = self._to_bytes(obj, context)
 
-        # add object to stack trace
-        stack_tracker.add(threading.current_thread().ident, b, obj)
+        # add object to stack trace -- use id instead?
+        stack_tracker.add(threading.current_thread().ident, id(obj), obj)
 
         self.size += sys.getsizeof(b)
 
@@ -281,7 +285,7 @@ class CodeHasher:
             self.hashes[key] = b
 
         # remove object from stack trace
-        stack_tracker.rem(threading.current_thread().ident, b)
+        stack_tracker.rem(threading.current_thread().ident, id(obj))
         return b
 
     def _update(self, hasher, obj, context=None):
