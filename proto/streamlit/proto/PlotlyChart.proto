@@ -27,8 +27,10 @@ message PlotlyChart {
     Figure figure = 2;
   }
 
+  // Deprecated: 3, 4
+
   // If True, will overwrite the chart width spec to fit to container.
-  bool use_container_width = 3;
+  bool use_container_width = 5;
 }
 
 message Figure {

@@ -28,10 +28,12 @@ message VegaLiteChart {
   // specified using Vega-Lite's inline API.
   DataFrame data = 2;
 
-  // If True, will overwrite the chart width spec to fit to container.
-  bool use_container_width = 3;
+  // Deprecated: 3
   
   // Dataframes associated with this chart using Vega-Lite's datasets API, if
   // any.
   repeated NamedDataSet datasets = 4;
+
+  // If True, will overwrite the chart width spec to fit to container.
+  bool use_container_width = 5;
 }

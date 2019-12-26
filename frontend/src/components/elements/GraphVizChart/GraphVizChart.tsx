@@ -91,14 +91,9 @@ class GraphVizChart extends React.PureComponent<PropsWithHeight> {
       }
       if (width > 0) {
         // Override or reset the graph width
+        // TODO: Fix width when maximized without breaking alignment when normal.
         graph.width(width)
       }
-
-      // Override or reset the graph width
-      // TODO: Fix width when maximized without breaking alignment when normal.
-      // if (width > 0) {
-      //   graph.width(width)
-      // }
     } catch (error) {
       logError(error)
     }

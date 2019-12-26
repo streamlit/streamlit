@@ -1154,11 +1154,11 @@ class DeltaGenerator(object):
 
         width : number
             Deprecated, if != 0 (default), will show an alert.
-            The real width should be setted in the graphviz object.
+            The real width should be set in the graphviz object.
 
         height : number
             Deprecated, if != 0 (default), will show an alert.
-            The real height should be setted in the graphviz object.
+            The real height should be set in the graphviz object.
 
         Example
         -------
