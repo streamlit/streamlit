@@ -407,10 +407,10 @@ class CodeHashTest(unittest.TestCase):
         """Test code that references an external module."""
 
         def call_altair_concat():
-            return alt.vegalite.v3.api.concat()
+            return alt.vegalite.v4.api.concat()
 
         def call_altair_layer():
-            return alt.vegalite.v3.api.layer()
+            return alt.vegalite.v4.api.layer()
 
         self.assertNotEqual(get_hash(call_altair_concat), get_hash(call_altair_layer))
 
