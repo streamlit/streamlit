@@ -20,6 +20,7 @@
     }
   },
   "dependencies": {
+    "@apache-arrow/esnext-esm": "^0.15.1",
     "@types/classnames": "^2.2.9",
     "@types/katex": "^0.10.2",
     "aws-sdk": "^2.524.0",

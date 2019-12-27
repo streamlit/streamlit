@@ -34,6 +34,7 @@ import Table from "components/elements/Table/"
 import Text from "components/elements/Text/"
 
 // Lazy-load elements.
+const ArrowTable = React.lazy(() => import("components/elements/ArrowTable/"))
 const Audio = React.lazy(() => import("components/elements/Audio/"))
 const Balloons = React.lazy(() => import("components/elements/Balloons/"))
 const BokehChart = React.lazy(() => import("components/elements/BokehChart/"))
@@ -218,6 +219,9 @@ class Block extends PureComponent<Props> {
     }
 
     return dispatchOneOf(element, "type", {
+      arrowTable: (el: SimpleElement) => (
+        <ArrowTable element={el} width={width} />
+      ),
       audio: (el: SimpleElement) => <Audio element={el} width={width} />,
       balloons: (el: SimpleElement) => <Balloons element={el} width={width} />,
       bokehChart: (el: SimpleElement) => (

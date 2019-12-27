@@ -94,7 +94,7 @@ def _marshall_styles(proto_table_style, df, styler=None):
     ----------
     proto_table_style : proto.TableStyle
     df : pandas.DataFrame
-    styler : pandas.Styler holding styling data for the data frame, or
+    styler : pandas.Styler holding styling data for the dataframe, or
         None if there's no style data to marshall
     """
 

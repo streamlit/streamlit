@@ -16,6 +16,7 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/ArrowTable.proto";
 import "streamlit/proto/Audio.proto";
 import "streamlit/proto/Balloons.proto";
 import "streamlit/proto/BokehChart.proto";
@@ -49,6 +50,7 @@ message Element {
 
   // An element can be one of the following element types.
   oneof type {
+    ArrowTable arrow_table = 30;
     Audio audio = 13;
     Balloons balloons = 12;
     BokehChart bokeh_chart = 17;
@@ -65,6 +67,7 @@ message Element {
     GraphVizChart graphviz_chart = 18;
     ImageList imgs = 6;
     MultiSelect multiselect = 28;
+    NumberInput number_input = 29;
     PlotlyChart plotly_chart = 16;
     Progress progress = 5;
     Radio radio = 23;
@@ -76,8 +79,7 @@ message Element {
     TimeInput time_input = 26;
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
-    NumberInput number_input = 29;
 
-    // Next ID: 29
+    // Next ID: 31
   }
 }

@@ -15,15 +15,12 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { Component, Fragment, PureComponent, SFC } from "react"
 import { Table as ReactTable } from "reactstrap"
-import { toFormattedString } from "../../../lib/format"
 import { Map as ImmutableMap } from "immutable"
-import {
-  dataFrameGet,
-  dataFrameGetDimensions,
-} from "../../../lib/dataFrameProto"
 import FullScreenWrapper from "components/shared/FullScreenWrapper"
+import { toFormattedString } from "lib/format"
+import { dataFrameGet, dataFrameGetDimensions } from "lib/dataFrameProto"
 import "./Table.scss"
 
 /**
@@ -34,15 +31,15 @@ interface Props {
   element: ImmutableMap<string, any>
 }
 
-class Table extends React.PureComponent<Props> {
+class Table extends PureComponent<Props> {
   render(): JSX.Element {
     const { element } = this.props
     const { headerRows, rows, cols } = dataFrameGetDimensions(element)
 
     const hasNoData = rows === headerRows
 
-    // TODO(tvst): Make tables have a max width with overflow: scroll (when
-    // media==screen). But need to fix the autosizer first.
+    // TODO (tvst): Make tables have a max width with overflow:
+    // scroll (when media == screen). But need to fix the autosizer first.
     return (
       <div className="streamlit-table stTable">
         <ReactTable className={hasNoData ? "empty-table" : ""}>
@@ -92,7 +89,7 @@ interface TableRowsProps {
   cols: number
 }
 
-const TableRows: React.SFC<TableRowsProps> = props => {
+const TableRows: SFC<TableRowsProps> = props => {
   const { df, header, headerRows, rows, cols } = props
   const startRow = header ? 0 : headerRows
   const endRow = header ? headerRows : rows
@@ -104,7 +101,7 @@ const TableRows: React.SFC<TableRowsProps> = props => {
       </tr>
     )
   }
-  return <React.Fragment>{rowArray}</React.Fragment>
+  return <Fragment>{rowArray}</Fragment>
 }
 
 /**
@@ -121,7 +118,7 @@ interface TableRowProps {
   cols: number
 }
 
-const TableRow: React.SFC<TableRowProps> = (props: TableRowProps) => {
+const TableRow: SFC<TableRowProps> = (props: TableRowProps) => {
   const { df, rowIdx, cols } = props
   const entries = []
   for (let colIdx = 0; colIdx < cols; colIdx++) {
@@ -147,10 +144,10 @@ const TableRow: React.SFC<TableRowProps> = (props: TableRowProps) => {
       throw new Error(`Cannot parse type "${type}".`)
     }
   }
-  return <React.Fragment>{entries}</React.Fragment>
+  return <Fragment>{entries}</Fragment>
 }
 
-class WithFullScreenWrapper extends React.Component<Props> {
+class WithFullScreenWrapper extends Component<Props> {
   render(): JSX.Element {
     const { element, width } = this.props
     return (

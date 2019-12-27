@@ -25,7 +25,7 @@ import functools
 import json
 import random
 import textwrap
-import pandas as pd
+
 from datetime import datetime
 from datetime import date
 from datetime import time
@@ -106,6 +106,8 @@ def _with_element(method):
 
     @_wraps_with_cleaned_sig(method, 2)  # Remove self and element from sig.
     def wrapped_method(dg, *args, **kwargs):
+        import pandas as pd
+
         # Warn if we're called from within an @st.cache function
         caching.maybe_show_cached_st_function_warning(dg)
 
@@ -129,7 +131,7 @@ def _build_duplicate_widget_message(widget_type, user_key=None):
     if user_key is not None:
         message = textwrap.dedent(
             """
-            There are multiple identical `st.{widget_type}` widgets with 
+            There are multiple identical `st.{widget_type}` widgets with
             `key='{user_key}'`.
 
             To fix this, please make sure that the `key` argument is unique for
@@ -803,6 +805,14 @@ class DeltaGenerator(object):
         import streamlit.elements.exception_proto as exception_proto
 
         exception_proto.marshall(element.exception, exception, exception_traceback)
+
+    @_with_element
+    def arrow_table(self, element, df):
+        import streamlit.elements.arrow_table as arrow_table
+
+        element_path = (self._container,) + self._path + (self._id,)
+        default_uuid = hash(element_path)
+        arrow_table.marshall(element.arrow_table, df, default_uuid)
 
     @_remove_self_from_sig
     def dataframe(self, data=None, width=None, height=None):

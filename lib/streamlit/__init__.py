@@ -143,6 +143,7 @@ sidebar = _NULL_DELTA_GENERATOR
 # DeltaGenerator methods:
 
 altair_chart = _with_dg(_DeltaGenerator.altair_chart)  # noqa: E221
+arrow_table = _with_dg(_DeltaGenerator.arrow_table)  # noqa: E221
 area_chart = _with_dg(_DeltaGenerator.area_chart)  # noqa: E221
 audio = _with_dg(_DeltaGenerator.audio)  # noqa: E221
 balloons = _with_dg(_DeltaGenerator.balloons)  # noqa: E221
