@@ -19,7 +19,7 @@ from streamlit import util
 
 
 def marshall(proto, df, default_uuid):
-    if _is_pandas_styler(df):
+    if util._is_pandas_styler(df):
         df = _marshall_styler(proto, df, default_uuid)
 
     # Convert all dataframe values to strings as we
@@ -28,10 +28,6 @@ def marshall(proto, df, default_uuid):
 
     _marshall_headers(proto, df)
     _marshall_data(proto, df)
-
-
-def _is_pandas_styler(df):
-    return util.is_type(df, "pandas.io.formats.style.Styler")
 
 
 def _marshall_styler(proto, styler, default_uuid):
@@ -115,22 +111,16 @@ def _pandas_style_to_css(style, uuid, separator=""):
 
 def _marshall_headers(proto, df):
     # Serialize header columns
-    header_columns = map(_tuple_to_list, df.columns.values)
+    header_columns = map(util._tuple_to_list, df.columns.values)
     header_columns_df = pd.DataFrame(header_columns)
     header_columns_table = _dataframe_to_serialized_arrow_table(header_columns_df)
     proto.header_columns = header_columns_table
 
     # Serialize header rows
-    header_rows = map(_tuple_to_list, df.index.values)
+    header_rows = map(util._tuple_to_list, df.index.values)
     header_rows_df = pd.DataFrame(header_rows)
     header_rows_table = _dataframe_to_serialized_arrow_table(header_rows_df)
     proto.header_rows = header_rows_table
-
-
-def _tuple_to_list(item):
-    if isinstance(item, tuple):
-        return list(item)
-    return item
 
 
 def _dataframe_to_serialized_arrow_table(df):

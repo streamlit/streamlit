@@ -336,6 +336,11 @@ def is_sympy_expession(obj):
         return False
 
 
+def _is_pandas_styler(obj):
+    """True if input looks like a DataFrame styler."""
+    return is_type(obj, "pandas.io.formats.style.Styler")
+
+
 def is_altair_chart(obj):
     """True if input looks like an Altair chart."""
     return is_type(obj, re.compile(r"^altair\.vegalite\.v\d+\.api\.\w*Chart$"))
@@ -498,3 +503,10 @@ def file_is_in_folder_glob(filepath, folderpath_glob):
 
     file_dir = os.path.dirname(filepath) + "/"
     return fnmatch.fnmatch(file_dir, folderpath_glob)
+
+
+def _tuple_to_list(item):
+    """Convert tuple to list. Leave as is if it's not a tuple."""
+    if isinstance(item, tuple):
+        return list(item)
+    return item
