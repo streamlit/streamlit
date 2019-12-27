@@ -252,6 +252,7 @@ def _global_log_level():
     else:
         return "info"
 
+
 @_create_option("global.unitTest", visibility="hidden", type_=bool)
 def _global_unit_test():
     """Are we in a unit test?

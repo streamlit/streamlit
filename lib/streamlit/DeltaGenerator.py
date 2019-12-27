@@ -2432,6 +2432,7 @@ class DeltaGenerator(object):
 
         """
         import streamlit.elements.map as streamlit_map
+
         element.pydeck_chart.json = streamlit_map.to_deckgl_json(data, zoom)
 
     @_with_element
@@ -2554,12 +2555,18 @@ class DeltaGenerator(object):
            height: 530px
 
         """
-        suppress_deprecation_warning = config.get_option("global.suppressDeprecationWarning")
+        suppress_deprecation_warning = config.get_option(
+            "global.suppressDeprecationWarning"
+        )
         if not suppress_deprecation_warning:
             import streamlit as st
-            st.warning("""The `deck_gl_chart` widget is deprecated and will be removed on 2020-03-04. To render a map, you should use `st.pyDeckChart` widget.""")
+
+            st.warning(
+                """The `deck_gl_chart` widget is deprecated and will be removed on 2020-03-04. To render a map, you should use `st.pyDeckChart` widget."""
+            )
 
         import streamlit.elements.deck_gl as deck_gl
+
         deck_gl.marshall(element.deck_gl_chart, spec, **kwargs)
 
     @_with_element
@@ -2659,8 +2666,9 @@ class DeltaGenerator(object):
 
         if pydeck_obj == None:
             import streamlit.elements.map as streamlit_map
+
             element.pydeck_chart.json = json.dumps(streamlit_map.DEFAULT_MAP)
-        else: 
+        else:
             element.pydeck_chart.json = pydeck_obj.to_json()
 
     @_with_element
@@ -2832,7 +2840,7 @@ def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
 
         index_name = data.index.name
         if index_name is None:
-            index_name = "index" 
+            index_name = "index"
 
         data = pd.melt(data.reset_index(), id_vars=[index_name])
 

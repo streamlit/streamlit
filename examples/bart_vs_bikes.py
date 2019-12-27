@@ -52,51 +52,46 @@ bart_stop_stats.drop(labels=["name"], axis=1, inplace=True)
 bart_stop_stats.insert(0, "name", bart_stop_names)
 
 # Set the map style
-map_style="mapbox://styles/mapbox/light-v10",
+map_style = ("mapbox://styles/mapbox/light-v10",)
 
 # Set the viewport location
-view_state = pdk.ViewState(
-    longitude=-122.4,
-    latitude=37.76,
-    zoom=11,
-    pitch=50
-)
+view_state = pdk.ViewState(longitude=-122.4, latitude=37.76, zoom=11, pitch=50)
 
 # Plot number of bike rentals throughtout the city
 hexagon_layer = pdk.Layer(
-    type='HexagonLayer',
+    type="HexagonLayer",
     data=bike_rental_stats,
     get_position="[lon, lat]",
     radius=200,
     elevation_scale=4,
     elevation_range=[0, 1000],
     pickable=True,
-    extruded=True
+    extruded=True,
 )
 
 # Now plot locations of Bart stops
 # ...and let's size the stops according to traffic
 scatterplot_layer = pdk.Layer(
-    type='ScatterplotLayer',
+    type="ScatterplotLayer",
     data=bart_stop_stats,
     get_position="[lon, lat]",
     radius_scale=10,
     get_radius=50,
-    get_fill_color=default_color
+    get_fill_color=default_color,
 )
 
- # Now Add names of Bart stops
+# Now Add names of Bart stops
 text_layer = pdk.Layer(
-    type='TextLayer',
+    type="TextLayer",
     data=bart_stop_stats,
     get_position="[lon, lat]",
     get_text="name",
-    get_size=15
+    get_size=15,
 )
 
 # And draw some arcs connecting the stops
 arc_layer = pdk.Layer(
-    type='ArcLayer',
+    type="ArcLayer",
     data=bart_path_stats,
     pickable=True,
     auto_highlight=True,
@@ -104,9 +99,13 @@ arc_layer = pdk.Layer(
     get_source_position="[lon, lat]",
     get_target_position="[lon2, lat2]",
     get_target_color=default_color,
-    get_source_color=default_color
+    get_source_color=default_color,
 )
 
 # Combined all of it
-pydeck_obj = pdk.Deck(initial_view_state=view_state, layers=[hexagon_layer, scatterplot_layer, text_layer, arc_layer], map_style=map_style)
+pydeck_obj = pdk.Deck(
+    initial_view_state=view_state,
+    layers=[hexagon_layer, scatterplot_layer, text_layer, arc_layer],
+    map_style=map_style,
+)
 st.write(pydeck_obj)

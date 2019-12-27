@@ -19,13 +19,8 @@ import pandas as pd
 import json
 
 DEFAULT_MAP = {
-    "initialViewState": {
-        "latitude": 0,
-        "longitude": 0,
-        "pitch": 0,
-        "zoom": 1,
-    },
-    "mapStyle": ["mapbox://styles/mapbox/light-v10"]
+    "initialViewState": {"latitude": 0, "longitude": 0, "pitch": 0, "zoom": 1,},
+    "mapStyle": ["mapbox://styles/mapbox/light-v10"],
 }
 _DEFAULT_COLOR = [200, 30, 0, 160]
 _ZOOM_LEVELS = [
@@ -51,6 +46,7 @@ _ZOOM_LEVELS = [
     0.0005,
 ]
 
+
 def _get_zoom_level(distance):
     """Get the zoom level for a given distance in degrees.
 
@@ -71,6 +67,7 @@ def _get_zoom_level(distance):
     for i in range(len(_ZOOM_LEVELS) - 1):
         if _ZOOM_LEVELS[i + 1] < distance <= _ZOOM_LEVELS[i]:
             return i
+
 
 def to_deckgl_json(data, zoom):
 
@@ -116,19 +113,21 @@ def to_deckgl_json(data, zoom):
     lat_col_index = data.columns.get_loc(lat)
     final_data = []
     for _, row in data.iterrows():
-        final_data.append({'lon': float(row[lon_col_index]), 'lat': float(row[lat_col_index])})
-        
+        final_data.append(
+            {"lon": float(row[lon_col_index]), "lat": float(row[lat_col_index])}
+        )
+
     default = DEFAULT_MAP
-    default['initialViewState']['latitude'] = center_lat
-    default['initialViewState']['longitude'] = center_lon
-    default['initialViewState']['zoom'] = zoom
+    default["initialViewState"]["latitude"] = center_lat
+    default["initialViewState"]["longitude"] = center_lon
+    default["initialViewState"]["zoom"] = zoom
     layer = {
-        "type":"ScatterplotLayer",
+        "type": "ScatterplotLayer",
         "getPosition": "[lon, lat]",
         "getRadius": 10,
         "radiusScale": 10,
         "getFillColor": _DEFAULT_COLOR,
-        "data": final_data
+        "data": final_data,
     }
-    default['layers'] = [layer]
+    default["layers"] = [layer]
     return json.dumps(default)
