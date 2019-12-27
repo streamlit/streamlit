@@ -34,9 +34,9 @@ RUN curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh
 ARG NVM_DIR=$HOME/.nvm
 ARG NODE_VERSION=v10.16.3
 
-# install yarn
+# install node and yarn
 RUN source $NVM_DIR/nvm.sh \
-    && nvm install --lts=dubnium \
+    && nvm install $NODE_VERSION --lts=dubnium \
     && npm install -g yarn
 
 # node path
@@ -76,6 +76,6 @@ RUN make develop
 # register streamlit user
 RUN mkdir $HOME/.streamlit \
     && echo '[general]' >  $HOME/.streamlit/credentials.toml \
-    && echo 'email = "jonathan@streamlit.io"' >> $HOME/.streamlit/credentials.toml
+    && echo 'email = "test@streamlit.io"' >> $HOME/.streamlit/credentials.toml
 
 CMD /bin/bash

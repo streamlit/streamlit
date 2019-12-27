@@ -22,21 +22,22 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import os
-import platform
 import toml
 import collections
+import urllib
 
 import click
 from blinker import Signal
 
 from streamlit import development
+from streamlit import env_util
+from streamlit import file_util
 from streamlit import util
 from streamlit.ConfigOption import ConfigOption
 
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
-
 
 # Config System Global State #
 
@@ -109,6 +110,7 @@ def _create_option(
     key,
     description=None,
     default_val=None,
+    scriptable=False,
     visibility="visible",
     deprecated=False,
     deprecation_text=None,
@@ -155,6 +157,7 @@ def _create_option(
         key,
         description=description,
         default_val=default_val,
+        scriptable=scriptable,
         visibility=visibility,
         deprecated=deprecated,
         deprecation_text=deprecation_text,
@@ -186,7 +189,6 @@ def _delete_option(key):
 
 _create_section("global", "Global options that apply across all of Streamlit.")
 
-
 _create_option(
     "global.disableWatchdogWarning",
     description="""
@@ -201,7 +203,6 @@ _create_option(
     type_=bool,
 )
 
-
 _create_option(
     "global.sharingMode",
     description="""
@@ -214,7 +215,6 @@ _create_option(
         """,
     default_val="off",
 )
-
 
 _create_option(
     "global.showWarningOnDirectExecution",
@@ -235,7 +235,7 @@ def _global_development_mode():
     normally.
     """
     return (
-        not util.is_pex()
+        not env_util.is_pex()
         and "site-packages" not in __file__
         and "dist-packages" not in __file__
     )
@@ -271,7 +271,6 @@ _create_option(
     type_=bool,
 )
 
-
 _create_option(
     "global.metrics",
     description="Whether to serve prometheus metrics from /metrics.",
@@ -279,7 +278,6 @@ _create_option(
     default_val=False,
     type_=bool,
 )
-
 
 _create_option(
     "global.minCachedMessageSize",
@@ -289,7 +287,6 @@ _create_option(
     default_val=10 * 1e3,
     type_=int,
 )  # 10k
-
 
 _create_option(
     "global.maxCachedMessageAge",
@@ -301,7 +298,6 @@ _create_option(
     type_=int,
 )
 
-
 # Config Section: Client #
 
 _create_section("client", "Settings for scripts that use Streamlit.")
@@ -311,6 +307,7 @@ _create_option(
     description="Whether to enable st.cache.",
     default_val=True,
     type_=bool,
+    scriptable=True,
 )
 
 _create_option(
@@ -319,8 +316,8 @@ _create_option(
         Streamlit app.""",
     default_val=True,
     type_=bool,
+    scriptable=True,
 )
-
 
 # Config Section: Runner #
 
@@ -361,7 +358,6 @@ _create_option(
 
 _create_section("server", "Settings for the Streamlit server")
 
-
 _create_option(
     "server.folderWatchBlacklist",
     description="""List of folders that should not be watched for changes. This
@@ -374,6 +370,23 @@ _create_option(
     default_val=[],
 )
 
+_create_option(
+    "server.fileWatcherType",
+    description="""
+        Change the type of file watcher used by Streamlit, or turn it off
+        completely.
+
+        Allowed values:
+        * "auto"     : Streamlit will attempt to use the watchdog module, and
+                       falls back to polling if watchdog is not available.
+        * "watchdog" : Force Streamlit to use the watchdog module.
+        * "poll"     : Force Streamlit to always use polling.
+        * "none"     : Streamlit will not watch files.
+    """,
+    default_val="auto",
+    type_=str,
+)
+
 
 @_create_option("server.headless", type_=bool)
 @util.memoize
@@ -384,7 +397,7 @@ def _server_headless():
     (2) server.liveSave is set.
     """
     is_live_save_on = get_option("server.liveSave")
-    is_linux = platform.system() == "Linux"
+    is_linux = env_util.IS_LINUX_OR_BSD
     has_display_env = not os.getenv("DISPLAY")
     is_running_in_editor_plugin = (
         os.getenv("IS_RUNNING_IN_STREAMLIT_EDITOR_PLUGIN") is not None
@@ -442,6 +455,15 @@ def _server_enable_cors():
     return True
 
 
+@_create_option("server.maxUploadSize", type_=int)
+def _server_max_upload_size():
+    """Max size, in megabytes, for files uploaded with the file_uploader.
+
+    Default: '50'
+    """
+    return 50
+
+
 # Config Section: Browser #
 
 _create_section("browser", "Configuration of browser front-end.")
@@ -476,6 +498,23 @@ def _browser_server_port():
     return get_option("server.port")
 
 
+# Config Section: Mapbox #
+
+_create_section("mapbox", "Mapbox configuration that is being used by DeckGL.")
+
+_create_option(
+    "mapbox.token",
+    description="""Configure Streamlit to use a custom Mapbox
+                token for elements like st.deck_gl_chart and st.map. If you
+                don't do this you'll be using Streamlit's own token,
+                which has limitations and is not guaranteed to always work.
+                To get a token for yourself, create an account at
+                https://mapbox.com. It's free! (for moderate usage levels)""",
+    default_val="pk.eyJ1IjoidGhpYWdvdCIsImEiOiJjamh3bm85NnkwMng4M3"
+    "dydnNveWwzeWNzIn0.vCBDzNsEF2uFSFk2AM0WZQ",
+)
+
+
 # Config Section: S3 #
 
 _create_section("s3", 'Configuration for when global.sharingMode is set to "s3".')
@@ -499,7 +538,7 @@ def _s3_url():
     return None
 
 
-@_create_option("s3.accessKeyId", visibility="obfuscated")
+@_create_option("s3.accessKeyId")
 def _s3_access_key_id():
     """Access key to write to the S3 bucket.
 
@@ -510,7 +549,7 @@ def _s3_access_key_id():
     return None
 
 
-@_create_option("s3.secretAccessKey", visibility="obfuscated")
+@_create_option("s3.secretAccessKey")
 def _s3_secret_access_key():
     """Secret access key to write to the S3 bucket.
 
@@ -520,16 +559,6 @@ def _s3_secret_access_key():
     """
     return None
 
-
-_create_option(
-    "s3.requireLoginToView",
-    description="""Make the shared app visible only to users who have been
-        granted view permission. If you are interested in this option, contact
-        us at support@streamlit.io.
-        """,
-    default_val=False,
-    type_=bool,
-)
 
 _create_option(
     "s3.keyPrefix",
@@ -703,11 +732,8 @@ def show_config():
 
             toml_setting = toml.dumps({key: option.value})
 
-            if len(toml_setting) == 0 or option.visibility == "obfuscated":
+            if len(toml_setting) == 0:
                 toml_setting = "#%s =\n" % key
-
-            elif option.visibility == "obfuscated":
-                toml_setting = "%s = (value hidden)\n" % key
 
             append_setting(toml_setting)
 
@@ -805,18 +831,18 @@ def _maybe_convert_to_number(v):
     return v
 
 
-def parse_config_file():
+def parse_config_file(force=False):
     """Parse the config file and update config parameters."""
     global _config_file_has_been_parsed
 
-    if _config_file_has_been_parsed:
+    if _config_file_has_been_parsed and force == False:
         return
 
     # Read ~/.streamlit/config.toml, and then overlay
     # $CWD/.streamlit/config.toml if it exists.
     config_filenames = [
-        util.get_streamlit_file_path("config.toml"),
-        util.get_project_streamlit_file_path("config.toml"),
+        file_util.get_streamlit_file_path("config.toml"),
+        file_util.get_project_streamlit_file_path("config.toml"),
     ]
 
     for filename in config_filenames:
@@ -877,6 +903,19 @@ def _check_conflicts():
             "In config.toml, s3.accessKeyId and s3.secretAccessKey must "
             "either both be set or both be unset."
         )
+
+        if is_manually_set("s3.url"):
+            # If s3.url is set, ensure that it's an absolute URL.
+            # An absolute URL starts with either `scheme://` or `//` --
+            # if the configured URL does not start with either prefix,
+            # prepend it with `//` to make it absolute. (If we don't do this,
+            # and the user enters something like `url=myhost.com/reports`, the
+            # browser will assume this is a relative URL, and will prepend
+            # the hostname of the Streamlit instance to the configured URL.)
+            s3_url = get_option("s3.url")
+            parsed = urllib.parse.urlparse(s3_url)
+            if parsed.netloc == "":
+                _set_option("s3.url", "//" + s3_url, get_where_defined("s3.url"))
 
 
 def _set_development_mode():

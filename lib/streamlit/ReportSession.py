@@ -24,7 +24,8 @@ from streamlit import __installation_id__
 from streamlit import __version__
 from streamlit import caching
 from streamlit import config
-from streamlit import util
+from streamlit import url_util
+from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.Report import Report
 from streamlit.ScriptRequestQueue import RerunData
@@ -36,7 +37,7 @@ from streamlit.credentials import Credentials
 from streamlit.logger import get_logger
 from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.Widget_pb2 import WidgetStates
+from streamlit.proto.Widget_pb2 import WidgetStates, WidgetState
 from streamlit.server.server_util import serialize_forward_msg
 from streamlit.storage.S3Storage import S3Storage as Storage
 from streamlit.watcher.LocalSourcesWatcher import LocalSourcesWatcher
@@ -87,6 +88,8 @@ class ReportSession(object):
 
         self._state = ReportSessionState.REPORT_NOT_RUNNING
 
+        self._uploaded_file_mgr = UploadedFileManager()
+
         self._main_dg = DeltaGenerator(enqueue=self.enqueue, container=BlockPath.MAIN)
         self._sidebar_dg = DeltaGenerator(
             enqueue=self.enqueue, container=BlockPath.SIDEBAR
@@ -132,6 +135,7 @@ class ReportSession(object):
         """
         if self._state != ReportSessionState.SHUTDOWN_REQUESTED:
             LOGGER.debug("Shutting down (id=%s)", self.id)
+            self._uploaded_file_mgr.delete_all_files()
 
             # Shut down the ScriptRunner, if one is active.
             # self._state must not be set to SHUTDOWN_REQUESTED until
@@ -163,13 +167,18 @@ class ReportSession(object):
         if not config.get_option("client.displayEnabled"):
             return False
 
-        # If we have an active ScriptRunner, signal that it can handle
-        # an execution control request. (Copy the scriptrunner reference
-        # to avoid it being unset from underneath us, as this function can
-        # be called outside the main thread.)
-        scriptrunner = self._scriptrunner
-        if scriptrunner is not None:
-            scriptrunner.maybe_handle_execution_control_request()
+        # Avoid having two maybe_handle_execution_control_request running on
+        # top of each other when tracer is installed. This leads to a lock
+        # contention.
+        if not config.get_option("runner.installTracer"):
+            # If we have an active ScriptRunner, signal that it can handle an
+            # execution control request. (Copy the scriptrunner reference to
+            # avoid it being unset from underneath us, as this function can be
+            # called outside the main thread.)
+            scriptrunner = self._scriptrunner
+
+            if scriptrunner is not None:
+                scriptrunner.maybe_handle_execution_control_request()
 
         self._report.enqueue(msg)
         return True
@@ -349,6 +358,8 @@ class ReportSession(object):
             "global.maxCachedMessageAge"
         )
 
+        imsg.config.mapbox_token = config.get_option("mapbox.token")
+
         LOGGER.debug(
             "New browser connection: "
             "gather_usage_stats=%s, "
@@ -368,7 +379,10 @@ class ReportSession(object):
         )
 
         imsg.user_info.installation_id = __installation_id__
-        imsg.user_info.email = Credentials.get_current().activation.email
+        if Credentials.get_current().activation:
+            imsg.user_info.email = Credentials.get_current().activation.email
+        else:
+            imsg.user_info.email = ""
 
         imsg.command_line = self._report.command_line
 
@@ -430,6 +444,31 @@ class ReportSession(object):
                 return
 
         self.request_rerun(widget_state)
+
+    def handle_upload_file(self, upload_file):
+        self._uploaded_file_mgr.create_or_clear_file(
+            widget_id=upload_file.widget_id,
+            name=upload_file.name,
+            size=upload_file.size,
+            last_modified=upload_file.lastModified,
+            chunks=upload_file.chunks,
+        )
+
+        self.handle_rerun_script_request(widget_state=self._widget_states)
+
+    def handle_upload_file_chunk(self, upload_file_chunk):
+        progress = self._uploaded_file_mgr.process_chunk(
+            widget_id=upload_file_chunk.widget_id,
+            index=upload_file_chunk.index,
+            data=upload_file_chunk.data,
+        )
+
+        if progress == 1:
+            self.handle_rerun_script_request(widget_state=self._widget_states)
+
+    def handle_delete_uploaded_file(self, delete_uploaded_file):
+        self._uploaded_file_mgr.delete_file(widget_id=delete_uploaded_file.widget_id)
+        self.handle_rerun_script_request(widget_state=self._widget_states)
 
     def handle_stop_script_request(self):
         """Tells the ScriptRunner to stop running its report."""
@@ -507,6 +546,7 @@ class ReportSession(object):
             sidebar_dg=self._sidebar_dg,
             widget_states=self._widget_states,
             request_queue=self._script_request_queue,
+            uploaded_file_mgr=self._uploaded_file_mgr,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()
@@ -559,7 +599,7 @@ class ReportSession(object):
         url = yield self._get_storage().save_report_files(self._report.report_id, files)
 
         if config.get_option("server.liveSave"):
-            util.print_url("Saved running app", url)
+            url_util.print_url("Saved running app", url)
 
         raise tornado.gen.Return(url)
 
@@ -571,7 +611,7 @@ class ReportSession(object):
         )
 
         if config.get_option("server.liveSave"):
-            util.print_url("Saved final app", url)
+            url_util.print_url("Saved final app", url)
 
         raise tornado.gen.Return(url)
 

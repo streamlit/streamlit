@@ -36,7 +36,6 @@ else:
     import tests.streamlit.watcher.test_data.dummy_module1 as DUMMY_MODULE_1
     import tests.streamlit.watcher.test_data.dummy_module2 as DUMMY_MODULE_2
     import tests.streamlit.watcher.test_data.misbehaved_module as MISBEHAVED_MODULE
-
     import tests.streamlit.watcher.test_data.nested_module_parent as NESTED_MODULE_PARENT
     import tests.streamlit.watcher.test_data.nested_module_child as NESTED_MODULE_CHILD
 
@@ -53,6 +52,7 @@ def NOOP_CALLBACK():
     pass
 
 
+@patch("streamlit.file_util.file_in_pythonpath", return_value=False)
 class LocalSourcesWatcherTest(unittest.TestCase):
     def setUp(self):
         modules = [
@@ -77,7 +77,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
                 pass
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
-    def test_just_script(self, fob):
+    def test_just_script(self, fob, _):
         lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
 
         fob.assert_called_once()
@@ -95,7 +95,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         self.assertEqual(fob.call_count, 1)  # __init__.py
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
-    def test_permission_error(self, fob):
+    def test_permission_error(self, fob, _):
         from streamlit import compatibility
 
         if compatibility.is_running_py3():
@@ -107,7 +107,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
-    def test_script_and_2_modules_at_once(self, fob):
+    def test_script_and_2_modules_at_once(self, fob, _):
         lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
 
         fob.assert_called_once()
@@ -139,7 +139,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         self.assertEqual(fob.call_count, 0)
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
-    def test_script_and_2_modules_in_series(self, fob):
+    def test_script_and_2_modules_in_series(self, fob, _):
         lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
 
         fob.assert_called_once()
@@ -173,7 +173,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         fob.assert_called_once()
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
-    def test_misbehaved_module(self, fob):
+    def test_misbehaved_module(self, fob, _):
         lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
 
         fob.assert_called_once()
@@ -185,7 +185,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         fob.assert_called_once()  # Just __init__.py
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
-    def test_nested_module_parent_unloaded(self, fob):
+    def test_nested_module_parent_unloaded(self, fob, _):
         lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
 
         fob.assert_called_once()
@@ -208,7 +208,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
             self.assertNotIn("NESTED_MODULE_PARENT", sys.modules)
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
-    def test_config_blacklist(self, fob):
+    def test_config_blacklist(self, fob, _):
         """Test server.folderWatchBlacklist"""
         prev_blacklist = config.get_option("server.folderWatchBlacklist")
 
@@ -229,6 +229,40 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         # Reset the config object.
         config.set_option("server.folderWatchBlacklist", prev_blacklist)
+
+    def test_config_watcherType(self, _):
+        """Test server.fileWatcherType"""
+
+        config.set_option("server.fileWatcherType", "none")
+        self.assertIsNone(LocalSourcesWatcher.get_file_watcher_class())
+
+        config.set_option("server.fileWatcherType", "poll")
+        if LocalSourcesWatcher.get_file_watcher_class() is not None:
+            self.assertEquals(
+                LocalSourcesWatcher.get_file_watcher_class().__name__,
+                "PollingFileWatcher",
+            )
+
+        config.set_option("server.fileWatcherType", "watchdog")
+        if LocalSourcesWatcher.get_file_watcher_class() is not None:
+            self.assertEquals(
+                LocalSourcesWatcher.get_file_watcher_class().__name__,
+                "EventBasedFileWatcher",
+            )
+
+        config.set_option("server.fileWatcherType", "auto")
+        self.assertIsNotNone(LocalSourcesWatcher.get_file_watcher_class())
+
+        if sys.modules["streamlit.watcher.EventBasedFileWatcher"] is not None:
+            self.assertEquals(
+                LocalSourcesWatcher.get_file_watcher_class().__name__,
+                "EventBasedFileWatcher",
+            )
+        else:
+            self.assertEquals(
+                LocalSourcesWatcher.get_file_watcher_class().__name__,
+                "PollingFileWatcher",
+            )
 
 
 def sort_args_list(args_list):

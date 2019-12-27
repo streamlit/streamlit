@@ -27,7 +27,7 @@ describe("st.time_input", () => {
   });
 
   it("has correct values", () => {
-    cy.get(".stText").should(
+    cy.get(".stMarkdown").should(
       "have.text",
       "Value 1: 08:45:00" + "Value 2: 21:15:00"
     );
@@ -44,7 +44,7 @@ describe("st.time_input", () => {
       .first()
       .click();
 
-    cy.get(".stText")
+    cy.get(".stMarkdown")
       .first()
       .should("have.text", "Value 1: 00:00:00");
   });
@@ -58,7 +58,7 @@ describe("st.time_input", () => {
       .first()
       .click();
 
-    cy.get(".stText")
+    cy.get(".stMarkdown")
       .first()
       .should("have.text", "Value 1: 01:11:00");
   });

@@ -13,7 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit import util
+from streamlit import file_util
+from streamlit import config
 
 # The files in the folders below should always be blacklisted.
 DEFAULT_FOLDER_BLACKLIST = [
@@ -30,6 +31,15 @@ DEFAULT_FOLDER_BLACKLIST = [
     "**/venv",
     "**/virtualenv",
 ]
+
+
+# Add the Streamlit lib folder when in dev mode, since otherwise we end up with
+# weird situations where the ID of a class in one run is not the same as in another
+# run.
+if config.get_option("global.developmentMode"):
+    import os
+
+    DEFAULT_FOLDER_BLACKLIST.append(os.path.dirname(__file__))
 
 
 class FolderBlackList(object):
@@ -63,6 +73,6 @@ class FolderBlackList(object):
 
         """
         return any(
-            util.file_is_in_folder_glob(filepath, blacklisted_folder)
+            file_util.file_is_in_folder_glob(filepath, blacklisted_folder)
             for blacklisted_folder in self._folder_blacklist
         )

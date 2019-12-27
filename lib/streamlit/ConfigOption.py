@@ -72,7 +72,9 @@ class ConfigOption(object):
     where_defined : str
         Indicates which file set this config option.
         ConfigOption.DEFAULT_DEFINITION means this file.
-    visibility : {'visible', 'hidden', 'obfuscated'}
+    visibility : {"visible", "hidden"}
+        See __init__.
+    scriptable : bool
         See __init__.
     deprecated: bool
         See __init__.
@@ -98,6 +100,7 @@ class ConfigOption(object):
         description=None,
         default_val=None,
         visibility="visible",
+        scriptable=False,
         deprecated=False,
         deprecation_text=None,
         expiration_date=None,
@@ -115,8 +118,10 @@ class ConfigOption(object):
             Like a comment for the config option.
         default_val : anything
             The value for this config option.
-        visibility : {'visible', 'hidden', 'obfuscated'}
+        visibility : {"visible", "hidden"}
             Whether this option should be shown to users.
+        scriptable : bool
+            Whether this config option can be set within a user script.
         deprecated: bool
             Whether this config option is deprecated.
         deprecation_text : str or None
@@ -147,6 +152,7 @@ class ConfigOption(object):
         self.description = description
 
         self.visibility = visibility
+        self.scriptable = scriptable
         self.default_val = default_val
         self.deprecated = deprecated
         self.replaced_by = replaced_by

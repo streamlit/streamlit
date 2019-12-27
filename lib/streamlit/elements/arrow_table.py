@@ -16,10 +16,11 @@
 import pandas as pd
 import pyarrow as pa
 from streamlit import util
+from streamlit import type_util
 
 
 def marshall(proto, df, default_uuid):
-    if util._is_pandas_styler(df):
+    if type_util.is_pandas_styler(df):
         df = _marshall_styler(proto, df, default_uuid)
 
     # Convert all dataframe values to strings as we

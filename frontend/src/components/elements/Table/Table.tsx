@@ -15,12 +15,12 @@
  * limitations under the License.
  */
 
-import React, { Component, Fragment, PureComponent, SFC } from "react"
+import React, { Fragment, PureComponent, SFC } from "react"
 import { Table as ReactTable } from "reactstrap"
-import { Map as ImmutableMap } from "immutable"
-import FullScreenWrapper from "components/shared/FullScreenWrapper"
 import { toFormattedString } from "lib/format"
+import { Map as ImmutableMap } from "immutable"
 import { dataFrameGet, dataFrameGetDimensions } from "lib/dataFrameProto"
+import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import "./Table.scss"
 
 /**
@@ -147,15 +147,4 @@ const TableRow: SFC<TableRowProps> = (props: TableRowProps) => {
   return <Fragment>{entries}</Fragment>
 }
 
-class WithFullScreenWrapper extends Component<Props> {
-  render(): JSX.Element {
-    const { element, width } = this.props
-    return (
-      <FullScreenWrapper width={width}>
-        {({ width }) => <Table element={element} width={width} />}
-      </FullScreenWrapper>
-    )
-  }
-}
-
-export default WithFullScreenWrapper
+export default withFullScreenWrapper(Table)

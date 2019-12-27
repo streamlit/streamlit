@@ -34,7 +34,7 @@ describe("st.radio", () => {
   });
 
   it("has correct initial values", () => {
-    cy.get(".stText").should(
+    cy.get(".stMarkdown").should(
       "have.text",
       "value 1: male" + "value 2: female" + "value 3: None"
     );
@@ -66,7 +66,7 @@ describe("st.radio", () => {
         .click({ force: true });
     });
 
-    cy.get(".stText").should(
+    cy.get(".stMarkdown").should(
       "have.text",
       "value 1: male" + "value 2: male" + "value 3: None"
     );

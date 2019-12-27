@@ -21,29 +21,36 @@ from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
 
+import io
 import functools
 import json
 import random
 import textwrap
-
 from datetime import datetime
 from datetime import date
 from datetime import time
 
 from streamlit import caching
+from streamlit import config
 from streamlit import metrics
+from streamlit import type_util
+from streamlit.ReportThread import get_report_ctx
+from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto import Alert_pb2
 from streamlit.proto import Balloons_pb2
 from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto import Text_pb2
-from streamlit import get_report_ctx
 
 # setup logging
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
+
+# Save the type built-in for when we override the name "type".
+_type = type
 
 MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
 
@@ -112,12 +119,17 @@ def _with_element(method):
         caching.maybe_show_cached_st_function_warning(dg)
 
         delta_type = method.__name__
-        last_index = -1
+        last_index = None
 
         if delta_type in DELTAS_TYPES_THAT_MELT_DATAFRAMES and len(args) > 0:
             data = args[0]
-            if isinstance(data, pd.DataFrame):
-                last_index = data.index[-1] if data.index.size > 0 else 0
+            if type_util.is_dataframe_compatible(data):
+                data = type_util.convert_anything_to_df(data)
+
+                if data.index.size > 0:
+                    last_index = data.index[-1]
+                else:
+                    last_index = None
 
         def marshall_element(element):
             return method(dg, element, *args, **kwargs)
@@ -266,7 +278,6 @@ class DeltaGenerator(object):
     path: tuple of ints
       The full path of this DeltaGenerator, consisting of the IDs of
       all ancestors. The 0th item is the topmost ancestor.
-
     """
 
     # The pydoc below is for user consumption, so it doesn't talk about
@@ -461,7 +472,7 @@ class DeltaGenerator(object):
 
     @_with_element
     def text(self, element, body):
-        """Write fixed-width text.
+        """Write fixed-width and preformatted text.
 
         Parameters
         ----------
@@ -479,7 +490,6 @@ class DeltaGenerator(object):
         """
 
         element.text.body = _clean_text(body)
-        element.text.format = Text_pb2.Text.PLAIN
 
     @_with_element
     def markdown(self, element, body, unsafe_allow_html=False):
@@ -490,7 +500,14 @@ class DeltaGenerator(object):
         body : str
             The string to display as Github-flavored Markdown. Syntax
             information can be found at: https://github.github.com/gfm.
-            Inline and block math are supported by KaTeX and remark-math.
+
+            This also supports:
+            * Emoji shortcodes, such as `:+1:`  and `:sunglasses:`.
+            For a list of all supported codes,
+            see https://www.webfx.com/tools/emoji-cheat-sheet/.
+            * LaTeX expressions, by just wrapping them in "$" or "$$" (the "$$"
+             must be on their own lines). Supported LaTeX functions are listed
+             at https://katex.org/docs/supported.html.
 
         unsafe_allow_html : bool
             By default, any HTML tags found in the body will be escaped and
@@ -523,33 +540,45 @@ class DeltaGenerator(object):
            height: 50px
 
         """
-        element.text.body = _clean_text(body)
-        element.text.format = Text_pb2.Text.MARKDOWN
-        element.text.allow_html = unsafe_allow_html
+        element.markdown.body = _clean_text(body)
+        element.markdown.allow_html = unsafe_allow_html
 
     @_with_element
     def latex(self, element, body):
-        """Display string formatted as LaTeX.
+        # This docstring needs to be "raw" because of the backslashes in the
+        # example below.
+        r"""Display mathematical expressions formatted as LaTeX.
+
+        Supported LaTeX functions are listed at
+        https://katex.org/docs/supported.html.
 
         Parameters
         ----------
-        body : str
-            The string to display as LaTeX.
+        body : str or SymPy expression
+            The string or SymPy expression to display as LaTeX. If str, it's
+            a good idea to use raw Python strings since LaTeX uses backslashes
+            a lot.
+
 
         Example
         -------
-        >>> st.latex("ax^2 + bx + c = 0")
+        >>> st.latex(r'''
+        ...     a + ar + a r^2 + a r^3 + \cdots + a r^{n-1} =
+        ...     \sum_{k=0}^{n-1} ar^k =
+        ...     a \left(\frac{1-r^{n}}{1-r}\right)
+        ...     ''')
+
+        .. output::
+           https://share.streamlit.io/0.50.0-td2L/index.html?id=NJFsy6NbGTsH2RF9W6ioQ4
+           height: 75px
 
         """
-        from streamlit.util import is_sympy_expession
-
-        if is_sympy_expession(body):
+        if type_util.is_sympy_expession(body):
             import sympy
 
             body = sympy.latex(body)
 
-        element.text.body = "$$\n%s\n$$" % _clean_text(body)
-        element.text.format = Text_pb2.Text.MARKDOWN
+        element.markdown.body = "$$\n%s\n$$" % _clean_text(body)
 
     @_with_element
     def code(self, element, body, language="python"):
@@ -581,8 +610,7 @@ class DeltaGenerator(object):
             "language": language or "",
             "body": body,
         }
-        element.text.body = _clean_text(markdown)
-        element.text.format = Text_pb2.Text.MARKDOWN
+        element.markdown.body = _clean_text(markdown)
 
     @_with_element
     def json(self, element, body):
@@ -613,12 +641,11 @@ class DeltaGenerator(object):
            height: 280px
 
         """
-        element.text.body = (
+        element.json.body = (
             body
             if isinstance(body, string_types)  # noqa: F821
             else json.dumps(body, default=lambda o: str(type(o)))
         )
-        element.text.format = Text_pb2.Text.JSON
 
     @_with_element
     def title(self, element, body):
@@ -641,8 +668,7 @@ class DeltaGenerator(object):
            height: 100px
 
         """
-        element.text.body = "# %s" % _clean_text(body)
-        element.text.format = Text_pb2.Text.MARKDOWN
+        element.markdown.body = "# %s" % _clean_text(body)
 
     @_with_element
     def header(self, element, body):
@@ -662,8 +688,7 @@ class DeltaGenerator(object):
            height: 100px
 
         """
-        element.text.body = "## %s" % _clean_text(body)
-        element.text.format = Text_pb2.Text.MARKDOWN
+        element.markdown.body = "## %s" % _clean_text(body)
 
     @_with_element
     def subheader(self, element, body):
@@ -683,8 +708,7 @@ class DeltaGenerator(object):
            height: 100px
 
         """
-        element.text.body = "### %s" % _clean_text(body)
-        element.text.format = Text_pb2.Text.MARKDOWN
+        element.markdown.body = "### %s" % _clean_text(body)
 
     @_with_element
     def error(self, element, body):
@@ -700,8 +724,8 @@ class DeltaGenerator(object):
         >>> st.error('This is an error')
 
         """
-        element.text.body = _clean_text(body)
-        element.text.format = Text_pb2.Text.ERROR
+        element.alert.body = _clean_text(body)
+        element.alert.format = Alert_pb2.Alert.ERROR
 
     @_with_element
     def warning(self, element, body):
@@ -717,8 +741,8 @@ class DeltaGenerator(object):
         >>> st.warning('This is a warning')
 
         """
-        element.text.body = _clean_text(body)
-        element.text.format = Text_pb2.Text.WARNING
+        element.alert.body = _clean_text(body)
+        element.alert.format = Alert_pb2.Alert.WARNING
 
     @_with_element
     def info(self, element, body):
@@ -734,8 +758,8 @@ class DeltaGenerator(object):
         >>> st.info('This is a purely informational message')
 
         """
-        element.text.body = _clean_text(body)
-        element.text.format = Text_pb2.Text.INFO
+        element.alert.body = _clean_text(body)
+        element.alert.format = Alert_pb2.Alert.INFO
 
     @_with_element
     def success(self, element, body):
@@ -751,8 +775,8 @@ class DeltaGenerator(object):
         >>> st.success('This is a success message!')
 
         """
-        element.text.body = _clean_text(body)
-        element.text.format = Text_pb2.Text.SUCCESS
+        element.alert.body = _clean_text(body)
+        element.alert.format = Alert_pb2.Alert.SUCCESS
 
     @_with_element
     def help(self, element, obj):
@@ -877,6 +901,11 @@ class DeltaGenerator(object):
     def line_chart(self, element, data=None, width=0, height=0):
         """Display a line chart.
 
+        This is just syntax-sugar around st.altair_chart. The main difference
+        is this command uses the data's own column and indices to figure out
+        the chart's spec. As a result this is easier to use for many "just plot
+        this" scenarios, while being less customizable.
+
         Parameters
         ----------
         data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict
@@ -898,8 +927,8 @@ class DeltaGenerator(object):
         >>> st.line_chart(chart_data)
 
         .. output::
-            https://share.streamlit.io/0.26.1-2LpAr/index.html?id=FjPACu1ham1Jx96YD1o7Pg
-            height: 200px
+           https://share.streamlit.io/0.50.0-td2L/index.html?id=BdxXG3MmrVBfJyqS2R2ki8
+           height: 220px
 
         """
 
@@ -911,6 +940,11 @@ class DeltaGenerator(object):
     @_with_element
     def area_chart(self, element, data=None, width=0, height=0):
         """Display a area chart.
+
+        This is just syntax-sugar around st.altair_chart. The main difference
+        is this command uses the data's own column and indices to figure out
+        the chart's spec. As a result this is easier to use for many "just plot
+        this" scenarios, while being less customizable.
 
         Parameters
         ----------
@@ -932,8 +966,8 @@ class DeltaGenerator(object):
         >>> st.area_chart(chart_data)
 
         .. output::
-            https://share.streamlit.io/0.26.1-2LpAr/index.html?id=BYLQrnN1tHonosFUj3Q4xm
-            height: 200px
+           https://share.streamlit.io/0.50.0-td2L/index.html?id=Pp65STuFj65cJRDfhGh4Jt
+           height: 220px
 
         """
         import streamlit.elements.altair as altair
@@ -944,6 +978,11 @@ class DeltaGenerator(object):
     @_with_element
     def bar_chart(self, element, data=None, width=0, height=0):
         """Display a bar chart.
+
+        This is just syntax-sugar around st.altair_chart. The main difference
+        is this command uses the data's own column and indices to figure out
+        the chart's spec. As a result this is easier to use for many "just plot
+        this" scenarios, while being less customizable.
 
         Parameters
         ----------
@@ -959,14 +998,14 @@ class DeltaGenerator(object):
         Example
         -------
         >>> chart_data = pd.DataFrame(
-        ...     [[20, 30, 50]],
-        ...     columns=['a', 'b', 'c'])
+        ...     np.random.randn(50, 3),
+        ...     columns=["a", "b", "c"])
         ...
         >>> st.bar_chart(chart_data)
 
         .. output::
-            https://share.streamlit.io/0.26.1-2LpAr/index.html?id=B8pQsaSjGyo1372MTnX9rk
-            height: 200px
+           https://share.streamlit.io/0.50.0-td2L/index.html?id=5U5bjR2b3jFwnJdDfSvuRk
+           height: 220px
 
         """
         import streamlit.elements.altair as altair
@@ -1229,7 +1268,7 @@ class DeltaGenerator(object):
         )
 
     @_with_element
-    def pyplot(self, element, fig=None, **kwargs):
+    def pyplot(self, element, fig=None, clear_figure=True, **kwargs):
         """Display a matplotlib.pyplot figure.
 
         Parameters
@@ -1237,6 +1276,11 @@ class DeltaGenerator(object):
         fig : Matplotlib Figure
             The figure to plot. When this argument isn't specified, which is
             the usual case, this function will render the global plot.
+
+        clear_figure : bool
+            If True or unspecified, the figure will be cleared after being
+            rendered. (This simulates Jupyter's approach to matplotlib
+            rendering.)
 
         **kwargs : any
             Arguments to pass to Matplotlib's savefig function.
@@ -1268,7 +1312,7 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.pyplot as pyplot
 
-        pyplot.marshall(element, fig, **kwargs)
+        pyplot.marshall(element, fig, clear_figure, **kwargs)
 
     @_with_element
     def bokeh_chart(self, element, figure):
@@ -1570,22 +1614,22 @@ class DeltaGenerator(object):
         """
 
         # Perform validation checks and return indices base on the default values.
-        def _check_and_convert_to_indices(default_values):
+        def _check_and_convert_to_indices(options, default_values):
+            if default_values is None and None not in options:
+                return None
+
+            if not isinstance(default_values, list):
+                default_values = [default_values]
+
             for value in default_values:
-                if not isinstance(value, string_types):  # noqa: F821
-                    raise StreamlitAPIException(
-                        "Multiselect default value has invalid type: %s"
-                        % type(value).__name__
-                    )
                 if value not in options:
                     raise StreamlitAPIException(
                         "Every Multiselect default value must exist in options"
                     )
-            return [options.index(value) for value in default]
 
-        indices = (
-            _check_and_convert_to_indices(default) if default is not None else None
-        )
+            return [options.index(value) for value in default_values]
+
+        indices = _check_and_convert_to_indices(options, default)
         element.multiselect.label = label
         default_value = [] if indices is None else indices
         element.multiselect.default[:] = default_value
@@ -1629,13 +1673,13 @@ class DeltaGenerator(object):
         Example
         -------
         >>> genre = st.radio(
-        ...     'What\'s your favorite movie genre',
+        ...     "What\'s your favorite movie genre",
         ...     ('Comedy', 'Drama', 'Documentary'))
         >>>
         >>> if genre == 'Comedy':
         ...     st.write('You selected comedy.')
         ... else:
-        ...     st.write('You didn\'t select comedy.')
+        ...     st.write("You didn\'t select comedy.")
 
         """
         if not isinstance(index, int):
@@ -1724,6 +1768,8 @@ class DeltaGenerator(object):
     ):
         """Display a slider widget.
 
+        This also allows you to render a range slider by passing a two-element tuple or list as the `value`.
+
         Parameters
         ----------
         label : str or None
@@ -1735,8 +1781,10 @@ class DeltaGenerator(object):
             The maximum permitted value.
             Defaults 100 if the value is an int, 1.0 otherwise.
         value : int/float or a tuple/list of int/float or None
-            The value of this widget when it first renders. In case the value
-            is passed as a tuple/list a range slider will be used.
+            The value of the slider when it first renders. If a tuple/list
+            of two values is passed here, then a range slider with those lower
+            and upper bounds is rendered. For example, if set to `(1, 10)` the
+            slider will have a selectable range between 1 and 10.
             Defaults to min_value.
         step : int/float or None
             The stepping interval.
@@ -1761,7 +1809,7 @@ class DeltaGenerator(object):
         >>> age = st.slider('How old are you?', 0, 130, 25)
         >>> st.write("I'm ", age, 'years old')
 
-        And here's an example of a range selector:
+        And here's an example of a range slider:
 
         >>> values = st.slider(
         ...     'Select a range of values',
@@ -1885,6 +1933,78 @@ class DeltaGenerator(object):
             # single variable
             current_value = current_value[0] if single_value else current_value
         return current_value if single_value else tuple(current_value)
+
+    @_with_element
+    def file_uploader(self, element, label, type=None, encoding="auto", key=None):
+
+        """Display a file uploader widget.
+
+        By default, uploaded files are limited to 50MB but you can configure that using the `server.maxUploadSize` config option.
+
+        Parameters
+        ----------
+        label : str or None
+            A short label explaining to the user what this file uploader is for.
+        type : str or list of str or None
+            Array of allowed extensions. ['png', 'jpg']
+            By default, all extensions are allowed.
+        encoding : str or None
+            The encoding to use when opening textual files (i.e. non-binary).
+            For example: 'utf-8'. If set to 'auto', will try to guess the
+            encoding. If None, will assume the file is binary.
+
+        Returns
+        -------
+        BytesIO or StringIO or None
+            The data for the uploaded file. If the file is in a well-known
+            textual format (or if the encoding parameter is set), returns a
+            StringIO. Otherwise BytesIO. If no file is loaded, returns None.
+
+            Note that BytesIO/StringIO are "file-like", which means you can
+            pass them anywhere where a file is expected!
+
+        Examples
+        --------
+        >>> uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+        >>> if uploaded_file is not None:
+        ...     data = pd.read_csv(uploaded_file)
+        ...     st.write(data)
+
+        """
+        from streamlit.string_util import is_binary_string
+
+        if isinstance(type, string_types):  # noqa: F821
+            type = [type]
+
+        element.file_uploader.label = label
+        element.file_uploader.type[:] = type if type is not None else []
+        element.file_uploader.max_upload_size_mb = config.get_option(
+            "server.maxUploadSize"
+        )
+        _set_widget_id("file_uploader", element, user_key=key)
+
+        data = None
+        ctx = get_report_ctx()
+        if ctx is not None:
+            progress, data = ctx.uploaded_file_mgr.get_data(element.file_uploader.id)
+            element.file_uploader.progress = progress
+
+        if data is None:
+            return NoValue
+
+        if encoding == "auto":
+            if is_binary_string(data):
+                encoding = None
+            else:
+                # If the file does not look like a pure binary file, assume
+                # it's utf-8. It would be great if we could guess it a little
+                # more smartly here, but it is what it is!
+                encoding = "utf-8"
+
+        if encoding:
+            return io.StringIO(data.decode(encoding))
+
+        return io.BytesIO(data)
 
     @_with_element
     def text_input(self, element, label, value="", key=None):
@@ -2040,7 +2160,7 @@ class DeltaGenerator(object):
         Example
         -------
         >>> d = st.date_input(
-        ...     'When\'s your birthday',
+        ...     "When\'s your birthday",
         ...     datetime.date(2019, 7, 6))
         >>> st.write('Your birthday is:', d)
 
@@ -2096,13 +2216,13 @@ class DeltaGenerator(object):
             If None, there will be no maximum.
         value : int or float or None
             The value of this widget when it first renders.
-            Defaults to min_value, or 0 if min_value is None
+            Defaults to min_value, or 0.0 if min_value is None
         step : int or float or None
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
             If the value is not specified, the format parameter will be used.
         format : str or None
-            Printf/Python format string controlling how the interface should
+            A printf-style format string controlling how the interface should
             display numbers. This does not impact the return value.
         key : str
             An optional string to use as the unique key for the widget.
@@ -2126,7 +2246,7 @@ class DeltaGenerator(object):
             if min_value:
                 value = min_value
             else:
-                value = 0
+                value = 0.0  # We set a float as default
 
         int_value = isinstance(value, int)
         float_value = isinstance(value, float)
@@ -2188,24 +2308,28 @@ class DeltaGenerator(object):
                 % {"value": value, "min": min_value, "max": max_value}
             )
 
-        element.number_input.label = label
-        element.number_input.default = value
-
-        if min_value is None:
-            element.number_input.min = float("-inf")
+        number_input = element.number_input
+        if all_ints:
+            data = number_input.int_data
         else:
-            element.number_input.min = min_value
+            data = number_input.float_data
 
-        if max_value is None:
-            element.number_input.max = float("+inf")
-        else:
-            element.number_input.max = max_value
+        number_input.label = label
+        data.default = value
+
+        if min_value is not None:
+            data.min = min_value
+            number_input.has_min = True
+
+        if max_value is not None:
+            data.max = max_value
+            number_input.has_max = True
 
         if step is not None:
-            element.number_input.step = step
+            data.step = step
 
         if format is not None:
-            element.number_input.format = format
+            number_input.format = format
 
         ui_value = _get_widget_ui_value("number_input", element, user_key=key)
 
@@ -2281,6 +2405,15 @@ class DeltaGenerator(object):
         This is a wrapper around st.deck_gl_chart to quickly create scatterplot
         charts on top of a map, with auto-centering and auto-zoom.
 
+        When using this method, we advise all users to use a personal Mapbox
+        token. This ensures the map tiles used in this chart are more
+        robust. You can do this with the mapbox.token config option.
+
+        To get a token for yourself, create an account at
+        https://mapbox.com. It's free! (for moderate usage levels) See
+        https://streamlit.io/docs/cli.html#view-all-config-options for more
+        info on how to set config options.
+
         Parameters
         ----------
         data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
@@ -2320,6 +2453,15 @@ class DeltaGenerator(object):
         (https://deck.gl/#/documentation), with a few small adaptations and
         some syntax sugar.
 
+        When using this method, we advise all users to use a personal Mapbox
+        token. This ensures the map tiles used in this chart are more
+        robust. You can do this with the mapbox.token config option.
+
+        To get a token for yourself, create an account at
+        https://mapbox.com. It's free! (for moderate usage levels) See
+        https://streamlit.io/docs/cli.html#view-all-config-options for more
+        info on how to set config options.
+
         Parameters
         ----------
 
@@ -2341,17 +2483,16 @@ class DeltaGenerator(object):
                   PointCloudLayer, ScatterplotLayer, ScreenGridLayer,
                   TextLayer.
 
-                - "encoding" : dict
-                  A mapping connecting specific fields in the dataset to
-                  properties of the chart. The exact keys that are accepted
-                  depend on the "type" field, above.
+                - Plus anything accepted by that layer type. The exact keys that
+                  are accepted depend on the "type" field, above. For example, for
+                  ScatterplotLayer you can set fields like "opacity", "filled",
+                  "stroked", and so on.
 
-                  For example, Deck.GL"s documentation for ScatterplotLayer
+                  In addition, Deck.GL"s documentation for ScatterplotLayer
                   shows you can use a "getRadius" field to individually set
                   the radius of each circle in the plot. So here you would
-                  set "encoding": {"getRadius": "my_column"} where
-                  "my_column" is the name of the column containing the radius
-                  data.
+                  set "getRadius": "my_column" where "my_column" is the name
+                  of the column containing the radius data.
 
                   For things like "getPosition", which expect an array rather
                   than a scalar value, we provide alternates that make the
@@ -2368,10 +2509,6 @@ class DeltaGenerator(object):
                     green, blue and alpha.
                   - Instead of "getSourceColor" : use the same as above.
                   - Instead of "getTargetColor" : use "getTargetColorR", etc.
-
-                - Plus anything accepted by that layer type. For example, for
-                  ScatterplotLayer you can set fields like "opacity", "filled",
-                  "stroked", and so on.
 
         **kwargs : any
             Same as spec, but as keywords. Keys are "unflattened" at the
@@ -2424,7 +2561,7 @@ class DeltaGenerator(object):
         ...
 
         .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=ASTdExBpJ1WxbGceneKN1i
+           https://share.streamlit.io/0.50.0-td2L/index.html?id=3GfRygWqxuqB5UitZLjz9i
            height: 530px
 
         """
@@ -2533,6 +2670,20 @@ class DeltaGenerator(object):
                 "Method requires exactly one dataset"
             )
 
+        # When doing add_rows on an element that does not already have data
+        # (for example, st.line_chart() without any args), call the original
+        # st.foo() element with new data instead of doing an add_rows().
+        if (
+            self._delta_type in DELTAS_TYPES_THAT_MELT_DATAFRAMES
+            and self._last_index is None
+        ):
+            # IMPORTANT: This assumes delta types and st method names always
+            # match!
+            st_method_name = self._delta_type
+            st_method = getattr(self, st_method_name)
+            st_method(data, **kwargs)
+            return
+
         data, self._last_index = _maybe_melt_data_for_add_rows(
             data, self._delta_type, self._last_index
         )
@@ -2564,7 +2715,7 @@ def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
     # by vega_lite will be different and it will throw an error.
     if delta_type in DELTAS_TYPES_THAT_MELT_DATAFRAMES:
         if not isinstance(data, pd.DataFrame):
-            data = data_frame_proto.convert_anything_to_df(data)
+            data = type_util.convert_anything_to_df(data)
 
         if type(data.index) is pd.RangeIndex:
             old_step = _get_pandas_index_attr(data, "step")
@@ -2585,7 +2736,11 @@ def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
             data.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
             last_index = stop
 
-        data = pd.melt(data.reset_index(), id_vars=["index"])
+        index_name = data.index.name
+        if index_name is None:
+            index_name = "index"
+
+        data = pd.melt(data.reset_index(), id_vars=[index_name])
 
     return data, last_index
 

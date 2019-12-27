@@ -21,6 +21,7 @@ yarn --cwd "frontend" pretty-quick --staged
 # Python 3.6+, but you can reformat Python 2 code with it).
 # "--diff-filter=ACMR" only lists files that are [A]dded, [C]opied, [M]odified,
 # or [R]enamed; we don't want to try to format files that have been deleted.
+# Ignore compile_error.py as it raises an exception.
 if command -v "black" > /dev/null; then
-  git diff --diff-filter=ACMR --name-only --cached | grep -E "\.pyi?$" | xargs black
+  git diff --diff-filter=ACMR --name-only --cached | grep -E "\.pyi?$" | grep -v "compile_error.py" | xargs black
 fi

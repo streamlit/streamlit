@@ -44,7 +44,7 @@ interactive table.
 ```
 
 ```Python
-dataframe = numpy.random.randn(10, 20)
+dataframe = np.random.randn(10, 20)
 st.dataframe(dataframe)
 ```
 
@@ -58,8 +58,8 @@ some elements in the interactive table.
 ```
 
 ```Python
-dataframe = pandas.DataFrame(
-    numpy.random.randn(10, 20),
+dataframe = pd.DataFrame(
+    np.random.randn(10, 20),
     columns=('col %d' % i for i in range(20)))
 
 st.dataframe(dataframe.style.highlight_max(axis=0))
@@ -69,8 +69,8 @@ Streamlit also has a method for static table generation:
 [`st.table()`](api.html#streamlit.table).
 
 ```Python
-dataframe = pandas.DataFrame(
-    numpy.random.randn(10, 20),
+dataframe = pd.DataFrame(
+    np.random.randn(10, 20),
     columns=('col %d' % i for i in range(20)))
 st.table(dataframe)
 ```

@@ -23,7 +23,7 @@ export default class Resolver<T> {
   public reject: (reason?: any) => void | Promise<any>
   public promise: Promise<T>
 
-  public constructor() {
+  constructor() {
     // Initialize to something so TS is happy.
     this.resolve = () => {}
     this.reject = () => {}

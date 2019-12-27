@@ -15,23 +15,15 @@
  * limitations under the License.
  */
 
-import React, {
-  Component,
-  Fragment,
-  PureComponent,
-  ReactNode,
-  SFC,
-} from "react"
+import React, { Fragment, PureComponent, ReactNode, SFC } from "react"
 import { Table as ReactTable } from "reactstrap"
 import { Map as ImmutableMap } from "immutable"
-import FullScreenWrapper from "components/shared/FullScreenWrapper"
 import { toFormattedString } from "lib/format"
+import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import TheArrowTable from "./TheArrowTable"
 
-type StElement = ImmutableMap<string, any>
-
 interface Props {
-  element: StElement
+  element: ImmutableMap<string, any>
   width: number
 }
 
@@ -42,12 +34,6 @@ class ArrowTable extends PureComponent<Props> {
     const headerRows: Uint8Array = this.props.element.get("headerRows")
     const data: Uint8Array = this.props.element.get("data")
     const table = new TheArrowTable(uuid, headerColumns, headerRows, data)
-
-    // TODO: Remove the lines below
-    console.log("rows", table.rows)
-    console.log("columns", table.columns)
-    console.log("header rows", table.headerRows)
-    console.log("header columns", table.headerColumns)
 
     const styles: string = this.props.element.get("styles")
     const hasNoData = table.headerRows === table.rows
@@ -191,15 +177,4 @@ const TableRow: SFC<TableRowProps> = (props: TableRowProps) => {
   return <Fragment>{entries}</Fragment>
 }
 
-class WithFullScreenWrapper extends Component<Props> {
-  render(): ReactNode {
-    const { element, width } = this.props
-    return (
-      <FullScreenWrapper width={width}>
-        {({ width }) => <ArrowTable element={element} width={width} />}
-      </FullScreenWrapper>
-    )
-  }
-}
-
-export default WithFullScreenWrapper
+export default withFullScreenWrapper(ArrowTable)

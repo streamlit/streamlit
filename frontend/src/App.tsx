@@ -23,14 +23,12 @@ import classNames from "classnames"
 // Other local imports.
 import ReportView from "components/core/ReportView/"
 import { StatusWidget } from "components/core/StatusWidget/"
-import LoginBox from "components/core/LoginBox/"
 import MainMenu from "components/core/MainMenu/"
 import {
   StreamlitDialog,
   DialogType,
   DialogProps,
 } from "components/core/StreamlitDialog/"
-import Resolver from "lib/Resolver"
 import { ConnectionManager } from "lib/ConnectionManager"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { ConnectionState } from "lib/ConnectionState"
@@ -41,17 +39,18 @@ import {
   Elements,
   BlockElement,
   SimpleElement,
+  ReportElement,
 } from "lib/DeltaParser"
 import {
-  ForwardMsg,
-  SessionEvent,
-  NewReport,
   BackMsg,
   Delta,
-  ForwardMsgMetadata,
+  ForwardMsg,
   IBackMsg,
-  SessionState,
+  IForwardMsgMetadata,
   Initialize,
+  NewReport,
+  SessionEvent,
+  ISessionState,
 } from "autogen/proto"
 
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
@@ -78,9 +77,8 @@ interface State {
   connectionState: ConnectionState
   elements: Elements
   reportId: string
-  reportName: string | null
+  reportHash: string | null
   reportRunState: ReportRunState
-  showLoginBox: boolean
   userSettings: UserSettings
   dialog?: DialogProps | null
   sharingEnabled?: boolean
@@ -95,7 +93,6 @@ declare global {
 }
 
 class App extends PureComponent<Props, State> {
-  userLoginResolver: Resolver<string>
   sessionEventDispatcher: SessionEventDispatcher
   statusWidgetRef: React.RefObject<StatusWidget>
   connectionManager: ConnectionManager | null
@@ -109,13 +106,18 @@ class App extends PureComponent<Props, State> {
     this.state = {
       connectionState: ConnectionState.INITIAL,
       elements: {
-        main: fromJS([makeElementWithInfoText("Please wait...")]),
+        main: fromJS([
+          {
+            element: makeElementWithInfoText("Please wait..."),
+            metadata: {},
+            reportId: "no report",
+          },
+        ]),
         sidebar: fromJS([]),
       },
       reportId: "<null>",
-      reportName: null,
+      reportHash: null,
       reportRunState: ReportRunState.NOT_RUNNING,
-      showLoginBox: false,
       userSettings: {
         wideMode: false,
         runOnSave: false,
@@ -124,15 +126,16 @@ class App extends PureComponent<Props, State> {
 
     // Bind event handlers.
     this.closeDialog = this.closeDialog.bind(this)
-    this.getUserLogin = this.getUserLogin.bind(this)
     this.handleConnectionError = this.handleConnectionError.bind(this)
     this.handleConnectionStateChanged = this.handleConnectionStateChanged.bind(
       this
     )
     this.handleMessage = this.handleMessage.bind(this)
+    this.handleUploadReportProgress = this.handleUploadReportProgress.bind(
+      this
+    )
+    this.handleReportUploaded = this.handleReportUploaded.bind(this)
     this.isServerConnected = this.isServerConnected.bind(this)
-    this.onLogInError = this.onLogInError.bind(this)
-    this.onLogInSuccess = this.onLogInSuccess.bind(this)
     this.rerunScript = this.rerunScript.bind(this)
     this.stopReport = this.stopReport.bind(this)
     this.openClearCacheDialog = this.openClearCacheDialog.bind(this)
@@ -142,7 +145,6 @@ class App extends PureComponent<Props, State> {
     this.handleDeltaMsg = this.handleDeltaMsg.bind(this)
     this.settingsCallback = this.settingsCallback.bind(this)
     this.aboutCallback = this.aboutCallback.bind(this)
-    this.userLoginResolver = new Resolver()
     this.sessionEventDispatcher = new SessionEventDispatcher()
     this.statusWidgetRef = React.createRef<StatusWidget>()
     this.connectionManager = null
@@ -171,7 +173,6 @@ class App extends PureComponent<Props, State> {
     // Initialize connection manager here, to avoid
     // "Can't call setState on a component that is not yet mounted." error.
     this.connectionManager = new ConnectionManager({
-      getUserLogin: this.getUserLogin,
       onMessage: this.handleMessage,
       onConnectionError: this.handleConnectionError,
       connectionStateChanged: this.handleConnectionStateChanged,
@@ -182,6 +183,33 @@ class App extends PureComponent<Props, State> {
     }
 
     MetricsManager.current.enqueue("viewReport")
+  }
+
+  showError(title: string, errorNode: ReactNode): void {
+    logError(errorNode)
+    const newDialog: DialogProps = {
+      type: DialogType.WARNING,
+      title: title,
+      msg: errorNode,
+      onClose: () => {},
+    }
+    this.openDialog(newDialog)
+  }
+
+  /**
+   * Checks if the code version from the backend is different than the frontend
+   */
+  hasStreamlitVersionChanged(initializeMsg: Initialize): boolean {
+    if (SessionInfo.isSet()) {
+      const { streamlitVersion: currentStreamlitVersion } = SessionInfo.current
+      const { environmentInfo } = initializeMsg
+
+      if (environmentInfo) {
+        return currentStreamlitVersion !== environmentInfo.streamlitVersion
+      }
+    }
+
+    return false
   }
 
   /**
@@ -203,17 +231,6 @@ class App extends PureComponent<Props, State> {
     }
   }
 
-  showError(title: string, errorNode: ReactNode): void {
-    logError(errorNode)
-    const newDialog: DialogProps = {
-      type: DialogType.WARNING,
-      title: title,
-      msg: errorNode,
-      onClose: () => {},
-    }
-    this.openDialog(newDialog)
-  }
-
   /**
    * Callback when we get a message from the server.
    */
@@ -233,7 +250,7 @@ class App extends PureComponent<Props, State> {
       dispatchProto(msgProto, "type", {
         initialize: (initializeMsg: Initialize) =>
           this.handleInitialize(initializeMsg),
-        sessionStateChanged: (msg: SessionState) =>
+        sessionStateChanged: (msg: ISessionState) =>
           this.handleSessionStateChanged(msg),
         sessionEvent: (evtMsg: SessionEvent) =>
           this.handleSessionEvent(evtMsg),
@@ -243,27 +260,32 @@ class App extends PureComponent<Props, State> {
           this.handleDeltaMsg(deltaMsg, msgProto.metadata),
         reportFinished: (status: ForwardMsg.ReportFinishedStatus) =>
           this.handleReportFinished(status),
-        uploadReportProgress: (progress: string | number) => {
-          const newDialog: DialogProps = {
-            type: DialogType.UPLOAD_PROGRESS,
-            progress: progress,
-            onClose: () => {},
-          }
-          this.openDialog(newDialog)
-        },
-        reportUploaded: (url: string) => {
-          const newDialog: DialogProps = {
-            type: DialogType.UPLOADED,
-            url: url,
-            onClose: () => {},
-          }
-          this.openDialog(newDialog)
-        },
+        uploadReportProgress: (progress: string | number) =>
+          this.handleUploadReportProgress(progress),
+        reportUploaded: (url: string) => this.handleReportUploaded(url),
       })
     } catch (err) {
       logError(err)
       this.showError("Bad message format", err.message)
     }
+  }
+
+  handleUploadReportProgress(progress: string | number): void {
+    const newDialog: DialogProps = {
+      type: DialogType.UPLOAD_PROGRESS,
+      progress: progress,
+      onClose: () => {},
+    }
+    this.openDialog(newDialog)
+  }
+
+  handleReportUploaded(url: string): void {
+    const newDialog: DialogProps = {
+      type: DialogType.UPLOADED,
+      url: url,
+      onClose: () => {},
+    }
+    this.openDialog(newDialog)
   }
 
   /**
@@ -272,17 +294,30 @@ class App extends PureComponent<Props, State> {
    */
 
   handleInitialize(initializeMsg: Initialize): void {
+    const { environmentInfo, userInfo, config, sessionState } = initializeMsg
+
+    if (!environmentInfo || !userInfo || !config || !sessionState) {
+      throw new Error("InitializeMsg is missing a required field")
+    }
+
+    if (this.hasStreamlitVersionChanged(initializeMsg)) {
+      window.location.reload()
+
+      return
+    }
+
     SessionInfo.current = new SessionInfo({
-      streamlitVersion: initializeMsg.environmentInfo.streamlitVersion,
-      pythonVersion: initializeMsg.environmentInfo.pythonVersion,
-      installationId: initializeMsg.userInfo.installationId,
-      authorEmail: initializeMsg.userInfo.email,
-      maxCachedMessageAge: initializeMsg.config.maxCachedMessageAge,
+      streamlitVersion: environmentInfo.streamlitVersion,
+      pythonVersion: environmentInfo.pythonVersion,
+      installationId: userInfo.installationId,
+      authorEmail: userInfo.email,
+      maxCachedMessageAge: config.maxCachedMessageAge,
       commandLine: initializeMsg.commandLine,
+      mapboxToken: config.mapboxToken,
     })
 
     MetricsManager.current.initialize({
-      gatherUsageStats: initializeMsg.config.gatherUsageStats,
+      gatherUsageStats: Boolean(config.gatherUsageStats),
     })
 
     MetricsManager.current.enqueue("createReport", {
@@ -290,18 +325,17 @@ class App extends PureComponent<Props, State> {
     })
 
     this.setState({
-      sharingEnabled: initializeMsg.config.sharingEnabled,
+      sharingEnabled: Boolean(config.sharingEnabled),
     })
 
-    const initialState = initializeMsg.sessionState
-    this.handleSessionStateChanged(initialState)
+    this.handleSessionStateChanged(sessionState)
   }
 
   /**
    * Handler for ForwardMsg.sessionStateChanged messages
    * @param stateChangeProto a SessionState protobuf
    */
-  handleSessionStateChanged(stateChangeProto: SessionState): void {
+  handleSessionStateChanged(stateChangeProto: ISessionState): void {
     this.setState((prevState: State) => {
       // Determine our new ReportRunState
       let reportRunState = prevState.reportRunState
@@ -342,7 +376,7 @@ class App extends PureComponent<Props, State> {
       return {
         userSettings: {
           ...prevState.userSettings,
-          runOnSave: stateChangeProto.runOnSave,
+          runOnSave: Boolean(stateChangeProto.runOnSave),
         },
         dialog,
         reportRunState,
@@ -382,10 +416,14 @@ class App extends PureComponent<Props, State> {
    * @param newReportProto a NewReport protobuf
    */
   handleNewReport(newReportProto: NewReport): void {
-    const name = newReportProto.name
-    const scriptPath = newReportProto.scriptPath
+    const { reportHash } = this.state
+    const { name: reportName, scriptPath } = newReportProto
 
-    document.title = `${name} · Streamlit`
+    const newReportHash = hashString(
+      SessionInfo.current.installationId + scriptPath
+    )
+
+    document.title = `${reportName} · Streamlit`
 
     MetricsManager.current.clearDeltaCounter()
 
@@ -394,13 +432,16 @@ class App extends PureComponent<Props, State> {
       // how many projects are being created with Streamlit while still keeping
       // possibly-sensitive info like the scriptPath outside of our metrics
       // services.
-      reportHash: hashString(SessionInfo.current.installationId + scriptPath),
+      reportHash: newReportHash,
     })
 
-    this.setState({
-      reportId: newReportProto.id,
-      reportName: name,
-    })
+    if (reportHash === newReportHash) {
+      this.setState({
+        reportId: newReportProto.id,
+      })
+    } else {
+      this.clearAppState(newReportHash, newReportProto.id)
+    }
   }
 
   /**
@@ -455,14 +496,42 @@ class App extends PureComponent<Props, State> {
    */
   clearOldElements = (elements: any, reportId: string): BlockElement => {
     return elements
-      .map((element: any) => {
-        if (element instanceof List) {
-          const clearedElements = this.clearOldElements(element, reportId)
+      .map((reportElement: ReportElement) => {
+        const simpleElement = reportElement.get("element")
+
+        if (simpleElement instanceof List) {
+          const clearedElements = this.clearOldElements(
+            simpleElement,
+            reportId
+          )
           return clearedElements.size > 0 ? clearedElements : null
         }
-        return element.get("reportId") === reportId ? element : null
+
+        return reportElement.get("reportId") === reportId
+          ? reportElement
+          : null
       })
-      .filter((element: any) => element !== null)
+      .filter((reportElement: any) => reportElement !== null)
+  }
+
+  /*
+   * Clear all elements from the state.
+   */
+  clearAppState(reportHash: string, reportId: string): void {
+    this.setState(
+      {
+        reportHash,
+        reportId,
+        elements: {
+          main: fromJS([]),
+          sidebar: fromJS([]),
+        },
+      },
+      () => {
+        this.elementListBuffer = this.state.elements
+        this.widgetMgr.clean(fromJS([]))
+      }
+    )
   }
 
   /**
@@ -509,7 +578,10 @@ class App extends PureComponent<Props, State> {
    * receive deltas extremely quickly without spamming React with lots of
    * render() calls.
    */
-  handleDeltaMsg(deltaMsg: Delta, metadataMsg: ForwardMsgMetadata): void {
+  handleDeltaMsg(
+    deltaMsg: Delta,
+    metadataMsg: IForwardMsgMetadata | undefined | null
+  ): void {
     this.elementListBuffer = applyDelta(
       this.state.elements,
       this.state.reportId,
@@ -732,25 +804,6 @@ class App extends PureComponent<Props, State> {
     this.openDialog(newDialog)
   }
 
-  async getUserLogin(): Promise<string> {
-    this.setState({ showLoginBox: true })
-    const idToken = await this.userLoginResolver.promise
-    this.setState({ showLoginBox: false })
-    return idToken
-  }
-
-  onLogInSuccess(accessToken: string, idToken: string): void {
-    if (accessToken) {
-      this.userLoginResolver.resolve(idToken)
-    } else {
-      this.userLoginResolver.reject("Error signing in.")
-    }
-  }
-
-  onLogInError(msg: any): void {
-    this.userLoginResolver.reject(`Error signing in. ${msg}`)
-  }
-
   render(): JSX.Element {
     const outerDivClass = classNames("stApp", {
       "streamlit-embedded": isEmbeddedInIFrame(),
@@ -797,26 +850,20 @@ class App extends PureComponent<Props, State> {
             </div>
           </header>
 
-          {this.state.showLoginBox ? (
-            <LoginBox
-              onSuccess={this.onLogInSuccess}
-              onFailure={this.onLogInError}
-            />
-          ) : (
-            <ReportView
-              wide={this.state.userSettings.wideMode}
-              elements={this.state.elements}
-              reportId={this.state.reportId}
-              reportRunState={this.state.reportRunState}
-              showStaleElementIndicator={
-                this.state.connectionState !== ConnectionState.STATIC
-              }
-              widgetMgr={this.widgetMgr}
-              widgetsDisabled={
-                this.state.connectionState !== ConnectionState.CONNECTED
-              }
-            />
-          )}
+          <ReportView
+            wide={this.state.userSettings.wideMode}
+            elements={this.state.elements}
+            reportId={this.state.reportId}
+            reportRunState={this.state.reportRunState}
+            showStaleElementIndicator={
+              this.state.connectionState !== ConnectionState.STATIC
+            }
+            widgetMgr={this.widgetMgr}
+            widgetsDisabled={
+              this.state.connectionState !== ConnectionState.CONNECTED
+            }
+          />
+
           {dialog}
         </div>
       </HotKeys>

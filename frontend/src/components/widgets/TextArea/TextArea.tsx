@@ -16,9 +16,10 @@
  */
 
 import React from "react"
-import { Textarea as UITextArea } from "baseui/textarea"
 import { Map as ImmutableMap } from "immutable"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
+
+import { Textarea as UITextArea } from "baseui/textarea"
 
 interface Props {
   disabled: boolean
@@ -71,20 +72,23 @@ class TextArea extends React.PureComponent<Props, State> {
     })
   }
 
-  private onKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
-    const { key, ctrlKey } = e
-    const { dirty } = this.state
+  isEnterKeyPressed = (
+    event: React.KeyboardEvent<HTMLTextAreaElement>
+  ): boolean => {
+    const { keyCode, key } = event
 
-    if (key === "Enter" && ctrlKey && dirty) {
-      this.setWidgetValue({ fromUi: true })
-    }
+    // Using keyCode as well due to some different behaviors on Windows
+    // https://bugs.chromium.org/p/chromium/issues/detail?id=79407
+    return key === "Enter" || keyCode === 13 || keyCode === 10
   }
 
   private onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
-    const { key, metaKey } = e
+    const { metaKey, ctrlKey } = e
     const { dirty } = this.state
 
-    if (key === "Enter" && metaKey && dirty) {
+    if (this.isEnterKeyPressed(e) && (ctrlKey || metaKey) && dirty) {
+      e.preventDefault()
+
       this.setWidgetValue({ fromUi: true })
     }
   }
@@ -103,7 +107,6 @@ class TextArea extends React.PureComponent<Props, State> {
           value={value}
           onBlur={this.onBlur}
           onChange={this.onChange}
-          onKeyPress={this.onKeyPress}
           onKeyDown={this.onKeyDown}
           disabled={disabled}
         />

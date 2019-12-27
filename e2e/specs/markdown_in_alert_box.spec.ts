@@ -26,10 +26,10 @@ describe("info/success/warning/error boxes", () => {
   });
 
   it("show complex markdown beautifully", () => {
-    cy.get(".stText.alert")
+    cy.get(".stAlert.alert")
       .should("have.length", 4)
       .each((el, i) => {
-        return cy.get(el).matchImageSnapshot(`stText-alert-${i}`);
+        return cy.get(el).matchImageSnapshot(`stAlert-alert-${i}`);
       });
   });
 });

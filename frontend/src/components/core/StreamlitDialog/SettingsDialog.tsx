@@ -33,7 +33,7 @@ export interface Props {
 export class SettingsDialog extends PureComponent<Props, UserSettings> {
   private _settings: UserSettings
 
-  public constructor(props: Props) {
+  constructor(props: Props) {
     super(props)
 
     // Holds the settings that will be saved when the "save" button is clicked.

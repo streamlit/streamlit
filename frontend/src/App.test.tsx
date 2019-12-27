@@ -16,31 +16,65 @@
  */
 
 import React from "react"
-import ReactDOM from "react-dom"
-import { SessionInfo, Args as SessionInfoArgs } from "./lib/SessionInfo"
+import { mount, CommonWrapper } from "enzyme"
+import { ForwardMsg } from "autogen/proto"
 import { MetricsManager } from "./lib/MetricsManager"
 import { getMetricsManagerForTest } from "./lib/MetricsManagerTestUtils"
+import { SessionInfo, Args as SessionInfoArgs } from "./lib/SessionInfo"
+
 import App from "./App"
 
-beforeEach(() => {
-  SessionInfo.current = new SessionInfo({
-    streamlitVersion: "sv",
-    installationId: "iid",
-    authorEmail: "ae",
-    maxCachedMessageAge: 2,
-    commandLine: "command line",
-  } as SessionInfoArgs)
-  MetricsManager.current = getMetricsManagerForTest()
-})
-
-afterEach(() => {
-  SessionInfo["singleton"] = undefined
-})
-
-it("renders without crashing", () => {
+const getWrapper = (): CommonWrapper => {
   const mountPoint = document.createElement("div")
   mountPoint.setAttribute("id", "ConnectionStatus")
   document.body.appendChild(mountPoint)
-  ReactDOM.render(<App />, mountPoint)
-  ReactDOM.unmountComponentAtNode(mountPoint)
+
+  return mount(<App />, { attachTo: mountPoint })
+}
+
+describe("App", () => {
+  beforeEach(() => {
+    SessionInfo.current = new SessionInfo({
+      streamlitVersion: "sv",
+      pythonVersion: "pv",
+      installationId: "iid",
+      authorEmail: "ae",
+      maxCachedMessageAge: 2,
+      commandLine: "command line",
+      mapboxToken: "mpt",
+    } as SessionInfoArgs)
+    MetricsManager.current = getMetricsManagerForTest()
+  })
+
+  afterEach(() => {
+    SessionInfo["singleton"] = undefined
+  })
+
+  it("renders without crashing", () => {
+    const wrapper = getWrapper()
+
+    expect(wrapper.html()).not.toBeNull()
+  })
+
+  it("should reload when streamlit server version changes", () => {
+    const wrapper = getWrapper()
+
+    window.location.reload = jest.fn()
+
+    const fwMessage = new ForwardMsg()
+
+    fwMessage.initialize = {
+      environmentInfo: {
+        streamlitVersion: "svv",
+      },
+      userInfo: {},
+      config: {},
+      sessionState: {},
+    }
+
+    // @ts-ignore
+    wrapper.instance().handleMessage(fwMessage)
+
+    expect(window.location.reload).toHaveBeenCalled()
+  })
 })

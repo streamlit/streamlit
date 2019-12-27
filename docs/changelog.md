@@ -22,6 +22,74 @@ See highlights, bug fixes, and known issues for Streamlit releases:
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.52.0
+
+_Release date: December 20, 2019_
+
+**Highlights:**
+
+- 📤 Preview release of the file uploader widget. To try it out just call
+  [`st.file_uploader`](https://streamlit.io/docs/api.html#streamlit.file_uploader)!
+  _Note that as a **preview release** things may change in the near future.
+  Looking forward to hearing input from the community before we stabilize the
+  API!_
+
+- 👋 Support for [emoji codes](https://www.webfx.com/tools/emoji-cheat-sheet/) in
+  `st.write` and `st.markdown`! Try it out with `st.write("Hello :wave:")`.
+
+**Breaking changes:**
+
+- 🧹 `st.pyplot` now clears figures by default, since that's what you want 99% of
+  the time. This allows you to create two or more Matplotlib charts without
+  having to call
+  [`pyplot.clf`](https://matplotlib.org/3.1.1/api/_as_gen/matplotlib.pyplot.clf.html)
+  every time. If you want to turn this behavior off, use
+  [`st.pyplot(clear_figure=False)`](https://streamlit.io/docs/api.html#streamlit.pyplot)
+- 📣 `st.cache` no longer checks for input mutations. This is the first change
+  of our ongoing effort to simplify the caching system and prepare Streamlit
+  for the launch of other caching primitives like Session State!
+
+## Version 0.51.0
+
+_Release date: November 30, 2019_
+
+**Highlights:**
+
+- 🐕 You can now tweak the behavior of the file watcher with the config option `server.fileWatcherType`. Use it to switch between:
+  - `auto` (default) : Streamlit will attempt to use the watchdog module, and
+    falls back to polling if watchdog is not available.
+  - `watchdog` : Force Streamlit to use the watchdog module.
+  - `poll` : Force Streamlit to always use polling.
+  - `none` : Streamlit will not watch files.
+
+**Notable bug fixes:**
+
+- Fix the "keyPrefix" option in static report sharing [#724](https://github.com/streamlit/streamlit/pull/724)
+- Add support for getColorX and getTargetColorX to DeckGL Chart [#718](https://github.com/streamlit/streamlit/pull/718)
+- Fixing Tornado on Windows + Python 3.8 [#682](https://github.com/streamlit/streamlit/pull/682)
+- Fall back on webbrowser if xdg-open is not installed on Linux [#701](https://github.com/streamlit/streamlit/pull/701)
+- Fixing number input spin buttons for Firefox [#683](https://github.com/streamlit/streamlit/pull/683)
+- Fixing CTRL+ENTER on Windows [#699](https://github.com/streamlit/streamlit/pull/699)
+- Do not automatically create credential file when in headless mode [#467](https://github.com/streamlit/streamlit/pull/467)
+
+## Version 0.50.1
+
+_Release date: November 10, 2019_
+
+**Highlights:**
+
+- 👩‍🎓 SymPy support and ability to draw mathematical expressions using LaTeX! See
+  [`st.latex`](api.html#streamlit.latex),
+  [`st.markdown`](api.html#streamlit.markdown),
+  and
+  [`st.write`](api.html#streamlit.write).
+- 🌄 You can now set config options using environment variables. For example,
+  `export STREAMLIT_SERVER_PORT=9876`.
+- 🐱 Ability to call `streamlit run` directly with Github and Gist URLs. No
+  need to grab the "raw" URL first!
+- 📃 Cleaner exception stack traces. We now remove all Streamlit-specific code
+  from stack traces originating from the user's app.
+
 ## Version 0.49.0
 
 _Release date: October 23, 2019_

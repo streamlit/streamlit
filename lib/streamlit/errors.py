@@ -36,6 +36,7 @@ class StreamlitAPIException(Exception):
     When displaying these exceptions on the frontend, we strip Streamlit
     entries from the stack trace so that the user doesn't see a bunch of
     noise related to Streamlit internals.
+
     """
 
     pass

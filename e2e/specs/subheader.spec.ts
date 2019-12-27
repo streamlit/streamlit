@@ -23,7 +23,7 @@ describe("st.subheader", () => {
   });
 
   it("displays a subheader", () => {
-    cy.get(".element-container .stText h3").should(
+    cy.get(".element-container .stMarkdown h3").should(
       "contain",
       "This subheader is awesome!"
     );

@@ -65,6 +65,9 @@ _LOGGER = _logger.get_logger("root")
 # Give the package a version.
 import pkg_resources as _pkg_resources
 import uuid as _uuid
+import subprocess
+import platform
+import os
 
 # This used to be pkg_resources.require('streamlit') but it would cause
 # pex files to fail. See #394 for more details.
@@ -73,14 +76,31 @@ __version__ = _pkg_resources.get_distribution("streamlit").version
 # Deterministic Unique Streamlit User ID
 # The try/except is needed for python 2/3 compatibility
 try:
-    __installation_id__ = str(_uuid.uuid5(_uuid.NAMESPACE_DNS, str(_uuid.getnode())))
+
+    if (
+        platform.system() == "Linux"
+        and os.path.isfile("/etc/machine-id") == False
+        and os.path.isfile("/var/lib/dbus/machine-id") == False
+    ):
+        print("Generate machine-id")
+        subprocess.run(["sudo", "dbus-uuidgen", "--ensure"])
+
+    machine_id = _uuid.getnode()
+    if os.path.isfile("/etc/machine-id"):
+        with open("/etc/machine-id", "r") as f:
+            machine_id = f.read()
+    elif os.path.isfile("/var/lib/dbus/machine-id"):
+        with open("/var/lib/dbus/machine-id", "r") as f:
+            machine_id = f.read()
+
+    __installation_id__ = str(_uuid.uuid5(_uuid.NAMESPACE_DNS, str(machine_id)))
+
 except UnicodeDecodeError:
     __installation_id__ = str(
         _uuid.uuid5(_uuid.NAMESPACE_DNS, str(_uuid.getnode()).encode("utf-8"))
     )
 
 import contextlib as _contextlib
-import functools as _functools
 import re as _re
 import sys as _sys
 import textwrap as _textwrap
@@ -90,11 +110,16 @@ import types as _types
 import json as _json
 import numpy as _np
 
+from streamlit.util import functools_wraps as _functools_wraps
 from streamlit import code_util as _code_util
-from streamlit import util as _util
+from streamlit import env_util as _env_util
+from streamlit import string_util as _string_util
+from streamlit import type_util as _type_util
 from streamlit import source_util as _source_util
-from streamlit.ReportThread import get_report_ctx, add_report_ctx
+from streamlit.ReportThread import get_report_ctx as _get_report_ctx
+from streamlit.ReportThread import add_report_ctx as _add_report_ctx
 from streamlit.DeltaGenerator import DeltaGenerator as _DeltaGenerator
+from streamlit.errors import StreamlitAPIException
 
 # Modules that the user should have access to.
 from streamlit.caching import cache  # noqa: F401
@@ -120,11 +145,11 @@ _config.on_config_parsed(_set_log_level)
 
 
 def _with_dg(method):
-    @_functools.wraps(method)
+    @_functools_wraps(method)
     def wrapped_method(*args, **kwargs):
-        ctx = get_report_ctx()
+        ctx = _get_report_ctx()
         dg = ctx.main_dg if ctx is not None else _NULL_DELTA_GENERATOR
-        return method(dg, *args, **kwargs)
+        return method.__get__(dg)(*args, **kwargs)
 
     return wrapped_method
 
@@ -134,7 +159,7 @@ def _reset(main_dg, sidebar_dg):
     sidebar_dg._reset()
     global sidebar
     sidebar = sidebar_dg
-    get_report_ctx().widget_ids_this_run.clear()
+    _get_report_ctx().widget_ids_this_run.clear()
 
 
 # Sidebar
@@ -158,6 +183,7 @@ deck_gl_chart = _with_dg(_DeltaGenerator.deck_gl_chart)  # noqa: E221
 empty = _with_dg(_DeltaGenerator.empty)  # noqa: E221
 error = _with_dg(_DeltaGenerator.error)  # noqa: E221
 exception = _with_dg(_DeltaGenerator.exception)  # noqa: E221
+file_uploader = _with_dg(_DeltaGenerator.file_uploader)  # noqa: E221
 graphviz_chart = _with_dg(_DeltaGenerator.graphviz_chart)  # noqa: E221
 header = _with_dg(_DeltaGenerator.header)  # noqa: E221
 help = _with_dg(_DeltaGenerator.help)  # noqa: E221
@@ -189,18 +215,44 @@ video = _with_dg(_DeltaGenerator.video)  # noqa: E221
 warning = _with_dg(_DeltaGenerator.warning)  # noqa: E221
 
 # Config
-set_option = _config.set_option
+
 get_option = _config.get_option
 
-# Special methods:
 
-_DATAFRAME_LIKE_TYPES = (
-    "DataFrame",  # pandas.core.frame.DataFrame
-    "Index",  # pandas.core.indexes.base.Index
-    "Series",  # pandas.core.series.Series
-    "Styler",  # pandas.io.formats.style.Styler
-    "ndarray",  # numpy.ndarray
-)
+def set_option(key, value):
+    """Set config option.
+
+    Currently, only two config options can be set within the script itself:
+        * client.caching
+        * client.displayEnabled
+
+    Calling with any other options will raise StreamlitAPIException.
+
+    Run `streamlit config show` in the terminal to see all available options.
+
+    Parameters
+    ----------
+    key : str
+        The config option key of the form "section.optionName". To see all
+        available options, run `streamlit config show` on a terminal.
+
+    value
+        The new value to assign to this config option.
+
+    """
+    opt = _config._config_options[key]
+    if opt.scriptable:
+        _config.set_option(key, value)
+        return
+
+    raise StreamlitAPIException(
+        "{key} cannot be set on the fly. Set as command line option, e.g. streamlit run script.py --{key}, or in config.toml instead.".format(
+            key=key
+        )
+    )
+
+
+# Special methods:
 
 _HELP_TYPES = (
     _types.BuiltinFunctionType,
@@ -236,7 +288,9 @@ def write(*args, **kwargs):
 
         Arguments are handled as follows:
 
-            - write(string)     : Prints the formatted Markdown string.
+            - write(string)     : Prints the formatted Markdown string, with
+              support for LaTeX expression and emoji shortcodes.
+              See docs for st.markdown for more.
             - write(data_frame) : Displays the DataFrame as a table.
             - write(error)      : Prints an exception specially.
             - write(func)       : Displays information about a function.
@@ -249,7 +303,7 @@ def write(*args, **kwargs):
             - write(graphviz)   : Displays a Graphviz graph.
             - write(plotly_fig) : Displays a Plotly figure.
             - write(bokeh_fig)  : Displays a Bokeh figure.
-            - write(sympy_expr) : Prints SymPy expression using LaTeX
+            - write(sympy_expr) : Prints SymPy expression using LaTeX.
 
     unsafe_allow_html : bool
         This is a keyword-only argument that defaults to False.
@@ -281,10 +335,10 @@ def write(*args, **kwargs):
     Its simplest use case is to draw Markdown-formatted text, whenever the
     input is a string:
 
-    >>> write('Hello, *World!*')
+    >>> write('Hello, *World!* :sunglasses:')
 
     .. output::
-       https://share.streamlit.io/0.25.0-2JkNY/index.html?id=DUJaq97ZQGiVAFi6YvnihF
+       https://share.streamlit.io/0.50.2-ZWk9/index.html?id=Pn5sjhgNs4a8ZbiUoSTRxE
        height: 50px
 
     As mentioned earlier, `st.write()` also accepts other data formats, such as
@@ -348,7 +402,7 @@ def write(*args, **kwargs):
             # Order matters!
             if isinstance(arg, string_types):  # noqa: F821
                 string_buffer.append(arg)
-            elif type(arg).__name__ in _DATAFRAME_LIKE_TYPES:
+            elif _type_util.is_dataframe_like(arg):
                 flush_buffer()
                 if len(_np.shape(arg)) > 2:
                     text(arg)
@@ -360,25 +414,25 @@ def write(*args, **kwargs):
             elif isinstance(arg, _HELP_TYPES):
                 flush_buffer()
                 help(arg)
-            elif _util.is_altair_chart(arg):
+            elif _type_util.is_altair_chart(arg):
                 flush_buffer()
                 altair_chart(arg)
-            elif _util.is_type(arg, "matplotlib.figure.Figure"):
+            elif _type_util.is_type(arg, "matplotlib.figure.Figure"):
                 flush_buffer()
                 pyplot(arg)
-            elif _util.is_plotly_chart(arg):
+            elif _type_util.is_plotly_chart(arg):
                 flush_buffer()
                 plotly_chart(arg)
-            elif _util.is_type(arg, "bokeh.plotting.figure.Figure"):
+            elif _type_util.is_type(arg, "bokeh.plotting.figure.Figure"):
                 flush_buffer()
                 bokeh_chart(arg)
-            elif _util.is_graphviz_chart(arg):
+            elif _type_util.is_graphviz_chart(arg):
                 flush_buffer()
                 graphviz_chart(arg)
-            elif _util.is_sympy_expession(arg):
+            elif _type_util.is_sympy_expession(arg):
                 flush_buffer()
                 latex(arg)
-            elif _util.is_keras_model(arg):
+            elif _type_util.is_keras_model(arg):
                 from tensorflow.python.keras.utils import vis_utils
 
                 flush_buffer()
@@ -387,7 +441,7 @@ def write(*args, **kwargs):
             elif (type(arg) in dict_types) or (isinstance(arg, list)):  # noqa: F821
                 flush_buffer()
                 json(arg)
-            elif _util.is_namedtuple(arg):
+            elif _type_util.is_namedtuple(arg):
                 flush_buffer()
                 json(_json.dumps(arg._asdict()))
             else:
@@ -452,7 +506,7 @@ def show(*args):
 
         # Escape markdown and add deltas
         for idx, input in enumerate(inputs):
-            escaped = _util.escape_markdown(input)
+            escaped = _string_util.escape_markdown(input)
 
             markdown("**%s**" % escaped)
             write(args[idx])
@@ -505,7 +559,7 @@ def spinner(text="In progress..."):
                     with caching.suppress_cached_st_function_warning():
                         message.warning(str(text))
 
-        add_report_ctx(_threading.Timer(DELAY_SECS, set_message)).start()
+        _add_report_ctx(_threading.Timer(DELAY_SECS, set_message)).start()
 
         # Yield control back to the context.
         yield
@@ -545,12 +599,14 @@ def echo():
         else:
             end_line = frame[1]
         lines_to_display = []
-        with source_util.open_python_file(filename) as source_file:
+        with _source_util.open_python_file(filename) as source_file:
             source_lines = source_file.readlines()
             lines_to_display.extend(source_lines[start_line:end_line])
             initial_spaces = _SPACES_RE.match(lines_to_display[0]).end()
             for line in source_lines[end_line:]:
-                if _SPACES_RE.match(line).end() < initial_spaces:
+                indentation = _SPACES_RE.match(line).end()
+                # The != 1 is because we want to allow '\n' between sections.
+                if indentation != 1 and indentation < initial_spaces:
                     break
                 lines_to_display.append(line)
         lines_to_display = _textwrap.dedent("".join(lines_to_display))
@@ -580,7 +636,7 @@ def _maybe_print_repl_warning():
     if not _repl_warning_has_been_displayed:
         _repl_warning_has_been_displayed = True
 
-        if _util.is_repl():
+        if _env_util.is_repl():
             _LOGGER.warning(
                 _textwrap.dedent(
                     """

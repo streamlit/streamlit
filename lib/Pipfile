@@ -30,11 +30,11 @@ seaborn = "*"
 prometheus-client = "*"
 opencv-python = "*"
 requests-mock = "*"
+
+[packages]
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if something is only required for testing, but not anything else, please
 # add to the dev dependencies above, instead.
-
-[packages]
 altair = ">=3.2.0"
 astor = "*"
 base58 = "*"
@@ -42,6 +42,9 @@ blinker = "*"
 boto3 = "*"
 botocore = "*"
 click = ">=7.0"
+# Pin python-dateutil to work around a botocore issue: https://github.com/boto/botocore/issues/1872
+# TODO: Remove this pin when the above issue is fixed.
+python-dateutil = "<=2.8.0"
 enum-compat = "*"
 # python3 code backported to python2
 future = "*"
@@ -61,11 +64,11 @@ watchdog = "*"
 
 [python3]
 # Only Python 3.x packages
-pandas = "*"
+pandas = ">=0.21.0"
 numpy = "*"
 
 [python2]
 # Only Python 2.x packages
 futures = "*"
-pandas = "<0.25.0"
+pandas = ">=0.21.0,<0.25.0"
 numpy = "<1.17.0"

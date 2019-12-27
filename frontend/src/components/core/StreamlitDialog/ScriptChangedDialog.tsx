@@ -36,7 +36,7 @@ export class ScriptChangedDialog extends PureComponent<Props> {
     [key: string]: (keyEvent?: KeyboardEvent) => void
   }
 
-  public constructor(props: Props) {
+  constructor(props: Props) {
     super(props)
 
     this.keyHandlers = {
