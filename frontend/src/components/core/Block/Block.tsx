@@ -257,7 +257,7 @@ class Block extends PureComponent<Props> {
       deckGlChart: (el: SimpleElement) => (
         <DeckGlChart element={el} width={width} />
       ),
-      pyDeckChart: (el: SimpleElement) => (
+      pydeckChart: (el: SimpleElement) => (
         <PyDeckChart element={el} width={width} />
       ),
       docString: (el: SimpleElement) => (

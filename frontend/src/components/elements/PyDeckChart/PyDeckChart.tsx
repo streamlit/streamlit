@@ -24,7 +24,6 @@ import Immutable from "immutable"
 import { StaticMap } from "react-map-gl"
 import FullScreenWrapper from "components/shared/FullScreenWrapper"
 import "mapbox-gl/dist/mapbox-gl.css"
-import "./PyDeckChart.scss"
 
 const configuration = {
   classes: Object.assign({}, layers, aggregationLayers),
@@ -79,7 +78,7 @@ class PyDeckChart extends React.PureComponent<PropsWithHeight, State> {
 
     return (
       <div
-        className="deckglchart stPyDeckChart"
+        className="stPyDeckChart"
         style={{
           height: deck.initialViewState.height,
           width: deck.initialViewState.width,

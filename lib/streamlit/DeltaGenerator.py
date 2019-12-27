@@ -43,7 +43,6 @@ from streamlit.proto import Balloons_pb2
 from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto import Text_pb2
-import streamlit.elements.map as streamlit_map
 
 
 # setup logging
@@ -2432,8 +2431,8 @@ class DeltaGenerator(object):
            height: 600px
 
         """
-
-        element.py_deck_chart.json = streamlit_map.embed_data(data, zoom)
+        import streamlit.elements.map as streamlit_map
+        element.pydeck_chart.json = streamlit_map.to_deckgl_json(data, zoom)
 
     @_with_element
     def deck_gl_chart(self, element, spec=None, **kwargs):
@@ -2564,12 +2563,11 @@ class DeltaGenerator(object):
         deck_gl.marshall(element.deck_gl_chart, spec, **kwargs)
 
     @_with_element
-    def py_deck_chart(self, element, pydeck_obj=None):
-        """Draw a map chart using the Deck.GL library.
+    def pydeck_chart(self, element, pydeck_obj=None):
+        """Draw a map chart using the PyDeck library.
 
-        This API closely follows Deck.GL's JavaScript API
-        (https://deck.gl/#/documentation), with a few small adaptations and
-        some syntax sugar.
+        This API convert a pyDeck object (https://deckgl.readthedocs.io/en/latest/) to JSON to render 
+        a map using Deck.GL' JSON converter JavaScript API (https://github.com/uber/deck.gl/tree/master/modules/json)
 
         Parameters
         ----------
@@ -2615,14 +2613,23 @@ class DeltaGenerator(object):
         ...    get_line_color=[255, 255, 255],
         ...    pickable=True)
 
-        >>> r = pdk.Deck(layers=[polygon, geojson],initial_view_state=INITIAL_VIEW_STATE)
+        >>> r = pdk.Deck(
+        ...    layers=[polygon, geojson],
+        ...    initial_view_state=INITIAL_VIEW_STATE)
         >>> st.write(r)
 
-        >>> icon_data = { "url":"https://img.icons8.com/plasticine/100/000000/marker.png", "width":128, "height":128, "anchorY": 128 }
+        And here is an example of placing icons on a map with an `IconLayer`:
+
+        >>> icon_data = { 
+        ...    "url":"https://img.icons8.com/plasticine/100/000000/marker.png", 
+        ...    "width":128, 
+        ...    "height":128, 
+        ...    "anchorY": 128}
+
         >>> data = pd.read_json("https://raw.githubusercontent.com/uber-common/deck.gl-data/master/website/bart-stations.json")
-        >>> data['icon_data']=None
+        >>> data['icon_data'] = None
         >>> for i in data.index:
-        >>>      data['icon_data'][i]=icon_data
+        ...     data['icon_data'][i] = icon_data
 
         >>> view_state = pdk.ViewState(
         ...    longitude=-122.22,
@@ -2636,11 +2643,11 @@ class DeltaGenerator(object):
         ...    data=data,
         ...    get_icon='icon_data',
         ...    get_size=4,
-        ...    pickable= True,
-        ...    size_scale= 15,
-        ...    get_position= 'coordinates')
+        ...    pickable=True,
+        ...    size_scale=15,
+        ...    get_position='coordinates')
 
-        >>> r2 = pdk.Deck(layers=[icon_layer2],initial_view_state=view_state)
+        >>> r2 = pdk.Deck(layers=[icon_layer2], initial_view_state=view_state)
         >>> st.write(r2)
 
         .. output::
@@ -2651,9 +2658,10 @@ class DeltaGenerator(object):
         """
 
         if pydeck_obj == None:
-            element.py_deck_chart.json = streamlit_map.DEFAULT_MAP
+            import streamlit.elements.map as streamlit_map
+            element.pydeck_chart.json = json.dumps(streamlit_map.DEFAULT_MAP)
         else: 
-            element.py_deck_chart.json = pydeck_obj.to_json()
+            element.pydeck_chart.json = pydeck_obj.to_json()
 
     @_with_element
     def table(self, element, data=None):

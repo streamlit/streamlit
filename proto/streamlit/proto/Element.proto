@@ -65,7 +65,7 @@ message Element {
     DataFrame table = 11;
     DateInput date_input = 27;
     DeckGlChart deck_gl_chart = 15;
-    PyDeckChart py_deck_chart = 34;
+    PyDeckChart pydeck_chart = 34;
     DocString doc_string = 7;
     Empty empty = 2;
     Exception exception = 8;

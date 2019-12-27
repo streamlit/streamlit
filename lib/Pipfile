@@ -60,18 +60,15 @@ tornado = ">=5.0,<6.0"
 tzlocal = "*"
 validators = "*"
 watchdog = "*"
+pydeck = "==0.1.dev5"
 
 # Only Python 3.x packages
 [python3]
 pandas = ">=0.21.0"
 numpy = "*"
-pydeck = "*"
 
 # Only Python 2.x packages
 [python2]
 futures = "*"
 pandas = ">=0.21.0,<0.25.0"
 numpy = "<1.17.0"
-
-[pipenv]
-allow_prereleases = true

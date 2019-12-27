@@ -13,13 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A Python wrapper around DeckGl."""
+"""A wrapper for simple PyDeck scatter charts."""
+
 import pandas as pd
 import json
 
-DEFAULT_MAP = '{"initialViewState":{"latitude":0,"longitude":0,"pitch":0,"zoom":1},"mapStyle":["mapbox://styles/mapbox/light-v10"]}'
-DEFAULT_COLOR = [200, 30, 0, 160]
-ZOOM_LEVELS = [
+DEFAULT_MAP = {
+    "initialViewState": {
+        "latitude": 0,
+        "longitude": 0,
+        "pitch": 0,
+        "zoom": 1,
+    },
+    "mapStyle": ["mapbox://styles/mapbox/light-v10"]
+}
+_DEFAULT_COLOR = [200, 30, 0, 160]
+_ZOOM_LEVELS = [
     360,
     180,
     90,
@@ -59,14 +68,14 @@ def _get_zoom_level(distance):
 
     """
 
-    for i in range(len(ZOOM_LEVELS) - 1):
-        if ZOOM_LEVELS[i + 1] < distance <= ZOOM_LEVELS[i]:
+    for i in range(len(_ZOOM_LEVELS) - 1):
+        if _ZOOM_LEVELS[i + 1] < distance <= _ZOOM_LEVELS[i]:
             return i
 
-def embed_data(data, zoom):
+def to_deckgl_json(data, zoom):
 
     if data.empty:
-        return DEFAULT_MAP
+        return json.dumps(DEFAULT_MAP)
 
     if "lat" in data:
         lat = "lat"
@@ -109,7 +118,7 @@ def embed_data(data, zoom):
     for _, row in data.iterrows():
         final_data.append({'lon': float(row[lon_col_index]), 'lat': float(row[lat_col_index])})
         
-    default = json.loads(DEFAULT_MAP)
+    default = DEFAULT_MAP
     default['initialViewState']['latitude'] = center_lat
     default['initialViewState']['longitude'] = center_lon
     default['initialViewState']['zoom'] = zoom
@@ -118,7 +127,7 @@ def embed_data(data, zoom):
         "getPosition": "[lon, lat]",
         "getRadius": 10,
         "radiusScale": 10,
-        "getFillColor": DEFAULT_COLOR,
+        "getFillColor": _DEFAULT_COLOR,
         "data": final_data
     }
     default['layers'] = [layer]
