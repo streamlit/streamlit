@@ -68,8 +68,8 @@ should use `st.sidebar.markdown()` instead), `st.echo`, and `st.spinner`.
 ```python
 import streamlit as st
 
-# Adds a checkbox to the sidebar
-add_selectbox = st.sidebar.checkbox(
+# Adds a selectbox to the sidebar
+add_selectbox = st.sidebar.selectbox(
     'How would you like to be contacted?',
     ('Email', 'Home phone', 'Mobile phone')
 )
