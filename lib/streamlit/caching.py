@@ -308,7 +308,7 @@ def cache(
     show_spinner=True,
     suppress_st_warning=False,
     hash_funcs=None,
-    **kwargs
+    ignore_hash=False,
 ):
     """Function decorator to memoize function executions.
 
@@ -341,6 +341,10 @@ def cache(
         inside Streamlit's caching mechanism: when the hasher encounters an object, it will first
         check to see if its type matches a key in this dict and, if so, will use the provided
         function to generate a hash for it. See below for an example of how this can be used.
+
+    ignore_hash : boolean
+        DEPRECATED. Please use allow_output_mutation instead.
+        This argument will be fully removed after 2020-03-16.
 
     Example
     -------
@@ -384,7 +388,7 @@ def cache(
     """
     # Help users migrate to the new kwarg
     # Remove this warning after 2020-03-16.
-    if "ignore_hash" in kwargs:
+    if ignore_hash:
         raise Exception(
             "The `ignore_hash` argument has been renamed to `allow_output_mutation`."
         )
