@@ -387,6 +387,14 @@ _create_option(
     type_=str,
 )
 
+_create_option(
+    "server.traceMsgs",
+    description="""
+        Debug stuff.
+    """,
+    default_val=False,
+)
+
 
 @_create_option("server.headless", type_=bool)
 @util.memoize

@@ -195,6 +195,8 @@ class Server(object):
         self._set_state(State.INITIAL)
         self._message_cache = ForwardMsgCache()
 
+        self._message_trace = []
+
     def start(self, on_started):
         """Start the server.
 
@@ -336,6 +338,14 @@ class Server(object):
             for session_info in list(self._session_infos.values()):
                 session_info.session.shutdown()
 
+            if config.get_option("server.traceMsgs"):
+                import base64
+                with open("trace", "w", encoding="utf-8") as f:
+                    for message in self._message_trace:
+                        serialized = f"{message[0]['type']}-{base64.b64encode(message[1]).decode('utf-8')}"
+                        f.write(":" + serialized)
+                self._message_trace = []
+
             self._set_state(State.STOPPED)
 
         except Exception as e:
@@ -407,7 +417,9 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             )
 
         # Ship it off!
-        ws.write_message(serialize_forward_msg(msg_to_send), binary=True)
+        serialized_msg = serialize_forward_msg(msg_to_send)
+        self._message_trace.append(({"type": "ForwardMsg"}, serialized_msg))
+        ws.write_message(serialized_msg, binary=True)
 
     def stop(self):
         click.secho("  Stopping...", fg="blue")
@@ -496,6 +508,8 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
 
     @tornado.gen.coroutine
     def on_message(self, payload):
+        self._server._message_trace.append(({"type": "BackMsg"}, payload))
+
         msg = BackMsg()
 
         try:
