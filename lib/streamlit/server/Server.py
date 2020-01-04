@@ -340,6 +340,7 @@ class Server(object):
 
             if config.get_option("server.traceMsgs"):
                 import base64
+
                 with open("trace", "w", encoding="utf-8") as f:
                     for message in self._message_trace:
                         serialized = f"{message[0]['type']}-{base64.b64encode(message[1]).decode('utf-8')}"

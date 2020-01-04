@@ -9,7 +9,7 @@ import tornado.gen
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.BackMsg_pb2 import BackMsg
 
-logger = logging.getLogger('client')
+logger = logging.getLogger("client")
 logger.setLevel(logging.INFO)
 
 
@@ -24,7 +24,9 @@ def decode_element(element):
         return None, None, None
     message_type, message = element.split("-")
     string_encoded_message = base64.b64decode(message)
-    obj, string_encoded_message = decode_message_from_string(message_type, string_encoded_message)
+    obj, string_encoded_message = decode_message_from_string(
+        message_type, string_encoded_message
+    )
     return message_type, obj, string_encoded_message
 
 
@@ -45,10 +47,14 @@ def run(url, messages):
         else:
             logger.debug(f"Waiting for message of type: {message_type}")
             received_message = yield conn.read_message()
-            recv_message_obj, _ = decode_message_from_string("ForwardMsg", received_message)
+            recv_message_obj, _ = decode_message_from_string(
+                "ForwardMsg", received_message
+            )
             actual_proto_type = recv_message_obj.WhichOneof("type")
             if actual_proto_type != message.WhichOneof("type"):
-                raise RuntimeError(f"Received message has type {actual_proto_type}, expected {message.WhichOneof('type')}")
+                raise RuntimeError(
+                    f"Received message has type {actual_proto_type}, expected {message.WhichOneof('type')}"
+                )
             logger.debug(f"    ... message from server of type: {actual_proto_type}")
 
 
@@ -68,15 +74,30 @@ def decode_only(messages):
 
 def main():
     parser = OptionParser()
-    parser.add_option("-f", "--file", dest="filename",
-                      help="Path to the trace file")
-    parser.add_option("-a", "--address", dest="address",
-                      help="Server address", default="localhost:8501")
-    parser.add_option("-c", "--concurrency", dest="concurrency",
-                      help="Number of concurrent runs", default=1, type="int")
-    parser.add_option("-d", "--dry",
-                      action="store_true", dest="dry", default=False,
-                      help="Don't connect")
+    parser.add_option("-f", "--file", dest="filename", help="Path to the trace file")
+    parser.add_option(
+        "-a",
+        "--address",
+        dest="address",
+        help="Server address",
+        default="localhost:8501",
+    )
+    parser.add_option(
+        "-c",
+        "--concurrency",
+        dest="concurrency",
+        help="Number of concurrent runs",
+        default=1,
+        type="int",
+    )
+    parser.add_option(
+        "-d",
+        "--dry",
+        action="store_true",
+        dest="dry",
+        default=False,
+        help="Don't connect",
+    )
 
     (options, args) = parser.parse_args()
 
@@ -88,9 +109,11 @@ def main():
         return
 
     IOLoop.current().run_sync(
-        lambda: run_multi(f"ws://{options.address}/stream", messages, options.concurrency))
+        lambda: run_multi(
+            f"ws://{options.address}/stream", messages, options.concurrency
+        )
+    )
 
 
 if __name__ == "__main__":
     main()
-
