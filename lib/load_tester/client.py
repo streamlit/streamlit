@@ -5,6 +5,8 @@ from optparse import OptionParser
 from tornado import websocket
 from tornado.ioloop import IOLoop
 import tornado.gen
+from tornado.gen import multi
+
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.BackMsg_pb2 import BackMsg
@@ -30,10 +32,9 @@ def decode_element(element):
     return message_type, obj, string_encoded_message
 
 
-@tornado.gen.coroutine
-def run(url, messages):
+async def run(url, messages):
     logger.debug(f"Connecting to {url}")
-    conn = yield websocket.websocket_connect(url)
+    conn = await websocket.websocket_connect(url)
     logger.debug("Connection successful.")
 
     for e in messages:
@@ -43,10 +44,10 @@ def run(url, messages):
 
         if message_type == "BackMsg":
             logger.debug(f"BackMessage of type: {message_type}")
-            yield conn.write_message(encoded_message, binary=True)
+            await conn.write_message(encoded_message, binary=True)
         else:
             logger.debug(f"Waiting for message of type: {message_type}")
-            received_message = yield conn.read_message()
+            received_message = await conn.read_message()
             recv_message_obj, _ = decode_message_from_string(
                 "ForwardMsg", received_message
             )
@@ -58,10 +59,8 @@ def run(url, messages):
             logger.debug(f"    ... message from server of type: {actual_proto_type}")
 
 
-@tornado.gen.coroutine
-def run_multi(url, messages, concurrency):
-    for _ in range(concurrency):
-        yield run(url, messages)
+async def run_multi(url, messages, concurrency):
+    await multi([run(url, messages) for _ in range(concurrency)])
 
 
 def decode_only(messages):
