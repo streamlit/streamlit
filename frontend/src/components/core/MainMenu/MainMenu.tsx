@@ -25,7 +25,7 @@ import {
 import Icon from "components/shared/Icon"
 import "./MainMenu.scss"
 
-const ONLINE_DOCS_URL = "https://streamlit.io/docs"
+const ONLINE_DOCS_URL = "https://docs.streamlit.io"
 const COMMUNITY_URL = "https://discuss.streamlit.io"
 const TEAMS_URL = "https://streamlit.io/forteams"
 const BUG_URL = "https://github.com/streamlit/streamlit/issues/new/choose"

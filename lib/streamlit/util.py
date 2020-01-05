@@ -29,7 +29,7 @@ import subprocess
 from streamlit import env_util
 
 # URL of Streamlit's help page.
-HELP_DOC = "https://streamlit.io/docs/"
+HELP_DOC = "https://docs.streamlit.io/"
 
 # Make functools.wraps() in Python 2 set the __wrapped__ attribute, as
 # is done in Python 3. This is required in st.cache.
