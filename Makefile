@@ -181,30 +181,21 @@ devel-docs: docs
 publish-docs: docs
 	cd docs/_build; \
 		aws s3 sync \
-				--acl public-read html s3://streamlit.io/docs/ \
-				--profile streamlit
-
-  # For now, continue publishing to secret/docs.
-	# TODO: Remove after 2020-01-01
-	cd docs/_build; \
-		aws s3 sync \
-				--acl public-read html s3://streamlit.io/secret/docs/ \
+				--acl public-read html s3://docs.streamlit.io \
 				--profile streamlit
 
 	# The line below uses the distribution ID obtained with
 	# $ aws cloudfront list-distributions | \
 	#     jq '.DistributionList.Items[] | \
 	#     select(.Aliases.Items[0] | \
-	#     contains("www.streamlit.io")) | \
+	#     contains("docs.streamlit.io")) | \
 	#     .Id'
 
 	aws cloudfront create-invalidation \
-		--distribution-id=E5G9JPT7IOJDV \
+		--distribution-id=E16K3UXOWYZ8U7 \
 		--paths \
-			'/docs/*' \
-			'/docs/tutorial/*' \
-			'/secret/docs/*' \
-			'/secret/docs/tutorial/*' \
+			'/*' \
+			'/tutorial/*' \
 		--profile streamlit
 
 .PHONY: protobuf

@@ -38,7 +38,7 @@ Or try running our "Hello World":
 
     $ streamlit hello
 
-For more detailed info, see https://streamlit.io/docs.
+For more detailed info, see https://docs.streamlit.io.
 """
 
 # IMPORTANT: Prefix with an underscore anything that the user shouldn't see.
