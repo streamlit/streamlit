@@ -2242,13 +2242,20 @@ class DeltaGenerator(object):
         float_value = isinstance(value, float)
 
         if value is None:
-            raise ValueError("The value should either be an int/float")
+            raise ValueError("Default value for number_input should be an int or a float.")
         else:
             if format is None:
                 format = "%d" if int_value else "%0.2f"
 
             if step is None:
                 step = 1 if int_value else 0.01
+
+        # Ensure supplied format contains only formatting characters and no spurious chars 
+        # that will prevent number_input from displaying anything at all, e.g. "a%.3f"
+        try:
+            float(format.format(2.4))
+        except ValueError:
+            raise ValueError("Format string for number_input contains invalid characters: %s" % format)
 
         # Ensure that all arguments are of the same type.
         args = [min_value, max_value, step]
