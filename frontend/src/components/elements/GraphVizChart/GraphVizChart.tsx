@@ -42,7 +42,8 @@ interface Dimensions {
 // Use d3Graphviz in a dummy expression so the library actually gets loaded.
 // This way it registers itself in d3 as a plugin at this point.
 const _dummy_graphviz = graphviz
-_dummy_graphviz // eslint-disable-line no-unused-expressions
+// eslint-disable-next-line
+_dummy_graphviz
 
 class GraphVizChart extends React.PureComponent<PropsWithHeight> {
   private chartId: string = "graphviz-chart-" + this.props.index
