@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ def intro():
         ### Want to learn more?
 
         - Check out [streamlit.io](https://streamlit.io)
-        - Jump into our [documentation](https://streamlit.io/docs)
+        - Jump into our [documentation](https://docs.streamlit.io)
         - Ask a question in our [community
           forums](https://discuss.streamlit.io)
 

@@ -29,7 +29,7 @@ _Release date: December 20, 2019_
 **Highlights:**
 
 - 📤 Preview release of the file uploader widget. To try it out just call
-  [`st.file_uploader`](https://streamlit.io/docs/api.html#streamlit.file_uploader)!
+  [`st.file_uploader`](https://docs.streamlit.io/api.html#streamlit.file_uploader)!
   _Note that as a **preview release** things may change in the near future.
   Looking forward to hearing input from the community before we stabilize the
   API!_
@@ -44,7 +44,7 @@ _Release date: December 20, 2019_
   having to call
   [`pyplot.clf`](https://matplotlib.org/3.1.1/api/_as_gen/matplotlib.pyplot.clf.html)
   every time. If you want to turn this behavior off, use
-  [`st.pyplot(clear_figure=False)`](https://streamlit.io/docs/api.html#streamlit.pyplot)
+  [`st.pyplot(clear_figure=False)`](https://docs.streamlit.io/api.html#streamlit.pyplot)
 - 📣 `st.cache` no longer checks for input mutations. This is the first change
   of our ongoing effort to simplify the caching system and prepare Streamlit
   for the launch of other caching primitives like Session State!
@@ -156,7 +156,7 @@ _Release date: September 19, 2019_
 **Highlights:**
 
 - ✨ Magic commands! Use `st.write` without typing `st.write`. See
-  https://streamlit.io/docs/api.html#magic-commands
+  https://docs.streamlit.io/api.html#magic-commands
 - 🎛️ New `st.multiselect` widget.
 - 🐍 Fixed numerous install issues so now you can use `pip install streamlit`
   even in Conda! We've therefore deactivated our Conda repo.
