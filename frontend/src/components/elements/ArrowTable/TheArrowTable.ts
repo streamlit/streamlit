@@ -140,10 +140,10 @@ class TheArrowTable {
     table: Table,
     rowIndex: number,
     columnIndex: number
-  ) => {
+  ): string => {
     const column = table.getColumnAt(columnIndex)
     if (column === null) {
-      return null
+      return ""
     }
     let content = column.get(rowIndex)
     content = this.handleIntValues(content)

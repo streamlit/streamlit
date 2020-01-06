@@ -61,7 +61,9 @@
     ],
     // It's OK to use ts-ignore when we're missing type definitions
     // for a JS library.
-    "@typescript-eslint/ban-ts-ignore": "off"
+    "@typescript-eslint/ban-ts-ignore": "off",
+    // We need empty arrow functions in some places
+    "@typescript-eslint/no-empty-function": "off"
   },
   "settings": {
     "react": {
