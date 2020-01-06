@@ -845,7 +845,6 @@ class App extends PureComponent<Props, State> {
         ...this.state.dialog,
         onClose: this.closeDialog,
       }
-      console.log("dialog props", dialogProps)
       dialog = StreamlitDialog(dialogProps)
     }
 
