@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -203,8 +203,7 @@ def _get_mutated_output_error_message():
         By default, Streamlit’s cache is immutable. You received this warning
         because Streamlit thinks you modified a cached object.
 
-        [Click here to see how to fix this issue.]
-        (https://streamlit.io/docs/advanced_concepts.html#advanced-caching)
+        [Click here to see how to fix this issue.](https://docs.streamlit.io/advanced_concepts.html#advanced-caching)
         """
     ).strip("\n")
 

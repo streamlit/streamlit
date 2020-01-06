@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2019 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import {
 import Icon from "components/shared/Icon"
 import "./MainMenu.scss"
 
-const ONLINE_DOCS_URL = "https://streamlit.io/docs"
+const ONLINE_DOCS_URL = "https://docs.streamlit.io"
 const COMMUNITY_URL = "https://discuss.streamlit.io"
 const TEAMS_URL = "https://streamlit.io/forteams"
 const BUG_URL = "https://github.com/streamlit/streamlit/issues/new/choose"
