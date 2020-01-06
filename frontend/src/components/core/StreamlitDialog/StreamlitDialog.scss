@@ -47,3 +47,17 @@ h5.modal-title {
   line-height: 1.5;
   text-transform: none;
 }
+
+.screenCastWarningDialog {
+  display: flex;
+
+  span {
+    font-size: 50px;
+    margin-right: 26px;
+    margin-left: 10px;
+  }
+
+  p {
+    margin: 0;
+  }
+}

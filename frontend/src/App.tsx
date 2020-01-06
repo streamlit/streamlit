@@ -19,15 +19,14 @@ import React, { Fragment, PureComponent, ReactNode } from "react"
 import { HotKeys } from "react-hotkeys"
 import { fromJS, List } from "immutable"
 import classNames from "classnames"
-
 // Other local imports.
 import ReportView from "components/core/ReportView/"
 import { StatusWidget } from "components/core/StatusWidget/"
 import MainMenu from "components/core/MainMenu/"
 import {
-  StreamlitDialog,
-  DialogType,
   DialogProps,
+  DialogType,
+  StreamlitDialog,
 } from "components/core/StreamlitDialog/"
 import { ConnectionManager } from "lib/ConnectionManager"
 import { WidgetStateManager } from "lib/WidgetStateManager"
@@ -36,10 +35,10 @@ import { ReportRunState } from "lib/ReportRunState"
 import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
 import {
   applyDelta,
-  Elements,
   BlockElement,
-  SimpleElement,
+  Elements,
   ReportElement,
+  SimpleElement,
 } from "lib/DeltaParser"
 import {
   BackMsg,
@@ -48,22 +47,21 @@ import {
   IBackMsg,
   IForwardMsgMetadata,
   Initialize,
+  ISessionState,
   NewReport,
   SessionEvent,
-  ISessionState,
 } from "autogen/proto"
 
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
 import { SessionInfo } from "lib/SessionInfo"
 import { MetricsManager } from "lib/MetricsManager"
 import {
+  flattenElements,
   hashString,
   isEmbeddedInIFrame,
   makeElementWithInfoText,
-  flattenElements,
 } from "lib/utils"
 import { logError, logMessage } from "lib/log"
-
 // WARNING: order matters
 import "assets/css/theme.scss"
 import "./App.scss"
@@ -71,7 +69,13 @@ import "assets/css/header.scss"
 import "assets/css/open-iconic.scss"
 import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
 
-interface Props {}
+import withScreencast, {
+  screenCastHoc,
+} from "./hocs/withScreencast/withScreencast"
+
+interface Props {
+  screenCast: screenCastHoc
+}
 
 interface State {
   connectionState: ConnectionState
@@ -167,6 +171,8 @@ class App extends PureComponent<Props, State> {
 
     // The c key clears the cache.
     c: () => this.openClearCacheDialog(),
+
+    esc: () => this.props.screenCast.stopRecording(),
   }
 
   componentDidMount(): void {
@@ -804,6 +810,29 @@ class App extends PureComponent<Props, State> {
     this.openDialog(newDialog)
   }
 
+  screencastCallback = () => {
+    const { screenCast } = this.props
+
+    // this.openDialog({
+    //   type: DialogType.UNSUPPORTED_BROWSERS,
+    //   onClose: this.closeDialog,
+    // })
+
+    if (!screenCast.recording && screenCast.countdown < 0) {
+      const newDialog: DialogProps = {
+        type: DialogType.SCREENCAST,
+        onClose: this.closeDialog,
+        toggleRecordAudio: screenCast.toggleRecordAudio,
+        recordAudio: screenCast.recordAudio,
+        startRecording: screenCast.startRecording,
+      }
+
+      this.openDialog(newDialog)
+    } else {
+      screenCast.stopRecording()
+    }
+  }
+
   render(): JSX.Element {
     const outerDivClass = classNames("stApp", {
       "streamlit-embedded": isEmbeddedInIFrame(),
@@ -816,6 +845,7 @@ class App extends PureComponent<Props, State> {
         ...this.state.dialog,
         onClose: this.closeDialog,
       }
+      console.log("dialog props", dialogProps)
       dialog = StreamlitDialog(dialogProps)
     }
 
@@ -846,6 +876,8 @@ class App extends PureComponent<Props, State> {
                 clearCacheCallback={this.openClearCacheDialog}
                 settingsCallback={this.settingsCallback}
                 aboutCallback={this.aboutCallback}
+                screencastCallback={this.screencastCallback}
+                screencastRecording={this.props.screenCast.recording}
               />
             </div>
           </header>
@@ -871,4 +903,4 @@ class App extends PureComponent<Props, State> {
   }
 }
 
-export default App
+export default withScreencast(App)

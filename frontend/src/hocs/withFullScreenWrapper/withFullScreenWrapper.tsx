@@ -1,4 +1,5 @@
 import React, { PureComponent, ComponentType, ReactNode } from "react"
+import hoistNonReactStatics from "hoist-non-react-statics"
 import { Map as ImmutableMap } from "immutable"
 
 import FullScreenWrapper from "components/shared/FullScreenWrapper"
@@ -13,7 +14,7 @@ export interface ReportElementProps {
 function withFullScreenWrapper(
   WrappedComponent: ComponentType<any>
 ): ComponentType<any> {
-  return class ComponentWithPagination extends PureComponent<
+  class ComponentWithFullScreenWrapper extends PureComponent<
     ReportElementProps
   > {
     render(): ReactNode {
@@ -33,6 +34,12 @@ function withFullScreenWrapper(
       )
     }
   }
+
+  // @ts-ignore
+  ComponentWithFullScreenWrapper.displayName = `withFullScreenWrapper(${WrappedComponent.displayName ||
+    WrappedComponent.name})`
+
+  return hoistNonReactStatics(ComponentWithFullScreenWrapper, WrappedComponent)
 }
 
 export default withFullScreenWrapper

@@ -33,6 +33,9 @@ import {
 } from "components/core/StreamlitDialog/ScriptChangedDialog"
 import { IException } from "autogen/proto"
 import { Props as SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
+import ScreencastDialog, {
+  Props as ScreencastDialogProps,
+} from "./ScreencastDialog"
 import { SessionInfo } from "lib/SessionInfo"
 
 import "./StreamlitDialog.scss"
@@ -47,6 +50,10 @@ interface ScriptChangedProps extends ScriptChangedDialogProps {
   type: DialogType.SCRIPT_CHANGED
 }
 
+interface ScreencastProps extends ScreencastDialogProps {
+  type: DialogType.SCREENCAST
+}
+
 export type DialogProps =
   | AboutProps
   | ClearCacheProps
@@ -57,8 +64,12 @@ export type DialogProps =
   | UploadProgressProps
   | UploadedProps
   | WarningProps
+  | ScreencastProps
+  | WarningUnsupportedBrowsers
 
 export enum DialogType {
+  UNSUPPORTED_BROWSERS = "WarningUnsupportedBrowsers",
+  SCREENCAST = "screencast",
   ABOUT = "about",
   CLEAR_CACHE = "clearCache",
   RERUN_SCRIPT = "rerunScript",
@@ -72,6 +83,10 @@ export enum DialogType {
 
 export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
   switch (dialogProps.type) {
+    case DialogType.UNSUPPORTED_BROWSERS:
+      return WarningUnsupportedBrowsers(dialogProps)
+    case DialogType.SCREENCAST:
+      return screencastDialog(dialogProps)
     case DialogType.ABOUT:
       return aboutDialog(dialogProps)
     case DialogType.CLEAR_CACHE:
@@ -95,6 +110,15 @@ export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
     default:
       return typeNotRecognizedDialog(dialogProps)
   }
+}
+
+/** About Dialog */
+function screencastDialog(props: ScreencastProps): ReactElement {
+  const { type, ...screencastDialogProps } = props
+
+  return (
+    <ScreencastDialog {...(screencastDialogProps as ScreencastDialogProps)} />
+  )
 }
 
 interface AboutProps {
@@ -336,6 +360,35 @@ function uploadedDialog(props: UploadedProps): ReactElement {
           Done
         </Button>
       </ModalFooter>
+    </BasicDialog>
+  )
+}
+
+interface WarningUnsupportedBrowsers {
+  type: DialogType.UNSUPPORTED_BROWSERS
+  onClose: PlainEventHandler
+}
+
+/**
+ * Prints out a warning
+ */
+function WarningUnsupportedBrowsers(
+  props: WarningUnsupportedBrowsers
+): ReactElement {
+  return (
+    <BasicDialog onClose={props.onClose}>
+      <ModalHeader toggle={props.onClose}>Record a screencast</ModalHeader>
+      <ModalBody>
+        <div className="screenCastWarningDialog">
+          <span role="img" aria-label="Alien Monster">
+            👾
+          </span>
+          <p>
+            Due to limitations with some browsers, this feature is only
+            supported on recent desktop versions of Chrome, Firefox, and Edge.
+          </p>
+        </div>
+      </ModalBody>
     </BasicDialog>
   )
 }
