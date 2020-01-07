@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2019 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -95,13 +95,13 @@ class NumberInput extends React.PureComponent<Props, State> {
   }
 
   private getMin = (): number => {
-    return this.props.element.get("has_min")
+    return this.props.element.get("hasMin")
       ? this.getData().get("min")
       : -Infinity
   }
 
   private getMax = (): number => {
-    return this.props.element.get("has_max")
+    return this.props.element.get("hasMax")
       ? this.getData().get("max")
       : +Infinity
   }

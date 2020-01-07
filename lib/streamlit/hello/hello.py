@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -58,7 +58,7 @@ Streamlit. We're generating a bunch of random numbers in a loop for around
                 demos.mapping_demo,
                 """
 This demo shows how to use
-[`st.deck_gl_chart`](https://streamlit.io/docs/api.html#streamlit.deck_gl_chart)
+[`st.deck_gl_chart`](https://docs.streamlit.io/api.html#streamlit.deck_gl_chart)
 to display geospatial data.
 """,
             ),

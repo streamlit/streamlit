@@ -76,6 +76,6 @@ RUN make develop
 # register streamlit user
 RUN mkdir $HOME/.streamlit \
     && echo '[general]' >  $HOME/.streamlit/credentials.toml \
-    && echo 'email = "jonathan@streamlit.io"' >> $HOME/.streamlit/credentials.toml
+    && echo 'email = "test@streamlit.io"' >> $HOME/.streamlit/credentials.toml
 
 CMD /bin/bash

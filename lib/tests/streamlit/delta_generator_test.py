@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -446,6 +446,31 @@ class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
         chart_spec = json.loads(element.spec)
         self.assertEqual(chart_spec["mark"], "line")
         self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 20)
+
+    def test_line_chart_with_generic_index(self):
+        """Test dg.line_chart with a generic index."""
+        data = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
+        data.set_index("a", inplace=True)
+
+        st.line_chart(data)
+
+        element = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(element.spec)
+        self.assertEqual(chart_spec["mark"], "line")
+        self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 30)
+
+    def test_line_chart_add_rows_with_generic_index(self):
+        """Test empty dg.line_chart with add_rows funciton and a generic index."""
+        data = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
+        data.set_index("a", inplace=True)
+
+        chart = st.line_chart()
+        chart.add_rows(data)
+
+        element = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(element.spec)
+        self.assertEqual(chart_spec["mark"], "line")
+        self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 30)
 
     def test_area_chart(self):
         """Test dg.area_chart."""

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -51,17 +51,6 @@ class DataFrameProtoTest(unittest.TestCase):
 
     def test_marshall_data_frame(self):
         """Test streamlit.data_frame_proto.marshall_data_frame.
-        """
-        pass
-
-    def test_convert_anything_to_df(self):
-        """Test streamlit.data_frame_proto.convert_anything_to_df.
-
-        Need to test dataframe is:
-        * pandas.core.frame.DataFrame
-        * pandas_styler
-        * numpy.ndaray and has a shape
-        * default
         """
         pass
 

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -87,9 +87,11 @@ class CacheTest(unittest.TestCase):
 
         warning.assert_not_called()
 
-        f()
+        r2 = f()
 
         warning.assert_called()
+
+        self.assertEqual(r, r2)
 
     @patch.object(st, "warning")
     def test_mutate_args(self, warning):

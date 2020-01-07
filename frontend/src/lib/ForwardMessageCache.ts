@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2019 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -107,6 +107,9 @@ export class ForwardMsgCache {
     }
 
     // Copy the metadata from the refMsg into our new message
+    if (!msg.metadata) {
+      throw new Error("ForwardMsg has no metadata")
+    }
     newMsg.metadata = ForwardMsgMetadata.create(msg.metadata)
     return newMsg
   }
@@ -159,7 +162,7 @@ export class ForwardMsgCache {
       return
     }
 
-    if (!msg.metadata.cacheable) {
+    if (!msg.metadata || !msg.metadata.cacheable) {
       // Don't cache messages that the server hasn't marked as cacheable.
       return
     }
