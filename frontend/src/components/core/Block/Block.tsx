@@ -45,16 +45,12 @@ const Audio = React.lazy(() => import("components/elements/Audio/"))
 const Balloons = React.lazy(() => import("components/elements/Balloons/"))
 const BokehChart = React.lazy(() => import("components/elements/BokehChart/"))
 const DataFrame = React.lazy(() => import("components/elements/DataFrame/"))
-const DeckGlChart = React.lazy(() =>
-  import("components/elements/DeckGlChart/")
-)
+const DeckGlChart = React.lazy(() => import("components/elements/DeckGlChart/"))
 const ImageList = React.lazy(() => import("components/elements/ImageList/"))
 const GraphVizChart = React.lazy(() =>
   import("components/elements/GraphVizChart/")
 )
-const PlotlyChart = React.lazy(() =>
-  import("components/elements/PlotlyChart/")
-)
+const PlotlyChart = React.lazy(() => import("components/elements/PlotlyChart/"))
 const VegaLiteChart = React.lazy(() =>
   import("components/elements/VegaLiteChart/")
 )
@@ -310,12 +306,7 @@ class Block extends PureComponent<Props> {
         />
       ),
       radio: (el: SimpleElement) => (
-        <Radio
-          key={el.get("id")}
-          element={el}
-          width={width}
-          {...widgetProps}
-        />
+        <Radio key={el.get("id")} element={el} width={width} {...widgetProps} />
       ),
       selectbox: (el: SimpleElement) => (
         <Selectbox
