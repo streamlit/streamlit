@@ -87,4 +87,6 @@ message Element {
     Video video = 14;
     // Next ID: 34
   }
+
+  reserved 9;
 }
