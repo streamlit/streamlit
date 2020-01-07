@@ -17,6 +17,9 @@ function withFullScreenWrapper(
   class ComponentWithFullScreenWrapper extends PureComponent<
     ReportElementProps
   > {
+    static readonly displayName = `withFullScreenWrapper(${WrappedComponent.displayName ||
+      WrappedComponent.name})`
+
     render(): ReactNode {
       const { element, index, width, height } = this.props
 
@@ -34,10 +37,6 @@ function withFullScreenWrapper(
       )
     }
   }
-
-  // @ts-ignore
-  ComponentWithFullScreenWrapper.displayName = `withFullScreenWrapper(${WrappedComponent.displayName ||
-    WrappedComponent.name})`
 
   return hoistNonReactStatics(ComponentWithFullScreenWrapper, WrappedComponent)
 }
