@@ -19,9 +19,27 @@ syntax = "proto3";
 message Slider {
   string id = 1;
   string label = 2;
-  repeated float default = 3;
-  float min = 4;
-  float max = 5;
-  float step = 6;
+
+  oneof data {
+    FloatSliderData float_data = 8;
+    IntSliderData int_data = 9;
+  }
+
   string format = 7;
+
+  reserved 3, 4, 5, 6;
+}
+
+message FloatSliderData {
+  repeated double default = 1;
+  double min = 2;
+  double max = 3;
+  double step = 4;
+}
+
+message IntSliderData {
+  repeated sint64 default = 1;
+  sint64 min = 2;
+  sint64 max = 3;
+  sint64 step = 4;
 }

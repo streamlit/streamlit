@@ -1905,11 +1905,17 @@ class DeltaGenerator(object):
         # decimals and/or use some heuristics for floats.
 
         element.slider.label = label
-        element.slider.default[:] = [value] if single_value else value
-        element.slider.min = min_value
-        element.slider.max = max_value
-        element.slider.step = step
         element.slider.format = format
+        if all_ints:
+            element.slider.int_data.default[:] = [value] if single_value else value
+            element.slider.int_data.min = min_value
+            element.slider.int_data.max = max_value
+            element.slider.int_data.step = step
+        else:
+            element.slider.float_data.default[:] = [value] if single_value else value
+            element.slider.float_data.min = min_value
+            element.slider.float_data.max = max_value
+            element.slider.float_data.step = step
 
         ui_value = _get_widget_ui_value("slider", element, user_key=key)
         # Convert the current value to the appropriate type.
