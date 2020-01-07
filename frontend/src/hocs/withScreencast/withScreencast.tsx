@@ -1,9 +1,12 @@
 import classNames from "classnames"
+import WhichBrowser from "which-browser"
 import ScreenCastRecorder from "lib/ScreenCastRecorder"
 import hoistNonReactStatics from "hoist-non-react-statics"
 import React, { PureComponent, ComponentType, ReactNode } from "react"
 
+import ScreencastDialog from "./components/ScreencastDialog"
 import VideoRecordedDialog from "./components/VideoRecordedDialog"
+import UnsupportedBrowserDialog from "./components/UnsupportedBrowserDialog"
 
 import "./withScreencast.scss"
 
@@ -16,12 +19,21 @@ interface WithScreenCastState {
   startAnimation: boolean
   blob?: Blob
   showRecordedDialog: boolean
+  showScreencastDialog: boolean
+  showUnsupportedDialog: boolean
 }
 
 export interface ScreenCastHOC extends WithScreenCastState {
   toggleRecordAudio: () => void
   startRecording: () => void
   stopRecording: () => void
+}
+
+const SUPPORTED_BROWSERS: any = {
+  Chrome: "49",
+  Firefox: "29",
+  Opera: "36",
+  Edge: "76",
 }
 
 function withScreencast(
@@ -34,11 +46,13 @@ function withScreencast(
     recorder?: ScreenCastRecorder | null
 
     state = {
+      countdown: -1,
       recording: false,
       recordAudio: false,
-      countdown: -1,
       startAnimation: false,
       showRecordedDialog: false,
+      showScreencastDialog: false,
+      showUnsupportedDialog: false,
     }
 
     toggleRecordAudio = (): void => {
@@ -47,6 +61,24 @@ function withScreencast(
       this.setState({
         recordAudio: !recordAudio,
       })
+    }
+
+    showDialog = (): void => {
+      const { recording, countdown } = this.state
+
+      if (!this.checkSupportedBrowser()) {
+        this.setState({
+          showUnsupportedDialog: true,
+        })
+      } else {
+        if (!recording && countdown < 0) {
+          this.setState({
+            showScreencastDialog: true,
+          })
+        } else {
+          this.stopRecording()
+        }
+      }
     }
 
     startRecording = async (): Promise<any> => {
@@ -110,7 +142,7 @@ function withScreencast(
     getScreenCastProps = (): ScreenCastHOC => ({
       ...this.state,
       toggleRecordAudio: this.toggleRecordAudio,
-      startRecording: this.startRecording,
+      startRecording: this.showDialog,
       stopRecording: this.stopRecording,
     })
 
@@ -128,11 +160,38 @@ function withScreencast(
       })
     }
 
+    closeUnsupportedDialog = (): void => {
+      this.setState({
+        showUnsupportedDialog: false,
+      })
+    }
+
+    closeScreencastDialog = (): void => {
+      this.setState({
+        showScreencastDialog: false,
+      })
+    }
+
+    checkSupportedBrowser = (): boolean => {
+      const whichBrowser = new WhichBrowser(navigator.userAgent)
+
+      const result = Object.keys(SUPPORTED_BROWSERS).map(browser => {
+        const browserVersion = SUPPORTED_BROWSERS[browser]
+
+        return whichBrowser.isBrowser(browser, ">", browserVersion)
+      })
+
+      return result.some(supported => supported)
+    }
+
     render(): ReactNode {
       const {
-        countdown,
-        showRecordedDialog,
         blob,
+        countdown,
+        recordAudio,
+        showRecordedDialog,
+        showScreencastDialog,
+        showUnsupportedDialog,
       }: WithScreenCastState = this.state
 
       return (
@@ -151,6 +210,19 @@ function withScreencast(
             <VideoRecordedDialog
               onClose={this.closeRecordedDialog}
               videoBlob={blob}
+            />
+          )}
+
+          {showUnsupportedDialog && (
+            <UnsupportedBrowserDialog onClose={this.closeUnsupportedDialog} />
+          )}
+
+          {showScreencastDialog && (
+            <ScreencastDialog
+              recordAudio={recordAudio}
+              onClose={this.closeScreencastDialog}
+              startRecording={this.startRecording}
+              toggleRecordAudio={this.toggleRecordAudio}
             />
           )}
         </div>

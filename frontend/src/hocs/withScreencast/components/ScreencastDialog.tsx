@@ -16,11 +16,9 @@
  */
 
 import React, { ChangeEvent, PureComponent, ReactNode } from "react"
-import { Button, ModalBody, ModalFooter, ModalHeader } from "reactstrap"
+import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap"
 
-import { BasicDialog } from "./StreamlitDialog"
-
-export interface Props {
+interface Props {
   /** Callback to close the dialog */
   onClose: () => void
 
@@ -72,7 +70,7 @@ class ScreencastDialog extends PureComponent<Props, State> {
     const { onClose } = this.props
 
     return (
-      <BasicDialog onClose={onClose}>
+      <Modal isOpen={true} toggle={onClose} className="streamlit-dialog">
         <ModalHeader toggle={onClose}>Record a screencast</ModalHeader>
         <ModalBody>
           <p>
@@ -96,7 +94,7 @@ class ScreencastDialog extends PureComponent<Props, State> {
             Start
           </Button>
         </ModalFooter>
-      </BasicDialog>
+      </Modal>
     )
   }
 }

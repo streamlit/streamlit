@@ -172,7 +172,7 @@ class App extends PureComponent<Props, State> {
     // The c key clears the cache.
     c: () => this.openClearCacheDialog(),
 
-    esc: () => this.props.screenCast.stopRecording(),
+    esc: this.props.screenCast.stopRecording,
   }
 
   componentDidMount(): void {
@@ -810,29 +810,6 @@ class App extends PureComponent<Props, State> {
     this.openDialog(newDialog)
   }
 
-  screencastCallback = (): void => {
-    const { screenCast } = this.props
-
-    // this.openDialog({
-    //   type: DialogType.UNSUPPORTED_BROWSERS,
-    //   onClose: this.closeDialog,
-    // })
-
-    if (!screenCast.recording && screenCast.countdown < 0) {
-      const newDialog: DialogProps = {
-        type: DialogType.SCREENCAST,
-        onClose: this.closeDialog,
-        toggleRecordAudio: screenCast.toggleRecordAudio,
-        recordAudio: screenCast.recordAudio,
-        startRecording: screenCast.startRecording,
-      }
-
-      this.openDialog(newDialog)
-    } else {
-      screenCast.stopRecording()
-    }
-  }
-
   render(): JSX.Element {
     const outerDivClass = classNames("stApp", {
       "streamlit-embedded": isEmbeddedInIFrame(),
@@ -875,7 +852,7 @@ class App extends PureComponent<Props, State> {
                 clearCacheCallback={this.openClearCacheDialog}
                 settingsCallback={this.settingsCallback}
                 aboutCallback={this.aboutCallback}
-                screencastCallback={this.screencastCallback}
+                screencastCallback={this.props.screenCast.startRecording}
                 screencastRecording={this.props.screenCast.recording}
               />
             </div>
