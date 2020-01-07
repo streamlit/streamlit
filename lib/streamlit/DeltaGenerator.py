@@ -1900,9 +1900,9 @@ class DeltaGenerator(object):
             else:
                 format = "%0.2f"
         # It would be great if we could guess the number of decimal places from
-        # the step`argument, but this would only be meaningful if step were a decimal.
-        # As a possible improvement we could make this function accept decimals
-        # and/or use some heuristics for floats.
+        # the `step` argument, but this would only be meaningful if step were a
+        # decimal. As a possible improvement we could make this function accept
+        # decimals and/or use some heuristics for floats.
 
         element.slider.label = label
         element.slider.default[:] = [value] if single_value else value
