@@ -49,7 +49,7 @@ function withScreencast(
       })
     }
 
-    startRecording = async () => {
+    startRecording = async (): Promise<any> => {
       const { recordAudio } = this.state
       this.recorder = new ScreenCastRecorder({ recordAudio })
 
@@ -62,7 +62,7 @@ function withScreencast(
       })
     }
 
-    stopRecording = async () => {
+    stopRecording = async (): Promise<any> => {
       let blob
       const { recording } = this.state
 
@@ -82,7 +82,7 @@ function withScreencast(
       })
     }
 
-    onAnimationEnd = async () => {
+    onAnimationEnd = async (): Promise<any> => {
       const { countdown } = this.state
 
       this.setState({

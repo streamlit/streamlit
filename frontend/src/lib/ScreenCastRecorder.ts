@@ -19,7 +19,7 @@ class ScreenCastRecorder {
     this.mediaRecorder = null
   }
 
-  async initialize() {
+  async initialize(): Promise<any> {
     // @ts-ignore
     const desktopStream = await navigator.mediaDevices.getDisplayMedia({
       video: true,
@@ -54,11 +54,11 @@ class ScreenCastRecorder {
     return "inactive"
   }
 
-  start() {
+  start(): void {
     this.mediaRecorder && this.mediaRecorder.start()
   }
 
-  stop() {
+  stop(): Promise<any> | undefined {
     if (!this.mediaRecorder) {
       return undefined
     }
@@ -80,7 +80,7 @@ class ScreenCastRecorder {
     return promise.then(() => this.buildOutputBlob())
   }
 
-  buildOutputBlob() {
+  buildOutputBlob(): Blob {
     return new Blob(this.recordedChunks, { type: BLOB_TYPE })
   }
 }

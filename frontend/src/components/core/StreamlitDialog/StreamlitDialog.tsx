@@ -114,7 +114,7 @@ export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
 
 /** About Dialog */
 function screencastDialog(props: ScreencastProps): ReactElement {
-  // eslint-disable-next-line no-unused-vars
+  // eslint-disable-next-line
   const { type, ...screencastDialogProps } = props
 
   return (
