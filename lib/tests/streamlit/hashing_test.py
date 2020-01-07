@@ -406,6 +406,9 @@ class CodeHashTest(unittest.TestCase):
     def test_external_module(self):
         """Test code that references an external module."""
 
+        # NB: If a future vegalite update removes the v3 API, these functions
+        # will need to be updated!
+
         def call_altair_concat():
             return altair.vegalite.v3.api.concat()
 
