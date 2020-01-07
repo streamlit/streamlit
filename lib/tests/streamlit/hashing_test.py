@@ -22,7 +22,7 @@ import tempfile
 import time
 import unittest
 
-import altair.vegalite.v4
+import altair.vegalite.v3
 import numpy as np
 import pandas as pd
 import pytest
@@ -407,10 +407,10 @@ class CodeHashTest(unittest.TestCase):
         """Test code that references an external module."""
 
         def call_altair_concat():
-            return altair.vegalite.v4.api.concat()
+            return altair.vegalite.v3.api.concat()
 
         def call_altair_layer():
-            return altair.vegalite.v4.api.layer()
+            return altair.vegalite.v3.api.layer()
 
         self.assertNotEqual(get_hash(call_altair_concat), get_hash(call_altair_layer))
 
