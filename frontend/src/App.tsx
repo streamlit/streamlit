@@ -70,11 +70,11 @@ import "assets/css/open-iconic.scss"
 import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
 
 import withScreencast, {
-  screenCastHoc,
+  ScreenCastHOC,
 } from "./hocs/withScreencast/withScreencast"
 
 interface Props {
-  screenCast: screenCastHoc
+  screenCast: ScreenCastHOC
 }
 
 interface State {
@@ -810,7 +810,7 @@ class App extends PureComponent<Props, State> {
     this.openDialog(newDialog)
   }
 
-  screencastCallback = () => {
+  screencastCallback = (): void => {
     const { screenCast } = this.props
 
     // this.openDialog({

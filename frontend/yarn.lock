@@ -1654,6 +1654,11 @@
     "@types/d3-voronoi" "*"
     "@types/d3-zoom" "*"
 
+"@types/dom-mediacapture-record@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@types/dom-mediacapture-record/-/dom-mediacapture-record-1.0.2.tgz#1b4c30836a5f94357c8f37bbb0bc0d71d8ce5c27"
+  integrity sha512-kvpfcIq+YnOPnXxzTx6hbStJin0jtcFgCQxn4XgumF11HrOICxddPJ0/oGBLOd0mauxpPvxBuVvBi1qf7NC7Fg==
+
 "@types/enzyme@^3.10.3":
   version "3.10.3"
   resolved "https://registry.yarnpkg.com/@types/enzyme/-/enzyme-3.10.3.tgz#02b6c5ac7d0472005944a652e79045e2f6c66804"

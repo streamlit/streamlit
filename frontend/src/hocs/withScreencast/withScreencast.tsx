@@ -1,19 +1,24 @@
 import classNames from "classnames"
+import ScreenCastRecorder from "lib/ScreenCastRecorder"
 import hoistNonReactStatics from "hoist-non-react-statics"
 import React, { PureComponent, ComponentType, ReactNode } from "react"
 
+import VideoRecordedDialog from "./components/VideoRecordedDialog"
+
 import "./withScreencast.scss"
 
-interface withScreenCastProps {}
+interface WithScreenCastProps {}
 
-interface screenCastState {
+interface WithScreenCastState {
   recording: boolean
   recordAudio: boolean
   countdown: number
   startAnimation: boolean
+  blob?: Blob
+  showRecordedDialog: boolean
 }
 
-export interface screenCastHoc extends screenCastState {
+export interface ScreenCastHOC extends WithScreenCastState {
   toggleRecordAudio: () => void
   startRecording: () => void
   stopRecording: () => void
@@ -23,17 +28,20 @@ function withScreencast(
   WrappedComponent: ComponentType<any>
 ): ComponentType<any> {
   class ComponentWithScreencast extends PureComponent<
-    withScreenCastProps,
-    screenCastState
+    WithScreenCastProps,
+    WithScreenCastState
   > {
+    recorder?: ScreenCastRecorder | null
+
     state = {
       recording: false,
       recordAudio: false,
       countdown: -1,
       startAnimation: false,
+      showRecordedDialog: false,
     }
 
-    toggleRecordAudio = () => {
+    toggleRecordAudio = (): void => {
       const { recordAudio } = this.state
 
       this.setState({
@@ -41,22 +49,40 @@ function withScreencast(
       })
     }
 
-    startRecording = () => {
+    startRecording = async () => {
+      const { recordAudio } = this.state
+      this.recorder = new ScreenCastRecorder({ recordAudio })
+
+      await this.recorder.initialize()
+
       this.setState({
         countdown: 3,
         startAnimation: true,
+        showRecordedDialog: false,
       })
     }
 
-    stopRecording = () => {
+    stopRecording = async () => {
+      let blob
+      const { recording } = this.state
+
+      if (
+        this.recorder &&
+        recording &&
+        this.recorder.getState() !== "inactive"
+      )
+        blob = await this.recorder.stop()
+
       this.setState({
-        recording: false,
+        blob,
         countdown: -1,
+        recording: false,
         startAnimation: false,
+        showRecordedDialog: true,
       })
     }
 
-    onAnimationEnd = () => {
+    onAnimationEnd = async () => {
       const { countdown } = this.state
 
       this.setState({
@@ -73,13 +99,15 @@ function withScreencast(
       }
 
       if (countdown - 1 === 0) {
+        if (this.recorder) await this.recorder.start()
+
         this.setState({
           recording: true,
         })
       }
     }
 
-    getScreenCastProps = (): screenCastHoc => ({
+    getScreenCastProps = (): ScreenCastHOC => ({
       ...this.state,
       toggleRecordAudio: this.toggleRecordAudio,
       startRecording: this.startRecording,
@@ -94,8 +122,18 @@ function withScreencast(
       })
     }
 
+    closeRecordedDialog = (): void => {
+      this.setState({
+        showRecordedDialog: false,
+      })
+    }
+
     render(): ReactNode {
-      const { countdown } = this.state
+      const {
+        countdown,
+        showRecordedDialog,
+        blob,
+      }: WithScreenCastState = this.state
 
       return (
         <div className="withScreencast">
@@ -107,6 +145,13 @@ function withScreencast(
             >
               <span>{countdown}</span>
             </div>
+          )}
+
+          {showRecordedDialog && blob && (
+            <VideoRecordedDialog
+              onClose={this.closeRecordedDialog}
+              videoBlob={blob}
+            />
           )}
         </div>
       )

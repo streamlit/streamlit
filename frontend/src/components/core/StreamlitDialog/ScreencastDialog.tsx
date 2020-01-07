@@ -60,7 +60,7 @@ class ScreencastDialog extends PureComponent<Props, State> {
     }
   }
 
-  handleStartButton = () => {
+  handleStartButton = (): void => {
     const { startRecording, onClose } = this.props
 
     startRecording()
