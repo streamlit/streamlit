@@ -15,9 +15,7 @@ st.write("Unupported for integers: o, x, X")
 st.write("Supported for floats: f, F, e, E, g, G")
 st.write("Unsupported for floats: (n/a)")
 
-st.write("Non-int-or-float characters in printf we don't support: p, a, A, n") 
-
-
+st.write("Non-int-or-float characters in printf we don't support: p, a, A, n")
 
 
 # https://docs.microsoft.com/en-us/cpp/c-runtime-library/format-specification-syntax-printf-and-wprintf-functions?view=vs-2019
@@ -83,6 +81,7 @@ OTHER_FORMATS = [
 # "%o",
 # ]
 
+st.number_input(label="No format supplied (control case)")
 
 display_ni(INT_FORMATS, value=2)
 
