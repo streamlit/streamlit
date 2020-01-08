@@ -2213,7 +2213,8 @@ class DeltaGenerator(object):
             If the value is not specified, the format parameter will be used.
         format : str or None
             A printf-style format string controlling how the interface should
-            display numbers. This does not impact the return value.
+            display numbers. Output must be purely numeric. This does not impact 
+            the return value. Valid formatters: %a %d %e %f %g %i  
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -2242,7 +2243,9 @@ class DeltaGenerator(object):
         float_value = isinstance(value, float)
 
         if value is None:
-            raise ValueError("Default value for number_input should be an int or a float.")
+            raise ValueError(
+                "Default value for number_input should be an int or a float."
+            )
         else:
             if format is None:
                 format = "%d" if int_value else "%0.2f"
@@ -2250,12 +2253,13 @@ class DeltaGenerator(object):
             if step is None:
                 step = 1 if int_value else 0.01
 
-        # Ensure supplied format contains only formatting characters and no spurious chars 
-        # that will prevent number_input from displaying anything at all, e.g. "a%.3f"
         try:
-            float(format.format(2.4))
-        except ValueError:
-            raise ValueError("Format string for number_input contains invalid characters: %s" % format)
+            float(format % 2.4)
+        except (TypeError, ValueError):
+            raise ValueError(
+                "Format string for number_input contains invalid characters: %s"
+                % format
+            )
 
         # Ensure that all arguments are of the same type.
         args = [min_value, max_value, step]
