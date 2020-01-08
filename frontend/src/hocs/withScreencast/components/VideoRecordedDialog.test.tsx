@@ -19,37 +19,38 @@ import React from "react"
 import { shallow } from "enzyme"
 import { ModalHeader, ModalBody, ModalFooter, Button } from "reactstrap"
 
-import VideoRecordedDialog from "./VideoRecordedDialog"
+import VideoRecordedDialog, { Props } from "./VideoRecordedDialog"
 
 URL.createObjectURL = jest.fn()
 
+const getProps = (props: object = {}): Props => ({
+  fileName: "test",
+  onClose: jest.fn(),
+  videoBlob: new Blob(),
+  ...props,
+})
+
 describe("VideoRecordedDialog", () => {
   it("renders without crashing", () => {
-    const wrapper = shallow(
-      <VideoRecordedDialog onClose={() => {}} videoBlob={new Blob()} />
-    )
+    const wrapper = shallow(<VideoRecordedDialog {...getProps()} />)
 
     expect(wrapper.html()).not.toBeNull()
   })
 
   it("should render a header", () => {
-    const onClose = jest.fn()
-    const wrapper = shallow(
-      <VideoRecordedDialog onClose={onClose} videoBlob={new Blob()} />
-    )
+    const props = getProps()
+    const wrapper = shallow(<VideoRecordedDialog {...props} />)
     const headerWrapper = wrapper.find(ModalHeader)
 
     // @ts-ignore
     headerWrapper.props().toggle()
 
     expect(headerWrapper.props().children).toBe("Screencast recorded")
-    expect(onClose).toBeCalled()
+    expect(props.onClose).toBeCalled()
   })
 
   it("should render a video", () => {
-    const wrapper = shallow(
-      <VideoRecordedDialog onClose={() => {}} videoBlob={new Blob()} />
-    )
+    const wrapper = shallow(<VideoRecordedDialog {...getProps()} />)
     const bodyWrapper = wrapper.find(ModalBody)
 
     expect(bodyWrapper.find("video").length).toBe(1)
@@ -57,15 +58,13 @@ describe("VideoRecordedDialog", () => {
   })
 
   it("should render a download button", () => {
-    const onClose = jest.fn()
-    const wrapper = shallow(
-      <VideoRecordedDialog onClose={onClose} videoBlob={new Blob()} />
-    )
+    const props = getProps()
+    const wrapper = shallow(<VideoRecordedDialog {...props} />)
     const buttonWrapper = wrapper.find(ModalFooter).find(Button)
 
     buttonWrapper.simulate("click")
 
     expect(buttonWrapper.length).toBe(1)
-    expect(onClose).toBeCalled()
+    expect(props.onClose).toBeCalled()
   })
 })
