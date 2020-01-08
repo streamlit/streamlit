@@ -23,6 +23,8 @@ export interface Props {
   onClose: () => void
 
   videoBlob: Blob
+
+  fileName: string
 }
 
 class VideoRecordedDialog extends PureComponent<Props> {
@@ -39,7 +41,7 @@ class VideoRecordedDialog extends PureComponent<Props> {
   }
 
   public render = (): ReactNode => {
-    const { onClose } = this.props
+    const { onClose, fileName } = this.props
     const videoSource = this.getVideoSource()
 
     return (
@@ -53,7 +55,7 @@ class VideoRecordedDialog extends PureComponent<Props> {
             outline
             color="primary"
             href={videoSource}
-            download="streamlit-screencast.mp4"
+            download={`${fileName}.mp4`}
             onClick={this.handleDownloadButton}
           >
             Download

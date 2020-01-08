@@ -32,6 +32,7 @@ import "./withScreencast.scss"
 interface WithScreenCastProps {}
 
 interface WithScreenCastState {
+  fileName: string
   recording: boolean
   recordAudio: boolean
   countdown: number
@@ -44,7 +45,7 @@ interface WithScreenCastState {
 
 export interface ScreenCastHOC extends WithScreenCastState {
   toggleRecordAudio: () => void
-  startRecording: () => void
+  startRecording: (fileName: string) => void
   stopRecording: () => void
 }
 
@@ -68,6 +69,7 @@ function withScreencast(
     recorder?: ScreenCastRecorder | null
 
     state = {
+      fileName: "streamlit-screencast",
       countdown: -1,
       recording: false,
       recordAudio: false,
@@ -85,7 +87,7 @@ function withScreencast(
       })
     }
 
-    showDialog = (): void => {
+    showDialog = (fileName: string): void => {
       const { recording, countdown } = this.state
 
       if (!this.checkSupportedBrowser()) {
@@ -95,6 +97,7 @@ function withScreencast(
       } else {
         if (!recording && countdown < 0) {
           this.setState({
+            fileName,
             showScreencastDialog: true,
           })
         } else {
@@ -209,6 +212,7 @@ function withScreencast(
     render(): ReactNode {
       const {
         blob,
+        fileName,
         countdown,
         recordAudio,
         showRecordedDialog,
@@ -232,6 +236,7 @@ function withScreencast(
             <VideoRecordedDialog
               onClose={this.closeRecordedDialog}
               videoBlob={blob}
+              fileName={fileName}
             />
           )}
 
