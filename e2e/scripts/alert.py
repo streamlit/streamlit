@@ -16,7 +16,7 @@
 import streamlit as st
 
 st.error("This is an error")
-st.warning("This is an warning")
+st.warning("This is a warning")
 st.info("This is an info message")
 st.success("This is a success message")
 

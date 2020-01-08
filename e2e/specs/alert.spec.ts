@@ -28,7 +28,7 @@ describe("st.error and friends", () => {
     ).contains("This is an error");
     cy.get(
       ".element-container .stAlert.alert-warning .markdown-text-container"
-    ).contains("This is an warning");
+    ).contains("This is a warning");
     cy.get(
       ".element-container .stAlert.alert-info .markdown-text-container"
     ).contains("This is an info message");
