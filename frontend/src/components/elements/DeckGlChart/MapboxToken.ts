@@ -17,15 +17,22 @@
 
 import { SessionInfo } from "lib/SessionInfo"
 
+/**
+ * A remote file that stores user-visible tokens.
+ */
 export const TOKENS_URL = "https://streamlit.io/tokens.json"
 
-/**
- * Exposes a singleton MapboxToken. If the user has specified
- * their own
- */
 export class MapboxToken {
   private static token?: string
 
+  /**
+   * Expose a singleton MapboxToken:
+   * - If the user specified a token in their streamlit config, return it.
+   * - Else, fetch the remote "tokens.json" and return the "mapbox" entry.
+   *
+   * (The returned value is cached in memory, so the remote resource will
+   * only be fetched once per session.)
+   */
   public static async get(): Promise<string> {
     if (MapboxToken.token == null) {
       if (SessionInfo.current.userMapboxToken !== "") {
