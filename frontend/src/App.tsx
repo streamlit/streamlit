@@ -96,7 +96,7 @@ declare global {
   }
 }
 
-class App extends PureComponent<Props, State> {
+export class App extends PureComponent<Props, State> {
   sessionEventDispatcher: SessionEventDispatcher
   statusWidgetRef: React.RefObject<StatusWidget>
   connectionManager: ConnectionManager | null

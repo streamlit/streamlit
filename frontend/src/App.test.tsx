@@ -22,14 +22,26 @@ import { MetricsManager } from "./lib/MetricsManager"
 import { getMetricsManagerForTest } from "./lib/MetricsManagerTestUtils"
 import { SessionInfo, Args as SessionInfoArgs } from "./lib/SessionInfo"
 
-import App from "./App"
+import { App } from "./App"
 
 const getWrapper = (): CommonWrapper => {
   const mountPoint = document.createElement("div")
   mountPoint.setAttribute("id", "ConnectionStatus")
   document.body.appendChild(mountPoint)
+  const screenCast = {
+    toggleRecordAudio: () => {},
+    startRecording: () => {},
+    stopRecording: () => {},
+    recording: false,
+    recordAudio: false,
+    countdown: -1,
+    startAnimation: false,
+    showRecordedDialog: false,
+    showScreencastDialog: false,
+    showUnsupportedDialog: false,
+  }
 
-  return mount(<App />, { attachTo: mountPoint })
+  return mount(<App screenCast={screenCast} />, { attachTo: mountPoint })
 }
 
 describe("App", () => {
