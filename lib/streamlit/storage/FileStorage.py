@@ -38,15 +38,12 @@ class FileStorage(AbstractStorage):
 
     def __init__(self):
         """Constructor."""
-        LOGGER.debug("FileStorage __init__")
         super(FileStorage, self).__init__()
-        LOGGER.debug("FileStorage post super")
         self._dir = self._mkdir()
-        LOGGER.debug("mkdir")
 
     def _mkdir(self):
         cwd = os.getcwd()
-        reports_dir = os.path.join(cwd, "streamlit-storage")
+        reports_dir = os.path.join(cwd, "frontend/public")
         if not os.path.exists(reports_dir):
             os.mkdir(reports_dir)
         return reports_dir
@@ -80,7 +77,7 @@ class FileStorage(AbstractStorage):
                     yield
 
         LOGGER.debug("Done writing files!")
-        raise gen.Return(report_path)
+        raise gen.Return("index.html?id=%s" % report_id)
 
 
 def _recursively_create_folder(path):
