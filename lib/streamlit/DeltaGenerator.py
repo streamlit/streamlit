@@ -2245,7 +2245,7 @@ class DeltaGenerator(object):
         float_value = isinstance(value, float)
 
         if value is None:
-            raise ValueError(
+            raise StreamlitAPIException(
                 "Default value for number_input should be an int or a float."
             )
         else:
@@ -2258,8 +2258,8 @@ class DeltaGenerator(object):
         try:
             float(format % 2.4)
         except (TypeError, ValueError):
-            raise ValueError(
-                "Format string for number_input contains invalid characters: %s"
+            raise StreamlitAPIException(
+                "Format string for st.number_input contains invalid characters: %s"
                 % format
             )
 
@@ -2274,7 +2274,7 @@ class DeltaGenerator(object):
         )
 
         if not int_args and not float_args:
-            raise TypeError(
+            raise StreamlitAPIException(
                 "All arguments must be of the same type."
                 "\n`value` has %(value_type)s type."
                 "\n`min_value` has %(min_type)s type."
@@ -2291,7 +2291,7 @@ class DeltaGenerator(object):
         all_floats = float_value and float_args
 
         if not all_ints and not all_floats:
-            raise TypeError(
+            raise StreamlitAPIException(
                 "Both value and arguments must be of the same type."
                 "\n`value` has %(value_type)s type."
                 "\n`min_value` has %(min_type)s type."
@@ -2304,7 +2304,7 @@ class DeltaGenerator(object):
             )
 
         if (min_value and min_value > value) or (max_value and max_value < value):
-            raise ValueError(
+            raise StreamlitAPIException(
                 "The default `value` of %(value)s "
                 "must lie between the `min_value` of %(min)s "
                 "and the `max_value` of %(max)s, inclusively."
