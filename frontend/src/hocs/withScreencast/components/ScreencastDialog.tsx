@@ -18,7 +18,7 @@
 import React, { ChangeEvent, PureComponent, ReactNode } from "react"
 import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap"
 
-interface Props {
+export interface Props {
   /** Callback to close the dialog */
   onClose: () => void
 
