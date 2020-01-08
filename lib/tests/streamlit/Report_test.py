@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -54,26 +54,24 @@ class ReportTest(unittest.TestCase):
     def test_serialize_final_report(self):
         report = Report("/not/a/script.py", "")
         _enqueue(report, INIT_MSG)
-        _enqueue(report, EMPTY_DELTA_MSG)
         _enqueue(report, TEXT_DELTA_MSG)
         _enqueue(report, EMPTY_DELTA_MSG)
 
         files = report.serialize_final_report_to_files()
 
-        # Validate our messages. We should have two: INIT, and TEXT_DELTA_MSG.
-        # (Empty messages don't get serialized.)
+        # Validate our messages.
         messages = [_parse_msg(msg_string) for _, msg_string in files[:-1]]
-        self.assertEqual(2, len(messages))
+        self.assertEqual(3, len(messages))
         self.assertEqual("initialize", messages[0].WhichOneof("type"))
-        self.assertEqual("delta", messages[1].WhichOneof("type"))
         self.assertEqual("text1", messages[1].delta.new_element.text.body)
+        self.assertEqual("empty", messages[2].delta.new_element.WhichOneof("type"))
 
         # Validate the manifest, which should be the final file.
         _, manifest_string = files[-1]
         manifest = StaticManifest()
         manifest.ParseFromString(manifest_string)
         self.assertEqual("script", manifest.name)
-        self.assertEqual(2, manifest.num_messages)
+        self.assertEqual(3, manifest.num_messages)
         self.assertEqual(StaticManifest.DONE, manifest.server_status)
         self.assertEqual("", manifest.external_server_ip)
         self.assertEqual("", manifest.internal_server_ip)

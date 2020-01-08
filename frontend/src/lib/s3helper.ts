@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2019 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,55 +18,53 @@
 import { FETCH_PARAMS } from "./baseconsts"
 import url from "url"
 
-// For historical reasons, this follows S3's GetObject API.
-interface GetObjectRequest {
-  Bucket: string
-  Key: string
-}
-
 /**
- * Parses the S3 data bucket name and the resource root for the current
- * report from the window location href.
+ * Returns the local path for a static report resource.
+ * @param reportId the report ID of the resource to fetch
+ * @param objName the name of the resource to fetch
  */
-export function getBucketAndResourceRoot(): {
-  bucket: string
-  resourceRoot: string
-} {
-  const { hostname, pathname } = url.parse(window.location.href, true)
+export function getReportObjectPath(
+  reportId: string,
+  objName: string
+): string {
+  const { pathname } = url.parse(window.location.href, true)
 
-  // Bucket name is always equal to the hostname
-  const bucket = String(hostname)
+  let resourceRoot = ""
+  if (pathname != null) {
+    // If we have a pathname, it will look like either
+    // 1) /some/s3/path/0.49.0-HdbX/index.html?id=1234 OR
+    // 2) /index.html?id=1234
+    // We want everything after the leading '/', and before the final '/'.
 
-  // We may not have a pathname
-  if (pathname == null || pathname === "/") {
-    return { bucket, resourceRoot: "" }
+    // Strip the trailing "/" and everything after it
+    resourceRoot = pathname.substring(0, pathname.lastIndexOf("/"))
+
+    // Strip the leading slash, if it exists
+    if (resourceRoot.startsWith("/")) {
+      resourceRoot = resourceRoot.substring(1)
+    }
   }
 
-  // Our pathname will look something like /some/s3/path/0.49.0-HdbX/index.html?id=9zttR9BsCpG6YP1fMD8rjj
-  // Everything after that initial '/ and before the final '/' is the resource root.
-  const startIdx = pathname.startsWith("/") ? 1 : 0
-  const endIdx = pathname.lastIndexOf("/")
-  const resourceRoot = pathname.substring(startIdx, endIdx)
-
-  return { bucket, resourceRoot }
+  const objectPath = `reports/${reportId}/${objName}`
+  return resourceRoot === ""
+    ? `/${objectPath}`
+    : `/${resourceRoot}/${objectPath}`
 }
 
 /**
- * Get an Object from S3. This smartly chooses whether hit the HTTP server in
- * front of S3 or whether to hit the S3 API server based.
+ * Fetch a static report resource from S3. Error if it doesn't exist.
  *
- * The reason why you'd want to do this is to make setup easier for clients who
- * have their own S3 setups but do not want to use auth (maybe because they're
- * in a VPN). This way there's no need for them to mess with things like
- * Cognito, IAM, roles, and so on -- which would be required if using the S3
- * API.
- *
- * So you should *always* use this instead of s3.getObject.
- *
- * Arguments: {Key: string, Bucket: string}
+ * @param reportId the report ID of the resource to fetch
+ * @param objName the name of the resource to fetch
  */
-export async function getObject(args: GetObjectRequest): Promise<Response> {
-  const response = await fetch(`/${args.Key}`, FETCH_PARAMS)
+export async function getReportObject(
+  reportId: string,
+  objName: string
+): Promise<Response> {
+  const response = await fetch(
+    getReportObjectPath(reportId, objName),
+    FETCH_PARAMS
+  )
 
   if (!response.ok) {
     if (response.status === 403) {

@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2019 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-import { ConnectionState } from "lib/ConnectionState"
 import { ForwardMsg, StaticManifest } from "autogen/proto"
-import { getBucketAndResourceRoot, getObject } from "lib/s3helper"
+import { ConnectionState } from "lib/ConnectionState"
 import { logError } from "lib/log"
+import { getReportObject } from "lib/s3helper"
 
 interface Props {
   reportId: string
@@ -49,13 +49,10 @@ export class StaticConnection {
 
   private static async getAllMessages(props: Props): Promise<void> {
     const { numMessages } = props.manifest
-    const { bucket, resourceRoot } = getBucketAndResourceRoot()
 
     for (let msgIdx = 0; msgIdx < numMessages; msgIdx++) {
-      const messageKey = `${resourceRoot}/reports/${props.reportId}/${msgIdx}.pb`
-
       try {
-        const response = await getObject({ Bucket: bucket, Key: messageKey })
+        const response = await getReportObject(props.reportId, `${msgIdx}.pb`)
         const arrayBuffer = await response.arrayBuffer()
         props.onMessage(ForwardMsg.decode(new Uint8Array(arrayBuffer)))
       } catch (error) {

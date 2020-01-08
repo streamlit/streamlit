@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -242,6 +242,16 @@ class CodeHasher:
         b = self.to_bytes(obj, context)
         hasher.update(b)
 
+    def _file_should_be_hashed(self, filename):
+        filepath = os.path.abspath(filename)
+        file_is_blacklisted = self._folder_black_list.is_blacklisted(filepath)
+        # Short circuiting for performance.
+        if file_is_blacklisted:
+            return False
+        return file_util.file_is_in_folder_glob(
+            filepath, self._get_main_script_directory()
+        ) or file_util.file_in_pythonpath(filepath)
+
     def _to_bytes(self, obj, context):
         """Hash objects to bytes, including code with dependencies.
         Python's built in `hash` does not produce consistent results across
@@ -332,11 +342,7 @@ class CodeHasher:
                     return self.to_bytes("%s.%s" % (obj.__module__, obj.__name__))
 
                 h = hashlib.new(self.name)
-                filepath = os.path.abspath(obj.__code__.co_filename)
-
-                if file_util.file_is_in_folder_glob(
-                    filepath, self._get_main_script_directory()
-                ) and not self._folder_black_list.is_blacklisted(filepath):
+                if self._file_should_be_hashed(obj.__code__.co_filename):
                     context = _get_context(obj)
                     if obj.__defaults__:
                         self._update(h, obj.__defaults__, context)

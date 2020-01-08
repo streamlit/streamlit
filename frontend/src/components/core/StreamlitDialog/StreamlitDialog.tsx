@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2019 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ import {
   ScriptChangedDialog,
   Props as ScriptChangedDialogProps,
 } from "components/core/StreamlitDialog/ScriptChangedDialog"
-import { Exception } from "autogen/proto"
+import { IException } from "autogen/proto"
 import { Props as SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
 import { SessionInfo } from "lib/SessionInfo"
 
@@ -236,7 +236,7 @@ function rerunScriptDialog(props: RerunScriptProps): ReactElement {
 
 interface ScriptCompileErrorProps {
   type: DialogType.SCRIPT_COMPILE_ERROR
-  exception: Exception
+  exception: IException | null | undefined
   onClose: PlainEventHandler
 }
 
@@ -249,7 +249,9 @@ function scriptCompileErrorDialog(
       <ModalBody>
         <div>
           <pre>
-            <code>{props.exception.message}</code>
+            <code>
+              {props.exception ? props.exception.message : "No message"}
+            </code>
           </pre>
         </div>
       </ModalBody>

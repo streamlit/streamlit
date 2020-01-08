@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,8 +36,9 @@ DEFAULT_FOLDER_BLACKLIST = [
 # Add the Streamlit lib folder when in dev mode, since otherwise we end up with
 # weird situations where the ID of a class in one run is not the same as in another
 # run.
-if config.get_option('global.developmentMode'):
+if config.get_option("global.developmentMode"):
     import os
+
     DEFAULT_FOLDER_BLACKLIST.append(os.path.dirname(__file__))
 
 

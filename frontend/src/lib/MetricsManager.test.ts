@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2019 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +21,12 @@ import { getMetricsManagerForTest } from "lib/MetricsManagerTestUtils"
 beforeEach(() => {
   SessionInfo.current = new SessionInfo({
     streamlitVersion: "sv",
+    pythonVersion: "pv",
     installationId: "iid",
     authorEmail: "ae",
-    pythonVersion: "pv",
     maxCachedMessageAge: 2,
     commandLine: "command line",
+    mapboxToken: "mbx",
   })
 })
 

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -177,14 +177,6 @@ class Report(object):
             if _should_save_report_msg(msg)
         ]
 
-        first_delta_index = 0
-        num_deltas = 0
-        for idx in range(len(messages)):
-            if messages[idx].HasField("delta"):
-                if num_deltas == 0:
-                    first_delta_index = idx
-                num_deltas += 1
-
         manifest = self._build_manifest(
             status=StaticManifest.DONE, num_messages=len(messages)
         )
@@ -269,17 +261,6 @@ def _should_save_report_msg(msg):
     """
 
     msg_type = msg.WhichOneof("type")
-
-    # Strip out empty delta messages. These don't have any data in them
-    # by definition, so omitting them can save the user from a potentially
-    # long load time with no downside.
-    if (
-        msg_type == "delta"
-        and msg.delta.WhichOneof("type") == "new_element"
-        and msg.delta.new_element.WhichOneof("type") == "empty"
-    ):
-        return False
-
     return msg_type == "initialize" or msg_type == "new_report" or msg_type == "delta"
 
 

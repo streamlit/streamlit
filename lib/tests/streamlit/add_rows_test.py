@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,9 +28,9 @@ from tests import testutil
 
 
 DATAFRAME = pd.DataFrame({"a": [1, 2], "b": [10, 20]})
-DATAFRAME_WITH_INDEX = pd.DataFrame({"a": [1, 2], "b": [10, 20]}).set_index('a')
+DATAFRAME_WITH_INDEX = pd.DataFrame({"a": [1, 2], "b": [10, 20]}).set_index("a")
 NEW_ROWS = pd.DataFrame({"a": [3, 4, 5], "b": [30, 40, 50]})
-NEW_ROWS_WITH_INDEX = pd.DataFrame({"a": [3, 4, 5], "b": [30, 40, 50]}).set_index('a')
+NEW_ROWS_WITH_INDEX = pd.DataFrame({"a": [3, 4, 5], "b": [30, 40, 50]}).set_index("a")
 NEW_ROWS_WRONG_SHAPE = pd.DataFrame({"a": [3, 4], "b": [30, 40], "c": [50, 60]})
 
 
@@ -118,12 +118,12 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
         for method in all_methods:
             # Create a new data-carrying element (e.g. st.dataframe)
             el = method(DATAFRAME_WITH_INDEX)
-           
+
             # Make sure it has 2 rows in it.
             df_proto = data_frame_proto._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
             self.assertEqual(num_rows, 2)
-            
+
             # This is what we're testing:
             el.add_rows(NEW_ROWS_WITH_INDEX)
 
@@ -144,7 +144,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             # Create a new data-carrying element (e.g. st.dataframe)
             el = method(None)
             data_frame_proto._get_data_frame(self.get_delta_from_queue())
-            
+
             # This is what we're testing:
             el.add_rows(DATAFRAME_WITH_INDEX)
 
@@ -165,7 +165,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             # Create a new data-carrying element (e.g. st.dataframe)
             el = method(None)
             data_frame_proto._get_data_frame(self.get_delta_from_queue())
-            
+
             # This is what we're testing:
             el.add_rows(DATAFRAME)
 

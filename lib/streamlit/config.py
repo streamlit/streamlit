@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -212,6 +212,9 @@ _create_option(
         - "off" : turn off sharing.
         - "s3" : share to S3, based on the settings under the [s3] section of
           this config file.
+        - "file" : share to a directory on the local machine. This is
+          meaningful only for debugging Streamlit itself, and shouldn't be
+          used for production.
         """,
     default_val="off",
 )
@@ -916,6 +919,19 @@ def _check_conflicts():
             parsed = urllib.parse.urlparse(s3_url)
             if parsed.netloc == "":
                 _set_option("s3.url", "//" + s3_url, get_where_defined("s3.url"))
+
+    elif get_option("global.sharingMode") == "file" and not get_option(
+        "global.developmentMode"
+    ):
+        # Warn users that "sharingMode=file" probably isn't what they meant
+        # to do.
+        LOGGER.warning(
+            "'sharingMode' is set to 'file', but Streamlit is not configured "
+            "for development. This sharingMode is used for debugging "
+            "Streamlit itself, and is not supported for other use-cases. "
+            "\n\nTo remove this warning, set the 'sharingMode' option to "
+            "another value, or remove it from your Streamlit config."
+        )
 
 
 def _set_development_mode():

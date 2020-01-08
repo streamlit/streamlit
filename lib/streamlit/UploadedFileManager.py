@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -94,8 +94,10 @@ class UploadedFileManager(object):
 
         file = self._file_list[widget_id]
 
-        progress = 1
+        progress = 100
+
         if file.data is None:
             progress = float(len(file.buffers)) / file.total_chunks
+            progress = round(100 * progress)
 
         return progress, file.data

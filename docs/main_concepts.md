@@ -29,7 +29,7 @@ What this all means is that Streamlit allows you to work in a fast interactive l
 
 Caching is super important when it comes to speed - especially when dealing with large data sets. It's always a good idea to load data, cache what's expensive, visualize the data, then spruce things up with interaction.
 
-Streamlit's ability to quickly update and re-execute the the whole app is great when you're working with a trivial amount of data, but when you have long-running computations, this can get costly and time consuming. Instead of re-executing, you can safely reuse data with [`st.cache`](api.html#streamlit.cache). `st.cache` is a data store that lets Streamlit apps safely and effortlessly persist information.
+Streamlit's ability to quickly update and re-execute the whole app is great when you're working with a trivial amount of data, but when you have long-running computations, this can get costly and time consuming. Instead of re-executing, you can safely reuse data with [`st.cache`](api.html#streamlit.cache). `st.cache` is a data store that lets Streamlit apps safely and effortlessly persist information.
 
 When you mark a function with Streamlit's cache annotation, it tells Streamlit that whenever the function is called that it needs to check three things:
 
@@ -68,8 +68,8 @@ should use `st.sidebar.markdown()` instead), `st.echo`, and `st.spinner`.
 ```python
 import streamlit as st
 
-# Adds a checkbox to the sidebar
-add_selectbox = st.sidebar.checkbox(
+# Adds a selectbox to the sidebar
+add_selectbox = st.sidebar.selectbox(
     'How would you like to be contacted?',
     ('Email', 'Home phone', 'Mobile phone')
 )
