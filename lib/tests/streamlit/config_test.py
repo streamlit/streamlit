@@ -353,7 +353,7 @@ class ConfigTest(unittest.TestCase):
             config._check_conflicts()
         self.assertEqual(
             str(e.value),
-            "browser.serverPort does not work when global.developmentMode is " "true.",
+            "browser.serverPort does not work when global.developmentMode is true.",
         )
 
     def test_check_conflicts_s3_sharing_mode(self):
