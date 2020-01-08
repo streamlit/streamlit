@@ -108,11 +108,11 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(c.format, "%" + char)
 
     def test_error_on_unsupported_formatters(self):
-        # note: The slightly-problematic %a, %X, and %X have different effects in 
+        # note: The slightly-problematic %a, %X, %x, and %o have different effects in
         #       Python3 and Python2, so we're not testing for/against them until
         #       we finally sunset Python2.
         # See https://github.com/streamlit/streamlit/pull/943#issuecomment-572268370
-        UNSUPPORTED = "opAn"
+        UNSUPPORTED = "pAn"
         for char in UNSUPPORTED:
             with pytest.raises(StreamlitAPIException) as exc_message:
                 st.number_input("any label", value=3.14, format="%" + char)
