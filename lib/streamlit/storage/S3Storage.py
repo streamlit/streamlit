@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@ class S3Storage(AbstractStorage):
         log.propagate = False
 
         assert (
-            config.get_option("global.sharingMode") != "off"
+            config.get_option("global.sharingMode") == "s3"
         ), 'Sharing is disabled. See "global.sharingMode".'
 
         self._bucketname = config.get_option("s3.bucket")

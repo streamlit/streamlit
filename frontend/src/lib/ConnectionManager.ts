@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2019 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import { IS_SHARED_REPORT } from "./baseconsts"
 
 import { ConnectionState } from "./ConnectionState"
 import { logError } from "./log"
-import { getBucketAndResourceRoot, getObject } from "./s3helper"
+import { getReportObject } from "./s3helper"
 import { StaticConnection } from "./StaticConnection"
 import { WebsocketConnection } from "./WebsocketConnection"
 
@@ -156,7 +156,7 @@ export class ConnectionManager {
   private async connectBasedOnManifest(
     reportId: string
   ): Promise<WebsocketConnection | StaticConnection> {
-    const manifest = await this.fetchManifest(reportId)
+    const manifest = await ConnectionManager.fetchManifest(reportId)
 
     return manifest.serverStatus === StaticManifest.ServerStatus.RUNNING
       ? this.connectToRunningServerFromManifest(manifest)
@@ -203,18 +203,11 @@ export class ConnectionManager {
     })
   }
 
-  private async fetchManifest(reportId: string): Promise<StaticManifest> {
+  private static async fetchManifest(
+    reportId: string
+  ): Promise<StaticManifest> {
     try {
-      const { bucket, resourceRoot } = getBucketAndResourceRoot()
-      if (resourceRoot == null) {
-        throw new Error(`No resourceRoot in URL ${window.location.href}`)
-      }
-
-      const manifestKey = `${resourceRoot}/reports/${reportId}/manifest.pb`
-      const data = await getObject({
-        Bucket: String(bucket),
-        Key: manifestKey,
-      })
+      const data = await getReportObject(reportId, "manifest.pb")
       const arrayBuffer = await data.arrayBuffer()
 
       return StaticManifest.decode(new Uint8Array(arrayBuffer))
