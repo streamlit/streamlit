@@ -832,14 +832,6 @@ class DeltaGenerator(object):
 
         exception_proto.marshall(element.exception, exception, exception_traceback)
 
-    @_with_element
-    def arrow_table(self, element, df):
-        import streamlit.elements.arrow_table as arrow_table
-
-        element_path = (self._container,) + self._path + (self._id,)
-        default_uuid = hash(element_path)
-        arrow_table.marshall(element.arrow_table, df, default_uuid)
-
     @_remove_self_from_sig
     def dataframe(self, data=None, width=None, height=None):
         """Display a dataframe as an interactive table.
@@ -2570,6 +2562,14 @@ class DeltaGenerator(object):
         import streamlit.elements.deck_gl as deck_gl
 
         deck_gl.marshall(element.deck_gl_chart, spec, **kwargs)
+
+    @_with_element
+    def _arrow_table(self, element, df):
+        import streamlit.elements.arrow_table as arrow_table
+
+        element_path = (self._container,) + self._path + (self._id,)
+        default_uuid = hash(element_path)
+        arrow_table.marshall(element.arrow_table, df, default_uuid)
 
     @_with_element
     def table(self, element, data=None):

@@ -32,4 +32,4 @@ styler = (
     .format("{:.2%}")
 )
 
-st.arrow_table(styler)
+st._arrow_table(styler)

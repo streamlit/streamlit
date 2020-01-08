@@ -44,10 +44,7 @@ class ArrowTable extends PureComponent<Props> {
     return (
       <div className="streamlit-table stTable">
         <style>{styles}</style>
-        <ReactTable
-          id={"T_" + uuid}
-          className={hasNoData ? "empty-table" : ""}
-        >
+        <ReactTable id={"T_" + uuid} className={hasNoData ? "empty-table" : ""}>
           {caption}
           <thead>
             <TableRows
