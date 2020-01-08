@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2019 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ const getProps = (props: object = {}): ReportElementProps => ({
   ...props,
 })
 
-describe("Button widget", () => {
+describe("withFullScreenWrapper HOC", () => {
   it("renders without crashing", () => {
     const props = getProps()
     const WithHoc = withFullScreenWrapper(testComponent)

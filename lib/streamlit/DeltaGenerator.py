@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -501,12 +501,14 @@ class DeltaGenerator(object):
             information can be found at: https://github.github.com/gfm.
 
             This also supports:
+
             * Emoji shortcodes, such as `:+1:`  and `:sunglasses:`.
-            For a list of all supported codes,
-            see https://www.webfx.com/tools/emoji-cheat-sheet/.
+              For a list of all supported codes,
+              see https://www.webfx.com/tools/emoji-cheat-sheet/.
+
             * LaTeX expressions, by just wrapping them in "$" or "$$" (the "$$"
-             must be on their own lines). Supported LaTeX functions are listed
-             at https://katex.org/docs/supported.html.
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
 
         unsafe_allow_html : bool
             By default, any HTML tags found in the body will be escaped and
@@ -2402,7 +2404,7 @@ class DeltaGenerator(object):
 
         To get a token for yourself, create an account at
         https://mapbox.com. It's free! (for moderate usage levels) See
-        https://streamlit.io/docs/cli.html#view-all-config-options for more
+        https://docs.streamlit.io/cli.html#view-all-config-options for more
         info on how to set config options.
 
         Parameters
@@ -2449,7 +2451,7 @@ class DeltaGenerator(object):
 
         To get a token for yourself, create an account at
         https://mapbox.com. It's free! (for moderate usage levels) See
-        https://streamlit.io/docs/cli.html#view-all-config-options for more
+        https://docs.streamlit.io/cli.html#view-all-config-options for more
         info on how to set config options.
 
         Parameters

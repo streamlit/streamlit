@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2019 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,13 +69,13 @@ export class SessionInfo {
     mapboxToken,
   }: Args) {
     if (
-      !streamlitVersion ||
-      !pythonVersion ||
-      !installationId ||
-      !authorEmail ||
-      !maxCachedMessageAge ||
-      !commandLine ||
-      !mapboxToken
+      streamlitVersion == null ||
+      pythonVersion == null ||
+      installationId == null ||
+      authorEmail == null ||
+      maxCachedMessageAge == null ||
+      commandLine == null ||
+      mapboxToken == null
     ) {
       throw new Error("SessionInfo arguments must be strings")
     }

@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2019 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -187,8 +187,8 @@ class Block extends PureComponent<Props> {
     const className = Block.getClassNames(isStale, isEmpty)
 
     return (
-      <Maybe enable={enable}>
-        <div key={index} className={className} style={{ width }}>
+      <Maybe enable={enable} key={index}>
+        <div className={className} style={{ width }}>
           <ErrorBoundary width={width}>
             <Suspense
               fallback={
