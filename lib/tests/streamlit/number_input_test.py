@@ -99,25 +99,27 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
         )
 
     def test_accept_valid_formats(self):
-        SUPPORTED = "diufFeEgG"
+        # note: we decided to include the slightly-problematic %a and %u here.
+        # see https://github.com/streamlit/streamlit/pull/943 for details.
+        SUPPORTED = "diufFeEgGa"        
         for char in SUPPORTED:
-            st.number_input("any label", format="%"+char)
+            st.number_input("any label", format="%" + char)
             c = self.get_delta_from_queue().new_element.number_input
-            self.assertEqual(c.format, "%"+char)
+            self.assertEqual(c.format, "%" + char)
 
     def test_error_on_unsupported_formatters(self):
-        UNSUPPORTED = "XxopaAn"
+        UNSUPPORTED = "XxopAn"
         for char in UNSUPPORTED:
             with pytest.raises(StreamlitAPIException) as exc_message:
-                st.number_input("any label", value=3.14, format="%"+char)
+                st.number_input("any label", value=3.14, format="%" + char)
 
     def test_error_on_invalid_formats(self):
-        BAD_FORMATS = ["blah",
-                       "a%f",
-                       "a%.3f",
-                       "%d%d",
-                      ]
+        BAD_FORMATS = [
+            "blah",
+            "a%f",
+            "a%.3f",
+            "%d%d",
+        ]
         for fmt in BAD_FORMATS:
             with pytest.raises(StreamlitAPIException) as exc_message:
                 st.number_input("any label", value=3.14, format=fmt)
-
