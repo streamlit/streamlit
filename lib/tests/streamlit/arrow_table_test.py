@@ -25,7 +25,7 @@ class ArrowTableTest(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall arrow_table protos."""
 
     def test_table_uuid(self):
-        df = create_grid_dataframe()
+        df = create_mock_dataframe()
         styler = df.style
         styler.set_uuid("custom_uuid")
         st._arrow_table(styler)
@@ -34,7 +34,7 @@ class ArrowTableTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(proto.uuid, "custom_uuid")
 
     def test_table_caption(self):
-        df = create_grid_dataframe()
+        df = create_mock_dataframe()
         styler = df.style
         styler.set_caption("The caption")
         st._arrow_table(styler)
@@ -43,7 +43,7 @@ class ArrowTableTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(proto.caption, "The caption")
 
     def test_table_styles(self):
-        df = create_grid_dataframe()
+        df = create_mock_dataframe()
         styler = df.style
         # NB: If UUID is not set a random UUID will be assigned to the table.
         styler.set_uuid("custom_uuid")
@@ -58,7 +58,7 @@ class ArrowTableTest(testutil.DeltaGeneratorTestCase):
         )
 
     def test_table_cell_styles(self):
-        df = create_grid_dataframe()
+        df = create_mock_dataframe()
         styler = df.style
         # NB: If UUID is not set a random UUID will be assigned to the table.
         styler.set_uuid("custom_uuid")
@@ -72,7 +72,7 @@ class ArrowTableTest(testutil.DeltaGeneratorTestCase):
         )
 
 
-def create_grid_dataframe():
+def create_mock_dataframe():
     grid = np.arange(0, 6, 1).reshape(2, 3)
     df = pd.DataFrame(
         grid,
