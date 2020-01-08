@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 class File(object):
     """Queue that smartly accumulates the report's messages."""
 
