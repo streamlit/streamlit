@@ -4,9 +4,11 @@ import ScreenCastRecorder from "lib/ScreenCastRecorder"
 import hoistNonReactStatics from "hoist-non-react-statics"
 import React, { PureComponent, ComponentType, ReactNode } from "react"
 
-import ScreencastDialog from "./components/ScreencastDialog"
-import VideoRecordedDialog from "./components/VideoRecordedDialog"
-import UnsupportedBrowserDialog from "./components/UnsupportedBrowserDialog"
+import {
+  UnsupportedBrowserDialog,
+  ScreencastDialog,
+  VideoRecordedDialog,
+} from "hocs/withScreencast/components"
 
 import "./withScreencast.scss"
 
