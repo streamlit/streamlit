@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -500,12 +500,14 @@ class DeltaGenerator(object):
             information can be found at: https://github.github.com/gfm.
 
             This also supports:
+
             * Emoji shortcodes, such as `:+1:`  and `:sunglasses:`.
-            For a list of all supported codes,
-            see https://www.webfx.com/tools/emoji-cheat-sheet/.
+              For a list of all supported codes,
+              see https://www.webfx.com/tools/emoji-cheat-sheet/.
+
             * LaTeX expressions, by just wrapping them in "$" or "$$" (the "$$"
-             must be on their own lines). Supported LaTeX functions are listed
-             at https://katex.org/docs/supported.html.
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
 
         unsafe_allow_html : bool
             By default, any HTML tags found in the body will be escaped and
@@ -1897,8 +1899,9 @@ class DeltaGenerator(object):
                 format = "%d"
             else:
                 format = "%0.2f"
+
         # It would be great if we could guess the number of decimal places from
-        # the step`argument, but this would only be meaningful if step were a decimal.
+        # the step argument, but this would only be meaningful if step were a decimal.
         # As a possible improvement we could make this function accept decimals
         # and/or use some heuristics for floats.
 
@@ -2213,7 +2216,8 @@ class DeltaGenerator(object):
             If the value is not specified, the format parameter will be used.
         format : str or None
             A printf-style format string controlling how the interface should
-            display numbers. This does not impact the return value.
+            display numbers. Output must be purely numeric. This does not impact 
+            the return value. Valid formatters: %d %e %f %g %i
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -2242,13 +2246,31 @@ class DeltaGenerator(object):
         float_value = isinstance(value, float)
 
         if value is None:
-            raise ValueError("The value should either be an int/float")
+            raise StreamlitAPIException(
+                "Default value for number_input should be an int or a float."
+            )
         else:
             if format is None:
                 format = "%d" if int_value else "%0.2f"
 
+            if format in ["%d", "%u", "%i"] and float_value:
+                # Fix for https://github.com/streamlit/streamlit/issues/930
+                # If user submitted format is int, assume the intention is to
+                # coerce submitted value to int.
+                value = int(value)
+                int_value = True
+                float_value = False
+
             if step is None:
                 step = 1 if int_value else 0.01
+
+        try:
+            float(format % 2)
+        except (TypeError, ValueError):
+            raise StreamlitAPIException(
+                "Format string for st.number_input contains invalid characters: %s"
+                % format
+            )
 
         # Ensure that all arguments are of the same type.
         args = [min_value, max_value, step]
@@ -2261,7 +2283,7 @@ class DeltaGenerator(object):
         )
 
         if not int_args and not float_args:
-            raise TypeError(
+            raise StreamlitAPIException(
                 "All arguments must be of the same type."
                 "\n`value` has %(value_type)s type."
                 "\n`min_value` has %(min_type)s type."
@@ -2278,7 +2300,7 @@ class DeltaGenerator(object):
         all_floats = float_value and float_args
 
         if not all_ints and not all_floats:
-            raise TypeError(
+            raise StreamlitAPIException(
                 "Both value and arguments must be of the same type."
                 "\n`value` has %(value_type)s type."
                 "\n`min_value` has %(min_type)s type."
@@ -2291,7 +2313,7 @@ class DeltaGenerator(object):
             )
 
         if (min_value and min_value > value) or (max_value and max_value < value):
-            raise ValueError(
+            raise StreamlitAPIException(
                 "The default `value` of %(value)s "
                 "must lie between the `min_value` of %(min)s "
                 "and the `max_value` of %(max)s, inclusively."
@@ -2401,7 +2423,7 @@ class DeltaGenerator(object):
 
         To get a token for yourself, create an account at
         https://mapbox.com. It's free! (for moderate usage levels) See
-        https://streamlit.io/docs/cli.html#view-all-config-options for more
+        https://docs.streamlit.io/cli.html#view-all-config-options for more
         info on how to set config options.
 
         Parameters
@@ -2449,7 +2471,7 @@ class DeltaGenerator(object):
 
         To get a token for yourself, create an account at
         https://mapbox.com. It's free! (for moderate usage levels) See
-        https://streamlit.io/docs/cli.html#view-all-config-options for more
+        https://docs.streamlit.io/cli.html#view-all-config-options for more
         info on how to set config options.
 
         Parameters

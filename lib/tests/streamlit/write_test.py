@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ from streamlit import type_util
 class StreamlitWriteTest(unittest.TestCase):
     """Test st.write.
 
-    Unit tests for https://streamlit.io/docs/api/text.html#streamlit.write
+    Unit tests for https://docs.streamlit.io/api/text.html#streamlit.write
 
     Because we're going to test st.markdown, st.pyplot, st.altair_chart
     later on, we don't have to test it in st.write In st.write, all we're
