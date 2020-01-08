@@ -1899,8 +1899,9 @@ class DeltaGenerator(object):
                 format = "%d"
             else:
                 format = "%0.2f"
+
         # It would be great if we could guess the number of decimal places from
-        # the step`argument, but this would only be meaningful if step were a decimal.
+        # the step argument, but this would only be meaningful if step were a decimal.
         # As a possible improvement we could make this function accept decimals
         # and/or use some heuristics for floats.
 
@@ -2216,7 +2217,7 @@ class DeltaGenerator(object):
         format : str or None
             A printf-style format string controlling how the interface should
             display numbers. Output must be purely numeric. This does not impact 
-            the return value. Valid formatters: %a %d %e %f %g %i  
+            the return value. Valid formatters: %d %e %f %g %i
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -2252,11 +2253,19 @@ class DeltaGenerator(object):
             if format is None:
                 format = "%d" if int_value else "%0.2f"
 
+            if format in ["%d", "%u", "%i"] and float_value:
+                # Fix for https://github.com/streamlit/streamlit/issues/930
+                # If user submitted format is int, assume the intention is to
+                # coerce submitted value to int.
+                value = int(value)
+                int_value = True
+                float_value = False
+
             if step is None:
                 step = 1 if int_value else 0.01
 
         try:
-            float(format % 2.4)
+            float(format % 2)
         except (TypeError, ValueError):
             raise StreamlitAPIException(
                 "Format string for st.number_input contains invalid characters: %s"
