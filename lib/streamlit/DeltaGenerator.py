@@ -259,7 +259,7 @@ class DeltaGenerator(object):
     id: int or None
       ID for deltas, or None to create the root DeltaGenerator (which
         produces DeltaGenerators with incrementing IDs)
-    delta_type: string or None
+    delta_type: str or None
       The name of the element passed in Element.proto's oneof.
       This is needed so we can transform dataframes for some elements when
       performing an `add_rows`.
@@ -2393,7 +2393,7 @@ class DeltaGenerator(object):
     def map(self, element, data, zoom=None):
         """Display a map with points on it.
 
-        This is a wrapper around st.deck_gl_chart to quickly create scatterplot
+        This is a wrapper around st.pydeck_chart to quickly create scatterplot
         charts on top of a map, with auto-centering and auto-zoom.
 
         When using this method, we advise all users to use a personal Mapbox
@@ -2433,7 +2433,7 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.map as streamlit_map
 
-        element.pydeck_chart.json = streamlit_map.to_deckgl_json(data, zoom)
+        element.deck_gl_json_chart.json = streamlit_map.to_deckgl_json(data, zoom)
 
     @_with_element
     def deck_gl_chart(self, element, spec=None, **kwargs):
@@ -2507,28 +2507,6 @@ class DeltaGenerator(object):
 
         Example
         -------
-        For convenience, if you pass in a dataframe and no spec, you get a
-        scatter plot:
-
-        >>> df = pd.DataFrame(
-        ...    np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
-        ...    columns=['lat', 'lon'])
-        ...
-        >>> st.deck_gl_chart(layers = [{
-                'data': df,
-                'type': 'ScatterplotLayer'
-            }])
-
-        .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=AhGZBy2qjzmWwPxMatHoB9
-           height: 530px
-
-        The dataframe must have columns called 'lat'/'latitude' or
-        'lon'/'longitude'.
-
-        If you want to do something more interesting, pass in a spec with its
-        own data, and no top-level dataframe. For instance:
-
         >>> st.deck_gl_chart(
         ...     viewport={
         ...         'latitude': 37.76,
@@ -2561,9 +2539,11 @@ class DeltaGenerator(object):
         if not suppress_deprecation_warning:
             import streamlit as st
 
-            st.warning(
-                """The `deck_gl_chart` widget is deprecated and will be removed on 2020-03-04. To render a map, you should use `st.pyDeckChart` widget."""
-            )
+            st.warning("""
+                The `deck_gl_chart` widget is deprecated and will be removed on
+
+                2020-03-04. To render a map, you should use `st.pyDeckChart` widget.
+            """)
 
         import streamlit.elements.deck_gl as deck_gl
 
@@ -2573,103 +2553,68 @@ class DeltaGenerator(object):
     def pydeck_chart(self, element, pydeck_obj=None):
         """Draw a map chart using the PyDeck library.
 
-        This API convert a pyDeck object (https://deckgl.readthedocs.io/en/latest/) to JSON to render 
-        a map using Deck.GL' JSON converter JavaScript API (https://github.com/uber/deck.gl/tree/master/modules/json)
+        This API convert a pyDeck object
+        (https://deckgl.readthedocs.io/en/latest/) to JSON to render a map
+
+        using Deck.GL' JSON converter JavaScript API
+        (https://github.com/uber/deck.gl/tree/master/modules/json)
+
 
         Parameters
         ----------
-
-        pydeck_obj : pydeck intance or None (https://deckgl.readthedocs.io/en/latest/index.html)
+        spec: pydeck.Deck or None
+            Object specifying the PyDeck chart to draw.
 
         Example
         -------
+        Here's a chart using a HexagonLayer and a ScatterplotLayer on top of
+        the light map style:
 
-        >>> import pandas as pd
-        >>> import pydeck as pdk
-        >>> import streamlit as st
-
-        >>> DATA_URL = "https://raw.githubusercontent.com/uber-common/deck.gl-data/master/examples/geojson/vancouver-blocks.json"
-        >>> LAND_COVER = [[[-123.0, 49.196], [-123.0, 49.324], [-123.306, 49.324], [-123.306, 49.196]]]
+        >>> df = pd.DataFrame(
+        ...    np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
+        ...    columns=['lat', 'lon'])
         
-        >>> INITIAL_VIEW_STATE = pdk.ViewState(
-        ...    latitude=49.254,
-        ...    longitude=-123.13,
-        ...    zoom=11,
-        ...    max_zoom=16,
-        ...    pitch=45,
-        ...    bearing=0)
-
-        >>> polygon = pdk.Layer(
-        ...    'PolygonLayer',
-        ...    LAND_COVER,
-        ...    stroked=False,
-        ...    # processes the data as a flat longitude-latitude pair
-        ...    get_polygon='-',
-        ...    get_fill_color=[0, 0, 0, 20])
-
-        >>> geojson = pdk.Layer(
-        ...    'GeoJsonLayer',
-        ...    DATA_URL,
-        ...    opacity=0.8,
-        ...    stroked=False,
-        ...    filled=True,
-        ...    extruded=True,
-        ...    wireframe=True,
-        ...    get_elevation='properties.valuePerSqm / 20',
-        ...    get_fill_color='[255, 255, properties.growth * 255]',
-        ...    get_line_color=[255, 255, 255],
-        ...    pickable=True)
-
-        >>> r = pdk.Deck(
-        ...    layers=[polygon, geojson],
-        ...    initial_view_state=INITIAL_VIEW_STATE)
-        >>> st.write(r)
-
-        And here is an example of placing icons on a map with an `IconLayer`:
-
-        >>> icon_data = { 
-        ...    "url":"https://img.icons8.com/plasticine/100/000000/marker.png", 
-        ...    "width":128, 
-        ...    "height":128, 
-        ...    "anchorY": 128}
-
-        >>> data = pd.read_json("https://raw.githubusercontent.com/uber-common/deck.gl-data/master/website/bart-stations.json")
-        >>> data['icon_data'] = None
-        >>> for i in data.index:
-        ...     data['icon_data'][i] = icon_data
-
-        >>> view_state = pdk.ViewState(
-        ...    longitude=-122.22,
-        ...    latitude=37.76,
-        ...    zoom=9,
-        ...    pitch=50)
-
-
-        >>> icon_layer2 = pdk.Layer(
-        ...    type='IconLayer',
-        ...    data=data,
-        ...    get_icon='icon_data',
-        ...    get_size=4,
-        ...    pickable=True,
-        ...    size_scale=15,
-        ...    get_position='coordinates')
-
-        >>> r2 = pdk.Deck(layers=[icon_layer2], initial_view_state=view_state)
-        >>> st.write(r2)
+        >>> st.pydeck_chart(pdk.Deck(
+        ...     map_style='mapbox://styles/mapbox/light-v9',
+        ...     initial_view_state=pdk.ViewState(
+        ...         latitude=37.76,
+        ...         longitude=-122.4,
+        ...         zoom=11,
+        ...         pitch=50,
+        ...     ),
+        ...     layers=[
+        ...         pdk.Layer(
+        ...            'HexagonLayer',
+        ...            data=df,
+        ...            get_position='[lon, lat]',
+        ...            radius=200,
+        ...            elevation_scale=4,
+        ...            elevation_range=[0, 1000],
+        ...            pickable=True,
+        ...            extruded=True,
+        ...         ),
+        ...         pdk.Layer(
+        ...             'ScatterplotLayer',
+        ...             data=df,
+        ...             get_position='[lon, lat]',
+        ...             get_color='[200, 30, 0, 160]',
+        ...             get_radius=200,
+        ...         ),
+        ...     ],
+        ... ))
 
         .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=ahGZBy2qjzmWwPxMatHoB9
-
-        The dataframe must have columns used in get_position layer param.
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=ASTdExBpJ1WxbGceneKN1i
+           height: 530px
 
         """
 
         if pydeck_obj == None:
             import streamlit.elements.map as streamlit_map
 
-            element.pydeck_chart.json = json.dumps(streamlit_map.DEFAULT_MAP)
+            element.deck_gl_json_chart.json = json.dumps(streamlit_map.DEFAULT_MAP)
         else:
-            element.pydeck_chart.json = pydeck_obj.to_json()
+            element.deck_gl_json_chart.json = pydeck_obj.to_json()
 
     @_with_element
     def table(self, element, data=None):

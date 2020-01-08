@@ -46,7 +46,7 @@ interface State {
   initialized: boolean
 }
 
-class PyDeckChart extends React.PureComponent<PropsWithHeight, State> {
+class DeckGlJsonChart extends React.PureComponent<PropsWithHeight, State> {
   static defaultProps = {
     height: 500,
   }
@@ -78,7 +78,7 @@ class PyDeckChart extends React.PureComponent<PropsWithHeight, State> {
 
     return (
       <div
-        className="stPyDeckChart"
+        className="stDeckGlJsonChart"
         style={{
           height: deck.initialViewState.height,
           width: deck.initialViewState.width,
@@ -115,7 +115,7 @@ class WithFullScreenWrapper extends React.Component<Props> {
     return (
       <FullScreenWrapper width={width}>
         {({ width, height }) => (
-          <PyDeckChart element={element} width={width} height={height} />
+          <DeckGlJsonChart element={element} width={width} height={height} />
         )}
       </FullScreenWrapper>
     )

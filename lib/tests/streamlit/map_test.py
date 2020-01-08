@@ -41,7 +41,7 @@ class StMapTest(testutil.DeltaGeneratorTestCase):
         """Test that deck_gl_chart can be called with lat/lon."""
         st.map(df1)
 
-        c = json.loads(self.get_delta_from_queue().new_element.pydeck_chart.json)
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
 
         self.assertIsNotNone(c.get("initialViewState"))
         self.assertIsNotNone(c.get("layers"))
