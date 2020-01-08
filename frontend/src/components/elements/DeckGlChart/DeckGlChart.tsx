@@ -118,7 +118,7 @@ class DeckGlChart extends React.PureComponent<PropsWithHeight, State> {
             height={this.initialViewState.height}
             width={this.initialViewState.width}
             mapStyle={this.mapStyle}
-            mapboxApiAccessToken={SessionInfo.current.mapboxToken}
+            mapboxApiAccessToken={SessionInfo.current.userMapboxToken}
           />
         </DeckGL>
       </div>

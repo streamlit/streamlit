@@ -41,7 +41,7 @@ describe("App", () => {
       authorEmail: "ae",
       maxCachedMessageAge: 2,
       commandLine: "command line",
-      mapboxToken: "mpt",
+      userMapboxToken: "mpt",
     } as SessionInfoArgs)
     MetricsManager.current = getMetricsManagerForTest()
   })

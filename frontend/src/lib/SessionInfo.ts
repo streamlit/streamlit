@@ -22,7 +22,7 @@ export interface Args {
   authorEmail?: string | null
   maxCachedMessageAge?: number | null
   commandLine?: string | null
-  mapboxToken?: string | null
+  userMapboxToken?: string | null
 }
 
 export class SessionInfo {
@@ -33,7 +33,14 @@ export class SessionInfo {
   public readonly authorEmail: string
   public readonly maxCachedMessageAge: number
   public readonly commandLine: string
-  public readonly mapboxToken: string
+
+  /**
+   * The user-supplied mapbox token. By default, this will be the empty string,
+   * which indicates that we should fetch Streamlit's mapbox token and use
+   * that instead. Do not use this value directly; use `MapboxToken.get()`
+   * instead.
+   */
+  public readonly userMapboxToken: string
 
   /**
    * Singleton SessionInfo object. The reasons we're using a singleton here
@@ -66,7 +73,7 @@ export class SessionInfo {
     authorEmail,
     maxCachedMessageAge,
     commandLine,
-    mapboxToken,
+    userMapboxToken,
   }: Args) {
     if (
       streamlitVersion == null ||
@@ -75,7 +82,7 @@ export class SessionInfo {
       authorEmail == null ||
       maxCachedMessageAge == null ||
       commandLine == null ||
-      mapboxToken == null
+      userMapboxToken == null
     ) {
       throw new Error("SessionInfo arguments must be strings")
     }
@@ -86,6 +93,6 @@ export class SessionInfo {
     this.authorEmail = authorEmail
     this.maxCachedMessageAge = maxCachedMessageAge
     this.commandLine = commandLine
-    this.mapboxToken = mapboxToken
+    this.userMapboxToken = userMapboxToken
   }
 }

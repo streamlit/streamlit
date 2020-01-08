@@ -313,7 +313,7 @@ class App extends PureComponent<Props, State> {
       authorEmail: userInfo.email,
       maxCachedMessageAge: config.maxCachedMessageAge,
       commandLine: initializeMsg.commandLine,
-      mapboxToken: config.mapboxToken,
+      userMapboxToken: config.mapboxToken,
     })
 
     MetricsManager.current.initialize({
