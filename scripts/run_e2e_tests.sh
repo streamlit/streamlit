@@ -91,9 +91,9 @@ function run_test {
   then
     file=$2
     filename=$(basename $file)
-    specpath="../e2e/specs/${filename%.*}.spec.ts"
+    specpath="../e2e/specs/${filename%.*}.spec.js"
   else
-    specpath="../e2e/specs/hello.spec.ts"
+    specpath="../e2e/specs/hello.spec.js"
   fi
 
   # Infinite loop to support retries.
