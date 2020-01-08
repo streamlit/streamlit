@@ -22,7 +22,7 @@ import tempfile
 import time
 import unittest
 
-import altair as alt
+import altair.vegalite.v3
 import numpy as np
 import pandas as pd
 import pytest
@@ -405,6 +405,9 @@ class CodeHashTest(unittest.TestCase):
 
     def test_external_module(self):
         """Test code that references an external module."""
+
+        # NB: If a future vegalite update removes the v3 API, these functions
+        # will need to be updated!
 
         def call_altair_concat():
             return alt.vegalite.v4.api.concat()

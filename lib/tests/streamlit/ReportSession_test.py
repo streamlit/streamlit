@@ -13,14 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import copy
 import unittest
+
+import tornado.gen
+import tornado.testing
 from mock import MagicMock, patch
 
-from streamlit import config
 from streamlit.ReportSession import ReportSession
 from streamlit.ScriptRunner import ScriptRunner
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.StaticManifest_pb2 import StaticManifest
+from tests.MockStorage import MockStorage
 
 
 class ReportSessionTest(unittest.TestCase):
@@ -94,3 +97,54 @@ class ReportSessionTest(unittest.TestCase):
         # likely because there's a bug in the enqueue function (which should
         # skip func when installTracer is on).
         func.assert_not_called()
+
+
+def _create_mock_websocket():
+    @tornado.gen.coroutine
+    def write_message(*args, **kwargs):
+        raise tornado.gen.Return(None)
+
+    ws = MagicMock()
+    ws.write_message.side_effect = write_message
+    return ws
+
+
+class ReportSessionSerializationTest(tornado.testing.AsyncTestCase):
+    @patch("streamlit.ReportSession.LocalSourcesWatcher")
+    @tornado.testing.gen_test
+    def test_handle_save_request(self, _1):
+        """Test that handle_save_request serializes files correctly."""
+        # Create a ReportSession with some mocked bits
+        rs = ReportSession(self.io_loop, "mock_report.py", "")
+        rs._report.report_id = "TestReportID"
+        rs._scriptrunner = MagicMock()
+
+        storage = MockStorage()
+        rs._storage = storage
+
+        # Send two deltas: empty and markdown
+        rs._main_dg.empty()
+        rs._main_dg.markdown("Text!")
+
+        yield rs.handle_save_request(_create_mock_websocket())
+
+        # Check the order of the received files. Manifest should be last.
+        self.assertEqual(3, len(storage.files))
+        self.assertEqual("reports/TestReportID/0.pb", storage.get_filename(0))
+        self.assertEqual("reports/TestReportID/1.pb", storage.get_filename(1))
+        self.assertEqual("reports/TestReportID/manifest.pb", storage.get_filename(2))
+
+        # Check the manifest
+        manifest = storage.get_message(2, StaticManifest)
+        self.assertEqual("mock_report", manifest.name)
+        self.assertEqual(2, manifest.num_messages)
+        self.assertEqual(StaticManifest.DONE, manifest.server_status)
+
+        # Check that the deltas we sent match messages in storage
+        sent_messages = rs._report._master_queue._queue
+        received_messages = [
+            storage.get_message(0, ForwardMsg),
+            storage.get_message(1, ForwardMsg),
+        ]
+
+        self.assertEqual(sent_messages, received_messages)
