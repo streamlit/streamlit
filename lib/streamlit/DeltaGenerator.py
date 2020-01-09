@@ -44,6 +44,7 @@ from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto import Text_pb2
 
+
 # setup logging
 from streamlit.logger import get_logger
 
@@ -258,7 +259,7 @@ class DeltaGenerator(object):
     id: int or None
       ID for deltas, or None to create the root DeltaGenerator (which
         produces DeltaGenerators with incrementing IDs)
-    delta_type: string or None
+    delta_type: str or None
       The name of the element passed in Element.proto's oneof.
       This is needed so we can transform dataframes for some elements when
       performing an `add_rows`.
@@ -2414,7 +2415,7 @@ class DeltaGenerator(object):
     def map(self, element, data, zoom=None):
         """Display a map with points on it.
 
-        This is a wrapper around st.deck_gl_chart to quickly create scatterplot
+        This is a wrapper around st.pydeck_chart to quickly create scatterplot
         charts on top of a map, with auto-centering and auto-zoom.
 
         When using this method, we advise all users to use a personal Mapbox
@@ -2452,10 +2453,9 @@ class DeltaGenerator(object):
            height: 600px
 
         """
+        import streamlit.elements.map as streamlit_map
 
-        import streamlit.elements.map as map
-
-        map.marshall(element, data, zoom)
+        element.deck_gl_json_chart.json = streamlit_map.to_deckgl_json(data, zoom)
 
     @_with_element
     def deck_gl_chart(self, element, spec=None, **kwargs):
@@ -2529,28 +2529,6 @@ class DeltaGenerator(object):
 
         Example
         -------
-        For convenience, if you pass in a dataframe and no spec, you get a
-        scatter plot:
-
-        >>> df = pd.DataFrame(
-        ...    np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
-        ...    columns=['lat', 'lon'])
-        ...
-        >>> st.deck_gl_chart(layers = [{
-                'data': df,
-                'type': 'ScatterplotLayer'
-            }])
-
-        .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=AhGZBy2qjzmWwPxMatHoB9
-           height: 530px
-
-        The dataframe must have columns called 'lat'/'latitude' or
-        'lon'/'longitude'.
-
-        If you want to do something more interesting, pass in a spec with its
-        own data, and no top-level dataframe. For instance:
-
         >>> st.deck_gl_chart(
         ...     viewport={
         ...         'latitude': 37.76,
@@ -2577,9 +2555,86 @@ class DeltaGenerator(object):
            height: 530px
 
         """
+        suppress_deprecation_warning = config.get_option(
+            "global.suppressDeprecationWarnings"
+        )
+        if not suppress_deprecation_warning:
+            import streamlit as st
+
+            st.warning("""
+                The `deck_gl_chart` widget is deprecated and will be removed on
+
+                2020-03-04. To render a map, you should use `st.pyDeckChart` widget.
+            """)
+
         import streamlit.elements.deck_gl as deck_gl
 
         deck_gl.marshall(element.deck_gl_chart, spec, **kwargs)
+
+    @_with_element
+    def pydeck_chart(self, element, pydeck_obj=None):
+        """Draw a map chart using the PyDeck library.
+
+        This API convert a pyDeck object
+        (https://deckgl.readthedocs.io/en/latest/) to JSON to render a map
+
+        using Deck.GL' JSON converter JavaScript API
+        (https://github.com/uber/deck.gl/tree/master/modules/json)
+
+        Parameters
+        ----------
+        spec: pydeck.Deck or None
+            Object specifying the PyDeck chart to draw.
+
+        Example
+        -------
+        Here's a chart using a HexagonLayer and a ScatterplotLayer on top of
+        the light map style:
+
+        >>> df = pd.DataFrame(
+        ...    np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
+        ...    columns=['lat', 'lon'])
+        
+        >>> st.pydeck_chart(pdk.Deck(
+        ...     map_style='mapbox://styles/mapbox/light-v9',
+        ...     initial_view_state=pdk.ViewState(
+        ...         latitude=37.76,
+        ...         longitude=-122.4,
+        ...         zoom=11,
+        ...         pitch=50,
+        ...     ),
+        ...     layers=[
+        ...         pdk.Layer(
+        ...            'HexagonLayer',
+        ...            data=df,
+        ...            get_position='[lon, lat]',
+        ...            radius=200,
+        ...            elevation_scale=4,
+        ...            elevation_range=[0, 1000],
+        ...            pickable=True,
+        ...            extruded=True,
+        ...         ),
+        ...         pdk.Layer(
+        ...             'ScatterplotLayer',
+        ...             data=df,
+        ...             get_position='[lon, lat]',
+        ...             get_color='[200, 30, 0, 160]',
+        ...             get_radius=200,
+        ...         ),
+        ...     ],
+        ... ))
+
+        .. output::
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=ASTdExBpJ1WxbGceneKN1i
+           height: 530px
+
+        """
+        if pydeck_obj is None:
+            import streamlit.elements.map as streamlit_map
+
+            element.deck_gl_json_chart.json = json.dumps(streamlit_map.DEFAULT_MAP)
+        else:
+            element.deck_gl_json_chart.json = pydeck_obj.to_json()
 
     @_with_element
     def table(self, element, data=None):
