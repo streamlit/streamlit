@@ -20,5 +20,5 @@ message GraphVizChart {
   // A specification of the GraphViz graph in the "Dot" language.
   string spec = 1;
 
-  // Deprecated: 2, 3
+  reserved 2, 3;
 }

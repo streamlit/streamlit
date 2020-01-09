@@ -29,7 +29,7 @@ message NumberInput {
   bool has_min = 11;
   bool has_max = 12;
 
-  // deprecated: 3, 4, 5, 6, 7
+  reserved 3, 4, 5, 6, 7;
 }
 
 message IntNumberInput {
