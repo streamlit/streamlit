@@ -31,7 +31,7 @@ from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 
-def marshall(proto, data=None, spec=None, width=0, **kwargs):
+def marshall(proto, data=None, spec=None, use_container_width=False, **kwargs):
     """Construct a Vega-Lite chart object.
 
     See DeltaGenerator.vega_lite_chart for docs.
@@ -63,12 +63,8 @@ def marshall(proto, data=None, spec=None, width=0, **kwargs):
     if len(spec) == 0:
         raise ValueError("Vega-Lite charts require a non-empty spec dict.")
 
-    # TODO: Improve autosizing code. It doesn't work with some kinds of charts,
-    # like composed charts, for example.
-    if width >= 0 and "width" not in spec:
-        spec["width"] = width
-        if "autosize" not in spec:
-            spec["autosize"] = {"type": "fit", "contains": "padding"}
+    if "autosize" not in spec:
+        spec["autosize"] = {"type": "fit", "contains": "padding"}
 
     # Pull data out of spec dict when it's in a 'dataset' key:
     #   marshall(proto, {datasets: {foo: df1, bar: df2}, ...})
@@ -99,6 +95,7 @@ def marshall(proto, data=None, spec=None, width=0, **kwargs):
             del spec["data"]
 
     proto.spec = json.dumps(spec)
+    proto.use_container_width = use_container_width
 
     if data is not None:
         data_frame_proto.marshall_data_frame(data, proto.data)
