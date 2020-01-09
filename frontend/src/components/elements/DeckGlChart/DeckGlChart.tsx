@@ -104,12 +104,8 @@ class DeckGlChart extends React.PureComponent<PropsWithHeight, State> {
 
   private initMapboxToken(): void {
     MapboxToken.get()
-      .then(token => {
-        this.setState({ mapboxToken: token })
-      })
-      .catch(error => {
-        this.setState({ mapboxTokenError: error })
-      })
+      .then(token => this.setState({ mapboxToken: token }))
+      .catch(error => this.setState({ mapboxTokenError: error }))
   }
 
   private fixHexLayerBug(): void {
