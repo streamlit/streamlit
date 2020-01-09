@@ -17,6 +17,8 @@
 
 from tests import testutil
 import streamlit as st
+from streamlit.errors import StreamlitAPIException
+
 from parameterized import parameterized
 import pytest
 
@@ -89,9 +91,39 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual("%0.2f" % c.float_data.step, "0.01")
 
     def test_value_outrange(self):
-        with pytest.raises(ValueError) as exc_message:
+        with pytest.raises(StreamlitAPIException) as exc_message:
             st.number_input("the label", 11, 0, 10)
         assert (
             "The default `value` of 10 must lie between the `min_value` of "
             "11 and the `max_value` of 0, inclusively." == str(exc_message.value)
         )
+
+    def test_accept_valid_formats(self):
+        # note: We decided to accept %u even though it is slightly problematic.
+        #       See https://github.com/streamlit/streamlit/pull/943
+        SUPPORTED = "difFeEgGu"
+        for char in SUPPORTED:
+            st.number_input("any label", format="%" + char)
+            c = self.get_delta_from_queue().new_element.number_input
+            self.assertEqual(c.format, "%" + char)
+
+    def test_error_on_unsupported_formatters(self):
+        # note: The slightly-problematic %a, %X, %x, and %o have different effects in
+        #       Python3 and Python2, so we're not testing for/against them until
+        #       we finally sunset Python2.
+        # See https://github.com/streamlit/streamlit/pull/943#issuecomment-572268370
+        UNSUPPORTED = "pAn"
+        for char in UNSUPPORTED:
+            with pytest.raises(StreamlitAPIException) as exc_message:
+                st.number_input("any label", value=3.14, format="%" + char)
+
+    def test_error_on_invalid_formats(self):
+        BAD_FORMATS = [
+            "blah",
+            "a%f",
+            "a%.3f",
+            "%d%d",
+        ]
+        for fmt in BAD_FORMATS:
+            with pytest.raises(StreamlitAPIException) as exc_message:
+                st.number_input("any label", value=3.14, format=fmt)

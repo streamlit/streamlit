@@ -148,13 +148,15 @@ clean: clean-docs
 	find . -name '*.pyc' -type f -delete || true
 	find . -name __pycache__ -type d -delete || true
 	find . -name .pytest_cache -exec rm -rfv {} \; || true
-	cd frontend; rm -rf build node_modules
 	rm -f lib/streamlit/proto/*_pb2.py
+	rm -rf lib/streamlit/static
+	rm -f lib/Pipfile.lock
+	rm -rf frontend/build
+	rm -rf frontend/node_modules
 	rm -f frontend/src/autogen/proto.js
 	rm -f frontend/src/autogen/proto.d.ts
 	rm -f frontend/src/autogen/scssVariables.ts
-	rm -rf lib/streamlit/static
-	rm -f lib/Pipfile.lock
+	rm -rf frontend/public/reports
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true
 	cd lib; rm -rf .coverage .coverage\.*
 

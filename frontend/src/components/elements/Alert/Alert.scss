@@ -12,36 +12,15 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
-syntax = "proto3";
+@import "src/assets/css/variables";
 
-message NumberInput {
-  string id = 1;
-  string label = 2;
-
-  oneof data {
-    IntNumberInput int_data = 9;
-    FloatNumberInput float_data = 10;
+.stAlert {
+  &.alert {
+    // Needed to get precedence.
+    margin: 0;
   }
 
-  string format = 8;
-  bool has_min = 11;
-  bool has_max = 12;
-
-  reserved 3, 4, 5, 6, 7;
-}
-
-message IntNumberInput {
-  sint64 default = 1;
-  int64 step = 2;
-  sint64 min = 3;
-  sint64 max = 4;
-}
-
-message FloatNumberInput {
-  double default = 1;
-  double step = 2;
-  double min = 3;
-  double max = 4;
+  // See write.scss for more.
 }
