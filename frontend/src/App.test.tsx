@@ -32,6 +32,7 @@ const getWrapper = (): CommonWrapper => {
     toggleRecordAudio: () => {},
     startRecording: () => {},
     stopRecording: () => {},
+    fileName: "",
     recording: false,
     recordAudio: false,
     countdown: -1,
