@@ -31,19 +31,19 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.slider
         self.assertEqual(c.label, "the label")
-        self.assertEqual(c.int_data.default, [0])
+        self.assertEqual(c.default, [0])
 
     @parameterized.expand(
         [
-            (1, [1], 1, int),  # int
-            (0.5, [0.5], 0.5, float),  # float
-            ((0, 1), [0, 1], (0, 1), int),  # int tuple
-            ([0, 1], [0, 1], (0, 1), int),  # int list
-            ((0.2, 0.5), [0.2, 0.5], (0.2, 0.5), float),  # float tuple
-            ([0.2, 0.5], [0.2, 0.5], (0.2, 0.5), float),  # float list
+            (1, [1], 1),  # int
+            ((0, 1), [0, 1], (0, 1)),  # int tuple
+            ([0, 1], [0, 1], (0, 1)),  # int list
+            (0.5, [0.5], 0.5),  # float
+            ((0.2, 0.5), [0.2, 0.5], (0.2, 0.5)),  # float tuple
+            ([0.2, 0.5], [0.2, 0.5], (0.2, 0.5)),  # float list
         ]
     )
-    def test_value_types(self, value, proto_value, return_value, data_type):
+    def test_value_types(self, value, proto_value, return_value):
         """Test that it supports different types of values."""
         ret = st.slider("the label", value=value)
 
@@ -51,10 +51,7 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.slider
         self.assertEqual(c.label, "the label")
-        if data_type == int:
-            self.assertEqual(c.int_data.default, proto_value)
-        else:
-            self.assertEqual(c.float_data.default, proto_value)
+        self.assertEqual(c.default, proto_value)
 
     def test_value_greater_than_min(self):
         with pytest.raises(StreamlitAPIException) as exc_slider:

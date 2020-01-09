@@ -47,12 +47,7 @@ class Slider extends React.PureComponent<Props, State> {
   public constructor(props: Props) {
     super(props)
     this.setWidgetValue = debounce(200, this.setWidgetValueRaw.bind(this))
-    this.state = {
-      value: this.getData()
-        .get("default")
-        .toJS(),
-    }
-    console.log(this.state)
+    this.state = { value: this.props.element.get("default").toJS() }
   }
 
   public componentDidMount = (): void => {
@@ -76,36 +71,9 @@ class Slider extends React.PureComponent<Props, State> {
     }
   }
 
-  /**
-   * Return the default/min/max/step configuration data for the Slider.
-   * These will either be all ints or all floats, depending on how the
-   * Slider widget was created in Python.
-   */
-  private getData = (): ImmutableMap<string, any> => {
-    return (
-      this.props.element.get("intData") || this.props.element.get("floatData")
-    )
-  }
-
-  /**
-   * True if the Slider operates on int data; false if it operates on
-   * floats.
-   */
-  private isIntData = (): boolean => {
-    return !!this.props.element.get("intData")
-  }
-
   private setWidgetValueRaw = (source: Source): void => {
     const widgetId: string = this.props.element.get("id")
-    if (this.isIntData()) {
-      this.props.widgetMgr.setIntArrayValue(widgetId, this.state.value, source)
-    } else {
-      this.props.widgetMgr.setFloatArrayValue(
-        widgetId,
-        this.state.value,
-        source
-      )
-    }
+    this.props.widgetMgr.setFloatArrayValue(widgetId, this.state.value, source)
   }
 
   private handleChange = ({ value }: { value: number[] }): void => {
@@ -123,9 +91,8 @@ class Slider extends React.PureComponent<Props, State> {
    * values (for a range slider).
    */
   private get value(): number[] {
-    const data = this.getData()
-    const min = data.get("min")
-    const max = data.get("max")
+    const min = this.props.element.get("min")
+    const max = this.props.element.get("max")
     const value = this.state.value
     let start = value[0]
     let end = value.length > 1 ? value[1] : value[0]
@@ -166,9 +133,8 @@ class Slider extends React.PureComponent<Props, State> {
 
   private renderTickBar = (): JSX.Element => {
     const format = this.props.element.get("format")
-    const data = this.getData()
-    const max = data.get("max")
-    const min = data.get("min")
+    const max = this.props.element.get("max")
+    const min = this.props.element.get("min")
     const tickBarItemStyle = sliderOverrides.TickBarItem
       .style as React.CSSProperties
 
@@ -183,11 +149,9 @@ class Slider extends React.PureComponent<Props, State> {
   public render = (): React.ReactNode => {
     const style = { width: this.props.width }
     const label = this.props.element.get("label")
-
-    const data = this.getData()
-    const min = data.get("min")
-    const max = data.get("max")
-    const step = data.get("step")
+    const min = this.props.element.get("min")
+    const max = this.props.element.get("max")
+    const step = this.props.element.get("step")
 
     return (
       <div ref={this.sliderRef} className="Widget stSlider" style={style}>
