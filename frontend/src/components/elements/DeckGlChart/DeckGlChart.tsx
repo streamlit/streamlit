@@ -15,6 +15,10 @@
  * limitations under the License.
  */
 
+import Alert from "components/elements/Alert"
+import { MapboxToken } from "components/elements/DeckGlChart/MapboxToken"
+import ErrorElement from "components/shared/ErrorElement"
+import { makeElementWithInfoText } from "lib/utils"
 import React from "react"
 import DeckGL, {
   ArcLayer,
@@ -29,7 +33,6 @@ import DeckGL, {
 } from "deck.gl"
 import Immutable from "immutable"
 import { StaticMap } from "react-map-gl"
-import { SessionInfo } from "lib/SessionInfo"
 import { dataFrameToArrayOfDicts } from "lib/dataFrameProto"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import "mapbox-gl/dist/mapbox-gl.css"
@@ -46,6 +49,8 @@ interface PropsWithHeight extends Props {
 
 interface State {
   initialized: boolean
+  mapboxToken?: string
+  mapboxTokenError?: Error
 }
 
 class DeckGlChart extends React.PureComponent<PropsWithHeight, State> {
@@ -53,7 +58,7 @@ class DeckGlChart extends React.PureComponent<PropsWithHeight, State> {
     height: 500,
   }
 
-  private initialViewState: {
+  private readonly initialViewState: {
     width: number
     height: number
     longitude: number
@@ -63,10 +68,10 @@ class DeckGlChart extends React.PureComponent<PropsWithHeight, State> {
     zoom: number
   }
 
-  private mapStyle: string
-  private fixHexLayerBug_bound: () => void
+  private readonly mapStyle: string
+  private readonly fixHexLayerBug_bound: () => void
 
-  constructor(props: PropsWithHeight) {
+  public constructor(props: PropsWithHeight) {
     super(props)
 
     const specStr = this.props.element.get("spec")
@@ -92,13 +97,47 @@ class DeckGlChart extends React.PureComponent<PropsWithHeight, State> {
     // where HexagonLayers were not drawing on first load but did load when the
     // script got re-executed.
     setTimeout(this.fixHexLayerBug_bound, 0)
+
+    // Fetch the app's mapbox token.
+    this.initMapboxToken()
   }
 
-  fixHexLayerBug(): void {
+  private initMapboxToken(): void {
+    MapboxToken.get()
+      .then(token => {
+        this.setState({ mapboxToken: token })
+      })
+      .catch(error => {
+        this.setState({ mapboxTokenError: error })
+      })
+  }
+
+  private fixHexLayerBug(): void {
     this.setState({ initialized: true })
   }
 
-  render(): JSX.Element {
+  public render(): JSX.Element {
+    // If we got an error when fetching our mapbox token, show the error.
+    if (this.state.mapboxTokenError != null) {
+      return (
+        <ErrorElement
+          width={this.props.width}
+          name="Error fetching Mapbox token"
+          message={this.state.mapboxTokenError.message}
+        />
+      )
+    }
+
+    // If our mapboxToken hasn't been retrieved yet, show a loading alert.
+    if (this.state.mapboxToken === undefined) {
+      return (
+        <Alert
+          element={makeElementWithInfoText("Loading...").get("alert")}
+          width={this.props.width}
+        />
+      )
+    }
+
     return (
       <div
         className="deckglchart stDeckGlChart"
@@ -118,14 +157,14 @@ class DeckGlChart extends React.PureComponent<PropsWithHeight, State> {
             height={this.initialViewState.height}
             width={this.initialViewState.width}
             mapStyle={this.mapStyle}
-            mapboxApiAccessToken={SessionInfo.current.userMapboxToken}
+            mapboxApiAccessToken={this.state.mapboxToken}
           />
         </DeckGL>
       </div>
     )
   }
 
-  buildLayers(): any {
+  private buildLayers(): any {
     const layers = this.props.element.get("layers")
     return layers.map((layer: any) => buildLayer(layer)).toArray()
   }

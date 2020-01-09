@@ -20,7 +20,7 @@ import { SessionInfo } from "lib/SessionInfo"
 /**
  * A remote file that stores user-visible tokens.
  */
-export const TOKENS_URL = "https://streamlit.io/tokens.json"
+export const TOKENS_URL = "https://data.streamlit.io/tokens.json"
 
 export class MapboxToken {
   private static token?: string
@@ -49,15 +49,24 @@ export class MapboxToken {
     url: string,
     tokenName: string
   ): Promise<string> {
-    const rsp = await fetch(url)
+    let rsp: Response
+    try {
+      rsp = await fetch(url)
+    } catch (e) {
+      // Fetch error messages are abysmal, and give virtually no useful
+      // context. Catch errors and append the offending URL to their messages
+      // to make them a bit more useful.
+      throw new Error(`${e.message} (${url})`)
+    }
+
     if (!rsp.ok) {
-      throw new Error(`${url}: Bad status ${rsp.status}`)
+      throw new Error(`Bad status: ${rsp.status} (${url})`)
     }
 
     const json = await rsp.json()
     const token = json[tokenName]
     if (token == null || token === "") {
-      throw new Error(`${url}: Missing token "${tokenName}"`)
+      throw new Error(`Missing token "${tokenName}" (${url})`)
     }
 
     return token

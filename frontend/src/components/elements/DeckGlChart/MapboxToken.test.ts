@@ -22,7 +22,7 @@ import {
 import { SessionInfo } from "lib/SessionInfo"
 import fetchMock from "fetch-mock"
 
-function setSessionInfo(userMapboxToken: string): void {
+function setSessionInfoWithMapboxToken(userMapboxToken: string): void {
   SessionInfo.current = new SessionInfo({
     streamlitVersion: "sv",
     pythonVersion: "pv",
@@ -36,7 +36,7 @@ function setSessionInfo(userMapboxToken: string): void {
 
 describe("MapboxToken", () => {
   beforeEach(() => {
-    setSessionInfo("")
+    setSessionInfoWithMapboxToken("")
   })
 
   afterEach(() => {
@@ -53,7 +53,7 @@ describe("MapboxToken", () => {
   test("Returns userMapboxToken if non-empty", async () => {
     const userToken = "nonEmptyToken"
 
-    setSessionInfo(userToken)
+    setSessionInfoWithMapboxToken(userToken)
     await expect(MapboxToken.get()).resolves.toEqual(userToken)
 
     // The token should also be cached.
@@ -74,7 +74,7 @@ describe("MapboxToken", () => {
     fetchMock.get(TOKENS_URL, { ohNo: "noTokenHere" })
 
     await expect(MapboxToken.get()).rejects.toEqual(
-      new Error(`${TOKENS_URL}: Missing token "mapbox"`)
+      new Error(`Missing token "mapbox" (${TOKENS_URL})`)
     )
 
     // No cached token after failure.
@@ -83,7 +83,7 @@ describe("MapboxToken", () => {
     fetchMock.restore()
     fetchMock.get(TOKENS_URL, 404)
     await expect(MapboxToken.get()).rejects.toEqual(
-      new Error(`${TOKENS_URL}: Bad status 404`)
+      new Error(`Bad status: 404 (${TOKENS_URL})`)
     )
 
     // No cached token after failure.
