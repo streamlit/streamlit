@@ -20,6 +20,5 @@ message GraphVizChart {
   // A specification of the GraphViz graph in the "Dot" language.
   string spec = 1;
 
-  int32 width = 2;
-  int32 height = 3;
+  reserved 2, 3;
 }
