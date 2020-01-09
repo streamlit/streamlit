@@ -2536,7 +2536,7 @@ class DeltaGenerator(object):
 
         """
         suppress_deprecation_warning = config.get_option(
-            "global.suppressDeprecationWarning"
+            "global.suppressDeprecationWarnings"
         )
         if not suppress_deprecation_warning:
             import streamlit as st
@@ -2560,7 +2560,6 @@ class DeltaGenerator(object):
 
         using Deck.GL' JSON converter JavaScript API
         (https://github.com/uber/deck.gl/tree/master/modules/json)
-
 
         Parameters
         ----------
@@ -2610,8 +2609,7 @@ class DeltaGenerator(object):
            height: 530px
 
         """
-
-        if pydeck_obj == None:
+        if pydeck_obj is None:
             import streamlit.elements.map as streamlit_map
 
             element.deck_gl_json_chart.json = json.dumps(streamlit_map.DEFAULT_MAP)

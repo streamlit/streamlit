@@ -282,7 +282,7 @@ class ConfigTest(unittest.TestCase):
                 u"global.metrics",
                 u"global.sharingMode",
                 u"global.showWarningOnDirectExecution",
-                u"global.suppressDeprecationWarning",
+                u"global.suppressDeprecationWarnings",
                 u"global.unitTest",
                 u"global.useNode",
                 u"runner.magicEnabled",
