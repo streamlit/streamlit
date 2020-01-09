@@ -45,17 +45,17 @@ class BokehChart extends React.PureComponent<PropsWithHeight> {
 
   public getChartDimensions = (plot: any): Dimensions => {
     const useContainerWidth = this.props.element.get("useContainerWidth")
-    let width = plot.attributes.width | plot.attributes.plot_width
-    let height = plot.attributes.height | plot.attributes.plot_height
+    // Default values
+    let width = plot.attributes.plot_width
+    let height = plot.attributes.plot_height
 
+    // if is not fullscreen and useContainerWidth==false, we should use default values
     if (this.props.height) {
       //fullscreen
       width = this.props.width
       height = this.props.height
-    } else {
-      if (useContainerWidth) {
-        width = this.props.width
-      }
+    } else if (useContainerWidth) {
+      width = this.props.width
     }
 
     return { width, height }
