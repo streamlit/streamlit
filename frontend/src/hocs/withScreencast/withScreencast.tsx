@@ -155,12 +155,16 @@ function withScreencast(
         }, 1000)
       }
 
-      if (countdown - 1 === 0) {
-        if (this.recorder) await this.recorder.start()
+      if (countdown - 1 === 0 && this.recorder) {
+        const hasStarted = this.recorder.start()
 
-        this.setState({
-          recording: true,
-        })
+        if (hasStarted) {
+          this.setState({
+            recording: this.recorder.start(),
+          })
+        } else {
+          this.stopRecording()
+        }
       }
     }
 

@@ -71,8 +71,14 @@ class ScreenCastRecorder {
     return "inactive"
   }
 
-  start(): void {
-    this.mediaRecorder && this.mediaRecorder.start()
+  start(): boolean {
+    try {
+      this.mediaRecorder && this.mediaRecorder.start()
+    } catch (e) {
+      return false
+    }
+
+    return true
   }
 
   stop(): Promise<any> | undefined {
