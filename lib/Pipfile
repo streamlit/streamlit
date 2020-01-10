@@ -60,6 +60,7 @@ tornado = ">=5.0,<6.0"
 tzlocal = "*"
 validators = "*"
 watchdog = "*"
+pydeck = "==0.1.dev5"
 
 # Only Python 3.x packages
 [python3]
