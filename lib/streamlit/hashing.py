@@ -18,8 +18,7 @@
 # Python 2/3 compatibility
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from collections import namedtuple
-from collections import OrderedDict
+import collections
 import dis
 import functools
 import hashlib
@@ -62,49 +61,32 @@ NP_SIZE_LARGE = 1000000
 NP_SAMPLE_SIZE = 100000
 
 
-Context = namedtuple("Context", ["globals", "cells", "varnames"])
+Context = collections.namedtuple("Context", ["globals", "cells", "varnames"])
 
 
-class MultithreadStackTracker:
+class HashStacks(object):
+    """Stack of what has been hashed, for circular reference detection.
 
-    CONST_UUID = "hesamagicalponyflyingthroughthesky"
+    This internally keeps 1 stack per thread.
+    """
 
     def __init__(self):
-        self.stack = {}
+        self.stacks = collections.defaultdict(list)
 
-    def create(self, thread_id):
-        """Creates stack for this thread. If already created, clears existing."""
-        #print("STACK: created for thread ID ", thread_id)
-        self.stack[thread_id] = OrderedDict()
+    def push(self, val):
+        thread_id = threading.current_thread().ident
+        self.stacks[thread_id].append(val)
 
-    def add(self, thread_id, key, val):
-        if key is None:
-            return
-        if thread_id not in self.stack:
-            self.create(thread_id)
+    def pop(self):
+        thread_id = threading.current_thread().ident
+        self.stacks[thread_id].pop()
 
-        if self.stack[thread_id].get(key):
-            #print("STACK: Duplicate found: ", key)
-            self.stack[thread_id][self.CONST_UUID] = val
-        else:
-            #print("STACK: Adding", key)
-            self.stack[thread_id][key] = val
+    def __contains__(self, val):
+        thread_id = threading.current_thread().ident
+        return val in self.stacks[thread_id]
 
-    def rem(self, thread_id, key):
-        if key == b'none:' or key is None:
-            return
-        if self.stack[thread_id].get(key):
-            print("STACK: Dropping", key)
-            self.stack[thread_id].pop(key)
-            return
-        raise Exception("Tried to remove but could not find key {}".format(key))
 
-    #def destroy(self, thread_id):
-    #    if thread_id in self.stack:
-    #        print("STACK: destroyed for thread ID", thread_id)
-    #        self.stack.pop(thread_id)
-
-stack_tracker = MultithreadStackTracker()
+hash_stacks = HashStacks()
 
 
 def _is_magicmock(obj):
@@ -153,7 +135,6 @@ def _key(obj, context):
     """Return key for memoization."""
 
     if obj is None:
-        #TODO: replace with consts defined at the top.
         return b"none:"  # special value so we can hash None
 
     def is_simple(obj):
@@ -274,18 +255,18 @@ class CodeHasher:
             self._counter += 1
             self.hashes[key] = _int_to_bytes(self._counter)
 
-        b = self._to_bytes(obj, context)
+        if obj in hash_stacks:
+            return b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky"
+        hash_stacks.push(obj)
 
-        # add object to stack trace -- use id instead?
-        stack_tracker.add(threading.current_thread().ident, id(obj), obj)
+        b = self._to_bytes(obj, context)
 
         self.size += sys.getsizeof(b)
 
         if key is not None:
             self.hashes[key] = b
 
-        # remove object from stack trace
-        stack_tracker.rem(threading.current_thread().ident, id(obj))
+        hash_stacks.pop()
         return b
 
     def _update(self, hasher, obj, context=None):
