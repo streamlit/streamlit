@@ -134,42 +134,40 @@ class MainMenu extends PureComponent<Props, State> {
 
           <DropdownItem divider />
 
+          {!this.props.screencastRecording && (
+            <DropdownItem
+              disabled={isServerDisconnected}
+              onClick={this.props.screencastCallback}
+            >
+              Record a screencast
+            </DropdownItem>
+          )}
+
+          {this.props.screencastRecording && (
+            <DropdownItem
+              disabled={isServerDisconnected}
+              onClick={this.props.screencastCallback}
+              className="stop-recording"
+            >
+              <span>
+                <strong>Stop recording</strong>
+              </span>
+
+              <span className="shortcut">ESC</span>
+            </DropdownItem>
+          )}
+
           {/* We hide 'Share Report' + divider if sharing is not configured */}
           {this.props.sharingEnabled && (
-            <>
-              {!this.props.screencastRecording && (
-                <DropdownItem
-                  disabled={isServerDisconnected}
-                  onClick={this.props.screencastCallback}
-                >
-                  Record a screencast
-                </DropdownItem>
-              )}
-
-              {this.props.screencastRecording && (
-                <DropdownItem
-                  disabled={isServerDisconnected}
-                  onClick={this.props.screencastCallback}
-                  className="stop-recording"
-                >
-                  <span>
-                    <strong>Stop recording</strong>
-                  </span>
-
-                  <span className="shortcut">ESC</span>
-                </DropdownItem>
-              )}
-
-              <DropdownItem
-                disabled={isServerDisconnected}
-                onClick={this.props.shareCallback}
-              >
-                Save a snapshot
-              </DropdownItem>
-
-              <DropdownItem divider />
-            </>
+            <DropdownItem
+              disabled={isServerDisconnected}
+              onClick={this.props.shareCallback}
+            >
+              Save a snapshot
+            </DropdownItem>
           )}
+
+          <DropdownItem divider />
 
           <DropdownItem onClick={this.openDocument(TEAMS_URL)}>
             Streamlit for teams

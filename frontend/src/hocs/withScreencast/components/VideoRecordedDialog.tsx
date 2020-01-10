@@ -16,7 +16,14 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
-import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap"
+import {
+  Button,
+  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  Alert,
+} from "reactstrap"
 
 export interface Props {
   /** Callback to close the dialog */
@@ -49,6 +56,12 @@ class VideoRecordedDialog extends PureComponent<Props> {
         <ModalHeader toggle={onClose}>Screencast recorded</ModalHeader>
         <ModalBody>
           <video style={{ width: "100%" }} src={videoSource} controls />
+          <Alert color="warning">
+            The video will be generated with a{" "}
+            <a href="https://www.webmproject.org/">WebM format</a>, if your
+            player does not support this type of file you could use your
+            browser to play it
+          </Alert>
         </ModalBody>
         <ModalFooter>
           <Button
