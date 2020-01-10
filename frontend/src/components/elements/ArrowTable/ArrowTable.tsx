@@ -22,12 +22,12 @@ import { toFormattedString } from "lib/format"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import TheArrowTable from "./TheArrowTable"
 
-interface Props {
+export interface Props {
   element: ImmutableMap<string, any>
   width: number
 }
 
-class ArrowTable extends PureComponent<Props> {
+export class ArrowTable extends PureComponent<Props> {
   public render = (): ReactNode => {
     const uuid: string = this.props.element.get("uuid")
     const headerColumns: Uint8Array = this.props.element.get("headerColumns")
@@ -86,7 +86,7 @@ class ArrowTable extends PureComponent<Props> {
  * columns    - Number of colums in the table.
  */
 
-interface TableRowsProps {
+export interface TableRowsProps {
   table: TheArrowTable
   header: boolean
   headerRows: number
@@ -119,7 +119,7 @@ const TableRows: SFC<TableRowsProps> = props => {
  * columns  - Number of colums in the table.
  */
 
-interface TableRowProps {
+export interface TableRowProps {
   table: TheArrowTable
   rowIndex: number
   columns: number

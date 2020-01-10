@@ -11,22 +11,6 @@
     orbit-camera-controller "^4.0.0"
     turntable-camera-controller "^3.0.0"
 
-"@apache-arrow/esnext-esm@^0.15.1":
-  version "0.15.1"
-  resolved "https://registry.yarnpkg.com/@apache-arrow/esnext-esm/-/esnext-esm-0.15.1.tgz#79ad30c7b11db3b6f57035122258b8320cf1c127"
-  integrity sha512-QIcgUBrOFFnXttlXdE5AFFU5E2LMihIXwkuFaGjUPK4vzR6KS6AOzhmJvaCSxBwCIhNVP8indgZ5EO8k7k+3CQ==
-  dependencies:
-    "@types/flatbuffers" "^1.9.1"
-    "@types/node" "^12.0.4"
-    "@types/text-encoding-utf-8" "^1.0.1"
-    command-line-args "5.0.2"
-    command-line-usage "5.0.5"
-    flatbuffers "1.11.0"
-    json-bignum "^0.0.3"
-    pad-left "^2.1.0"
-    text-encoding-utf-8 "^1.0.2"
-    tslib "^1.9.3"
-
 "@babel/code-frame@7.5.5", "@babel/code-frame@^7.0.0", "@babel/code-frame@^7.5.5":
   version "7.5.5"
   resolved "https://registry.yarnpkg.com/@babel/code-frame/-/code-frame-7.5.5.tgz#bc0782f6d69f7b7d49531219699b988f669a8f9d"
@@ -2849,6 +2833,22 @@ anymatch@^2.0.0:
     micromatch "^3.1.4"
     normalize-path "^2.1.1"
 
+apache-arrow@^0.15.1:
+  version "0.15.1"
+  resolved "https://registry.yarnpkg.com/apache-arrow/-/apache-arrow-0.15.1.tgz#136c03e18c3fa2617b41999608e7e685b0966147"
+  integrity sha512-3H+sC789nWn8JDnMwfd2j19NJ4gMcdtbpp2Haa22wBoDGUbbA5FgD2OqfE9Mr4yPlJZFWVJDw7C1hgJo2UolxA==
+  dependencies:
+    "@types/flatbuffers" "^1.9.1"
+    "@types/node" "^12.0.4"
+    "@types/text-encoding-utf-8" "^1.0.1"
+    command-line-args "5.0.2"
+    command-line-usage "5.0.5"
+    flatbuffers "1.11.0"
+    json-bignum "^0.0.3"
+    pad-left "^2.1.0"
+    text-encoding-utf-8 "^1.0.2"
+    tslib "^1.9.3"
+
 app-path@^3.2.0:
   version "3.2.0"
   resolved "https://registry.yarnpkg.com/app-path/-/app-path-3.2.0.tgz#06d426e0c988885264e0aa0a766dfa2723491633"
@@ -3547,7 +3547,7 @@ body-parser@1.19.0:
     raw-body "2.4.0"
     type-is "~1.6.17"
 
-bokehjs@^1.2.0:
+bokehjs@^1.4.0:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/bokehjs/-/bokehjs-1.4.0.tgz#b781b49824110210a068c44ecc0bba43e7ee6134"
   integrity sha512-ex3gR9Xm6hgPomAGry2jPAWmPE83tAjDrcPZGJETOR/F2r6KzwX0GLbfuyAtcv8zJoZQ8eCFa+Iyz3ppJgq/kQ==
@@ -3976,9 +3976,9 @@ canvas-fit@^1.5.0:
   dependencies:
     element-size "^1.1.1"
 
-"canvas2svg@https://github.com/bokeh/canvas2svg#v1.0.21":
+"canvas2svg@git+https://github.com/bokeh/canvas2svg.git#v1.0.21":
   version "1.0.21"
-  resolved "https://github.com/bokeh/canvas2svg#6c526739ab8b07fa335f51d5a78e15e021c2fe1b"
+  resolved "git+https://github.com/bokeh/canvas2svg.git#6c526739ab8b07fa335f51d5a78e15e021c2fe1b"
 
 capture-exit@^2.0.0:
   version "2.0.0"
@@ -8154,9 +8154,9 @@ globule@^1.0.0:
     lodash "~4.17.10"
     minimatch "~3.0.2"
 
-"gloo2@https://github.com/bokeh/gloo2.git#b41bd5d":
+"gloo2@git+https://github.com/bokeh/gloo2.git#b41bd5d":
   version "0.0.1"
-  resolved "https://github.com/bokeh/gloo2.git#b41bd5daa5eeaac83850cd2586ad7ae05929f027"
+  resolved "git+https://github.com/bokeh/gloo2.git#b41bd5daa5eeaac83850cd2586ad7ae05929f027"
 
 glsl-inject-defines@^1.0.1:
   version "1.0.3"
@@ -11766,9 +11766,9 @@ numbro@^2.1.2:
   dependencies:
     bignumber.js "^8.0.1"
 
-"numbro@https://github.com/bokeh/numbro.git#e1b6c52":
+"numbro@git+https://github.com/bokeh/numbro.git#e1b6c52":
   version "1.6.2"
-  resolved "https://github.com/bokeh/numbro.git#e1b6c52a220d0a1e05dca1bee35dbd1b761fd260"
+  resolved "git+https://github.com/bokeh/numbro.git#e1b6c52a220d0a1e05dca1bee35dbd1b761fd260"
 
 numeric@^1.2.6:
   version "1.2.6"
@@ -12469,9 +12469,9 @@ pify@^4.0.1:
   resolved "https://registry.yarnpkg.com/pify/-/pify-4.0.1.tgz#4b2cd25c50d598735c50292224fd8c6df41e3231"
   integrity sha512-uB80kBFb/tfd68bVleG9T5GGsGPjJrLAUpR5PZIrhBnIaRTQRjqdJSsIKkOP6OAIFbj7GOrcudc5pNjZ+geV2g==
 
-"pikaday@https://github.com/bokeh/pikaday.git#6b7258e":
+"pikaday@git+https://github.com/bokeh/pikaday.git#6b7258e":
   version "1.8.0"
-  resolved "https://github.com/bokeh/pikaday.git#6b7258eaff518c52b615a5286939aeb298cf0fb0"
+  resolved "git+https://github.com/bokeh/pikaday.git#6b7258eaff518c52b615a5286939aeb298cf0fb0"
 
 pinkie-promise@^2.0.0:
   version "2.0.1"
@@ -15477,9 +15477,9 @@ slice-ansi@^2.1.0:
     astral-regex "^1.0.0"
     is-fullwidth-code-point "^2.0.0"
 
-"slickgrid@https://github.com/bokeh/SlickGrid.git#8e993bf":
+"slickgrid@git+https://github.com/bokeh/SlickGrid.git#8e993bf":
   version "2.3.23"
-  resolved "https://github.com/bokeh/SlickGrid.git#8e993bfe1e4c16c6115bbad2ee1b4476d2136675"
+  resolved "git+https://github.com/bokeh/SlickGrid.git#8e993bfe1e4c16c6115bbad2ee1b4476d2136675"
   dependencies:
     "@types/slickgrid" "^2.1.27"
     jquery ">=3.4.0"

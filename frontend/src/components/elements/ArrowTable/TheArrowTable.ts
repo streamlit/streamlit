@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import { Table } from "@apache-arrow/esnext-esm"
+import { Table } from "apache-arrow"
 
 type CellType = "blank" | "columnHeading" | "rowHeading" | "data"
 

@@ -27,11 +27,11 @@
     }
   },
   "dependencies": {
-    "@apache-arrow/esnext-esm": "^0.15.1",
+    "apache-arrow": "^0.15.1",
     "aws-sdk": "^2.524.0",
     "axios": "^0.19.0",
     "baseui": "^8.17.1",
-    "bokehjs": "^1.2.0",
+    "bokehjs": "^1.4.0",
     "bootstrap": "^4.3.1",
     "camelcase": "^5.2.0",
     "classnames": "^2.2.6",
