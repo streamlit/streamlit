@@ -135,17 +135,13 @@ class MainMenu extends PureComponent<Props, State> {
           <DropdownItem divider />
 
           {!this.props.screencastRecording && (
-            <DropdownItem
-              disabled={isServerDisconnected}
-              onClick={this.props.screencastCallback}
-            >
+            <DropdownItem onClick={this.props.screencastCallback}>
               Record a screencast
             </DropdownItem>
           )}
 
           {this.props.screencastRecording && (
             <DropdownItem
-              disabled={isServerDisconnected}
               onClick={this.props.screencastCallback}
               className="stop-recording"
             >
