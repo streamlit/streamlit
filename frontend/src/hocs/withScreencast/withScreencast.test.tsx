@@ -15,10 +15,13 @@
  * limitations under the License.
  */
 
+jest.mock("lib/ScreenCastRecorder")
+
 import React, { ComponentType } from "react"
 import { shallow } from "enzyme"
 
 import withScreencast from "./withScreencast"
+import { ScreencastDialog, UnsupportedBrowserDialog } from "./components"
 
 const testComponent: ComponentType = () => <div>test</div>
 
@@ -28,5 +31,45 @@ describe("withScreencast HOC", () => {
     const wrapper = shallow(<WithHoc />)
 
     expect(wrapper.html()).not.toBeNull()
+  })
+
+  it("wrapped component should have screenCast prop", () => {
+    const WithHoc = withScreencast(testComponent)
+    const wrapper = shallow(<WithHoc />)
+
+    // @ts-ignore
+    expect(wrapper.find(testComponent).props().screenCast).toBeDefined()
+  })
+
+  it("it should show a configuration dialog before start recording", () => {
+    const WithHoc = withScreencast(testComponent)
+    const wrapper = shallow(<WithHoc />)
+
+    // @ts-ignore
+    wrapper.instance().checkSupportedBrowser = () => true
+
+    // @ts-ignore
+    wrapper
+      .find(testComponent)
+      .props()
+      .screenCast.startRecording("screencast-filename")
+
+    expect(wrapper.find(ScreencastDialog).length).toBe(1)
+  })
+
+  it("it should show an unsupported dialog", () => {
+    const WithHoc = withScreencast(testComponent)
+    const wrapper = shallow(<WithHoc />)
+
+    // @ts-ignore
+    wrapper.instance().checkSupportedBrowser = () => false
+
+    // @ts-ignore
+    wrapper
+      .find(testComponent)
+      .props()
+      .screenCast.startRecording("screencast-filename")
+
+    expect(wrapper.find(UnsupportedBrowserDialog).length).toBe(1)
   })
 })

@@ -27,8 +27,6 @@
     }
   },
   "dependencies": {
-    "@types/dom-mediacapture-record": "^1.0.2",
-    "@types/hoist-non-react-statics": "^3.3.1",
     "aws-sdk": "^2.524.0",
     "axios": "^0.19.0",
     "baseui": "^8.17.1",
@@ -90,8 +88,10 @@
     "@types/clipboard": "^2.0.1",
     "@types/d3": "^5.7.2",
     "@types/d3-graphviz": "^2.6.2",
+    "@types/dom-mediacapture-record": "^1.0.2",
     "@types/enzyme": "^3.10.3",
     "@types/fetch-mock": "^7.3.1",
+    "@types/hoist-non-react-statics": "^3.3.1",
     "@types/jest": "^24.0.11",
     "@types/katex": "^0.10.2",
     "@types/lodash": "^4.14.138",
@@ -102,7 +102,7 @@
     "@types/numeral": "^0.0.26",
     "@types/plotly.js": "^1.44.8",
     "@types/prismjs": "^1.16.0",
-    "@types/react": "^16.8.23",
+    "@types/react": "^16.9.17",
     "@types/react-copy-to-clipboard": "^4.2.6",
     "@types/react-dom": "^16.8.4",
     "@types/react-map-gl": "^5.0.1",
