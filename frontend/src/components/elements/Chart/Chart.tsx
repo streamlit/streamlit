@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2019 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,10 +21,10 @@ import {
   indexGet,
   tableGet,
   INDEX_COLUMN_DESIGNATOR,
-} from "../../../lib/dataFrameProto"
-import { format, Duration } from "../../../lib/format"
+} from "lib/dataFrameProto"
+import { format, Duration } from "lib/format"
 import { Map as ImmutableMap } from "immutable"
-import FullScreenWrapper from "components/shared/FullScreenWrapper"
+import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import * as recharts from "recharts"
 
 import "./Chart.scss"
@@ -243,17 +243,4 @@ function extractProps(element: any): boolean {
   return props
 }
 
-class WithFullScreenWrapper extends React.Component<Props> {
-  render(): JSX.Element {
-    const { element, width } = this.props
-    return (
-      <FullScreenWrapper width={width}>
-        {({ width, height }) => (
-          <Chart element={element} width={width} height={height} />
-        )}
-      </FullScreenWrapper>
-    )
-  }
-}
-
-export default WithFullScreenWrapper
+export default withFullScreenWrapper(Chart)

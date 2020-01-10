@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 
-def marshall(proto, figure_or_dot, width, height):
+def marshall(proto, figure_or_dot):
     """Construct a GraphViz chart object.
 
     See DeltaGenerator.graphviz_chart for docs.
@@ -37,5 +37,3 @@ def marshall(proto, figure_or_dot, width, height):
         raise Exception("Unhandled type for graphviz chart: %s" % type(figure_or_dot))
 
     proto.spec = dot
-    proto.width = width
-    proto.height = height

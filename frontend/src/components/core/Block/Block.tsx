@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2019 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import { dispatchOneOf } from "lib/immutableProto"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { makeElementWithInfoText } from "lib/utils"
-import { ForwardMsgMetadata } from "autogen/proto"
+import { IForwardMsgMetadata } from "autogen/proto"
 import { ReportElement, BlockElement, SimpleElement } from "lib/DeltaParser"
 
 // Load (non-lazy) elements.
@@ -46,6 +46,9 @@ const BokehChart = React.lazy(() => import("components/elements/BokehChart/"))
 const DataFrame = React.lazy(() => import("components/elements/DataFrame/"))
 const DeckGlChart = React.lazy(() =>
   import("components/elements/DeckGlChart/")
+)
+const DeckGlJsonChart = React.lazy(() =>
+  import("components/elements/DeckGlJsonChart/")
 )
 const ImageList = React.lazy(() => import("components/elements/ImageList/"))
 const GraphVizChart = React.lazy(() =>
@@ -184,8 +187,8 @@ class Block extends PureComponent<Props> {
     const className = Block.getClassNames(isStale, isEmpty)
 
     return (
-      <Maybe enable={enable}>
-        <div key={index} className={className} style={{ width }}>
+      <Maybe enable={enable} key={index}>
+        <div className={className} style={{ width }}>
           <ErrorBoundary width={width}>
             <Suspense
               fallback={
@@ -207,7 +210,7 @@ class Block extends PureComponent<Props> {
     element: SimpleElement,
     index: number,
     width: number,
-    metadata: ForwardMsgMetadata
+    metadata: IForwardMsgMetadata
   ): ReactNode => {
     if (!element) {
       throw new Error("Transmission error.")
@@ -222,10 +225,20 @@ class Block extends PureComponent<Props> {
 
     // Modify width using the value from the spec as passed with the message when applicable
     if (metadata && metadata.elementDimensionSpec) {
-      if (metadata.elementDimensionSpec.width > 0) {
+      if (
+        metadata &&
+        metadata.elementDimensionSpec &&
+        metadata.elementDimensionSpec.width &&
+        metadata.elementDimensionSpec.width > 0
+      ) {
         width = Math.min(metadata.elementDimensionSpec.width, width)
       }
-      if (metadata.elementDimensionSpec.height > 0) {
+      if (
+        metadata &&
+        metadata.elementDimensionSpec &&
+        metadata.elementDimensionSpec.height &&
+        metadata.elementDimensionSpec.height > 0
+      ) {
         height = metadata.elementDimensionSpec.height
       }
     }
@@ -243,6 +256,9 @@ class Block extends PureComponent<Props> {
       ),
       deckGlChart: (el: SimpleElement) => (
         <DeckGlChart element={el} width={width} />
+      ),
+      deckGlJsonChart: (el: SimpleElement) => (
+        <DeckGlJsonChart element={el} width={width} />
       ),
       docString: (el: SimpleElement) => (
         <DocString element={el} width={width} />

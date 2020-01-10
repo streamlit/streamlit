@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ def marshall_data_frame(data, proto_df):
     proto_df : proto.DataFrame
         Output. The protobuf for a Streamlit DataFrame proto.
     """
-    df = convert_anything_to_df(data)
+    df = type_util.convert_anything_to_df(data)
 
     # Convert df into an iterable of columns (each of type Series).
     df_data = (df.iloc[:, col] for col in range(len(df.columns)))
@@ -51,40 +51,8 @@ def marshall_data_frame(data, proto_df):
     _marshall_index(df.columns, proto_df.columns)
     _marshall_index(df.index, proto_df.index)
 
-    styler = data if _is_pandas_styler(data) else None
+    styler = data if type_util.is_pandas_styler(data) else None
     _marshall_styles(proto_df.style, df, styler)
-
-
-def convert_anything_to_df(df):
-    """Try to convert different formats to a Pandas Dataframe.
-
-    Parameters
-    ----------
-    df : ndarray, Iterable, dict, DataFrame, Styler, None, or any
-
-    Returns
-    -------
-    pandas.DataFrame
-
-    """
-    if type_util.is_type(df, "pandas.core.frame.DataFrame"):
-        return df
-
-    if _is_pandas_styler(df):
-        return df.data
-
-    import pandas as pd
-
-    if type_util.is_type(df, "numpy.ndarray") and len(df.shape) == 0:
-        return pd.DataFrame([])
-
-    # Try to convert to pandas.DataFrame. This will raise an error is df is not
-    # compatible with the pandas.DataFrame constructor.
-    return pd.DataFrame(df)
-
-
-def _is_pandas_styler(obj):
-    return type_util.is_type(obj, "pandas.io.formats.style.Styler")
 
 
 def _marshall_styles(proto_table_style, df, styler=None):

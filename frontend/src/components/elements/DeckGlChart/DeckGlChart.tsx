@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2019 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ import Immutable from "immutable"
 import { StaticMap } from "react-map-gl"
 import { SessionInfo } from "lib/SessionInfo"
 import { dataFrameToArrayOfDicts } from "lib/dataFrameProto"
-import FullScreenWrapper from "components/shared/FullScreenWrapper"
+import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import "mapbox-gl/dist/mapbox-gl.css"
 import "./DeckGlChart.scss"
 
@@ -462,17 +462,4 @@ function parseGetters(type: any, spec: any): void {
   })
 }
 
-class WithFullScreenWrapper extends React.Component<Props> {
-  render(): JSX.Element {
-    const { element, width } = this.props
-    return (
-      <FullScreenWrapper width={width}>
-        {({ width, height }) => (
-          <DeckGlChart element={element} width={width} height={height} />
-        )}
-      </FullScreenWrapper>
-    )
-  }
-}
-
-export default WithFullScreenWrapper
+export default withFullScreenWrapper(DeckGlChart)

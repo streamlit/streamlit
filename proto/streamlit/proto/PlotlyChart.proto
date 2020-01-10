@@ -1,5 +1,5 @@
 /**
- * Copyright 2018-2019 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,8 +27,10 @@ message PlotlyChart {
     Figure figure = 2;
   }
 
-  int32 width = 3;
-  int32 height = 4;
+  // If True, will overwrite the chart width spec to fit to container.
+  bool use_container_width = 5;
+
+  reserved 3, 4;
 }
 
 message Figure {

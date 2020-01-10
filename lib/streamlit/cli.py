@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -173,7 +173,7 @@ def main_docs():
     print("Showing help page in browser...")
     from streamlit import util
 
-    util.open_browser("https://streamlit.io/docs")
+    util.open_browser("https://docs.streamlit.io")
 
 
 @main.command("hello")
@@ -212,7 +212,7 @@ def main_run(target, args=None, **kwargs):
     _, extension = os.path.splitext(target)
     if extension[1:] not in ACCEPTED_FILE_EXTENSIONS:
         raise click.BadArgumentUsage(
-            "Streamlit requires raw Python (.py) files, not %s.\nFor more information, please see https://streamlit.io/docs"
+            "Streamlit requires raw Python (.py) files, not %s.\nFor more information, please see https://docs.streamlit.io"
             % extension
         )
 

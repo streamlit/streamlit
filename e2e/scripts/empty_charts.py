@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,8 +27,8 @@ spec = {
 }
 
 # 5 empty charts
-st.vega_lite_chart(spec)
-st.pyplot()
+st.vega_lite_chart(spec, use_container_width=True)
+st.pyplot(use_container_width=True)
 st.line_chart()
 st.bar_chart()
 st.area_chart()
@@ -40,27 +40,27 @@ st.area_chart()
 
 # 6 errors
 try:
-    st.vega_lite_chart({})
+    st.vega_lite_chart({}, use_container_width=True)
 except Exception as e:
     st.write(e)
 
 try:
-    st.vega_lite_chart(data, {})
+    st.vega_lite_chart(data, {}, use_container_width=True)
 except Exception as e:
     st.write(e)
 
 try:
-    st.vega_lite_chart(data)
+    st.vega_lite_chart(data, use_container_width=True)
 except Exception as e:
     st.write(e)
 
 try:
-    st.vega_lite_chart()
+    st.vega_lite_chart(use_container_width=True)
 except Exception as e:
     st.write(e)
 
 try:
-    st.altair_chart()
+    st.altair_chart(use_container_width=True)
 except Exception as e:
     st.write(e)
 

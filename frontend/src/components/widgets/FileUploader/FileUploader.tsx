@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2019 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import { WidgetStateManager } from "lib/WidgetStateManager"
 import { fileUploaderOverrides } from "lib/widgetTheme"
 import "./FileUploader.scss"
 
-interface Props {
+export interface Props {
   disabled: boolean
   element: ImmutableMap<string, any>
   widgetStateManager: WidgetStateManager
@@ -50,7 +50,7 @@ class FileUploader extends React.PureComponent<Props, State> {
   private handleFileRead = (
     ev: ProgressEvent<FileReader>,
     file: File
-  ): void => {
+  ): Promise<void> => {
     if (ev.target !== null) {
       if (ev.target.result instanceof ArrayBuffer) {
         this.props.widgetStateManager.sendUploadFileMessage(
@@ -60,27 +60,36 @@ class FileUploader extends React.PureComponent<Props, State> {
           new Uint8Array(ev.target.result)
         )
       } else {
-        console.warn("This file is not ArrayBuffer type.")
+        const error = "This file is not ArrayBuffer type."
+        console.warn(error)
+        return Promise.reject(error)
       }
     }
-    this.setState({ status: "UPLOADING" })
+
+    return new Promise(resolve => {
+      this.setState({ status: "UPLOADING" }, () => {
+        resolve()
+      })
+    })
   }
 
   private dropHandler = (
     acceptedFiles: File[],
     rejectedFiles: File[],
     event: React.SyntheticEvent<HTMLElement>
-  ): void => {
+  ): Promise<void[]> => {
+    const promises: Promise<void>[] = []
     const { element } = this.props
     const maxSizeMb = element.get("maxUploadSizeMb")
 
     if (rejectedFiles.length > 0) {
       // TODO: Tell user which files *are* allowed.
+      const errorMessage = `${rejectedFiles[0].type} files are not allowed`
       this.setState({
         status: "ERROR",
-        errorMessage: `${rejectedFiles[0].type} files are not allowed`,
+        errorMessage: errorMessage,
       })
-      return
+      return Promise.reject(errorMessage)
     }
 
     this.setState({
@@ -92,9 +101,22 @@ class FileUploader extends React.PureComponent<Props, State> {
       const fileSizeMB = file.size / 1024 / 1024
       if (fileSizeMB < maxSizeMb) {
         const fileReader = new FileReader()
-        fileReader.onloadend = (ev: ProgressEvent<FileReader>) =>
-          this.handleFileRead(ev, file)
-        fileReader.readAsArrayBuffer(file)
+
+        promises.push(
+          new Promise((resolve, reject) => {
+            fileReader.onerror = () => {
+              fileReader.abort()
+              reject(new DOMException("Problem parsing input file."))
+            }
+
+            fileReader.onload = (ev: ProgressEvent<FileReader>) => {
+              this.handleFileRead(ev, file).then(() => {
+                resolve()
+              })
+            }
+            fileReader.readAsArrayBuffer(file)
+          })
+        )
       } else {
         this.setState({
           status: "ERROR",
@@ -102,16 +124,14 @@ class FileUploader extends React.PureComponent<Props, State> {
         })
       }
     })
+
+    return Promise.all(promises)
   }
 
   public componentDidUpdate(oldProps: Props): void {
+    // This is the wrong place for this logic! Need to move it somewhere else.
     const progress = this.props.element.get("progress")
-    const oldProgress = oldProps.element.get("progress")
-    if (
-      oldProgress < 1 &&
-      progress >= 1 &&
-      this.state.status === "UPLOADING"
-    ) {
+    if (this.state.status === "UPLOADING" && progress >= 100) {
       this.setState({ status: "UPLOADED" })
     }
   }

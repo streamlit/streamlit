@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,12 +25,13 @@ import numpy as np
 import pandas as pd
 
 import streamlit as st
+from streamlit import type_util
 
 
 class StreamlitWriteTest(unittest.TestCase):
     """Test st.write.
 
-    Unit tests for https://streamlit.io/docs/api/text.html#streamlit.write
+    Unit tests for https://docs.streamlit.io/api/text.html#streamlit.write
 
     Because we're going to test st.markdown, st.pyplot, st.altair_chart
     later on, we don't have to test it in st.write In st.write, all we're
@@ -52,15 +53,19 @@ class StreamlitWriteTest(unittest.TestCase):
     def test_dataframe(self):
         """Test st.write with dataframe."""
         data = {
-            "DataFrame": pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"]),
-            "Series": pd.Series(np.array(["a", "b", "c"])),
-            "Index": pd.Index(list("abc")),
-            "ndarray": np.array(["a", "b", "c"]),
-            "Styler": pd.DataFrame({"a": [1], "b": [2]}).style.format("{:.2%}"),
+            type_util._PANDAS_DF_TYPE_STR: pd.DataFrame(
+                [[20, 30, 50]], columns=["a", "b", "c"]
+            ),
+            type_util._PANDAS_SERIES_TYPE_STR: pd.Series(np.array(["a", "b", "c"])),
+            type_util._PANDAS_INDEX_TYPE_STR: pd.Index(list("abc")),
+            type_util._PANDAS_STYLER_TYPE_STR: pd.DataFrame(
+                {"a": [1], "b": [2]}
+            ).style.format("{:.2%}"),
+            type_util._NUMPY_ARRAY_TYPE_STR: np.array(["a", "b", "c"]),
         }
 
         # Make sure we have test cases for all _DATAFRAME_LIKE_TYPES
-        self.assertEqual(sorted(data.keys()), sorted(st._DATAFRAME_LIKE_TYPES))
+        self.assertEqual(sorted(data.keys()), sorted(type_util._DATAFRAME_LIKE_TYPES))
 
         for df in data.values():
             with patch("streamlit.dataframe") as p:
@@ -92,7 +97,7 @@ class StreamlitWriteTest(unittest.TestCase):
     @patch("streamlit.type_util.is_type")
     def test_altair_chart(self, is_type):
         """Test st.write with altair_chart."""
-        is_type.return_value = True
+        is_type.side_effect = make_is_type_mock(type_util._ALTAIR_RE)
 
         class FakeChart(object):
             pass
@@ -105,7 +110,7 @@ class StreamlitWriteTest(unittest.TestCase):
     @patch("streamlit.type_util.is_type")
     def test_pyplot(self, is_type):
         """Test st.write with matplotlib."""
-        is_type.side_effect = [False, True]
+        is_type.side_effect = make_is_type_mock("matplotlib.figure.Figure")
 
         class FakePyplot(object):
             pass
@@ -194,3 +199,29 @@ class StreamlitWriteTest(unittest.TestCase):
             with st.spinner("some message"):
                 time.sleep(0.15)
             e.assert_called_once_with()
+
+
+def make_is_type_mock(true_type_matchers):
+    """Return a function that mocks is_type.
+
+    When you do this:
+    mock_is_type.side_effect = make_is_type_mock("foo.bar.Baz")
+
+    ...then when you call mock_is_type(my_type, "foo.bar.Baz") it will return
+    True (and False otherwise).
+
+    You can also pass in a tuple.
+    """
+    if type(true_type_matchers) is not tuple:
+        true_type_matchers = (true_type_matchers,)
+
+    def new_is_type(obj, type_matchers):
+        if type(type_matchers) is not tuple:
+            type_matchers = (type_matchers,)
+
+        for type_matcher in type_matchers:
+            if type_matcher in true_type_matchers:
+                return True
+        return False
+
+    return new_is_type

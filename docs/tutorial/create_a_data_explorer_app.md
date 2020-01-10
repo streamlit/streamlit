@@ -1,7 +1,7 @@
 # Tutorial: Create a data explorer app
 
 If you've made it this far, chances are you've
-[installed Streamlit](https://streamlit.io/docs/#install-streamlit) and
+[installed Streamlit](https://docs.streamlit.io/#install-streamlit) and
 run through the basics in our [get started guide](../getting_started.md). If
 not, now is a good time to take a look.
 

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,10 +19,11 @@ from bokeh.embed import json_item
 import json
 
 
-def marshall(proto, figure):
+def marshall(proto, figure, use_container_width):
     """Construct a Bokeh chart object.
 
     See DeltaGenerator.bokeh_chart for docs.
     """
     data = json_item(figure)
     proto.figure = json.dumps(data)
+    proto.use_container_width = use_container_width

@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2019 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,13 @@
  */
 
 import React from "react"
-import { Map as ImmutableMap } from "immutable"
-import { tableGetRowsAndCols, indexGet, tableGet } from "lib/dataFrameProto"
-import FullScreenWrapper from "components/shared/FullScreenWrapper"
 import { logMessage } from "lib/log"
-
+import { Map as ImmutableMap } from "immutable"
+import withFullScreenWrapper from "hocs/withFullScreenWrapper"
+import { tableGetRowsAndCols, indexGet, tableGet } from "lib/dataFrameProto"
 import embed from "vega-embed"
 import * as vega from "vega"
-
 import "./VegaLiteChart.scss"
-import { Padding } from "vega"
 
 const MagicFields = {
   DATAFRAME_INDEX: "(index)",
@@ -37,8 +34,6 @@ const DEFAULT_DATA_NAME = "source"
  * Horizontal space needed for the embed actions button.
  */
 const EMBED_PADDING = 38
-const DEFAULT_HEIGHT = 200
-const FIX_PADDING_BOTTOM = 20
 
 /**
  * Fix bug where Vega Lite was vertically-cropping the x-axis in some cases.
@@ -63,11 +58,6 @@ interface Props {
 
 interface PropsWithHeight extends Props {
   height: number | undefined
-}
-
-interface Dimensions {
-  width: number | undefined
-  height: number
 }
 
 interface State {
@@ -117,44 +107,34 @@ class VegaLiteChart extends React.PureComponent<PropsWithHeight, State> {
     }
   }
 
-  public getChartDimensions = (specWidth: number | undefined): Dimensions => {
-    // Width values:
-    //  undefined : let Vega-Lite pick (this is -1 in Python)
-    //          0 : use full width
-    //         >0 : use given width
-    // See docs for DeltaGenerator.vega_lite_chart().
-    const width =
-      specWidth === 0 ? this.props.width - EMBED_PADDING : specWidth
+  public generateSpec = (): any => {
+    const el = this.props.element
+    const spec = JSON.parse(el.get("spec"))
+    const useContainerWidth = JSON.parse(el.get("useContainerWidth"))
 
-    const height = this.props.height ? this.props.height : DEFAULT_HEIGHT
-
-    return { width, height }
-  }
-
-  public getChartPadding = (padding: Padding): Padding => {
-    if (padding === undefined) {
-      return {
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: FIX_PADDING_BOTTOM,
-      }
-    } else if (typeof padding === "number") {
-      return {
-        top: padding,
-        left: padding,
-        right: padding,
-        bottom: Math.max(padding, FIX_PADDING_BOTTOM),
-      }
-    } else if (padding.bottom !== undefined) {
-      padding.bottom = Math.max(padding.bottom, FIX_PADDING_BOTTOM)
-      return padding
-    } else if (padding.bottom === undefined) {
-      padding.bottom = FIX_PADDING_BOTTOM
-      return padding
+    if (this.props.height) {
+      //fullscreen
+      spec.width = this.props.width - EMBED_PADDING
+      spec.height = this.props.height
     } else {
-      return 0
+      if (useContainerWidth) {
+        spec.width = this.props.width - EMBED_PADDING
+      }
     }
+
+    if (!spec.padding) {
+      spec.padding = {}
+    }
+
+    if (spec.padding.bottom == null) {
+      spec.padding.bottom = BOTTOM_PADDING
+    }
+
+    if (spec.datasets) {
+      throw new Error("Datasets should not be passed as part of the spec")
+    }
+
+    return spec
   }
 
   public async componentDidUpdate(prevProps: PropsWithHeight): Promise<void> {
@@ -284,28 +264,7 @@ class VegaLiteChart extends React.PureComponent<PropsWithHeight, State> {
     }
 
     const el = this.props.element
-
-    const spec = JSON.parse(el.get("spec"))
-
-    const { width, height } = this.getChartDimensions(spec.width as (
-      | number
-      | undefined))
-    spec.width = width
-    spec.height = height
-    spec.padding = this.getChartPadding(spec.padding)
-
-    if (!spec.padding) {
-      spec.padding = {}
-    }
-
-    if (spec.padding.bottom == null) {
-      spec.padding.bottom = BOTTOM_PADDING
-    }
-
-    if (spec.datasets) {
-      throw new Error("Datasets should not be passed as part of the spec")
-    }
-
+    const spec = this.generateSpec()
     const { vgSpec, view } = await embed(this.element, spec)
 
     const datasets = getDataArrays(el)
@@ -475,17 +434,4 @@ function dataIsAnAppendOfPrev(
   return true
 }
 
-class WithFullScreenWrapper extends React.Component<Props> {
-  render(): JSX.Element {
-    const { element, width } = this.props
-    return (
-      <FullScreenWrapper width={width}>
-        {({ width, height }) => (
-          <VegaLiteChart element={element} width={width} height={height} />
-        )}
-      </FullScreenWrapper>
-    )
-  }
-}
-
-export default WithFullScreenWrapper
+export default withFullScreenWrapper(VegaLiteChart)

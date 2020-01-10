@@ -4,7 +4,7 @@
    :maxdepth: 2
    :hidden:
 
-   Home <https://streamlit.io/docs/>
+   Home <https://docs.streamlit.io/>
    main_concepts
    getting_started
 
@@ -56,7 +56,7 @@ Streamlit works, see [Main concepts](main_concepts.md).
 Follow these steps and you'll have a sample app running in less than 5 minutes.
 
 1. Make sure that you have [Python 2.7.0
-   / Python 3.6.x](https://www.python.org/downloads/) or greater installed.
+   / Python 3.6.0](https://www.python.org/downloads/) or greater installed.
 2. Install Streamlit using [PIP](https://pip.pypa.io/en/stable/installing/):
    ```bash
    $ pip install streamlit

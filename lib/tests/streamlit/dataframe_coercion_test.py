@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
 
-from streamlit.elements.data_frame_proto import convert_anything_to_df
+from streamlit import type_util
 
 setup_2_3_shims(globals())
 
@@ -34,7 +34,7 @@ class DataFrameCoercionTest(unittest.TestCase):
         of equal-length lists
         """
         d = {"a": [1], "b": [2], "c": [3]}
-        df = convert_anything_to_df(d)
+        df = type_util.convert_anything_to_df(d)
         self.assertEqual(type(df), pd.DataFrame)
         self.assertEqual(df.shape, (1, 3))
 
@@ -43,7 +43,7 @@ class DataFrameCoercionTest(unittest.TestCase):
         from an empty numpy array.
         """
         arr = np.array([])
-        df = convert_anything_to_df(arr)
+        df = type_util.convert_anything_to_df(arr)
         self.assertEqual(type(df), pd.DataFrame)
         self.assertEqual(df.shape, (0, 1))
 
@@ -51,6 +51,6 @@ class DataFrameCoercionTest(unittest.TestCase):
         """Test that a DataFrame can be constructed from a pandas.Styler"""
         d = {"a": [1], "b": [2], "c": [3]}
         styler = pd.DataFrame(d).style.format("{:.2%}")
-        df = convert_anything_to_df(styler)
+        df = type_util.convert_anything_to_df(styler)
         self.assertEqual(type(df), pd.DataFrame)
         self.assertEqual(df.shape, (1, 3))
