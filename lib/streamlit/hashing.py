@@ -61,6 +61,14 @@ NP_SIZE_LARGE = 1000000
 NP_SAMPLE_SIZE = 100000
 
 
+# "None"sense as a placeholder for literal None object while hashing.
+NONESENSE = b"streamlit-4w350m3-None"
+
+# Arbitrary item to denote where we found a cycle in a hashed object.
+# This allows us to hash self-referencing lists, dictionaries, etc.
+CYCLE_PLACEHOLDER = b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky"
+
+
 Context = collections.namedtuple("Context", ["globals", "cells", "varnames"])
 
 
@@ -134,6 +142,11 @@ def _int_to_bytes(i):
 def _key(obj, context):
     """Return key for memoization."""
 
+    # use arbitrary value in place of None since the return of None 
+    # is usedfor control flow in .to_bytes
+    if obj is None:
+        return NONESENSE
+
     def is_simple(obj):
         return (
             isinstance(obj, bytes)
@@ -165,7 +178,7 @@ def _key(obj, context):
     ):
         return id(obj)
 
-    raise Exception("Non-memoizable object")
+    return None
 
 
 def _hashing_error_message(start):
@@ -239,12 +252,9 @@ class CodeHasher:
     def hexdigest(self):
         return self.hasher.hexdigest()
 
-    def safe_memoize_to_bytes(self, obj, context=None):
+    def to_bytes(self, obj, context=None):
         """Add memoization to _to_bytes and protect against cycles in data structures."""
-        try:
-            key = _key(obj, context)
-        except:
-            key = None
+        key = _key(obj, context)
 
         if key:
             if key in self.hashes:
@@ -255,15 +265,15 @@ class CodeHasher:
             self.hashes[key] = _int_to_bytes(self._counter)
 
         if obj in hash_stacks:
-            # arbitrary item to denote where we found a cycle in the object.
-            return b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky"
+            return CYCLE_PLACEHOLDER
+
         hash_stacks.push(obj)
 
         b = self._to_bytes(obj, context)
 
         self.size += sys.getsizeof(b)
 
-        if key is not None:
+        if key:
             self.hashes[key] = b
 
         hash_stacks.pop()
@@ -318,7 +328,7 @@ class CodeHasher:
                 # Special string since hashes change between sessions.
                 # We don't use Python's `hash` since hashes are not consistent
                 # across runs.
-                return b"none:"
+                return NONESENSE
             elif obj is True:
                 return b"bool:1"
             elif obj is False:
