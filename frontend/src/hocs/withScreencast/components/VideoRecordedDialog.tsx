@@ -52,7 +52,7 @@ class VideoRecordedDialog extends PureComponent<Props> {
     const videoSource = this.getVideoSource()
 
     return (
-      <Modal isOpen={true} toggle={onClose} className="streamlit-dialog">
+      <Modal isOpen={true} className="streamlit-dialog">
         <ModalHeader toggle={onClose}>Screencast recorded</ModalHeader>
         <ModalBody>
           <video style={{ width: "100%" }} src={videoSource} controls />
