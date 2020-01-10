@@ -134,9 +134,6 @@ def _int_to_bytes(i):
 def _key(obj, context):
     """Return key for memoization."""
 
-    if obj is None:
-        return b"none:"  # special value so we can hash None
-
     def is_simple(obj):
         return (
             isinstance(obj, bytes)
@@ -168,8 +165,7 @@ def _key(obj, context):
     ):
         return id(obj)
 
-    # control-flow improvement, raise Exception?
-    return None
+    raise Exception("Non-memoizable object")
 
 
 def _hashing_error_message(start):
@@ -243,11 +239,14 @@ class CodeHasher:
     def hexdigest(self):
         return self.hasher.hexdigest()
 
-    def to_bytes(self, obj, context=None):
-        """Add memoization to _to_bytes."""
-        key = _key(obj, context)
+    def safe_memoize_to_bytes(self, obj, context=None):
+        """Add memoization to _to_bytes and protect against cycles in data structures."""
+        try:
+            key = _key(obj, context)
+        except:
+            key = None
 
-        if key is not None:
+        if key:
             if key in self.hashes:
                 return self.hashes[key]
 
@@ -256,6 +255,7 @@ class CodeHasher:
             self.hashes[key] = _int_to_bytes(self._counter)
 
         if obj in hash_stacks:
+            # arbitrary item to denote where we found a cycle in the object.
             return b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky"
         hash_stacks.push(obj)
 
