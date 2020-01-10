@@ -2354,7 +2354,12 @@ class DeltaGenerator(object):
                 # Fix for https://github.com/streamlit/streamlit/issues/930
                 # Warn user to check if displaying float as int was really intended.
                 import streamlit as st
-                st.warning("st.number_input value was given as a float but string format is int. You may want to use %f instead of {}.".format(format))
+
+                st.warning(
+                    "st.number_input value was given as a float but string format is int. You may want to use %f instead of {}.".format(
+                        format
+                    )
+                )
 
             if step is None:
                 step = 1 if int_value else 0.01
@@ -2655,11 +2660,13 @@ class DeltaGenerator(object):
         if not suppress_deprecation_warning:
             import streamlit as st
 
-            st.warning("""
+            st.warning(
+                """
                 The `deck_gl_chart` widget is deprecated and will be removed on
 
                 2020-03-04. To render a map, you should use `st.pyDeckChart` widget.
-            """)
+            """
+            )
 
         import streamlit.elements.deck_gl as deck_gl
 
