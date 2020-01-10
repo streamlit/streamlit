@@ -160,7 +160,7 @@ function withScreencast(
 
         if (hasStarted) {
           this.setState({
-            recording: this.recorder.start(),
+            recording: true,
           })
         } else {
           this.stopRecording()
