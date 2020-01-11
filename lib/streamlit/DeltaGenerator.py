@@ -2313,7 +2313,7 @@ class DeltaGenerator(object):
             If the value is not specified, the format parameter will be used.
         format : str or None
             A printf-style format string controlling how the interface should
-            display numbers. Output must be purely numeric. This does not impact 
+            display numbers. Output must be purely numeric. This does not impact
             the return value. Valid formatters: %d %e %f %g %i
         key : str
             An optional string to use as the unique key for the widget.
@@ -2669,13 +2669,14 @@ class DeltaGenerator(object):
 
     @_with_element
     def pydeck_chart(self, element, pydeck_obj=None):
-        """Draw a map chart using the PyDeck library.
+        """Draw a chart using the PyDeck library.
 
-        This API convert a pyDeck object
-        (https://deckgl.readthedocs.io/en/latest/) to JSON to render a map
+        This supports 3D maps, point clouds, and more! More info about PyDeck
+        at https://deckgl.readthedocs.io/en/latest/.
 
-        using Deck.GL' JSON converter JavaScript API
-        (https://github.com/uber/deck.gl/tree/master/modules/json)
+        These docs are also quite useful:
+            - [DeckGL docs](https://github.com/uber/deck.gl/tree/master/docs)
+            - [DeckGL JSON docs](https://github.com/uber/deck.gl/tree/master/modules/json)
 
         Parameters
         ----------
@@ -2690,7 +2691,7 @@ class DeltaGenerator(object):
         >>> df = pd.DataFrame(
         ...    np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
         ...    columns=['lat', 'lon'])
-        
+
         >>> st.pydeck_chart(pdk.Deck(
         ...     map_style='mapbox://styles/mapbox/light-v9',
         ...     initial_view_state=pdk.ViewState(

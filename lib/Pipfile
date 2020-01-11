@@ -49,7 +49,7 @@ enum-compat = "*"
 # python3 code backported to python2
 future = "*"
 pillow = ">=6.2.0"
-# Set protobuf version based on the protoc version on the release machine
+# Set protobuf version based on the protoc version on the release machine.
 # (i.e. Thiago's machine)
 protobuf = ">=3.6.0"
 requests = "*"

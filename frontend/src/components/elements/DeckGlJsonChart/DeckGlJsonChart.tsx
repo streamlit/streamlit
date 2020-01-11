@@ -73,7 +73,7 @@ class DeckGlJsonChart extends React.PureComponent<PropsWithHeight, State> {
     const json = JSON.parse(element.get("json"))
     json.initialViewState.height = height
     json.initialViewState.width = width
-    delete json.views //We are nos using views, and this avoid a console warning
+    delete json.views // We are not using views. This avoids a console warning.
     const deck = jsonConverter.convert(json)
 
     return (
