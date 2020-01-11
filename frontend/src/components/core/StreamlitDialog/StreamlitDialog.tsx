@@ -115,7 +115,7 @@ function aboutDialog(props: AboutProps): ReactElement {
           <br />
           <a href="https://streamlit.io">https://streamlit.io</a>
           <br />
-          Copyright 2019 Streamlit Inc. All rights reserved.
+          Copyright 2020 Streamlit Inc. All rights reserved.
         </div>
       </ModalBody>
       <ModalFooter>
