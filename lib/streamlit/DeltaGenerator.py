@@ -2651,19 +2651,18 @@ class DeltaGenerator(object):
            height: 530px
 
         """
-        suppress_deprecation_warning = config.get_option(
-            "global.suppressDeprecationWarnings"
-        )
-        if not suppress_deprecation_warning:
-            import streamlit as st
-
-            st.warning(
-                """
-                The `deck_gl_chart` widget is deprecated and will be removed on
-
-                2020-03-04. To render a map, you should use `st.pyDeckChart` widget.
-            """
-            )
+        # TODO: Add this in a few weeks.
+        #
+        # suppress_deprecation_warning = config.get_option(
+        #     "global.suppressDeprecationWarnings"
+        # )
+        # if not suppress_deprecation_warning:
+        #     import streamlit as st
+        #
+        #     st.warning("""
+        #         The `deck_gl_chart` widget is deprecated and will be removed on
+        #         2020-03-04. To render a map, you should use `st.pyDeckChart` widget.
+        #     """)
 
         import streamlit.elements.deck_gl as deck_gl
 
