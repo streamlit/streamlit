@@ -2508,13 +2508,13 @@ class DeltaGenerator(object):
         element.empty.unused = True
 
     @_with_element
-    def map(self, element, data, zoom=None):
+    def map(self, element, data=None, zoom=None):
         """Display a map with points on it.
 
         This is a wrapper around st.pydeck_chart to quickly create scatterplot
         charts on top of a map, with auto-centering and auto-zoom.
 
-        When using this method, we advise all users to use a personal Mapbox
+        When using this command, we advise all users to use a personal Mapbox
         token. This ensures the map tiles used in this chart are more
         robust. You can do this with the mapbox.token config option.
 
@@ -2561,7 +2561,7 @@ class DeltaGenerator(object):
         (https://deck.gl/#/documentation), with a few small adaptations and
         some syntax sugar.
 
-        When using this method, we advise all users to use a personal Mapbox
+        When using this command, we advise all users to use a personal Mapbox
         token. This ensures the map tiles used in this chart are more
         robust. You can do this with the mapbox.token config option.
 
@@ -2651,7 +2651,7 @@ class DeltaGenerator(object):
            height: 530px
 
         """
-        # TODO: Add this in a few weeks.
+        # TODO: Add this in around 2020-01-31
         #
         # suppress_deprecation_warning = config.get_option(
         #     "global.suppressDeprecationWarnings"
@@ -2661,7 +2661,7 @@ class DeltaGenerator(object):
         #
         #     st.warning("""
         #         The `deck_gl_chart` widget is deprecated and will be removed on
-        #         2020-03-04. To render a map, you should use `st.pyDeckChart` widget.
+        #         2020-03-04. To render a map, you should use `st.pydeck_chart` widget.
         #     """)
 
         import streamlit.elements.deck_gl as deck_gl
@@ -2678,6 +2678,15 @@ class DeltaGenerator(object):
         These docs are also quite useful:
             - [DeckGL docs](https://github.com/uber/deck.gl/tree/master/docs)
             - [DeckGL JSON docs](https://github.com/uber/deck.gl/tree/master/modules/json)
+
+        When using this command, we advise all users to use a personal Mapbox
+        token. This ensures the map tiles used in this chart are more
+        robust. You can do this with the mapbox.token config option.
+
+        To get a token for yourself, create an account at
+        https://mapbox.com. It's free! (for moderate usage levels) See
+        https://docs.streamlit.io/cli.html#view-all-config-options for more
+        info on how to set config options.
 
         Parameters
         ----------
@@ -2727,14 +2736,9 @@ class DeltaGenerator(object):
            height: 530px
 
         """
-        if pydeck_obj is None:
-            import streamlit.elements.map as streamlit_map
+        import streamlit.elements.deck_gl_json_chart as deck_gl_json_chart
 
-            spec = json.dumps(streamlit_map.DEFAULT_MAP)
-        else:
-            spec = pydeck_obj.to_json()
-
-        element.deck_gl_json_chart.json = spec
+        deck_gl_json_chart.marshall(element, pydeck_obj)
 
     @_with_element
     def table(self, element, data=None):
@@ -2834,7 +2838,7 @@ class DeltaGenerator(object):
         else:
             raise StreamlitAPIException(
                 "Wrong number of arguments to add_rows()."
-                "Method requires exactly one dataset"
+                "Command requires exactly one dataset"
             )
 
         # When doing add_rows on an element that does not already have data
