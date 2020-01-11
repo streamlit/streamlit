@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import ast
+import sys
 from streamlit import compatibility
 
 
@@ -104,7 +105,10 @@ def _insert_import_statement(tree):
     # __future__ import".
     elif (
         len(tree.body) > 1
-        and (type(tree.body[0]) is ast.Expr and type(tree.body[0].value) is ast.Str)
+        and (
+            type(tree.body[0]) is ast.Expr and
+            _is_docstring_node(tree.body[0].value)
+        )
         and type(tree.body[1]) in (ast.ImportFrom, ast.Import)
     ):
         tree.body.insert(2, st_import)
@@ -141,7 +145,7 @@ def _get_st_write_from_expr(node, i, parent_type):
     # Don't change Docstring nodes
     if (
         i == 0
-        and type(node.value) is ast.Str
+        and _is_docstring_node(node.value)
         and parent_type in (ast.FunctionDef, ast.Module)
     ):
         return None
@@ -174,3 +178,10 @@ def _get_st_write_from_expr(node, i, parent_type):
         st_write = _build_st_write_call(args)
 
     return st_write
+
+
+def _is_docstring_node(node):
+    if sys.version_info >= (3, 8, 0):
+        return type(node) is ast.Constant and type(node.value) is str
+    else:
+        return type(node) is ast.Str
