@@ -15,11 +15,13 @@
 
 """slider unit test."""
 
-from streamlit.errors import StreamlitAPIException
-from tests import testutil
-import streamlit as st
-from parameterized import parameterized
 import pytest
+from parameterized import parameterized
+
+import streamlit as st
+from streamlit.errors import StreamlitAPIException
+from streamlit.js_number import JSNumber
+from tests import testutil
 
 
 class SliderTest(testutil.DeltaGeneratorTestCase):
@@ -56,25 +58,47 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
     def test_value_greater_than_min(self):
         with pytest.raises(StreamlitAPIException) as exc_slider:
             st.slider("Slider label", 10, 100, 0)
-        assert (
-            "The default `value` of 0 must lie between the `min_value` of "
-            "10 and the `max_value` of 100, inclusively." == str(exc_slider.value)
+        self.assertEqual(
+            "The default `value` of 0 must lie between the `min_value` of 10 "
+            "and the `max_value` of 100, inclusively.",
+            str(exc_slider.value),
         )
 
     def test_value_smaller_than_max(self):
         with pytest.raises(StreamlitAPIException) as exc_slider:
             st.slider("Slider label", 10, 100, 101)
-        assert (
-            "The default `value` of 101 "
-            "must lie between the `min_value` of 10 "
-            "and the `max_value` of 100, inclusively." == str(exc_slider.value)
+        self.assertEqual(
+            "The default `value` of 101 must lie between the `min_value` of "
+            "10 and the `max_value` of 100, inclusively.",
+            str(exc_slider.value),
         )
 
     def test_max_min(self):
         with pytest.raises(StreamlitAPIException) as exc_slider:
             st.slider("Slider label", 101, 100, 101)
-        assert (
-            "The default `value` of 101 "
-            "must lie between the `min_value` of 101 "
-            "and the `max_value` of 100, inclusively." == str(exc_slider.value)
+        self.assertEqual(
+            "The default `value` of 101 must lie between the `min_value` of "
+            "101 and the `max_value` of 100, inclusively.",
+            str(exc_slider.value),
         )
+
+    def test_value_out_of_bounds(self):
+        # Max int
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.slider("Label", max_value=JSNumber.MAX_SAFE_INTEGER + 1)
+        self.assertEqual("`max_value` must be <= (1 << 53) - 1", str(exc.value))
+
+        # Min int
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.slider("Label", min_value=JSNumber.MIN_SAFE_INTEGER - 1)
+        self.assertEqual("`min_value` must be >= -((1 << 53) - 1)", str(exc.value))
+
+        # Max float
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.slider("Label", value=0.5, max_value=2e308)
+        self.assertEqual("`max_value` must be <= 1.797e+308", str(exc.value))
+
+        # Min float
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.slider("Label", value=0.5, min_value=-2e308)
+        self.assertEqual("`min_value` must be >= -1.797e+308", str(exc.value))

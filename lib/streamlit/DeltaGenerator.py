@@ -37,6 +37,8 @@ from streamlit import type_util
 from streamlit.ReportThread import get_report_ctx
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException
+from streamlit.js_number import JSNumber
+from streamlit.js_number import JSNumberBoundsException
 from streamlit.proto import Alert_pb2
 from streamlit.proto import Balloons_pb2
 from streamlit.proto import BlockPath_pb2
@@ -1891,6 +1893,18 @@ class DeltaGenerator(object):
                     "The value and/or arguments are out of range."
                 )
 
+        # Bounds checks. JSNumber produces human-readable exceptions that
+        # we simply re-package as StreamlitAPIExceptions.
+        try:
+            if all_ints:
+                JSNumber.validate_int_bounds(min_value, "`min_value`")
+                JSNumber.validate_int_bounds(max_value, "`max_value`")
+            else:
+                JSNumber.validate_float_bounds(min_value, "`min_value`")
+                JSNumber.validate_float_bounds(max_value, "`max_value`")
+        except JSNumberBoundsException as e:
+            raise StreamlitAPIException(str(e))
+
         # Set format default.
         if format is None:
             if all_ints:
@@ -1926,7 +1940,6 @@ class DeltaGenerator(object):
 
     @_with_element
     def file_uploader(self, element, label, type=None, encoding="auto", key=None):
-
         """Display a file uploader widget.
 
         By default, uploaded files are limited to 50MB but you can configure that using the `server.maxUploadSize` config option.
