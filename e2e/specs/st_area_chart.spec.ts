@@ -28,6 +28,6 @@ describe("st.area_chart", () => {
   it("displays an area chart", () => {
     cy.get(".element-container .stVegaLiteChart")
       .find("canvas")
-      .should("have.css", "height", "200px");
+      .should("have.css", "height", "300px");
   });
 });

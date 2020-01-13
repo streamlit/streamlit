@@ -25,6 +25,6 @@ describe("st.bar_chart", () => {
   it("displays a bar chart", () => {
     cy.get(".element-container .stVegaLiteChart")
       .find("canvas")
-      .should("have.css", "height", "200px");
+      .should("have.css", "height", "300px");
   });
 });
