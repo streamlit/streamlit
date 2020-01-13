@@ -17,7 +17,7 @@
 
 import React from "react"
 import { Map as ImmutableMap } from "immutable"
-import FullScreenWrapper from "components/shared/FullScreenWrapper"
+import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import "./ImageList.scss"
 
 interface Props {
@@ -88,15 +88,4 @@ class ImageList extends React.PureComponent<Props> {
   }
 }
 
-class WithFullScreenWrapper extends React.Component<Props> {
-  render(): JSX.Element {
-    const { element, width } = this.props
-    return (
-      <FullScreenWrapper width={width}>
-        {({ width, height }) => <ImageList element={element} width={width} />}
-      </FullScreenWrapper>
-    )
-  }
-}
-
-export default WithFullScreenWrapper
+export default withFullScreenWrapper(ImageList)

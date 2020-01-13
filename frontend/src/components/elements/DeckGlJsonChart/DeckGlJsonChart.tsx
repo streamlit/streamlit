@@ -22,7 +22,7 @@ import * as layers from "@deck.gl/layers"
 import * as aggregationLayers from "@deck.gl/aggregation-layers"
 import Immutable from "immutable"
 import { StaticMap } from "react-map-gl"
-import FullScreenWrapper from "components/shared/FullScreenWrapper"
+import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import "mapbox-gl/dist/mapbox-gl.css"
 
 const configuration = {
@@ -109,17 +109,4 @@ class DeckGlJsonChart extends React.PureComponent<PropsWithHeight, State> {
   }
 }
 
-class WithFullScreenWrapper extends React.Component<Props> {
-  render(): JSX.Element {
-    const { element, width } = this.props
-    return (
-      <FullScreenWrapper width={width}>
-        {({ width, height }) => (
-          <DeckGlJsonChart element={element} width={width} height={height} />
-        )}
-      </FullScreenWrapper>
-    )
-  }
-}
-
-export default WithFullScreenWrapper
+export default withFullScreenWrapper(DeckGlJsonChart)
