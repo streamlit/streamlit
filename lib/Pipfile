@@ -18,7 +18,6 @@ sphinx-rtd-theme = "*"
 recommonmark = "*"
 # Packages used in unit tests:
 matplotlib = "*"
-scipy = "<1.3.0"
 plotly = "*"
 chart-studio = "*"
 bokeh = "*"
