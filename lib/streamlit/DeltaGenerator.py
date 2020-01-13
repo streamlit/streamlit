@@ -35,14 +35,12 @@ from streamlit import config
 from streamlit import metrics
 from streamlit import type_util
 from streamlit.ReportThread import get_report_ctx
-from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Alert_pb2
 from streamlit.proto import Balloons_pb2
 from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
-from streamlit.proto import Text_pb2
 
 # setup logging
 from streamlit.logger import get_logger
