@@ -124,13 +124,14 @@ def to_deckgl_json(data, zoom):
     default["initialViewState"]["latitude"] = center_lat
     default["initialViewState"]["longitude"] = center_lon
     default["initialViewState"]["zoom"] = zoom
-    layer = {
-        "type": "ScatterplotLayer",
-        "getPosition": "[lon, lat]",
-        "getRadius": 10,
-        "radiusScale": 10,
-        "getFillColor": _DEFAULT_COLOR,
-        "data": final_data,
-    }
-    default["layers"] = [layer]
+    default["layers"] = [
+        {
+            "@@type": "ScatterplotLayer",
+            "getPosition": "@@=[lon, lat]",
+            "getRadius": 10,
+            "radiusScale": 10,
+            "getFillColor": _DEFAULT_COLOR,
+            "data": final_data,
+        }
+    ]
     return json.dumps(default)

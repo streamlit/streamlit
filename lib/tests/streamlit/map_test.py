@@ -50,7 +50,7 @@ class StMapTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.get("initialViewState").get("longitude"), 25)
         self.assertEqual(c.get("initialViewState").get("zoom"), 3)
         self.assertEqual(c.get("initialViewState").get("pitch"), 0)
-        self.assertEqual(c.get("layers")[0].get("type"), "ScatterplotLayer")
+        self.assertEqual(c.get("layers")[0].get("@@type"), "ScatterplotLayer")
 
     def test_map_leak(self):
         """Test that maps don't stay in memory when you create a new blank one.

@@ -105,10 +105,7 @@ def _insert_import_statement(tree):
     # __future__ import".
     elif (
         len(tree.body) > 1
-        and (
-            type(tree.body[0]) is ast.Expr and
-            _is_docstring_node(tree.body[0].value)
-        )
+        and (type(tree.body[0]) is ast.Expr and _is_docstring_node(tree.body[0].value))
         and type(tree.body[1]) in (ast.ImportFrom, ast.Import)
     ):
         tree.body.insert(2, st_import)

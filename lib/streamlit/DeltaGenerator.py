@@ -2545,7 +2545,7 @@ class DeltaGenerator(object):
         >>> st.map(df)
 
         .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=7Sr8jMkKDc6E6Y5y2v2MNk
+           https://share.streamlit.io/0.53.0-SULT/index.html?id=9gTiomqPEbvHY2huTLoQtH
            height: 600px
 
         """
