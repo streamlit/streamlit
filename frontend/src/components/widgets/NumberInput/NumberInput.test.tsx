@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2019 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,6 +96,24 @@ describe("NumberInput widget", () => {
     expect(wrapper.instance().getMin()).toBe(-Infinity)
     // @ts-ignore
     expect(wrapper.instance().getMax()).toBe(+Infinity)
+  })
+
+  it("should set min/max", () => {
+    const props = getIntProps({
+      hasMin: true,
+      hasMax: true,
+      intData: {
+        default: 10,
+        min: 0,
+        max: 10,
+      },
+    })
+    const wrapper = shallow(<NumberInput {...props} />)
+
+    // @ts-ignore
+    expect(wrapper.instance().getMin()).toBe(0)
+    // @ts-ignore
+    expect(wrapper.instance().getMax()).toBe(10)
   })
 
   describe("FloatData", () => {

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ from __future__ import absolute_import
 
 from datetime import date
 
-from streamlit.elements.data_frame_proto import convert_anything_to_df
+from streamlit import type_util
 import streamlit.elements.vega_lite as vega_lite
 import altair as alt
 import pandas as pd
@@ -49,14 +49,14 @@ def _is_date_column(df, name):
     return isinstance(column[0], date)
 
 
-def generate_chart(chart_type, data):
+def generate_chart(chart_type, data, width=0, height=0):
     if data is None:
         # Use an empty-ish dict because if we use None the x axis labels rotate
         # 90 degrees. No idea why. Need to debug.
         data = {"": []}
 
     if not isinstance(data, pd.DataFrame):
-        data = convert_anything_to_df(data)
+        data = type_util.convert_anything_to_df(data)
 
     index_name = data.index.name
     if index_name is None:
@@ -80,7 +80,7 @@ def generate_chart(chart_type, data):
     y_scale = alt.Scale(type="utc") if _is_date_column(data, "value") else alt.Undefined
 
     chart = (
-        getattr(alt.Chart(data), "mark_" + chart_type)()
+        getattr(alt.Chart(data, width=width, height=height), "mark_" + chart_type)()
         .encode(
             alt.X(index_name, title="", scale=x_scale),
             alt.Y("value", title="", scale=y_scale),
@@ -93,7 +93,7 @@ def generate_chart(chart_type, data):
     return chart
 
 
-def marshall(vega_lite_chart, altair_chart, width=0, **kwargs):
+def marshall(vega_lite_chart, altair_chart, use_container_width=False, **kwargs):
     import altair as alt
 
     # Normally altair_chart.to_dict() would transform the dataframe used by the
@@ -118,4 +118,9 @@ def marshall(vega_lite_chart, altair_chart, width=0, **kwargs):
         # transformed.
         chart_dict["datasets"] = datasets
 
-        vega_lite.marshall(vega_lite_chart, chart_dict, width=width, **kwargs)
+        vega_lite.marshall(
+            vega_lite_chart,
+            chart_dict,
+            use_container_width=use_container_width,
+            **kwargs
+        )

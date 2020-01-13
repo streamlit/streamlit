@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2019 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@
 import React from "react"
 import { Map as ImmutableMap } from "immutable"
 import { dispatchOneOf } from "lib/immutableProto"
-import FullScreenWrapper from "components/shared/FullScreenWrapper"
+import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import Plot from "react-plotly.js"
 
 interface Props {
@@ -45,51 +45,43 @@ const DEFAULT_HEIGHT = 450
 class PlotlyChart extends React.PureComponent<PropsWithHeight> {
   private forceRecreatePlotKey = 0
 
-  public getChartDimensions = (): Dimensions => {
-    const el = this.props.element
-
-    const width: number =
-      el.get("width") > 0 ? el.get("width") : this.props.width
-
-    const height: number =
-      el.get("height") > 0
-        ? el.get("height")
-        : this.props.height
-        ? this.props.height
-        : DEFAULT_HEIGHT
-
-    return { width, height }
-  }
-
   public render(): React.ReactNode {
     const el = this.props.element
-    const { width, height } = this.getChartDimensions()
-
     return dispatchOneOf(el, "chart", {
-      url: (url: string) => this.renderIFrame(url, width, height),
-      figure: (figure: ImmutableMap<string, any>) =>
-        this.renderFigure(figure, width, height),
+      url: (url: string) => this.renderIFrame(url),
+      figure: (figure: ImmutableMap<string, any>) => this.renderFigure(figure),
     })
   }
 
-  private renderIFrame = (
-    url: string,
-    width: number,
-    height: number
-  ): React.ReactNode => {
-    // <iframe> elements must have a unique title property
+  private renderIFrame = (url: string): React.ReactNode => {
+    const width = this.props.width
+    const height = this.props.height ? this.props.height : DEFAULT_HEIGHT
     return <iframe title="Plotly" src={url} style={{ width, height }} />
   }
 
-  private renderFigure = (
-    figure: ImmutableMap<string, any>,
-    width: number,
-    height: number
-  ): React.ReactNode => {
+  public generateSpec = (figure: ImmutableMap<string, any>): any => {
+    const el = this.props.element
     const spec = JSON.parse(figure.get("spec"))
+    const useContainerWidth = JSON.parse(el.get("useContainerWidth"))
+
+    if (this.props.height) {
+      //fullscreen
+      spec.layout.width = this.props.width
+      spec.layout.height = this.props.height
+    } else {
+      if (useContainerWidth) {
+        spec.layout.width = this.props.width
+      }
+    }
+
+    return spec
+  }
+
+  private renderFigure = (
+    figure: ImmutableMap<string, any>
+  ): React.ReactNode => {
+    const spec = this.generateSpec(figure)
     const config = JSON.parse(figure.get("config"))
-    spec.layout.width = width
-    spec.layout.height = height
 
     // 2019-11-05: Re-render with a new element key to force React to
     // unmount the previous <Plot> component and create a new element from
@@ -106,23 +98,9 @@ class PlotlyChart extends React.PureComponent<PropsWithHeight> {
         layout={spec.layout}
         config={config}
         frames={spec.frames}
-        style={{ width, height }}
       />
     )
   }
 }
 
-class WithFullScreenWrapper extends React.Component<Props> {
-  render(): JSX.Element {
-    const { element, width } = this.props
-    return (
-      <FullScreenWrapper width={width}>
-        {({ width, height }) => (
-          <PlotlyChart element={element} width={width} height={height} />
-        )}
-      </FullScreenWrapper>
-    )
-  }
-}
-
-export default WithFullScreenWrapper
+export default withFullScreenWrapper(PlotlyChart)

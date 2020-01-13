@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ def main():
     st.write("This should show a plot with labels and images cut off")
     x = st.info("Loading...")
     with st.echo():
-        x.pyplot(fig)
+        x.pyplot(fig, clear_figure=False)
 
     # generate an image file via matplotlib with kwargs
     fakefile = io.BytesIO()

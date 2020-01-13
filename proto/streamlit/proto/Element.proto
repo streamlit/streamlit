@@ -1,5 +1,5 @@
 /**
- * Copyright 2018-2019 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import "streamlit/proto/Checkbox.proto";
 import "streamlit/proto/DataFrame.proto";
 import "streamlit/proto/DateInput.proto";
 import "streamlit/proto/DeckGlChart.proto";
+import "streamlit/proto/DeckGlJsonChart.proto";
 import "streamlit/proto/DocString.proto";
 import "streamlit/proto/Empty.proto";
 import "streamlit/proto/Exception.proto";
@@ -64,6 +65,7 @@ message Element {
     DataFrame table = 11;
     DateInput date_input = 27;
     DeckGlChart deck_gl_chart = 15;
+    DeckGlJsonChart deck_gl_json_chart = 34;
     DocString doc_string = 7;
     Empty empty = 2;
     Exception exception = 8;
@@ -85,6 +87,9 @@ message Element {
     TimeInput time_input = 26;
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
-    // Next ID: 34
+    
+    // Next ID: 35
   }
+
+  reserved 9;
 }

@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2019 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 import {
   BlockPath,
   Delta,
-  ForwardMsgMetadata,
+  IForwardMsgMetadata,
   NamedDataSet,
 } from "autogen/proto"
 import { List, Map as ImmutableMap } from "immutable"
@@ -42,8 +42,12 @@ export function applyDelta(
   elements: Elements,
   reportId: string,
   deltaMsg: Delta,
-  metadata: ForwardMsgMetadata
+  metadata: IForwardMsgMetadata | null | undefined
 ): Elements {
+  if (!metadata) {
+    throw new Error("Delta metadata is required")
+  }
+
   const delta = toImmutableProto(Delta, deltaMsg)
   const parentBlock = requireNonNull(metadata.parentBlock)
   const parentBlockPath = requireNonNull(parentBlock.path)
@@ -93,7 +97,7 @@ function handleNewElementMessage(
   reportElement: ReportElement,
   element: SimpleElement,
   reportId: string,
-  metadata: ForwardMsgMetadata
+  metadata: IForwardMsgMetadata
 ): ReportElement {
   MetricsManager.current.incrementDeltaCounter(container)
   MetricsManager.current.incrementDeltaCounter(element.get("type"))

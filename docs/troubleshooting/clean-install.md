@@ -64,6 +64,7 @@ Streamlit's officially-supported environment manager for macOS and Linux is [Pip
    ```
 
    On Ubuntu with Python 3:
+
    ```sh
    sudo apt-get install python3-pip
    ```
@@ -101,6 +102,7 @@ Streamlit's officially-supported environment manager for macOS and Linux is [Pip
    ```
 
    Or if you want to create an easily-reproducible environment, replace `pip` with `pipenv` every time you install something:
+
    ```sh
    pipenv install streamlit
    ```

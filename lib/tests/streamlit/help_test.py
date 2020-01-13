@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -115,8 +115,7 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
                 ds.signature,
                 (
                     "(func=None, persist=False, "
-                    "allow_output_mutation=False, show_spinner=True, suppress_st_warning=False, hash_funcs=None, "
-                    "**kwargs)"
+                    "allow_output_mutation=False, show_spinner=True, suppress_st_warning=False, hash_funcs=None, ignore_hash=False)"
                 ),
             )
             self.assertTrue(ds.doc_string.startswith("Function decorator to"))

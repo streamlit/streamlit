@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import time
 import types
 import unittest
 
-import altair as alt
+import altair.vegalite.v3
 import numpy as np
 import pandas as pd
 import pytest
@@ -444,11 +444,14 @@ class CodeHashTest(unittest.TestCase):
     def test_external_module(self):
         """Test code that references an external module."""
 
+        # NB: If a future vegalite update removes the v3 API, these functions
+        # will need to be updated!
+
         def call_altair_concat():
-            return alt.vegalite.v3.api.concat()
+            return alt.vegalite.v4.api.concat()
 
         def call_altair_layer():
-            return alt.vegalite.v3.api.layer()
+            return alt.vegalite.v4.api.layer()
 
         self.assertNotEqual(get_hash(call_altair_concat), get_hash(call_altair_layer))
 

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -203,8 +203,7 @@ def _get_mutated_output_error_message():
         By default, Streamlit’s cache is immutable. You received this warning
         because Streamlit thinks you modified a cached object.
 
-        [Click here to see how to fix this issue.]
-        (https://streamlit.io/docs/advanced_concepts.html#advanced-caching)
+        [Click here to see how to fix this issue.](https://docs.streamlit.io/advanced_concepts.html#advanced-caching)
         """
     ).strip("\n")
 
@@ -242,7 +241,8 @@ def _read_from_disk_cache(key):
     path = file_util.get_streamlit_file_path("cache", "%s.pickle" % key)
     try:
         with file_util.streamlit_read(path, binary=True) as input:
-            value = pickle.load(input)
+            entry = pickle.load(input)
+            value = entry.value
             LOGGER.debug("Disk cache HIT: %s", type(value))
     except util.Error as e:
         LOGGER.error(e)
@@ -307,7 +307,7 @@ def cache(
     show_spinner=True,
     suppress_st_warning=False,
     hash_funcs=None,
-    **kwargs
+    ignore_hash=False,
 ):
     """Function decorator to memoize function executions.
 
@@ -340,6 +340,10 @@ def cache(
         inside Streamlit's caching mechanism: when the hasher encounters an object, it will first
         check to see if its type matches a key in this dict and, if so, will use the provided
         function to generate a hash for it. See below for an example of how this can be used.
+
+    ignore_hash : boolean
+        DEPRECATED. Please use allow_output_mutation instead.
+        This argument will be fully removed after 2020-03-16.
 
     Example
     -------
@@ -383,7 +387,7 @@ def cache(
     """
     # Help users migrate to the new kwarg
     # Remove this warning after 2020-03-16.
-    if "ignore_hash" in kwargs:
+    if ignore_hash:
         raise Exception(
             "The `ignore_hash` argument has been renamed to `allow_output_mutation`."
         )

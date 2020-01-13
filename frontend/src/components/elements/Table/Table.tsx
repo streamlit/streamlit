@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2019 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,10 @@
 
 import React from "react"
 import { Table as ReactTable } from "reactstrap"
-import { toFormattedString } from "../../../lib/format"
+import { toFormattedString } from "lib/format"
 import { Map as ImmutableMap } from "immutable"
-import {
-  dataFrameGet,
-  dataFrameGetDimensions,
-} from "../../../lib/dataFrameProto"
-import FullScreenWrapper from "components/shared/FullScreenWrapper"
+import { dataFrameGet, dataFrameGetDimensions } from "lib/dataFrameProto"
+import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import "./Table.scss"
 
 /**
@@ -150,15 +147,4 @@ const TableRow: React.SFC<TableRowProps> = (props: TableRowProps) => {
   return <React.Fragment>{entries}</React.Fragment>
 }
 
-class WithFullScreenWrapper extends React.Component<Props> {
-  render(): JSX.Element {
-    const { element, width } = this.props
-    return (
-      <FullScreenWrapper width={width}>
-        {({ width }) => <Table element={element} width={width} />}
-      </FullScreenWrapper>
-    )
-  }
-}
-
-export default WithFullScreenWrapper
+export default withFullScreenWrapper(Table)

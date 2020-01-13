@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -450,7 +450,7 @@ class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
     def test_line_chart_with_generic_index(self):
         """Test dg.line_chart with a generic index."""
         data = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
-        data.set_index('a', inplace=True)
+        data.set_index("a", inplace=True)
 
         st.line_chart(data)
 
@@ -462,7 +462,7 @@ class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
     def test_line_chart_add_rows_with_generic_index(self):
         """Test empty dg.line_chart with add_rows funciton and a generic index."""
         data = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
-        data.set_index('a', inplace=True)
+        data.set_index("a", inplace=True)
 
         chart = st.line_chart()
         chart.add_rows(data)

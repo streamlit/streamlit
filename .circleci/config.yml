@@ -367,7 +367,7 @@ jobs:
           command: |
             mkdir ~/.streamlit
             echo '[general]' >  ~/.streamlit/credentials.toml
-            echo 'email = "jonathan@streamlit.io"' >> ~/.streamlit/credentials.toml
+            echo 'email = "test@streamlit.io"' >> ~/.streamlit/credentials.toml
             cd frontend
             yarn run cy:serve-and-run-all
 

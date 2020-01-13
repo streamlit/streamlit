@@ -1,5 +1,5 @@
 /**
- * Copyright 2018-2019 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 syntax = "proto3";
 
 import "streamlit/proto/DataFrame.proto";
-import "streamlit/proto/DataTransform.proto";
 import "streamlit/proto/NamedDataSet.proto";
 
 message VegaLiteChart {
@@ -32,4 +31,9 @@ message VegaLiteChart {
   // Dataframes associated with this chart using Vega-Lite's datasets API, if
   // any.
   repeated NamedDataSet datasets = 4;
+
+  // If True, will overwrite the chart width spec to fit to container.
+  bool use_container_width = 5;
+
+  reserved 3;
 }

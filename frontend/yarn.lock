@@ -901,6 +901,14 @@
   dependencies:
     d3-dsv "^1.0.8"
 
+"@deck.gl/json@^7.3.4":
+  version "7.3.4"
+  resolved "https://registry.yarnpkg.com/@deck.gl/json/-/json-7.3.4.tgz#b21e902c9fe2a1211f5973aab5f49222956a46b8"
+  integrity sha512-5yZ2Wr4EcVliIHrA9pQIz6QH31FGxY2Wqfdjf97ILdjT0Z0D1fawpzxZPBz4LL2LrAVSg6RWUYdMycvc1iIwpQ==
+  dependencies:
+    d3-dsv "^1.0.8"
+    expression-eval "^2.0.0"
+
 "@deck.gl/layers@7.2.3":
   version "7.2.3"
   resolved "https://registry.yarnpkg.com/@deck.gl/layers/-/layers-7.2.3.tgz#129bf2af15a2dffb58abd71ca684aaa2c61a30d8"
@@ -3702,7 +3710,7 @@ combined-stream@^1.0.6, combined-stream@~1.0.6:
   dependencies:
     delayed-stream "~1.0.0"
 
-commander@2, commander@2.20.0, commander@^2.11.0, commander@^2.15.1, commander@^2.20.0, commander@~2.20.0:
+commander@2, commander@2.20.0, commander@^2.11.0, commander@^2.15.1, commander@^2.20.0:
   version "2.20.0"
   resolved "https://registry.yarnpkg.com/commander/-/commander-2.20.0.tgz#d58bb2b5c1ee8f87b0d340027e9e94e222c5a422"
 
@@ -3714,7 +3722,7 @@ commander@2.17.x:
   version "2.17.1"
   resolved "https://registry.yarnpkg.com/commander/-/commander-2.17.1.tgz#bd77ab7de6de94205ceacc72f1716d29f20a77bf"
 
-commander@^2.19.0:
+commander@^2.19.0, commander@~2.20.3:
   version "2.20.3"
   resolved "https://registry.yarnpkg.com/commander/-/commander-2.20.3.tgz#fd485e84c03eb4881c20722ba48035e8531aeb33"
   integrity sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ==
@@ -4304,6 +4312,11 @@ cwise@^1.0.10, cwise@^1.0.3, cwise@^1.0.4:
 cyclist@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/cyclist/-/cyclist-1.0.1.tgz#596e9698fd0c80e12038c2b82d6eb1b35b6224d9"
+
+cypress-file-upload@^3.5.1:
+  version "3.5.1"
+  resolved "https://registry.yarnpkg.com/cypress-file-upload/-/cypress-file-upload-3.5.1.tgz#6dcd7a87c93242b8fe917abe39bdda1ff82e23a3"
+  integrity sha512-HUhnoLlhLTHmgRGsoflcGyv3n9WA/Kh96mmBLmTGlg9Fs/CP2fVVc4NdbKeT9fNYk6Qy3upjfUxYaavNnfQb/Q==
 
 cypress-image-snapshot@^3.1.1:
   version "3.1.1"
@@ -5790,6 +5803,13 @@ express@^4.16.2:
     utils-merge "1.0.1"
     vary "~1.1.2"
 
+expression-eval@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/expression-eval/-/expression-eval-2.0.0.tgz#156bc71a700b0c7797f47d8a7167ce4fba5c060c"
+  integrity sha512-8cFzfco37CdZQd4DTyZ+ncxQtPUTE0dcxvbGXYc17Ji+3MQSBkT+11GdfC7eO2duvLNuWjN7Ejqb0kLX/u2bBw==
+  dependencies:
+    jsep "^0.3.0"
+
 extend-shallow@^2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/extend-shallow/-/extend-shallow-2.0.1.tgz#51af7d614ad9a9f610ea1bafbb989d6b1c56890f"
@@ -7041,8 +7061,9 @@ handle-thing@^2.0.0:
   resolved "https://registry.yarnpkg.com/handle-thing/-/handle-thing-2.0.0.tgz#0e039695ff50c93fc288557d696f3c1dc6776754"
 
 handlebars@^4.1.2:
-  version "4.2.0"
-  resolved "https://registry.yarnpkg.com/handlebars/-/handlebars-4.2.0.tgz#57ce8d2175b9bbb3d8b3cf3e4217b1aec8ddcb2e"
+  version "4.5.3"
+  resolved "https://registry.yarnpkg.com/handlebars/-/handlebars-4.5.3.tgz#5cf75bd8714f7605713511a56be7c349becb0482"
+  integrity sha512-3yPecJoJHK/4c6aZhSvxOyG4vJKDshV36VHp0iVCDVh7o9w2vwi3NSnL2MMPj3YdduqaBcu7cGbggJQM0br9xA==
   dependencies:
     neo-async "^2.6.0"
     optimist "^0.6.1"
@@ -8516,6 +8537,11 @@ jsdom@^14.0.0:
     ws "^6.1.2"
     xml-name-validator "^3.0.0"
 
+jsep@^0.3.0:
+  version "0.3.4"
+  resolved "https://registry.yarnpkg.com/jsep/-/jsep-0.3.4.tgz#55ebd4400c5c5861cb1ff949a7a4cd97fcaacaa0"
+  integrity sha512-ovGD9wE+wvudIIYxZGrRcZCxNyZ3Cl1N7Bzyp7/j4d/tA0BaUwcVM9bu0oZaSrefMiNwv6TwZ9X15gvZosteCQ==
+
 jsesc@^2.5.1:
   version "2.5.2"
   resolved "https://registry.yarnpkg.com/jsesc/-/jsesc-2.5.2.tgz#80564d2e483dacf6e8ef209650a67df3f0c283a4"
@@ -9374,6 +9400,7 @@ minimist@1.2.0, minimist@^1.1.1, minimist@^1.1.3, minimist@^1.2.0, minimist@~1.2
 minimist@~0.0.1:
   version "0.0.10"
   resolved "https://registry.yarnpkg.com/minimist/-/minimist-0.0.10.tgz#de3f98543dbf96082be48ad1a0c7cda836301dcf"
+  integrity sha1-3j+YVD2/lggr5IrRoMfNqDYwHc8=
 
 minipass@^2.2.1, minipass@^2.3.5:
   version "2.5.0"
@@ -10180,6 +10207,7 @@ opn@^5.1.0:
 optimist@^0.6.1:
   version "0.6.1"
   resolved "https://registry.yarnpkg.com/optimist/-/optimist-0.6.1.tgz#da3ea74686fa21a19a111c326e90eb15a0196686"
+  integrity sha1-2j6nRob6IaGaERwybpDrFaAZZoY=
   dependencies:
     minimist "~0.0.1"
     wordwrap "~0.0.2"
@@ -13050,9 +13078,10 @@ send@0.17.1:
     range-parser "~1.2.1"
     statuses "~1.5.0"
 
-serialize-javascript@^1.7.0:
-  version "1.9.1"
-  resolved "https://registry.yarnpkg.com/serialize-javascript/-/serialize-javascript-1.9.1.tgz#cfc200aef77b600c47da9bb8149c943e798c2fdb"
+serialize-javascript@^1.7.0, serialize-javascript@^2.1.1:
+  version "2.1.2"
+  resolved "https://registry.yarnpkg.com/serialize-javascript/-/serialize-javascript-2.1.2.tgz#ecec53b0e0317bdc95ef76ab7074b7384785fa61"
+  integrity sha512-rs9OggEUF0V4jUSecXazOYsLfu7OGK2qIn3c7IPBiffz32XniEp/TX9Xmc9LQfK2nQ2QKHvZ2oygKUGU0lG4jQ==
 
 serve-index@^1.7.2:
   version "1.9.1"
@@ -13358,6 +13387,7 @@ source-map-url@^0.4.0:
 source-map@0.6.1, source-map@^0.6.0, source-map@^0.6.1, source-map@~0.6.0, source-map@~0.6.1:
   version "0.6.1"
   resolved "https://registry.yarnpkg.com/source-map/-/source-map-0.6.1.tgz#74722af32e9614e9c287a8d0bbde48b5e2f1a263"
+  integrity sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==
 
 source-map@^0.4.2:
   version "0.4.4"
@@ -14326,9 +14356,10 @@ typedarray@^0.0.6:
   version "0.0.6"
   resolved "https://registry.yarnpkg.com/typedarray/-/typedarray-0.0.6.tgz#867ac74e3864187b1d3d47d996a78ec5c8830777"
 
-typescript@^3.6.2:
-  version "3.6.2"
-  resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.6.2.tgz#105b0f1934119dde543ac8eb71af3a91009efe54"
+typescript@3.6.3:
+  version "3.6.3"
+  resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.6.3.tgz#fea942fabb20f7e1ca7164ff626f1a9f3f70b4da"
+  integrity sha512-N7bceJL1CtRQ2RiG0AQME13ksR7DiuQh/QehubYcghzv20tnh+MQnQIuJddTmsbqYj+dztchykemz0zFzlvdQw==
 
 ua-parser-js@^0.7.18:
   version "0.7.20"
@@ -14351,10 +14382,11 @@ uglify-js@^2.6.0:
     uglify-to-browserify "~1.0.0"
 
 uglify-js@^3.1.4:
-  version "3.6.0"
-  resolved "https://registry.yarnpkg.com/uglify-js/-/uglify-js-3.6.0.tgz#704681345c53a8b2079fb6cec294b05ead242ff5"
+  version "3.7.3"
+  resolved "https://registry.yarnpkg.com/uglify-js/-/uglify-js-3.7.3.tgz#f918fce9182f466d5140f24bb0ff35c2d32dcc6a"
+  integrity sha512-7tINm46/3puUA4hCkKYo4Xdts+JDaVC9ZPRcG8Xw9R4nhO/gZgUM3TENq8IF4Vatk8qCig4MzP/c8G4u2BkVQg==
   dependencies:
-    commander "~2.20.0"
+    commander "~2.20.3"
     source-map "~0.6.1"
 
 uglify-to-browserify@~1.0.0:
@@ -15340,6 +15372,7 @@ wordwrap@0.0.2:
 wordwrap@~0.0.2:
   version "0.0.3"
   resolved "https://registry.yarnpkg.com/wordwrap/-/wordwrap-0.0.3.tgz#a3d5da6cd5c0bc0008d37234bbaf1bed63059107"
+  integrity sha1-o9XabNXAvAAI03I0u68b7WMFkQc=
 
 wordwrap@~1.0.0:
   version "1.0.0"

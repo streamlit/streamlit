@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ SHARING_MODES = set(
 )
 
 
-def marshall(proto, figure_or_data, width, height, sharing, **kwargs):
+def marshall(proto, figure_or_data, use_container_width, sharing, **kwargs):
     """Marshall a proto with a Plotly spec.
 
     See DeltaGenerator.plotly_chart for docs.
@@ -63,8 +63,7 @@ def marshall(proto, figure_or_data, width, height, sharing, **kwargs):
     if not isinstance(sharing, string_types) or sharing.lower() not in SHARING_MODES:
         raise ValueError("Invalid sharing mode for Plotly chart: %s" % sharing)
 
-    proto.width = width
-    proto.height = height
+    proto.use_container_width = use_container_width
 
     if sharing == "streamlit":
         import plotly.utils

@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2019 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import { Map as ImmutableMap } from "immutable"
 import { Alert as AlertProto } from "autogen/proto"
 import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
 
+import "./Alert.scss"
 import "assets/css/write.scss"
 
 // classes defined in assets/css/theme.scss

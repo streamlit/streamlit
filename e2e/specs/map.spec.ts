@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2019 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,6 @@ describe("st.map", () => {
   });
 
   it("displays a map using deck_gl", () => {
-    cy.get(".element-container .deckglchart").should("have.length", 2);
+    cy.get(".element-container .stDeckGlJsonChart").should("have.length", 2);
   });
 });
