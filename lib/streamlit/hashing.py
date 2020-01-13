@@ -258,14 +258,15 @@ class CodeHasher:
                 return _int_to_bytes(obj)
             elif isinstance(obj, list) or isinstance(obj, tuple):
                 h = hashlib.new(self.name)
-                # add type to distingush x from [x]
+
+                # Add type to distingush x from [x]
                 self._update(h, type(obj).__name__.encode() + b":")
                 for e in obj:
                     self._update(h, e, context)
                 return h.digest()
             elif isinstance(obj, dict):
                 h = hashlib.new(self.name)
-                # add type to distingush x from [x]
+
                 self._update(h, type(obj).__name__.encode() + b":")
                 for e in obj.items():
                     self._update(h, e, context)
@@ -375,7 +376,7 @@ class CodeHasher:
             else:
                 # As a last resort
                 h = hashlib.new(self.name)
-                # Add type to distingush x from [x]
+
                 self._update(h, type(obj).__name__.encode() + b":")
                 for e in obj.__reduce__():
                     self._update(h, e, context)
