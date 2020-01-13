@@ -36,6 +36,7 @@ from streamlit import type_util
 from streamlit.errors import UnhashableType
 from streamlit.folder_black_list import FolderBlackList
 from streamlit.compatibility import setup_2_3_shims
+from streamlit.logger import get_logger
 
 if sys.version_info >= (3, 0):
     from streamlit.hashing_py3 import get_referenced_objects
@@ -50,6 +51,8 @@ try:
 except ImportError:
     import pickle
 
+
+LOGGER = get_logger(__name__)
 
 # If a dataframe has more than this many rows, we consider it large and hash a sample.
 PANDAS_ROWS_LARGE = 100000
@@ -146,39 +149,26 @@ def _key(obj, context):
     return None
 
 
-def _hashing_error_message(start):
+def _hashing_error_message(bad_type):
     return textwrap.dedent(
         """
-        %(start)s
+        Cannot hash object of type %(bad_type)s
 
-        **More information:** to prevent unexpected behavior, Streamlit tries
-        to detect mutations in cached objects defined in your local files so
-        it can alert you when the cache is used incorrectly. However, something
-        went wrong while performing this check.
+        As part of caching some code, Streamlit encountered an object of
+        type `%(bad_type)s`. You’ll need to help Streamlit understand how to
+        hash that type with the `hash_funcs` argument. For example:
 
-        This error can occur when your virtual environment lives in the same
-        folder as your project, since that makes it hard for Streamlit to
-        understand which files it should check. If you think that's what caused
-        this, please add the following to `~/.streamlit/config.toml`:
-
-        ```toml
-        [server]
-        folderWatchBlacklist = ['foldername']
+        ```
+        @st.cache(hash_funcs={%(bad_type)s: my_hash_func})
+        def my_func(...):
+            ...
         ```
 
-        ...where `foldername` is the relative or absolute path to the folder
-        where you put your virtual environment.
-
-        Otherwise, please [file a
-        bug here](https://github.com/streamlit/streamlit/issues/new/choose).
-
-        To stop this warning from showing in the meantime, try one of the
-        following:
-
-        * **Preferred:** modify your code to avoid using this type of object.
-        * Or add the argument `allow_output_mutation=True` to the `st.cache` decorator.
+        Please see the [`hash_funcs` documentation]
+        (https://streamlit.io/docs/advanced_concepts.html#advanced-caching)
+        for more details.
     """
-        % {"start": start}
+        % {"bad_type": str(bad_type).split("'")[1]}
     ).strip("\n")
 
 
@@ -391,9 +381,11 @@ class CodeHasher:
                 for e in obj.__reduce__():
                     self._update(h, e, context)
                 return h.digest()
+        except UnhashableType as e:
+            raise e
         except Exception as e:
-            msg = "Streamlit failed to hash an object of type %s." % type(obj)
-            st.warning(_hashing_error_message(msg))
+            LOGGER.error(e)
+            msg = _hashing_error_message(type(obj))
             raise UnhashableType(msg)
 
     def _code_to_bytes(self, code, context):
