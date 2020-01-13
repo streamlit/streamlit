@@ -18,7 +18,6 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
-from streamlit.proto.NumberInput_pb2 import NumberInput
 
 setup_2_3_shims(globals())
 
@@ -44,6 +43,7 @@ from streamlit.proto import Alert_pb2
 from streamlit.proto import Balloons_pb2
 from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
+from streamlit.proto.NumberInput_pb2 import NumberInput
 
 
 # setup logging
