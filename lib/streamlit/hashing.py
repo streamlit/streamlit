@@ -289,7 +289,6 @@ class CodeHasher:
                 try:
                     return pd.util.hash_pandas_object(obj).sum()
                 except TypeError:
-                    # Todo: should we still be pickling in this case?
                     # Use pickle if pandas cannot hash the object for example if
                     # it contains unhashable objects.
                     return pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
@@ -376,7 +375,7 @@ class CodeHasher:
             else:
                 # As a last resort
                 h = hashlib.new(self.name)
-                # add type to distingush x from [x]
+                # Add type to distingush x from [x]
                 self._update(h, type(obj).__name__.encode() + b":")
                 for e in obj.__reduce__():
                     self._update(h, e, context)
