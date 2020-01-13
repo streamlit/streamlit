@@ -16,6 +16,7 @@
  */
 
 import React, { Fragment, PureComponent, ReactNode } from "react"
+import moment from "moment"
 import { HotKeys } from "react-hotkeys"
 import { fromJS, List } from "immutable"
 import classNames from "classnames"
@@ -82,7 +83,6 @@ interface State {
   elements: Elements
   reportId: string
   reportName: string
-  reportHash: string | null
   reportRunState: ReportRunState
   userSettings: UserSettings
   dialog?: DialogProps | null
@@ -122,7 +122,6 @@ export class App extends PureComponent<Props, State> {
       },
       reportName: "",
       reportId: "<null>",
-      reportHash: null,
       reportRunState: ReportRunState.NOT_RUNNING,
       userSettings: {
         wideMode: false,
@@ -403,7 +402,6 @@ export class App extends PureComponent<Props, State> {
    * @param newReportProto a NewReport protobuf
    */
   handleNewReport = (newReportProto: NewReport): void => {
-    const { reportHash } = this.state
     const { id: reportId, name: reportName, scriptPath } = newReportProto
 
     const newReportHash = hashString(
@@ -422,13 +420,7 @@ export class App extends PureComponent<Props, State> {
       reportHash: newReportHash,
     })
 
-    if (reportHash === newReportHash) {
-      this.setState({
-        reportId,
-      })
-    } else {
-      this.clearAppState(newReportHash, reportId, reportName)
-    }
+    this.clearAppState(reportId, reportName)
   }
 
   /**
@@ -504,16 +496,11 @@ export class App extends PureComponent<Props, State> {
   /*
    * Clear all elements from the state.
    */
-  clearAppState(
-    reportHash: string,
-    reportId: string,
-    reportName: string
-  ): void {
+  clearAppState(reportId: string, reportName: string): void {
     this.setState(
       {
         reportId,
         reportName,
-        reportHash,
         elements: {
           main: fromJS([]),
           sidebar: fromJS([]),
@@ -797,10 +784,11 @@ export class App extends PureComponent<Props, State> {
   }
 
   screencastCallback = (): void => {
-    const { reportName, reportHash } = this.state
+    const { reportName } = this.state
     const { startRecording } = this.props.screenCast
+    const date = moment().format("YYYY-MM-DD-HH-MM-SS")
 
-    startRecording(`${reportName}-${reportHash}`)
+    startRecording(`streamlit-${reportName}-${date}`)
   }
 
   render(): JSX.Element {

@@ -68,7 +68,7 @@ class VideoRecordedDialog extends PureComponent<Props> {
             outline
             color="primary"
             href={videoSource}
-            download={`${fileName}.mp4`}
+            download={`${fileName}.webm`}
             onClick={this.handleDownloadButton}
           >
             Download
