@@ -18,6 +18,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+from streamlit.proto.NumberInput_pb2 import NumberInput
 
 setup_2_3_shims(globals())
 
@@ -1992,6 +1993,8 @@ class DeltaGenerator(object):
 
         # Bounds checks. JSNumber produces human-readable exceptions that
         # we simply re-package as StreamlitAPIExceptions.
+        # (We check `min_value` and `max_value` here; `value` and `step` are
+        # already known to be in the [min_value, max_value] range.)
         try:
             if all_ints:
                 JSNumber.validate_int_bounds(min_value, "`min_value`")
@@ -2428,25 +2431,43 @@ class DeltaGenerator(object):
                 % {"value": value, "min": min_value, "max": max_value}
             )
 
-        number_input = element.number_input
-        if all_ints:
-            data = number_input.int_data
-        else:
-            data = number_input.float_data
+        # Bounds checks. JSNumber produces human-readable exceptions that
+        # we simply re-package as StreamlitAPIExceptions.
+        try:
+            if all_ints:
+                if min_value is not None:
+                    JSNumber.validate_int_bounds(min_value, "`min_value`")
+                if max_value is not None:
+                    JSNumber.validate_int_bounds(max_value, "`max_value`")
+                if step is not None:
+                    JSNumber.validate_int_bounds(step, "`step`")
+                JSNumber.validate_int_bounds(value, "`value`")
+            else:
+                if min_value is not None:
+                    JSNumber.validate_float_bounds(min_value, "`min_value`")
+                if max_value is not None:
+                    JSNumber.validate_float_bounds(max_value, "`max_value`")
+                if step is not None:
+                    JSNumber.validate_float_bounds(step, "`step`")
+                JSNumber.validate_float_bounds(value, "`value`")
+        except JSNumberBoundsException as e:
+            raise StreamlitAPIException(str(e))
 
+        number_input = element.number_input
+        number_input.data_type = NumberInput.INT if all_ints else NumberInput.FLOAT
         number_input.label = label
-        data.default = value
+        number_input.default = value
 
         if min_value is not None:
-            data.min = min_value
+            number_input.min = min_value
             number_input.has_min = True
 
         if max_value is not None:
-            data.max = max_value
+            number_input.max = max_value
             number_input.has_max = True
 
         if step is not None:
-            data.step = step
+            number_input.step = step
 
         if format is not None:
             number_input.format = format

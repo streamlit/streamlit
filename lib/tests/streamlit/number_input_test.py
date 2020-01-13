@@ -15,22 +15,35 @@
 
 """number_input unit test."""
 
-from tests import testutil
+import pytest
+
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
-
-from parameterized import parameterized
-import pytest
+from streamlit.js_number import JSNumber
+from streamlit.proto.NumberInput_pb2 import NumberInput
+from tests import testutil
 
 
 class NumberInputTest(testutil.DeltaGeneratorTestCase):
+    def test_data_type(self):
+        """Test that NumberInput.type is set to the proper
+        NumberInput.DataType value
+        """
+        st.number_input("Label", value=0)
+        c = self.get_delta_from_queue().new_element.number_input
+        self.assertEqual(NumberInput.INT, c.data_type)
+
+        st.number_input("Label", value=0.5)
+        c = self.get_delta_from_queue().new_element.number_input
+        self.assertEqual(NumberInput.FLOAT, c.data_type)
+
     def test_just_label(self):
         """Test that it can be called with no value."""
         st.number_input("the label")
 
         c = self.get_delta_from_queue().new_element.number_input
         self.assertEqual(c.label, "the label")
-        self.assertEqual(c.float_data.default, 0.0)
+        self.assertEqual(c.default, 0.0)
         self.assertEqual(c.has_min, False)
         self.assertEqual(c.has_max, False)
 
@@ -39,16 +52,16 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.number_input
         self.assertEqual(c.label, "the label")
-        self.assertEqual(c.int_data.default, 1)
+        self.assertEqual(c.default, 1)
 
     def test_value_between_range(self):
         st.number_input("the label", 0, 11, 10)
 
         c = self.get_delta_from_queue().new_element.number_input
         self.assertEqual(c.label, "the label")
-        self.assertEqual(c.int_data.default, 10)
-        self.assertEqual(c.int_data.min, 0)
-        self.assertEqual(c.int_data.max, 11)
+        self.assertEqual(c.default, 10)
+        self.assertEqual(c.min, 0)
+        self.assertEqual(c.max, 11)
         self.assertEqual(c.has_min, True)
         self.assertEqual(c.has_max, True)
 
@@ -56,13 +69,13 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
         st.number_input("the label", value=10)
 
         c = self.get_delta_from_queue().new_element.number_input
-        self.assertEqual(c.int_data.step, 1.0)
+        self.assertEqual(c.step, 1.0)
 
     def test_default_step_when_a_value_is_float(self):
         st.number_input("the label", value=10.5)
 
         c = self.get_delta_from_queue().new_element.number_input
-        self.assertEqual("%0.2f" % c.float_data.step, "0.01")
+        self.assertEqual("%0.2f" % c.step, "0.01")
 
     def test_default_format_int(self):
         st.number_input("the label", value=10)
@@ -81,14 +94,14 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.number_input
         self.assertEqual(c.format, "%d")
-        self.assertEqual(c.int_data.step, 1)
+        self.assertEqual(c.step, 1)
 
     def test_format_float_and_default_step(self):
         st.number_input("the label", value=10.0, format="%f")
 
         c = self.get_delta_from_queue().new_element.number_input
         self.assertEqual(c.format, "%f")
-        self.assertEqual("%0.2f" % c.float_data.step, "0.01")
+        self.assertEqual("%0.2f" % c.step, "0.01")
 
     def test_value_outrange(self):
         with pytest.raises(StreamlitAPIException) as exc_message:
@@ -127,3 +140,36 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
         for fmt in BAD_FORMATS:
             with pytest.raises(StreamlitAPIException) as exc_message:
                 st.number_input("any label", value=3.14, format=fmt)
+
+    def test_value_out_of_bounds(self):
+        # Max int
+        with pytest.raises(StreamlitAPIException) as exc:
+            value = JSNumber.MAX_SAFE_INTEGER + 1
+            st.number_input("Label", value=value)
+        self.assertEqual(
+            "`value` (%s) must be <= (1 << 53) - 1" % str(value), str(exc.value)
+        )
+
+        # Min int
+        with pytest.raises(StreamlitAPIException) as exc:
+            value = JSNumber.MIN_SAFE_INTEGER - 1
+            st.number_input("Label", value=value)
+        self.assertEqual(
+            "`value` (%s) must be >= -((1 << 53) - 1)" % str(value), str(exc.value)
+        )
+
+        # Max float
+        with pytest.raises(StreamlitAPIException) as exc:
+            value = 2e308
+            st.number_input("Label", value=value)
+        self.assertEqual(
+            "`value` (%s) must be <= 1.797e+308" % str(value), str(exc.value)
+        )
+
+        # Min float
+        with pytest.raises(StreamlitAPIException) as exc:
+            value = -2e308
+            st.number_input("Label", value=value)
+        self.assertEqual(
+            "`value` (%s) must be >= -1.797e+308" % str(value), str(exc.value)
+        )
