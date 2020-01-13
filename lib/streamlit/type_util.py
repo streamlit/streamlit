@@ -194,6 +194,11 @@ def is_pandas_styler(obj):
     return is_type(obj, _PANDAS_STYLER_TYPE_STR)
 
 
+def is_pydeck(obj):
+    """True if input looks like a pydeck chart."""
+    return is_type(obj, "pydeck.bindings.deck.Deck")
+
+
 def convert_anything_to_df(df):
     """Try to convert different formats to a Pandas Dataframe.
 

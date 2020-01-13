@@ -13,17 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A Python wrapper around Bokeh."""
+import streamlit as st
 
-from bokeh.embed import json_item
-import json
+st.error("This is an error")
+st.warning("This is a warning")
+st.info("This is an info message")
+st.success("This is a success message")
 
-
-def marshall(proto, figure, use_container_width):
-    """Construct a Bokeh chart object.
-
-    See DeltaGenerator.bokeh_chart for docs.
-    """
-    data = json_item(figure)
-    proto.figure = json.dumps(data)
-    proto.use_container_width = use_container_width
+# This is here so we can test the distance beween the success message and the
+# "Done!" text below.
+st.write("Done!")

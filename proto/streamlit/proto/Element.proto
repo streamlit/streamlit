@@ -27,6 +27,7 @@ import "streamlit/proto/Checkbox.proto";
 import "streamlit/proto/DataFrame.proto";
 import "streamlit/proto/DateInput.proto";
 import "streamlit/proto/DeckGlChart.proto";
+import "streamlit/proto/DeckGlJsonChart.proto";
 import "streamlit/proto/DocString.proto";
 import "streamlit/proto/Empty.proto";
 import "streamlit/proto/Exception.proto";
@@ -55,7 +56,7 @@ message Element {
   // An element can be one of the following element types.
   oneof type {
     Alert alert = 30;
-    ArrowTable arrow_table = 34;
+    ArrowTable arrow_table = 35;
     Audio audio = 13;
     Balloons balloons = 12;
     BokehChart bokeh_chart = 17;
@@ -66,6 +67,7 @@ message Element {
     DataFrame table = 11;
     DateInput date_input = 27;
     DeckGlChart deck_gl_chart = 15;
+    DeckGlJsonChart deck_gl_json_chart = 34;
     DocString doc_string = 7;
     Empty empty = 2;
     Exception exception = 8;
@@ -87,8 +89,8 @@ message Element {
     TimeInput time_input = 26;
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
-
-    // Next ID: 35
+    
+    // Next ID: 36
   }
 
   reserved 9;

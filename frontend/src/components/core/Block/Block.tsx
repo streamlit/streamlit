@@ -46,6 +46,9 @@ const Balloons = React.lazy(() => import("components/elements/Balloons/"))
 const BokehChart = React.lazy(() => import("components/elements/BokehChart/"))
 const DataFrame = React.lazy(() => import("components/elements/DataFrame/"))
 const DeckGlChart = React.lazy(() => import("components/elements/DeckGlChart/"))
+const DeckGlJsonChart = React.lazy(() =>
+  import("components/elements/DeckGlJsonChart/")
+)
 const ImageList = React.lazy(() => import("components/elements/ImageList/"))
 const GraphVizChart = React.lazy(() =>
   import("components/elements/GraphVizChart/")
@@ -253,6 +256,9 @@ class Block extends PureComponent<Props> {
       ),
       deckGlChart: (el: SimpleElement) => (
         <DeckGlChart element={el} width={width} />
+      ),
+      deckGlJsonChart: (el: SimpleElement) => (
+        <DeckGlJsonChart element={el} width={width} />
       ),
       docString: (el: SimpleElement) => (
         <DocString element={el} width={width} />

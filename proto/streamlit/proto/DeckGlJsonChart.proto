@@ -1,5 +1,4 @@
 /**
- * @license
  * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,14 +12,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+*/
 
-describe("st.map", () => {
-  before(() => {
-    cy.visit("http://localhost:3000/")
-  })
+syntax = "proto3";
 
-  it("displays a map using deck_gl", () => {
-    cy.get(".element-container .stDeckGlJsonChart").should("have.length", 2)
-  })
-})
+message DeckGlJsonChart {
+  // The dataframe that will be used as the chart's main data source.
+  string json = 1;
+}

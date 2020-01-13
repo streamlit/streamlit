@@ -48,20 +48,21 @@ _dummy_graphviz
 class GraphVizChart extends React.PureComponent<PropsWithHeight> {
   private chartId: string = "graphviz-chart-" + this.props.index
   private originalHeight = 0
+  private originalWidth = 0
 
   private getChartData = (): string => {
     return this.props.element.get("spec")
   }
 
   public getChartDimensions = (): Dimensions => {
-    const el = this.props.element
-    const width = el.get("width") ? el.get("width") : this.props.width
-    const height = el.get("height")
-      ? el.get("height")
-      : this.props.height
-      ? this.props.height
-      : this.originalHeight
+    let width = this.originalWidth
+    let height = this.originalHeight
 
+    if (this.props.height) {
+      //fullscreen
+      width = this.props.width
+      height = this.props.height
+    }
     return { width, height }
   }
 
@@ -80,20 +81,19 @@ class GraphVizChart extends React.PureComponent<PropsWithHeight> {
           ).node() as SVGGraphicsElement
           if (node) {
             this.originalHeight = node.getBBox().height
+            this.originalWidth = node.getBBox().width
           }
         })
 
-      const { height } = this.getChartDimensions()
+      const { height, width } = this.getChartDimensions()
       if (height > 0) {
         // Override or reset the graph height
         graph.height(height)
       }
-
-      // Override or reset the graph width
-      // TODO: Fix width when maximized without breaking alignment when normal.
-      // if (width > 0) {
-      //   graph.width(width)
-      // }
+      if (width > 0) {
+        // Override or reset the graph width
+        graph.width(width)
+      }
     } catch (error) {
       logError(error)
     }
@@ -109,8 +109,7 @@ class GraphVizChart extends React.PureComponent<PropsWithHeight> {
 
   public render = (): React.ReactNode => {
     const width: number = this.props.element.get("width") || this.props.width
-    const height: number =
-      this.props.element.get("height") || this.props.height
+    const height: number = this.props.element.get("height") || this.props.height
     return (
       <div
         className="graphviz stGraphVizChart"

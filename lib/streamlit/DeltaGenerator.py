@@ -44,6 +44,7 @@ from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto import Text_pb2
 
+
 # setup logging
 from streamlit.logger import get_logger
 
@@ -260,7 +261,7 @@ class DeltaGenerator(object):
     id: int or None
       ID for deltas, or None to create the root DeltaGenerator (which
         produces DeltaGenerators with incrementing IDs)
-    delta_type: string or None
+    delta_type: str or None
       The name of the element passed in Element.proto's oneof.
       This is needed so we can transform dataframes for some elements when
       performing an `add_rows`.
@@ -928,8 +929,9 @@ class DeltaGenerator(object):
 
         import streamlit.elements.altair as altair
 
-        chart = altair.generate_chart("line", data)
-        altair.marshall(element.vega_lite_chart, chart, width, height=height)
+        chart = altair.generate_chart("line", data, width, height)
+        use_container_width = width == 0
+        altair.marshall(element.vega_lite_chart, chart, use_container_width)
 
     @_with_element
     def area_chart(self, element, data=None, width=0, height=0):
@@ -966,8 +968,9 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.altair as altair
 
-        chart = altair.generate_chart("area", data)
-        altair.marshall(element.vega_lite_chart, chart, width, height=height)
+        chart = altair.generate_chart("area", data, width, height)
+        use_container_width = width == 0
+        altair.marshall(element.vega_lite_chart, chart, use_container_width)
 
     @_with_element
     def bar_chart(self, element, data=None, width=0, height=0):
@@ -1004,11 +1007,20 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.altair as altair
 
-        chart = altair.generate_chart("bar", data)
-        altair.marshall(element.vega_lite_chart, chart, width, height=height)
+        chart = altair.generate_chart("bar", data, width, height)
+        use_container_width = width == 0
+        altair.marshall(element.vega_lite_chart, chart, use_container_width)
 
     @_with_element
-    def vega_lite_chart(self, element, data=None, spec=None, width=0, **kwargs):
+    def vega_lite_chart(
+        self,
+        element,
+        data=None,
+        spec=None,
+        width=0,
+        use_container_width=False,
+        **kwargs
+    ):
         """Display a chart using the Vega-Lite library.
 
         Parameters
@@ -1024,10 +1036,12 @@ class DeltaGenerator(object):
             https://vega.github.io/vega-lite/docs/ for more info.
 
         width : number
-            If 0 (default), stretch chart to the full document width. If -1,
-            use the default from Vega-Lite. If greater than 0, sets the width.
-            Note that if spec['width'] is defined, it takes precedence over
-            this argument.
+            Deprecated, if != 0 (default), will show an alert.
+            The real width should be setted in spec.
+
+        use_container_width : bool (False default)
+            If True, set the chart width to the column width. This overrides
+            vega-lite's native `width` value.
 
         **kwargs : any
             Same as spec, but as keywords.
@@ -1063,10 +1077,23 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.vega_lite as vega_lite
 
-        vega_lite.marshall(element.vega_lite_chart, data, spec, width, **kwargs)
+        if width != 0:
+            import streamlit as st
+
+            st.warning(
+                "The `width` argument in `st.vega_lite_chart` is deprecated and will be removed on 2020-03-04. To set the width, you should instead use Vega-Lite's native `width` argument as described at https://vega.github.io/vega-lite/docs/size.html"
+            )
+
+        vega_lite.marshall(
+            element.vega_lite_chart,
+            data,
+            spec,
+            use_container_width=use_container_width,
+            **kwargs
+        )
 
     @_with_element
-    def altair_chart(self, element, altair_chart, width=0):
+    def altair_chart(self, element, altair_chart, width=0, use_container_width=False):
         """Display a chart using the Altair library.
 
         Parameters
@@ -1075,10 +1102,12 @@ class DeltaGenerator(object):
             The Altair chart object to display.
 
         width : number
-            If 0 (default), stretch chart to the full document width. If -1,
-            use the default from Altair. If greater than 0, sets the width.
-            Note that if the top-level width  is defined, it takes precedence
-            over this argument.
+            Deprecated, if != 0 (default), will show an alert.
+            The real width should be setted in the altair_chart object.
+
+        use_container_width : bool (False default)
+            If True, set the chart width to the column width. This overrides
+            altair's native `width` value.
 
         Example
         -------
@@ -1106,7 +1135,18 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.altair as altair
 
-        altair.marshall(element.vega_lite_chart, altair_chart, width)
+        if width != 0:
+            import streamlit as st
+
+            st.warning(
+                "The `width` argument in `st.vega_lite_chart` is deprecated and will be removed on 2020-03-04. To set the width, you should instead use altair's native `width` argument as described at https://altair-viz.github.io/user_guide/generated/toplevel/altair.Chart.html"
+            )
+
+        altair.marshall(
+            element.vega_lite_chart,
+            altair_chart,
+            use_container_width=use_container_width,
+        )
 
     @_with_element
     def graphviz_chart(self, element, figure_or_dot, width=0, height=0):
@@ -1116,10 +1156,14 @@ class DeltaGenerator(object):
         ----------
         figure_or_dot : graphviz.dot.Graph, graphviz.dot.Digraph, str
             The Graphlib graph object or dot string to display
-        width : type
-            The chart width in pixels, or 0 for full width.
-        height : type
-            The chart height in pixels, or 0 for default height.
+
+        width : number
+            Deprecated, if != 0 (default), will show an alert.
+            The real width should be set in the graphviz object.
+
+        height : number
+            Deprecated, if != 0 (default), will show an alert.
+            The real height should be set in the graphviz object.
 
         Example
         -------
@@ -1173,13 +1217,37 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.graphviz_chart as graphviz_chart
 
-        graphviz_chart.marshall(
-            element.graphviz_chart, figure_or_dot, width=width, height=height
-        )
+        if width != 0 and height != 0:
+            import streamlit as st
+
+            st.warning(
+                "The `width` and `height` arguments in `st.graphviz` are deprecated and will be removed on 2020-03-04"
+            )
+        elif width != 0:
+            import streamlit as st
+
+            st.warning(
+                "The `width` argument in `st.graphviz` is deprecated and will be removed on 2020-03-04"
+            )
+        elif height != 0:
+            import streamlit as st
+
+            st.warning(
+                "The `height` argument in `st.graphviz` is deprecated and will be removed on 2020-03-04"
+            )
+
+        graphviz_chart.marshall(element.graphviz_chart, figure_or_dot)
 
     @_with_element
     def plotly_chart(
-        self, element, figure_or_data, width=0, height=0, sharing="streamlit", **kwargs
+        self,
+        element,
+        figure_or_data,
+        width=0,
+        height=0,
+        use_container_width=False,
+        sharing="streamlit",
+        **kwargs
     ):
         """Display an interactive Plotly chart.
 
@@ -1199,10 +1267,16 @@ class DeltaGenerator(object):
             it.
 
         width : int
-            The chart width in pixels, or 0 for full width.
+            Deprecated, if != 0 (default), will show an alert.
+            The real width should be setted in the altair_chart object.
 
         height : int
-            The chart height in pixels, or 0 for default height.
+            Deprecated, if != 0 (default), will show an alert.
+            The real width should be setted in the altair_chart object.
+
+        use_container_width : bool (False default)
+            If True, set the chart width to the column width. This overrides
+            altair's native `width` value.
 
         sharing : {'streamlit', 'private', 'secret', 'public'}
             Use 'streamlit' to insert the plot and all its dependencies
@@ -1257,8 +1331,27 @@ class DeltaGenerator(object):
         # it in sync with what Plotly calls it.
         import streamlit.elements.plotly_chart as plotly_chart
 
+        if width != 0 and height != 0:
+            import streamlit as st
+
+            st.warning(
+                "The `width` and `height` arguments in `st.plotly_chart` are deprecated and will be removed on 2020-03-04. To set this values, you should instead use ploty's native arguments as described at https://plot.ly/python/setting-graph-size/"
+            )
+        elif width != 0:
+            import streamlit as st
+
+            st.warning(
+                "The `width` argument in `st.plotly_chart` is deprecated and will be removed on 2020-03-04. To set the width, you should instead use ploty's native `width` argument as described at https://plot.ly/python/setting-graph-size/"
+            )
+        elif height != 0:
+            import streamlit as st
+
+            st.warning(
+                "The `height` argument in `st.plotly_chart` is deprecated and will be removed on 2020-03-04. To set the height, you should instead use ploty's native `height` argument as described at https://plot.ly/python/setting-graph-size/"
+            )
+
         plotly_chart.marshall(
-            element.plotly_chart, figure_or_data, width, height, sharing, **kwargs
+            element.plotly_chart, figure_or_data, use_container_width, sharing, **kwargs
         )
 
     @_with_element
@@ -1309,7 +1402,7 @@ class DeltaGenerator(object):
         pyplot.marshall(element, fig, clear_figure, **kwargs)
 
     @_with_element
-    def bokeh_chart(self, element, figure):
+    def bokeh_chart(self, element, figure, use_container_width=False):
         """Display an interactive Bokeh chart.
 
         Bokeh is a charting library for Python. The arguments to this function
@@ -1320,6 +1413,10 @@ class DeltaGenerator(object):
         ----------
         figure : bokeh.plotting.figure.Figure
             A Bokeh figure to plot.
+
+        use_container_width : bool (False default)
+            If True, set the chart width to the column width. This overrides
+            altair's native `width` value.
 
 
         To show Bokeh charts in Streamlit, just call `st.bokeh_chart`
@@ -1349,7 +1446,7 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.bokeh_chart as bokeh_chart
 
-        bokeh_chart.marshall(element.bokeh_chart, figure)
+        bokeh_chart.marshall(element.bokeh_chart, figure, use_container_width)
 
     # TODO: Make this accept files and strings/bytes as input.
     @_with_element
@@ -1901,8 +1998,9 @@ class DeltaGenerator(object):
                 format = "%d"
             else:
                 format = "%0.2f"
+
         # It would be great if we could guess the number of decimal places from
-        # the step`argument, but this would only be meaningful if step were a decimal.
+        # the step argument, but this would only be meaningful if step were a decimal.
         # As a possible improvement we could make this function accept decimals
         # and/or use some heuristics for floats.
 
@@ -2217,7 +2315,8 @@ class DeltaGenerator(object):
             If the value is not specified, the format parameter will be used.
         format : str or None
             A printf-style format string controlling how the interface should
-            display numbers. This does not impact the return value.
+            display numbers. Output must be purely numeric. This does not impact 
+            the return value. Valid formatters: %d %e %f %g %i
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -2246,13 +2345,31 @@ class DeltaGenerator(object):
         float_value = isinstance(value, float)
 
         if value is None:
-            raise ValueError("The value should either be an int/float")
+            raise StreamlitAPIException(
+                "Default value for number_input should be an int or a float."
+            )
         else:
             if format is None:
                 format = "%d" if int_value else "%0.2f"
 
+            if format in ["%d", "%u", "%i"] and float_value:
+                # Fix for https://github.com/streamlit/streamlit/issues/930
+                # If user submitted format is int, assume the intention is to
+                # coerce submitted value to int.
+                value = int(value)
+                int_value = True
+                float_value = False
+
             if step is None:
                 step = 1 if int_value else 0.01
+
+        try:
+            float(format % 2)
+        except (TypeError, ValueError):
+            raise StreamlitAPIException(
+                "Format string for st.number_input contains invalid characters: %s"
+                % format
+            )
 
         # Ensure that all arguments are of the same type.
         args = [min_value, max_value, step]
@@ -2265,7 +2382,7 @@ class DeltaGenerator(object):
         )
 
         if not int_args and not float_args:
-            raise TypeError(
+            raise StreamlitAPIException(
                 "All arguments must be of the same type."
                 "\n`value` has %(value_type)s type."
                 "\n`min_value` has %(min_type)s type."
@@ -2282,7 +2399,7 @@ class DeltaGenerator(object):
         all_floats = float_value and float_args
 
         if not all_ints and not all_floats:
-            raise TypeError(
+            raise StreamlitAPIException(
                 "Both value and arguments must be of the same type."
                 "\n`value` has %(value_type)s type."
                 "\n`min_value` has %(min_type)s type."
@@ -2295,7 +2412,7 @@ class DeltaGenerator(object):
             )
 
         if (min_value and min_value > value) or (max_value and max_value < value):
-            raise ValueError(
+            raise StreamlitAPIException(
                 "The default `value` of %(value)s "
                 "must lie between the `min_value` of %(min)s "
                 "and the `max_value` of %(max)s, inclusively."
@@ -2396,7 +2513,7 @@ class DeltaGenerator(object):
     def map(self, element, data, zoom=None):
         """Display a map with points on it.
 
-        This is a wrapper around st.deck_gl_chart to quickly create scatterplot
+        This is a wrapper around st.pydeck_chart to quickly create scatterplot
         charts on top of a map, with auto-centering and auto-zoom.
 
         When using this method, we advise all users to use a personal Mapbox
@@ -2434,10 +2551,9 @@ class DeltaGenerator(object):
            height: 600px
 
         """
+        import streamlit.elements.map as streamlit_map
 
-        import streamlit.elements.map as map
-
-        map.marshall(element, data, zoom)
+        element.deck_gl_json_chart.json = streamlit_map.to_deckgl_json(data, zoom)
 
     @_with_element
     def deck_gl_chart(self, element, spec=None, **kwargs):
@@ -2511,28 +2627,6 @@ class DeltaGenerator(object):
 
         Example
         -------
-        For convenience, if you pass in a dataframe and no spec, you get a
-        scatter plot:
-
-        >>> df = pd.DataFrame(
-        ...    np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
-        ...    columns=['lat', 'lon'])
-        ...
-        >>> st.deck_gl_chart(layers = [{
-                'data': df,
-                'type': 'ScatterplotLayer'
-            }])
-
-        .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=AhGZBy2qjzmWwPxMatHoB9
-           height: 530px
-
-        The dataframe must have columns called 'lat'/'latitude' or
-        'lon'/'longitude'.
-
-        If you want to do something more interesting, pass in a spec with its
-        own data, and no top-level dataframe. For instance:
-
         >>> st.deck_gl_chart(
         ...     viewport={
         ...         'latitude': 37.76,
@@ -2559,6 +2653,20 @@ class DeltaGenerator(object):
            height: 530px
 
         """
+        suppress_deprecation_warning = config.get_option(
+            "global.suppressDeprecationWarnings"
+        )
+        if not suppress_deprecation_warning:
+            import streamlit as st
+
+            st.warning(
+                """
+                The `deck_gl_chart` widget is deprecated and will be removed on
+
+                2020-03-04. To render a map, you should use `st.pyDeckChart` widget.
+            """
+            )
+
         import streamlit.elements.deck_gl as deck_gl
 
         deck_gl.marshall(element.deck_gl_chart, spec, **kwargs)
@@ -2570,6 +2678,70 @@ class DeltaGenerator(object):
         element_path = (self._container,) + self._path + (self._id,)
         default_uuid = hash(element_path)
         arrow_table.marshall(element.arrow_table, df, default_uuid)
+
+    def pydeck_chart(self, element, pydeck_obj=None):
+        """Draw a map chart using the PyDeck library.
+
+        This API convert a pyDeck object
+        (https://deckgl.readthedocs.io/en/latest/) to JSON to render a map
+
+        using Deck.GL' JSON converter JavaScript API
+        (https://github.com/uber/deck.gl/tree/master/modules/json)
+
+        Parameters
+        ----------
+        spec: pydeck.Deck or None
+            Object specifying the PyDeck chart to draw.
+
+        Example
+        -------
+        Here's a chart using a HexagonLayer and a ScatterplotLayer on top of
+        the light map style:
+
+        >>> df = pd.DataFrame(
+        ...    np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
+        ...    columns=['lat', 'lon'])
+        
+        >>> st.pydeck_chart(pdk.Deck(
+        ...     map_style='mapbox://styles/mapbox/light-v9',
+        ...     initial_view_state=pdk.ViewState(
+        ...         latitude=37.76,
+        ...         longitude=-122.4,
+        ...         zoom=11,
+        ...         pitch=50,
+        ...     ),
+        ...     layers=[
+        ...         pdk.Layer(
+        ...            'HexagonLayer',
+        ...            data=df,
+        ...            get_position='[lon, lat]',
+        ...            radius=200,
+        ...            elevation_scale=4,
+        ...            elevation_range=[0, 1000],
+        ...            pickable=True,
+        ...            extruded=True,
+        ...         ),
+        ...         pdk.Layer(
+        ...             'ScatterplotLayer',
+        ...             data=df,
+        ...             get_position='[lon, lat]',
+        ...             get_color='[200, 30, 0, 160]',
+        ...             get_radius=200,
+        ...         ),
+        ...     ],
+        ... ))
+
+        .. output::
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=ASTdExBpJ1WxbGceneKN1i
+           height: 530px
+
+        """
+        if pydeck_obj is None:
+            import streamlit.elements.map as streamlit_map
+
+            element.deck_gl_json_chart.json = json.dumps(streamlit_map.DEFAULT_MAP)
+        else:
+            element.deck_gl_json_chart.json = pydeck_obj.to_json()
 
     @_with_element
     def table(self, element, data=None):

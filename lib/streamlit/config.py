@@ -283,6 +283,14 @@ _create_option(
 )
 
 _create_option(
+    "global.suppressDeprecationWarnings",
+    description="Hide deprecation warnings in the streamlit app.",
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
     "global.minCachedMessageSize",
     description="""Only cache ForwardMsgs that are greater than or equal to
         this minimum.""",

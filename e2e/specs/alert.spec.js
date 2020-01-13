@@ -15,12 +15,27 @@
  * limitations under the License.
  */
 
-describe("st.map", () => {
+describe("st.error and friends", () => {
   before(() => {
     cy.visit("http://localhost:3000/")
   })
 
-  it("displays a map using deck_gl", () => {
-    cy.get(".element-container .stDeckGlJsonChart").should("have.length", 2)
+  it("displays correctly", () => {
+    cy.get(
+      ".element-container .stAlert.alert-danger .markdown-text-container"
+    ).contains("This is an error")
+    cy.get(
+      ".element-container .stAlert.alert-warning .markdown-text-container"
+    ).contains("This is a warning")
+    cy.get(
+      ".element-container .stAlert.alert-info .markdown-text-container"
+    ).contains("This is an info message")
+    cy.get(
+      ".element-container .stAlert.alert-success .markdown-text-container"
+    ).contains("This is a success message")
+  })
+
+  it("displays correctly", () => {
+    cy.get(".main > .block-container").matchImageSnapshot("alerts")
   })
 })

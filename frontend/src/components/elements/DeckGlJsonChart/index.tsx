@@ -15,12 +15,4 @@
  * limitations under the License.
  */
 
-describe("st.map", () => {
-  before(() => {
-    cy.visit("http://localhost:3000/")
-  })
-
-  it("displays a map using deck_gl", () => {
-    cy.get(".element-container .stDeckGlJsonChart").should("have.length", 2)
-  })
-})
+export { default } from "./DeckGlJsonChart"

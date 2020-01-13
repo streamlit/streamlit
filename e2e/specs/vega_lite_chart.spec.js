@@ -47,9 +47,8 @@ describe("st.vega_lite_chart", () => {
       .eq(2)
       .should("have.css", "width")
       .and(width => {
-        // Tests run on mac expect 282px while running on linux expects 284px
-        if (width != "282px" && width != "284px") {
-          throw new Error("Expected width to be 282px or 284px. Was: " + width)
+        if (width != "200px") {
+          throw new Error("Expected default width to be 200px. Was: " + width)
         }
       })
 
