@@ -122,4 +122,14 @@ describe("App", () => {
       "streamlit-reportName-date"
     )
   })
+
+  it("should stop screencast when esc is pressed", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+
+    // @ts-ignore
+    wrapper.instance().keyHandlers.esc()
+
+    expect(props.screenCast.stopRecording).toBeCalled()
+  })
 })
