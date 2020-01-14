@@ -27,6 +27,7 @@ import {
 } from "autogen/proto"
 
 import { Set as ImmutableSet } from "immutable"
+import { Long } from "protobufjs"
 
 /**
  * The maximum size of each file upload chunk, measured in bytes. The default
@@ -157,7 +158,7 @@ export class WidgetStateManager {
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
-  public getIntArrayValue(widgetId: string): number[] | undefined {
+  public getIntArrayValue(widgetId: string): (number | Long)[] | undefined {
     const state = this.getWidgetStateProto(widgetId)
     if (
       state != null &&
