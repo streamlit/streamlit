@@ -2370,7 +2370,7 @@ class DeltaGenerator(object):
                 import streamlit as st
 
                 st.warning(
-                    "st.number_input value was given as a float but string format is int. You may want to use %f instead of {}.".format(
+                    "Warning: NumberInput value below is float, but format {} displays as integer.".format(
                         format
                     )
                 )
