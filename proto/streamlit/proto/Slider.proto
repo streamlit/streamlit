@@ -19,9 +19,12 @@ syntax = "proto3";
 message Slider {
   string id = 1;
   string label = 2;
-  repeated float default = 3;
-  float min = 4;
-  float max = 5;
-  float step = 6;
   string format = 7;
+
+  repeated double default = 8;
+  double min = 9;
+  double max = 10;
+  double step = 11;
+
+  reserved 3, 4, 5, 6;
 }
