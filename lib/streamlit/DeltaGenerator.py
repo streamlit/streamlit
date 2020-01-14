@@ -1519,6 +1519,118 @@ class DeltaGenerator(object):
         )
 
     @_with_element
+    def iframe(
+        self,
+        element,
+        src,
+        width=None,
+        height=None,
+        name=None,
+        allow=None,
+        allow_fullscreen=False,
+        referrer_policy=None,
+        sandbox=None,
+    ):
+        """Load a remote URL in an <iframe>.
+
+        These parameters correspond directly to <iframe> attributes, which are
+        described in more detail at
+        https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe.
+
+        Parameters
+        ----------
+        src : str
+            The URL of the page to embed.
+        width : int
+            The width of the frame in CSS pixels. Defaults to the report's
+            default element width.
+        height : int
+            The height of the frame in CSS pixels. Defaults to 150.
+        name : str
+            A targetable name for the embedded browsing context. Defaults to None.
+        allow : str
+            Specifies a feature policy for the iframe.
+        allow_fullscreen : bool
+            If True, the iframe can activate fullscreen mode. Defaults to False.
+        referrer_policy : str
+            Indicates which referrer to send when fetching the frame's resource.
+            Defaults to None.
+        sandbox : str
+            Applies extra restrictions to the content in the frame. Defaults to
+            None.
+
+        """
+        from .elements import iframe_proto
+
+        iframe_proto.marshall(
+            element.iframe,
+            src=src,
+            width=width,
+            height=height,
+            name=name,
+            allow=allow,
+            allow_fullscreen=allow_fullscreen,
+            referrer_policy=referrer_policy,
+            sandbox=sandbox,
+        )
+
+    @_with_element
+    def html(
+        self,
+        element,
+        html,
+        width=None,
+        height=None,
+        name=None,
+        allow=None,
+        allow_fullscreen=False,
+        referrer_policy=None,
+        sandbox=None,
+    ):
+        """Display an HTML string in an <iframe>.
+
+        These parameters correspond directly to <iframe> attributes, which are
+        described in more detail at
+        https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe.
+
+        Parameters
+        ----------
+        html : str
+            The HTML string to embed in the iframe.
+        width : int
+            The width of the frame in CSS pixels. Defaults to the report's
+            default element width.
+        height : int
+            The height of the frame in CSS pixels. Defaults to 150.
+        name : str
+            A targetable name for the embedded browsing context. Defaults to None.
+        allow : str
+            Specifies a feature policy for the iframe.
+        allow_fullscreen : bool
+            If True, the iframe can activate fullscreen mode. Defaults to False.
+        referrer_policy : str
+            Indicates which referrer to send when fetching the frame's resource.
+            Defaults to None.
+        sandbox : str
+            Applies extra restrictions to the content in the frame. Defaults to
+            None.
+
+        """
+        from .elements import iframe_proto
+
+        iframe_proto.marshall(
+            element.iframe,
+            srcdoc=html,
+            width=width,
+            height=height,
+            name=name,
+            allow=allow,
+            allow_fullscreen=allow_fullscreen,
+            referrer_policy=referrer_policy,
+            sandbox=sandbox,
+        )
+
+    @_with_element
     def audio(self, element, data, format="audio/wav", start_time=0):
         """Display an audio player.
 

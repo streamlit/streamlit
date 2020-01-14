@@ -32,6 +32,7 @@ import "streamlit/proto/Empty.proto";
 import "streamlit/proto/Exception.proto";
 import "streamlit/proto/FileUploader.proto";
 import "streamlit/proto/GraphVizChart.proto";
+import "streamlit/proto/IFrame.proto";
 import "streamlit/proto/Image.proto";
 import "streamlit/proto/Json.proto";
 import "streamlit/proto/NumberInput.proto";
@@ -71,6 +72,7 @@ message Element {
     Exception exception = 8;
     FileUploader file_uploader = 33;
     GraphVizChart graphviz_chart = 18;
+    IFrame iframe = 35;
     ImageList imgs = 6;
     Json json = 31;
     Markdown markdown = 29;
@@ -87,8 +89,8 @@ message Element {
     TimeInput time_input = 26;
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
-    
-    // Next ID: 35
+
+    // Next ID: 36
   }
 
   reserved 9;
