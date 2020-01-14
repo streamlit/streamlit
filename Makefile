@@ -14,25 +14,25 @@ help:
 
 .PHONY: all
 # Get dependencies, build frontend, install Streamlit into Python environment.
-all: init install build develop
+all: init frontend install
 
 .PHONY: all-devel
 # Get dependencies and install Streamlit into Python environment -- but do not build the frontend.
-all-devel: init install develop
+all-devel: init develop
 	@echo ""
 	@echo "    The frontend has *not* been rebuilt."
 	@echo "    If you need to make a wheel file or test S3 sharing, run:"
 	@echo ""
-	@echo "    make build"
+	@echo "    make frontend"
 	@echo ""
 
 .PHONY: init
 # Install Python and JS dependencies.
 init: setup pipenv-install react-init scssvars protobuf # react-build release
 
-.PHONY: build
+.PHONY: frontend
 # Build frontend into static files.
-build: react-build
+frontend: react-build
 
 .PHONY: setup
 setup:
