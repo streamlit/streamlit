@@ -2366,11 +2366,14 @@ class DeltaGenerator(object):
 
             if format in ["%d", "%u", "%i"] and float_value:
                 # Fix for https://github.com/streamlit/streamlit/issues/930
-                # If user submitted format is int, assume the intention is to
-                # coerce submitted value to int.
-                value = int(value)
-                int_value = True
-                float_value = False
+                # Warn user to check if displaying float as int was really intended.
+                import streamlit as st
+
+                st.warning(
+                    "Warning: NumberInput value below is float, but format {} displays as integer.".format(
+                        format
+                    )
+                )
 
             if step is None:
                 step = 1 if int_value else 0.01
