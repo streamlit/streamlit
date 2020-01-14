@@ -23,7 +23,9 @@ import * as aggregationLayers from "@deck.gl/aggregation-layers"
 import Immutable from "immutable"
 import { StaticMap } from "react-map-gl"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
+
 import "mapbox-gl/dist/mapbox-gl.css"
+import "./DeckGlJsonChart.scss"
 
 const configuration = {
   classes: Object.assign({}, layers, aggregationLayers),
