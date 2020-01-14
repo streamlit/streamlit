@@ -50,13 +50,11 @@ const getWrapper = (): ReactWrapper => {
   return mount(<App {...props} />, { attachTo: mountPoint })
 }
 
-jest.mock("moment", () => {
-  return jest.fn().mockImplementation(() => {
-    return {
-      format: () => "date",
-    }
-  })
-})
+jest.mock("moment", () =>
+  jest.fn().mockImplementation(() => ({
+    format: () => "date",
+  }))
+)
 
 describe("App", () => {
   beforeEach(() => {
