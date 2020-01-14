@@ -44,9 +44,9 @@ message WidgetState {
 }
 
 message FloatArray {
-  repeated float value = 1;
+  repeated double value = 1;
 }
 
 message IntArray {
-  repeated int32 value = 1;
+  repeated sint64 value = 1;
 }

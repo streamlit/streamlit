@@ -17,31 +17,25 @@
 syntax = "proto3";
 
 message NumberInput {
+  enum DataType {
+    // Does the input operate on ints or floats? This doesn't change how the
+    // data is stored, but the frontend needs to know for input parsing.
+    INT = 0;
+    FLOAT = 1;
+  }
+
   string id = 1;
   string label = 2;
-
-  oneof data {
-    IntNumberInput int_data = 9;
-    FloatNumberInput float_data = 10;
-  }
 
   string format = 8;
   bool has_min = 11;
   bool has_max = 12;
 
-  reserved 3, 4, 5, 6, 7;
-}
+  DataType data_type = 13;
+  double default = 14;
+  double step = 15;
+  double min = 16;
+  double max = 17;
 
-message IntNumberInput {
-  sint64 default = 1;
-  int64 step = 2;
-  sint64 min = 3;
-  sint64 max = 4;
-}
-
-message FloatNumberInput {
-  double default = 1;
-  double step = 2;
-  double min = 3;
-  double max = 4;
+  reserved 3, 4, 5, 6, 7, 9, 10;
 }
