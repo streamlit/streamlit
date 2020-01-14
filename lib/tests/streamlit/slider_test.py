@@ -15,11 +15,13 @@
 
 """slider unit test."""
 
-from streamlit.errors import StreamlitAPIException
-from tests import testutil
-import streamlit as st
-from parameterized import parameterized
 import pytest
+from parameterized import parameterized
+
+import streamlit as st
+from streamlit.errors import StreamlitAPIException
+from streamlit.js_number import JSNumber
+from tests import testutil
 
 
 class SliderTest(testutil.DeltaGeneratorTestCase):
@@ -31,21 +33,21 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.slider
         self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, [0.0])
+        self.assertEqual(c.default, [0])
 
     @parameterized.expand(
         [
-            (0, [0.0], 0),
-            (0.0, [0.0], 0.0),
-            ((0, 1), [0.0, 1.0], (0, 1)),
-            ([0, 1], [0.0, 1.0], (0, 1)),
-            ((0.0, 1.0), [0.0, 1.0], (0.0, 1.0)),
-            ([0.0, 1.0], [0.0, 1.0], (0.0, 1.0)),
+            (1, [1], 1),  # int
+            ((0, 1), [0, 1], (0, 1)),  # int tuple
+            ([0, 1], [0, 1], (0, 1)),  # int list
+            (0.5, [0.5], 0.5),  # float
+            ((0.2, 0.5), [0.2, 0.5], (0.2, 0.5)),  # float tuple
+            ([0.2, 0.5], [0.2, 0.5], (0.2, 0.5)),  # float list
         ]
     )
-    def test_value_types(self, arg_value, proto_value, return_value):
+    def test_value_types(self, value, proto_value, return_value):
         """Test that it supports different types of values."""
-        ret = st.slider("the label", value=arg_value)
+        ret = st.slider("the label", value=value)
 
         self.assertEqual(ret, return_value)
 
@@ -56,25 +58,60 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
     def test_value_greater_than_min(self):
         with pytest.raises(StreamlitAPIException) as exc_slider:
             st.slider("Slider label", 10, 100, 0)
-        assert (
-            "The default `value` of 0 must lie between the `min_value` of "
-            "10 and the `max_value` of 100, inclusively." == str(exc_slider.value)
+        self.assertEqual(
+            "The default `value` of 0 must lie between the `min_value` of 10 "
+            "and the `max_value` of 100, inclusively.",
+            str(exc_slider.value),
         )
 
     def test_value_smaller_than_max(self):
         with pytest.raises(StreamlitAPIException) as exc_slider:
             st.slider("Slider label", 10, 100, 101)
-        assert (
-            "The default `value` of 101 "
-            "must lie between the `min_value` of 10 "
-            "and the `max_value` of 100, inclusively." == str(exc_slider.value)
+        self.assertEqual(
+            "The default `value` of 101 must lie between the `min_value` of "
+            "10 and the `max_value` of 100, inclusively.",
+            str(exc_slider.value),
         )
 
     def test_max_min(self):
         with pytest.raises(StreamlitAPIException) as exc_slider:
             st.slider("Slider label", 101, 100, 101)
-        assert (
-            "The default `value` of 101 "
-            "must lie between the `min_value` of 101 "
-            "and the `max_value` of 100, inclusively." == str(exc_slider.value)
+        self.assertEqual(
+            "The default `value` of 101 must lie between the `min_value` of "
+            "101 and the `max_value` of 100, inclusively.",
+            str(exc_slider.value),
+        )
+
+    def test_value_out_of_bounds(self):
+        # Max int
+        with pytest.raises(StreamlitAPIException) as exc:
+            max_value = JSNumber.MAX_SAFE_INTEGER + 1
+            st.slider("Label", max_value=max_value)
+        self.assertEqual(
+            "`max_value` (%s) must be <= (1 << 53) - 1" % str(max_value), str(exc.value)
+        )
+
+        # Min int
+        with pytest.raises(StreamlitAPIException) as exc:
+            min_value = JSNumber.MIN_SAFE_INTEGER - 1
+            st.slider("Label", min_value=min_value)
+        self.assertEqual(
+            "`min_value` (%s) must be >= -((1 << 53) - 1)" % str(min_value),
+            str(exc.value),
+        )
+
+        # Max float
+        with pytest.raises(StreamlitAPIException) as exc:
+            max_value = 2e308
+            st.slider("Label", value=0.5, max_value=max_value)
+        self.assertEqual(
+            "`max_value` (%s) must be <= 1.797e+308" % str(max_value), str(exc.value)
+        )
+
+        # Min float
+        with pytest.raises(StreamlitAPIException) as exc:
+            min_value = -2e308
+            st.slider("Label", value=0.5, min_value=min_value)
+        self.assertEqual(
+            "`min_value` (%s) must be >= -1.797e+308" % str(min_value), str(exc.value)
         )

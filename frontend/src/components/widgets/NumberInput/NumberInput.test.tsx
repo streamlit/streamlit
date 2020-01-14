@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+import { NumberInput as NumberInputProto } from "autogen/proto"
 import React from "react"
 import { shallow } from "enzyme"
 import { Input as UIInput } from "baseui/input"
@@ -41,22 +42,20 @@ const getProps = (elementProps: object = {}): Props => ({
 
 const getIntProps = (elementProps: object = {}): Props => {
   return getProps({
-    intData: {
-      default: 10,
-      min: 0,
-      max: 0,
-    },
+    dataType: NumberInputProto.DataType.INT,
+    default: 10,
+    min: 0,
+    max: 0,
     ...elementProps,
   })
 }
 
 const getFloatProps = (elementProps: object = {}): Props => {
   return getProps({
-    floatData: {
-      default: 10.0,
-      min: 0.0,
-      max: 0.0,
-    },
+    dataType: NumberInputProto.DataType.FLOAT,
+    default: 10.0,
+    min: 0.0,
+    max: 0.0,
     ...elementProps,
   })
 }
@@ -72,7 +71,7 @@ describe("NumberInput widget", () => {
   it("handles malformed format strings without crashing", () => {
     // This format string is malformed (it should be %0.2f)
     const props = getFloatProps({
-      floatData: { default: 5.0 },
+      default: 5.0,
       format: "%0.2",
     })
     const wrapper = shallow(<NumberInput {...props} />)
@@ -102,11 +101,9 @@ describe("NumberInput widget", () => {
     const props = getIntProps({
       hasMin: true,
       hasMax: true,
-      intData: {
-        default: 10,
-        min: 0,
-        max: 10,
-      },
+      default: 10,
+      min: 0,
+      max: 10,
     })
     const wrapper = shallow(<NumberInput {...props} />)
 
@@ -120,10 +117,8 @@ describe("NumberInput widget", () => {
     it("should change the state when ArrowDown", () => {
       const props = getFloatProps({
         format: "%0.2f",
-        floatData: {
-          default: 11.0,
-          step: 0.1,
-        },
+        default: 11.0,
+        step: 0.1,
       })
       const wrapper = shallow(<NumberInput {...props} />)
       const InputWrapper = wrapper.find(UIInput)
@@ -142,11 +137,7 @@ describe("NumberInput widget", () => {
 
   describe("Value", () => {
     it("should pass a default value", () => {
-      const props = getIntProps({
-        intData: {
-          default: 10,
-        },
-      })
+      const props = getIntProps({ default: 10 })
       const wrapper = shallow(<NumberInput {...props} />)
 
       expect(wrapper.find(UIInput).props().value).toBe("10")
