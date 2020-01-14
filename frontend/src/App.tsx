@@ -74,7 +74,7 @@ import withScreencast, {
   ScreenCastHOC,
 } from "./hocs/withScreencast/withScreencast"
 
-interface Props {
+export interface Props {
   screenCast: ScreenCastHOC
 }
 

@@ -16,22 +16,20 @@
  */
 
 import React from "react"
-import { mount, CommonWrapper } from "enzyme"
+import { shallow, mount, ReactWrapper } from "enzyme"
 import { ForwardMsg } from "autogen/proto"
 import { MetricsManager } from "./lib/MetricsManager"
 import { getMetricsManagerForTest } from "./lib/MetricsManagerTestUtils"
 import { SessionInfo, Args as SessionInfoArgs } from "./lib/SessionInfo"
 
-import { App } from "./App"
+import { App, Props } from "./App"
+import MainMenu from "./components/core/MainMenu"
 
-const getWrapper = (): CommonWrapper => {
-  const mountPoint = document.createElement("div")
-  mountPoint.setAttribute("id", "ConnectionStatus")
-  document.body.appendChild(mountPoint)
-  const screenCast = {
-    toggleRecordAudio: () => {},
-    startRecording: () => {},
-    stopRecording: () => {},
+const getProps = (): Props => ({
+  screenCast: {
+    toggleRecordAudio: jest.fn(),
+    startRecording: jest.fn(),
+    stopRecording: jest.fn(),
     fileName: "",
     recording: false,
     recordAudio: false,
@@ -40,10 +38,25 @@ const getWrapper = (): CommonWrapper => {
     showRecordedDialog: false,
     showScreencastDialog: false,
     showUnsupportedDialog: false,
-  }
+  },
+})
 
-  return mount(<App screenCast={screenCast} />, { attachTo: mountPoint })
+const getWrapper = (): ReactWrapper => {
+  const mountPoint = document.createElement("div")
+  mountPoint.setAttribute("id", "ConnectionStatus")
+  document.body.appendChild(mountPoint)
+  const props = getProps()
+
+  return mount(<App {...props} />, { attachTo: mountPoint })
 }
+
+jest.mock("moment", () => {
+  return jest.fn().mockImplementation(() => {
+    return {
+      format: () => "date",
+    }
+  })
+})
 
 describe("App", () => {
   beforeEach(() => {
@@ -70,7 +83,8 @@ describe("App", () => {
   })
 
   it("should reload when streamlit server version changes", () => {
-    const wrapper = getWrapper()
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
 
     window.location.reload = jest.fn()
 
@@ -89,5 +103,23 @@ describe("App", () => {
     wrapper.instance().handleMessage(fwMessage)
 
     expect(window.location.reload).toHaveBeenCalled()
+  })
+
+  it("should start screencast recording when the MainMenu is clicked", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+
+    wrapper.setState({
+      reportName: "reportName",
+    })
+
+    wrapper
+      .find(MainMenu)
+      .props()
+      .screencastCallback()
+
+    expect(props.screenCast.startRecording).toHaveBeenCalledWith(
+      "streamlit-reportName-date"
+    )
   })
 })
