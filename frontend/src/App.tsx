@@ -83,6 +83,7 @@ interface State {
   elements: Elements
   reportId: string
   reportName: string
+  reportHash: string | null
   reportRunState: ReportRunState
   userSettings: UserSettings
   dialog?: DialogProps | null
@@ -122,6 +123,7 @@ export class App extends PureComponent<Props, State> {
       },
       reportName: "",
       reportId: "<null>",
+      reportHash: null,
       reportRunState: ReportRunState.NOT_RUNNING,
       userSettings: {
         wideMode: false,
@@ -402,6 +404,7 @@ export class App extends PureComponent<Props, State> {
    * @param newReportProto a NewReport protobuf
    */
   handleNewReport = (newReportProto: NewReport): void => {
+    const { reportHash } = this.state
     const { id: reportId, name: reportName, scriptPath } = newReportProto
 
     const newReportHash = hashString(
@@ -420,7 +423,13 @@ export class App extends PureComponent<Props, State> {
       reportHash: newReportHash,
     })
 
-    this.clearAppState(reportId, reportName)
+    if (reportHash === newReportHash) {
+      this.setState({
+        reportId,
+      })
+    } else {
+      this.clearAppState(newReportHash, reportId, reportName)
+    }
   }
 
   /**
@@ -496,11 +505,16 @@ export class App extends PureComponent<Props, State> {
   /*
    * Clear all elements from the state.
    */
-  clearAppState(reportId: string, reportName: string): void {
+  clearAppState(
+    reportHash: string,
+    reportId: string,
+    reportName: string
+  ): void {
     this.setState(
       {
         reportId,
         reportName,
+        reportHash,
         elements: {
           main: fromJS([]),
           sidebar: fromJS([]),
