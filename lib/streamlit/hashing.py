@@ -76,6 +76,12 @@ class HashStacks(object):
     """Stack of what has been hashed, for circular reference detection.
 
     This internally keeps 1 stack per thread.
+
+    Internally, this stores the ID of pushed objects rather than the objects
+    themselves because otherwise the "in" operator inside __contains__ would
+    fail for objects that don't return a boolean for "==" operator. For
+    example, arr == 10 where arr is a NumPy array returns another NumPy array.
+    This causes the "in" to crash since it expects a boolean.
     """
 
     def __init__(self):
@@ -83,7 +89,7 @@ class HashStacks(object):
 
     def push(self, val):
         thread_id = threading.current_thread().ident
-        self.stacks[thread_id].append(val)
+        self.stacks[thread_id].append(id(val))
 
     def pop(self):
         thread_id = threading.current_thread().ident
@@ -91,7 +97,7 @@ class HashStacks(object):
 
     def __contains__(self, val):
         thread_id = threading.current_thread().ident
-        return val in self.stacks[thread_id]
+        return id(val) in self.stacks[thread_id]
 
 
 hash_stacks = HashStacks()
