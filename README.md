@@ -51,7 +51,7 @@ streamlit run https://raw.githubusercontent.com/streamlit/demo-self-driving/mast
 
 ## Streamlit for Teams
 
-[Streamlit for Teams](https://streamlit.io/forteams/) is our enterprise edition, with single-click deploy, authentication, web editing, versioning, and more. Please contact us if you would like to learn more.
+[Streamlit for Teams](https://streamlit.io/for-teams/) is our enterprise edition, with single-click deploy, authentication, web editing, versioning, and more. Please contact us if you would like to learn more.
 
 ## License
 
