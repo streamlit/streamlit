@@ -148,8 +148,8 @@ def _int_to_bytes(i):
 def _key(obj, context):
     """Return key for memoization."""
 
-    # use arbitrary value in place of None since the return of None 
-    # is usedfor control flow in .to_bytes
+    # use arbitrary value in place of None since the return of None
+    # is used for control flow in .to_bytes
     if obj is None:
         return NONESENSE
 
