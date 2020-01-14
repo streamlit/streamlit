@@ -267,7 +267,7 @@ def data_frame_demo():
             color="Region:N",
         )
     )
-    st.write("", "", chart)
+    st.altair_chart(chart, use_container_width=True)
 
 
 # fmt: on
