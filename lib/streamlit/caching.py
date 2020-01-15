@@ -436,9 +436,7 @@ def cache(
             args_hasher.update([args, kwargs])
             LOGGER.debug("Hashing arguments to %s of %i bytes.", name, args_hasher.size)
 
-            code_hasher = CodeHasher("md5", hasher, hash_funcs)
-            code_hasher.update(func)
-            LOGGER.debug("Hashing function %s in %i bytes.", name, code_hasher.size)
+            hasher.update(code_hash)
 
             key = hasher.hexdigest()
             LOGGER.debug("Cache key: %s", key)
@@ -506,6 +504,7 @@ class Cache(dict):
     >>> if c := st.Cache():
     ...     # Fetch data from URL here, and then clean it up. Finally assign to c.
     ...     c.data = ...
+
     """
 
     def __init__(self, persist=False, allow_output_mutation=False):
