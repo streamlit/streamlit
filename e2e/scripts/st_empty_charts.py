@@ -37,6 +37,8 @@ st.area_chart()
 # comment this one out to avoid this Cypress-Mapbox related error.
 # ref: https://github.com/cypress-io/cypress/issues/4322
 # st.deck_gl_chart()
+# st.pydeck_chart()
+# st.map()
 
 # 6 errors
 try:
@@ -61,10 +63,5 @@ except Exception as e:
 
 try:
     st.altair_chart(use_container_width=True)
-except Exception as e:
-    st.write(e)
-
-try:
-    st.map()
 except Exception as e:
     st.write(e)

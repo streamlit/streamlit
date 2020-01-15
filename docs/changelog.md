@@ -22,6 +22,49 @@ See highlights, bug fixes, and known issues for Streamlit releases:
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.53.0
+
+_Release date: January 13, 2019_
+
+**Highlights:**
+
+- 🗺️ Support for all DeckGL features! Just us
+  [Pydeck](https://deckgl.readthedocs.io/en/latest/) instead of
+  [`st.deck_gl_chart`](https://docs.streamlit.io/api.html#streamlit.pydeck_chart).
+  To do that, simply pass a PyDeck object to
+  [`st.pydeck_chart`](https://docs.streamlit.io/api.html#streamlit.pydeck_chart),
+  [`st.write`](https://docs.streamlit.io/api.html#streamlit.write),
+  or [magic](https://docs.streamlit.io/api.html#magic),
+
+  _Note that as a **preview release** things may change in the near future.
+  Looking forward to hearing input from the community before we stabilize the
+  API!_
+
+  **The goals is for this to replace `st.deck_gl_chart`,** since it
+  is does everything the old API did _and much more!_
+
+- 🆕 Better handling of Streamlit upgrades while developing. We now auto-reload
+  the browser tab if the app it is displaying uses a newer version of Streamlit
+  than the one the tab is running.
+
+- 👑 New favicon, with our new logo!
+
+**Notable fixes:**
+
+- Magic now works correctly in Python 3.8. It no longer causes
+  docstrings to render in your app.
+
+**Breaking changes:**
+
+- Updated how we calculate the default width and height of all chart types.
+  We now leave chart sizing up to your charting library itself, so please refer
+  to the library's documentation.
+
+  As a result, the `width` and `height` arguments have been deprecated
+  from most chart commands, and `use_container_width` has been introduced
+  everywhere to allow you to make charts fill as much horizontal space as
+  possible (this used to be the default).
+
 ## Version 0.52.0
 
 _Release date: December 20, 2019_
@@ -30,6 +73,7 @@ _Release date: December 20, 2019_
 
 - 📤 Preview release of the file uploader widget. To try it out just call
   [`st.file_uploader`](https://docs.streamlit.io/api.html#streamlit.file_uploader)!
+
   _Note that as a **preview release** things may change in the near future.
   Looking forward to hearing input from the community before we stabilize the
   API!_

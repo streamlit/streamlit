@@ -13,17 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
-import pandas as pd
-import numpy as np
+import json
 
-coords = np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4]
-df = pd.DataFrame(coords, columns=["lat", "lon"])
 
-# Sugar syntax for a basic scatterplot map using deck_gl:
-# st.map(df)
-st.map(df)
+# Map used when no data is passed.
+EMPTY_MAP = {"initialViewState": {"latitude": 0, "longitude": 0, "pitch": 0, "zoom": 1}}
 
-# Similar test but specifying a custom zoom level:
-# st.map(df)
-st.map(df, zoom=8)
+
+def marshall(element, pydeck_obj):
+    if pydeck_obj is None:
+        spec = json.dumps(EMPTY_MAP)
+    else:
+        spec = pydeck_obj.to_json()
+
+    element.deck_gl_json_chart.json = spec

@@ -79,12 +79,5 @@ describe("handles empty charts", () => {
         "have.text",
         "TypeError: altair_chart() missing 1 required positional argument: 'altair_chart'"
       );
-
-    cy.get(".stException .message")
-      .eq(5)
-      .should(
-        "have.text",
-        "TypeError: map() missing 1 required positional argument: 'data'"
-      );
   });
 });
