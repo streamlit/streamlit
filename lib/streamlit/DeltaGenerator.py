@@ -1566,6 +1566,7 @@ class DeltaGenerator(object):
 
         """
         from .elements import media_proto
+
         media_proto.marshall_audio(element.audio, data, format, start_time)
 
     @_with_element
@@ -1596,6 +1597,7 @@ class DeltaGenerator(object):
 
         """
         from .elements import media_proto
+
         media_proto.marshall_video(element.video, data, format, start_time)
 
     @_with_element
