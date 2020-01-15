@@ -34,7 +34,7 @@ interface State {
 }
 
 /**
- * Implements a dialog that is used to configure user settings.
+ * A dialog that allows a screencast to be configured and recorded.
  */
 class ScreencastDialog extends PureComponent<Props, State> {
   state = {
@@ -47,14 +47,7 @@ class ScreencastDialog extends PureComponent<Props, State> {
     const { toggleRecordAudio } = this.props
 
     if (checked !== recordAudio) {
-      this.setState(
-        {
-          recordAudio: checked,
-        },
-        () => {
-          toggleRecordAudio()
-        }
-      )
+      this.setState({ recordAudio: checked }, toggleRecordAudio)
     }
   }
 
