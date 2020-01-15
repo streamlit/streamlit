@@ -36,7 +36,11 @@ class ScreenCastRecorder {
     this.mediaRecorder = null
   }
 
-  async initialize(): Promise<any> {
+  /**
+   * This asynchronous method will initialize the screen recording object asking
+   * for permissions to the user which are needed to start recording.
+   */
+  async initialize(): Promise<void> {
     // @ts-ignore
     const desktopStream = await navigator.mediaDevices.getDisplayMedia({
       video: true,
@@ -71,9 +75,19 @@ class ScreenCastRecorder {
     return "inactive"
   }
 
+  /**
+   * This method will start the scren recording if the user has granted permissions
+   * and the mediaRecorder has been initialized
+   *
+   * @returns {boolean}
+   */
   start(): boolean {
+    if (!this.mediaRecorder) {
+      return false
+    }
+
     try {
-      this.mediaRecorder && this.mediaRecorder.start()
+      this.mediaRecorder.start()
     } catch (e) {
       return false
     }
@@ -81,12 +95,19 @@ class ScreenCastRecorder {
     return true
   }
 
-  stop(): Promise<any> | undefined {
+  /**
+   * This method will stop recording and then return the generated Blob
+   *
+   * @returns {(Promise|undefined)}
+   *  A Promise which will return the generated Blob
+   *  Undefined if the MediaRecorder could not initialize
+   */
+  stop(): Promise<Blob> | undefined {
     if (!this.mediaRecorder) {
       return undefined
     }
 
-    let resolver: any
+    let resolver: () => void
 
     const promise = new Promise(r => {
       resolver = r
