@@ -17,14 +17,14 @@
 
 /// <reference types="cypress" />
 
-describe("st.bar_chart", () => {
+describe("st.line_chart", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
   });
 
-  it("displays a bar chart", () => {
+  it("displays a line chart", () => {
     cy.get(".element-container .stVegaLiteChart")
       .find("canvas")
-      .should("have.css", "height", "200px");
+      .should("have.css", "height", "300px");
   });
 });

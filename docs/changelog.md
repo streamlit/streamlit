@@ -73,6 +73,7 @@ _Release date: December 20, 2019_
 
 - 📤 Preview release of the file uploader widget. To try it out just call
   [`st.file_uploader`](https://docs.streamlit.io/api.html#streamlit.file_uploader)!
+
   _Note that as a **preview release** things may change in the near future.
   Looking forward to hearing input from the community before we stabilize the
   API!_

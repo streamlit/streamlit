@@ -17,12 +17,16 @@
 
 /// <reference types="cypress" />
 
-describe("st.map", () => {
+describe("st.deck_gl_chart", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
   });
 
-  it("displays a map using deck_gl", () => {
-    cy.get(".element-container .stDeckGlJsonChart").should("have.length", 2);
+  it("displays 2 maps", () => {
+    const els = cy.get(".element-container .stDeckGlJsonChart");
+
+    els.should("have.length", 2);
+
+    els.find("canvas").should("have.css", "height", "500px");
   });
 });
