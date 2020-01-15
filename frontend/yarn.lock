@@ -901,10 +901,10 @@
   dependencies:
     d3-dsv "^1.0.8"
 
-"@deck.gl/json@^7.3.4":
-  version "7.3.4"
-  resolved "https://registry.yarnpkg.com/@deck.gl/json/-/json-7.3.4.tgz#b21e902c9fe2a1211f5973aab5f49222956a46b8"
-  integrity sha512-5yZ2Wr4EcVliIHrA9pQIz6QH31FGxY2Wqfdjf97ILdjT0Z0D1fawpzxZPBz4LL2LrAVSg6RWUYdMycvc1iIwpQ==
+"@deck.gl/json@^8.0.5":
+  version "8.0.5"
+  resolved "https://registry.yarnpkg.com/@deck.gl/json/-/json-8.0.5.tgz#07a56ce3e33cdcfeea7c620c58f4e2aa362b1cf7"
+  integrity sha512-X2/iCI7oBZkG7nOaaFkqEy5pDTLY0eYtSQPe5C1cA2fHdnpr1/x5m1ZzpRh7d+7zGKKxLiIk9Mqc/GxsiCT1XQ==
   dependencies:
     d3-dsv "^1.0.8"
     expression-eval "^2.0.0"
