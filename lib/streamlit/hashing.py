@@ -18,7 +18,7 @@
 # Python 2/3 compatibility
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from collections import namedtuple
+import collections
 import dis
 import functools
 import hashlib
@@ -28,6 +28,7 @@ import io
 import os
 import sys
 import textwrap
+import threading
 
 import streamlit as st
 from streamlit import config
@@ -60,7 +61,46 @@ NP_SIZE_LARGE = 1000000
 NP_SAMPLE_SIZE = 100000
 
 
-Context = namedtuple("Context", ["globals", "cells", "varnames"])
+# "None"sense as a placeholder for literal None object while hashing.
+NONESENSE = b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-None"
+
+# Arbitrary item to denote where we found a cycle in a hashed object.
+# This allows us to hash self-referencing lists, dictionaries, etc.
+CYCLE_PLACEHOLDER = b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-CYCLE"
+
+
+Context = collections.namedtuple("Context", ["globals", "cells", "varnames"])
+
+
+class HashStacks(object):
+    """Stack of what has been hashed, for circular reference detection.
+
+    This internally keeps 1 stack per thread.
+
+    Internally, this stores the ID of pushed objects rather than the objects
+    themselves because otherwise the "in" operator inside __contains__ would
+    fail for objects that don't return a boolean for "==" operator. For
+    example, arr == 10 where arr is a NumPy array returns another NumPy array.
+    This causes the "in" to crash since it expects a boolean.
+    """
+
+    def __init__(self):
+        self.stacks = collections.defaultdict(list)
+
+    def push(self, val):
+        thread_id = threading.current_thread().ident
+        self.stacks[thread_id].append(id(val))
+
+    def pop(self):
+        thread_id = threading.current_thread().ident
+        self.stacks[thread_id].pop()
+
+    def __contains__(self, val):
+        thread_id = threading.current_thread().ident
+        return id(val) in self.stacks[thread_id]
+
+
+hash_stacks = HashStacks()
 
 
 def _is_magicmock(obj):
@@ -108,8 +148,10 @@ def _int_to_bytes(i):
 def _key(obj, context):
     """Return key for memoization."""
 
+    # use arbitrary value in place of None since the return of None
+    # is used for control flow in .to_bytes
     if obj is None:
-        return b"none:"  # special value so we can hash None
+        return NONESENSE
 
     def is_simple(obj):
         return (
@@ -217,7 +259,7 @@ class CodeHasher:
         return self.hasher.hexdigest()
 
     def to_bytes(self, obj, context=None):
-        """Add memoization to _to_bytes."""
+        """Add memoization to _to_bytes and protect against cycles in data structures."""
         key = _key(obj, context)
 
         if key is not None:
@@ -228,6 +270,11 @@ class CodeHasher:
             self._counter += 1
             self.hashes[key] = _int_to_bytes(self._counter)
 
+        if obj in hash_stacks:
+            return CYCLE_PLACEHOLDER
+
+        hash_stacks.push(obj)
+
         b = self._to_bytes(obj, context)
 
         self.size += sys.getsizeof(b)
@@ -235,6 +282,7 @@ class CodeHasher:
         if key is not None:
             self.hashes[key] = b
 
+        hash_stacks.pop()
         return b
 
     def _update(self, hasher, obj, context=None):
@@ -286,7 +334,7 @@ class CodeHasher:
                 # Special string since hashes change between sessions.
                 # We don't use Python's `hash` since hashes are not consistent
                 # across runs.
-                return b"none:"
+                return NONESENSE
             elif obj is True:
                 return b"bool:1"
             elif obj is False:

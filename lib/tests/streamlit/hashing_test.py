@@ -61,6 +61,24 @@ class HashTest(unittest.TestCase):
         self.assertNotEqual(get_hash([1, 2]), get_hash([2, 2]))
         self.assertNotEqual(get_hash([1]), get_hash(1))
 
+        # test that we can hash self-referencing lists
+        a = [1, 2, 3]
+        a.append(a)
+        b = [1, 2, 3]
+        b.append(b)
+        self.assertEqual(get_hash(a), get_hash(b))
+
+    def test_dict(self):
+        d1 = {"cat": "hat"}
+        d2 = {"things": [1, 2]}
+
+        self.assertEqual(get_hash(d1), get_hash(d1))
+        self.assertNotEqual(get_hash(d1), get_hash(d2))
+
+        # test that we can hash self-referencing dictionaries
+        d2 = {"book": d1}
+        self.assertNotEqual(get_hash(d2), get_hash(d1))
+
     def test_tuple(self):
         self.assertEqual(get_hash((1, 2)), get_hash((1, 2)))
         self.assertNotEqual(get_hash((1, 2)), get_hash((2, 2)))

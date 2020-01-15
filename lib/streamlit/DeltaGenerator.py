@@ -2399,7 +2399,6 @@ class DeltaGenerator(object):
                 format = "%d" if int_value else "%0.2f"
 
             if format in ["%d", "%u", "%i"] and float_value:
-                # Fix for https://github.com/streamlit/streamlit/issues/930
                 # Warn user to check if displaying float as int was really intended.
                 import streamlit as st
 
