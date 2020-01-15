@@ -76,7 +76,7 @@ class ScreenCastRecorder {
   }
 
   /**
-   * This method will start the scren recording if the user has granted permissions
+   * This method will start the screen recording if the user has granted permissions
    * and the mediaRecorder has been initialized
    *
    * @returns {boolean}
