@@ -19,8 +19,9 @@ import React from "react"
 import { Input as UIInput } from "baseui/input"
 import { Map as ImmutableMap } from "immutable"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
+import { TextInput as TextInputProto } from "autogen/proto"
 
-interface Props {
+export interface Props {
   disabled: boolean
   element: ImmutableMap<string, any>
   widgetMgr: WidgetStateManager
@@ -75,6 +76,12 @@ class TextInput extends React.PureComponent<Props, State> {
     }
   }
 
+  private getTypeString(): string | undefined {
+    return this.props.element.get("type") === TextInputProto.Type.PASSWORD
+      ? "password"
+      : undefined
+  }
+
   public render = (): React.ReactNode => {
     const label: string = this.props.element.get("label")
     const style = { width: this.props.width }
@@ -88,6 +95,7 @@ class TextInput extends React.PureComponent<Props, State> {
           onChange={this.onChange}
           onKeyPress={this.onKeyPress}
           disabled={this.props.disabled}
+          type={this.getTypeString()}
         />
         {this.state.dirty ? (
           <div className="instructions">Press Enter to apply</div>

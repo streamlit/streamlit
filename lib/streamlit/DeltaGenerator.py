@@ -18,6 +18,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+from streamlit.proto.TextInput_pb2 import TextInput
 
 setup_2_3_shims(globals())
 
@@ -2111,7 +2112,7 @@ class DeltaGenerator(object):
         return io.BytesIO(data)
 
     @_with_element
-    def text_input(self, element, label, value="", key=None):
+    def text_input(self, element, label, value="", key=None, type="default"):
         """Display a single-line text input widget.
 
         Parameters
@@ -2126,6 +2127,10 @@ class DeltaGenerator(object):
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+        type : str
+            The type of the text input. This can be either "default" (for
+            a regular text input), or "password" (for a text input that
+            masks the user's typed value). Defaults to "default".
 
         Returns
         -------
@@ -2140,6 +2145,15 @@ class DeltaGenerator(object):
         """
         element.text_input.label = label
         element.text_input.default = str(value)
+        if type == "default":
+            element.text_input.type = TextInput.DEFAULT
+        elif type == "password":
+            element.text_input.type = TextInput.PASSWORD
+        else:
+            raise StreamlitAPIException(
+                "'%s' is not a valid text_input type. Valid types are 'default' and 'password'."
+                % type
+            )
 
         ui_value = _get_widget_ui_value("text_input", element, user_key=key)
         current_value = ui_value if ui_value is not None else value
