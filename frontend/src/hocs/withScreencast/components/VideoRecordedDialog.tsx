@@ -57,10 +57,10 @@ class VideoRecordedDialog extends PureComponent<Props> {
         <ModalBody>
           <video style={{ width: "100%" }} src={videoSource} controls />
           <Alert color="warning">
-            The video will be generated with a{" "}
-            <a href="https://www.webmproject.org/">WebM format</a>, if your
-            player does not support this type of file you could use your
-            browser to play it
+            This video is encoded in the{" "}
+            <a href="https://www.webmproject.org/">WebM format</a> (This format
+            is not supported by all video players, but your browser will be
+            able to play it.)
           </Alert>
         </ModalBody>
         <ModalFooter>
