@@ -2138,7 +2138,7 @@ class DeltaGenerator(object):
         else:
             raise StreamlitAPIException(
                 "'%s' is not a valid text_input type. Valid types are 'default' and 'password'."
-                % str(type)
+                % type
             )
 
         ui_value = _get_widget_ui_value("text_input", element, user_key=key)
