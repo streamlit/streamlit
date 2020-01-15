@@ -262,7 +262,7 @@ class CodeHasher:
         """Add memoization to _to_bytes and protect against cycles in data structures."""
         key = _key(obj, context)
 
-        if key:
+        if key is not None:
             if key in self.hashes:
                 return self.hashes[key]
 
@@ -279,7 +279,7 @@ class CodeHasher:
 
         self.size += sys.getsizeof(b)
 
-        if key:
+        if key is not None:
             self.hashes[key] = b
 
         hash_stacks.pop()
