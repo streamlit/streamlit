@@ -482,8 +482,13 @@ _create_section("browser", "Configuration of browser front-end.")
 
 @_create_option("browser.serverAddress")
 def _browser_server_address():
-    """Internet address of the server server that the browser should connect
-    to. Can be IP address or DNS name.
+    """Internet address where users should point their browsers in order to
+    connect to the app. Can be IP address or DNS name and path.
+
+    This doesn't have much of an effect. This is only used in order to:
+    - Show the URL on the terminal
+    - Open the browser
+    - Tell the browser where to connect to the server when in liveSave mode.
 
     Default: 'localhost'
     """
@@ -501,8 +506,13 @@ def _gather_usage_stats():
 
 @_create_option("browser.serverPort", type_=int)
 def _browser_server_port():
-    """Port that the browser should use to connect to the server when in
-    liveSave mode.
+    """Port where users should point their browsers in order to connect to the
+    app.
+
+    This doesn't have much of an effect. This is only used in order to:
+    - Show the URL on the terminal
+    - Open the browser
+    - Tell the browser where to connect to the server when in liveSave mode.
 
     Default: whatever value is set in server.port.
     """

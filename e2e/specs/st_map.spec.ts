@@ -17,17 +17,12 @@
 
 /// <reference types="cypress" />
 
-describe("st.area_chart", () => {
+describe("st.map", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
-
-    // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
   });
 
-  it("displays an area chart", () => {
-    cy.get(".element-container .stVegaLiteChart")
-      .find("canvas")
-      .should("have.css", "height", "200px");
+  it("displays 3 maps", () => {
+    cy.get(".element-container .stDeckGlJsonChart").should("have.length", 3);
   });
 });

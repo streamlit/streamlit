@@ -17,14 +17,17 @@
 
 /// <reference types="cypress" />
 
-describe("st.line_chart", () => {
+describe("st.area_chart", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
+
+    // Make the ribbon decoration line disappear
+    cy.get(".decoration").invoke("css", "display", "none");
   });
 
-  it("displays a line chart", () => {
+  it("displays an area chart", () => {
     cy.get(".element-container .stVegaLiteChart")
       .find("canvas")
-      .should("have.css", "height", "200px");
+      .should("have.css", "height", "300px");
   });
 });

@@ -1,6 +1,6 @@
 {
   "name": "streamlit-browser",
-  "version": "0.52.0",
+  "version": "0.53.0",
   "private": true,
   "homepage": ".",
   "scripts": {
@@ -80,9 +80,9 @@
     "xxhashjs": "^0.2.2"
   },
   "devDependencies": {
-    "@deck.gl/json": "^7.3.4",
     "@craco/craco": "^5.5.0",
     "@danmarshall/deckgl-typings": "^2.2.5",
+    "@deck.gl/json": "^8.0.5",
     "@types/classnames": "^2.2.9",
     "@types/clipboard": "^2.0.1",
     "@types/d3": "^5.7.2",
@@ -116,8 +116,8 @@
     "@typescript-eslint/eslint-plugin": "^2.5.0",
     "@typescript-eslint/parser": "^2.5.0",
     "cypress": "^3.4.1",
-    "cypress-image-snapshot": "^3.1.1",
     "cypress-file-upload": "^3.5.1",
+    "cypress-image-snapshot": "^3.1.1",
     "enzyme": "^3.10.0",
     "enzyme-adapter-react-16": "^1.15.1",
     "eslint": "^6.3.0",

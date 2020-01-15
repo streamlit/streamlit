@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,21 +13,18 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
-syntax = "proto3";
+/// <reference types="cypress" />
 
-message TextInput {
-  enum Type {
-    // A normal text input.
-    DEFAULT = 0;
+describe("st.bar_chart", () => {
+  before(() => {
+    cy.visit("http://localhost:3000/");
+  });
 
-    // A password text input. Typed values are obscured by default.
-    PASSWORD = 1;
-  }
-
-  string id = 1;
-  string label = 2;
-  string default = 3;
-  Type type = 4;
-}
+  it("displays a bar chart", () => {
+    cy.get(".element-container .stVegaLiteChart")
+      .find("canvas")
+      .should("have.css", "height", "300px");
+  });
+});

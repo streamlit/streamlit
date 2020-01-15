@@ -12,21 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
-syntax = "proto3";
-
-message TextInput {
-  enum Type {
-    // A normal text input.
-    DEFAULT = 0;
-
-    // A password text input. Typed values are obscured by default.
-    PASSWORD = 1;
-  }
-
-  string id = 1;
-  string label = 2;
-  string default = 3;
-  Type type = 4;
+.stDeckGlJsonChart {
+  // Required for fullscreen.
+  position: relative;
 }
