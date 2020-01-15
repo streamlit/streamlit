@@ -24,17 +24,17 @@ See highlights, bug fixes, and known issues for Streamlit releases:
 
 ## Version 0.53.0
 
-_Release date: January 13, 2019_
+_Release date: January 14, 2019_
 
 **Highlights:**
 
-- 🗺️ Support for all DeckGL features! Just us
+- 🗺️ Support for all DeckGL features! Just use
   [Pydeck](https://deckgl.readthedocs.io/en/latest/) instead of
   [`st.deck_gl_chart`](https://docs.streamlit.io/api.html#streamlit.pydeck_chart).
   To do that, simply pass a PyDeck object to
   [`st.pydeck_chart`](https://docs.streamlit.io/api.html#streamlit.pydeck_chart),
   [`st.write`](https://docs.streamlit.io/api.html#streamlit.write),
-  or [magic](https://docs.streamlit.io/api.html#magic),
+  or [magic](https://docs.streamlit.io/api.html#magic).
 
   _Note that as a **preview release** things may change in the near future.
   Looking forward to hearing input from the community before we stabilize the
