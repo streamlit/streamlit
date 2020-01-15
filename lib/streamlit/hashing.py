@@ -62,11 +62,11 @@ NP_SAMPLE_SIZE = 100000
 
 
 # "None"sense as a placeholder for literal None object while hashing.
-NONESENSE = b"streamlit-4w350m3-None"
+NONESENSE = b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-None"
 
 # Arbitrary item to denote where we found a cycle in a hashed object.
 # This allows us to hash self-referencing lists, dictionaries, etc.
-CYCLE_PLACEHOLDER = b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky"
+CYCLE_PLACEHOLDER = b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-CYCLE"
 
 
 Context = collections.namedtuple("Context", ["globals", "cells", "varnames"])
