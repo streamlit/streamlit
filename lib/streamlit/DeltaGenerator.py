@@ -18,6 +18,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+from streamlit.proto.TextInput_pb2 import TextInput
 
 setup_2_3_shims(globals())
 
@@ -35,14 +36,15 @@ from streamlit import config
 from streamlit import metrics
 from streamlit import type_util
 from streamlit.ReportThread import get_report_ctx
-from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException
+from streamlit.js_number import JSNumber
+from streamlit.js_number import JSNumberBoundsException
 from streamlit.proto import Alert_pb2
 from streamlit.proto import Balloons_pb2
 from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
-from streamlit.proto import Text_pb2
+from streamlit.proto.NumberInput_pb2 import NumberInput
 
 
 # setup logging
@@ -2010,6 +2012,20 @@ class DeltaGenerator(object):
                     "The value and/or arguments are out of range."
                 )
 
+        # Bounds checks. JSNumber produces human-readable exceptions that
+        # we simply re-package as StreamlitAPIExceptions.
+        # (We check `min_value` and `max_value` here; `value` and `step` are
+        # already known to be in the [min_value, max_value] range.)
+        try:
+            if all_ints:
+                JSNumber.validate_int_bounds(min_value, "`min_value`")
+                JSNumber.validate_int_bounds(max_value, "`max_value`")
+            else:
+                JSNumber.validate_float_bounds(min_value, "`min_value`")
+                JSNumber.validate_float_bounds(max_value, "`max_value`")
+        except JSNumberBoundsException as e:
+            raise StreamlitAPIException(str(e))
+
         # Set format default.
         if format is None:
             if all_ints:
@@ -2018,16 +2034,16 @@ class DeltaGenerator(object):
                 format = "%0.2f"
 
         # It would be great if we could guess the number of decimal places from
-        # the step argument, but this would only be meaningful if step were a decimal.
-        # As a possible improvement we could make this function accept decimals
-        # and/or use some heuristics for floats.
+        # the `step` argument, but this would only be meaningful if step were a
+        # decimal. As a possible improvement we could make this function accept
+        # decimals and/or use some heuristics for floats.
 
         element.slider.label = label
+        element.slider.format = format
         element.slider.default[:] = [value] if single_value else value
         element.slider.min = min_value
         element.slider.max = max_value
         element.slider.step = step
-        element.slider.format = format
 
         ui_value = _get_widget_ui_value("slider", element, user_key=key)
         # Convert the current value to the appropriate type.
@@ -2046,7 +2062,6 @@ class DeltaGenerator(object):
 
     @_with_element
     def file_uploader(self, element, label, type=None, encoding="auto", key=None):
-
         """Display a file uploader widget.
 
         By default, uploaded files are limited to 50MB but you can configure that using the `server.maxUploadSize` config option.
@@ -2117,7 +2132,7 @@ class DeltaGenerator(object):
         return io.BytesIO(data)
 
     @_with_element
-    def text_input(self, element, label, value="", key=None):
+    def text_input(self, element, label, value="", key=None, type="default"):
         """Display a single-line text input widget.
 
         Parameters
@@ -2132,6 +2147,10 @@ class DeltaGenerator(object):
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+        type : str
+            The type of the text input. This can be either "default" (for
+            a regular text input), or "password" (for a text input that
+            masks the user's typed value). Defaults to "default".
 
         Returns
         -------
@@ -2146,6 +2165,15 @@ class DeltaGenerator(object):
         """
         element.text_input.label = label
         element.text_input.default = str(value)
+        if type == "default":
+            element.text_input.type = TextInput.DEFAULT
+        elif type == "password":
+            element.text_input.type = TextInput.PASSWORD
+        else:
+            raise StreamlitAPIException(
+                "'%s' is not a valid text_input type. Valid types are 'default' and 'password'."
+                % type
+            )
 
         ui_value = _get_widget_ui_value("text_input", element, user_key=key)
         current_value = ui_value if ui_value is not None else value
@@ -2372,11 +2400,14 @@ class DeltaGenerator(object):
 
             if format in ["%d", "%u", "%i"] and float_value:
                 # Fix for https://github.com/streamlit/streamlit/issues/930
-                # If user submitted format is int, assume the intention is to
-                # coerce submitted value to int.
-                value = int(value)
-                int_value = True
-                float_value = False
+                # Warn user to check if displaying float as int was really intended.
+                import streamlit as st
+
+                st.warning(
+                    "Warning: NumberInput value below is float, but format {} displays as integer.".format(
+                        format
+                    )
+                )
 
             if step is None:
                 step = 1 if int_value else 0.01
@@ -2437,25 +2468,43 @@ class DeltaGenerator(object):
                 % {"value": value, "min": min_value, "max": max_value}
             )
 
-        number_input = element.number_input
-        if all_ints:
-            data = number_input.int_data
-        else:
-            data = number_input.float_data
+        # Bounds checks. JSNumber produces human-readable exceptions that
+        # we simply re-package as StreamlitAPIExceptions.
+        try:
+            if all_ints:
+                if min_value is not None:
+                    JSNumber.validate_int_bounds(min_value, "`min_value`")
+                if max_value is not None:
+                    JSNumber.validate_int_bounds(max_value, "`max_value`")
+                if step is not None:
+                    JSNumber.validate_int_bounds(step, "`step`")
+                JSNumber.validate_int_bounds(value, "`value`")
+            else:
+                if min_value is not None:
+                    JSNumber.validate_float_bounds(min_value, "`min_value`")
+                if max_value is not None:
+                    JSNumber.validate_float_bounds(max_value, "`max_value`")
+                if step is not None:
+                    JSNumber.validate_float_bounds(step, "`step`")
+                JSNumber.validate_float_bounds(value, "`value`")
+        except JSNumberBoundsException as e:
+            raise StreamlitAPIException(str(e))
 
+        number_input = element.number_input
+        number_input.data_type = NumberInput.INT if all_ints else NumberInput.FLOAT
         number_input.label = label
-        data.default = value
+        number_input.default = value
 
         if min_value is not None:
-            data.min = min_value
+            number_input.min = min_value
             number_input.has_min = True
 
         if max_value is not None:
-            data.max = max_value
+            number_input.max = max_value
             number_input.has_max = True
 
         if step is not None:
-            data.step = step
+            number_input.step = step
 
         if format is not None:
             number_input.format = format
