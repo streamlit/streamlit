@@ -1566,14 +1566,7 @@ class DeltaGenerator(object):
 
         """
         from .elements import media_proto
-
-        # TODO: write bytes to file.
-        url = data
-        media_proto.marshall_audio(element.audio, url, format, start_time)
-
-        # TODO: Get rid of the following TODO.
-        # TODO: Provide API to convert raw NumPy arrays to audio file (with
-        # proper headers, etc)?
+        media_proto.marshall_audio(element.audio, data, format, start_time)
 
     @_with_element
     def video(self, element, data, format="video/mp4", start_time=0):
@@ -1602,13 +1595,8 @@ class DeltaGenerator(object):
            height: 600px
 
         """
-        # TODO: Provide API to convert raw NumPy arrays to video file (with
-        # proper headers, etc)?
         from .elements import media_proto
-
-        # TODO: write bytes to file.
-        url = data
-        media_proto.marshall_video(element.video, url, format, start_time)
+        media_proto.marshall_video(element.video, data, format, start_time)
 
     @_with_element
     def button(self, element, label, key=None):
