@@ -44,14 +44,11 @@ class Audio extends React.PureComponent<Props> {
   public render(): React.ReactNode {
     const { element, width } = this.props
 
-    // TODO: simplify after checking no more to do here.
-    const src = element.get("url")
-
     return (
       <audio
         ref={this.audioRef}
         controls
-        src={src}
+        src={element.get("url")}
         className="stAudio"
         style={{ width }}
       />

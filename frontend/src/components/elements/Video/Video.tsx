@@ -68,14 +68,11 @@ class Video extends React.PureComponent<Props> {
       )
     }
 
-    // TODO: simplify after checking no more to do here
-    const src = element.get("url")
-
     return (
       <video
         ref={this.videoRef}
         controls
-        src={src}
+        src={element.get("url")}
         className="stVideo"
         style={{ width }}
       />
