@@ -20,6 +20,7 @@ import os
 import sys
 import tempfile
 import time
+import types
 import unittest
 
 import altair.vegalite.v3
@@ -30,6 +31,7 @@ import tensorflow as tf
 from mock import MagicMock
 
 import streamlit as st
+from streamlit.errors import UnhashableType
 from streamlit.util import functools_wraps
 from streamlit.hashing import NP_SIZE_LARGE, PANDAS_ROWS_LARGE, CodeHasher
 
@@ -84,6 +86,42 @@ class HashTest(unittest.TestCase):
         self.assertNotEqual(get_hash((1, 2)), get_hash((2, 2)))
         self.assertNotEqual(get_hash((1,)), get_hash(1))
         self.assertNotEqual(get_hash((1,)), get_hash([1]))
+
+    def test_dict(self):
+        dict_gen = {1: (x for x in range(1))}
+
+        self.assertEqual(get_hash({1: 1}), get_hash({1: 1}))
+        self.assertNotEqual(get_hash({1: 1}), get_hash({1: 2}))
+        self.assertNotEqual(get_hash({1: 1}), get_hash([(1, 1)]))
+
+        with self.assertRaises(UnhashableType):
+            get_hash(dict_gen)
+        get_hash(dict_gen, hash_funcs={types.GeneratorType: id})
+
+    def test_reduce_(self):
+        class A(object):
+            def __init__(self):
+                self.x = [1, 2, 3]
+
+        class B(object):
+            def __init__(self):
+                self.x = [1, 2, 3]
+
+        class C(object):
+            def __init__(self):
+                self.x = (x for x in range(1))
+
+        self.assertEqual(get_hash(A()), get_hash(A()))
+        self.assertNotEqual(get_hash(A()), get_hash(B()))
+        self.assertNotEqual(get_hash(A()), get_hash(A().__reduce__()))
+
+        with self.assertRaises(UnhashableType):
+            get_hash(C())
+        get_hash(C(), hash_funcs={types.GeneratorType: id})
+
+    def test_generator(self):
+        with self.assertRaises(UnhashableType):
+            get_hash((x for x in range(1)))
 
     def test_float(self):
         self.assertEqual(get_hash(0.1), get_hash(0.1))
@@ -190,7 +228,7 @@ class HashTest(unittest.TestCase):
         tf_session_class = type(tf_session)
 
         # Unhashable object raises an error
-        with self.assertRaises(TypeError):
+        with self.assertRaises(UnhashableType):
             get_hash(tf_session)
 
         id_hash_func = {tf_session_class: id}
@@ -664,7 +702,7 @@ class CodeHashTest(unittest.TestCase):
         # Function with unhashable object raises an error in python 3
         # In python 2 we fallback to hashing the function name
         if sys.version_info >= (3, 0):
-            with self.assertRaises(TypeError):
+            with self.assertRaises(UnhashableType):
                 get_hash(f)
 
         hash_funcs = {tf_session_class: id}
