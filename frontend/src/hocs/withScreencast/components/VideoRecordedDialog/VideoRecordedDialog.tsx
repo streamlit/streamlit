@@ -47,7 +47,7 @@ class VideoRecordedDialog extends PureComponent<Props> {
     const videoSource = this.getVideoSource()
 
     return (
-      <Modal size="lg" isOpen={true} className="streamlit-dialog screencast">
+      <Modal isOpen={true} className="streamlit-dialog screencast">
         <ModalHeader toggle={onClose}>Next steps</ModalHeader>
         <ModalBody>
           <div className="steps-container">
