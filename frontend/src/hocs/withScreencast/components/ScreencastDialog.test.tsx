@@ -62,12 +62,12 @@ describe("ScreencastDialog", () => {
         },
       })
 
-      expect(labelWrapper.text()).toBe(" Record audio")
+      expect(labelWrapper.text()).toBe(" Also record audio")
       expect(wrapper.find("input").props().checked).toBeTruthy()
       expect(props.toggleRecordAudio).toBeCalled()
     })
 
-    it("should have a countdown explanation message", () => {
+    it("should have the stop recording explanation message", () => {
       const props = getProps()
       const wrapper = shallow(<ScreencastDialog {...props} />)
 
@@ -76,9 +76,7 @@ describe("ScreencastDialog", () => {
           .find("p")
           .last()
           .text()
-      ).toBe(
-        "There will be a 3-second countdown before recording starts. Press Esc any time to stop recording."
-      )
+      ).toBe("Press Esc any time to stop recording.")
     })
   })
 
@@ -90,7 +88,7 @@ describe("ScreencastDialog", () => {
 
       buttonWrapper.simulate("click")
 
-      expect(buttonWrapper.props().children).toBe("Start")
+      expect(buttonWrapper.props().children).toBe("Start recording!")
       expect(props.startRecording).toBeCalled()
       expect(props.onClose).toBeCalled()
     })
