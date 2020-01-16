@@ -16,14 +16,9 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
-import {
-  Button,
-  Modal,
-  ModalBody,
-  ModalFooter,
-  ModalHeader,
-  Alert,
-} from "reactstrap"
+import { Button, Modal, ModalBody, ModalHeader } from "reactstrap"
+
+import "./style.scss"
 
 export interface Props {
   /** Callback to close the dialog */
@@ -52,28 +47,37 @@ class VideoRecordedDialog extends PureComponent<Props> {
     const videoSource = this.getVideoSource()
 
     return (
-      <Modal isOpen={true} className="streamlit-dialog">
-        <ModalHeader toggle={onClose}>Screencast recorded</ModalHeader>
+      <Modal size="lg" isOpen={true} className="streamlit-dialog screencast">
+        <ModalHeader toggle={onClose}>Next steps</ModalHeader>
         <ModalBody>
-          <video style={{ width: "100%" }} src={videoSource} controls />
-          <Alert color="warning">
-            This video is encoded in the{" "}
-            <a href="https://www.webmproject.org/">WebM format</a> (This format
-            is not supported by all video players, but your browser will be
-            able to play it.)
-          </Alert>
+          <div className="steps-container">
+            <div className="first-column first-step">Step 1 →</div>
+            <div className="second-column first-step">
+              <p>Preview your video below:</p>
+              <video src={videoSource} controls />
+            </div>
+            <div className="third-column first-step"></div>
+
+            <div className="first-column second-step">Step 2 →</div>
+            <div className="second-column second-step">
+              <Button
+                outline
+                color="primary"
+                href={videoSource}
+                download={`${fileName}.webm`}
+                onClick={this.handleDownloadButton}
+              >
+                Save video to disk
+              </Button>
+            </div>
+
+            <div className="first-column third-step">Step 3 →</div>
+            <div className="second-column third-step">
+              Share it with the world on Twitter, LinkedIn, YouTube, or just
+              plain email! 😀
+            </div>
+          </div>
         </ModalBody>
-        <ModalFooter>
-          <Button
-            outline
-            color="primary"
-            href={videoSource}
-            download={`${fileName}.webm`}
-            onClick={this.handleDownloadButton}
-          >
-            Download
-          </Button>
-        </ModalFooter>
       </Modal>
     )
   }
