@@ -154,7 +154,7 @@ def _hashing_error_message(bad_type):
         """
         Cannot hash object of type %(bad_type)s
 
-        As part of caching some code, Streamlit encountered an object of
+        While caching some code, Streamlit encountered an object of
         type `%(bad_type)s`. You’ll need to help Streamlit understand how to
         hash that type with the `hash_funcs` argument. For example:
 
