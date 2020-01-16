@@ -269,7 +269,8 @@ class CodeHasher:
             elif isinstance(obj, list) or isinstance(obj, tuple):
                 h = hashlib.new(self.name)
 
-                # Add type to distingush x from [x]
+                # Hash the name of the container so that ["a"] hashes differently from ("a",)
+                # Otherwise we'd only be hashing the data and the hashes would be the same.
                 self._update(h, type(obj).__name__.encode() + b":")
                 for e in obj:
                     self._update(h, e, context)
