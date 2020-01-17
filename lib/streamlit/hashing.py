@@ -274,6 +274,8 @@ class CodeHasher:
             if key is not None:
                 self.hashes[key] = b
         finally:
+            # In case an UnhashableType (or other) error is thrown, clean up the
+            # stack so we don't get false positives in future hashing calls
             hash_stacks.pop()
 
         return b
