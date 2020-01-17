@@ -266,14 +266,16 @@ class CodeHasher:
 
         hash_stacks.push(obj)
 
-        b = self._to_bytes(obj, context)
+        try:
+            b = self._to_bytes(obj, context)
 
-        self.size += sys.getsizeof(b)
+            self.size += sys.getsizeof(b)
 
-        if key is not None:
-            self.hashes[key] = b
+            if key is not None:
+                self.hashes[key] = b
+        finally:
+            hash_stacks.pop()
 
-        hash_stacks.pop()
         return b
 
     def _update(self, hasher, obj, context=None):
