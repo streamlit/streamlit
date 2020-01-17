@@ -19,6 +19,12 @@
         padding-right: 0.5rem;
       }
 
+      .second-step {
+        p {
+          margin: 0.5rem 0 0;
+        }
+      }
+
       .first-column,
       .second-column,
       .third-columnd {
@@ -36,7 +42,6 @@
         color: gray;
         font-weight: bold;
 
-        &.second-step,
         &.third-step {
           display: grid;
           align-items: center;

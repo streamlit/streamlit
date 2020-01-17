@@ -47,7 +47,7 @@ class VideoRecordedDialog extends PureComponent<Props> {
     const videoSource = this.getVideoSource()
 
     return (
-      <Modal isOpen={true} className="streamlit-dialog screencast">
+      <Modal size="lg" isOpen={true} className="streamlit-dialog screencast">
         <ModalHeader toggle={onClose}>Next steps</ModalHeader>
         <ModalBody>
           <div className="steps-container">
@@ -69,6 +69,12 @@ class VideoRecordedDialog extends PureComponent<Props> {
               >
                 Save video to disk
               </Button>
+              <p>
+                This video is encoded in the{" "}
+                <a href="https://www.webmproject.org/">WebM format</a>, which
+                is only supported by newer video players. You can also play it
+                by dragging the file into your browser.
+              </p>
             </div>
 
             <div className="first-column third-step">Step 3 →</div>
