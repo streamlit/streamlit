@@ -37,9 +37,9 @@ def generated():
 
     f.close()
     x.text("Sending wave...")
-    # x.audio("sound.wav")
-    # x.audio("file:///Users/nthmost/projects/git/STREAMLIT/streamlit/sound.wav")
-    x.audio("http://localhost:8000/sound.wav")
+    with io.open("sound.wav", "rb") as f:
+        x.text("Sending wave...")
+        x.audio(f)
 
 
 generated()

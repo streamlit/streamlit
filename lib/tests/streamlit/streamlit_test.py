@@ -135,7 +135,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         # base64.b64encode(bytes('\x11\x22\x33\x44\x55\x66'.encode('utf-8')))
         # self.assertEqual(el.audio.data, "ESIzRFVm")
         self.assertEqual(el.audio.format, "audio/wav")
-        #TODO: test el.audio.url
+        # TODO: test el.audio.url
 
         # test using a URL instead of data
         some_url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
@@ -167,7 +167,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         # self.assertEqual(el.audio.data, "ESIzRFVm")
         self.assertEqual(el.audio.format, "audio/mp3")
         self.assertEqual(el.audio.start_time, 10)
-        #TODO: test el.audio.url
+        # TODO: test el.audio.url
 
     def test_st_balloons(self):
         """Test st.balloons."""
@@ -627,8 +627,8 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.video.format, "video/mp4")
-        #TODO: test el.video.url
-        #TODO: test that el.video.url is in filemanager 
+        # TODO: test el.video.url
+        # TODO: test that el.video.url is in filemanager
 
         # Test with an arbitrary URL in place of data
         some_url = "http://www.marmosetcare.com/video/in-the-wild/intro.webm"
@@ -660,7 +660,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             st.video(non_url)
             el = self.get_delta_from_queue().new_element
             assert not el.video.url
-            #assert el.video.data == "YmxhaA=="  # "blah" to base64 encoded payload
+            # assert el.video.data == "YmxhaA=="  # "blah" to base64 encoded payload
         except TypeError:
             # Python 3 behavior
             assert True
@@ -673,8 +673,8 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.video.format, "video/mp4")
         self.assertEqual(el.video.start_time, 10)
-        #TODO: test el.video.url
-        #TODO: test that el.video.url is in filemanager 
+        # TODO: test el.video.url
+        # TODO: test that el.video.url is in filemanager
 
     def test_st_warning(self):
         """Test st.warning."""

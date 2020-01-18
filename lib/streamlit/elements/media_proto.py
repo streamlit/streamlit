@@ -81,9 +81,6 @@ def _old_marshall_binary(proto, data):
     elif type(data) is bytes:
         # Must come after str, since byte and str are equivalent in Python 2.7.
         b64encodable = data
-    elif isinstance(data, io.BytesIO):
-        data.seek(0)
-        b64encodable = data.getvalue()
     elif isinstance(data, io.IOBase):
         data.seek(0)
         b64encodable = data.read()
@@ -101,15 +98,27 @@ def _marshall_binary(proto, data):
     this media file stored in a file manager.
     """
 
+    if isinstance(data, io.BytesIO):
+        data.seek(0)
+        data = date.getvalue()
+    elif isinstance(data, io.IOBase):
+        data.seek(0)
+        data = data.read()
+
     obj_hash = hash(data)
-    #if obj_hash in FileManager:
+
+    # if obj_hash in FileManager:
     #    proto.url = FileManager.get(obj_hash).url
     #    return
 
-    #open(obj_hash+".data").write(data)
+    # open(obj_hash+".data").write(data)
 
-    open("/Users/nthmost/projects/git/streamlit/fileserver/"+str(obj_hash), 'wb').write(data)
-    proto.url = "file:///Users/nthmost/projects/git/streamlit/fileserver/"+str(obj_hash)
+    open(
+        "/Users/nthmost/projects/git/streamlit/fileserver/" + str(obj_hash), "wb"
+    ).write(data)
+    proto.url = "file:///Users/nthmost/projects/git/streamlit/fileserver/" + str(
+        obj_hash
+    )
 
 
 def marshall_video(proto, data, format="video/mp4", start_time=0):
@@ -167,8 +176,11 @@ def marshall_audio(proto, data, format="audio/wav", start_time=0):
     proto.format = format
     proto.start_time = start_time
 
-    if isinstance(data, string_types) and url(data):  # noqa: F821
-        proto.url = data
+    if isinstance(data, string_types):
+        if url(data):  # noqa: F821
+            proto.url = data
+            return
+        # assume it's a filename
+        proto.url = "FILENAME: "+data
     else:
         _marshall_binary(proto, data)
-
