@@ -27,6 +27,10 @@ import re
 from validators import url
 
 from streamlit.proto import Video_pb2
+from streamlit.MediaFileManager import MediaFileManager
+
+
+_media_filemanager = MediaFileManager()
 
 
 # Regular expression explained at https://regexr.com/4n2l2 Covers any youtube
@@ -64,35 +68,6 @@ def _reshape_youtube_url(url):
     return None
 
 
-def _old_marshall_binary(proto, data):
-    """Marshals a proto with binary data (converts to base64).
-
-    Parameters
-    ----------
-    proto : the proto to fill. Must have a string field called "data".
-    data : a buffer with the binary data. Supported formats: str, bytes,
-        BytesIO, NumPy array, or a file opened with io.open().
-    """
-    if type(data) in string_types:  # noqa: F821
-        # Python3 raises TypeError for unencodable text (but not Python 2.7)
-        b64encodable = bytes(data)
-    elif type(data) is newbytes:
-        b64encodable = data
-    elif type(data) is bytes:
-        # Must come after str, since byte and str are equivalent in Python 2.7.
-        b64encodable = data
-    elif isinstance(data, io.IOBase):
-        data.seek(0)
-        b64encodable = data.read()
-    elif type(data).__name__ == "ndarray":
-        b64encodable = data
-    else:
-        raise RuntimeError("Invalid binary data format: %s" % type(data))
-
-    data_b64 = base64.b64encode(b64encodable)
-    proto.data = data_b64.decode("utf-8")
-
-
 def _marshall_binary(proto, data):
     """ Handles binary data and packs the proto.url field with a link to 
     this media file stored in a file manager.
@@ -104,21 +79,13 @@ def _marshall_binary(proto, data):
     elif isinstance(data, io.IOBase):
         data.seek(0)
         data = data.read()
+    #elif type(data).__name__ == "ndarray":
+    #    data = ...
+    else:
+        raise RuntimeError("Invalid binary data format: %s" % type(data))
 
-    obj_hash = hash(data)
-
-    # if obj_hash in FileManager:
-    #    proto.url = FileManager.get(obj_hash).url
-    #    return
-
-    # open(obj_hash+".data").write(data)
-
-    open(
-        "/Users/nthmost/projects/git/streamlit/fileserver/" + str(obj_hash), "wb"
-    ).write(data)
-    proto.url = "file:///Users/nthmost/projects/git/streamlit/fileserver/" + str(
-        obj_hash
-    )
+    this_file = _media_filemanager.add(data)
+    proto.url = this_file.url
 
 
 def marshall_video(proto, data, format="video/mp4", start_time=0):
