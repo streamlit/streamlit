@@ -67,6 +67,10 @@ class ScreencastDialog extends PureComponent<Props, State> {
         <ModalHeader toggle={onClose}>Record a screencast</ModalHeader>
         <ModalBody>
           <p>
+            This will record a video with the contents of your screen, so you
+            can easily share what you're seeing with others.
+          </p>
+          <p>
             <label>
               <input
                 type="checkbox"
@@ -74,17 +78,16 @@ class ScreencastDialog extends PureComponent<Props, State> {
                 checked={recordAudio}
                 onChange={this.handleRecordAudioCheckbox}
               />{" "}
-              Record audio
+              Also record audio
             </label>
           </p>
           <p>
-            There will be a 3-second countdown before recording starts. Press
-            Esc any time to stop recording.
+            Press <kbd>Esc</kbd> any time to stop recording.
           </p>
         </ModalBody>
         <ModalFooter>
           <Button outline color="primary" onClick={this.handleStartButton}>
-            Start
+            Start recording!
           </Button>
         </ModalFooter>
       </Modal>

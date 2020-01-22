@@ -1,0 +1,60 @@
+@import "src/assets/css/variables";
+
+.streamlit-dialog.screencast {
+  width: 80%;
+
+  .modal-body {
+    padding: 0;
+
+    video {
+      width: 100%;
+    }
+
+    .steps-container {
+      display: grid;
+
+      grid-template-columns: 100px auto 100px;
+
+      .first-column {
+        padding-right: 0.5rem;
+      }
+
+      .second-step {
+        p {
+          margin: 0.5rem 0 0;
+        }
+      }
+
+      .first-column,
+      .second-column,
+      .third-columnd {
+        border-top: 1px solid $gray-300;
+        padding-top: 0.7rem;
+        padding-bottom: 0.7rem;
+
+        &.first-step {
+          border-top: 0;
+        }
+      }
+
+      .first-column {
+        text-align: right;
+        color: gray;
+        font-weight: bold;
+
+        &.third-step {
+          display: grid;
+          align-items: center;
+        }
+      }
+
+      .second-column {
+        &.second-step,
+        &.third-step {
+          grid-column-start: 2;
+          grid-column-end: 4;
+        }
+      }
+    }
+  }
+}
