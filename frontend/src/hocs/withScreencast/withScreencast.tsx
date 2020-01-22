@@ -29,21 +29,28 @@ import {
 
 import "./withScreencast.scss"
 
+export enum Steps {
+  UNSUPPORTED = "unsupported",
+  OFF = "off",
+  SETUP = "setup",
+  COUNTDOWN = "countdown",
+  RECORDING = "recording",
+  PREVIEW_FILE = "preview_file",
+}
+
 interface WithScreenCastProps {}
 
 interface WithScreenCastState {
   fileName: string
-  recording: boolean
   recordAudio: boolean
   countdown: number
   startAnimation: boolean
-  blob?: Blob
-  showRecordedDialog: boolean
-  showScreencastDialog: boolean
-  showUnsupportedDialog: boolean
+  outputBlob?: Blob
+  currentState: Steps
 }
 
-export interface ScreenCastHOC extends WithScreenCastState {
+export interface ScreenCastHOC {
+  currentState: Steps
   toggleRecordAudio: () => void
   startRecording: (fileName: string) => void
   stopRecording: () => void
@@ -72,12 +79,9 @@ function withScreencast(
     state = {
       fileName: "streamlit-screencast",
       countdown: -1,
-      recording: false,
       recordAudio: false,
       startAnimation: false,
-      showRecordedDialog: false,
-      showScreencastDialog: false,
-      showUnsupportedDialog: false,
+      currentState: Steps.OFF,
     }
 
     toggleRecordAudio = (): void => {
@@ -89,17 +93,17 @@ function withScreencast(
     }
 
     showDialog = (fileName: string): void => {
-      const { recording, countdown } = this.state
+      const { currentState } = this.state
 
       if (!this.checkSupportedBrowser()) {
         this.setState({
-          showUnsupportedDialog: true,
+          currentState: Steps.UNSUPPORTED,
         })
       } else {
-        if (!recording && countdown < 0) {
+        if (currentState === Steps.OFF) {
           this.setState({
             fileName,
-            showScreencastDialog: true,
+            currentState: Steps.SETUP,
           })
         } else {
           this.stopRecording()
@@ -116,27 +120,26 @@ function withScreencast(
       this.setState({
         countdown: 3,
         startAnimation: true,
-        showRecordedDialog: false,
+        currentState: Steps.COUNTDOWN,
       })
     }
 
     stopRecording = async (): Promise<any> => {
-      let blob
-      const { recording } = this.state
+      let outputBlob
+      const { currentState } = this.state
 
       if (
         this.recorder &&
-        recording &&
+        currentState === Steps.RECORDING &&
         this.recorder.getState() !== "inactive"
       )
-        blob = await this.recorder.stop()
+        outputBlob = await this.recorder.stop()
 
       this.setState({
-        blob,
+        outputBlob,
         countdown: -1,
-        recording: false,
         startAnimation: false,
-        showRecordedDialog: true,
+        currentState: Steps.PREVIEW_FILE,
       })
     }
 
@@ -166,7 +169,7 @@ function withScreencast(
 
         if (hasStarted) {
           this.setState({
-            recording: true,
+            currentState: Steps.RECORDING,
           })
         } else {
           this.stopRecording()
@@ -175,7 +178,7 @@ function withScreencast(
     }
 
     getScreenCastProps = (): ScreenCastHOC => ({
-      ...this.state,
+      currentState: this.state.currentState,
       toggleRecordAudio: this.toggleRecordAudio,
       startRecording: this.showDialog,
       stopRecording: this.stopRecording,
@@ -189,21 +192,9 @@ function withScreencast(
       })
     }
 
-    closeRecordedDialog = (): void => {
+    closeDialog = (): void => {
       this.setState({
-        showRecordedDialog: false,
-      })
-    }
-
-    closeUnsupportedDialog = (): void => {
-      this.setState({
-        showUnsupportedDialog: false,
-      })
-    }
-
-    closeScreencastDialog = (): void => {
-      this.setState({
-        showScreencastDialog: false,
+        currentState: Steps.OFF,
       })
     }
 
@@ -221,19 +212,31 @@ function withScreencast(
 
     render(): ReactNode {
       const {
-        blob,
+        outputBlob,
         fileName,
         countdown,
         recordAudio,
-        showRecordedDialog,
-        showScreencastDialog,
-        showUnsupportedDialog,
+        currentState,
       }: WithScreenCastState = this.state
 
       return (
         <div className="withScreencast">
           <WrappedComponent screenCast={this.getScreenCastProps()} />
-          {countdown > 0 && (
+
+          {currentState === Steps.UNSUPPORTED && (
+            <UnsupportedBrowserDialog onClose={this.closeDialog} />
+          )}
+
+          {currentState === Steps.SETUP && (
+            <ScreencastDialog
+              recordAudio={recordAudio}
+              onClose={this.closeDialog}
+              startRecording={this.startRecording}
+              toggleRecordAudio={this.toggleRecordAudio}
+            />
+          )}
+
+          {currentState === Steps.COUNTDOWN && (
             <div
               className={this.getCountdownClassName()}
               onAnimationEnd={this.onAnimationEnd}
@@ -242,24 +245,11 @@ function withScreencast(
             </div>
           )}
 
-          {showRecordedDialog && blob && (
+          {currentState === Steps.PREVIEW_FILE && outputBlob && (
             <VideoRecordedDialog
-              onClose={this.closeRecordedDialog}
-              videoBlob={blob}
+              onClose={this.closeDialog}
+              videoBlob={outputBlob}
               fileName={fileName}
-            />
-          )}
-
-          {showUnsupportedDialog && (
-            <UnsupportedBrowserDialog onClose={this.closeUnsupportedDialog} />
-          )}
-
-          {showScreencastDialog && (
-            <ScreencastDialog
-              recordAudio={recordAudio}
-              onClose={this.closeScreencastDialog}
-              startRecording={this.startRecording}
-              toggleRecordAudio={this.toggleRecordAudio}
             />
           )}
         </div>

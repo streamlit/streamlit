@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-@keyframes moveUp {
+@keyframes screencastCounterMoveUp {
   0% {
     opacity: 0.8;
     transform: translateY(20vh);
@@ -43,7 +43,7 @@
     transition: opacity 0.3s ease-in-out;
 
     &.withAnimation {
-      animation: moveUp 0.25s;
+      animation: screencastCounterMoveUp 0.25s;
       animation-delay: 0.75s;
     }
   }
