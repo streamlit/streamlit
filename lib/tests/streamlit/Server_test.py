@@ -29,7 +29,6 @@ from tornado import gen
 
 import streamlit.server.Server
 from streamlit import config
-from streamlit.server.Server import server_port_is_manually_set
 from streamlit.server.Server import MAX_PORT_SEARCH_RETRIES
 from streamlit.ForwardMsgCache import ForwardMsgCache
 from streamlit.ForwardMsgCache import populate_hash_if_needed
