@@ -112,6 +112,7 @@ like `st.line_chart` and `st.area_chart`.
 .. autofunction:: streamlit.vega_lite_chart
 .. autofunction:: streamlit.plotly_chart
 .. autofunction:: streamlit.bokeh_chart
+.. autofunction:: streamlit.pydeck_chart
 .. autofunction:: streamlit.deck_gl_chart
 .. autofunction:: streamlit.graphviz_chart
 .. autofunction:: streamlit.map
@@ -143,6 +144,7 @@ With widgets, Streamlit allows you to bake interactivity directly into your apps
 .. autofunction:: streamlit.text_area
 .. autofunction:: streamlit.date_input
 .. autofunction:: streamlit.time_input
+.. autofunction:: streamlit.file_uploader
 ```
 
 ## Add widgets to sidebar

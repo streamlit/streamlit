@@ -204,8 +204,11 @@ class App extends PureComponent<Props, State> {
       const { streamlitVersion: currentStreamlitVersion } = SessionInfo.current
       const { environmentInfo } = initializeMsg
 
-      if (environmentInfo) {
-        return currentStreamlitVersion !== environmentInfo.streamlitVersion
+      if (
+        environmentInfo != null &&
+        environmentInfo.streamlitVersion != null
+      ) {
+        return currentStreamlitVersion < environmentInfo.streamlitVersion
       }
     }
 

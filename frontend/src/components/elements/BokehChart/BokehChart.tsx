@@ -44,14 +44,20 @@ class BokehChart extends React.PureComponent<PropsWithHeight> {
   }
 
   public getChartDimensions = (plot: any): Dimensions => {
-    const width = plot.attributes.plot_width
-      ? plot.attributes.plot_width
-      : this.props.width
-    const height = plot.attributes.plot_height
-      ? plot.attributes.plot_height
-      : this.props.height
-      ? this.props.height
-      : undefined
+    const useContainerWidth = this.props.element.get("useContainerWidth")
+    // Default values
+    let width = plot.attributes.plot_width
+    let height = plot.attributes.plot_height
+
+    // if is not fullscreen and useContainerWidth==false, we should use default values
+    if (this.props.height) {
+      //fullscreen
+      width = this.props.width
+      height = this.props.height
+    } else if (useContainerWidth) {
+      width = this.props.width
+    }
+
     return { width, height }
   }
 
@@ -71,8 +77,10 @@ class BokehChart extends React.PureComponent<PropsWithHeight> {
         : undefined
     if (plot) {
       const { width, height } = this.getChartDimensions(plot)
-      plot.attributes.plot_width = width
-      if (height !== undefined) {
+      if (width > 0) {
+        plot.attributes.plot_width = width
+      }
+      if (height > 0) {
         plot.attributes.plot_height = height
       }
     }
@@ -100,14 +108,7 @@ class BokehChart extends React.PureComponent<PropsWithHeight> {
   }
 
   public render = (): React.ReactNode => (
-    <div
-      id={this.chartId}
-      className="stBokehChart"
-      style={{
-        width: this.props.width,
-        height: this.props.height ? this.props.height : undefined,
-      }}
-    />
+    <div id={this.chartId} className="stBokehChart" />
   )
 }
 

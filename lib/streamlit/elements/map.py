@@ -13,15 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""A wrapper for simple PyDeck scatter charts."""
+
 import pandas as pd
-from math import sqrt
+import json
 
-from streamlit.logger import get_logger
-import streamlit.elements.deck_gl as deck_gl
+import streamlit.elements.deck_gl_json_chart as deck_gl_json_chart
 
-LOGGER = get_logger(__name__)
+# Map used as the basis for st.map.
+_DEFAULT_MAP = dict(deck_gl_json_chart.EMPTY_MAP)
+_DEFAULT_MAP["mapStyle"] = "mapbox://styles/mapbox/light-v10"
 
-ZOOM_LEVELS = [
+# Other default parameters for st.map.
+_DEFAULT_COLOR = [200, 30, 0, 160]
+_ZOOM_LEVELS = [
     360,
     180,
     90,
@@ -62,21 +67,15 @@ def _get_zoom_level(distance):
 
     """
 
-    for i in range(len(ZOOM_LEVELS) - 1):
-        if ZOOM_LEVELS[i + 1] < distance <= ZOOM_LEVELS[i]:
-            return i + 1
+    for i in range(len(_ZOOM_LEVELS) - 1):
+        if _ZOOM_LEVELS[i + 1] < distance <= _ZOOM_LEVELS[i]:
+            return i
 
 
-def marshall(element, data, zoom=None):
-    """Marshall a proto with DeckGL chart info.
+def to_deckgl_json(data, zoom):
 
-    This is a shorthand for DeltaGenerator.deck_gl_chart,
-    which will auto center and auto zoom the chart.
-    If it is needed you can specify the zoom param.
-
-    See DeltaGenerator.deck_gl_chart for docs.
-
-    """
+    if data is None or data.empty:
+        return json.dumps(_DEFAULT_MAP)
 
     if "lat" in data:
         lat = "lat"
@@ -101,28 +100,38 @@ def marshall(element, data, zoom=None):
     max_lat = data[lat].max()
     min_lon = data[lon].min()
     max_lon = data[lon].max()
-
     center_lat = (max_lat + min_lat) / 2.0
     center_lon = (max_lon + min_lon) / 2.0
+    range_lon = abs(max_lon - min_lon)
+    range_lat = abs(max_lat - min_lat)
 
-    if zoom is None:
-        range_lon = abs(max_lon - min_lon)
-        range_lat = abs(max_lat - min_lat)
-
+    if zoom == None:
         if range_lon > range_lat:
             longitude_distance = range_lon
         else:
             longitude_distance = range_lat
-
         zoom = _get_zoom_level(longitude_distance)
 
-    deck_gl.marshall(
-        element.deck_gl_chart,
-        viewport={
-            "latitude": center_lat,
-            "longitude": center_lon,
-            "zoom": zoom,
-            "pitch": 0,
-        },
-        layers=[{"type": "ScatterplotLayer", "data": data}],
-    )
+    lon_col_index = data.columns.get_loc(lon)
+    lat_col_index = data.columns.get_loc(lat)
+    final_data = []
+    for _, row in data.iterrows():
+        final_data.append(
+            {"lon": float(row[lon_col_index]), "lat": float(row[lat_col_index])}
+        )
+
+    default = dict(_DEFAULT_MAP)
+    default["initialViewState"]["latitude"] = center_lat
+    default["initialViewState"]["longitude"] = center_lon
+    default["initialViewState"]["zoom"] = zoom
+    default["layers"] = [
+        {
+            "@@type": "ScatterplotLayer",
+            "getPosition": "@@=[lon, lat]",
+            "getRadius": 10,
+            "radiusScale": 10,
+            "getFillColor": _DEFAULT_COLOR,
+            "data": final_data,
+        }
+    ]
+    return json.dumps(default)

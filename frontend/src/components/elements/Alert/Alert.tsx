@@ -22,6 +22,7 @@ import { Map as ImmutableMap } from "immutable"
 import { Alert as AlertProto } from "autogen/proto"
 import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
 
+import "./Alert.scss"
 import "assets/css/write.scss"
 
 // classes defined in assets/css/theme.scss

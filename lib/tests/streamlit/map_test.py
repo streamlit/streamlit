@@ -19,6 +19,7 @@ import pandas as pd
 import numpy as np
 import json
 
+from streamlit.elements.map import _DEFAULT_MAP
 from tests import testutil
 import streamlit as st
 
@@ -26,38 +27,41 @@ df1 = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
 
 
 class StMapTest(testutil.DeltaGeneratorTestCase):
-    """Test ability to marshall deck_gl_chart protos via st.map."""
+    """Test ability to marshall deck_gl_json_chart protos via st.map."""
 
     def test_no_args(self):
         """Test that it can be called with no args."""
-        st.deck_gl_chart()
+        st.map()
 
-        c = self.get_delta_from_queue().new_element.deck_gl_chart
-        self.assertEqual(c.HasField("data"), False)
-        self.assertEqual(json.loads(c.spec), {})
+        c = self.get_delta_from_queue().new_element.deck_gl_json_chart
+        self.assertEqual(json.loads(c.json), _DEFAULT_MAP)
 
     def test_basic(self):
-        """Test that deck_gl_chart can be called with lat/lon."""
+        """Test that it can be called with lat/lon."""
         st.map(df1)
 
-        c = self.get_delta_from_queue().new_element.deck_gl_chart
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
 
-        self.assertEqual(c.HasField("data"), False)
-        self.assertEqual(len(c.layers), 1)
+        self.assertIsNotNone(c.get("initialViewState"))
+        self.assertIsNotNone(c.get("layers"))
+        self.assertIsNotNone(c.get("mapStyle"))
+        self.assertEqual(len(c.get("layers")), 1)
+        self.assertEqual(c.get("initialViewState").get("latitude"), 2.5)
+        self.assertEqual(c.get("initialViewState").get("longitude"), 25)
+        self.assertEqual(c.get("initialViewState").get("zoom"), 3)
+        self.assertEqual(c.get("initialViewState").get("pitch"), 0)
+        self.assertEqual(c.get("layers")[0].get("@@type"), "ScatterplotLayer")
 
-        deck_gl_spec = json.loads(c.spec)
+    def test_map_leak(self):
+        """Test that maps don't stay in memory when you create a new blank one.
 
-        assert "viewport" in deck_gl_spec
+        This is testing for an actual (fixed) bug.
+        """
+        st.map(df1)
+        st.map()
 
-        self.assertEqual(deck_gl_spec["viewport"]["latitude"], 2.5)
-        self.assertEqual(deck_gl_spec["viewport"]["longitude"], 25)
-        self.assertEqual(deck_gl_spec["viewport"]["zoom"], 4)
-        self.assertEqual(deck_gl_spec["viewport"]["pitch"], 0)
-
-        layer = c.layers[0]
-        spec = json.loads(layer.spec)
-        isScatterplotLayer = spec["type"] == "ScatterplotLayer"
-        assert isScatterplotLayer
+        c = self.get_delta_from_queue().new_element.deck_gl_json_chart
+        self.assertEqual(json.loads(c.json), _DEFAULT_MAP)
 
     def test_missing_column(self):
         """Test st.map with wrong column label."""
