@@ -160,7 +160,7 @@ class DeckGlChart extends React.PureComponent<PropsWithHeight, State> {
     )
   }
 
-  private buildLayers(): any {
+  private buildLayers(): any[] {
     const layers = this.props.element.get("layers")
     return layers.map((layer: any) => buildLayer(layer)).toArray()
   }
