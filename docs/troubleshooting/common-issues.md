@@ -101,6 +101,24 @@ $ pex streamlit foo bar -o mypexbinary.pex
   $ ./mypexbinary.pex -m streamlit hello
   ```
 
+## Streamlit hangs when deployed as a web app
+
+If you're Streamlit app hangs when it's deployed as a web app (EC2, Heroku, AppEngine, CloudRun, etc.), you can try disabling CORS.
+
+```eval_rst
+.. tip::
+   Cross-Origin Resource Sharing (CORS) uses HTTP headers to give a web app running at one origin, access to selected resources from another origin. To learn more about CORS and how it's used in web apps, see [Cross-Origin Resource Sharing](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS) from MDN.
+```
+
+To disable CORS in your web app, follow these steps:
+
+1. Open `~/.streamlit/config.toml`.
+2. Add these lines to the `config.toml` and save:
+   ```
+   [server]
+   enableCORS=false
+   ```
+
 ## Downgrade Streamlit
 
 If you've upgraded to the latest version of Streamlit and things aren't working, you can downgrade at any time using this command:
