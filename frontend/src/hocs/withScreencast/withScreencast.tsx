@@ -49,11 +49,12 @@ export interface ScreenCastHOC extends WithScreenCastState {
   stopRecording: () => void
 }
 
+// Supported browsers taken from https://caniuse.com/#search=getdisplaymedia
 const SUPPORTED_BROWSERS: any = {
-  Chrome: "49",
-  Firefox: "29",
-  Opera: "36",
-  Edge: "76",
+  Chrome: "72",
+  Firefox: "66",
+  Opera: "64",
+  Edge: "17",
 }
 
 function withScreencast(
@@ -207,7 +208,7 @@ function withScreencast(
       const result = Object.keys(SUPPORTED_BROWSERS).map(browser => {
         const browserVersion = SUPPORTED_BROWSERS[browser]
 
-        return whichBrowser.isBrowser(browser, ">", browserVersion)
+        return whichBrowser.isBrowser(browser, ">=", browserVersion)
       })
 
       return result.some(supported => supported)
