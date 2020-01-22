@@ -55,6 +55,8 @@ function withFullScreenWrapper(
     }
   }
 
+  // Static methods must be copied over
+  // https://en.reactjs.org/docs/higher-order-components.html#static-methods-must-be-copied-over
   return hoistNonReactStatics(ComponentWithFullScreenWrapper, WrappedComponent)
 }
 

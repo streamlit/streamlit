@@ -143,6 +143,11 @@ function withScreencast(
     onAnimationEnd = async (): Promise<any> => {
       const { countdown } = this.state
 
+      if (this.recorder == null) {
+        // Should never happen.
+        throw new Error("Countdown finished but recorder is null")
+      }
+
       this.setState({
         startAnimation: false,
         countdown: countdown - 1,
@@ -156,7 +161,7 @@ function withScreencast(
         }, 1000)
       }
 
-      if (countdown - 1 === 0 && this.recorder) {
+      if (countdown - 1 === 0) {
         const hasStarted = this.recorder.start()
 
         if (hasStarted) {
@@ -262,6 +267,8 @@ function withScreencast(
     }
   }
 
+  // Static methods must be copied over
+  // https://en.reactjs.org/docs/higher-order-components.html#static-methods-must-be-copied-over
   return hoistNonReactStatics(ComponentWithScreencast, WrappedComponent)
 }
 

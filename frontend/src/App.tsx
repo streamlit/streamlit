@@ -851,7 +851,7 @@ export class App extends PureComponent<Props, State> {
                 settingsCallback={this.settingsCallback}
                 aboutCallback={this.aboutCallback}
                 screencastCallback={this.screencastCallback}
-                screencastRecording={this.props.screenCast.recording}
+                isScreencastRecording={this.props.screenCast.recording}
               />
             </div>
           </header>

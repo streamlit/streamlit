@@ -55,7 +55,7 @@ interface Props {
   /** Show the About dialog. */
   aboutCallback: () => void
 
-  screencastRecording: boolean
+  isScreencastRecording: boolean
 }
 
 interface State {
@@ -80,8 +80,8 @@ class MainMenu extends PureComponent<Props, State> {
     }))
   }
 
-  openDocument = (document: string) => () => {
-    window.open(document, "_blank")
+  getOpenInWindowCallback = (url: string) => () => {
+    window.open(url, "_blank")
   }
 
   public render(): JSX.Element {
@@ -96,8 +96,8 @@ class MainMenu extends PureComponent<Props, State> {
         <DropdownToggle outline color="secondary" id="MainMenuButton">
           <Icon type="menu" />
 
-          {this.props.screencastRecording && (
-            <span className="glowing-circle" />
+          {this.props.isScreencastRecording && (
+            <span className="recording-indicator" />
           )}
         </DropdownToggle>
 
@@ -120,27 +120,29 @@ class MainMenu extends PureComponent<Props, State> {
 
           <DropdownItem divider />
 
-          <DropdownItem onClick={this.openDocument(ONLINE_DOCS_URL)}>
+          <DropdownItem
+            onClick={this.getOpenInWindowCallback(ONLINE_DOCS_URL)}
+          >
             Documentation
           </DropdownItem>
 
-          <DropdownItem onClick={this.openDocument(COMMUNITY_URL)}>
+          <DropdownItem onClick={this.getOpenInWindowCallback(COMMUNITY_URL)}>
             Ask a question
           </DropdownItem>
 
-          <DropdownItem onClick={this.openDocument(BUG_URL)}>
+          <DropdownItem onClick={this.getOpenInWindowCallback(BUG_URL)}>
             Report a bug
           </DropdownItem>
 
           <DropdownItem divider />
 
-          {!this.props.screencastRecording && (
+          {!this.props.isScreencastRecording && (
             <DropdownItem onClick={this.props.screencastCallback}>
               Record a screencast
             </DropdownItem>
           )}
 
-          {this.props.screencastRecording && (
+          {this.props.isScreencastRecording && (
             <DropdownItem
               onClick={this.props.screencastCallback}
               className="stop-recording"
@@ -165,7 +167,7 @@ class MainMenu extends PureComponent<Props, State> {
 
           <DropdownItem divider />
 
-          <DropdownItem onClick={this.openDocument(TEAMS_URL)}>
+          <DropdownItem onClick={this.getOpenInWindowCallback(TEAMS_URL)}>
             Streamlit for teams
           </DropdownItem>
 
