@@ -20,6 +20,9 @@ import wave
 
 st.title("Audio test")
 
+st.header("Local file")
+
+st.audio("/Library/Application Support/Logic/Alchemy Samples/Sound Effects/Ambience Nature/Crystal Clear Waves.wav")
 
 st.title("Generated audio (440Hz sine wave)")
 
@@ -74,3 +77,14 @@ song = st.selectbox(
 )
 
 st.audio(song)
+
+st.title("Streaming audio from a URL")
+
+st.write('[MP3: Mutiny Radio](http://nthmost.net:8000/mutiny-studio)')
+
+st.audio("http://nthmost.net:8000/mutiny-studio")
+
+st.write('[OGG: Radio Loki](http://nthmost.net:8000/loki.ogg)')
+
+st.audio("http://nthmost.net:8000/loki.ogg")
+
