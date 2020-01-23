@@ -16,18 +16,18 @@
  */
 
 import React, { Fragment, PureComponent, ReactNode } from "react"
+import moment from "moment"
 import { HotKeys } from "react-hotkeys"
 import { fromJS, List } from "immutable"
 import classNames from "classnames"
-
 // Other local imports.
 import ReportView from "components/core/ReportView/"
 import { StatusWidget } from "components/core/StatusWidget/"
 import MainMenu from "components/core/MainMenu/"
 import {
-  StreamlitDialog,
-  DialogType,
   DialogProps,
+  DialogType,
+  StreamlitDialog,
 } from "components/core/StreamlitDialog/"
 import { ConnectionManager } from "lib/ConnectionManager"
 import { WidgetStateManager } from "lib/WidgetStateManager"
@@ -36,10 +36,10 @@ import { ReportRunState } from "lib/ReportRunState"
 import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
 import {
   applyDelta,
-  Elements,
   BlockElement,
-  SimpleElement,
+  Elements,
   ReportElement,
+  SimpleElement,
 } from "lib/DeltaParser"
 import {
   BackMsg,
@@ -48,22 +48,21 @@ import {
   IBackMsg,
   IForwardMsgMetadata,
   Initialize,
+  ISessionState,
   NewReport,
   SessionEvent,
-  ISessionState,
 } from "autogen/proto"
 
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
 import { SessionInfo } from "lib/SessionInfo"
 import { MetricsManager } from "lib/MetricsManager"
 import {
+  flattenElements,
   hashString,
   isEmbeddedInIFrame,
   makeElementWithInfoText,
-  flattenElements,
 } from "lib/utils"
 import { logError, logMessage } from "lib/log"
-
 // WARNING: order matters
 import "assets/css/theme.scss"
 import "./App.scss"
@@ -71,12 +70,19 @@ import "assets/css/header.scss"
 import "assets/css/open-iconic.scss"
 import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
 
-interface Props {}
+import withScreencast, {
+  ScreenCastHOC,
+} from "./hocs/withScreencast/withScreencast"
+
+export interface Props {
+  screenCast: ScreenCastHOC
+}
 
 interface State {
   connectionState: ConnectionState
   elements: Elements
   reportId: string
+  reportName: string
   reportHash: string | null
   reportRunState: ReportRunState
   userSettings: UserSettings
@@ -92,7 +98,7 @@ declare global {
   }
 }
 
-class App extends PureComponent<Props, State> {
+export class App extends PureComponent<Props, State> {
   sessionEventDispatcher: SessionEventDispatcher
   statusWidgetRef: React.RefObject<StatusWidget>
   connectionManager: ConnectionManager | null
@@ -115,6 +121,7 @@ class App extends PureComponent<Props, State> {
         ]),
         sidebar: fromJS([]),
       },
+      reportName: "",
       reportId: "<null>",
       reportHash: null,
       reportRunState: ReportRunState.NOT_RUNNING,
@@ -124,27 +131,6 @@ class App extends PureComponent<Props, State> {
       },
     }
 
-    // Bind event handlers.
-    this.closeDialog = this.closeDialog.bind(this)
-    this.handleConnectionError = this.handleConnectionError.bind(this)
-    this.handleConnectionStateChanged = this.handleConnectionStateChanged.bind(
-      this
-    )
-    this.handleMessage = this.handleMessage.bind(this)
-    this.handleUploadReportProgress = this.handleUploadReportProgress.bind(
-      this
-    )
-    this.handleReportUploaded = this.handleReportUploaded.bind(this)
-    this.isServerConnected = this.isServerConnected.bind(this)
-    this.rerunScript = this.rerunScript.bind(this)
-    this.stopReport = this.stopReport.bind(this)
-    this.openClearCacheDialog = this.openClearCacheDialog.bind(this)
-    this.clearCache = this.clearCache.bind(this)
-    this.shareReport = this.shareReport.bind(this)
-    this.saveSettings = this.saveSettings.bind(this)
-    this.handleDeltaMsg = this.handleDeltaMsg.bind(this)
-    this.settingsCallback = this.settingsCallback.bind(this)
-    this.aboutCallback = this.aboutCallback.bind(this)
     this.sessionEventDispatcher = new SessionEventDispatcher()
     this.statusWidgetRef = React.createRef<StatusWidget>()
     this.connectionManager = null
@@ -167,6 +153,8 @@ class App extends PureComponent<Props, State> {
 
     // The c key clears the cache.
     c: () => this.openClearCacheDialog(),
+
+    esc: this.props.screenCast.stopRecording,
   }
 
   componentDidMount(): void {
@@ -218,7 +206,7 @@ class App extends PureComponent<Props, State> {
   /**
    * Called by ConnectionManager when our connection state changes
    */
-  handleConnectionStateChanged(newState: ConnectionState): void {
+  handleConnectionStateChanged = (newState: ConnectionState): void => {
     logMessage(
       `Connection state changed from ${this.state.connectionState} to ${newState}`
     )
@@ -237,7 +225,7 @@ class App extends PureComponent<Props, State> {
   /**
    * Callback when we get a message from the server.
    */
-  handleMessage(msgProto: ForwardMsg): void {
+  handleMessage = (msgProto: ForwardMsg): void => {
     // We don't have an immutableProto here, so we can't use
     // the dispatchOneOf helper
     const dispatchProto = (obj: any, name: string, funcs: any): any => {
@@ -273,7 +261,7 @@ class App extends PureComponent<Props, State> {
     }
   }
 
-  handleUploadReportProgress(progress: string | number): void {
+  handleUploadReportProgress = (progress: string | number): void => {
     const newDialog: DialogProps = {
       type: DialogType.UPLOAD_PROGRESS,
       progress: progress,
@@ -282,7 +270,7 @@ class App extends PureComponent<Props, State> {
     this.openDialog(newDialog)
   }
 
-  handleReportUploaded(url: string): void {
+  handleReportUploaded = (url: string): void => {
     const newDialog: DialogProps = {
       type: DialogType.UPLOADED,
       url: url,
@@ -296,7 +284,7 @@ class App extends PureComponent<Props, State> {
    * @param initializeMsg an Initialize protobuf
    */
 
-  handleInitialize(initializeMsg: Initialize): void {
+  handleInitialize = (initializeMsg: Initialize): void => {
     const { environmentInfo, userInfo, config, sessionState } = initializeMsg
 
     if (!environmentInfo || !userInfo || !config || !sessionState) {
@@ -338,7 +326,7 @@ class App extends PureComponent<Props, State> {
    * Handler for ForwardMsg.sessionStateChanged messages
    * @param stateChangeProto a SessionState protobuf
    */
-  handleSessionStateChanged(stateChangeProto: ISessionState): void {
+  handleSessionStateChanged = (stateChangeProto: ISessionState): void => {
     this.setState((prevState: State) => {
       // Determine our new ReportRunState
       let reportRunState = prevState.reportRunState
@@ -391,7 +379,7 @@ class App extends PureComponent<Props, State> {
    * Handler for ForwardMsg.sessionEvent messages
    * @param sessionEvent a SessionEvent protobuf
    */
-  handleSessionEvent(sessionEvent: SessionEvent): void {
+  handleSessionEvent = (sessionEvent: SessionEvent): void => {
     this.sessionEventDispatcher.handleSessionEventMsg(sessionEvent)
     if (sessionEvent.type === "scriptCompilationException") {
       this.setState({ reportRunState: ReportRunState.COMPILATION_ERROR })
@@ -418,9 +406,9 @@ class App extends PureComponent<Props, State> {
    * Handler for ForwardMsg.newReport messages
    * @param newReportProto a NewReport protobuf
    */
-  handleNewReport(newReportProto: NewReport): void {
+  handleNewReport = (newReportProto: NewReport): void => {
     const { reportHash } = this.state
-    const { name: reportName, scriptPath } = newReportProto
+    const { id: reportId, name: reportName, scriptPath } = newReportProto
 
     const newReportHash = hashString(
       SessionInfo.current.installationId + scriptPath
@@ -440,10 +428,10 @@ class App extends PureComponent<Props, State> {
 
     if (reportHash === newReportHash) {
       this.setState({
-        reportId: newReportProto.id,
+        reportId,
       })
     } else {
-      this.clearAppState(newReportHash, newReportProto.id)
+      this.clearAppState(newReportHash, reportId, reportName)
     }
   }
 
@@ -520,11 +508,16 @@ class App extends PureComponent<Props, State> {
   /*
    * Clear all elements from the state.
    */
-  clearAppState(reportHash: string, reportId: string): void {
+  clearAppState(
+    reportHash: string,
+    reportId: string,
+    reportName: string
+  ): void {
     this.setState(
       {
-        reportHash,
         reportId,
+        reportName,
+        reportHash,
         elements: {
           main: fromJS([]),
           sidebar: fromJS([]),
@@ -547,7 +540,7 @@ class App extends PureComponent<Props, State> {
   /**
    * Closes the upload dialog if it's open.
    */
-  closeDialog(): void {
+  closeDialog = (): void => {
     // HACK: Remove modal-open class that Bootstrap uses to hide scrollbars
     // when a modal is open. Otherwise, when the user causes a syntax error in
     // Python and we show an "Error" modal, and then the user presses "R" while
@@ -562,7 +555,7 @@ class App extends PureComponent<Props, State> {
   /**
    * Saves a UserSettings object.
    */
-  saveSettings(newSettings: UserSettings): void {
+  saveSettings = (newSettings: UserSettings): void => {
     const prevRunOnSave = this.state.userSettings.runOnSave
     const runOnSave = newSettings.runOnSave
 
@@ -581,10 +574,10 @@ class App extends PureComponent<Props, State> {
    * receive deltas extremely quickly without spamming React with lots of
    * render() calls.
    */
-  handleDeltaMsg(
+  handleDeltaMsg = (
     deltaMsg: Delta,
     metadataMsg: IForwardMsgMetadata | undefined | null
-  ): void {
+  ): void => {
     this.elementListBuffer = applyDelta(
       this.state.elements,
       this.state.reportId,
@@ -635,7 +628,7 @@ class App extends PureComponent<Props, State> {
   /**
    * Callback to call when we want to share the report.
    */
-  public shareReport(): void {
+  shareReport = (): void => {
     if (this.isServerConnected()) {
       if (this.state.sharingEnabled) {
         MetricsManager.current.enqueue("shareReport")
@@ -672,7 +665,7 @@ class App extends PureComponent<Props, State> {
    * will be set to true, which will result in a request to the Server
    * to enable runOnSave for this report.
    */
-  rerunScript(alwaysRunOnSave = false): void {
+  rerunScript = (alwaysRunOnSave = false): void => {
     this.closeDialog()
 
     if (!this.isServerConnected()) {
@@ -707,7 +700,7 @@ class App extends PureComponent<Props, State> {
   }
 
   /** Requests that the server stop running the report */
-  stopReport(): void {
+  stopReport = (): void => {
     if (!this.isServerConnected()) {
       logError("Cannot stop app when disconnected from server.")
       return
@@ -730,7 +723,7 @@ class App extends PureComponent<Props, State> {
   /**
    * Shows a dialog asking the user to confirm they want to clear the cache
    */
-  openClearCacheDialog(): void {
+  openClearCacheDialog = (): void => {
     if (this.isServerConnected()) {
       const newDialog: DialogProps = {
         type: DialogType.CLEAR_CACHE,
@@ -748,7 +741,7 @@ class App extends PureComponent<Props, State> {
   /**
    * Asks the server to clear the st_cache
    */
-  clearCache(): void {
+  clearCache = (): void => {
     this.closeDialog()
     if (this.isServerConnected()) {
       MetricsManager.current.enqueue("clearCache")
@@ -775,20 +768,20 @@ class App extends PureComponent<Props, State> {
   /**
    * Updates the report body when there's a connection error.
    */
-  handleConnectionError(errNode: ReactNode): void {
+  handleConnectionError = (errNode: ReactNode): void => {
     this.showError("Connection error", errNode)
   }
 
   /**
    * Indicates whether we're connected to the server.
    */
-  isServerConnected(): boolean {
+  isServerConnected = (): boolean => {
     return this.connectionManager
       ? this.connectionManager.isConnected()
       : false
   }
 
-  settingsCallback(): void {
+  settingsCallback = (): void => {
     const newDialog: DialogProps = {
       type: DialogType.SETTINGS,
       isServerConnected: this.isServerConnected(),
@@ -799,12 +792,26 @@ class App extends PureComponent<Props, State> {
     this.openDialog(newDialog)
   }
 
-  aboutCallback(): void {
+  aboutCallback = (): void => {
     const newDialog: DialogProps = {
       type: DialogType.ABOUT,
       onClose: this.closeDialog,
     }
     this.openDialog(newDialog)
+  }
+
+  screencastCallback = (): void => {
+    const { reportName } = this.state
+    const { startRecording } = this.props.screenCast
+    const date = moment().format("YYYY-MM-DD-HH-MM-SS")
+
+    startRecording(`streamlit-${reportName}-${date}`)
+  }
+
+  isScreencastRecording = (): boolean => {
+    const { screenCast } = this.props
+
+    return screenCast.currentState === "RECORDING"
   }
 
   render(): JSX.Element {
@@ -849,6 +856,8 @@ class App extends PureComponent<Props, State> {
                 clearCacheCallback={this.openClearCacheDialog}
                 settingsCallback={this.settingsCallback}
                 aboutCallback={this.aboutCallback}
+                screencastCallback={this.screencastCallback}
+                isScreencastRecording={this.isScreencastRecording()}
               />
             </div>
           </header>
@@ -874,4 +883,4 @@ class App extends PureComponent<Props, State> {
   }
 }
 
-export default App
+export default withScreencast(App)
