@@ -21,7 +21,8 @@ from streamlit import config
 from streamlit import metrics
 from streamlit.logger import get_logger
 from streamlit.server.server_util import serialize_forward_msg
-from streamlit.MediaFileManager import MediaFileManager
+from streamlit.MediaFileManager import mfm as _media_filemanager
+
 
 LOGGER = get_logger(__name__)
 
@@ -60,13 +61,7 @@ class AddSlashHandler(tornado.web.RequestHandler):
         pass
 
 
-# TODO: move this up when appropriate
-from streamlit.MediaFileManager import mfm as _media_filemanager
-
-
 class MediaFileHandler(tornado.web.RequestHandler):
-
-    # We could implement PUT and DEL here... :thinking_face:
 
     def set_default_headers(self):
         if _allow_cross_origin_requests():
@@ -76,16 +71,17 @@ class MediaFileHandler(tornado.web.RequestHandler):
         # open the request URL to see the requested hash
 
         requested_hash = self.request.uri.split("/media/")[1].strip("/healthz").strip("/stream")
-        print(requested_hash)
 
-        if requested_hash in _media_filemanager:
+        try:
             media = _media_filemanager.get(requested_hash)
-            self.write(media.content)
-            self.set_header("Content-Type:", media.filetype)
-            self.set_status(200)
-        else:
+        except:
+            self.write("File at %s not found" % requested_hash)
             self.set_status(400)
-            self.write("File not found")
+            return 
+
+        self.write(media.content)
+        self.set_header("Content-Type:", media.mimetype)
+        self.set_status(200)
 
 
 class _SpecialRequestHandler(tornado.web.RequestHandler):

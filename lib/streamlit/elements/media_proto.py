@@ -81,7 +81,7 @@ def _marshall_binary(proto, data):
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
-    this_file = _media_filemanager.add(data, filetype=proto.format)
+    this_file = _media_filemanager.add(data, mimetype=proto.format)
     proto.url = this_file.url
 
 
@@ -137,6 +137,7 @@ def marshall_audio(proto, data, format="audio/wav", start_time=0):
         The time from which this element should start playing. (default: 0)
     """
 
+    # TODO we don't send format to the front-end, apparently...
     proto.format = format
     proto.start_time = start_time
 
@@ -146,7 +147,7 @@ def marshall_audio(proto, data, format="audio/wav", start_time=0):
             return
         # assume it's a filename
         with open(data, "rb") as fh:
-            new = _media_filemanager.add(fh.read(), filename=data, filetype=format)
+            new = _media_filemanager.add(fh.read(), filename=data, mimetype=format)
             proto.url = new.url
 
     else:

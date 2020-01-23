@@ -11,7 +11,7 @@ class MediaFile(object):
         self,
         file_id=None,
         content=None,
-        filetype="audio/wav",
+        mimetype="audio/wav",
         filename=None,
         size=None,
         last_modified=None,
@@ -19,7 +19,7 @@ class MediaFile(object):
 
         self.file_id = file_id
         self.content = content
-        self.filetype = filetype
+        self.mimetype = mimetype
         self.filename = filename
         self.size = size
         self.last_modified = last_modified
@@ -44,18 +44,18 @@ class MediaFileManager(object):
         """ Deletes file with specified file_id. """
         del self._files[file_id]
 
-    def add(self, content, filetype=None, filename=None):
+    def add(self, content, mimetype=None, filename=None):
         """ Adds new file with given content. Creates a hash of the 
         data to make a file ID.  If a file with given ID already exists,
         returns the MediaFile object.  Otherwise, creates a new file 
         with given content and supplied parameters.
 
-        filetype should be set for best results.  filename can be elided.
+        mimetype should be set for best results.  filename can be elided.
 
         Parameters
         ----------
         content : str, bytes.  Raw data to store in file object.
-        filetype : str
+        mimetype : str
             The mime type for the media file. E.g. "audio/mpeg"
         filename : str
             User-defined filename of loaded file. (Default: None)
@@ -66,7 +66,7 @@ class MediaFileManager(object):
             new = MediaFile(
                 file_id=file_id,
                 content=content,
-                filetype=filetype,
+                mimetype=mimetype,
                 filename=filename,
                 last_modified=datetime.utcnow(),
             )
