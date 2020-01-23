@@ -33,16 +33,16 @@ class MediaFileManager(object):
     """In-memory file manager for MediaFile objects."""
 
     def __init__(self):
-        self._file_list = {}
+        self._files = {}
 
     def clear(self):
         """ Deletes all files from the file manager. """
-        for file_id in list(self._file_list):
+        for file_id in list(self._files):
             self.delete(widget_id)
 
     def delete(self, file_id):
         """ Deletes file with specified file_id. """
-        del self._file_list[file_id]
+        del self._files[file_id]
 
     def add(self, content, filetype=None, filename=None):
         """ Adds new file with given content. Creates a hash of the 
@@ -62,7 +62,7 @@ class MediaFileManager(object):
         """
         file_id = hashlib.sha224(content).hexdigest()
 
-        if not file_id in self._file_list:
+        if not file_id in self._files:
             new = MediaFile(
                 file_id=file_id,
                 content=content,
@@ -70,11 +70,17 @@ class MediaFileManager(object):
                 filename=filename,
                 last_modified=datetime.utcnow(),
             )
-            self._file_list[file_id] = new
-        return self._file_list[file_id]
+            self._files[file_id] = new
+        return self._files[file_id]
+
+    def get(self, file_id):
+        """ Returns MediaFile object for given file_id.  
+        Raises KeyError if not found.
+        """
+        return self._files[file_id]
 
     def __contains__(self, file_id):
-        return file_id in self._file_list
+        return file_id in self._files
 
 
 mfm = MediaFileManager()

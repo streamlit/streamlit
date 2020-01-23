@@ -147,7 +147,7 @@ def marshall_audio(proto, data, format="audio/wav", start_time=0):
         # assume it's a filename
         with open(data, "rb") as fh:
             new = _media_filemanager.add(fh.read(), filename=data, filetype=format)
+            proto.url = new.url
 
-        proto.url = "FILENAME: " + data
     else:
         _marshall_binary(proto, data)

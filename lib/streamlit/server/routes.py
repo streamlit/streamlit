@@ -75,16 +75,17 @@ class MediaFileHandler(tornado.web.RequestHandler):
     def get(self, items):
         # open the request URL to see the requested hash
 
-        print(self.request)
+        requested_hash = self.request.uri.split("/media/")[1].strip("/healthz").strip("/stream")
+        print(requested_hash)
 
         if requested_hash in _media_filemanager:
             media = _media_filemanager.get(requested_hash)
-            self.write(media.data)
-            self.set_header("Content-Type: %s" % media.filetype)
+            self.write(media.content)
+            self.set_header("Content-Type:", media.filetype)
             self.set_status(200)
         else:
             self.set_status(400)
-            self.write("file not found")
+            self.write("File not found")
 
 
 class _SpecialRequestHandler(tornado.web.RequestHandler):
