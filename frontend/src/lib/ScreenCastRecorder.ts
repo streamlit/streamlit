@@ -41,7 +41,7 @@ class ScreenCastRecorder {
    * for permissions to the user which are needed to start recording.
    */
   async initialize(): Promise<void> {
-    // @ts-ignore
+    // @ts-ignore reason: https://github.com/microsoft/TypeScript/issues/33232
     const desktopStream = await navigator.mediaDevices.getDisplayMedia({
       video: true,
     })

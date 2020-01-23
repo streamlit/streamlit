@@ -72,7 +72,6 @@ import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
 
 import withScreencast, {
   ScreenCastHOC,
-  Steps as ScreencastSteps,
 } from "./hocs/withScreencast/withScreencast"
 
 export interface Props {
@@ -812,7 +811,7 @@ export class App extends PureComponent<Props, State> {
   isScreencastRecording = (): boolean => {
     const { screenCast } = this.props
 
-    return screenCast.currentState === ScreencastSteps.RECORDING
+    return screenCast.currentState === "RECORDING"
   }
 
   render(): JSX.Element {

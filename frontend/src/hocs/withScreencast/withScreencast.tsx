@@ -29,14 +29,13 @@ import {
 
 import "./withScreencast.scss"
 
-export enum Steps {
-  UNSUPPORTED = "unsupported",
-  OFF = "off",
-  SETUP = "setup",
-  COUNTDOWN = "countdown",
-  RECORDING = "recording",
-  PREVIEW_FILE = "preview_file",
-}
+export type Steps =
+  | "UNSUPPORTED"
+  | "OFF"
+  | "SETUP"
+  | "COUNTDOWN"
+  | "RECORDING"
+  | "PREVIEW_FILE"
 
 interface WithScreenCastProps {}
 
@@ -81,7 +80,7 @@ function withScreencast(
       countdown: -1,
       recordAudio: false,
       startAnimation: false,
-      currentState: Steps.OFF,
+      currentState: "OFF" as Steps,
     }
 
     toggleRecordAudio = (): void => {
@@ -97,13 +96,13 @@ function withScreencast(
 
       if (!this.checkSupportedBrowser()) {
         this.setState({
-          currentState: Steps.UNSUPPORTED,
+          currentState: "UNSUPPORTED",
         })
       } else {
-        if (currentState === Steps.OFF) {
+        if (currentState === "OFF") {
           this.setState({
             fileName,
-            currentState: Steps.SETUP,
+            currentState: "SETUP",
           })
         } else {
           this.stopRecording()
@@ -120,7 +119,7 @@ function withScreencast(
       this.setState({
         countdown: 3,
         startAnimation: true,
-        currentState: Steps.COUNTDOWN,
+        currentState: "COUNTDOWN",
       })
     }
 
@@ -130,7 +129,7 @@ function withScreencast(
 
       if (
         this.recorder &&
-        currentState === Steps.RECORDING &&
+        currentState === "RECORDING" &&
         this.recorder.getState() !== "inactive"
       )
         outputBlob = await this.recorder.stop()
@@ -139,7 +138,7 @@ function withScreencast(
         outputBlob,
         countdown: -1,
         startAnimation: false,
-        currentState: Steps.PREVIEW_FILE,
+        currentState: "PREVIEW_FILE",
       })
     }
 
@@ -169,7 +168,7 @@ function withScreencast(
 
         if (hasStarted) {
           this.setState({
-            currentState: Steps.RECORDING,
+            currentState: "RECORDING",
           })
         } else {
           this.stopRecording()
@@ -194,7 +193,7 @@ function withScreencast(
 
     closeDialog = (): void => {
       this.setState({
-        currentState: Steps.OFF,
+        currentState: "OFF",
       })
     }
 
@@ -223,11 +222,11 @@ function withScreencast(
         <div className="withScreencast">
           <WrappedComponent screenCast={this.getScreenCastProps()} />
 
-          {currentState === Steps.UNSUPPORTED && (
+          {currentState === "UNSUPPORTED" && (
             <UnsupportedBrowserDialog onClose={this.closeDialog} />
           )}
 
-          {currentState === Steps.SETUP && (
+          {currentState === "SETUP" && (
             <ScreencastDialog
               recordAudio={recordAudio}
               onClose={this.closeDialog}
@@ -236,7 +235,7 @@ function withScreencast(
             />
           )}
 
-          {currentState === Steps.COUNTDOWN && (
+          {currentState === "COUNTDOWN" && (
             <div
               className={this.getCountdownClassName()}
               onAnimationEnd={this.onAnimationEnd}
@@ -245,7 +244,7 @@ function withScreencast(
             </div>
           )}
 
-          {currentState === Steps.PREVIEW_FILE && outputBlob && (
+          {currentState === "PREVIEW_FILE" && outputBlob && (
             <VideoRecordedDialog
               onClose={this.closeDialog}
               videoBlob={outputBlob}
