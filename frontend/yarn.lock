@@ -1662,6 +1662,11 @@
     "@types/d3-voronoi" "*"
     "@types/d3-zoom" "*"
 
+"@types/dom-mediacapture-record@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@types/dom-mediacapture-record/-/dom-mediacapture-record-1.0.2.tgz#1b4c30836a5f94357c8f37bbb0bc0d71d8ce5c27"
+  integrity sha512-kvpfcIq+YnOPnXxzTx6hbStJin0jtcFgCQxn4XgumF11HrOICxddPJ0/oGBLOd0mauxpPvxBuVvBi1qf7NC7Fg==
+
 "@types/enzyme@^3.10.3":
   version "3.10.3"
   resolved "https://registry.yarnpkg.com/@types/enzyme/-/enzyme-3.10.3.tgz#02b6c5ac7d0472005944a652e79045e2f6c66804"
@@ -1697,6 +1702,14 @@
   version "2.0.36"
   resolved "https://registry.yarnpkg.com/@types/hammerjs/-/hammerjs-2.0.36.tgz#17ce0a235e9ffbcdcdf5095646b374c2bf615a4c"
   integrity sha512-7TUK/k2/QGpEAv/BCwSHlYu3NXZhQ9ZwBYpzr9tjlPIL2C5BeGhH3DmVavRx3ZNyELX5TLC91JTz/cen6AAtIQ==
+
+"@types/hoist-non-react-statics@^3.3.1":
+  version "3.3.1"
+  resolved "https://registry.yarnpkg.com/@types/hoist-non-react-statics/-/hoist-non-react-statics-3.3.1.tgz#1124aafe5118cb591977aeb1ceaaed1070eb039f"
+  integrity sha512-iMIqiko6ooLrTh1joXodJK5X9xeEALT1kM5G3ZLhD3hszxBdIEd5C75U834D9mLcINgD4OyZf5uQXjkuYydWvA==
+  dependencies:
+    "@types/react" "*"
+    hoist-non-react-statics "^3.3.0"
 
 "@types/istanbul-lib-coverage@*", "@types/istanbul-lib-coverage@^2.0.0":
   version "2.0.1"
@@ -1853,9 +1866,17 @@
     "@types/prop-types" "*"
     "@types/react" "*"
 
-"@types/react@*", "@types/react@^16.8.23":
+"@types/react@*":
   version "16.9.2"
   resolved "https://registry.yarnpkg.com/@types/react/-/react-16.9.2.tgz#6d1765431a1ad1877979013906731aae373de268"
+  dependencies:
+    "@types/prop-types" "*"
+    csstype "^2.2.0"
+
+"@types/react@^16.9.17":
+  version "16.9.17"
+  resolved "https://registry.yarnpkg.com/@types/react/-/react-16.9.17.tgz#58f0cc0e9ec2425d1441dd7b623421a867aa253e"
+  integrity sha512-UP27In4fp4sWF5JgyV6pwVPAQM83Fj76JOcg02X5BZcpSu5Wx+fP9RMqc2v0ssBoQIFvD5JdKY41gjJJKmw6Bg==
   dependencies:
     "@types/prop-types" "*"
     csstype "^2.2.0"
@@ -1879,7 +1900,7 @@
     "@types/react" "*"
     "@types/recharts-scale" "*"
 
-"@types/sizzle@*":
+"@types/sizzle@*", "@types/sizzle@2.3.2":
   version "2.3.2"
   resolved "https://registry.yarnpkg.com/@types/sizzle/-/sizzle-2.3.2.tgz#a811b8c18e2babab7d542b3365887ae2e4d9de47"
 
@@ -4329,12 +4350,14 @@ cypress-image-snapshot@^3.1.1:
     pkg-dir "^3.0.0"
     term-img "^4.0.0"
 
-cypress@^3.4.1:
-  version "3.4.1"
-  resolved "https://registry.yarnpkg.com/cypress/-/cypress-3.4.1.tgz#ca2e4e9864679da686c6a6189603efd409664c30"
+cypress@^3.8.0:
+  version "3.8.1"
+  resolved "https://registry.yarnpkg.com/cypress/-/cypress-3.8.1.tgz#7821084e0ead81d35ffa29f2141c977dfdfc2343"
+  integrity sha512-eLk5OpL/ZMDfQx9t7ZaDUAGVcvSOPTi7CG1tiUnu9BGk7caBiDhuFi3Tz/D5vWqH/Dl6Uh4X+Au4W+zh0xzbXw==
   dependencies:
     "@cypress/listr-verbose-renderer" "0.4.1"
     "@cypress/xvfb" "1.2.4"
+    "@types/sizzle" "2.3.2"
     arch "2.1.1"
     bluebird "3.5.0"
     cachedir "1.3.0"
@@ -4361,6 +4384,7 @@ cypress@^3.4.1:
     request-progress "3.0.0"
     supports-color "5.5.0"
     tmp "0.1.0"
+    untildify "3.0.3"
     url "0.11.0"
     yauzl "2.10.0"
 
@@ -7204,6 +7228,13 @@ hmac-drbg@^1.0.0:
 hoist-non-react-statics@^3.3.0:
   version "3.3.0"
   resolved "https://registry.yarnpkg.com/hoist-non-react-statics/-/hoist-non-react-statics-3.3.0.tgz#b09178f0122184fb95acf525daaecb4d8f45958b"
+  dependencies:
+    react-is "^16.7.0"
+
+hoist-non-react-statics@^3.3.1:
+  version "3.3.1"
+  resolved "https://registry.yarnpkg.com/hoist-non-react-statics/-/hoist-non-react-statics-3.3.1.tgz#101685d3aff3b23ea213163f6e8e12f4f111e19f"
+  integrity sha512-wbg3bpgA/ZqWrZuMOeJi8+SKMhr7X9TesL/rXMjTzh0p0JUBo3II8DHboYbuIXWRlttrUFxwcu/5kygrCw8fJw==
   dependencies:
     react-is "^16.7.0"
 
@@ -14520,6 +14551,11 @@ unset-value@^1.0.0:
     has-value "^0.3.1"
     isobject "^3.0.0"
 
+untildify@3.0.3:
+  version "3.0.3"
+  resolved "https://registry.yarnpkg.com/untildify/-/untildify-3.0.3.tgz#1e7b42b140bcfd922b22e70ca1265bfe3634c7c9"
+  integrity sha512-iSk/J8efr8uPT/Z4eSUywnqyrQU7DSdMfdqK4iWEaUVVmcP5JcnpRqmVMwcwcnmI1ATFNgC5V90u09tBynNFKA==
+
 upath@^1.1.1:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/upath/-/upath-1.2.0.tgz#8f66dbcd55a883acdae4408af8b035a5044c1894"
@@ -15340,6 +15376,11 @@ whatwg-url@^7.0.0:
     lodash.sortby "^4.7.0"
     tr46 "^1.0.1"
     webidl-conversions "^4.0.2"
+
+which-browser@^0.5.1:
+  version "0.5.1"
+  resolved "https://registry.yarnpkg.com/which-browser/-/which-browser-0.5.1.tgz#4e0c8b1135d2f5cf1fd5766964ed170d981eeb57"
+  integrity sha512-MulGxP+e6dN62chtrKRPRftpyAqt870E8KtonNRwuOn5hilWkNW4MUbsXxNy1IdyrPD8xKKFLqLbuYV1pOIi4Q==
 
 which-module@^1.0.0:
   version "1.0.0"
