@@ -27,10 +27,7 @@ import re
 from validators import url
 
 from streamlit.proto import Video_pb2
-from streamlit.MediaFileManager import MediaFileManager
-
-
-_media_filemanager = MediaFileManager()
+from streamlit.MediaFileManager import mfm as _media_filemanager
 
 
 # Regular expression explained at https://regexr.com/4n2l2 Covers any youtube
@@ -84,7 +81,7 @@ def _marshall_binary(proto, data):
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
-    this_file = _media_filemanager.add(data)
+    this_file = _media_filemanager.add(data, filetype=proto.format)
     proto.url = this_file.url
 
 
@@ -148,6 +145,9 @@ def marshall_audio(proto, data, format="audio/wav", start_time=0):
             proto.url = data
             return
         # assume it's a filename
+        with open(data, 'rb') as fh:
+            new = _media_filemanager.add(fh.read(), filename=data, filetype=format)
+            
         proto.url = "FILENAME: "+data
     else:
         _marshall_binary(proto, data)
