@@ -62,22 +62,27 @@ class AddSlashHandler(tornado.web.RequestHandler):
 
 
 class MediaFileHandler(tornado.web.RequestHandler):
-
     def set_default_headers(self):
         if _allow_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
 
     def get(self, items):
         # open the request URL to see the requested hash
-
-        requested_hash = self.request.uri.split("/media/")[1].strip("/healthz").strip("/stream")
+        requested_hash = (
+            self.request.uri.split("/media/")[1].strip("/healthz").strip("/stream")
+        )
+        # remove extension, if present.
+        requested_hash = requested_hash.split(".")[0]
+        
+        print("REQUESTED:", requested_hash)
+        print(_media_filemanager._files)
 
         try:
             media = _media_filemanager.get(requested_hash)
         except:
             self.write("File at %s not found" % requested_hash)
             self.set_status(400)
-            return 
+            return
 
         self.write(media.content)
         self.set_header("Content-Type:", media.mimetype)

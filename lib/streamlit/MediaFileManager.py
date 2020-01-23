@@ -4,6 +4,24 @@ import hashlib
 from datetime import datetime
 
 
+# https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Complete_list_of_MIME_types
+
+MIME_MAP = {
+    "audio/wav": "wav",
+    "audio/webm": "weba",
+    "video/webm": "webm",
+    "video/mp2t": "ts",
+    "audio/opus": "opus",
+    "application/ogg": "ogx",
+    "video/ogg": "ogv",
+    "audio/ogg": "oga",
+    "video/mpeg": "mpeg",
+    "audio/mpeg": "mp3",
+    "video/x-msvideo": "avi",
+    "audio/aac": "aac",
+    }
+
+
 class MediaFile(object):
     """Abstraction for audiovisual/image file objects."""
 
@@ -26,6 +44,9 @@ class MediaFile(object):
 
     @property
     def url(self):
+        ext = MIME_MAP.get(self.mimetype, None)
+        if ext:
+            return "/media/{}.{}".format(self.file_id, ext)
         return "/media/{}".format(self.file_id)
 
 
