@@ -154,4 +154,3 @@ def make_url_path_regex(*path, **kwargs):
     path = [x.strip("/") for x in path if x]  # Filter out falsy components.
     path_format = r"^/%s/?$" if kwargs.get("trailing_slash", True) else r"^/%s$"
     return path_format % "/".join(path)
-

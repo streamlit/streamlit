@@ -3,11 +3,19 @@
 import hashlib
 from datetime import datetime
 
+
 class MediaFile(object):
     """Abstraction for audiovisual/image file objects."""
 
-    def __init__(self, file_id=None, content=None, filetype="audio/wav", 
-                    filename=None, size=None, last_modified=None):
+    def __init__(
+        self,
+        file_id=None,
+        content=None,
+        filetype="audio/wav",
+        filename=None,
+        size=None,
+        last_modified=None,
+    ):
 
         self.file_id = file_id
         self.content = content

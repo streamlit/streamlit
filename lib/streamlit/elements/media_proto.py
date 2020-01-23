@@ -76,7 +76,7 @@ def _marshall_binary(proto, data):
     elif isinstance(data, io.IOBase):
         data.seek(0)
         data = data.read()
-    #elif type(data).__name__ == "ndarray":
+    # elif type(data).__name__ == "ndarray":
     #    data = ...
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
@@ -145,9 +145,9 @@ def marshall_audio(proto, data, format="audio/wav", start_time=0):
             proto.url = data
             return
         # assume it's a filename
-        with open(data, 'rb') as fh:
+        with open(data, "rb") as fh:
             new = _media_filemanager.add(fh.read(), filename=data, filetype=format)
-            
-        proto.url = "FILENAME: "+data
+
+        proto.url = "FILENAME: " + data
     else:
         _marshall_binary(proto, data)

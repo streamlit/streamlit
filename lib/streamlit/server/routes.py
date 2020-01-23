@@ -63,6 +63,7 @@ class AddSlashHandler(tornado.web.RequestHandler):
 # TODO: move this up when appropriate
 from streamlit.MediaFileManager import mfm as _media_filemanager
 
+
 class MediaFileHandler(tornado.web.RequestHandler):
 
     # We could implement PUT and DEL here... :thinking_face:
@@ -84,7 +85,6 @@ class MediaFileHandler(tornado.web.RequestHandler):
         else:
             self.set_status(400)
             self.write("file not found")
-        
 
 
 class _SpecialRequestHandler(tornado.web.RequestHandler):
