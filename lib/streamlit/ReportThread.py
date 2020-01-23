@@ -23,10 +23,11 @@ LOGGER = get_logger(__name__)
 ReportContext = namedtuple(
     "ReportContext",
     [
-        # (DeltaGenerator) The main DeltaGenerator for the report
-        "main_dg",
-        # (DeltaGenerator) The sidebar DeltaGenerator for the report
-        "sidebar_dg",
+        # (dict of str->RunningCursor) Mapping of container name to top-level
+        # cursor.
+        "cursors",
+        # (callable) Function that enqueues ForwardMsg protos in the websocket.
+        "enqueue",
         # (Widgets) The Widgets state object for the report
         "widgets",
         # (_WidgetIDSet) The set of widget IDs that have been assigned in the
@@ -79,17 +80,11 @@ class ReportThread(threading.Thread):
     """Extends threading.Thread with a ReportContext member"""
 
     def __init__(
-        self,
-        main_dg,
-        sidebar_dg,
-        widgets,
-        target=None,
-        name=None,
-        uploaded_file_mgr=None,
+        self, enqueue, widgets, target=None, name=None, uploaded_file_mgr=None,
     ):
         super(ReportThread, self).__init__(target=target, name=name)
         self.streamlit_report_ctx = ReportContext(
-            main_dg, sidebar_dg, widgets, _WidgetIDSet(), uploaded_file_mgr
+            {}, enqueue, widgets, _WidgetIDSet(), uploaded_file_mgr
         )
 
 

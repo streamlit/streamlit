@@ -49,13 +49,7 @@ class ScriptRunnerEvent(Enum):
 
 class ScriptRunner(object):
     def __init__(
-        self,
-        report,
-        main_dg,
-        sidebar_dg,
-        widget_states,
-        request_queue,
-        uploaded_file_mgr=None,
+        self, report, widget_states, request_queue, uploaded_file_mgr=None,
     ):
         """Initialize the ScriptRunner.
 
@@ -65,12 +59,6 @@ class ScriptRunner(object):
         ----------
         report : Report
             The ReportSession's report.
-
-        main_dg : DeltaGenerator
-            The ReportSession's main DeltaGenerator.
-
-        sidebar_dg : DeltaGenerator
-            The ReportSession's sidebar DeltaGenerator.
 
         widget_states : streamlit.proto.Widget_pb2.WidgetStates
             The ReportSession's current widget states
@@ -85,8 +73,6 @@ class ScriptRunner(object):
 
         """
         self._report = report
-        self._main_dg = main_dg
-        self._sidebar_dg = sidebar_dg
         self._request_queue = request_queue
         self._uploaded_file_mgr = uploaded_file_mgr
 
@@ -133,8 +119,7 @@ class ScriptRunner(object):
             raise Exception("ScriptRunner was already started")
 
         self._script_thread = ReportThread(
-            main_dg=self._main_dg,
-            sidebar_dg=self._sidebar_dg,
+            enqueue=self._report.enqueue,
             widgets=self._widgets,
             target=self._process_request_queue,
             name="ScriptRunner.scriptThread",
@@ -244,10 +229,10 @@ class ScriptRunner(object):
 
         LOGGER.debug("Running script %s", rerun_data)
 
-        # Reset delta generator so it starts from index 0.
+        # Reset widget values.
         import streamlit as st
 
-        st._reset(self._main_dg, self._sidebar_dg)
+        st._reset()
 
         self.on_event.send(ScriptRunnerEvent.SCRIPT_STARTED)
 

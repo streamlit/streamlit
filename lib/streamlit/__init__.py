@@ -124,9 +124,6 @@ from streamlit.errors import StreamlitAPIException
 # Modules that the user should have access to.
 from streamlit.caching import cache  # noqa: F401
 
-# Delta generator with no queue so it can't send anything out.
-_NULL_DELTA_GENERATOR = _DeltaGenerator(None)
-
 # This is set to True inside cli._main_run(), and is False otherwise.
 # If False, we should assume that DeltaGenerator functions are effectively
 # no-ops, and adapt gracefully.
@@ -144,75 +141,67 @@ def _set_log_level():
 _config.on_config_parsed(_set_log_level)
 
 
-def _with_dg(method):
-    @_functools_wraps(method)
-    def wrapped_method(*args, **kwargs):
-        ctx = _get_report_ctx()
-        dg = ctx.main_dg if ctx is not None else _NULL_DELTA_GENERATOR
-        return method.__get__(dg)(*args, **kwargs)
-
-    return wrapped_method
-
-
-def _reset(main_dg, sidebar_dg):
-    main_dg._reset()
-    sidebar_dg._reset()
-    global sidebar
-    sidebar = sidebar_dg
+def _reset():
+    # TODO: Move this out of here. This isn't a particularly nice place to
+    # reset this...
     _get_report_ctx().widget_ids_this_run.clear()
 
 
-# Sidebar
-sidebar = _NULL_DELTA_GENERATOR
+# Delta generator with no queue so it can't send anything out. Useful for
+# testing.
+_NULL_DELTA_GENERATOR = _DeltaGenerator(container=None)
+
+_main = _DeltaGenerator(container="main")
+sidebar = _DeltaGenerator(container="sidebar")
 
 # DeltaGenerator methods:
 
-altair_chart = _with_dg(_DeltaGenerator.altair_chart)  # noqa: E221
-area_chart = _with_dg(_DeltaGenerator.area_chart)  # noqa: E221
-audio = _with_dg(_DeltaGenerator.audio)  # noqa: E221
-balloons = _with_dg(_DeltaGenerator.balloons)  # noqa: E221
-bar_chart = _with_dg(_DeltaGenerator.bar_chart)  # noqa: E221
-bokeh_chart = _with_dg(_DeltaGenerator.bokeh_chart)  # noqa: E221
-button = _with_dg(_DeltaGenerator.button)  # noqa: E221
-checkbox = _with_dg(_DeltaGenerator.checkbox)  # noqa: E221
-code = _with_dg(_DeltaGenerator.code)  # noqa: E221
-dataframe = _with_dg(_DeltaGenerator.dataframe)  # noqa: E221
-date_input = _with_dg(_DeltaGenerator.date_input)  # noqa: E221
-deck_gl_chart = _with_dg(_DeltaGenerator.deck_gl_chart)  # noqa: E221
-pydeck_chart = _with_dg(_DeltaGenerator.pydeck_chart)  # noqa: E221
-empty = _with_dg(_DeltaGenerator.empty)  # noqa: E221
-error = _with_dg(_DeltaGenerator.error)  # noqa: E221
-exception = _with_dg(_DeltaGenerator.exception)  # noqa: E221
-file_uploader = _with_dg(_DeltaGenerator.file_uploader)  # noqa: E221
-graphviz_chart = _with_dg(_DeltaGenerator.graphviz_chart)  # noqa: E221
-header = _with_dg(_DeltaGenerator.header)  # noqa: E221
-help = _with_dg(_DeltaGenerator.help)  # noqa: E221
-image = _with_dg(_DeltaGenerator.image)  # noqa: E221
-info = _with_dg(_DeltaGenerator.info)  # noqa: E221
-json = _with_dg(_DeltaGenerator.json)  # noqa: E221
-latex = _with_dg(_DeltaGenerator.latex)  # noqa: E221
-line_chart = _with_dg(_DeltaGenerator.line_chart)  # noqa: E221
-map = _with_dg(_DeltaGenerator.map)  # noqa: E221
-markdown = _with_dg(_DeltaGenerator.markdown)  # noqa: E221
-multiselect = _with_dg(_DeltaGenerator.multiselect)  # noqa: E221
-number_input = _with_dg(_DeltaGenerator.number_input)  # noqa: E221
-plotly_chart = _with_dg(_DeltaGenerator.plotly_chart)  # noqa: E221
-progress = _with_dg(_DeltaGenerator.progress)  # noqa: E221
-pyplot = _with_dg(_DeltaGenerator.pyplot)  # noqa: E221
-radio = _with_dg(_DeltaGenerator.radio)  # noqa: E221
-selectbox = _with_dg(_DeltaGenerator.selectbox)  # noqa: E221
-slider = _with_dg(_DeltaGenerator.slider)  # noqa: E221
-subheader = _with_dg(_DeltaGenerator.subheader)  # noqa: E221
-success = _with_dg(_DeltaGenerator.success)  # noqa: E221
-table = _with_dg(_DeltaGenerator.table)  # noqa: E221
-text = _with_dg(_DeltaGenerator.text)  # noqa: E221
-text_area = _with_dg(_DeltaGenerator.text_area)  # noqa: E221
-text_input = _with_dg(_DeltaGenerator.text_input)  # noqa: E221
-time_input = _with_dg(_DeltaGenerator.time_input)  # noqa: E221
-title = _with_dg(_DeltaGenerator.title)  # noqa: E221
-vega_lite_chart = _with_dg(_DeltaGenerator.vega_lite_chart)  # noqa: E221
-video = _with_dg(_DeltaGenerator.video)  # noqa: E221
-warning = _with_dg(_DeltaGenerator.warning)  # noqa: E221
+altair_chart = _main.altair_chart  # noqa: E221
+area_chart = _main.area_chart  # noqa: E221
+audio = _main.audio  # noqa: E221
+balloons = _main.balloons  # noqa: E221
+bar_chart = _main.bar_chart  # noqa: E221
+bokeh_chart = _main.bokeh_chart  # noqa: E221
+button = _main.button  # noqa: E221
+checkbox = _main.checkbox  # noqa: E221
+code = _main.code  # noqa: E221
+dataframe = _main.dataframe  # noqa: E221
+date_input = _main.date_input  # noqa: E221
+deck_gl_chart = _main.deck_gl_chart  # noqa: E221
+pydeck_chart = _main.pydeck_chart  # noqa: E221
+empty = _main.empty  # noqa: E221
+error = _main.error  # noqa: E221
+exception = _main.exception  # noqa: E221
+file_uploader = _main.file_uploader  # noqa: E221
+graphviz_chart = _main.graphviz_chart  # noqa: E221
+header = _main.header  # noqa: E221
+help = _main.help  # noqa: E221
+image = _main.image  # noqa: E221
+info = _main.info  # noqa: E221
+json = _main.json  # noqa: E221
+latex = _main.latex  # noqa: E221
+line_chart = _main.line_chart  # noqa: E221
+map = _main.map  # noqa: E221
+markdown = _main.markdown  # noqa: E221
+multiselect = _main.multiselect  # noqa: E221
+number_input = _main.number_input  # noqa: E221
+plotly_chart = _main.plotly_chart  # noqa: E221
+progress = _main.progress  # noqa: E221
+pyplot = _main.pyplot  # noqa: E221
+radio = _main.radio  # noqa: E221
+selectbox = _main.selectbox  # noqa: E221
+slider = _main.slider  # noqa: E221
+subheader = _main.subheader  # noqa: E221
+success = _main.success  # noqa: E221
+table = _main.table  # noqa: E221
+text = _main.text  # noqa: E221
+text_area = _main.text_area  # noqa: E221
+text_input = _main.text_input  # noqa: E221
+time_input = _main.time_input  # noqa: E221
+title = _main.title  # noqa: E221
+vega_lite_chart = _main.vega_lite_chart  # noqa: E221
+video = _main.video  # noqa: E221
+warning = _main.warning  # noqa: E221
 
 # Config
 
