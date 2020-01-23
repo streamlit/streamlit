@@ -43,6 +43,9 @@ interface Props {
   /** Clear the cache. */
   clearCacheCallback: () => void
 
+  /** Show the screen recording dialog. */
+  screencastCallback: () => void
+
   /** Share the report to S3. */
   shareCallback: () => void
 
@@ -51,6 +54,8 @@ interface Props {
 
   /** Show the About dialog. */
   aboutCallback: () => void
+
+  isScreencastRecording: boolean
 }
 
 interface State {
@@ -69,34 +74,44 @@ class MainMenu extends PureComponent<Props, State> {
     }
   }
 
-  public toggle(): void {
+  toggle = (): void => {
     this.setState(({ dropdownOpen }) => ({
       dropdownOpen: !dropdownOpen,
     }))
   }
 
+  getOpenInWindowCallback = (url: string) => () => {
+    window.open(url, "_blank")
+  }
+
   public render(): JSX.Element {
+    const isServerDisconnected = !this.props.isServerConnected()
+
     return (
       <Dropdown
         id="MainMenu"
         isOpen={this.state.dropdownOpen}
-        toggle={() => this.toggle()}
+        toggle={this.toggle}
       >
         <DropdownToggle outline color="secondary" id="MainMenuButton">
           <Icon type="menu" />
+
+          {this.props.isScreencastRecording && (
+            <span className="recording-indicator" />
+          )}
         </DropdownToggle>
 
         <DropdownMenu right>
           <DropdownItem
-            disabled={!this.props.isServerConnected()}
-            onClick={() => this.props.quickRerunCallback()}
+            disabled={isServerDisconnected}
+            onClick={this.props.quickRerunCallback}
           >
             <span>Rerun</span>
             <span className="shortcut">R</span>
           </DropdownItem>
 
           <DropdownItem
-            disabled={!this.props.isServerConnected()}
+            disabled={isServerDisconnected}
             onClick={this.props.clearCacheCallback}
           >
             <span>Clear cache</span>
@@ -105,43 +120,62 @@ class MainMenu extends PureComponent<Props, State> {
 
           <DropdownItem divider />
 
-          <DropdownItem onClick={() => window.open(ONLINE_DOCS_URL, "_blank")}>
+          <DropdownItem
+            onClick={this.getOpenInWindowCallback(ONLINE_DOCS_URL)}
+          >
             Documentation
           </DropdownItem>
 
-          <DropdownItem onClick={() => window.open(COMMUNITY_URL, "_blank")}>
+          <DropdownItem onClick={this.getOpenInWindowCallback(COMMUNITY_URL)}>
             Ask a question
           </DropdownItem>
 
-          <DropdownItem onClick={() => window.open(BUG_URL, "_blank")}>
+          <DropdownItem onClick={this.getOpenInWindowCallback(BUG_URL)}>
             Report a bug
           </DropdownItem>
 
           <DropdownItem divider />
 
+          {!this.props.isScreencastRecording && (
+            <DropdownItem onClick={this.props.screencastCallback}>
+              Record a screencast
+            </DropdownItem>
+          )}
+
+          {this.props.isScreencastRecording && (
+            <DropdownItem
+              onClick={this.props.screencastCallback}
+              className="stop-recording"
+            >
+              <span>
+                <strong>Stop recording</strong>
+              </span>
+
+              <span className="shortcut">ESC</span>
+            </DropdownItem>
+          )}
+
           {/* We hide 'Share Report' + divider if sharing is not configured */}
           {this.props.sharingEnabled && (
             <DropdownItem
-              disabled={!this.props.isServerConnected()}
+              disabled={isServerDisconnected}
               onClick={this.props.shareCallback}
             >
               Save a snapshot
             </DropdownItem>
           )}
 
-          {this.props.sharingEnabled && <DropdownItem divider />}
+          <DropdownItem divider />
 
-          <DropdownItem onClick={() => window.open(TEAMS_URL, "_blank")}>
+          <DropdownItem onClick={this.getOpenInWindowCallback(TEAMS_URL)}>
             Streamlit for teams
           </DropdownItem>
 
-          <DropdownItem onClick={() => this.props.settingsCallback()}>
+          <DropdownItem onClick={this.props.settingsCallback}>
             Settings
           </DropdownItem>
 
-          <DropdownItem onClick={() => this.props.aboutCallback()}>
-            About
-          </DropdownItem>
+          <DropdownItem onClick={this.props.aboutCallback}>About</DropdownItem>
         </DropdownMenu>
       </Dropdown>
     )

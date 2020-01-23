@@ -16,25 +16,63 @@
 
 @import "src/assets/css/variables";
 
-#MainMenuBtn {
-  height: $overlayBtn-height;
-  width: $overlayBtn-width;
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 4px red;
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow: 0 0 8px 2px red;
+    filter: brightness(2);
+  }
+  100% {
+    box-shadow: 0 0 4px red;
+    filter: brightness(1);
+  }
 }
 
-#MainMenuBtn > svg {
-  margin-top: -0.25rem;
-}
+#MainMenu {
+  #MainMenuButton {
+    height: $overlayBtn-height;
+    width: $overlayBtn-width;
 
-/* The menu itself. */
-#MainMenu div.dropdown-menu {
-  width: 12rem;
-}
+    > svg {
+      margin-top: -0.25rem;
+    }
+  }
 
-/* For keyboard shortcuts. */
-#MainMenu span.shortcut {
-  color: darkgray;
-  float: right;
-  font-size: 0.75rem;
-  font-variant: small-caps;
-  margin-top: 0.25rem;
+  /* The menu itself. */
+  div.dropdown-menu {
+    width: 12rem;
+  }
+
+  /* For keyboard shortcuts. */
+  span.shortcut {
+    color: darkgray;
+    float: right;
+    font-size: 0.75rem;
+    font-variant: small-caps;
+    margin-top: 0.25rem;
+  }
+
+  .stop-recording {
+    color: red;
+
+    .shortcut {
+      color: red;
+    }
+  }
+
+  .recording-indicator {
+    display: block;
+    bottom: 6px;
+    right: 5px;
+    position: absolute;
+    background-color: red;
+    width: 10px;
+    height: 10px;
+    border-radius: 50px;
+    box-shadow: 0 0 8px 2px red;
+    animation: pulse 2s linear 1s infinite;
+  }
 }
