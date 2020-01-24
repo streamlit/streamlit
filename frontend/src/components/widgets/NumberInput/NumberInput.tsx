@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+import { NumberInput as NumberInputProto } from "autogen/proto"
 import React from "react"
 import { sprintf } from "sprintf-js"
 import { Input as UIInput } from "baseui/input"
@@ -57,7 +58,7 @@ class NumberInput extends React.PureComponent<Props, State> {
   constructor(props: Props) {
     super(props)
 
-    const defaultValue = this.getData().get("default")
+    const defaultValue = this.props.element.get("default")
 
     this.state = {
       dirty: false,
@@ -68,11 +69,6 @@ class NumberInput extends React.PureComponent<Props, State> {
 
   public componentDidMount(): void {
     this.setWidgetValue({ fromUi: false })
-  }
-
-  private getData = (): ImmutableMap<string, any> => {
-    const { element } = this.props
-    return element.get("intData") || element.get("floatData")
   }
 
   private formatValue = (value: number): string => {
@@ -91,23 +87,23 @@ class NumberInput extends React.PureComponent<Props, State> {
   }
 
   private isIntData = (): boolean => {
-    return !!this.props.element.get("intData")
+    return this.props.element.get("dataType") === NumberInputProto.DataType.INT
   }
 
   private getMin = (): number => {
     return this.props.element.get("hasMin")
-      ? this.getData().get("min")
+      ? this.props.element.get("min")
       : -Infinity
   }
 
   private getMax = (): number => {
     return this.props.element.get("hasMax")
-      ? this.getData().get("max")
+      ? this.props.element.get("max")
       : +Infinity
   }
 
   private getStep = (): number => {
-    const step = this.getData().get("step")
+    const step = this.props.element.get("step")
 
     if (step) {
       return step
@@ -123,7 +119,7 @@ class NumberInput extends React.PureComponent<Props, State> {
   private setWidgetValue = (source: Source): void => {
     const { value } = this.state
     const { element, widgetMgr } = this.props
-    const data = this.getData()
+    const data = this.props.element
 
     const widgetId: string = element.get("id")
     const min: number = this.getMin()

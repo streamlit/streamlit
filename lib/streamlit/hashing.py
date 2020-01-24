@@ -18,7 +18,7 @@
 # Python 2/3 compatibility
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from collections import namedtuple
+import collections
 import dis
 import functools
 import hashlib
@@ -28,13 +28,16 @@ import io
 import os
 import sys
 import textwrap
+import threading
 
 import streamlit as st
 from streamlit import config
 from streamlit import file_util
 from streamlit import type_util
+from streamlit.errors import UnhashableType
 from streamlit.folder_black_list import FolderBlackList
 from streamlit.compatibility import setup_2_3_shims
+from streamlit.logger import get_logger
 
 if sys.version_info >= (3, 0):
     from streamlit.hashing_py3 import get_referenced_objects
@@ -50,6 +53,8 @@ except ImportError:
     import pickle
 
 
+LOGGER = get_logger(__name__)
+
 # If a dataframe has more than this many rows, we consider it large and hash a sample.
 PANDAS_ROWS_LARGE = 100000
 PANDAS_SAMPLE_SIZE = 10000
@@ -60,7 +65,46 @@ NP_SIZE_LARGE = 1000000
 NP_SAMPLE_SIZE = 100000
 
 
-Context = namedtuple("Context", ["globals", "cells", "varnames"])
+# "None"sense as a placeholder for literal None object while hashing.
+NONESENSE = b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-None"
+
+# Arbitrary item to denote where we found a cycle in a hashed object.
+# This allows us to hash self-referencing lists, dictionaries, etc.
+CYCLE_PLACEHOLDER = b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-CYCLE"
+
+
+Context = collections.namedtuple("Context", ["globals", "cells", "varnames"])
+
+
+class HashStacks(object):
+    """Stack of what has been hashed, for circular reference detection.
+
+    This internally keeps 1 stack per thread.
+
+    Internally, this stores the ID of pushed objects rather than the objects
+    themselves because otherwise the "in" operator inside __contains__ would
+    fail for objects that don't return a boolean for "==" operator. For
+    example, arr == 10 where arr is a NumPy array returns another NumPy array.
+    This causes the "in" to crash since it expects a boolean.
+    """
+
+    def __init__(self):
+        self.stacks = collections.defaultdict(list)
+
+    def push(self, val):
+        thread_id = threading.current_thread().ident
+        self.stacks[thread_id].append(id(val))
+
+    def pop(self):
+        thread_id = threading.current_thread().ident
+        self.stacks[thread_id].pop()
+
+    def __contains__(self, val):
+        thread_id = threading.current_thread().ident
+        return id(val) in self.stacks[thread_id]
+
+
+hash_stacks = HashStacks()
 
 
 def _is_magicmock(obj):
@@ -108,8 +152,10 @@ def _int_to_bytes(i):
 def _key(obj, context):
     """Return key for memoization."""
 
+    # use arbitrary value in place of None since the return of None
+    # is used for control flow in .to_bytes
     if obj is None:
-        return b"none:"  # special value so we can hash None
+        return NONESENSE
 
     def is_simple(obj):
         return (
@@ -145,39 +191,26 @@ def _key(obj, context):
     return None
 
 
-def _hashing_error_message(start):
+def _hashing_error_message(bad_type):
     return textwrap.dedent(
         """
-        %(start)s
+        Cannot hash object of type %(bad_type)s
 
-        **More information:** to prevent unexpected behavior, Streamlit tries
-        to detect mutations in cached objects defined in your local files so
-        it can alert you when the cache is used incorrectly. However, something
-        went wrong while performing this check.
+        While caching some code, Streamlit encountered an object of
+        type `%(bad_type)s`. You’ll need to help Streamlit understand how to
+        hash that type with the `hash_funcs` argument. For example:
 
-        This error can occur when your virtual environment lives in the same
-        folder as your project, since that makes it hard for Streamlit to
-        understand which files it should check. If you think that's what caused
-        this, please add the following to `~/.streamlit/config.toml`:
-
-        ```toml
-        [server]
-        folderWatchBlacklist = ['foldername']
+        ```
+        @st.cache(hash_funcs={%(bad_type)s: my_hash_func})
+        def my_func(...):
+            ...
         ```
 
-        ...where `foldername` is the relative or absolute path to the folder
-        where you put your virtual environment.
-
-        Otherwise, please [file a
-        bug here](https://github.com/streamlit/streamlit/issues/new/choose).
-
-        To stop this warning from showing in the meantime, try one of the
-        following:
-
-        * **Preferred:** modify your code to avoid using this type of object.
-        * Or add the argument `allow_output_mutation=True` to the `st.cache` decorator.
+        Please see the [`hash_funcs` documentation]
+        (https://streamlit.io/docs/advanced_concepts.html#advanced-caching)
+        for more details.
     """
-        % {"start": start}
+        % {"bad_type": str(bad_type).split("'")[1]}
     ).strip("\n")
 
 
@@ -217,7 +250,7 @@ class CodeHasher:
         return self.hasher.hexdigest()
 
     def to_bytes(self, obj, context=None):
-        """Add memoization to _to_bytes."""
+        """Add memoization to _to_bytes and protect against cycles in data structures."""
         key = _key(obj, context)
 
         if key is not None:
@@ -228,12 +261,22 @@ class CodeHasher:
             self._counter += 1
             self.hashes[key] = _int_to_bytes(self._counter)
 
-        b = self._to_bytes(obj, context)
+        if obj in hash_stacks:
+            return CYCLE_PLACEHOLDER
 
-        self.size += sys.getsizeof(b)
+        hash_stacks.push(obj)
 
-        if key is not None:
-            self.hashes[key] = b
+        try:
+            b = self._to_bytes(obj, context)
+
+            self.size += sys.getsizeof(b)
+
+            if key is not None:
+                self.hashes[key] = b
+        finally:
+            # In case an UnhashableType (or other) error is thrown, clean up the
+            # stack so we don't get false positives in future hashing calls
+            hash_stacks.pop()
 
         return b
 
@@ -277,16 +320,25 @@ class CodeHasher:
                 return _int_to_bytes(obj)
             elif isinstance(obj, list) or isinstance(obj, tuple):
                 h = hashlib.new(self.name)
-                # add type to distingush x from [x]
+
+                # Hash the name of the container so that ["a"] hashes differently from ("a",)
+                # Otherwise we'd only be hashing the data and the hashes would be the same.
                 self._update(h, type(obj).__name__.encode() + b":")
                 for e in obj:
+                    self._update(h, e, context)
+                return h.digest()
+            elif isinstance(obj, dict):
+                h = hashlib.new(self.name)
+
+                self._update(h, type(obj).__name__.encode() + b":")
+                for e in obj.items():
                     self._update(h, e, context)
                 return h.digest()
             elif obj is None:
                 # Special string since hashes change between sessions.
                 # We don't use Python's `hash` since hashes are not consistent
                 # across runs.
-                return b"none:"
+                return NONESENSE
             elif obj is True:
                 return b"bool:1"
             elif obj is False:
@@ -381,21 +433,19 @@ class CodeHasher:
                 self._update(h, obj.keywords)
                 return h.digest()
             else:
-                try:
-                    # As a last resort, we pickle the object to hash it.
-                    return pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
-                except:
-                    st.warning(
-                        _hashing_error_message(
-                            "Streamlit cannot hash an object of type %s." % type(obj)
-                        )
-                    )
-        except:
-            st.warning(
-                _hashing_error_message(
-                    "Streamlit failed to hash an object of type %s." % type(obj)
-                )
-            )
+                # As a last resort
+                h = hashlib.new(self.name)
+
+                self._update(h, type(obj).__name__.encode() + b":")
+                for e in obj.__reduce__():
+                    self._update(h, e, context)
+                return h.digest()
+        except UnhashableType as e:
+            raise e
+        except Exception as e:
+            LOGGER.error(e)
+            msg = _hashing_error_message(type(obj))
+            raise UnhashableType(msg)
 
     def _code_to_bytes(self, code, context):
         h = hashlib.new(self.name)

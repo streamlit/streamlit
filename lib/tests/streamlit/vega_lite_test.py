@@ -177,7 +177,8 @@ class VegaLiteTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.vega_lite_chart
         self.assertDictEqual(
-            json.loads(c.spec), merge_dicts(autosize_spec, {"mark": "rect", "width": 200})
+            json.loads(c.spec),
+            merge_dicts(autosize_spec, {"mark": "rect", "width": 200}),
         )
 
 

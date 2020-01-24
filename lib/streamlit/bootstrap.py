@@ -159,6 +159,12 @@ def _on_server_start(server):
     ioloop.call_later(BROWSER_WAIT_TIMEOUT_SEC, maybe_open_browser)
 
 
+def _fix_pydeck_mapbox_api_warning():
+    """Sets MAPBOX_API_KEY environment variable needed for PyDeck otherwise it will throw an exception"""
+
+    os.environ["MAPBOX_API_KEY"] = config.get_option("mapbox.token")
+
+
 def _print_url():
     title_message = "You can now view your Streamlit app in your browser."
     named_urls = []
@@ -206,6 +212,7 @@ def run(script_path, command_line, args):
     _fix_matplotlib_crash()
     _fix_tornado_crash()
     _fix_sys_argv(script_path, args)
+    _fix_pydeck_mapbox_api_warning()
 
     # Install a signal handler that will shut down the ioloop
     # and close all our threads

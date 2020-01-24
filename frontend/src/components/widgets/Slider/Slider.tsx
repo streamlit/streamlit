@@ -39,15 +39,15 @@ interface State {
 }
 
 class Slider extends React.PureComponent<Props, State> {
+  public state: State
+
   private sliderRef = React.createRef<HTMLDivElement>()
-  private setWidgetValue: (source: Source) => void
-  public state: State = {
-    value: this.props.element.get("default").toJS(),
-  }
+  private readonly setWidgetValue: (source: Source) => void
 
   public constructor(props: Props) {
     super(props)
     this.setWidgetValue = debounce(200, this.setWidgetValueRaw.bind(this))
+    this.state = { value: this.props.element.get("default").toJS() }
   }
 
   public componentDidMount = (): void => {
@@ -85,6 +85,11 @@ class Slider extends React.PureComponent<Props, State> {
     knob.focus()
   }
 
+  /**
+   * Return the value of the slider. This will either be an array with
+   * one value (for a single value slider), or an array with two
+   * values (for a range slider).
+   */
   private get value(): number[] {
     const min = this.props.element.get("min")
     const max = this.props.element.get("max")
