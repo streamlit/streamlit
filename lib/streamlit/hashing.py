@@ -370,13 +370,7 @@ class CodeHasher:
                 return h.digest()
             elif inspect.isbuiltin(obj):
                 return self.to_bytes(obj.__name__)
-            elif hasattr(obj, "name") and (
-                isinstance(obj, io.IOBase)
-                or (
-                    isinstance(obj.name, string_types)  # noqa: F821
-                    and os.path.exists(obj.name)
-                )
-            ):
+            elif hasattr(obj, "name") and isinstance(obj, io.IOBase):
                 # Hash files as name + last modification date + offset.
                 h = hashlib.new(self.name)
                 self._update(h, obj.name)
