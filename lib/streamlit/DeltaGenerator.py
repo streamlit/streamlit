@@ -372,7 +372,7 @@ class DeltaGenerator(object):
 
         # Only enqueue message if there's a container.
 
-        if self._container is not None:
+        if self._container and self._cursor:
             assert self._container in ("sidebar", "main")
 
             if self._container == "sidebar":

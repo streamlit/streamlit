@@ -389,20 +389,15 @@ class TestScriptRunner(ScriptRunner):
         def enqueue_fn(msg):
             self.report_queue.enqueue(msg)
             self.maybe_handle_execution_control_request()
-            return True
 
-        self.main_dg = DeltaGenerator(enqueue=enqueue_fn, container=BlockPath.MAIN)
-        self.sidebar_dg = DeltaGenerator(
-            enqueue=enqueue_fn, container=BlockPath.SIDEBAR
-        )
         self.script_request_queue = ScriptRequestQueue()
-
         script_path = os.path.join(os.path.dirname(__file__), "test_data", script_name)
 
+        report = Report(script_path, "test command line")
+        report.enqueue = enqueue_fn
+
         super(TestScriptRunner, self).__init__(
-            report=Report(script_path, "test command line"),
-            main_dg=self.main_dg,
-            sidebar_dg=self.sidebar_dg,
+            report=report,
             widget_states=WidgetStates(),
             request_queue=self.script_request_queue,
         )
@@ -445,6 +440,10 @@ class TestScriptRunner(ScriptRunner):
             super(TestScriptRunner, self)._process_request_queue()
         except BaseException as e:
             self.script_thread_exceptions.append(e)
+
+    def _run_script(self, rerun_data):
+        self.report_queue.clear()
+        super(TestScriptRunner, self)._run_script(rerun_data)
 
     def join(self):
         """Joins the run thread, if it was started"""

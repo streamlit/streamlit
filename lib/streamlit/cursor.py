@@ -19,6 +19,9 @@ from streamlit.ReportThread import get_report_ctx
 def get_container_cursor(container):
     ctx = get_report_ctx()
 
+    if ctx is None:
+        return None
+
     if container in ctx.cursors:
         return ctx.cursors[container]
 

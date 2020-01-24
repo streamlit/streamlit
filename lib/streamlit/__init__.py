@@ -147,10 +147,6 @@ def _reset():
     _get_report_ctx().widget_ids_this_run.clear()
 
 
-# Delta generator with no queue so it can't send anything out. Useful for
-# testing.
-_NULL_DELTA_GENERATOR = _DeltaGenerator(container=None)
-
 _main = _DeltaGenerator(container="main")
 sidebar = _DeltaGenerator(container="sidebar")
 

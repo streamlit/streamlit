@@ -88,7 +88,7 @@ class ReportThread(threading.Thread):
         )
 
 
-def add_report_ctx(thread):
+def add_report_ctx(thread=None, ctx=None):
     """Adds the current ReportContext to a newly-created thread.
 
     This should be called from this thread's parent thread,
@@ -98,6 +98,9 @@ def add_report_ctx(thread):
     ----------
     thread : threading.Thread
         The thread to attach the current ReportContext to.
+    ctx : ReportContext or None
+        The ReportContext to add, or None to use the current thread's
+        ReportContext.
 
     Returns
     -------
@@ -105,7 +108,10 @@ def add_report_ctx(thread):
         The same thread that was passed in, for chaining.
 
     """
-    ctx = get_report_ctx()
+    if thread is None:
+        thread = threading.current_thread()
+    if ctx is None:
+        ctx = get_report_ctx()
     if ctx is not None:
         setattr(thread, REPORT_CONTEXT_ATTR_NAME, ctx)
     return thread
