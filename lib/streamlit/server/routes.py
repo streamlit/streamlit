@@ -78,7 +78,9 @@ class MediaFileHandler(tornado.web.RequestHandler):
             self.set_status(400)
             return
 
-        LOGGER.debug("MediaFileManager: Sending %s file %s" % (media.mimetype, requested_hash))
+        LOGGER.debug(
+            "MediaFileManager: Sending %s file %s" % (media.mimetype, requested_hash)
+        )
         self.write(media.content)
         self.set_header("Content-Type:", media.mimetype)
         self.set_status(200)

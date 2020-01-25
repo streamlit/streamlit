@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import io
 import streamlit as st
 import numpy as np
@@ -22,12 +23,39 @@ st.title("Audio test")
 
 st.header("Local file")
 
-st.audio(
-    "/Library/Application Support/Logic/Alchemy Samples/Sound Effects/Ambience Nature/Crystal Clear Waves.wav"
-)
+AUDIO_EXTENSIONS = ['wav', 'flac', 'mp3', 'aac', 'ogg', 'oga']
 
-st.title("Generated audio (440Hz sine wave)")
+def get_audio_files_in_dir(directory):
+    out = []
+    for item in os.listdir(directory):
+        try:
+            name, ext = item.split(".")
+        except:
+            continue
+        if name and ext:
+            if ext in AUDIO_EXTENSIONS:
+                out.append(item)
+    return out
 
+
+avdir = os.path.expanduser("~")
+audiofiles = get_audio_files_in_dir(avdir)
+
+if len(audiofiles) == 0:
+    st.write("Put some audio files in your home directory (%s) to activate this player." % avdir)
+
+else:
+    filename = st.selectbox(
+        "Select an audio file from your home directory to play",
+        audiofiles,
+        0,
+        )
+
+    st.audio(os.path.join(avdir, filename))
+
+
+
+st.header("Generated audio (440Hz sine wave)")
 
 def note(freq, length, amp, rate):
     t = np.linspace(0, length, length * rate)
@@ -60,12 +88,10 @@ with io.open("sound.wav", "rb") as f:
     x.text("Sending wave...")
     x.audio(f)
 
-st.title("Audio from a URL")
-
+st.header("Audio from a Remote URL")
 
 def shorten_audio_option(opt):
     return opt.split("/")[-1]
-
 
 song = st.selectbox(
     "Pick an MP3 to play",
