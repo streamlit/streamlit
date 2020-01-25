@@ -74,16 +74,17 @@ class MediaFileHandler(tornado.web.RequestHandler):
         # remove extension, if present.
         requested_hash = requested_hash.split(".")[0]
         
-        print("REQUESTED:", requested_hash)
-        print(_media_filemanager._files)
+        LOGGER.debug("MediaFileManager: file requested with hash %" % requested_hash)
 
         try:
             media = _media_filemanager.get(requested_hash)
         except:
-            self.write("File at %s not found" % requested_hash)
+            LOGGER.error("MediaFileManager 404: File %s not found")
+            self.write("%s not found" % requested_hash)
             self.set_status(400)
             return
 
+        LOGGER.debug("MediaFileManager 200: File %s found")
         self.write(media.content)
         self.set_header("Content-Type:", media.mimetype)
         self.set_status(200)
