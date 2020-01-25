@@ -15,10 +15,10 @@
 
 import streamlit as st
 
-st.title("Play Videos from URLs")
+st.title("Video Widget Examples")
 
+st.header("Remote video playback")
 st.write("st.video allows a variety of HTML5 supported video links, including YouTube.")
-
 
 def shorten_vid_option(opt):
     return opt.split("/")[-1]
@@ -41,3 +41,12 @@ vidurl = st.selectbox(
 )
 
 st.video(vidurl)
+
+st.header("Local video files")
+st.write("You can use st.video to play a locally-stored video by supplying it with a valid filesystem path.")
+
+#filename = st.text_input("Input media path here")
+
+filename = "/Applications/Parallels Desktop.app/Contents/Resources/coherence_light.mp4"
+st.video(filename)
+

@@ -70,7 +70,13 @@ def _marshall_binary(proto, data):
     this media file stored in a file manager.
     """
 
-    if isinstance(data, io.BytesIO):
+    if data is None:
+        # allow None values so media players can be shown without media.
+        proto.url = ""
+        proto.format = ""
+        return 
+
+    elif isinstance(data, io.BytesIO):
         data.seek(0)
         data = date.getvalue()
     elif isinstance(data, io.IOBase):
@@ -106,15 +112,24 @@ def marshall_video(proto, data, format="video/mp4", start_time=0):
 
     proto.format = format
     proto.start_time = start_time
+    
+    # "type" distinguishes between YouTube and non-YouTube links
     proto.type = Video_pb2.Video.Type.NATIVE
 
     if isinstance(data, string_types) and url(data):  # noqa: F821
-        youtube_url = _reshape_youtube_url(url)
+        youtube_url = _reshape_youtube_url(data)
         if youtube_url:
             proto.url = youtube_url
             proto.type = Video_pb2.Video.Type.YOUTUBE_IFRAME
         else:
-            proto.url = url
+            proto.url = data
+
+    elif isinstance(data, string_types):
+        # assume it's a filename
+        with open(data, "rb") as fh:
+            new = _media_filemanager.add(fh.read(), filename=data, mimetype=format)
+            proto.url = new.url
+
     else:
         _marshall_binary(proto, data)
 
