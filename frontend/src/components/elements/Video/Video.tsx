@@ -18,6 +18,8 @@
 import React from "react"
 import { Map as ImmutableMap } from "immutable"
 import { Video as VideoProto } from "autogen/proto"
+import { getWindowBaseUriParts as get_base_uri_parts } from "../../../lib/UriUtil"
+import { buildHttpUri } from "../../../lib/UriUtil"
 
 interface Props {
   width: number
@@ -68,11 +70,23 @@ class Video extends React.PureComponent<Props> {
       )
     }
 
+    var uri = element.get("url")
+
+    if (element.get("url").startsWith("/media")) {
+      uri = buildHttpUri(get_base_uri_parts(), element.get("url"))
+    }
+
+    console.log("DEBUG VIDEO URI Preprocess step:")
+    console.log(element.get("url"))
+    console.log(element.get("format"))
+    console.log(uri)
+    console.log("/DEBUG")
+
     return (
       <video
         ref={this.videoRef}
         controls
-        src={element.get("url")}
+        src={uri}
         className="stVideo"
         style={{ width }}
       />
