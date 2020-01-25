@@ -66,25 +66,19 @@ class MediaFileHandler(tornado.web.RequestHandler):
         if _allow_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
 
-    def get(self, items):
-        # open the request URL to see the requested hash
-        requested_hash = (
-            self.request.uri.split("/media/")[1].strip("/healthz").strip("/stream")
-        )
-        # remove extension, if present.
-        requested_hash = requested_hash.split(".")[0]
-        
-        LOGGER.debug("MediaFileManager: file requested with hash %" % requested_hash)
+    def get(self, filename):
+        # remove extension from submitted filename, if present.
+        requested_hash = filename.split(".")[0]
 
         try:
             media = _media_filemanager.get(requested_hash)
         except:
-            LOGGER.error("MediaFileManager 404: File %s not found")
+            LOGGER.error("MediaFileManager: Missing file %s" % requested_hash)
             self.write("%s not found" % requested_hash)
             self.set_status(400)
             return
 
-        LOGGER.debug("MediaFileManager 200: File %s found")
+        LOGGER.debug("MediaFileManager: Sending %s file %s" % (media.mimetype, requested_hash))
         self.write(media.content)
         self.set_header("Content-Type:", media.mimetype)
         self.set_status(200)

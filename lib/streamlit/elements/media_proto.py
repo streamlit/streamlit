@@ -74,7 +74,7 @@ def _marshall_binary(proto, data):
         # allow None values so media players can be shown without media.
         proto.url = ""
         proto.format = ""
-        return 
+        return
 
     elif isinstance(data, io.BytesIO):
         data.seek(0)
@@ -112,7 +112,7 @@ def marshall_video(proto, data, format="video/mp4", start_time=0):
 
     proto.format = format
     proto.start_time = start_time
-    
+
     # "type" distinguishes between YouTube and non-YouTube links
     proto.type = Video_pb2.Video.Type.NATIVE
 
@@ -125,11 +125,13 @@ def marshall_video(proto, data, format="video/mp4", start_time=0):
             proto.url = data
 
     elif isinstance(data, string_types):
-        # assume it's a filename
-        with open(data, "rb") as fh:
-            new = _media_filemanager.add(fh.read(), filename=data, mimetype=format)
-            proto.url = new.url
-
+        # assume it's a filename or blank.
+        if data.strip() == "":
+            proto.url = ""
+        else:
+            with open(data, "rb") as fh:
+                new = _media_filemanager.add(fh.read(), filename=data, mimetype=format)
+                proto.url = new.url
     else:
         _marshall_binary(proto, data)
 
@@ -160,10 +162,13 @@ def marshall_audio(proto, data, format="audio/wav", start_time=0):
         if url(data):  # noqa: F821
             proto.url = data
             return
-        # assume it's a filename
-        with open(data, "rb") as fh:
-            new = _media_filemanager.add(fh.read(), filename=data, mimetype=format)
-            proto.url = new.url
+        # assume it's a filename or blank.
+        if data.strip() == "":
+            proto.url = ""
+        else:
+            with open(data, "rb") as fh:
+                new = _media_filemanager.add(fh.read(), filename=data, mimetype=format)
+                proto.url = new.url
 
     else:
         _marshall_binary(proto, data)
