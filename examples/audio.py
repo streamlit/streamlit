@@ -18,12 +18,18 @@ import io
 import streamlit as st
 import numpy as np
 import wave
+import sndhdr
 
 st.title("Audio test")
 
 st.header("Local file")
 
-AUDIO_EXTENSIONS = ['wav', 'flac', 'mp3', 'aac', 'ogg', 'oga']
+# These are the formats supported in Streamlit right now.
+AUDIO_EXTENSIONS = ["wav", "flac", "mp3", "aac", "ogg", "oga", "m4a", "opus", "wma"]
+                    
+# For samples of sounds in different formats, see 
+# https://docs.espressif.com/projects/esp-adf/en/latest/design-guide/audio-samples.html
+
 
 def get_audio_files_in_dir(directory):
     out = []
@@ -42,20 +48,21 @@ avdir = os.path.expanduser("~")
 audiofiles = get_audio_files_in_dir(avdir)
 
 if len(audiofiles) == 0:
-    st.write("Put some audio files in your home directory (%s) to activate this player." % avdir)
+    st.write(
+        "Put some audio files in your home directory (%s) to activate this player."
+        % avdir
+    )
 
 else:
     filename = st.selectbox(
-        "Select an audio file from your home directory to play",
-        audiofiles,
-        0,
-        )
-
-    st.audio(os.path.join(avdir, filename))
-
+        "Select an audio file from your home directory (%s) to play" % avdir, audiofiles, 0,
+    )
+    audiopath = os.path.join(avdir, filename)
+    st.audio(audiopath)
 
 
 st.header("Generated audio (440Hz sine wave)")
+
 
 def note(freq, length, amp, rate):
     t = np.linspace(0, length, length * rate)
@@ -90,8 +97,10 @@ with io.open("sound.wav", "rb") as f:
 
 st.header("Audio from a Remote URL")
 
+
 def shorten_audio_option(opt):
     return opt.split("/")[-1]
+
 
 song = st.selectbox(
     "Pick an MP3 to play",
