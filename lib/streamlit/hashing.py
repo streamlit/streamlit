@@ -372,8 +372,8 @@ class CodeHasher:
             elif inspect.isbuiltin(obj):
                 return self.to_bytes(obj.__name__)
             elif hasattr(obj, "name") and (
-                isinstance(obj, io.IOBase) or
-                isinstance(obj, tempfile._TemporaryFileWrapper)
+                isinstance(obj, io.IOBase)
+                or isinstance(obj, tempfile._TemporaryFileWrapper)
             ):
                 # Hash files as name + last modification date + offset.
                 h = hashlib.new(self.name)
