@@ -73,10 +73,10 @@ values. You can set these options in four different ways:
 - **In a per-project config file at `$CWD/.streamlit/config.toml`,** where
   `$CWD` is the folder you're running Streamlit from.
 
-- **Through `STREAMLIT_CONFIG_*` environment variables,** such as:
+- **Through `STREAMLIT_*` environment variables,** such as:
 
   ```bash
-  $ export STREAMLIT_CONFIG_SERVER_PORT=80
+  $ export STREAMLIT_SERVER_PORT=80
   ```
 
 - **As flags in the command line** when running `streamlit run`. For example:
