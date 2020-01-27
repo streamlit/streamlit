@@ -44,10 +44,11 @@ from streamlit.DeltaGenerator import _build_duplicate_widget_message
 from streamlit.cursor import LockedCursor
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.Element_pb2 import Element
-from streamlit.proto.TextInput_pb2 import TextInput
-from streamlit.proto.TextArea_pb2 import TextArea
+from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.Delta_pb2 import Delta
+from streamlit.proto.Element_pb2 import Element
+from streamlit.proto.TextArea_pb2 import TextArea
+from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.DeltaGenerator import (
     _wraps_with_cleaned_sig,
     _remove_self_from_sig,
@@ -284,7 +285,7 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         new_dg = dg._enqueue_new_element_delta(enqueue_fn, None)
         self.assertEqual(dg, new_dg)
 
-    @parameterized.expand([("main"), ("sidebar")])
+    @parameterized.expand([(BlockPath.MAIN,), (BlockPath.SIDEBAR,)])
     def test_enqueue_new_element_delta(self, container):
         dg = DeltaGenerator(container=container)
         self.assertEqual(0, dg._cursor.index)
@@ -299,7 +300,7 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         def marshall_element(element):
             fake_dg.fake_text(element, test_data)
 
-        new_dg = dg._enqueue_new_element_delta(marshall_element, "fake")
+        new_dg = dg._enqueue_new_element_delta(marshall_element, None)
         self.assertNotEqual(dg, new_dg)
         self.assertEqual(1, dg._cursor.index)
         self.assertEqual(container, new_dg._container)
@@ -321,7 +322,7 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         def marshall_element(element):
             fake_dg.fake_text(element, test_data)
 
-        new_dg = dg._enqueue_new_element_delta(marshall_element, "fake")
+        new_dg = dg._enqueue_new_element_delta(marshall_element, None)
         self.assertEqual(dg._cursor, new_dg._cursor)
 
         msg = self.get_message_from_queue()

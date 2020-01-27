@@ -110,16 +110,17 @@ import types as _types
 import json as _json
 import numpy as _np
 
-from streamlit.util import functools_wraps as _functools_wraps
 from streamlit import code_util as _code_util
 from streamlit import env_util as _env_util
+from streamlit import source_util as _source_util
 from streamlit import string_util as _string_util
 from streamlit import type_util as _type_util
-from streamlit import source_util as _source_util
-from streamlit.ReportThread import get_report_ctx as _get_report_ctx
-from streamlit.ReportThread import add_report_ctx as _add_report_ctx
 from streamlit.DeltaGenerator import DeltaGenerator as _DeltaGenerator
+from streamlit.ReportThread import add_report_ctx as _add_report_ctx
+from streamlit.ReportThread import get_report_ctx as _get_report_ctx
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto import BlockPath_pb2 as _BlockPath_pb2
+from streamlit.util import functools_wraps as _functools_wraps
 
 # Modules that the user should have access to.
 from streamlit.caching import cache  # noqa: F401
@@ -147,8 +148,8 @@ def _reset():
     _get_report_ctx().widget_ids_this_run.clear()
 
 
-_main = _DeltaGenerator(container="main")
-sidebar = _DeltaGenerator(container="sidebar")
+_main = _DeltaGenerator(container=_BlockPath_pb2.BlockPath.MAIN)
+sidebar = _DeltaGenerator(container=_BlockPath_pb2.BlockPath.SIDEBAR)
 
 # DeltaGenerator methods:
 

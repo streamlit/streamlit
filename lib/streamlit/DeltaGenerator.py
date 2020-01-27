@@ -257,7 +257,7 @@ class DeltaGenerator(object):
 
     Parameters
     ----------
-    container: "main" or "sidebar" or None
+    container: BlockPath_pb2.BlockPath or None
       The root container for this DeltaGenerator. If None, this is a null
       DeltaGenerator which doesn't print to the app at all (useful for
       testing).
@@ -268,7 +268,7 @@ class DeltaGenerator(object):
     # The pydoc below is for user consumption, so it doesn't talk about
     # DeltaGenerator constructor parameters (which users should never use). For
     # those, see above.
-    def __init__(self, container="main", cursor=None):
+    def __init__(self, container=BlockPath_pb2.BlockPath.MAIN, cursor=None):
         """Inserts or updates elements in Streamlit apps.
 
         As a user, you should never initialize this object by hand. Instead,
@@ -308,7 +308,7 @@ class DeltaGenerator(object):
 
         def wrapper(*args, **kwargs):
             if name in streamlit_methods:
-                if self._container == "sidebar":
+                if self._container == BlockPath_pb2.BlockPath.SIDEBAR:
                     message = (
                         "Method `%(name)s()` does not exist for "
                         "`st.sidebar`. Did you mean `st.%(name)s()`?" % {"name": name}
@@ -373,13 +373,7 @@ class DeltaGenerator(object):
         # Only enqueue message if there's a container.
 
         if self._container and self._cursor:
-            assert self._container in ("sidebar", "main")
-
-            if self._container == "sidebar":
-                msg.metadata.parent_block.container = BlockPath_pb2.BlockPath.SIDEBAR
-            else:
-                msg.metadata.parent_block.container = BlockPath_pb2.BlockPath.MAIN
-
+            msg.metadata.parent_block.container = self._container
             msg.metadata.parent_block.path[:] = self._cursor.path
             msg.metadata.delta_id = self._cursor.index
 
@@ -2914,12 +2908,7 @@ class DeltaGenerator(object):
         )
 
         msg = ForwardMsg_pb2.ForwardMsg()
-
-        if self._container == "sidebar":
-            msg.metadata.parent_block.container = BlockPath_pb2.BlockPath.SIDEBAR
-        else:
-            msg.metadata.parent_block.container = BlockPath_pb2.BlockPath.MAIN
-
+        msg.metadata.parent_block.container = self._container
         msg.metadata.parent_block.path[:] = self._cursor.path
         msg.metadata.delta_id = self._cursor.index
 
