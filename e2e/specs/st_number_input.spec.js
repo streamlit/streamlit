@@ -17,50 +17,50 @@
 
 describe("st.number_input", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.visit("http://localhost:3000/")
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
-  });
+    cy.get(".decoration").invoke("css", "display", "none")
+  })
 
   it("shows widget correctly", () => {
-    cy.get(".stNumberInput").should("have.length", 3);
+    cy.get(".stNumberInput").should("have.length", 3)
 
     cy.get(".stNumberInput").each((el, idx) => {
       // @ts-ignore
-      return cy.wrap(el).matchImageSnapshot("number_input" + idx);
-    });
-  });
+      return cy.wrap(el).matchImageSnapshot("number_input" + idx)
+    })
+  })
 
   it("has correct default values", () => {
     cy.get(".stMarkdown").should(
       "have.text",
       'value 1: " 0.0 "' + 'value 2: " 1 "' + 'value 3: " 1 "'
-    );
-  });
+    )
+  })
 
   it("sets value correctly on enter keypress", () => {
     cy.get(".stNumberInput input")
       .first()
       .clear()
-      .type("10{enter}");
+      .type("10{enter}")
 
     cy.get(".stMarkdown").should(
       "have.text",
       'value 1: " 10.0 "' + 'value 2: " 1 "' + 'value 3: " 1 "'
-    );
-  });
+    )
+  })
 
   it("sets value correctly on blur", () => {
     cy.get(".stNumberInput input")
       .first()
       .clear()
       .type("10")
-      .blur();
+      .blur()
 
     cy.get(".stMarkdown").should(
       "have.text",
       'value 1: " 10.0 "' + 'value 2: " 1 "' + 'value 3: " 1 "'
-    );
-  });
-});
+    )
+  })
+})

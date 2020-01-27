@@ -17,18 +17,18 @@
 
 describe("st.latex", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
-  });
+    cy.visit("http://localhost:3000/")
+  })
 
   it("displays LaTeX symbol", () => {
     cy.get(".element-container .stMarkdown")
       .eq(0)
-      .should("contain", "LATE​X");
-  });
+      .should("contain", "LATE​X")
+  })
 
   it("displays Sympy expression as LaTeX", () => {
     cy.get(".element-container .stMarkdown")
       .eq(1)
-      .should("contain", "a + b");
-  });
-});
+      .should("contain", "a + b")
+  })
+})

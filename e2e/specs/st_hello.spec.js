@@ -17,15 +17,15 @@
 
 describe("hello", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
-  });
+    cy.visit("http://localhost:3000/")
+  })
 
   it("displays the welcome message", () => {
     cy.get(".element-container .stMarkdown h1").should(
       "contain",
       "Welcome to Streamlit!"
-    );
+    )
 
-    cy.get(".streamlit-dialog").should("not.exist");
-  });
-});
+    cy.get(".streamlit-dialog").should("not.exist")
+  })
+})

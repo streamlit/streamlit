@@ -17,55 +17,55 @@
 
 describe("st.file_uploader", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.visit("http://localhost:3000/")
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
-  });
+    cy.get(".decoration").invoke("css", "display", "none")
+  })
 
   it("shows widget correctly", () => {
-    cy.get(".stFileUploader").should("have.length", 1);
-    cy.get(".stFileUploader label").should("have.text", "Drop a file:");
+    cy.get(".stFileUploader").should("have.length", 1)
+    cy.get(".stFileUploader label").should("have.text", "Drop a file:")
 
-    cy.get(".stFileUploader").matchImageSnapshot("file_uploader");
-  });
+    cy.get(".stFileUploader").matchImageSnapshot("file_uploader")
+  })
 
   it("shows error message for not allowed files", () => {
-    cy.get(".stFileUploader").should("have.length", 1);
-    cy.get(".stFileUploader label").should("have.text", "Drop a file:");
+    cy.get(".stFileUploader").should("have.length", 1)
+    cy.get(".stFileUploader label").should("have.text", "Drop a file:")
 
-    const fileName = "example.json";
+    const fileName = "example.json"
 
     cy.fixture(fileName).then(fileContent => {
       cy.get('[data-baseweb="file-uploader"] > div').upload(
         { fileContent, fileName, mimeType: "application/json" },
         { force: true, subjectType: "drag-n-drop" }
-      );
+      )
 
       cy.get(".uploadError").should(
         "have.text",
         " application/json files are not allowedOK"
-      );
+      )
 
-      cy.get(".stFileUploader").matchImageSnapshot("file_uploader-error");
-    });
-  });
+      cy.get(".stFileUploader").matchImageSnapshot("file_uploader-error")
+    })
+  })
 
   it("shows uploaded file name", () => {
-    cy.get(".stFileUploader").should("have.length", 1);
-    cy.get(".stFileUploader label").should("have.text", "Drop a file:");
+    cy.get(".stFileUploader").should("have.length", 1)
+    cy.get(".stFileUploader label").should("have.text", "Drop a file:")
 
-    const fileName = "example.txt";
+    const fileName = "example.txt"
 
     cy.fixture(fileName).then(fileContent => {
       cy.get('[data-baseweb="file-uploader"] > div').upload(
         { fileContent, fileName, mimeType: "text/plain" },
         { force: true, subjectType: "drag-n-drop" }
-      );
+      )
 
-      cy.get(".uploadDone").should("have.text", fileName);
+      cy.get(".uploadDone").should("have.text", fileName)
 
-      cy.get(".stFileUploader").matchImageSnapshot("file_uploader-uploaded");
-    });
-  });
-});
+      cy.get(".stFileUploader").matchImageSnapshot("file_uploader-uploaded")
+    })
+  })
+})

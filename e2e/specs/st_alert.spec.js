@@ -17,25 +17,25 @@
 
 describe("st.error and friends", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
-  });
+    cy.visit("http://localhost:3000/")
+  })
 
   it("displays correctly", () => {
     cy.get(
       ".element-container .stAlert.alert-danger .markdown-text-container"
-    ).contains("This is an error");
+    ).contains("This is an error")
     cy.get(
       ".element-container .stAlert.alert-warning .markdown-text-container"
-    ).contains("This is a warning");
+    ).contains("This is a warning")
     cy.get(
       ".element-container .stAlert.alert-info .markdown-text-container"
-    ).contains("This is an info message");
+    ).contains("This is an info message")
     cy.get(
       ".element-container .stAlert.alert-success .markdown-text-container"
-    ).contains("This is a success message");
-  });
+    ).contains("This is a success message")
+  })
 
   it("displays correctly", () => {
-    cy.get(".main > .block-container").matchImageSnapshot("alerts");
-  });
-});
+    cy.get(".main > .block-container").matchImageSnapshot("alerts")
+  })
+})

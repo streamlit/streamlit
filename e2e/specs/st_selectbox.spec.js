@@ -17,42 +17,42 @@
 
 describe("st.selectbox", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.visit("http://localhost:3000/")
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
-  });
+    cy.get(".decoration").invoke("css", "display", "none")
+  })
 
   it("shows widget correctly", () => {
-    cy.get(".stSelectbox").should("have.length", 3);
+    cy.get(".stSelectbox").should("have.length", 3)
 
     cy.get(".stSelectbox").each((el, idx) => {
-      return cy.wrap(el).matchImageSnapshot("selectbox" + idx);
-    });
-  });
+      return cy.wrap(el).matchImageSnapshot("selectbox" + idx)
+    })
+  })
 
   it("has correct initial values", () => {
     cy.get(".stMarkdown").should(
       "have.text",
       "value 1: female" + "value 2: male" + "value 3: None"
-    );
-  });
+    )
+  })
 
   it("formats display values", () => {
     cy.get(".stSelectbox span")
       .eq(1)
-      .should("have.text", "Male");
-  });
+      .should("have.text", "Male")
+  })
 
   it("handles no options", () => {
     cy.get(".stSelectbox span")
       .eq(2)
-      .should("have.text", "No options to select.");
+      .should("have.text", "No options to select.")
 
     cy.get(".stSelectbox input")
       .eq(2)
-      .should("be.disabled");
-  });
+      .should("be.disabled")
+  })
 
   it("sets value correctly when user clicks", () => {
     cy.get(".stSelectbox")
@@ -61,15 +61,15 @@ describe("st.selectbox", () => {
       .then(el => {
         cy.wrap(el)
           .find("input")
-          .click();
+          .click()
         cy.get("li")
           .last()
-          .click();
-      });
+          .click()
+      })
 
     cy.get(".stMarkdown").should(
       "have.text",
       "value 1: female" + "value 2: female" + "value 3: None"
-    );
-  });
-});
+    )
+  })
+})

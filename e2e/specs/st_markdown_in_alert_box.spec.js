@@ -17,17 +17,17 @@
 
 describe("info/success/warning/error boxes", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.visit("http://localhost:3000/")
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
-  });
+    cy.get(".decoration").invoke("css", "display", "none")
+  })
 
   it("show complex markdown beautifully", () => {
     cy.get(".stAlert.alert")
       .should("have.length", 4)
       .each((el, i) => {
-        return cy.get(el).matchImageSnapshot(`stAlert-alert-${i}`);
-      });
-  });
-});
+        return cy.get(el).matchImageSnapshot(`stAlert-alert-${i}`)
+      })
+  })
+})

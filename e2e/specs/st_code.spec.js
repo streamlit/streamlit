@@ -17,13 +17,13 @@
 
 describe("st.code", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
-  });
+    cy.visit("http://localhost:3000/")
+  })
 
   it("displays a code block", () => {
     cy.get(".element-container .stMarkdown pre").should(
       "contain",
       "This code is awesome!"
-    );
-  });
-});
+    )
+  })
+})

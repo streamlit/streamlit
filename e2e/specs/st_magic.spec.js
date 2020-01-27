@@ -17,8 +17,8 @@
 
 describe("streamlit magic", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
-  });
+    cy.visit("http://localhost:3000/")
+  })
 
   it("displays expected text", () => {
     const expected = [
@@ -36,17 +36,17 @@ describe("streamlit magic", () => {
       "FUNCTION",
       "ASYNC FUNCTION",
       "ASYNC FOR",
-      "ASYNC WITH"
-    ];
+      "ASYNC WITH",
+    ]
 
-    const selector = ".element-container > .stMarkdown > p";
+    const selector = ".element-container > .stMarkdown > p"
 
-    cy.get(selector).should("have.length", expected.length);
+    cy.get(selector).should("have.length", expected.length)
 
     expected.forEach((text, index) => {
       cy.get(selector)
         .eq(index)
-        .contains(text);
-    });
-  });
-});
+        .contains(text)
+    })
+  })
+})

@@ -17,33 +17,33 @@
 
 describe("st.checkbox", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.visit("http://localhost:3000/")
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
-  });
+    cy.get(".decoration").invoke("css", "display", "none")
+  })
 
   it("shows widget correctly", () => {
-    cy.get(".stCheckbox").should("have.length", 3);
+    cy.get(".stCheckbox").should("have.length", 3)
 
     cy.get(".stCheckbox").each((el, idx) => {
-      return cy.wrap(el).matchImageSnapshot("checkbox" + idx);
-    });
-  });
+      return cy.wrap(el).matchImageSnapshot("checkbox" + idx)
+    })
+  })
 
   it("has correct initial values", () => {
     cy.get(".stMarkdown").should(
       "have.text",
       "value 1: True" + "value 2: False" + "value 3: False"
-    );
-  });
+    )
+  })
 
   it("sets value correctly when user clicks", () => {
-    cy.get(".stCheckbox").click({ multiple: true });
+    cy.get(".stCheckbox").click({ multiple: true })
 
     cy.get(".stMarkdown").should(
       "have.text",
       "value 1: False" + "value 2: True" + "value 3: True"
-    );
-  });
-});
+    )
+  })
+})

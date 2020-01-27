@@ -21,11 +21,11 @@ describe("Dataframes with different sizes", () => {
     { width: "696px", height: "300px" },
     { width: "248px", height: "150px" },
     { width: "248px", height: "300px" },
-    { width: "696px", height: "150px" }
-  ];
+    { width: "696px", height: "150px" },
+  ]
   before(() => {
-    cy.visit("http://localhost:3000/");
-  });
+    cy.visit("http://localhost:3000/")
+  })
 
   it("should show as expected", () => {
     cy.get(".element-container .stDataFrame")
@@ -34,7 +34,7 @@ describe("Dataframes with different sizes", () => {
         return cy
           .wrap(el)
           .should("have.css", "width", expected[idx].width)
-          .should("have.css", "height", expected[idx].height);
-      });
-  });
-});
+          .should("have.css", "height", expected[idx].height)
+      })
+  })
+})

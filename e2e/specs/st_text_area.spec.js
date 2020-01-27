@@ -17,19 +17,19 @@
 
 describe("st.text_area", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.visit("http://localhost:3000/")
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
-  });
+    cy.get(".decoration").invoke("css", "display", "none")
+  })
 
   it("shows widget correctly", () => {
-    cy.get(".stTextArea").should("have.length", 4);
+    cy.get(".stTextArea").should("have.length", 4)
 
     cy.get(".stTextArea").each((el, idx) => {
-      return cy.wrap(el).matchImageSnapshot("text_area" + idx);
-    });
-  });
+      return cy.wrap(el).matchImageSnapshot("text_area" + idx)
+    })
+  })
 
   it("has correct default values", () => {
     cy.get(".stMarkdown").should(
@@ -38,13 +38,13 @@ describe("st.text_area", () => {
         'value 2: " default text "' +
         'value 3: " 1234 "' +
         'value 4: " None "'
-    );
-  });
+    )
+  })
 
   it("sets value correctly when user types", () => {
     cy.get(".stTextArea textarea")
       .first()
-      .type("test area{enter}");
+      .type("test area{enter}")
 
     cy.get(".stMarkdown").should(
       "have.text",
@@ -52,13 +52,13 @@ describe("st.text_area", () => {
         'value 2: " default text "' +
         'value 3: " 1234 "' +
         'value 4: " None "'
-    );
-  });
+    )
+  })
 
   it("sets value correctly on ctrl-enter keypress", () => {
     cy.get(".stTextArea textarea")
       .first()
-      .type("test area{ctrl}{enter}");
+      .type("test area{ctrl}{enter}")
 
     cy.get(".stMarkdown").should(
       "have.text",
@@ -66,13 +66,13 @@ describe("st.text_area", () => {
         'value 2: " default text "' +
         'value 3: " 1234 "' +
         'value 4: " None "'
-    );
-  });
+    )
+  })
 
   it("sets value correctly on command-enter keypress", () => {
     cy.get(".stTextArea textarea")
       .first()
-      .type("test area{command}{enter}");
+      .type("test area{command}{enter}")
 
     cy.get(".stMarkdown").should(
       "have.text",
@@ -80,14 +80,14 @@ describe("st.text_area", () => {
         'value 2: " default text "' +
         'value 3: " 1234 "' +
         'value 4: " None "'
-    );
-  });
+    )
+  })
 
   it("sets value correctly on blur", () => {
     cy.get(".stTextArea textarea")
       .first()
       .type("test area")
-      .blur();
+      .blur()
 
     cy.get(".stMarkdown").should(
       "have.text",
@@ -95,6 +95,6 @@ describe("st.text_area", () => {
         'value 2: " default text "' +
         'value 3: " 1234 "' +
         'value 4: " None "'
-    );
-  });
-});
+    )
+  })
+})

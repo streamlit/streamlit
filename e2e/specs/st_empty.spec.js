@@ -17,13 +17,13 @@
 
 describe("st.empty", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.visit("http://localhost:3000/")
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
-  });
+    cy.get(".decoration").invoke("css", "display", "none")
+  })
 
   it("matches the snapshot", () => {
-    cy.get(".block-container").matchImageSnapshot("stEmpty");
-  });
-});
+    cy.get(".block-container").matchImageSnapshot("stEmpty")
+  })
+})

@@ -17,15 +17,15 @@
 
 describe("st.altair_chart", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.visit("http://localhost:3000/")
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
-  });
+    cy.get(".decoration").invoke("css", "display", "none")
+  })
 
   it("displays an altair chart", () => {
     cy.get(".element-container .stVegaLiteChart")
       .find("canvas")
-      .should("have.class", "marks");
-  });
-});
+      .should("have.class", "marks")
+  })
+})

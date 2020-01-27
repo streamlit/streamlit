@@ -17,19 +17,19 @@
 
 describe("st.text_input", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.visit("http://localhost:3000/")
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
-  });
+    cy.get(".decoration").invoke("css", "display", "none")
+  })
 
   it("shows widget correctly", () => {
-    cy.get(".stTextInput").should("have.length", 4);
+    cy.get(".stTextInput").should("have.length", 4)
 
     cy.get(".stTextInput").each((el, idx) => {
-      return cy.wrap(el).matchImageSnapshot("text_input" + idx);
-    });
-  });
+      return cy.wrap(el).matchImageSnapshot("text_input" + idx)
+    })
+  })
 
   it("has correct default values", () => {
     cy.get(".stMarkdown").should(
@@ -38,13 +38,13 @@ describe("st.text_input", () => {
         'value 2: " default text "' +
         'value 3: " 1234 "' +
         'value 4: " None "'
-    );
-  });
+    )
+  })
 
   it("sets value correctly when user types", () => {
     cy.get(".stTextInput input")
       .first()
-      .type("test input");
+      .type("test input")
 
     cy.get(".stMarkdown").should(
       "have.text",
@@ -52,13 +52,13 @@ describe("st.text_input", () => {
         'value 2: " default text "' +
         'value 3: " 1234 "' +
         'value 4: " None "'
-    );
-  });
+    )
+  })
 
   it("sets value correctly on enter keypress", () => {
     cy.get(".stTextInput input")
       .first()
-      .type("test input{enter}");
+      .type("test input{enter}")
 
     cy.get(".stMarkdown").should(
       "have.text",
@@ -66,14 +66,14 @@ describe("st.text_input", () => {
         'value 2: " default text "' +
         'value 3: " 1234 "' +
         'value 4: " None "'
-    );
-  });
+    )
+  })
 
   it("sets value correctly on blur", () => {
     cy.get(".stTextInput input")
       .first()
       .type("test input")
-      .blur();
+      .blur()
 
     cy.get(".stMarkdown").should(
       "have.text",
@@ -81,6 +81,6 @@ describe("st.text_input", () => {
         'value 2: " default text "' +
         'value 3: " 1234 "' +
         'value 4: " None "'
-    );
-  });
-});
+    )
+  })
+})

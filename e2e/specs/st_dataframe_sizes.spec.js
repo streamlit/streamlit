@@ -16,15 +16,15 @@
  */
 
 describe("Dataframes", () => {
-  const DF_SELECTOR = ".stDataFrame";
-  const TABLE_SELECTOR = ".stTable > table.table";
+  const DF_SELECTOR = ".stDataFrame"
+  const TABLE_SELECTOR = ".stTable > table.table"
 
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.visit("http://localhost:3000/")
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
-  });
+    cy.get(".decoration").invoke("css", "display", "none")
+  })
 
   it("show a tooltip for each cell", () => {
     // Each cell's title should be equal to its text content.
@@ -33,20 +33,20 @@ describe("Dataframes", () => {
       .first()
       .within(() => {
         cy.get(`div.data`).each(el => {
-          expect(el.text()).to.eq(el.attr("title"));
-        });
-      });
-  });
+          expect(el.text()).to.eq(el.attr("title"))
+        })
+      })
+  })
 
   it("have consistent st.dataframe visuals", () => {
     cy.get(DF_SELECTOR).each((el, idx) => {
-      return cy.wrap(el).matchImageSnapshot("dataframe-visuals" + idx);
-    });
-  });
+      return cy.wrap(el).matchImageSnapshot("dataframe-visuals" + idx)
+    })
+  })
 
   it("have consistent st.table visuals", () => {
     cy.get(TABLE_SELECTOR).each((el, idx) => {
-      return cy.wrap(el).matchImageSnapshot("table-visuals" + idx);
-    });
-  });
-});
+      return cy.wrap(el).matchImageSnapshot("table-visuals" + idx)
+    })
+  })
+})

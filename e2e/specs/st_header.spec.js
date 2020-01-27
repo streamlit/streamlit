@@ -17,13 +17,13 @@
 
 describe("st.header", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
-  });
+    cy.visit("http://localhost:3000/")
+  })
 
   it("displays a header", () => {
     cy.get(".element-container .stMarkdown h2").should(
       "contain",
       "This header is awesome!"
-    );
-  });
-});
+    )
+  })
+})

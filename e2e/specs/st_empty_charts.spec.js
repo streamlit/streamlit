@@ -17,30 +17,30 @@
 
 describe("handles empty charts", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.visit("http://localhost:3000/")
 
     // Wait for the site to be fully loaded
     cy.get(".element-container").should($els => {
-      expect($els).to.have.length.of.at.least(10);
-    });
+      expect($els).to.have.length.of.at.least(10)
+    })
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
-  });
+    cy.get(".decoration").invoke("css", "display", "none")
+  })
 
   it("gracefully handles no data", () => {
     // vega lite
     cy.get(".element-container .stVegaLiteChart").each((el, i) => {
-      return cy.wrap(el).matchImageSnapshot(`stVegaLiteChart-${i}`);
-    });
+      return cy.wrap(el).matchImageSnapshot(`stVegaLiteChart-${i}`)
+    })
 
     // pyplot
-    cy.get(".stImage > img").should("have.attr", "src");
+    cy.get(".stImage > img").should("have.attr", "src")
 
     // BUG https://github.com/cypress-io/cypress/issues/4322
     // cy.get('.stDeckGlChart canvas')
     //  .should('exist')
-  });
+  })
 
   it("handles no data with exception", () => {
     cy.get(".stException .message")
@@ -48,34 +48,34 @@ describe("handles empty charts", () => {
       .should(
         "have.text",
         "ValueError: Vega-Lite charts require a non-empty spec dict."
-      );
+      )
 
     cy.get(".stException .message")
       .eq(1)
       .should(
         "have.text",
         "ValueError: Vega-Lite charts require a non-empty spec dict."
-      );
+      )
 
     cy.get(".stException .message")
       .eq(2)
       .should(
         "have.text",
         "ValueError: Vega-Lite charts require a non-empty spec dict."
-      );
+      )
 
     cy.get(".stException .message")
       .eq(3)
       .should(
         "have.text",
         "ValueError: Vega-Lite charts require a non-empty spec dict."
-      );
+      )
 
     cy.get(".stException .message")
       .eq(4)
       .should(
         "have.text",
         "TypeError: altair_chart() missing 1 required positional argument: 'altair_chart'"
-      );
-  });
-});
+      )
+  })
+})
