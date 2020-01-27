@@ -28,6 +28,7 @@ import io
 import os
 import sys
 import textwrap
+import tempfile
 import threading
 
 import streamlit as st
@@ -370,7 +371,10 @@ class CodeHasher:
                 return h.digest()
             elif inspect.isbuiltin(obj):
                 return self.to_bytes(obj.__name__)
-            elif hasattr(obj, "name") and isinstance(obj, io.IOBase):
+            elif hasattr(obj, "name") and (
+                isinstance(obj, io.IOBase) or
+                isinstance(obj, tempfile._TemporaryFileWrapper)
+            ):
                 # Hash files as name + last modification date + offset.
                 h = hashlib.new(self.name)
                 self._update(h, obj.name)
