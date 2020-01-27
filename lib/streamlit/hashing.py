@@ -375,7 +375,8 @@ class CodeHasher:
             elif hasattr(obj, "name") and (
                 isinstance(obj, io.IOBase)
                 or isinstance(obj, tempfile._TemporaryFileWrapper)
-                or not compatibility.is_running_py3() and isinstance(obj, file)
+                or (not compatibility.is_running_py3()
+                and isinstance(obj, file))
             ):
                 # Hash files as name + last modification date + offset.
                 h = hashlib.new(self.name)
