@@ -32,6 +32,7 @@ import tempfile
 import threading
 
 import streamlit as st
+from streamlit import compatibility
 from streamlit import config
 from streamlit import file_util
 from streamlit import type_util
@@ -374,6 +375,7 @@ class CodeHasher:
             elif hasattr(obj, "name") and (
                 isinstance(obj, io.IOBase)
                 or isinstance(obj, tempfile._TemporaryFileWrapper)
+                or not compatibility.is_running_py3() and isinstance(obj, file)
             ):
                 # Hash files as name + last modification date + offset.
                 h = hashlib.new(self.name)
