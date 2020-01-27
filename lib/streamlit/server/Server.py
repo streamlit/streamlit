@@ -37,7 +37,8 @@ from streamlit.ReportSession import ReportSession
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.UploadedFileManager import UploadedFileManager
+from streamlit.server.UploadFileHandler import HTTPUploadedFileManager
+from streamlit.server.UploadFileHandler import UploadFileHandler
 from streamlit.server.routes import AddSlashHandler
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
@@ -194,6 +195,7 @@ class Server(object):
         self._state = None
         self._set_state(State.INITIAL)
         self._message_cache = ForwardMsgCache()
+        self._uploaded_file_mgr = HTTPUploadedFileManager()
 
     def start(self, on_started):
         """Start the server.
@@ -248,6 +250,11 @@ class Server(object):
                 make_url_path_regex(base, "message"),
                 MessageCacheHandler,
                 dict(cache=self._message_cache),
+            ),
+            (
+                make_url_path_regex(base, "upload_file"),
+                UploadFileHandler,
+                dict(file_mgr=self._uploaded_file_mgr),
             ),
         ]
 
