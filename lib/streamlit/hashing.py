@@ -34,10 +34,9 @@ import streamlit as st
 from streamlit import config
 from streamlit import file_util
 from streamlit import type_util
-from streamlit.errors import UnhashableType
+from streamlit.errors import UnhashableType, UserHashError, InternalHashError
 from streamlit.folder_black_list import FolderBlackList
 from streamlit.compatibility import setup_2_3_shims
-from streamlit.logger import get_logger
 
 if sys.version_info >= (3, 0):
     from streamlit.hashing_py3 import get_referenced_objects
@@ -52,8 +51,6 @@ try:
 except ImportError:
     import pickle
 
-
-LOGGER = get_logger(__name__)
 
 # If a dataframe has more than this many rows, we consider it large and hash a sample.
 PANDAS_ROWS_LARGE = 100000
@@ -211,6 +208,56 @@ def _hashing_error_message(bad_type):
         for more details.
     """
         % {"bad_type": str(bad_type).split("'")[1]}
+    ).strip("\n")
+
+
+def _hashing_internal_error_message(exc, bad_type):
+    return textwrap.dedent(
+        """
+        %(exc)s
+
+        Cannot hash object of type %(bad_type)s
+
+        While caching some code, Streamlit encountered an object of
+        type `%(bad_type)s`. You’ll need to help Streamlit understand how to
+        hash that type with the `hash_funcs` argument. For example:
+
+        ```
+        @st.cache(hash_funcs={%(bad_type)s: my_hash_func})
+        def my_func(...):
+            ...
+        ```
+
+        Please see the [`hash_funcs` documentation]
+        (https://streamlit.io/docs/advanced_concepts.html#advanced-caching)
+        for more details.
+    """
+        % {"bad_type": str(bad_type).split("'")[1]}
+    ).strip("\n")
+
+
+def _hashing_user_error_message(exc):
+    return textwrap.dedent(
+        """
+        %(exception)s
+
+        Cannot hash object of type ?
+
+        While caching some code, Streamlit encountered an object of
+        type ?. You’ll need to help Streamlit understand how to
+        hash that type with the `hash_funcs` argument. For example:
+
+        ```
+        @st.cache(hash_funcs={?: my_hash_func})
+        def my_func(...):
+            ...
+        ```
+
+        Please see the [`hash_funcs` documentation]
+        (https://streamlit.io/docs/advanced_concepts.html#advanced-caching)
+        for more details.
+    """
+        % {"exception": str(exc)}
     ).strip("\n")
 
 
@@ -437,15 +484,25 @@ class CodeHasher:
                 h = hashlib.new(self.name)
 
                 self._update(h, type(obj).__name__.encode() + b":")
-                for e in obj.__reduce__():
+                try:
+                    reduce_data = obj.__reduce__()
+                except:
+                    msg = _hashing_error_message(type(obj))
+                    raise UnhashableType(msg)
+
+                for e in reduce_data:
                     self._update(h, e, context)
                 return h.digest()
-        except UnhashableType as e:
-            raise e
+        except (UnhashableType, UserHashError, InternalHashError):
+            raise
         except Exception as e:
-            LOGGER.error(e)
-            msg = _hashing_error_message(type(obj))
-            raise UnhashableType(msg)
+            import traceback
+            traceback.print_exc()
+            # TODO
+            # include stacktrace from e in the message?
+            # include info about the obj in the message?
+            msg = _hashing_internal_error_message(e, type(obj))
+            raise InternalHashError(msg)
 
     def _code_to_bytes(self, code, context):
         h = hashlib.new(self.name)
@@ -464,7 +521,13 @@ class CodeHasher:
 
         # Hash non-local names and functions referenced by the bytecode.
         if hasattr(dis, "get_instructions"):  # get_instructions is new since Python 3.4
-            for ref in get_referenced_objects(code, context):
+            try:
+                referenced_objects = get_referenced_objects(code, context)
+            except Exception as e:
+                msg = _hashing_user_error_message(e)
+                raise UserHashError(msg)
+
+            for ref in referenced_objects:
                 self._update(h, ref, context)
         else:
             # This won't correctly follow nested calls like `foo.bar.baz()`.

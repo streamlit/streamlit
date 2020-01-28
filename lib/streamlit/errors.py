@@ -48,3 +48,11 @@ class DuplicateWidgetID(StreamlitAPIException):
 
 class UnhashableType(StreamlitAPIException):
     pass
+
+
+class UserHashError(StreamlitAPIException):
+    pass
+
+
+class InternalHashError(StreamlitAPIException):
+    pass
