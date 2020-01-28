@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Server.py unit tests"""
+"""UploadFileHandler.py unit tests"""
 
 import requests
 import tornado.gen
@@ -54,20 +54,21 @@ class UploadFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         """Uploading a file should populate our file_mgr."""
         params = {
             "image.png": ("image.png", b"1234"),
-            "reportSessionId": (None, "reportIdString"),
-            "widgetId": (None, "widgetIdString"),
-            "lastModified": (None, "lastModifiedString"),
+            "reportSessionId": (None, "fooReport"),
+            "widgetId": (None, "barWidget"),
         }
         response = self._upload_file(params)
         self.assertEqual(200, response.code)
+        self.assertEqual(
+            b"1234", self.file_mgr.get_file_data("fooReport", "barWidget")
+        )
 
     def test_missing_params(self):
         """Missing params in the body should fail with 400 status."""
         params = {
             "image.png": ("image.png", b"1234"),
-            "reportSessionId": (None, "reportIdString"),
-            # "widgetId": (None, 'widgetIdString'),
-            "lastModified": (None, "lastModifiedString"),
+            "reportSessionId": (None, "fooReport"),
+            # "widgetId": (None, 'barWidget'),
         }
 
         response = self._upload_file(params)
@@ -77,10 +78,9 @@ class UploadFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def test_missing_file(self):
         """Missing file should fail with 400 status."""
         params = {
-            # "image.png": ("image.png", b'1234'),
-            "reportSessionId": (None, "reportIdString"),
-            "widgetId": (None, "widgetIdString"),
-            "lastModified": (None, "lastModifiedString"),
+            # "image.png": ("image.png", b"1234"),
+            "reportSessionId": (None, "fooReport"),
+            "widgetId": (None, "barWidget"),
         }
         response = self._upload_file(params)
         self.assertEqual(400, response.code)
