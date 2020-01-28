@@ -20,7 +20,7 @@
  * can't run other tests after we kill the server
  */
 describe("disable widgets", () => {
-  beforeEach(() => {
+  before(() => {
     cy.visit("http://localhost:3000/")
 
     // Make the ribbon decoration line disappear
@@ -36,19 +36,12 @@ describe("disable widgets", () => {
       win.streamlitDebug.closeConnection()
 
       cy.get(".stButton button").should("be.disabled")
-
       cy.get(".stCheckbox input").should("be.disabled")
-
       cy.get(".stDateInput input").should("be.disabled")
-
       cy.get(".stRadio input").should("be.disabled")
-
       cy.get(".stSelectbox input").should("be.disabled")
-
       cy.get(".stTextArea textarea").should("be.disabled")
-
       cy.get(".stTextInput input").should("be.disabled")
-
       cy.get(".stTimeInput input").should("be.disabled")
 
       // slider doesn't have a `disabled` attribute

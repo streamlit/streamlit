@@ -16,9 +16,11 @@
  */
 
 describe("st.dataframe", () => {
-  beforeEach(() => {
+  before(() => {
     cy.visit("http://localhost:3000/")
+  })
 
+  beforeEach(() => {
     cy.get(".element-container .stDataFrame")
       .find(".ReactVirtualized__Grid__innerScrollContainer")
       .find(".dataframe.data")
@@ -32,12 +34,12 @@ describe("st.dataframe", () => {
   it("checks number of cells", () => {
     cy.get("@cells")
       .its("length")
-      .should("eq", 100)
+      .should("eq", 9)
   })
 
-  it("contains all numbers from 0..99", () => {
+  it("contains all numbers from 0..8", () => {
     cy.get("@cells").each(($element, index) => {
-      return cy.wrap($element).should("contain", index)
+      cy.wrap($element).should("contain", index)
     })
   })
 
@@ -45,9 +47,5 @@ describe("st.dataframe", () => {
     cy.get("@cells")
       .first()
       .should("have.css", "background-color", "rgb(255, 255, 0)")
-  })
-
-  it("looks the same", () => {
-    // (HK) TODO: diff screenshots
   })
 })

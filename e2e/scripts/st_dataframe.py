@@ -23,6 +23,6 @@ def highlight_first(value):
     return "background-color: %s" % color
 
 
-grid = np.arange(0, 100, 1).reshape(10, 10)
+grid = np.arange(0, 9, 1).reshape(3, 3)
 df = pd.DataFrame(grid)
 st.dataframe(df.style.applymap(highlight_first))

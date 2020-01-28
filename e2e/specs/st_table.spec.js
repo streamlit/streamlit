@@ -16,9 +16,11 @@
  */
 
 describe("st.table", () => {
-  beforeEach(() => {
+  before(() => {
     cy.visit("http://localhost:3000/")
+  })
 
+  beforeEach(() => {
     cy.get(".element-container .stTable tbody tr").as("rows")
     cy.get(".element-container .stTable tbody td").as("cells")
   })
@@ -30,22 +32,18 @@ describe("st.table", () => {
   it("checks number of rows", () => {
     cy.get("@rows")
       .its("length")
-      .should("eq", 10)
+      .should("eq", 3)
   })
 
   it("checks number of cells", () => {
     cy.get("@cells")
       .its("length")
-      .should("eq", 100)
+      .should("eq", 9)
   })
 
-  it("contains all numbers from 0..99", () => {
+  it("contains all numbers from 0..8", () => {
     cy.get("@cells").each(($element, index) => {
-      return cy.wrap($element).should("contain", index)
+      cy.wrap($element).should("contain", index)
     })
-  })
-
-  it("looks the same", () => {
-    // (HK) TODO: diff screenshots
   })
 })

@@ -16,7 +16,7 @@
  */
 
 describe("st.date_input", () => {
-  beforeEach(() => {
+  before(() => {
     cy.visit("http://localhost:3000/")
   })
 

@@ -16,7 +16,7 @@
  */
 
 describe("kill server", () => {
-  beforeEach(() => {
+  before(() => {
     cy.visit("http://localhost:3000/")
 
     // Make the ribbon decoration line disappear

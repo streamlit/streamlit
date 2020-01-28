@@ -16,7 +16,7 @@
  */
 
 describe("st.number_input", () => {
-  beforeEach(() => {
+  before(() => {
     cy.visit("http://localhost:3000/")
 
     // Make the ribbon decoration line disappear
@@ -27,7 +27,6 @@ describe("st.number_input", () => {
     cy.get(".stNumberInput").should("have.length", 3)
 
     cy.get(".stNumberInput").each((el, idx) => {
-      // @ts-ignore
       return cy.wrap(el).matchImageSnapshot("number_input" + idx)
     })
   })

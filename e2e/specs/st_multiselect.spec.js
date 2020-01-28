@@ -48,6 +48,7 @@ describe("st.multiselect", () => {
           .should("have.text", "selectbox 1searchChoose an option")
       })
     })
+
     describe("when there are no valid options", () => {
       it("should show the correct placeholder", () => {
         cy.get(".stMultiSelect")
@@ -130,6 +131,7 @@ describe("st.multiselect", () => {
             .eq(1) // this is the 'close button' element for 'Male'
             .click()
         })
+
         it("outputs the correct value", () => {
           cy.get(".stText")
             .should("have.length", 4)
@@ -146,6 +148,7 @@ describe("st.multiselect", () => {
             .eq(4) // this is the clear button element
             .click()
         })
+
         it("outputs the correct value", () => {
           cy.get(".stText")
             .should("have.length", 4)
