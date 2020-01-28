@@ -497,6 +497,7 @@ class CodeHasher:
             raise
         except Exception as e:
             import traceback
+
             traceback.print_exc()
             # TODO
             # include stacktrace from e in the message?
