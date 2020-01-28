@@ -79,10 +79,10 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual("audio", ds.name)
         self.assertEqual("streamlit", ds.module)
         if is_python_2:
-            self.assertEqual("<type 'function'>", ds.type)
+            self.assertEqual("<type 'instancemethod'>", ds.type)
             self.assertEqual("(data, format=u'audio/wav', start_time=0)", ds.signature)
         else:
-            self.assertEqual("<class 'function'>", ds.type)
+            self.assertEqual("<class 'method'>", ds.type)
             self.assertEqual("(data, format='audio/wav', start_time=0)", ds.signature)
         self.assertTrue(ds.doc_string.startswith("Display an audio player"))
 
@@ -94,9 +94,9 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual("dataframe", ds.name)
         self.assertEqual("streamlit", ds.module)
         if is_python_2:
-            self.assertEqual("<type 'function'>", ds.type)
+            self.assertEqual("<type 'instancemethod'>", ds.type)
         else:
-            self.assertEqual("<class 'function'>", ds.type)
+            self.assertEqual("<class 'method'>", ds.type)
         self.assertEqual("(data=None, width=None, height=None)", ds.signature)
         self.assertTrue(ds.doc_string.startswith("Display a dataframe"))
 

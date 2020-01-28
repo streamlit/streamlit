@@ -56,7 +56,7 @@ class VideoRecordedDialog extends PureComponent<Props> {
               <p>Preview your video below:</p>
               <video src={videoSource} controls />
             </div>
-            <div className="third-column first-step"></div>
+            <div className="third-column first-step" />
 
             <div className="first-column second-step">Step 2 →</div>
             <div className="second-column second-step">
@@ -80,7 +80,10 @@ class VideoRecordedDialog extends PureComponent<Props> {
             <div className="first-column third-step">Step 3 →</div>
             <div className="second-column third-step">
               Share it with the world on Twitter, LinkedIn, YouTube, or just
-              plain email! 😀
+              plain email!{" "}
+              <span role="img" aria-label="Happy">
+                😀
+              </span>
             </div>
           </div>
         </ModalBody>

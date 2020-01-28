@@ -91,11 +91,6 @@ class ReportSession(object):
 
         self._uploaded_file_mgr = UploadedFileManager()
 
-        self._main_dg = DeltaGenerator(enqueue=self.enqueue, container=BlockPath.MAIN)
-        self._sidebar_dg = DeltaGenerator(
-            enqueue=self.enqueue, container=BlockPath.SIDEBAR
-        )
-
         self._widget_states = WidgetStates()
         self._local_sources_watcher = LocalSourcesWatcher(
             self._report, self._on_source_file_changed
@@ -543,8 +538,6 @@ class ReportSession(object):
         # Create the ScriptRunner, attach event handlers, and start it
         self._scriptrunner = ScriptRunner(
             report=self._report,
-            main_dg=self._main_dg,
-            sidebar_dg=self._sidebar_dg,
             widget_states=self._widget_states,
             request_queue=self._script_request_queue,
             uploaded_file_mgr=self._uploaded_file_mgr,

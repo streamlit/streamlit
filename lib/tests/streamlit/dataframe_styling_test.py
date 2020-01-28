@@ -27,25 +27,18 @@ import numpy as np
 import pandas as pd
 from parameterized import parameterized
 
+import streamlit as st
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.ReportQueue import ReportQueue
 from streamlit.proto.DataFrame_pb2 import CellStyle
 from streamlit.proto.DataFrame_pb2 import CSSStyle
+from tests import testutil
 
 
-class DataFrameStylingTest(unittest.TestCase):
+class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
     """Tests marshalling of pandas.Styler dataframe styling data
     with both st.dataframe and st.table.
     """
-
-    def setUp(self):
-        self._report_queue = ReportQueue()
-
-        def enqueue(msg):
-            self._report_queue.enqueue(msg)
-            return True
-
-        self._dg = DeltaGenerator(enqueue)
 
     @parameterized.expand([("dataframe", "data_frame"), ("table", "table")])
     def test_unstyled_has_no_style(self, element, proto):
@@ -55,7 +48,7 @@ class DataFrameStylingTest(unittest.TestCase):
 
         df = pd.DataFrame({"A": [1, 2, 3, 4, 5]})
 
-        getattr(self._dg, element)(df.style)
+        getattr(st, element)(df.style)
         proto_df = getattr(self._get_element(), proto)
 
         rows, cols = df.shape
@@ -74,7 +67,7 @@ class DataFrameStylingTest(unittest.TestCase):
 
         df = pd.DataFrame({"A": values})
 
-        get_delta = getattr(self._dg, element)
+        get_delta = getattr(st, element)
         get_delta(df.style.format("{:.2%}"))
 
         proto_df = getattr(self._get_element(), proto)
@@ -92,7 +85,7 @@ class DataFrameStylingTest(unittest.TestCase):
 
         df = pd.DataFrame({"A": values})
 
-        get_delta = getattr(self._dg, element)
+        get_delta = getattr(st, element)
         get_delta(
             df.style.highlight_max(color="yellow").applymap(
                 lambda val: "color: red" if val < 0 else "color: black"
@@ -115,7 +108,7 @@ class DataFrameStylingTest(unittest.TestCase):
             {css_s("color", "black")},
         ]
 
-        get_delta = getattr(self._dg, element)
+        get_delta = getattr(st, element)
         x = get_delta(df1.style.applymap(lambda val: "color: red"))
 
         x.add_rows(df2.style.applymap(lambda val: "color: black"))
@@ -136,7 +129,7 @@ class DataFrameStylingTest(unittest.TestCase):
             {css_s("color", "black")},
         ]
 
-        x = getattr(self._dg, element)(df1)
+        x = getattr(st, element)(df1)
         x.add_rows(df2.style.applymap(lambda val: "color: black"))
 
         proto_df = getattr(self._get_element(), proto)
@@ -155,7 +148,7 @@ class DataFrameStylingTest(unittest.TestCase):
             set(),
         ]
 
-        get_delta = getattr(self._dg, element)
+        get_delta = getattr(st, element)
         x = get_delta(df1.style.applymap(lambda val: "color: black"))
 
         x.add_rows(df2)
@@ -165,7 +158,7 @@ class DataFrameStylingTest(unittest.TestCase):
 
     def _get_element(self):
         """Returns the most recent element in the DeltaGenerator queue"""
-        return self._report_queue._queue[-1].delta.new_element
+        return self.get_delta_from_queue().new_element
 
     def _assert_column_display_values(self, proto_df, col, display_values):
         """Asserts that cells in a column have the given display_values"""
