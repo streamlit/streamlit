@@ -374,6 +374,7 @@ class CodeHasher:
                 return self.to_bytes(obj.__name__)
             elif hasattr(obj, "name") and (
                 isinstance(obj, io.IOBase)
+                # Handle temporary files used during testing
                 or isinstance(obj, tempfile._TemporaryFileWrapper)
                 or (not compatibility.is_running_py3() and isinstance(obj, file))
             ):
