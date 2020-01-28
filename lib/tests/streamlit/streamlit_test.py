@@ -278,9 +278,9 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             el.doc_string.doc_string.startswith("Display text in header formatting.")
         )
         if sys.version_info >= (3, 0):
-            self.assertEqual(el.doc_string.type, "<class 'function'>")
+            self.assertEqual(el.doc_string.type, "<class 'method'>")
         else:
-            self.assertEqual(el.doc_string.type, u"<type 'function'>")
+            self.assertEqual(el.doc_string.type, u"<type 'instancemethod'>")
         self.assertEqual(el.doc_string.signature, "(body)")
 
     def test_st_image_PIL_image(self):

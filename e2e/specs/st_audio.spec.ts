@@ -25,7 +25,7 @@ describe("st.audio", () => {
   });
 
   it("displays an audio player", () => {
-    cy.get(".element-container").find("audio.stAudio");
+    cy.get(".element-container .stAudio");
   });
 
   it("has controls", () => {
