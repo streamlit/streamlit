@@ -26,7 +26,10 @@ See highlights, bug fixes, and known issues for Streamlit releases:
 
 _Release date: January 29, 2019_
 
-Bugfix release!
+**Highlights:**
+
+- ⌨️ Support for password fields! Just pass `type="password"` to
+  `st.text_input()`.
 
 **Notable fixes:**
 
