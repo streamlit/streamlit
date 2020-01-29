@@ -136,19 +136,19 @@ class MainMenu extends PureComponent<Props, State> {
 
           <DropdownItem divider />
 
-          {this.props.screenCastState === "COUNTDOWN" && (
-            <DropdownItem onClick={this.props.screencastCallback}>
-              <span>Cancel screencast</span>
-              <span className="shortcut">ESC</span>
-            </DropdownItem>
-          )}
-
           {this.props.screenCastState !== "RECORDING" &&
             this.props.screenCastState !== "COUNTDOWN" && (
               <DropdownItem onClick={this.props.screencastCallback}>
                 Record a screencast
               </DropdownItem>
             )}
+
+          {this.props.screenCastState === "COUNTDOWN" && (
+            <DropdownItem onClick={this.props.screencastCallback}>
+              <span>Cancel screencast</span>
+              <span className="shortcut">ESC</span>
+            </DropdownItem>
+          )}
 
           {this.props.screenCastState === "RECORDING" && (
             <DropdownItem
