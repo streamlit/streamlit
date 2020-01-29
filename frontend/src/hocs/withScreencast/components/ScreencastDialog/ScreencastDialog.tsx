@@ -71,7 +71,7 @@ class ScreencastDialog extends PureComponent<Props, State> {
             can easily share what you're seeing with others.
           </p>
           <p>
-            <label>
+            <label style={{ margin: 0 }}>
               <input
                 type="checkbox"
                 name="recordAudio"
@@ -81,7 +81,7 @@ class ScreencastDialog extends PureComponent<Props, State> {
               Also record audio
             </label>
           </p>
-          <p>
+          <p style={{ margin: 0 }}>
             Press <kbd>Esc</kbd> any time to stop recording.
           </p>
         </ModalBody>

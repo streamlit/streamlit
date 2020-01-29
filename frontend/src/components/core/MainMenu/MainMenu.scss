@@ -16,18 +16,15 @@
 
 @import "src/assets/css/variables";
 
-@keyframes pulse {
+@keyframes recording-indicator-pulse {
   0% {
-    box-shadow: 0 0 4px red;
-    filter: brightness(1);
+    box-shadow: 0 0 0.25rem $red;
   }
   50% {
-    box-shadow: 0 0 8px 2px red;
-    filter: brightness(2);
+    box-shadow: 0 0 0.5rem 0.25rem $red;
   }
   100% {
-    box-shadow: 0 0 4px red;
-    filter: brightness(1);
+    box-shadow: 0 0 0.25rem $red;
   }
 }
 
@@ -56,23 +53,23 @@
   }
 
   .stop-recording {
-    color: red;
+    color: $red;
 
     .shortcut {
-      color: red;
+      color: $red;
     }
   }
 
   .recording-indicator {
     display: block;
-    bottom: 6px;
-    right: 5px;
+    bottom: 0.5rem;
+    right: 0.5rem;
     position: absolute;
     background-color: red;
-    width: 10px;
-    height: 10px;
+    width: 0.5rem;
+    height: 0.5rem;
     border-radius: 50px;
-    box-shadow: 0 0 8px 2px red;
-    animation: pulse 2s linear 1s infinite;
+    box-shadow: 0 0 0.25rem $red;
+    animation: recording-indicator-pulse 2s linear infinite;
   }
 }
