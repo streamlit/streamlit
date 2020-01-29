@@ -448,7 +448,6 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.imgs.imgs[0].caption, "")
         self.assertTrue(el.imgs.imgs[0].url.startswith("/media"))
 
-
     def test_st_pyplot_clear_figure(self):
         """st.pyplot should clear the passed-in figure."""
         if sys.version_info < (3, 0):

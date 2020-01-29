@@ -69,7 +69,7 @@ def create_image(size, format="RGB"):
         return image
 
 
-#TODO: update for PR #1029
+# TODO: update for PR #1029
 IMAGES = {
     "img_32_32_3_rgb": {
         "pil": create_image(32, "RGB"),
@@ -131,7 +131,7 @@ IMAGES = {
 class ImageProtoTest(testutil.DeltaGeneratorTestCase):
     """Test streamlit.image_proto."""
 
-    #TODO: update for PR #1029
+    # TODO: update for PR #1029
     @parameterized.expand(
         [
             (
