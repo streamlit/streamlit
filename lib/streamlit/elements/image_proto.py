@@ -124,9 +124,7 @@ def _normalize_to_bytes(data, width, format):
             else:
                 mime_type = "image/" + format
 
-    return data, mime_type 
-    #b64 = base64.b64encode(data).decode("utf-8")
-    #return b64, mime_type
+    return data, mime_type
 
 
 def _clip_image(image, clamp):
@@ -233,17 +231,11 @@ def marshall_images(
             except TypeError:
                 data = image
 
-        # By default, image payload is bytes
+        # Assume input in bytes.
         else:
             data = image
 
         (data, mime_type) = _normalize_to_bytes(data, width, format)
         this_file = _media_filemanager.add(data, mimetype=mime_type)
         proto_img.url = this_file.url
-
-        #(b64, mime_type) = _bytes_to_b64(data, width, format)
-        #proto_img.data.base64 = b64
-        #proto_img.data.mime_type = mime_type
-
-        
 
