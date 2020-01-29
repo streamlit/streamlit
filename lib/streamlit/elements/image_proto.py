@@ -238,4 +238,3 @@ def marshall_images(
         (data, mime_type) = _normalize_to_bytes(data, width, format)
         this_file = _media_filemanager.add(data, mimetype=mime_type)
         proto_img.url = this_file.url
-

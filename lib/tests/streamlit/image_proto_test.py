@@ -69,6 +69,7 @@ def create_image(size, format="RGB"):
         return image
 
 
+#TODO: update for PR #1029
 IMAGES = {
     "img_32_32_3_rgb": {
         "pil": create_image(32, "RGB"),
@@ -130,6 +131,7 @@ IMAGES = {
 class ImageProtoTest(testutil.DeltaGeneratorTestCase):
     """Test streamlit.image_proto."""
 
+    #TODO: update for PR #1029
     @parameterized.expand(
         [
             (
@@ -150,6 +152,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
             ),
         ]
     )
+    # TODO: update for #1029
     def test_marshall_images(self, data_in, base64_out, format):
         """Test streamlit.image_proto.marshall_images.
         Need to test the following:
@@ -167,8 +170,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         st.image(data_in, format=format)
         imglist = self.get_delta_from_queue().new_element.imgs
         self.assertEqual(len(imglist.imgs), 1)
-        self.assertEqual(imglist.imgs[0].data.base64, base64_out)
-        self.assertEqual(imglist.imgs[0].data.mime_type, "image/" + format)
+        self.assertTrue(imglist.imgs[0].url.startswith("/media"))
 
     def test_BytesIO_to_bytes(self):
         """Test streamlit.image_proto.BytesIO_to_bytes."""
@@ -193,13 +195,6 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
             "Channel can only be 1, 3, or 4 got 2. Shape is (1, 2, 2)",
             str(shape2_exc.value),
         )
-
-    def test_bytes_to_b64(self):
-        """Test streamlit.image_proto.bytes_to_b64.
-        Need to test the following:
-        * if width is greater then requested then shrink
-        """
-        pass
 
     def test_clip_image(self):
         """Test streamlit.image_proto.clip_image.

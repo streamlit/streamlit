@@ -291,7 +291,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.imgs.width, 100)
         self.assertEqual(el.imgs.imgs[0].caption, "some caption")
-        self.assertTrue(el.imgs.imgs[0].data.base64.endswith(checksum))
+        self.assertTrue(el.imgs.imgs[0].url.startswith("/media"))
 
     def test_st_image_PIL_array(self):
         """Test st.image with a PIL array."""
@@ -302,6 +302,8 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         ]
         # Manually calculated by letting the test fail and copying and
         # pasting the result.
+
+        # TODO: update for #1029
         imgs_b64 = [
             "A1oDWgNaA9oFUoUBf3Xr7AgAAAAASUVORK5CYII=",
             "WgNaA1oDWgPaBVCHAX/y3CvgAAAAAElFTkSuQmCC",
@@ -320,7 +322,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.imgs.width, -2)
         for idx, checksum in enumerate(imgs_b64):
             self.assertEqual(el.imgs.imgs[idx].caption, "some caption")
-            self.assertTrue(el.imgs.imgs[idx].data.base64.endswith(checksum))
+            self.assertTrue(el.imgs.imgs[0].url.startswith("/media"))
 
     def test_st_image_with_single_url(self):
         """Test st.image with single url."""
@@ -444,9 +446,8 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.imgs.width, -2)
         self.assertEqual(el.imgs.imgs[0].caption, "")
+        self.assertTrue(el.imgs.imgs[0].url.startswith("/media"))
 
-        checksum = "iVBORw0KGgoAAAANSUhEUgAAAZAAAAGQCAYAAACAvzb"
-        self.assertTrue(el.imgs.imgs[0].data.base64.startswith(checksum))
 
     def test_st_pyplot_clear_figure(self):
         """st.pyplot should clear the passed-in figure."""
