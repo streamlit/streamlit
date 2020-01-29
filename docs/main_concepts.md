@@ -70,17 +70,18 @@ def my_slow_function(arg1, arg2):
     return the_output
 ```
 
-When you mark a function with the [`@st.cache`](api.html#streamlit.cache) decorator, it tells Streamlit that whenever the function is called it needs to check three things:
+When you mark a function with the [`@st.cache`](api.html#streamlit.cache) decorator, it tells Streamlit that whenever the function is called it needs to check a few things:
 
 1. The input parameters that you called the function with
-2. The body of the function
-3. The body of any function used inside the cached function
+2. The value of any external variable used in the function
+3. The body of the function
+4. The body of any function used inside the cached function
 
 If this is the first time Streamlit has seen these items with these exact values and in this exact combination and order, it runs the function and stores the result in a local cache. Think of the cache as a simple in-memory key-value store, where the key is a hash of all 3 above and the value is the actual output object passed by reference.
 
 Then, next time the cached function is called, if the key hasn’t changed, Streamlit will just skip executing the function altogether and, instead, return the output previously stored in the cache.
 
-For more information about the Streamlit cache, its configuration parameters, and its limitations, see [Caching](new-caching-doc).
+For more information about the Streamlit cache, its configuration parameters, and its limitations, see [Caching](caching.md).
 
 ## App model
 

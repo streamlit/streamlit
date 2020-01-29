@@ -9,6 +9,8 @@
    getting_started
 
    tutorial/index
+   caching
+   advanced_caching
    advanced_concepts
 
    api

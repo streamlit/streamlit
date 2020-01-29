@@ -15,7 +15,7 @@ Then, next time the cached function is called, if the key hasn’t changed, Stre
 
 The way Streamlit keeps track of changes in those three components is through hashing. For more information on this, see the Under the hood section.
 
-Finally, [`@st.cache`](api.html#streamlit.cache) supports arguments to configure the cache's behavior. You can find more information on those in our [API reference](api.html).
+Finally, [`@st.cache`](api.html#streamlit.cache) supports arguments to configure the cache's behavior. You can find more information on those in our [API reference](api.md).
 
 Let's take a look at a few examples that illustrate how caching works in a Streamlit app.
 
@@ -270,10 +270,12 @@ When you run this app for the first time, you should see three messages on the s
 
 So what's up?
 
-What's going on here is that Streamlit caches the output res by reference, when you mutated `res["output"]` outside the cached function you ended up inadvertently modifying the cache. This means every subsequent call to `expensive_computation(2, 21)` will return the wrong value!
+What's going on here is that Streamlit caches the output `res` by reference. When you mutated `res["output"]` outside the cached function you ended up inadvertently modifying the cache. This means every subsequent call to `expensive_computation(2, 21)` will return the wrong value!
 
 Since this behavior is usually not what you'd expect, Streamlit tries to be helpful show you a warning, along with some ideas about how to fix your code.
 
-In this specific case, the fix is just to not mutate `res["output"]` outside the cached function. There was no good reason for us to do that anyway! Another solution would be to clone the result value with `res = deepcopy(expensive_computation(2, 21))`. Check out the section entitled [Fixing caching issues](placeholder-for-new-doc) for more information on these approaches and more.
+In this specific case, the fix is just to not mutate `res["output"]` outside the cached function. There was no good reason for us to do that anyway! Another solution would be to clone the result value with `res = deepcopy(expensive_computation(2, 21))`. Check out the section entitled [Fixing caching issues](troubleshooting/caching-issues.md) for more information on these approaches and more.
 
-See also the [Advanced Caching](placeholder-for-new-doc)  section for some examples of how this by reference cache can be exploited in other useful ways.
+## Next steps
+
+* [Advanced Caching](advanced_caching.md)
