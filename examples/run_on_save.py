@@ -26,11 +26,13 @@ secs_to_wait = 5
 How to test this:
 """
 
-st.info("""
+st.info(
+    """
     **First of all, make sure you're running the dev version of Streamlit** or
     that this file lives outside the Streamlit distribution. Otherwise, changes
     to this file may be ignored!
-""")
+"""
+)
 
 """
 1. If run-on-save is on, make sure the page changes every few seconds. Then
