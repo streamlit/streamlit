@@ -55,7 +55,7 @@ interface Props {
   /** Show the About dialog. */
   aboutCallback: () => void
 
-  isScreencastRecording: boolean
+  screenCastState: string
 }
 
 interface State {
@@ -96,7 +96,7 @@ class MainMenu extends PureComponent<Props, State> {
         <DropdownToggle outline color="secondary" id="MainMenuButton">
           <Icon type="menu" />
 
-          {this.props.isScreencastRecording && (
+          {this.props.screenCastState === "RECORDING" && (
             <span className="recording-indicator" />
           )}
         </DropdownToggle>
@@ -136,13 +136,21 @@ class MainMenu extends PureComponent<Props, State> {
 
           <DropdownItem divider />
 
-          {!this.props.isScreencastRecording && (
+          {this.props.screenCastState === "COUNTDOWN" && (
             <DropdownItem onClick={this.props.screencastCallback}>
-              Record a screencast
+              <span>Cancel screencast</span>
+              <span className="shortcut">ESC</span>
             </DropdownItem>
           )}
 
-          {this.props.isScreencastRecording && (
+          {this.props.screenCastState !== "RECORDING" &&
+            this.props.screenCastState !== "COUNTDOWN" && (
+              <DropdownItem onClick={this.props.screencastCallback}>
+                Record a screencast
+              </DropdownItem>
+            )}
+
+          {this.props.screenCastState === "RECORDING" && (
             <DropdownItem
               onClick={this.props.screencastCallback}
               className="stop-recording"
