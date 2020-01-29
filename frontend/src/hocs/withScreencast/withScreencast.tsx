@@ -106,8 +106,8 @@ function withScreencast(
 
     startRecording = async (): Promise<any> => {
       const { recordAudio } = this.state
-      this.recorder = new ScreenCastRecorder({ recordAudio })
 
+      this.recorder = new ScreenCastRecorder({ recordAudio })
       await this.recorder.initialize()
 
       this.setState({
@@ -119,17 +119,28 @@ function withScreencast(
       let outputBlob
       const { currentState } = this.state
 
+      if (this.recorder == null) {
+        // Should never happen.
+        throw new Error("Countdown finished but recorder is null")
+      }
+
+      if (currentState === "COUNTDOWN") {
+        this.setState({
+          currentState: "OFF",
+        })
+      }
+
       if (
-        this.recorder &&
         currentState === "RECORDING" &&
         this.recorder.getState() !== "inactive"
-      )
+      ) {
         outputBlob = await this.recorder.stop()
 
-      this.setState({
-        outputBlob,
-        currentState: "PREVIEW_FILE",
-      })
+        this.setState({
+          outputBlob,
+          currentState: "PREVIEW_FILE",
+        })
+      }
     }
 
     onCountdownEnd = async (): Promise<any> => {

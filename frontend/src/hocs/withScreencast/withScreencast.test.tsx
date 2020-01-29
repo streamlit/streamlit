@@ -20,8 +20,13 @@ jest.mock("lib/ScreenCastRecorder")
 import React, { ComponentType } from "react"
 import { shallow } from "enzyme"
 
-import withScreencast from "./withScreencast"
-import { ScreencastDialog, UnsupportedBrowserDialog } from "./components"
+import withScreencast, { ScreenCastHOC } from "./withScreencast"
+import Countdown from "components/core/Countdown"
+import {
+  ScreencastDialog,
+  UnsupportedBrowserDialog,
+  VideoRecordedDialog,
+} from "./components"
 
 const testComponent: ComponentType = () => <div>test</div>
 
@@ -41,7 +46,7 @@ describe("withScreencast HOC", () => {
     expect(wrapper.find(testComponent).props().screenCast).toBeDefined()
   })
 
-  it("it should show a configuration dialog before start recording", () => {
+  describe("Steps", () => {
     const WithHoc = withScreencast(testComponent)
     const wrapper = shallow(<WithHoc />)
 
@@ -54,10 +59,54 @@ describe("withScreencast HOC", () => {
       .props()
       .screenCast.startRecording("screencast-filename")
 
-    expect(wrapper.find(ScreencastDialog).length).toBe(1)
+    it("should show a configuration dialog before start recording", () => {
+      expect(wrapper.find(ScreencastDialog).length).toBe(1)
+    })
+
+    it("should show a countdown after setup", async () => {
+      await wrapper
+        .find(ScreencastDialog)
+        .props()
+        .startRecording()
+
+      const countdownWrapper = wrapper.find(Countdown)
+
+      expect(countdownWrapper.length).toBe(1)
+    })
+
+    it("should be on recording state after countdown", async () => {
+      const countdownWrapper = wrapper.find(Countdown)
+
+      // @ts-ignore
+      wrapper.instance().recorder.start = jest.fn().mockReturnValue(true)
+
+      await countdownWrapper.props().endCallback()
+
+      const wrappedComponentProps: {
+        screenCast: ScreenCastHOC
+      } = wrapper.find(testComponent).props() as any
+
+      expect(wrappedComponentProps.screenCast.currentState).toBe("RECORDING")
+    })
+
+    it("should show recorded dialog after recording", async () => {
+      const wrappedComponentProps: {
+        screenCast: ScreenCastHOC
+      } = wrapper.find(testComponent).props() as any
+
+      // @ts-ignore
+      wrapper.instance().recorder.stop = jest
+        .fn()
+        .mockReturnValue(new Blob([]))
+
+      await wrappedComponentProps.screenCast.stopRecording()
+
+      expect(wrapper.state("currentState")).toBe("PREVIEW_FILE")
+      expect(wrapper.find(VideoRecordedDialog).length).toBe(1)
+    })
   })
 
-  it("it should show an unsupported dialog", () => {
+  it("should show an unsupported dialog", () => {
     const WithHoc = withScreencast(testComponent)
     const wrapper = shallow(<WithHoc />)
 

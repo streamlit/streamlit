@@ -41,9 +41,17 @@ class Countdown extends PureComponent<Props, State> {
     interval: DEFAULT_COUNTDOWN_INTERVAL,
   }
 
+  timeOutID?: number
+
   state = {
     countdown: this.props.countdown,
     startAnimation: this.props.start || true,
+  }
+
+  componentWillUnmount(): void {
+    if (this.timeOutID) {
+      clearTimeout(this.timeOutID)
+    }
   }
 
   onAnimationEnd = async (): Promise<any> => {
@@ -56,7 +64,7 @@ class Countdown extends PureComponent<Props, State> {
     })
 
     if (countdown - 1 > 0) {
-      window.setTimeout(() => {
+      this.timeOutID = window.setTimeout(() => {
         this.setState({
           startAnimation: true,
         })
