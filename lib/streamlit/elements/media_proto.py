@@ -23,6 +23,7 @@ setup_2_3_shims(globals())
 import io
 import base64
 import re
+import mimetypes
 
 from validators import url
 
@@ -76,6 +77,9 @@ def _marshall_binary(proto, data):
         proto.format = ""
         return
 
+    elif isinstance(data, bytes):
+        pass
+
     elif isinstance(data, io.BytesIO):
         data.seek(0)
         data = date.getvalue()
@@ -110,7 +114,7 @@ def marshall_video(proto, data, format="video/mp4", start_time=0):
         The time from which this element should start playing. (default: 0)
     """
 
-    proto.format = format
+    proto.format = format if format else mimetypes.guess_type("video.%s" % ext)[0]
     proto.start_time = start_time
 
     # "type" distinguishes between YouTube and non-YouTube links
@@ -154,8 +158,7 @@ def marshall_audio(proto, data, format="audio/wav", start_time=0):
         The time from which this element should start playing. (default: 0)
     """
 
-    # TODO we don't send format to the front-end, apparently...
-    proto.format = format
+    proto.format = format if format else mimetypes.guess_type("video.%s" % ext)[0]
     proto.start_time = start_time
 
     if isinstance(data, string_types):

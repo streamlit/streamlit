@@ -69,6 +69,7 @@ class MediaFileHandler(tornado.web.RequestHandler):
     def get(self, filename):
         # remove extension from submitted filename, if present.
         requested_hash = filename.split(".")[0]
+        LOGGER.debug("MediaFileHandler: GET %s" % filename)
 
         try:
             media = _media_filemanager.get(requested_hash)

@@ -29,6 +29,8 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from urllib.parse import urlparse
 
+from streamlit.MediaFileManager import mfm as _media_filemanager
+
 LOGGER = get_logger(__name__)
 
 # This constant is related to the frontend maximum content width specified
@@ -96,7 +98,7 @@ def _verify_np_shape(array):
     return array
 
 
-def _bytes_to_b64(data, width, format):
+def _normalize_to_bytes(data, width, format):
     format = format.lower()
     ext = imghdr.what(None, data)
 
@@ -122,9 +124,9 @@ def _bytes_to_b64(data, width, format):
             else:
                 mime_type = "image/" + format
 
-    b64 = base64.b64encode(data).decode("utf-8")
-
-    return b64, mime_type
+    return data, mime_type 
+    #b64 = base64.b64encode(data).decode("utf-8")
+    #return b64, mime_type
 
 
 def _clip_image(image, clamp):
@@ -235,7 +237,13 @@ def marshall_images(
         else:
             data = image
 
-        (b64, mime_type) = _bytes_to_b64(data, width, format)
+        (data, mime_type) = _normalize_to_bytes(data, width, format)
+        this_file = _media_filemanager.add(data, mimetype=mime_type)
+        proto_img.url = this_file.url
 
-        proto_img.data.base64 = b64
-        proto_img.data.mime_type = mime_type
+        #(b64, mime_type) = _bytes_to_b64(data, width, format)
+        #proto_img.data.base64 = b64
+        #proto_img.data.mime_type = mime_type
+
+        
+

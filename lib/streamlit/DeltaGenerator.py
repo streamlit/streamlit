@@ -1437,7 +1437,6 @@ class DeltaGenerator(object):
 
         bokeh_chart.marshall(element.bokeh_chart, figure, use_container_width)
 
-    # TODO: Make this accept files and strings/bytes as input.
     @_with_element
     def image(
         self,
@@ -1496,7 +1495,7 @@ class DeltaGenerator(object):
            height: 630px
 
         """
-        import streamlit.elements.image_proto as image_proto
+        from .elements import image_proto
 
         if use_column_width:
             width = -2

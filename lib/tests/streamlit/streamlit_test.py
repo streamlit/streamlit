@@ -144,17 +144,10 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.audio.url, some_url)
 
-        # Test that a non-URL string doesn't load into URL param.
-        non_url = "blah"
-        try:
-            # Python 2 behavior
-            st.audio(non_url)
-            el = self.get_delta_from_queue().new_element
-            assert not el.audio.url
-            # assert el.audio.data == "YmxhaA=="  # "blah" to base64 encoded payload
-        except TypeError:
-            # Python 3 behavior
-            assert True
+        # Test that a non-URL string is assumed to be a filename
+        bad_filename = "blah"
+        with self.assertRaises(FileNotFoundError):
+            st.video(bad_filename)
 
     def test_st_audio_options(self):
         """Test st.audio with options."""
@@ -653,17 +646,10 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             el = self.get_delta_from_queue().new_element
             self.assertEqual(el.video.url, yt_embeds[x])
 
-        # Test that a non-URL string doesn't load the URL property
-        non_url = "blah"
-        try:
-            # Python 2 behavior
-            st.video(non_url)
-            el = self.get_delta_from_queue().new_element
-            assert not el.video.url
-            # assert el.video.data == "YmxhaA=="  # "blah" to base64 encoded payload
-        except TypeError:
-            # Python 3 behavior
-            assert True
+        # Test that a non-URL string is assumed to be a filename
+        bad_filename = "blah"
+        with self.assertRaises(FileNotFoundError):
+            st.video(bad_filename)
 
     def test_st_video_options(self):
         """Test st.video with options."""

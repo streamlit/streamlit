@@ -18,6 +18,8 @@
 import React from "react"
 import { Map as ImmutableMap } from "immutable"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
+import { getWindowBaseUriParts as get_base_uri_parts } from "../../../lib/UriUtil"
+import { buildHttpUri } from "../../../lib/UriUtil"
 import "./ImageList.scss"
 
 interface Props {
@@ -25,21 +27,12 @@ interface Props {
   element: ImmutableMap<string, any>
 }
 
-/**
- * Returns an image source string, suitable for use in <img src=...>,
- * from an Image protobuf object.
- * An Image protobuf can contain either a URL string or a base64-encoded PNG.
- */
-function getImageSrcString(imgProto: ImmutableMap<string, any>): string {
-  const type = imgProto.get("type")
-  if (type === "data") {
-    const data = imgProto.get("data")
-    return `data:${data.get("mimeType")};base64,${data.get("base64")}`
-  } else if (type === "url") {
+function getImageURI(imgProto: ImmutableMap<string, any>): string {
+  if (imgProto.get("url").startsWith("/media")) {
+    return buildHttpUri(get_base_uri_parts(), imgProto.get("url"))
+  } else {
     return imgProto.get("url")
   }
-
-  throw new Error(`Unrecognized Image protobuf type ${type}`)
 }
 
 /**
@@ -69,16 +62,16 @@ class ImageList extends React.PureComponent<Props> {
       <div style={{ width }}>
         {element
           .get("imgs")
-          .map((img: ImmutableMap<string, any>, indx: string) => (
+          .map((img: ImmutableMap<string, any>, idx: string) => (
             <div
               className="image-container stImage"
-              key={indx}
+              key={idx}
               style={{ width: imgWidth }}
             >
               <img
                 style={{ width: imgWidth }}
-                src={getImageSrcString(img)}
-                alt={indx}
+                src={getImageURI(img)}
+                alt={idx}
               />
               <div className="caption"> {img.get("caption")} </div>
             </div>

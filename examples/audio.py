@@ -26,8 +26,8 @@ st.header("Local file")
 
 # These are the formats supported in Streamlit right now.
 AUDIO_EXTENSIONS = ["wav", "flac", "mp3", "aac", "ogg", "oga", "m4a", "opus", "wma"]
-                    
-# For samples of sounds in different formats, see 
+
+# For samples of sounds in different formats, see
 # https://docs.espressif.com/projects/esp-adf/en/latest/design-guide/audio-samples.html
 
 
@@ -55,7 +55,9 @@ if len(audiofiles) == 0:
 
 else:
     filename = st.selectbox(
-        "Select an audio file from your home directory (%s) to play" % avdir, audiofiles, 0,
+        "Select an audio file from your home directory (%s) to play" % avdir,
+        audiofiles,
+        0,
     )
     audiopath = os.path.join(avdir, filename)
     st.audio(audiopath)

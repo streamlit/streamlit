@@ -3,7 +3,6 @@
 import hashlib
 from datetime import datetime
 
-# https://webplatform.github.io/docs/concepts/Internet_and_Web/mime_types/
 
 class MediaFile(object):
     """Abstraction for audiovisual/image file objects."""
@@ -12,7 +11,7 @@ class MediaFile(object):
         self,
         file_id=None,
         content=None,
-        mimetype="audio/wav",   # a workable default for most AV files.
+        mimetype=None,
         filename=None,
         size=None,
         last_modified=None,
@@ -27,6 +26,8 @@ class MediaFile(object):
 
     @property
     def url(self):
+        if self.mimetype:
+            return "/media/{}.{}".format(self.file_id, self.mimetype.split("/")[1])
         return "/media/{}".format(self.file_id)
 
 
