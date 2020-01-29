@@ -73,14 +73,14 @@ class VideoRecordedDialog extends PureComponent<Props> {
                 This video is encoded in the{" "}
                 <a href="https://www.webmproject.org/">WebM format</a>, which
                 is only supported by newer video players. You can also play it
-                by dragging the file into your browser.
+                by dragging the file directly into your browser.
               </p>
             </div>
 
             <div className="first-column third-step">Step 3 →</div>
             <div className="second-column third-step">
-              Share it with the world on Twitter, LinkedIn, YouTube, or just
-              plain email!{" "}
+              Share your video with the world on Twitter, LinkedIn, YouTube, or
+              just plain email!{" "}
               <span role="img" aria-label="Happy">
                 😀
               </span>
