@@ -49,7 +49,7 @@ class Audio extends React.PureComponent<Props> {
     /* if this is a relative URI, assume it's being served from streamlit and 
        construct it appropriately.  Otherwise leave it alone.  */
 
-    var uri = element.get("url")
+    let uri = element.get("url")
 
     if (element.get("url").startsWith("/media")) {
       uri = buildHttpUri(get_base_uri_parts(), element.get("url"))
