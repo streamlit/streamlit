@@ -16,8 +16,11 @@
 
 @import "src/assets/css/theme";
 
-@keyframes screencastCounterMoveUp {
+@keyframes screencast-counter-animation {
   0% {
+    opacity: 0;
+  }
+  25% {
     opacity: 1;
   }
   100% {
@@ -42,7 +45,6 @@
     text-shadow: 1px 1px 10px darkgrey;
     transition: opacity 0.3s ease-in-out;
     font-family: Helvetica, Calibri, Roboto, "Open Sans", Arial, sans-serif;
-    animation: screencastCounterMoveUp 0.25s;
-    animation-delay: 0.75s;
+    animation: screencast-counter-animation 1s;
   }
 }
