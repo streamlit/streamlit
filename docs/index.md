@@ -38,13 +38,27 @@ state, and with no need for callbacks. It's a simple and powerful app model
 that lets you build rich UIs incredibly quickly. To learn more about how
 Streamlit works, see [Main concepts](main_concepts.md).
 
+#### Install and play with Streamlit
 ```eval_rst
 .. raw:: html
 
   <iframe
     width="560"
     height="315"
-    src="https://www.youtube.com/embed/B2iAodr0fOo"
+    src="https://www.youtube.com/embed/sxLNCDnqyFc"
+    style="margin: 0 0 2rem 0;"
+    frameborder="0"
+    allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+    allowfullscreen></iframe>
+```
+#### Let's build a data app!
+```eval_rst
+.. raw:: html
+
+  <iframe
+    width="560"
+    height="315"
+    src="https://www.youtube.com/embed/VtrFjkSGgKM"
     style="margin: 0 0 2rem 0;"
     frameborder="0"
     allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
