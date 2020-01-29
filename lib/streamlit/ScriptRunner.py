@@ -236,10 +236,8 @@ class ScriptRunner(object):
 
         LOGGER.debug("Running script %s", rerun_data)
 
-        # Reset widget values.
-        import streamlit as st
-
-        st._reset()
+        # Reset DeltaGenerators and widgets.
+        get_report_ctx().reset()
 
         self.on_event.send(ScriptRunnerEvent.SCRIPT_STARTED)
 
