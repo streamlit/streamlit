@@ -74,7 +74,7 @@ def _marshall_binary(proto, data):
     if not data:
         # allow None values so media players can be shown without media.
         proto.url = ""
-        proto.format = ""
+        proto.format = ""       # TODO: remove?
         return
 
     elif isinstance(data, bytes):
@@ -101,24 +101,22 @@ def _marshall_av_media(proto, data):
     """
 
     if isinstance(data, string_types):
-        # assume it's a filename or blank.
-        try:
-            with open(data, "rb") as fh:
-                new = _media_filemanager.add(fh.read(), filename=data, mimetype=format)
-                proto.url = new.url
-        except Exception as err:
-            print(err)
-            if type(data) is bytes:
-                # we're here because Python2 treats str and bytes equivalently.
-                 _marshall_binary(proto, data)
-            else:
-                raise FileNotFoundError("File not found: %s" % data)
+        # Assume it's a filename or blank.  Allow OS-based file errors.
+        with open(data, "rb") as fh:
+            new = _media_filemanager.add(fh.read(), filename=data, mimetype=format)
+            proto.url = new.url
+        #except Exception as err:
+        #    if type(data) is bytes:
+        #        # we're here because Python2 treats str and bytes equivalently.
+        #         _marshall_binary(proto, data)
+        #    else:
+        #        raise FileNotFoundError("File not found: %s" % data)
 
     else:
         _marshall_binary(proto, data)
 
 
-def marshall_video(proto, data, format="video/mp4", start_time=0):
+def marshall_video(proto, data, mimetype="video/mp4", start_time=0):
     """Marshalls a video proto, using url processors as needed.
 
     Parameters
@@ -130,14 +128,14 @@ def marshall_video(proto, data, format="video/mp4", start_time=0):
         to load. Includes support for YouTube URLs.
         If passing the raw data, this must include headers and any other
         bytes required in the actual file.
-    format : str
+    mimetype : str
         The mime type for the video file. Defaults to 'video/mp4'.
         See https://tools.ietf.org/html/rfc4281 for more info.
     start_time : int
         The time from which this element should start playing. (default: 0)
     """
 
-    proto.format = format
+    proto.format = mimetype     #TODO: do we need this anymore?
     proto.start_time = start_time
 
     # "type" distinguishes between YouTube and non-YouTube links
@@ -155,7 +153,7 @@ def marshall_video(proto, data, format="video/mp4", start_time=0):
         _marshall_av_media(proto, data)
 
 
-def marshall_audio(proto, data, format="audio/wav", start_time=0):
+def marshall_audio(proto, data, mimetype="audio/wav", start_time=0):
     """Marshalls an audio proto, using data and url processors as needed.
 
     Parameters
@@ -166,14 +164,14 @@ def marshall_audio(proto, data, format="audio/wav", start_time=0):
         Raw audio data or a string with a URL pointing to the file to load.
         If passing the raw data, this must include headers and any other bytes
         required in the actual file.
-    format : str
+    mimetype : str
         The mime type for the audio file. Defaults to "audio/wav".
         See https://tools.ietf.org/html/rfc4281 for more info.
     start_time : int
         The time from which this element should start playing. (default: 0)
     """
 
-    proto.format = format
+    proto.format = mimetype     #TODO: do we need this anymore?
     proto.start_time = start_time
 
     if isinstance(data, string_types):

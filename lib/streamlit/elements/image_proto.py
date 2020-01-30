@@ -103,9 +103,9 @@ def _normalize_to_bytes(data, width, format):
     ext = imghdr.what(None, data)
 
     if format is None:
-        mime_type = mimetypes.guess_type("image.%s" % ext)[0]
+        mimetype = mimetypes.guess_type("image.%s" % ext)[0]
     else:
-        mime_type = "image/" + format
+        mimetype = "image/" + format
 
     image = Image.open(io.BytesIO(data))
     actual_width, actual_height = image.size
@@ -120,11 +120,11 @@ def _normalize_to_bytes(data, width, format):
             data = _PIL_to_bytes(image, format=format, quality=90)
 
             if format is None:
-                mime_type = "image/png"
+                mimetype = "image/png"
             else:
-                mime_type = "image/" + format
+                mimetype = "image/" + format
 
-    return data, mime_type
+    return data, mimetype
 
 
 def _clip_image(image, clamp):
@@ -235,6 +235,6 @@ def marshall_images(
         else:
             data = image
 
-        (data, mime_type) = _normalize_to_bytes(data, width, format)
-        this_file = _media_filemanager.add(data, mimetype=mime_type)
+        (data, mimetype) = _normalize_to_bytes(data, width, format)
+        this_file = _media_filemanager.add(data, mimetype=mimetype)
         proto_img.url = this_file.url
