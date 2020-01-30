@@ -20,23 +20,25 @@ from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
-ReportContext = namedtuple(
-    "ReportContext",
-    [
+
+class ReportContext(object):
+    def __init__(self, enqueue, widgets, widget_ids_this_run, uploaded_file_mgr):
         # (dict) Mapping of container (type str or BlockPath) to top-level
         # cursor (type AbstractCursor).
-        "cursors",
+        self.cursors = {}
         # (callable) Function that enqueues ForwardMsg protos in the websocket.
-        "enqueue",
+        self.enqueue = enqueue
         # (Widgets) The Widgets state object for the report
-        "widgets",
+        self.widgets = widgets
         # (_WidgetIDSet) The set of widget IDs that have been assigned in the
         # current report run. This set is cleared at the start of each run.
-        "widget_ids_this_run",
+        self.widget_ids_this_run = widget_ids_this_run
         # (UploadedFileManager) Object that manages files uploaded by this user.
-        "uploaded_file_mgr",
-    ],
-)
+        self.uploaded_file_mgr = uploaded_file_mgr
+
+    def reset(self):
+        self.cursors = {}
+        self.widget_ids_this_run.clear()
 
 
 class _WidgetIDSet(object):
@@ -84,7 +86,7 @@ class ReportThread(threading.Thread):
     ):
         super(ReportThread, self).__init__(target=target, name=name)
         self.streamlit_report_ctx = ReportContext(
-            {}, enqueue, widgets, _WidgetIDSet(), uploaded_file_mgr
+            enqueue, widgets, _WidgetIDSet(), uploaded_file_mgr
         )
 
 

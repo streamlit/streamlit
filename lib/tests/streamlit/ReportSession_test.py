@@ -124,7 +124,7 @@ class ReportSessionSerializationTest(tornado.testing.AsyncTestCase):
         rs._report.report_id = "TestReportID"
 
         orig_ctx = get_report_ctx()
-        ctx = ReportContext({}, rs._report.enqueue, None, None, None)
+        ctx = ReportContext(rs._report.enqueue, None, None, None)
         add_report_ctx(ctx=ctx)
 
         rs._scriptrunner = MagicMock()
