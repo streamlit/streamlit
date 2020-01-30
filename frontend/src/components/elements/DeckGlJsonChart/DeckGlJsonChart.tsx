@@ -17,19 +17,28 @@
 
 import React from "react"
 import DeckGL from "deck.gl"
-import { JSONConverter } from "@deck.gl/json"
-import * as layers from "@deck.gl/layers"
-import * as aggregationLayers from "@deck.gl/aggregation-layers"
 import Immutable from "immutable"
 import { StaticMap } from "react-map-gl"
+import * as layers from "@deck.gl/layers"
+import { JSONConverter } from "@deck.gl/json"
+import * as aggregationLayers from "@deck.gl/aggregation-layers"
+
+// @ts-ignore
+import { CSVLoader } from "@loaders.gl/csv"
+// @ts-ignore
+import { registerLoaders } from "@loaders.gl/core"
+
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 
 import "mapbox-gl/dist/mapbox-gl.css"
 import "./DeckGlJsonChart.scss"
 
 const configuration = {
-  classes: Object.assign({}, layers, aggregationLayers),
+  classes: { ...layers, ...aggregationLayers },
 }
+
+registerLoaders([CSVLoader])
+
 const jsonConverter = new JSONConverter({ configuration })
 
 const MAPBOX_ACCESS_TOKEN =
@@ -53,20 +62,18 @@ class DeckGlJsonChart extends React.PureComponent<PropsWithHeight, State> {
     height: 500,
   }
 
-  private fixHexLayerBug_bound: () => void
-
   constructor(props: PropsWithHeight) {
     super(props)
+
     this.state = { initialized: false }
-    this.fixHexLayerBug_bound = this.fixHexLayerBug.bind(this)
 
     // HACK: Load layers a little after loading the map, to hack around a bug
     // where HexagonLayers were not drawing on first load but did load when the
     // script got re-executed.
-    setTimeout(this.fixHexLayerBug_bound, 0)
+    setTimeout(this.fixHexLayerBug, 0)
   }
 
-  fixHexLayerBug(): void {
+  fixHexLayerBug = (): void => {
     this.setState({ initialized: true })
   }
 
@@ -92,6 +99,9 @@ class DeckGlJsonChart extends React.PureComponent<PropsWithHeight, State> {
           width={deck.initialViewState.width}
           layers={this.state.initialized ? deck.layers : []}
           controller
+          getTooltip={() => ({
+            text: "Testing tooltip text",
+          })}
         >
           <StaticMap
             height={deck.initialViewState.height}
