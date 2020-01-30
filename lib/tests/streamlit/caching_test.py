@@ -22,9 +22,10 @@ from mock import patch
 
 import streamlit as st
 from streamlit import caching
+from tests import testutil
 
 
-class CacheTest(unittest.TestCase):
+class CacheTest(testutil.DeltaGeneratorTestCase):
     def tearDown(self):
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
