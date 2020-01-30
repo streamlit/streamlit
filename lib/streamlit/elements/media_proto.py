@@ -71,7 +71,7 @@ def _marshall_binary(proto, data):
     this media file stored in a file manager.
     """
 
-    if data is None:
+    if not data:
         # allow None values so media players can be shown without media.
         proto.url = ""
         proto.format = ""
@@ -95,6 +95,29 @@ def _marshall_binary(proto, data):
     proto.url = this_file.url
 
 
+def _marshall_av_media(proto, data):
+    """ Assume format has already been set in the proto.  Here we make decisions about 
+    whether the contents of the data refer to a filename, or a series of bytes.
+    """
+
+    if isinstance(data, string_types):
+        # assume it's a filename or blank.
+        try:
+            with open(data, "rb") as fh:
+                new = _media_filemanager.add(fh.read(), filename=data, mimetype=format)
+                proto.url = new.url
+        except Exception as err:
+            print(err)
+            if type(data) is bytes:
+                # we're here because Python2 treats str and bytes equivalently.
+                 _marshall_binary(proto, data)
+            else:
+                raise FileNotFoundError("File not found: %s" % data)
+
+    else:
+        _marshall_binary(proto, data)
+
+
 def marshall_video(proto, data, format="video/mp4", start_time=0):
     """Marshalls a video proto, using url processors as needed.
 
@@ -114,7 +137,7 @@ def marshall_video(proto, data, format="video/mp4", start_time=0):
         The time from which this element should start playing. (default: 0)
     """
 
-    proto.format = format if format else mimetypes.guess_type("video.%s" % ext)[0]
+    proto.format = format
     proto.start_time = start_time
 
     # "type" distinguishes between YouTube and non-YouTube links
@@ -127,17 +150,9 @@ def marshall_video(proto, data, format="video/mp4", start_time=0):
             proto.type = Video_pb2.Video.Type.YOUTUBE_IFRAME
         else:
             proto.url = data
-
-    elif isinstance(data, string_types):
-        # assume it's a filename or blank.
-        if data.strip() == "":
-            proto.url = ""
-        else:
-            with open(data, "rb") as fh:
-                new = _media_filemanager.add(fh.read(), filename=data, mimetype=format)
-                proto.url = new.url
+    
     else:
-        _marshall_binary(proto, data)
+        _marshall_av_media(proto, data)
 
 
 def marshall_audio(proto, data, format="audio/wav", start_time=0):
@@ -158,20 +173,13 @@ def marshall_audio(proto, data, format="audio/wav", start_time=0):
         The time from which this element should start playing. (default: 0)
     """
 
-    proto.format = format if format else mimetypes.guess_type("video.%s" % ext)[0]
+    proto.format = format
     proto.start_time = start_time
 
     if isinstance(data, string_types):
         if url(data):  # noqa: F821
             proto.url = data
-            return
-        # assume it's a filename or blank.
-        if data.strip() == "":
-            proto.url = ""
-        else:
-            with open(data, "rb") as fh:
-                new = _media_filemanager.add(fh.read(), filename=data, mimetype=format)
-                proto.url = new.url
 
     else:
-        _marshall_binary(proto, data)
+        _marshall_av_media(proto, data)
+
