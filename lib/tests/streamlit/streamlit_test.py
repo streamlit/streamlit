@@ -36,6 +36,12 @@ from tests import testutil
 import streamlit as st
 
 
+# Remove this paragraph when Python2 is deprecated.
+try:
+    FileNotFoundError
+except NameError:
+    FileNotFoundError = IOError
+
 def get_version():
     """Get version by parsing out setup.py."""
     dirname = os.path.dirname(__file__)
@@ -124,18 +130,15 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_audio(self):
         """Test st.audio."""
-        # TODO(armando): generate real audio data
-        # For now it doesnt matter cause browser is the one that uses it.
+
+        # Fake audio data: expect the resultant mimetype to be audio default.
         fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
 
         st.audio(fake_audio_data)
 
         el = self.get_delta_from_queue().new_element
-        # Manually base64 encoded payload above via
-        # base64.b64encode(bytes('\x11\x22\x33\x44\x55\x66'.encode('utf-8')))
-        # self.assertEqual(el.audio.data, "ESIzRFVm")
         self.assertEqual(el.audio.format, "audio/wav")
-        # TODO: test el.audio.url
+        self.assertTrue(el.audio.url.startswith("/media"))
 
         # test using a URL instead of data
         some_url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
@@ -155,12 +158,9 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         st.audio(fake_audio_data, format="audio/mp3", start_time=10)
 
         el = self.get_delta_from_queue().new_element
-        # Manually base64 encoded payload above via
-        # base64.b64encode(bytes('\x11\x22\x33\x44\x55\x66'.encode('utf-8')))
-        # self.assertEqual(el.audio.data, "ESIzRFVm")
         self.assertEqual(el.audio.format, "audio/mp3")
         self.assertEqual(el.audio.start_time, 10)
-        # TODO: test el.audio.url
+        self.assertTrue(el.audio.url.startswith("/media"))
 
     def test_st_balloons(self):
         """Test st.balloons."""
