@@ -23,6 +23,7 @@ setup_2_3_shims(globals())
 
 import pandas as pd
 
+from streamlit.ReportThread import get_report_ctx
 import streamlit as st
 import streamlit.elements.data_frame_proto as data_frame_proto
 from tests import testutil
@@ -105,7 +106,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(num_rows, 5)
 
             # Clear the queue so the next loop is like a brand new test.
-            st._reset()
+            get_report_ctx().reset()
             self.report_queue.clear()
 
     def test_with_index_add_rows(self):
@@ -130,7 +131,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(num_rows, 5)
 
             # Clear the queue so the next loop is like a brand new test.
-            st._reset()
+            get_report_ctx().reset()
             self.report_queue.clear()
 
     def test_with_index_no_data_add_rows(self):
@@ -151,7 +152,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(num_rows, 2)
 
             # Clear the queue so the next loop is like a brand new test.
-            st._reset()
+            get_report_ctx().reset()
             self.report_queue.clear()
 
     def test_no_index_no_data_add_rows(self):
@@ -172,7 +173,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(num_rows, 2)
 
             # Clear the queue so the next loop is like a brand new test.
-            st._reset()
+            get_report_ctx().reset()
             self.report_queue.clear()
 
     def test_simple_add_rows_with_clear_queue(self):
@@ -198,7 +199,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(num_rows, 3)
 
             # Clear the queue so the next loop is like a brand new test.
-            st._reset()
+            get_report_ctx().reset()
             self.report_queue.clear()
 
     def test_named_add_rows(self):
@@ -221,7 +222,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(num_rows, 5)
 
             # Clear the queue so the next loop is like a brand new test.
-            st._reset()
+            get_report_ctx().reset()
             self.report_queue.clear()
 
     def test_named_add_rows_with_clear_queue(self):
@@ -245,7 +246,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(num_rows, 3)
 
             # Clear the queue so the next loop is like a brand new test.
-            st._reset()
+            get_report_ctx().reset()
             self.report_queue.clear()
 
     def test_add_rows_works_when_new_name(self):
@@ -265,7 +266,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(num_rows, 3)
 
             # Clear the queue so the next loop is like a brand new test.
-            st._reset()
+            get_report_ctx().reset()
             self.report_queue.clear()
 
     def test_add_rows_fails_when_wrong_shape(self):
@@ -281,5 +282,5 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
                 el.add_rows(NEW_ROWS_WRONG_SHAPE)
 
             # Clear the queue so the next loop is like a brand new test.
-            st._reset()
+            get_report_ctx().reset()
             self.report_queue.clear()

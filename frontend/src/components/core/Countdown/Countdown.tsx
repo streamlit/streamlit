@@ -16,72 +16,41 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
-import classNames from "classnames"
 
-import "./style.scss"
+import "./Countdown.scss"
 
 interface Props {
   countdown: number
   start: boolean
-  interval: number
   endCallback: Function
 }
 
 interface State {
   countdown: number
-  startAnimation: boolean
 }
-
-const DEFAULT_COUNTDOWN_INTERVAL = 1000
 
 class Countdown extends PureComponent<Props, State> {
   public static defaultProps: Partial<Props> = {
     endCallback: () => {},
     start: true,
-    interval: DEFAULT_COUNTDOWN_INTERVAL,
   }
-
-  timeOutID?: number
 
   state = {
     countdown: this.props.countdown,
-    startAnimation: this.props.start || true,
-  }
-
-  componentWillUnmount(): void {
-    if (this.timeOutID) {
-      clearTimeout(this.timeOutID)
-    }
   }
 
   onAnimationEnd = async (): Promise<any> => {
     const { countdown } = this.state
-    const { endCallback, interval } = this.props
+    const { endCallback } = this.props
+    const newCountdown = countdown - 1
 
     this.setState({
-      startAnimation: false,
-      countdown: countdown - 1,
+      countdown: newCountdown,
     })
 
-    if (countdown - 1 > 0) {
-      this.timeOutID = window.setTimeout(() => {
-        this.setState({
-          startAnimation: true,
-        })
-      }, interval)
-    }
-
-    if (countdown - 1 === 0) {
+    if (newCountdown === 0) {
       endCallback()
     }
-  }
-
-  getCountdownClassName = (): string => {
-    const { startAnimation } = this.state
-
-    return classNames("countdown", {
-      withAnimation: startAnimation,
-    })
   }
 
   render(): ReactNode {
@@ -89,9 +58,11 @@ class Countdown extends PureComponent<Props, State> {
 
     return (
       <div
-        className={this.getCountdownClassName()}
+        className="countdown"
         onAnimationEnd={this.onAnimationEnd}
+        key={"frame" + countdown}
       >
+        {/* The key forces DOM mutations, for animation to restart. */}
         <span>{countdown}</span>
       </div>
     )

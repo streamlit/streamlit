@@ -28,9 +28,11 @@ import io
 import os
 import sys
 import textwrap
+import tempfile
 import threading
 
 import streamlit as st
+from streamlit import compatibility
 from streamlit import config
 from streamlit import file_util
 from streamlit import type_util
@@ -372,10 +374,9 @@ class CodeHasher:
                 return self.to_bytes(obj.__name__)
             elif hasattr(obj, "name") and (
                 isinstance(obj, io.IOBase)
-                or (
-                    isinstance(obj.name, string_types)  # noqa: F821
-                    and os.path.exists(obj.name)
-                )
+                # Handle temporary files used during testing
+                or isinstance(obj, tempfile._TemporaryFileWrapper)
+                or (not compatibility.is_running_py3() and isinstance(obj, file))
             ):
                 # Hash files as name + last modification date + offset.
                 h = hashlib.new(self.name)

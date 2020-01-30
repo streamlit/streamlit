@@ -18,11 +18,10 @@
 import CodeBlock from "components/elements/CodeBlock"
 import React, { ReactElement, ReactNode } from "react"
 import ReactMarkdown from "react-markdown"
-
 // @ts-ignore
 import htmlParser from "react-markdown/plugins/html-parser"
 // @ts-ignore
-import { InlineMath, BlockMath } from "react-katex"
+import { BlockMath, InlineMath } from "react-katex"
 // @ts-ignore
 import RemarkMathPlugin from "remark-math"
 // @ts-ignore
@@ -48,7 +47,19 @@ export interface Props {
  * renderers and AST plugins (for syntax highlighting, HTML support, etc).
  */
 export class StreamlitMarkdown extends React.PureComponent<Props> {
+  componentDidCatch(): void {
+    const { source } = this.props
+
+    throw {
+      name: "Error parsing Markdown or HTML in this string",
+      message: <p>{source}</p>,
+      stack: null,
+    }
+  }
+
   public render(): ReactNode {
+    const { source, allowHTML } = this.props
+
     const renderers = {
       code: CodeBlock,
       link: linkWithTargetBlank,
@@ -61,12 +72,12 @@ export class StreamlitMarkdown extends React.PureComponent<Props> {
 
     const plugins = [RemarkMathPlugin, RemarkEmoji]
 
-    const astPlugins = this.props.allowHTML ? [htmlParser()] : []
+    const astPlugins = allowHTML ? [htmlParser()] : []
 
     return (
       <ReactMarkdown
-        source={this.props.source}
-        escapeHtml={!this.props.allowHTML}
+        source={source}
+        escapeHtml={!allowHTML}
         astPlugins={astPlugins}
         plugins={plugins}
         renderers={renderers}
