@@ -99,9 +99,6 @@ class DeckGlJsonChart extends React.PureComponent<PropsWithHeight, State> {
           width={deck.initialViewState.width}
           layers={this.state.initialized ? deck.layers : []}
           controller
-          getTooltip={() => ({
-            text: "Testing tooltip text",
-          })}
         >
           <StaticMap
             height={deck.initialViewState.height}
