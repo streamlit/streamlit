@@ -2,18 +2,18 @@
 
 Streamlit provides a caching mechanism that allows your app to stay performant even when loading data from the web, manipulating large datasets, or performing expensive computations. This is done with the [`@st.cache`](api.html#streamlit.cache) decorator.
 
-When you mark a function with the [`@st.cache`](api.html#streamlit.cache) decorator, it tells Streamlit that whenever the function is called it needs to check three things:
+When you mark a function with the [`@st.cache`](api.html#streamlit.cache) decorator, it tells Streamlit that whenever the function is called it needs to check a few things:
 
 1. The input parameters that you called the function with
 2. The value of any external variable used in the function
 3. The body of the function
 4. The body of any function used inside the cached function
 
-If this is the first time Streamlit has seen these items with these exact values and in this exact combination and order, it runs the function and stores the result in a local cache. Think of the cache as a simple in-memory key-value store, where the key is a hash of all 3 above and the value is the actual output object passed by reference.
+If this is the first time Streamlit has seen these items with these exact values and in this exact combination and order, it runs the function and stores the result in a local cache. Think of the cache as a simple in-memory key-value store, where the key is a hash of all of the above and the value is the actual output object passed by reference.
 
 Then, next time the cached function is called, if the key hasn’t changed, Streamlit will just skip executing the function altogether and, instead, return the output previously stored in the cache.
 
-The way Streamlit keeps track of changes in those three components is through hashing. For more information on this, see the Under the hood section.
+The way Streamlit keeps track of changes in these components is through hashing.
 
 Finally, [`@st.cache`](api.html#streamlit.cache) supports arguments to configure the cache's behavior. You can find more information on those in our [API reference](api.md).
 
@@ -38,7 +38,7 @@ res = expensive_computation(a, b)
 st.write("Result:", res)
 ```
 
-You'll notice that this app is laggy. If you press R to rerun the app, it gets worse, since the calculation is rerun from start to finish with each refresh. This isn't a great experience.
+You'll notice that this app is laggy. If you press **R** to rerun the app, it gets worse, since the calculation is rerun from start to finish with each refresh. This isn't a great experience.
 
 Let's add the [`@st.cache`](api.html#streamlit.cache) decorator:
 
@@ -194,10 +194,10 @@ Even though `inner_func()` is not annotated with [`@st.cache`](api.html#streamli
 
 That's because Streamlit always traverses your code and its dependencies to verify that the cached values are still valid. This means that while developing your app you can edit your code freely without worrying about the cache. Any change you make to your app, Streamlit should do the right thing!
 
-Streamlit is also smart enough to only traverse dependencies that belong to your app, and skip  over any dependency that comes from an installed Python library.
+Streamlit is also smart enough to only traverse dependencies that belong to your app, and skip over any dependency that comes from an installed Python library.
 
 
-## Example 5: One user can speed up another
+## Example 5: Use the global cache to speed up your app for all users
 
 Going back to our original function, let's add a widget to control the value of `b`:
 
@@ -274,7 +274,7 @@ What's going on here is that Streamlit caches the output `res` by reference. Whe
 
 Since this behavior is usually not what you'd expect, Streamlit tries to be helpful show you a warning, along with some ideas about how to fix your code.
 
-In this specific case, the fix is just to not mutate `res["output"]` outside the cached function. There was no good reason for us to do that anyway! Another solution would be to clone the result value with `res = deepcopy(expensive_computation(2, 21))`. 
+In this specific case, the fix is just to not mutate `res["output"]` outside the cached function. There was no good reason for us to do that anyway! Another solution would be to clone the result value with `res = deepcopy(expensive_computation(2, 21))`.
 
 ## Next steps
 
