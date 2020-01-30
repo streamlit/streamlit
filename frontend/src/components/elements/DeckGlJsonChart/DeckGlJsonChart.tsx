@@ -23,9 +23,7 @@ import * as layers from "@deck.gl/layers"
 import { JSONConverter } from "@deck.gl/json"
 import * as aggregationLayers from "@deck.gl/aggregation-layers"
 
-// @ts-ignore
 import { CSVLoader } from "@loaders.gl/csv"
-// @ts-ignore
 import { registerLoaders } from "@loaders.gl/core"
 
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
