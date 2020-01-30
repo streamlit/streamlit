@@ -76,12 +76,6 @@ class Video extends React.PureComponent<Props> {
       uri = buildHttpUri(get_base_uri_parts(), element.get("url"))
     }
 
-    console.log("DEBUG VIDEO URI Preprocess step:")
-    console.log(element.get("url"))
-    console.log(element.get("format"))
-    console.log(uri)
-    console.log("/DEBUG")
-
     return (
       <video
         ref={this.videoRef}

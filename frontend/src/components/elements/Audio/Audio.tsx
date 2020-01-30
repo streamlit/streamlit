@@ -55,12 +55,6 @@ class Audio extends React.PureComponent<Props> {
       uri = buildHttpUri(get_base_uri_parts(), element.get("url"))
     }
 
-    console.log("DEBUG AUDIO URI:")
-    console.log(element.get("url"))
-    console.log(element.get("format"))
-    console.log(uri)
-    console.log("/DEBUG")
-
     return (
       <audio
         ref={this.audioRef}
