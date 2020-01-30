@@ -2,9 +2,9 @@
 #
 # Check https://circleci.com/docs/2.0/language-python/ for more details
 #
-version: 3
+version: 2
 workflows:
-  version: 3
+  version: 2
   circleci:
     jobs:
       - python-3.7.4
