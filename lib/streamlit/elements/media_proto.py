@@ -66,20 +66,31 @@ def _reshape_youtube_url(url):
     return None
 
 
-def _marshall_binary(proto, data):
-    """ Handles binary data and packs the proto.url field with a link to 
-    this media file stored in a file manager.
+def _marshall_av_media(proto, data, mimetype):
+    """ Given some audio or video data and a supplied mimetype, fill protobuf 
+    object depending on whether the contents of the data refer to a filename 
+    or a series of bytes.
+
+    Load data either from file or through bytes-processing methods into a 
+    MediaFile object.  Pack proto with generated Tornado-based URL.
     """
+    # Audio and Video methods have already checked if this is a URL by this point.
+
+    if isinstance(data, string_types):
+        # Assume it's a filename or blank.  Allow OS-based file errors.
+        with open(data, "rb") as fh:
+            this_file = _media_filemanager.add(fh.read(), filename=data, mimetype=format)
+            proto.url = this_file.url
+            return
 
     if not data:
-        # allow None values so media players can be shown without media.
+        # allow empty values so media players can be shown without media.
         proto.url = ""
-        proto.format = ""       # TODO: remove?
         return
 
-    elif isinstance(data, bytes):
+    # Assume bytes; try methods until we run out.
+    if isinstance(data, bytes):
         pass
-
     elif isinstance(data, io.BytesIO):
         data.seek(0)
         data = date.getvalue()
@@ -93,27 +104,6 @@ def _marshall_binary(proto, data):
 
     this_file = _media_filemanager.add(data, mimetype=proto.format)
     proto.url = this_file.url
-
-
-def _marshall_av_media(proto, data):
-    """ Assume format has already been set in the proto.  Here we make decisions about 
-    whether the contents of the data refer to a filename, or a series of bytes.
-    """
-
-    if isinstance(data, string_types):
-        # Assume it's a filename or blank.  Allow OS-based file errors.
-        with open(data, "rb") as fh:
-            new = _media_filemanager.add(fh.read(), filename=data, mimetype=format)
-            proto.url = new.url
-        #except Exception as err:
-        #    if type(data) is bytes:
-        #        # we're here because Python2 treats str and bytes equivalently.
-        #         _marshall_binary(proto, data)
-        #    else:
-        #        raise FileNotFoundError("File not found: %s" % data)
-
-    else:
-        _marshall_binary(proto, data)
 
 
 def marshall_video(proto, data, mimetype="video/mp4", start_time=0):
@@ -135,7 +125,6 @@ def marshall_video(proto, data, mimetype="video/mp4", start_time=0):
         The time from which this element should start playing. (default: 0)
     """
 
-    proto.format = mimetype     #TODO: do we need this anymore?
     proto.start_time = start_time
 
     # "type" distinguishes between YouTube and non-YouTube links
@@ -148,9 +137,9 @@ def marshall_video(proto, data, mimetype="video/mp4", start_time=0):
             proto.type = Video_pb2.Video.Type.YOUTUBE_IFRAME
         else:
             proto.url = data
-    
+
     else:
-        _marshall_av_media(proto, data)
+        _marshall_av_media(proto, data, mimetype)
 
 
 def marshall_audio(proto, data, mimetype="audio/wav", start_time=0):
@@ -171,7 +160,6 @@ def marshall_audio(proto, data, mimetype="audio/wav", start_time=0):
         The time from which this element should start playing. (default: 0)
     """
 
-    proto.format = mimetype     #TODO: do we need this anymore?
     proto.start_time = start_time
 
     if isinstance(data, string_types):
@@ -179,5 +167,4 @@ def marshall_audio(proto, data, mimetype="audio/wav", start_time=0):
             proto.url = data
 
     else:
-        _marshall_av_media(proto, data)
-
+        _marshall_av_media(proto, data, mimetype)

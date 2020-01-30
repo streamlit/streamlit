@@ -1503,8 +1503,9 @@ class DeltaGenerator(object):
             width = -1
         elif width <= 0:
             raise StreamlitAPIException("Image width must be positive.")
+
         image_proto.marshall_images(
-            image, caption, width, element.imgs, clamp, channels, format
+            image, caption, width, element.imgs, clamp, channels, format 
         )
 
     @_with_element
