@@ -15,27 +15,49 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { PureComponent, ReactNode } from "react"
 import DeckGL from "deck.gl"
-import { JSONConverter } from "@deck.gl/json"
-import * as layers from "@deck.gl/layers"
-import * as aggregationLayers from "@deck.gl/aggregation-layers"
 import Immutable from "immutable"
 import { StaticMap } from "react-map-gl"
+import * as layers from "@deck.gl/layers"
+import { JSONConverter } from "@deck.gl/json"
+import * as aggregationLayers from "@deck.gl/aggregation-layers"
+
+import { CSVLoader } from "@loaders.gl/csv"
+import { registerLoaders } from "@loaders.gl/core"
+
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 
 import "mapbox-gl/dist/mapbox-gl.css"
 import "./DeckGlJsonChart.scss"
 
-const configuration = {
-  classes: Object.assign({}, layers, aggregationLayers),
+interface PickingInfo {
+  object: {
+    [key: string]: string
+  }
 }
+
+interface DeckObject {
+  initialViewState: {
+    height: number
+    width: number
+  }
+  layers: Array<object>
+  mapStyle?: string | Array<string>
+}
+
+const configuration = {
+  classes: { ...layers, ...aggregationLayers },
+}
+
+registerLoaders([CSVLoader])
+
 const jsonConverter = new JSONConverter({ configuration })
 
 const MAPBOX_ACCESS_TOKEN =
   "pk.eyJ1IjoidGhpYWdvdCIsImEiOiJjamh3bm85NnkwMng4M3dydnNveWwzeWNzIn0.vCBDzNsEF2uFSFk2AM0WZQ"
 
-interface Props {
+export interface Props {
   width: number
   element: Immutable.Map<string, any>
 }
@@ -48,35 +70,67 @@ interface State {
   initialized: boolean
 }
 
-class DeckGlJsonChart extends React.PureComponent<PropsWithHeight, State> {
+export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
   static defaultProps = {
     height: 500,
   }
 
-  private fixHexLayerBug_bound: () => void
+  state = {
+    initialized: false,
+  }
 
-  constructor(props: PropsWithHeight) {
-    super(props)
-    this.state = { initialized: false }
-    this.fixHexLayerBug_bound = this.fixHexLayerBug.bind(this)
-
+  componentDidMount = (): void => {
     // HACK: Load layers a little after loading the map, to hack around a bug
     // where HexagonLayers were not drawing on first load but did load when the
     // script got re-executed.
-    setTimeout(this.fixHexLayerBug_bound, 0)
+    this.setState({
+      initialized: true,
+    })
   }
 
-  fixHexLayerBug(): void {
+  fixHexLayerBug = (): void => {
     this.setState({ initialized: true })
   }
 
-  render(): JSX.Element {
+  getDeckObject = (): DeckObject => {
     const { element, width, height } = this.props
     const json = JSON.parse(element.get("json"))
+
     json.initialViewState.height = height
     json.initialViewState.width = width
+
     delete json.views // We are not using views. This avoids a console warning.
-    const deck = jsonConverter.convert(json)
+
+    return jsonConverter.convert(json)
+  }
+
+  createTooltip = (info: PickingInfo): object | boolean => {
+    const { element } = this.props
+    let tooltip = element.get("tooltip")
+
+    if (!info || !info.object || !tooltip) {
+      return false
+    }
+
+    tooltip = JSON.parse(tooltip)
+
+    const matchedVariables = tooltip.html.match(/{(.*?)}/g)
+
+    if (matchedVariables) {
+      matchedVariables.forEach((el: string) => {
+        const variable = el.substring(1, el.length - 1)
+
+        if (info.object[variable]) {
+          tooltip.html = tooltip.html.replace(el, info.object[variable])
+        }
+      })
+    }
+
+    return tooltip
+  }
+
+  render(): ReactNode {
+    const deck = this.getDeckObject()
 
     return (
       <div
@@ -91,6 +145,7 @@ class DeckGlJsonChart extends React.PureComponent<PropsWithHeight, State> {
           height={deck.initialViewState.height}
           width={deck.initialViewState.width}
           layers={this.state.initialized ? deck.layers : []}
+          getTooltip={this.createTooltip}
           controller
         >
           <StaticMap
