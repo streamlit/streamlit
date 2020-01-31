@@ -29,12 +29,13 @@ import os
 import sys
 import textwrap
 import threading
+import traceback
 
 import streamlit as st
 from streamlit import config
 from streamlit import file_util
 from streamlit import type_util
-from streamlit.errors import UnhashableType, UserHashError, InternalHashError
+from streamlit.errors import UnhashableType, UserHashError, InternalHashError, StreamlitAPIException
 from streamlit.folder_black_list import FolderBlackList
 from streamlit.compatibility import setup_2_3_shims
 
@@ -214,13 +215,14 @@ def _hashing_error_message(bad_type):
 def _hashing_internal_error_message(exc, bad_type):
     return textwrap.dedent(
         """
-        %(exc)s
+        %(exception)s
 
-        Cannot hash object of type %(bad_type)s
+        Usually this means you found a Streamlit bug!
+        If you think that's the case, please [file a bug report here.]
+        (https://github.com/streamlit/streamlit/issues/new/choose)
 
-        While caching some code, Streamlit encountered an object of
-        type `%(bad_type)s`. You’ll need to help Streamlit understand how to
-        hash that type with the `hash_funcs` argument. For example:
+        In the meantime, you can try bypassing this error by registering a custom
+        hash function via the `hash_funcs` keyword in @st.cache(). For example:
 
         ```
         @st.cache(hash_funcs={%(bad_type)s: my_hash_func})
@@ -232,7 +234,7 @@ def _hashing_internal_error_message(exc, bad_type):
         (https://streamlit.io/docs/advanced_concepts.html#advanced-caching)
         for more details.
     """
-        % {"bad_type": str(bad_type).split("'")[1]}
+        % {"exception": str(exc), "bad_type": str(bad_type).split("'")[1]}
     ).strip("\n")
 
 
@@ -241,21 +243,10 @@ def _hashing_user_error_message(exc):
         """
         %(exception)s
 
-        Cannot hash object of type ?
+        Usually this means there is an error in your code.
 
-        While caching some code, Streamlit encountered an object of
-        type ?. You’ll need to help Streamlit understand how to
-        hash that type with the `hash_funcs` argument. For example:
-
-        ```
-        @st.cache(hash_funcs={?: my_hash_func})
-        def my_func(...):
-            ...
-        ```
-
-        Please see the [`hash_funcs` documentation]
-        (https://streamlit.io/docs/advanced_concepts.html#advanced-caching)
-        for more details.
+        If you think this is actually a Streamlit bug, please [file a bug report here.]
+        (https://github.com/streamlit/streamlit/issues/new/choose)
     """
         % {"exception": str(exc)}
     ).strip("\n")
@@ -495,15 +486,10 @@ class CodeHasher:
                 return h.digest()
         except (UnhashableType, UserHashError, InternalHashError):
             raise
+        # comment below to see the raw error instead of internal hash error
         except Exception as e:
-            import traceback
-
-            traceback.print_exc()
-            # TODO
-            # include stacktrace from e in the message?
-            # include info about the obj in the message?
             msg = _hashing_internal_error_message(e, type(obj))
-            raise InternalHashError(msg)
+            raise InternalHashError(msg)  # .with_traceback(e.__traceback__)
 
     def _code_to_bytes(self, code, context):
         h = hashlib.new(self.name)

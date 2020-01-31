@@ -28,10 +28,10 @@ import numpy as np
 import pandas as pd
 import pytest
 import tensorflow as tf
-from mock import MagicMock
+from mock import patch, MagicMock
 
 import streamlit as st
-from streamlit.errors import UnhashableType
+from streamlit.errors import UnhashableType, UserHashError, InternalHashError
 from streamlit.util import functools_wraps
 from streamlit.hashing import NP_SIZE_LARGE, PANDAS_ROWS_LARGE, CodeHasher
 
@@ -122,6 +122,36 @@ class HashTest(unittest.TestCase):
     def test_generator(self):
         with self.assertRaises(UnhashableType):
             get_hash((x for x in range(1)))
+
+    def test_hashing_broken_function(self):
+        def f():
+            import datetime
+            # strptime doesn't exist on datetime
+            # This causes an error in hashing_py3.py `get_referenced_objects`
+            return datetime.strptime("%H")
+
+        with self.assertRaises(UserHashError):
+            get_hash(f)
+
+    def test_internal_hashing_issue_hash_funcs(self):
+        # Simulate an error in the hashing code by creating a hash_funcs
+        # that causes an error during hashing.
+        with self.assertRaises(InternalHashError):
+            get_hash(1, hash_funcs={int: lambda x: "a" + x})
+
+    def test_internal_hashing_issue_mocked(self):
+        # Simulate an error in the hashing code by mocking streamlit internals
+        def side_effect(i):
+            if i == 123456789:
+                return "a" + 1
+
+            return i.to_bytes(
+                (i.bit_length() + 8) // 8, "little", signed=True
+            )
+
+        with self.assertRaises(InternalHashError):
+            with patch("streamlit.hashing._int_to_bytes", side_effect=side_effect):
+                get_hash(123456789)
 
     def test_float(self):
         self.assertEqual(get_hash(0.1), get_hash(0.1))
