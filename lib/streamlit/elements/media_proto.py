@@ -79,7 +79,9 @@ def _marshall_av_media(proto, data, mimetype):
     if isinstance(data, string_types):
         # Assume it's a filename or blank.  Allow OS-based file errors.
         with open(data, "rb") as fh:
-            this_file = _media_filemanager.add(fh.read(), filename=data, mimetype=format)
+            this_file = _media_filemanager.add(
+                fh.read(), filename=data, mimetype=format
+            )
             proto.url = this_file.url
             return
 
@@ -126,6 +128,7 @@ def marshall_video(proto, data, mimetype="video/mp4", start_time=0):
     """
 
     proto.start_time = start_time
+    proto.format = mimetype
 
     # "type" distinguishes between YouTube and non-YouTube links
     proto.type = Video_pb2.Video.Type.NATIVE
@@ -161,6 +164,7 @@ def marshall_audio(proto, data, mimetype="audio/wav", start_time=0):
     """
 
     proto.start_time = start_time
+    proto.format = mimetype
 
     if isinstance(data, string_types):
         if url(data):  # noqa: F821
