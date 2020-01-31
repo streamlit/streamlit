@@ -60,28 +60,60 @@ class DeckGlJsonChart extends React.PureComponent<PropsWithHeight, State> {
     height: 500,
   }
 
-  constructor(props: PropsWithHeight) {
-    super(props)
+  state = {
+    initialized: false,
+  }
 
-    this.state = { initialized: false }
-
+  componentDidMount(): void {
     // HACK: Load layers a little after loading the map, to hack around a bug
     // where HexagonLayers were not drawing on first load but did load when the
     // script got re-executed.
-    setTimeout(this.fixHexLayerBug, 0)
+    this.setState({
+      initialized: true,
+    })
   }
 
   fixHexLayerBug = (): void => {
     this.setState({ initialized: true })
   }
 
-  render(): JSX.Element {
+  getDeckObject = (): any => {
     const { element, width, height } = this.props
     const json = JSON.parse(element.get("json"))
+
     json.initialViewState.height = height
     json.initialViewState.width = width
+
     delete json.views // We are not using views. This avoids a console warning.
-    const deck = jsonConverter.convert(json)
+
+    return jsonConverter.convert(json)
+  }
+
+  createTooltip = (info: any): object | boolean => {
+    const { element } = this.props
+    let tooltip = element.get("tooltip")
+
+    if (!info || !info.object || !tooltip) {
+      return false
+    }
+
+    tooltip = JSON.parse(tooltip)
+
+    const matchedVariables = tooltip.html.match(/{(.*?)}/g)
+
+    if (matchedVariables) {
+      matchedVariables.forEach((el: string) => {
+        const variable = el.substring(1, el.length - 1)
+
+        tooltip.html = tooltip.html.replace(el, info.object[variable])
+      })
+    }
+
+    return tooltip
+  }
+
+  render(): JSX.Element {
+    const deck = this.getDeckObject()
 
     return (
       <div
@@ -96,6 +128,7 @@ class DeckGlJsonChart extends React.PureComponent<PropsWithHeight, State> {
           height={deck.initialViewState.height}
           width={deck.initialViewState.width}
           layers={this.state.initialized ? deck.layers : []}
+          getTooltip={this.createTooltip}
           controller
         >
           <StaticMap
