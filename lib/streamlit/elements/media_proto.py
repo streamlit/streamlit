@@ -80,7 +80,7 @@ def _marshall_av_media(proto, data, mimetype):
         # Assume it's a filename or blank.  Allow OS-based file errors.
         with open(data, "rb") as fh:
             this_file = _media_filemanager.add(
-                fh.read(), filename=data, mimetype=format
+                fh.read(), filename=data, mimetype=mimetype
             )
             proto.url = this_file.url
             return
@@ -104,7 +104,7 @@ def _marshall_av_media(proto, data, mimetype):
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
-    this_file = _media_filemanager.add(data, mimetype=proto.format)
+    this_file = _media_filemanager.add(data, mimetype=mimetype)
     proto.url = this_file.url
 
 
@@ -128,7 +128,6 @@ def marshall_video(proto, data, mimetype="video/mp4", start_time=0):
     """
 
     proto.start_time = start_time
-    proto.format = mimetype
 
     # "type" distinguishes between YouTube and non-YouTube links
     proto.type = Video_pb2.Video.Type.NATIVE
@@ -164,11 +163,9 @@ def marshall_audio(proto, data, mimetype="audio/wav", start_time=0):
     """
 
     proto.start_time = start_time
-    proto.format = mimetype
 
-    if isinstance(data, string_types):
-        if url(data):  # noqa: F821
-            proto.url = data
+    if isinstance(data, string_types) and url(data):  # noqa: F821
+        proto.url = data
 
     else:
         _marshall_av_media(proto, data, mimetype)
