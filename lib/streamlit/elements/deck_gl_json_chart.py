@@ -28,6 +28,5 @@ def marshall(element, pydeck_obj):
 
     element.deck_gl_json_chart.json = spec
 
-    if isinstance(pydeck_obj.deck_widget.tooltip, dict):
+    if pydeck_obj is not None and isinstance(pydeck_obj.deck_widget.tooltip, dict):
         element.deck_gl_json_chart.tooltip = json.dumps(pydeck_obj.deck_widget.tooltip)
-
