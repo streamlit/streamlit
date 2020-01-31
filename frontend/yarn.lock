@@ -850,15 +850,6 @@
     debug "^3.1.0"
     lodash.once "^4.1.1"
 
-"@danmarshall/deckgl-typings@^2.2.5":
-  version "2.2.5"
-  resolved "https://registry.yarnpkg.com/@danmarshall/deckgl-typings/-/deckgl-typings-2.2.5.tgz#0d318c752e9aecda5bb9ea450c39aa2ca0e36860"
-  integrity sha512-unF0PbUhFas7QxsCYScL7hpblsBh16Ik4TOew4KCy7eZLYfGJg9Mj6Gj4FDuwkBFuW4QlsW2BfMYY4OootMaGQ==
-  dependencies:
-    "@types/hammerjs" "^2.0.36"
-    "@types/react" "*"
-    indefinitely-typed "^1.0.2"
-
 "@deck.gl/aggregation-layers@8.0.12":
   version "8.0.12"
   resolved "https://registry.yarnpkg.com/@deck.gl/aggregation-layers/-/aggregation-layers-8.0.12.tgz#fbc91ef33e4a3b3e10dd808627e266916f8a4101"
@@ -1803,11 +1794,6 @@
   version "2.4.5"
   resolved "https://registry.yarnpkg.com/@types/gl-matrix/-/gl-matrix-2.4.5.tgz#80630d88fb74ff8897a2a2855a8a700e6ee19d3e"
   integrity sha512-0L8Mq1+oaIW0oVzGUDbSW+HnTjCNb4CmoIQE5BkoHt/A7x20z0MJ1PnwfH3atty/vbWLGgvJwVu2Mz3SKFiEFw==
-
-"@types/hammerjs@^2.0.36":
-  version "2.0.36"
-  resolved "https://registry.yarnpkg.com/@types/hammerjs/-/hammerjs-2.0.36.tgz#17ce0a235e9ffbcdcdf5095646b374c2bf615a4c"
-  integrity sha512-7TUK/k2/QGpEAv/BCwSHlYu3NXZhQ9ZwBYpzr9tjlPIL2C5BeGhH3DmVavRx3ZNyELX5TLC91JTz/cen6AAtIQ==
 
 "@types/hoist-non-react-statics@^3.3.1":
   version "3.3.1"
@@ -7654,14 +7640,6 @@ incremental-convex-hull@^1.0.1:
   dependencies:
     robust-orientation "^1.1.2"
     simplicial-complex "^1.0.0"
-
-indefinitely-typed@^1.0.2:
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/indefinitely-typed/-/indefinitely-typed-1.0.2.tgz#b577044fceb8f7c151e1a851b034b643eafdb14e"
-  integrity sha512-BGnhwdPmpGDCvKQ4EnhfcPkE3tHbwodkmLLPIWjDINHjD5WFj0C0lGMLzObZC9yyaVoqwJRzYJxe0X1XYXxcDQ==
-  dependencies:
-    fs-extra "^7.0.0"
-    minimist "^1.2.0"
 
 indent-string@^2.1.0:
   version "2.1.0"
