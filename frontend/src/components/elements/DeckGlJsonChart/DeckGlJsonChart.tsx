@@ -105,7 +105,9 @@ class DeckGlJsonChart extends React.PureComponent<PropsWithHeight, State> {
       matchedVariables.forEach((el: string) => {
         const variable = el.substring(1, el.length - 1)
 
-        tooltip.html = tooltip.html.replace(el, info.object[variable])
+        if (info.object[variable]) {
+          tooltip.html = tooltip.html.replace(el, info.object[variable])
+        }
       })
     }
 
