@@ -1,22 +1,42 @@
-@import "src/assets/css/variables";
+/**
+ * @license
+ * Copyright 2018-2020 Streamlit Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@import "src/assets/css/theme";
 
 .streamlit-dialog.screencast {
   width: 80%;
 
   .modal-body {
-    padding: 0;
-
     video {
       width: 100%;
+      border-radius: $border-radius;
+    }
+
+    .download-button {
+      margin-top: calc(-#{$border-width} - #{$input-btn-padding-y});
     }
 
     .steps-container {
       display: grid;
 
-      grid-template-columns: 100px auto 100px;
+      grid-template-columns: 6em auto 6em;
 
       .first-column {
-        padding-right: 0.5rem;
+        padding-right: 1rem;
       }
 
       .second-step {
@@ -28,7 +48,6 @@
       .first-column,
       .second-column,
       .third-columnd {
-        border-top: 1px solid $gray-300;
         padding-top: 0.7rem;
         padding-bottom: 0.7rem;
 
@@ -39,7 +58,7 @@
 
       .first-column {
         text-align: right;
-        color: gray;
+        color: $gray;
         font-weight: bold;
 
         &.third-step {

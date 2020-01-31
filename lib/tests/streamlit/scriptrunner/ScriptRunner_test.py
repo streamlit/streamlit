@@ -393,11 +393,9 @@ class TestScriptRunner(ScriptRunner):
         self.script_request_queue = ScriptRequestQueue()
         script_path = os.path.join(os.path.dirname(__file__), "test_data", script_name)
 
-        report = Report(script_path, "test command line")
-        report.enqueue = enqueue_fn
-
         super(TestScriptRunner, self).__init__(
-            report=report,
+            report=Report(script_path, "test command line"),
+            enqueue_forward_msg=enqueue_fn,
             widget_states=WidgetStates(),
             request_queue=self.script_request_queue,
         )
