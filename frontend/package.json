@@ -85,7 +85,6 @@
   },
   "devDependencies": {
     "@craco/craco": "^5.5.0",
-    "@danmarshall/deckgl-typings": "^2.2.5",
     "@deck.gl/json": "^8.0.5",
     "@types/classnames": "^2.2.9",
     "@types/clipboard": "^2.0.1",
