@@ -106,7 +106,7 @@ res = expensive_computation(a, b)
 st.write("Result:", res)
 ```
 
-The first time you rerun the app you'll notice the text "Cache miss" and that it takes about two seconds to finish running. Now, if you press **R** to rerun the app again, it'll always be a cache hit. That means, no more text that shows "Cache hit", and you'll notice that the report loads noticeably faster.
+The first time you rerun the app you'll notice the text "Cache miss" and that it takes about two seconds to finish running. Now, if you press **R** to rerun the app again, it'll always be a cache hit. That means, no more text that shows "Cache miss", and you'll notice that the report loads noticeably faster.
 
 This is because Streamlit notices whenever the arguments **a** and **b** change and determines whether the function should be re-executed and re-cached.
 
