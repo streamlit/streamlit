@@ -18,7 +18,7 @@ syntax = "proto3";
 
 message Video {
   // A url pointing to a video file
-  string url = 1;
+  string url = 4;
 
   enum Type {
     UNUSED = 0;  // This should always exist.
@@ -26,12 +26,12 @@ message Video {
     YOUTUBE_IFRAME = 2;
   }
 
-  Type type = 4;
-
-  // The type attribute of the HTML <video> tag's <source> subtag.
-  // ex: "video/mp4"
-  string format = 2;
-
   // The currentTime attribute of the HTML <video> tag's <source> subtag.
   int32 start_time = 3;
+  
+  // Type affects how browser wraps the video in tags: plain HTML5, YouTube...
+  Type type = 5;
+
+  reserved 1,2;
+  reserved "format", "data";
 }

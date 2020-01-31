@@ -18,8 +18,11 @@ syntax = "proto3";
 
 // An image which can be displayed on the screen.
 message Image {
-  string url = 1;
+  string url = 3;
   string caption = 2;
+
+  reserved 1;
+  reserved "data";
 }
 
 // A set of images.
