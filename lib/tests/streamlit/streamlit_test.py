@@ -610,7 +610,8 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         # Make up some bytes to pretend we have a video.  The server should not vet
         # the video before sending it to the browser.
-        fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        #fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        fake_video_data = "\x12\x10\x35\x44\x55\x66".encode("utf-8")
 
         st.video(fake_video_data)
 

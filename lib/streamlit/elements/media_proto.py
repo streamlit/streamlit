@@ -148,7 +148,7 @@ def marshall_audio(proto, data, mimetype="audio/wav", start_time=0):
     """Marshalls an audio proto, using data and url processors as needed.
 
     Parameters
-    ----------
+lib/tests/streamlit/.streamlit_test.py.swp    ----------
     proto : The proto to fill. Must have a string field called "url".
     data : str, bytes, BytesIO, numpy.ndarray, or file opened with
             io.open()
