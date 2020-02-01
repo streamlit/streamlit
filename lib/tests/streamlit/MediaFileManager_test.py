@@ -13,58 +13,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit tests for UploadedFileManager"""
+"""Unit tests for MediaFileManager"""
 
 import unittest
 
-from streamlit.UploadedFileManager import UploadedFileManager
+from streamlit.MediaFileManager import MediaFileManager
+from streamlit.MediaFileManager import _get_file_id
 from datetime import date
 
 
+mfm = MediaFileManager()
+
+
 class UploadedFileManagerTest(unittest.TestCase):
-    def test_msg_hash(self):
-        """Test that ForwardMsg hash generation works as expected"""
+    def test__get_file_id(self):
+        """Test that file_id generation from data works as expected."""
 
-        widget_idA = "A0123456789"
-        widget_idB = "B0123456789"
-        file_name = "example_file.png"
-        file_bytes = bytearray(
-            "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789",
-            "utf-8",
-        )
-        uploaded_file_mgr = UploadedFileManager()
+        fake_bytes = "\x00\x00\xff\x00\x00\xff\x00\x00\xff\x00\x00\xff\x00".encode("utf-8")
+        test_hash = "70ac4b6fc5504e13e07eb33dfb5a0c2042c9bf02de3ec0bf49a4e7bc"
 
-        uploaded_file_mgr.create_or_clear_file(
-            widget_idA, file_name, len(file_bytes), date.today(), 1
-        )
-        uploaded_file_mgr.create_or_clear_file(
-            widget_idB, file_name, len(file_bytes), date.today(), 2
-        )
+        self.assertEqual(test_hash, _get_file_id(fake_bytes))
 
-        progress_a = uploaded_file_mgr.process_chunk(widget_idA, 0, file_bytes)
-        self.assertEqual(progress_a, 1)
+    def test_add_file(self):
 
-        progress_b = uploaded_file_mgr.process_chunk(widget_idB, 0, file_bytes[0:50])
-        self.assertEqual(progress_b, 0.5)
 
-        progress_b = uploaded_file_mgr.process_chunk(widget_idB, 1, file_bytes[50:100])
-        self.assertEqual(progress_b, 1)
 
-        progress_a, data_a = uploaded_file_mgr.get_data(widget_idA)
-        progress_b, data_b = uploaded_file_mgr.get_data(widget_idB)
-        self.assertEqual(progress_a, 100)
-        self.assertEqual(progress_b, 100)
-        self.assertEqual(len(data_a), len(file_bytes))
-        self.assertEqual(data_a, file_bytes)
-        self.assertEqual(data_a, data_b)
+    def test_override_file(self):
 
-        uploaded_file_mgr.delete_file(widget_idA)
 
-        progress_a, data_a = uploaded_file_mgr.get_data(widget_idA)
-        self.assertEqual(progress_a, 0)
-        self.assertEqual(data_a, None)
+    def test_delete_file(self):
 
-        uploaded_file_mgr.delete_all_files()
-        progress_b, data_b = uploaded_file_mgr.get_data(widget_idB)
-        self.assertEqual(progress_b, 0)
-        self.assertEqual(data_b, None)
+
+
+    def test_clear_files(self):
+        """Test that MediaFileManager removes all files when requested."""
+
+
+
+
+

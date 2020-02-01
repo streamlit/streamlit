@@ -138,7 +138,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
 
         # locate resultant file in MediaFileManager and test its properties.
-        file_id = _get_file_id(fake_audio_data)
+        file_id = _get_file_id(fake_audio_data, "audio/wav")
         self.assertTrue(file_id in _media_filemanager)
 
         afile = _media_filemanager.get(file_id)
@@ -296,7 +296,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         # locate resultant file in the file manager and check its metadata.
         from streamlit.elements.image_proto import _PIL_to_bytes
 
-        file_id = _get_file_id(_PIL_to_bytes(img, format="PNG"))
+        file_id = _get_file_id(_PIL_to_bytes(img, format="PNG"), "image/png")
         self.assertTrue(file_id in _media_filemanager)
 
         afile = _media_filemanager.get(file_id)
@@ -327,7 +327,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         from streamlit.elements.image_proto import _PIL_to_bytes
 
         for idx in range(len(imgs)):
-            file_id = _get_file_id(_PIL_to_bytes(imgs[idx], format="PNG"))
+            file_id = _get_file_id(_PIL_to_bytes(imgs[idx], format="PNG"), "image/png")
             self.assertEqual(el.imgs.imgs[idx].caption, "some caption")
             self.assertTrue(file_id in _media_filemanager)
             afile = _media_filemanager.get(file_id)
@@ -466,7 +466,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         for clear_figure in [True, False]:
             plt.hist(np.random.normal(1, 1, size=100), bins=20)
             with patch.object(plt, "clf", wraps=plt.clf, autospec=True) as plt_clf:
-                st.pyplot(clear_figure=clear_figure)
+                st.pyplot(clear_figure35=clear_figure)
 
                 if clear_figure:
                     plt_clf.assert_called_once()
@@ -610,7 +610,6 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         # Make up some bytes to pretend we have a video.  The server should not vet
         # the video before sending it to the browser.
-        #fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
         fake_video_data = "\x12\x10\x35\x44\x55\x66".encode("utf-8")
 
         st.video(fake_video_data)
@@ -618,7 +617,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
 
         # locate resultant file in MediaFileManager and test its properties.
-        file_id = _get_file_id(fake_video_data)
+        file_id = _get_file_id(fake_video_data, "video/mp4")
         self.assertTrue(file_id in _media_filemanager)
 
         afile = _media_filemanager.get(file_id)

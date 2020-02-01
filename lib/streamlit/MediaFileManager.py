@@ -6,8 +6,10 @@ from datetime import datetime
 STATIC_MEDIA_ENDPOINT = "/media"
 
 
-def _get_file_id(data):
-    return hashlib.sha224(data).hexdigest()
+def _get_file_id(data, mimetype):
+    if mimetype is None:
+        mimetype = ""
+    return hashlib.sha224(bytes(mimetype) + data).hexdigest()
 
 
 class MediaFile(object):
@@ -70,7 +72,7 @@ class MediaFileManager(object):
         filename : str
             User-defined filename of loaded file. (Default: None)
         """
-        file_id = _get_file_id(content)
+        file_id = _get_file_id(content, mimetype)
 
         if not file_id in self._files:
             new = MediaFile(
