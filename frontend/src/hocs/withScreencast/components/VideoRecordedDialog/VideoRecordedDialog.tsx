@@ -51,14 +51,14 @@ class VideoRecordedDialog extends PureComponent<Props> {
         <ModalHeader toggle={onClose}>Next steps</ModalHeader>
         <ModalBody>
           <div className="steps-container">
-            <div className="first-column first-step">Step 1 →</div>
+            <div className="first-column first-step">Step 1</div>
             <div className="second-column first-step">
               <p>Preview your video below:</p>
               <video src={videoSource} controls />
             </div>
             <div className="third-column first-step" />
 
-            <div className="first-column second-step">Step 2 →</div>
+            <div className="first-column second-step">Step 2</div>
             <div className="second-column second-step">
               <Button
                 outline
@@ -66,21 +66,24 @@ class VideoRecordedDialog extends PureComponent<Props> {
                 href={videoSource}
                 download={`${fileName}.webm`}
                 onClick={this.handleDownloadButton}
+                className="download-button"
               >
                 Save video to disk
               </Button>
               <p>
-                This video is encoded in the{" "}
-                <a href="https://www.webmproject.org/">WebM format</a>, which
-                is only supported by newer video players. You can also play it
-                by dragging the file into your browser.
+                <small>
+                  This video is encoded in the{" "}
+                  <a href="https://www.webmproject.org/">WebM format</a>, which
+                  is only supported by newer video players. You can also play
+                  it by dragging the file directly into your browser.
+                </small>
               </p>
             </div>
 
-            <div className="first-column third-step">Step 3 →</div>
+            <div className="first-column third-step">Step 3</div>
             <div className="second-column third-step">
-              Share it with the world on Twitter, LinkedIn, YouTube, or just
-              plain email!{" "}
+              Share your video with the world on Twitter, LinkedIn, YouTube, or
+              just plain email!{" "}
               <span role="img" aria-label="Happy">
                 😀
               </span>
