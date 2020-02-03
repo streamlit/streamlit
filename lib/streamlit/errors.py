@@ -22,7 +22,11 @@ class S3NoCredentials(Exception):
     pass
 
 
-class StreamlitAPIException(Exception):
+class MarkdownFormattedException(Exception):
+    pass
+
+
+class StreamlitAPIException(MarkdownFormattedException):
     """Base class for Streamlit API exceptions.
 
     An API exception should be thrown when user code interacts with the
@@ -54,5 +58,5 @@ class UserHashError(StreamlitAPIException):
     pass
 
 
-class InternalHashError(StreamlitAPIException):
+class InternalHashError(MarkdownFormattedException):
     pass

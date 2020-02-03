@@ -35,7 +35,7 @@ import streamlit as st
 from streamlit import config
 from streamlit import file_util
 from streamlit import type_util
-from streamlit.errors import UnhashableType, UserHashError, InternalHashError, StreamlitAPIException
+from streamlit.errors import UnhashableType, UserHashError, InternalHashError
 from streamlit.folder_black_list import FolderBlackList
 from streamlit.compatibility import setup_2_3_shims
 
@@ -252,6 +252,21 @@ def _hashing_user_error_message(exc):
     ).strip("\n")
 
 
+def _hash_funcs_error_message(exc):
+    return textwrap.dedent(
+        """
+        %(exception)s
+
+        I see you passed the `hash_funcs` argument into ``@st.cache()``.
+        The error could stem from some bad code in your hash function.
+
+        If you think this is actually a Streamlit bug, please [file a bug report here.]
+        (https://github.com/streamlit/streamlit/issues/new/choose)
+    """
+        % {"exception": str(exc)}
+    ).strip("\n")
+
+
 class CodeHasher:
     """A hasher that can hash code objects including dependencies."""
 
@@ -351,7 +366,13 @@ class CodeHasher:
                 return obj.encode()
             elif type(obj) in self.hash_funcs:
                 # Escape hatch for unsupported objects
-                return self.to_bytes(self.hash_funcs[type(obj)](obj))
+                try:
+                    output = self.hash_funcs[type(obj)](obj)
+                except Exception as e:
+                    msg = _hash_funcs_error_message(e)
+                    raise UserHashError(msg).with_traceback(e.__traceback__)
+
+                return self.to_bytes(output)
             elif isinstance(obj, float):
                 return self.to_bytes(hash(obj))
             elif isinstance(obj, int):
@@ -471,25 +492,24 @@ class CodeHasher:
                 self._update(h, obj.keywords)
                 return h.digest()
             else:
-                # As a last resort
+                # As a last resort, hash the output of the object's __reduce__ method
                 h = hashlib.new(self.name)
-
                 self._update(h, type(obj).__name__.encode() + b":")
+
                 try:
                     reduce_data = obj.__reduce__()
-                except:
+                except Exception as e:
                     msg = _hashing_error_message(type(obj))
-                    raise UnhashableType(msg)
+                    raise UnhashableType(msg).with_traceback(e.__traceback__)
 
                 for e in reduce_data:
                     self._update(h, e, context)
                 return h.digest()
         except (UnhashableType, UserHashError, InternalHashError):
             raise
-        # comment below to see the raw error instead of internal hash error
         except Exception as e:
             msg = _hashing_internal_error_message(e, type(obj))
-            raise InternalHashError(msg)  # .with_traceback(e.__traceback__)
+            raise InternalHashError(msg).with_traceback(e.__traceback__)
 
     def _code_to_bytes(self, code, context):
         h = hashlib.new(self.name)
@@ -512,7 +532,7 @@ class CodeHasher:
                 referenced_objects = get_referenced_objects(code, context)
             except Exception as e:
                 msg = _hashing_user_error_message(e)
-                raise UserHashError(msg)
+                raise UserHashError(msg).with_traceback(e.__traceback__)
 
             for ref in referenced_objects:
                 self._update(h, ref, context)

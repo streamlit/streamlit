@@ -123,7 +123,7 @@ class HashTest(unittest.TestCase):
         with self.assertRaises(UnhashableType):
             get_hash((x for x in range(1)))
 
-    def test_hashing_broken_function(self):
+    def test_hashing_broken_code(self):
         def f():
             import datetime
             # strptime doesn't exist on datetime
@@ -133,21 +133,15 @@ class HashTest(unittest.TestCase):
         with self.assertRaises(UserHashError):
             get_hash(f)
 
-    def test_internal_hashing_issue_hash_funcs(self):
-        # Simulate an error in the hashing code by creating a hash_funcs
-        # that causes an error during hashing.
-        with self.assertRaises(InternalHashError):
+    def test_hash_funcs_error(self):
+        with self.assertRaises(UserHashError):
             get_hash(1, hash_funcs={int: lambda x: "a" + x})
 
-    def test_internal_hashing_issue_mocked(self):
-        # Simulate an error in the hashing code by mocking streamlit internals
+    def test_internal_hashing_error(self):
         def side_effect(i):
             if i == 123456789:
                 return "a" + 1
-
-            return i.to_bytes(
-                (i.bit_length() + 8) // 8, "little", signed=True
-            )
+            return i.to_bytes((i.bit_length() + 8) // 8, "little", signed=True)
 
         with self.assertRaises(InternalHashError):
             with patch("streamlit.hashing._int_to_bytes", side_effect=side_effect):
