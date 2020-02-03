@@ -15,7 +15,6 @@
  */
 
 @import "src/assets/css/variables";
-@import "src/assets/css/mixins";
 
 body.embedded {
   overflow: hidden;
@@ -25,55 +24,6 @@ body.embedded:hover {
   overflow: auto;
 }
 
-a,
-a:visited {
-  color: $primary;
-}
-
-a:hover,
-a:active {
-  color: $primary;
-  text-decoration: underline;
-}
-
-iframe {
-  border: none;
-  padding: 0;
-  margin: 0;
-}
-
-code {
-  padding: 0.2em 0.4em;
-  margin: 0;
-  border-radius: $border-radius;
-  background: $gray-faint;
-  color: $green;
-}
-
-pre {
-  @include element-margin-bottom;
-
-  background: $gray-faint;
-  border-radius: $border-radius;
-  padding: 1rem;
-
-  code {
-    background: transparent;
-    border: 0;
-    display: inline;
-    font-size: $font-size-sm;
-    line-height: inherit;
-    margin: 0;
-    max-width: auto;
-    padding: 0;
-    white-space: pre;
-    word-break: normal;
-    word-wrap: normal;
-    overflow-x: auto;
-    color: $green;
-  }
-}
-
 .stApp {
   position: absolute;
   top: 0;
@@ -81,19 +31,6 @@ pre {
   right: 0;
   bottom: 0;
   overflow: hidden;
-}
-
-.progress {
-  background-color: $gray-lightest;
-}
-
-.progress-bar {
-  background-color: $blue;
-}
-
-.icon {
-  width: 0.9rem;
-  height: 0.9rem;
 }
 
 .bash::before {

@@ -8,9 +8,6 @@ workflows:
   circleci:
     jobs:
       - python-3.7.4
-      - python-2.7.16:
-          requires:
-            - python-3.7.4
       - cypress-approval:
           type: approval
           requires:
@@ -169,12 +166,7 @@ jobs:
           command: |
             echo 'Checking for virtualenv'
             if [ ! -d venv ] ; then
-              if [ "${CIRCLE_JOB}" == "python-2.7.16" ] ; then
-                pip install virtualenv
-                python -m virtualenv venv
-              else
-                python -m venv venv
-              fi
+              python -m venv venv
               source venv/bin/activate
               make setup
               make pipenv-lock
@@ -246,11 +238,7 @@ jobs:
       - run:
           name: Run frontend tests
           command: |
-            if [ "${CIRCLE_JOB}" == "python-2.7.16" ] ; then
-              echo "Not running frontend tests because our job is ${CIRCLE_JOB}"
-            else
-              make jstest
-            fi
+            make jstest
 
       #################################################################
       # Save cache for python virtualenv, node_modules, protobuf
@@ -275,16 +263,6 @@ jobs:
           paths:
             - frontend/src/autogen/proto.js
             - lib/streamlit/proto
-
-  # The 'python-2.7.16' job inherits everything from the Python 3 job.
-  # In a few cases, there are steps that are conditionally skipped based
-  # on the name of the current job (see, e.g., "Run frontend tests").
-  # If the python-2.7.16 job name is changed, please also find and replace
-  # any relevant strings that reference it by name!
-  python-2.7.16:
-    <<: *job-template
-    docker:
-      - image: circleci/python:2.7.16-stretch
 
   cypress:
     docker:

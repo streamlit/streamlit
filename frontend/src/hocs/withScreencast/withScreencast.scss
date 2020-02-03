@@ -14,14 +14,17 @@
  * limitations under the License.
  */
 
-@keyframes screencastCounterMoveUp {
+@import "src/assets/css/theme";
+
+@keyframes screencast-counter-animation {
   0% {
-    opacity: 0.8;
-    transform: translateY(20vh);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
   }
   100% {
     opacity: 0;
-    transform: translateY(0vh);
   }
 }
 
@@ -36,15 +39,12 @@
     justify-content: center;
     align-items: center;
     font-size: 40vh;
-    color: red;
+    color: $red;
     font-weight: bolder;
     opacity: 0.8;
     text-shadow: 1px 1px 10px darkgrey;
     transition: opacity 0.3s ease-in-out;
-
-    &.withAnimation {
-      animation: screencastCounterMoveUp 0.25s;
-      animation-delay: 0.75s;
-    }
+    font-family: Helvetica, Calibri, Roboto, "Open Sans", Arial, sans-serif;
+    animation: screencast-counter-animation 1s;
   }
 }

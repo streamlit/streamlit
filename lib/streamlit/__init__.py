@@ -142,12 +142,6 @@ def _set_log_level():
 _config.on_config_parsed(_set_log_level)
 
 
-def _reset():
-    # TODO: Move this out of here. This isn't a particularly nice place to
-    # reset this...
-    _get_report_ctx().widget_ids_this_run.clear()
-
-
 _main = _DeltaGenerator(container=_BlockPath_pb2.BlockPath.MAIN)
 sidebar = _DeltaGenerator(container=_BlockPath_pb2.BlockPath.SIDEBAR)
 
