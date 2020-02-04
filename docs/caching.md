@@ -235,7 +235,7 @@ This happens because the Streamlit cache is global to all users. So everyone con
 
 ## Example 6: Mutating cached values
 
-As mentioned in the How Caching Works section, the Streamlit cache stores items by reference. This allows the Streamlit cache to support structures that aren't memory-managed by Python, such as TensorFlow objects. However, it can also lead to unexpected behavior — which is why Streamlit has a few checks to guide developers in the right direction. Let's look into those checks now.
+As mentioned in the [overview](#caching) section, the Streamlit cache stores items by reference. This allows the Streamlit cache to support structures that aren't memory-managed by Python, such as TensorFlow objects. However, it can also lead to unexpected behavior — which is why Streamlit has a few checks to guide developers in the right direction. Let's look into those checks now.
 
 Let's write an app that has a cached function which returns a mutable object, and then let's follow up by mutating that object:
 
