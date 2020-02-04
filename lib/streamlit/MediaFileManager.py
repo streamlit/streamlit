@@ -71,7 +71,9 @@ class MediaFileManager(object):
         returns the MediaFile object.  Otherwise, creates a new file 
         with given content and supplied parameters.
 
-        mimetype should be set for best results.
+        mimetype should be set for best results, as its contents will be
+        used in the "Content-Type" header when the file is sent via HTTP
+        in response to the front-end's GET request.
 
         Parameters
         ----------
