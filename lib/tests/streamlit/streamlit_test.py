@@ -466,7 +466,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         for clear_figure in [True, False]:
             plt.hist(np.random.normal(1, 1, size=100), bins=20)
             with patch.object(plt, "clf", wraps=plt.clf, autospec=True) as plt_clf:
-                st.pyplot(clear_figure35=clear_figure)
+                st.pyplot(clear_figure=clear_figure)
 
                 if clear_figure:
                     plt_clf.assert_called_once()
