@@ -1880,8 +1880,9 @@ class DeltaGenerator(object):
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
         format : str or None
-            Printf/Python format string controlling how the interface should
+            A printf-style format string controlling how the interface should
             display numbers. This does not impact the return value.
+            Valid formatters: %d %e %f %g %i
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
