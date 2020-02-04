@@ -9,11 +9,9 @@ When you mark a function with the [`@st.cache`](api.html#streamlit.cache) decora
 3. The body of the function
 4. The body of any function used inside the cached function
 
-If this is the first time Streamlit has seen these items with these exact values and in this exact combination and order, it runs the function and stores the result in a local cache. Think of the cache as a simple in-memory key-value store, where the key is a hash of all of the above and the value is the actual output object passed by reference.
+If this is the first time Streamlit has seen these items with these exact values and in this exact combination and order, it runs the function and stores the result in a local cache. Then, next time the cached function is called, if none of these changed, Streamlit will just skip executing the function altogether and, instead, return the output previously stored in the cache.
 
-Then, next time the cached function is called, if the key hasn’t changed, Streamlit will just skip executing the function altogether and, instead, return the output previously stored in the cache.
-
-The way Streamlit keeps track of changes in these components is through hashing.
+The way Streamlit keeps track of changes in these components is through hashing. Think of the cache as a simple in-memory key-value store, where the key is a hash of all of the above and the value is the actual output object passed by reference.
 
 Finally, [`@st.cache`](api.html#streamlit.cache) supports arguments to configure the cache's behavior. You can find more information on those in our [API reference](api.md).
 
@@ -38,7 +36,7 @@ res = expensive_computation(a, b)
 st.write("Result:", res)
 ```
 
-You'll notice that this app is laggy. If you press **R** to rerun the app, it gets worse, since the calculation is rerun from start to finish with each refresh. This isn't a great experience.
+Try pressing **R** to rerun the app, and notice how long it takes for the result to show up. This is because `expensive_computation(a, b)` is being re-executed every time the app runs. This isn't a great experience.
 
 Let's add the [`@st.cache`](api.html#streamlit.cache) decorator:
 
@@ -82,7 +80,7 @@ Now when you rerun the app the text "Cache miss" appears on the first run, but n
 
 ```eval_rst
 .. note::
-   You may have noticed that we added the `suppress_st_warning` to the `@st.cache` decorators. That's because the cached function above uses a Streamlit command itself (`st.write` in this case), and when Streamlit sees that, it shows a warning that your command will only execute when you get a cache hit. More often than not, when you see that warning it's because there's a bug in your code. However, in our case we're using the `st.write` command to demonstrate when the cache is being hit, so the behavior Streamlit is warning us about is exactly what we want. As a result, we are passing in `suppress_st_warning=True` to turn that warning off.
+   You may have noticed that we've added the `suppress_st_warning` to the `@st.cache` decorators. That's because the cached function above uses a Streamlit command itself (`st.write` in this case), and when Streamlit sees that, it shows a warning that your command will only execute when you get a cache hit. More often than not, when you see that warning it's because there's a bug in your code. However, in our case we're using the `st.write` command to demonstrate when the cache is being hit, so the behavior Streamlit is warning us about is exactly what we want. As a result, we are passing in `suppress_st_warning=True` to turn that warning off.
 ```
 
 ## Example 2: When the function arguments change
@@ -106,7 +104,7 @@ res = expensive_computation(a, b)
 st.write("Result:", res)
 ```
 
-The first time you rerun the app you'll notice the text "Cache miss" and that it takes about two seconds to finish running. Now, if you press **R** to rerun the app again, it'll always be a cache hit. That means, no more text that shows "Cache miss", and you'll notice that the report loads noticeably faster.
+Now the first time you rerun the app it's a cache miss. This is evidenced by the "Cache miss" text showing up and the app taking 2s to finish running. After that, if you press **R** to rerun, it's always a cache hit. That is, no such text shows up and the app is fast again.
 
 This is because Streamlit notices whenever the arguments **a** and **b** change and determines whether the function should be re-executed and re-cached.
 
@@ -131,7 +129,7 @@ res = expensive_computation(a, b)
 st.write("Result:", res)
 ```
 
-The first run is a "Cache miss", but each subsequent run is a cache hit. This is because on first run, Streamlit detected that the function body changed, reran the function, and put the result in the cache.
+The first run is a "Cache miss", but when you press R each subsequent run is a cache hit. This is because on first run, Streamlit detected that the function body changed, reran the function, and put the result in the cache.
 
 ```eval_rst
 .. tip::
@@ -268,11 +266,17 @@ When you run this app for the first time, you should see three messages on the s
 * Result: {output: 42}
 * Mutated result: {output: "result was manually mutated"}
 
+No surprises here. But now notice what happens when you rerun you app (i.e. press **R**):
+
+* Result: {output: "result was manually mutated"}
+* Mutated result: {output: "result was manually mutated"}
+* <Warning> Cached object mutated. (...)
+
 So what's up?
 
 What's going on here is that Streamlit caches the output `res` by reference. When you mutated `res["output"]` outside the cached function you ended up inadvertently modifying the cache. This means every subsequent call to `expensive_computation(2, 21)` will return the wrong value!
 
-Since this behavior is usually not what you'd expect, Streamlit tries to be helpful show you a warning, along with some ideas about how to fix your code.
+Since this behavior is usually not what you'd expect, Streamlit tries to be helpful and show you a warning, along with some ideas about how to fix your code.
 
 In this specific case, the fix is just to not mutate `res["output"]` outside the cached function. There was no good reason for us to do that anyway! Another solution would be to clone the result value with `res = deepcopy(expensive_computation(2, 21))`. Check out the section entitled [Fixing caching issues](troubleshooting/caching_issues.md) for more information on these approaches and more.
 
