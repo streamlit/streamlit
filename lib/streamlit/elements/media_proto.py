@@ -79,13 +79,11 @@ def _marshall_av_media(proto, data, mimetype):
     if isinstance(data, string_types):
         # Assume it's a filename or blank.  Allow OS-based file errors.
         with open(data, "rb") as fh:
-            this_file = _media_filemanager.add(
-                fh.read(), filename=data, mimetype=mimetype
-            )
+            this_file = _media_filemanager.add(fh.read(), mimetype=mimetype)
             proto.url = this_file.url
             return
 
-    if not data:
+    if data is None:
         # allow empty values so media players can be shown without media.
         proto.url = ""
         return
@@ -99,8 +97,8 @@ def _marshall_av_media(proto, data, mimetype):
     elif isinstance(data, io.IOBase):
         data.seek(0)
         data = data.read()
-    # elif type(data).__name__ == "ndarray":
-    #    data = ...
+    elif type(data).__name__ == "ndarray":
+        data = data.tobytes()
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
@@ -148,7 +146,7 @@ def marshall_audio(proto, data, mimetype="audio/wav", start_time=0):
     """Marshalls an audio proto, using data and url processors as needed.
 
     Parameters
-lib/tests/streamlit/.streamlit_test.py.swp    ----------
+    ----------
     proto : The proto to fill. Must have a string field called "url".
     data : str, bytes, BytesIO, numpy.ndarray, or file opened with
             io.open()
