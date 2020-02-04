@@ -34,11 +34,11 @@ from streamlit.ForwardMsgCache import ForwardMsgCache
 from streamlit.ForwardMsgCache import create_reference_msg
 from streamlit.ForwardMsgCache import populate_hash_if_needed
 from streamlit.ReportSession import ReportSession
+from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.server.UploadFileHandler import HTTPUploadedFileManager
-from streamlit.server.UploadFileHandler import UploadFileHandler
+from streamlit.server.UploadFileRequestHandler import UploadFileRequestHandler
 from streamlit.server.routes import AddSlashHandler
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
@@ -195,7 +195,22 @@ class Server(object):
         self._state = None
         self._set_state(State.INITIAL)
         self._message_cache = ForwardMsgCache()
-        self._uploaded_file_mgr = HTTPUploadedFileManager()
+        self._uploaded_file_mgr = UploadedFileManager()
+        self._uploaded_file_mgr.on_file_added.connect()
+
+    def _on_file_uploaded(self, file):
+        """Event handler for UploadedFileManager.on_file_added.
+
+        When a file is uploaded by a user, schedule a re-run of the
+        corresponding ReportSession.
+
+        Parameters
+        ----------
+        file : File
+            The file that was just uploaded.
+
+        """
+        pass
 
     def start(self, on_started):
         """Start the server.
@@ -253,7 +268,7 @@ class Server(object):
             ),
             (
                 make_url_path_regex(base, "upload_file"),
-                UploadFileHandler,
+                UploadFileRequestHandler,
                 dict(file_mgr=self._uploaded_file_mgr),
             ),
         ]
@@ -500,6 +515,14 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def on_close(self):
         self._server._remove_browser_connection(self)
+        self._session = None
+
+    @property
+    def session_id(self):
+        """ReportSession.id of our ReportSession, or None if we are not
+        connected.
+        """
+        return self._session.id if self._session is not None else None
 
     @tornado.gen.coroutine
     def on_message(self, payload):
