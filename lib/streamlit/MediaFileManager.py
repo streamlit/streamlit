@@ -6,10 +6,21 @@ from datetime import datetime
 STATIC_MEDIA_ENDPOINT = "/media"
 
 
-def _get_file_id(data, mimetype):
+def _get_file_id(data, mimetype=None):
+    """
+    Parameters
+    ----------
+
+    data : bytes 
+        Content of media file in bytes. Other types will throw TypeError.
+    mimetype : str
+        Any string. Will be converted to bytes and used to compute a hash.
+        None will be converted to empty string.  [default: None]
+    """
+
     if mimetype is None:
         mimetype = ""
-    return hashlib.sha224(bytes(mimetype) + data).hexdigest()
+    return hashlib.sha224(bytes(mimetype.encode("utf-8")) + data).hexdigest()
 
 
 class MediaFile(object):
@@ -20,7 +31,6 @@ class MediaFile(object):
         file_id=None,
         content=None,
         mimetype=None,
-        filename=None,
         size=None,
         last_modified=None,
     ):
@@ -28,7 +38,6 @@ class MediaFile(object):
         self.file_id = file_id
         self.content = content
         self.mimetype = mimetype
-        self.filename = filename
         self.size = size
         self.last_modified = last_modified
 
@@ -50,27 +59,29 @@ class MediaFileManager(object):
     def clear(self):
         """ Deletes all files from the file manager. """
         for file_id in list(self._files):
-            self.delete(widget_id)
+            self.delete(file_id)
 
     def delete(self, file_id):
         """ Deletes file with specified file_id. """
-        del self._files[file_id]
+        try:
+            del self._files[file_id]
+        except KeyError:
+            raise FileNotFoundError("File_id %s not found in MediaFileManager." % file_id)
 
-    def add(self, content, mimetype=None, filename=None):
+    def add(self, content, mimetype=None):
         """ Adds new file with given content. Creates a hash of the 
         data to make a file ID.  If a file with given ID already exists,
         returns the MediaFile object.  Otherwise, creates a new file 
         with given content and supplied parameters.
 
-        mimetype should be set for best results.  filename can be elided.
+        mimetype should be set for best results.
 
         Parameters
         ----------
         content : str, bytes.  Raw data to store in file object.
         mimetype : str
             The mime type for the media file. E.g. "audio/mpeg"
-        filename : str
-            User-defined filename of loaded file. (Default: None)
+            (Default: None)
         """
         file_id = _get_file_id(content, mimetype)
 
@@ -79,7 +90,6 @@ class MediaFileManager(object):
                 file_id=file_id,
                 content=content,
                 mimetype=mimetype,
-                filename=filename,
                 last_modified=datetime.utcnow(),
             )
             self._files[file_id] = new
@@ -91,8 +101,13 @@ class MediaFileManager(object):
         """
         return self._files[file_id]
 
-    def __contains__(self, file_id):
-        return file_id in self._files
+    def __contains__(self, file_id_or_mediafile):
+        if type(file_id_or_mediafile) is MediaFile:
+            return file_id_or_mediafile.file_id in self._files
+        return file_id_or_mediafile in self._files
+
+    def __len__(self):
+        return len(self._files)
 
 
 mfm = MediaFileManager()
