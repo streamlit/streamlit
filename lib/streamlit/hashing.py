@@ -204,7 +204,7 @@ def _hashing_error_message(bad_type):
             ...
         ```
 
-        Please see the [`hash_funcs` documentation]
+        Please see the `hash_funcs` [documentation]
         (https://streamlit.io/docs/advanced_concepts.html#advanced-caching)
         for more details.
     """
@@ -230,7 +230,7 @@ def _hashing_internal_error_message(exc, bad_type):
             ...
         ```
 
-        Please see the [`hash_funcs` documentation]
+        Please see the `hash_funcs` [documentation]
         (https://streamlit.io/docs/advanced_concepts.html#advanced-caching)
         for more details.
     """
@@ -257,8 +257,8 @@ def _hash_funcs_error_message(exc):
         """
         %(exception)s
 
-        I see you passed the `hash_funcs` argument into ``@st.cache()``.
-        The error could stem from some bad code in your hash function.
+        This error is likely from a bad function passed via the `hash_funcs`
+        keyword to `@st.cache`.
 
         If you think this is actually a Streamlit bug, please [file a bug report here.]
         (https://github.com/streamlit/streamlit/issues/new/choose)
