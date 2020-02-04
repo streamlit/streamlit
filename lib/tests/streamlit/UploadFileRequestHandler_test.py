@@ -21,20 +21,20 @@ import tornado.testing
 import tornado.web
 import tornado.websocket
 
+from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.logger import get_logger
-from streamlit.server.UploadFileHandler import HTTPUploadedFileManager
-from streamlit.server.UploadFileHandler import UploadFileHandler
+from streamlit.server.UploadFileRequestHandler import UploadFileRequestHandler
 
 LOGGER = get_logger(__name__)
 
 
-class UploadFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
-    """Tests the POST /upload_file endpoint."""
+class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
+    """Tests the /upload_file endpoint."""
 
     def get_app(self):
-        self.file_mgr = HTTPUploadedFileManager()
+        self.file_mgr = UploadedFileManager()
         return tornado.web.Application(
-            [("/upload_file", UploadFileHandler, dict(file_mgr=self.file_mgr))]
+            [("/upload_file", UploadFileRequestHandler, dict(file_mgr=self.file_mgr))]
         )
 
     def _upload_file(self, params):

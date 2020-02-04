@@ -12,92 +12,121 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import threading
+
+from blinker import Signal
 
 
 class File(object):
-    """Queue that smartly accumulates the report's messages."""
+    """Encapsulates an uploaded file's data and metadata."""
 
-    def __init__(self, widget_id, name, size, last_modified, chunks):
+    def __init__(self, report_session_id, widget_id, name, data):
+        """Construct a new File object.
 
+        Parameters
+        ----------
+        report_session_id : str
+            The session ID of the report that created owns the file.
+        widget_id : str
+            The widget ID of the FileUploader that uploaded the file.
+        name : str
+            The file's name.
+        data : bytes
+            The file's data.
+
+        """
+        self.report_session_id = report_session_id
         self.widget_id = widget_id
         self.name = name
-        self.size = size
-        self.last_modified = last_modified
-        self.total_chunks = chunks
-        self.buffers = {}
-        self.data = None
+        self.data = data
 
-    def process_chunk(self, index, data):
-        """Process an incoming file chunk and return percent done."""
-
-        if index in self.buffers:
-            raise RuntimeError("File chunk was already processed")
-
-        self.buffers[index] = data
-        if len(self.buffers) == self.total_chunks:
-            self._coalesce_chunks()
-            return 1
-
-        if len(self.buffers) > 0:
-            return float(len(self.buffers)) / self.total_chunks
-
-    def _coalesce_chunks(self):
-        self.data = bytearray()
-        index = 0
-        while self.buffers.get(index) != None:
-            self.data.extend(self.buffers[index])
-            del self.buffers[index]
-            index += 1
-
-        self.buffers = {}
+    @property
+    def id(self):
+        """The file's unique ID."""
+        return self.report_session_id, self.widget_id
 
 
 class UploadedFileManager(object):
+    """Holds files uploaded by users of the running Streamlit app,
+    and emits an event signal when a file is added.
+    """
+
     def __init__(self):
-        self._file_list = {}
+        self._files = {}
+        self._files_lock = threading.Lock()
+        self.on_file_added = Signal(
+            doc="""Emitted when a file is added to the manager.
 
-    def delete_all_files(self):
-        for widget_id in list(self._file_list):
-            self.delete_file(widget_id)
-
-    def delete_file(self, widget_id):
-        del self._file_list[widget_id]
-
-    def create_or_clear_file(self, widget_id, name, size, last_modified, chunks):
-        if widget_id in self._file_list:
-            self.delete_file(widget_id)
-
-        file = File(
-            widget_id=widget_id,
-            name=name,
-            size=size,
-            last_modified=last_modified,
-            chunks=chunks,
+            Parameters
+            ----------
+            file : File
+                The file that was added.
+            """
         )
-        self._file_list[widget_id] = file
 
-    def process_chunk(self, widget_id, index, data):
-        """Process an incoming file chunk and return percent done."""
+    def add_file(self, file):
+        """Add a new file to the FileManager.
 
-        if widget_id not in self._file_list:
-            # Handle possible race condition when you cancel an upload
-            # and an old file chunk is received.
-            return 0
+        If another file with the same ID exists, it will be replaced with this
+        one.
 
-        return self._file_list[widget_id].process_chunk(index, data)
+        The "on_file_added" Signal will be emitted after the file is added.
 
-    def get_data(self, widget_id):
-        """Get a tuple with file progress and data bytes (or None)."""
+        Parameters
+        ----------
+        file : File
+            The file to add.
 
-        if widget_id not in self._file_list:
-            return 0, None
+        """
+        with self._files_lock:
+            self._files[file.id] = file
+        self.on_file_added.send(file)
 
-        file = self._file_list[widget_id]
+    def get_file_data(self, report_session_id, widget_id):
+        """Return the file data for a file with the given ID, or None
+        if the file doesn't exist.
 
-        progress = 100
+        Parameters
+        ----------
+        report_session_id : str
+            The session ID of the report that owns the file.
+        widget_id : str
+            The widget ID of the FileUploader that created the file.
 
-        if file.data is None:
-            progress = float(len(file.buffers)) / file.total_chunks
-            progress = round(100 * progress)
+        Returns
+        -------
+        bytes or None
+            The file's data, or None if the file does not exist.
 
-        return progress, file.data
+        """
+        file_id = report_session_id, widget_id
+        with self._files_lock:
+            file = self._files.get(file_id, None)
+        return file.data if file is not None else None
+
+    def remove_file(self, report_session_id, widget_id):
+        """Remove the file with the given ID, if it exists.
+
+        Parameters
+        ----------
+        report_session_id : str
+            The session ID of the report that owns the file.
+        widget_id : str
+            The widget ID of the FileUploader that created the file.
+        """
+        file_id = report_session_id, widget_id
+        with self._files_lock:
+            self._files.pop(file_id, None)
+
+    def remove_all_files(self, report_session_id):
+        """Remove all files that belong to the given report_session_id.
+
+        Parameters
+        ----------
+        report_session_id : str
+            The session ID of the report whose files we're removing.
+
+        """
+        for file_id in list(self._files.keys()):
+            if file_id[0] == report_session_id:
+                self.remove_file(*file_id)

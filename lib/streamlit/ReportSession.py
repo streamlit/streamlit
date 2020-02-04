@@ -63,7 +63,7 @@ class ReportSession(object):
 
     _next_id = 0
 
-    def __init__(self, ioloop, script_path, command_line):
+    def __init__(self, ioloop, script_path, command_line, uploaded_file_manager):
         """Initialize the ReportSession.
 
         Parameters
@@ -77,6 +77,9 @@ class ReportSession(object):
         command_line : str
             Command line as input by the user.
 
+        uploaded_file_manager : UploadedFileManager
+            The server's UploadedFileManager.
+
         """
         # Each ReportSession gets a unique string ID.
         self.id = str(ReportSession._next_id)
@@ -84,10 +87,9 @@ class ReportSession(object):
 
         self._ioloop = ioloop
         self._report = Report(script_path, command_line)
+        self._uploaded_file_mgr = uploaded_file_manager
 
         self._state = ReportSessionState.REPORT_NOT_RUNNING
-
-        self._uploaded_file_mgr = UploadedFileManager()
 
         self._widget_states = WidgetStates()
         self._local_sources_watcher = LocalSourcesWatcher(
