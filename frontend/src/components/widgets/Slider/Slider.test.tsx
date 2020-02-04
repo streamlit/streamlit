@@ -206,16 +206,16 @@ describe("Slider widget", () => {
       it("start > max", () => {
         // @ts-ignore
         wrapper.find(UISlider).prop("onChange")({
-          value: [11, 10],
+          value: [11],
         })
 
-        expect(wrapper.find(UISlider).prop("value")).toStrictEqual([10, 10])
+        expect(wrapper.find(UISlider).prop("value")).toStrictEqual([10])
       })
 
       it("end < min", () => {
         // @ts-ignore
         wrapper.find(UISlider).prop("onChange")({
-          value: [1, 0],
+          value: [1, -1],
         })
 
         expect(wrapper.find(UISlider).prop("value")).toStrictEqual([0, 0])
