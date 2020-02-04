@@ -1517,8 +1517,8 @@ class DeltaGenerator(object):
         data : str, bytes, BytesIO, numpy.ndarray, or file opened with
                 io.open().
             Raw audio data or a string with a URL pointing to the file to load.
-            If passing the raw data, this must include headers and any other bytes
-            required in the actual file.
+            Numpy arrays and raw data formats must include all necessary file
+            headers to match specified file format.
         start_time: int
             The time from which this element should start playing.
         format : str
@@ -1548,8 +1548,9 @@ class DeltaGenerator(object):
                 io.open().
             Raw video data or a string with a URL pointing to the video
             to load. Includes support for YouTube URLs.
-            If passing the raw data, this must include headers and any other
-            bytes required in the actual file.
+            Numpy arrays and raw data formats must include all necessary file
+            headers to match specified file format.
+        start_time: int
         format : str
             The mime type for the video file. Defaults to 'video/mp4'.
             See https://tools.ietf.org/html/rfc4281 for more info.
