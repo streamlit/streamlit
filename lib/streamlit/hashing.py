@@ -238,20 +238,6 @@ def _hashing_internal_error_message(exc, bad_type):
     ).strip("\n")
 
 
-def _hashing_user_error_message(exc):
-    return textwrap.dedent(
-        """
-        %(exception)s
-
-        Usually this means there is an error in your code.
-
-        If you think this is actually a Streamlit bug, please [file a bug report here.]
-        (https://github.com/streamlit/streamlit/issues/new/choose)
-    """
-        % {"exception": str(exc)}
-    ).strip("\n")
-
-
 def _hash_funcs_error_message(exc):
     return textwrap.dedent(
         """
@@ -528,13 +514,7 @@ class CodeHasher:
 
         # Hash non-local names and functions referenced by the bytecode.
         if hasattr(dis, "get_instructions"):  # get_instructions is new since Python 3.4
-            try:
-                referenced_objects = get_referenced_objects(code, context)
-            except Exception as e:
-                msg = _hashing_user_error_message(e)
-                raise UserHashError(msg).with_traceback(e.__traceback__)
-
-            for ref in referenced_objects:
+            for ref in get_referenced_objects(code, context):
                 self._update(h, ref, context)
         else:
             # This won't correctly follow nested calls like `foo.bar.baz()`.
