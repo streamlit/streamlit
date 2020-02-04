@@ -27,12 +27,7 @@ class MediaFile(object):
     """Abstraction for audiovisual/image file objects."""
 
     def __init__(
-        self,
-        file_id=None,
-        content=None,
-        mimetype=None,
-        size=None,
-        last_modified=None,
+        self, file_id=None, content=None, mimetype=None, size=None, last_modified=None,
     ):
 
         self.file_id = file_id
@@ -66,7 +61,9 @@ class MediaFileManager(object):
         try:
             del self._files[file_id]
         except KeyError:
-            raise FileNotFoundError("File_id %s not found in MediaFileManager." % file_id)
+            raise FileNotFoundError(
+                "File_id %s not found in MediaFileManager." % file_id
+            )
 
     def add(self, content, mimetype=None):
         """ Adds new file with given content. Creates a hash of the 
