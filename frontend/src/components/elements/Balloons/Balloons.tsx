@@ -42,7 +42,7 @@ BALLOON_IMAGES[BalloonsProto.Type.HAPPY_FACE] = HappyFaceEmoji
 BALLOON_IMAGES[BalloonsProto.Type.STAR_FACE] = StarFaceEmoji
 BALLOON_IMAGES[BalloonsProto.Type.COOL_FACE] = CoolFaceEmoji
 
-interface Props {
+export interface Props {
   width: number
   element: ImmutableMap<string, any>
 }
