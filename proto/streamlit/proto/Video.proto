@@ -18,7 +18,7 @@ syntax = "proto3";
 
 message Video {
   // A url pointing to a video file
-  string url = 4;
+  string url = 5;
 
   enum Type {
     UNUSED = 0;  // This should always exist.
@@ -32,6 +32,6 @@ message Video {
   // Type affects how browser wraps the video in tags: plain HTML5, YouTube...
   Type type = 5;
 
-  reserved 1,2;
+  reserved 1,2,4;
   reserved "format", "data";
 }

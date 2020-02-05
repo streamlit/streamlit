@@ -17,11 +17,11 @@
 syntax = "proto3";
 
 message Audio {
-  string url = 4;
+  string url = 5;
 
   // The currentTime attribute of the HTML <audio> tag's <source> subtag.
   int32 start_time = 3;
 
-  reserved 1, 2;
+  reserved 1, 2, 4;
   reserved "data", "format";
 }
