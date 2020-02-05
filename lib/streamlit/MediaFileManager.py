@@ -83,7 +83,8 @@ class MediaFileManager(object):
 
         Parameters
         ----------
-        content : str, bytes.  Raw data to store in file object.
+        content : bytes  
+            Raw data to store in file object.
         mimetype : str
             The mime type for the media file. E.g. "audio/mpeg"
         """
