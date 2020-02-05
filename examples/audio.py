@@ -18,7 +18,7 @@ import io
 import streamlit as st
 import numpy as np
 import wave
-import sndhdr
+from scipy.io import wavfile
 
 st.title("Audio test")
 
@@ -85,13 +85,13 @@ nframes = duration * sampling_rate
 x = st.text("Making wave...")
 sine_wave = note(frequency, duration, amplitude, sampling_rate)
 
-f = wave.open("sound.wav", "w")
-f.setparams((nchannels, sampwidth, int(sampling_rate), nframes, comptype, compname))
+fh = wave.open("sound.wav", "w")
+fh.setparams((nchannels, sampwidth, int(sampling_rate), nframes, comptype, compname))
 
 x.text("Converting wave...")
-f.writeframes(sine_wave)
+fh.writeframes(sine_wave)
 
-f.close()
+fh.close()
 
 with io.open("sound.wav", "rb") as f:
     x.text("Sending wave...")
@@ -99,10 +99,8 @@ with io.open("sound.wav", "rb") as f:
 
 st.header("Audio from a Remote URL")
 
-
 def shorten_audio_option(opt):
     return opt.split("/")[-1]
-
 
 song = st.selectbox(
     "Pick an MP3 to play",
