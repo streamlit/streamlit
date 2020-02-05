@@ -20,6 +20,7 @@ import { getMetricsManagerForTest } from "lib/MetricsManagerTestUtils"
 
 beforeEach(() => {
   SessionInfo.current = new SessionInfo({
+    sessionId: "sessionId",
     streamlitVersion: "sv",
     pythonVersion: "pv",
     installationId: "iid",

@@ -16,6 +16,7 @@
  */
 
 export interface Args {
+  sessionId: string
   streamlitVersion?: string | null
   pythonVersion?: string | null
   installationId?: string | null
@@ -27,6 +28,7 @@ export interface Args {
 
 export class SessionInfo {
   // Fields that don't change during the lifetime of a session (i.e. a browser tab).
+  public readonly sessionId: string
   public readonly streamlitVersion: string
   public readonly pythonVersion: string
   public readonly installationId: string
@@ -60,6 +62,7 @@ export class SessionInfo {
   }
 
   constructor({
+    sessionId,
     streamlitVersion,
     pythonVersion,
     installationId,
@@ -69,6 +72,7 @@ export class SessionInfo {
     mapboxToken,
   }: Args) {
     if (
+      sessionId == null ||
       streamlitVersion == null ||
       pythonVersion == null ||
       installationId == null ||
@@ -77,9 +81,10 @@ export class SessionInfo {
       commandLine == null ||
       mapboxToken == null
     ) {
-      throw new Error("SessionInfo arguments must be strings")
+      throw new Error("SessionInfo arguments must be non-null")
     }
 
+    this.sessionId = sessionId
     this.streamlitVersion = streamlitVersion
     this.pythonVersion = pythonVersion
     this.installationId = installationId

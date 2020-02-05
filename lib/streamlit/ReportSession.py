@@ -374,6 +374,7 @@ class ReportSession(object):
             imsg.user_info.email = ""
 
         imsg.command_line = self._report.command_line
+        imsg.session_id = self.id
 
         self.enqueue(msg)
 

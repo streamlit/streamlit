@@ -35,7 +35,7 @@ message Initialize {
   // The ReportSession.id for this connection's ReportSession.
   // This is used to associate uploaded files with the client that uploaded
   // them.
-  int32 session_id = 6;
+  string session_id = 6;
 }
 
 message Config {

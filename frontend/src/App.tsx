@@ -285,9 +285,21 @@ export class App extends PureComponent<Props, State> {
    */
 
   handleInitialize = (initializeMsg: Initialize): void => {
-    const { environmentInfo, userInfo, config, sessionState } = initializeMsg
+    const {
+      sessionId,
+      environmentInfo,
+      userInfo,
+      config,
+      sessionState,
+    } = initializeMsg
 
-    if (!environmentInfo || !userInfo || !config || !sessionState) {
+    if (
+      sessionId == null ||
+      !environmentInfo ||
+      !userInfo ||
+      !config ||
+      !sessionState
+    ) {
       throw new Error("InitializeMsg is missing a required field")
     }
 
@@ -298,6 +310,7 @@ export class App extends PureComponent<Props, State> {
     }
 
     SessionInfo.current = new SessionInfo({
+      sessionId: sessionId,
       streamlitVersion: environmentInfo.streamlitVersion,
       pythonVersion: environmentInfo.pythonVersion,
       installationId: userInfo.installationId,
