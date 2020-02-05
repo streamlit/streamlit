@@ -18,8 +18,10 @@
 import React from "react"
 import { Map as ImmutableMap } from "immutable"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
-import { getWindowBaseUriParts as get_base_uri_parts } from "../../../lib/UriUtil"
-import { buildHttpUri } from "../../../lib/UriUtil"
+import {
+  getWindowBaseUriParts as get_base_uri_parts,
+  buildHttpUri,
+} from "lib/UriUtil"
 import "./ImageList.scss"
 
 interface Props {
