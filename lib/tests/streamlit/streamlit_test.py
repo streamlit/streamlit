@@ -164,13 +164,15 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_audio_options(self):
         """Test st.audio with options."""
+        from streamlit.MediaFileManager import _get_file_id
+
         fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
         st.audio(fake_audio_data, format="audio/mp3", start_time=10)
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.audio.start_time, 10)
         self.assertTrue(el.audio.url.startswith(STATIC_MEDIA_ENDPOINT))
-        # TODO: check out this file in the MFM and check its mimetype
+        self.assertTrue(_get_file_id(fake_audio_data, "audio/mp3"), el.audio.url)
 
     def test_st_balloons(self):
         """Test st.balloons."""
@@ -664,13 +666,16 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_video_options(self):
         """Test st.video with options."""
+
+        from streamlit.MediaFileManager import _get_file_id
+
         fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
         st.video(fake_video_data, format="video/mp4", start_time=10)
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.video.start_time, 10)
         self.assertTrue(el.video.url.startswith(STATIC_MEDIA_ENDPOINT))
-        # TODO: check out this file in the MFM and look at its mimetype
+        self.assertTrue(_get_file_id(fake_video_data, "video/mp4") in el.video.url)
 
     def test_st_warning(self):
         """Test st.warning."""
