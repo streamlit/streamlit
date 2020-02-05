@@ -75,12 +75,12 @@ class UploadedFileManagerTest(unittest.TestCase):
         self.assertEqual([FILE_1A], self.file_added_events)
 
     def test_remove_all_files(self):
-        self.mgr.remove_all_files("non-report")
+        self.mgr.remove_session_files("non-report")
 
         self.mgr.add_file(FILE_1A)
         self.mgr.add_file(FILE_2)
 
-        self.mgr.remove_all_files("report")
+        self.mgr.remove_session_files("report")
         self.assertIsNone(self.mgr.get_file_data("report", "widget"))
         self.assertEqual(b"FILE_2", self.mgr.get_file_data("report2", "widget"))
         self.assertEqual([FILE_1A, FILE_2], self.file_added_events)

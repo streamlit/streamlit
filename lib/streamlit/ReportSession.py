@@ -131,7 +131,7 @@ class ReportSession(object):
         """
         if self._state != ReportSessionState.SHUTDOWN_REQUESTED:
             LOGGER.debug("Shutting down (id=%s)", self.id)
-            self._uploaded_file_mgr.delete_all_files()
+            self._uploaded_file_mgr.remove_session_files(self.id)
 
             # Shut down the ScriptRunner, if one is active.
             # self._state must not be set to SHUTDOWN_REQUESTED until

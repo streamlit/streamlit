@@ -118,7 +118,7 @@ class UploadedFileManager(object):
         with self._files_lock:
             self._files.pop(file_id, None)
 
-    def remove_all_files(self, report_session_id):
+    def remove_session_files(self, report_session_id):
         """Remove all files that belong to the given report_session_id.
 
         Parameters
@@ -127,6 +127,7 @@ class UploadedFileManager(object):
             The session ID of the report whose files we're removing.
 
         """
+        # Copy the keys into a list, because we'll be mutating the dictionary.
         for file_id in list(self._files.keys()):
             if file_id[0] == report_session_id:
                 self.remove_file(*file_id)
