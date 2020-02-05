@@ -1871,8 +1871,9 @@ class DeltaGenerator(object):
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
         format : str or None
-            Printf/Python format string controlling how the interface should
+            A printf-style format string controlling how the interface should
             display numbers. This does not impact the return value.
+            Valid formatters: %d %e %f %g %i
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -2418,14 +2419,16 @@ class DeltaGenerator(object):
 
         if not all_ints and not all_floats:
             raise StreamlitAPIException(
-                "Both value and arguments must be of the same type."
+                "All numerical arguments must be of the same type."
                 "\n`value` has %(value_type)s type."
                 "\n`min_value` has %(min_type)s type."
                 "\n`max_value` has %(max_type)s type."
+                "\n`step` has %(step_type)s type."
                 % {
                     "value_type": type(value).__name__,
                     "min_type": type(min_value).__name__,
                     "max_type": type(max_value).__name__,
+                    "step_type": type(step).__name__,
                 }
             )
 
