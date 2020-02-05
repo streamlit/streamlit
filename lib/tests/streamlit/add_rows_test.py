@@ -78,11 +78,20 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
         for delta in deltas:
             el = delta(DATAFRAME)
             el.add_rows(NEW_ROWS)
+            # It is important that we test after this second call to add_rows
+            # to cover the logic to compute the index.
+            # See:
+            # https://github.com/streamlit/streamlit/issues/748
+            el.add_rows(NEW_ROWS)
 
             df_proto = data_frame_proto._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
 
-            self.assertEqual(num_rows, 10)
+            self.assertEqual(num_rows, 16)
+            self.assertEqual(
+                [0, 1, 0, 1, 2, 3, 4, 2, 3, 4, 5, 6, 7, 5, 6, 7],
+                df_proto.data.cols[0].int64s.data
+            )
 
     def test_simple_add_rows(self):
         """Test plain old add_rows."""
