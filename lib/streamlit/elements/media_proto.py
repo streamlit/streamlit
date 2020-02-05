@@ -13,17 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
-from future.types import newbytes
 from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
 
 import io
-import base64
 import re
-import mimetypes
 
 from validators import url
 
@@ -97,7 +92,7 @@ def _marshall_av_media(proto, data, mimetype):
     elif isinstance(data, io.IOBase):
         data.seek(0)
         data = data.read()
-    elif type(data).__name__ == "ndarray":
+    elif is_type(data, "numpy.ndarray"):
         data = data.tobytes()
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
