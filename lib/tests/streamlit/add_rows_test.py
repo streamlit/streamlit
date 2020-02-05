@@ -90,7 +90,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(num_rows, 16)
             self.assertEqual(
                 [0, 1, 0, 1, 2, 3, 4, 2, 3, 4, 5, 6, 7, 5, 6, 7],
-                df_proto.data.cols[0].int64s.data
+                df_proto.data.cols[0].int64s.data,
             )
 
     def test_simple_add_rows(self):
