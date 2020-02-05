@@ -200,7 +200,7 @@ class Server(object):
         self._set_state(State.INITIAL)
         self._message_cache = ForwardMsgCache()
         self._uploaded_file_mgr = UploadedFileManager()
-        self._uploaded_file_mgr.on_file_added.connect()
+        self._uploaded_file_mgr.on_file_added.connect(self._on_file_uploaded)
 
     def _on_file_uploaded(self, file):
         """Event handler for UploadedFileManager.on_file_added.

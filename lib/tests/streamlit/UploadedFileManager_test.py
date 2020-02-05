@@ -17,24 +17,24 @@
 
 import unittest
 
-from streamlit.UploadedFileManager import File
+from streamlit.UploadedFileManager import UploadedFile
 from streamlit.UploadedFileManager import UploadedFileManager
 
-FILE_1A = File(
+FILE_1A = UploadedFile(
     report_session_id="report",
     widget_id="widget",
     name="FILE_1A",
     data=b"FILE_1A",
 )
 
-FILE_1B = File(
+FILE_1B = UploadedFile(
     report_session_id="report",
     widget_id="widget",
     name="FILE_1B",
     data=b"FILE_1B",
 )
 
-FILE_2 = File(
+FILE_2 = UploadedFile(
     report_session_id="report2",
     widget_id="widget",
     name="FILE_2",

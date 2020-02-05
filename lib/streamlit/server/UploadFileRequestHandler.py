@@ -17,6 +17,7 @@
 import tornado.web
 import tornado.httputil
 
+from streamlit.UploadedFileManager import UploadedFile
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
@@ -90,7 +91,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             return
 
         self._file_mgr.add_file(
-            File(
+            UploadedFile(
                 report_session_id=report_session_id,
                 widget_id=widget_id,
                 name=file["filename"],

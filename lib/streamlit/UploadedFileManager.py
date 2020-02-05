@@ -17,7 +17,7 @@ import threading
 from blinker import Signal
 
 
-class File(object):
+class UploadedFile(object):
     """Encapsulates an uploaded file's data and metadata."""
 
     def __init__(self, report_session_id, widget_id, name, data):
@@ -59,7 +59,7 @@ class UploadedFileManager(object):
 
             Parameters
             ----------
-            file : File
+            file : UploadedFile
                 The file that was added.
             """
         )
@@ -74,7 +74,7 @@ class UploadedFileManager(object):
 
         Parameters
         ----------
-        file : File
+        file : UploadedFile
             The file to add.
 
         """
