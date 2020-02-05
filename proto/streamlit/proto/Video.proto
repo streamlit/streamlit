@@ -18,7 +18,7 @@ syntax = "proto3";
 
 message Video {
   // A url pointing to a video file
-  string url = 5;
+  string url = 6;
 
   enum Type {
     UNUSED = 0;  // This should always exist.
