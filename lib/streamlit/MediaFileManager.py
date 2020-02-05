@@ -41,10 +41,7 @@ def _get_file_id(data, mimetype=None):
 class MediaFile(object):
     """Abstraction for audiovisual/image file objects."""
 
-    def __init__(
-        self, file_id=None, content=None, mimetype=None):
-    ):
-
+    def __init__(self, file_id=None, content=None, mimetype=None):
         self.file_id = file_id
         self.content = content
         self.mimetype = mimetype
@@ -67,7 +64,9 @@ class MediaFileManager(object):
         self._files.clear()
 
     def delete(self, mediafile_or_id):
-        """Deletes MediaFile via file_id lookup."""
+        """Deletes MediaFile via file_id lookup.
+        Raises KeyError if not found.
+        """
         if type(mediafile_or_id) is MediaFile:
             del self._files[MediaFile.file_id]
         else:
@@ -101,7 +100,7 @@ class MediaFileManager(object):
         return self._files[file_id]
 
     def get(self, mediafile_or_id):
-        """Returns MediaFile object for given file_id.  
+        """Returns MediaFile object for given file_id.
         Raises KeyError if not found.
         """
         if type(mediafile_or_id) is MediaFile:
@@ -117,4 +116,4 @@ class MediaFileManager(object):
         return len(self._files)
 
 
-mfm = MediaFileManager()
+media_file_manager = MediaFileManager()

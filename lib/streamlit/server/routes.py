@@ -21,7 +21,7 @@ from streamlit import config
 from streamlit import metrics
 from streamlit.logger import get_logger
 from streamlit.server.server_util import serialize_forward_msg
-from streamlit.MediaFileManager import mfm as _media_filemanager
+from streamlit.MediaFileManager import media_file_manager
 
 
 LOGGER = get_logger(__name__)
@@ -72,7 +72,7 @@ class MediaFileHandler(tornado.web.RequestHandler):
         LOGGER.debug("MediaFileHandler: GET %s" % filename)
 
         try:
-            media = _media_filemanager.get(requested_hash)
+            media = media_file_manager.get(requested_hash)
         except:
             LOGGER.error("MediaFileManager: Missing file %s" % requested_hash)
             self.write("%s not found" % requested_hash)

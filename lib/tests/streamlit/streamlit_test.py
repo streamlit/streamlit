@@ -33,7 +33,7 @@ from streamlit.proto.Balloons_pb2 import Balloons
 
 from streamlit.proto.Alert_pb2 import Alert
 
-from streamlit.MediaFileManager import mfm as _media_filemanager
+from streamlit.MediaFileManager import media_file_manager
 from streamlit.MediaFileManager import _get_file_id
 from streamlit.MediaFileManager import STATIC_MEDIA_ENDPOINT
 
@@ -139,9 +139,9 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         # locate resultant file in MediaFileManager and test its properties.
         file_id = _get_file_id(fake_audio_data, "audio/wav")
-        self.assertTrue(file_id in _media_filemanager)
+        self.assertTrue(file_id in media_file_manager)
 
-        afile = _media_filemanager.get(file_id)
+        afile = media_file_manager.get(file_id)
         self.assertEqual(afile.mimetype, "audio/wav")
         self.assertEqual(afile.url, el.audio.url)
 
@@ -297,9 +297,9 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         from streamlit.elements.image_proto import _PIL_to_bytes
 
         file_id = _get_file_id(_PIL_to_bytes(img, format="PNG"), "image/png")
-        self.assertTrue(file_id in _media_filemanager)
+        self.assertTrue(file_id in media_file_manager)
 
-        afile = _media_filemanager.get(file_id)
+        afile = media_file_manager.get(file_id)
         self.assertEqual(afile.mimetype, "image/png")
         self.assertEqual(afile.url, el.imgs.imgs[0].url)
 
@@ -329,8 +329,8 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         for idx in range(len(imgs)):
             file_id = _get_file_id(_PIL_to_bytes(imgs[idx], format="PNG"), "image/png")
             self.assertEqual(el.imgs.imgs[idx].caption, "some caption")
-            self.assertTrue(file_id in _media_filemanager)
-            afile = _media_filemanager.get(file_id)
+            self.assertTrue(file_id in media_file_manager)
+            afile = media_file_manager.get(file_id)
             self.assertEqual(afile.mimetype, "image/png")
             self.assertEqual(afile.url, el.imgs.imgs[idx].url)
 
@@ -618,9 +618,9 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         # locate resultant file in MediaFileManager and test its properties.
         file_id = _get_file_id(fake_video_data, "video/mp4")
-        self.assertTrue(file_id in _media_filemanager)
+        self.assertTrue(file_id in media_file_manager)
 
-        afile = _media_filemanager.get(file_id)
+        afile = media_file_manager.get(file_id)
         self.assertEqual(afile.mimetype, "video/mp4")
         self.assertEqual(afile.url, el.video.url)
 

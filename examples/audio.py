@@ -99,8 +99,10 @@ with io.open("sound.wav", "rb") as f:
 
 st.header("Audio from a Remote URL")
 
+
 def shorten_audio_option(opt):
     return opt.split("/")[-1]
+
 
 song = st.selectbox(
     "Pick an MP3 to play",

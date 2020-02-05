@@ -28,7 +28,7 @@ import mimetypes
 from validators import url
 
 from streamlit.proto import Video_pb2
-from streamlit.MediaFileManager import mfm as _media_filemanager
+from streamlit.MediaFileManager import media_file_manager
 
 
 # Regular expression explained at https://regexr.com/4n2l2 Covers any youtube
@@ -79,7 +79,7 @@ def _marshall_av_media(proto, data, mimetype):
     if isinstance(data, string_types):
         # Assume it's a filename or blank.  Allow OS-based file errors.
         with open(data, "rb") as fh:
-            this_file = _media_filemanager.add(fh.read(), mimetype=mimetype)
+            this_file = media_file_manager.add(fh.read(), mimetype=mimetype)
             proto.url = this_file.url
             return
 
@@ -102,7 +102,7 @@ def _marshall_av_media(proto, data, mimetype):
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
-    this_file = _media_filemanager.add(data, mimetype=mimetype)
+    this_file = media_file_manager.add(data, mimetype=mimetype)
     proto.url = this_file.url
 
 
