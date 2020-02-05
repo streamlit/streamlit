@@ -531,6 +531,7 @@ class ReportSession(object):
 
         # Create the ScriptRunner, attach event handlers, and start it
         self._scriptrunner = ScriptRunner(
+            session_id=self.id,
             report=self._report,
             enqueue_forward_msg=self.enqueue,
             widget_states=self._widget_states,

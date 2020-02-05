@@ -207,10 +207,6 @@ class Server(object):
         self._uploaded_file_mgr = UploadedFileManager()
         self._uploaded_file_mgr.on_file_added.connect(self._on_file_uploaded)
 
-    @property
-    def uploaded_file_mgr(self):
-        return self._uploaded_file_mgr
-
     def _on_file_uploaded(self, file):
         """Event handler for UploadedFileManager.on_file_added.
 
@@ -488,6 +484,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
                 ioloop=self._ioloop,
                 script_path=self._script_path,
                 command_line=self._command_line,
+                uploaded_file_manager=self._uploaded_file_mgr,
             )
 
         assert session.id not in self._session_info_by_id, (
