@@ -255,7 +255,7 @@ res = expensive_computation(a, b)
 
 st.write("Result:", res)
 
-res["output"] = "result was manually mutated"  # 👈 Mutate cached value
+res["output"] = "result was manually mutated"  # 👈 Mutated cached value
 
 st.write("Mutated result:", res)
 ```
