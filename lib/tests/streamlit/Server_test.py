@@ -29,6 +29,7 @@ from tornado import gen
 
 import streamlit.server.Server
 from streamlit import config
+from streamlit.ReportSession import ReportSession
 from streamlit.server.Server import MAX_PORT_SEARCH_RETRIES
 from streamlit.ForwardMsgCache import ForwardMsgCache
 from streamlit.ForwardMsgCache import populate_hash_if_needed
@@ -67,12 +68,7 @@ def _create_report_finished_msg(status):
 
 
 class ServerTest(ServerTestCase):
-    def _patch_report_session(self):
-        """Mock the Server's ReportSession import. We don't want
-        actual sessions to be instantiated, or scripts to be run.
-        """
-
-        return mock.patch("streamlit.server.Server.ReportSession", autospec=True)
+    _next_report_id = 0
 
     @tornado.testing.gen_test
     def test_start_stop(self):
@@ -93,6 +89,7 @@ class ServerTest(ServerTestCase):
     @tornado.testing.gen_test
     def test_websocket_connect(self):
         """Test that we can connect to the server via websocket."""
+
         with self._patch_report_session():
             yield self.start_server_loop()
 
@@ -102,9 +99,51 @@ class ServerTest(ServerTestCase):
             ws_client = yield self.ws_connect()
             self.assertTrue(self.server.browser_is_connected)
 
-            # Close the connection, give the server a moment to step
-            # its runloop, and assert we're no longer connected.
+            # Get this client's SessionInfo object
+            self.assertEquals(1, len(self.server._session_info_by_id))
+            session_info = list(self.server._session_info_by_id.values())[0]
+
+            # Close the connection
             ws_client.close()
+            yield gen.sleep(0.1)
+            self.assertFalse(self.server.browser_is_connected)
+
+            # Ensure ReportSession.shutdown() was called, and that our
+            # SessionInfo was cleared.
+            session_info.session.shutdown.assert_called_once()
+            self.assertEquals(0, len(self.server._session_info_by_id))
+
+    @tornado.testing.gen_test
+    def test_multiple_connections(self):
+        """Test multiple websockets can connect simultaneously."""
+
+        with self._patch_report_session():
+            yield self.start_server_loop()
+
+            self.assertFalse(self.server.browser_is_connected)
+
+            # Open a websocket connection
+            ws_client1 = yield self.ws_connect()
+            self.assertTrue(self.server.browser_is_connected)
+
+            # Open another
+            ws_client2 = yield self.ws_connect()
+            self.assertTrue(self.server.browser_is_connected)
+
+            # Assert that our session_infos are sane
+            session_infos = list(self.server._session_info_by_id.values())
+            self.assertEqual(2, len(session_infos))
+            self.assertNotEqual(
+                session_infos[0].session.id, session_infos[1].session.id,
+            )
+
+            # Close the first
+            ws_client1.close()
+            yield gen.sleep(0.1)
+            self.assertTrue(self.server.browser_is_connected)
+
+            # Close the second
+            ws_client2.close()
             yield gen.sleep(0.1)
             self.assertFalse(self.server.browser_is_connected)
 
@@ -117,13 +156,13 @@ class ServerTest(ServerTestCase):
             ws_client = yield self.ws_connect()
 
             # Get the server's socket and session for this client
-            ws, session = list(self.server._session_infos.items())[0]
+            session_info = list(self.server._session_info_by_id.values())[0]
 
             # Create a message and ensure its hash is unset; we're testing
             # that _send_message adds the hash before it goes out.
             msg = _create_dataframe_msg([1, 2, 3])
             msg.ClearField("hash")
-            self.server._send_message(ws, session, msg)
+            self.server._send_message(session_info, msg)
 
             received = yield self.read_forward_msg(ws_client)
             self.assertEqual(populate_hash_if_needed(msg), received.hash)
@@ -138,18 +177,18 @@ class ServerTest(ServerTestCase):
             ws_client = yield self.ws_connect()
 
             # Get the server's socket and session for this client
-            ws, session = list(self.server._session_infos.items())[0]
+            session_info = list(self.server._session_info_by_id.values())[0]
 
             config._set_option("global.minCachedMessageSize", 0, "test")
             cacheable_msg = _create_dataframe_msg([1, 2, 3])
-            self.server._send_message(ws, session, cacheable_msg)
+            self.server._send_message(session_info, cacheable_msg)
             received = yield self.read_forward_msg(ws_client)
             self.assertTrue(cacheable_msg.metadata.cacheable)
             self.assertTrue(received.metadata.cacheable)
 
             config._set_option("global.minCachedMessageSize", 1000, "test")
             cacheable_msg = _create_dataframe_msg([4, 5, 6])
-            self.server._send_message(ws, session, cacheable_msg)
+            self.server._send_message(session_info, cacheable_msg)
             received = yield self.read_forward_msg(ws_client)
             self.assertFalse(cacheable_msg.metadata.cacheable)
             self.assertFalse(received.metadata.cacheable)
@@ -164,12 +203,12 @@ class ServerTest(ServerTestCase):
             ws_client = yield self.ws_connect()
 
             # Get the server's socket and session for this client
-            ws, session = list(self.server._session_infos.items())[0]
+            session_info = list(self.server._session_info_by_id.values())[0]
 
             msg1 = _create_dataframe_msg([1, 2, 3], 1)
 
             # Send the message, and read it back. It will not have been cached.
-            self.server._send_message(ws, session, msg1)
+            self.server._send_message(session_info, msg1)
             uncached = yield self.read_forward_msg(ws_client)
             self.assertEqual("delta", uncached.WhichOneof("type"))
 
@@ -177,7 +216,7 @@ class ServerTest(ServerTestCase):
 
             # Send an equivalent message. This time, it should be cached,
             # and a "hash_reference" message should be received instead.
-            self.server._send_message(ws, session, msg2)
+            self.server._send_message(session_info, msg2)
             cached = yield self.read_forward_msg(ws_client)
             self.assertEqual("ref_hash", cached.WhichOneof("type"))
             # We should have the *hash* of msg1 and msg2:
@@ -198,7 +237,7 @@ class ServerTest(ServerTestCase):
             yield self.start_server_loop()
             yield self.ws_connect()
 
-            ws, session = list(self.server._session_infos.items())[0]
+            session = list(self.server._session_info_by_id.values())[0]
 
             data_msg = _create_dataframe_msg([1, 2, 3])
 
@@ -209,13 +248,13 @@ class ServerTest(ServerTestCase):
                     else ForwardMsg.FINISHED_WITH_COMPILE_ERROR
                 )
                 finish_msg = _create_report_finished_msg(status)
-                self.server._send_message(ws, session, finish_msg)
+                self.server._send_message(session, finish_msg)
 
             def is_data_msg_cached():
                 return self.server._message_cache.get_message(data_msg.hash) is not None
 
             def send_data_msg():
-                self.server._send_message(ws, session, data_msg)
+                self.server._send_message(session, data_msg)
 
             # Send a cacheable message. It should be cached.
             send_data_msg()
@@ -244,6 +283,31 @@ class ServerTest(ServerTestCase):
             # should be evicted from the cache.
             finish_report(True)
             self.assertFalse(is_data_msg_cached())
+
+    @staticmethod
+    def _create_mock_report_session(*args, **kwargs):
+        """Create a mock ReportSession. Each mocked instance will have
+        its own unique ID."""
+        mock_id = mock.PropertyMock(
+            return_value="mock_id:%s" % ServerTest._next_report_id
+        )
+        ServerTest._next_report_id += 1
+
+        mock_session = mock.MagicMock(ReportSession, autospec=True, *args, **kwargs)
+        type(mock_session).id = mock_id
+        return mock_session
+
+    def _patch_report_session(self):
+        """Mock the Server's ReportSession import. We don't want
+        actual sessions to be instantiated, or scripts to be run.
+        """
+
+        return mock.patch(
+            "streamlit.server.Server.ReportSession",
+            # new_callable must return a function, not an object, or else
+            # there will only be a single ReportSession mock. Hence the lambda.
+            new_callable=lambda: self._create_mock_report_session,
+        )
 
 
 class ServerUtilsTest(unittest.TestCase):
