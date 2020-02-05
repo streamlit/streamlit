@@ -76,7 +76,7 @@ class MediaFileHandler(tornado.web.RequestHandler):
         except:
             LOGGER.error("MediaFileManager: Missing file %s" % requested_hash)
             self.write("%s not found" % requested_hash)
-            self.set_status(400)
+            self.set_status(404)
             return
 
         LOGGER.debug(
