@@ -20,9 +20,11 @@
   :maxdepth: 2
   :hidden:
 
-  GitHub <https://github.com/streamlit/streamlit>
-  Community forum < https://discuss.streamlit.io/>
   troubleshooting/index
+  Frequently Asked Questions < https://github.com/streamlit/streamlit/wiki/FAQ>
+  Community forum < https://discuss.streamlit.io/>
+  Bug tracker <https://github.com/streamlit/streamlit/issues>
+  GitHub <https://github.com/streamlit/streamlit>
 
 ```
 
