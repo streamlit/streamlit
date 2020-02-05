@@ -24,7 +24,7 @@ See highlights, bug fixes, and known issues for Streamlit releases:
 
 ## Version 0.55.0
 
-_Release date: February 2, 2020_
+_Release date: February 4, 2020_
 
 **Highlights:**
 
