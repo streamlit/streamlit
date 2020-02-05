@@ -9,7 +9,7 @@ When you mark a function with the [`@st.cache`](api.html#streamlit.cache) decora
 3. The body of the function
 4. The body of any function used inside the cached function
 
-If this is the first time Streamlit has seen these items with these exact values and in this exact combination and order, it runs the function and stores the result in a local cache. Then, next time the cached function is called, if none of these changed, Streamlit will just skip executing the function altogether and, instead, return the output previously stored in the cache.
+If this is the first time Streamlit has seen these four components with these exact values and in this exact combination and order, it runs the function and stores the result in a local cache. Then, next time the cached function is called, if none of these components changed, Streamlit will just skip executing the function altogether and, instead, return the output previously stored in the cache.
 
 The way Streamlit keeps track of changes in these components is through hashing. Think of the cache as a simple in-memory key-value store, where the key is a hash of all of the above and the value is the actual output object passed by reference.
 
@@ -120,7 +120,7 @@ import time
 def expensive_computation(a, b):
     st.write("Cache miss: expensive_computation(", a, ",", b, ") ran")
     time.sleep(2)  # This makes the function take 2s to run
-    return a * b + 1  # 👈 Add a +1 at the end here
+    return a * b + 1  # 👈 Added a +1 at the end here
 
 a = 2
 b = 210
@@ -173,7 +173,7 @@ import time
 
 def inner_func(a, b):
     st.write("inner_func(", a, ",", b, ") ran")
-    return a ** b  # 👈 Change the * to ** here
+    return a ** b  # 👈 Changed the * to ** here
 
 @st.cache(suppress_st_warning=True)
 def expensive_computation(a, b):
@@ -210,7 +210,7 @@ def expensive_computation(a, b):
     return a * b
 
 a = 2
-b = st.slider("Pick a number", 0, 10)  # 👈 Change this
+b = st.slider("Pick a number", 0, 10)  # 👈 Changed this
 res = expensive_computation(a, b)
 
 st.write("Result:", res)
