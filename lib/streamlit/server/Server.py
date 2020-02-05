@@ -70,7 +70,7 @@ MAX_PORT_SEARCH_RETRIES = 100
 
 
 class SessionInfo(object):
-    """Type stored in our _report_sessions dict.
+    """Type stored in our _session_info_by_id dict.
 
     For each ReportSession, the server tracks that session's
     report_run_count. This is used to track the age of messages in
