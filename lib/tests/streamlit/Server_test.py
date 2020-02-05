@@ -96,6 +96,33 @@ class ServerTest(ServerTestCase):
             self.assertFalse(self.server.browser_is_connected)
 
             # Open a websocket connection
+            ws_client = yield self.ws_connect()
+            self.assertTrue(self.server.browser_is_connected)
+
+            # Get this client's SessionInfo object
+            self.assertEquals(1, len(self.server._session_info_by_id))
+            session_info = list(self.server._session_info_by_id.values())[0]
+
+            # Close the connection
+            ws_client.close()
+            yield gen.sleep(0.1)
+            self.assertFalse(self.server.browser_is_connected)
+
+            # Ensure ReportSession.shutdown() was called, and that our
+            # SessionInfo was cleared.
+            session_info.session.shutdown.assert_called_once()
+            self.assertEquals(0, len(self.server._session_info_by_id))
+
+    @tornado.testing.gen_test
+    def test_multiple_connections(self):
+        """Test multiple websockets can connect simultaneously."""
+
+        with self._patch_report_session():
+            yield self.start_server_loop()
+
+            self.assertFalse(self.server.browser_is_connected)
+
+            # Open a websocket connection
             ws_client1 = yield self.ws_connect()
             self.assertTrue(self.server.browser_is_connected)
 
