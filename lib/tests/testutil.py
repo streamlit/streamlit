@@ -63,6 +63,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
             add_report_ctx(
                 threading.current_thread(),
                 ReportContext(
+                    session_id="test session id",
                     enqueue=self.report_queue.enqueue,
                     widgets=Widgets(),
                     widget_ids_this_run=_WidgetIDSet(),

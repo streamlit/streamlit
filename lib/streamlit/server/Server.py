@@ -165,7 +165,12 @@ class Server(object):
 
     @classmethod
     def get_current(cls):
-        """Return the singleton instance."""
+        """
+        Returns
+        -------
+        Server
+            The singleton Server object.
+        """
         if cls._singleton is None:
             raise RuntimeError("Server has not been initialized yet")
 
@@ -201,6 +206,10 @@ class Server(object):
         self._message_cache = ForwardMsgCache()
         self._uploaded_file_mgr = UploadedFileManager()
         self._uploaded_file_mgr.on_file_added.connect(self._on_file_uploaded)
+
+    @property
+    def uploaded_file_mgr(self):
+        return self._uploaded_file_mgr
 
     def _on_file_uploaded(self, file):
         """Event handler for UploadedFileManager.on_file_added.

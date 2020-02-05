@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import threading
 
 from blinker import Signal
@@ -20,12 +21,12 @@ from blinker import Signal
 class UploadedFile(object):
     """Encapsulates an uploaded file's data and metadata."""
 
-    def __init__(self, report_session_id, widget_id, name, data):
+    def __init__(self, session_id, widget_id, name, data):
         """Construct a new File object.
 
         Parameters
         ----------
-        report_session_id : str
+        session_id : str
             The session ID of the report that created owns the file.
         widget_id : str
             The widget ID of the FileUploader that uploaded the file.
@@ -35,7 +36,7 @@ class UploadedFile(object):
             The file's data.
 
         """
-        self.report_session_id = report_session_id
+        self.session_id = session_id
         self.widget_id = widget_id
         self.name = name
         self.data = data
@@ -43,7 +44,7 @@ class UploadedFile(object):
     @property
     def id(self):
         """The file's unique ID."""
-        return self.report_session_id, self.widget_id
+        return self.session_id, self.widget_id
 
 
 class UploadedFileManager(object):
@@ -82,13 +83,13 @@ class UploadedFileManager(object):
             self._files[file.id] = file
         self.on_file_added.send(file)
 
-    def get_file_data(self, report_session_id, widget_id):
+    def get_file_data(self, session_id, widget_id):
         """Return the file data for a file with the given ID, or None
         if the file doesn't exist.
 
         Parameters
         ----------
-        report_session_id : str
+        session_id : str
             The session ID of the report that owns the file.
         widget_id : str
             The widget ID of the FileUploader that created the file.
@@ -99,35 +100,35 @@ class UploadedFileManager(object):
             The file's data, or None if the file does not exist.
 
         """
-        file_id = report_session_id, widget_id
+        file_id = session_id, widget_id
         with self._files_lock:
             file = self._files.get(file_id, None)
         return file.data if file is not None else None
 
-    def remove_file(self, report_session_id, widget_id):
+    def remove_file(self, session_id, widget_id):
         """Remove the file with the given ID, if it exists.
 
         Parameters
         ----------
-        report_session_id : str
+        session_id : str
             The session ID of the report that owns the file.
         widget_id : str
             The widget ID of the FileUploader that created the file.
         """
-        file_id = report_session_id, widget_id
+        file_id = session_id, widget_id
         with self._files_lock:
             self._files.pop(file_id, None)
 
-    def remove_session_files(self, report_session_id):
-        """Remove all files that belong to the given report_session_id.
+    def remove_session_files(self, session_id):
+        """Remove all files that belong to the given report.
 
         Parameters
         ----------
-        report_session_id : str
+        session_id : str
             The session ID of the report whose files we're removing.
 
         """
         # Copy the keys into a list, because we'll be mutating the dictionary.
         for file_id in list(self._files.keys()):
-            if file_id[0] == report_session_id:
+            if file_id[0] == session_id:
                 self.remove_file(*file_id)

@@ -92,7 +92,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
 
         self._file_mgr.add_file(
             UploadedFile(
-                report_session_id=report_session_id,
+                session_id=report_session_id,
                 widget_id=widget_id,
                 name=file["filename"],
                 data=file["body"],

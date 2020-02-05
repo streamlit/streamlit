@@ -21,21 +21,21 @@ from streamlit.UploadedFileManager import UploadedFile
 from streamlit.UploadedFileManager import UploadedFileManager
 
 FILE_1A = UploadedFile(
-    report_session_id="report",
+    session_id="session",
     widget_id="widget",
     name="FILE_1A",
     data=b"FILE_1A",
 )
 
 FILE_1B = UploadedFile(
-    report_session_id="report",
+    session_id="session",
     widget_id="widget",
     name="FILE_1B",
     data=b"FILE_1B",
 )
 
 FILE_2 = UploadedFile(
-    report_session_id="report2",
+    session_id="session2",
     widget_id="widget",
     name="FILE_2",
     data=b"FILE_2",
@@ -55,23 +55,23 @@ class UploadedFileManagerTest(unittest.TestCase):
         self.assertIsNone(self.mgr.get_file_data("non-report", "non-widget"))
 
         self.mgr.add_file(FILE_1A)
-        self.assertEqual(b"FILE_1A", self.mgr.get_file_data("report", "widget"))
+        self.assertEqual(b"FILE_1A", self.mgr.get_file_data("session", "widget"))
         self.assertEqual([FILE_1A], self.file_added_events)
 
         # Add another file with the same ID
         self.mgr.add_file(FILE_1B)
         self.assertEqual([FILE_1A, FILE_1B], self.file_added_events)
-        self.assertEqual(b"FILE_1B", self.mgr.get_file_data("report", "widget"))
+        self.assertEqual(b"FILE_1B", self.mgr.get_file_data("session", "widget"))
 
     def test_remove_file(self):
         # This should not error.
         self.mgr.remove_file("non-report", "non-widget")
 
         self.mgr.add_file(FILE_1A)
-        self.assertEqual(b"FILE_1A", self.mgr.get_file_data("report", "widget"))
+        self.assertEqual(b"FILE_1A", self.mgr.get_file_data("session", "widget"))
 
-        self.mgr.remove_file("report", "widget")
-        self.assertIsNone(self.mgr.get_file_data("report", "widget"))
+        self.mgr.remove_file("session", "widget")
+        self.assertIsNone(self.mgr.get_file_data("session", "widget"))
         self.assertEqual([FILE_1A], self.file_added_events)
 
     def test_remove_all_files(self):
@@ -80,7 +80,7 @@ class UploadedFileManagerTest(unittest.TestCase):
         self.mgr.add_file(FILE_1A)
         self.mgr.add_file(FILE_2)
 
-        self.mgr.remove_session_files("report")
-        self.assertIsNone(self.mgr.get_file_data("report", "widget"))
-        self.assertEqual(b"FILE_2", self.mgr.get_file_data("report2", "widget"))
+        self.mgr.remove_session_files("session")
+        self.assertIsNone(self.mgr.get_file_data("session", "widget"))
+        self.assertEqual(b"FILE_2", self.mgr.get_file_data("session2", "widget"))
         self.assertEqual([FILE_1A, FILE_2], self.file_added_events)

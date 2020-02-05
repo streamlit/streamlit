@@ -18,11 +18,11 @@
 import os
 import sys
 import time
+import tokenize
 import unittest
 
 from parameterized import parameterized
 
-from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.Report import Report
 from streamlit.ReportQueue import ReportQueue
 from streamlit.ScriptRequestQueue import RerunData
@@ -30,7 +30,6 @@ from streamlit.ScriptRequestQueue import ScriptRequest
 from streamlit.ScriptRequestQueue import ScriptRequestQueue
 from streamlit.ScriptRunner import ScriptRunner
 from streamlit.ScriptRunner import ScriptRunnerEvent
-from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.Widget_pb2 import WidgetStates
 
 
@@ -44,8 +43,6 @@ def _create_widget(id, states):
     states.widgets.add().id = id
     return states.widgets[-1]
 
-
-import tokenize
 
 if hasattr(tokenize, "open"):
     text_utf = "complete! 👨‍🎤"
@@ -394,6 +391,7 @@ class TestScriptRunner(ScriptRunner):
         script_path = os.path.join(os.path.dirname(__file__), "test_data", script_name)
 
         super(TestScriptRunner, self).__init__(
+            session_id="test session id",
             report=Report(script_path, "test command line"),
             enqueue_forward_msg=enqueue_fn,
             widget_states=WidgetStates(),
