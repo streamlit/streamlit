@@ -91,6 +91,7 @@ IMAGES = {
 
 class ImageProtoTest(testutil.DeltaGeneratorTestCase):
     """Test streamlit.image_proto."""
+
     @parameterized.expand(
         [
             (IMAGES["img_32_32_3_rgb"]["np"], "png",),
@@ -115,9 +116,10 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         """
         from streamlit.MediaFileManager import _get_file_id
         from streamlit.elements.image_proto import _np_array_to_bytes
-        
-        file_id = _get_file_id(_np_array_to_bytes(data_in, format=format), 
-                                mimetype="image/"+format)
+
+        file_id = _get_file_id(
+            _np_array_to_bytes(data_in, format=format), mimetype="image/" + format
+        )
 
         st.image(data_in, format=format)
         imglist = self.get_delta_from_queue().new_element.imgs

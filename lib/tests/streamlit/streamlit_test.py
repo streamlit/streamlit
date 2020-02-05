@@ -260,8 +260,8 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(
                 el.exception.stack_trace,
                 [
-                    u"Cannot extract the stack trace for this exception. Try "
-                    u"calling exception() within the `catch` block."
+                    "Cannot extract the stack trace for this exception. Try "
+                    "calling exception() within the `catch` block."
                 ],
             )
 
@@ -285,7 +285,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         if sys.version_info >= (3, 0):
             self.assertEqual(el.doc_string.type, "<class 'method'>")
         else:
-            self.assertEqual(el.doc_string.type, u"<type 'instancemethod'>")
+            self.assertEqual(el.doc_string.type, "<type 'instancemethod'>")
         self.assertEqual(el.doc_string.signature, "(body)")
 
     def test_st_image_PIL_image(self):
