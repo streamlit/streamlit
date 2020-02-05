@@ -153,9 +153,14 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.audio.url, some_url)
 
         # Test that a non-URL string is assumed to be a filename
-        # bad_filename = "blah"
-        # with self.assertRaises(FileNotFoundError):
-        #    st.audio(bad_filename)
+        bad_filename = "blah"
+        with self.assertRaises(FileNotFoundError):
+            st.audio(bad_filename)
+
+        # Test that we can use an empty/None value without error.
+        st.audio(None)
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.audio.url, "")
 
     def test_st_audio_options(self):
         """Test st.audio with options."""
@@ -651,6 +656,11 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         bad_filename = "blah"
         with self.assertRaises(FileNotFoundError):
             st.video(bad_filename)
+
+        # Test that we can use an empty/None value without error.
+        st.video(None)
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.video.url, "")
 
     def test_st_video_options(self):
         """Test st.video with options."""

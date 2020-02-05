@@ -134,7 +134,7 @@ class UploadedFileManagerTest(unittest.TestCase):
         self.assertFalse(sample["file_id"] in mfm)
 
         # Make sure we throw an error when looking for an invalid file_id.
-        with self.assertRaises(FileNotFoundError):
+        with self.assertRaises(KeyError):
             mfm.delete(sample["file_id"])
 
     def test_clear_files(self):

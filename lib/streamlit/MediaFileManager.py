@@ -70,7 +70,7 @@ class MediaFileManager(object):
         if type(mediafile_or_id) is MediaFile:
             del self._files[MediaFile.file_id]
         else:
-            del self._files[file_id]
+            del self._files[mediafile_or_id]
 
     def add(self, content, mimetype):
         """Adds new MediaFile with given parameters; returns the object.
@@ -91,11 +91,7 @@ class MediaFileManager(object):
         file_id = _get_file_id(content, mimetype)
 
         if not file_id in self._files:
-            new = MediaFile(
-                file_id=file_id,
-                content=content,
-                mimetype=mimetype,
-            )
+            new = MediaFile(file_id=file_id, content=content, mimetype=mimetype,)
             self._files[file_id] = new
         return self._files[file_id]
 

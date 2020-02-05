@@ -15,7 +15,6 @@
 
 """Image marshalling."""
 
-import base64
 import io
 import imghdr
 import mimetypes
@@ -29,7 +28,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from urllib.parse import urlparse
 
-from streamlit.MediaFileManager import mfm as _media_filemanager
+from streamlit.MediaFileManager import media_file_manager
 
 LOGGER = get_logger(__name__)
 
@@ -221,20 +220,14 @@ def marshall_images(
             except UnicodeDecodeError:
                 pass
 
-            # If not, see if it's a file.
-            try:
-                # If file, open and continue.
-                with open(image, "rb") as f:
-                    data = f.read()
-            # Ok, then it must be bytes inside a str. This happens with
-            # Python2's version of open().
-            except TypeError:
-                data = image
+            # If not, see if it's a file. Allow OS filesystem errors to raise.
+            with open(image, "rb") as f:
+                data = f.read()
 
         # Assume input in bytes.
         else:
             data = image
 
         (data, mimetype) = _normalize_to_bytes(data, width, format)
-        this_file = _media_filemanager.add(data, mimetype=mimetype)
+        this_file = media_file_manager.add(data, mimetype=mimetype)
         proto_img.url = this_file.url
