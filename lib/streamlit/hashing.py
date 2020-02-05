@@ -31,6 +31,8 @@ import textwrap
 import tempfile
 import threading
 
+import numpy
+
 import streamlit as st
 from streamlit import compatibility
 from streamlit import config
@@ -384,6 +386,8 @@ class CodeHasher:
                 self._update(h, os.path.getmtime(obj.name))
                 self._update(h, obj.tell())
                 return h.digest()
+            elif isinstance(obj, numpy.ufunc):
+                return f"{obj.__class__.__name__}:{obj.__name__}".encode()
             elif inspect.isroutine(obj):
                 if hasattr(obj, "__wrapped__"):
                     # Ignore the wrapper of wrapped functions.
