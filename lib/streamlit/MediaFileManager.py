@@ -53,8 +53,7 @@ class MediaFileManager(object):
 
     def clear(self):
         """ Deletes all files from the file manager. """
-        for file_id in list(self._files):
-            self.delete(file_id)
+        self._files.clear()
 
     def delete(self, file_id):
         """ Deletes file with specified file_id. """
