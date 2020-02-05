@@ -67,9 +67,10 @@ def _reshape_youtube_url(url):
 
 
 def _marshall_av_media(proto, data, mimetype):
-    """ Given some audio or video data and a supplied mimetype, fill protobuf 
-    object depending on whether the contents of the data refer to a filename 
-    or a series of bytes.
+    """ Fill audio or video proto based on contents of data.
+
+    Given a string, check if it's a url; if so, send it out without modification.
+    Otherwise assume strings are filenames and let any OS errors raise.
 
     Load data either from file or through bytes-processing methods into a 
     MediaFile object.  Pack proto with generated Tornado-based URL.
@@ -79,13 +80,12 @@ def _marshall_av_media(proto, data, mimetype):
     if isinstance(data, string_types):
         # Assume it's a filename or blank.  Allow OS-based file errors.
         with open(data, "rb") as fh:
-            this_file = media_file_manager.add(fh.read(), mimetype=mimetype)
+            this_file = media_file_manager.add(fh.read(), mimetype)
             proto.url = this_file.url
             return
 
     if data is None:
-        # allow empty values so media players can be shown without media.
-        proto.url = ""
+        # Allow empty values so media players can be shown without media.
         return
 
     # Assume bytes; try methods until we run out.
@@ -102,7 +102,7 @@ def _marshall_av_media(proto, data, mimetype):
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
-    this_file = media_file_manager.add(data, mimetype=mimetype)
+    this_file = media_file_manager.add(data, mimetype)
     proto.url = this_file.url
 
 

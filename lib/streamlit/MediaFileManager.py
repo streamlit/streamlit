@@ -95,7 +95,6 @@ class MediaFileManager(object):
                 file_id=file_id,
                 content=content,
                 mimetype=mimetype,
-                last_modified=datetime.utcnow(),
             )
             self._files[file_id] = new
         return self._files[file_id]
