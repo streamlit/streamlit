@@ -84,7 +84,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         file = file_list[0]
 
         try:
-            report_session_id = self._require_arg(args, "reportSessionId")
+            session_id = self._require_arg(args, "sessionId")
             widget_id = self._require_arg(args, "widgetId")
         except Exception as e:
             self.send_error(400, reason=str(e))
@@ -92,7 +92,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
 
         self._file_mgr.add_file(
             UploadedFile(
-                session_id=report_session_id,
+                session_id=session_id,
                 widget_id=widget_id,
                 name=file["filename"],
                 data=file["body"],

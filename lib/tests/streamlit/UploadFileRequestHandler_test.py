@@ -54,7 +54,7 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         """Uploading a file should populate our file_mgr."""
         params = {
             "image.png": ("image.png", b"1234"),
-            "reportSessionId": (None, "fooReport"),
+            "sessionId": (None, "fooReport"),
             "widgetId": (None, "barWidget"),
         }
         response = self._upload_file(params)
@@ -67,7 +67,7 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         """Missing params in the body should fail with 400 status."""
         params = {
             "image.png": ("image.png", b"1234"),
-            "reportSessionId": (None, "fooReport"),
+            "sessionId": (None, "fooReport"),
             # "widgetId": (None, 'barWidget'),
         }
 
@@ -79,7 +79,7 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         """Missing file should fail with 400 status."""
         params = {
             # "image.png": ("image.png", b"1234"),
-            "reportSessionId": (None, "fooReport"),
+            "sessionId": (None, "fooReport"),
             "widgetId": (None, "barWidget"),
         }
         response = self._upload_file(params)
