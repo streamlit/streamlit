@@ -67,7 +67,8 @@ class MediaFileHandler(tornado.web.RequestHandler):
             self.set_header("Access-Control-Allow-Origin", "*")
 
     def get(self, filename):
-        # remove extension from submitted filename, if present.
+        # Filename is {requested_hash}.{extension} but MediaFileManager 
+        # is indexed by requested_hash.
         requested_hash = filename.split(".")[0]
         LOGGER.debug("MediaFileHandler: GET %s" % filename)
 
