@@ -87,7 +87,12 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
             'tornado.testing.gen_test' coroutine.
 
         """
-        return tornado.websocket.websocket_connect(self.get_ws_url("/stream"))
+        # We use a long connect_timeout to facilitate debugging
+        return tornado.websocket.websocket_connect(
+            self.get_ws_url("/stream"),
+            connect_timeout=120 * 1000,
+            ping_timeout=120 * 1000,
+        )
 
     @tornado.gen.coroutine
     def read_forward_msg(self, ws_client):
