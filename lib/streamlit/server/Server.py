@@ -505,6 +505,7 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def on_close(self):
         self._server._close_report_session(self._session.id)
+        self._session = None
 
     @tornado.gen.coroutine
     def on_message(self, payload):
