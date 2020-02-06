@@ -1516,7 +1516,7 @@ class DeltaGenerator(object):
         ----------
         data : str, bytes, BytesIO, numpy.ndarray, or file opened with
                 io.open().
-            Raw audio data or a string with a URL pointing to the file to load.
+            Raw audio data, filename, or a URL pointing to the file to load.
             Numpy arrays and raw data formats must include all necessary file
             headers to match specified file format.
         start_time: int
@@ -1527,7 +1527,10 @@ class DeltaGenerator(object):
 
         Example
         -------
-        >>> st.audio('myaudio.ogg', format='audio/ogg')
+        >>> audio_file = open('myaudio.ogg', 'rb')
+        >>> audio_bytes = audio_file.read()
+        >>>
+        >>> st.audio(audio_bytes, format='audio/ogg')
 
         .. output::
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=Dv3M9sA7Cg8gwusgnVNTHb
@@ -1546,8 +1549,8 @@ class DeltaGenerator(object):
         ----------
         data : str, bytes, BytesIO, numpy.ndarray, or file opened with
                 io.open().
-            Raw video data or a string with a URL pointing to the video
-            to load. Includes support for YouTube URLs.
+            Raw video data, filename, or URL pointing to a video to load.
+            Includes support for YouTube URLs.
             Numpy arrays and raw data formats must include all necessary file
             headers to match specified file format.
         start_time: int
@@ -1559,7 +1562,10 @@ class DeltaGenerator(object):
 
         Example
         -------
-        >>> st.video('myvideo.mp4')
+        >>> video_file = open('myvideo.mp4', 'rb')
+        >>> video_bytes = video_file.read()
+        >>>
+        >>> st.video(video_bytes)
 
         .. output::
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=Wba9sZELKfKwXH4nDCCbMv
