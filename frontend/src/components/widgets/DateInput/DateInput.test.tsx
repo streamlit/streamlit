@@ -31,6 +31,7 @@ const getProps = (elementProps: object = {}): Props => ({
   element: fromJS({
     id: 1,
     label: "Label",
+    default: "1970/01/01",
     ...elementProps,
   }),
   width: 0,
@@ -44,6 +45,10 @@ describe("DateInput widget", () => {
 
   it("renders without crashing", () => {
     expect(wrapper.find(UIDatePicker).length).toBe(1)
+  })
+
+  it("should render a label", () => {
+    expect(wrapper.find("label").text()).toBe(props.element.get("label"))
   })
 
   it("should set widget value on did mount", () => {
@@ -66,5 +71,35 @@ describe("DateInput widget", () => {
 
     // @ts-ignore
     expect(style.width).toBe(getProps().width)
+  })
+
+  it("should render a default value", () => {
+    expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual(
+      new Date(props.element.get("default"))
+    )
+  })
+
+  it("could be disabled", () => {
+    expect(wrapper.find(UIDatePicker).prop("disabled")).toBe(props.disabled)
+  })
+
+  it("should have the correct format", () => {
+    expect(wrapper.find(UIDatePicker).prop("formatString")).toBe("yyyy/MM/dd")
+  })
+
+  it("should update the widget value when it's changed", () => {
+    const newDate = new Date("2020/02/06")
+
+    // @ts-ignore
+    wrapper.find(UIDatePicker).prop("onChange")({
+      date: newDate,
+    })
+
+    expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual(newDate)
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element.get("id"),
+      "2020/02/06",
+      { fromUi: true }
+    )
   })
 })
