@@ -68,7 +68,7 @@ def _get_failing_lines(code, lineno):
         for line in source_lines[lineno:]:
             indentation = SPACES_RE.match(line).end()
 
-            if indentation < initial_spaces:
+            if indentation <= initial_spaces:
                 break
             lines.append(line)
     return lines
