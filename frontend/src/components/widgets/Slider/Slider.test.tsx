@@ -60,6 +60,7 @@ describe("Slider widget", () => {
 
     const wrapper = shallow(<Slider {...props} />)
 
+    // We need to do this as we are using a debounce when the widget value is set
     await timeout(200)
 
     expect(props.widgetMgr.setFloatArrayValue).toHaveBeenCalledWith(
@@ -242,6 +243,7 @@ describe("Slider widget", () => {
         value: [1, 10],
       })
 
+      // We need to do this as we are using a debounce when the widget value is set
       await timeout(200)
 
       expect(props.widgetMgr.setFloatArrayValue).toHaveBeenCalledWith(
