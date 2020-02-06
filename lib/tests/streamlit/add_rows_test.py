@@ -23,6 +23,8 @@ setup_2_3_shims(globals())
 
 import pandas as pd
 
+from streamlit.ReportThread import get_report_ctx
+import streamlit as st
 import streamlit.elements.data_frame_proto as data_frame_proto
 from tests import testutil
 
@@ -37,16 +39,12 @@ NEW_ROWS_WRONG_SHAPE = pd.DataFrame({"a": [3, 4], "b": [30, 40], "c": [50, 60]})
 class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
     """Test dg.add_rows."""
 
-    def setUp(self):
-        super(DeltaGeneratorAddRowsTest, self).setUp(override_root=False)
-        self._dg = self.new_delta_generator()
-
     def _get_unnamed_data_methods(self):
         """DeltaGenerator methods that do not produce named datasets."""
         return [
-            lambda df: self._dg.dataframe(df),
-            lambda df: self._dg.table(df),
-            lambda df: self._dg.vega_lite_chart(
+            lambda df: st.dataframe(df),
+            lambda df: st.table(df),
+            lambda df: st.vega_lite_chart(
                 df, {"mark": "line", "encoding": {"x": "a", "y": "b"}}
             ),
             # TODO: line_chart, bar_chart, etc.
@@ -54,16 +52,16 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
 
     def _get_deltas_that_melt_dataframes(self):
         return [
-            lambda df: self._dg.line_chart(df),
-            lambda df: self._dg.bar_chart(df),
-            lambda df: self._dg.area_chart(df),
+            lambda df: st.line_chart(df),
+            lambda df: st.bar_chart(df),
+            lambda df: st.area_chart(df),
         ]
 
     def _get_named_data_methods(self):
         """DeltaGenerator methods that produce named datasets."""
         # These should always name the desired data "mydata1"
         return [
-            lambda df: self._dg.vega_lite_chart(
+            lambda df: st.vega_lite_chart(
                 {
                     "mark": "line",
                     "datasets": {"mydata1": df},
@@ -108,7 +106,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(num_rows, 5)
 
             # Clear the queue so the next loop is like a brand new test.
-            self._dg._reset()
+            get_report_ctx().reset()
             self.report_queue.clear()
 
     def test_with_index_add_rows(self):
@@ -133,7 +131,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(num_rows, 5)
 
             # Clear the queue so the next loop is like a brand new test.
-            self._dg._reset()
+            get_report_ctx().reset()
             self.report_queue.clear()
 
     def test_with_index_no_data_add_rows(self):
@@ -154,7 +152,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(num_rows, 2)
 
             # Clear the queue so the next loop is like a brand new test.
-            self._dg._reset()
+            get_report_ctx().reset()
             self.report_queue.clear()
 
     def test_no_index_no_data_add_rows(self):
@@ -175,7 +173,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(num_rows, 2)
 
             # Clear the queue so the next loop is like a brand new test.
-            self._dg._reset()
+            get_report_ctx().reset()
             self.report_queue.clear()
 
     def test_simple_add_rows_with_clear_queue(self):
@@ -201,7 +199,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(num_rows, 3)
 
             # Clear the queue so the next loop is like a brand new test.
-            self._dg._reset()
+            get_report_ctx().reset()
             self.report_queue.clear()
 
     def test_named_add_rows(self):
@@ -224,7 +222,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(num_rows, 5)
 
             # Clear the queue so the next loop is like a brand new test.
-            self._dg._reset()
+            get_report_ctx().reset()
             self.report_queue.clear()
 
     def test_named_add_rows_with_clear_queue(self):
@@ -248,7 +246,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(num_rows, 3)
 
             # Clear the queue so the next loop is like a brand new test.
-            self._dg._reset()
+            get_report_ctx().reset()
             self.report_queue.clear()
 
     def test_add_rows_works_when_new_name(self):
@@ -268,7 +266,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(num_rows, 3)
 
             # Clear the queue so the next loop is like a brand new test.
-            self._dg._reset()
+            get_report_ctx().reset()
             self.report_queue.clear()
 
     def test_add_rows_fails_when_wrong_shape(self):
@@ -284,5 +282,5 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
                 el.add_rows(NEW_ROWS_WRONG_SHAPE)
 
             # Clear the queue so the next loop is like a brand new test.
-            self._dg._reset()
+            get_report_ctx().reset()
             self.report_queue.clear()

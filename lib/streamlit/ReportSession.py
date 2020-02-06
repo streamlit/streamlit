@@ -91,11 +91,6 @@ class ReportSession(object):
 
         self._uploaded_file_mgr = UploadedFileManager()
 
-        self._main_dg = DeltaGenerator(enqueue=self.enqueue, container=BlockPath.MAIN)
-        self._sidebar_dg = DeltaGenerator(
-            enqueue=self.enqueue, container=BlockPath.SIDEBAR
-        )
-
         self._widget_states = WidgetStates()
         self._local_sources_watcher = LocalSourcesWatcher(
             self._report, self._on_source_file_changed
@@ -158,15 +153,9 @@ class ReportSession(object):
         msg : ForwardMsg
             The message to enqueue
 
-        Returns
-        -------
-        bool
-            True if the message was enqueued, or False if
-            client.displayEnabled is not set
-
         """
         if not config.get_option("client.displayEnabled"):
-            return False
+            return
 
         # Avoid having two maybe_handle_execution_control_request running on
         # top of each other when tracer is installed. This leads to a lock
@@ -182,7 +171,6 @@ class ReportSession(object):
                 scriptrunner.maybe_handle_execution_control_request()
 
         self._report.enqueue(msg)
-        return True
 
     def enqueue_exception(self, e):
         """Enqueues an Exception message.
@@ -543,8 +531,7 @@ class ReportSession(object):
         # Create the ScriptRunner, attach event handlers, and start it
         self._scriptrunner = ScriptRunner(
             report=self._report,
-            main_dg=self._main_dg,
-            sidebar_dg=self._sidebar_dg,
+            enqueue_forward_msg=self.enqueue,
             widget_states=self._widget_states,
             request_queue=self._script_request_queue,
             uploaded_file_mgr=self._uploaded_file_mgr,

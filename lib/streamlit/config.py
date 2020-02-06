@@ -296,7 +296,7 @@ _create_option(
         this minimum.""",
     visibility="hidden",
     default_val=10 * 1e3,
-    type_=int,
+    type_=float,
 )  # 10k
 
 _create_option(

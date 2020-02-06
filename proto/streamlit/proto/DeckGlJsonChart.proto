@@ -19,4 +19,5 @@ syntax = "proto3";
 message DeckGlJsonChart {
   // The dataframe that will be used as the chart's main data source.
   string json = 1;
+  string tooltip = 2;
 }

@@ -18,7 +18,6 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
-from streamlit.proto.TextInput_pb2 import TextInput
 
 setup_2_3_shims(globals())
 
@@ -33,11 +32,13 @@ from datetime import time
 
 from streamlit import caching
 from streamlit import config
+from streamlit import cursor
 from streamlit import metrics
 from streamlit import type_util
 from streamlit.ReportThread import get_report_ctx
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException
+from streamlit.errors import NoSessionContext
 from streamlit.js_number import JSNumber
 from streamlit.js_number import JSNumberBoundsException
 from streamlit.proto import Alert_pb2
@@ -45,6 +46,7 @@ from streamlit.proto import Balloons_pb2
 from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto.NumberInput_pb2 import NumberInput
+from streamlit.proto.TextInput_pb2 import TextInput
 
 
 # setup logging
@@ -255,45 +257,18 @@ class DeltaGenerator(object):
 
     Parameters
     ----------
-    enqueue: callable or None
-      Function that (maybe) enqueues ForwardMsg's and returns True if
-        enqueued or False if not.
-    id: int or None
-      ID for deltas, or None to create the root DeltaGenerator (which
-        produces DeltaGenerators with incrementing IDs)
-    delta_type: str or None
-      The name of the element passed in Element.proto's oneof.
-      This is needed so we can transform dataframes for some elements when
-      performing an `add_rows`.
-    last_index: int or None
-      The last index of the DataFrame for the element this DeltaGenerator
-      created. Only applies to elements that transform dataframes,
-      like line charts.
-    is_root: bool
-      If True, this will behave like a root DeltaGenerator which an
-      auto-incrementing ID (in which case, `id` should be None).
-      If False, this will have a fixed ID as determined
-      by the `id` argument.
-    container: BlockPath
-      The root container for this DeltaGenerator. Can be MAIN or SIDEBAR.
-    path: tuple of ints
-      The full path of this DeltaGenerator, consisting of the IDs of
-      all ancestors. The 0th item is the topmost ancestor.
+    container: BlockPath_pb2.BlockPath or None
+      The root container for this DeltaGenerator. If None, this is a null
+      DeltaGenerator which doesn't print to the app at all (useful for
+      testing).
+
+    cursor: cursor.AbstractCursor or None
     """
 
     # The pydoc below is for user consumption, so it doesn't talk about
     # DeltaGenerator constructor parameters (which users should never use). For
     # those, see above.
-    def __init__(
-        self,
-        enqueue,
-        id=0,
-        delta_type=None,
-        last_index=None,
-        is_root=True,
-        container=BlockPath_pb2.BlockPath.MAIN,
-        path=(),
-    ):
+    def __init__(self, container=BlockPath_pb2.BlockPath.MAIN, cursor=None):
         """Inserts or updates elements in Streamlit apps.
 
         As a user, you should never initialize this object by hand. Instead,
@@ -308,13 +283,21 @@ class DeltaGenerator(object):
         an element `foo` inside the sidebar.
 
         """
-        self._enqueue = enqueue
-        self._id = id
-        self._delta_type = delta_type
-        self._last_index = last_index
-        self._is_root = is_root
         self._container = container
-        self._path = path
+
+        # This is either:
+        # - None: if this is the running DeltaGenerator for a top-level
+        #   container.
+        # - RunningCursor: if this is the running DeltaGenerator for a
+        #   non-top-level container (created with dg._block())
+        # - LockedCursor: if this is a locked DeltaGenerator returned by some
+        #   other DeltaGenerator method. E.g. the dg returned in dg =
+        #   st.text("foo").
+        #
+        # You should never use this! Instead use self._cursor, which is a
+        # computed property that fetches the right cursor.
+        #
+        self._provided_cursor = cursor
 
     def __getattr__(self, name):
         import streamlit as st
@@ -345,11 +328,12 @@ class DeltaGenerator(object):
 
         return wrapper
 
-    # Protected (should be used only by Streamlit, not by users).
-    def _reset(self):
-        """Reset delta generator so it starts from index 0."""
-        assert self._is_root
-        self._id = 0
+    @property
+    def _cursor(self):
+        if self._provided_cursor is None:
+            return cursor.get_container_cursor(self._container)
+        else:
+            return self._provided_cursor
 
     def _enqueue_new_element_delta(
         self,
@@ -377,85 +361,70 @@ class DeltaGenerator(object):
             element.
 
         """
-
-        def value_or_dg(value, dg):
-            """Widgets have return values unlike other elements and may want to
-            return `None`. We create a special `NoValue` class for this scenario
-            since `None` return values get replaced with a DeltaGenerator.
-            """
-            if value is NoValue:
-                return None
-            if value is None:
-                return dg
-            return value
-
         rv = None
-        if marshall_element:
-            msg = ForwardMsg_pb2.ForwardMsg()
-            rv = marshall_element(msg.delta.new_element)
+
+        # Always call marshall_element() so users can run their script without
+        # Streamlit.
+        msg = ForwardMsg_pb2.ForwardMsg()
+        rv = marshall_element(msg.delta.new_element)
+
+        msg_was_enqueued = False
+
+        # Only enqueue message if there's a container.
+
+        if self._container and self._cursor:
             msg.metadata.parent_block.container = self._container
-            msg.metadata.parent_block.path[:] = self._path
-            msg.metadata.delta_id = self._id
+            msg.metadata.parent_block.path[:] = self._cursor.path
+            msg.metadata.delta_id = self._cursor.index
+
             if element_width is not None:
                 msg.metadata.element_dimension_spec.width = element_width
             if element_height is not None:
                 msg.metadata.element_dimension_spec.height = element_height
 
-        # "Null" delta generators (those without queues), don't send anything.
-        if self._enqueue is None:
-            return value_or_dg(rv, self)
+            _enqueue_message(msg)
+            msg_was_enqueued = True
 
-        # Figure out if we need to create a new ID for this element.
-        if self._is_root:
+        if msg_was_enqueued:
+            # Get a DeltaGenerator that is locked to the current element
+            # position.
             output_dg = DeltaGenerator(
-                enqueue=self._enqueue,
-                id=msg.metadata.delta_id,
-                delta_type=delta_type,
-                last_index=last_index,
                 container=self._container,
-                is_root=False,
+                cursor=self._cursor.get_locked_cursor(
+                    delta_type=delta_type, last_index=last_index
+                ),
             )
         else:
-            self._delta_type = delta_type
-            self._last_index = last_index
+            # If the message was not enqueued, just return self since it's a
+            # no-op from the point of view of the app.
             output_dg = self
 
-        kind = msg.delta.new_element.WhichOneof("type")
-
-        m = metrics.Client.get("streamlit_enqueue_deltas_total")
-        m.labels(kind).inc()
-        msg_was_enqueued = self._enqueue(msg)
-
-        if not msg_was_enqueued:
-            return value_or_dg(rv, self)
-
-        if self._is_root:
-            self._id += 1
-
-        return value_or_dg(rv, output_dg)
+        return _value_or_dg(rv, output_dg)
 
     def _block(self):
-        if self._enqueue is None:
+        if self._container is None or self._cursor is None:
             return self
 
         msg = ForwardMsg_pb2.ForwardMsg()
         msg.delta.new_block = True
         msg.metadata.parent_block.container = self._container
-        msg.metadata.parent_block.path[:] = self._path
-        msg.metadata.delta_id = self._id
+        msg.metadata.parent_block.path[:] = self._cursor.path
+        msg.metadata.delta_id = self._cursor.index
 
-        new_block_dg = DeltaGenerator(
-            enqueue=self._enqueue,
-            id=0,
-            is_root=True,
-            container=self._container,
-            path=self._path + (self._id,),
+        # Normally we'd return a new DeltaGenerator that uses the locked cursor
+        # below. But in this case we want to return a DeltaGenerator that uses
+        # a brand new cursor for this new block we're creating.
+        block_cursor = cursor.RunningCursor(
+            path=self._cursor.path + (self._cursor.index,)
         )
+        block_dg = DeltaGenerator(container=self._container, cursor=block_cursor)
 
-        self._enqueue(msg)
-        self._id += 1
+        # Must be called to increment this cursor's index.
+        self._cursor.get_locked_cursor(None)
 
-        return new_block_dg
+        _enqueue_message(msg)
+
+        return block_dg
 
     @_with_element
     def balloons(self, element):
@@ -1810,7 +1779,11 @@ class DeltaGenerator(object):
         ui_value = _get_widget_ui_value("radio", element, user_key=key)
         current_value = ui_value if ui_value is not None else index
 
-        return options[current_value] if len(options) > 0 and options[current_value] is not None else NoValue
+        return (
+            options[current_value]
+            if len(options) > 0 and options[current_value] is not None
+            else NoValue
+        )
 
     @_with_element
     def selectbox(self, element, label, options, index=0, format_func=str, key=None):
@@ -1865,7 +1838,11 @@ class DeltaGenerator(object):
         ui_value = _get_widget_ui_value("selectbox", element, user_key=key)
         current_value = ui_value if ui_value is not None else index
 
-        return options[current_value] if len(options) > 0 and options[current_value] is not None else NoValue
+        return (
+            options[current_value]
+            if len(options) > 0 and options[current_value] is not None
+            else NoValue
+        )
 
     @_with_element
     def slider(
@@ -1903,8 +1880,9 @@ class DeltaGenerator(object):
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
         format : str or None
-            Printf/Python format string controlling how the interface should
+            A printf-style format string controlling how the interface should
             display numbers. This does not impact the return value.
+            Valid formatters: %d %e %f %g %i
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -2450,14 +2428,16 @@ class DeltaGenerator(object):
 
         if not all_ints and not all_floats:
             raise StreamlitAPIException(
-                "Both value and arguments must be of the same type."
+                "All numerical arguments must be of the same type."
                 "\n`value` has %(value_type)s type."
                 "\n`min_value` has %(min_type)s type."
                 "\n`max_value` has %(max_type)s type."
+                "\n`step` has %(step_type)s type."
                 % {
                     "value_type": type(value).__name__,
                     "min_type": type(min_value).__name__,
                     "max_type": type(max_value).__name__,
+                    "step_type": type(step).__name__,
                 }
             )
 
@@ -2532,6 +2512,7 @@ class DeltaGenerator(object):
         >>> my_bar = st.progress(0)
         >>>
         >>> for percent_complete in range(100):
+        ...     time.sleep(0.1)        
         ...     my_bar.progress(percent_complete + 1)
 
         """
@@ -2893,10 +2874,10 @@ class DeltaGenerator(object):
         >>> my_chart.add_rows(some_fancy_name=df2)  # <-- name used as keyword
 
         """
-        if self._enqueue is None:
+        if self._container is None or self._cursor is None:
             return self
 
-        if self._is_root:
+        if not self._cursor.is_locked:
             raise StreamlitAPIException("Only existing elements can `add_rows`.")
 
         # Accept syntax st.add_rows(df).
@@ -2916,24 +2897,24 @@ class DeltaGenerator(object):
         # (for example, st.line_chart() without any args), call the original
         # st.foo() element with new data instead of doing an add_rows().
         if (
-            self._delta_type in DELTAS_TYPES_THAT_MELT_DATAFRAMES
-            and self._last_index is None
+            self._cursor.props["delta_type"] in DELTAS_TYPES_THAT_MELT_DATAFRAMES
+            and self._cursor.props["last_index"] is None
         ):
             # IMPORTANT: This assumes delta types and st method names always
             # match!
-            st_method_name = self._delta_type
+            st_method_name = self._cursor.props["delta_type"]
             st_method = getattr(self, st_method_name)
             st_method(data, **kwargs)
             return
 
-        data, self._last_index = _maybe_melt_data_for_add_rows(
-            data, self._delta_type, self._last_index
+        data, self._cursor.props["last_index"] = _maybe_melt_data_for_add_rows(
+            data, self._cursor.props["delta_type"], self._cursor.props["last_index"]
         )
 
         msg = ForwardMsg_pb2.ForwardMsg()
         msg.metadata.parent_block.container = self._container
-        msg.metadata.parent_block.path[:] = self._path
-        msg.metadata.delta_id = self._id
+        msg.metadata.parent_block.path[:] = self._cursor.path
+        msg.metadata.delta_id = self._cursor.index
 
         import streamlit.elements.data_frame_proto as data_frame_proto
 
@@ -2943,7 +2924,7 @@ class DeltaGenerator(object):
             msg.delta.add_rows.name = name
             msg.delta.add_rows.has_name = True
 
-        self._enqueue(msg)
+        _enqueue_message(msg)
 
         return self
 
@@ -2989,3 +2970,32 @@ def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
 
 def _clean_text(text):
     return textwrap.dedent(str(text)).strip()
+
+
+def _value_or_dg(value, dg):
+    """Return either value, or None, or dg.
+
+    This is needed because Widgets have meaningful return values. This is
+    unlike other elements, which always return None. Then we internally replace
+    that None with a DeltaGenerator instance.
+
+    However, sometimes a widget may want to return None, and in this case it
+    should not be replaced by a DeltaGenerator. So we have a special NoValue
+    object that gets replaced by None.
+
+    """
+    if value is NoValue:
+        return None
+    if value is None:
+        return dg
+    return value
+
+
+def _enqueue_message(msg):
+    """Enqueues a ForwardMsg proto to send to the app."""
+    ctx = get_report_ctx()
+
+    if ctx is None:
+        raise NoSessionContext()
+
+    ctx.enqueue(msg)

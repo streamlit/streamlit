@@ -22,6 +22,38 @@ See highlights, bug fixes, and known issues for Streamlit releases:
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.55.0
+
+_Release date: February 4, 2020_
+
+**Highlights:**
+
+- 📺 **Ability to record screencasts directly from Streamlit!** This allows
+  you to easily record and share explanations about your models, analyses,
+  data, etc. Just click ☰ then "Record a screencast". Give it a try!
+
+## Version 0.54.0
+
+_Release date: January 29, 2020_
+
+**Highlights:**
+
+- ⌨️ Support for password fields! Just pass `type="password"` to
+  `st.text_input()`.
+
+**Notable fixes:**
+
+- ✳️ Numerous st.cache improvements, including better support for complex objects.
+- 🗣️ Fixed cross-talk in sidebar between multiple users.
+
+**Breaking changes:**
+
+- If you're using the SessionState <del>hack</del> Gist, you should re-download it!
+  Depending on which hack you're using, here are some links to save you some
+  time:
+  - [SessionState.py](https://gist.github.com/tvst/036da038ab3e999a64497f42de966a92)
+  - [st_state_patch.py](https://gist.github.com/tvst/0899a5cdc9f0467f7622750896e6bd7f)
+
 ## Version 0.53.0
 
 _Release date: January 14, 2019_

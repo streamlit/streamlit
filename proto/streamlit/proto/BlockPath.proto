@@ -18,8 +18,9 @@ syntax = "proto3";
 
 message BlockPath {
   enum Container {
-    MAIN = 0;
-    SIDEBAR = 1;
+    UNUSED = 0;
+    MAIN = 1;
+    SIDEBAR = 2;
   }
 
   // Top level container of the block.
