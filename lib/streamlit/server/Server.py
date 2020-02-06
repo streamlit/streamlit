@@ -41,6 +41,7 @@ from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.server.routes import AddSlashHandler
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
+from streamlit.server.routes import MediaFileHandler
 from streamlit.server.routes import MessageCacheHandler
 from streamlit.server.routes import MetricsHandler
 from streamlit.server.routes import StaticFileHandler
@@ -249,6 +250,7 @@ class Server(object):
                 MessageCacheHandler,
                 dict(cache=self._message_cache),
             ),
+            (make_url_path_regex(base, "media/(.*)"), MediaFileHandler),
         ]
 
         if config.get_option("global.developmentMode") and config.get_option(
