@@ -16,25 +16,17 @@
 """A hashing utility for code that uses Python 3 specific code so it needs to be
 conditionally imported."""
 
-import ast
 import dis
 import importlib
+import inspect
 import re
 import textwrap
-
-import astor
 
 from streamlit import source_util as _source_util
 from streamlit.errors import UserHashError
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
-
-SPACES_RE = re.compile("\\s*")
-
-
-def _clean_text(text):
-    return textwrap.dedent(str(text)).strip()
 
 
 def _hashing_user_error_message(exc, lines, filename, lineno):
@@ -53,7 +45,7 @@ If you think this is actually a Streamlit bug, please [file a bug report here.]
     """
         % {
             "exception": str(exc),
-            "lines": _clean_text(lines),
+            "lines": lines,
             "filename": filename,
             "lineno": lineno,
         }
@@ -61,22 +53,14 @@ If you think this is actually a Streamlit bug, please [file a bug report here.]
 
 
 def _get_failing_lines(code, lineno):
-    lines = []
+    code_lines = inspect.getsourcelines(code)
+    end_lineno = min(lineno + 3, len(code_lines[0]) + code_lines[1])
+    lines = None
 
     with _source_util.open_python_file(code.co_filename) as source_file:
         source_lines = source_file.readlines()
-        lines = source_lines[lineno - 1: lineno + 2]
-        # lines.append(source_lines[lineno-1])
-        # initial_spaces = SPACES_RE.match(lines[0]).end()
+        lines = source_lines[lineno - 1: end_lineno]
 
-        # Get the lines below the start line where the indent
-        # is >= to the start line. Do not allow new lines.
-        #for line in source_lines[lineno:]:
-        #    indentation = SPACES_RE.match(line).end()
-
-        #    if indentation <= initial_spaces:
-        #        break
-        #    lines.append(line)
     return lines
 
 
@@ -144,14 +128,9 @@ def get_referenced_objects(code, context):
         except Exception as e:
             lines = _get_failing_lines(code, lineno)
 
-            #try:
-            #    parsed_context = ast.parse("".join(lines).lstrip())
-            #    broken_code = astor.to_source(parsed_context)
-            #except:
-            #    LOGGER.debug("AST could not parse user code: %s" % lines)
-            #    broken_code = "Could not parse code"
-
-            msg = _hashing_user_error_message(e, "".join(lines), code.co_filename, lineno)
+            msg = _hashing_user_error_message(
+                e, "".join(lines), code.co_filename, lineno
+            )
             raise UserHashError(msg).with_traceback(e.__traceback__)
 
     return refs
