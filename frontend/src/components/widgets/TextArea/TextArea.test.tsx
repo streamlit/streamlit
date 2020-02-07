@@ -18,7 +18,6 @@
 import React from "react"
 import { shallow } from "enzyme"
 import { fromJS } from "immutable"
-import { radioOverrides } from "lib/widgetTheme"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import TextArea, { Props } from "./TextArea"
@@ -40,7 +39,7 @@ const getProps = (elementProps: object = {}): Props => ({
   widgetMgr: new WidgetStateManager(sendBackMsg),
 })
 
-describe("Checkbox widget", () => {
+describe("TextArea widget", () => {
   const props = getProps()
   const wrapper = shallow(<TextArea {...props} />)
 
@@ -84,29 +83,75 @@ describe("Checkbox widget", () => {
     expect(wrapper.find(UITextArea).prop("disabled")).toBe(props.disabled)
   })
 
-  describe("should show instructions", () => {
-    it("Ctrl+Enter if not mac", () => {
-      // @ts-ignore
-      wrapper.find(UITextArea).prop("onChange")({
-        target: {
-          value: "testing",
-        },
-      } as React.ChangeEvent<HTMLTextAreaElement>)
+  it("should show Ctrl+Enter instructions", () => {
+    // @ts-ignore
+    wrapper.find(UITextArea).prop("onChange")({
+      target: {
+        value: "testing",
+      },
+    } as React.ChangeEvent<HTMLTextAreaElement>)
 
-      expect(wrapper.find("div.instructions").text()).toBe(
-        "Press Ctrl+Enter to apply"
-      )
+    expect(wrapper.find("div.instructions").text()).toBe(
+      "Press Ctrl+Enter to apply"
+    )
+  })
+
+  it("should set widget value on blur", () => {
+    const props = getProps()
+    const wrapper = shallow(<TextArea {...props} />)
+
+    // @ts-ignore
+    wrapper.find(UITextArea).prop("onChange")({
+      target: {
+        value: "testing",
+      },
+    } as React.ChangeEvent<HTMLTextAreaElement>)
+
+    // @ts-ignore
+    wrapper.find(UITextArea).prop("onBlur")()
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element.get("id"),
+      "testing",
+      { fromUi: true }
+    )
+  })
+
+  it("should set widget value when ctrl+enter is pressed", () => {
+    const props = getProps()
+    const wrapper = shallow(<TextArea {...props} />)
+
+    // @ts-ignore
+    wrapper.find(UITextArea).prop("onChange")({
+      target: {
+        value: "testing",
+      },
+    } as React.ChangeEvent<HTMLTextAreaElement>)
+
+    // @ts-ignore
+    wrapper.find(UITextArea).prop("onKeyDown")({
+      preventDefault: jest.fn(),
+      ctrlKey: true,
+      key: "Enter",
     })
 
-    it("⌘+Enter if mac", () => {
-      Object.defineProperty(navigator, "platform", {
-        value: "MacIntel",
-        writable: true,
-      })
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element.get("id"),
+      "testing",
+      { fromUi: true }
+    )
+  })
 
-      const props = getProps()
-      const wrapper = shallow(<TextArea {...props} />)
+  describe("On mac it should", () => {
+    Object.defineProperty(navigator, "platform", {
+      value: "MacIntel",
+      writable: true,
+    })
 
+    const props = getProps()
+    const wrapper = shallow(<TextArea {...props} />)
+
+    it("show ⌘+Enter instructions", () => {
       // @ts-ignore
       wrapper.find(UITextArea).prop("onChange")({
         target: {
@@ -116,6 +161,28 @@ describe("Checkbox widget", () => {
 
       expect(wrapper.find("div.instructions").text()).toBe(
         "Press ⌘+Enter to apply"
+      )
+    })
+
+    it("should set widget value when ⌘+enter is pressed", () => {
+      // @ts-ignore
+      wrapper.find(UITextArea).prop("onChange")({
+        target: {
+          value: "testing",
+        },
+      } as React.ChangeEvent<HTMLTextAreaElement>)
+
+      // @ts-ignore
+      wrapper.find(UITextArea).prop("onKeyDown")({
+        preventDefault: jest.fn(),
+        metaKey: true,
+        key: "Enter",
+      })
+
+      expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+        props.element.get("id"),
+        "testing",
+        { fromUi: true }
       )
     })
   })
