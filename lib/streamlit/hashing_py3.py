@@ -40,18 +40,23 @@ def _clean_text(text):
 def _hashing_user_error_message(exc, lines, filename, lineno):
     return textwrap.dedent(
         """
-        %(exception)s
+%(exception)s
 
-        Error in `%(filename)s` near line `%(lineno)s`:
+Error in `%(filename)s` near line `%(lineno)s`:
 
-        ```
-        %(lines)s
-        ```
+```
+%(lines)s
+```
 
-        If you think this is actually a Streamlit bug, please [file a bug report here.]
-        (https://github.com/streamlit/streamlit/issues/new/choose)
+If you think this is actually a Streamlit bug, please [file a bug report here.]
+(https://github.com/streamlit/streamlit/issues/new/choose)
     """
-        % {"exception": str(exc), "lines": _clean_text(lines), "filename": filename, "lineno": lineno}
+        % {
+            "exception": str(exc),
+            "lines": _clean_text(lines),
+            "filename": filename,
+            "lineno": lineno,
+        }
     ).strip("\n")
 
 
@@ -60,17 +65,18 @@ def _get_failing_lines(code, lineno):
 
     with _source_util.open_python_file(code.co_filename) as source_file:
         source_lines = source_file.readlines()
-        lines.append(source_lines[lineno-1])
-        initial_spaces = SPACES_RE.match(lines[0]).end()
+        lines = source_lines[lineno - 1: lineno + 2]
+        # lines.append(source_lines[lineno-1])
+        # initial_spaces = SPACES_RE.match(lines[0]).end()
 
         # Get the lines below the start line where the indent
         # is >= to the start line. Do not allow new lines.
-        for line in source_lines[lineno:]:
-            indentation = SPACES_RE.match(line).end()
+        #for line in source_lines[lineno:]:
+        #    indentation = SPACES_RE.match(line).end()
 
-            if indentation <= initial_spaces:
-                break
-            lines.append(line)
+        #    if indentation <= initial_spaces:
+        #        break
+        #    lines.append(line)
     return lines
 
 
@@ -138,14 +144,14 @@ def get_referenced_objects(code, context):
         except Exception as e:
             lines = _get_failing_lines(code, lineno)
 
-            try:
-                parsed_context = ast.parse("".join(lines).lstrip())
-                broken_code = astor.to_source(parsed_context)
-            except:
-                LOGGER.debug("AST could not parse user code: %s" % lines)
-                broken_code = "Could not parse code"
+            #try:
+            #    parsed_context = ast.parse("".join(lines).lstrip())
+            #    broken_code = astor.to_source(parsed_context)
+            #except:
+            #    LOGGER.debug("AST could not parse user code: %s" % lines)
+            #    broken_code = "Could not parse code"
 
-            msg = _hashing_user_error_message(e, broken_code, code.co_filename, lineno)
+            msg = _hashing_user_error_message(e, "".join(lines), code.co_filename, lineno)
             raise UserHashError(msg).with_traceback(e.__traceback__)
 
     return refs
