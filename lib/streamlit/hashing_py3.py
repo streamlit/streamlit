@@ -19,19 +19,13 @@ conditionally imported."""
 import dis
 import importlib
 import inspect
-import re
 import textwrap
 
-from streamlit import source_util as _source_util
 from streamlit.errors import UserHashError
-from streamlit.logger import get_logger
-
-LOGGER = get_logger(__name__)
 
 
 def _hashing_user_error_message(exc, lines, filename, lineno):
-    return textwrap.dedent(
-        """
+    return ("""
 %(exception)s
 
 Error in `%(filename)s` near line `%(lineno)s`:
@@ -45,7 +39,7 @@ If you think this is actually a Streamlit bug, please [file a bug report here.]
     """
         % {
             "exception": str(exc),
-            "lines": lines,
+            "lines": textwrap.dedent(lines),
             "filename": filename,
             "lineno": lineno,
         }
@@ -57,7 +51,7 @@ def _get_failing_lines(code, lineno):
 
     start = lineno - source_lineno
     end = min(start + 3, len(source_lines))
-    lines = source_lines[start : end]
+    lines = source_lines[start:end]
 
     return lines
 
