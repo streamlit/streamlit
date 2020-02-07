@@ -18,6 +18,7 @@
 import React from "react"
 import { shallow } from "enzyme"
 import { fromJS } from "immutable"
+import { multiSelectOverrides } from "lib/widgetTheme"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import Multiselect, { Props } from "./Multiselect"
@@ -155,5 +156,9 @@ describe("Multiselect widget", () => {
     })
 
     expect(wrapper.find(UISelect).prop("value")).toStrictEqual([])
+  })
+
+  it("should have our theme overrides", () => {
+    expect(wrapper.find(UISelect).prop("overrides")).toBe(multiSelectOverrides)
   })
 })
