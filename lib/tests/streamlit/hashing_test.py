@@ -127,12 +127,13 @@ class HashTest(unittest.TestCase):
     def test_hashing_broken_code(self):
         def f():
             import datetime
+
             # strptime doesn't exist on datetime
             # This causes an error in hashing_py3.py `get_referenced_objects`
             return datetime.strptime("%H")
 
         exc_msg = "module 'datetime' has no attribute 'strptime'"
-        code_msg = "return datetime.strptime(\"%H\")"
+        code_msg = 'return datetime.strptime("%H")'
 
         with self.assertRaises(UserHashError) as ctx:
             get_hash(f)

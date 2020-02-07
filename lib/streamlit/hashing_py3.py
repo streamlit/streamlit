@@ -25,7 +25,8 @@ from streamlit.errors import UserHashError
 
 
 def _hashing_user_error_message(exc, lines, filename, lineno):
-    return ("""
+    return (
+        """
 %(exception)s
 
 Error in `%(filename)s` near line `%(lineno)s`:
