@@ -15,8 +15,7 @@
  * limitations under the License.
  */
 
-import CodeBlock from "components/elements/CodeBlock"
-import React, { ReactElement, ReactNode } from "react"
+import React, { ReactElement, ReactNode, Fragment, PureComponent } from "react"
 import ReactMarkdown from "react-markdown"
 // @ts-ignore
 import htmlParser from "react-markdown/plugins/html-parser"
@@ -26,6 +25,7 @@ import { BlockMath, InlineMath } from "react-katex"
 import RemarkMathPlugin from "remark-math"
 // @ts-ignore
 import RemarkEmoji from "remark-emoji"
+import CodeBlock from "components/elements/CodeBlock/"
 
 import "katex/dist/katex.min.css"
 
@@ -46,32 +46,33 @@ export interface Props {
  * Wraps the <ReactMarkdown> component to include our standard
  * renderers and AST plugins (for syntax highlighting, HTML support, etc).
  */
-export class StreamlitMarkdown extends React.PureComponent<Props> {
-  componentDidCatch(): void {
+export class StreamlitMarkdown extends PureComponent<Props> {
+  public componentDidCatch = (): void => {
     const { source } = this.props
 
-    throw {
+    throw Object.assign(new Error(), {
       name: "Error parsing Markdown or HTML in this string",
       message: <p>{source}</p>,
       stack: null,
-    }
+    })
   }
 
-  public render(): ReactNode {
+  public render = (): ReactNode => {
     const { source, allowHTML } = this.props
 
     const renderers = {
       code: CodeBlock,
       link: linkWithTargetBlank,
       linkReference: linkReferenceHasParens,
-      inlineMath: (props: { value: string }) => (
+      inlineMath: (props: { value: string }): ReactElement => (
         <InlineMath>{props.value}</InlineMath>
       ),
-      math: (props: { value: string }) => <BlockMath>{props.value}</BlockMath>,
+      math: (props: { value: string }): ReactElement => (
+        <BlockMath>{props.value}</BlockMath>
+      ),
     }
 
     const plugins = [RemarkMathPlugin, RemarkEmoji]
-
     const astPlugins = allowHTML ? [htmlParser()] : []
 
     return (
@@ -87,13 +88,13 @@ export class StreamlitMarkdown extends React.PureComponent<Props> {
 }
 
 interface LinkProps {
-  href: string
   children: ReactElement
+  href: string
 }
 
 interface LinkReferenceProps {
-  href: string
   children: [ReactElement]
+  href: string
 }
 
 // Using target="_blank" without rel="noopener noreferrer" is a security risk:
@@ -108,11 +109,15 @@ export function linkWithTargetBlank(props: LinkProps): ReactElement {
 
 // Handle rendering a link through a reference, ex [text](href)
 // Don't convert to a link if only `[text]` and missing `(href)`
-export function linkReferenceHasParens(props: LinkReferenceProps): any {
+export function linkReferenceHasParens(
+  props: LinkReferenceProps
+): ReactElement | null {
   const { href, children } = props
 
   if (!href) {
-    return children.length ? `[${children[0].props.children}]` : ""
+    return children.length ? (
+      <Fragment>[{children[0].props.children}]</Fragment>
+    ) : null
   }
 
   return (
