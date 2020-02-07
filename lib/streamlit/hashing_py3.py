@@ -53,13 +53,11 @@ If you think this is actually a Streamlit bug, please [file a bug report here.]
 
 
 def _get_failing_lines(code, lineno):
-    code_lines = inspect.getsourcelines(code)
-    end_lineno = min(lineno + 3, len(code_lines[0]) + code_lines[1])
-    lines = None
+    source_lines, source_lineno = inspect.getsourcelines(code)
 
-    with _source_util.open_python_file(code.co_filename) as source_file:
-        source_lines = source_file.readlines()
-        lines = source_lines[lineno - 1: end_lineno]
+    start = lineno - source_lineno
+    end = min(start + 3, len(source_lines))
+    lines = source_lines[start : end]
 
     return lines
 
