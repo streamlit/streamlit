@@ -365,9 +365,7 @@ class CodeHasher:
                 self._update(h, obj.shape)
 
                 if obj.size >= NP_SIZE_LARGE:
-                    import numpy as np
-
-                    state = np.random.RandomState(0)
+                    state = numpy.random.RandomState(0)
                     obj = state.choice(obj.flat, size=NP_SAMPLE_SIZE)
 
                 self._update(h, obj.tobytes())
@@ -387,6 +385,8 @@ class CodeHasher:
                 self._update(h, obj.tell())
                 return h.digest()
             elif isinstance(obj, numpy.ufunc):
+                # For object of type numpy.ufunc returns ufunc:<object name>
+                # For example, for numpy.remainder, this is ufunc:remainder
                 return f"{obj.__class__.__name__}:{obj.__name__}".encode()
             elif inspect.isroutine(obj):
                 if hasattr(obj, "__wrapped__"):
