@@ -724,7 +724,5 @@ class CodeHashTest(unittest.TestCase):
             return np.remainder(a, b)
 
         self.assertNotEqual(get_hash(np.remainder), get_hash(np.logical_and))
-        self.assertEqual(get_hash(np.logical_and), get_hash(np.logical_and))
-        self.assertEqual(get_hash(f), get_hash(f))
         self.assertEqual(get_hash(f), get_hash(g))
         self.assertNotEqual(get_hash(f), get_hash(h))
