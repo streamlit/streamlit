@@ -40,7 +40,7 @@ If you think this is actually a Streamlit bug, please [file a bug report here.]
     """
         % {
             "exception": str(exc),
-            "lines": textwrap.dedent(lines),
+            "lines": textwrap.dedent(lines).strip("\n"),
             "filename": filename,
             "lineno": lineno,
         }
