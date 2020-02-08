@@ -387,7 +387,7 @@ class CodeHasher:
             elif isinstance(obj, numpy.ufunc):
                 # For object of type numpy.ufunc returns ufunc:<object name>
                 # For example, for numpy.remainder, this is ufunc:remainder
-                return f"{obj.__class__.__name__}:{obj.__name__}".encode()
+                return ("%s:%s" % (obj.__class__.__name__, obj.__name__)).encode()
             elif inspect.isroutine(obj):
                 if hasattr(obj, "__wrapped__"):
                     # Ignore the wrapper of wrapped functions.
