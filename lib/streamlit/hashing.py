@@ -29,7 +29,6 @@ import os
 import sys
 import textwrap
 import threading
-import traceback
 
 import streamlit as st
 from streamlit import config
