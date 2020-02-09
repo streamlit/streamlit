@@ -1,7 +1,11 @@
 # App is not loading when running remotely
 
-Below are a few common errors that occur when users try to host a Streamlit app
-remotely.
+Below are a few common errors that occur when users spin up their own solution
+to host a Streamlit app remotely.
+
+To learn about a deceptively simple way to host Streamlit apps that avoids all
+the issues below, check out [Streamlit for
+Teams](https://www.streamlit.io/for-teams).
 
 ### Symptom #1: The app never loads
 
