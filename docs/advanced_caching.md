@@ -4,30 +4,30 @@ In [caching](caching.md), you learned about the Streamlit cache, which is access
 
 The cache is a key-value store, where the key is a hash of:
 
-1. The function arguments
-2. The value of any external variable used in the function
-3. The function body
-4. The body of any function used inside the cached function
+1. The input parameters that you called the function with
+1. The value of any external variable used in the function
+1. The body of the function
+1. The body of any function used inside the cached function
 
 And the value is a tuple of:
 
-1. The cached output
-2. A hash of the cached output (you'll see why soon)
+- The cached output
+- A hash of the cached output (you'll see why soon)
 
 For both the key and the output hash, Streamlit uses a specialized hash function that knows how to traverse code, hash special objects, and can have its [behavior customized by the user](#the-hash-funcs-parameter).
 
 For example, when the function `expensive_computation(a, b)`, decorated with [`@st.cache`](api.html#streamlit.cache), is executed with `a=2` and `b=21`, Streamlit does the following:
 
 1. Computes the cache key
-2. If the key is found in the cache, then:
-   * Extracts the previously-cached (output, output_hash) tuple.
-   * Performs an **Output Mutation Check**, where a fresh hash of the output is computed and compared to the stored `output_hash`.
-     * If the two hashes are different, shows a **Cached Object Mutated** warning. (Note: Setting `allow_output_mutation=True` disables this step).
-3. If the input key is not found in the cache, then:
-   * Executes the cached function (i.e. output = `expensive_computation(2, 21)`).
-   * Calculates the `output_hash` from the function's `output`.
-   * Stores `key → (output, output_hash)` in the cache.
-4. Returns the output.
+1. If the key is found in the cache, then:
+   - Extracts the previously-cached (output, output_hash) tuple.
+   - Performs an **Output Mutation Check**, where a fresh hash of the output is computed and compared to the stored `output_hash`.
+     - If the two hashes are different, shows a **Cached Object Mutated** warning. (Note: Setting `allow_output_mutation=True` disables this step).
+1. If the input key is not found in the cache, then:
+   - Executes the cached function (i.e. output = `expensive_computation(2, 21)`).
+   - Calculates the `output_hash` from the function's `output`.
+   - Stores `key → (output, output_hash)` in the cache.
+1. Returns the output.
 
 If an error is encountered an exception is raised. If the error occurs while hashing either the key or the output an `UnhashableTypeError` error is thrown. If you run into any issues, see [fixing caching issues](troubleshooting/caching_issues.md).
 
@@ -50,7 +50,7 @@ def func(file_reference):
 
 By default, Streamlit hashes custom classes like `FileReference` by recursively navigating their structure. In this case, its hash is the hash of the filename property. As long as the file name doesn't change, the hash will remain constant.
 
-However, what if you wanted to have the hasher check for changes to the file's modification time, not just its name? This is possible with  [`@st.cache`](api.html#streamlit.cache)'s `hash_funcs` parameter:
+However, what if you wanted to have the hasher check for changes to the file's modification time, not just its name? This is possible with [`@st.cache`](api.html#streamlit.cache)'s `hash_funcs` parameter:
 
 ```Python
 class FileReference:
@@ -92,21 +92,25 @@ def func(file_reference):
 While it's possible to write custom hash functions, let's take a look at some of the tools that Python provides out of the box. Here's a list of some hash functions and when it makes sense to use them.
 
 Python's [`id`](https://docs.python.org/3/library/functions.html#id) function | [Example](#example-1-pass-a-database-connection-around)
-* Speed: Fast
-* Use case: If you're hashing a singleton object, like an open database connection or a TensorFlow session. These are objects that will only be instantiated once, no matter how many times your script reruns.
-* [Example](#example-1-pass-a-database-connection-around)<br/>
+
+- Speed: Fast
+- Use case: If you're hashing a singleton object, like an open database connection or a TensorFlow session. These are objects that will only be instantiated once, no matter how many times your script reruns.
+- [Example](#example-1-pass-a-database-connection-around)<br/>
 
 `lambda _: None` | [Example](#example-2-turn-off-hashing-for-a-specific-type)
-* Speed: Fast
-* Use case: If you want to turn off hashing of this type. This is useful if you know the object is not going to change.
+
+- Speed: Fast
+- Use case: If you want to turn off hashing of this type. This is useful if you know the object is not going to change.
 
 Python's [`hash()`](https://docs.python.org/3/library/functions.html#hash) function | [Example](#example-3-use-python-s-hash-function)
-* Speed: Can be slow based the size of the object being cached
-* Use case: If Python already knows how to hash this type correctly.
+
+- Speed: Can be slow based the size of the object being cached
+- Use case: If Python already knows how to hash this type correctly.
 
 Custom hash function | [Example](#the-hash-funcs-parameter)
-* Speed: N/a
-* Use case: If you'd like to override how Streamlit hashes a particular type.
+
+- Speed: N/a
+- Use case: If you'd like to override how Streamlit hashes a particular type.
 
 ## Example 1: Pass a database connection around
 
@@ -162,4 +166,4 @@ def func(...):
 
 ## Next steps
 
-* [Advanced concepts](advanced_concepts.md)
+- [Advanced concepts](advanced_concepts.md)

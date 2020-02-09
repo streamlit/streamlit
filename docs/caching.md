@@ -80,7 +80,7 @@ Now when you rerun the app the text "Cache miss" appears on the first run, but n
 
 ```eval_rst
 .. note::
-   You may have noticed that we've added the `suppress_st_warning` to the `@st.cache` decorators. That's because the cached function above uses a Streamlit command itself (`st.write` in this case), and when Streamlit sees that, it shows a warning that your command will only execute when you get a cache hit. More often than not, when you see that warning it's because there's a bug in your code. However, in our case we're using the `st.write` command to demonstrate when the cache is being hit, so the behavior Streamlit is warning us about is exactly what we want. As a result, we are passing in `suppress_st_warning=True` to turn that warning off.
+   You may have noticed that we've added the `suppress_st_warning` keyword to the `@st.cache` decorators. That's because the cached function above uses a Streamlit command itself (`st.write` in this case), and when Streamlit sees that, it shows a warning that your command will only execute when you get a cache hit. More often than not, when you see that warning it's because there's a bug in your code. However, in our case we're using the `st.write` command to demonstrate when the cache is being hit, so the behavior Streamlit is warning us about is exactly what we want. As a result, we are passing in `suppress_st_warning=True` to turn that warning off.
 ```
 
 ## Example 2: When the function arguments change
@@ -129,7 +129,7 @@ res = expensive_computation(a, b)
 st.write("Result:", res)
 ```
 
-The first run is a "Cache miss", but when you press R each subsequent run is a cache hit. This is because on first run, Streamlit detected that the function body changed, reran the function, and put the result in the cache.
+The first run is a "Cache miss", but when you press **R** each subsequent run is a cache hit. This is because on first run, Streamlit detected that the function body changed, reran the function, and put the result in the cache.
 
 ```eval_rst
 .. tip::
@@ -162,8 +162,9 @@ st.write("Result:", res)
 ```
 
 What you see is the usual:
-The first run results in a cache miss.
-Every subsequent rerun results in a cache hit.
+
+1. The first run results in a cache miss.
+1. Every subsequent rerun results in a cache hit.
 
 But now let's try modifying the `inner_func()`:
 
@@ -194,8 +195,7 @@ That's because Streamlit always traverses your code and its dependencies to veri
 
 Streamlit is also smart enough to only traverse dependencies that belong to your app, and skip over any dependency that comes from an installed Python library.
 
-
-## Example 5: Use the global cache to speed up your app for all users
+## Example 5: Use caching to speed up your app across users
 
 Going back to our original function, let's add a widget to control the value of `b`:
 
@@ -216,10 +216,10 @@ res = expensive_computation(a, b)
 st.write("Result:", res)
 ```
 
-What you'll see:  
+What you'll see:
 
-* If you move the slider to a number Streamlit hasn't seen before, you'll have a cache miss again. And every subsequent rerun with the same number will be a cache hit, of course.
-* If you move the slider back to a number Streamlit has seen before, the cache is hit and the app is fast as expected.
+- If you move the slider to a number Streamlit hasn't seen before, you'll have a cache miss again. And every subsequent rerun with the same number will be a cache hit, of course.
+- If you move the slider back to a number Streamlit has seen before, the cache is hit and the app is fast as expected.
 
 In computer science terms, what is happening here is that [`@st.cache`](api.html#streamlit.cache) is [memoizing](https://en.wikipedia.org/wiki/Memoization) `expensive_computation(a, b)`.
 
@@ -262,15 +262,15 @@ st.write("Mutated result:", res)
 
 When you run this app for the first time, you should see three messages on the screen:
 
-* Cache miss (...)
-* Result: {output: 42}
-* Mutated result: {output: "result was manually mutated"}
+- Cache miss (...)
+- Result: {output: 42}
+- Mutated result: {output: "result was manually mutated"}
 
 No surprises here. But now notice what happens when you rerun you app (i.e. press **R**):
 
-* Result: {output: "result was manually mutated"}
-* Mutated result: {output: "result was manually mutated"}
-* <Warning> Cached object mutated. (...)
+- Result: {output: "result was manually mutated"}
+- Mutated result: {output: "result was manually mutated"}
+- <Warning> Cached object mutated. (...)
 
 So what's up?
 
@@ -282,4 +282,4 @@ In this specific case, the fix is just to not mutate `res["output"]` outside the
 
 ## Next steps
 
-* [Advanced caching](advanced_caching.md)
+- [Advanced caching](advanced_caching.md)
