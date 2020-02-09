@@ -488,7 +488,7 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def check_origin(self, origin):
         """Set up CORS."""
-        return is_url_from_allowed_origins(origin)
+        return super().check_origin(origin) or is_url_from_allowed_origins(origin)
 
     def open(self):
         self._session = self._server._add_browser_connection(self)
