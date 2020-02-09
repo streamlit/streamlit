@@ -10,4 +10,5 @@ These articles are designed to get you "unstuck" when something goes wrong. If y
 
    clean-install
    common-issues
+   caching_issues
 ```

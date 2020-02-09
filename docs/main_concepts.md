@@ -25,30 +25,6 @@ Behind the scenes, Streamlit re-executes the entire Python script from top to bo
 
 What this all means is that Streamlit allows you to work in a fast interactive loop: you type some code, save, type some more code, save, and on-and-on until you're happy with your app. The idea is to use Streamlit as a place where you can understand your code, debug it, perfect it, and finally share your results.
 
-## Caching
-
-Caching is super important when it comes to speed - especially when dealing with large data sets. It's always a good idea to load data, cache what's expensive, visualize the data, then spruce things up with interaction.
-
-Streamlit's ability to quickly update and re-execute the whole app is great when you're working with a trivial amount of data, but when you have long-running computations, this can get costly and time consuming. Instead of re-executing, you can safely reuse data with [`st.cache`](api.html#streamlit.cache). `st.cache` is a data store that lets Streamlit apps safely and effortlessly persist information.
-
-When you mark a function with Streamlit's cache annotation, it tells Streamlit that whenever the function is called that it needs to check three things:
-
-1. The actual bytecode that makes up the body of the function
-2. Code, variables, and files that the function depends on
-3. The input parameters that you called the function with
-
-If this is the first time Streamlit has seen these items, with these exact values, and in this exact combination/order, it runs the function and stores the result in a local cache. The next time the function is called, if the values haven't changed, then Streamlit knows it can skip executing the function altogether. Instead, it reads the output from the local cache and passes it on to the caller – like magic.
-
-"But, wait a second," you're saying to yourself, "this sounds too good to be true. What are the limitations of all this awesomesauce?"
-
-Well, there are a few:
-
-1. Streamlit will only check for changes within the current working directory. This means that Streamlit only detects code updates inside installed Python libraries.
-2. If your function is not deterministic (its output depends on random numbers), or if it pulls data from an external time-varying source (for example, a live stock market ticker service) the cached value won't know when things have changed.
-3. Lastly, you should not mutate the output of a cached function since cached values are stored by reference (for performance reasons and to be able to support libraries such as TensorFlow). Don't worry, Streamlit is smart enough to detect these mutations and show a loud warning explaining how to fix the problem.
-
-While these limitations are important to keep in mind, most of the time, they aren't an issue. The times that these rules apply, caching is really transformational.
-
 ## Widgets
 
 When you've got the data or model into the state that you want to explore, you can add in widgets like [`st.slider()`](api.html#streamlit.slider), [`st.button()`](api.html#streamlit.button) or [`st.selectbox()`](api.html#streamlit.selectbox). It's really straightforward - just treat widgets as variables. There are no callbacks in Streamlit! Every interaction simply reruns the script from top-to-bottom. Streamlit assigns each variable an up-to-date value given the app state. This approach leads to really clean code:
@@ -80,6 +56,30 @@ add_slider = st.sidebar.slider(
     0.0, 100.0, (25.0, 75.0)
 )
 ```
+
+## Caching
+
+The Streamlit cache allows your app to stay performant even when loading data from the web, manipulating large datasets, or performing expensive computations.
+
+To use the cache, just wrap functions in the [`@st.cache`](api.html#streamlit.cache) decorator:
+
+```python
+@st.cache  # <-- This function will be cached
+def my_slow_function(arg1, arg2):
+    # Do something really slow in here!
+    return the_output
+```
+
+When you mark a function with the [`@st.cache`](api.html#streamlit.cache) decorator, it tells Streamlit that whenever the function is called it needs to check a few things:
+
+1. The input parameters that you called the function with
+2. The value of any external variable used in the function
+3. The body of the function
+4. The body of any function used inside the cached function
+
+If this is the first time Streamlit has seen these four components with these exact values and in this exact combination and order, it runs the function and stores the result in a local cache. Then, next time the cached function is called, if none of these components changed, Streamlit will just skip executing the function altogether and, instead, return the output previously stored in the cache.
+
+For more information about the Streamlit cache, its configuration parameters, and its limitations, see [Caching](caching.md).
 
 ## App model
 
