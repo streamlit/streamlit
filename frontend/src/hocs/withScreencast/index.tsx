@@ -15,14 +15,4 @@
  * limitations under the License.
  */
 
-/// <reference types="cypress" />
-
-describe("st.balloons", () => {
-  before(() => {
-    cy.visit("http://localhost:3000/");
-  });
-
-  it("displays balloons", () => {
-    cy.get(".element-container").find(".balloons");
-  });
-});
+export { default } from "./withScreencast"

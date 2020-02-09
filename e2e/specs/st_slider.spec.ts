@@ -49,7 +49,7 @@ describe("st.slider", () => {
     cy.get('.stSlider [role="slider"]')
       .first()
       .click()
-      .type("{rightarrow}");
+      .type("{rightarrow}", { force: true });
 
     cy.get(".stMarkdown")
       .first()
@@ -60,7 +60,7 @@ describe("st.slider", () => {
     cy.get('.stSlider [role="slider"]')
       .first()
       .click()
-      .type("{leftarrow}");
+      .type("{leftarrow}", { force: true });
 
     cy.get(".stMarkdown")
       .first()

@@ -24,6 +24,7 @@ from streamlit import config
 from streamlit import magic
 from streamlit import source_util
 from streamlit.ReportThread import ReportThread
+from streamlit.ReportThread import get_report_ctx
 from streamlit.ScriptRequestQueue import ScriptRequest
 from streamlit.logger import get_logger
 from streamlit.widgets import Widgets
@@ -51,8 +52,7 @@ class ScriptRunner(object):
     def __init__(
         self,
         report,
-        main_dg,
-        sidebar_dg,
+        enqueue_forward_msg,
         widget_states,
         request_queue,
         uploaded_file_mgr=None,
@@ -66,12 +66,6 @@ class ScriptRunner(object):
         report : Report
             The ReportSession's report.
 
-        main_dg : DeltaGenerator
-            The ReportSession's main DeltaGenerator.
-
-        sidebar_dg : DeltaGenerator
-            The ReportSession's sidebar DeltaGenerator.
-
         widget_states : streamlit.proto.Widget_pb2.WidgetStates
             The ReportSession's current widget states
 
@@ -81,12 +75,11 @@ class ScriptRunner(object):
             and then shut down.
 
         uploaded_file_mgr : UploadedFileManager
-            The File manager to store the data uploaded by the file_uplpader widget.
+            The File manager to store the data uploaded by the file_uploader widget.
 
         """
         self._report = report
-        self._main_dg = main_dg
-        self._sidebar_dg = sidebar_dg
+        self._enqueue_forward_msg = enqueue_forward_msg
         self._request_queue = request_queue
         self._uploaded_file_mgr = uploaded_file_mgr
 
@@ -133,8 +126,7 @@ class ScriptRunner(object):
             raise Exception("ScriptRunner was already started")
 
         self._script_thread = ReportThread(
-            main_dg=self._main_dg,
-            sidebar_dg=self._sidebar_dg,
+            enqueue=self._enqueue_forward_msg,
             widgets=self._widgets,
             target=self._process_request_queue,
             name="ScriptRunner.scriptThread",
@@ -244,10 +236,8 @@ class ScriptRunner(object):
 
         LOGGER.debug("Running script %s", rerun_data)
 
-        # Reset delta generator so it starts from index 0.
-        import streamlit as st
-
-        st._reset(self._main_dg, self._sidebar_dg)
+        # Reset DeltaGenerators and widgets.
+        get_report_ctx().reset()
 
         self.on_event.send(ScriptRunnerEvent.SCRIPT_STARTED)
 

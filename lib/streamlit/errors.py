@@ -22,6 +22,10 @@ class S3NoCredentials(Exception):
     pass
 
 
+class NoSessionContext(Exception):
+    pass
+
+
 class StreamlitAPIException(Exception):
     """Base class for Streamlit API exceptions.
 

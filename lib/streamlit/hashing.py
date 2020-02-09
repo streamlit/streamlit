@@ -28,9 +28,13 @@ import io
 import os
 import sys
 import textwrap
+import tempfile
 import threading
 
+import numpy
+
 import streamlit as st
+from streamlit import compatibility
 from streamlit import config
 from streamlit import file_util
 from streamlit import type_util
@@ -361,9 +365,7 @@ class CodeHasher:
                 self._update(h, obj.shape)
 
                 if obj.size >= NP_SIZE_LARGE:
-                    import numpy as np
-
-                    state = np.random.RandomState(0)
+                    state = numpy.random.RandomState(0)
                     obj = state.choice(obj.flat, size=NP_SAMPLE_SIZE)
 
                 self._update(h, obj.tobytes())
@@ -372,10 +374,9 @@ class CodeHasher:
                 return self.to_bytes(obj.__name__)
             elif hasattr(obj, "name") and (
                 isinstance(obj, io.IOBase)
-                or (
-                    isinstance(obj.name, string_types)  # noqa: F821
-                    and os.path.exists(obj.name)
-                )
+                # Handle temporary files used during testing
+                or isinstance(obj, tempfile._TemporaryFileWrapper)
+                or (not compatibility.is_running_py3() and isinstance(obj, file))
             ):
                 # Hash files as name + last modification date + offset.
                 h = hashlib.new(self.name)
@@ -383,6 +384,10 @@ class CodeHasher:
                 self._update(h, os.path.getmtime(obj.name))
                 self._update(h, obj.tell())
                 return h.digest()
+            elif isinstance(obj, numpy.ufunc):
+                # For object of type numpy.ufunc returns ufunc:<object name>
+                # For example, for numpy.remainder, this is ufunc:remainder
+                return ("%s:%s" % (obj.__class__.__name__, obj.__name__)).encode()
             elif inspect.isroutine(obj):
                 if hasattr(obj, "__wrapped__"):
                     # Ignore the wrapper of wrapped functions.

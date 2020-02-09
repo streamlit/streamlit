@@ -31,7 +31,7 @@ describe("handles empty charts", () => {
   });
 
   it("gracefully handles no data", () => {
-    // vega lite
+    // vega-lite
     cy.get(".element-container .stVegaLiteChart").each((el, i) => {
       return cy.wrap(el).matchImageSnapshot(`stVegaLiteChart-${i}`);
     });

@@ -1,0 +1,78 @@
+/**
+ * Copyright 2018-2020 Streamlit Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@import "src/assets/css/theme";
+
+.streamlit-dialog.screencast {
+  width: 80%;
+
+  .modal-body {
+    video {
+      width: 100%;
+      border-radius: $border-radius;
+    }
+
+    .download-button {
+      margin-top: calc(-#{$border-width} - #{$input-btn-padding-y});
+    }
+
+    .steps-container {
+      display: grid;
+
+      grid-template-columns: 6em auto 6em;
+
+      .first-column {
+        padding-right: 1rem;
+      }
+
+      .second-step {
+        p {
+          margin: 0.5rem 0 0;
+        }
+      }
+
+      .first-column,
+      .second-column,
+      .third-columnd {
+        padding-top: 0.7rem;
+        padding-bottom: 0.7rem;
+
+        &.first-step {
+          border-top: 0;
+        }
+      }
+
+      .first-column {
+        text-align: right;
+        color: $gray;
+        font-weight: bold;
+
+        &.third-step {
+          display: grid;
+          align-items: center;
+        }
+      }
+
+      .second-column {
+        &.second-step,
+        &.third-step {
+          grid-column-start: 2;
+          grid-column-end: 4;
+        }
+      }
+    }
+  }
+}
