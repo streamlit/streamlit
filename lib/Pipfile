@@ -4,7 +4,6 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-funcsigs = {version = "*",markers = "python_version < '3.0'"}
 mock = "*"
 pipenv = "*"
 pytest = "*"
@@ -24,7 +23,7 @@ bokeh = "*"
 graphviz = "*"
 parameterized = "*"
 pydot = "*"
-tensorflow = ">=2.0.0"
+tensorflow = {version = ">=2.0.0", markers = "python_version < '3.8'"}
 seaborn = "*"
 prometheus-client = "*"
 opencv-python = "*"
