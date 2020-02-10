@@ -67,11 +67,14 @@ jobs:
 
       - run:
           # There is no lock file for the protobufs so we run a checksum
-          # across all the protos and save that to a file to use as
-          # cache key.
+          # across all the protos along with Python and the protobuf compilers
+          # and save that to a file to use as cache key.
           name: Checksum all protobufs
           command: |
-            md5sum proto/streamlit/proto/*.proto $(which python) > ~/protobuf.md5
+            md5sum proto/streamlit/proto/*.proto > ~/protobuf.md5
+            md5sum $(which python) >> ~/protobuf.md5
+            md5sum $(which protoc) >> ~/protobuf.md5
+            md5sum $(which protoc-gen-mypy) >> ~/protobuf.md5
 
       #################################################################
       # Restore from cache
@@ -216,6 +219,22 @@ jobs:
           when: always
 
       #################################################################
+      # Run mypy. (Only executed in one job.)
+      #################################################################
+      - run:
+          name: Run mypy
+          command: |
+            if [ "${CIRCLE_JOB}" != "python-3.8" ] ; then
+              echo "Mypy is only run in python-3.8 job"
+            else
+              scripts/mypy --report
+            fi
+
+      - store_test_results:
+          path: lib/test-reports
+          when: always
+
+      #################################################################
       # Run make pycoverage
       #################################################################
       - run:
@@ -242,7 +261,7 @@ jobs:
           name: Run frontend tests
           command: |
             if [ "${CIRCLE_JOB}" != "python-3.8" ] ; then
-              echo "Not running frontend tests because our job is ${CIRCLE_JOB}"
+              echo "Frontend tests are only run in python-3.8 job"
             else
               make jstest
             fi
