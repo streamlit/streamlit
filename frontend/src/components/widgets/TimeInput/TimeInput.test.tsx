@@ -95,7 +95,7 @@ describe("TextInput widget", () => {
   })
 
   it("should set the widget value on change", () => {
-    const date = new Date(1581347333882)
+    const date = new Date(1995, 10, 10, 12, 8)
 
     // @ts-ignore
     wrapper.find(UITimePicker).prop("onChange")(date)
