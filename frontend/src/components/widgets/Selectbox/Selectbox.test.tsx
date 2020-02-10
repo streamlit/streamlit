@@ -21,7 +21,7 @@ import { fromJS } from "immutable"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import Selectbox, { Props } from "./Selectbox"
-import { OnChangeParams, Select as UISelect } from "baseui/select"
+import { Select as UISelect } from "baseui/select"
 
 jest.mock("lib/WidgetStateManager")
 
