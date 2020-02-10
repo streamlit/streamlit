@@ -25,6 +25,7 @@ with a non-zero status.
 import os
 import subprocess
 import sys
+from typing import Set
 
 import click
 
@@ -35,7 +36,7 @@ IS_PYTHON_3_5 = sys.version_info[:2] == (3, 5)
 # Where we expect to find the example files.
 E2E_DIR = "e2e/scripts"
 
-EXCLUDED_FILENAMES = set()
+EXCLUDED_FILENAMES = set()  # type: Set[str]
 
 # Since there is not DISPLAY set (and since Streamlit is not actually running
 # and fixing Matplotlib in these tests), we set the MPL backend to something
@@ -52,14 +53,6 @@ except ImportError:
 # magic.py uses the async keyword, which is Python 3.6+
 if IS_PYTHON_2 or IS_PYTHON_3_5:
     EXCLUDED_FILENAMES.add("st_magic.py")
-
-# DEVNULL support
-try:
-    # Python 3
-    from subprocess import DEVNULL
-except ImportError:
-    # Python 2
-    DEVNULL = open(os.devnull, "wb")
 
 
 def _command_to_string(command):
@@ -96,7 +89,9 @@ def run_commands(section_header, commands):
         )
 
         # Run the command.
-        result = subprocess.call(command.split(" "), stdout=DEVNULL, stderr=None)
+        result = subprocess.call(
+            command.split(" "), stdout=subprocess.DEVNULL, stderr=None
+        )
         if result != 0:
             failed_commands.append(command)
 

@@ -387,14 +387,9 @@ def _clean_problem_modules():
 def _new_module(name):
     """Create a new module with the given name."""
 
-    if sys.version_info >= (3, 4):
-        import types
+    import types
 
-        return types.ModuleType(name)
-
-    import imp
-
-    return imp.new_module(name)
+    return types.ModuleType(name)
 
 
 # Code modified from IPython (BSD license)

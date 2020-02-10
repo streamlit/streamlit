@@ -28,6 +28,8 @@ seaborn = "*"
 prometheus-client = "*"
 opencv-python = "*"
 requests-mock = "*"
+mypy = "==0.761"
+mypy-protobuf = ">=1.17"
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if something is only required for testing, but not anything else, please
 # add to the dev dependencies above, instead.
