@@ -26,10 +26,13 @@ import importlib
 import inspect
 import io
 import os
+import pickle
 import sys
 import textwrap
 import tempfile
 import threading
+
+import numpy
 
 import streamlit as st
 from streamlit import compatibility
@@ -45,14 +48,6 @@ if sys.version_info >= (3, 0):
     from streamlit.hashing_py3 import get_referenced_objects
 
 setup_2_3_shims(globals())
-
-
-try:
-    # cPickle, if available, is much faster than pickle.
-    # Source: https://pymotw.com/2/pickle/
-    import cPickle as pickle
-except ImportError:
-    import pickle
 
 
 LOGGER = get_logger(__name__)
@@ -363,9 +358,7 @@ class CodeHasher:
                 self._update(h, obj.shape)
 
                 if obj.size >= NP_SIZE_LARGE:
-                    import numpy as np
-
-                    state = np.random.RandomState(0)
+                    state = numpy.random.RandomState(0)
                     obj = state.choice(obj.flat, size=NP_SAMPLE_SIZE)
 
                 self._update(h, obj.tobytes())
@@ -384,6 +377,10 @@ class CodeHasher:
                 self._update(h, os.path.getmtime(obj.name))
                 self._update(h, obj.tell())
                 return h.digest()
+            elif isinstance(obj, numpy.ufunc):
+                # For object of type numpy.ufunc returns ufunc:<object name>
+                # For example, for numpy.remainder, this is ufunc:remainder
+                return ("%s:%s" % (obj.__class__.__name__, obj.__name__)).encode()
             elif inspect.isroutine(obj):
                 if hasattr(obj, "__wrapped__"):
                     # Ignore the wrapper of wrapped functions.
@@ -494,7 +491,7 @@ class CodeHasher:
     def _get_main_script_directory():
         """Get the directory of the main script.
         """
-        import __main__
+        import __main__  # type: ignore[import]
         import os
 
         # This works because we set __main__.__file__ to the report

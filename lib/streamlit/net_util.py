@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import socket
+from typing import Optional
 
 import requests
 
@@ -26,7 +27,7 @@ LOGGER = get_logger(__name__)
 # URL for checking the current machine's external IP address.
 _AWS_CHECK_IP = "http://checkip.amazonaws.com"
 
-_external_ip = None
+_external_ip = None  # type: Optional[str]
 
 
 def get_external_ip():
@@ -59,7 +60,7 @@ def get_external_ip():
     return _external_ip
 
 
-_internal_ip = None
+_internal_ip = None  # type: Optional[str]
 
 
 def get_internal_ip():

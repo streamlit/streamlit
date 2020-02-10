@@ -8,9 +8,8 @@ workflows:
   circleci:
     jobs:
       - python-3.7.4
-      - python-2.7.16:
-          requires:
-            - python-3.7.4
+      - python-3.5 # Oldest supported Python minor version.
+      - python-3.8 # Latest supported Python minor version.
       - cypress-approval:
           type: approval
           requires:
@@ -52,14 +51,14 @@ jobs:
               rm -f dot.bin
             fi
 
-      - run:
-          # We use the python Pipfile.lock as the cache key and also
-          # the hash of the current python.
-          # If dependencies haven't changed then use the cache.
-          name: Create Python cache key
+      - run: &create_python_cache_key
+          # Combine hashes of the Python interpreter and Pipfile plus today's
+          # date into a file whose checksum will key the Python environ. cache.
+          name: Create Python environment cache key
           command: |
-            md5sum lib/Pipfile.locks/${CIRCLE_JOB} > ~/python_version.md5
-            md5sum $(which python) >> ~/python_version.md5
+            md5sum $(which python) > ~/python_version.md5
+            md5sum lib/Pipfile >> ~/python_version.md5
+            date +%F >> ~/python_version.md5
 
       - run: &create_yarn_cache_key
           name: Create Yarn cache key
@@ -68,11 +67,14 @@ jobs:
 
       - run:
           # There is no lock file for the protobufs so we run a checksum
-          # across all the protos and save that to a file to use as
-          # cache key.
+          # across all the protos along with Python and the protobuf compilers
+          # and save that to a file to use as cache key.
           name: Checksum all protobufs
           command: |
-            md5sum proto/streamlit/proto/*.proto $(which python) > ~/protobuf.md5
+            md5sum proto/streamlit/proto/*.proto > ~/protobuf.md5
+            md5sum $(which python) >> ~/protobuf.md5
+            md5sum $(which protoc) >> ~/protobuf.md5
+            md5sum $(which protoc-gen-mypy) >> ~/protobuf.md5
 
       #################################################################
       # Restore from cache
@@ -169,15 +171,11 @@ jobs:
           command: |
             echo 'Checking for virtualenv'
             if [ ! -d venv ] ; then
-              if [ "${CIRCLE_JOB}" == "python-2.7.16" ] ; then
-                pip install virtualenv
-                python -m virtualenv venv
-              else
-                python -m venv venv
-              fi
+              python -m venv venv
               source venv/bin/activate
               make setup
-              make pipenv-lock
+              pip install --upgrade pip
+              make pipenv-install
               deactivate
             else
               echo 'Virtualenv already exists, not creating'
@@ -221,6 +219,22 @@ jobs:
           when: always
 
       #################################################################
+      # Run mypy. (Only executed in one job.)
+      #################################################################
+      - run:
+          name: Run mypy
+          command: |
+            if [ "${CIRCLE_JOB}" != "python-3.8" ] ; then
+              echo "Mypy is only run in python-3.8 job"
+            else
+              scripts/mypy --report
+            fi
+
+      - store_test_results:
+          path: lib/test-reports
+          when: always
+
+      #################################################################
       # Run make pycoverage
       #################################################################
       - run:
@@ -241,13 +255,13 @@ jobs:
             make integration-tests
 
       #################################################################
-      # Run frontend tests. (Only executed in the Python 3 job.)
+      # Run frontend tests. (Only executed in one job.)
       #################################################################
       - run:
           name: Run frontend tests
           command: |
-            if [ "${CIRCLE_JOB}" == "python-2.7.16" ] ; then
-              echo "Not running frontend tests because our job is ${CIRCLE_JOB}"
+            if [ "${CIRCLE_JOB}" != "python-3.8" ] ; then
+              echo "Frontend tests are only run in python-3.8 job"
             else
               make jstest
             fi
@@ -255,7 +269,6 @@ jobs:
       #################################################################
       # Save cache for python virtualenv, node_modules, protobuf
       #################################################################
-
       - save_cache:
           name: Save virtualenv to cache
           key: v12-python-venv-{{ checksum "~/python_version.md5" }}
@@ -276,15 +289,17 @@ jobs:
             - frontend/src/autogen/proto.js
             - lib/streamlit/proto
 
-  # The 'python-2.7.16' job inherits everything from the Python 3 job.
-  # In a few cases, there are steps that are conditionally skipped based
-  # on the name of the current job (see, e.g., "Run frontend tests").
-  # If the python-2.7.16 job name is changed, please also find and replace
-  # any relevant strings that reference it by name!
-  python-2.7.16:
+  # The following jobs inherit from python-3.7.4. In a few cases, there are
+  # steps that are skipped based on the name of the current job (see, e.g.,
+  # "Run frontend tests").
+  python-3.8:
     <<: *job-template
     docker:
-      - image: circleci/python:2.7.16-stretch
+      - image: circleci/python:3.8.1
+  python-3.5:
+    <<: *job-template
+    docker:
+      - image: circleci/python:3.5.9
 
   cypress:
     docker:
@@ -306,10 +321,7 @@ jobs:
           <<: *get_dot_checksum
 
       - run:
-          name: Create python cache key.
-          command: |
-            md5sum lib/Pipfile.locks/python-3.7.4 > ~/python_version.md5
-            md5sum $(which python) >> ~/python_version.md5
+          <<: *create_python_cache_key
 
       - run:
           <<: *create_yarn_cache_key
