@@ -15,19 +15,19 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { PureComponent, ReactNode } from "react"
 import { Map as ImmutableMap } from "immutable"
 import {
   getWindowBaseUriParts as get_base_uri_parts,
   buildHttpUri,
 } from "lib/UriUtil"
 
-interface Props {
+export interface Props {
   width: number
   element: ImmutableMap<string, any>
 }
 
-class Audio extends React.PureComponent<Props> {
+class Audio extends PureComponent<Props> {
   private audioRef = React.createRef<HTMLAudioElement>()
 
   public componentDidMount = (): void => {
@@ -40,21 +40,22 @@ class Audio extends React.PureComponent<Props> {
 
   private updateTime(): void {
     if (this.audioRef.current) {
-      const startTime = this.props.element.get("startTime")
-      this.audioRef.current.currentTime = startTime
+      const { element } = this.props
+
+      this.audioRef.current.currentTime = element.get("startTime")
     }
   }
 
-  public render(): React.ReactNode {
+  public render(): ReactNode {
     const { element, width } = this.props
 
-    /* if this is a relative URI, assume it's being served from streamlit and 
+    /* if this is a relative URI, assume it's being served from streamlit and
        construct it appropriately.  Otherwise leave it alone.  */
 
     let uri = element.get("url")
 
-    if (element.get("url").startsWith("/media")) {
-      uri = buildHttpUri(get_base_uri_parts(), element.get("url"))
+    if (uri.startsWith("/media")) {
+      uri = buildHttpUri(get_base_uri_parts(), uri)
     }
 
     return (

@@ -1003,7 +1003,7 @@ class DeltaGenerator(object):
         spec=None,
         width=0,
         use_container_width=False,
-        **kwargs,
+        **kwargs
     ):
         """Display a chart using the Vega-Lite library.
 
@@ -1235,7 +1235,7 @@ class DeltaGenerator(object):
         height=0,
         use_container_width=False,
         sharing="streamlit",
-        **kwargs,
+        **kwargs
     ):
         """Display an interactive Plotly chart.
 
@@ -2954,7 +2954,7 @@ def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
             stop = last_index + old_step + old_stop
 
             data.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
-            last_index = stop
+            last_index = stop - 1
 
         index_name = data.index.name
         if index_name is None:
