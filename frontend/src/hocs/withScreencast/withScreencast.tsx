@@ -119,6 +119,10 @@ function withScreencast(
       let outputBlob
       const { currentState } = this.state
 
+      if (currentState === "OFF") {
+        return
+      }
+
       if (this.recorder == null) {
         // Should never happen.
         throw new Error("Countdown finished but recorder is null")
