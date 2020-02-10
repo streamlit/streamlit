@@ -26,6 +26,7 @@ import importlib
 import inspect
 import io
 import os
+import pickle
 import sys
 import textwrap
 import tempfile
@@ -47,14 +48,6 @@ if sys.version_info >= (3, 0):
     from streamlit.hashing_py3 import get_referenced_objects
 
 setup_2_3_shims(globals())
-
-
-try:
-    # cPickle, if available, is much faster than pickle.
-    # Source: https://pymotw.com/2/pickle/
-    import cPickle as pickle
-except ImportError:
-    import pickle
 
 
 LOGGER = get_logger(__name__)
@@ -498,7 +491,7 @@ class CodeHasher:
     def _get_main_script_directory():
         """Get the directory of the main script.
         """
-        import __main__
+        import __main__  # type: ignore[import]
         import os
 
         # This works because we set __main__.__file__ to the report
