@@ -20,18 +20,18 @@ import { shallow } from "enzyme"
 import { fromJS } from "immutable"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
-import TextInput, { Props } from "./TextInput"
-import { Input as UIInput } from "baseui/input"
-import { TextInput as TextInputProto } from "autogen/proto"
+import TextArea, { Props } from "./TextArea"
+import { Textarea as UITextArea } from "baseui/textarea"
 
 jest.mock("lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
+
 const getProps = (elementProps: object = {}): Props => ({
   element: fromJS({
+    id: 1,
     label: "Label",
     default: "",
-    type: TextInputProto.Type.DEFAULT,
     ...elementProps,
   }),
   width: 0,
@@ -39,28 +39,12 @@ const getProps = (elementProps: object = {}): Props => ({
   widgetMgr: new WidgetStateManager(sendBackMsg),
 })
 
-describe("TextInput widget", () => {
+describe("TextArea widget", () => {
   const props = getProps()
-  const wrapper = shallow(<TextInput {...props} />)
+  const wrapper = shallow(<TextArea {...props} />)
 
   it("renders without crashing", () => {
-    expect(wrapper).toBeDefined()
-  })
-
-  it("should show a label", () => {
-    expect(wrapper.find("label").text()).toBe(props.element.get("label"))
-  })
-
-  it("should handle TextInputProto.Type properly", () => {
-    const defaultProps = getProps({ type: TextInputProto.Type.DEFAULT })
-    let textInput = shallow(<TextInput {...defaultProps} />)
-    let uiInput = textInput.find(UIInput)
-    expect(uiInput.props().type).toBeUndefined()
-
-    const passwordProps = getProps({ type: TextInputProto.Type.PASSWORD })
-    textInput = shallow(<TextInput {...passwordProps} />)
-    uiInput = textInput.find(UIInput)
-    expect(uiInput.props().type).toBe("password")
+    expect(wrapper.find(UITextArea).length).toBe(1)
   })
 
   it("should set widget value on did mount", () => {
@@ -79,42 +63,52 @@ describe("TextInput widget", () => {
     const splittedClassName = className.split(" ")
 
     expect(splittedClassName).toContain("Widget")
-    expect(splittedClassName).toContain("stTextInput")
+    expect(splittedClassName).toContain("stTextArea")
 
     // @ts-ignore
     expect(style.width).toBe(getProps().width)
   })
 
-  it("could be disabled", () => {
-    expect(wrapper.find(UIInput).prop("disabled")).toBe(props.disabled)
+  it("should render a label", () => {
+    expect(wrapper.find("label").text()).toBe(props.element.get("label"))
   })
 
-  it("should show Enter instructions", () => {
+  it("should have a default value", () => {
+    expect(wrapper.find(UITextArea).prop("value")).toBe(
+      props.element.get("default").toString()
+    )
+  })
+
+  it("could be disabled", () => {
+    expect(wrapper.find(UITextArea).prop("disabled")).toBe(props.disabled)
+  })
+
+  it("should show Ctrl+Enter instructions", () => {
     // @ts-ignore
-    wrapper.find(UIInput).prop("onChange")({
+    wrapper.find(UITextArea).prop("onChange")({
       target: {
         value: "testing",
       },
     } as React.ChangeEvent<HTMLTextAreaElement>)
 
     expect(wrapper.find("div.instructions").text()).toBe(
-      "Press Enter to apply"
+      "Press Ctrl+Enter to apply"
     )
   })
 
   it("should set widget value on blur", () => {
     const props = getProps()
-    const wrapper = shallow(<TextInput {...props} />)
+    const wrapper = shallow(<TextArea {...props} />)
 
     // @ts-ignore
-    wrapper.find(UIInput).prop("onChange")({
+    wrapper.find(UITextArea).prop("onChange")({
       target: {
         value: "testing",
       },
     } as React.ChangeEvent<HTMLTextAreaElement>)
 
     // @ts-ignore
-    wrapper.find(UIInput).prop("onBlur")()
+    wrapper.find(UITextArea).prop("onBlur")()
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element.get("id"),
@@ -123,20 +117,21 @@ describe("TextInput widget", () => {
     )
   })
 
-  it("should set widget value when enter is pressed", () => {
+  it("should set widget value when ctrl+enter is pressed", () => {
     const props = getProps()
-    const wrapper = shallow(<TextInput {...props} />)
+    const wrapper = shallow(<TextArea {...props} />)
 
     // @ts-ignore
-    wrapper.find(UIInput).prop("onChange")({
+    wrapper.find(UITextArea).prop("onChange")({
       target: {
         value: "testing",
       },
     } as React.ChangeEvent<HTMLTextAreaElement>)
 
     // @ts-ignore
-    wrapper.find(UIInput).prop("onKeyPress")({
+    wrapper.find(UITextArea).prop("onKeyDown")({
       preventDefault: jest.fn(),
+      ctrlKey: true,
       key: "Enter",
     })
 
@@ -147,18 +142,48 @@ describe("TextInput widget", () => {
     )
   })
 
-  it("don't do anything when the component is clean", () => {
-    const props = getProps()
-    const wrapper = shallow(<TextInput {...props} />)
-
-    // @ts-ignore
-    wrapper.find(UIInput).prop("onKeyPress")({
-      preventDefault: jest.fn(),
-      key: "Enter",
+  describe("On mac it should", () => {
+    Object.defineProperty(navigator, "platform", {
+      value: "MacIntel",
+      writable: true,
     })
-    // @ts-ignore
-    wrapper.find(UIInput).prop("onBlur")()
 
-    expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    const props = getProps()
+    const wrapper = shallow(<TextArea {...props} />)
+
+    it("show ⌘+Enter instructions", () => {
+      // @ts-ignore
+      wrapper.find(UITextArea).prop("onChange")({
+        target: {
+          value: "testing",
+        },
+      } as React.ChangeEvent<HTMLTextAreaElement>)
+
+      expect(wrapper.find("div.instructions").text()).toBe(
+        "Press ⌘+Enter to apply"
+      )
+    })
+
+    it("should set widget value when ⌘+enter is pressed", () => {
+      // @ts-ignore
+      wrapper.find(UITextArea).prop("onChange")({
+        target: {
+          value: "testing",
+        },
+      } as React.ChangeEvent<HTMLTextAreaElement>)
+
+      // @ts-ignore
+      wrapper.find(UITextArea).prop("onKeyDown")({
+        preventDefault: jest.fn(),
+        metaKey: true,
+        key: "Enter",
+      })
+
+      expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+        props.element.get("id"),
+        "testing",
+        { fromUi: true }
+      )
+    })
   })
 })
