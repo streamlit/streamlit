@@ -18,6 +18,7 @@
 import React from "react"
 import { shallow } from "enzyme"
 import { fromJS } from "immutable"
+import { timeout } from "lib/utils"
 import { sliderOverrides } from "lib/widgetTheme"
 import { Slider as UISlider } from "baseui/slider"
 import { WidgetStateManager } from "lib/WidgetStateManager"
@@ -42,10 +43,6 @@ const getProps = (elementProps: object = {}): Props => ({
   disabled: false,
   widgetMgr: new WidgetStateManager(sendBackMsg),
 })
-
-function timeout(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
 
 describe("Slider widget", () => {
   it("should show a label", () => {

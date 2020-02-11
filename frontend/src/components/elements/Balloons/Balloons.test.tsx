@@ -18,9 +18,15 @@
 import React from "react"
 import { shallow } from "enzyme"
 import { fromJS } from "immutable"
+import { timeout } from "lib/utils"
 import { Balloons as BalloonsProto } from "autogen/proto"
 
-import Balloons, { Props } from "./Balloons"
+import Balloons, {
+  Props,
+  MAX_ANIMATION_DURATION_MS,
+  DELAY_MAX_MS,
+  NUM_BALLOONS,
+} from "./Balloons"
 
 const getProps = (): Props => ({
   element: fromJS({
@@ -36,12 +42,21 @@ describe("Balloons element", () => {
     const wrapper = shallow(<Balloons {...props} />)
 
     expect(wrapper).toBeDefined()
-    expect(wrapper.find(".balloons img").length).toBe(15)
+    expect(wrapper.find(".balloons img").length).toBe(NUM_BALLOONS)
 
     wrapper.find(".balloons img").forEach(node => {
       expect(node.prop("src")).toBeTruthy()
       expect(node.prop("style")).toHaveProperty("left")
       expect(node.prop("style")).toHaveProperty("animationDelay")
     })
+  })
+
+  it("should render one time per session", async () => {
+    const props = getProps()
+    const wrapper = shallow(<Balloons {...props} />)
+
+    await timeout(MAX_ANIMATION_DURATION_MS + DELAY_MAX_MS + 100)
+
+    expect(wrapper.html()).toBeNull()
   })
 })
