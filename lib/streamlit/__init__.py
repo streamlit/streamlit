@@ -83,7 +83,7 @@ if (
     print("Generate machine-id")
     subprocess.run(["sudo", "dbus-uuidgen", "--ensure"])
 
-    machine_id = str(_uuid.getnode())
+machine_id = str(_uuid.getnode())
 if os.path.isfile("/etc/machine-id"):
     with open("/etc/machine-id", "r") as f:
         machine_id = f.read()
