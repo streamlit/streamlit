@@ -2404,7 +2404,7 @@ class DeltaGenerator(object):
         args = [min_value, max_value, step]
 
         int_args = all(
-            map(lambda a: (isinstance(a, int) or isinstance(a, type(None))), args)
+            map(lambda a: (isinstance(a, numbers.Integral) or isinstance(a, type(None))), args)
         )
         float_args = all(
             map(lambda a: (isinstance(a, float) or isinstance(a, type(None))), args)
