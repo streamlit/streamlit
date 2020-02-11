@@ -15,6 +15,7 @@
 
 """A wrapper for simple PyDeck scatter charts."""
 
+import copy
 import json
 from typing import Any, Dict
 
@@ -122,7 +123,7 @@ def to_deckgl_json(data, zoom):
             {"lon": float(row[lon_col_index]), "lat": float(row[lat_col_index])}
         )
 
-    default = dict(_DEFAULT_MAP)
+    default = copy.deepcopy(_DEFAULT_MAP)
     default["initialViewState"]["latitude"] = center_lat
     default["initialViewState"]["longitude"] = center_lon
     default["initialViewState"]["zoom"] = zoom
