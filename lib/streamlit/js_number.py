@@ -70,7 +70,7 @@ class JSNumber(object):
         if value_name is None:
             value_name = "value"
 
-        if not isinstance(value, numbers.Integer):
+        if not isinstance(value, numbers.Integral):
             raise JSNumberBoundsException("%s (%s) is not an int" % (value_name, value))
         elif value < cls.MIN_SAFE_INTEGER:
             raise JSNumberBoundsException(
@@ -102,7 +102,7 @@ class JSNumber(object):
         if value_name is None:
             value_name = "value"
 
-        if not isinstance(value, (numbers.Integer, float)):
+        if not isinstance(value, (numbers.Integral, float)):
             raise JSNumberBoundsException(
                 "%s (%s) is not a float" % (value_name, value)
             )
