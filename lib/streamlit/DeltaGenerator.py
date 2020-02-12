@@ -1042,7 +1042,7 @@ class DeltaGenerator(object):
         ...     columns=['a', 'b', 'c'])
         >>>
         >>> st.vega_lite_chart(df, {
-        ...     'mark': 'circle',
+        ...     'mark': {'type': 'circle', 'tooltip': True},
         ...     'encoding': {
         ...         'x': {'field': 'a', 'type': 'quantitative'},
         ...         'y': {'field': 'b', 'type': 'quantitative'},
@@ -1107,7 +1107,7 @@ class DeltaGenerator(object):
         ...     columns=['a', 'b', 'c'])
         ...
         >>> c = alt.Chart(df).mark_circle().encode(
-        ...     x='a', y='b', size='c', color='c')
+        ...     x='a', y='b', size='c', color='c', tooltip=['a', 'b', 'c'])
         >>>
         >>> st.altair_chart(c, width=-1)
 
@@ -2509,7 +2509,7 @@ class DeltaGenerator(object):
         >>> my_bar = st.progress(0)
         >>>
         >>> for percent_complete in range(100):
-        ...     time.sleep(0.1)        
+        ...     time.sleep(0.1)
         ...     my_bar.progress(percent_complete + 1)
 
         """
