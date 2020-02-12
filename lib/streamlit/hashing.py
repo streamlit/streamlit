@@ -49,14 +49,6 @@ if sys.version_info >= (3, 0):
 setup_2_3_shims(globals())
 
 
-try:
-    # cPickle, if available, is much faster than pickle.
-    # Source: https://pymotw.com/2/pickle/
-    import cPickle as pickle
-except ImportError:
-    import pickle
-
-
 # If a dataframe has more than this many rows, we consider it large and hash a sample.
 PANDAS_ROWS_LARGE = 100000
 PANDAS_SAMPLE_SIZE = 10000
@@ -373,15 +365,15 @@ class CodeHasher:
                 # Hash the name of the container so that ["a"] hashes differently from ("a",)
                 # Otherwise we'd only be hashing the data and the hashes would be the same.
                 self._update(h, type(obj).__name__.encode() + b":")
-                for e in obj:
-                    self._update(h, e, context)
+                for item in obj:
+                    self._update(h, item, context)
                 return h.digest()
             elif isinstance(obj, dict):
                 h = hashlib.new(self.name)
 
                 self._update(h, type(obj).__name__.encode() + b":")
-                for e in obj.items():
-                    self._update(h, e, context)
+                for item in obj.items():
+                    self._update(h, item, context)
                 return h.digest()
             elif obj is None:
                 # Special string since hashes change between sessions.
@@ -493,8 +485,8 @@ class CodeHasher:
                     msg = _hashing_error_message(type(obj))
                     raise UnhashableType(msg).with_traceback(e.__traceback__)
 
-                for e in reduce_data:
-                    self._update(h, e, context)
+                for item in reduce_data:
+                    self._update(h, item, context)
                 return h.digest()
         except (UnhashableType, UserHashError, InternalHashError):
             raise
