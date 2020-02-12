@@ -58,7 +58,7 @@ class NumberInput extends React.PureComponent<Props, State> {
   constructor(props: Props) {
     super(props)
 
-    const defaultValue = this.props.element.get("default")
+    const defaultValue = this.props.element.get("value")
 
     this.state = {
       dirty: false,

@@ -19,5 +19,5 @@ syntax = "proto3";
 message Button {
   string id = 1;
   string label = 2;
-  bool default = 3;
+  bool value = 3;
 }

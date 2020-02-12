@@ -44,7 +44,7 @@ interface State {
 class TextArea extends React.PureComponent<Props, State> {
   public state: State = {
     dirty: false,
-    value: this.props.element.get("default"),
+    value: this.props.element.get("value"),
   }
 
   public componentDidMount(): void {

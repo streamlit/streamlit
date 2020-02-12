@@ -27,6 +27,6 @@ message TextInput {
 
   string id = 1;
   string label = 2;
-  string default = 3;
+  string value = 3;
   Type type = 4;
 }

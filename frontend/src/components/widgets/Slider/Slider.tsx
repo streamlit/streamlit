@@ -47,7 +47,7 @@ class Slider extends React.PureComponent<Props, State> {
   public constructor(props: Props) {
     super(props)
     this.setWidgetValue = debounce(200, this.setWidgetValueRaw.bind(this))
-    this.state = { value: this.props.element.get("default").toJS() }
+    this.state = { value: this.props.element.get("value").toJS() }
   }
 
   public componentDidMount = (): void => {

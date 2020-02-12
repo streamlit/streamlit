@@ -38,7 +38,7 @@ interface State {
 
 class Radio extends React.PureComponent<Props, State> {
   public state: State = {
-    value: this.props.element.get("default"),
+    value: this.props.element.get("value"),
   }
 
   public componentDidMount(): void {

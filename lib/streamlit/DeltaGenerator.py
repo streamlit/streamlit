@@ -1604,10 +1604,12 @@ class DeltaGenerator(object):
 
         """
         element.button.label = label
-        element.button.default = False
 
         ui_value = _get_widget_ui_value("button", element, user_key=key)
         current_value = ui_value if ui_value is not None else False
+
+        element.button.value = current_value
+
         return current_value
 
     @_with_element
@@ -1641,10 +1643,12 @@ class DeltaGenerator(object):
 
         """
         element.checkbox.label = label
-        element.checkbox.default = bool(value)
 
         ui_value = _get_widget_ui_value("checkbox", element, user_key=key)
         current_value = ui_value if ui_value is not None else value
+
+        element.checkbox.value = bool(current_value)
+
         return bool(current_value)
 
     @_with_element
@@ -1709,13 +1713,15 @@ class DeltaGenerator(object):
         indices = _check_and_convert_to_indices(options, default)
         element.multiselect.label = label
         default_value = [] if indices is None else indices
-        element.multiselect.default[:] = default_value
         element.multiselect.options[:] = [
             str(format_func(option)) for option in options
         ]
 
         ui_value = _get_widget_ui_value("multiselect", element, user_key=key)
         current_value = ui_value.value if ui_value is not None else default_value
+
+        element.multiselect.value[:] = current_value
+
         return [options[i] for i in current_value]
 
     @_with_element
@@ -1770,11 +1776,12 @@ class DeltaGenerator(object):
             )
 
         element.radio.label = label
-        element.radio.default = index
         element.radio.options[:] = [str(format_func(option)) for option in options]
 
         ui_value = _get_widget_ui_value("radio", element, user_key=key)
         current_value = ui_value if ui_value is not None else index
+
+        element.radio.value = current_value
 
         return (
             options[current_value]
@@ -1829,11 +1836,12 @@ class DeltaGenerator(object):
             )
 
         element.selectbox.label = label
-        element.selectbox.default = index
         element.selectbox.options[:] = [str(format_func(option)) for option in options]
 
         ui_value = _get_widget_ui_value("selectbox", element, user_key=key)
         current_value = ui_value if ui_value is not None else index
+
+        element.selectbox.value = current_value
 
         return (
             options[current_value]
@@ -2017,7 +2025,6 @@ class DeltaGenerator(object):
 
         element.slider.label = label
         element.slider.format = format
-        element.slider.default[:] = [value] if single_value else value
         element.slider.min = min_value
         element.slider.max = max_value
         element.slider.step = step
@@ -2035,6 +2042,8 @@ class DeltaGenerator(object):
             # If there is only one value in the array destructure it into a
             # single variable
             current_value = current_value[0] if single_value else current_value
+
+        element.slider.value[:] = [current_value] if single_value else current_value
         return current_value if single_value else tuple(current_value)
 
     @_with_element
@@ -2141,7 +2150,7 @@ class DeltaGenerator(object):
 
         """
         element.text_input.label = label
-        element.text_input.default = str(value)
+
         if type == "default":
             element.text_input.type = TextInput.DEFAULT
         elif type == "password":
@@ -2154,6 +2163,9 @@ class DeltaGenerator(object):
 
         ui_value = _get_widget_ui_value("text_input", element, user_key=key)
         current_value = ui_value if ui_value is not None else value
+
+        element.text_input.value = str(current_value)
+
         return str(current_value)
 
     @_with_element
@@ -2191,10 +2203,12 @@ class DeltaGenerator(object):
 
         """
         element.text_area.label = label
-        element.text_area.default = str(value)
 
         ui_value = _get_widget_ui_value("text_area", element, user_key=key)
         current_value = ui_value if ui_value is not None else value
+
+        element.text_area.value = str(current_value)
+
         return str(current_value)
 
     @_with_element
@@ -2240,7 +2254,6 @@ class DeltaGenerator(object):
             value = value.time()
 
         element.time_input.label = label
-        element.time_input.default = time.strftime(value, "%H:%M")
 
         ui_value = _get_widget_ui_value("time_input", element, user_key=key)
         current_value = (
@@ -2248,6 +2261,9 @@ class DeltaGenerator(object):
             if ui_value is not None
             else value
         )
+
+        element.time_input.value = time.strftime(current_value, "%H:%M")
+
         return current_value
 
     @_with_element
@@ -2295,7 +2311,6 @@ class DeltaGenerator(object):
             value = value.date()
 
         element.date_input.label = label
-        element.date_input.default = date.strftime(value, "%Y/%m/%d")
 
         ui_value = _get_widget_ui_value("date_input", element, user_key=key)
         current_value = (
@@ -2303,6 +2318,9 @@ class DeltaGenerator(object):
             if ui_value is not None
             else value
         )
+
+        element.date_input.value = date.strftime(current_value, "%Y/%m/%d")
+
         return current_value
 
     @_with_element
@@ -2471,7 +2489,6 @@ class DeltaGenerator(object):
         number_input = element.number_input
         number_input.data_type = NumberInput.INT if all_ints else NumberInput.FLOAT
         number_input.label = label
-        number_input.default = value
 
         if min_value is not None:
             number_input.min = min_value
@@ -2488,8 +2505,11 @@ class DeltaGenerator(object):
             number_input.format = format
 
         ui_value = _get_widget_ui_value("number_input", element, user_key=key)
+        current_value = ui_value if ui_value is not None else value
 
-        return ui_value if ui_value is not None else value
+        number_input.value = current_value
+
+        return current_value
 
     @_with_element
     def progress(self, element, value):
@@ -2509,7 +2529,7 @@ class DeltaGenerator(object):
         >>> my_bar = st.progress(0)
         >>>
         >>> for percent_complete in range(100):
-        ...     time.sleep(0.1)        
+        ...     time.sleep(0.1)
         ...     my_bar.progress(percent_complete + 1)
 
         """
