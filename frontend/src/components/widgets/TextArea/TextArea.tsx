@@ -21,7 +21,7 @@ import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 
 import { Textarea as UITextArea } from "baseui/textarea"
 
-interface Props {
+export interface Props {
   disabled: boolean
   element: ImmutableMap<string, any>
   widgetMgr: WidgetStateManager

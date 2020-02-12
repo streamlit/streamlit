@@ -1075,7 +1075,7 @@ class DeltaGenerator(object):
             data,
             spec,
             use_container_width=use_container_width,
-            **kwargs
+            **kwargs,
         )
 
     @_with_element
@@ -1438,7 +1438,6 @@ class DeltaGenerator(object):
 
         bokeh_chart.marshall(element.bokeh_chart, figure, use_container_width)
 
-    # TODO: Make this accept files and strings/bytes as input.
     @_with_element
     def image(
         self,
@@ -1497,7 +1496,7 @@ class DeltaGenerator(object):
            height: 630px
 
         """
-        import streamlit.elements.image_proto as image_proto
+        from .elements import image_proto
 
         if use_column_width:
             width = -2
@@ -1505,6 +1504,7 @@ class DeltaGenerator(object):
             width = -1
         elif width <= 0:
             raise StreamlitAPIException("Image width must be positive.")
+
         image_proto.marshall_images(
             image, caption, width, element.imgs, clamp, channels, format
         )
@@ -1517,9 +1517,9 @@ class DeltaGenerator(object):
         ----------
         data : str, bytes, BytesIO, numpy.ndarray, or file opened with
                 io.open().
-            Raw audio data or a string with a URL pointing to the file to load.
-            If passing the raw data, this must include headers and any other bytes
-            required in the actual file.
+            Raw audio data, filename, or a URL pointing to the file to load.
+            Numpy arrays and raw data formats must include all necessary file
+            headers to match specified file format.
         start_time: int
             The time from which this element should start playing.
         format : str
@@ -1538,8 +1538,6 @@ class DeltaGenerator(object):
            height: 400px
 
         """
-        # TODO: Provide API to convert raw NumPy arrays to audio file (with
-        # proper headers, etc)?
         from .elements import media_proto
 
         media_proto.marshall_audio(element.audio, data, format, start_time)
@@ -1552,10 +1550,11 @@ class DeltaGenerator(object):
         ----------
         data : str, bytes, BytesIO, numpy.ndarray, or file opened with
                 io.open().
-            Raw video data or a string with a URL pointing to the video
-            to load. Includes support for YouTube URLs.
-            If passing the raw data, this must include headers and any other
-            bytes required in the actual file.
+            Raw video data, filename, or URL pointing to a video to load.
+            Includes support for YouTube URLs.
+            Numpy arrays and raw data formats must include all necessary file
+            headers to match specified file format.
+        start_time: int
         format : str
             The mime type for the video file. Defaults to 'video/mp4'.
             See https://tools.ietf.org/html/rfc4281 for more info.
@@ -1574,8 +1573,6 @@ class DeltaGenerator(object):
            height: 600px
 
         """
-        # TODO: Provide API to convert raw NumPy arrays to video file (with
-        # proper headers, etc)?
         from .elements import media_proto
 
         media_proto.marshall_video(element.video, data, format, start_time)
@@ -2518,6 +2515,7 @@ class DeltaGenerator(object):
         >>> my_bar = st.progress(0)
         >>>
         >>> for percent_complete in range(100):
+        ...     time.sleep(0.1)        
         ...     my_bar.progress(percent_complete + 1)
 
         """
@@ -2962,7 +2960,7 @@ def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
             stop = last_index + old_step + old_stop
 
             data.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
-            last_index = stop
+            last_index = stop - 1
 
         index_name = data.index.name
         if index_name is None:

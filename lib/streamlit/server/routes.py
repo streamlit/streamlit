@@ -21,6 +21,8 @@ from streamlit import config
 from streamlit import metrics
 from streamlit.logger import get_logger
 from streamlit.server.server_util import serialize_forward_msg
+from streamlit.MediaFileManager import media_file_manager
+
 
 LOGGER = get_logger(__name__)
 
@@ -57,6 +59,33 @@ class AddSlashHandler(tornado.web.RequestHandler):
     @tornado.web.addslash
     def get(self):
         pass
+
+
+class MediaFileHandler(tornado.web.RequestHandler):
+    def set_default_headers(self):
+        if _allow_cross_origin_requests():
+            self.set_header("Access-Control-Allow-Origin", "*")
+
+    def get(self, filename):
+        # Filename is {requested_hash}.{extension} but MediaFileManager
+        # is indexed by requested_hash.
+        requested_hash = filename.split(".")[0]
+        LOGGER.debug("MediaFileHandler: GET %s" % filename)
+
+        try:
+            media = media_file_manager.get(requested_hash)
+        except:
+            LOGGER.error("MediaFileManager: Missing file %s" % requested_hash)
+            self.write("%s not found" % requested_hash)
+            self.set_status(404)
+            return
+
+        LOGGER.debug(
+            "MediaFileManager: Sending %s file %s" % (media.mimetype, requested_hash)
+        )
+        self.write(media.content)
+        self.set_header("Content-Type:", media.mimetype)
+        self.set_status(200)
 
 
 class _SpecialRequestHandler(tornado.web.RequestHandler):

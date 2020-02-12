@@ -27,13 +27,19 @@ import altair.vegalite.v3
 import numpy as np
 import pandas as pd
 import pytest
-import tensorflow as tf
 from mock import MagicMock
+
+try:
+    import tensorflow as tf
+except ImportError:
+    pass
 
 import streamlit as st
 from streamlit.errors import UnhashableType
 from streamlit.util import functools_wraps
 from streamlit.hashing import NP_SIZE_LARGE, PANDAS_ROWS_LARGE, CodeHasher
+
+from tests import testutil
 
 get_main_script_director = MagicMock(return_value=os.getcwd())
 
@@ -220,7 +226,8 @@ class HashTest(unittest.TestCase):
         # stack due to an infinite recursion.)
         self.assertNotEqual(get_hash(MagicMock()), get_hash(MagicMock()))
 
-    def test_non_hashable(self):
+    @testutil.requires_tensorflow
+    def test_tensorflow_non_hashable(self):
         """Test user provided hash functions."""
 
         tf_config = tf.compat.v1.ConfigProto()
@@ -686,7 +693,8 @@ class CodeHashTest(unittest.TestCase):
         # contains the name of the function in the closure.
         # self.assertEqual(get_hash(f), get_hash(h))
 
-    def test_non_hashable(self):
+    @testutil.requires_tensorflow
+    def test_tensorflow_non_hashable(self):
         """Test the hash of functions that return non hashable objects."""
 
         tf_config = tf.compat.v1.ConfigProto()
@@ -710,3 +718,19 @@ class CodeHashTest(unittest.TestCase):
         self.assertEqual(
             get_hash(f, hash_funcs=hash_funcs), get_hash(g, hash_funcs=hash_funcs)
         )
+
+    def test_ufunc(self):
+        """Test code that references numpy ufuncs."""
+
+        def f(a, b):
+            return np.logical_and(a, b)
+
+        def g(a, b):
+            return np.logical_and(a, b)
+
+        def h(a, b):
+            return np.remainder(a, b)
+
+        self.assertNotEqual(get_hash(np.remainder), get_hash(np.logical_and))
+        self.assertEqual(get_hash(f), get_hash(g))
+        self.assertNotEqual(get_hash(f), get_hash(h))

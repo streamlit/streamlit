@@ -33,7 +33,7 @@ class ConfigOptionTest(unittest.TestCase):
         self.assertEqual("mysection", c.section)
         self.assertEqual("myName", c.name)
         self.assertEqual(None, c.description)
-        self.assertEqual(u"visible", c.visibility)
+        self.assertEqual("visible", c.visibility)
 
     def test_call(self):
         key = "mysection.myName"
