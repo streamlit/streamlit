@@ -42,4 +42,4 @@ yes / no
 
 # Additional information
 
-If needed, add any other context about the problem here. For exmaple, did this bug come from https://discuss.streamlit.io or another site? Link the original source here!
+If needed, add any other context about the problem here. For example, did this bug come from https://discuss.streamlit.io or another site? Link the original source here!

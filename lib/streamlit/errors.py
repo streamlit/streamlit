@@ -22,6 +22,10 @@ class S3NoCredentials(Exception):
     pass
 
 
+class NoSessionContext(Exception):
+    pass
+
+
 class MarkdownFormattedException(Exception):
     """Instances of this class can use markdown in their messages, which will get
     nicely formatted on the frontend.

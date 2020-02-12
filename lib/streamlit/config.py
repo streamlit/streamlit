@@ -25,6 +25,7 @@ import os
 import toml
 import collections
 import urllib
+from typing import Dict
 
 import click
 from blinker import Signal
@@ -50,7 +51,7 @@ _section_descriptions = collections.OrderedDict(
 
 # Stores the config options as key value pairs in an ordered dict to be able
 # to show the config params help in the same order they were included.
-_config_options = collections.OrderedDict()
+_config_options = collections.OrderedDict()  # type: Dict[str, ConfigOption]
 
 # Makes sure we only parse the config file once.
 _config_file_has_been_parsed = False
@@ -296,7 +297,7 @@ _create_option(
         this minimum.""",
     visibility="hidden",
     default_val=10 * 1e3,
-    type_=int,
+    type_=float,
 )  # 10k
 
 _create_option(

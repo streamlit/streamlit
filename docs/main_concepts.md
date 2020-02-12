@@ -1,93 +1,213 @@
 # Main concepts
 
-Working with Streamlit is simple. First you sprinkle a few Streamlit commands into a normal Python script. Then you run the script:
+Working with Streamlit is simple. First you sprinkle a few Streamlit commands
+into a normal Python script, then you run it with `streamlit run`:
 
 ```
-$ streamlit run your_script.py [script args]
+$ streamlit run your_script.py [-- script args]
+```
+
+As soon as you run the script as shown above, a local Streamlit server will
+spin up and your app will open in a new tab your default web browser. The app
+is your canvas, where you'll draw charts, text, widgets, tables, and more.
+
+What gets drawn in the app is up to you. For example
+[`st.text`](apid.html#streamlit.text) writes raw text to your app, and
+[`st.line_chart`](api.html#streamlit.line_chart) draws — you guessed it — a
+line chart. Refer to our [API documentation](api.md) to see all commands that
+are available to you.
+
+```eval_rst
+.. note::
+   When passing your script some custom arguments, they must be passed after
+   two dashes. Otherwise the arguments get interpreted as arguments to
+   Streamlit itself.
 ```
 
 ```eval_rst
 .. tip::
-   Did you know you can also pass a URL to `streamlit run`? This is great when combined with Github Gists. For example:
+   You can also pass a URL to `streamlit run`! This is great when combined with
+   Github Gists. For example:
 
    `$ streamlit run https://raw.githubusercontent.com/streamlit/demo-uber-nyc-pickups/master/app.py`
 ```
 
-As soon as you run the script, a new tab will open in your default browser and connect to a Streamlit server that's automatically launched behind the scenes. In the tab, you'll find your Streamlit app. This is your canvas, where you'll draw charts, text, tables, and more.
+## Development flow
 
-What gets drawn in the app is up to you. For example [`st.text`](apid.html#streamlit.text) writes raw text to your app, and [`st.line_chart`](api.html#streamlit.line_chart) draws — you guessed it — a line chart.
+Every time you want to update your app, just save the source file. When you do
+that, Streamlit detects if there is a change and asks you whether you want to
+rerun your app. Choose "Always rerun" at the top-right of your screen to
+automatically update your app every time you change its source code.
+
+This allows you to work in a fast interactive loop: you type some code, save
+it, try it out live, then type some more code, save it, try it out, and so on
+until you're happy with the results. This tight loop between coding and viewing
+results live is one of that ways Streamlit makes your life easier.
+
+```eval_rst
+.. tip::
+  While developing a Streamlit app, it's recommended to lay out your editor and
+  browser windows side by side, so the code and the app can be seen at the same
+  time. Give it a try!
+```
 
 ## Data flow
 
-Every time you want to update your app, just save your script. The Streamlit server is listening, and will automatically update the report as needed.
+Streamlit's architecture allows you to write apps the same way you write plain
+Python scripts. To unlock this, Streamlit apps have a unique data flow: any
+time something must be updated on the screen, Streamlit just reruns your entire
+Python script from top to bottom.
 
-Behind the scenes, Streamlit re-executes the entire Python script from top to bottom on each save. Then Streamlit does a bunch of computer-science magic to make sure that your report is updated efficiently. If you're wondering how we deal with non-trivial code, the answers is [`@st.cache`](#caching), which we'll cover in the next section.
+This can happen in two situations:
 
-What this all means is that Streamlit allows you to work in a fast interactive loop: you type some code, save, type some more code, save, and on-and-on until you're happy with your app. The idea is to use Streamlit as a place where you can understand your code, debug it, perfect it, and finally share your results.
+- Whenever you modify your app's source code.
 
-## Caching
+- Whenever a user interacts with widgets in the app. For example, when dragging
+  a slider, entering text in an input box, or clicking a button.
 
-Caching is super important when it comes to speed - especially when dealing with large data sets. It's always a good idea to load data, cache what's expensive, visualize the data, then spruce things up with interaction.
+And to make all of this fast and seamless, Streamlit does some heavy lifting
+for you behind the scenes. A big player in this story is the
+[`@st.cache`](#caching) decorator, which allows developers to skip certain
+costly computations when their apps rerun. We'll cover caching later in this
+page.
 
-Streamlit's ability to quickly update and re-execute the whole app is great when you're working with a trivial amount of data, but when you have long-running computations, this can get costly and time consuming. Instead of re-executing, you can safely reuse data with [`st.cache`](api.html#streamlit.cache). `st.cache` is a data store that lets Streamlit apps safely and effortlessly persist information.
+## Drawing content
 
-When you mark a function with Streamlit's cache annotation, it tells Streamlit that whenever the function is called that it needs to check three things:
+Writing to Streamlit apps is simple. Just call the appropriate API command:
 
-1. The actual bytecode that makes up the body of the function
-2. Code, variables, and files that the function depends on
-3. The input parameters that you called the function with
+```python
+import streamlit as st
+x = 4
+st.write(x, 'squared is', x * x)
+```
 
-If this is the first time Streamlit has seen these items, with these exact values, and in this exact combination/order, it runs the function and stores the result in a local cache. The next time the function is called, if the values haven't changed, then Streamlit knows it can skip executing the function altogether. Instead, it reads the output from the local cache and passes it on to the caller – like magic.
+In the example above we used the [`st.write()`](api.html#streamlit.write)
+command. Whenever you want to draw something to the screen
+[`st.write()`](api.html#streamlit.write) is always a good first start! It tries
+to guess the best visual representation for its arguments based on their data
+types, so things like dataframes are drawn as beautiful tables, Matplotlib
+figures are drawn as charts, and so on.
 
-"But, wait a second," you're saying to yourself, "this sounds too good to be true. What are the limitations of all this awesomesauce?"
+And you can even use [Streamlit magic](api.html#magic) to skip the
+[`st.write()`](api.html#streamlit.write) command altogether:
 
-Well, there are a few:
+```python
+import streamlit as st
+x = 4
+x, 'squared is', x * x  # 👈 Magic!
+```
 
-1. Streamlit will only check for changes within the current working directory. This means that Streamlit only detects code updates inside installed Python libraries.
-2. If your function is not deterministic (its output depends on random numbers), or if it pulls data from an external time-varying source (for example, a live stock market ticker service) the cached value won't know when things have changed.
-3. Lastly, you should not mutate the output of a cached function since cached values are stored by reference (for performance reasons and to be able to support libraries such as TensorFlow). Don't worry, Streamlit is smart enough to detect these mutations and show a loud warning explaining how to fix the problem.
-
-While these limitations are important to keep in mind, most of the time, they aren't an issue. The times that these rules apply, caching is really transformational.
+If you want to do something more advanced like changing specific settings,
+drawing animations, or inserting content out of order, check out other
+available Streamlit commands in our [API documentation](api.md) and [Advanced
+Concepts](advanced_concepts.md) pages.
 
 ## Widgets
 
-When you've got the data or model into the state that you want to explore, you can add in widgets like [`st.slider()`](api.html#streamlit.slider), [`st.button()`](api.html#streamlit.button) or [`st.selectbox()`](api.html#streamlit.selectbox). It's really straightforward - just treat widgets as variables. There are no callbacks in Streamlit! Every interaction simply reruns the script from top-to-bottom. Streamlit assigns each variable an up-to-date value given the app state. This approach leads to really clean code:
+When you've got the data or model into the state that you want to explore, you
+can add in widgets like [`st.slider()`](api.html#streamlit.slider),
+[`st.button()`](api.html#streamlit.button) or
+[`st.selectbox()`](api.html#streamlit.selectbox). It's really straightforward
+— just treat widgets as variables:
 
 ```python
 import streamlit as st
-x = st.slider('x')
+x = st.slider('x')  # 👈 this is a widget
 st.write(x, 'squared is', x * x)
-
 ```
+
+On first run, the app above should output the text "0 squared is 0". Then
+every time a user interacts with a widget, Streamlit simply reruns your script
+from top to bottom, assigning the current state of the widget to your variable
+in the process.
+
+For example, if the user moves the slider to position `10`, Streamlit will
+rerun the code above and set `x` to `10` accordingly. So now you should see the
+text "10 squared is 100".
 
 ## Sidebar
 
-Streamlit makes it easy to organize your widgets in a left panel sidebar with [`st.sidebar`](api.html#add-widgets-to-sidebar). Each element that's passed to [`st.sidebar`](api.html#add-widgets-to-sidebar) is pinned to the left, allowing users to focus on the content in your app. The only elements that aren't supported are: `st.write` (you
-should use `st.sidebar.markdown()` instead), `st.echo`, and `st.spinner`.
+Streamlit makes it easy to organize your widgets in a left panel sidebar with
+[`st.sidebar`](api.html#add-widgets-to-sidebar). Each element that's passed to
+[`st.sidebar`](api.html#add-widgets-to-sidebar) is pinned to the left, allowing
+users to focus on the content in your app while still having access to UI
+controls.
+
+For example, if you want to add a selectbox and a slider to a sidebar, just
+use `st.sidebar.slider` and `st.siderbar.selectbox` instead of `st.slider` and
+`st.selectbox`:
 
 ```python
 import streamlit as st
 
-# Adds a selectbox to the sidebar
+# Add a selectbox to the sidebar:
 add_selectbox = st.sidebar.selectbox(
     'How would you like to be contacted?',
     ('Email', 'Home phone', 'Mobile phone')
 )
 
-# Adds a slider to the sidebar
+# Add a slider to the sidebar:
 add_slider = st.sidebar.slider(
     'Select a range of values',
     0.0, 100.0, (25.0, 75.0)
 )
 ```
 
+```eval_rst
+.. note::
+  The following Streamlit commands are not currently supported in the sidebar:
+  `st.write` (you should use `st.sidebar.markdown()` instead), `st.echo`, and
+  `st.spinner`.
+```
+
+## Caching
+
+The Streamlit cache allows your app to execute quickly even when loading data
+from the web, manipulating large datasets, or performing expensive
+computations.
+
+To use the cache, just wrap functions in the
+[`@st.cache`](api.html#streamlit.cache) decorator:
+
+```python
+@st.cache  # 👈 This function will be cached
+def my_slow_function(arg1, arg2):
+    # Do something really slow in here!
+    return the_output
+```
+
+When you mark a function with the [`@st.cache`](api.html#streamlit.cache)
+decorator, it tells Streamlit that whenever the function is called it needs to
+check a few things:
+
+1. The input parameters that you called the function with
+1. The value of any external variable used in the function
+1. The body of the function
+1. The body of any function used inside the cached function
+
+If this is the first time Streamlit has seen these four components with these
+exact values and in this exact combination and order, it runs the function and
+stores the result in a local cache. Then, next time the cached function is
+called, if none of these components changed, Streamlit will just skip executing
+the function altogether and, instead, return the output previously stored in
+the cache.
+
+For more information about the Streamlit cache, its configuration parameters,
+and its limitations, see [Caching](caching.md).
+
 ## App model
 
-Now that you have an idea of what Streamlit is, let's close the loop and review how it works:
+Now that you know a little more about all the individual pieces, let's close
+the loop and review how it works together:
 
-1. The entire script is rerun with each save.
-2. Streamlit assigns each variable an up-to-date value based on the current state of the app.
-3. Caching allows Streamlit to skip redundant data fetches and computation.
+1. Streamlit apps are Python scripts that run from top to bottom
+1. Every time a user opens a browser tab pointing to your app, the script is
+   re-executed
+1. As the script executes, Streamlit draws its output live in a browser
+1. Scripts use the Streamlit cache to avoid recomputing expensive functions, so
+   updates happen very fast
+1. Every time a user interacts with a widget, your script is re-executed and
+   the output value of that widget is set to the new value during that run.
 
 ![](media/app_model.png)
 

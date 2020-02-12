@@ -120,22 +120,6 @@ class MainMenu extends PureComponent<Props, State> {
 
           <DropdownItem divider />
 
-          <DropdownItem
-            onClick={this.getOpenInWindowCallback(ONLINE_DOCS_URL)}
-          >
-            Documentation
-          </DropdownItem>
-
-          <DropdownItem onClick={this.getOpenInWindowCallback(COMMUNITY_URL)}>
-            Ask a question
-          </DropdownItem>
-
-          <DropdownItem onClick={this.getOpenInWindowCallback(BUG_URL)}>
-            Report a bug
-          </DropdownItem>
-
-          <DropdownItem divider />
-
           {!this.props.isScreencastRecording && (
             <DropdownItem onClick={this.props.screencastCallback}>
               Record a screencast
@@ -164,6 +148,22 @@ class MainMenu extends PureComponent<Props, State> {
               Save a snapshot
             </DropdownItem>
           )}
+
+          <DropdownItem divider />
+
+          <DropdownItem
+            onClick={this.getOpenInWindowCallback(ONLINE_DOCS_URL)}
+          >
+            Documentation
+          </DropdownItem>
+
+          <DropdownItem onClick={this.getOpenInWindowCallback(COMMUNITY_URL)}>
+            Ask a question
+          </DropdownItem>
+
+          <DropdownItem onClick={this.getOpenInWindowCallback(BUG_URL)}>
+            Report a bug
+          </DropdownItem>
 
           <DropdownItem divider />
 

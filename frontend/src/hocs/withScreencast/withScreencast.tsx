@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-import classNames from "classnames"
 import WhichBrowser from "which-browser"
 import ScreenCastRecorder from "lib/ScreenCastRecorder"
 import hoistNonReactStatics from "hoist-non-react-statics"
@@ -43,7 +42,6 @@ interface WithScreenCastState {
   fileName: string
   recordAudio: boolean
   countdown: number
-  startAnimation: boolean
   outputBlob?: Blob
   currentState: Steps
 }
@@ -79,7 +77,6 @@ function withScreencast(
       fileName: "streamlit-screencast",
       countdown: -1,
       recordAudio: false,
-      startAnimation: false,
       currentState: "OFF" as Steps,
     }
 
@@ -118,7 +115,6 @@ function withScreencast(
 
       this.setState({
         countdown: 3,
-        startAnimation: true,
         currentState: "COUNTDOWN",
       })
     }
@@ -127,19 +123,30 @@ function withScreencast(
       let outputBlob
       const { currentState } = this.state
 
+      if (this.recorder == null) {
+        // Should never happen.
+        throw new Error("Countdown finished but recorder is null")
+      }
+
+      if (currentState === "COUNTDOWN") {
+        this.setState({
+          countdown: -1,
+          currentState: "OFF",
+        })
+      }
+
       if (
-        this.recorder &&
         currentState === "RECORDING" &&
         this.recorder.getState() !== "inactive"
-      )
+      ) {
         outputBlob = await this.recorder.stop()
 
-      this.setState({
-        outputBlob,
-        countdown: -1,
-        startAnimation: false,
-        currentState: "PREVIEW_FILE",
-      })
+        this.setState({
+          outputBlob,
+          countdown: -1,
+          currentState: "PREVIEW_FILE",
+        })
+      }
     }
 
     onAnimationEnd = async (): Promise<any> => {
@@ -150,20 +157,13 @@ function withScreencast(
         throw new Error("Countdown finished but recorder is null")
       }
 
+      const newCount = countdown - 1
+
       this.setState({
-        startAnimation: false,
-        countdown: countdown - 1,
+        countdown: newCount,
       })
 
-      if (countdown - 1 > 0) {
-        window.setTimeout(() => {
-          this.setState({
-            startAnimation: true,
-          })
-        }, 1000)
-      }
-
-      if (countdown - 1 === 0) {
+      if (newCount <= 0) {
         const hasStarted = this.recorder.start()
 
         if (hasStarted) {
@@ -182,14 +182,6 @@ function withScreencast(
       startRecording: this.showDialog,
       stopRecording: this.stopRecording,
     })
-
-    getCountdownClassName = (): string => {
-      const { startAnimation } = this.state
-
-      return classNames("countdown", {
-        withAnimation: startAnimation,
-      })
-    }
 
     closeDialog = (): void => {
       this.setState({
@@ -235,11 +227,13 @@ function withScreencast(
             />
           )}
 
-          {currentState === "COUNTDOWN" && (
+          {currentState === "COUNTDOWN" && countdown > 0 && (
             <div
-              className={this.getCountdownClassName()}
+              className="countdown"
               onAnimationEnd={this.onAnimationEnd}
+              key={"frame" + countdown}
             >
+              {/* The key forces DOM mutations, for animation to restart. */}
               <span>{countdown}</span>
             </div>
           )}

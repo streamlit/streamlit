@@ -1,6 +1,9 @@
 # Troubleshooting
 
-These articles are designed to get you "unstuck" when something goes wrong. If you have questions, feature requests, or want to report an issue, please use our [community forum](https://discuss.streamlit.io/) or [GitHub issues](https://github.com/streamlit/streamlit/issues).
+These articles are designed to get you "unstuck" when something goes wrong. If
+you have questions, feature requests, or want to report an issue, please use
+our [community forum](https://discuss.streamlit.io/) or [GitHub
+issues](https://github.com/streamlit/streamlit/issues).
 
 ```eval_rst
 .. toctree::
@@ -8,6 +11,8 @@ These articles are designed to get you "unstuck" when something goes wrong. If y
    :titlesonly:
    :glob:
 
+   sanity-checks
+   not-loading
    clean-install
-   common-issues
+   caching_issues
 ```

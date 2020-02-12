@@ -73,56 +73,18 @@ IMAGES = {
     "img_32_32_3_rgb": {
         "pil": create_image(32, "RGB"),
         "np": np.array(create_image(32, "RGB")),
-        "base64": (
-            "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAt0lEQVR4nO2W3Q6AI"
-            "AiF0fX+r0w3rTkVAoFozXPTUsSPI/0UAEBI1AFGgjIb5BJ2C6ph77mequnmfQGkVj"
-            "ZxfgDac0RPgNUmwogeUGoDbICfAEzfx7J1fg5oIa543yOQQjRx/j3wBFHG2/z/AV4"
-            "IAm9X2/DzjyF219cB4sUA9FXHuJDtABIAVLX+LmQ6gASA8r/aqCwH7ioqMS5db9p8"
-            "AhCugbwyc9pcSwsEHyOzWNIqiFnNjZLEJ9goJC2jsDvYAAAAAElFTkSuQmCC"
-        ),
     },
     "img_32_32_3_rgba": {
         "pil": create_image(32, "RGBA"),
         "np": np.array(create_image(32, "RGBA")),
-        "base64": (
-            "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAt0lEQVR4nO2W3Q6AI"
-            "AiF0fX+r0w3rTkVAoFozXPTUsSPI/0UAEBI1AFGgjIb5BJ2C6ph77mequnmfQGkVj"
-            "ZxfgDac0RPgNUmwogeUGoDbICfAEzfx7J1fg5oIa543yOQQjRx/j3wBFHG2/z/AV4"
-            "IAm9X2/DzjyF219cB4sUA9FXHuJDtABIAVLX+LmQ6gASA8r/aqCwH7ioqMS5db9p8"
-            "AhCugbwyc9pcSwsEHyOzWNIqiFnNjZLEJ9goJC2jsDvYAAAAAElFTkSuQmCC"
-        ),
     },
     "img_32_32_3_bgr": {
         "pil": create_image(32, "BGR"),
         "np": np.array(create_image(32, "BGR")),
-        "base64": (
-            "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAl0lEQVR4nO2WQRKAI"
-            "AhFv97/zrTJsjL9gNTGt2iaxJ5AMwEEkwAAot9SaG6tQrL2ROO3X587BP20y6pVwB"
-            "RVzAK+ZeLsAcESLEGbNA45Iq0ZMI4EuErUd5RVXw/eHHwNA1H9Ijr89JlKdQ0RTKQ"
-            "hkJf7aYK53AXPIzuT+DYDYgrxCSI4BdyY4xAEsQvoOcoqiCNDN6ip2QDGkhkrdjjL"
-            "bQAAAABJRU5ErkJggg=="
-        ),
     },
     "img_64_64_rgb": {
         "pil": Image.new("RGB", (64, 64), color="red"),
         "np": np.array(Image.new("RGB", (64, 64), color="red")),
-        "base64": (
-            "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSE"
-            "w8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQ"
-            "wLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI"
-            "yMjIyMjIyMjIyMjL/wAARCABAAEADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAA"
-            "AAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE"
-            "1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRk"
-            "dISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKW"
-            "mp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3"
-            "+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDB"
-            "AcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNO"
-            "El8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl"
-            "6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU"
-            "1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDi6KKK+ZP3EKKKK"
-            "ACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKA"
-            "CiiigAooooA//Z"
-        ),
     },
 }
 
@@ -132,25 +94,13 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (
-                IMAGES["img_32_32_3_rgb"]["np"],
-                IMAGES["img_32_32_3_rgb"]["base64"],
-                "png",
-            ),
-            (
-                IMAGES["img_32_32_3_bgr"]["np"],
-                IMAGES["img_32_32_3_bgr"]["base64"],
-                "png",
-            ),
-            (IMAGES["img_64_64_rgb"]["np"], IMAGES["img_64_64_rgb"]["base64"], "jpeg"),
-            (
-                IMAGES["img_32_32_3_rgba"]["np"],
-                IMAGES["img_32_32_3_rgba"]["base64"],
-                "jpeg",
-            ),
+            (IMAGES["img_32_32_3_rgb"]["np"], "png",),
+            (IMAGES["img_32_32_3_bgr"]["np"], "png",),
+            (IMAGES["img_64_64_rgb"]["np"], "jpeg",),
+            (IMAGES["img_32_32_3_rgba"]["np"], "jpeg",),
         ]
     )
-    def test_marshall_images(self, data_in, base64_out, format):
+    def test_marshall_images(self, data_in, format):
         """Test streamlit.image_proto.marshall_images.
         Need to test the following:
         * if list
@@ -164,11 +114,18 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         * Path
         * Bytes
         """
+        from streamlit.MediaFileManager import _get_file_id
+        from streamlit.elements.image_proto import _np_array_to_bytes
+
+        file_id = _get_file_id(
+            _np_array_to_bytes(data_in, format=format), mimetype="image/" + format
+        )
+
         st.image(data_in, format=format)
         imglist = self.get_delta_from_queue().new_element.imgs
         self.assertEqual(len(imglist.imgs), 1)
-        self.assertEqual(imglist.imgs[0].data.base64, base64_out)
-        self.assertEqual(imglist.imgs[0].data.mime_type, "image/" + format)
+        self.assertTrue(imglist.imgs[0].url.startswith("/media"))
+        self.assertTrue(file_id in imglist.imgs[0].url)
 
     def test_BytesIO_to_bytes(self):
         """Test streamlit.image_proto.BytesIO_to_bytes."""
@@ -193,13 +150,6 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
             "Channel can only be 1, 3, or 4 got 2. Shape is (1, 2, 2)",
             str(shape2_exc.value),
         )
-
-    def test_bytes_to_b64(self):
-        """Test streamlit.image_proto.bytes_to_b64.
-        Need to test the following:
-        * if width is greater then requested then shrink
-        """
-        pass
 
     def test_clip_image(self):
         """Test streamlit.image_proto.clip_image.

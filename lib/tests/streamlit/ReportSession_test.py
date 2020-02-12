@@ -19,11 +19,16 @@ import tornado.gen
 import tornado.testing
 from mock import MagicMock, patch
 
+from streamlit.ReportQueue import ReportQueue
 from streamlit.ReportSession import ReportSession
+from streamlit.ReportThread import ReportContext
+from streamlit.ReportThread import add_report_ctx
+from streamlit.ReportThread import get_report_ctx
 from streamlit.ScriptRunner import ScriptRunner
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
 from tests.MockStorage import MockStorage
+import streamlit as st
 
 
 class ReportSessionTest(unittest.TestCase):
@@ -117,14 +122,19 @@ class ReportSessionSerializationTest(tornado.testing.AsyncTestCase):
         # Create a ReportSession with some mocked bits
         rs = ReportSession(self.io_loop, "mock_report.py", "")
         rs._report.report_id = "TestReportID"
+
+        orig_ctx = get_report_ctx()
+        ctx = ReportContext(rs._report.enqueue, None, None, None)
+        add_report_ctx(ctx=ctx)
+
         rs._scriptrunner = MagicMock()
 
         storage = MockStorage()
         rs._storage = storage
 
         # Send two deltas: empty and markdown
-        rs._main_dg.empty()
-        rs._main_dg.markdown("Text!")
+        st.empty()
+        st.markdown("Text!")
 
         yield rs.handle_save_request(_create_mock_websocket())
 
@@ -148,3 +158,5 @@ class ReportSessionSerializationTest(tornado.testing.AsyncTestCase):
         ]
 
         self.assertEqual(sent_messages, received_messages)
+
+        add_report_ctx(ctx=orig_ctx)
