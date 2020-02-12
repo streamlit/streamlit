@@ -198,7 +198,8 @@ def _get_mutated_output_error_message():
         By default, Streamlit’s cache is immutable. You received this warning
         because Streamlit thinks you modified a cached object.
 
-        [Click here to see how to fix this issue.](https://docs.streamlit.io/advanced_caching.html)
+        [Click here to see how to fix this issue.]
+        (https://docs.streamlit.io/advanced_caching.html)
         """
     ).strip("\n")
 
