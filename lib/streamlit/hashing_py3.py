@@ -25,6 +25,8 @@ from streamlit.errors import UserHashError
 
 
 def _hashing_user_error_message(exc, lines, filename, lineno):
+    # This needs to have zero indentation otherwise %(line)s will
+    # render incorrectly in Markdown.
     return (
         """
 %(exception)s
@@ -48,6 +50,13 @@ If you think this is actually a Streamlit bug, please [file a bug report here.]
 
 
 def _get_failing_lines(code, lineno):
+    """Get list of strings (lines of code) from lineno to lineno+3.
+
+    Ideally we'd return the exact line where the error took place, but there
+    are reasons why this is not possible without a lot of work, including
+    playing with the AST. So for now we're returning 3 lines near where
+    the error took place.
+    """
     source_lines, source_lineno = inspect.getsourcelines(code)
 
     start = lineno - source_lineno
@@ -72,6 +81,10 @@ def get_referenced_objects(code, context):
     def handle_operation(op):
         nonlocal tos
         nonlocal lineno
+
+        # Sometimes starts_line is None, in which case let's just remember the
+        # previous start_line (if any). This way when there's an exception we at
+        # least can point users somewhat near the line where the error stems from.
         if op.starts_line is not None:
             lineno = op.starts_line
 
