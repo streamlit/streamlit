@@ -200,9 +200,9 @@ def _hashing_error_message(bad_type):
             ...
         ```
 
-        Please see the [`hash_funcs`
-        documentation](https://streamlit.io/docs/advanced_caching.html) for
-        more details.
+        Please see the `hash_funcs` [documentation]
+        (https://streamlit.io/docs/advanced_caching.html)
+        for more details.
     """
         % {"bad_type": str(bad_type).split("'")[1]}
     ).strip("\n")
@@ -227,7 +227,7 @@ def _hashing_internal_error_message(exc, bad_type):
         ```
 
         Please see the `hash_funcs` [documentation]
-        (https://streamlit.io/docs/advanced_concepts.html#advanced-caching)
+        (https://streamlit.io/docs/advanced_caching.html)
         for more details.
     """
         % {"exception": str(exc), "bad_type": str(bad_type).split("'")[1]}
