@@ -26,7 +26,7 @@ $ pip install --upgrade streamlit
 $ streamlit version
 ```
 
-...and then verify that the version number printed is `0.55.0`.
+...and then verify that the version number printed is `0.55.1`.
 
 **Try reproducing the issue now.** If not fixed, keep reading on.
 
@@ -43,7 +43,7 @@ st.write(st.__version__)
 
 ...then call `streamlit run` on your script and make sure it says the same
 version as above. If not the same version, check out [these
-instructions](clean-install.html) for some sure-fire ways to set up your
+instructions](clean-install.md) for some sure-fire ways to set up your
 environment.
 
 ## Check #4: Is your browser caching your app too aggressively?
