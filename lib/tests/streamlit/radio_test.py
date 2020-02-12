@@ -33,7 +33,7 @@ class RadioTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.radio
         self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, 0)
+        self.assertEqual(c.value, 0)
 
     def test_valid_value(self):
         """Test that valid value is an int."""
@@ -41,7 +41,7 @@ class RadioTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.radio
         self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, 1)
+        self.assertEqual(c.value, 1)
 
     def test_noneType_option(self):
         """Test NoneType option value."""
@@ -63,7 +63,7 @@ class RadioTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.radio
         self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, 0)
+        self.assertEqual(c.value, 0)
         self.assertEqual(c.options, proto_options)
 
     def test_cast_options_to_string(self):
@@ -75,7 +75,7 @@ class RadioTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.radio
         self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, 0)
+        self.assertEqual(c.value, 0)
         self.assertEqual(c.options, proto_options)
 
     def test_format_function(self):
@@ -87,7 +87,7 @@ class RadioTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.radio
         self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, 0)
+        self.assertEqual(c.value, 0)
         self.assertEqual(c.options, proto_options)
 
     @parameterized.expand([((),), ([],), (np.array([]),), (pd.Series(np.array([])),)])
@@ -97,7 +97,7 @@ class RadioTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.radio
         self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, 0)
+        self.assertEqual(c.value, 0)
         self.assertEqual(c.options, [])
 
     def test_invalid_value(self):

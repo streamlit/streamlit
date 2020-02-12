@@ -33,7 +33,7 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
-        self.assertListEqual(c.default[:], [])
+        self.assertListEqual(c.value[:], [])
 
     @parameterized.expand(
         [
@@ -49,7 +49,7 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
-        self.assertListEqual(c.default[:], [])
+        self.assertListEqual(c.value[:], [])
         self.assertEqual(c.options, proto_options)
 
     def test_cast_options_to_string(self):
@@ -61,7 +61,7 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
-        self.assertListEqual(c.default[:], [2])
+        self.assertListEqual(c.value[:], [2])
         self.assertEqual(c.options, proto_options)
 
     def test_default_string(self):
@@ -73,7 +73,7 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
-        self.assertListEqual(c.default[:], [3])
+        self.assertListEqual(c.value[:], [3])
         self.assertEqual(c.options, proto_options)
 
     def test_format_function(self):
@@ -85,7 +85,7 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
-        self.assertListEqual(c.default[:], [])
+        self.assertListEqual(c.value[:], [])
         self.assertEqual(c.options, proto_options)
 
     @parameterized.expand([((),), ([],), (np.array([]),), (pd.Series(np.array([])),)])
@@ -95,7 +95,7 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
-        self.assertListEqual(c.default[:], [])
+        self.assertListEqual(c.value[:], [])
         self.assertEqual(c.options, [])
 
     @parameterized.expand([(None, []), ([], []), (["Tea", "Water"], [1, 2])])
@@ -105,7 +105,7 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
-        self.assertListEqual(c.default[:], expected)
+        self.assertListEqual(c.value[:], expected)
         self.assertEqual(c.options, ["Coffee", "Tea", "Water"])
 
     @parameterized.expand(

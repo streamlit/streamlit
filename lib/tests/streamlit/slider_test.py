@@ -33,7 +33,7 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.slider
         self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, [0])
+        self.assertEqual(c.value, [0])
 
     @parameterized.expand(
         [
@@ -53,7 +53,7 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.slider
         self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, proto_value)
+        self.assertEqual(c.value, proto_value)
 
     def test_value_greater_than_min(self):
         with pytest.raises(StreamlitAPIException) as exc_slider:
