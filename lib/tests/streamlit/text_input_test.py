@@ -41,7 +41,7 @@ class TextInputTest(testutil.DeltaGeneratorTestCase):
         proto_values = ["some str", "123", "None", "{}", ".*SomeObj.*"]
 
         for arg_value, proto_value in zip(arg_values, proto_values):
-            st.text_input("the label", arg_value)
+            st.text_input("the label", arg_value, key=proto_value)
 
             c = self.get_delta_from_queue().new_element.text_input
             self.assertEqual(c.label, "the label")
