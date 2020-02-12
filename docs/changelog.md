@@ -22,9 +22,23 @@ See highlights, bug fixes, and known issues for Streamlit releases:
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.55.0
+
+_Release date: February 4, 2020_
+
+**Highlights:**
+
+- 📺 **Ability to record screencasts directly from Streamlit!** This allows you
+  to easily record and share explanations about your models, analyses, data,
+  etc. Just click ☰ then "Record a screencast". Give it a try!
+
+  NOTE: The recorded video will be in `webm` format, which will work for
+  sending to others or YouTube. If you want to upload to Twitter try a
+  conversion service like https://cloudconvert.com/webm-to-mp4.
+
 ## Version 0.54.0
 
-_Release date: January 29, 2019_
+_Release date: January 29, 2020_
 
 **Highlights:**
 
