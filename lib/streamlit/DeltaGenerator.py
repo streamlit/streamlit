@@ -26,6 +26,7 @@ import functools
 import json
 import random
 import textwrap
+import numbers
 from datetime import datetime
 from datetime import date
 from datetime import time
@@ -2367,7 +2368,7 @@ class DeltaGenerator(object):
             else:
                 value = 0.0  # We set a float as default
 
-        int_value = isinstance(value, int)
+        int_value = isinstance(value, numbers.Integral)
         float_value = isinstance(value, float)
 
         if value is None:
@@ -2403,7 +2404,12 @@ class DeltaGenerator(object):
         args = [min_value, max_value, step]
 
         int_args = all(
-            map(lambda a: (isinstance(a, int) or isinstance(a, type(None))), args)
+            map(
+                lambda a: (
+                    isinstance(a, numbers.Integral) or isinstance(a, type(None))
+                ),
+                args,
+            )
         )
         float_args = all(
             map(lambda a: (isinstance(a, float) or isinstance(a, type(None))), args)
