@@ -502,11 +502,11 @@ class WidgetIdText(testutil.DeltaGeneratorTestCase):
     def test_ids_are_equal_when_proto_is_equal(self):
         text_input1 = TextInput()
         text_input1.label = "Label #1"
-        text_input1.default = "Value #1"
+        text_input1.value = "Value #1"
 
         text_input2 = TextInput()
         text_input2.label = "Label #1"
-        text_input2.default = "Value #1"
+        text_input2.value = "Value #1"
 
         element1 = Element()
         element1.text_input.CopyFrom(text_input1)
@@ -522,11 +522,11 @@ class WidgetIdText(testutil.DeltaGeneratorTestCase):
     def test_ids_are_diff_when_labels_are_diff(self):
         text_input1 = TextInput()
         text_input1.label = "Label #1"
-        text_input1.default = "Value #1"
+        text_input1.value = "Value #1"
 
         text_input2 = TextInput()
         text_input2.label = "Label #2"
-        text_input2.default = "Value #1"
+        text_input2.value = "Value #1"
 
         element1 = Element()
         element1.text_input.CopyFrom(text_input1)
@@ -542,11 +542,11 @@ class WidgetIdText(testutil.DeltaGeneratorTestCase):
     def test_ids_are_diff_when_types_are_diff(self):
         text_input1 = TextInput()
         text_input1.label = "Label #1"
-        text_input1.default = "Value #1"
+        text_input1.value = "Value #1"
 
         text_area2 = TextArea()
         text_area2.label = "Label #1"
-        text_area2.default = "Value #1"
+        text_area2.value = "Value #1"
 
         element1 = Element()
         element1.text_input.CopyFrom(text_input1)
@@ -562,11 +562,11 @@ class WidgetIdText(testutil.DeltaGeneratorTestCase):
     def test_ids_are_equal_when_keys_are_equal(self):
         text_input1 = TextInput()
         text_input1.label = "Label #1"
-        text_input1.default = "Value #1"
+        text_input1.value = "Value #1"
 
         text_input2 = TextInput()
         text_input2.label = "Label #1"
-        text_input2.default = "Value #1"
+        text_input2.value = "Value #1"
 
         element1 = Element()
         element1.text_input.CopyFrom(text_input1)
@@ -582,11 +582,11 @@ class WidgetIdText(testutil.DeltaGeneratorTestCase):
     def test_ids_are_diff_when_keys_are_diff(self):
         text_input1 = TextInput()
         text_input1.label = "Label #1"
-        text_input1.default = "Value #1"
+        text_input1.value = "Value #1"
 
         text_input2 = TextInput()
         text_input2.label = "Label #1"
-        text_input2.default = "Value #1"
+        text_input2.value = "Value #1"
 
         element1 = Element()
         element1.text_input.CopyFrom(text_input1)
@@ -602,11 +602,11 @@ class WidgetIdText(testutil.DeltaGeneratorTestCase):
     def test_ids_are_diff_when_values_are_diff(self):
         text_input1 = TextInput()
         text_input1.label = "Label #1"
-        text_input1.default = "Value #1"
+        text_input1.value = "Value #1"
 
         text_input2 = TextInput()
         text_input2.label = "Label #1"
-        text_input2.default = "Value #2"
+        text_input2.value = "Value #2"
 
         element1 = Element()
         element1.text_input.CopyFrom(text_input1)
