@@ -7,21 +7,20 @@ workflows:
   version: 2
   circleci:
     jobs:
-      - python-3.7.4
       - python-3.5 # Oldest supported Python minor version.
       - python-3.8 # Latest supported Python minor version.
       - cypress-approval:
           type: approval
           requires:
-            - python-3.7.4
+            - python-3.8
       - cypress:
           requires:
             - cypress-approval
 
 jobs:
-  python-3.7.4: &job-template
+  python-3.8: &job-template
     docker:
-      - image: circleci/python:3.7.4-stretch
+      - image: circleci/python:3.8.1
 
     working_directory: ~/repo
 
@@ -289,13 +288,8 @@ jobs:
             - frontend/src/autogen/proto.js
             - lib/streamlit/proto
 
-  # The following jobs inherit from python-3.7.4. In a few cases, there are
-  # steps that are skipped based on the name of the current job (see, e.g.,
-  # "Run frontend tests").
-  python-3.8:
-    <<: *job-template
-    docker:
-      - image: circleci/python:3.8.1
+  # The following inherits from python-3.8. In a few cases, steps are skipped
+  # based on the name of the current job (see, e.g., "Run frontend tests").
   python-3.5:
     <<: *job-template
     docker:
