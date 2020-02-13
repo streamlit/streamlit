@@ -31,7 +31,7 @@ const getProps = (elementProps: object = {}): Props => ({
   element: fromJS({
     id: 1,
     label: "Label",
-    default: false,
+    value: false,
     ...elementProps,
   }),
   width: 0,
@@ -50,7 +50,7 @@ describe("Checkbox widget", () => {
   it("should set widget value on did mount", () => {
     expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
       props.element.get("id"),
-      props.element.get("default"),
+      props.element.get("value"),
       { fromUi: false }
     )
   })
@@ -78,7 +78,7 @@ describe("Checkbox widget", () => {
 
   it("should be unchecked by default", () => {
     expect(wrapper.find(UICheckbox).prop("checked")).toBe(
-      props.element.get("default")
+      props.element.get("value")
     )
   })
 

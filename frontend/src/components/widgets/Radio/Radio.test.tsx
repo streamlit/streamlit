@@ -32,7 +32,7 @@ const getProps = (elementProps: object = {}): Props => ({
   element: fromJS({
     id: 1,
     label: "Label",
-    default: 0,
+    value: 0,
     options: ["a", "b", "c"],
     ...elementProps,
   }),
@@ -53,7 +53,7 @@ describe("Checkbox widget", () => {
   it("should set widget value on did mount", () => {
     expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
       props.element.get("id"),
-      props.element.get("default"),
+      props.element.get("value"),
       { fromUi: false }
     )
   })
@@ -79,7 +79,7 @@ describe("Checkbox widget", () => {
 
   it("should have a default value", () => {
     expect(wrapper.find(RadioGroup).prop("value")).toBe(
-      props.element.get("default").toString()
+      props.element.get("value").toString()
     )
   })
 

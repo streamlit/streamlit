@@ -31,7 +31,7 @@ const getProps = (elementProps: object = {}): Props => ({
   element: fromJS({
     id: 1,
     label: "Label",
-    default: "",
+    value: "",
     ...elementProps,
   }),
   width: 0,
@@ -50,7 +50,7 @@ describe("TextArea widget", () => {
   it("should set widget value on did mount", () => {
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element.get("id"),
-      props.element.get("default"),
+      props.element.get("value"),
       { fromUi: false }
     )
   })
@@ -75,7 +75,7 @@ describe("TextArea widget", () => {
 
   it("should have a default value", () => {
     expect(wrapper.find(UITextArea).prop("value")).toBe(
-      props.element.get("default").toString()
+      props.element.get("value").toString()
     )
   })
 

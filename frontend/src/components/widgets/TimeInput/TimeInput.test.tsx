@@ -31,7 +31,7 @@ const getProps = (elementProps: object = {}): Props => ({
   element: fromJS({
     id: 123,
     label: "Label",
-    default: "12:45",
+    value: "12:45",
     ...elementProps,
   }),
   width: 0,
@@ -54,7 +54,7 @@ describe("TextInput widget", () => {
   it("should set widget value on did mount", () => {
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element.get("id"),
-      props.element.get("default"),
+      props.element.get("value"),
       { fromUi: false }
     )
   })

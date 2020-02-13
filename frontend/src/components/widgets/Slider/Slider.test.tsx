@@ -32,7 +32,7 @@ const getProps = (elementProps: object = {}): Props => ({
     id: 1,
     label: "Label",
     format: "%d",
-    default: [5],
+    value: [5],
     min: 0,
     max: 10,
     step: 1,
@@ -129,7 +129,7 @@ describe("Slider widget", () => {
       const UISliderWrapper = wrapper.find(UISlider)
       const propValue = UISliderWrapper.prop("value")
 
-      expect(propValue).toStrictEqual(props.element.get("default").toJS())
+      expect(propValue).toStrictEqual(props.element.get("value").toJS())
       expect(propValue[0]).toBeGreaterThanOrEqual(props.element.get("min"))
       expect(propValue[0]).toBeLessThan(props.element.get("max"))
     })
@@ -157,7 +157,7 @@ describe("Slider widget", () => {
   describe("Range value", () => {
     it("renders without crashing", () => {
       const props = getProps({
-        default: [1, 9],
+        value: [1, 9],
       })
       const wrapper = shallow(<Slider {...props} />)
 
@@ -166,13 +166,13 @@ describe("Slider widget", () => {
 
     it("should have a correct value", () => {
       const props = getProps({
-        default: [1, 9],
+        value: [1, 9],
       })
       const wrapper = shallow(<Slider {...props} />)
       const UISliderWrapper = wrapper.find(UISlider)
       const propValue = UISliderWrapper.prop("value")
 
-      expect(propValue).toStrictEqual(props.element.get("default").toJS())
+      expect(propValue).toStrictEqual(props.element.get("value").toJS())
 
       propValue.forEach(value => {
         expect(value).toBeGreaterThanOrEqual(props.element.get("min"))
@@ -182,7 +182,7 @@ describe("Slider widget", () => {
 
     describe("value should be within bounds", () => {
       const props = getProps({
-        default: [1, 9],
+        value: [1, 9],
       })
       const wrapper = shallow(<Slider {...props} />)
 
@@ -234,7 +234,7 @@ describe("Slider widget", () => {
 
     it("should handle value changes", async () => {
       const props = getProps({
-        default: [1, 9],
+        value: [1, 9],
       })
       const wrapper = shallow(<Slider {...props} />)
 

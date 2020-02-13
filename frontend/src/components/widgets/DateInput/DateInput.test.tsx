@@ -31,7 +31,7 @@ const getProps = (elementProps: object = {}): Props => ({
   element: fromJS({
     id: 1,
     label: "Label",
-    default: "1970/01/01",
+    value: "1970/01/01",
     ...elementProps,
   }),
   width: 0,
@@ -54,7 +54,7 @@ describe("DateInput widget", () => {
   it("should set widget value on did mount", () => {
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element.get("id"),
-      props.element.get("default"),
+      props.element.get("value"),
       { fromUi: false }
     )
   })
@@ -75,7 +75,7 @@ describe("DateInput widget", () => {
 
   it("should render a default value", () => {
     expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual(
-      new Date(props.element.get("default"))
+      new Date(props.element.get("value"))
     )
   })
 
