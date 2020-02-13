@@ -160,15 +160,37 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
             "Did you mean `st.write()`?",
         )
 
-    @parameterized.expand([
-        (st.empty().empty, 'streamlit.DeltaGenerator', 'empty', '()'),
-        (st.empty().text, 'streamlit.DeltaGenerator', 'text', '(body)'),
-        (st.empty().markdown, 'streamlit.DeltaGenerator', 'markdown', '(body, unsafe_allow_html=False)'),
-        (st.empty().checkbox, 'streamlit.DeltaGenerator', 'checkbox', '(label, value=False, key=None)'),
-        (st.empty().dataframe, 'streamlit.DeltaGenerator', 'dataframe', '(data=None, width=None, height=None)'),
-        (st.empty().add_rows, 'streamlit.DeltaGenerator', 'add_rows', '(data=None, **kwargs)'),
-        (st.write, 'streamlit', 'write', '(*args, **kwargs)'),
-    ])
+    @parameterized.expand(
+        [
+            (st.empty().empty, "streamlit.DeltaGenerator", "empty", "()"),
+            (st.empty().text, "streamlit.DeltaGenerator", "text", "(body)"),
+            (
+                st.empty().markdown,
+                "streamlit.DeltaGenerator",
+                "markdown",
+                "(body, unsafe_allow_html=False)",
+            ),
+            (
+                st.empty().checkbox,
+                "streamlit.DeltaGenerator",
+                "checkbox",
+                "(label, value=False, key=None)",
+            ),
+            (
+                st.empty().dataframe,
+                "streamlit.DeltaGenerator",
+                "dataframe",
+                "(data=None, width=None, height=None)",
+            ),
+            (
+                st.empty().add_rows,
+                "streamlit.DeltaGenerator",
+                "add_rows",
+                "(data=None, **kwargs)",
+            ),
+            (st.write, "streamlit", "write", "(*args, **kwargs)"),
+        ]
+    )
     def test_function_signatures(self, func, module, name, sig):
         self.assertEqual(module, func.__module__)
         self.assertEqual(name, func.__name__)

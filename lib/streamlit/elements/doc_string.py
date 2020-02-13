@@ -35,9 +35,7 @@ LOGGER = get_logger(__name__)
 
 CONFUSING_STREAMLIT_MODULES = ("streamlit.DeltaGenerator", "streamlit.caching")
 
-CONFUSING_STREAMLIT_SIG_PREFIXES = (
-    "(element, ",
-)
+CONFUSING_STREAMLIT_SIG_PREFIXES = ("(element, ",)
 
 
 def marshall(proto, obj):
