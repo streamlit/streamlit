@@ -72,28 +72,18 @@ def _wraps_with_cleaned_sig(wrapped, num_args_to_remove):
     num_args_to_remove). This is useful since function signatures are visible
     in our user-facing docs, and many methods in DeltaGenerator have arguments
     that users have no access to.
+
+    Note that "self" is ignored by default. So to remove both "self" and the
+    next argument you'd pass num_args_to_remove=1.
     """
     # By passing (None, ...), we're removing (arg1, ...) from *args
     args_to_remove = (None,) * num_args_to_remove
     fake_wrapped = functools.partial(wrapped, *args_to_remove)
     fake_wrapped.__doc__ = wrapped.__doc__
-
-    # These fields are used by wraps(), but in Python 2 partial() does not
-    # produce them.
-    fake_wrapped.__module__ = wrapped.__module__
     fake_wrapped.__name__ = wrapped.__name__
+    fake_wrapped.__module__ = wrapped.__module__
 
     return functools.wraps(fake_wrapped)
-
-
-def _remove_self_from_sig(method):
-    """Remove the `self` argument from `method`'s signature."""
-
-    @_wraps_with_cleaned_sig(method, 1)  # Remove self from sig.
-    def wrapped_method(self, *args, **kwargs):
-        return method(self, *args, **kwargs)
-
-    return wrapped_method
 
 
 def _with_element(method):
@@ -117,7 +107,7 @@ def _with_element(method):
 
     """
 
-    @_wraps_with_cleaned_sig(method, 2)  # Remove self and element from sig.
+    @_wraps_with_cleaned_sig(method, 1)  # Remove self and element from sig.
     def wrapped_method(dg, *args, **kwargs):
         # Warn if we're called from within an @st.cache function
         caching.maybe_show_cached_st_function_warning(dg)
@@ -803,7 +793,6 @@ class DeltaGenerator(object):
 
         exception_proto.marshall(element.exception, exception, exception_traceback)
 
-    @_remove_self_from_sig
     def dataframe(self, data=None, width=None, height=None):
         """Display a dataframe as an interactive table.
 
@@ -2518,7 +2507,7 @@ class DeltaGenerator(object):
         >>> my_bar = st.progress(0)
         >>>
         >>> for percent_complete in range(100):
-        ...     time.sleep(0.1)        
+        ...     time.sleep(0.1)
         ...     my_bar.progress(percent_complete + 1)
 
         """

@@ -36,10 +36,7 @@ LOGGER = get_logger(__name__)
 CONFUSING_STREAMLIT_MODULES = ("streamlit.DeltaGenerator", "streamlit.caching")
 
 CONFUSING_STREAMLIT_SIG_PREFIXES = (
-    "(self, element, ",
-    "(self, _, ",
-    "(self, ",
-    "(ui_value, ",
+    "(element, ",
 )
 
 

@@ -51,7 +51,6 @@ from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.DeltaGenerator import (
     _wraps_with_cleaned_sig,
-    _remove_self_from_sig,
     _with_element,
     _set_widget_id,
 )
@@ -161,6 +160,21 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
             "Did you mean `st.write()`?",
         )
 
+    @parameterized.expand([
+        (st.empty().empty, 'streamlit.DeltaGenerator', 'empty', '()'),
+        (st.empty().text, 'streamlit.DeltaGenerator', 'text', '(body)'),
+        (st.empty().markdown, 'streamlit.DeltaGenerator', 'markdown', '(body, unsafe_allow_html=False)'),
+        (st.empty().checkbox, 'streamlit.DeltaGenerator', 'checkbox', '(label, value=False, key=None)'),
+        (st.empty().dataframe, 'streamlit.DeltaGenerator', 'dataframe', '(data=None, width=None, height=None)'),
+        (st.empty().add_rows, 'streamlit.DeltaGenerator', 'add_rows', '(data=None, **kwargs)'),
+        (st.write, 'streamlit', 'write', '(*args, **kwargs)'),
+    ])
+    def test_function_signatures(self, func, module, name, sig):
+        self.assertEqual(module, func.__module__)
+        self.assertEqual(name, func.__name__)
+        actual_sig = signature(func)
+        self.assertEqual(str(actual_sig), sig)
+
     def test_wraps_with_cleaned_sig(self):
         wrapped_function = _wraps_with_cleaned_sig(FakeDeltaGenerator.fake_text, 2)
         wrapped = wrapped_function.keywords.get("wrapped")
@@ -177,24 +191,6 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
         # Check clean signature
         sig = signature(wrapped)
         self.assertEqual(str(sig), "(body)")
-
-    def test_remove_self_from_sig(self):
-        wrapped = _remove_self_from_sig(FakeDeltaGenerator.fake_dataframe)
-
-        # Verify original signature
-        sig = signature(FakeDeltaGenerator.fake_dataframe)
-        self.assertEqual(str(sig), "(self, arg0, data=None)", str(sig))
-
-        # Check cleaned signature.
-        # On python2 it looks like: '(self, *args, **kwargs)'
-        if sys.version_info >= (3, 0):
-            sig = signature(wrapped)
-            self.assertEqual("(arg0, data=None)", str(sig))
-
-        # Check cleaned output.
-        dg = FakeDeltaGenerator()
-        result = wrapped(dg, "foo", data="bar")
-        self.assertEqual(result, ("foo", "bar"))
 
     def test_with_element(self):
         wrapped = _with_element(FakeDeltaGenerator.fake_text)
