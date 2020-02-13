@@ -21,10 +21,11 @@ message Slider {
   string label = 2;
   string format = 7;
 
-  repeated double value = 8;
   double min = 9;
   double max = 10;
   double step = 11;
+  repeated double value = 12;
 
-  reserved 3, 4, 5, 6;
+  reserved 3, 4, 5, 6, 8;
+  reserved "default";
 }

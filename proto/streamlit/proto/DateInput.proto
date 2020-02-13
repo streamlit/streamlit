@@ -19,5 +19,8 @@ syntax = "proto3";
 message DateInput {
   string id = 1;
   string label = 2;
-  string value = 3;
+  string value = 4;
+
+  reserved 3;
+  reserved "default";
 }

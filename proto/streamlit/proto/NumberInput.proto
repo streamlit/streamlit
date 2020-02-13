@@ -32,10 +32,11 @@ message NumberInput {
   bool has_max = 12;
 
   DataType data_type = 13;
-  double value = 14;
   double step = 15;
   double min = 16;
   double max = 17;
+  double value = 18;
 
-  reserved 3, 4, 5, 6, 7, 9, 10;
+  reserved 3, 4, 5, 6, 7, 9, 10, 14;
+  reserved "default";
 }

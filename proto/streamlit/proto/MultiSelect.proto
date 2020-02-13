@@ -19,6 +19,9 @@ syntax = "proto3";
 message MultiSelect {
   string id = 1;
   string label = 2;
-  repeated int32 value = 3;
+  repeated int32 value = 5;
   repeated string options = 4;
+
+  reserved 3;
+  reserved "default";
 }
