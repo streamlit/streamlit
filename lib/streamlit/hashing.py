@@ -18,6 +18,7 @@
 # Python 2/3 compatibility
 from __future__ import absolute_import, division, print_function, unicode_literals
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 import collections
@@ -33,8 +34,6 @@ import sys
 import textwrap
 import tempfile
 import threading
-
-import numpy
 
 import streamlit as st
 from streamlit import compatibility
@@ -406,7 +405,9 @@ class CodeHasher:
                 self._update(h, obj.shape)
 
                 if obj.size >= NP_SIZE_LARGE:
-                    state = numpy.random.RandomState(0)
+                    import numpy as np
+
+                    state = np.random.RandomState(0)
                     obj = state.choice(obj.flat, size=NP_SAMPLE_SIZE)
 
                 self._update(h, obj.tobytes())
@@ -425,7 +426,7 @@ class CodeHasher:
                 self._update(h, os.path.getmtime(obj.name))
                 self._update(h, obj.tell())
                 return h.digest()
-            elif isinstance(obj, numpy.ufunc):
+            elif type_util.is_type(obj, "numpy.ufunc"):
                 # For object of type numpy.ufunc returns ufunc:<object name>
                 # For example, for numpy.remainder, this is ufunc:remainder
                 return ("%s:%s" % (obj.__class__.__name__, obj.__name__)).encode()
