@@ -17,6 +17,8 @@
 
 # Python 2/3 compatibility
 from __future__ import absolute_import, division, print_function, unicode_literals
+from streamlit.compatibility import setup_2_3_shims
+setup_2_3_shims(globals())
 
 import collections
 import dis
@@ -41,12 +43,12 @@ from streamlit import file_util
 from streamlit import type_util
 from streamlit.errors import UnhashableType, UserHashError, InternalHashError
 from streamlit.folder_black_list import FolderBlackList
-from streamlit.compatibility import setup_2_3_shims
+from streamlit.logger import get_logger
 
 if sys.version_info >= (3, 0):
     from streamlit.hashing_py3 import get_referenced_objects
 
-setup_2_3_shims(globals())
+LOGGER = get_logger(__name__)
 
 
 # If a dataframe has more than this many rows, we consider it large and hash a sample.
@@ -302,7 +304,9 @@ class CodeHasher:
         hash_stacks.push(obj)
 
         try:
+            LOGGER.debug("About to hash: %s", obj)
             b = self._to_bytes(obj, context)
+            LOGGER.debug("Done hashing: %s", obj)
 
             self.size += sys.getsizeof(b)
 
