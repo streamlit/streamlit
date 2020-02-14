@@ -97,10 +97,9 @@ class Block extends PureComponent<Props> {
       .toArray()
       .map((reportElement: ReportElement, index: number): ReactNode | null => {
         const element = reportElement.get("element")
-        const hash = reportElement.get("hash")
 
         if (element instanceof List) {
-          return this.renderBlock(element as BlockElement, hash, width)
+          return this.renderBlock(element as BlockElement, index, width)
         } else {
           return this.renderElementWithErrorBoundary(
             reportElement,
