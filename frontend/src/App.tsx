@@ -248,7 +248,7 @@ export class App extends PureComponent<Props, State> {
         newReport: (newReportMsg: NewReport) =>
           this.handleNewReport(newReportMsg),
         delta: (deltaMsg: Delta) =>
-          this.handleDeltaMsg(deltaMsg, msgProto.metadata),
+          this.handleDeltaMsg(deltaMsg, msgProto.metadata, msgProto.hash),
         reportFinished: (status: ForwardMsg.ReportFinishedStatus) =>
           this.handleReportFinished(status),
         uploadReportProgress: (progress: string | number) =>
@@ -576,13 +576,15 @@ export class App extends PureComponent<Props, State> {
    */
   handleDeltaMsg = (
     deltaMsg: Delta,
-    metadataMsg: IForwardMsgMetadata | undefined | null
+    metadataMsg: IForwardMsgMetadata | undefined | null,
+    hashMsg: string
   ): void => {
     this.elementListBuffer = applyDelta(
       this.state.elements,
       this.state.reportId,
       deltaMsg,
-      metadataMsg
+      metadataMsg,
+      hashMsg
     )
 
     if (!this.elementListBufferTimerIsSet) {
