@@ -18,6 +18,7 @@
 # Python 2/3 compatibility
 from __future__ import absolute_import, division, print_function
 from streamlit.compatibility import setup_2_3_shims
+
 setup_2_3_shims(globals())
 
 import ast
@@ -436,7 +437,7 @@ def cache(
             try:
                 return_value = _read_from_cache(
                     key, persist, allow_output_mutation, func, caller_frame, hash_funcs
-               )
+                )
                 LOGGER.debug("Cache hit: %s", func)
             except CacheKeyNotFoundError:
                 LOGGER.debug("Cache miss: %s", func)
