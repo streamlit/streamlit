@@ -182,11 +182,13 @@ class Block extends PureComponent<Props> {
       reportElement.get("metadata")
     )
 
-    const isEmpty = element.get("type") === "empty"
+    const elementType = element.get("type")
+    const isEmpty = elementType === "empty"
     const enable = this.shouldComponentBeEnabled(isEmpty)
     const isStale = this.isComponentStale(enable, reportElement)
     const className = Block.getClassNames(isStale, isEmpty)
-    const key = reportElement.get("hash") || index
+    const simpleElement = element.get(elementType)
+    const key = simpleElement.get("id") || index
 
     return (
       <Maybe enable={enable} key={key}>

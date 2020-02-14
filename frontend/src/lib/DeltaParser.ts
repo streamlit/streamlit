@@ -42,8 +42,7 @@ export function applyDelta(
   elements: Elements,
   reportId: string,
   deltaMsg: Delta,
-  metadata: IForwardMsgMetadata | null | undefined,
-  hash: string
+  metadata: IForwardMsgMetadata | null | undefined
 ): Elements {
   if (!metadata) {
     throw new Error("Delta metadata is required")
@@ -71,15 +70,14 @@ export function applyDelta(
           currentElement,
           element,
           reportId,
-          metadata,
-          hash
+          metadata
         )
       )
     },
     newBlock: () => {
       elements[container] = elements[container].updateIn(
         deltaPath,
-        reportElement => handleNewBlockMessage(container, reportElement, hash)
+        reportElement => handleNewBlockMessage(container, reportElement)
       )
     },
     addRows: (namedDataSet: NamedDataSet) => {
@@ -99,8 +97,7 @@ function handleNewElementMessage(
   reportElement: ReportElement,
   element: SimpleElement,
   reportId: string,
-  metadata: IForwardMsgMetadata,
-  hash: string
+  metadata: IForwardMsgMetadata
 ): ReportElement {
   MetricsManager.current.incrementDeltaCounter(container)
   MetricsManager.current.incrementDeltaCounter(element.get("type"))
@@ -116,19 +113,15 @@ function handleNewElementMessage(
     reportId,
     element,
     metadata,
-    hash,
   })
 }
 
 function handleNewBlockMessage(
   container: Container,
-  reportElement: ReportElement,
-  hash: string
+  reportElement: ReportElement
 ): ReportElement {
   MetricsManager.current.incrementDeltaCounter(container)
   MetricsManager.current.incrementDeltaCounter("new block")
-
-  reportElement.set("hash", hash)
 
   if (reportElement.get("element") instanceof List) {
     return reportElement
