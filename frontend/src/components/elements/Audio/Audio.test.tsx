@@ -46,7 +46,7 @@ describe("Audio Element", () => {
   describe("should have a src", () => {
     it("when the url starts with media", () => {
       expect(audioElement.prop("src")).toBe(
-        "http://localhost:80/media/08a569df5f3bd617f11b7d137861a3bef91379309ce95bdb9ff04a38.wav"
+        "/media/08a569df5f3bd617f11b7d137861a3bef91379309ce95bdb9ff04a38.wav"
       )
     })
 
