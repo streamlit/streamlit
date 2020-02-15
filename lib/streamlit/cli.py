@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -136,6 +135,16 @@ def main(ctx, log_level="info"):
 
         $ streamlit run your_script.py
     """
+    import sys
+    if sys.version_info < (3, 5):
+        click.secho("""
+IMPORTANT: This version of Streamlit is the last that one that
+will be supported on this version of Python!!!
+""", fg="yellow", bold=True)
+        click.secho(
+"""Please upgrade to Python 3.5 or higher if you want to use the latest
+Streamlit.
+""")
 
     if log_level:
         import streamlit.logger

@@ -37,7 +37,7 @@ def readme():
 
 setuptools.setup(
     name="streamlit",
-    version="0.55.1",  # PEP-440
+    version="0.55.2",  # PEP-440
     description="Frontend library for machine learning engineers",
     long_description=readme(),
     url="https://streamlit.io",
@@ -46,6 +46,7 @@ setuptools.setup(
     license="Apache 2",
     packages=setuptools.find_packages(exclude=["tests", "tests.*"]),
     # Requirements
+    python_requires="<3.5",
     install_requires=requirements,
     zip_safe=False,  # install source files not egg
     include_package_data=True,  # copy html and friends
