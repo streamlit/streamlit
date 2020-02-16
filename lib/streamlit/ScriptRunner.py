@@ -75,7 +75,7 @@ class ScriptRunner(object):
             and then shut down.
 
         uploaded_file_mgr : UploadedFileManager
-            The File manager to store the data uploaded by the file_uplpader widget.
+            The File manager to store the data uploaded by the file_uploader widget.
 
         """
         self._report = report

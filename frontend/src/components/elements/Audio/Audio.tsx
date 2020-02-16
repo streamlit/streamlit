@@ -17,6 +17,10 @@
 
 import React, { PureComponent, ReactNode } from "react"
 import { Map as ImmutableMap } from "immutable"
+import {
+  getWindowBaseUriParts as get_base_uri_parts,
+  buildHttpUri,
+} from "lib/UriUtil"
 
 export interface Props {
   width: number
@@ -36,22 +40,29 @@ class Audio extends PureComponent<Props> {
 
   private updateTime(): void {
     if (this.audioRef.current) {
-      const startTime = this.props.element.get("startTime")
-      this.audioRef.current.currentTime = startTime
+      const { element } = this.props
+
+      this.audioRef.current.currentTime = element.get("startTime")
     }
   }
 
   public render(): ReactNode {
     const { element, width } = this.props
-    const src = element.get("url")
-      ? element.get("url")
-      : "data:" + element.get("format") + ";base64," + element.get("data")
+
+    /* if this is a relative URI, assume it's being served from streamlit and
+       construct it appropriately.  Otherwise leave it alone.  */
+
+    let uri = element.get("url")
+
+    if (uri.startsWith("/media")) {
+      uri = buildHttpUri(get_base_uri_parts(), uri)
+    }
 
     return (
       <audio
         ref={this.audioRef}
         controls
-        src={src}
+        src={uri}
         className="stAudio"
         style={{ width }}
       />

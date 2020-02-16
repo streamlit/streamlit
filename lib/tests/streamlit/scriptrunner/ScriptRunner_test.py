@@ -34,6 +34,11 @@ from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.Widget_pb2 import WidgetStates
 
 
+text_utf = "complete! 👨‍🎤"
+text_no_encoding = text_utf
+text_latin = "complete! ð\x9f\x91¨â\x80\x8dð\x9f\x8e¤"
+
+
 def _create_widget(id, states):
     """
     Returns
@@ -43,18 +48,6 @@ def _create_widget(id, states):
     """
     states.widgets.add().id = id
     return states.widgets[-1]
-
-
-import tokenize
-
-if hasattr(tokenize, "open"):
-    text_utf = "complete! 👨‍🎤"
-    text_no_encoding = text_utf
-    text_latin = "complete! ð\x9f\x91¨â\x80\x8dð\x9f\x8e¤"
-else:
-    text_utf = u"complete! 👨‍🎤"
-    text_no_encoding = u"complete! \xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x8e\xa4"
-    text_latin = text_no_encoding
 
 
 class ScriptRunnerTest(unittest.TestCase):

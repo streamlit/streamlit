@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,4 +17,4 @@
 
 import streamlit as st
 
-st.text(u"complete! 👨‍🎤")
+st.text("complete! 👨‍🎤")
