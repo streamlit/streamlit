@@ -37,12 +37,13 @@ def readme():
 
 setuptools.setup(
     name="streamlit",
-    version="0.55.1",  # PEP-440
+    version="0.56.0",  # PEP-440
     description="Frontend library for machine learning engineers",
     long_description=readme(),
     url="https://streamlit.io",
     author="Streamlit Inc",
     author_email="hello@streamlit.io",
+    python_requires=">=3.5",
     license="Apache 2",
     packages=setuptools.find_packages(exclude=["tests", "tests.*"]),
     # Requirements

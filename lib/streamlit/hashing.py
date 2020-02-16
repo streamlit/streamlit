@@ -17,6 +17,9 @@
 
 # Python 2/3 compatibility
 from __future__ import absolute_import, division, print_function, unicode_literals
+from streamlit.compatibility import setup_2_3_shims
+
+setup_2_3_shims(globals())
 
 import collections
 import dis
@@ -32,8 +35,6 @@ import textwrap
 import tempfile
 import threading
 
-import numpy
-
 import streamlit as st
 from streamlit import compatibility
 from streamlit import config
@@ -41,12 +42,12 @@ from streamlit import file_util
 from streamlit import type_util
 from streamlit.errors import UnhashableType, UserHashError, InternalHashError
 from streamlit.folder_black_list import FolderBlackList
-from streamlit.compatibility import setup_2_3_shims
+from streamlit.logger import get_logger
 
 if sys.version_info >= (3, 0):
     from streamlit.hashing_py3 import get_referenced_objects
 
-setup_2_3_shims(globals())
+LOGGER = get_logger(__name__)
 
 
 # If a dataframe has more than this many rows, we consider it large and hash a sample.
@@ -302,7 +303,9 @@ class CodeHasher:
         hash_stacks.push(obj)
 
         try:
+            LOGGER.debug("About to hash: %s", obj)
             b = self._to_bytes(obj, context)
+            LOGGER.debug("Done hashing: %s", obj)
 
             self.size += sys.getsizeof(b)
 
@@ -402,7 +405,9 @@ class CodeHasher:
                 self._update(h, obj.shape)
 
                 if obj.size >= NP_SIZE_LARGE:
-                    state = numpy.random.RandomState(0)
+                    import numpy as np
+
+                    state = np.random.RandomState(0)
                     obj = state.choice(obj.flat, size=NP_SAMPLE_SIZE)
 
                 self._update(h, obj.tobytes())
@@ -421,7 +426,7 @@ class CodeHasher:
                 self._update(h, os.path.getmtime(obj.name))
                 self._update(h, obj.tell())
                 return h.digest()
-            elif isinstance(obj, numpy.ufunc):
+            elif type_util.is_type(obj, "numpy.ufunc"):
                 # For object of type numpy.ufunc returns ufunc:<object name>
                 # For example, for numpy.remainder, this is ufunc:remainder
                 return ("%s:%s" % (obj.__class__.__name__, obj.__name__)).encode()

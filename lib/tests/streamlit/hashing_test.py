@@ -155,7 +155,7 @@ class HashTest(unittest.TestCase):
 
             exc = str(ctx.exception)
             self.assertEqual(exc.find(exc_msg) >= 0, True)
-            self.assertNotEqual(re.search("Error in `.+` near line `\d+`", exc), None)
+            self.assertNotEqual(re.search(r"Error in `.+` near line `\d+`", exc), None)
             self.assertEqual(exc.find(code_msg) >= 0, True)
 
     def test_hash_funcs_error(self):
