@@ -438,6 +438,16 @@ def _server_run_on_save():
     return False
 
 
+@_create_option("server.address")
+def _server_address():
+    """The Address where the server will listen for client and browser
+    connections.
+
+    Default: (unset)
+    """
+    return None
+
+
 @_create_option("server.port", type_=int)
 def _server_port():
     """The port where the server will listen for client and browser

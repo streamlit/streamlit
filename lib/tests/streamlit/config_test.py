@@ -302,6 +302,7 @@ class ConfigTest(unittest.TestCase):
                 "server.fileWatcherType",
                 "server.headless",
                 "server.liveSave",
+                "server.address",
                 "server.port",
                 "server.runOnSave",
                 "server.maxUploadSize",
