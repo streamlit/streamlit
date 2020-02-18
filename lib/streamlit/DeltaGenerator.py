@@ -604,11 +604,17 @@ class DeltaGenerator(object):
            height: 280px
 
         """
-        element.json.body = (
-            body
-            if isinstance(body, string_types)  # noqa: F821
-            else json.dumps(body, default=lambda o: str(type(o)))
-        )
+        import streamlit as st
+
+        if not isinstance (body, string_types):
+            try:
+                body = json.dumps(body, default=lambda o: str(type(o)))
+            except TypeError as err:
+                st.warning("Warning: this data structure was not fully serializable as "
+                           "JSON due to one or more unexpected keys.  (Error was: %s)" % err)
+                body = json.dumps(body, skipkeys=True, default=lambda o: str(type(o)))
+
+        element.json.body = body
 
     @_with_element
     def title(self, element, body):
