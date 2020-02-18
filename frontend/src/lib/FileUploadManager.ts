@@ -42,6 +42,25 @@ export class FileUploadManager {
       throw new Error("Cannot upload file: not connected to a server")
     }
 
+    // TODO: Progress (via axios?)
+    // axios.request( {
+    //   method: "post",
+    //   url: "/aaa",
+    //   data: myData,
+    //   onUploadProgress: (p) => {
+    //     console.log(p);
+    //     //this.setState({
+    //     //fileprogress: p.loaded / p.total
+    //     //})
+    //   }
+    //
+    //
+    // }).then (data => {
+    //   //this.setState({
+    //   //fileprogress: 1.0,
+    //   //})
+    // })
+
     const form = new FormData()
     form.append("sessionId", SessionInfo.current.sessionId)
     form.append("widgetId", widgetId)
