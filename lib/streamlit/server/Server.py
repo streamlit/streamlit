@@ -21,6 +21,7 @@ import errno
 import traceback
 import click
 from enum import Enum
+from typing import Any, Dict, Optional, TYPE_CHECKING
 
 import tornado.concurrent
 import tornado.gen
@@ -30,6 +31,7 @@ import tornado.websocket
 
 from streamlit import config
 from streamlit import file_util
+from streamlit.ConfigOption import ConfigOption
 from streamlit.ForwardMsgCache import ForwardMsgCache
 from streamlit.ForwardMsgCache import create_reference_msg
 from streamlit.ForwardMsgCache import populate_hash_if_needed
@@ -49,6 +51,9 @@ from streamlit.server.server_util import is_cacheable_msg
 from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import make_url_path_regex
 from streamlit.server.server_util import serialize_forward_msg
+
+if TYPE_CHECKING:
+    from streamlit.Report import Report
 
 LOGGER = get_logger(__name__)
 
@@ -143,7 +148,7 @@ def start_listening(app):
                         port += 1
 
                     config._set_option(
-                        "server.port", port, config.ConfigOption.STREAMLIT_DEFINITION
+                        "server.port", port, ConfigOption.STREAMLIT_DEFINITION
                     )
                     call_count += 1
             else:
@@ -160,7 +165,7 @@ def start_listening(app):
 
 class Server(object):
 
-    _singleton = None
+    _singleton = None  # type: Optional[Server]
 
     @classmethod
     def get_current(cls):
@@ -198,6 +203,7 @@ class Server(object):
         self._state = None
         self._set_state(State.INITIAL)
         self._message_cache = ForwardMsgCache()
+        self._report = None  # type: Optional[Report]
 
     def start(self, on_started):
         """Start the server.
@@ -223,8 +229,10 @@ class Server(object):
 
         self._ioloop.spawn_callback(self._loop_coroutine, on_started)
 
-    def get_debug(self):
-        return {"report": self._report.get_debug()}
+    def get_debug(self) -> Dict[str, Dict[str, Any]]:
+        if self._report:
+            return {"report": self._report.get_debug()}
+        return {}
 
     def _create_app(self):
         """Create our tornado web app.
@@ -506,11 +514,16 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
         self._session = self._server._create_report_session(self)
 
     def on_close(self):
+        if not self._session:
+            return
         self._server._close_report_session(self._session.id)
         self._session = None
 
     @tornado.gen.coroutine
     def on_message(self, payload):
+        if not self._session:
+            return
+
         msg = BackMsg()
 
         try:

@@ -20,6 +20,7 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import numbers
+from typing import Optional, Union
 
 
 class JSNumberBoundsException(Exception):
@@ -49,7 +50,7 @@ class JSNumber(object):
     MIN_NEGATIVE_VALUE = -MAX_VALUE
 
     @classmethod
-    def validate_int_bounds(cls, value, value_name=None):
+    def validate_int_bounds(cls, value: int, value_name: Optional[str] = None) -> None:
         """Validate that an int value can be represented with perfect precision
         by a JavaScript Number.
 
@@ -72,7 +73,7 @@ class JSNumber(object):
 
         if not isinstance(value, numbers.Integral):
             raise JSNumberBoundsException("%s (%s) is not an int" % (value_name, value))
-        elif value < cls.MIN_SAFE_INTEGER:
+        elif value < cls.MIN_SAFE_INTEGER:  # type: ignore[misc]
             raise JSNumberBoundsException(
                 "%s (%s) must be >= -((1 << 53) - 1)" % (value_name, value)
             )
@@ -82,7 +83,9 @@ class JSNumber(object):
             )
 
     @classmethod
-    def validate_float_bounds(cls, value, value_name):
+    def validate_float_bounds(
+        cls, value: Union[int, float], value_name: Optional[str]
+    ) -> None:
         """Validate that a float value can be represented by a JavaScript Number.
 
         Parameters

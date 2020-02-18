@@ -14,11 +14,15 @@
 # limitations under the License.
 
 import hashlib
+from typing import MutableMapping, TYPE_CHECKING
 from weakref import WeakKeyDictionary
 
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+
+if TYPE_CHECKING:
+    from streamlit.ReportSession import ReportSession
 
 LOGGER = get_logger(__name__)
 
@@ -104,8 +108,9 @@ class ForwardMsgCache(object):
 
         def __init__(self, msg):
             self.msg = msg
-            # {ReportSession -> report_run_count}
-            self._session_report_run_counts = WeakKeyDictionary()
+            self._session_report_run_counts = (
+                WeakKeyDictionary()
+            )  # type: MutableMapping[ReportSession, int]
 
         def add_session_ref(self, session, report_run_count):
             """Adds a reference to a ReportSession that has referenced
