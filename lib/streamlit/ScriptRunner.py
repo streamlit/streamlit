@@ -79,7 +79,7 @@ class ScriptRunner(object):
             and then shut down.
 
         uploaded_file_mgr : UploadedFileManager
-            The File manager to store the data uploaded by the file_uplpader widget.
+            The File manager to store the data uploaded by the file_uploader widget.
 
         """
         self._session_id = session_id
@@ -393,14 +393,9 @@ def _clean_problem_modules():
 def _new_module(name):
     """Create a new module with the given name."""
 
-    if sys.version_info >= (3, 4):
-        import types
+    import types
 
-        return types.ModuleType(name)
-
-    import imp
-
-    return imp.new_module(name)
+    return types.ModuleType(name)
 
 
 # Code modified from IPython (BSD license)

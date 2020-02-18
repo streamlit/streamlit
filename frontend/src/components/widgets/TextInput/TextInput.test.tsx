@@ -17,11 +17,11 @@
 
 import React from "react"
 import { shallow } from "enzyme"
-import { Input as UIInput } from "baseui/input"
 import { fromJS } from "immutable"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import TextInput, { Props } from "./TextInput"
+import { Input as UIInput } from "baseui/input"
 import { TextInput as TextInputProto } from "autogen/proto"
 
 jest.mock("lib/WidgetStateManager")
@@ -40,17 +40,14 @@ const getProps = (elementProps: object = {}): Props => ({
 })
 
 describe("TextInput widget", () => {
-  it("renders without crashing", () => {
-    const props = getProps()
-    const wrapper = shallow(<TextInput {...props} />)
+  const props = getProps()
+  const wrapper = shallow(<TextInput {...props} />)
 
+  it("renders without crashing", () => {
     expect(wrapper).toBeDefined()
   })
 
   it("should show a label", () => {
-    const props = getProps()
-    const wrapper = shallow(<TextInput {...props} />)
-
     expect(wrapper.find("label").text()).toBe(props.element.get("label"))
   })
 
@@ -64,5 +61,104 @@ describe("TextInput widget", () => {
     textInput = shallow(<TextInput {...passwordProps} />)
     uiInput = textInput.find(UIInput)
     expect(uiInput.props().type).toBe("password")
+  })
+
+  it("should set widget value on did mount", () => {
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element.get("id"),
+      props.element.get("default"),
+      { fromUi: false }
+    )
+  })
+
+  it("should have correct className and style", () => {
+    const wrappedDiv = wrapper.find("div").first()
+
+    const { className, style } = wrappedDiv.props()
+    // @ts-ignore
+    const splittedClassName = className.split(" ")
+
+    expect(splittedClassName).toContain("Widget")
+    expect(splittedClassName).toContain("stTextInput")
+
+    // @ts-ignore
+    expect(style.width).toBe(getProps().width)
+  })
+
+  it("could be disabled", () => {
+    expect(wrapper.find(UIInput).prop("disabled")).toBe(props.disabled)
+  })
+
+  it("should show Enter instructions", () => {
+    // @ts-ignore
+    wrapper.find(UIInput).prop("onChange")({
+      target: {
+        value: "testing",
+      },
+    } as React.ChangeEvent<HTMLTextAreaElement>)
+
+    expect(wrapper.find("div.instructions").text()).toBe(
+      "Press Enter to apply"
+    )
+  })
+
+  it("should set widget value on blur", () => {
+    const props = getProps()
+    const wrapper = shallow(<TextInput {...props} />)
+
+    // @ts-ignore
+    wrapper.find(UIInput).prop("onChange")({
+      target: {
+        value: "testing",
+      },
+    } as React.ChangeEvent<HTMLTextAreaElement>)
+
+    // @ts-ignore
+    wrapper.find(UIInput).prop("onBlur")()
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element.get("id"),
+      "testing",
+      { fromUi: true }
+    )
+  })
+
+  it("should set widget value when enter is pressed", () => {
+    const props = getProps()
+    const wrapper = shallow(<TextInput {...props} />)
+
+    // @ts-ignore
+    wrapper.find(UIInput).prop("onChange")({
+      target: {
+        value: "testing",
+      },
+    } as React.ChangeEvent<HTMLTextAreaElement>)
+
+    // @ts-ignore
+    wrapper.find(UIInput).prop("onKeyPress")({
+      preventDefault: jest.fn(),
+      key: "Enter",
+    })
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element.get("id"),
+      "testing",
+      { fromUi: true }
+    )
+  })
+
+  it("don't do anything when the component is clean", () => {
+    const props = getProps()
+    const wrapper = shallow(<TextInput {...props} />)
+
+    // @ts-ignore
+    wrapper.find(UIInput).prop("onKeyPress")({
+      preventDefault: jest.fn(),
+      key: "Enter",
+    })
+    // @ts-ignore
+    wrapper.find(UIInput).prop("onBlur")()
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
   })
 })

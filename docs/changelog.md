@@ -22,9 +22,35 @@ See highlights, bug fixes, and known issues for Streamlit releases:
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.56.0
+
+_Release date: February 15, 2020_
+
+**Highlights:**
+
+- 📄 Improved error messages for st.cache. The errors now also point to the new
+  caching docs we just released. Read more
+  [here](https://discuss.streamlit.io/t/help-us-stress-test-streamlit-s-latest-caching-update/1944)!
+
+**Breaking changes:**
+
+- 🐍 As [announced last month](https://discuss.streamlit.io/t/streamlit-will-deprecate-python-2-in-february/1656),
+  **Streamlit no longer supports Python 2.** To use Streamlit you'll need
+  Python 3.5 or above.
+
+## Version 0.55.0
+
+_Release date: February 4, 2020_
+
+**Highlights:**
+
+- 📺 **Ability to record screencasts directly from Streamlit!** This allows
+  you to easily record and share explanations about your models, analyses,
+  data, etc. Just click ☰ then "Record a screencast". Give it a try!
+
 ## Version 0.54.0
 
-_Release date: January 29, 2019_
+_Release date: January 29, 2020_
 
 **Highlights:**
 

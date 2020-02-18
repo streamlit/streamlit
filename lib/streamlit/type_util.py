@@ -22,6 +22,7 @@ from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
 
 import re
+from typing import Tuple
 
 from streamlit import errors
 
@@ -77,7 +78,7 @@ _DATAFRAME_COMPATIBLE_TYPES = (
     type({}),  # For Python 2. See dict_types in compatibility.py.
     list,
     type(None),
-)
+)  # type: Tuple[type, ...]
 
 
 def is_dataframe_like(obj):

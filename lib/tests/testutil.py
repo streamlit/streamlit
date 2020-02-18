@@ -14,6 +14,8 @@
 # limitations under the License.
 
 """Utility functions to use in our tests."""
+import functools
+import sys
 import threading
 import unittest
 
@@ -50,6 +52,22 @@ def build_mock_config_is_manually_set(overrides_dict):
         return orig_is_manually_set(name)
 
     return mock_config_is_manually_set
+
+
+def requires_tensorflow(func):
+    """Decorator indicating that a TestCase or test requires Tensorflow."""
+
+    @functools.wraps(func)
+    def inner(*args, **kwargs):
+        version = sys.version_info
+        if version.major == 3 and version.minor > 7:
+            args[0].skipTest(
+                "Requires Tensorflow, which doesn't support Python %d.%d"
+                % (version.major, version.minor)
+            )
+        func(*args, **kwargs)
+
+    return inner
 
 
 class DeltaGeneratorTestCase(unittest.TestCase):

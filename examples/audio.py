@@ -13,15 +13,57 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import io
 import streamlit as st
 import numpy as np
 import wave
+from scipy.io import wavfile
 
 st.title("Audio test")
 
+st.header("Local file")
 
-st.title("Generated audio (440Hz sine wave)")
+# These are the formats supported in Streamlit right now.
+AUDIO_EXTENSIONS = ["wav", "flac", "mp3", "aac", "ogg", "oga", "m4a", "opus", "wma"]
+
+# For samples of sounds in different formats, see
+# https://docs.espressif.com/projects/esp-adf/en/latest/design-guide/audio-samples.html
+
+
+def get_audio_files_in_dir(directory):
+    out = []
+    for item in os.listdir(directory):
+        try:
+            name, ext = item.split(".")
+        except:
+            continue
+        if name and ext:
+            if ext in AUDIO_EXTENSIONS:
+                out.append(item)
+    return out
+
+
+avdir = os.path.expanduser("~")
+audiofiles = get_audio_files_in_dir(avdir)
+
+if len(audiofiles) == 0:
+    st.write(
+        "Put some audio files in your home directory (%s) to activate this player."
+        % avdir
+    )
+
+else:
+    filename = st.selectbox(
+        "Select an audio file from your home directory (%s) to play" % avdir,
+        audiofiles,
+        0,
+    )
+    audiopath = os.path.join(avdir, filename)
+    st.audio(audiopath)
+
+
+st.header("Generated audio (440Hz sine wave)")
 
 
 def note(freq, length, amp, rate):
@@ -43,19 +85,19 @@ nframes = duration * sampling_rate
 x = st.text("Making wave...")
 sine_wave = note(frequency, duration, amplitude, sampling_rate)
 
-f = wave.open("sound.wav", "w")
-f.setparams((nchannels, sampwidth, int(sampling_rate), nframes, comptype, compname))
+fh = wave.open("sound.wav", "w")
+fh.setparams((nchannels, sampwidth, int(sampling_rate), nframes, comptype, compname))
 
 x.text("Converting wave...")
-f.writeframes(sine_wave)
+fh.writeframes(sine_wave)
 
-f.close()
+fh.close()
 
 with io.open("sound.wav", "rb") as f:
     x.text("Sending wave...")
     x.audio(f)
 
-st.title("Audio from a URL")
+st.header("Audio from a Remote URL")
 
 
 def shorten_audio_option(opt):
@@ -74,3 +116,13 @@ song = st.selectbox(
 )
 
 st.audio(song)
+
+st.title("Streaming audio from a URL")
+
+st.write("[MP3: Mutiny Radio](http://nthmost.net:8000/mutiny-studio)")
+
+st.audio("http://nthmost.net:8000/mutiny-studio")
+
+st.write("[OGG: Radio Loki](http://nthmost.net:8000/loki.ogg)")
+
+st.audio("http://nthmost.net:8000/loki.ogg")

@@ -4,7 +4,6 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-funcsigs = {version = "*",markers = "python_version < '3.0'"}
 mock = "*"
 pipenv = "*"
 pytest = "*"
@@ -24,11 +23,13 @@ bokeh = "*"
 graphviz = "*"
 parameterized = "*"
 pydot = "*"
-tensorflow = ">=2.0.0"
+tensorflow = {version = ">=2.0.0", markers = "python_version < '3.8'"}
 seaborn = "*"
 prometheus-client = "*"
 opencv-python = "*"
 requests-mock = "*"
+mypy = "==0.761"
+mypy-protobuf = ">=1.17"
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if something is only required for testing, but not anything else, please
 # add to the dev dependencies above, instead.

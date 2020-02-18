@@ -27,6 +27,7 @@ import functools
 import json
 import random
 import textwrap
+import numbers
 from datetime import datetime
 from datetime import date
 from datetime import time
@@ -72,28 +73,18 @@ def _wraps_with_cleaned_sig(wrapped, num_args_to_remove):
     num_args_to_remove). This is useful since function signatures are visible
     in our user-facing docs, and many methods in DeltaGenerator have arguments
     that users have no access to.
+
+    Note that "self" is ignored by default. So to remove both "self" and the
+    next argument you'd pass num_args_to_remove=1.
     """
     # By passing (None, ...), we're removing (arg1, ...) from *args
     args_to_remove = (None,) * num_args_to_remove
     fake_wrapped = functools.partial(wrapped, *args_to_remove)
     fake_wrapped.__doc__ = wrapped.__doc__
-
-    # These fields are used by wraps(), but in Python 2 partial() does not
-    # produce them.
-    fake_wrapped.__module__ = wrapped.__module__
     fake_wrapped.__name__ = wrapped.__name__
+    fake_wrapped.__module__ = wrapped.__module__
 
     return functools.wraps(fake_wrapped)
-
-
-def _remove_self_from_sig(method):
-    """Remove the `self` argument from `method`'s signature."""
-
-    @_wraps_with_cleaned_sig(method, 1)  # Remove self from sig.
-    def wrapped_method(self, *args, **kwargs):
-        return method(self, *args, **kwargs)
-
-    return wrapped_method
 
 
 def _with_element(method):
@@ -117,7 +108,7 @@ def _with_element(method):
 
     """
 
-    @_wraps_with_cleaned_sig(method, 2)  # Remove self and element from sig.
+    @_wraps_with_cleaned_sig(method, 1)  # Remove self and element from sig.
     def wrapped_method(dg, *args, **kwargs):
         # Warn if we're called from within an @st.cache function
         caching.maybe_show_cached_st_function_warning(dg)
@@ -803,7 +794,6 @@ class DeltaGenerator(object):
 
         exception_proto.marshall(element.exception, exception, exception_traceback)
 
-    @_remove_self_from_sig
     def dataframe(self, data=None, width=None, height=None):
         """Display a dataframe as an interactive table.
 
@@ -1075,7 +1065,7 @@ class DeltaGenerator(object):
             data,
             spec,
             use_container_width=use_container_width,
-            **kwargs
+            **kwargs,
         )
 
     @_with_element
@@ -1438,7 +1428,6 @@ class DeltaGenerator(object):
 
         bokeh_chart.marshall(element.bokeh_chart, figure, use_container_width)
 
-    # TODO: Make this accept files and strings/bytes as input.
     @_with_element
     def image(
         self,
@@ -1497,7 +1486,7 @@ class DeltaGenerator(object):
            height: 630px
 
         """
-        import streamlit.elements.image_proto as image_proto
+        from .elements import image_proto
 
         if use_column_width:
             width = -2
@@ -1505,6 +1494,7 @@ class DeltaGenerator(object):
             width = -1
         elif width <= 0:
             raise StreamlitAPIException("Image width must be positive.")
+
         image_proto.marshall_images(
             image, caption, width, element.imgs, clamp, channels, format
         )
@@ -1517,9 +1507,9 @@ class DeltaGenerator(object):
         ----------
         data : str, bytes, BytesIO, numpy.ndarray, or file opened with
                 io.open().
-            Raw audio data or a string with a URL pointing to the file to load.
-            If passing the raw data, this must include headers and any other bytes
-            required in the actual file.
+            Raw audio data, filename, or a URL pointing to the file to load.
+            Numpy arrays and raw data formats must include all necessary file
+            headers to match specified file format.
         start_time: int
             The time from which this element should start playing.
         format : str
@@ -1538,8 +1528,6 @@ class DeltaGenerator(object):
            height: 400px
 
         """
-        # TODO: Provide API to convert raw NumPy arrays to audio file (with
-        # proper headers, etc)?
         from .elements import media_proto
 
         media_proto.marshall_audio(element.audio, data, format, start_time)
@@ -1552,10 +1540,11 @@ class DeltaGenerator(object):
         ----------
         data : str, bytes, BytesIO, numpy.ndarray, or file opened with
                 io.open().
-            Raw video data or a string with a URL pointing to the video
-            to load. Includes support for YouTube URLs.
-            If passing the raw data, this must include headers and any other
-            bytes required in the actual file.
+            Raw video data, filename, or URL pointing to a video to load.
+            Includes support for YouTube URLs.
+            Numpy arrays and raw data formats must include all necessary file
+            headers to match specified file format.
+        start_time: int
         format : str
             The mime type for the video file. Defaults to 'video/mp4'.
             See https://tools.ietf.org/html/rfc4281 for more info.
@@ -1574,8 +1563,6 @@ class DeltaGenerator(object):
            height: 600px
 
         """
-        # TODO: Provide API to convert raw NumPy arrays to video file (with
-        # proper headers, etc)?
         from .elements import media_proto
 
         media_proto.marshall_video(element.video, data, format, start_time)
@@ -2371,7 +2358,7 @@ class DeltaGenerator(object):
             else:
                 value = 0.0  # We set a float as default
 
-        int_value = isinstance(value, int)
+        int_value = isinstance(value, numbers.Integral)
         float_value = isinstance(value, float)
 
         if value is None:
@@ -2407,7 +2394,12 @@ class DeltaGenerator(object):
         args = [min_value, max_value, step]
 
         int_args = all(
-            map(lambda a: (isinstance(a, int) or isinstance(a, type(None))), args)
+            map(
+                lambda a: (
+                    isinstance(a, numbers.Integral) or isinstance(a, type(None))
+                ),
+                args,
+            )
         )
         float_args = all(
             map(lambda a: (isinstance(a, float) or isinstance(a, type(None))), args)
@@ -2516,6 +2508,7 @@ class DeltaGenerator(object):
         >>> my_bar = st.progress(0)
         >>>
         >>> for percent_complete in range(100):
+        ...     time.sleep(0.1)
         ...     my_bar.progress(percent_complete + 1)
 
         """
@@ -2960,7 +2953,7 @@ def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
             stop = last_index + old_step + old_stop
 
             data.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
-            last_index = stop
+            last_index = stop - 1
 
         index_name = data.index.name
         if index_name is None:

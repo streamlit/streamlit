@@ -42,6 +42,7 @@ from streamlit.server.UploadFileRequestHandler import UploadFileRequestHandler
 from streamlit.server.routes import AddSlashHandler
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
+from streamlit.server.routes import MediaFileHandler
 from streamlit.server.routes import MessageCacheHandler
 from streamlit.server.routes import MetricsHandler
 from streamlit.server.routes import StaticFileHandler
@@ -280,6 +281,7 @@ class Server(object):
                 UploadFileRequestHandler,
                 dict(file_mgr=self._uploaded_file_mgr),
             ),
+            (make_url_path_regex(base, "media/(.*)"), MediaFileHandler),
         ]
 
         if config.get_option("global.developmentMode") and config.get_option(
@@ -527,7 +529,7 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def check_origin(self, origin):
         """Set up CORS."""
-        return is_url_from_allowed_origins(origin)
+        return super().check_origin(origin) or is_url_from_allowed_origins(origin)
 
     def open(self):
         self._session = self._server._create_report_session(self)

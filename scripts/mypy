@@ -1,0 +1,128 @@
+#!/usr/bin/env python
+
+# Copyright 2018-2020 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Process Mypy line precision report into useful statistics."""
+
+import glob
+import itertools
+import os
+import os.path
+import sys
+import tempfile
+from typing import List, NamedTuple
+
+import click
+import mypy.version
+import mypy.main as mypy_main
+
+
+MYPY_VERSION = "0.761"
+PATHS = ["lib/", "scripts/*"]
+EXCLUDE_FILES = {"scripts/add_license_headers.py"}
+
+
+class Module:
+    _COLUMNS = (56, 5, 5, 7)
+    _HEADERS = ("Module", "Lines", "Typed", "Percent")
+
+    def __init__(self, name: str, lines: int = 0, precise: int = 0):
+        self.name = name
+        self.lines = lines
+        self.precise = precise
+
+    @classmethod
+    def header(cls) -> str:
+        fmt = "%-*s  %-*s  %-*s  %-*s"
+        return ("%s\n%s" % (fmt, fmt)) % tuple(
+            itertools.chain(
+                *zip(cls._COLUMNS, cls._HEADERS),
+                *zip(cls._COLUMNS, ["-" * len(h) for h in cls._HEADERS]),
+            )
+        )
+
+    def __str__(self) -> str:
+        cols = self._COLUMNS
+        return "%-*s  %*d  %*d % 7.02f%%" % (
+            cols[0],
+            self.name,
+            cols[1],
+            self.lines,
+            cols[2],
+            self.precise,
+            self.precise * 100 / self.lines,
+        )
+
+
+def process_report(path: str) -> None:
+    modules = []  # type: List[Module]
+    totals = Module("Total")
+
+    with open(path) as f:
+        for line in f.readlines()[2:]:  # Skip two header lines.
+            parts = line.split()
+            name = parts[0]
+            if name.endswith("_pb2"):
+                continue
+            total_lines = int(parts[1])
+            empty_lines = int(parts[5])
+            lines = total_lines - empty_lines
+            if not lines:
+                continue
+            precise = int(parts[2])
+            modules.append(Module(name, lines, precise))
+            totals.lines += lines
+            totals.precise += precise
+
+    print(Module.header())
+    for module in sorted(modules, key=lambda m: m.name):
+        print(str(module))
+    print(str(totals))
+
+
+@click.command()
+@click.option("--report", is_flag=True, help="Emit line coverage report for all files")
+def main(report: bool = False) -> None:
+    if mypy.version.__version__ != MYPY_VERSION:
+        print(
+            "Mypy version %s required, found %s"
+            % (MYPY_VERSION, mypy.version.__version__),
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    paths = []  # type: List[str]
+    for path in PATHS:
+        if "*" in path:
+            for filename in glob.glob(path):
+                if not (filename in EXCLUDE_FILES or filename.endswith(".sh")):
+                    paths.append(filename)
+        else:
+            paths.append(path)
+
+    args = ["--config-file=lib/mypy.ini"]
+    if report:
+        tempdir = tempfile.TemporaryDirectory()
+        args.append("--lineprecision-report=%s" % tempdir.name)
+    args.append("--")
+    args.extend(paths)
+
+    mypy_main.main(None, sys.stdout, sys.stderr, args=args)
+    if report:
+        process_report(os.path.join(tempdir.name, "lineprecision.txt"))
+
+
+if __name__ == "__main__":
+    main()
