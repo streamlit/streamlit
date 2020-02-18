@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,9 +15,4 @@
  * limitations under the License.
  */
 
-@import "src/assets/css/open-iconic.scss";
-
-.open-iconic {
-  display: inline-flex;
-  font-size: 0.9rem;
-}
+export { default } from "./Countdown"

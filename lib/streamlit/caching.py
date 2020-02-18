@@ -17,6 +17,9 @@
 
 # Python 2/3 compatibility
 from __future__ import absolute_import, division, print_function
+from streamlit.compatibility import setup_2_3_shims
+
+setup_2_3_shims(globals())
 
 import ast
 import contextlib
@@ -36,13 +39,10 @@ from streamlit.util import functools_wraps
 from streamlit import config
 from streamlit import file_util
 from streamlit import util
-from streamlit.compatibility import setup_2_3_shims
 from streamlit.hashing import CodeHasher
 from streamlit.hashing import Context
 from streamlit.hashing import get_hash
 from streamlit.logger import get_logger
-
-setup_2_3_shims(globals())
 
 CACHED_ST_FUNCTION_WARNING = """
 Your script writes to your Streamlit app from within a cached function. This
@@ -198,7 +198,8 @@ def _get_mutated_output_error_message():
         By default, Streamlit’s cache is immutable. You received this warning
         because Streamlit thinks you modified a cached object.
 
-        [Click here to see how to fix this issue.](https://docs.streamlit.io/advanced_concepts.html#advanced-caching)
+        [Click here to see how to fix this issue.]
+        (https://docs.streamlit.io/advanced_caching.html)
         """
     ).strip("\n")
 
@@ -380,6 +381,8 @@ def cache(
     ...     return MongoClient(url)
 
     """
+    LOGGER.debug("Entering st.cache: %s", func)
+
     # Help users migrate to the new kwarg
     # Remove this warning after 2020-03-16.
     if ignore_hash:
@@ -435,7 +438,10 @@ def cache(
                 return_value = _read_from_cache(
                     key, persist, allow_output_mutation, func, caller_frame, hash_funcs
                 )
+                LOGGER.debug("Cache hit: %s", func)
             except CacheKeyNotFoundError:
+                LOGGER.debug("Cache miss: %s", func)
+
                 with _calling_cached_function():
                     if suppress_st_warning:
                         with suppress_cached_st_function_warning():

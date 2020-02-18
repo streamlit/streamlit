@@ -64,8 +64,9 @@ class ScriptRunnerTest(unittest.TestCase):
     @parameterized.expand(
         [
             ("good_script.py", text_utf),
-            ("good_script_no_encoding.py", text_no_encoding),
-            ("good_script_latin_encoding.py", text_latin),
+            # These files are .txt to avoid being broken by "make headers".
+            ("good_script_no_encoding.py.txt", text_no_encoding),
+            ("good_script_latin_encoding.py.txt", text_latin),
         ]
     )
     def test_run_script(self, filename, text):
