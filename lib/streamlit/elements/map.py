@@ -133,6 +133,7 @@ def to_deckgl_json(data, zoom):
             "getPosition": "@@=[lon, lat]",
             "getRadius": 10,
             "radiusScale": 10,
+            "radiusMinPixels": 3,
             "getFillColor": _DEFAULT_COLOR,
             "data": final_data,
         }
