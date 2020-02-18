@@ -23,6 +23,8 @@ import {
   DropdownToggle,
 } from "reactstrap"
 import Icon from "components/shared/Icon"
+
+import ScreencastOption from "./component/ScreencastOption"
 import "./MainMenu.scss"
 
 const ONLINE_DOCS_URL = "https://docs.streamlit.io"
@@ -120,32 +122,10 @@ class MainMenu extends PureComponent<Props, State> {
 
           <DropdownItem divider />
 
-          {this.props.screenCastState !== "RECORDING" &&
-            this.props.screenCastState !== "COUNTDOWN" && (
-              <DropdownItem onClick={this.props.screencastCallback}>
-                Record a screencast
-              </DropdownItem>
-            )}
-
-          {this.props.screenCastState === "COUNTDOWN" && (
-            <DropdownItem onClick={this.props.screencastCallback}>
-              <span>Cancel screencast</span>
-              <span className="shortcut">ESC</span>
-            </DropdownItem>
-          )}
-
-          {this.props.screenCastState === "RECORDING" && (
-            <DropdownItem
-              onClick={this.props.screencastCallback}
-              className="stop-recording"
-            >
-              <span>
-                <strong>Stop recording</strong>
-              </span>
-
-              <span className="shortcut">ESC</span>
-            </DropdownItem>
-          )}
+          <ScreencastOption
+            screenCastState={this.props.screenCastState}
+            onClick={this.props.screencastCallback}
+          />
 
           {/* We hide 'Share Report' + divider if sharing is not configured */}
           {this.props.sharingEnabled && (

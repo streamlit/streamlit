@@ -21,7 +21,6 @@ import "./Countdown.scss"
 
 interface Props {
   countdown: number
-  start: boolean
   endCallback: Function
 }
 
@@ -32,7 +31,6 @@ interface State {
 class Countdown extends PureComponent<Props, State> {
   public static defaultProps: Partial<Props> = {
     endCallback: () => {},
-    start: true,
   }
 
   state = {
@@ -44,9 +42,11 @@ class Countdown extends PureComponent<Props, State> {
     const { endCallback } = this.props
     const newCountdown = countdown - 1
 
-    this.setState({
-      countdown: newCountdown,
-    })
+    if (newCountdown >= 0) {
+      this.setState({
+        countdown: newCountdown,
+      })
+    }
 
     if (newCountdown === 0) {
       endCallback()

@@ -119,13 +119,9 @@ function withScreencast(
       let outputBlob
       const { currentState } = this.state
 
-      if (currentState === "OFF") {
+      // We should do nothing if the user try to stop recording when it is not started
+      if (currentState === "OFF" || this.recorder == null) {
         return
-      }
-
-      if (this.recorder == null) {
-        // Should never happen.
-        throw new Error("Countdown finished but recorder is null")
       }
 
       if (currentState === "COUNTDOWN") {
