@@ -25,7 +25,7 @@ import FileUploader, { Props } from "./FileUploader"
 
 jest.mock("lib/WidgetStateManager")
 
-const blolbFile = new File([""], "filename.txt", {
+const blobFile = new File([""], "filename.txt", {
   type: "text/plain",
   lastModified: 0,
 })
@@ -67,7 +67,7 @@ describe("FileUploader widget", () => {
 
     const promise = internalFileUploader
       .props()
-      .onDrop([blolbFile], [], null)
+      .onDrop([blobFile], [], null)
       .then(() => {
         expect(wrapper.state("status")).toBe("UPLOADING")
         expect(wrapper.find("div.uploadProgress").length).toBe(1)
@@ -83,7 +83,7 @@ describe("FileUploader widget", () => {
     const wrapper = shallow(<FileUploader {...props} />)
     const internalFileUploader = wrapper.find(FileUploaderBaseui)
 
-    internalFileUploader.props().onDrop([], [blolbFile], null)
+    internalFileUploader.props().onDrop([], [blobFile], null)
     expect(wrapper.state("status")).toBe("ERROR")
     expect(wrapper.state("errorMessage")).toBe(
       "text/plain files are not allowed"
@@ -98,7 +98,7 @@ describe("FileUploader widget", () => {
     const wrapper = shallow(<FileUploader {...props} />)
     const internalFileUploader = wrapper.find(FileUploaderBaseui)
 
-    internalFileUploader.props().onDrop([blolbFile], [], null)
+    internalFileUploader.props().onDrop([blobFile], [], null)
     expect(wrapper.state("status")).toBe("ERROR")
     expect(wrapper.state("errorMessage")).toBe(
       "The max file size allowed is 0MB"
