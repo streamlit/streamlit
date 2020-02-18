@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+import axios from "axios"
 import { SessionInfo } from "lib/SessionInfo"
 import { BaseUriParts, buildHttpUri } from "lib/UriUtil"
 
@@ -35,31 +36,13 @@ export class FileUploadManager {
     widgetId: string,
     name: string,
     lastModified: number,
-    data: Uint8Array | File
+    data: Uint8Array | File,
+    onUploadProgress?: (progressEvent: any) => void
   ): Promise<void> {
     const serverURI = this.getServerUri()
     if (serverURI === undefined) {
       throw new Error("Cannot upload file: not connected to a server")
     }
-
-    // TODO: Progress (via axios?)
-    // axios.request( {
-    //   method: "post",
-    //   url: "/aaa",
-    //   data: myData,
-    //   onUploadProgress: (p) => {
-    //     console.log(p);
-    //     //this.setState({
-    //     //fileprogress: p.loaded / p.total
-    //     //})
-    //   }
-    //
-    //
-    // }).then (data => {
-    //   //this.setState({
-    //   //fileprogress: 1.0,
-    //   //})
-    // })
 
     const form = new FormData()
     form.append("sessionId", SessionInfo.current.sessionId)
@@ -71,16 +54,11 @@ export class FileUploadManager {
       form.append(name, new Blob([data.buffer]))
     }
 
-    const url = buildHttpUri(serverURI, "upload_file")
-    const rsp = await fetch(url, {
+    await axios.request({
+      url: buildHttpUri(serverURI, "upload_file"),
       method: "POST",
-      body: form,
+      data: form,
+      onUploadProgress,
     })
-
-    if (!rsp.ok) {
-      // `fetch` doesn't reject for bad HTTP statuses, so
-      // we explicitly check for that.
-      throw new Error(`Failed to upload ${name} (status ${rsp.status})`)
-    }
   }
 }

@@ -15,7 +15,8 @@
  * limitations under the License.
  */
 
-import fetchMock from "fetch-mock"
+import axios, { AxiosRequestConfig } from "axios"
+import MockAdapter from "axios-mock-adapter"
 import { FileUploadManager } from "lib/FileUploadManager"
 import { SessionInfo } from "lib/SessionInfo"
 import { buildHttpUri } from "lib/UriUtil"
@@ -26,52 +27,64 @@ const MOCK_SERVER_URI = {
   basePath: "",
 }
 
-function mockUploadResponseStatus(status: number): void {
-  const response = { status: status }
-  const options = { method: "post" }
+describe("FileUploadManager", () => {
+  let axiosMock: MockAdapter
 
-  fetchMock.mock(
-    buildHttpUri(MOCK_SERVER_URI, "upload_file"),
-    response,
-    options
-  )
-}
-
-beforeEach(() => {
-  fetchMock.config.sendAsJson = false
-  SessionInfo.current = new SessionInfo({
-    sessionId: "sessionId",
-    streamlitVersion: "sv",
-    pythonVersion: "pv",
-    installationId: "iid",
-    authorEmail: "ae",
-    maxCachedMessageAge: 2,
-    commandLine: "command line",
-    mapboxToken: "mpt",
+  beforeEach(() => {
+    axiosMock = new MockAdapter(axios)
+    SessionInfo.current = new SessionInfo({
+      sessionId: "sessionId",
+      streamlitVersion: "sv",
+      pythonVersion: "pv",
+      installationId: "iid",
+      authorEmail: "ae",
+      maxCachedMessageAge: 2,
+      commandLine: "command line",
+      mapboxToken: "mpt",
+    })
   })
-})
 
-afterEach(() => {
-  fetchMock.restore()
-  SessionInfo["singleton"] = undefined
-})
+  afterEach(() => {
+    axiosMock.restore()
+    SessionInfo["singleton"] = undefined
+  })
 
-test("uploads files correctly", async () => {
-  const uploader = new FileUploadManager(() => MOCK_SERVER_URI)
+  function mockUploadResponseStatus(status: number): void {
+    axiosMock
+      .onPost(buildHttpUri(MOCK_SERVER_URI, "upload_file"))
+      .reply((config: AxiosRequestConfig): any[] => {
+        if (status == 200) {
+          // Validate that widgetId and sessionId are present on
+          // outgoing requests.
+          const data = config.data as FormData
+          if (data.get("widgetId") == null) {
+            return [400]
+          } else if (data.get("sessionId") == null) {
+            return [400]
+          }
+        }
 
-  mockUploadResponseStatus(200)
+        return [status]
+      })
+  }
 
-  await expect(
-    uploader.uploadFile("widgetId", "file.txt", 0, new Uint8Array([0, 1, 2]))
-  ).resolves.toBeUndefined()
-})
+  test("uploads files correctly", async () => {
+    const uploader = new FileUploadManager(() => MOCK_SERVER_URI)
 
-test("handles errors", async () => {
-  const uploader = new FileUploadManager(() => MOCK_SERVER_URI)
+    mockUploadResponseStatus(200)
 
-  mockUploadResponseStatus(400)
+    await expect(
+      uploader.uploadFile("widgetId", "file.txt", 0, new Uint8Array([0, 1, 2]))
+    ).resolves.toBeUndefined()
+  })
 
-  await expect(
-    uploader.uploadFile("widgetId", "file.txt", 0, new Uint8Array([0, 1, 2]))
-  ).rejects.toEqual(new Error("Failed to upload file.txt (status 400)"))
+  test("handles errors", async () => {
+    const uploader = new FileUploadManager(() => MOCK_SERVER_URI)
+
+    mockUploadResponseStatus(400)
+
+    await expect(
+      uploader.uploadFile("widgetId", "file.txt", 0, new Uint8Array([0, 1, 2]))
+    ).rejects.toEqual(new Error("Request failed with status code 400"))
+  })
 })
