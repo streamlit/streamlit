@@ -2081,8 +2081,7 @@ class DeltaGenerator(object):
         ctx = get_report_ctx()
         if ctx is not None:
             data = ctx.uploaded_file_mgr.get_file_data(
-                session_id=ctx.session_id,
-                widget_id=element.file_uploader.id
+                session_id=ctx.session_id, widget_id=element.file_uploader.id
             )
 
         if data is None:

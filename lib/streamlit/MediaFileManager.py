@@ -41,7 +41,7 @@ def _get_file_id(data, mimetype=None):
     filehash.update(bytes(mimetype.encode("utf-8")))
     return filehash.hexdigest()
 
-    #return hashlib.sha224(bytes(mimetype.encode("utf-8")) + data).hexdigest()
+    # return hashlib.sha224(bytes(mimetype.encode("utf-8")) + data).hexdigest()
 
 
 class MediaFile(object):
