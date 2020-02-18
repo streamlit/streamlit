@@ -2813,6 +2813,39 @@ class DeltaGenerator(object):
         ...
         >>> st.table(df)
 
+        """
+        import streamlit.elements.arrow_table as arrow_table
+
+        # NB: If UUID is not provided by Styler, a hash of the position
+        # of the element will be used. This will cause a rerender of the table
+        # when the position of the element is changed.
+        # (HK) TODO: Come up with a better way to set the default UUID.
+        element_path = (self._container,) + self._cursor.path + (self._cursor.index,)
+        default_uuid = hash(element_path)
+
+        arrow_table.marshall(element.table, data, default_uuid)
+
+    @_with_element
+    def old_table(self, element, data=None):
+        """Display a static table.
+
+        This differs from `st.dataframe` in that the table in this case is
+        static: its entire contents are just laid out directly on the page.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
+            or None
+            The table data.
+
+        Example
+        -------
+        >>> df = pd.DataFrame(
+        ...    np.random.randn(10, 5),
+        ...    columns=('col %d' % i for i in range(5)))
+        ...
+        >>> st.old_table(df)
+
         .. output::
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=KfZvDMprL4JFKXbpjD3fpq
            height: 480px
@@ -2820,7 +2853,7 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.data_frame_proto as data_frame_proto
 
-        data_frame_proto.marshall_data_frame(data, element.table)
+        data_frame_proto.marshall_data_frame(data, element.old_table)
 
     def add_rows(self, data=None, **kwargs):
         """Concatenate a dataframe to the bottom of the current one.

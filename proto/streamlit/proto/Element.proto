@@ -12,11 +12,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
 syntax = "proto3";
 
 import "streamlit/proto/Alert.proto";
+import "streamlit/proto/ArrowTable.proto";
 import "streamlit/proto/Audio.proto";
 import "streamlit/proto/Balloons.proto";
 import "streamlit/proto/BokehChart.proto";
@@ -55,6 +56,7 @@ message Element {
   // An element can be one of the following element types.
   oneof type {
     Alert alert = 30;
+    ArrowTable table = 35;
     Audio audio = 13;
     Balloons balloons = 12;
     BokehChart bokeh_chart = 17;
@@ -62,7 +64,7 @@ message Element {
     Chart chart = 4;
     Checkbox checkbox = 20;
     DataFrame data_frame = 3;
-    DataFrame table = 11;
+    DataFrame old_table = 11;
     DateInput date_input = 27;
     DeckGlChart deck_gl_chart = 15;
     DeckGlJsonChart deck_gl_json_chart = 34;
@@ -87,8 +89,8 @@ message Element {
     TimeInput time_input = 26;
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
-    
-    // Next ID: 35
+
+    // Next ID: 36
   }
 
   reserved 9;

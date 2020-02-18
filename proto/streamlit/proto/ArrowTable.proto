@@ -1,5 +1,4 @@
 /**
- * @license
  * Copyright 2018-2019 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,4 +14,18 @@
  * limitations under the License.
  */
 
-export { default } from "./Table"
+syntax = "proto3";
+
+message ArrowTable {
+  bytes data = 1;
+  bytes index = 2;
+  bytes columns = 3;
+  Styler styler = 5;
+}
+
+message Styler {
+  string uuid = 1;
+  string caption = 2;
+  string styles = 3;
+  bytes display_values = 4;
+}

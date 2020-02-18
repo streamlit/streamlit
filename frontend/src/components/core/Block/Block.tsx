@@ -34,6 +34,7 @@ import FullScreenWrapper from "components/shared/FullScreenWrapper/"
 import ExceptionElement from "components/elements/ExceptionElement/"
 import Json from "components/elements/Json/"
 import Markdown from "components/elements/Markdown/"
+import OldTable from "components/elements/OldTable/"
 import Table from "components/elements/Table/"
 import Text from "components/elements/Text/"
 
@@ -44,9 +45,7 @@ const Audio = React.lazy(() => import("components/elements/Audio/"))
 const Balloons = React.lazy(() => import("components/elements/Balloons/"))
 const BokehChart = React.lazy(() => import("components/elements/BokehChart/"))
 const DataFrame = React.lazy(() => import("components/elements/DataFrame/"))
-const DeckGlChart = React.lazy(() =>
-  import("components/elements/DeckGlChart/")
-)
+const DeckGlChart = React.lazy(() => import("components/elements/DeckGlChart/"))
 const DeckGlJsonChart = React.lazy(() =>
   import("components/elements/DeckGlJsonChart/")
 )
@@ -54,9 +53,7 @@ const ImageList = React.lazy(() => import("components/elements/ImageList/"))
 const GraphVizChart = React.lazy(() =>
   import("components/elements/GraphVizChart/")
 )
-const PlotlyChart = React.lazy(() =>
-  import("components/elements/PlotlyChart/")
-)
+const PlotlyChart = React.lazy(() => import("components/elements/PlotlyChart/"))
 const VegaLiteChart = React.lazy(() =>
   import("components/elements/VegaLiteChart/")
 )
@@ -281,6 +278,7 @@ class Block extends PureComponent<Props> {
           {...widgetProps}
         />
       ),
+      oldTable: (el: SimpleElement) => <OldTable element={el} width={width} />,
       plotlyChart: (el: SimpleElement) => (
         <PlotlyChart element={el} width={width} />
       ),
@@ -312,12 +310,7 @@ class Block extends PureComponent<Props> {
         />
       ),
       radio: (el: SimpleElement) => (
-        <Radio
-          key={el.get("id")}
-          element={el}
-          width={width}
-          {...widgetProps}
-        />
+        <Radio key={el.get("id")} element={el} width={width} {...widgetProps} />
       ),
       selectbox: (el: SimpleElement) => (
         <Selectbox

@@ -42,7 +42,8 @@ interface Dimensions {
 // Use d3Graphviz in a dummy expression so the library actually gets loaded.
 // This way it registers itself in d3 as a plugin at this point.
 const _dummy_graphviz = graphviz
-_dummy_graphviz // eslint-disable-line no-unused-expressions
+// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+_dummy_graphviz
 
 class GraphVizChart extends React.PureComponent<PropsWithHeight> {
   private chartId: string = "graphviz-chart-" + this.props.index
@@ -108,8 +109,7 @@ class GraphVizChart extends React.PureComponent<PropsWithHeight> {
 
   public render = (): React.ReactNode => {
     const width: number = this.props.element.get("width") || this.props.width
-    const height: number =
-      this.props.element.get("height") || this.props.height
+    const height: number = this.props.element.get("height") || this.props.height
     return (
       <div
         className="graphviz stGraphVizChart"

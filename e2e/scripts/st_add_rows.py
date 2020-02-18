@@ -42,7 +42,7 @@ df1 = df.iloc[0:1, :]
 
 for test_type in ["coalesce in Py", "coalesce in JS", "clear after addrows"]:
 
-    table_el = st.table(df1)
+    table_el = st.old_table(df1)
     dataframe_el = st.dataframe(df1)
     chart_el1 = st.line_chart()
     chart_el2 = st.line_chart(df1)

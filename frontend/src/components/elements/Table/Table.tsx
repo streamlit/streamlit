@@ -15,58 +15,55 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { Table as ReactTable } from "reactstrap"
-import { toFormattedString } from "lib/format"
+import React, { Fragment, PureComponent, ReactNode, SFC } from "react"
+import { range } from "lodash"
+import { Table as UITable } from "reactstrap"
 import { Map as ImmutableMap } from "immutable"
-import { dataFrameGet, dataFrameGetDimensions } from "lib/dataFrameProto"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
-import "./Table.scss"
+import ArrowTable from "lib/ArrowTable"
+import { toFormattedString } from "lib/format"
 
-/**
- * Functional element representing a DataFrame.
- */
-interface Props {
-  width: number
+export interface Props {
   element: ImmutableMap<string, any>
+  width: number
 }
 
-class Table extends React.PureComponent<Props> {
-  render(): JSX.Element {
-    const { element } = this.props
-    const { headerRows, rows, cols } = dataFrameGetDimensions(element)
+export class Table extends PureComponent<Props> {
+  public render = (): ReactNode => {
+    const data = this.props.element.get("data")
+    const index = this.props.element.get("index")
+    const columns = this.props.element.get("columns")
+    const styler = this.props.element.get("styler")
+    const table = new ArrowTable(data, index, columns, styler)
 
-    const hasNoData = rows === headerRows
+    const hasHeader = table.headerRows > 0
+    const hasData = table.dataRows > 0
+    const id = table.uuid ? "T_" + table.uuid : undefined
+    const classNames = hasData ? undefined : "empty-table"
+    const caption = table.caption ? <caption>{table.caption}</caption> : null
 
-    // TODO(tvst): Make tables have a max width with overflow: scroll (when
-    // media==screen). But need to fix the autosizer first.
+    console.log("render", table.headerRows, table.rows)
+
     return (
       <div className="streamlit-table stTable">
-        <ReactTable className={hasNoData ? "empty-table" : ""}>
-          <thead>
-            <TableRows
-              df={element}
-              header={true}
-              headerRows={headerRows}
-              rows={rows}
-              cols={cols}
-            />
-          </thead>
+        <style>{table.styles}</style>
+        <UITable id={id} className={classNames}>
+          {caption}
+          {hasHeader && (
+            <thead>
+              <TableRows isHeader={true} table={table} />
+            </thead>
+          )}
           <tbody>
-            {hasNoData ? (
-              <tr>
-                <td colSpan={cols || 1}>empty</td>
-              </tr>
+            {hasData ? (
+              <TableRows isHeader={false} table={table} />
             ) : (
-              <TableRows
-                df={element}
-                headerRows={headerRows}
-                rows={rows}
-                cols={cols}
-              />
+              <tr>
+                <td colSpan={table.columns || 1}>empty</td>
+              </tr>
             )}
           </tbody>
-        </ReactTable>
+        </UITable>
       </div>
     )
   }
@@ -75,76 +72,85 @@ class Table extends React.PureComponent<Props> {
 /**
  * Purely functional component returning a list of rows.
  *
- * df         - The dataFrame to display.
- * header     - Whether to display the header.
- * headerRows - Number of rows in the header.
- * rows       - Number of rows in the table (header + data).
- * cols       - Number of colums in the table.
+ * isHeader     - Whether to display the header.
+ * table        - The table to display.
  */
-interface TableRowsProps {
-  df: ImmutableMap<string, any>
-  header?: boolean | false
-  headerRows: number
-  rows: number
-  cols: number
+
+export interface TableRowsProps {
+  isHeader: boolean
+  table: ArrowTable
 }
 
-const TableRows: React.SFC<TableRowsProps> = props => {
-  const { df, header, headerRows, rows, cols } = props
-  const startRow = header ? 0 : headerRows
-  const endRow = header ? headerRows : rows
-  const rowArray = []
-  for (let rowIdx = startRow; rowIdx < endRow; rowIdx++) {
-    rowArray.push(
-      <tr key={rowIdx}>
-        <TableRow df={df} rowIdx={rowIdx} cols={cols} />
-      </tr>
-    )
-  }
-  return <React.Fragment>{rowArray}</React.Fragment>
+const TableRows: SFC<TableRowsProps> = props => {
+  const { isHeader, table } = props
+  const { headerRows, rows } = table
+  const startRow = isHeader ? 0 : headerRows
+  const endRow = isHeader ? headerRows : rows
+
+  const tableRows = range(startRow, endRow).map(rowIndex => (
+    <tr key={rowIndex}>
+      <TableRow rowIndex={rowIndex} table={table} />
+    </tr>
+  ))
+
+  return <Fragment>{tableRows}</Fragment>
 }
 
 /**
  * Purely functional component returning a list entries for a row.
  *
- * df     - The dataFrame to display.
- * rowIdx - The row index.
- * cols   - numver of colums in the table.
+ * rowIndex - The row index.
+ * table    - The table to display.
  */
 
-interface TableRowProps {
-  df: ImmutableMap<string, any>
-  rowIdx: number
-  cols: number
+export interface TableRowProps {
+  rowIndex: number
+  table: ArrowTable
 }
 
-const TableRow: React.SFC<TableRowProps> = (props: TableRowProps) => {
-  const { df, rowIdx, cols } = props
-  const entries = []
-  for (let colIdx = 0; colIdx < cols; colIdx++) {
-    const { contents, styles, type } = dataFrameGet(df, colIdx, rowIdx)
-    const formattedContents = toFormattedString(contents)
-    if (type === "corner") {
-      entries.push(<th key={colIdx}>&nbsp;</th>)
-    } else if (type === "row-header") {
-      entries.push(
-        <th key={colIdx} scope="row">
-          {formattedContents}
-        </th>
-      )
-    } else if (type === "col-header") {
-      entries.push(<th key={colIdx}>{formattedContents}</th>)
-    } else if (type === "data") {
-      entries.push(
-        <td style={styles} key={colIdx}>
-          {formattedContents}
-        </td>
-      )
-    } else {
-      throw new Error(`Cannot parse type "${type}".`)
+const TableRow: SFC<TableRowProps> = props => {
+  const { rowIndex, table } = props
+  const { columns } = table
+
+  const cells = range(0, columns).map(columnIndex => {
+    const { classNames, content, id, type } = table.getCell(
+      rowIndex,
+      columnIndex
+    )
+    const formattedContent = toFormattedString(content)
+
+    switch (type) {
+      case "blank": {
+        return <th key={columnIndex} className={classNames}></th>
+      }
+      case "index": {
+        return (
+          <th key={columnIndex} scope="row" className={classNames}>
+            {formattedContent}
+          </th>
+        )
+      }
+      case "columns": {
+        return (
+          <th key={columnIndex} scope="col" id={id} className={classNames}>
+            {formattedContent}
+          </th>
+        )
+      }
+      case "data": {
+        return (
+          <td key={columnIndex} id={id} className={classNames}>
+            {formattedContent}
+          </td>
+        )
+      }
+      default: {
+        throw new Error(`Cannot parse type "${type}".`)
+      }
     }
-  }
-  return <React.Fragment>{entries}</React.Fragment>
+  })
+
+  return <Fragment>{cells}</Fragment>
 }
 
 export default withFullScreenWrapper(Table)

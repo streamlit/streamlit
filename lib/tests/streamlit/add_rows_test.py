@@ -43,7 +43,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
         """DeltaGenerator methods that do not produce named datasets."""
         return [
             lambda df: st.dataframe(df),
-            lambda df: st.table(df),
+            lambda df: st.old_table(df),
             lambda df: st.vega_lite_chart(
                 df, {"mark": "line", "encoding": {"x": "a", "y": "b"}}
             ),

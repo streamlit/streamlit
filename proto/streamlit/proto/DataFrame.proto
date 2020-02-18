@@ -12,7 +12,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
 syntax = "proto3";
 
@@ -85,47 +85,29 @@ message MultiIndex {
 
 // A date represented internally as nano second epoch int64. See:
 // https://pandas.pydata.org/pandas-docs/stable/generated/pandas.DatetimeIndex.html
-message DatetimeIndex {
-  Int64Array data = 1;
-}
+message DatetimeIndex { Int64Array data = 1; }
 
 // A time interval represented internally as nano second epoch int64. See:
 // https://pandas.pydata.org/pandas-docs/stable/generated/pandas.TimedeltaIndex.html
-message TimedeltaIndex {
-  Int64Array data = 1;
-}
+message TimedeltaIndex { Int64Array data = 1; }
 
 // See:
 // https://pandas.pydata.org/pandas-docs/stable/generated/pandas.Int64Index.html
-message Int64Index {
-  Int64Array data = 1;
-}
+message Int64Index { Int64Array data = 1; }
 
 // See:
 // https://pandas.pydata.org/pandas-docs/stable/generated/pandas.Int64Index.html
-message Float64Index {
-  DoubleArray data = 1;
-}
+message Float64Index { DoubleArray data = 1; }
 
-message StringArray {
-  repeated string data = 1;
-}
+message StringArray { repeated string data = 1; }
 
-message DoubleArray {
-  repeated double data = 1;
-}
+message DoubleArray { repeated double data = 1; }
 
-message Int32Array {
-  repeated int32 data = 1;
-}
+message Int32Array { repeated int32 data = 1; }
 
-message Int64Array {
-  repeated int64 data = 1;
-}
+message Int64Array { repeated int64 data = 1; }
 
-message UInt32Array {
-  repeated uint32 data = 1;
-}
+message UInt32Array { repeated uint32 data = 1; }
 
 message CSSStyle {
   string property = 1;
@@ -134,7 +116,7 @@ message CSSStyle {
 
 message CellStyle {
   repeated CSSStyle css = 1;
-  string display_value = 2;       // e.g. '21.96%'
+  string display_value = 2; // e.g. '21.96%'
 
   // The default value for a string field in proto3 is '', so we need
   // this extra bool to indicate the presence of a user-specified
@@ -142,9 +124,7 @@ message CellStyle {
   bool has_display_value = 3;
 }
 
-message CellStyleArray {
-  repeated CellStyle styles = 1;
-}
+message CellStyleArray { repeated CellStyle styles = 1; }
 
 message AnyArray {
   oneof type {
@@ -156,10 +136,6 @@ message AnyArray {
   }
 }
 
-message Table {
-  repeated AnyArray cols = 1;
-}
+message Table { repeated AnyArray cols = 1; }
 
-message TableStyle {
-  repeated CellStyleArray cols = 1;
-}
+message TableStyle { repeated CellStyleArray cols = 1; }

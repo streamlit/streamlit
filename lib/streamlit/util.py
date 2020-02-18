@@ -122,3 +122,10 @@ def _open_browser_with_command(command, url):
 # TODO: Move this into errors.py? Replace with StreamlitAPIException?
 class Error(Exception):
     pass
+
+
+def _maybe_tuple_to_list(item):
+    """Convert a tuple to a list. Leave as is if it's not a tuple."""
+    if isinstance(item, tuple):
+        return list(item)
+    return item

@@ -192,10 +192,7 @@ export class App extends PureComponent<Props, State> {
       const { streamlitVersion: currentStreamlitVersion } = SessionInfo.current
       const { environmentInfo } = initializeMsg
 
-      if (
-        environmentInfo != null &&
-        environmentInfo.streamlitVersion != null
-      ) {
+      if (environmentInfo != null && environmentInfo.streamlitVersion != null) {
         return currentStreamlitVersion < environmentInfo.streamlitVersion
       }
     }
@@ -243,8 +240,7 @@ export class App extends PureComponent<Props, State> {
           this.handleInitialize(initializeMsg),
         sessionStateChanged: (msg: ISessionState) =>
           this.handleSessionStateChanged(msg),
-        sessionEvent: (evtMsg: SessionEvent) =>
-          this.handleSessionEvent(evtMsg),
+        sessionEvent: (evtMsg: SessionEvent) => this.handleSessionEvent(evtMsg),
         newReport: (newReportMsg: NewReport) =>
           this.handleNewReport(newReportMsg),
         delta: (deltaMsg: Delta) =>
@@ -342,10 +338,7 @@ export class App extends PureComponent<Props, State> {
 
         // If the scriptCompileError dialog is open and the report starts
         // running, close it.
-        if (
-          dialog != null &&
-          dialog.type === DialogType.SCRIPT_COMPILE_ERROR
-        ) {
+        if (dialog != null && dialog.type === DialogType.SCRIPT_COMPILE_ERROR) {
           dialog = undefined
         }
       } else if (
@@ -491,16 +484,11 @@ export class App extends PureComponent<Props, State> {
         const simpleElement = reportElement.get("element")
 
         if (simpleElement instanceof List) {
-          const clearedElements = this.clearOldElements(
-            simpleElement,
-            reportId
-          )
+          const clearedElements = this.clearOldElements(simpleElement, reportId)
           return clearedElements.size > 0 ? clearedElements : null
         }
 
-        return reportElement.get("reportId") === reportId
-          ? reportElement
-          : null
+        return reportElement.get("reportId") === reportId ? reportElement : null
       })
       .filter((reportElement: any) => reportElement !== null)
   }
@@ -776,9 +764,7 @@ export class App extends PureComponent<Props, State> {
    * Indicates whether we're connected to the server.
    */
   isServerConnected = (): boolean => {
-    return this.connectionManager
-      ? this.connectionManager.isConnected()
-      : false
+    return this.connectionManager ? this.connectionManager.isConnected() : false
   }
 
   settingsCallback = (): void => {

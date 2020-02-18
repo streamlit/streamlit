@@ -176,6 +176,7 @@ map = _main.map  # noqa: E221
 markdown = _main.markdown  # noqa: E221
 multiselect = _main.multiselect  # noqa: E221
 number_input = _main.number_input  # noqa: E221
+old_table = _main.old_table  # noqa: E221
 plotly_chart = _main.plotly_chart  # noqa: E221
 progress = _main.progress  # noqa: E221
 pyplot = _main.pyplot  # noqa: E221

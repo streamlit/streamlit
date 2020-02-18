@@ -37,7 +37,7 @@ from tests import testutil
 
 class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
     """Tests marshalling of pandas.Styler dataframe styling data
-    with both st.dataframe and st.table.
+    with both st.dataframe and st.old_table.
     """
 
     @parameterized.expand([("dataframe", "data_frame"), ("table", "table")])

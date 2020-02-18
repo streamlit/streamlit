@@ -585,10 +585,10 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.alert.format, Alert.SUCCESS)
 
     def test_st_table(self):
-        """Test st.table."""
+        """Test st.old_table."""
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
 
-        st.table(df)
+        st.old_table(df)
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.table.data.cols[0].int64s.data, [1, 3])
