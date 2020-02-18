@@ -51,25 +51,20 @@ class FileUploader extends React.PureComponent<Props, State> {
     ev: ProgressEvent<FileReader>,
     file: File
   ): Promise<void> => {
-    if (ev.target !== null) {
-      if (ev.target.result instanceof ArrayBuffer) {
-        this.props.widgetStateManager.sendUploadFileMessage(
-          this.props.element.get("id"),
-          file.name,
-          file.lastModified,
-          new Uint8Array(ev.target.result)
-        )
-      } else {
-        const error = "This file is not ArrayBuffer type."
-        console.warn(error)
-        return Promise.reject(error)
-      }
+    if (ev.target === null || !(ev.target.result instanceof ArrayBuffer)) {
+      const error = "This file is not ArrayBuffer type."
+      return Promise.reject(error)
     }
 
+    this.props.widgetStateManager.sendUploadFileMessage(
+      this.props.element.get("id"),
+      file.name,
+      file.lastModified,
+      new Uint8Array(ev.target.result)
+    )
+
     return new Promise(resolve => {
-      this.setState({ status: "UPLOADING" }, () => {
-        resolve()
-      })
+      this.setState({ status: "UPLOADING" }, resolve)
     })
   }
 
@@ -92,10 +87,7 @@ class FileUploader extends React.PureComponent<Props, State> {
       return Promise.reject(errorMessage)
     }
 
-    this.setState({
-      acceptedFiles,
-      status: "READING",
-    })
+    this.setState({ acceptedFiles, status: "READING" })
 
     acceptedFiles.forEach((file: File) => {
       const fileSizeMB = file.size / 1024 / 1024
@@ -136,7 +128,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     }
   }
 
-  reset = (): void => {
+  private reset = (): void => {
     this.setState({
       status: "READY",
       errorMessage: undefined,
@@ -144,7 +136,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     })
   }
 
-  renderErrorMessage = (): React.ReactNode => {
+  private renderErrorMessage = (): React.ReactNode => {
     const { errorMessage } = this.state
     return (
       <div className="uploadStatus uploadError">
@@ -158,7 +150,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     )
   }
 
-  renderUploadingMessage = (): React.ReactNode => {
+  private renderUploadingMessage = (): React.ReactNode => {
     return (
       <div className="uploadStatus uploadProgress">
         <span className="body">
@@ -180,7 +172,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     )
   }
 
-  renderFileUploader = (): React.ReactNode => {
+  private renderFileUploader = (): React.ReactNode => {
     const { status, errorMessage } = this.state
     const { element } = this.props
     const accept: string[] = element
