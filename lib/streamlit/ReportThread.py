@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import threading
-from collections import namedtuple
 
 from streamlit.logger import get_logger
 

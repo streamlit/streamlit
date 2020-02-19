@@ -584,7 +584,6 @@ class CodeHashTest(unittest.TestCase):
         self.assertNotEqual(hash_prog_1(), hash_prog_2())
         self.assertEqual(hash_prog_1(), hash_prog_3())
 
-    @pytest.mark.skipif(sys.version_info < (3,), reason="Requires Python 3.")
     def test_class_referenced(self):
         """Test hash for classes with methods that reference values."""
 
@@ -750,11 +749,8 @@ class CodeHashTest(unittest.TestCase):
         def g(y):
             return tf_session
 
-        # Function with unhashable object raises an error in python 3
-        # In python 2 we fallback to hashing the function name
-        if sys.version_info >= (3, 0):
-            with self.assertRaises(UnhashableType):
-                get_hash(f)
+        with self.assertRaises(UnhashableType):
+            get_hash(f)
 
         hash_funcs = {tf_session_class: id}
 
