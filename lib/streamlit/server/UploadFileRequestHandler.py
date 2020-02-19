@@ -19,6 +19,7 @@ import tornado.httputil
 
 from streamlit.UploadedFileManager import UploadedFile
 from streamlit.logger import get_logger
+from streamlit.server import routes
 
 LOGGER = get_logger(__name__)
 
@@ -38,6 +39,10 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
 
         """
         self._file_mgr = file_mgr
+
+    def set_default_headers(self):
+        if routes.allow_cross_origin_requests():
+            self.set_header("Access-Control-Allow-Origin", "*")
 
     @staticmethod
     def _require_arg(args, name):
