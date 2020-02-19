@@ -22,7 +22,7 @@ import Block from "components/core/Block/"
 import Sidebar from "components/core/Sidebar"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import { FileUploadManager } from "lib/FileUploadManager"
+import { FileUploadClient } from "lib/FileUploadClient"
 
 import { ThemeProvider } from "baseui"
 import { BlockElement } from "lib/DeltaParser"
@@ -54,7 +54,7 @@ interface Props {
 
   widgetMgr: WidgetStateManager
 
-  fileUploadMgr: FileUploadManager
+  uploadClient: FileUploadClient
 
   // Disable the widgets when not connected to the server.
   widgetsDisabled: boolean
@@ -92,7 +92,7 @@ class ReportView extends PureComponent<Props> {
                   }
                   widgetMgr={this.props.widgetMgr}
                   widgetsDisabled={this.props.widgetsDisabled}
-                  fileUploadMgr={this.props.fileUploadMgr}
+                  uploadClient={this.props.uploadClient}
                 />
               </ThemeProvider>
             </div>
@@ -110,7 +110,7 @@ class ReportView extends PureComponent<Props> {
                 }
                 widgetMgr={this.props.widgetMgr}
                 widgetsDisabled={this.props.widgetsDisabled}
-                fileUploadMgr={this.props.fileUploadMgr}
+                uploadClient={this.props.uploadClient}
               />
             </ThemeProvider>
           </div>

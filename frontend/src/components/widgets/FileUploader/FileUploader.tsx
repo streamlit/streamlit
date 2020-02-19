@@ -19,7 +19,7 @@ import axios, { CancelTokenSource } from "axios"
 import { FileUploader as FileUploaderBaseui } from "baseui/file-uploader"
 import Icon from "components/shared/Icon"
 import { Map as ImmutableMap } from "immutable"
-import { FileUploadManager } from "lib/FileUploadManager"
+import { FileUploadClient } from "lib/FileUploadClient"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { fileUploaderOverrides } from "lib/widgetTheme"
 import React from "react"
@@ -30,7 +30,7 @@ export interface Props {
   disabled: boolean
   element: ImmutableMap<string, any>
   widgetStateManager: WidgetStateManager
-  fileUploadMgr: FileUploadManager
+  uploadClient: FileUploadClient
   width: number
 }
 
@@ -90,7 +90,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     this.currentUploadCanceller = axios.CancelToken.source()
     const promises: Promise<void>[] = []
     for (const file of acceptedFiles) {
-      const p = this.props.fileUploadMgr.uploadFile(
+      const p = this.props.uploadClient.uploadFile(
         this.props.element.get("id"),
         file.name,
         file.lastModified,

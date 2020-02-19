@@ -22,7 +22,7 @@ import { BaseUriParts, buildHttpUri } from "lib/UriUtil"
 /**
  * Handles uploading files to the server.
  */
-export class FileUploadManager {
+export class FileUploadClient {
   private readonly getServerUri: () => BaseUriParts | undefined
 
   constructor(getServerUri: () => BaseUriParts | undefined) {

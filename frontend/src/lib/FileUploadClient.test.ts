@@ -17,7 +17,7 @@
 
 import axios, { AxiosRequestConfig } from "axios"
 import MockAdapter from "axios-mock-adapter"
-import { FileUploadManager } from "lib/FileUploadManager"
+import { FileUploadClient } from "lib/FileUploadClient"
 import { SessionInfo } from "lib/SessionInfo"
 import { buildHttpUri } from "lib/UriUtil"
 
@@ -27,7 +27,7 @@ const MOCK_SERVER_URI = {
   basePath: "",
 }
 
-describe("FileUploadManager", () => {
+describe("FileUploadClient", () => {
   let axiosMock: MockAdapter
 
   beforeEach(() => {
@@ -69,7 +69,7 @@ describe("FileUploadManager", () => {
   }
 
   test("uploads files correctly", async () => {
-    const uploader = new FileUploadManager(() => MOCK_SERVER_URI)
+    const uploader = new FileUploadClient(() => MOCK_SERVER_URI)
 
     mockUploadResponseStatus(200)
 
@@ -79,7 +79,7 @@ describe("FileUploadManager", () => {
   })
 
   test("handles errors", async () => {
-    const uploader = new FileUploadManager(() => MOCK_SERVER_URI)
+    const uploader = new FileUploadClient(() => MOCK_SERVER_URI)
 
     mockUploadResponseStatus(400)
 

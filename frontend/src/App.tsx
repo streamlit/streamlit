@@ -56,7 +56,7 @@ import {
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
 import { SessionInfo } from "lib/SessionInfo"
 import { MetricsManager } from "lib/MetricsManager"
-import { FileUploadManager } from "lib/FileUploadManager"
+import { FileUploadClient } from "lib/FileUploadClient"
 import {
   flattenElements,
   hashString,
@@ -103,7 +103,7 @@ export class App extends PureComponent<Props, State> {
   private readonly statusWidgetRef: React.RefObject<StatusWidget>
   private connectionManager: ConnectionManager | null
   private readonly widgetMgr: WidgetStateManager
-  private fileUploadMgr: FileUploadManager
+  private uploadClient: FileUploadClient
   private elementListBuffer: Elements | null
   private elementListBufferTimerIsSet: boolean
 
@@ -138,7 +138,7 @@ export class App extends PureComponent<Props, State> {
     this.widgetMgr = new WidgetStateManager((msg: IBackMsg) => {
       this.sendBackMsg(new BackMsg(msg))
     })
-    this.fileUploadMgr = new FileUploadManager(() => {
+    this.uploadClient = new FileUploadClient(() => {
       return this.connectionManager
         ? this.connectionManager.getBaseUriParts()
         : undefined
@@ -887,7 +887,7 @@ export class App extends PureComponent<Props, State> {
             widgetsDisabled={
               this.state.connectionState !== ConnectionState.CONNECTED
             }
-            fileUploadMgr={this.fileUploadMgr}
+            uploadClient={this.uploadClient}
           />
 
           {dialog}
