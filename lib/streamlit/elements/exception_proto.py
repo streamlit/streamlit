@@ -136,6 +136,8 @@ def _format_syntax_error_message(exception):
 
 def _is_in_streamlit_package(file):
     """True if the given file is part of the streamlit package."""
+    print('XXX', os.path.commonprefix([os.path.realpath(file)]))
+    print('XXX', _streamlit_dir)
     return (
         os.path.commonprefix([os.path.realpath(file), _streamlit_dir]) == _streamlit_dir
     )
