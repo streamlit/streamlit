@@ -26,13 +26,6 @@ import {
 import { Set as ImmutableSet } from "immutable"
 import { Long } from "protobufjs"
 
-/**
- * The maximum size of each file upload chunk, measured in bytes. The default
- * file size allowed by server config is 50MB, but we achieved best results
- * with 10MB.
- */
-const FILE_UPLOAD_MAX_CHUNK_SIZE_BYTES = 10e6 // ~10MB
-
 export interface Source {
   fromUi: boolean
 }
