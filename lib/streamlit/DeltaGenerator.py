@@ -1254,17 +1254,17 @@ class DeltaGenerator(object):
 
         width : int
             Deprecated. If != 0 (default), will show an alert.
-            From now on you should set the width directly in the Altair
-            spec. Please refer to the Altair documentation for details.
+            From now on you should set the width directly in the figure.
+            Please refer to the Plotly documentation for details.
 
         height : int
             Deprecated. If != 0 (default), will show an alert.
-            From now on you should set the height directly in the Altair
-            spec. Please refer to the Altair documentation for details.
+            From now on you should set the height directly in the figure.
+            Please refer to the Plotly documentation for details.
 
         use_container_width : bool
             If True, set the chart width to the column width. This takes
-            precedence over Altair's native `width` value.
+            precedence over the figure's native `width` value.
 
         sharing : {'streamlit', 'private', 'secret', 'public'}
             Use 'streamlit' to insert the plot and all its dependencies
@@ -1315,27 +1315,27 @@ class DeltaGenerator(object):
 
         """
         # NOTE: "figure_or_data" is the name used in Plotly's .plot() method
-        # for their main parameter. I don't like the name, but its best to keep
-        # it in sync with what Plotly calls it.
+        # for their main parameter. I don't like the name, but it's best to
+        # keep it in sync with what Plotly calls it.
         import streamlit.elements.plotly_chart as plotly_chart
 
         if width != 0 and height != 0:
             import streamlit as st
 
             st.warning(
-                "The `width` and `height` arguments in `st.plotly_chart` are deprecated and will be removed on 2020-03-04. To set this values, you should instead use ploty's native arguments as described at https://plot.ly/python/setting-graph-size/"
+                "The `width` and `height` arguments in `st.plotly_chart` are deprecated and will be removed on 2020-03-04. To set these values, you should instead use Plotly's native arguments as described at https://plot.ly/python/setting-graph-size/"
             )
         elif width != 0:
             import streamlit as st
 
             st.warning(
-                "The `width` argument in `st.plotly_chart` is deprecated and will be removed on 2020-03-04. To set the width, you should instead use ploty's native `width` argument as described at https://plot.ly/python/setting-graph-size/"
+                "The `width` argument in `st.plotly_chart` is deprecated and will be removed on 2020-03-04. To set the width, you should instead use Plotly's native `width` argument as described at https://plot.ly/python/setting-graph-size/"
             )
         elif height != 0:
             import streamlit as st
 
             st.warning(
-                "The `height` argument in `st.plotly_chart` is deprecated and will be removed on 2020-03-04. To set the height, you should instead use ploty's native `height` argument as described at https://plot.ly/python/setting-graph-size/"
+                "The `height` argument in `st.plotly_chart` is deprecated and will be removed on 2020-03-04. To set the height, you should instead use Plotly's native `height` argument as described at https://plot.ly/python/setting-graph-size/"
             )
 
         plotly_chart.marshall(
