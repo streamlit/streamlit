@@ -92,8 +92,6 @@ class FileUploader extends React.PureComponent<Props, State> {
     for (const file of acceptedFiles) {
       const p = this.props.uploadClient.uploadFile(
         this.props.element.get("id"),
-        file.name,
-        file.lastModified,
         file,
         undefined,
         this.currentUploadCanceller.token

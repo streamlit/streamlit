@@ -30,13 +30,16 @@ export class FileUploadClient {
   }
 
   /**
-   * Upload a file to the server.
+   * Upload a file to the server. It will be associated with this browser's sessionID.
+   *
+   * @param widgetId: the ID of the FileUploader widget that's doing the upload.
+   * @param file: the file to upload.
+   * @param onUploadProgress: an optional function that will be called repeatedly with progress events during the upload.
+   * @param cancelToken: an optional axios CancelToken that can be used to cancel the in-progress upload.
    */
   public async uploadFile(
     widgetId: string,
-    name: string,
-    lastModified: number,
-    data: Uint8Array | Blob,
+    file: File,
     onUploadProgress?: (progressEvent: any) => void,
     cancelToken?: CancelToken
   ): Promise<void> {
@@ -48,12 +51,8 @@ export class FileUploadClient {
     const form = new FormData()
     form.append("sessionId", SessionInfo.current.sessionId)
     form.append("widgetId", widgetId)
-    form.append("lastModified", lastModified.toString())
-    if (data instanceof Blob) {
-      form.append(name, data)
-    } else {
-      form.append(name, new Blob([data.buffer]))
-    }
+    form.append("lastModified", file.lastModified.toString())
+    form.append(file.name, file)
 
     await axios.request({
       cancelToken: cancelToken,
