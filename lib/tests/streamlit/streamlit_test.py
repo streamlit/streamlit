@@ -14,6 +14,8 @@
 # limitations under the License.
 
 """Streamlit Unit test."""
+from io import BytesIO
+
 from mock import patch
 import json
 import os
@@ -161,6 +163,12 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         st.audio(None)
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.audio.url, "")
+
+        # Test that our other data types don't result in an error.
+        st.audio(b"bytes_data")
+        st.audio("str_data".encode("utf-8"))
+        st.audio(BytesIO(b"bytesio_data"))
+        st.audio(np.array([0, 1, 2, 3]))
 
     def test_st_audio_options(self):
         """Test st.audio with options."""
@@ -673,6 +681,12 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         st.video(None)
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.video.url, "")
+
+        # Test that our other data types don't result in an error.
+        st.video(b"bytes_data")
+        st.video("str_data".encode("utf-8"))
+        st.video(BytesIO(b"bytesio_data"))
+        st.video(np.array([0, 1, 2, 3]))
 
     def test_st_video_options(self):
         """Test st.video with options."""
