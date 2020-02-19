@@ -49,16 +49,6 @@ def _create_widget(id, states):
     return states.widgets[-1]
 
 
-if hasattr(tokenize, "open"):
-    text_utf = "complete! 👨‍🎤"
-    text_no_encoding = text_utf
-    text_latin = "complete! ð\x9f\x91¨â\x80\x8dð\x9f\x8e¤"
-else:
-    text_utf = u"complete! 👨‍🎤"
-    text_no_encoding = u"complete! \xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x8e\xa4"
-    text_latin = text_no_encoding
-
-
 class ScriptRunnerTest(unittest.TestCase):
     def test_startup_shutdown(self):
         """Test that we can create and shut down a ScriptRunner."""
