@@ -220,7 +220,24 @@ class Server(object):
             The file that was just uploaded.
 
         """
-        pass
+        session_info = self._get_session_info(file.session_id)
+        if session_info is not None:
+            session_info.session.request_rerun()
+
+    def _get_session_info(self, session_id):
+        """Return the SessionInfo with the given id, or None if no such
+        session exists.
+
+        Parameters
+        ----------
+        session_id : str
+
+        Returns
+        -------
+        SessionInfo or None
+
+        """
+        return self._session_info_by_id.get(session_id, None)
 
     def start(self, on_started):
         """Start the server.

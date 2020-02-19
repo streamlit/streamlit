@@ -30,6 +30,7 @@ from tornado import gen
 import streamlit.server.Server
 from streamlit import config
 from streamlit.ReportSession import ReportSession
+from streamlit.UploadedFileManager import UploadedFile
 from streamlit.server.Server import MAX_PORT_SEARCH_RETRIES
 from streamlit.ForwardMsgCache import ForwardMsgCache
 from streamlit.ForwardMsgCache import populate_hash_if_needed
@@ -283,6 +284,33 @@ class ServerTest(ServerTestCase):
             # should be evicted from the cache.
             finish_report(True)
             self.assertFalse(is_data_msg_cached())
+
+    @tornado.testing.gen_test
+    def test_uploaded_file_triggers_rerun(self):
+        """Test that uploading a file triggers a re-run in the associated
+        ReportSession."""
+        with self._patch_report_session():
+            yield self.start_server_loop()
+
+            # Connect twice and get associated ReportSessions
+            yield self.ws_connect()
+            yield self.ws_connect()
+            session_info1 = list(self.server._session_info_by_id.values())[0]
+            session_info2 = list(self.server._session_info_by_id.values())[1]
+
+            # "Upload a file" for Session1
+            self.server._uploaded_file_mgr.add_file(
+                UploadedFile(
+                    session_id=session_info1.session.id,
+                    widget_id="widget_id",
+                    name="file.txt",
+                    data=b"file contents",
+                )
+            )
+
+            # Session1 should have a rerun request; Session2 should not
+            session_info1.session.request_rerun.assert_called_once()
+            session_info2.session.request_rerun.assert_not_called()
 
     @staticmethod
     def _create_mock_report_session(*args, **kwargs):
