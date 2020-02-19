@@ -15,16 +15,16 @@
  * limitations under the License.
  */
 
+import axios, { CancelTokenSource } from "axios"
 import { FileUploader as FileUploaderBaseui } from "baseui/file-uploader"
 import Icon from "components/shared/Icon"
 import { Map as ImmutableMap } from "immutable"
+import { FileUploadManager } from "lib/FileUploadManager"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { fileUploaderOverrides } from "lib/widgetTheme"
 import React from "react"
 import { Button, Spinner } from "reactstrap"
-import { FileUploadManager } from "../../../lib/FileUploadManager"
 import "./FileUploader.scss"
-import { logWarning } from "../../../lib/log"
 
 export interface Props {
   disabled: boolean
@@ -41,6 +41,9 @@ interface State {
 }
 
 class FileUploader extends React.PureComponent<Props, State> {
+  /** Used to cancel the current upload, if there is one. */
+  private currentUploadCanceller?: CancelTokenSource
+
   public constructor(props: Props) {
     super(props)
     this.state = {
@@ -48,24 +51,6 @@ class FileUploader extends React.PureComponent<Props, State> {
       errorMessage: undefined,
       acceptedFiles: [],
     }
-  }
-
-  private handleFileRead = (
-    ev: ProgressEvent<FileReader>,
-    file: File
-  ): void => {
-    if (ev.target === null || !(ev.target.result instanceof ArrayBuffer)) {
-      throw new Error("This file is not ArrayBuffer type.")
-    }
-
-    this.props.widgetStateManager.sendUploadFileMessage(
-      this.props.element.get("id"),
-      file.name,
-      file.lastModified,
-      new Uint8Array(ev.target.result)
-    )
-
-    this.setState({ status: "UPLOADING" })
   }
 
   private dropHandler = (
@@ -101,29 +86,40 @@ class FileUploader extends React.PureComponent<Props, State> {
       }
     }
 
-    this.setState({ acceptedFiles, status: "UPLOADING" })
-
     // Upload all the files
+    this.currentUploadCanceller = axios.CancelToken.source()
     const promises: Promise<void>[] = []
     for (const file of acceptedFiles) {
       const p = this.props.fileUploadMgr.uploadFile(
         this.props.element.get("id"),
         file.name,
         file.lastModified,
-        file
+        file,
+        undefined,
+        this.currentUploadCanceller.token
       )
       promises.push(p)
     }
 
+    this.setState({ acceptedFiles, status: "UPLOADING" })
+
     Promise.all(promises)
       .then(() => {
+        this.currentUploadCanceller = undefined
         this.setState({ status: "UPLOADED" })
       })
       .catch(err => {
-        this.setState({
-          status: "ERROR",
-          errorMessage: err ? err.toString() : "Unknown error",
-        })
+        if (axios.isCancel(err)) {
+          // If this was a cancel error, we don't show the user an error -
+          // the cancellation was in response to an action they took
+          this.currentUploadCanceller = undefined
+          this.setState({ status: "UPLOADED" })
+        } else {
+          this.setState({
+            status: "ERROR",
+            errorMessage: err ? err.toString() : "Unknown error",
+          })
+        }
       })
   }
 
@@ -155,20 +151,18 @@ class FileUploader extends React.PureComponent<Props, State> {
         <span className="body">
           <Spinner color="secondary" size="sm" /> Uploading...
         </span>
-        <Button
-          outline
-          size="sm"
-          onClick={() => {
-            this.setState({ status: "UPLOADED", errorMessage: undefined })
-            this.props.widgetStateManager.sendDeleteUploadedFileMessage(
-              this.props.element.get("id")
-            )
-          }}
-        >
+        <Button outline size="sm" onClick={this.cancelCurrentUpload}>
           Cancel
         </Button>
       </div>
     )
+  }
+
+  private cancelCurrentUpload = (): void => {
+    if (this.currentUploadCanceller != null) {
+      this.currentUploadCanceller.cancel()
+      this.currentUploadCanceller = undefined
+    }
   }
 
   private renderFileUploader = (): React.ReactNode => {

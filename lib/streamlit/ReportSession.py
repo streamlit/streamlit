@@ -435,31 +435,6 @@ class ReportSession(object):
 
         self.request_rerun(widget_state)
 
-    def handle_upload_file(self, upload_file):
-        self._uploaded_file_mgr.create_or_clear_file(
-            widget_id=upload_file.widget_id,
-            name=upload_file.name,
-            size=upload_file.size,
-            last_modified=upload_file.lastModified,
-            chunks=upload_file.chunks,
-        )
-
-        self.handle_rerun_script_request(widget_state=self._widget_states)
-
-    def handle_upload_file_chunk(self, upload_file_chunk):
-        progress = self._uploaded_file_mgr.process_chunk(
-            widget_id=upload_file_chunk.widget_id,
-            index=upload_file_chunk.index,
-            data=upload_file_chunk.data,
-        )
-
-        if progress == 1:
-            self.handle_rerun_script_request(widget_state=self._widget_states)
-
-    def handle_delete_uploaded_file(self, delete_uploaded_file):
-        self._uploaded_file_mgr.delete_file(widget_id=delete_uploaded_file.widget_id)
-        self.handle_rerun_script_request(widget_state=self._widget_states)
-
     def handle_stop_script_request(self):
         """Tell the ScriptRunner to stop running its report."""
         self._enqueue_script_request(ScriptRequest.STOP)

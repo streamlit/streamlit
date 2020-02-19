@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import axios from "axios"
+import axios, { CancelToken } from "axios"
 import { SessionInfo } from "lib/SessionInfo"
 import { BaseUriParts, buildHttpUri } from "lib/UriUtil"
 
@@ -37,7 +37,8 @@ export class FileUploadManager {
     name: string,
     lastModified: number,
     data: Uint8Array | Blob,
-    onUploadProgress?: (progressEvent: any) => void
+    onUploadProgress?: (progressEvent: any) => void,
+    cancelToken?: CancelToken
   ): Promise<void> {
     const serverURI = this.getServerUri()
     if (serverURI === undefined) {
@@ -55,6 +56,7 @@ export class FileUploadManager {
     }
 
     await axios.request({
+      cancelToken: cancelToken,
       url: buildHttpUri(serverURI, "upload_file"),
       method: "POST",
       data: form,

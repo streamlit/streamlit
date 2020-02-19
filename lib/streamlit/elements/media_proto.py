@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from streamlit import type_util
 from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
@@ -67,7 +68,7 @@ def _marshall_av_media(proto, data, mimetype):
     Given a string, check if it's a url; if so, send it out without modification.
     Otherwise assume strings are filenames and let any OS errors raise.
 
-    Load data either from file or through bytes-processing methods into a 
+    Load data either from file or through bytes-processing methods into a
     MediaFile object.  Pack proto with generated Tornado-based URL.
     """
     # Audio and Video methods have already checked if this is a URL by this point.
@@ -88,11 +89,11 @@ def _marshall_av_media(proto, data, mimetype):
         pass
     elif isinstance(data, io.BytesIO):
         data.seek(0)
-        data = date.getvalue()
+        data = data.getvalue()
     elif isinstance(data, io.IOBase):
         data.seek(0)
         data = data.read()
-    elif is_type(data, "numpy.ndarray"):
+    elif type_util.is_type(data, "numpy.ndarray"):
         data = data.tobytes()
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
