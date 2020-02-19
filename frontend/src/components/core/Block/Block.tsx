@@ -27,7 +27,7 @@ import { ReportElement, BlockElement, SimpleElement } from "lib/DeltaParser"
 
 // Load (non-lazy) elements.
 import Alert from "components/elements/Alert/"
-import Chart from "components/elements/Chart/"
+// import Chart from "components/elements/Chart/"
 import DocString from "components/elements/DocString/"
 import ErrorBoundary from "components/shared/ErrorBoundary/"
 import FullScreenWrapper from "components/shared/FullScreenWrapper/"
@@ -253,7 +253,7 @@ class Block extends PureComponent<Props> {
       bokehChart: (el: SimpleElement) => (
         <BokehChart element={el} index={index} width={width} />
       ),
-      chart: (el: SimpleElement) => <Chart element={el} width={width} />,
+      // chart: (el: SimpleElement) => <Chart element={el} width={width} />,
       dataFrame: (el: SimpleElement) => (
         <DataFrame element={el} width={width} height={height} />
       ),
