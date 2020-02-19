@@ -22,6 +22,7 @@ import Block from "components/core/Block/"
 import Sidebar from "components/core/Sidebar"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
+import { FileUploadManager } from "lib/FileUploadManager"
 
 import { ThemeProvider } from "baseui"
 import { BlockElement } from "lib/DeltaParser"
@@ -29,7 +30,6 @@ import { mainWidgetTheme, sidebarWidgetTheme } from "lib/widgetTheme"
 
 import "./ReportView.scss"
 import "./Widget.scss"
-import { FileUploadManager } from "../../../lib/FileUploadManager"
 
 interface Elements {
   main: BlockElement

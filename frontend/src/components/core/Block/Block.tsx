@@ -24,6 +24,7 @@ import { WidgetStateManager } from "lib/WidgetStateManager"
 import { makeElementWithInfoText } from "lib/utils"
 import { IForwardMsgMetadata } from "autogen/proto"
 import { ReportElement, BlockElement, SimpleElement } from "lib/DeltaParser"
+import { FileUploadManager } from "lib/FileUploadManager"
 
 // Load (non-lazy) elements.
 import Alert from "components/elements/Alert/"
@@ -38,7 +39,6 @@ import Table from "components/elements/Table/"
 import Text from "components/elements/Text/"
 
 import Maybe from "components/core/Maybe/"
-import { FileUploadManager } from "../../../lib/FileUploadManager"
 
 // Lazy-load elements.
 const Audio = React.lazy(() => import("components/elements/Audio/"))
