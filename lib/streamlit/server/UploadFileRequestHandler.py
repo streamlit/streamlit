@@ -44,6 +44,26 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         if routes.allow_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
 
+    def options(self):
+        """/OPTIONS handler for preflight CORS checks.
+
+        When a browser is making a CORS request, it may sometimes first
+        send an OPTIONS request, to check whether the server understands the
+        CORS protocol. This is optional, and doesn't happen for every request
+        or in every browser. If an OPTIONS request does get sent, and is not
+        then handled by the server, the browser will fail the underlying
+        request.
+
+        The proper way to handle this is to send a 204 response ("no content")
+        with the CORS headers attached. (These headers are automatically added
+        to every outgoing response, including OPTIONS responses,
+        via set_default_headers().)
+
+        See https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request
+        """
+        self.set_status(204)
+        self.finish()
+
     @staticmethod
     def _require_arg(args, name):
         """Return the value of the argument with the given name.
