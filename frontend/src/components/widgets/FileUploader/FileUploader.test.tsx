@@ -20,16 +20,18 @@ import { shallow } from "enzyme"
 import { FileUploader as FileUploaderBaseui } from "baseui/file-uploader"
 import { fromJS } from "immutable"
 import { WidgetStateManager } from "lib/WidgetStateManager"
+import { FileUploadManager } from "lib/FileUploadManager"
 
 import FileUploader, { Props } from "./FileUploader"
 
 jest.mock("lib/WidgetStateManager")
+jest.mock("lib/FileUploadManager")
 
-const blobFile = new File([""], "filename.txt", {
+const blobFile = new File(["Text in a file!"], "filename.txt", {
   type: "text/plain",
   lastModified: 0,
 })
-const sendBackMsg = jest.fn()
+
 const getProps = (elementProps: object = {}): Props => ({
   element: fromJS({
     type: [],
@@ -39,7 +41,8 @@ const getProps = (elementProps: object = {}): Props => ({
   }),
   width: 0,
   disabled: false,
-  widgetStateManager: new WidgetStateManager(sendBackMsg),
+  widgetStateManager: new WidgetStateManager(jest.fn()),
+  fileUploadManager: new FileUploadManager(jest.fn()),
 })
 
 describe("FileUploader widget", () => {
@@ -60,19 +63,14 @@ describe("FileUploader widget", () => {
     expect(wrapper.find("label").text()).toBe(props.element.get("label"))
   })
 
-  it("should change the status drop a File", () => {
+  it("should change status when dropping a File", () => {
     const props = getProps()
     const wrapper = shallow(<FileUploader {...props} />)
     const internalFileUploader = wrapper.find(FileUploaderBaseui)
 
-    const promise = internalFileUploader
-      .props()
-      .onDrop([blobFile], [], null)
-      .then(() => {
-        expect(wrapper.state("status")).toBe("UPLOADING")
-        expect(wrapper.find("div.uploadProgress").length).toBe(1)
-      })
-    expect(wrapper.state("status")).toBe("READING")
+    const promise = internalFileUploader.props().onDrop([blobFile], [], null)
+    expect(wrapper.state("status")).toBe("UPLOADING")
+    expect(wrapper.find("div.uploadProgress").length).toBe(1)
     return promise
   })
 

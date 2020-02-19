@@ -38,6 +38,7 @@ import Table from "components/elements/Table/"
 import Text from "components/elements/Text/"
 
 import Maybe from "components/core/Maybe/"
+import { FileUploadManager } from "../../../lib/FileUploadManager"
 
 // Lazy-load elements.
 const Audio = React.lazy(() => import("components/elements/Audio/"))
@@ -85,6 +86,7 @@ interface Props {
   reportRunState: ReportRunState
   showStaleElementIndicator: boolean
   widgetMgr: WidgetStateManager
+  fileUploadMgr: FileUploadManager
   widgetsDisabled: boolean
 }
 
@@ -136,6 +138,7 @@ class Block extends PureComponent<Props> {
           reportRunState={this.props.reportRunState}
           showStaleElementIndicator={this.props.showStaleElementIndicator}
           widgetMgr={this.props.widgetMgr}
+          fileUploadMgr={this.props.fileUploadMgr}
           widgetsDisabled={this.props.widgetsDisabled}
         />
       </div>
@@ -344,6 +347,7 @@ class Block extends PureComponent<Props> {
           element={el}
           width={width}
           widgetStateManager={widgetProps.widgetMgr}
+          fileUploadManager={this.props.fileUploadMgr}
           disabled={widgetProps.disabled}
         />
       ),

@@ -29,6 +29,7 @@ import { mainWidgetTheme, sidebarWidgetTheme } from "lib/widgetTheme"
 
 import "./ReportView.scss"
 import "./Widget.scss"
+import { FileUploadManager } from "../../../lib/FileUploadManager"
 
 interface Elements {
   main: BlockElement
@@ -52,6 +53,8 @@ interface Props {
   showStaleElementIndicator: boolean
 
   widgetMgr: WidgetStateManager
+
+  fileUploadMgr: FileUploadManager
 
   // Disable the widgets when not connected to the server.
   widgetsDisabled: boolean
@@ -89,6 +92,7 @@ class ReportView extends PureComponent<Props> {
                   }
                   widgetMgr={this.props.widgetMgr}
                   widgetsDisabled={this.props.widgetsDisabled}
+                  fileUploadMgr={this.props.fileUploadMgr}
                 />
               </ThemeProvider>
             </div>
@@ -106,6 +110,7 @@ class ReportView extends PureComponent<Props> {
                 }
                 widgetMgr={this.props.widgetMgr}
                 widgetsDisabled={this.props.widgetsDisabled}
+                fileUploadMgr={this.props.fileUploadMgr}
               />
             </ThemeProvider>
           </div>

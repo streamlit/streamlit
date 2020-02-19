@@ -15,24 +15,27 @@
  * limitations under the License.
  */
 
-import React from "react"
-import Icon from "components/shared/Icon"
-import { Button, Spinner } from "reactstrap"
 import { FileUploader as FileUploaderBaseui } from "baseui/file-uploader"
+import Icon from "components/shared/Icon"
 import { Map as ImmutableMap } from "immutable"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { fileUploaderOverrides } from "lib/widgetTheme"
+import React from "react"
+import { Button, Spinner } from "reactstrap"
+import { FileUploadManager } from "../../../lib/FileUploadManager"
 import "./FileUploader.scss"
+import { logWarning } from "../../../lib/log"
 
 export interface Props {
   disabled: boolean
   element: ImmutableMap<string, any>
   widgetStateManager: WidgetStateManager
+  fileUploadManager: FileUploadManager
   width: number
 }
 
 interface State {
-  status: "READY" | "READING" | "UPLOADING" | "UPLOADED" | "ERROR"
+  status: "READY" | "UPLOADING" | "UPLOADED" | "ERROR"
   errorMessage?: string
   acceptedFiles: File[]
 }
@@ -50,10 +53,9 @@ class FileUploader extends React.PureComponent<Props, State> {
   private handleFileRead = (
     ev: ProgressEvent<FileReader>,
     file: File
-  ): Promise<void> => {
+  ): void => {
     if (ev.target === null || !(ev.target.result instanceof ArrayBuffer)) {
-      const error = "This file is not ArrayBuffer type."
-      return Promise.reject(error)
+      throw new Error("This file is not ArrayBuffer type.")
     }
 
     this.props.widgetStateManager.sendUploadFileMessage(
@@ -63,17 +65,14 @@ class FileUploader extends React.PureComponent<Props, State> {
       new Uint8Array(ev.target.result)
     )
 
-    return new Promise(resolve => {
-      this.setState({ status: "UPLOADING" }, resolve)
-    })
+    this.setState({ status: "UPLOADING" })
   }
 
   private dropHandler = (
     acceptedFiles: File[],
     rejectedFiles: File[],
     event: React.SyntheticEvent<HTMLElement>
-  ): Promise<void[]> => {
-    const promises: Promise<void>[] = []
+  ): void => {
     const { element } = this.props
     const maxSizeMb = element.get("maxUploadSizeMb")
 
@@ -84,40 +83,38 @@ class FileUploader extends React.PureComponent<Props, State> {
         status: "ERROR",
         errorMessage: errorMessage,
       })
-      return Promise.reject(errorMessage)
+
+      return
     }
 
-    this.setState({ acceptedFiles, status: "READING" })
-
-    acceptedFiles.forEach((file: File) => {
-      const fileSizeMB = file.size / 1024 / 1024
-      if (fileSizeMB < maxSizeMb) {
-        const fileReader = new FileReader()
-
-        promises.push(
-          new Promise((resolve, reject) => {
-            fileReader.onerror = () => {
-              fileReader.abort()
-              reject(new DOMException("Problem parsing input file."))
-            }
-
-            fileReader.onload = (ev: ProgressEvent<FileReader>) => {
-              this.handleFileRead(ev, file).then(() => {
-                resolve()
-              })
-            }
-            fileReader.readAsArrayBuffer(file)
-          })
-        )
-      } else {
+    // validate file sizes
+    const maxSizeBytes = maxSizeMb * 1024 * 1024
+    for (const file of acceptedFiles) {
+      if (file.size > maxSizeBytes) {
+        const errorMessage = `The max file size allowed is ${maxSizeMb}MB`
         this.setState({
           status: "ERROR",
-          errorMessage: `The max file size allowed is ${maxSizeMb}MB`,
+          errorMessage: errorMessage,
         })
-      }
-    })
 
-    return Promise.all(promises)
+        return
+      }
+    }
+
+    this.setState({ acceptedFiles, status: "UPLOADING" })
+
+    for (const file of acceptedFiles) {
+      const fileReader = new FileReader()
+      fileReader.onerror = () => {
+        fileReader.abort()
+        logWarning("Problem parsing input file.")
+      }
+
+      fileReader.onload = (ev: ProgressEvent<FileReader>) => {
+        this.handleFileRead(ev, file)
+      }
+      fileReader.readAsArrayBuffer(file)
+    }
   }
 
   public componentDidUpdate(oldProps: Props): void {

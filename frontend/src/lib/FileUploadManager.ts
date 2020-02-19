@@ -36,7 +36,7 @@ export class FileUploadManager {
     widgetId: string,
     name: string,
     lastModified: number,
-    data: Uint8Array | File,
+    data: Uint8Array | Blob,
     onUploadProgress?: (progressEvent: any) => void
   ): Promise<void> {
     const serverURI = this.getServerUri()
@@ -48,7 +48,7 @@ export class FileUploadManager {
     form.append("sessionId", SessionInfo.current.sessionId)
     form.append("widgetId", widgetId)
     form.append("lastModified", lastModified.toString())
-    if (data instanceof File) {
+    if (data instanceof Blob) {
       form.append(name, data)
     } else {
       form.append(name, new Blob([data.buffer]))

@@ -56,6 +56,7 @@ import {
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
 import { SessionInfo } from "lib/SessionInfo"
 import { MetricsManager } from "lib/MetricsManager"
+import { FileUploadManager } from "lib/FileUploadManager"
 import {
   flattenElements,
   hashString,
@@ -98,12 +99,13 @@ declare global {
 }
 
 export class App extends PureComponent<Props, State> {
-  sessionEventDispatcher: SessionEventDispatcher
-  statusWidgetRef: React.RefObject<StatusWidget>
-  connectionManager: ConnectionManager | null
-  widgetMgr: WidgetStateManager
-  elementListBuffer: Elements | null
-  elementListBufferTimerIsSet: boolean
+  private readonly sessionEventDispatcher: SessionEventDispatcher
+  private readonly statusWidgetRef: React.RefObject<StatusWidget>
+  private connectionManager: ConnectionManager | null
+  private readonly widgetMgr: WidgetStateManager
+  private fileUploadMgr: FileUploadManager
+  private elementListBuffer: Elements | null
+  private elementListBufferTimerIsSet: boolean
 
   constructor(props: Props) {
     super(props)
@@ -135,6 +137,11 @@ export class App extends PureComponent<Props, State> {
     this.connectionManager = null
     this.widgetMgr = new WidgetStateManager((msg: IBackMsg) => {
       this.sendBackMsg(new BackMsg(msg))
+    })
+    this.fileUploadMgr = new FileUploadManager(() => {
+      return this.connectionManager
+        ? this.connectionManager.getBaseUriParts()
+        : undefined
     })
     this.elementListBufferTimerIsSet = false
     this.elementListBuffer = null
@@ -768,7 +775,7 @@ export class App extends PureComponent<Props, State> {
   /**
    * Sends a message back to the server.
    */
-  sendBackMsg = (msg: BackMsg): void => {
+  private sendBackMsg = (msg: BackMsg): void => {
     if (this.connectionManager) {
       logMessage(msg)
       this.connectionManager.sendMessage(msg)
@@ -886,6 +893,7 @@ export class App extends PureComponent<Props, State> {
             widgetsDisabled={
               this.state.connectionState !== ConnectionState.CONNECTED
             }
+            fileUploadMgr={this.fileUploadMgr}
           />
 
           {dialog}
