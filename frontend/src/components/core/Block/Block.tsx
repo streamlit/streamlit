@@ -347,7 +347,7 @@ class Block extends PureComponent<Props> {
           element={el}
           width={width}
           widgetStateManager={widgetProps.widgetMgr}
-          fileUploadManager={this.props.fileUploadMgr}
+          fileUploadMgr={this.props.fileUploadMgr}
           disabled={widgetProps.disabled}
         />
       ),

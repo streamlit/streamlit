@@ -30,7 +30,7 @@ export interface Props {
   disabled: boolean
   element: ImmutableMap<string, any>
   widgetStateManager: WidgetStateManager
-  fileUploadManager: FileUploadManager
+  fileUploadMgr: FileUploadManager
   width: number
 }
 
@@ -103,26 +103,28 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     this.setState({ acceptedFiles, status: "UPLOADING" })
 
+    // Upload all the files
+    const promises: Promise<void>[] = []
     for (const file of acceptedFiles) {
-      const fileReader = new FileReader()
-      fileReader.onerror = () => {
-        fileReader.abort()
-        logWarning("Problem parsing input file.")
-      }
-
-      fileReader.onload = (ev: ProgressEvent<FileReader>) => {
-        this.handleFileRead(ev, file)
-      }
-      fileReader.readAsArrayBuffer(file)
+      const p = this.props.fileUploadMgr.uploadFile(
+        this.props.element.get("id"),
+        file.name,
+        file.lastModified,
+        file
+      )
+      promises.push(p)
     }
-  }
 
-  public componentDidUpdate(oldProps: Props): void {
-    // This is the wrong place for this logic! Need to move it somewhere else.
-    const progress = this.props.element.get("progress")
-    if (this.state.status === "UPLOADING" && progress >= 100) {
-      this.setState({ status: "UPLOADED" })
-    }
+    Promise.all(promises)
+      .then(() => {
+        this.setState({ status: "UPLOADED" })
+      })
+      .catch(err => {
+        this.setState({
+          status: "ERROR",
+          errorMessage: err ? err.toString() : "Unknown error",
+        })
+      })
   }
 
   private reset = (): void => {
