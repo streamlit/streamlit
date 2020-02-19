@@ -509,7 +509,6 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         ----------
         session_id : str
             The ReportSession's id string.
-
         """
         if session_id in self._session_info_by_id:
             session_info = self._session_info_by_id[session_id]

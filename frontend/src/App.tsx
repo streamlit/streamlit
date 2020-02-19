@@ -827,12 +827,6 @@ export class App extends PureComponent<Props, State> {
     startRecording(`streamlit-${reportName}-${date}`)
   }
 
-  isScreencastRecording = (): boolean => {
-    const { screenCast } = this.props
-
-    return screenCast.currentState === "RECORDING"
-  }
-
   render(): JSX.Element {
     const outerDivClass = classNames("stApp", {
       "streamlit-embedded": isEmbeddedInIFrame(),
@@ -876,7 +870,7 @@ export class App extends PureComponent<Props, State> {
                 settingsCallback={this.settingsCallback}
                 aboutCallback={this.aboutCallback}
                 screencastCallback={this.screencastCallback}
-                isScreencastRecording={this.isScreencastRecording()}
+                screenCastState={this.props.screenCast.currentState}
               />
             </div>
           </header>

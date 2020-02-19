@@ -25,8 +25,7 @@ import {
   ScreencastDialog,
   VideoRecordedDialog,
 } from "hocs/withScreencast/components"
-
-import "./withScreencast.scss"
+import Countdown from "components/core/Countdown"
 
 export type Steps =
   | "UNSUPPORTED"
@@ -41,7 +40,6 @@ interface WithScreenCastProps {}
 interface WithScreenCastState {
   fileName: string
   recordAudio: boolean
-  countdown: number
   outputBlob?: Blob
   currentState: Steps
 }
@@ -75,7 +73,6 @@ function withScreencast(
 
     state = {
       fileName: "streamlit-screencast",
-      countdown: -1,
       recordAudio: false,
       currentState: "OFF" as Steps,
     }
@@ -109,12 +106,11 @@ function withScreencast(
 
     startRecording = async (): Promise<any> => {
       const { recordAudio } = this.state
-      this.recorder = new ScreenCastRecorder({ recordAudio })
 
+      this.recorder = new ScreenCastRecorder({ recordAudio })
       await this.recorder.initialize()
 
       this.setState({
-        countdown: 3,
         currentState: "COUNTDOWN",
       })
     }
@@ -123,14 +119,13 @@ function withScreencast(
       let outputBlob
       const { currentState } = this.state
 
-      if (this.recorder == null) {
-        // Should never happen.
-        throw new Error("Countdown finished but recorder is null")
+      // We should do nothing if the user try to stop recording when it is not started
+      if (currentState === "OFF" || this.recorder == null) {
+        return
       }
 
       if (currentState === "COUNTDOWN") {
         this.setState({
-          countdown: -1,
           currentState: "OFF",
         })
       }
@@ -143,36 +138,25 @@ function withScreencast(
 
         this.setState({
           outputBlob,
-          countdown: -1,
           currentState: "PREVIEW_FILE",
         })
       }
     }
 
-    onAnimationEnd = async (): Promise<any> => {
-      const { countdown } = this.state
-
+    onCountdownEnd = async (): Promise<any> => {
       if (this.recorder == null) {
         // Should never happen.
         throw new Error("Countdown finished but recorder is null")
       }
 
-      const newCount = countdown - 1
+      const hasStarted = this.recorder.start()
 
-      this.setState({
-        countdown: newCount,
-      })
-
-      if (newCount <= 0) {
-        const hasStarted = this.recorder.start()
-
-        if (hasStarted) {
-          this.setState({
-            currentState: "RECORDING",
-          })
-        } else {
-          this.stopRecording()
-        }
+      if (hasStarted) {
+        this.setState({
+          currentState: "RECORDING",
+        })
+      } else {
+        this.stopRecording()
       }
     }
 
@@ -205,7 +189,6 @@ function withScreencast(
       const {
         outputBlob,
         fileName,
-        countdown,
         recordAudio,
         currentState,
       }: WithScreenCastState = this.state
@@ -227,15 +210,8 @@ function withScreencast(
             />
           )}
 
-          {currentState === "COUNTDOWN" && countdown > 0 && (
-            <div
-              className="countdown"
-              onAnimationEnd={this.onAnimationEnd}
-              key={"frame" + countdown}
-            >
-              {/* The key forces DOM mutations, for animation to restart. */}
-              <span>{countdown}</span>
-            </div>
+          {currentState === "COUNTDOWN" && (
+            <Countdown countdown={3} endCallback={this.onCountdownEnd} />
           )}
 
           {currentState === "PREVIEW_FILE" && outputBlob && (
