@@ -440,8 +440,10 @@ def _server_run_on_save():
 
 @_create_option("server.address")
 def _server_address():
-    """The Address where the server will listen for client and browser
-    connections.
+    """The address where the server will listen for client and browser
+    connections. Use this if you want to bind the server to a specific address.
+    If set, the server will only be accessible from this address, and not from
+    any aliases (like localhost).
 
     Default: (unset)
     """
@@ -450,7 +452,7 @@ def _server_address():
 
 @_create_option("server.port", type_=int)
 def _server_port():
-    """The port where the server will listen for client and browser
+    """The port where the server will listen for browser
     connections.
 
     Default: 8501
