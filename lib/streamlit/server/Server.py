@@ -575,14 +575,7 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
             msg.ParseFromString(payload)
             msg_type = msg.WhichOneof("type")
 
-            if msg_type == "upload_file_chunk":
-                LOGGER.debug(
-                    "Received the following upload_file_chunk back message:\nfile_uploaded {\n   widget_id: %s\n   index: %s\n   data: #####\n}",
-                    msg.upload_file_chunk.widget_id,
-                    msg.upload_file_chunk.index,
-                )
-            else:
-                LOGGER.debug("Received the following back message:\n%s", msg)
+            LOGGER.debug("Received the following back message:\n%s", msg)
 
             if msg_type == "cloud_upload":
                 yield self._session.handle_save_request(self)

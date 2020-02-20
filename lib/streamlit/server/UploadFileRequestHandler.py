@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Dict, Any
 
 import tornado.web
 import tornado.httputil
@@ -84,8 +85,8 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         return arg[0].decode("utf-8")
 
     def post(self):
-        args = {}
-        files = {}
+        args = {}  # type: Dict[str, str]
+        files = {}  # type: Dict[str, Any]
 
         tornado.httputil.parse_body_arguments(
             content_type=self.request.headers["Content-Type"],
