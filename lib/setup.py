@@ -1,16 +1,21 @@
+import os
 import platform
 import setuptools
 import subprocess
+import sys
 
 from pipenv.project import Project
 from pipenv.utils import convert_deps_to_pip
-from sys import version_info
+from setuptools.command.install import install
+
+# circleci.py version
+VERSION = "0.56.1"  # PEP-440
 
 pipfile = Project(chdir=False).parsed_pipfile
 
 # Combine [packages] with either [python3] or [python2]
 packages = pipfile["packages"].copy()
-if version_info.major == 2:
+if sys.version_info.major == 2:
     packages.update(pipfile["python2"])
 else:
     packages.update(pipfile["python3"])
@@ -35,9 +40,29 @@ def readme():
         return f.read()
 
 
+class VerifyVersionCommand(install):
+    """Custom command to verify that the git tag matches our version"""
+    description = 'verify that the git tag matches our version'
+
+    def run(self):
+        tag = os.getenv('CIRCLE_TAG')
+
+        # TODO the tag should include a date
+        # so we'll need to update the version above to include a date
+
+        # TODO what about regular deploys with no tag, we need to disable this?
+
+        # TODO what about tags for releases?
+        if tag != VERSION:
+            info = "Git tag: {0} does not match the version of this app: {1}".format(
+                tag, VERSION
+            )
+            sys.exit(info)
+
+
 setuptools.setup(
-    name="streamlit",
-    version="0.56.0",  # PEP-440
+    name="streamlit", # TODO use streamlit-nightly
+    version=VERSION,
     description="Frontend library for machine learning engineers",
     long_description=readme(),
     url="https://streamlit.io",
@@ -55,4 +80,7 @@ setuptools.setup(
     # - streamlit version
     # - streamlit hello
     scripts=["bin/streamlit.cmd"],
+    cmdclass={
+        'verify': VerifyVersionCommand,
+    }
 )

@@ -9,6 +9,17 @@ workflows:
     jobs:
       - python-3.5 # Oldest supported Python minor version.
       - python-3.8 # Latest supported Python minor version.
+          filters:
+            tags:
+              only: /[0-9]+(\.[0-9]+)\.dev[0-9]+/  # 0.55.1.dev20201129
+      - nightly-release:
+          requires:
+            - python-3.8
+          filters:
+            tags:
+              only: /[0-9]+(\.[0-9]+)\.dev[0-9]+/
+            branches:
+              ignore: /.*/
       - cypress-approval:
           type: approval
           requires:
@@ -17,7 +28,37 @@ workflows:
           requires:
             - cypress-approval
 
+  create-nightly-tag:
+    jobs:
+      - create-tag
+
 jobs:
+  create-tag:
+    docker:
+      - image: circleci/python:3.8.1
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout:
+          name: Checkout Streamlit code
+
+      - run:
+          name: Create tag
+          command: |
+            # needs to read the current version from somewhere
+            #   get it from setup.py ?
+            # ? automatically increment the number ?
+            # add todays date to the version
+            #
+            # update setup.py with the version
+            # commit setup.py somewhere
+            #   to develop? new branch?
+            #   can we commit directly to a tag without it going to a branch?
+            export TAG = 0.57.1.dev20200219
+            git tag -a $TAG -m "Streamlit nightly $TAG"
+            git push origin $TAG
+
   python-3.8: &job-template
     docker:
       - image: circleci/python:3.8.1
@@ -294,6 +335,100 @@ jobs:
     <<: *job-template
     docker:
       - image: circleci/python:3.5.9
+
+  nightly-release:
+    docker:
+      - image: circleci/python:3.8.1
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout:
+          name: Checkout Streamlit code
+
+      #################################################################
+      # Pre Cache Steps
+      #################################################################
+      - run:
+          <<: *get_make_checksum
+
+      - run:
+          <<: *get_dot_checksum
+
+      - run:
+          <<: *create_python_cache_key
+
+      - run:
+          <<: *create_yarn_cache_key
+
+      #################################################################
+      # Restore from cache
+      #################################################################
+      - restore_cache:
+          <<: *restore_virtualenv
+
+      - restore_cache:
+          <<: *restore_nvm
+
+      - restore_cache:
+          <<: *restore_make
+
+      - restore_cache:
+          <<: *restore_dot
+
+      #################################################################
+      # Pre Make commands
+      #################################################################
+      - run:
+          <<: *install_make
+
+      - run:
+          <<: *install_dot
+
+      - run:
+          <<: *install_nodejs
+
+      - run:
+          <<: *activate_virtualenv
+
+      - run:
+          <<: *make_develop
+
+      - run:
+          <<: *generate_protobufs
+
+      - run:
+          name: Make SCSS vars
+          command: |
+            make scssvars
+
+      # TODO what steps are different above for making a build?
+
+      - run:
+          name: verify git tag vs. version
+          command: |
+            cd lib
+            python setup.py verify
+
+      - run:
+          name: init .pypirc
+          command: |
+            cd lib
+            echo -e "[pypi]" >> ~/.pypirc
+            echo -e "username = jrhone" >> ~/.pypirc
+            echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
+
+      - run:
+          name: create packages
+          command: |
+            make frontend
+            make wheel
+
+      - run:
+          name: upload to pypi
+          command: |
+            cd lib
+            twine upload dist/*
 
   cypress:
     docker:
