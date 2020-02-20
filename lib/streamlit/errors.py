@@ -27,7 +27,9 @@ class NoSessionContext(Exception):
 
 
 class MarkdownFormattedException(Exception):
-    """Instances of this class can use markdown in their messages, which will get
+    """Exceptions with Markdown in their description.
+
+    Instances of this class can use markdown in their messages, which will get
     nicely formatted on the frontend.
     """
 
