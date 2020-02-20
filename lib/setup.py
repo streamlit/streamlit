@@ -42,10 +42,11 @@ def readme():
 
 class VerifyVersionCommand(install):
     """Custom command to verify that the git tag matches our version"""
-    description = 'verify that the git tag matches our version'
+
+    description = "verify that the git tag matches our version"
 
     def run(self):
-        tag = os.getenv('CIRCLE_TAG')
+        tag = os.getenv("CIRCLE_TAG")
 
         # TODO the tag should include a date
         # so we'll need to update the version above to include a date
@@ -61,7 +62,7 @@ class VerifyVersionCommand(install):
 
 
 setuptools.setup(
-    name="streamlit", # TODO use streamlit-nightly
+    name="streamlit",  # TODO use streamlit-nightly
     version=VERSION,
     description="Frontend library for machine learning engineers",
     long_description=readme(),
@@ -80,7 +81,5 @@ setuptools.setup(
     # - streamlit version
     # - streamlit hello
     scripts=["bin/streamlit.cmd"],
-    cmdclass={
-        'verify': VerifyVersionCommand,
-    }
+    cmdclass={"verify": VerifyVersionCommand,},
 )
