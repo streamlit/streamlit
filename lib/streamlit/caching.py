@@ -31,8 +31,9 @@ import shutil
 import struct
 import textwrap
 import threading
+import types
 from collections import namedtuple
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import streamlit as st
 from streamlit.util import functools_wraps
@@ -269,7 +270,7 @@ def _write_to_disk_cache(key, value):
 
 
 def _read_from_cache(
-    key, persisted, allow_output_mutation, func_or_code, message_opts, hash_funcs
+    key, persisted, allow_output_mutation, func_or_code, hash_funcs=None
 ):
     """
     Read the value from the cache. Our goal is to read from memory
@@ -290,7 +291,7 @@ def _read_from_cache(
         raise e
 
 
-def _write_to_cache(key, value, persist, allow_output_mutation, hash_funcs):
+def _write_to_cache(key, value, persist, allow_output_mutation, hash_funcs=None):
     _write_to_mem_cache(key, value, allow_output_mutation, hash_funcs)
     if persist:
         _write_to_disk_cache(key, value)
@@ -433,10 +434,9 @@ def cache(
             key = hasher.hexdigest()
             LOGGER.debug("Cache key: %s", key)
 
-            caller_frame = inspect.currentframe().f_back
             try:
                 return_value = _read_from_cache(
-                    key, persist, allow_output_mutation, func, caller_frame, hash_funcs
+                    key, persist, allow_output_mutation, func, hash_funcs
                 )
                 LOGGER.debug("Cache hit: %s", func)
             except CacheKeyNotFoundError:
@@ -509,8 +509,9 @@ class Cache(Dict[Any, Any]):
 
         dict.__init__(self)
 
-    def has_changes(self):
+    def has_changes(self) -> bool:
         current_frame = inspect.currentframe()
+        assert current_frame is not None
         caller_frame = current_frame.f_back
 
         current_file = inspect.getfile(current_frame)
@@ -522,6 +523,7 @@ class Cache(Dict[Any, Any]):
         frameinfo = inspect.getframeinfo(caller_frame)
         filename, caller_lineno, _, code_context, _ = frameinfo
 
+        assert code_context is not None
         code_context = code_context[0]
 
         context_indent = len(code_context) - len(code_context.lstrip())
@@ -558,11 +560,7 @@ class Cache(Dict[Any, Any]):
 
         try:
             value, _ = _read_from_cache(
-                key,
-                self._persist,
-                self._allow_output_mutation,
-                code,
-                [caller_lineno + 1, caller_lineno + len(lines)],
+                key, self._persist, self._allow_output_mutation, code, None
             )
             self.update(value)
         except CacheKeyNotFoundError:

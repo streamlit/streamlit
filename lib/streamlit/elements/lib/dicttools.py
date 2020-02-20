@@ -17,9 +17,12 @@
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
+
 from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
+
+from typing import Any, Dict, Optional
 
 
 def _unflatten_single_dict(flat_dict):
@@ -59,11 +62,11 @@ def _unflatten_single_dict(flat_dict):
         A tree made of dicts inside of dicts.
 
     """
-    out = dict()
+    out = dict()  # type: Dict[str, Any]
     for pathstr, v in flat_dict.items():
         path = pathstr.split("_")
 
-        prev_dict = None
+        prev_dict = None  # type: Optional[Dict[str, Any]]
         curr_dict = out
 
         for k in path:
@@ -72,7 +75,8 @@ def _unflatten_single_dict(flat_dict):
             prev_dict = curr_dict
             curr_dict = curr_dict[k]
 
-        prev_dict[k] = v
+        if prev_dict is not None:
+            prev_dict[k] = v
 
     return out
 
@@ -122,17 +126,11 @@ def unflatten(flat_dict, encodings=None):
 
     for k, v in list(out_dict.items()):
         # Unflatten child dicts:
-        if type(v) in (
-            dict,
-            native_dict,
-        ):  # noqa: F821 pylint:disable=undefined-variable
+        if isinstance(v, dict):
             v = unflatten(v, encodings)
         elif hasattr(v, "__iter__"):
             for i, child in enumerate(v):
-                if type(child) in (
-                    dict,
-                    native_dict,
-                ):  # noqa: F821 pylint:disable=undefined-variable
+                if isinstance(child, dict):
                     v[i] = unflatten(child, encodings)
 
         # Move items into 'encoding' if needed:

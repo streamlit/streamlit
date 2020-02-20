@@ -19,9 +19,9 @@ from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
 
-# flake8: noqa
 import re
 import urllib
+from typing import Optional
 
 # Regular expression for process_gitblob_url
 _GITBLOB_RE = re.compile(
@@ -32,7 +32,7 @@ _GITBLOB_RE = re.compile(
 )
 
 
-def process_gitblob_url(url):
+def process_gitblob_url(url: str) -> str:
     """Check url to see if it describes a GitHub Gist "blob" URL.
 
     If so, returns a new URL to get the "raw" script.
@@ -57,7 +57,7 @@ def process_gitblob_url(url):
     return url
 
 
-def get_hostname(url):
+def get_hostname(url: str) -> Optional[str]:
     """Return the hostname of a URL (with or without protocol)."""
     # Just so urllib can parse the URL, make sure there's a protocol.
     # (The actual protocol doesn't matter to us)

@@ -17,6 +17,7 @@ import base58
 import copy
 import os
 import uuid
+from typing import Any, Dict
 
 from streamlit import config
 from streamlit.ReportQueue import ReportQueue
@@ -90,12 +91,11 @@ class Report(object):
         # this queue and delivers its contents to the browser.
         self._browser_queue = ReportQueue()
 
-        self.report_id = None
         self.generate_new_id()
 
         self.command_line = command_line
 
-    def get_debug(self):
+    def get_debug(self) -> Dict[str, Dict[str, Any]]:
         return {"master queue": self._master_queue.get_debug()}
 
     def enqueue(self, msg):
@@ -129,10 +129,9 @@ class Report(object):
         """
         return self._browser_queue.flush()
 
-    def generate_new_id(self):
+    def generate_new_id(self) -> None:
         """Randomly generate an ID representing this report's execution."""
-        # Convert to str for Python2
-        self.report_id = str(base58.b58encode(uuid.uuid4().bytes).decode("utf-8"))
+        self.report_id = base58.b58encode(uuid.uuid4().bytes).decode()
 
     def serialize_running_report_to_files(self):
         """Return a running report as an easily-serializable list of tuples.

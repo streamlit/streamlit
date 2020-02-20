@@ -17,6 +17,7 @@
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
+
 from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
@@ -51,6 +52,7 @@ _section_descriptions = collections.OrderedDict(
 
 # Stores the config options as key value pairs in an ordered dict to be able
 # to show the config params help in the same order they were included.
+# TODO(nate): Change type annotation to OrderedDict once Python 3.7 is required.
 _config_options = collections.OrderedDict()  # type: Dict[str, ConfigOption]
 
 # Makes sure we only parse the config file once.
@@ -828,7 +830,7 @@ def _maybe_read_env_variable(value):
         variable.
 
     """
-    if isinstance(value, string_types) and value.startswith("env:"):  # noqa F821
+    if isinstance(value, str) and value.startswith("env:"):
         var_name = value[len("env:") :]
         env_var = os.environ.get(var_name)
 
