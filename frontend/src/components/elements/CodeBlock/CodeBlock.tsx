@@ -16,7 +16,7 @@
  */
 
 import Prism from "prismjs"
-import React from "react"
+import React, { PureComponent, ReactNode } from "react"
 
 // Prism language definition files.
 // These must come after the prismjs import because they modify Prism.languages
@@ -32,7 +32,7 @@ import "prismjs/components/prism-c"
 import CopyButton from "./CopyButton"
 import "./CodeBlock.scss"
 
-interface Props {
+export interface Props {
   width: number
   language?: string
   value: string
@@ -41,8 +41,8 @@ interface Props {
 /**
  * Renders a code block with syntax highlighting, via Prismjs
  */
-class CodeBlock extends React.PureComponent<Props> {
-  public render(): React.ReactNode {
+class CodeBlock extends PureComponent<Props> {
+  public render(): ReactNode {
     if (this.props.language == null) {
       return (
         <div className="stCodeBlock">
