@@ -24,6 +24,7 @@ setup_2_3_shims(globals())
 import datetime
 import re
 import textwrap
+from typing import Any, Callable, Optional
 
 from streamlit.logger import get_logger
 
@@ -156,7 +157,7 @@ class ConfigOption(object):
         self.default_val = default_val
         self.deprecated = deprecated
         self.replaced_by = replaced_by
-        self._get_val_func = None
+        self._get_val_func = None  # type: Optional[Callable[[], Any]]
         self.where_defined = ConfigOption.DEFAULT_DEFINITION
         self.type = type_
 
@@ -198,8 +199,10 @@ class ConfigOption(object):
         return self
 
     @property
-    def value(self):
+    def value(self) -> Any:
         """Get the value of this config option."""
+        if self._get_val_func is None:
+            return None
         return self._get_val_func()
 
     def set_value(self, value, where_defined=None):
@@ -271,8 +274,9 @@ class ConfigOption(object):
         return now > expiration_date
 
 
-def _parse_yyyymmdd_str(date_str):
-    return datetime.datetime(*[int(token) for token in date_str.split("-")])
+def _parse_yyyymmdd_str(date_str: str) -> datetime.datetime:
+    year, month, day = [int(token) for token in date_str.split("-", 2)]
+    return datetime.datetime(year, month, day)
 
 
 class Error(Exception):

@@ -50,7 +50,8 @@ class ScriptRequestQueue(object):
 
     def __init__(self):
         self._lock = threading.Lock()
-        self._queue = deque()
+        # TODO(nate): Switch to Deque[Tuple[ScriptRequest, Any]] when 3.6 is required.
+        self._queue = deque()  # type: ignore[var-annotated]
 
     @property
     def has_request(self):

@@ -23,6 +23,7 @@ import re
 
 from validators import url
 
+from streamlit import type_util
 from streamlit.proto import Video_pb2
 from streamlit.MediaFileManager import media_file_manager
 
@@ -73,7 +74,7 @@ def _marshall_av_media(proto, data, mimetype):
     """
     # Audio and Video methods have already checked if this is a URL by this point.
 
-    if isinstance(data, string_types):
+    if isinstance(data, str):
         # Assume it's a filename or blank.  Allow OS-based file errors.
         with open(data, "rb") as fh:
             this_file = media_file_manager.add(fh.read(), mimetype)
@@ -90,7 +91,7 @@ def _marshall_av_media(proto, data, mimetype):
     elif isinstance(data, io.BytesIO):
         data.seek(0)
         data = data.getvalue()
-    elif isinstance(data, io.IOBase):
+    elif isinstance(data, io.RawIOBase):
         data.seek(0)
         data = data.read()
     elif type_util.is_type(data, "numpy.ndarray"):
@@ -126,7 +127,7 @@ def marshall_video(proto, data, mimetype="video/mp4", start_time=0):
     # "type" distinguishes between YouTube and non-YouTube links
     proto.type = Video_pb2.Video.Type.NATIVE
 
-    if isinstance(data, string_types) and url(data):  # noqa: F821
+    if isinstance(data, str) and url(data):
         youtube_url = _reshape_youtube_url(data)
         if youtube_url:
             proto.url = youtube_url
@@ -158,7 +159,7 @@ def marshall_audio(proto, data, mimetype="audio/wav", start_time=0):
 
     proto.start_time = start_time
 
-    if isinstance(data, string_types) and url(data):  # noqa: F821
+    if isinstance(data, str) and url(data):
         proto.url = data
 
     else:
