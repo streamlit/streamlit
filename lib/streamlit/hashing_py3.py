@@ -20,6 +20,8 @@ import dis
 import importlib
 import inspect
 import textwrap
+import types
+from typing import Optional, Union
 
 from streamlit.errors import UserHashError
 
@@ -67,7 +69,8 @@ def _get_failing_lines(code, lineno):
 
 
 def get_referenced_objects(code, context):
-    tos = None  # top of the stack
+    # tos = Top of the stack.
+    tos = None  # type: Optional[Union[str, types.ModuleType]]
     lineno = None
     refs = []
 

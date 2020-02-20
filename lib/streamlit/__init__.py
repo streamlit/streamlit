@@ -68,7 +68,7 @@ import uuid as _uuid
 import subprocess
 import platform
 import os
-from typing import Any, Tuple, Type
+from typing import Any, List, Tuple, Type
 
 # This used to be pkg_resources.require('streamlit') but it would cause
 # pex files to fail. See #394 for more details.
@@ -116,8 +116,9 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto import BlockPath_pb2 as _BlockPath_pb2
 from streamlit.util import functools_wraps as _functools_wraps
 
-# Modules that the user should have access to.
-from streamlit.caching import cache  # noqa: F401
+# Modules that the user should have access to. These are imported with "as"
+# syntax pass mypy checking with implicit_reexport disabled.
+from streamlit.caching import cache as cache  # noqa: F401
 
 # This is set to True inside cli._main_run(), and is False otherwise.
 # If False, we should assume that DeltaGenerator functions are effectively
@@ -357,7 +358,7 @@ def write(*args, **kwargs):
     unsafe_allow_html = kwargs.get("unsafe_allow_html", False)
 
     try:
-        string_buffer = []
+        string_buffer = []  # type: List[str]
 
         def flush_buffer():
             if string_buffer:
@@ -368,7 +369,7 @@ def write(*args, **kwargs):
 
         for arg in args:
             # Order matters!
-            if isinstance(arg, string_types):  # noqa: F821
+            if isinstance(arg, str):
                 string_buffer.append(arg)
             elif _type_util.is_dataframe_like(arg):
                 flush_buffer()
@@ -406,7 +407,7 @@ def write(*args, **kwargs):
                 flush_buffer()
                 dot = vis_utils.model_to_dot(arg)
                 graphviz_chart(dot.to_string())
-            elif (type(arg) in dict_types) or (isinstance(arg, list)):  # noqa: F821
+            elif isinstance(arg, (dict, list)):
                 flush_buffer()
                 json(arg)
             elif _type_util.is_namedtuple(arg):
@@ -464,8 +465,11 @@ def show(*args):
         import inspect
 
         # Get the calling line of code
-        previous_frame = inspect.currentframe().f_back
-        lines = inspect.getframeinfo(previous_frame)[3]
+        current_frame = inspect.currentframe()
+        if current_frame is None:
+            warning("`show` not enabled in the shell")
+            return
+        lines = inspect.getframeinfo(current_frame.f_back)[3]
 
         if not lines:
             warning("`show` not enabled in the shell")
@@ -505,8 +509,6 @@ def spinner(text="In progress..."):
 
     """
     import streamlit.caching as caching
-
-    display_message_lock = None
 
     # @st.cache optionally uses spinner for long-running computations.
     # Normally, streamlit warns the user when they call st functions
@@ -559,31 +561,27 @@ def echo():
     code = empty()  # noqa: F821
     try:
         frame = _traceback.extract_stack()[-3]
-        if _is_running_py3():
-            filename, start_line = frame.filename, frame.lineno
-        else:
-            filename, start_line = frame[:2]
+        filename, start_line = frame.filename, frame.lineno
         yield
         frame = _traceback.extract_stack()[-3]
-        if _is_running_py3():
-            end_line = frame.lineno
-        else:
-            end_line = frame[1]
-        lines_to_display = []
+        end_line = frame.lineno
+        lines_to_display = []  # type: List[str]
         with _source_util.open_python_file(filename) as source_file:
             source_lines = source_file.readlines()
             lines_to_display.extend(source_lines[start_line:end_line])
-            initial_spaces = _SPACES_RE.match(lines_to_display[0]).end()
+            match = _SPACES_RE.match(lines_to_display[0])
+            initial_spaces = match.end() if match else 0
             for line in source_lines[end_line:]:
-                indentation = _SPACES_RE.match(line).end()
+                match = _SPACES_RE.match(line)
+                indentation = match.end() if match else 0
                 # The != 1 is because we want to allow '\n' between sections.
                 if indentation != 1 and indentation < initial_spaces:
                     break
                 lines_to_display.append(line)
-        lines_to_display = _textwrap.dedent("".join(lines_to_display))
-        code.code(lines_to_display, "python")
+        line_to_display = _textwrap.dedent("".join(lines_to_display))
+        code.code(line_to_display, "python")
 
-    except FileNotFoundError as err:  # noqa: F821
+    except FileNotFoundError as err:
         code.warning("Unable to display code. %s" % err)
 
 

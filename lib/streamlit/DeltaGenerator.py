@@ -81,7 +81,7 @@ def _wraps_with_cleaned_sig(wrapped, num_args_to_remove):
     args_to_remove = (None,) * num_args_to_remove
     fake_wrapped = functools.partial(wrapped, *args_to_remove)
     fake_wrapped.__doc__ = wrapped.__doc__
-    fake_wrapped.__name__ = wrapped.__name__
+    fake_wrapped.__name__ = wrapped.__name__  # type: ignore[attr-defined]
     fake_wrapped.__module__ = wrapped.__module__
 
     return functools.wraps(fake_wrapped)
@@ -607,7 +607,7 @@ class DeltaGenerator(object):
         """
         import streamlit as st
 
-        if not isinstance(body, string_types):
+        if not isinstance(body, str):
             try:
                 body = json.dumps(body, default=lambda o: str(type(o)))
             except TypeError as err:
@@ -2075,7 +2075,7 @@ class DeltaGenerator(object):
         """
         from streamlit.string_util import is_binary_string
 
-        if isinstance(type, string_types):  # noqa: F821
+        if isinstance(type, str):
             type = [type]
 
         element.file_uploader.label = label

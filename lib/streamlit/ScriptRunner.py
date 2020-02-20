@@ -378,14 +378,14 @@ def _clean_problem_modules():
     if "keras" in sys.modules:
         try:
             keras = sys.modules["keras"]
-            keras.backend.clear_session()
+            keras.backend.clear_session()  # type: ignore[attr-defined]
         except:
             pass
 
     if "matplotlib.pyplot" in sys.modules:
         try:
             plt = sys.modules["matplotlib.pyplot"]
-            plt.close("all")
+            plt.close("all")  # type: ignore[attr-defined]
         except:
             pass
 

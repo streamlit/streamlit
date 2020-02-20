@@ -26,6 +26,8 @@ setup_2_3_shims(globals())
 from streamlit import config as _config
 
 import os
+from typing import Optional
+
 import click
 
 import streamlit
@@ -76,7 +78,7 @@ def _convert_config_option_to_click_option(config_option):
 
 def configurator_options(func):
     """Decorator that adds config param keys to click dynamically."""
-    for _, value in reversed(_config._config_options.items()):
+    for _, value in reversed(_config._config_options.items()):  # type: ignore[call-overload]
         parsed_parameter = _convert_config_option_to_click_option(value)
         config_option = click.option(
             parsed_parameter["option"],
@@ -236,10 +238,13 @@ def main_run(target, args=None, **kwargs):
 
 
 # Utility function to compute the command line as a string
-def _get_command_line_as_string():
+def _get_command_line_as_string() -> Optional[str]:
     import subprocess
 
-    cmd_line_as_list = [click.get_current_context().parent.command_path]
+    parent = click.get_current_context().parent
+    if parent is None:
+        return None
+    cmd_line_as_list = [parent.command_path]
     cmd_line_as_list.extend(click.get_os_args())
     return subprocess.list2cmdline(cmd_line_as_list)
 
@@ -258,26 +263,6 @@ def _main_run(file, args=[]):
         click.echo(NEW_VERSION_TEXT)
 
     bootstrap.run(file, command_line, args)
-
-
-# DEPRECATED
-
-# TODO: Remove after 2019-09-01
-@main.command("clear_cache", deprecated=True, hidden=True)
-@click.pass_context
-def main_clear_cache(ctx):
-    """Deprecated."""
-    click.echo(click.style('Use "cache clear" instead.', fg="red"))
-    ctx.invoke(cache_clear)
-
-
-# TODO: Remove after 2019-09-01
-@main.command("show_config", deprecated=True, hidden=True)
-@click.pass_context
-def main_show_config(ctx):
-    """Deprecated."""
-    click.echo(click.style('Use "config show" instead.', fg="red"))
-    ctx.invoke(config_show)
 
 
 # SUBCOMMAND: cache

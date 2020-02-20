@@ -15,6 +15,8 @@
 
 """Server related utility functions"""
 
+from typing import Callable, List, Optional, Union
+
 from streamlit import config
 from streamlit import net_util
 from streamlit import type_util
@@ -111,7 +113,7 @@ def is_url_from_allowed_origins(url):
 
     hostname = url_util.get_hostname(url)
 
-    allowed_domains = [
+    allowed_domains = [  # List[Union[str, Callable[[], Optional[str]]]]
         # Check localhost first.
         "localhost",
         "0.0.0.0",
@@ -127,7 +129,7 @@ def is_url_from_allowed_origins(url):
     ]
 
     for allowed_domain in allowed_domains:
-        if type_util.is_function(allowed_domain):
+        if callable(allowed_domain):
             allowed_domain = allowed_domain()
 
         if allowed_domain is None:
@@ -139,14 +141,16 @@ def is_url_from_allowed_origins(url):
     return False
 
 
-def _get_server_address_if_manually_set():
+def _get_server_address_if_manually_set() -> Optional[str]:
     if config.is_manually_set("browser.serverAddress"):
         return url_util.get_hostname(config.get_option("browser.serverAddress"))
+    return None
 
 
-def _get_s3_url_host_if_manually_set():
+def _get_s3_url_host_if_manually_set() -> Optional[str]:
     if config.is_manually_set("s3.url"):
         return url_util.get_hostname(config.get_option("s3.url"))
+    return None
 
 
 def make_url_path_regex(*path, **kwargs):
