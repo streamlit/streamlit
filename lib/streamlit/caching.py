@@ -34,15 +34,18 @@ import threading
 from collections import namedtuple
 from typing import Any, Dict
 
-import streamlit as st
-from streamlit.util import functools_wraps
 from streamlit import config
 from streamlit import file_util
 from streamlit import util
+from streamlit.code_util import get_nonstreamlit_frameinfos
+from streamlit.error_util import print_traceback_to_markdown_string
 from streamlit.hashing import CodeHasher
 from streamlit.hashing import Context
 from streamlit.hashing import get_hash
 from streamlit.logger import get_logger
+from streamlit.util import functools_wraps
+import streamlit as st
+
 
 CACHED_ST_FUNCTION_WARNING = """
 Your script writes to your Streamlit app from within a cached function. This
@@ -190,17 +193,30 @@ class _AddCopy(ast.NodeTransformer):
         return node
 
 
-def _get_mutated_output_error_message():
-    message = textwrap.dedent(
-        """
-        **WARNING: Cached Object Mutated**
+def _get_mutated_output_error_message(func):
+    frameinfos = get_nonstreamlit_frameinfos()
 
-        By default, Streamlit’s cache is immutable. You received this warning
-        because Streamlit thinks you modified a cached object.
+    values = {
+        "func_name": func.__name__,
+        "traceback": print_traceback_to_markdown_string(frameinfos),
+    }
 
-        [Click here to see how to fix this issue.]
-        (https://docs.streamlit.io/advanced_caching.html)
-        """
+    message = (
+        """**Cached Object Mutated**
+
+By default, Streamlit’s cache should be treated as immutable. You
+received this warning because Streamlit thinks you mutated an object
+returned by cached function `%(func_name)s()`.
+
+The problem is that an object returned by that function was modified
+**outside the function**, which can have unexpected effects.
+
+[Click here to see how to fix this issue.]
+(https://docs.streamlit.io/advanced_caching.html)
+
+%(traceback)s
+"""
+        % values
     ).strip("\n")
 
     return message
@@ -268,9 +284,7 @@ def _write_to_disk_cache(key, value):
         raise CacheError("Unable to write to cache: %s" % e)
 
 
-def _read_from_cache(
-    key, persisted, allow_output_mutation, func_or_code, message_opts, hash_funcs
-):
+def _read_from_cache(key, persisted, allow_output_mutation, func_or_code, hash_funcs):
     """
     Read the value from the cache. Our goal is to read from memory
     if possible. If the data was mutated (hash changed), we show a
@@ -279,9 +293,6 @@ def _read_from_cache(
     """
     try:
         return _read_from_mem_cache(key, allow_output_mutation, hash_funcs)
-    except CachedObjectWasMutatedError as e:
-        st.warning(_get_mutated_output_error_message())
-        return e.cached_value
     except CacheKeyNotFoundError as e:
         if persisted:
             value = _read_from_disk_cache(key)
@@ -433,12 +444,16 @@ def cache(
             key = hasher.hexdigest()
             LOGGER.debug("Cache key: %s", key)
 
-            caller_frame = inspect.currentframe().f_back
             try:
                 return_value = _read_from_cache(
-                    key, persist, allow_output_mutation, func, caller_frame, hash_funcs
+                    key, persist, allow_output_mutation, func, hash_funcs
                 )
                 LOGGER.debug("Cache hit: %s", func)
+
+            except CachedObjectWasMutatedError as e:
+                st.warning(_get_mutated_output_error_message(func))
+                return e.cached_value
+
             except CacheKeyNotFoundError:
                 LOGGER.debug("Cache miss: %s", func)
 
@@ -519,9 +534,7 @@ class Cache(Dict[Any, Any]):
         if real_caller_is_parent_frame:
             caller_frame = caller_frame.f_back
 
-        frameinfo = inspect.getframeinfo(caller_frame)
-        filename, caller_lineno, _, code_context, _ = frameinfo
-
+        filename, caller_lineno, code_context = _get_frame_info(caller_frame)
         code_context = code_context[0]
 
         context_indent = len(code_context) - len(code_context.lstrip())
@@ -631,3 +644,9 @@ def _clear_disk_cache():
 def _clear_mem_cache():
     global _mem_cache
     _mem_cache = {}
+
+
+def _get_frame_info(caller_frame):
+    frameinfo = inspect.getframeinfo(caller_frame)
+    filename, caller_lineno, _, code_context, _ = frameinfo
+    return filename, caller_lineno, code_context

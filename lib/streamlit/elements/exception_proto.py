@@ -13,20 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import sys
 import traceback
 
-import streamlit
+from streamlit.code_util import get_nonstreamlit_frameinfos
 from streamlit.errors import StreamlitAPIException, MarkdownFormattedException
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
-
-# Extract the streamlit package path
-_streamlit_dir = os.path.dirname(streamlit.__file__)
-# Make it absolute, and ensure there's a trailing path separator
-_streamlit_dir = os.path.join(os.path.realpath(_streamlit_dir), "")
 
 
 def marshall(exception_proto, exception, exception_traceback=None):
@@ -134,22 +128,6 @@ def _format_syntax_error_message(exception):
     return str(exception)
 
 
-def _is_in_streamlit_package(file):
-    """True if the given file is part of the streamlit package."""
-    print('XXX', os.path.commonprefix([os.path.realpath(file)]))
-    print('XXX', _streamlit_dir)
-    return (
-        os.path.commonprefix([os.path.realpath(file), _streamlit_dir]) == _streamlit_dir
-    )
-
-
-def _get_stackframe_filename(frame):
-    """Return the filename component of a traceback frame."""
-    # Python 3 has a frame.filename variable, but frames in
-    # Python 2 are just tuples. This code works in both versions.
-    return frame[0]
-
-
 def _get_stack_trace(
     exception, exception_traceback=None, strip_streamlit_stack_entries=False
 ):
@@ -200,11 +178,7 @@ def _get_stack_trace(
         ]
     else:
         if strip_streamlit_stack_entries:
-            extracted_traceback = [
-                frame
-                for frame in extracted_traceback
-                if not _is_in_streamlit_package(_get_stackframe_filename(frame))
-            ]
+            extracted_traceback = get_nonstreamlit_frameinfos(extracted_traceback)
         stack_trace = traceback.format_list(extracted_traceback)
 
     return stack_trace
