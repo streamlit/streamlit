@@ -56,17 +56,20 @@ class CodeBlock extends PureComponent<Props> {
 
     // Language definition keys are lowercase
     let lang = Prism.languages[this.props.language.toLowerCase()]
+    let languageClassName = `language-${this.props.language}`
+
     if (lang === undefined) {
       console.warn(
         `No syntax highlighting for ${this.props.language}; defaulting to Python`
       )
       lang = Prism.languages.python
+      languageClassName = "language-python"
     }
 
     const safeHtml = this.props.value
       ? Prism.highlight(this.props.value, lang, "")
       : ""
-    const languageClassName = `language-${this.props.language}`
+
     return (
       <div className="stCodeBlock">
         <CopyButton text={this.props.value} />
