@@ -15,8 +15,9 @@
 
 """A hashing utility for code."""
 
-#XXX
+# XXX
 from streamlit.compatibility import setup_shims
+
 setup_shims(globals())
 
 import collections
@@ -510,7 +511,7 @@ class CodeHasher:
         ]
         self._update(h, consts, context)
 
-        #XXX
+        # XXX
         # Hash non-local names and functions referenced by the bytecode.
         if hasattr(dis, "get_instructions"):  # get_instructions is new since Python 3.4
             for ref in get_referenced_objects(code, context):

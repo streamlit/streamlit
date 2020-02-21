@@ -15,8 +15,9 @@
 
 """This is a script which is run when the Streamlit package is executed."""
 
-#XXX
+# XXX
 from streamlit.compatibility import setup_shims
+
 setup_shims(globals())
 
 from streamlit import config as _config

@@ -15,8 +15,9 @@
 
 """A bunch of useful utilities for dealing with types."""
 
-#XXX
+# XXX
 from streamlit.compatibility import setup_shims
+
 setup_shims(globals())
 
 import re

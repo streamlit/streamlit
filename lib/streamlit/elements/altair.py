@@ -15,8 +15,9 @@
 
 """A Python wrapper around Altair."""
 
-#XXX
+# XXX
 from streamlit.compatibility import setup_shims
+
 setup_shims(globals())
 
 from datetime import date

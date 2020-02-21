@@ -15,8 +15,9 @@
 
 """Tools for working with dicts."""
 
-#XXX
+# XXX
 from streamlit.compatibility import setup_shims
+
 setup_shims(globals())
 
 from typing import Any, Dict, Optional

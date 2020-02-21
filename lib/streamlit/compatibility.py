@@ -23,6 +23,8 @@ setup_2_3_shims(globals())
 
 
 INSTEAD:
+
+#XXX
 from streamlit.compatibility import setup_shims
 setup_shims(globals())
 
@@ -40,71 +42,3 @@ def setup_shims(caller_globals):
     caller_globals["native_dict"] = _dict
 
 
-def setup_2_3_shims(caller_globals):
-    """
-    Meant to be called as follows:
-
-    setup_2_3_shims(globals())
-
-    And sets up a bunch of compatibility aliases to make python 2 more like
-    python 3.
-    """
-    if is_running_py3():
-        caller_globals["dict_types"] = (type({}),)
-        caller_globals["string_types"] = (type(""),)
-        caller_globals["native_dict"] = _dict
-    else:
-        # Override basic types.
-        native_dict = _dict
-        from builtins import range, map, str, dict, object, zip, int
-
-        # These are the symbols we will export to the calling package.
-        export_symbols = [
-            "range",
-            "map",
-            "str",
-            "dict",
-            "object",
-            "zip",
-            "int",
-            "native_dict",
-        ]
-
-        # Oerride the open function.
-        from io import open
-
-        export_symbols += ["open"]
-
-        from six import string_types
-
-        export_symbols += ["string_types"]
-
-        # Export these symbols to the calling function's symbol table.
-        for symbol in export_symbols:
-            caller_globals[symbol] = locals()[symbol]
-
-        # Special Cases
-        caller_globals["FileNotFoundError"] = IOError
-        caller_globals["dict_types"] = (dict, type({}))
-
-        # Before we can call future.stanard_library, we need to make sure we're not
-        # overriding any of the packages that it monkey patches or this can cause
-        # some screwyness.
-        illegal_package_names = ["urllib", "test", "dbm"]
-        current_directory_files = os.listdir(".")
-        for illegal_package_name in illegal_package_names:
-            illegal_source_file = illegal_package_name + ".py"
-            assert illegal_source_file not in current_directory_files, (
-                'File "%s" overrides a built-in package name.'
-                " Please rename it." % illegal_source_file
-            )
-
-        # Do a bunch of dark monkey patching magic.
-        from future.standard_library import install_aliases
-
-        install_aliases()
-
-
-def is_running_py3():
-    """Returns True iff we're running 3 or above."""
-    return sys.version_info >= (3, 0)

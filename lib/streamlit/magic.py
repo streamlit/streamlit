@@ -16,6 +16,7 @@
 import ast
 import sys
 
+
 def add_magic(code, script_path):
     """Modifies the code to support magic Streamlit commands.
 

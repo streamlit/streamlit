@@ -19,8 +19,9 @@ These are functions that only make sense within the watcher. In particular,
 functions that use streamlit.config can go here to avoid a dependency cycle.
 """
 
-#XXX
+# XXX
 from streamlit.compatibility import setup_shims
+
 setup_shims(globals())
 
 import hashlib

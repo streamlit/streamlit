@@ -35,8 +35,9 @@ How these classes work together
 
 """
 
-#XXX
+# XXX
 from streamlit.compatibility import setup_shims
+
 setup_shims(globals())
 
 import os

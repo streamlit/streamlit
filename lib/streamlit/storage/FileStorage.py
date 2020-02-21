@@ -15,8 +15,9 @@
 
 """Handles a connecton to an S3 bucket to send Report data."""
 
-#XXX
+# XXX
 from streamlit.compatibility import setup_shims
+
 setup_shims(globals())
 
 import errno

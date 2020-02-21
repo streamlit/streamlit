@@ -25,6 +25,7 @@ from streamlit import config
 from streamlit.Report import Report
 from streamlit.watcher import LocalSourcesWatcher
 
+#XXX
 if sys.version_info[0] == 2:
     import test_data.dummy_module1 as DUMMY_MODULE_1
     import test_data.dummy_module2 as DUMMY_MODULE_2
@@ -96,14 +97,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
     def test_permission_error(self, fob, _):
-        from streamlit import compatibility
-
-        if compatibility.is_running_py3():
-            ErrorType = PermissionError
-        else:
-            ErrorType = OSError
-
-        fob.side_effect = ErrorType("This error should be caught!")
+        fob.side_effect = PermissionError("This error should be caught!")
         lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
