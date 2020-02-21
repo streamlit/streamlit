@@ -56,7 +56,7 @@ class VerifyVersionCommand(install):
 
 
 setuptools.setup(
-    name="streamlit-nightly-dev",  # TODO use streamlit-nightly in pypi only
+    name="streamlit",  # TODO use streamlit-nightly in pypi only
     version=VERSION,
     description="Frontend library for machine learning engineers",
     long_description=readme(),
