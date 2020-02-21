@@ -40,7 +40,7 @@ interface Props {
   element: Immutable.Map<string, any>
 }
 
-interface PropsWithHeight extends Props {
+export interface PropsWithHeight extends Props {
   height: number | undefined
 }
 
@@ -48,12 +48,12 @@ interface State {
   initialized: boolean
 }
 
-class DeckGlChart extends React.PureComponent<PropsWithHeight, State> {
+export class DeckGlChart extends React.PureComponent<PropsWithHeight, State> {
   static defaultProps = {
     height: 500,
   }
 
-  private initialViewState: {
+  private readonly initialViewState: {
     width: number
     height: number
     longitude: number
@@ -63,8 +63,7 @@ class DeckGlChart extends React.PureComponent<PropsWithHeight, State> {
     zoom: number
   }
 
-  private mapStyle: string
-  private fixHexLayerBug_bound: () => void
+  private readonly mapStyle: string
 
   constructor(props: PropsWithHeight) {
     super(props)
@@ -85,16 +84,13 @@ class DeckGlChart extends React.PureComponent<PropsWithHeight, State> {
 
     this.mapStyle = getStyleUrl(v.mapStyle)
 
-    this.fixHexLayerBug_bound = this.fixHexLayerBug.bind(this)
     this.state = { initialized: false }
+  }
 
+  componentDidMount(): void {
     // HACK: Load layers a little after loading the map, to hack around a bug
     // where HexagonLayers were not drawing on first load but did load when the
     // script got re-executed.
-    setTimeout(this.fixHexLayerBug_bound, 0)
-  }
-
-  fixHexLayerBug(): void {
     this.setState({ initialized: true })
   }
 

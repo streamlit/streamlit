@@ -88,10 +88,6 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     })
   }
 
-  fixHexLayerBug = (): void => {
-    this.setState({ initialized: true })
-  }
-
   getDeckObject = (): DeckObject => {
     const { element, width, height } = this.props
     const json = JSON.parse(element.get("json"))
