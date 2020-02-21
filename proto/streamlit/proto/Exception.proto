@@ -31,4 +31,8 @@ message Exception {
 
   // The stack trace to print.
   repeated string stack_trace = 3;
+
+  // If true, this is an error that doesn't stop the execution flow. So it gets
+  // rendered differently for clarity.
+  bool is_warning = 5;
 }

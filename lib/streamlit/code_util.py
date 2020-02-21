@@ -15,10 +15,7 @@
 
 """A bunch of useful code utilities."""
 
-import os
 import re
-
-import streamlit as st
 
 
 def extract_args(line):
@@ -89,29 +86,3 @@ def get_method_args_from_code(args, line):
     else:
         inputs = [line_args]
     return inputs
-
-
-# Extract the streamlit package path
-_streamlit_dir = os.path.dirname(st.__file__)
-# Make it absolute, and ensure there's a trailing path separator
-_streamlit_dir = os.path.join(os.path.realpath(_streamlit_dir), "")
-
-
-def _is_in_streamlit_package(file):
-    """True if the given file is part of the streamlit package."""
-    return (
-        os.path.commonprefix([os.path.realpath(file), _streamlit_dir]) == _streamlit_dir
-    )
-
-
-def get_nonstreamlit_frameinfos(frameinfos=None):
-    if frameinfos is None:
-        import inspect
-
-        frameinfos = inspect.stack()
-
-    return [
-        frameinfo
-        for frameinfo in frameinfos
-        if not _is_in_streamlit_package(frameinfo.filename)
-    ]

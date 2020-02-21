@@ -13,23 +13,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import traceback
 
-def print_traceback_to_markdown_string(frameinfos):
-    if not frameinfos:
-        return "(No traceback available)"
+import streamlit as st
 
-    frameinfo_strs = [
-        "%s:%s" % (frameinfo.filename, frameinfo.lineno) for frameinfo in frameinfos
+
+# Extract the streamlit package path
+_streamlit_dir = os.path.dirname(st.__file__)
+
+# Make it absolute, resolve aliases, and ensure there's a trailing path
+# separator
+_streamlit_dir = os.path.join(os.path.realpath(_streamlit_dir), "")
+
+
+def _is_in_streamlit_package(file):
+    """True if the given file is part of the streamlit package."""
+    try:
+        common_prefix = os.path.commonprefix([os.path.realpath(file), _streamlit_dir])
+    except ValueError:
+        # Raised if paths are on different drives.
+        return False
+
+    return common_prefix == _streamlit_dir
+
+
+def get_nonstreamlit_traceback(extracted_tb):
+    return [
+        entry for entry in extracted_tb if not _is_in_streamlit_package(entry.filename)
     ]
-
-    frameinfo_str = "\n".join(frameinfo_strs)
-
-    return (
-        """
-Traceback:
-```
-%s
-```
-"""
-        % frameinfo_str
-    )

@@ -78,11 +78,12 @@
     code,
     pre {
       background: $white-a50;
+      color: inherit;
 
       code,
       pre {
         background: none;
-        color: $green;
+        color: inherit;
       }
     }
 

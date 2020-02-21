@@ -69,3 +69,29 @@ class InternalHashError(MarkdownFormattedException):
     """Exception in Streamlit hashing code (i.e. not a user error)"""
 
     pass
+
+
+class StreamlitAPIWarning(StreamlitAPIException, Warning):
+    """Used to display a warning.
+
+    Note that this should not be "raised", but passed to st.exception
+    instead.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(StreamlitAPIWarning, self).__init__(*args, **kwargs)
+        import inspect
+        import traceback
+
+        f = inspect.currentframe()
+        self.tacked_on_stack = traceback.extract_stack(f)
+
+
+class StreamlitDeprecationWarning(StreamlitAPIWarning):
+    """Used to display a warning.
+
+    Note that this should not be "raised", but passed to st.exception
+    instead.
+    """
+
+    pass

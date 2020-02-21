@@ -16,14 +16,16 @@
 import sys
 import traceback
 
-from streamlit.code_util import get_nonstreamlit_frameinfos
-from streamlit.errors import StreamlitAPIException, MarkdownFormattedException
+from streamlit.error_util import get_nonstreamlit_traceback
+from streamlit.errors import MarkdownFormattedException
+from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIWarning
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
 
-def marshall(exception_proto, exception, exception_traceback=None):
+def marshall(exception_proto, exception):
     """Marshalls an Exception.proto message.
 
     Parameters
@@ -33,10 +35,6 @@ def marshall(exception_proto, exception, exception_traceback=None):
 
     exception : BaseException
         The exception whose data we're extracting
-
-    exception_traceback : traceback or None
-        An optional alternate traceback to use. If this is None, the traceback
-        will be extracted from the exception.
     """
     exception_proto.type = type(exception).__name__
 
@@ -45,11 +43,12 @@ def marshall(exception_proto, exception, exception_traceback=None):
     is_api_exception = isinstance(exception, StreamlitAPIException)
     is_markdown_exception = isinstance(exception, MarkdownFormattedException)
 
-    stack_trace = _get_stack_trace(
-        exception, exception_traceback, strip_streamlit_stack_entries=is_api_exception
+    stack_trace = _get_stack_trace_str_list(
+        exception, strip_streamlit_stack_entries=is_api_exception
     )
 
     exception_proto.stack_trace.extend(stack_trace)
+    exception_proto.is_warning = isinstance(exception, Warning)
 
     try:
         if isinstance(exception, SyntaxError):
@@ -84,7 +83,7 @@ Traceback:
             % {
                 "etype": type(exception).__name__,
                 "str_exception": str_exception,
-                "str_exception_tb": "\n".join(_get_stack_trace(str_exception)),
+                "str_exception_tb": "\n".join(_get_stack_trace_str_list(str_exception)),
             }
         )
 
@@ -128,19 +127,13 @@ def _format_syntax_error_message(exception):
     return str(exception)
 
 
-def _get_stack_trace(
-    exception, exception_traceback=None, strip_streamlit_stack_entries=False
-):
+def _get_stack_trace_str_list(exception, strip_streamlit_stack_entries=False):
     """Get the stack trace for the given exception.
 
     Parameters
     ----------
     exception : BaseException
         The exception to extract the traceback from
-
-    exception_traceback : traceback or None
-        An optional alternate traceback to use. If this is None, the traceback
-        will be extracted from the exception.
 
     strip_streamlit_stack_entries : bool
         If True, all traceback entries that are in the Streamlit package
@@ -154,11 +147,9 @@ def _get_stack_trace(
         The exception traceback as a list of strings
 
     """
-    # Get and extract the traceback for the exception.
-    if exception_traceback is not None:
-        extracted_traceback = traceback.extract_tb(exception_traceback)
+    if isinstance(exception, StreamlitAPIWarning):
+        extracted_traceback = exception.tacked_on_stack
     elif hasattr(exception, "__traceback__"):
-        # This is the Python 3 way to get the traceback.
         extracted_traceback = traceback.extract_tb(exception.__traceback__)
     else:
         # Hack for Python 2 which will extract the traceback as long as this
@@ -172,13 +163,15 @@ def _get_stack_trace(
 
     # Format the extracted traceback and add it to the protobuf element.
     if extracted_traceback is None:
-        stack_trace = [
+        stack_trace_str_list = [
             "Cannot extract the stack trace for this exception. "
             "Try calling exception() within the `catch` block."
         ]
     else:
         if strip_streamlit_stack_entries:
-            extracted_traceback = get_nonstreamlit_frameinfos(extracted_traceback)
-        stack_trace = traceback.format_list(extracted_traceback)
+            extracted_traceback = get_nonstreamlit_traceback(extracted_traceback)
+        stack_trace_str_list = traceback.format_list(extracted_traceback)
 
-    return stack_trace
+    stack_trace_str_list = [item.strip() for item in stack_trace_str_list]
+
+    return stack_trace_str_list

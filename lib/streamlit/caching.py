@@ -37,26 +37,14 @@ from typing import Any, Dict
 from streamlit import config
 from streamlit import file_util
 from streamlit import util
-from streamlit.code_util import get_nonstreamlit_frameinfos
-from streamlit.error_util import print_traceback_to_markdown_string
+from streamlit.errors import StreamlitAPIWarning
+from streamlit.errors import StreamlitDeprecationWarning
 from streamlit.hashing import CodeHasher
 from streamlit.hashing import Context
 from streamlit.hashing import get_hash
 from streamlit.logger import get_logger
 from streamlit.util import functools_wraps
 import streamlit as st
-
-
-CACHED_ST_FUNCTION_WARNING = """
-Your script writes to your Streamlit app from within a cached function. This
-code will only be called when we detect a cache "miss", which can lead to
-unexpected results.
-
-How to resolve this warning:
-* Move the streamlit function call outside the cached function.
-* Or, if you know what you're doing, use `@st.cache(suppress_st_warning=True)`
-to suppress the warning.
-"""
 
 
 LOGGER = get_logger(__name__)
@@ -117,7 +105,19 @@ def _show_cached_st_function_warning(dg):
     # Avoid infinite recursion by suppressing additional cached
     # function warnings from within the cached function warning.
     with suppress_cached_st_function_warning():
-        dg.warning(CACHED_ST_FUNCTION_WARNING)
+        e = CachedStFunctionWarning(
+            """
+Your script writes to your Streamlit app from within a cached function. This
+code will only be called when we detect a cache "miss", which can lead to
+unexpected results.
+
+How to resolve this warning:
+* Move the streamlit function call outside the cached function.
+* Or, if you know what you're doing, use `@st.cache(suppress_st_warning=True)`
+to suppress the warning.
+"""
+        )
+        dg.exception(e)
 
 
 def maybe_show_cached_st_function_warning(dg):
@@ -193,33 +193,26 @@ class _AddCopy(ast.NodeTransformer):
         return node
 
 
-def _get_mutated_output_error_message(func):
-    frameinfos = get_nonstreamlit_frameinfos()
+def _show_mutated_output_warning(func):
+    func_name = func.__name__
 
-    values = {
-        "func_name": func.__name__,
-        "traceback": print_traceback_to_markdown_string(frameinfos),
-    }
-
-    message = (
-        """**Cached Object Mutated**
-
+    msg = (
+        """
 By default, Streamlit’s cache should be treated as immutable. You
 received this warning because Streamlit thinks you mutated an object
-returned by cached function `%(func_name)s()`.
+returned by cached function `%s()`.
 
 The problem is that an object returned by that function was modified
 **outside the function**, which can have unexpected effects.
 
 [Click here to see how to fix this issue.]
 (https://docs.streamlit.io/advanced_caching.html)
-
-%(traceback)s
 """
-        % values
+        % func_name
     ).strip("\n")
 
-    return message
+    e = CachedObjectMutationWarning(msg)
+    st.exception(e)
 
 
 def _read_from_mem_cache(key, allow_output_mutation, hash_funcs):
@@ -285,11 +278,11 @@ def _write_to_disk_cache(key, value):
 
 
 def _read_from_cache(key, persisted, allow_output_mutation, func_or_code, hash_funcs):
-    """
-    Read the value from the cache. Our goal is to read from memory
-    if possible. If the data was mutated (hash changed), we show a
-    warning. If reading from memory fails, we either read from disk
-    or rerun the code.
+    """Read a value from the cache.
+
+    Our goal is to read from memory if possible. If the data was mutated (hash
+    changed), we show a warning. If reading from memory fails, we either read
+    from disk or rerun the code.
     """
     try:
         return _read_from_mem_cache(key, allow_output_mutation, hash_funcs)
@@ -397,7 +390,7 @@ def cache(
     # Help users migrate to the new kwarg
     # Remove this warning after 2020-03-16.
     if ignore_hash:
-        raise Exception(
+        raise StreamlitDeprecationWarning(
             "The `ignore_hash` argument has been renamed to `allow_output_mutation`."
         )
 
@@ -451,7 +444,7 @@ def cache(
                 LOGGER.debug("Cache hit: %s", func)
 
             except CachedObjectWasMutatedError as e:
-                st.warning(_get_mutated_output_error_message(func))
+                _show_mutated_output_warning(func)
                 return e.cached_value
 
             except CacheKeyNotFoundError:
@@ -650,3 +643,11 @@ def _get_frame_info(caller_frame):
     frameinfo = inspect.getframeinfo(caller_frame)
     filename, caller_lineno, _, code_context, _ = frameinfo
     return filename, caller_lineno, code_context
+
+
+class CachedStFunctionWarning(StreamlitAPIWarning):
+    pass
+
+
+class CachedObjectMutationWarning(StreamlitAPIWarning):
+    pass
