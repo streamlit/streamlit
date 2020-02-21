@@ -249,7 +249,7 @@ class ScriptRunner(object):
             # the file, compile it, and exec() it. This implementation is
             # compatible with both 2 and 3.
 
-            #XXX
+            # XXX
             with source_util.open_python_file(self._report.script_path) as f:
                 filebody = f.read()
 
