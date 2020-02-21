@@ -30,6 +30,14 @@ workflows:
             - cypress-approval
 
   create-nightly-tag:
+    triggers:
+      - schedule:
+          # TODO set to 11PM PST
+          cron: "10 5 * * *"
+          filters:
+            branches:
+              only:
+                - develop
     jobs:
       - create-tag
 
