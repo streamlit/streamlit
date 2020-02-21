@@ -33,12 +33,6 @@ setup_shims(globals())
 import sys
 import os
 
-_dict = dict
-
 
 def setup_shims(caller_globals):
-    caller_globals["dict_types"] = (type({}),)
     caller_globals["string_types"] = (type(""),)
-    caller_globals["native_dict"] = _dict
-
-

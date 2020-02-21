@@ -15,8 +15,9 @@
 
 """DataFrame unit tests"""
 
-#XXX
+# XXX
 from streamlit.compatibility import setup_shims
+
 setup_shims(globals())
 
 import unittest

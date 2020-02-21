@@ -15,11 +15,6 @@
 
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
-# XXX
-from streamlit.compatibility import setup_shims
-
-setup_shims(globals())
-
 import io
 import functools
 import json
@@ -222,15 +217,7 @@ def _get_widget_ui_value(widget_type, element, user_key=None):
 
 
 def _get_pandas_index_attr(data, attr):
-    python3_attr = getattr(data.index, attr, None)
-    python2_attr = getattr(data.index, "__dict__", None)
-
-    if python3_attr:
-        return python3_attr
-    elif python2_attr:
-        return data.index.__dict__["_" + attr]
-    else:
-        return None
+    return getattr(data.index, attr, None)
 
 
 class NoValue(object):

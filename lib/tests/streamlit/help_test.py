@@ -15,8 +15,9 @@
 
 """st.help unit test."""
 
-#XXX
+# XXX
 from streamlit.compatibility import setup_shims
+
 setup_shims(globals())
 
 import sys

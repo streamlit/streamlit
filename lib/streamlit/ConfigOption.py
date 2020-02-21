@@ -15,11 +15,6 @@
 
 """This class stores a key-value pair for the config system."""
 
-# XXX
-from streamlit.compatibility import setup_shims
-
-setup_shims(globals())
-
 import datetime
 import re
 import textwrap
