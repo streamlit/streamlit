@@ -114,10 +114,12 @@ class MediaFileManager(object):
 
         Raises KeyError if not found.
         """
-        mf = mediafile_or_id if type(mediafile_or_id) is MediaFile else self._files[mediafile_or_id]
+        mf = (
+            mediafile_or_id
+            if type(mediafile_or_id) is MediaFile
+            else self._files[mediafile_or_id]
+        )
         mf.refcount = mf.refcount - 1
-        #if mf.refcount < 1:
-        #    self.delete(mf)
         return mf
 
     def __contains__(self, mediafile_or_id):
