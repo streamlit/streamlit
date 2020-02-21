@@ -47,14 +47,9 @@ For more detailed info, see https://docs.streamlit.io.
 # manually mess with the local namespace so the linter can't know that some
 # identifiers actually exist in the namespace.
 
-# Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
-from streamlit.compatibility import (
-    setup_2_3_shims as _setup_2_3_shims,
-    is_running_py3 as _is_running_py3,
-)
-
-_setup_2_3_shims(globals())
+#XXX 
+from streamlit.compatibility import setup_shims
+setup_shims(globals())
 
 # Must be at the top, to avoid circular dependency.
 from streamlit import logger as _logger

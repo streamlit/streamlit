@@ -19,12 +19,25 @@ be called as follows:
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
 setup_2_3_shims(globals())
+
+
+
+INSTEAD:
+from streamlit.compatibility import setup_shims
+setup_shims(globals())
+
 """
 
 import sys
 import os
 
 _dict = dict
+
+
+def setup_shims(caller_globals):
+    caller_globals["dict_types"] = (type({}),)
+    caller_globals["string_types"] = (type(""),)
+    caller_globals["native_dict"] = _dict
 
 
 def setup_2_3_shims(caller_globals):

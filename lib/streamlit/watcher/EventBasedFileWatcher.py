@@ -35,11 +35,9 @@ How these classes work together
 
 """
 
-# Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
-from streamlit.compatibility import setup_2_3_shims
-
-setup_2_3_shims(globals())
+#XXX
+from streamlit.compatibility import setup_shims
+setup_shims(globals())
 
 import os
 import threading

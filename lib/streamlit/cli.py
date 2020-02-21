@@ -15,13 +15,9 @@
 
 """This is a script which is run when the Streamlit package is executed."""
 
-# Python 2/3 compatibility
-from __future__ import print_function, division, absolute_import
-
-# Not importing unicode_literals from __future__ because click doesn't like it.
-from streamlit.compatibility import setup_2_3_shims
-
-setup_2_3_shims(globals())
+#XXX
+from streamlit.compatibility import setup_shims
+setup_shims(globals())
 
 from streamlit import config as _config
 

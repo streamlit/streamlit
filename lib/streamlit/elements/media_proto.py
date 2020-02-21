@@ -14,9 +14,10 @@
 # limitations under the License.
 
 from streamlit import type_util
-from streamlit.compatibility import setup_2_3_shims
 
-setup_2_3_shims(globals())
+#XXX
+from streamlit.compatibility import setup_shims
+setup_shims(globals())
 
 import io
 import re

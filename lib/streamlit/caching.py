@@ -15,11 +15,9 @@
 
 """A library of caching utilities."""
 
-# Python 2/3 compatibility
-from __future__ import absolute_import, division, print_function
-from streamlit.compatibility import setup_2_3_shims
-
-setup_2_3_shims(globals())
+#XXX
+from streamlit.compatibility import setup_shims
+setup_shims(globals())
 
 import ast
 import contextlib
