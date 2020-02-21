@@ -45,7 +45,8 @@ def _get_file_id(data, mimetype=None):
 class MediaFile(object):
     """Abstraction for audiovisual/image file objects."""
 
-    def __init__(self, file_id=None, content=None, mimetype=None, refcount=1):
+    #XXX what's the right refcount?  1 and 2 are not enough...?
+    def __init__(self, file_id=None, content=None, mimetype=None, refcount=2):
         self.file_id = file_id
         self.content = content
         self.mimetype = mimetype
