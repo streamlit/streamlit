@@ -14,6 +14,7 @@ workflows:
               only: /[0-9]+(\.[0-9]+)\.dev[0-9]+/ # 0.55.1.dev20201129
       - nightly-release:
           requires:
+            # TODO run 3.5 and cypress non flaky tests (later)
             - python-3.8
           filters:
             tags:
@@ -46,16 +47,15 @@ jobs:
       - run:
           name: Create tag
           command: |
-            # needs to read the current version from somewhere
-            #   get it from setup.py ?
-            # ? automatically increment the number ?
-            # add todays date to the version
-            #
-            # update setup.py with the version
-            # commit setup.py somewhere
-            #   to develop? new branch?
-            #   can we commit directly to a tag without it going to a branch?
-            export TAG = 0.57.1.dev20200219
+            TAG="$(./scripts/pypi_nightly_create_tag.py)"
+
+            ./scripts/update_version.py $TAG
+
+            git add lib/setup.py
+            git add docs/troubleshooting/sanity-checks.md
+            git add frontend/package.json
+            git commit -m"Update version in files"
+
             git tag -a $TAG -m "Streamlit nightly $TAG"
             git push origin $TAG
 
@@ -422,6 +422,7 @@ jobs:
           name: create packages
           command: |
             make frontend
+            make install
             make wheel
 
       - run:

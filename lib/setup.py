@@ -48,12 +48,6 @@ class VerifyVersionCommand(install):
     def run(self):
         tag = os.getenv("CIRCLE_TAG")
 
-        # TODO the tag should include a date
-        # so we'll need to update the version above to include a date
-
-        # TODO what about regular deploys with no tag, we need to disable this?
-
-        # TODO what about tags for releases?
         if tag != VERSION:
             info = "Git tag: {0} does not match the version of this app: {1}".format(
                 tag, VERSION
@@ -62,7 +56,7 @@ class VerifyVersionCommand(install):
 
 
 setuptools.setup(
-    name="streamlit",  # TODO use streamlit-nightly
+    name="streamlit-nightly-dev",  # TODO use streamlit-nightly in pypi only
     version=VERSION,
     description="Frontend library for machine learning engineers",
     long_description=readme(),
