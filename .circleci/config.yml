@@ -34,7 +34,7 @@ workflows:
     triggers:
       - schedule:
           # TODO set to 11PM PST
-          cron: "10 5 * * *"
+          cron: "45 7 * * *"
           filters:
             branches:
               only:
