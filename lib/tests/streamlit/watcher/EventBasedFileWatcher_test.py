@@ -13,11 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# XXX
-from streamlit.compatibility import setup_shims
-
-setup_shims(globals())
-
 import unittest
 import mock
 from watchdog import events

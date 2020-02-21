@@ -15,11 +15,6 @@
 
 """deck_gl unit test."""
 
-# XXX
-from streamlit.compatibility import setup_shims
-
-setup_shims(globals())
-
 from google.protobuf import json_format
 import pandas as pd
 import json

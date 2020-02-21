@@ -15,11 +15,6 @@
 
 """DeltaGenerator Unittest."""
 
-# XXX
-from streamlit.compatibility import setup_shims
-
-setup_shims(globals())
-
 import json
 import mock
 import sys

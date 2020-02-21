@@ -15,11 +15,6 @@
 
 """A library of caching utilities."""
 
-# XXX
-from streamlit.compatibility import setup_shims
-
-setup_shims(globals())
-
 import ast
 import contextlib
 import hashlib

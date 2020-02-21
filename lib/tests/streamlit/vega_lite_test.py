@@ -15,11 +15,6 @@
 
 """vega_lite unit test."""
 
-# XXX
-from streamlit.compatibility import setup_shims
-
-setup_shims(globals())
-
 import unittest
 import pandas as pd
 import json

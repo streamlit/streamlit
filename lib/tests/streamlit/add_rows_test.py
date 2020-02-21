@@ -15,11 +15,6 @@
 
 """Unit test of dg.add_rows()."""
 
-# XXX
-from streamlit.compatibility import setup_shims
-
-setup_shims(globals())
-
 import pandas as pd
 
 from streamlit.ReportThread import get_report_ctx

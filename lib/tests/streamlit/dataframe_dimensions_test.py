@@ -15,11 +15,6 @@
 
 """Dataframe dimension parameters test."""
 
-# XXX
-from streamlit.compatibility import setup_shims
-
-setup_shims(globals())
-
 import pandas as pd
 
 from tests import testutil

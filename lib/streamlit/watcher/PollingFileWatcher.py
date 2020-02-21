@@ -15,11 +15,6 @@
 
 """A class that watches the file system"""
 
-# XXX
-from streamlit.compatibility import setup_shims
-
-setup_shims(globals())
-
 from concurrent.futures import ThreadPoolExecutor
 import os
 import time

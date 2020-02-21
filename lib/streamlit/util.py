@@ -15,11 +15,6 @@
 
 """A bunch of useful utilities."""
 
-# XXX
-from streamlit.compatibility import setup_shims
-
-setup_shims(globals())
-
 import functools
 import os
 import sys

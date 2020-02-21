@@ -15,11 +15,6 @@
 
 """A bunch of useful utilities for dealing with types."""
 
-# XXX
-from streamlit.compatibility import setup_shims
-
-setup_shims(globals())
-
 import re
 from typing import Tuple
 

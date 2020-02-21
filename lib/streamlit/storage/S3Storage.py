@@ -15,11 +15,6 @@
 
 """Handles a connecton to an S3 bucket to send Report data."""
 
-# XXX
-from streamlit.compatibility import setup_shims
-
-setup_shims(globals())
-
 import boto3
 import botocore
 import logging

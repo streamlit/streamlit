@@ -15,11 +15,6 @@
 
 """st.help unit test."""
 
-# XXX
-from streamlit.compatibility import setup_shims
-
-setup_shims(globals())
-
 import sys
 
 from tests import testutil

@@ -35,11 +35,6 @@ How these classes work together
 
 """
 
-# XXX
-from streamlit.compatibility import setup_shims
-
-setup_shims(globals())
-
 import os
 import threading
 

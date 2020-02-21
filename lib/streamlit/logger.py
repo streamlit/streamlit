@@ -15,11 +15,6 @@
 
 """Logging module."""
 
-# XXX
-from streamlit.compatibility import setup_shims
-
-setup_shims(globals())
-
 import inspect
 import logging
 import sys

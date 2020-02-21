@@ -15,11 +15,6 @@
 
 """Loads the configuration data."""
 
-# XXX
-from streamlit.compatibility import setup_shims
-
-setup_shims(globals())
-
 import os
 import toml
 import collections

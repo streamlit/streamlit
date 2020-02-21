@@ -15,11 +15,6 @@
 
 """Tests coercing various objects to DataFrames"""
 
-# XXX
-from streamlit.compatibility import setup_shims
-
-setup_shims(globals())
-
 from streamlit import type_util
 
 import unittest
