@@ -41,22 +41,25 @@ def _get_file_id(data, mimetype=None):
     filehash.update(bytes(mimetype.encode("utf-8")))
     return filehash.hexdigest()
 
-    #return hashlib.sha224(bytes(mimetype.encode("utf-8")) + data).hexdigest()
-
 
 class MediaFile(object):
     """Abstraction for audiovisual/image file objects."""
 
-    def __init__(self, file_id=None, content=None, mimetype=None):
+    def __init__(self, file_id=None, content=None, mimetype=None, refcount=1):
         self.file_id = file_id
         self.content = content
         self.mimetype = mimetype
+        self.refcount = refcount
 
     @property
     def url(self):
         return "{}/{}.{}".format(
             STATIC_MEDIA_ENDPOINT, self.file_id, self.mimetype.split("/")[1]
         )
+
+    @property
+    def id(self):
+        return self.file_id
 
 
 class MediaFileManager(object):
@@ -74,7 +77,7 @@ class MediaFileManager(object):
         Raises KeyError if not found.
         """
         if type(mediafile_or_id) is MediaFile:
-            del self._files[MediaFile.file_id]
+            del self._files[mediafile_or_id.id]
         else:
             del self._files[mediafile_or_id]
 
@@ -82,7 +85,7 @@ class MediaFileManager(object):
         """Adds new MediaFile with given parameters; returns the object.
 
         If an identical file already exists, returns the existing object
-        rather than creating a new one.
+        and increments its refcount by one.
 
         mimetype must be set, as this string will be used in the
         "Content-Type" header when the file is sent via HTTP GET.
@@ -99,19 +102,27 @@ class MediaFileManager(object):
         if not file_id in self._files:
             new = MediaFile(file_id=file_id, content=content, mimetype=mimetype,)
             self._files[file_id] = new
+        else:
+            self._files[file_id].refcount += 1
+
         return self._files[file_id]
 
     def get(self, mediafile_or_id):
-        """Returns MediaFile object for given file_id.
+        """Returns MediaFile object for given file_id and decrements its refcount.
+
+        If the MediaFile's refcount goes to zero, the file is deleted.
+
         Raises KeyError if not found.
         """
-        if type(mediafile_or_id) is MediaFile:
-            return mediafile_or_id
-        return self._files[mediafile_or_id]
+        mf = mediafile_or_id if type(mediafile_or_id) is MediaFile else self._files[mediafile_or_id]
+        mf.refcount = mf.refcount - 1
+        #if mf.refcount < 1:
+        #    self.delete(mf)
+        return mf
 
     def __contains__(self, mediafile_or_id):
         if type(mediafile_or_id) is MediaFile:
-            return mediafile_or_id.file_id in self._files
+            return mediafile_or_id.id in self._files
         return mediafile_or_id in self._files
 
     def __len__(self):

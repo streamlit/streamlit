@@ -86,6 +86,8 @@ class MediaFileHandler(tornado.web.RequestHandler):
         self.write(media.content)
         self.set_header("Content-Type:", media.mimetype)
         self.set_status(200)
+        if media.refcount < 1:
+            media_file_manager.delete(media)
 
 
 class _SpecialRequestHandler(tornado.web.RequestHandler):
