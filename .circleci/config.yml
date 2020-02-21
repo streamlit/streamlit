@@ -272,8 +272,9 @@ jobs:
       #################################################################
       - run:
           name: Run mypy
+          # TODO CHANGE BACK TO 3.8
           command: |
-            if [ "${CIRCLE_JOB}" != "python-3.8" ] ; then
+            if [ "${CIRCLE_JOB}" != "python-3.9" ] ; then
               echo "Mypy is only run in python-3.8 job"
             else
               scripts/mypy --report
