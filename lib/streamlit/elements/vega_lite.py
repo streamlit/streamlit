@@ -15,11 +15,6 @@
 
 """A Python wrapper around Vega-Lite."""
 
-# XXX
-from streamlit.compatibility import setup_shims
-
-setup_shims(globals())
-
 import json
 
 import streamlit.elements.lib.dicttools as dicttools

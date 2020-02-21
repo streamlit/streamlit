@@ -15,11 +15,6 @@
 
 """A Python wrapper around DeckGl."""
 
-# XXX
-from streamlit.compatibility import setup_shims
-
-setup_shims(globals())
-
 import json
 from typing import Any, List
 

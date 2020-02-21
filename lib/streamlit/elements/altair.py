@@ -15,11 +15,6 @@
 
 """A Python wrapper around Altair."""
 
-# XXX
-from streamlit.compatibility import setup_shims
-
-setup_shims(globals())
-
 from datetime import date
 
 from streamlit import type_util

@@ -15,11 +15,6 @@
 
 from streamlit import type_util
 
-# XXX
-from streamlit.compatibility import setup_shims
-
-setup_shims(globals())
-
 import io
 import re
 

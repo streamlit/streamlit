@@ -15,11 +15,6 @@
 
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
-# XXX
-from streamlit.compatibility import setup_shims
-
-setup_shims(globals())
-
 import inspect
 
 from streamlit.logger import get_logger
