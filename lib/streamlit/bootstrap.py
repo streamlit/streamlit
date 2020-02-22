@@ -148,6 +148,8 @@ def _on_server_start(server):
 
         if config.is_manually_set("browser.serverAddress"):
             addr = config.get_option("browser.serverAddress")
+        elif config.is_manually_set("server.address"):
+            addr = config.get_option("server.address")
         else:
             addr = "localhost"
 
