@@ -1040,7 +1040,7 @@ class DeltaGenerator(object):
         ...     columns=['a', 'b', 'c'])
         >>>
         >>> st.vega_lite_chart(df, {
-        ...     'mark': 'circle',
+        ...     'mark': {'type': 'circle', 'tooltip': True},
         ...     'encoding': {
         ...         'x': {'field': 'a', 'type': 'quantitative'},
         ...         'y': {'field': 'b', 'type': 'quantitative'},
@@ -1105,9 +1105,9 @@ class DeltaGenerator(object):
         ...     columns=['a', 'b', 'c'])
         ...
         >>> c = alt.Chart(df).mark_circle().encode(
-        ...     x='a', y='b', size='c', color='c')
+        ...     x='a', y='b', size='c', color='c', tooltip=['a', 'b', 'c'])
         >>>
-        >>> st.altair_chart(c, width=-1)
+        >>> st.altair_chart(c, use_container_width=True)
 
         .. output::
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5

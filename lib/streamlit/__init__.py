@@ -343,7 +343,7 @@ def write(*args, **kwargs):
     ...     columns=['a', 'b', 'c'])
     ...
     >>> c = alt.Chart(df).mark_circle().encode(
-    ...     x='a', y='b', size='c', color='c')
+    ...     x='a', y='b', size='c', color='c', tooltip=['a', 'b', 'c'])
     >>>
     >>> st.write(c)
 
