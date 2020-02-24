@@ -18,7 +18,6 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
-from streamlit.proto.TextInput_pb2 import TextInput
 
 setup_2_3_shims(globals())
 
@@ -27,17 +26,20 @@ import functools
 import json
 import random
 import textwrap
+import numbers
 from datetime import datetime
 from datetime import date
 from datetime import time
 
 from streamlit import caching
 from streamlit import config
+from streamlit import cursor
 from streamlit import metrics
 from streamlit import type_util
 from streamlit.ReportThread import get_report_ctx
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException
+from streamlit.errors import NoSessionContext
 from streamlit.js_number import JSNumber
 from streamlit.js_number import JSNumberBoundsException
 from streamlit.proto import Alert_pb2
@@ -45,6 +47,7 @@ from streamlit.proto import Balloons_pb2
 from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto.NumberInput_pb2 import NumberInput
+from streamlit.proto.TextInput_pb2 import TextInput
 
 
 # setup logging
@@ -69,28 +72,18 @@ def _wraps_with_cleaned_sig(wrapped, num_args_to_remove):
     num_args_to_remove). This is useful since function signatures are visible
     in our user-facing docs, and many methods in DeltaGenerator have arguments
     that users have no access to.
+
+    Note that "self" is ignored by default. So to remove both "self" and the
+    next argument you'd pass num_args_to_remove=1.
     """
     # By passing (None, ...), we're removing (arg1, ...) from *args
     args_to_remove = (None,) * num_args_to_remove
     fake_wrapped = functools.partial(wrapped, *args_to_remove)
     fake_wrapped.__doc__ = wrapped.__doc__
-
-    # These fields are used by wraps(), but in Python 2 partial() does not
-    # produce them.
+    fake_wrapped.__name__ = wrapped.__name__  # type: ignore[attr-defined]
     fake_wrapped.__module__ = wrapped.__module__
-    fake_wrapped.__name__ = wrapped.__name__
 
     return functools.wraps(fake_wrapped)
-
-
-def _remove_self_from_sig(method):
-    """Remove the `self` argument from `method`'s signature."""
-
-    @_wraps_with_cleaned_sig(method, 1)  # Remove self from sig.
-    def wrapped_method(self, *args, **kwargs):
-        return method(self, *args, **kwargs)
-
-    return wrapped_method
 
 
 def _with_element(method):
@@ -114,7 +107,7 @@ def _with_element(method):
 
     """
 
-    @_wraps_with_cleaned_sig(method, 2)  # Remove self and element from sig.
+    @_wraps_with_cleaned_sig(method, 1)  # Remove self and element from sig.
     def wrapped_method(dg, *args, **kwargs):
         # Warn if we're called from within an @st.cache function
         caching.maybe_show_cached_st_function_warning(dg)
@@ -255,45 +248,18 @@ class DeltaGenerator(object):
 
     Parameters
     ----------
-    enqueue: callable or None
-      Function that (maybe) enqueues ForwardMsg's and returns True if
-        enqueued or False if not.
-    id: int or None
-      ID for deltas, or None to create the root DeltaGenerator (which
-        produces DeltaGenerators with incrementing IDs)
-    delta_type: str or None
-      The name of the element passed in Element.proto's oneof.
-      This is needed so we can transform dataframes for some elements when
-      performing an `add_rows`.
-    last_index: int or None
-      The last index of the DataFrame for the element this DeltaGenerator
-      created. Only applies to elements that transform dataframes,
-      like line charts.
-    is_root: bool
-      If True, this will behave like a root DeltaGenerator which an
-      auto-incrementing ID (in which case, `id` should be None).
-      If False, this will have a fixed ID as determined
-      by the `id` argument.
-    container: BlockPath
-      The root container for this DeltaGenerator. Can be MAIN or SIDEBAR.
-    path: tuple of ints
-      The full path of this DeltaGenerator, consisting of the IDs of
-      all ancestors. The 0th item is the topmost ancestor.
+    container: BlockPath_pb2.BlockPath or None
+      The root container for this DeltaGenerator. If None, this is a null
+      DeltaGenerator which doesn't print to the app at all (useful for
+      testing).
+
+    cursor: cursor.AbstractCursor or None
     """
 
     # The pydoc below is for user consumption, so it doesn't talk about
     # DeltaGenerator constructor parameters (which users should never use). For
     # those, see above.
-    def __init__(
-        self,
-        enqueue,
-        id=0,
-        delta_type=None,
-        last_index=None,
-        is_root=True,
-        container=BlockPath_pb2.BlockPath.MAIN,
-        path=(),
-    ):
+    def __init__(self, container=BlockPath_pb2.BlockPath.MAIN, cursor=None):
         """Inserts or updates elements in Streamlit apps.
 
         As a user, you should never initialize this object by hand. Instead,
@@ -308,13 +274,21 @@ class DeltaGenerator(object):
         an element `foo` inside the sidebar.
 
         """
-        self._enqueue = enqueue
-        self._id = id
-        self._delta_type = delta_type
-        self._last_index = last_index
-        self._is_root = is_root
         self._container = container
-        self._path = path
+
+        # This is either:
+        # - None: if this is the running DeltaGenerator for a top-level
+        #   container.
+        # - RunningCursor: if this is the running DeltaGenerator for a
+        #   non-top-level container (created with dg._block())
+        # - LockedCursor: if this is a locked DeltaGenerator returned by some
+        #   other DeltaGenerator method. E.g. the dg returned in dg =
+        #   st.text("foo").
+        #
+        # You should never use this! Instead use self._cursor, which is a
+        # computed property that fetches the right cursor.
+        #
+        self._provided_cursor = cursor
 
     def __getattr__(self, name):
         import streamlit as st
@@ -345,11 +319,12 @@ class DeltaGenerator(object):
 
         return wrapper
 
-    # Protected (should be used only by Streamlit, not by users).
-    def _reset(self):
-        """Reset delta generator so it starts from index 0."""
-        assert self._is_root
-        self._id = 0
+    @property
+    def _cursor(self):
+        if self._provided_cursor is None:
+            return cursor.get_container_cursor(self._container)
+        else:
+            return self._provided_cursor
 
     def _enqueue_new_element_delta(
         self,
@@ -377,85 +352,70 @@ class DeltaGenerator(object):
             element.
 
         """
-
-        def value_or_dg(value, dg):
-            """Widgets have return values unlike other elements and may want to
-            return `None`. We create a special `NoValue` class for this scenario
-            since `None` return values get replaced with a DeltaGenerator.
-            """
-            if value is NoValue:
-                return None
-            if value is None:
-                return dg
-            return value
-
         rv = None
-        if marshall_element:
-            msg = ForwardMsg_pb2.ForwardMsg()
-            rv = marshall_element(msg.delta.new_element)
+
+        # Always call marshall_element() so users can run their script without
+        # Streamlit.
+        msg = ForwardMsg_pb2.ForwardMsg()
+        rv = marshall_element(msg.delta.new_element)
+
+        msg_was_enqueued = False
+
+        # Only enqueue message if there's a container.
+
+        if self._container and self._cursor:
             msg.metadata.parent_block.container = self._container
-            msg.metadata.parent_block.path[:] = self._path
-            msg.metadata.delta_id = self._id
+            msg.metadata.parent_block.path[:] = self._cursor.path
+            msg.metadata.delta_id = self._cursor.index
+
             if element_width is not None:
                 msg.metadata.element_dimension_spec.width = element_width
             if element_height is not None:
                 msg.metadata.element_dimension_spec.height = element_height
 
-        # "Null" delta generators (those without queues), don't send anything.
-        if self._enqueue is None:
-            return value_or_dg(rv, self)
+            _enqueue_message(msg)
+            msg_was_enqueued = True
 
-        # Figure out if we need to create a new ID for this element.
-        if self._is_root:
+        if msg_was_enqueued:
+            # Get a DeltaGenerator that is locked to the current element
+            # position.
             output_dg = DeltaGenerator(
-                enqueue=self._enqueue,
-                id=msg.metadata.delta_id,
-                delta_type=delta_type,
-                last_index=last_index,
                 container=self._container,
-                is_root=False,
+                cursor=self._cursor.get_locked_cursor(
+                    delta_type=delta_type, last_index=last_index
+                ),
             )
         else:
-            self._delta_type = delta_type
-            self._last_index = last_index
+            # If the message was not enqueued, just return self since it's a
+            # no-op from the point of view of the app.
             output_dg = self
 
-        kind = msg.delta.new_element.WhichOneof("type")
-
-        m = metrics.Client.get("streamlit_enqueue_deltas_total")
-        m.labels(kind).inc()
-        msg_was_enqueued = self._enqueue(msg)
-
-        if not msg_was_enqueued:
-            return value_or_dg(rv, self)
-
-        if self._is_root:
-            self._id += 1
-
-        return value_or_dg(rv, output_dg)
+        return _value_or_dg(rv, output_dg)
 
     def _block(self):
-        if self._enqueue is None:
+        if self._container is None or self._cursor is None:
             return self
 
         msg = ForwardMsg_pb2.ForwardMsg()
         msg.delta.new_block = True
         msg.metadata.parent_block.container = self._container
-        msg.metadata.parent_block.path[:] = self._path
-        msg.metadata.delta_id = self._id
+        msg.metadata.parent_block.path[:] = self._cursor.path
+        msg.metadata.delta_id = self._cursor.index
 
-        new_block_dg = DeltaGenerator(
-            enqueue=self._enqueue,
-            id=0,
-            is_root=True,
-            container=self._container,
-            path=self._path + (self._id,),
+        # Normally we'd return a new DeltaGenerator that uses the locked cursor
+        # below. But in this case we want to return a DeltaGenerator that uses
+        # a brand new cursor for this new block we're creating.
+        block_cursor = cursor.RunningCursor(
+            path=self._cursor.path + (self._cursor.index,)
         )
+        block_dg = DeltaGenerator(container=self._container, cursor=block_cursor)
 
-        self._enqueue(msg)
-        self._id += 1
+        # Must be called to increment this cursor's index.
+        self._cursor.get_locked_cursor(None)
 
-        return new_block_dg
+        _enqueue_message(msg)
+
+        return block_dg
 
     @_with_element
     def balloons(self, element):
@@ -644,11 +604,19 @@ class DeltaGenerator(object):
            height: 280px
 
         """
-        element.json.body = (
-            body
-            if isinstance(body, string_types)  # noqa: F821
-            else json.dumps(body, default=lambda o: str(type(o)))
-        )
+        import streamlit as st
+
+        if not isinstance(body, str):
+            try:
+                body = json.dumps(body, default=lambda o: str(type(o)))
+            except TypeError as err:
+                st.warning(
+                    "Warning: this data structure was not fully serializable as "
+                    "JSON due to one or more unexpected keys.  (Error was: %s)" % err
+                )
+                body = json.dumps(body, skipkeys=True, default=lambda o: str(type(o)))
+
+        element.json.body = body
 
     @_with_element
     def title(self, element, body):
@@ -833,7 +801,6 @@ class DeltaGenerator(object):
 
         exception_proto.marshall(element.exception, exception, exception_traceback)
 
-    @_remove_self_from_sig
     def dataframe(self, data=None, width=None, height=None):
         """Display a dataframe as an interactive table.
 
@@ -1073,7 +1040,7 @@ class DeltaGenerator(object):
         ...     columns=['a', 'b', 'c'])
         >>>
         >>> st.vega_lite_chart(df, {
-        ...     'mark': 'circle',
+        ...     'mark': {'type': 'circle', 'tooltip': True},
         ...     'encoding': {
         ...         'x': {'field': 'a', 'type': 'quantitative'},
         ...         'y': {'field': 'b', 'type': 'quantitative'},
@@ -1105,7 +1072,7 @@ class DeltaGenerator(object):
             data,
             spec,
             use_container_width=use_container_width,
-            **kwargs
+            **kwargs,
         )
 
     @_with_element
@@ -1138,9 +1105,9 @@ class DeltaGenerator(object):
         ...     columns=['a', 'b', 'c'])
         ...
         >>> c = alt.Chart(df).mark_circle().encode(
-        ...     x='a', y='b', size='c', color='c')
+        ...     x='a', y='b', size='c', color='c', tooltip=['a', 'b', 'c'])
         >>>
-        >>> st.altair_chart(c, width=-1)
+        >>> st.altair_chart(c, use_container_width=True)
 
         .. output::
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
@@ -1287,17 +1254,17 @@ class DeltaGenerator(object):
 
         width : int
             Deprecated. If != 0 (default), will show an alert.
-            From now on you should set the width directly in the Altair
-            spec. Please refer to the Altair documentation for details.
+            From now on you should set the width directly in the figure.
+            Please refer to the Plotly documentation for details.
 
         height : int
             Deprecated. If != 0 (default), will show an alert.
-            From now on you should set the height directly in the Altair
-            spec. Please refer to the Altair documentation for details.
+            From now on you should set the height directly in the figure.
+            Please refer to the Plotly documentation for details.
 
         use_container_width : bool
             If True, set the chart width to the column width. This takes
-            precedence over Altair's native `width` value.
+            precedence over the figure's native `width` value.
 
         sharing : {'streamlit', 'private', 'secret', 'public'}
             Use 'streamlit' to insert the plot and all its dependencies
@@ -1348,27 +1315,27 @@ class DeltaGenerator(object):
 
         """
         # NOTE: "figure_or_data" is the name used in Plotly's .plot() method
-        # for their main parameter. I don't like the name, but its best to keep
-        # it in sync with what Plotly calls it.
+        # for their main parameter. I don't like the name, but it's best to
+        # keep it in sync with what Plotly calls it.
         import streamlit.elements.plotly_chart as plotly_chart
 
         if width != 0 and height != 0:
             import streamlit as st
 
             st.warning(
-                "The `width` and `height` arguments in `st.plotly_chart` are deprecated and will be removed on 2020-03-04. To set this values, you should instead use ploty's native arguments as described at https://plot.ly/python/setting-graph-size/"
+                "The `width` and `height` arguments in `st.plotly_chart` are deprecated and will be removed on 2020-03-04. To set these values, you should instead use Plotly's native arguments as described at https://plot.ly/python/setting-graph-size/"
             )
         elif width != 0:
             import streamlit as st
 
             st.warning(
-                "The `width` argument in `st.plotly_chart` is deprecated and will be removed on 2020-03-04. To set the width, you should instead use ploty's native `width` argument as described at https://plot.ly/python/setting-graph-size/"
+                "The `width` argument in `st.plotly_chart` is deprecated and will be removed on 2020-03-04. To set the width, you should instead use Plotly's native `width` argument as described at https://plot.ly/python/setting-graph-size/"
             )
         elif height != 0:
             import streamlit as st
 
             st.warning(
-                "The `height` argument in `st.plotly_chart` is deprecated and will be removed on 2020-03-04. To set the height, you should instead use ploty's native `height` argument as described at https://plot.ly/python/setting-graph-size/"
+                "The `height` argument in `st.plotly_chart` is deprecated and will be removed on 2020-03-04. To set the height, you should instead use Plotly's native `height` argument as described at https://plot.ly/python/setting-graph-size/"
             )
 
         plotly_chart.marshall(
@@ -1468,7 +1435,6 @@ class DeltaGenerator(object):
 
         bokeh_chart.marshall(element.bokeh_chart, figure, use_container_width)
 
-    # TODO: Make this accept files and strings/bytes as input.
     @_with_element
     def image(
         self,
@@ -1527,7 +1493,7 @@ class DeltaGenerator(object):
            height: 630px
 
         """
-        import streamlit.elements.image_proto as image_proto
+        from .elements import image_proto
 
         if use_column_width:
             width = -2
@@ -1535,6 +1501,7 @@ class DeltaGenerator(object):
             width = -1
         elif width <= 0:
             raise StreamlitAPIException("Image width must be positive.")
+
         image_proto.marshall_images(
             image, caption, width, element.imgs, clamp, channels, format
         )
@@ -1547,9 +1514,9 @@ class DeltaGenerator(object):
         ----------
         data : str, bytes, BytesIO, numpy.ndarray, or file opened with
                 io.open().
-            Raw audio data or a string with a URL pointing to the file to load.
-            If passing the raw data, this must include headers and any other bytes
-            required in the actual file.
+            Raw audio data, filename, or a URL pointing to the file to load.
+            Numpy arrays and raw data formats must include all necessary file
+            headers to match specified file format.
         start_time: int
             The time from which this element should start playing.
         format : str
@@ -1568,8 +1535,6 @@ class DeltaGenerator(object):
            height: 400px
 
         """
-        # TODO: Provide API to convert raw NumPy arrays to audio file (with
-        # proper headers, etc)?
         from .elements import media_proto
 
         media_proto.marshall_audio(element.audio, data, format, start_time)
@@ -1582,10 +1547,11 @@ class DeltaGenerator(object):
         ----------
         data : str, bytes, BytesIO, numpy.ndarray, or file opened with
                 io.open().
-            Raw video data or a string with a URL pointing to the video
-            to load. Includes support for YouTube URLs.
-            If passing the raw data, this must include headers and any other
-            bytes required in the actual file.
+            Raw video data, filename, or URL pointing to a video to load.
+            Includes support for YouTube URLs.
+            Numpy arrays and raw data formats must include all necessary file
+            headers to match specified file format.
+        start_time: int
         format : str
             The mime type for the video file. Defaults to 'video/mp4'.
             See https://tools.ietf.org/html/rfc4281 for more info.
@@ -1604,8 +1570,6 @@ class DeltaGenerator(object):
            height: 600px
 
         """
-        # TODO: Provide API to convert raw NumPy arrays to video file (with
-        # proper headers, etc)?
         from .elements import media_proto
 
         media_proto.marshall_video(element.video, data, format, start_time)
@@ -1810,7 +1774,11 @@ class DeltaGenerator(object):
         ui_value = _get_widget_ui_value("radio", element, user_key=key)
         current_value = ui_value if ui_value is not None else index
 
-        return options[current_value] if len(options) > 0 and options[current_value] is not None else NoValue
+        return (
+            options[current_value]
+            if len(options) > 0 and options[current_value] is not None
+            else NoValue
+        )
 
     @_with_element
     def selectbox(self, element, label, options, index=0, format_func=str, key=None):
@@ -1865,7 +1833,11 @@ class DeltaGenerator(object):
         ui_value = _get_widget_ui_value("selectbox", element, user_key=key)
         current_value = ui_value if ui_value is not None else index
 
-        return options[current_value] if len(options) > 0 and options[current_value] is not None else NoValue
+        return (
+            options[current_value]
+            if len(options) > 0 and options[current_value] is not None
+            else NoValue
+        )
 
     @_with_element
     def slider(
@@ -1903,8 +1875,9 @@ class DeltaGenerator(object):
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
         format : str or None
-            Printf/Python format string controlling how the interface should
+            A printf-style format string controlling how the interface should
             display numbers. This does not impact the return value.
+            Valid formatters: %d %e %f %g %i
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -2100,7 +2073,7 @@ class DeltaGenerator(object):
         """
         from streamlit.string_util import is_binary_string
 
-        if isinstance(type, string_types):  # noqa: F821
+        if isinstance(type, str):
             type = [type]
 
         element.file_uploader.label = label
@@ -2389,7 +2362,7 @@ class DeltaGenerator(object):
             else:
                 value = 0.0  # We set a float as default
 
-        int_value = isinstance(value, int)
+        int_value = isinstance(value, numbers.Integral)
         float_value = isinstance(value, float)
 
         if value is None:
@@ -2425,7 +2398,12 @@ class DeltaGenerator(object):
         args = [min_value, max_value, step]
 
         int_args = all(
-            map(lambda a: (isinstance(a, int) or isinstance(a, type(None))), args)
+            map(
+                lambda a: (
+                    isinstance(a, numbers.Integral) or isinstance(a, type(None))
+                ),
+                args,
+            )
         )
         float_args = all(
             map(lambda a: (isinstance(a, float) or isinstance(a, type(None))), args)
@@ -2450,14 +2428,16 @@ class DeltaGenerator(object):
 
         if not all_ints and not all_floats:
             raise StreamlitAPIException(
-                "Both value and arguments must be of the same type."
+                "All numerical arguments must be of the same type."
                 "\n`value` has %(value_type)s type."
                 "\n`min_value` has %(min_type)s type."
                 "\n`max_value` has %(max_type)s type."
+                "\n`step` has %(step_type)s type."
                 % {
                     "value_type": type(value).__name__,
                     "min_type": type(min_value).__name__,
                     "max_type": type(max_value).__name__,
+                    "step_type": type(step).__name__,
                 }
             )
 
@@ -2532,6 +2512,7 @@ class DeltaGenerator(object):
         >>> my_bar = st.progress(0)
         >>>
         >>> for percent_complete in range(100):
+        ...     time.sleep(0.1)
         ...     my_bar.progress(percent_complete + 1)
 
         """
@@ -2893,10 +2874,10 @@ class DeltaGenerator(object):
         >>> my_chart.add_rows(some_fancy_name=df2)  # <-- name used as keyword
 
         """
-        if self._enqueue is None:
+        if self._container is None or self._cursor is None:
             return self
 
-        if self._is_root:
+        if not self._cursor.is_locked:
             raise StreamlitAPIException("Only existing elements can `add_rows`.")
 
         # Accept syntax st.add_rows(df).
@@ -2916,24 +2897,24 @@ class DeltaGenerator(object):
         # (for example, st.line_chart() without any args), call the original
         # st.foo() element with new data instead of doing an add_rows().
         if (
-            self._delta_type in DELTAS_TYPES_THAT_MELT_DATAFRAMES
-            and self._last_index is None
+            self._cursor.props["delta_type"] in DELTAS_TYPES_THAT_MELT_DATAFRAMES
+            and self._cursor.props["last_index"] is None
         ):
             # IMPORTANT: This assumes delta types and st method names always
             # match!
-            st_method_name = self._delta_type
+            st_method_name = self._cursor.props["delta_type"]
             st_method = getattr(self, st_method_name)
             st_method(data, **kwargs)
             return
 
-        data, self._last_index = _maybe_melt_data_for_add_rows(
-            data, self._delta_type, self._last_index
+        data, self._cursor.props["last_index"] = _maybe_melt_data_for_add_rows(
+            data, self._cursor.props["delta_type"], self._cursor.props["last_index"]
         )
 
         msg = ForwardMsg_pb2.ForwardMsg()
         msg.metadata.parent_block.container = self._container
-        msg.metadata.parent_block.path[:] = self._path
-        msg.metadata.delta_id = self._id
+        msg.metadata.parent_block.path[:] = self._cursor.path
+        msg.metadata.delta_id = self._cursor.index
 
         import streamlit.elements.data_frame_proto as data_frame_proto
 
@@ -2943,7 +2924,7 @@ class DeltaGenerator(object):
             msg.delta.add_rows.name = name
             msg.delta.add_rows.has_name = True
 
-        self._enqueue(msg)
+        _enqueue_message(msg)
 
         return self
 
@@ -2976,7 +2957,7 @@ def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
             stop = last_index + old_step + old_stop
 
             data.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
-            last_index = stop
+            last_index = stop - 1
 
         index_name = data.index.name
         if index_name is None:
@@ -2989,3 +2970,32 @@ def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
 
 def _clean_text(text):
     return textwrap.dedent(str(text)).strip()
+
+
+def _value_or_dg(value, dg):
+    """Return either value, or None, or dg.
+
+    This is needed because Widgets have meaningful return values. This is
+    unlike other elements, which always return None. Then we internally replace
+    that None with a DeltaGenerator instance.
+
+    However, sometimes a widget may want to return None, and in this case it
+    should not be replaced by a DeltaGenerator. So we have a special NoValue
+    object that gets replaced by None.
+
+    """
+    if value is NoValue:
+        return None
+    if value is None:
+        return dg
+    return value
+
+
+def _enqueue_message(msg):
+    """Enqueues a ForwardMsg proto to send to the app."""
+    ctx = get_report_ctx()
+
+    if ctx is None:
+        raise NoSessionContext()
+
+    ctx.enqueue(msg)

@@ -22,16 +22,25 @@ class S3NoCredentials(Exception):
     pass
 
 
-class StreamlitAPIException(Exception):
+class NoSessionContext(Exception):
+    pass
+
+
+class MarkdownFormattedException(Exception):
+    """Instances of this class can use markdown in their messages, which will get
+    nicely formatted on the frontend.
+    """
+
+    pass
+
+
+class StreamlitAPIException(MarkdownFormattedException):
     """Base class for Streamlit API exceptions.
 
     An API exception should be thrown when user code interacts with the
     Streamlit API incorrectly. (That is, when we throw an exception as a
     result of a user's malformed `st.foo` call, it should be a
     StreamlitAPIException or subclass.)
-
-    Instances of this class can use markdown in their messages, which will get
-    nicely formatted on the frontend.
 
     When displaying these exceptions on the frontend, we strip Streamlit
     entries from the stack trace so that the user doesn't see a bunch of
@@ -47,4 +56,14 @@ class DuplicateWidgetID(StreamlitAPIException):
 
 
 class UnhashableType(StreamlitAPIException):
+    pass
+
+
+class UserHashError(StreamlitAPIException):
+    pass
+
+
+class InternalHashError(MarkdownFormattedException):
+    """Exception in Streamlit hashing code (i.e. not a user error)"""
+
     pass

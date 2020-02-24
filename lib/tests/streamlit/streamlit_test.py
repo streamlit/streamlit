@@ -14,6 +14,8 @@
 # limitations under the License.
 
 """Streamlit Unit test."""
+from io import BytesIO
+
 from mock import patch
 import json
 import os
@@ -32,6 +34,11 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Balloons_pb2 import Balloons
 
 from streamlit.proto.Alert_pb2 import Alert
+
+from streamlit.MediaFileManager import media_file_manager
+from streamlit.MediaFileManager import _get_file_id
+from streamlit.MediaFileManager import STATIC_MEDIA_ENDPOINT
+
 from tests import testutil
 import streamlit as st
 
@@ -124,17 +131,21 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_audio(self):
         """Test st.audio."""
-        # TODO(armando): generate real audio data
-        # For now it doesnt matter cause browser is the one that uses it.
+
+        # Fake audio data: expect the resultant mimetype to be audio default.
         fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
 
         st.audio(fake_audio_data)
 
         el = self.get_delta_from_queue().new_element
-        # Manually base64 encoded payload above via
-        # base64.b64encode(bytes('\x11\x22\x33\x44\x55\x66'.encode('utf-8')))
-        self.assertEqual(el.audio.data, "ESIzRFVm")
-        self.assertEqual(el.audio.format, "audio/wav")
+
+        # locate resultant file in MediaFileManager and test its properties.
+        file_id = _get_file_id(fake_audio_data, "audio/wav")
+        self.assertTrue(file_id in media_file_manager)
+
+        afile = media_file_manager.get(file_id)
+        self.assertEqual(afile.mimetype, "audio/wav")
+        self.assertEqual(afile.url, el.audio.url)
 
         # test using a URL instead of data
         some_url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
@@ -143,29 +154,33 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.audio.url, some_url)
 
-        # Test that a non-URL string doesn't load into URL param.
-        non_url = "blah"
-        try:
-            # Python 2 behavior
-            st.audio(non_url)
-            el = self.get_delta_from_queue().new_element
-            assert not el.audio.url
-            assert el.audio.data == "YmxhaA=="  # "blah" to base64 encoded payload
-        except TypeError:
-            # Python 3 behavior
-            assert True
+        # Test that a non-URL string is assumed to be a filename
+        bad_filename = "blah"
+        with self.assertRaises(FileNotFoundError):
+            st.audio(bad_filename)
+
+        # Test that we can use an empty/None value without error.
+        st.audio(None)
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.audio.url, "")
+
+        # Test that our other data types don't result in an error.
+        st.audio(b"bytes_data")
+        st.audio("str_data".encode("utf-8"))
+        st.audio(BytesIO(b"bytesio_data"))
+        st.audio(np.array([0, 1, 2, 3]))
 
     def test_st_audio_options(self):
         """Test st.audio with options."""
+        from streamlit.MediaFileManager import _get_file_id
+
         fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
         st.audio(fake_audio_data, format="audio/mp3", start_time=10)
 
         el = self.get_delta_from_queue().new_element
-        # Manually base64 encoded payload above via
-        # base64.b64encode(bytes('\x11\x22\x33\x44\x55\x66'.encode('utf-8')))
-        self.assertEqual(el.audio.data, "ESIzRFVm")
-        self.assertEqual(el.audio.format, "audio/mp3")
         self.assertEqual(el.audio.start_time, 10)
+        self.assertTrue(el.audio.url.startswith(STATIC_MEDIA_ENDPOINT))
+        self.assertTrue(_get_file_id(fake_audio_data, "audio/mp3"), el.audio.url)
 
     def test_st_balloons(self):
         """Test st.balloons."""
@@ -255,8 +270,8 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(
                 el.exception.stack_trace,
                 [
-                    u"Cannot extract the stack trace for this exception. Try "
-                    u"calling exception() within the `catch` block."
+                    "Cannot extract the stack trace for this exception. Try "
+                    "calling exception() within the `catch` block."
                 ],
             )
 
@@ -278,25 +293,30 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             el.doc_string.doc_string.startswith("Display text in header formatting.")
         )
         if sys.version_info >= (3, 0):
-            self.assertEqual(el.doc_string.type, "<class 'function'>")
+            self.assertEqual(el.doc_string.type, "<class 'method'>")
         else:
-            self.assertEqual(el.doc_string.type, u"<type 'function'>")
+            self.assertEqual(el.doc_string.type, "<type 'instancemethod'>")
         self.assertEqual(el.doc_string.signature, "(body)")
 
     def test_st_image_PIL_image(self):
         """Test st.image with PIL image."""
         img = Image.new("RGB", (64, 64), color="red")
 
-        # Manually calculated by letting the test fail and copying and
-        # pasting the result.
-        checksum = "gNaA9oFUoUBf3Xr7AgAAAAASUVORK5CYII="
-
         st.image(img, caption="some caption", width=100, format="PNG")
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.imgs.width, 100)
         self.assertEqual(el.imgs.imgs[0].caption, "some caption")
-        self.assertTrue(el.imgs.imgs[0].data.base64.endswith(checksum))
+
+        # locate resultant file in the file manager and check its metadata.
+        from streamlit.elements.image_proto import _PIL_to_bytes
+
+        file_id = _get_file_id(_PIL_to_bytes(img, format="PNG"), "image/png")
+        self.assertTrue(file_id in media_file_manager)
+
+        afile = media_file_manager.get(file_id)
+        self.assertEqual(afile.mimetype, "image/png")
+        self.assertEqual(afile.url, el.imgs.imgs[0].url)
 
     def test_st_image_PIL_array(self):
         """Test st.image with a PIL array."""
@@ -305,13 +325,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             Image.new("RGB", (64, 64), color="blue"),
             Image.new("RGB", (64, 64), color="green"),
         ]
-        # Manually calculated by letting the test fail and copying and
-        # pasting the result.
-        imgs_b64 = [
-            "A1oDWgNaA9oFUoUBf3Xr7AgAAAAASUVORK5CYII=",
-            "WgNaA1oDWgPaBVCHAX/y3CvgAAAAAElFTkSuQmCC",
-            "NaA1oDWgNaBdYVwBALVjUB8AAAAASUVORK5CYII=",
-        ]
+
         st.image(
             imgs,
             caption=["some caption"] * 3,
@@ -323,9 +337,17 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.imgs.width, -2)
-        for idx, checksum in enumerate(imgs_b64):
+
+        # locate resultant file in the file manager and check its metadata.
+        from streamlit.elements.image_proto import _PIL_to_bytes
+
+        for idx in range(len(imgs)):
+            file_id = _get_file_id(_PIL_to_bytes(imgs[idx], format="PNG"), "image/png")
             self.assertEqual(el.imgs.imgs[idx].caption, "some caption")
-            self.assertTrue(el.imgs.imgs[idx].data.base64.endswith(checksum))
+            self.assertTrue(file_id in media_file_manager)
+            afile = media_file_manager.get(file_id)
+            self.assertEqual(afile.mimetype, "image/png")
+            self.assertEqual(afile.url, el.imgs.imgs[idx].url)
 
     def test_st_image_with_single_url(self):
         """Test st.image with single url."""
@@ -374,6 +396,16 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.json.body, '{"some": "json"}')
+
+        # Test that an object containing non-json-friendly keys can still
+        # be displayed.  Resultant json body will be missing those keys.
+
+        n = np.array([1, 2, 3, 4, 5])
+        data = {n[0]: "this key will not render as JSON", "array": n}
+        st.json(data)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.json.body, '{"array": "<class \'numpy.ndarray\'>"}')
 
     def test_st_line_chart(self):
         """Test st.line_chart."""
@@ -424,11 +456,6 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         * Failed import of matplotlib.
         * Passing in a figure.
         """
-        # We don't test matplotlib under Python 2, because we're not
-        # able to reliably force the backend to "agg".
-        if sys.version_info < (3, 0):
-            return
-
         import matplotlib
         import matplotlib.pyplot as plt
 
@@ -449,17 +476,10 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.imgs.width, -2)
         self.assertEqual(el.imgs.imgs[0].caption, "")
-
-        checksum = "iVBORw0KGgoAAAANSUhEUgAAAZAAAAGQCAYAAACAvzb"
-        self.assertTrue(el.imgs.imgs[0].data.base64.startswith(checksum))
+        self.assertTrue(el.imgs.imgs[0].url.startswith(STATIC_MEDIA_ENDPOINT))
 
     def test_st_pyplot_clear_figure(self):
         """st.pyplot should clear the passed-in figure."""
-        if sys.version_info < (3, 0):
-            # We don't test matplotlib under Python 2, because we're not
-            # able to reliably force the backend to "agg".
-            return
-
         import matplotlib
         import matplotlib.pyplot as plt
 
@@ -529,11 +549,6 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_plotly_chart_mpl(self):
         """Test st.plotly_chart can handle Matplotlib figures."""
-        # We don't test matplotlib under Python 2, because we're not
-        # able to reliably force the backend to "agg".
-        if sys.version_info < (3, 0):
-            return
-
         import matplotlib
         import matplotlib.pyplot as plt
 
@@ -617,17 +632,22 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_video(self):
         """Test st.video."""
-        # TODO(armando): generate real video data
-        # For now it doesnt matter cause browser is the one that uses it.
-        fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+
+        # Make up some bytes to pretend we have a video.  The server should not vet
+        # the video before sending it to the browser.
+        fake_video_data = "\x12\x10\x35\x44\x55\x66".encode("utf-8")
 
         st.video(fake_video_data)
 
         el = self.get_delta_from_queue().new_element
-        # Manually base64 encoded payload above via
-        # base64.b64encode(bytes('\x11\x22\x33\x44\x55\x66'.encode('utf-8')))
-        self.assertEqual(el.video.data, "ESIzRFVm")
-        self.assertEqual(el.video.format, "video/mp4")
+
+        # locate resultant file in MediaFileManager and test its properties.
+        file_id = _get_file_id(fake_video_data, "video/mp4")
+        self.assertTrue(file_id in media_file_manager)
+
+        afile = media_file_manager.get(file_id)
+        self.assertEqual(afile.mimetype, "video/mp4")
+        self.assertEqual(afile.url, el.video.url)
 
         # Test with an arbitrary URL in place of data
         some_url = "http://www.marmosetcare.com/video/in-the-wild/intro.webm"
@@ -652,29 +672,34 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             el = self.get_delta_from_queue().new_element
             self.assertEqual(el.video.url, yt_embeds[x])
 
-        # Test that a non-URL string doesn't load the URL property
-        non_url = "blah"
-        try:
-            # Python 2 behavior
-            st.video(non_url)
-            el = self.get_delta_from_queue().new_element
-            assert not el.video.url
-            assert el.video.data == "YmxhaA=="  # "blah" to base64 encoded payload
-        except TypeError:
-            # Python 3 behavior
-            assert True
+        # Test that a non-URL string is assumed to be a filename
+        bad_filename = "blah"
+        with self.assertRaises(FileNotFoundError):
+            st.video(bad_filename)
+
+        # Test that we can use an empty/None value without error.
+        st.video(None)
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.video.url, "")
+
+        # Test that our other data types don't result in an error.
+        st.video(b"bytes_data")
+        st.video("str_data".encode("utf-8"))
+        st.video(BytesIO(b"bytesio_data"))
+        st.video(np.array([0, 1, 2, 3]))
 
     def test_st_video_options(self):
         """Test st.video with options."""
+
+        from streamlit.MediaFileManager import _get_file_id
+
         fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
         st.video(fake_video_data, format="video/mp4", start_time=10)
 
         el = self.get_delta_from_queue().new_element
-        # Manually base64 encoded payload above via
-        # base64.b64encode(bytes('\x11\x22\x33\x44\x55\x66'.encode('utf-8')))
-        self.assertEqual(el.video.data, "ESIzRFVm")
-        self.assertEqual(el.video.format, "video/mp4")
         self.assertEqual(el.video.start_time, 10)
+        self.assertTrue(el.video.url.startswith(STATIC_MEDIA_ENDPOINT))
+        self.assertTrue(_get_file_id(fake_video_data, "video/mp4") in el.video.url)
 
     def test_st_warning(self):
         """Test st.warning."""

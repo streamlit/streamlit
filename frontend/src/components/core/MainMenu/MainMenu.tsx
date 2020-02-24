@@ -23,6 +23,8 @@ import {
   DropdownToggle,
 } from "reactstrap"
 import Icon from "components/shared/Icon"
+
+import ScreencastOption from "./component/ScreencastOption"
 import "./MainMenu.scss"
 
 const ONLINE_DOCS_URL = "https://docs.streamlit.io"
@@ -55,7 +57,7 @@ interface Props {
   /** Show the About dialog. */
   aboutCallback: () => void
 
-  isScreencastRecording: boolean
+  screenCastState: string
 }
 
 interface State {
@@ -96,7 +98,7 @@ class MainMenu extends PureComponent<Props, State> {
         <DropdownToggle outline color="secondary" id="MainMenuButton">
           <Icon type="menu" />
 
-          {this.props.isScreencastRecording && (
+          {this.props.screenCastState === "RECORDING" && (
             <span className="recording-indicator" />
           )}
         </DropdownToggle>
@@ -120,6 +122,23 @@ class MainMenu extends PureComponent<Props, State> {
 
           <DropdownItem divider />
 
+          <ScreencastOption
+            screenCastState={this.props.screenCastState}
+            onClick={this.props.screencastCallback}
+          />
+
+          {/* We hide 'Share Report' + divider if sharing is not configured */}
+          {this.props.sharingEnabled && (
+            <DropdownItem
+              disabled={isServerDisconnected}
+              onClick={this.props.shareCallback}
+            >
+              Save a snapshot
+            </DropdownItem>
+          )}
+
+          <DropdownItem divider />
+
           <DropdownItem
             onClick={this.getOpenInWindowCallback(ONLINE_DOCS_URL)}
           >
@@ -133,37 +152,6 @@ class MainMenu extends PureComponent<Props, State> {
           <DropdownItem onClick={this.getOpenInWindowCallback(BUG_URL)}>
             Report a bug
           </DropdownItem>
-
-          <DropdownItem divider />
-
-          {!this.props.isScreencastRecording && (
-            <DropdownItem onClick={this.props.screencastCallback}>
-              Record a screencast
-            </DropdownItem>
-          )}
-
-          {this.props.isScreencastRecording && (
-            <DropdownItem
-              onClick={this.props.screencastCallback}
-              className="stop-recording"
-            >
-              <span>
-                <strong>Stop recording</strong>
-              </span>
-
-              <span className="shortcut">ESC</span>
-            </DropdownItem>
-          )}
-
-          {/* We hide 'Share Report' + divider if sharing is not configured */}
-          {this.props.sharingEnabled && (
-            <DropdownItem
-              disabled={isServerDisconnected}
-              onClick={this.props.shareCallback}
-            >
-              Save a snapshot
-            </DropdownItem>
-          )}
 
           <DropdownItem divider />
 

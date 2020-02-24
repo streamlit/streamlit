@@ -26,7 +26,6 @@ from streamlit import caching
 from streamlit import config
 from streamlit import url_util
 from streamlit.UploadedFileManager import UploadedFileManager
-from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.Report import Report
 from streamlit.ScriptRequestQueue import RerunData
 from streamlit.ScriptRequestQueue import ScriptRequest
@@ -35,7 +34,6 @@ from streamlit.ScriptRunner import ScriptRunner
 from streamlit.ScriptRunner import ScriptRunnerEvent
 from streamlit.credentials import Credentials
 from streamlit.logger import get_logger
-from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Widget_pb2 import WidgetStates
 from streamlit.server.server_util import serialize_forward_msg
@@ -80,8 +78,8 @@ class ReportSession(object):
             Command line as input by the user.
 
         """
-        # Each ReportSession gets a unique ID
-        self.id = ReportSession._next_id
+        # Each ReportSession gets a unique string ID.
+        self.id = str(ReportSession._next_id)
         ReportSession._next_id += 1
 
         self._ioloop = ioloop
@@ -90,11 +88,6 @@ class ReportSession(object):
         self._state = ReportSessionState.REPORT_NOT_RUNNING
 
         self._uploaded_file_mgr = UploadedFileManager()
-
-        self._main_dg = DeltaGenerator(enqueue=self.enqueue, container=BlockPath.MAIN)
-        self._sidebar_dg = DeltaGenerator(
-            enqueue=self.enqueue, container=BlockPath.SIDEBAR
-        )
 
         self._widget_states = WidgetStates()
         self._local_sources_watcher = LocalSourcesWatcher(
@@ -114,7 +107,7 @@ class ReportSession(object):
         LOGGER.debug("ReportSession initialized (id=%s)", self.id)
 
     def flush_browser_queue(self):
-        """Clears the report queue and returns the messages it contained.
+        """Clear the report queue and return the messages it contained.
 
         The Server calls this periodically to deliver new messages
         to the browser connected to this report.
@@ -129,7 +122,7 @@ class ReportSession(object):
         return self._report.flush_browser_queue()
 
     def shutdown(self):
-        """Shuts down the ReportSession.
+        """Shut down the ReportSession.
 
         It's an error to use a ReportSession after it's been shut down.
 
@@ -148,7 +141,7 @@ class ReportSession(object):
             self._local_sources_watcher.close()
 
     def enqueue(self, msg):
-        """Enqueues a new ForwardMsg to our browser queue.
+        """Enqueue a new ForwardMsg to our browser queue.
 
         This can be called on both the main thread and a ScriptRunner
         run thread.
@@ -158,15 +151,9 @@ class ReportSession(object):
         msg : ForwardMsg
             The message to enqueue
 
-        Returns
-        -------
-        bool
-            True if the message was enqueued, or False if
-            client.displayEnabled is not set
-
         """
         if not config.get_option("client.displayEnabled"):
-            return False
+            return
 
         # Avoid having two maybe_handle_execution_control_request running on
         # top of each other when tracer is installed. This leads to a lock
@@ -182,10 +169,9 @@ class ReportSession(object):
                 scriptrunner.maybe_handle_execution_control_request()
 
         self._report.enqueue(msg)
-        return True
 
     def enqueue_exception(self, e):
-        """Enqueues an Exception message.
+        """Enqueue an Exception message.
 
         Parameters
         ----------
@@ -398,7 +384,7 @@ class ReportSession(object):
         self.enqueue(msg)
 
     def _enqueue_report_finished_message(self, status):
-        """Enqueues a report_finished ForwardMsg.
+        """Enqueue a report_finished ForwardMsg.
 
         Parameters
         ----------
@@ -412,7 +398,7 @@ class ReportSession(object):
     def handle_rerun_script_request(
         self, command_line=None, widget_state=None, is_preheat=False
     ):
-        """Tells the ScriptRunner to re-run its report.
+        """Tell the ScriptRunner to re-run its report.
 
         Parameters
         ----------
@@ -472,11 +458,11 @@ class ReportSession(object):
         self.handle_rerun_script_request(widget_state=self._widget_states)
 
     def handle_stop_script_request(self):
-        """Tells the ScriptRunner to stop running its report."""
+        """Tell the ScriptRunner to stop running its report."""
         self._enqueue_script_request(ScriptRequest.STOP)
 
     def handle_clear_cache_request(self):
-        """Clears this report's cache.
+        """Clear this report's cache.
 
         Because this cache is global, it will be cleared for all users.
 
@@ -488,7 +474,7 @@ class ReportSession(object):
         caching.clear_cache()
 
     def handle_set_run_on_save_request(self, new_value):
-        """Changes our run_on_save flag to the given value.
+        """Change our run_on_save flag to the given value.
 
         The browser will be notified of the change.
 
@@ -543,8 +529,7 @@ class ReportSession(object):
         # Create the ScriptRunner, attach event handlers, and start it
         self._scriptrunner = ScriptRunner(
             report=self._report,
-            main_dg=self._main_dg,
-            sidebar_dg=self._sidebar_dg,
+            enqueue_forward_msg=self.enqueue,
             widget_states=self._widget_states,
             request_queue=self._script_request_queue,
             uploaded_file_mgr=self._uploaded_file_mgr,

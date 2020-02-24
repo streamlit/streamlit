@@ -17,16 +17,12 @@
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
+
 from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
 
 import inspect
-
-try:
-    import funcsigs
-except ImportError:
-    pass
 
 from streamlit.logger import get_logger
 
@@ -35,12 +31,7 @@ LOGGER = get_logger(__name__)
 
 CONFUSING_STREAMLIT_MODULES = ("streamlit.DeltaGenerator", "streamlit.caching")
 
-CONFUSING_STREAMLIT_SIG_PREFIXES = (
-    "(self, element, ",
-    "(self, _, ",
-    "(self, ",
-    "(ui_value, ",
-)
+CONFUSING_STREAMLIT_SIG_PREFIXES = ("(element, ",)
 
 
 def marshall(proto, obj):
@@ -108,21 +99,8 @@ def _get_signature(f):
 
     sig = ""
 
-    get_signature = None
-
-    # Python 3.3+
-    if hasattr(inspect, "signature"):
-        get_signature = inspect.signature
-    else:
-        try:
-            get_signature = funcsigs.signature
-        except NameError:
-            # Funcsigs doesn't exist.
-            get_signature = lambda x: ""
-            pass
-
     try:
-        sig = str(get_signature(f))
+        sig = str(inspect.signature(f))
     except ValueError:
         # f is a builtin.
         pass

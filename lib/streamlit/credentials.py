@@ -19,6 +19,7 @@ import os
 import sys
 import textwrap
 from collections import namedtuple
+from typing import Optional
 
 import click
 import toml
@@ -36,12 +37,6 @@ Activation = namedtuple(
         "is_valid",  # boolean : whether the email is valid.
     ],
 )
-
-# For python 2.7
-try:
-    FileNotFoundError
-except NameError:  # pragma: nocover
-    FileNotFoundError = IOError
 
 
 EMAIL_PROMPT = """
@@ -82,7 +77,7 @@ INSTRUCTIONS_TEXT = """
 class Credentials(object):
     """Credentials class."""
 
-    _singleton = None
+    _singleton = None  # type: Optional[Credentials]
 
     @classmethod
     def get_current(cls):
@@ -104,7 +99,7 @@ class Credentials(object):
 
         Credentials._singleton = self
 
-    def load(self, auto_resolve=False):
+    def load(self, auto_resolve=False) -> None:
         """Load from toml file."""
         if self.activation is not None:
             LOGGER.error("Credentials already loaded. Not rereading file.")
@@ -113,6 +108,8 @@ class Credentials(object):
         try:
             with open(self._conf_file, "r") as f:
                 data = toml.load(f).get("general")
+            if data is None:
+                raise Exception
             self.activation = _verify_email(data.get("email"))
         except FileNotFoundError:
             if auto_resolve:
@@ -144,7 +141,7 @@ class Credentials(object):
         except (Exception, RuntimeError) as e:
             _exit(str(e))
 
-        if not self.activation.is_valid:
+        if self.activation is None or not self.activation.is_valid:
             _exit("Activation email not valid.")
 
     @classmethod
@@ -164,20 +161,18 @@ class Credentials(object):
 
     def save(self):
         """Save to toml file."""
+        if self.activation is None:
+            return
+
         # Create intermediate directories if necessary
-        try:
-            os.makedirs(os.path.dirname(self._conf_file))
-        except Exception:
-            # Python 3 supports exist_ok=True which avoids the try/except,
-            # but Python 2 does not.
-            pass
+        os.makedirs(os.path.dirname(self._conf_file), exist_ok=True)
 
         # Write the file
         data = {"email": self.activation.email}
         with open(self._conf_file, "w") as f:
             toml.dump({"general": data}, f)
 
-    def activate(self, show_instructions=True):
+    def activate(self, show_instructions: bool = True) -> None:
         """Activate Streamlit.
 
         Used by `streamlit activate`.
@@ -214,7 +209,7 @@ class Credentials(object):
                     LOGGER.error("Please try again.")
 
 
-def _verify_email(email):
+def _verify_email(email: str) -> Activation:
     """Verify the user's email address.
 
     The email can either be an empty string (if the user chooses not to enter

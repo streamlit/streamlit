@@ -18,13 +18,18 @@
 import unittest
 from mock import patch
 
-from tensorflow.python.keras.utils import vis_utils
-from tensorflow.python.keras.models import Sequential
-from tensorflow.python.keras.layers import Conv2D, MaxPooling2D, Dense, Flatten
+try:
+    from tensorflow.python.keras.utils import vis_utils
+    from tensorflow.python.keras.models import Sequential
+    from tensorflow.python.keras.layers import Conv2D, MaxPooling2D, Dense, Flatten
+except ImportError:
+    pass
 
 import streamlit as st
+from tests import testutil
 
 
+@testutil.requires_tensorflow
 class KerasTest(unittest.TestCase):
     """Test ability to marshall keras models."""
 

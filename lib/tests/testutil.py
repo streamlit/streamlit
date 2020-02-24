@@ -14,6 +14,8 @@
 # limitations under the License.
 
 """Utility functions to use in our tests."""
+import functools
+import sys
 import threading
 import unittest
 
@@ -22,6 +24,8 @@ from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.ReportQueue import ReportQueue
 from streamlit.ReportThread import REPORT_CONTEXT_ATTR_NAME
 from streamlit.ReportThread import ReportContext
+from streamlit.ReportThread import add_report_ctx
+from streamlit.ReportThread import get_report_ctx
 from streamlit.ReportThread import _WidgetIDSet
 from streamlit.widgets import Widgets
 from streamlit.proto.BlockPath_pb2 import BlockPath
@@ -50,19 +54,34 @@ def build_mock_config_is_manually_set(overrides_dict):
     return mock_config_is_manually_set
 
 
+def requires_tensorflow(func):
+    """Decorator indicating that a TestCase or test requires Tensorflow."""
+
+    @functools.wraps(func)
+    def inner(*args, **kwargs):
+        version = sys.version_info
+        if version.major == 3 and version.minor > 7:
+            args[0].skipTest(
+                "Requires Tensorflow, which doesn't support Python %d.%d"
+                % (version.major, version.minor)
+            )
+        func(*args, **kwargs)
+
+    return inner
+
+
 class DeltaGeneratorTestCase(unittest.TestCase):
     def setUp(self, override_root=True):
         self.report_queue = ReportQueue()
+        self.override_root = override_root
+        self.orig_report_ctx = None
 
-        if override_root:
-            main_dg = self.new_delta_generator()
-            sidebar_dg = self.new_delta_generator(container=BlockPath.SIDEBAR)
-            setattr(
+        if self.override_root:
+            self.orig_report_ctx = get_report_ctx()
+            add_report_ctx(
                 threading.current_thread(),
-                REPORT_CONTEXT_ATTR_NAME,
                 ReportContext(
-                    main_dg=main_dg,
-                    sidebar_dg=sidebar_dg,
+                    enqueue=self.report_queue.enqueue,
                     widgets=Widgets(),
                     widget_ids_this_run=_WidgetIDSet(),
                     uploaded_file_mgr=UploadedFileManager(),
@@ -71,23 +90,8 @@ class DeltaGeneratorTestCase(unittest.TestCase):
 
     def tearDown(self):
         self.report_queue._clear()
-        if hasattr(threading.current_thread(), REPORT_CONTEXT_ATTR_NAME):
-            delattr(threading.current_thread(), REPORT_CONTEXT_ATTR_NAME)
-
-    def new_delta_generator(self, *args, **kwargs):
-        def enqueue_fn(msg):
-            self.report_queue.enqueue(msg)
-            return True
-
-        if len(args) > 0:
-            enqueue = args[0]
-            args = args[1:]
-        elif "enqueue" in kwargs:
-            enqueue = kwargs.pop("enqueue")
-        else:
-            enqueue = enqueue_fn
-
-        return DeltaGenerator(enqueue, *args, **kwargs)
+        if self.override_root:
+            add_report_ctx(threading.current_thread(), self.orig_report_ctx)
 
     def get_message_from_queue(self, index=-1):
         """Get a ForwardMsg proto from the queue, by index.
@@ -105,4 +109,10 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         -------
         Delta
         """
-        return self.report_queue._queue[index].delta
+        # return self.report_queue._queue[index].delta
+        deltas = self.get_all_deltas_from_queue()
+        return deltas[index]
+
+    def get_all_deltas_from_queue(self):
+        """Return all the delta messages in our ReportQueue"""
+        return [msg.delta for msg in self.report_queue._queue if msg.HasField("delta")]

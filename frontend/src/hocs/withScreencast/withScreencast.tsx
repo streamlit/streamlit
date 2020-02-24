@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-import classNames from "classnames"
 import WhichBrowser from "which-browser"
 import ScreenCastRecorder from "lib/ScreenCastRecorder"
 import hoistNonReactStatics from "hoist-non-react-statics"
@@ -26,8 +25,7 @@ import {
   ScreencastDialog,
   VideoRecordedDialog,
 } from "hocs/withScreencast/components"
-
-import "./withScreencast.scss"
+import Countdown from "components/core/Countdown"
 
 export type Steps =
   | "UNSUPPORTED"
@@ -42,8 +40,6 @@ interface WithScreenCastProps {}
 interface WithScreenCastState {
   fileName: string
   recordAudio: boolean
-  countdown: number
-  startAnimation: boolean
   outputBlob?: Blob
   currentState: Steps
 }
@@ -77,9 +73,7 @@ function withScreencast(
 
     state = {
       fileName: "streamlit-screencast",
-      countdown: -1,
       recordAudio: false,
-      startAnimation: false,
       currentState: "OFF" as Steps,
     }
 
@@ -112,13 +106,11 @@ function withScreencast(
 
     startRecording = async (): Promise<any> => {
       const { recordAudio } = this.state
-      this.recorder = new ScreenCastRecorder({ recordAudio })
 
+      this.recorder = new ScreenCastRecorder({ recordAudio })
       await this.recorder.initialize()
 
       this.setState({
-        countdown: 3,
-        startAnimation: true,
         currentState: "COUNTDOWN",
       })
     }
@@ -127,52 +119,44 @@ function withScreencast(
       let outputBlob
       const { currentState } = this.state
 
+      // We should do nothing if the user try to stop recording when it is not started
+      if (currentState === "OFF" || this.recorder == null) {
+        return
+      }
+
+      if (currentState === "COUNTDOWN") {
+        this.setState({
+          currentState: "OFF",
+        })
+      }
+
       if (
-        this.recorder &&
         currentState === "RECORDING" &&
         this.recorder.getState() !== "inactive"
-      )
+      ) {
         outputBlob = await this.recorder.stop()
 
-      this.setState({
-        outputBlob,
-        countdown: -1,
-        startAnimation: false,
-        currentState: "PREVIEW_FILE",
-      })
+        this.setState({
+          outputBlob,
+          currentState: "PREVIEW_FILE",
+        })
+      }
     }
 
-    onAnimationEnd = async (): Promise<any> => {
-      const { countdown } = this.state
-
+    onCountdownEnd = async (): Promise<any> => {
       if (this.recorder == null) {
         // Should never happen.
         throw new Error("Countdown finished but recorder is null")
       }
 
-      this.setState({
-        startAnimation: false,
-        countdown: countdown - 1,
-      })
+      const hasStarted = this.recorder.start()
 
-      if (countdown - 1 > 0) {
-        window.setTimeout(() => {
-          this.setState({
-            startAnimation: true,
-          })
-        }, 1000)
-      }
-
-      if (countdown - 1 === 0) {
-        const hasStarted = this.recorder.start()
-
-        if (hasStarted) {
-          this.setState({
-            currentState: "RECORDING",
-          })
-        } else {
-          this.stopRecording()
-        }
+      if (hasStarted) {
+        this.setState({
+          currentState: "RECORDING",
+        })
+      } else {
+        this.stopRecording()
       }
     }
 
@@ -182,14 +166,6 @@ function withScreencast(
       startRecording: this.showDialog,
       stopRecording: this.stopRecording,
     })
-
-    getCountdownClassName = (): string => {
-      const { startAnimation } = this.state
-
-      return classNames("countdown", {
-        withAnimation: startAnimation,
-      })
-    }
 
     closeDialog = (): void => {
       this.setState({
@@ -213,7 +189,6 @@ function withScreencast(
       const {
         outputBlob,
         fileName,
-        countdown,
         recordAudio,
         currentState,
       }: WithScreenCastState = this.state
@@ -236,12 +211,7 @@ function withScreencast(
           )}
 
           {currentState === "COUNTDOWN" && (
-            <div
-              className={this.getCountdownClassName()}
-              onAnimationEnd={this.onAnimationEnd}
-            >
-              <span>{countdown}</span>
-            </div>
+            <Countdown countdown={3} endCallback={this.onCountdownEnd} />
           )}
 
           {currentState === "PREVIEW_FILE" && outputBlob && (

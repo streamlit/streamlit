@@ -17,6 +17,7 @@
 
 import functools
 import os
+import re
 import sys
 import tempfile
 import time
@@ -27,13 +28,19 @@ import altair.vegalite.v3
 import numpy as np
 import pandas as pd
 import pytest
-import tensorflow as tf
-from mock import MagicMock
+from mock import patch, MagicMock
+
+try:
+    import tensorflow as tf
+except ImportError:
+    pass
 
 import streamlit as st
-from streamlit.errors import UnhashableType
+from streamlit.errors import UnhashableType, UserHashError, InternalHashError
 from streamlit.util import functools_wraps
 from streamlit.hashing import NP_SIZE_LARGE, PANDAS_ROWS_LARGE, CodeHasher
+
+from tests import testutil
 
 get_main_script_director = MagicMock(return_value=os.getcwd())
 
@@ -122,6 +129,48 @@ class HashTest(unittest.TestCase):
     def test_generator(self):
         with self.assertRaises(UnhashableType):
             get_hash((x for x in range(1)))
+
+    def test_hashing_broken_code(self):
+        import datetime
+
+        def a():
+            return datetime.strptime("%H")
+
+        def b():
+            x = datetime.strptime("%H")
+            ""
+            ""
+            return x
+
+        data = [
+            (a, '```\nreturn datetime.strptime("%H")\n```'),
+            (b, '```\nx = datetime.strptime("%H")\n""\n""\n```'),
+        ]
+
+        for func, code_msg in data:
+            exc_msg = "module 'datetime' has no attribute 'strptime'"
+
+            with self.assertRaises(UserHashError) as ctx:
+                get_hash(func)
+
+            exc = str(ctx.exception)
+            self.assertEqual(exc.find(exc_msg) >= 0, True)
+            self.assertNotEqual(re.search(r"Error in `.+` near line `\d+`", exc), None)
+            self.assertEqual(exc.find(code_msg) >= 0, True)
+
+    def test_hash_funcs_error(self):
+        with self.assertRaises(UserHashError):
+            get_hash(1, hash_funcs={int: lambda x: "a" + x})
+
+    def test_internal_hashing_error(self):
+        def side_effect(i):
+            if i == 123456789:
+                return "a" + 1
+            return i.to_bytes((i.bit_length() + 8) // 8, "little", signed=True)
+
+        with self.assertRaises(InternalHashError):
+            with patch("streamlit.hashing._int_to_bytes", side_effect=side_effect):
+                get_hash(123456789)
 
     def test_float(self):
         self.assertEqual(get_hash(0.1), get_hash(0.1))
@@ -220,7 +269,8 @@ class HashTest(unittest.TestCase):
         # stack due to an infinite recursion.)
         self.assertNotEqual(get_hash(MagicMock()), get_hash(MagicMock()))
 
-    def test_non_hashable(self):
+    @testutil.requires_tensorflow
+    def test_tensorflow_non_hashable(self):
         """Test user provided hash functions."""
 
         tf_config = tf.compat.v1.ConfigProto()
@@ -466,10 +516,10 @@ class CodeHashTest(unittest.TestCase):
         # will need to be updated!
 
         def call_altair_concat():
-            return alt.vegalite.v4.api.concat()
+            return altair.vegalite.v4.api.concat()
 
         def call_altair_layer():
-            return alt.vegalite.v4.api.layer()
+            return altair.vegalite.v4.api.layer()
 
         self.assertNotEqual(get_hash(call_altair_concat), get_hash(call_altair_layer))
 
@@ -686,7 +736,8 @@ class CodeHashTest(unittest.TestCase):
         # contains the name of the function in the closure.
         # self.assertEqual(get_hash(f), get_hash(h))
 
-    def test_non_hashable(self):
+    @testutil.requires_tensorflow
+    def test_tensorflow_non_hashable(self):
         """Test the hash of functions that return non hashable objects."""
 
         tf_config = tf.compat.v1.ConfigProto()
@@ -710,3 +761,19 @@ class CodeHashTest(unittest.TestCase):
         self.assertEqual(
             get_hash(f, hash_funcs=hash_funcs), get_hash(g, hash_funcs=hash_funcs)
         )
+
+    def test_ufunc(self):
+        """Test code that references numpy ufuncs."""
+
+        def f(a, b):
+            return np.logical_and(a, b)
+
+        def g(a, b):
+            return np.logical_and(a, b)
+
+        def h(a, b):
+            return np.remainder(a, b)
+
+        self.assertNotEqual(get_hash(np.remainder), get_hash(np.logical_and))
+        self.assertEqual(get_hash(f), get_hash(g))
+        self.assertNotEqual(get_hash(f), get_hash(h))

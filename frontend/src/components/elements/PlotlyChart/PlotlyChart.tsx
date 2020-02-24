@@ -43,8 +43,6 @@ interface Dimensions {
 const DEFAULT_HEIGHT = 450
 
 class PlotlyChart extends React.PureComponent<PropsWithHeight> {
-  private forceRecreatePlotKey = 0
-
   public render(): React.ReactNode {
     const el = this.props.element
     return dispatchOneOf(el, "chart", {
@@ -83,16 +81,8 @@ class PlotlyChart extends React.PureComponent<PropsWithHeight> {
     const spec = this.generateSpec(figure)
     const config = JSON.parse(figure.get("config"))
 
-    // 2019-11-05: Re-render with a new element key to force React to
-    // unmount the previous <Plot> component and create a new element from
-    // scratch. Plotly charts are not always re-rendering
-    // properly, per https://github.com/streamlit/streamlit/issues/512
-    // This seems to be a react-plotly bug; I made a standalone repro case
-    // and submitted it to them here: https://github.com/plotly/react-plotly.js/issues/167.
-    // TODO: Remove this hack when the react-plotly bug is fixed!
     return (
       <Plot
-        key={this.forceRecreatePlotKey++}
         className="stPlotlyChart"
         data={spec.data}
         layout={spec.layout}

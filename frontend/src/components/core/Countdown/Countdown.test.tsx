@@ -15,14 +15,16 @@
  * limitations under the License.
  */
 
-/// <reference types="cypress" />
+import React from "react"
+import { shallow } from "enzyme"
 
-describe("st.balloons", () => {
-  before(() => {
-    cy.visit("http://localhost:3000/");
-  });
+import Countdown from "./Countdown"
 
-  it("displays balloons", () => {
-    cy.get(".element-container").find(".balloons");
-  });
-});
+describe("Countdown Component", () => {
+  it("should render without crashing", () => {
+    const wrapper = shallow(<Countdown countdown={10} />)
+
+    expect(wrapper.html()).toBeDefined()
+    expect(wrapper.find("span").text()).toBe("10")
+  })
+})

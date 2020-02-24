@@ -1,12 +1,12 @@
 # Get started
 
 The easiest way to learn how to use Streamlit is to try things out yourself. As
-you read through this guide, test each method. As long as your app is
-running, every time you add a new element to your script and save, Streamlit's
-UI will ask if you'd like to rerun the app and view the changes. This allows
-you to work in a fast interactive loop: you write some code, save it, review
-the output, write some more, and so on, until you're happy with the results.
-The goal is to use Streamlit to create an interactive app for your data or model
+you read through this guide, test each method. As long as your app is running,
+every time you add a new element to your script and save, Streamlit's UI will
+ask if you'd like to rerun the app and view the changes. This allows you to
+work in a fast interactive loop: you write some code, save it, review the
+output, write some more, and so on, until you're happy with the results. The
+goal is to use Streamlit to create an interactive app for your data or model
 and along the way to use Streamlit to review, debug, perfect, and share your
 code.
 
@@ -39,9 +39,10 @@ these commands in a virtual environment. This ensures that the dependencies
 pulled in for Streamlit don't impact any other Python projects
 you're working on.
 
-- [virtualenv](https://virtualenv.pypa.io/en/latest/)
-- [venv](https://docs.python.org/3/library/venv.html)
 - [pipenv](https://docs.pipenv.org/en/latest/)
+- [venv](https://docs.python.org/3/library/venv.html)
+- [virtualenv](https://virtualenv.pypa.io/en/latest/)
+- [conda](https://www.anaconda.com/distribution/)
 
 ## Install Streamlit
 

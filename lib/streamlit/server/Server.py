@@ -21,6 +21,7 @@ import errno
 import traceback
 import click
 from enum import Enum
+from typing import Any, Dict, Optional, TYPE_CHECKING
 
 import tornado.concurrent
 import tornado.gen
@@ -30,6 +31,7 @@ import tornado.websocket
 
 from streamlit import config
 from streamlit import file_util
+from streamlit.ConfigOption import ConfigOption
 from streamlit.ForwardMsgCache import ForwardMsgCache
 from streamlit.ForwardMsgCache import create_reference_msg
 from streamlit.ForwardMsgCache import populate_hash_if_needed
@@ -37,10 +39,10 @@ from streamlit.ReportSession import ReportSession
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.server.routes import AddSlashHandler
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
+from streamlit.server.routes import MediaFileHandler
 from streamlit.server.routes import MessageCacheHandler
 from streamlit.server.routes import MetricsHandler
 from streamlit.server.routes import StaticFileHandler
@@ -49,6 +51,9 @@ from streamlit.server.server_util import is_cacheable_msg
 from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import make_url_path_regex
 from streamlit.server.server_util import serialize_forward_msg
+
+if TYPE_CHECKING:
+    from streamlit.Report import Report
 
 LOGGER = get_logger(__name__)
 
@@ -71,21 +76,25 @@ MAX_PORT_SEARCH_RETRIES = 100
 
 
 class SessionInfo(object):
-    """Type stored in our _report_sessions dict.
+    """Type stored in our _session_info_by_id dict.
 
     For each ReportSession, the server tracks that session's
     report_run_count. This is used to track the age of messages in
     the ForwardMsgCache.
     """
 
-    def __init__(self, session):
+    def __init__(self, ws, session):
         """Initialize a SessionInfo instance.
 
         Parameters
         ----------
         session : ReportSession
+            The ReportSession object.
+        ws : _BrowserWebSocketHandler
+            The websocket that owns this report.
         """
         self.session = session
+        self.ws = ws
         self.report_run_count = 0
 
 
@@ -117,10 +126,11 @@ def start_listening(app):
     call_count = 0
 
     while call_count < MAX_PORT_SEARCH_RETRIES:
+        address = config.get_option("server.address")
         port = config.get_option("server.port")
 
         try:
-            app.listen(port)
+            app.listen(port, address)
             break  # It worked! So let's break out of the loop.
 
         except (OSError, socket.error) as e:
@@ -139,7 +149,7 @@ def start_listening(app):
                         port += 1
 
                     config._set_option(
-                        "server.port", port, config.ConfigOption.STREAMLIT_DEFINITION
+                        "server.port", port, ConfigOption.STREAMLIT_DEFINITION
                     )
                     call_count += 1
             else:
@@ -156,7 +166,7 @@ def start_listening(app):
 
 class Server(object):
 
-    _singleton = None
+    _singleton = None  # type: Optional[Server]
 
     @classmethod
     def get_current(cls):
@@ -187,13 +197,14 @@ class Server(object):
         self._script_path = script_path
         self._command_line = command_line
 
-        # Mapping of WebSocket->SessionInfo.
-        self._session_infos = {}
+        # Mapping of ReportSession.id -> SessionInfo.
+        self._session_info_by_id = {}
 
         self._must_stop = threading.Event()
         self._state = None
         self._set_state(State.INITIAL)
         self._message_cache = ForwardMsgCache()
+        self._report = None  # type: Optional[Report]
 
     def start(self, on_started):
         """Start the server.
@@ -219,8 +230,10 @@ class Server(object):
 
         self._ioloop.spawn_callback(self._loop_coroutine, on_started)
 
-    def get_debug(self):
-        return {"report": self._report.get_debug()}
+    def get_debug(self) -> Dict[str, Dict[str, Any]]:
+        if self._report:
+            return {"report": self._report.get_debug()}
+        return {}
 
     def _create_app(self):
         """Create our tornado web app.
@@ -249,6 +262,7 @@ class Server(object):
                 MessageCacheHandler,
                 dict(cache=self._message_cache),
             ),
+            (make_url_path_regex(base, "media/(.*)"), MediaFileHandler),
         ]
 
         if config.get_option("global.developmentMode") and config.get_option(
@@ -307,19 +321,17 @@ class Server(object):
                     # Shallow-clone our sessions into a list, so we can iterate
                     # over it and not worry about whether it's being changed
                     # outside this coroutine.
-                    session_pairs = list(self._session_infos.items())
+                    session_infos = list(self._session_info_by_id.values())
 
-                    for ws, session_info in session_pairs:
-                        if ws is PREHEATED_REPORT_SESSION:
-                            continue
-                        if ws is None:
+                    for session_info in session_infos:
+                        if session_info.ws is PREHEATED_REPORT_SESSION:
                             continue
                         msg_list = session_info.session.flush_browser_queue()
                         for msg in msg_list:
                             try:
-                                self._send_message(ws, session_info, msg)
+                                self._send_message(session_info, msg)
                             except tornado.websocket.WebSocketClosedError:
-                                self._remove_browser_connection(ws)
+                                self._close_report_session(session_info.session.id)
                             yield
                         yield
 
@@ -333,7 +345,7 @@ class Server(object):
                 yield tornado.gen.sleep(0.01)
 
             # Shut down all ReportSessions
-            for session_info in list(self._session_infos.values()):
+            for session_info in list(self._session_info_by_id.values()):
                 session_info.session.shutdown()
 
             self._set_state(State.STOPPED)
@@ -350,7 +362,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         finally:
             self._on_stopped()
 
-    def _send_message(self, ws, session_info, msg):
+    def _send_message(self, session_info, msg):
         """Send a message to a client.
 
         If the client is likely to have already cached the message, we may
@@ -359,8 +371,6 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
 
         Parameters
         ----------
-        ws : _BrowserWebSocketHandler
-            The socket connected to the client
         session_info : SessionInfo
             The SessionInfo associated with websocket
         msg : ForwardMsg
@@ -407,7 +417,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             )
 
         # Ship it off!
-        ws.write_message(serialize_forward_msg(msg_to_send), binary=True)
+        session_info.ws.write_message(serialize_forward_msg(msg_to_send), binary=True)
 
     def stop(self):
         click.secho("  Stopping...", fg="blue")
@@ -429,52 +439,64 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         This is used to start running the user's script even before the first
         browser connects.
         """
-        session = self._add_browser_connection(PREHEATED_REPORT_SESSION)
+        session = self._create_report_session(PREHEATED_REPORT_SESSION)
         session.handle_rerun_script_request(is_preheat=True)
 
-    def _add_browser_connection(self, ws):
-        """Register a connected browser with the server
+    def _create_report_session(self, ws):
+        """Register a connected browser with the server.
 
         Parameters
         ----------
-        ws : _BrowserWebSocketHandler or PREHEATED_REPORT_CONTEXT
-            The newly-connected websocket handler
+        ws : _BrowserWebSocketHandler or PREHEATED_REPORT_SESSION
+            The newly-connected websocket handler.
 
         Returns
         -------
         ReportSession
-            The ReportSession associated with this browser connection
+            The newly-created ReportSession for this browser connection.
 
         """
-        if ws not in self._session_infos:
+        if PREHEATED_REPORT_SESSION in self._session_info_by_id:
+            assert len(self._session_info_by_id) == 1
+            LOGGER.debug("Reusing preheated context for ws %s", ws)
+            session = self._session_info_by_id[PREHEATED_REPORT_SESSION].session
+            del self._session_info_by_id[PREHEATED_REPORT_SESSION]
+        else:
+            LOGGER.debug("Creating new context for ws %s", ws)
+            session = ReportSession(
+                ioloop=self._ioloop,
+                script_path=self._script_path,
+                command_line=self._command_line,
+            )
 
-            if PREHEATED_REPORT_SESSION in self._session_infos:
-                assert len(self._session_infos) == 1
-                LOGGER.debug("Reusing preheated context for ws %s", ws)
-                session = self._session_infos[PREHEATED_REPORT_SESSION].session
-                del self._session_infos[PREHEATED_REPORT_SESSION]
-            else:
-                LOGGER.debug("Creating new context for ws %s", ws)
-                session = ReportSession(
-                    ioloop=self._ioloop,
-                    script_path=self._script_path,
-                    command_line=self._command_line,
-                )
+        assert session.id not in self._session_info_by_id, (
+            "session.id '%s' registered multiple times!" % session.id
+        )
+        self._session_info_by_id[session.id] = SessionInfo(ws, session)
 
-            self._session_infos[ws] = SessionInfo(session)
+        if ws is not PREHEATED_REPORT_SESSION:
+            self._set_state(State.ONE_OR_MORE_BROWSERS_CONNECTED)
 
-            if ws is not PREHEATED_REPORT_SESSION:
-                self._set_state(State.ONE_OR_MORE_BROWSERS_CONNECTED)
+        return session
 
-        return self._session_infos[ws].session
+    def _close_report_session(self, session_id):
+        """Shutdown and remove a ReportSession.
 
-    def _remove_browser_connection(self, ws):
-        if ws in self._session_infos:
-            session_info = self._session_infos[ws]
-            del self._session_infos[ws]
+        This function may be called multiple times for the same session,
+        which is not an error. (Subsequent calls just no-op.)
+
+        Parameters
+        ----------
+        session_id : str
+            The ReportSession's id string.
+
+        """
+        if session_id in self._session_info_by_id:
+            session_info = self._session_info_by_id[session_id]
+            del self._session_info_by_id[session_id]
             session_info.session.shutdown()
 
-        if len(self._session_infos) == 0:
+        if len(self._session_info_by_id) == 0:
             self._set_state(State.NO_BROWSERS_CONNECTED)
 
 
@@ -483,19 +505,26 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def initialize(self, server):
         self._server = server
+        self._session = None
 
     def check_origin(self, origin):
         """Set up CORS."""
-        return is_url_from_allowed_origins(origin)
+        return super().check_origin(origin) or is_url_from_allowed_origins(origin)
 
     def open(self):
-        self._session = self._server._add_browser_connection(self)
+        self._session = self._server._create_report_session(self)
 
     def on_close(self):
-        self._server._remove_browser_connection(self)
+        if not self._session:
+            return
+        self._server._close_report_session(self._session.id)
+        self._session = None
 
     @tornado.gen.coroutine
     def on_message(self, payload):
+        if not self._session:
+            return
+
         msg = BackMsg()
 
         try:

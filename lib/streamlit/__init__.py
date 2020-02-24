@@ -68,37 +68,31 @@ import uuid as _uuid
 import subprocess
 import platform
 import os
+from typing import Any, List, Tuple, Type
 
 # This used to be pkg_resources.require('streamlit') but it would cause
 # pex files to fail. See #394 for more details.
 __version__ = _pkg_resources.get_distribution("streamlit").version
 
 # Deterministic Unique Streamlit User ID
-# The try/except is needed for python 2/3 compatibility
-try:
+if (
+    platform.system() == "Linux"
+    and os.path.isfile("/etc/machine-id") == False
+    and os.path.isfile("/var/lib/dbus/machine-id") == False
+):
+    print("Generate machine-id")
+    subprocess.run(["sudo", "dbus-uuidgen", "--ensure"])
 
-    if (
-        platform.system() == "Linux"
-        and os.path.isfile("/etc/machine-id") == False
-        and os.path.isfile("/var/lib/dbus/machine-id") == False
-    ):
-        print("Generate machine-id")
-        subprocess.run(["sudo", "dbus-uuidgen", "--ensure"])
+machine_id = str(_uuid.getnode())
+if os.path.isfile("/etc/machine-id"):
+    with open("/etc/machine-id", "r") as f:
+        machine_id = f.read()
+elif os.path.isfile("/var/lib/dbus/machine-id"):
+    with open("/var/lib/dbus/machine-id", "r") as f:
+        machine_id = f.read()
 
-    machine_id = _uuid.getnode()
-    if os.path.isfile("/etc/machine-id"):
-        with open("/etc/machine-id", "r") as f:
-            machine_id = f.read()
-    elif os.path.isfile("/var/lib/dbus/machine-id"):
-        with open("/var/lib/dbus/machine-id", "r") as f:
-            machine_id = f.read()
+__installation_id__ = str(_uuid.uuid5(_uuid.NAMESPACE_DNS, machine_id))
 
-    __installation_id__ = str(_uuid.uuid5(_uuid.NAMESPACE_DNS, str(machine_id)))
-
-except UnicodeDecodeError:
-    __installation_id__ = str(
-        _uuid.uuid5(_uuid.NAMESPACE_DNS, str(_uuid.getnode()).encode("utf-8"))
-    )
 
 import contextlib as _contextlib
 import re as _re
@@ -110,22 +104,21 @@ import types as _types
 import json as _json
 import numpy as _np
 
-from streamlit.util import functools_wraps as _functools_wraps
 from streamlit import code_util as _code_util
 from streamlit import env_util as _env_util
+from streamlit import source_util as _source_util
 from streamlit import string_util as _string_util
 from streamlit import type_util as _type_util
-from streamlit import source_util as _source_util
-from streamlit.ReportThread import get_report_ctx as _get_report_ctx
-from streamlit.ReportThread import add_report_ctx as _add_report_ctx
 from streamlit.DeltaGenerator import DeltaGenerator as _DeltaGenerator
+from streamlit.ReportThread import add_report_ctx as _add_report_ctx
+from streamlit.ReportThread import get_report_ctx as _get_report_ctx
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto import BlockPath_pb2 as _BlockPath_pb2
+from streamlit.util import functools_wraps as _functools_wraps
 
-# Modules that the user should have access to.
-from streamlit.caching import cache  # noqa: F401
-
-# Delta generator with no queue so it can't send anything out.
-_NULL_DELTA_GENERATOR = _DeltaGenerator(None)
+# Modules that the user should have access to. These are imported with "as"
+# syntax pass mypy checking with implicit_reexport disabled.
+from streamlit.caching import cache as cache  # noqa: F401
 
 # This is set to True inside cli._main_run(), and is False otherwise.
 # If False, we should assume that DeltaGenerator functions are effectively
@@ -144,75 +137,57 @@ def _set_log_level():
 _config.on_config_parsed(_set_log_level)
 
 
-def _with_dg(method):
-    @_functools_wraps(method)
-    def wrapped_method(*args, **kwargs):
-        ctx = _get_report_ctx()
-        dg = ctx.main_dg if ctx is not None else _NULL_DELTA_GENERATOR
-        return method.__get__(dg)(*args, **kwargs)
-
-    return wrapped_method
-
-
-def _reset(main_dg, sidebar_dg):
-    main_dg._reset()
-    sidebar_dg._reset()
-    global sidebar
-    sidebar = sidebar_dg
-    _get_report_ctx().widget_ids_this_run.clear()
-
-
-# Sidebar
-sidebar = _NULL_DELTA_GENERATOR
+_main = _DeltaGenerator(container=_BlockPath_pb2.BlockPath.MAIN)
+sidebar = _DeltaGenerator(container=_BlockPath_pb2.BlockPath.SIDEBAR)
 
 # DeltaGenerator methods:
 
-altair_chart = _with_dg(_DeltaGenerator.altair_chart)  # noqa: E221
-area_chart = _with_dg(_DeltaGenerator.area_chart)  # noqa: E221
-audio = _with_dg(_DeltaGenerator.audio)  # noqa: E221
-balloons = _with_dg(_DeltaGenerator.balloons)  # noqa: E221
-bar_chart = _with_dg(_DeltaGenerator.bar_chart)  # noqa: E221
-bokeh_chart = _with_dg(_DeltaGenerator.bokeh_chart)  # noqa: E221
-button = _with_dg(_DeltaGenerator.button)  # noqa: E221
-checkbox = _with_dg(_DeltaGenerator.checkbox)  # noqa: E221
-code = _with_dg(_DeltaGenerator.code)  # noqa: E221
-dataframe = _with_dg(_DeltaGenerator.dataframe)  # noqa: E221
-date_input = _with_dg(_DeltaGenerator.date_input)  # noqa: E221
-deck_gl_chart = _with_dg(_DeltaGenerator.deck_gl_chart)  # noqa: E221
-pydeck_chart = _with_dg(_DeltaGenerator.pydeck_chart)  # noqa: E221
-empty = _with_dg(_DeltaGenerator.empty)  # noqa: E221
-error = _with_dg(_DeltaGenerator.error)  # noqa: E221
-exception = _with_dg(_DeltaGenerator.exception)  # noqa: E221
-file_uploader = _with_dg(_DeltaGenerator.file_uploader)  # noqa: E221
-graphviz_chart = _with_dg(_DeltaGenerator.graphviz_chart)  # noqa: E221
-header = _with_dg(_DeltaGenerator.header)  # noqa: E221
-help = _with_dg(_DeltaGenerator.help)  # noqa: E221
-image = _with_dg(_DeltaGenerator.image)  # noqa: E221
-info = _with_dg(_DeltaGenerator.info)  # noqa: E221
-json = _with_dg(_DeltaGenerator.json)  # noqa: E221
-latex = _with_dg(_DeltaGenerator.latex)  # noqa: E221
-line_chart = _with_dg(_DeltaGenerator.line_chart)  # noqa: E221
-map = _with_dg(_DeltaGenerator.map)  # noqa: E221
-markdown = _with_dg(_DeltaGenerator.markdown)  # noqa: E221
-multiselect = _with_dg(_DeltaGenerator.multiselect)  # noqa: E221
-number_input = _with_dg(_DeltaGenerator.number_input)  # noqa: E221
-plotly_chart = _with_dg(_DeltaGenerator.plotly_chart)  # noqa: E221
-progress = _with_dg(_DeltaGenerator.progress)  # noqa: E221
-pyplot = _with_dg(_DeltaGenerator.pyplot)  # noqa: E221
-radio = _with_dg(_DeltaGenerator.radio)  # noqa: E221
-selectbox = _with_dg(_DeltaGenerator.selectbox)  # noqa: E221
-slider = _with_dg(_DeltaGenerator.slider)  # noqa: E221
-subheader = _with_dg(_DeltaGenerator.subheader)  # noqa: E221
-success = _with_dg(_DeltaGenerator.success)  # noqa: E221
-table = _with_dg(_DeltaGenerator.table)  # noqa: E221
-text = _with_dg(_DeltaGenerator.text)  # noqa: E221
-text_area = _with_dg(_DeltaGenerator.text_area)  # noqa: E221
-text_input = _with_dg(_DeltaGenerator.text_input)  # noqa: E221
-time_input = _with_dg(_DeltaGenerator.time_input)  # noqa: E221
-title = _with_dg(_DeltaGenerator.title)  # noqa: E221
-vega_lite_chart = _with_dg(_DeltaGenerator.vega_lite_chart)  # noqa: E221
-video = _with_dg(_DeltaGenerator.video)  # noqa: E221
-warning = _with_dg(_DeltaGenerator.warning)  # noqa: E221
+altair_chart = _main.altair_chart  # noqa: E221
+area_chart = _main.area_chart  # noqa: E221
+audio = _main.audio  # noqa: E221
+balloons = _main.balloons  # noqa: E221
+bar_chart = _main.bar_chart  # noqa: E221
+bokeh_chart = _main.bokeh_chart  # noqa: E221
+button = _main.button  # noqa: E221
+checkbox = _main.checkbox  # noqa: E221
+code = _main.code  # noqa: E221
+dataframe = _main.dataframe  # noqa: E221
+date_input = _main.date_input  # noqa: E221
+deck_gl_chart = _main.deck_gl_chart  # noqa: E221
+pydeck_chart = _main.pydeck_chart  # noqa: E221
+empty = _main.empty  # noqa: E221
+error = _main.error  # noqa: E221
+exception = _main.exception  # noqa: E221
+file_uploader = _main.file_uploader  # noqa: E221
+graphviz_chart = _main.graphviz_chart  # noqa: E221
+header = _main.header  # noqa: E221
+help = _main.help  # noqa: E221
+image = _main.image  # noqa: E221
+info = _main.info  # noqa: E221
+json = _main.json  # noqa: E221
+latex = _main.latex  # noqa: E221
+line_chart = _main.line_chart  # noqa: E221
+map = _main.map  # noqa: E221
+markdown = _main.markdown  # noqa: E221
+multiselect = _main.multiselect  # noqa: E221
+number_input = _main.number_input  # noqa: E221
+plotly_chart = _main.plotly_chart  # noqa: E221
+progress = _main.progress  # noqa: E221
+pyplot = _main.pyplot  # noqa: E221
+radio = _main.radio  # noqa: E221
+selectbox = _main.selectbox  # noqa: E221
+slider = _main.slider  # noqa: E221
+subheader = _main.subheader  # noqa: E221
+success = _main.success  # noqa: E221
+table = _main.table  # noqa: E221
+text = _main.text  # noqa: E221
+text_area = _main.text_area  # noqa: E221
+text_input = _main.text_input  # noqa: E221
+time_input = _main.time_input  # noqa: E221
+title = _main.title  # noqa: E221
+vega_lite_chart = _main.vega_lite_chart  # noqa: E221
+video = _main.video  # noqa: E221
+warning = _main.warning  # noqa: E221
 
 # Config
 
@@ -260,13 +235,7 @@ _HELP_TYPES = (
     _types.FunctionType,
     _types.MethodType,
     _types.ModuleType,
-)
-
-if not _is_running_py3():
-    _HELP_TYPES = list(_HELP_TYPES)
-    _HELP_TYPES.append(_types.ClassType)
-    _HELP_TYPES.append(_types.InstanceType)
-    _HELP_TYPES = tuple(_HELP_TYPES)
+)  # type: Tuple[Type[Any], ...]
 
 
 def write(*args, **kwargs):
@@ -374,7 +343,7 @@ def write(*args, **kwargs):
     ...     columns=['a', 'b', 'c'])
     ...
     >>> c = alt.Chart(df).mark_circle().encode(
-    ...     x='a', y='b', size='c', color='c')
+    ...     x='a', y='b', size='c', color='c', tooltip=['a', 'b', 'c'])
     >>>
     >>> st.write(c)
 
@@ -389,7 +358,7 @@ def write(*args, **kwargs):
     unsafe_allow_html = kwargs.get("unsafe_allow_html", False)
 
     try:
-        string_buffer = []
+        string_buffer = []  # type: List[str]
 
         def flush_buffer():
             if string_buffer:
@@ -400,7 +369,7 @@ def write(*args, **kwargs):
 
         for arg in args:
             # Order matters!
-            if isinstance(arg, string_types):  # noqa: F821
+            if isinstance(arg, str):
                 string_buffer.append(arg)
             elif _type_util.is_dataframe_like(arg):
                 flush_buffer()
@@ -438,7 +407,7 @@ def write(*args, **kwargs):
                 flush_buffer()
                 dot = vis_utils.model_to_dot(arg)
                 graphviz_chart(dot.to_string())
-            elif (type(arg) in dict_types) or (isinstance(arg, list)):  # noqa: F821
+            elif isinstance(arg, (dict, list)):
                 flush_buffer()
                 json(arg)
             elif _type_util.is_namedtuple(arg):
@@ -496,8 +465,11 @@ def show(*args):
         import inspect
 
         # Get the calling line of code
-        previous_frame = inspect.currentframe().f_back
-        lines = inspect.getframeinfo(previous_frame)[3]
+        current_frame = inspect.currentframe()
+        if current_frame is None:
+            warning("`show` not enabled in the shell")
+            return
+        lines = inspect.getframeinfo(current_frame.f_back)[3]
 
         if not lines:
             warning("`show` not enabled in the shell")
@@ -537,8 +509,6 @@ def spinner(text="In progress..."):
 
     """
     import streamlit.caching as caching
-
-    display_message_lock = None
 
     # @st.cache optionally uses spinner for long-running computations.
     # Normally, streamlit warns the user when they call st functions
@@ -591,31 +561,27 @@ def echo():
     code = empty()  # noqa: F821
     try:
         frame = _traceback.extract_stack()[-3]
-        if _is_running_py3():
-            filename, start_line = frame.filename, frame.lineno
-        else:
-            filename, start_line = frame[:2]
+        filename, start_line = frame.filename, frame.lineno
         yield
         frame = _traceback.extract_stack()[-3]
-        if _is_running_py3():
-            end_line = frame.lineno
-        else:
-            end_line = frame[1]
-        lines_to_display = []
+        end_line = frame.lineno
+        lines_to_display = []  # type: List[str]
         with _source_util.open_python_file(filename) as source_file:
             source_lines = source_file.readlines()
             lines_to_display.extend(source_lines[start_line:end_line])
-            initial_spaces = _SPACES_RE.match(lines_to_display[0]).end()
+            match = _SPACES_RE.match(lines_to_display[0])
+            initial_spaces = match.end() if match else 0
             for line in source_lines[end_line:]:
-                indentation = _SPACES_RE.match(line).end()
+                match = _SPACES_RE.match(line)
+                indentation = match.end() if match else 0
                 # The != 1 is because we want to allow '\n' between sections.
                 if indentation != 1 and indentation < initial_spaces:
                     break
                 lines_to_display.append(line)
-        lines_to_display = _textwrap.dedent("".join(lines_to_display))
-        code.code(lines_to_display, "python")
+        line_to_display = _textwrap.dedent("".join(lines_to_display))
+        code.code(line_to_display, "python")
 
-    except FileNotFoundError as err:  # noqa: F821
+    except FileNotFoundError as err:
         code.warning("Unable to display code. %s" % err)
 
 

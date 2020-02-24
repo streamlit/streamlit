@@ -21,7 +21,7 @@ import { Map as ImmutableMap } from "immutable"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { logWarning } from "lib/log"
 
-interface Props {
+export interface Props {
   disabled: boolean
   element: ImmutableMap<string, any>
   widgetMgr: WidgetStateManager
@@ -62,6 +62,7 @@ class Selectbox extends React.PureComponent<Props, State> {
     }
 
     const [selected] = params.value
+
     this.setState({ value: parseInt(selected.value, 10) }, () =>
       this.setWidgetValue({ fromUi: true })
     )
@@ -77,7 +78,7 @@ class Selectbox extends React.PureComponent<Props, State> {
       {
         label:
           options.size > 0
-            ? options[this.state.value]
+            ? options.get(this.state.value)
             : "No options to select.",
         value: this.state.value.toString(),
       },

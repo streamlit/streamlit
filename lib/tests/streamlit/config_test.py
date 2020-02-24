@@ -254,13 +254,13 @@ class ConfigTest(unittest.TestCase):
         sections = sorted(
             [
                 "_test",
-                u"browser",
-                u"client",
-                u"global",
-                u"mapbox",
-                u"runner",
-                u"s3",
-                u"server",
+                "browser",
+                "client",
+                "global",
+                "mapbox",
+                "runner",
+                "s3",
+                "server",
             ]
         )
         keys = sorted(list(config._section_descriptions.keys()))
@@ -269,42 +269,43 @@ class ConfigTest(unittest.TestCase):
     def test_config_option_keys(self):
         config_options = sorted(
             [
-                u"browser.gatherUsageStats",
-                u"browser.serverAddress",
-                u"browser.serverPort",
-                u"client.caching",
-                u"client.displayEnabled",
-                u"global.developmentMode",
-                u"global.disableWatchdogWarning",
-                u"global.logLevel",
-                u"global.maxCachedMessageAge",
-                u"global.minCachedMessageSize",
-                u"global.metrics",
-                u"global.sharingMode",
-                u"global.showWarningOnDirectExecution",
-                u"global.suppressDeprecationWarnings",
-                u"global.unitTest",
-                u"global.useNode",
-                u"runner.magicEnabled",
-                u"runner.installTracer",
-                u"runner.fixMatplotlib",
-                u"mapbox.token",
-                u"s3.accessKeyId",
-                u"s3.bucket",
-                u"s3.keyPrefix",
-                u"s3.profile",
-                u"s3.region",
-                u"s3.secretAccessKey",
-                u"s3.url",
-                u"server.enableCORS",
-                u"server.baseUrlPath",
-                u"server.folderWatchBlacklist",
-                u"server.fileWatcherType",
-                u"server.headless",
-                u"server.liveSave",
-                u"server.port",
-                u"server.runOnSave",
-                u"server.maxUploadSize",
+                "browser.gatherUsageStats",
+                "browser.serverAddress",
+                "browser.serverPort",
+                "client.caching",
+                "client.displayEnabled",
+                "global.developmentMode",
+                "global.disableWatchdogWarning",
+                "global.logLevel",
+                "global.maxCachedMessageAge",
+                "global.minCachedMessageSize",
+                "global.metrics",
+                "global.sharingMode",
+                "global.showWarningOnDirectExecution",
+                "global.suppressDeprecationWarnings",
+                "global.unitTest",
+                "global.useNode",
+                "runner.magicEnabled",
+                "runner.installTracer",
+                "runner.fixMatplotlib",
+                "mapbox.token",
+                "s3.accessKeyId",
+                "s3.bucket",
+                "s3.keyPrefix",
+                "s3.profile",
+                "s3.region",
+                "s3.secretAccessKey",
+                "s3.url",
+                "server.enableCORS",
+                "server.baseUrlPath",
+                "server.folderWatchBlacklist",
+                "server.fileWatcherType",
+                "server.headless",
+                "server.liveSave",
+                "server.address",
+                "server.port",
+                "server.runOnSave",
+                "server.maxUploadSize",
             ]
         )
         keys = sorted(config._config_options.keys())
@@ -325,9 +326,9 @@ class ConfigTest(unittest.TestCase):
         )
 
         truth = [
-            u"Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-            u"Curabitur ac fermentum eros.",
-            u"Maecenas libero est, ultricies eget ligula eget,",
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+            "Curabitur ac fermentum eros.",
+            "Maecenas libero est, ultricies eget ligula eget,",
         ]
 
         result = config._clean_paragraphs(input)
@@ -504,11 +505,11 @@ class ConfigTest(unittest.TestCase):
 
     def test_global_log_level_debug(self):
         config.set_option("global.developmentMode", True)
-        self.assertEqual(u"debug", config.get_option("global.logLevel"))
+        self.assertEqual("debug", config.get_option("global.logLevel"))
 
     def test_global_log_level(self):
         config.set_option("global.developmentMode", False)
-        self.assertEqual(u"info", config.get_option("global.logLevel"))
+        self.assertEqual("info", config.get_option("global.logLevel"))
 
 
 class ConfigLoadingTest(unittest.TestCase):
@@ -559,8 +560,8 @@ class ConfigLoadingTest(unittest.TestCase):
         with open_patch, makedirs_patch, pathexists_patch:
             config.parse_config_file()
 
-            self.assertEqual(u"global_bucket", config.get_option("s3.bucket"))
-            self.assertEqual(u"global_url", config.get_option("s3.url"))
+            self.assertEqual("global_bucket", config.get_option("s3.bucket"))
+            self.assertEqual("global_url", config.get_option("s3.url"))
             self.assertIsNone(config.get_option("s3.accessKeyId"))
 
     def test_load_local_config(self):
@@ -585,8 +586,8 @@ class ConfigLoadingTest(unittest.TestCase):
         with open_patch, makedirs_patch, pathexists_patch:
             config.parse_config_file()
 
-            self.assertEqual(u"local_bucket", config.get_option("s3.bucket"))
-            self.assertEqual(u"local_accessKeyId", config.get_option("s3.accessKeyId"))
+            self.assertEqual("local_bucket", config.get_option("s3.bucket"))
+            self.assertEqual("local_accessKeyId", config.get_option("s3.accessKeyId"))
             self.assertIsNone(config.get_option("s3.url"))
 
     def test_load_global_local_config(self):
@@ -627,13 +628,13 @@ class ConfigLoadingTest(unittest.TestCase):
             config.parse_config_file()
 
             # s3.bucket set in both local and global
-            self.assertEqual(u"local_bucket", config.get_option("s3.bucket"))
+            self.assertEqual("local_bucket", config.get_option("s3.bucket"))
 
             # s3.url is set in global, and not in local
-            self.assertEqual(u"global_url", config.get_option("s3.url"))
+            self.assertEqual("global_url", config.get_option("s3.url"))
 
             # s3.accessKeyId is set in local and not in global
-            self.assertEqual(u"local_accessKeyId", config.get_option("s3.accessKeyId"))
+            self.assertEqual("local_accessKeyId", config.get_option("s3.accessKeyId"))
 
     def test_upload_file_default_values(self):
         self.assertEqual(50, config.get_option("server.maxUploadSize"))

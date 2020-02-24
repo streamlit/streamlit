@@ -16,9 +16,10 @@
 import os
 import sys
 import traceback
+from typing import Optional
 
 import streamlit
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, MarkdownFormattedException
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
@@ -49,6 +50,7 @@ def marshall(exception_proto, exception, exception_traceback=None):
     # If this is a StreamlitAPIException, we prune all Streamlit entries
     # from the exception's stack trace.
     is_api_exception = isinstance(exception, StreamlitAPIException)
+    is_markdown_exception = isinstance(exception, MarkdownFormattedException)
 
     stack_trace = _get_stack_trace(
         exception, exception_traceback, strip_streamlit_stack_entries=is_api_exception
@@ -64,7 +66,7 @@ def marshall(exception_proto, exception, exception_traceback=None):
             exception_proto.message = _format_syntax_error_message(exception)
         else:
             exception_proto.message = str(exception)
-            exception_proto.message_is_markdown = is_api_exception
+            exception_proto.message_is_markdown = is_markdown_exception
     except Exception as str_exception:
         # Sometimes the exception's __str__/__unicode__ method itself
         # raises an error.
@@ -174,6 +176,7 @@ def _get_stack_trace(
 
     """
     # Get and extract the traceback for the exception.
+    extracted_traceback = None  # type: Optional[traceback.StackSummary]
     if exception_traceback is not None:
         extracted_traceback = traceback.extract_tb(exception_traceback)
     elif hasattr(exception, "__traceback__"):
@@ -197,11 +200,13 @@ def _get_stack_trace(
         ]
     else:
         if strip_streamlit_stack_entries:
-            extracted_traceback = [
+            extracted_frames = [
                 frame
                 for frame in extracted_traceback
                 if not _is_in_streamlit_package(_get_stackframe_filename(frame))
             ]
-        stack_trace = traceback.format_list(extracted_traceback)
+            stack_trace = traceback.format_list(extracted_frames)
+        else:
+            stack_trace = traceback.format_list(extracted_traceback)
 
     return stack_trace

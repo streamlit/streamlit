@@ -25,11 +25,12 @@ import inspect
 import logging
 import sys
 import time
+from typing import Dict
 
 from streamlit import development
 
 # Loggers for each name are saved here.
-LOGGERS = dict()
+LOGGERS = {}  # type: Dict[str, logging.Logger]
 
 # The global log level is set here across all names.
 LOG_LEVEL = logging.INFO

@@ -14,18 +14,11 @@
 # limitations under the License.
 
 import fnmatch
+import importlib
 import os
 import sys
 import collections
 
-try:
-    # Python 2
-    import imp as importlib
-except ImportError:
-    # Python 3
-    import importlib
-
-from streamlit import compatibility
 from streamlit import config
 from streamlit import env_util
 from streamlit import file_util
@@ -133,17 +126,12 @@ class LocalSourcesWatcher(object):
         if FileWatcher is None:
             return
 
-        if compatibility.is_running_py3():
-            ErrorType = PermissionError
-        else:
-            ErrorType = OSError
-
         try:
             wm = WatchedModule(
                 watcher=FileWatcher(filepath, self.on_file_changed),
                 module_name=module_name,
             )
-        except ErrorType:
+        except PermissionError:
             # If you don't have permission to read this file, don't even add it
             # to watchers.
             return

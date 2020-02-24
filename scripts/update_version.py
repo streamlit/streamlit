@@ -59,7 +59,7 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 # there.
 PYTHON = {
     "lib/setup.py": r"(?P<pre>.*version=\").*(?P<post>\",  # PEP-440$)",
-    "docs/troubleshooting/common-issues.md": r"(?P<pre>.*number printed is `).*(?P<post>`.$)",
+    "docs/troubleshooting/sanity-checks.md": r"(?P<pre>.*number printed is `).*(?P<post>`.$)",
 }
 
 NODE = {"frontend/package.json": r'(?P<pre>^  "version": ").*(?P<post>",$)'}
@@ -98,7 +98,7 @@ def update_files(data, python=True):
         filename = os.path.join(BASE_DIR, filename)
         matched = False
         pattern = re.compile(regex)
-        for line in fileinput.input(filename, inplace=1):
+        for line in fileinput.input(filename, inplace=True):
             if pattern.match(line.rstrip()):
                 matched = True
             line = re.sub(regex, r"\g<pre>%s\g<post>" % version, line.rstrip())

@@ -34,6 +34,11 @@ from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.Widget_pb2 import WidgetStates
 
 
+text_utf = "complete! 👨‍🎤"
+text_no_encoding = text_utf
+text_latin = "complete! ð\x9f\x91¨â\x80\x8dð\x9f\x8e¤"
+
+
 def _create_widget(id, states):
     """
     Returns
@@ -43,18 +48,6 @@ def _create_widget(id, states):
     """
     states.widgets.add().id = id
     return states.widgets[-1]
-
-
-import tokenize
-
-if hasattr(tokenize, "open"):
-    text_utf = "complete! 👨‍🎤"
-    text_no_encoding = text_utf
-    text_latin = "complete! ð\x9f\x91¨â\x80\x8dð\x9f\x8e¤"
-else:
-    text_utf = u"complete! 👨‍🎤"
-    text_no_encoding = u"complete! \xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x8e\xa4"
-    text_latin = text_no_encoding
 
 
 class ScriptRunnerTest(unittest.TestCase):
@@ -71,8 +64,9 @@ class ScriptRunnerTest(unittest.TestCase):
     @parameterized.expand(
         [
             ("good_script.py", text_utf),
-            ("good_script_no_encoding.py", text_no_encoding),
-            ("good_script_latin_encoding.py", text_latin),
+            # These files are .txt to avoid being broken by "make headers".
+            ("good_script_no_encoding.py.txt", text_no_encoding),
+            ("good_script_latin_encoding.py.txt", text_latin),
         ]
     )
     def test_run_script(self, filename, text):
@@ -389,20 +383,13 @@ class TestScriptRunner(ScriptRunner):
         def enqueue_fn(msg):
             self.report_queue.enqueue(msg)
             self.maybe_handle_execution_control_request()
-            return True
 
-        self.main_dg = DeltaGenerator(enqueue=enqueue_fn, container=BlockPath.MAIN)
-        self.sidebar_dg = DeltaGenerator(
-            enqueue=enqueue_fn, container=BlockPath.SIDEBAR
-        )
         self.script_request_queue = ScriptRequestQueue()
-
         script_path = os.path.join(os.path.dirname(__file__), "test_data", script_name)
 
         super(TestScriptRunner, self).__init__(
             report=Report(script_path, "test command line"),
-            main_dg=self.main_dg,
-            sidebar_dg=self.sidebar_dg,
+            enqueue_forward_msg=enqueue_fn,
             widget_states=WidgetStates(),
             request_queue=self.script_request_queue,
         )
@@ -445,6 +432,10 @@ class TestScriptRunner(ScriptRunner):
             super(TestScriptRunner, self)._process_request_queue()
         except BaseException as e:
             self.script_thread_exceptions.append(e)
+
+    def _run_script(self, rerun_data):
+        self.report_queue.clear()
+        super(TestScriptRunner, self)._run_script(rerun_data)
 
     def join(self):
         """Joins the run thread, if it was started"""

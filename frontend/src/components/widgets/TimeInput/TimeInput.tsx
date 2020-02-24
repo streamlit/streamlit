@@ -20,7 +20,7 @@ import { TimePicker as UITimePicker } from "baseui/datepicker"
 import { Map as ImmutableMap } from "immutable"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 
-interface Props {
+export interface Props {
   disabled: boolean
   element: ImmutableMap<string, any>
   widgetMgr: WidgetStateManager
@@ -50,18 +50,42 @@ class TimeInput extends React.PureComponent<Props, State> {
   }
 
   private handleChange = (newDate: Date): void => {
-    const value = dateToString(newDate)
+    const value = this.dateToString(newDate)
     this.setState({ value }, () => this.setWidgetValue({ fromUi: true }))
   }
 
+  private stringToDate = (value: string): Date => {
+    const [hours, minutes] = value.split(":").map(Number)
+    const date = new Date()
+
+    date.setHours(hours)
+    date.setMinutes(minutes)
+
+    return date
+  }
+
+  private dateToString = (value: Date): string => {
+    const hours = value
+      .getHours()
+      .toString()
+      .padStart(2, "0")
+    const minutes = value
+      .getMinutes()
+      .toString()
+      .padStart(2, "0")
+
+    return hours + ":" + minutes
+  }
+
   public render = (): React.ReactNode => {
-    const style = { width: this.props.width }
-    const label = this.props.element.get("label")
+    const { disabled, width, element } = this.props
+    const style = { width }
+    const label = element.get("label")
 
     const selectOverrides = {
       Select: {
         props: {
-          disabled: this.props.disabled,
+          disabled,
         },
       },
     }
@@ -71,7 +95,7 @@ class TimeInput extends React.PureComponent<Props, State> {
         <label>{label}</label>
         <UITimePicker
           format="24"
-          value={stringToDate(this.state.value)}
+          value={this.stringToDate(this.state.value)}
           onChange={this.handleChange}
           overrides={selectOverrides}
           creatable
@@ -79,26 +103,6 @@ class TimeInput extends React.PureComponent<Props, State> {
       </div>
     )
   }
-}
-
-function stringToDate(value: string): Date {
-  const [hours, minutes] = value.split(":").map(Number)
-  const date = new Date()
-  date.setHours(hours)
-  date.setMinutes(minutes)
-  return date
-}
-
-function dateToString(value: Date): string {
-  const hours = value
-    .getHours()
-    .toString()
-    .padStart(2, "0")
-  const minutes = value
-    .getMinutes()
-    .toString()
-    .padStart(2, "0")
-  return hours + ":" + minutes
 }
 
 export default TimeInput
