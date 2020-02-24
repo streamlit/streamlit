@@ -15,10 +15,7 @@
  * limitations under the License.
  */
 
-import {
-  MapboxToken,
-  TOKENS_URL,
-} from "components/elements/DeckGlChart/MapboxToken"
+import { MapboxToken, TOKENS_URL } from "hocs/withMapboxToken/MapboxToken"
 import { SessionInfo } from "lib/SessionInfo"
 import fetchMock from "fetch-mock"
 
