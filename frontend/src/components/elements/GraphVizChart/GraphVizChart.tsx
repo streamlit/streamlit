@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { PureComponent, ReactNode } from "react"
 import { Map as ImmutableMap } from "immutable"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 
@@ -30,7 +30,7 @@ interface Props {
   index: number
 }
 
-interface PropsWithHeight extends Props {
+export interface PropsWithHeight extends Props {
   height: number | undefined
 }
 
@@ -44,7 +44,7 @@ interface Dimensions {
 const _dummy_graphviz = graphviz
 _dummy_graphviz // eslint-disable-line no-unused-expressions
 
-class GraphVizChart extends React.PureComponent<PropsWithHeight> {
+export class GraphVizChart extends PureComponent<PropsWithHeight> {
   private chartId: string = "graphviz-chart-" + this.props.index
   private originalHeight = 0
   private originalWidth = 0
@@ -106,7 +106,7 @@ class GraphVizChart extends React.PureComponent<PropsWithHeight> {
     this.updateChart()
   }
 
-  public render = (): React.ReactNode => {
+  public render = (): ReactNode => {
     const width: number = this.props.element.get("width") || this.props.width
     const height: number =
       this.props.element.get("height") || this.props.height
