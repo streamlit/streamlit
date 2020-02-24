@@ -548,8 +548,7 @@ _create_option(
                 which has limitations and is not guaranteed to always work.
                 To get a token for yourself, create an account at
                 https://mapbox.com. It's free! (for moderate usage levels)""",
-    default_val="pk.eyJ1IjoidGhpYWdvdCIsImEiOiJjamh3bm85NnkwMng4M3"
-    "dydnNveWwzeWNzIn0.vCBDzNsEF2uFSFk2AM0WZQ",
+    default_val="",
 )
 
 
