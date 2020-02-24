@@ -21,25 +21,6 @@ import { fromJS } from "immutable"
 
 import DocString, { Props } from "./DocString"
 
-// // The name of the object.
-// string
-// name = 1;
-//
-// // The module of the object
-// string
-// module = 2;
-//
-// // The doc string.
-// string
-// doc_string = 3;
-//
-// // The type of the object.
-// string
-// type = 4;
-//
-// // The signature of the object, if it's a function. Else, unset.
-// string
-// signature = 5;
 const getProps = (elementProps: object = {}): Props => ({
   element: fromJS({
     name: "balloons",
