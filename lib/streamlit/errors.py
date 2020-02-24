@@ -57,20 +57,6 @@ class DuplicateWidgetID(StreamlitAPIException):
     pass
 
 
-class UnhashableType(StreamlitAPIException):
-    pass
-
-
-class UserHashError(StreamlitAPIException):
-    pass
-
-
-class InternalHashError(MarkdownFormattedException):
-    """Exception in Streamlit hashing code (i.e. not a user error)"""
-
-    pass
-
-
 class StreamlitAPIWarning(StreamlitAPIException, Warning):
     """Used to display a warning.
 

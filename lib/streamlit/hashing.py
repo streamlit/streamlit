@@ -17,6 +17,7 @@
 
 import collections
 import dis
+import enum
 import functools
 import hashlib
 import importlib
@@ -25,48 +26,65 @@ import io
 import os
 import pickle
 import sys
-import textwrap
 import tempfile
+import textwrap
 import threading
+import weakref
 
 import streamlit as st
 from streamlit import compatibility
 from streamlit import config
 from streamlit import file_util
 from streamlit import type_util
-from streamlit.errors import UnhashableType, UserHashError, InternalHashError
+from streamlit.errors import StreamlitAPIException, MarkdownFormattedException
 from streamlit.folder_black_list import FolderBlackList
 from streamlit.logger import get_logger
-
-if sys.version_info >= (3, 0):
-    from streamlit.hashing_py3 import get_referenced_objects
 
 LOGGER = get_logger(__name__)
 
 
 # If a dataframe has more than this many rows, we consider it large and hash a sample.
-PANDAS_ROWS_LARGE = 100000
-PANDAS_SAMPLE_SIZE = 10000
+_PANDAS_ROWS_LARGE = 100000
+_PANDAS_SAMPLE_SIZE = 10000
 
 
 # Similar to dataframes, we also sample large numpy arrays.
-NP_SIZE_LARGE = 1000000
-NP_SAMPLE_SIZE = 100000
+_NP_SIZE_LARGE = 1000000
+_NP_SAMPLE_SIZE = 100000
 
 
 # Arbitrary item to denote where we found a cycle in a hashed object.
 # This allows us to hash self-referencing lists, dictionaries, etc.
-CYCLE_PLACEHOLDER = b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-CYCLE"
+_CYCLE_PLACEHOLDER = b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-CYCLE"
+
+
+_FOLDER_BLACK_LIST = FolderBlackList(config.get_option("server.folderWatchBlacklist"))
 
 
 Context = collections.namedtuple("Context", ["globals", "cells", "varnames"])
-HashStackItem = collections.namedtuple(
-    "HashStackItem", ["value", "file_name", "line_text", "line_number"]
-)
 
 
-class HashStacks(object):
-    """Stack of what has been hashed, for circular reference detection.
+def update_hash(val, hasher, hash_reason, hash_source, context=None, hash_funcs=None):
+    """Updates a hashlib hasher with the hash of val.
+
+    This is the main entrypoint to hashing.py.
+    """
+    hash_stacks.current.hash_reason = hash_reason
+    hash_stacks.current.hash_source = hash_source
+
+    ch = CodeHasher(hash_funcs)
+    ch.update(hasher, val, context)
+
+
+class HashReason(enum.Enum):
+    CACHING_FUNC_ARGS = 0
+    CACHING_FUNC_BODY = 1
+    CACHING_FUNC_OUTPUT = 2
+    CACHING_BLOCK = 3
+
+
+class _HashStack(object):
+    """Stack of what has been hashed, for debug and circular reference detection.
 
     This internally keeps 1 stack per thread.
 
@@ -78,22 +96,55 @@ class HashStacks(object):
     """
 
     def __init__(self):
-        self.stacks = collections.defaultdict(list)
+        self._stack = collections.OrderedDict()
+
+        # The reason why we're doing this hashing, for debug purposes.
+        self.hash_reason = None
+
+        # Either a function or a code block, depending on whether the reason is
+        # due to hashing part of a function (i.e. body, args, output) or an
+        # st.Cache codeblock.
+        self.hash_source = None
 
     def push(self, val):
-        thread_id = threading.current_thread().ident
-        self.stacks[thread_id].append(id(val))
+        self._stack[id(val)] = val
 
     def pop(self):
-        thread_id = threading.current_thread().ident
-        return self.stacks[thread_id].pop()
+        return self._stack.popitem()
 
     def __contains__(self, val):
-        thread_id = threading.current_thread().ident
-        return id(val) in self.stacks[thread_id]
+        return id(val) in self._stack
+
+    def pretty_print(self):
+        def to_str(v):
+            try:
+                return 'Object of type %s: %s' % (type_util.get_fqn_type(v), str(v))
+            except:
+                return '<Unable to convert item to string>'
+
+        return '\n'.join(to_str(x) for x in reversed(self._stack.values()))
 
 
-hash_stacks = HashStacks()
+class _HashStacks(object):
+    """Stacks of what has been hashed, with at most 1 stack per thread."""
+
+    def __init__(self):
+        self._stacks = weakref.WeakKeyDictionary()
+
+    @property
+    def current(self):
+        current_thread = threading.current_thread()
+
+        stack = self._stacks.get(current_thread, None)
+
+        if stack is None:
+            stack = _HashStack()
+            self._stacks[current_thread] = stack
+
+        return stack
+
+
+hash_stacks = _HashStacks()
 
 
 def _is_magicmock(obj):
@@ -104,11 +155,14 @@ def _is_magicmock(obj):
 
 def _get_context(func):
     code = func.__code__
+
     # Mapping from variable name to the value if we can resolve it.
     # Otherwise map to the name.
     cells = {}
+
     for var in code.co_cellvars:
         cells[var] = var  # Instead of value, we use the name.
+
     if code.co_freevars:
         assert len(code.co_freevars) == len(func.__closure__)
         cells.update(
@@ -122,19 +176,12 @@ def _get_context(func):
     return Context(globals=func.__globals__, cells=cells, varnames=varnames)
 
 
-def get_hash(f, context=None, hash_funcs=None):
-    """Quick utility function that computes a hash of an arbitrary object."""
-    hasher = CodeHasher("md5", hash_funcs=hash_funcs)
-    hasher.update(f, context)
-    return hasher.digest()
-
-
 def _int_to_bytes(i):
     num_bytes = (i.bit_length() + 8) // 8
     return b"int:%s" % i.to_bytes(num_bytes, "little", signed=True)
 
 
-def _key(obj, context):
+def _key(obj):
     """Return key for memoization."""
 
     if obj is None:
@@ -174,76 +221,13 @@ def _key(obj, context):
     return NoResult
 
 
-def _hashing_error_message(bad_type):
-    return textwrap.dedent(
-        """
-        Cannot hash object of type %(bad_type)s
-
-        While caching some code, Streamlit encountered an object of
-        type `%(bad_type)s`. You’ll need to help Streamlit understand how to
-        hash that type with the `hash_funcs` argument. For example:
-
-        ```
-        @st.cache(hash_funcs={%(bad_type)s: my_hash_func})
-        def my_func(...):
-            ...
-        ```
-
-        Please see the `hash_funcs` [documentation]
-        (https://streamlit.io/docs/advanced_caching.html)
-        for more details.
-    """
-        % {"bad_type": str(bad_type).split("'")[1]}
-    ).strip("\n")
-
-
-def _hashing_internal_error_message(exc, bad_type):
-    return textwrap.dedent(
-        """
-        %(exception)s
-
-        Usually this means you found a Streamlit bug!
-        If you think that's the case, please [file a bug report here.]
-        (https://github.com/streamlit/streamlit/issues/new/choose)
-
-        In the meantime, you can try bypassing this error by registering a custom
-        hash function via the `hash_funcs` keyword in @st.cache(). For example:
-
-        ```
-        @st.cache(hash_funcs={%(bad_type)s: my_hash_func})
-        def my_func(...):
-            ...
-        ```
-
-        Please see the `hash_funcs` [documentation]
-        (https://streamlit.io/docs/advanced_caching.html)
-        for more details.
-    """
-        % {"exception": str(exc), "bad_type": str(bad_type).split("'")[1]}
-    ).strip("\n")
-
-
-def _hash_funcs_error_message(exc):
-    return textwrap.dedent(
-        """
-        %(exception)s
-
-        This error is likely from a bad function passed via the `hash_funcs`
-        keyword to `@st.cache`.
-
-        If you think this is actually a Streamlit bug, please [file a bug report here.]
-        (https://github.com/streamlit/streamlit/issues/new/choose)
-    """
-        % {"exception": str(exc)}
-    ).strip("\n")
-
-
 class CodeHasher:
     """A hasher that can hash code objects including dependencies."""
 
-    def __init__(self, name="md5", hasher=None, hash_funcs=None):
+    def __init__(self, hash_funcs=None):
+        self._hash_funcs = hash_funcs or {}
+
         self._hashes = {}
-        self._name = name
 
         # The number of the bytes in the hash.
         self.size = 0
@@ -251,30 +235,9 @@ class CodeHasher:
         # An ever increasing counter.
         self._counter = 0
 
-        if hasher:
-            self._hasher = hasher
-        else:
-            self._hasher = hashlib.new(name)
-
-        self._folder_black_list = FolderBlackList(
-            config.get_option("server.folderWatchBlacklist")
-        )
-
-        self.hash_funcs = hash_funcs or {}
-
-    def update(self, obj, context=None):
-        """Update the hash with the provided object."""
-        self._update(self._hasher, obj, context)
-
-    def digest(self):
-        return self._hasher.digest()
-
-    def hexdigest(self):
-        return self._hasher.hexdigest()
-
     def to_bytes(self, obj, context=None):
-        """Add memoization to _get_hash and protect against cycles in data structures."""
-        key = _key(obj, context)
+        """Add memoization to _to_bytes and protect against cycles in data structures."""
+        key = _key(obj)
 
         if key is not NoResult:
             if key in self._hashes:
@@ -284,18 +247,18 @@ class CodeHasher:
             self._counter += 1
             self._hashes[key] = _int_to_bytes(self._counter)
 
-        if obj in hash_stacks:
-            return CYCLE_PLACEHOLDER
+        if obj in hash_stacks.current:
+            return _CYCLE_PLACEHOLDER
 
-        hash_stacks.push(obj)
+        hash_stacks.current.push(obj)
 
         try:
             LOGGER.debug("About to hash: %s", obj)
-            b = self._get_hash(obj, context)
+            b = self._to_bytes(obj, context)
             LOGGER.debug("Done hashing: %s", obj)
 
             # XXX Size calculation is wrong. When we call to_bytes inside
-            # _get_hash things get double-counted.
+            # _to_bytes things get double-counted.
             self.size += sys.getsizeof(b)
 
             if key is not None:
@@ -312,18 +275,18 @@ class CodeHasher:
         finally:
             # In case an UnhashableType (or other) error is thrown, clean up the
             # stack so we don't get false positives in future hashing calls
-            hash_stacks.pop()
+            hash_stacks.current.pop()
 
         return b
 
-    def _update(self, hasher, obj, context=None):
+    def update(self, hasher, obj, context=None):
         """Update the provided hasher with the hash of an object."""
         b = self.to_bytes(obj, context)
         hasher.update(b)
 
     def _file_should_be_hashed(self, filename):
         filepath = os.path.abspath(filename)
-        file_is_blacklisted = self._folder_black_list.is_blacklisted(filepath)
+        file_is_blacklisted = _FOLDER_BLACK_LIST.is_blacklisted(filepath)
         # Short circuiting for performance.
         if file_is_blacklisted:
             return False
@@ -331,7 +294,7 @@ class CodeHasher:
             filepath, self._get_main_script_directory()
         ) or file_util.file_in_pythonpath(filepath)
 
-    def _get_hash(self, obj, context):
+    def _to_bytes(self, obj, context):
         """Hash objects to bytes, including code with dependencies.
 
         Python's built in `hash` does not produce consistent results across
@@ -351,10 +314,10 @@ class CodeHasher:
             # str == bytes on python 2
             return b"str:%s" % obj.encode()
 
-        elif type(obj) in self.hash_funcs:
+        elif type(obj) in self._hash_funcs:
             # Escape hatch for unsupported objects
             try:
-                output = self.hash_funcs[type(obj)](obj)
+                output = self._hash_funcs[type(obj)](obj)
             except BaseException as e:
                 msg = _hash_funcs_error_message(e)
                 raise UserHashError(msg).with_traceback(e.__traceback__)
@@ -368,21 +331,21 @@ class CodeHasher:
             return _int_to_bytes(obj)
 
         elif isinstance(obj, (list, tuple)):
-            h = hashlib.new(self._name)
+            h = hashlib.new("md5")
 
             # Hash the name of the container so that ["a"] hashes differently from ("a",)
             # Otherwise we'd only be hashing the data and the hashes would be the same.
-            self._update(h, type(obj).__name__.encode() + b":")
+            self.update(h, type(obj).__name__.encode() + b":")
             for item in obj:
-                self._update(h, item, context)
+                self.update(h, item, context)
             return h.digest()
 
         elif isinstance(obj, dict):
-            h = hashlib.new(self._name)
+            h = hashlib.new("md5")
 
-            self._update(h, type(obj).__name__.encode() + b":")
+            self.update(h, type(obj).__name__.encode() + b":")
             for item in obj.items():
-                self._update(h, item, context)
+                self.update(h, item, context)
             return h.digest()
 
         elif obj is None:
@@ -402,8 +365,8 @@ class CodeHasher:
         ):
             import pandas as pd
 
-            if len(obj) >= PANDAS_ROWS_LARGE:
-                obj = obj.sample(n=PANDAS_SAMPLE_SIZE, random_state=0)
+            if len(obj) >= _PANDAS_ROWS_LARGE:
+                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
             try:
                 return pd.util.hash_pandas_object(obj).sum()
             except TypeError:
@@ -412,16 +375,16 @@ class CodeHasher:
                 return pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
 
         elif type_util.is_type(obj, "numpy.ndarray"):
-            h = hashlib.new(self._name)
-            self._update(h, obj.shape)
+            h = hashlib.new("md5")
+            self.update(h, obj.shape)
 
-            if obj.size >= NP_SIZE_LARGE:
+            if obj.size >= _NP_SIZE_LARGE:
                 import numpy as np
 
                 state = np.random.RandomState(0)
-                obj = state.choice(obj.flat, size=NP_SAMPLE_SIZE)
+                obj = state.choice(obj.flat, size=_NP_SAMPLE_SIZE)
 
-            self._update(h, obj.tobytes())
+            self.update(h, obj.tobytes())
             return h.digest()
 
         elif inspect.isbuiltin(obj):
@@ -434,10 +397,10 @@ class CodeHasher:
             or (not compatibility.is_running_py3() and isinstance(obj, file))
         ):
             # Hash files as name + last modification date + offset.
-            h = hashlib.new(self._name)
-            self._update(h, obj.name)
-            self._update(h, os.path.getmtime(obj.name))
-            self._update(h, obj.tell())
+            h = hashlib.new("md5")
+            self.update(h, obj.name)
+            self.update(h, os.path.getmtime(obj.name))
+            self.update(h, obj.tell())
             return h.digest()
 
         elif type_util.is_type(obj, "numpy.ufunc"):
@@ -455,16 +418,17 @@ class CodeHasher:
                 # (e.g. during development).
                 return self.to_bytes("%s.%s" % (obj.__module__, obj.__name__))
 
-            h = hashlib.new(self._name)
+            h = hashlib.new("md5")
+
             if self._file_should_be_hashed(obj.__code__.co_filename):
                 context = _get_context(obj)
                 if obj.__defaults__:
-                    self._update(h, obj.__defaults__, context)
+                    self.update(h, obj.__defaults__, context)
                 h.update(self._code_to_bytes(obj.__code__, context))
             else:
                 # Don't hash code that is not in the current working directory.
-                self._update(h, obj.__module__)
-                self._update(h, obj.__name__)
+                self.update(h, obj.__module__)
+                self.update(h, obj.__name__)
             return h.digest()
 
         elif inspect.iscode(obj):
@@ -493,32 +457,32 @@ class CodeHasher:
             # The return value of functools.partial is not a plain function:
             # it's a callable object that remembers the original function plus
             # the values you pickled into it. So here we need to special-case it.
-            h = hashlib.new(self._name)
-            self._update(h, obj.args)
-            self._update(h, obj.func)
-            self._update(h, obj.keywords)
+            h = hashlib.new("md5")
+            self.update(h, obj.args)
+            self.update(h, obj.func)
+            self.update(h, obj.keywords)
             return h.digest()
 
         else:
             # As a last resort, hash the output of the object's __reduce__ method
-            h = hashlib.new(self._name)
-            self._update(h, type(obj).__name__.encode() + b":")
+            h = hashlib.new("md5")
+            self.update(h, type(obj).__name__.encode() + b":")
 
             try:
                 reduce_data = obj.__reduce__()
             except BaseException as e:
-                msg = _hashing_error_message(type(obj))
+                msg = _hashing_error_message(obj)
                 raise UnhashableType(msg).with_traceback(e.__traceback__)
 
             for item in reduce_data:
-                self._update(h, item, context)
+                self.update(h, item, context)
             return h.digest()
 
     def _code_to_bytes(self, code, context):
-        h = hashlib.new(self._name)
+        h = hashlib.new("md5")
 
         # Hash the bytecode.
-        self._update(h, code.co_code)
+        self.update(h, code.co_code)
 
         # Hash constants that are referenced by the bytecode but ignore names of lambdas.
         consts = [
@@ -526,10 +490,10 @@ class CodeHasher:
             for n in code.co_consts
             if not isinstance(n, str) or not n.endswith(".<lambda>")
         ]
-        self._update(h, consts, context)
+        self.update(h, consts, context)
 
         for ref in get_referenced_objects(code, context):
-            self._update(h, ref, context)
+            self.update(h, ref, context)
 
         return h.digest()
 
@@ -546,7 +510,250 @@ class CodeHasher:
         return os.path.dirname(main_path)
 
 
+def _hashing_user_error_message(exc, lines, filename, lineno):
+    # XXX
+    # This needs to have zero indentation otherwise %(line)s will
+    # render incorrectly in Markdown.
+    return (
+        """
+%(exception)s
+
+Error in `%(filename)s` near line `%(lineno)s`:
+
+```
+%(lines)s
+```
+
+If you think this is actually a Streamlit bug, please [file a bug report here.]
+(https://github.com/streamlit/streamlit/issues/new/choose)
+    """
+        % {
+            "exception": str(exc),
+            "lines": textwrap.dedent(lines).strip("\n"),
+            "filename": filename,
+            "lineno": lineno,
+        }
+    ).strip("\n")
+
+
+def _get_failing_lines(code, lineno):
+    """Get list of strings (lines of code) from lineno to lineno+3.
+
+    Ideally we'd return the exact line where the error took place, but there
+    are reasons why this is not possible without a lot of work, including
+    playing with the AST. So for now we're returning 3 lines near where
+    the error took place.
+    """
+    source_lines, source_lineno = inspect.getsourcelines(code)
+
+    start = lineno - source_lineno
+    end = min(start + 3, len(source_lines))
+    lines = source_lines[start:end]
+
+    return lines
+
+
+def get_referenced_objects(code, context):
+    tos = None  # top of the stack
+    lineno = None
+    refs = []
+
+    def set_tos(t):
+        nonlocal tos
+        if tos is not None:
+            # hash tos so we support reading multiple objects
+            refs.append(tos)
+        tos = t
+
+    # Our goal is to find referenced objects. The problem is that co_names
+    # does not have full qualified names in it. So if you access `foo.bar`,
+    # co_names has `foo` and `bar` in it but it doesn't tell us that the
+    # code reads `bar` of `foo`. We are going over the bytecode to resolve
+    # from which object an attribute is requested.
+    # Read more about bytecode at https://docs.python.org/3/library/dis.html
+
+    for op in dis.get_instructions(code):
+        try:
+            # Sometimes starts_line is None, in which case let's just remember the
+            # previous start_line (if any). This way when there's an exception we at
+            # least can point users somewhat near the line where the error stems from.
+            if op.starts_line is not None:
+                lineno = op.starts_line
+
+            if op.opname in ["LOAD_GLOBAL", "LOAD_NAME"]:
+                if op.argval in context.globals:
+                    set_tos(context.globals[op.argval])
+                else:
+                    set_tos(op.argval)
+            elif op.opname in ["LOAD_DEREF", "LOAD_CLOSURE"]:
+                set_tos(context.cells[op.argval])
+            elif op.opname == "IMPORT_NAME":
+                try:
+                    set_tos(importlib.import_module(op.argval))
+                except ImportError:
+                    set_tos(op.argval)
+            elif op.opname in ["LOAD_METHOD", "LOAD_ATTR", "IMPORT_FROM"]:
+                if tos is None:
+                    refs.append(op.argval)
+                elif isinstance(tos, str):
+                    tos += "." + op.argval
+                else:
+                    tos = getattr(tos, op.argval)
+            elif op.opname == "DELETE_FAST" and tos:
+                del context.varnames[op.argval]
+                tos = None
+            elif op.opname == "STORE_FAST" and tos:
+                context.varnames[op.argval] = tos
+                tos = None
+            elif op.opname == "LOAD_FAST" and op.argval in context.varnames:
+                set_tos(context.varnames[op.argval])
+            else:
+                # For all other instructions, hash the current TOS.
+                if tos is not None:
+                    refs.append(tos)
+                    tos = None
+        except Exception as e:
+            lines = _get_failing_lines(code, lineno)
+
+            msg = _hashing_user_error_message(
+                e, "".join(lines), code.co_filename, lineno
+            )
+            raise UserHashError(msg).with_traceback(e.__traceback__)
+
+    return refs
+
+
 class NoResult(object):
     """Placeholder class for return values when None is meaningful."""
 
     pass
+
+
+class UnhashableType(StreamlitAPIException):
+    pass
+
+
+class UserHashError(StreamlitAPIException):
+    pass
+
+
+class InternalHashError(MarkdownFormattedException):
+    """Exception in Streamlit hashing code (i.e. not a user error)"""
+
+    pass
+
+
+# XXX Move this into the exception itself.
+def _hashing_error_message(failed_obj):
+    hash_reason = hash_stacks.current.hash_reason
+    hash_source = hash_stacks.current.hash_source
+
+    #failed_obj_type_str = str(type(failed_obj)).split("'")[1]
+    failed_obj_type_str = type_util.get_fqn_type(failed_obj)
+
+    if hash_source is None or hash_reason is None:
+        object_desc = "something"
+        object_part = ""
+        additional_explanation = ""
+
+    elif hash_reason is HashReason.CACHING_BLOCK:
+        object_desc = "a code block"
+        object_part = ""
+        additional_explanation = ""
+
+    else:
+        if hasattr(hash_source, "__name__"):
+            object_desc = "`%s()`" % hash_source.__name__
+            object_desc_specific = object_desc
+        else:
+            object_desc = "a function"
+            object_desc_specific = "that function"
+
+        if hash_reason is HashReason.CACHING_FUNC_ARGS:
+            object_part = "the arguments of"
+        elif hash_reason is HashReason.CACHING_FUNC_BODY:
+            object_part = "the body of"
+        elif hash_reason is HashReason.CACHING_FUNC_OUTPUT:
+            object_part = "the return value of"
+
+    args = {
+        "failed_obj_type_str": failed_obj_type_str,
+        "hash_stack": hash_stacks.current.pretty_print(),
+        "object_desc": object_desc,
+        "object_part": object_part,
+    }
+
+    # This needs to have zero indentation otherwise %(hash_stack)s will
+    # render incorrectly in Markdown.
+    return ("""
+Cannot hash object of type `%(failed_obj_type_str)s` in %(object_part)s `%(object_desc)s`.
+
+While caching %(object_desc)s, Streamlit encountered an object of type
+`%(failed_obj_type_str)s`, which it does not know how to hash.
+
+To address this, please try helping Streamlit understand how to hash that type
+by passing the `hash_funcs` argument into `@st.cache`. For example:
+
+```
+@st.cache(hash_funcs={%(failed_obj_type_str)s: my_hash_func})
+def my_func(...):
+    ...
+```
+
+If you don't know where the object of type `%(failed_obj_type_str)s` is coming
+from, try looking at the hash chain below for an object that you do recognize,
+then pass that to `hash_funcs` instead:
+
+```
+%(hash_stack)s
+```
+
+Please see the `hash_funcs` [documentation]
+(https://streamlit.io/docs/advanced_caching.html)
+for more details.
+
+""" % args
+    ).strip("\n")
+
+
+def _hashing_internal_error_message(exc, bad_type):
+    # XXX
+    # This needs to have zero indentation otherwise %(XXX)s will
+    # render incorrectly in Markdown.
+    return ("""
+%(exception)s
+
+Usually this means you found a Streamlit bug!
+If you think that's the case, please [file a bug report here.]
+(https://github.com/streamlit/streamlit/issues/new/choose)
+
+In the meantime, you can try bypassing this error by registering a custom
+hash function via the `hash_funcs` keyword in @st.cache(). For example:
+
+```
+@st.cache(hash_funcs={%(bad_type)s: my_hash_func})
+def my_func(...):
+    ...
+```
+
+Please see the `hash_funcs` [documentation]
+(https://streamlit.io/docs/advanced_caching.html)
+for more details.
+"""
+        % {"exception": str(exc), "bad_type": str(bad_type).split("'")[1]}
+    ).strip("\n")
+
+
+def _hash_funcs_error_message(exc):
+    # XXX
+    return ("""
+%(exception)s
+
+This error is likely from a bad function passed via the `hash_funcs`
+keyword to `@st.cache`.
+
+If you think this is actually a Streamlit bug, please [file a bug report here.]
+(https://github.com/streamlit/streamlit/issues/new/choose)
+"""
+        % {"exception": str(exc)}
+    ).strip("\n")

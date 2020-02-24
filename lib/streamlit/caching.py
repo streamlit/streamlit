@@ -39,28 +39,15 @@ from streamlit import file_util
 from streamlit import util
 from streamlit.errors import StreamlitAPIWarning
 from streamlit.errors import StreamlitDeprecationWarning
-from streamlit.hashing import CodeHasher
 from streamlit.hashing import Context
-from streamlit.hashing import get_hash
+from streamlit.hashing import update_hash
+from streamlit.hashing import HashReason
 from streamlit.logger import get_logger
 from streamlit.util import functools_wraps
 import streamlit as st
 
 
 LOGGER = get_logger(__name__)
-
-
-class CacheError(Exception):
-    pass
-
-
-class CacheKeyNotFoundError(Exception):
-    pass
-
-
-class CachedObjectWasMutatedError(ValueError):
-    def __init__(self, cached_value):
-        self.cached_value = cached_value
 
 
 CacheEntry = namedtuple("CacheEntry", ["value", "hash"])
@@ -112,7 +99,7 @@ code will only be called when we detect a cache "miss", which can lead to
 unexpected results.
 
 How to resolve this warning:
-* Move the streamlit function call outside the cached function.
+* Move the Streamlit function call outside the cached function.
 * Or, if you know what you're doing, use `@st.cache(suppress_st_warning=True)`
 to suppress the warning.
 """
@@ -215,13 +202,13 @@ The problem is that an object returned by that function was modified
     st.exception(e)
 
 
-def _read_from_mem_cache(key, allow_output_mutation, hash_funcs):
+def _read_from_mem_cache(key, allow_output_mutation, func_or_code, hash_funcs):
     if key in _mem_cache:
         entry = _mem_cache[key]
 
         if (
             allow_output_mutation
-            or get_hash(entry.value, hash_funcs=hash_funcs) == entry.hash
+            or _get_output_hash(entry.value, func_or_code, hash_funcs) == entry.hash
         ):
             LOGGER.debug("Memory cache HIT: %s", type(entry.value))
             return entry.value
@@ -233,13 +220,24 @@ def _read_from_mem_cache(key, allow_output_mutation, hash_funcs):
         raise CacheKeyNotFoundError("Key not found in mem cache")
 
 
-def _write_to_mem_cache(key, value, allow_output_mutation, hash_funcs):
+def _write_to_mem_cache(key, value, allow_output_mutation, func_or_code, hash_funcs):
     if allow_output_mutation:
         hash = None
     else:
-        hash = get_hash(value, hash_funcs=hash_funcs)
+        hash = _get_output_hash(value, func_or_code, hash_funcs)
 
     _mem_cache[key] = CacheEntry(value=value, hash=hash)
+
+
+def _get_output_hash(value, func_or_code, hash_funcs):
+    hasher = hashlib.new("md5")
+    update_hash(
+        value,
+        hasher=hasher,
+        hash_funcs=hash_funcs,
+        hash_reason=HashReason.CACHING_FUNC_OUTPUT,
+        hash_source=func_or_code)
+    return hasher.digest()
 
 
 def _read_from_disk_cache(key):
@@ -285,17 +283,17 @@ def _read_from_cache(key, persisted, allow_output_mutation, func_or_code, hash_f
     from disk or rerun the code.
     """
     try:
-        return _read_from_mem_cache(key, allow_output_mutation, hash_funcs)
+        return _read_from_mem_cache(key, allow_output_mutation, func_or_code, hash_funcs)
     except CacheKeyNotFoundError as e:
         if persisted:
             value = _read_from_disk_cache(key)
-            _write_to_mem_cache(key, value, allow_output_mutation, hash_funcs)
+            _write_to_mem_cache(key, value, allow_output_mutation, func_or_code, hash_funcs)
             return value
         raise e
 
 
-def _write_to_cache(key, value, persist, allow_output_mutation, hash_funcs):
-    _write_to_mem_cache(key, value, allow_output_mutation, hash_funcs)
+def _write_to_cache(key, value, persist, allow_output_mutation, func_or_code, hash_funcs):
+    _write_to_mem_cache(key, value, allow_output_mutation, func_or_code, hash_funcs)
     if persist:
         _write_to_disk_cache(key, value)
 
@@ -426,20 +424,30 @@ def cache(
         def get_or_set_cache():
             hasher = hashlib.new("md5")
 
-            args_hasher = CodeHasher("md5", hasher, hash_funcs)
-            args_hasher.update([args, kwargs])
-            LOGGER.debug("Hashing arguments to %s of %i bytes.", name, args_hasher.size)
+            update_hash(
+                [args, kwargs],
+                hasher=hasher,
+                hash_funcs=hash_funcs,
+                hash_reason=HashReason.CACHING_FUNC_ARGS,
+                hash_source=func)
 
-            code_hasher = CodeHasher("md5", hasher, hash_funcs)
-            code_hasher.update(func)
-            LOGGER.debug("Hashing function %s in %i bytes.", name, code_hasher.size)
+            update_hash(
+                func,
+                hasher=hasher,
+                hash_funcs=hash_funcs,
+                hash_reason=HashReason.CACHING_FUNC_BODY,
+                hash_source=func)
 
             key = hasher.hexdigest()
             LOGGER.debug("Cache key: %s", key)
 
             try:
                 return_value = _read_from_cache(
-                    key, persist, allow_output_mutation, func, hash_funcs
+                    key,
+                    persisted=persist,
+                    allow_output_mutation=allow_output_mutation,
+                    func_or_code=func,
+                    hash_funcs=hash_funcs,
                 )
                 LOGGER.debug("Cache hit: %s", func)
 
@@ -462,6 +470,7 @@ def cache(
                     value=return_value,
                     persist=persist,
                     allow_output_mutation=allow_output_mutation,
+                    func_or_code=func,
                     hash_funcs=hash_funcs,
                 )
 
@@ -555,20 +564,23 @@ class Cache(Dict[Any, Any]):
         context = Context(dict(caller_frame.f_globals, **caller_frame.f_locals), {}, {})
         code = compile(program, filename, "exec")
 
-        code_hasher = CodeHasher("md5")
-        code_hasher.update(code, context)
-        LOGGER.debug("Hashing block in %i bytes.", code_hasher.size)
+        hasher = hashlib.new("md5")
+        update_hash(
+            code,
+            hasher=hasher,
+            context=context,
+            hash_reason=HashReason.CACHING_BLOCK,
+            hash_source=code)
 
-        key = code_hasher.hexdigest()
+        key = hasher.hexdigest()
         LOGGER.debug("Cache key: %s", key)
 
         try:
             value, _ = _read_from_cache(
                 key,
-                self._persist,
-                self._allow_output_mutation,
-                code,
-                [caller_lineno + 1, caller_lineno + len(lines)],
+                persisted=self._persist,
+                allow_output_mutation=self._allow_output_mutation,
+                func_or_code=code,
             )
             self.update(value)
         except CacheKeyNotFoundError:
@@ -643,6 +655,19 @@ def _get_frame_info(caller_frame):
     frameinfo = inspect.getframeinfo(caller_frame)
     filename, caller_lineno, _, code_context, _ = frameinfo
     return filename, caller_lineno, code_context
+
+
+class CacheError(Exception):
+    pass
+
+
+class CacheKeyNotFoundError(Exception):
+    pass
+
+
+class CachedObjectWasMutatedError(ValueError):
+    def __init__(self, cached_value):
+        self.cached_value = cached_value
 
 
 class CachedStFunctionWarning(StreamlitAPIWarning):
