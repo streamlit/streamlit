@@ -26,7 +26,7 @@ def _get_file_id(data, mimetype=None):
     Parameters
     ----------
 
-    data : bytes 
+    data : bytes
         Content of media file in bytes. Other types will throw TypeError.
     mimetype : str
         Any string. Will be converted to bytes and used to compute a hash.
@@ -40,8 +40,6 @@ def _get_file_id(data, mimetype=None):
     filehash = hashlib.sha224(data)
     filehash.update(bytes(mimetype.encode("utf-8")))
     return filehash.hexdigest()
-
-    # return hashlib.sha224(bytes(mimetype.encode("utf-8")) + data).hexdigest()
 
 
 class MediaFile(object):
@@ -89,7 +87,7 @@ class MediaFileManager(object):
 
         Parameters
         ----------
-        content : bytes  
+        content : bytes
             Raw data to store in file object.
         mimetype : str
             The mime type for the media file. E.g. "audio/mpeg"
