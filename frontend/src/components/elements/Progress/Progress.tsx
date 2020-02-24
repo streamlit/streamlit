@@ -15,24 +15,24 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { PureComponent, ReactNode } from "react"
 import { Map as ImmutableMap } from "immutable"
 import { Progress as UIProgress } from "reactstrap"
 
 import "./Progress.scss"
 
-interface Props {
+export interface Props {
   width: number
   element: ImmutableMap<string, any>
 }
 
-const FAST_UPDATE_MS = 50
+export const FAST_UPDATE_MS = 50
 
-class Progress extends React.PureComponent<Props> {
+class Progress extends PureComponent<Props> {
   lastValue = -1
   lastAnimatedTime = -1
 
-  public render(): React.ReactNode {
+  public render(): ReactNode {
     const { element, width } = this.props
     const value = element.get("value")
     const time = new Date().getTime()
