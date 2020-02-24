@@ -15,12 +15,12 @@
  * limitations under the License.
  */
 
-import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
+import React, { PureComponent, ReactNode } from "react"
 import { Map as ImmutableMap } from "immutable"
-import React, { ReactNode } from "react"
+import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
 import "./ExceptionElement.scss"
 
-interface Props {
+export interface Props {
   width: number
   element: ImmutableMap<string, any>
 }
@@ -28,9 +28,10 @@ interface Props {
 /**
  * Functional element representing formatted text.
  */
-class ExceptionElement extends React.PureComponent<Props> {
-  public render(): React.ReactNode {
+class ExceptionElement extends PureComponent<Props> {
+  public render(): ReactNode {
     const { element, width } = this.props
+
     const type = element.get("type")
     const message = element.get("message")
     const stackTrace = element.get("stackTrace")
