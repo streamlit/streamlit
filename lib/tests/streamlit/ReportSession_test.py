@@ -119,6 +119,14 @@ class ReportSessionTest(unittest.TestCase):
         self.assertEquals(ReportSessionState.SHUTDOWN_REQUESTED, rs._state)
         file_mgr.remove_session_files.assert_called_once_with(rs.id)
 
+    @patch("streamlit.ReportSession.LocalSourcesWatcher")
+    def test_unique_id(self, _1):
+        """Each ReportSession should have a unique ID"""
+        file_mgr = MagicMock(spec=UploadedFileManager)
+        rs1 = ReportSession(None, "", "", file_mgr)
+        rs2 = ReportSession(None, "", "", file_mgr)
+        self.assertNotEquals(rs1.id, rs2.id)
+
 
 def _create_mock_websocket():
     @tornado.gen.coroutine

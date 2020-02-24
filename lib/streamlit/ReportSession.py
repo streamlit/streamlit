@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import sys
+import uuid
 from enum import Enum
 
 import tornado.gen
@@ -61,8 +62,6 @@ class ReportSession(object):
     A ReportSession is attached to each thread involved in running its Report.
     """
 
-    _next_id = 0
-
     def __init__(self, ioloop, script_path, command_line, uploaded_file_manager):
         """Initialize the ReportSession.
 
@@ -81,9 +80,8 @@ class ReportSession(object):
             The server's UploadedFileManager.
 
         """
-        # Each ReportSession gets a unique string ID.
-        self.id = str(ReportSession._next_id)
-        ReportSession._next_id += 1
+        # Each ReportSession has a unique string ID.
+        self.id = str(uuid.uuid4())
 
         self._ioloop = ioloop
         self._report = Report(script_path, command_line)
