@@ -20,7 +20,7 @@
  * Copyright 2019 Streamlit Inc. All rights reserved.
  */
 
-import React from "react"
+import React, { ReactNode, PureComponent } from "react"
 import { Map as ImmutableMap } from "immutable"
 import { dispatchOneOf } from "lib/immutableProto"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
@@ -31,7 +31,7 @@ interface Props {
   element: ImmutableMap<string, any>
 }
 
-interface PropsWithHeight extends Props {
+export interface PropsWithHeight extends Props {
   height: number | undefined
 }
 
@@ -40,10 +40,10 @@ interface Dimensions {
   height: number
 }
 
-const DEFAULT_HEIGHT = 450
+export const DEFAULT_HEIGHT = 450
 
-class PlotlyChart extends React.PureComponent<PropsWithHeight> {
-  public render(): React.ReactNode {
+export class PlotlyChart extends PureComponent<PropsWithHeight> {
+  public render(): ReactNode {
     const el = this.props.element
     return dispatchOneOf(el, "chart", {
       url: (url: string) => this.renderIFrame(url),
