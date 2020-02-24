@@ -287,7 +287,7 @@ class ServerTest(ServerTestCase):
 
     @tornado.testing.gen_test
     def test_uploaded_file_triggers_rerun(self):
-        """Test that uploading a file triggers a re-run in the associated
+        """Uploading a file should trigger a re-run in the associated
         ReportSession."""
         with self._patch_report_session():
             yield self.start_server_loop()
@@ -308,9 +308,40 @@ class ServerTest(ServerTestCase):
                 )
             )
 
+            self.assertEquals(
+                self.server._uploaded_file_mgr.get_file_data(
+                    session_info1.session.id, "widget_id"
+                ),
+                b"file contents",
+            )
+
             # Session1 should have a rerun request; Session2 should not
             session_info1.session.request_rerun.assert_called_once()
             session_info2.session.request_rerun.assert_not_called()
+
+    @tornado.testing.gen_test
+    def test_orphaned_upload_file_deletion(self):
+        """An uploaded file with no associated ReportSession should be
+        deleted."""
+        with self._patch_report_session():
+            yield self.start_server_loop()
+            yield self.ws_connect()
+
+            # "Upload a file" for a session that doesn't exist
+            self.server._uploaded_file_mgr.add_file(
+                UploadedFile(
+                    session_id="no_such_session",
+                    widget_id="widget_id",
+                    name="file.txt",
+                    data=b"file contents",
+                )
+            )
+
+            self.assertIsNone(
+                self.server._uploaded_file_mgr.get_file_data(
+                    "no_such_session", "widget_id"
+                )
+            )
 
     @staticmethod
     def _create_mock_report_session(*args, **kwargs):

@@ -230,6 +230,10 @@ class Server(object):
         session_info = self._get_session_info(file.session_id)
         if session_info is not None:
             session_info.session.request_rerun()
+        else:
+            # If an uploaded file doesn't belong to an existing session,
+            # remove it so it doesn't stick around forever.
+            self._uploaded_file_mgr.remove_file(file.session_id, file.widget_id)
 
     def _get_session_info(self, session_id):
         """Return the SessionInfo with the given id, or None if no such
