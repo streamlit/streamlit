@@ -36,6 +36,8 @@ class ReportContext(object):
         # (UploadedFileManager) Object that manages files uploaded by this user.
         self.uploaded_file_mgr = uploaded_file_mgr
 
+        # XXX add session ID here 
+
     def reset(self):
         self.cursors = {}
         self.widget_ids_this_run.clear()

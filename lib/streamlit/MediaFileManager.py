@@ -45,7 +45,6 @@ def _get_file_id(data, mimetype=None):
 class MediaFile(object):
     """Abstraction for audiovisual/image file objects."""
 
-    # XXX what's the right refcount?  1 and 2 are not enough...?
     def __init__(self, file_id=None, content=None, mimetype=None, refcount=2):
         self.file_id = file_id
         self.content = content
@@ -69,10 +68,12 @@ class MediaFileManager(object):
     def __init__(self):
         self._files = {}
 
+    # XXX remove
     def clear(self):
         """Deletes all files from the file manager. """
         self._files.clear()
 
+    # XXX make internal
     def delete(self, mediafile_or_id):
         """Deletes MediaFile via file_id lookup.
         Raises KeyError if not found.
@@ -109,6 +110,7 @@ class MediaFileManager(object):
         return self._files[file_id]
 
     def get(self, mediafile_or_id):
+        # XXX stop decrementing.
         """Returns MediaFile object for given file_id and decrements its refcount.
 
         If the MediaFile's refcount goes to zero, the file is deleted.
@@ -122,6 +124,10 @@ class MediaFileManager(object):
         )
         mf.refcount = mf.refcount - 1
         return mf
+
+    # XXX implement
+    def reset_files_for_session(self):
+        pass
 
     def __contains__(self, mediafile_or_id):
         if type(mediafile_or_id) is MediaFile:

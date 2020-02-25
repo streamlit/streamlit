@@ -329,6 +329,7 @@ class ScriptRunner(object):
             # ScriptRunner.
 
         finally:
+            # XXX call media_manager.reset_files_for_session
             self._widgets.reset_triggers()
             self.on_event.send(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
 
