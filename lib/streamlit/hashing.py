@@ -505,7 +505,6 @@ class CodeHasher:
         ]
         self._update(h, consts, context)
 
-        # XXX
         # Hash non-local names and functions referenced by the bytecode.
         if hasattr(dis, "get_instructions"):  # get_instructions is new since Python 3.4
             for ref in get_referenced_objects(code, context):

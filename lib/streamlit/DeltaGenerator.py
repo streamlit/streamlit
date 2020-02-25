@@ -2502,7 +2502,6 @@ class DeltaGenerator(object):
         ...     my_bar.progress(percent_complete + 1)
 
         """
-        # XXX
         # Needed for python 2/3 compatibility
         value_type = type(value).__name__
         if value_type == "float":
