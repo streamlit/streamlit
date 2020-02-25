@@ -36,8 +36,6 @@ def marshall(exception_proto, exception):
     exception : BaseException
         The exception whose data we're extracting
     """
-    exception_proto.type = type(exception).__name__
-
     # If this is a StreamlitAPIException, we prune all Streamlit entries
     # from the exception's stack trace.
     is_api_exception = isinstance(exception, StreamlitAPIException)
@@ -46,6 +44,13 @@ def marshall(exception_proto, exception):
     stack_trace = _get_stack_trace_str_list(
         exception, strip_streamlit_stack_entries=is_api_exception
     )
+
+    # Some exceptions (like UserHashError) have an alternate_name attribute so
+    # we can pretend to the user that the exception is called something else.
+    if getattr(exception, "alternate_name", None) is not None:
+        exception_proto.type = exception.alternate_name
+    else:
+        exception_proto.type = type(exception).__name__
 
     exception_proto.stack_trace.extend(stack_trace)
     exception_proto.is_warning = isinstance(exception, Warning)

@@ -118,11 +118,11 @@ class _HashStack(object):
     def pretty_print(self):
         def to_str(v):
             try:
-                return 'Object of type %s: %s' % (type_util.get_fqn_type(v), str(v))
+                return "Object of type %s: %s" % (type_util.get_fqn_type(v), str(v))
             except:
-                return '<Unable to convert item to string>'
+                return "<Unable to convert item to string>"
 
-        return '\n'.join(to_str(x) for x in reversed(self._stack.values()))
+        return "\n".join(to_str(x) for x in reversed(self._stack.values()))
 
 
 class _HashStacks(object):
@@ -264,16 +264,16 @@ class CodeHasher:
             if key is not None:
                 self._hashes[key] = b
 
-        except (UnhashableType, UserHashError, InternalHashError):
+        except (UnhashableTypeError, UserHashError, InternalHashError):
             # Re-raise exceptions we hand-raise internally.
             raise
 
         except BaseException as e:
-            msg = _hashing_internal_error_message(e, type(obj))
+            msg = _get_internal_hash_error_message(e, obj)
             raise InternalHashError(msg).with_traceback(e.__traceback__)
 
         finally:
-            # In case an UnhashableType (or other) error is thrown, clean up the
+            # In case an UnhashableTypeError (or other) error is thrown, clean up the
             # stack so we don't get false positives in future hashing calls
             hash_stacks.current.pop()
 
@@ -316,11 +316,14 @@ class CodeHasher:
 
         elif type(obj) in self._hash_funcs:
             # Escape hatch for unsupported objects
+            hash_func = self._hash_funcs[type(obj)]
             try:
-                output = self._hash_funcs[type(obj)](obj)
+                output = hash_func(obj)
             except BaseException as e:
-                msg = _hash_funcs_error_message(e)
-                raise UserHashError(msg).with_traceback(e.__traceback__)
+                msg = _get_user_hash_error_message(e, obj, hash_func)
+                new_exc = UserHashError(msg).with_traceback(e.__traceback__)
+                new_exc.alternate_name = type(e).__name__
+                raise new_exc
 
             return self.to_bytes(output)
 
@@ -471,8 +474,8 @@ class CodeHasher:
             try:
                 reduce_data = obj.__reduce__()
             except BaseException as e:
-                msg = _hashing_error_message(obj)
-                raise UnhashableType(msg).with_traceback(e.__traceback__)
+                msg = _get_unhashable_type_error_message(e, obj)
+                raise UnhashableTypeError(msg).with_traceback(e.__traceback__)
 
             for item in reduce_data:
                 self.update(h, item, context)
@@ -508,49 +511,6 @@ class CodeHasher:
         # script path in ScriptRunner.
         main_path = __main__.__file__
         return os.path.dirname(main_path)
-
-
-def _hashing_user_error_message(exc, lines, filename, lineno):
-    # XXX
-    # This needs to have zero indentation otherwise %(line)s will
-    # render incorrectly in Markdown.
-    return (
-        """
-%(exception)s
-
-Error in `%(filename)s` near line `%(lineno)s`:
-
-```
-%(lines)s
-```
-
-If you think this is actually a Streamlit bug, please [file a bug report here.]
-(https://github.com/streamlit/streamlit/issues/new/choose)
-    """
-        % {
-            "exception": str(exc),
-            "lines": textwrap.dedent(lines).strip("\n"),
-            "filename": filename,
-            "lineno": lineno,
-        }
-    ).strip("\n")
-
-
-def _get_failing_lines(code, lineno):
-    """Get list of strings (lines of code) from lineno to lineno+3.
-
-    Ideally we'd return the exact line where the error took place, but there
-    are reasons why this is not possible without a lot of work, including
-    playing with the AST. So for now we're returning 3 lines near where
-    the error took place.
-    """
-    source_lines, source_lineno = inspect.getsourcelines(code)
-
-    start = lineno - source_lineno
-    end = min(start + 3, len(source_lines))
-    lines = source_lines[start:end]
-
-    return lines
 
 
 def get_referenced_objects(code, context):
@@ -613,12 +573,10 @@ def get_referenced_objects(code, context):
                     refs.append(tos)
                     tos = None
         except Exception as e:
-            lines = _get_failing_lines(code, lineno)
-
-            msg = _hashing_user_error_message(
-                e, "".join(lines), code.co_filename, lineno
-            )
-            raise UserHashError(msg).with_traceback(e.__traceback__)
+            msg = _get_user_hash_error_from_code_message(e, code, lineno)
+            new_exc = UserHashError(msg).with_traceback(e.__traceback__)
+            new_exc.alternate_name = type(e).__name__
+            raise new_exc
 
     return refs
 
@@ -629,12 +587,14 @@ class NoResult(object):
     pass
 
 
-class UnhashableType(StreamlitAPIException):
+class UnhashableTypeError(StreamlitAPIException):
     pass
 
 
 class UserHashError(StreamlitAPIException):
-    pass
+    def __init__(self, msg):
+        self.alternate_name = None
+        super(UserHashError, self).__init__(msg)
 
 
 class InternalHashError(MarkdownFormattedException):
@@ -643,12 +603,11 @@ class InternalHashError(MarkdownFormattedException):
     pass
 
 
-# XXX Move this into the exception itself.
-def _hashing_error_message(failed_obj):
+def _get_error_message_args(exc, failed_obj):
     hash_reason = hash_stacks.current.hash_reason
     hash_source = hash_stacks.current.hash_source
 
-    #failed_obj_type_str = str(type(failed_obj)).split("'")[1]
+    # failed_obj_type_str = str(type(failed_obj)).split("'")[1]
     failed_obj_type_str = type_util.get_fqn_type(failed_obj)
 
     if hash_source is None or hash_reason is None:
@@ -676,20 +635,27 @@ def _hashing_error_message(failed_obj):
         elif hash_reason is HashReason.CACHING_FUNC_OUTPUT:
             object_part = "the return value of"
 
-    args = {
+    return {
+        "orig_exception_desc": str(exc),
         "failed_obj_type_str": failed_obj_type_str,
         "hash_stack": hash_stacks.current.pretty_print(),
         "object_desc": object_desc,
         "object_part": object_part,
     }
 
+
+# XXX Move this into the exception itself.
+def _get_unhashable_type_error_message(exc, failed_obj):
+    args = _get_error_message_args(exc, failed_obj)
+
     # This needs to have zero indentation otherwise %(hash_stack)s will
     # render incorrectly in Markdown.
-    return ("""
-Cannot hash object of type `%(failed_obj_type_str)s` in %(object_part)s `%(object_desc)s`.
+    return (
+        """
+Cannot hash object of type `%(failed_obj_type_str)s` in %(object_part)s %(object_desc)s.
 
-While caching %(object_desc)s, Streamlit encountered an object of type
-`%(failed_obj_type_str)s`, which it does not know how to hash.
+While caching %(object_part)s %(object_desc)s, Streamlit encountered an
+object of type `%(failed_obj_type_str)s`, which it does not know how to hash.
 
 To address this, please try helping Streamlit understand how to hash that type
 by passing the `hash_funcs` argument into `@st.cache`. For example:
@@ -711,49 +677,127 @@ then pass that to `hash_funcs` instead:
 Please see the `hash_funcs` [documentation]
 (https://streamlit.io/docs/advanced_caching.html)
 for more details.
-
-""" % args
+        """
+        % args
     ).strip("\n")
 
 
-def _hashing_internal_error_message(exc, bad_type):
-    # XXX
+def _get_internal_hash_error_message(exc, failed_obj):
+    args = _get_error_message_args(exc, failed_obj)
+
     # This needs to have zero indentation otherwise %(XXX)s will
     # render incorrectly in Markdown.
-    return ("""
-%(exception)s
+    return (
+        """
+%(orig_exception_desc)s
 
-Usually this means you found a Streamlit bug!
-If you think that's the case, please [file a bug report here.]
-(https://github.com/streamlit/streamlit/issues/new/choose)
+While caching %(object_part)s %(object_desc)s, Streamlit encountered an
+object of type `%(failed_obj_type_str)s`, which it does not know how to hash.
+
+**In this specific case, it's very likely you found a Streamlit bug so please
+[file a bug report here.]
+(https://github.com/streamlit/streamlit/issues/new/choose)**
 
 In the meantime, you can try bypassing this error by registering a custom
 hash function via the `hash_funcs` keyword in @st.cache(). For example:
 
 ```
-@st.cache(hash_funcs={%(bad_type)s: my_hash_func})
+@st.cache(hash_funcs={%(failed_obj_type_str)s: my_hash_func})
 def my_func(...):
     ...
+```
+
+If you don't know where the object of type `%(failed_obj_type_str)s` is coming
+from, try looking at the hash chain below for an object that you do recognize,
+then pass that to `hash_funcs` instead:
+
+```
+%(hash_stack)s
 ```
 
 Please see the `hash_funcs` [documentation]
 (https://streamlit.io/docs/advanced_caching.html)
 for more details.
-"""
-        % {"exception": str(exc), "bad_type": str(bad_type).split("'")[1]}
+        """
+        % args
     ).strip("\n")
 
 
-def _hash_funcs_error_message(exc):
-    # XXX
-    return ("""
-%(exception)s
+def _get_user_hash_error_message(exc, failed_obj, hash_func):
+    args = _get_error_message_args(exc, failed_obj)
 
-This error is likely from a bad function passed via the `hash_funcs`
-keyword to `@st.cache`.
+    if hasattr(hash_func, "__name__"):
+        args["hash_func_name"] = "`%s()`" % hash_func.__name__
+    else:
+        args["hash_func_name"] = "a function"
+
+    return (
+        """
+%(orig_exception_desc)s
+
+This error is likely due to a bug in %(hash_func_name)s, which is a
+user-defined hash function that was passed into the `@st.cache` decorator of
+%(object_desc)s.
+
+%(hash_func_name)s failed when hashing an object of type
+`%(failed_obj_type_str)s`.  If you don't know where that object is coming from,
+try looking at the hash chain below for an object that you do recognize, then
+pass that to `hash_funcs` instead:
+
+```
+%(hash_stack)s
+```
 
 If you think this is actually a Streamlit bug, please [file a bug report here.]
 (https://github.com/streamlit/streamlit/issues/new/choose)
-"""
-        % {"exception": str(exc)}
+        """
+        % args
     ).strip("\n")
+
+
+def _get_user_hash_error_from_code_message(exc, code, lineno):
+    args = _get_error_message_args(exc, failed_obj)
+
+    failing_lines = _get_failing_lines(code, lineno)
+    failing_lines_str = "".join(failing_lines)
+    failing_lines_str = textwrap.dedent(failing_lines_str).strip("\n")
+
+    args["exception"] = str(exc)
+    args["failing_lines_str"] = failing_lines_str
+    args["filename"] = code.co_filename
+    args["lineno"] = lineno
+
+    # This needs to have zero indentation otherwise %(lines_str)s will
+    # render incorrectly in Markdown.
+    return (
+        """
+%(orig_exception_desc)s
+
+Error in `%(filename)s` near line `%(lineno)s`:
+
+```
+%(failing_lines_str)s
+```
+
+If you think this is actually a Streamlit bug, please [file a bug report here.]
+(https://github.com/streamlit/streamlit/issues/new/choose)
+    """
+        % args
+    ).strip("\n")
+
+
+def _get_failing_lines(code, lineno):
+    """Get list of strings (lines of code) from lineno to lineno+3.
+
+    Ideally we'd return the exact line where the error took place, but there
+    are reasons why this is not possible without a lot of work, including
+    playing with the AST. So for now we're returning 3 lines near where
+    the error took place.
+    """
+    source_lines, source_lineno = inspect.getsourcelines(code)
+
+    start = lineno - source_lineno
+    end = min(start + 3, len(source_lines))
+    lines = source_lines[start:end]
+
+    return lines

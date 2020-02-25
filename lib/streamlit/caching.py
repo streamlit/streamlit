@@ -181,21 +181,23 @@ class _AddCopy(ast.NodeTransformer):
 
 
 def _show_mutated_output_warning(func):
-    func_name = func.__name__
+    if hasattr(func, "__name__"):
+        func_name = "`%s()`" % func.__name__
+    else:
+        func_name = ""
 
     msg = (
         """
-By default, Streamlit’s cache should be treated as immutable. You
-received this warning because Streamlit thinks you mutated an object
-returned by cached function `%s()`.
+Return value of cached function %(func_name)s should not be mutated.
 
-The problem is that an object returned by that function was modified
-**outside the function**, which can have unexpected effects.
+By default, Streamlit's cache should be treated as immutable. You
+received this warning because Streamlit thinks you mutated an object
+returned by %(func_name)s, which is a cached function.
 
 [Click here to see how to fix this issue.]
 (https://docs.streamlit.io/advanced_caching.html)
 """
-        % func_name
+        % {"func_name": func_name}
     ).strip("\n")
 
     e = CachedObjectMutationWarning(msg)
@@ -236,7 +238,8 @@ def _get_output_hash(value, func_or_code, hash_funcs):
         hasher=hasher,
         hash_funcs=hash_funcs,
         hash_reason=HashReason.CACHING_FUNC_OUTPUT,
-        hash_source=func_or_code)
+        hash_source=func_or_code,
+    )
     return hasher.digest()
 
 
@@ -283,16 +286,22 @@ def _read_from_cache(key, persisted, allow_output_mutation, func_or_code, hash_f
     from disk or rerun the code.
     """
     try:
-        return _read_from_mem_cache(key, allow_output_mutation, func_or_code, hash_funcs)
+        return _read_from_mem_cache(
+            key, allow_output_mutation, func_or_code, hash_funcs
+        )
     except CacheKeyNotFoundError as e:
         if persisted:
             value = _read_from_disk_cache(key)
-            _write_to_mem_cache(key, value, allow_output_mutation, func_or_code, hash_funcs)
+            _write_to_mem_cache(
+                key, value, allow_output_mutation, func_or_code, hash_funcs
+            )
             return value
         raise e
 
 
-def _write_to_cache(key, value, persist, allow_output_mutation, func_or_code, hash_funcs):
+def _write_to_cache(
+    key, value, persist, allow_output_mutation, func_or_code, hash_funcs
+):
     _write_to_mem_cache(key, value, allow_output_mutation, func_or_code, hash_funcs)
     if persist:
         _write_to_disk_cache(key, value)
@@ -429,14 +438,16 @@ def cache(
                 hasher=hasher,
                 hash_funcs=hash_funcs,
                 hash_reason=HashReason.CACHING_FUNC_ARGS,
-                hash_source=func)
+                hash_source=func,
+            )
 
             update_hash(
                 func,
                 hasher=hasher,
                 hash_funcs=hash_funcs,
                 hash_reason=HashReason.CACHING_FUNC_BODY,
-                hash_source=func)
+                hash_source=func,
+            )
 
             key = hasher.hexdigest()
             LOGGER.debug("Cache key: %s", key)
@@ -570,7 +581,8 @@ class Cache(Dict[Any, Any]):
             hasher=hasher,
             context=context,
             hash_reason=HashReason.CACHING_BLOCK,
-            hash_source=code)
+            hash_source=code,
+        )
 
         key = hasher.hexdigest()
         LOGGER.debug("Cache key: %s", key)
