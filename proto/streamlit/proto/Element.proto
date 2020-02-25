@@ -52,7 +52,6 @@ import "streamlit/proto/Video.proto";
 
 // An element which can be displayed on the screen.
 message Element {
-
   // An element can be one of the following element types.
   oneof type {
     Alert alert = 30;
