@@ -1197,7 +1197,7 @@ class DeltaGenerator(object):
         ''')
 
         .. output::
-           https://share.streamlit.io/0.37.0-2PGsB/index.html?id=QFXRFT19mzA3brW8XCAcK8
+           https://share.streamlit.io/0.56.0-xTAd/index.html?id=GBn3GXZie5K1kXuBKe4yQL
            height: 400px
 
         """
@@ -1310,7 +1310,7 @@ class DeltaGenerator(object):
         >>> st.plotly_chart(fig)
 
         .. output::
-           https://share.streamlit.io/0.32.0-2KznC/index.html?id=NbyKJnNQ2XcrpWTno643uD
+           https://share.streamlit.io/0.56.0-xTAd/index.html?id=TuP96xX8JnsoQeUGAPjkGQ
            height: 400px
 
         """
@@ -1427,7 +1427,7 @@ class DeltaGenerator(object):
         >>> st.bokeh_chart(p)
 
         .. output::
-           https://share.streamlit.io/0.34.0-2Ezo2/index.html?id=kWNtYxGUFpA3PRXt3uVff
+           https://share.streamlit.io/0.56.0-xTAd/index.html?id=Fdhg51uMbGMLRRxXV6ubzp
            height: 600px
 
         """
