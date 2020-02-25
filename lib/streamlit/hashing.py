@@ -72,7 +72,7 @@ def update_hash(val, hasher, hash_reason, hash_source, context=None, hash_funcs=
     hash_stacks.current.hash_reason = hash_reason
     hash_stacks.current.hash_source = hash_source
 
-    ch = CodeHasher(hash_funcs)
+    ch = _CodeHasher(hash_funcs)
     ch.update(hasher, val, context)
 
 
@@ -221,7 +221,7 @@ def _key(obj):
     return NoResult
 
 
-class CodeHasher:
+class _CodeHasher:
     """A hasher that can hash code objects including dependencies."""
 
     def __init__(self, hash_funcs=None):
@@ -257,8 +257,8 @@ class CodeHasher:
             b = self._to_bytes(obj, context)
             LOGGER.debug("Done hashing: %s", obj)
 
-            # XXX Size calculation is wrong. When we call to_bytes inside
-            # _to_bytes things get double-counted.
+            # Hmmm... It's psosible that the size calculation is wrong. When we
+            # call to_bytes inside _to_bytes things get double-counted.
             self.size += sys.getsizeof(b)
 
             if key is not None:
@@ -269,8 +269,7 @@ class CodeHasher:
             raise
 
         except BaseException as e:
-            msg = _get_internal_hash_error_message(e, obj)
-            raise InternalHashError(msg).with_traceback(e.__traceback__)
+            raise InternalHashError(e, obj)
 
         finally:
             # In case an UnhashableTypeError (or other) error is thrown, clean up the
@@ -320,10 +319,7 @@ class CodeHasher:
             try:
                 output = hash_func(obj)
             except BaseException as e:
-                msg = _get_user_hash_error_message(e, obj, hash_func)
-                new_exc = UserHashError(msg).with_traceback(e.__traceback__)
-                new_exc.alternate_name = type(e).__name__
-                raise new_exc
+                raise UserHashError(e, obj, hash_func=hash_func)
 
             return self.to_bytes(output)
 
@@ -474,8 +470,7 @@ class CodeHasher:
             try:
                 reduce_data = obj.__reduce__()
             except BaseException as e:
-                msg = _get_unhashable_type_error_message(e, obj)
-                raise UnhashableTypeError(msg).with_traceback(e.__traceback__)
+                raise UnhashableTypeError(e, obj)
 
             for item in reduce_data:
                 self.update(h, item, context)
@@ -514,14 +509,14 @@ class CodeHasher:
 
 
 def get_referenced_objects(code, context):
-    tos = None  # top of the stack
+    tos = None  # Top of the stack
     lineno = None
     refs = []
 
     def set_tos(t):
         nonlocal tos
         if tos is not None:
-            # hash tos so we support reading multiple objects
+            # Hash tos so we support reading multiple objects
             refs.append(tos)
         tos = t
 
@@ -573,10 +568,7 @@ def get_referenced_objects(code, context):
                     refs.append(tos)
                     tos = None
         except Exception as e:
-            msg = _get_user_hash_error_from_code_message(e, code, lineno)
-            new_exc = UserHashError(msg).with_traceback(e.__traceback__)
-            new_exc.alternate_name = type(e).__name__
-            raise new_exc
+            raise UserHashError(e, code, lineno=lineno)
 
     return refs
 
@@ -588,22 +580,175 @@ class NoResult(object):
 
 
 class UnhashableTypeError(StreamlitAPIException):
-    pass
+    def __init__(self, orig_exc, failed_obj):
+        msg = self._get_message(orig_exc, failed_obj)
+        super(UnhashableTypeError, self).__init__(msg)
+        self.with_traceback(orig_exc.__traceback__)
+
+    def _get_message(self, orig_exc, failed_obj):
+        args = _get_error_message_args(orig_exc, failed_obj)
+
+        # This needs to have zero indentation otherwise %(hash_stack)s will
+        # render incorrectly in Markdown.
+        return (
+            """
+Cannot hash object of type `%(failed_obj_type_str)s`, found in %(object_part)s
+%(object_desc)s.
+
+While caching %(object_part)s %(object_desc)s, Streamlit encountered an
+object of type `%(failed_obj_type_str)s`, which it does not know how to hash.
+
+To address this, please try helping Streamlit understand how to hash that type
+by passing the `hash_funcs` argument into `@st.cache`. For example:
+
+```
+@st.cache(hash_funcs={%(failed_obj_type_str)s: my_hash_func})
+def my_func(...):
+    ...
+```
+
+If you don't know where the object of type `%(failed_obj_type_str)s` is coming
+from, try looking at the hash chain below for an object that you do recognize,
+then pass that to `hash_funcs` instead:
+
+```
+%(hash_stack)s
+```
+
+Please see the `hash_funcs` [documentation]
+(https://streamlit.io/docs/advanced_caching.html)
+for more details.
+            """
+            % args
+        ).strip("\n")
 
 
 class UserHashError(StreamlitAPIException):
-    def __init__(self, msg):
-        self.alternate_name = None
+    def __init__(self, orig_exc, cached_func_or_code, hash_func=None, lineno=None):
+        self.alternate_name = type(orig_exc).__name__
+
+        if hash_func:
+            msg = self._get_message_from_func(orig_exc, cached_func_or_code, hash_func)
+        else:
+            msg = self._get_message_from_code(orig_exc, cached_func_or_code, lineno)
+
         super(UserHashError, self).__init__(msg)
+        self.with_traceback(orig_exc.__traceback__)
+
+    def _get_message_from_func(self, orig_exc, cached_func, hash_func):
+        args = _get_error_message_args(orig_exc, cached_func)
+
+        if hasattr(hash_func, "__name__"):
+            args["hash_func_name"] = "`%s()`" % hash_func.__name__
+        else:
+            args["hash_func_name"] = "a function"
+
+        return (
+            """
+%(orig_exception_desc)s
+
+This error is likely due to a bug in %(hash_func_name)s, which is a
+user-defined hash function that was passed into the `@st.cache` decorator of
+%(object_desc)s.
+
+%(hash_func_name)s failed when hashing an object of type
+`%(failed_obj_type_str)s`.  If you don't know where that object is coming from,
+try looking at the hash chain below for an object that you do recognize, then
+pass that to `hash_funcs` instead:
+
+```
+%(hash_stack)s
+```
+
+If you think this is actually a Streamlit bug, please [file a bug report here.]
+(https://github.com/streamlit/streamlit/issues/new/choose)
+            """
+            % args
+        ).strip("\n")
+
+    def _get_message_from_code(self, orig_exc, cached_code, lineno):
+        args = _get_error_message_args(orig_exc, cached_code)
+
+        failing_lines = _get_failing_lines(cached_code, lineno)
+        failing_lines_str = "".join(failing_lines)
+        failing_lines_str = textwrap.dedent(failing_lines_str).strip("\n")
+
+        args["failing_lines_str"] = failing_lines_str
+        args["filename"] = cached_code.co_filename
+        args["lineno"] = lineno
+
+        # This needs to have zero indentation otherwise %(lines_str)s will
+        # render incorrectly in Markdown.
+        return (
+            """
+%(orig_exception_desc)s
+
+Streamlit encountered an error while caching %(object_part)s %(object_desc)s.
+This is likely due to a bug in `%(filename)s` near line `%(lineno)s`:
+
+```
+%(failing_lines_str)s
+```
+
+Please modify the code above to address this.
+
+If you think this is actually a Streamlit bug, you may [file a bug report
+here.] (https://github.com/streamlit/streamlit/issues/new/choose)
+        """
+            % args
+        ).strip("\n")
 
 
 class InternalHashError(MarkdownFormattedException):
     """Exception in Streamlit hashing code (i.e. not a user error)"""
 
-    pass
+    def __init__(self, orig_exc, failed_obj):
+        msg = self._get_message(orig_exc, failed_obj)
+        super(InternalHashError, self).__init__(msg)
+        self.with_traceback(orig_exc.__traceback__)
+
+    def _get_message(self, orig_exc, failed_obj):
+        args = _get_error_message_args(orig_exc, failed_obj)
+
+        # This needs to have zero indentation otherwise %(hash_stack)s will
+        # render incorrectly in Markdown.
+        return (
+            """
+%(orig_exception_desc)s
+
+While caching %(object_part)s %(object_desc)s, Streamlit encountered an
+object of type `%(failed_obj_type_str)s`, which it does not know how to hash.
+
+**In this specific case, it's very likely you found a Streamlit bug so please
+[file a bug report here.]
+(https://github.com/streamlit/streamlit/issues/new/choose)**
+
+In the meantime, you can try bypassing this error by registering a custom
+hash function via the `hash_funcs` keyword in @st.cache(). For example:
+
+```
+@st.cache(hash_funcs={%(failed_obj_type_str)s: my_hash_func})
+def my_func(...):
+    ...
+```
+
+If you don't know where the object of type `%(failed_obj_type_str)s` is coming
+from, try looking at the hash chain below for an object that you do recognize,
+then pass that to `hash_funcs` instead:
+
+```
+%(hash_stack)s
+```
+
+Please see the `hash_funcs` [documentation]
+(https://streamlit.io/docs/advanced_caching.html)
+for more details.
+            """
+            % args
+        ).strip("\n")
 
 
-def _get_error_message_args(exc, failed_obj):
+def _get_error_message_args(orig_exc, failed_obj):
     hash_reason = hash_stacks.current.hash_reason
     hash_source = hash_stacks.current.hash_source
 
@@ -636,154 +781,12 @@ def _get_error_message_args(exc, failed_obj):
             object_part = "the return value of"
 
     return {
-        "orig_exception_desc": str(exc),
+        "orig_exception_desc": str(orig_exc),
         "failed_obj_type_str": failed_obj_type_str,
         "hash_stack": hash_stacks.current.pretty_print(),
         "object_desc": object_desc,
         "object_part": object_part,
     }
-
-
-# XXX Move this into the exception itself.
-def _get_unhashable_type_error_message(exc, failed_obj):
-    args = _get_error_message_args(exc, failed_obj)
-
-    # This needs to have zero indentation otherwise %(hash_stack)s will
-    # render incorrectly in Markdown.
-    return (
-        """
-Cannot hash object of type `%(failed_obj_type_str)s` in %(object_part)s %(object_desc)s.
-
-While caching %(object_part)s %(object_desc)s, Streamlit encountered an
-object of type `%(failed_obj_type_str)s`, which it does not know how to hash.
-
-To address this, please try helping Streamlit understand how to hash that type
-by passing the `hash_funcs` argument into `@st.cache`. For example:
-
-```
-@st.cache(hash_funcs={%(failed_obj_type_str)s: my_hash_func})
-def my_func(...):
-    ...
-```
-
-If you don't know where the object of type `%(failed_obj_type_str)s` is coming
-from, try looking at the hash chain below for an object that you do recognize,
-then pass that to `hash_funcs` instead:
-
-```
-%(hash_stack)s
-```
-
-Please see the `hash_funcs` [documentation]
-(https://streamlit.io/docs/advanced_caching.html)
-for more details.
-        """
-        % args
-    ).strip("\n")
-
-
-def _get_internal_hash_error_message(exc, failed_obj):
-    args = _get_error_message_args(exc, failed_obj)
-
-    # This needs to have zero indentation otherwise %(XXX)s will
-    # render incorrectly in Markdown.
-    return (
-        """
-%(orig_exception_desc)s
-
-While caching %(object_part)s %(object_desc)s, Streamlit encountered an
-object of type `%(failed_obj_type_str)s`, which it does not know how to hash.
-
-**In this specific case, it's very likely you found a Streamlit bug so please
-[file a bug report here.]
-(https://github.com/streamlit/streamlit/issues/new/choose)**
-
-In the meantime, you can try bypassing this error by registering a custom
-hash function via the `hash_funcs` keyword in @st.cache(). For example:
-
-```
-@st.cache(hash_funcs={%(failed_obj_type_str)s: my_hash_func})
-def my_func(...):
-    ...
-```
-
-If you don't know where the object of type `%(failed_obj_type_str)s` is coming
-from, try looking at the hash chain below for an object that you do recognize,
-then pass that to `hash_funcs` instead:
-
-```
-%(hash_stack)s
-```
-
-Please see the `hash_funcs` [documentation]
-(https://streamlit.io/docs/advanced_caching.html)
-for more details.
-        """
-        % args
-    ).strip("\n")
-
-
-def _get_user_hash_error_message(exc, failed_obj, hash_func):
-    args = _get_error_message_args(exc, failed_obj)
-
-    if hasattr(hash_func, "__name__"):
-        args["hash_func_name"] = "`%s()`" % hash_func.__name__
-    else:
-        args["hash_func_name"] = "a function"
-
-    return (
-        """
-%(orig_exception_desc)s
-
-This error is likely due to a bug in %(hash_func_name)s, which is a
-user-defined hash function that was passed into the `@st.cache` decorator of
-%(object_desc)s.
-
-%(hash_func_name)s failed when hashing an object of type
-`%(failed_obj_type_str)s`.  If you don't know where that object is coming from,
-try looking at the hash chain below for an object that you do recognize, then
-pass that to `hash_funcs` instead:
-
-```
-%(hash_stack)s
-```
-
-If you think this is actually a Streamlit bug, please [file a bug report here.]
-(https://github.com/streamlit/streamlit/issues/new/choose)
-        """
-        % args
-    ).strip("\n")
-
-
-def _get_user_hash_error_from_code_message(exc, code, lineno):
-    args = _get_error_message_args(exc, failed_obj)
-
-    failing_lines = _get_failing_lines(code, lineno)
-    failing_lines_str = "".join(failing_lines)
-    failing_lines_str = textwrap.dedent(failing_lines_str).strip("\n")
-
-    args["exception"] = str(exc)
-    args["failing_lines_str"] = failing_lines_str
-    args["filename"] = code.co_filename
-    args["lineno"] = lineno
-
-    # This needs to have zero indentation otherwise %(lines_str)s will
-    # render incorrectly in Markdown.
-    return (
-        """
-%(orig_exception_desc)s
-
-Error in `%(filename)s` near line `%(lineno)s`:
-
-```
-%(failing_lines_str)s
-```
-
-If you think this is actually a Streamlit bug, please [file a bug report here.]
-(https://github.com/streamlit/streamlit/issues/new/choose)
-    """
-        % args
-    ).strip("\n")
 
 
 def _get_failing_lines(code, lineno):
