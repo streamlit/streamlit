@@ -52,8 +52,8 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
             in str(e.value)
         )
 
-    @patch.object(st, "warning")
-    def test_args(self, warning):
+    @patch.object(st, "exception")
+    def test_args(self, exception):
         called = [False]
 
         @st.cache
@@ -74,10 +74,10 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
         f(1)
         self.assertTrue(called[0])
 
-        warning.assert_not_called()
+        exception.assert_not_called()
 
-    @patch.object(st, "warning")
-    def test_mutate_return(self, warning):
+    @patch.object(st, "exception")
+    def test_mutate_return(self, exception):
         @st.cache
         def f():
             return [0, 1]
@@ -86,16 +86,16 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
 
         r[0] = 1
 
-        warning.assert_not_called()
+        exception.assert_not_called()
 
         r2 = f()
 
-        warning.assert_called()
+        exception.assert_called()
 
         self.assertEqual(r, r2)
 
-    @patch.object(st, "warning")
-    def test_mutate_args(self, warning):
+    @patch.object(st, "exception")
+    def test_mutate_args(self, exception):
         @st.cache
         def foo(d):
             d["answer"] += 1
@@ -105,7 +105,7 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
 
         self.assertNotEqual(foo(d), foo(d))
 
-        warning.assert_not_called()
+        exception.assert_not_called()
 
     @patch("streamlit.caching._show_cached_st_function_warning")
     def test_cached_st_function_warning(self, warning):
@@ -243,8 +243,8 @@ class CachingObjectTest(unittest.TestCase):
 
             self.assertEqual(c.value, val)
 
-    @patch.object(st, "warning")
-    def off_test_mutate(self, warning):
+    @patch.object(st, "exception")
+    def off_test_mutate(self, exception):
         for _ in range(2):
             c = st.Cache()
             if c:
@@ -252,4 +252,4 @@ class CachingObjectTest(unittest.TestCase):
 
             c.value[0] = 1
 
-        warning.assert_called()
+        exception.assert_called()
