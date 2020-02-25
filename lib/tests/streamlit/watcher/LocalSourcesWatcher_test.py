@@ -25,7 +25,6 @@ from streamlit import config
 from streamlit.Report import Report
 from streamlit.watcher import LocalSourcesWatcher
 
-# XXX
 if sys.version_info[0] == 2:
     import test_data.dummy_module1 as DUMMY_MODULE_1
     import test_data.dummy_module2 as DUMMY_MODULE_2
