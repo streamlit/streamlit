@@ -26,7 +26,7 @@ beforeEach(() => {
     authorEmail: "ae",
     maxCachedMessageAge: 2,
     commandLine: "command line",
-    mapboxToken: "mbx",
+    userMapboxToken: "mbx",
   })
 })
 

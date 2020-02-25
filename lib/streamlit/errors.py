@@ -64,8 +64,8 @@ class StreamlitAPIWarning(StreamlitAPIException, Warning):
     instead.
     """
 
-    def __init__(self, *args, **kwargs):
-        super(StreamlitAPIWarning, self).__init__(*args, **kwargs)
+    def __init__(self, *args):
+        super(StreamlitAPIWarning, self).__init__(*args)
         import inspect
         import traceback
 

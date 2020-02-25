@@ -30,6 +30,8 @@ import tempfile
 import textwrap
 import threading
 import weakref
+import types
+from typing import Any, List
 
 import streamlit as st
 from streamlit import compatibility
@@ -96,7 +98,9 @@ class _HashStack(object):
     """
 
     def __init__(self):
-        self._stack = collections.OrderedDict()
+        self._stack = (
+            collections.OrderedDict()
+        )  # type: collections.OrderedDict[int, List[int]]
 
         # The reason why we're doing this hashing, for debug purposes.
         self.hash_reason = None
@@ -129,7 +133,9 @@ class _HashStacks(object):
     """Stacks of what has been hashed, with at most 1 stack per thread."""
 
     def __init__(self):
-        self._stacks = weakref.WeakKeyDictionary()
+        self._stacks = (
+            weakref.WeakKeyDictionary()
+        )  # type: weakref.WeakKeyDictionary[threading.Thread, _HashStack]
 
     @property
     def current(self):
@@ -153,8 +159,8 @@ def _is_magicmock(obj):
     )
 
 
-def _get_context(func):
-    code = func.__code__
+def _get_context(func) -> Context:
+    code = func.__code__  # type: types.CodeType
 
     # Mapping from variable name to the value if we can resolve it.
     # Otherwise map to the name.
@@ -166,7 +172,7 @@ def _get_context(func):
     if code.co_freevars:
         assert len(code.co_freevars) == len(func.__closure__)
         cells.update(
-            zip(code.co_freevars, map(lambda c: c.cell_contents, func.__closure__))
+            zip(code.co_freevars, map(lambda c: c.cell_contents, func.__closure__))  # type: ignore[no-any-return]
         )
 
     varnames = {}
@@ -393,12 +399,12 @@ class _CodeHasher:
             isinstance(obj, io.IOBase)
             # Handle temporary files used during testing
             or isinstance(obj, tempfile._TemporaryFileWrapper)
-            or (not compatibility.is_running_py3() and isinstance(obj, file))
         ):
             # Hash files as name + last modification date + offset.
             h = hashlib.new("md5")
-            self.update(h, obj.name)
-            self.update(h, os.path.getmtime(obj.name))
+            obj_name = getattr(obj, "name", "file")
+            self.update(h, obj_name)
+            self.update(h, os.path.getmtime(obj_name))
             self.update(h, obj.tell())
             return h.digest()
 
@@ -509,7 +515,8 @@ class _CodeHasher:
 
 
 def get_referenced_objects(code, context):
-    tos = None  # Top of the stack
+    # Top of the stack
+    tos = None  # type: Any
     lineno = None
     refs = []
 

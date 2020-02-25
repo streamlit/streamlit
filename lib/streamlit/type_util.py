@@ -48,9 +48,7 @@ def is_type(obj, fqn_type_pattern):
 
     """
     fqn_type = get_fqn_type(obj)
-    if isinstance(
-        fqn_type_pattern, string_types
-    ):  # noqa: F821 pylint:disable=undefined-variable
+    if isinstance(fqn_type_pattern, str):
         return fqn_type_pattern == fqn_type
     else:
         return fqn_type_pattern.match(fqn_type) is not None
@@ -80,7 +78,6 @@ _DATAFRAME_LIKE_TYPES = (
 
 _DATAFRAME_COMPATIBLE_TYPES = (
     dict,
-    type({}),  # For Python 2. See dict_types in compatibility.py.
     list,
     type(None),
 )  # type: Tuple[type, ...]
@@ -159,7 +156,7 @@ def _is_list_of_plotly_objs(obj):
 
 
 def _is_probably_plotly_dict(obj):
-    if type(obj) not in dict_types:  # noqa: F821 pylint:disable=undefined-variable
+    if not isinstance(obj, dict):
         return False
 
     if len(obj.keys()) == 0:

@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Optional, Tuple
+
 from streamlit.ReportThread import get_report_ctx
 
 
@@ -37,6 +39,11 @@ class AbstractCursor(object):
     get_locked_cursor() on that element's respective AbstractCursor.
     """
 
+    def __init__(self):
+        self._is_locked = False
+        self._index = None  # type: Optional[int]
+        self._path = ()  # type: Tuple[int, ...]
+
     @property
     def index(self):
         return self._index
@@ -54,7 +61,7 @@ class AbstractCursor(object):
 
 
 class RunningCursor(AbstractCursor):
-    def __init__(self, path=()):
+    def __init__(self, path: Tuple[int, ...] = ()):
         """A moving pointer to a location in the app.
 
         RunningCursors auto-increment to the next available location when you
@@ -68,7 +75,7 @@ class RunningCursor(AbstractCursor):
 
         """
         self._is_locked = False
-        self._index = 0
+        self._index = 0  # type: int
         self._path = path
 
     def get_locked_cursor(self, **props):
@@ -80,7 +87,9 @@ class RunningCursor(AbstractCursor):
 
 
 class LockedCursor(AbstractCursor):
-    def __init__(self, path=(), index=None, **props):
+    def __init__(
+        self, path: Tuple[int, ...] = (), index: Optional[int] = None, **props
+    ):
         """A locked pointer to a location in the app.
 
         LockedCursors always point to the same location, even when you call

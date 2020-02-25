@@ -17,11 +17,13 @@
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
+
 from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
 
 import json
+from typing import Any, List
 
 from streamlit import case_converters
 import streamlit.elements.lib.dicttools as dicttools
@@ -37,14 +39,7 @@ def marshall(proto, spec=None, **kwargs):
 
     See DeltaGenerator.deck_gl_chart for docs.
     """
-    if "data" in kwargs:
-        # TODO: Remove this check after 2019-11-28.
-        raise Exception(
-            "The `data` parameter is deprecated. Use `st.map` or"
-            "specify a spec dict in `st.deck_gl_chart`."
-        )
-
-    data = []
+    data = []  # type: List[Any]
 
     if spec is None:
         spec = dict()

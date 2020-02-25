@@ -282,7 +282,9 @@ def _write_to_disk_cache(key, value):
         raise CacheError("Unable to write to cache: %s" % e)
 
 
-def _read_from_cache(key, persist, allow_output_mutation, func_or_code, hash_funcs):
+def _read_from_cache(
+    key, persist, allow_output_mutation, func_or_code, hash_funcs=None
+):
     """Read a value from the cache.
 
     Our goal is to read from memory if possible. If the data was mutated (hash
@@ -304,7 +306,7 @@ def _read_from_cache(key, persist, allow_output_mutation, func_or_code, hash_fun
 
 
 def _write_to_cache(
-    key, value, persist, allow_output_mutation, func_or_code, hash_funcs
+    key, value, persist, allow_output_mutation, func_or_code, hash_funcs=None
 ):
     _write_to_mem_cache(key, value, allow_output_mutation, func_or_code, hash_funcs)
     if persist:
@@ -551,8 +553,10 @@ class Cache(Dict[Any, Any]):
 
         dict.__init__(self)
 
-    def has_changes(self):
+    def has_changes(self) -> bool:
         current_frame = inspect.currentframe()
+
+        assert current_frame is not None
         caller_frame = current_frame.f_back
 
         current_file = inspect.getfile(current_frame)
@@ -562,6 +566,8 @@ class Cache(Dict[Any, Any]):
             caller_frame = caller_frame.f_back
 
         filename, caller_lineno, code_context = _get_frame_info(caller_frame)
+
+        assert code_context is not None
         code_context = code_context[0]
 
         context_indent = len(code_context) - len(code_context.lstrip())
@@ -614,7 +620,11 @@ class Cache(Dict[Any, Any]):
                 # If we don't hash the results, we don't need to use exec and just return True.
                 # This way line numbers will be correct.
                 _write_to_cache(
-                    key=key, value=self, persist=False, allow_output_mutation=True
+                    key=key,
+                    value=self,
+                    persist=False,
+                    allow_output_mutation=True,
+                    func_or_code=code,
                 )
                 return True
 
@@ -624,6 +634,7 @@ class Cache(Dict[Any, Any]):
                 value=self,
                 persist=self._persist,
                 allow_output_mutation=self._allow_output_mutation,
+                func_or_code=code,
             )
 
         # Return False so that we have control over the execution.

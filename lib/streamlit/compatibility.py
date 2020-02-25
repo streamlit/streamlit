@@ -41,14 +41,12 @@ def setup_2_3_shims(caller_globals):
         caller_globals["string_types"] = (type(""),)
         caller_globals["native_dict"] = _dict
     else:
-        # These are the symbols we will export to the calling package.
-        export_symbols = []
-
         # Override basic types.
         native_dict = _dict
         from builtins import range, map, str, dict, object, zip, int
 
-        export_symbols += [
+        # These are the symbols we will export to the calling package.
+        export_symbols = [
             "range",
             "map",
             "str",

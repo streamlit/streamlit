@@ -522,10 +522,10 @@ class CodeHashTest(unittest.TestCase):
         # will need to be updated!
 
         def call_altair_concat():
-            return alt.vegalite.v4.api.concat()
+            return altair.vegalite.v4.api.concat()
 
         def call_altair_layer():
-            return alt.vegalite.v4.api.layer()
+            return altair.vegalite.v4.api.layer()
 
         self.assertNotEqual(get_hash(call_altair_concat), get_hash(call_altair_layer))
 

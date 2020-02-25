@@ -15,6 +15,7 @@
 
 import sys
 import traceback
+from typing import Optional
 
 from streamlit.error_util import get_nonstreamlit_traceback
 from streamlit.errors import MarkdownFormattedException
@@ -152,6 +153,7 @@ def _get_stack_trace_str_list(exception, strip_streamlit_stack_entries=False):
         The exception traceback as a list of strings
 
     """
+    extracted_traceback = None  # type: Optional[traceback.StackSummary]
     if isinstance(exception, StreamlitAPIWarning):
         extracted_traceback = exception.tacked_on_stack
     elif hasattr(exception, "__traceback__"):
@@ -174,8 +176,12 @@ def _get_stack_trace_str_list(exception, strip_streamlit_stack_entries=False):
         ]
     else:
         if strip_streamlit_stack_entries:
-            extracted_traceback = get_nonstreamlit_traceback(extracted_traceback)
-        stack_trace_str_list = traceback.format_list(extracted_traceback)
+            extracted_frames = get_nonstreamlit_traceback(extracted_traceback)
+            # XXX WAS LIKE THIS
+            # stack_trace_str_list = traceback.format_list(extracted_traceback)
+            stack_trace_str_list = traceback.format_list(extracted_frames)
+        else:
+            stack_trace_str_list = traceback.format_list(extracted_traceback)
 
     stack_trace_str_list = [item.strip() for item in stack_trace_str_list]
 

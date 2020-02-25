@@ -109,7 +109,7 @@ def _fix_tornado_crash():
         import asyncio
 
         try:
-            from asyncio import (
+            from asyncio import (  # type: ignore[attr-defined]
                 WindowsProactorEventLoopPolicy,
                 WindowsSelectorEventLoopPolicy,
             )
@@ -148,6 +148,8 @@ def _on_server_start(server):
 
         if config.is_manually_set("browser.serverAddress"):
             addr = config.get_option("browser.serverAddress")
+        elif config.is_manually_set("server.address"):
+            addr = config.get_option("server.address")
         else:
             addr = "localhost"
 
@@ -172,6 +174,12 @@ def _print_url():
     if config.is_manually_set("browser.serverAddress"):
         named_urls = [
             ("URL", Report.get_url(config.get_option("browser.serverAddress")))
+        ]
+
+    elif config.is_manually_set("server.address"):
+        named_urls = [
+            ("Network URL", Report.get_url(config.get_option("server.address"))),
+            ("External URL", Report.get_url(net_util.get_external_ip())),
         ]
 
     elif config.get_option("server.headless"):

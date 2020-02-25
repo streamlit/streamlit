@@ -29,14 +29,15 @@ import DeckGL, {
 } from "deck.gl"
 import Immutable from "immutable"
 import { StaticMap } from "react-map-gl"
-import { SessionInfo } from "lib/SessionInfo"
 import { dataFrameToArrayOfDicts } from "lib/dataFrameProto"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
+import withMapboxToken from "hocs/withMapboxToken/withMapboxToken"
 import "mapbox-gl/dist/mapbox-gl.css"
 import "./DeckGlChart.scss"
 
 interface Props {
   width: number
+  mapboxToken: string
   element: Immutable.Map<string, any>
 }
 
@@ -53,7 +54,7 @@ class DeckGlChart extends React.PureComponent<PropsWithHeight, State> {
     height: 500,
   }
 
-  private initialViewState: {
+  private readonly initialViewState: {
     width: number
     height: number
     longitude: number
@@ -63,10 +64,10 @@ class DeckGlChart extends React.PureComponent<PropsWithHeight, State> {
     zoom: number
   }
 
-  private mapStyle: string
-  private fixHexLayerBug_bound: () => void
+  private readonly mapStyle: string
+  private readonly fixHexLayerBug_bound: () => void
 
-  constructor(props: PropsWithHeight) {
+  public constructor(props: PropsWithHeight) {
     super(props)
 
     const specStr = this.props.element.get("spec")
@@ -94,11 +95,11 @@ class DeckGlChart extends React.PureComponent<PropsWithHeight, State> {
     setTimeout(this.fixHexLayerBug_bound, 0)
   }
 
-  fixHexLayerBug(): void {
+  private fixHexLayerBug(): void {
     this.setState({ initialized: true })
   }
 
-  render(): JSX.Element {
+  public render(): JSX.Element {
     return (
       <div
         className="deckglchart stDeckGlChart"
@@ -118,14 +119,14 @@ class DeckGlChart extends React.PureComponent<PropsWithHeight, State> {
             height={this.initialViewState.height}
             width={this.initialViewState.width}
             mapStyle={this.mapStyle}
-            mapboxApiAccessToken={SessionInfo.current.mapboxToken}
+            mapboxApiAccessToken={this.props.mapboxToken}
           />
         </DeckGL>
       </div>
     )
   }
 
-  buildLayers(): any {
+  private buildLayers(): any[] {
     const layers = this.props.element.get("layers")
     return layers.map((layer: any) => buildLayer(layer)).toArray()
   }
@@ -462,4 +463,4 @@ function parseGetters(type: any, spec: any): void {
   })
 }
 
-export default withFullScreenWrapper(DeckGlChart)
+export default withMapboxToken(withFullScreenWrapper(DeckGlChart))

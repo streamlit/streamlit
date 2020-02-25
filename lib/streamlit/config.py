@@ -17,6 +17,7 @@
 
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
+
 from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
@@ -51,6 +52,7 @@ _section_descriptions = collections.OrderedDict(
 
 # Stores the config options as key value pairs in an ordered dict to be able
 # to show the config params help in the same order they were included.
+# TODO(nate): Change type annotation to OrderedDict once Python 3.7 is required.
 _config_options = collections.OrderedDict()  # type: Dict[str, ConfigOption]
 
 # Makes sure we only parse the config file once.
@@ -438,9 +440,21 @@ def _server_run_on_save():
     return False
 
 
+@_create_option("server.address")
+def _server_address():
+    """The address where the server will listen for client and browser
+    connections. Use this if you want to bind the server to a specific address.
+    If set, the server will only be accessible from this address, and not from
+    any aliases (like localhost).
+
+    Default: (unset)
+    """
+    return None
+
+
 @_create_option("server.port", type_=int)
 def _server_port():
-    """The port where the server will listen for client and browser
+    """The port where the server will listen for browser
     connections.
 
     Default: 8501
@@ -534,8 +548,7 @@ _create_option(
                 which has limitations and is not guaranteed to always work.
                 To get a token for yourself, create an account at
                 https://mapbox.com. It's free! (for moderate usage levels)""",
-    default_val="pk.eyJ1IjoidGhpYWdvdCIsImEiOiJjamh3bm85NnkwMng4M3"
-    "dydnNveWwzeWNzIn0.vCBDzNsEF2uFSFk2AM0WZQ",
+    default_val="",
 )
 
 
@@ -828,7 +841,7 @@ def _maybe_read_env_variable(value):
         variable.
 
     """
-    if isinstance(value, string_types) and value.startswith("env:"):  # noqa F821
+    if isinstance(value, str) and value.startswith("env:"):
         var_name = value[len("env:") :]
         env_var = os.environ.get(var_name)
 
