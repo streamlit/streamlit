@@ -208,15 +208,17 @@ def _read_from_mem_cache(key, allow_output_mutation, func_or_code, hash_funcs):
     if key in _mem_cache:
         entry = _mem_cache[key]
 
-        if (
-            allow_output_mutation
-            or _get_output_hash(entry.value, func_or_code, hash_funcs) == entry.hash
-        ):
-            LOGGER.debug("Memory cache HIT: %s", type(entry.value))
-            return entry.value
-        else:
-            LOGGER.debug("Cache object was mutated: %s", key)
-            raise CachedObjectWasMutatedError(entry.value)
+        if not allow_output_mutation:
+            computed_output_hash = _get_output_hash(entry.value, func_or_code, hash_funcs)
+            stored_output_hash = entry.hash
+
+            if computed_output_hash != stored_output_hash:
+                LOGGER.debug("Cached object was mutated: %s", key)
+                raise CachedObjectWasMutatedError(entry.value)
+
+        LOGGER.debug("Memory cache HIT: %s", type(entry.value))
+        return entry.value
+
     else:
         LOGGER.debug("Memory cache MISS: %s", key)
         raise CacheKeyNotFoundError("Key not found in mem cache")
@@ -278,7 +280,7 @@ def _write_to_disk_cache(key, value):
         raise CacheError("Unable to write to cache: %s" % e)
 
 
-def _read_from_cache(key, persisted, allow_output_mutation, func_or_code, hash_funcs):
+def _read_from_cache(key, persist, allow_output_mutation, func_or_code, hash_funcs):
     """Read a value from the cache.
 
     Our goal is to read from memory if possible. If the data was mutated (hash
@@ -290,7 +292,7 @@ def _read_from_cache(key, persisted, allow_output_mutation, func_or_code, hash_f
             key, allow_output_mutation, func_or_code, hash_funcs
         )
     except CacheKeyNotFoundError as e:
-        if persisted:
+        if persist:
             value = _read_from_disk_cache(key)
             _write_to_mem_cache(
                 key, value, allow_output_mutation, func_or_code, hash_funcs
@@ -433,13 +435,23 @@ def cache(
         def get_or_set_cache():
             hasher = hashlib.new("md5")
 
-            update_hash(
-                [args, kwargs],
-                hasher=hasher,
-                hash_funcs=hash_funcs,
-                hash_reason=HashReason.CACHING_FUNC_ARGS,
-                hash_source=func,
-            )
+            if args:
+                update_hash(
+                    args,
+                    hasher=hasher,
+                    hash_funcs=hash_funcs,
+                    hash_reason=HashReason.CACHING_FUNC_ARGS,
+                    hash_source=func,
+                )
+
+            if kwargs:
+                update_hash(
+                    kwargs,
+                    hasher=hasher,
+                    hash_funcs=hash_funcs,
+                    hash_reason=HashReason.CACHING_FUNC_ARGS,
+                    hash_source=func,
+                )
 
             update_hash(
                 func,
@@ -454,8 +466,8 @@ def cache(
 
             try:
                 return_value = _read_from_cache(
-                    key,
-                    persisted=persist,
+                    key=key,
+                    persist=persist,
                     allow_output_mutation=allow_output_mutation,
                     func_or_code=func,
                     hash_funcs=hash_funcs,
@@ -589,8 +601,8 @@ class Cache(Dict[Any, Any]):
 
         try:
             value, _ = _read_from_cache(
-                key,
-                persisted=self._persist,
+                key=key,
+                persist=self._persist,
                 allow_output_mutation=self._allow_output_mutation,
                 func_or_code=code,
             )
