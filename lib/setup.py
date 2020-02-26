@@ -9,7 +9,7 @@ from pipenv.utils import convert_deps_to_pip
 from setuptools.command.install import install
 
 # circleci.py version
-VERSION = "0.56.2.dev20200224"  # PEP-440
+VERSION = "0.56.2.dev20200225"  # PEP-440
 
 pipfile = Project(chdir=False).parsed_pipfile
 
