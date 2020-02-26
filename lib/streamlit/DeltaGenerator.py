@@ -2040,8 +2040,8 @@ class DeltaGenerator(object):
     def file_uploader(self, element, label, type=None, encoding="auto", key=None):
         """Display a file uploader widget.
 
-        By default, uploaded files are limited to 50MB but you can configure
-        that using the `server.maxUploadSize` config option.
+        By default, uploaded files are limited to 200MB. You can configure
+        this using the `server.maxUploadSize` config option.
 
         Parameters
         ----------
