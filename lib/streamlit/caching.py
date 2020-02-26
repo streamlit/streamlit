@@ -23,11 +23,13 @@ import contextlib
 import hashlib
 import inspect
 import os
+import pickle
 import shutil
 import struct
 import textwrap
 import threading
 from collections import namedtuple
+from typing import Any, Dict
 
 import streamlit as st
 from streamlit.util import functools_wraps
@@ -53,13 +55,6 @@ How to resolve this warning:
 to suppress the warning.
 """
 
-try:
-    # cPickle, if available, is much faster than pickle.
-    # Source: https://pymotw.com/2/pickle/
-    import cPickle as pickle
-except ImportError:
-    import pickle
-
 
 LOGGER = get_logger(__name__)
 
@@ -82,7 +77,7 @@ DiskCacheEntry = namedtuple("DiskCacheEntry", ["value"])
 
 
 # The in memory cache.
-_mem_cache = {}  # Type: Dict[string, CacheEntry]
+_mem_cache = {}  # type: Dict[str, CacheEntry]
 
 
 # A thread-local counter that's incremented when we enter @st.cache
@@ -439,7 +434,7 @@ def cache(
             try:
                 return_value = _read_from_cache(
                     key, persist, allow_output_mutation, func, caller_frame, hash_funcs
-               )
+                )
             except CacheKeyNotFoundError:
                 with _calling_cached_function():
                     if suppress_st_warning:
@@ -474,7 +469,7 @@ def cache(
     return wrapped_func
 
 
-class Cache(dict):
+class Cache(Dict[Any, Any]):
     """Cache object to persist data across reruns.
 
     Parameters

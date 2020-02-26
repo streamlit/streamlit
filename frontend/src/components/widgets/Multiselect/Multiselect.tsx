@@ -22,7 +22,7 @@ import { multiSelectOverrides } from "lib/widgetTheme"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { TYPE, Select as UISelect, OnChangeParams } from "baseui/select"
 
-interface Props {
+export interface Props {
   disabled: boolean
   element: ImmutableMap<string, any>
   widgetMgr: WidgetStateManager

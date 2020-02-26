@@ -23,7 +23,7 @@ import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { sliderOverrides } from "lib/widgetTheme"
 import { debounce } from "lib/utils"
 
-interface Props {
+export interface Props {
   disabled: boolean
   element: ImmutableMap<string, any>
   widgetMgr: WidgetStateManager
@@ -65,9 +65,7 @@ class Slider extends React.PureComponent<Props, State> {
     if (this.sliderRef.current) {
       const knobSelector = '[role="slider"]'
       const knobs = this.sliderRef.current.querySelectorAll(knobSelector)
-      knobs.forEach(knob =>
-        knob.removeEventListener("click", this.handleClick)
-      )
+      knobs.forEach(knob => knob.removeEventListener("click", this.handleClick))
     }
   }
 
@@ -139,9 +137,13 @@ class Slider extends React.PureComponent<Props, State> {
       .style as React.CSSProperties
 
     return (
-      <div style={sliderOverrides.TickBar.style}>
-        <div style={tickBarItemStyle}>{sprintf(format, min)}</div>
-        <div style={tickBarItemStyle}>{sprintf(format, max)}</div>
+      <div className="sliderTickBar" style={sliderOverrides.TickBar.style}>
+        <div className="tickBarMin" style={tickBarItemStyle}>
+          {sprintf(format, min)}
+        </div>
+        <div className="tickBarMax" style={tickBarItemStyle}>
+          {sprintf(format, max)}
+        </div>
       </div>
     )
   }

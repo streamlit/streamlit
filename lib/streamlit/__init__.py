@@ -68,37 +68,31 @@ import uuid as _uuid
 import subprocess
 import platform
 import os
+from typing import Any, Tuple, Type
 
 # This used to be pkg_resources.require('streamlit') but it would cause
 # pex files to fail. See #394 for more details.
 __version__ = _pkg_resources.get_distribution("streamlit").version
 
 # Deterministic Unique Streamlit User ID
-# The try/except is needed for python 2/3 compatibility
-try:
+if (
+    platform.system() == "Linux"
+    and os.path.isfile("/etc/machine-id") == False
+    and os.path.isfile("/var/lib/dbus/machine-id") == False
+):
+    print("Generate machine-id")
+    subprocess.run(["sudo", "dbus-uuidgen", "--ensure"])
 
-    if (
-        platform.system() == "Linux"
-        and os.path.isfile("/etc/machine-id") == False
-        and os.path.isfile("/var/lib/dbus/machine-id") == False
-    ):
-        print("Generate machine-id")
-        subprocess.run(["sudo", "dbus-uuidgen", "--ensure"])
+machine_id = str(_uuid.getnode())
+if os.path.isfile("/etc/machine-id"):
+    with open("/etc/machine-id", "r") as f:
+        machine_id = f.read()
+elif os.path.isfile("/var/lib/dbus/machine-id"):
+    with open("/var/lib/dbus/machine-id", "r") as f:
+        machine_id = f.read()
 
-    machine_id = _uuid.getnode()
-    if os.path.isfile("/etc/machine-id"):
-        with open("/etc/machine-id", "r") as f:
-            machine_id = f.read()
-    elif os.path.isfile("/var/lib/dbus/machine-id"):
-        with open("/var/lib/dbus/machine-id", "r") as f:
-            machine_id = f.read()
+__installation_id__ = str(_uuid.uuid5(_uuid.NAMESPACE_DNS, machine_id))
 
-    __installation_id__ = str(_uuid.uuid5(_uuid.NAMESPACE_DNS, str(machine_id)))
-
-except UnicodeDecodeError:
-    __installation_id__ = str(
-        _uuid.uuid5(_uuid.NAMESPACE_DNS, str(_uuid.getnode()).encode("utf-8"))
-    )
 
 import contextlib as _contextlib
 import re as _re
@@ -241,13 +235,7 @@ _HELP_TYPES = (
     _types.FunctionType,
     _types.MethodType,
     _types.ModuleType,
-)
-
-if not _is_running_py3():
-    _HELP_TYPES = list(_HELP_TYPES)
-    _HELP_TYPES.append(_types.ClassType)
-    _HELP_TYPES.append(_types.InstanceType)
-    _HELP_TYPES = tuple(_HELP_TYPES)
+)  # type: Tuple[Type[Any], ...]
 
 
 def write(*args, **kwargs):

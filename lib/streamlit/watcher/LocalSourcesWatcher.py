@@ -14,16 +14,10 @@
 # limitations under the License.
 
 import fnmatch
+import importlib
 import os
 import sys
 import collections
-
-try:
-    # Python 2
-    import imp as importlib
-except ImportError:
-    # Python 3
-    import importlib
 
 from streamlit import compatibility
 from streamlit import config

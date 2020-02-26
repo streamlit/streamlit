@@ -180,7 +180,7 @@ class StreamlitWriteTest(unittest.TestCase):
             st.write(SomeObject())
 
             p.assert_called_once_with(
-                u"`1 * 2 - 3 = 4 \\`ok\\` !`", unsafe_allow_html=False
+                "`1 * 2 - 3 = 4 \\`ok\\` !`", unsafe_allow_html=False
             )
 
     def test_exception(self):

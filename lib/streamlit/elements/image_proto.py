@@ -15,7 +15,6 @@
 
 """Image marshalling."""
 
-import base64
 import io
 import imghdr
 import mimetypes
@@ -28,6 +27,8 @@ from PIL import Image, ImageFile
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from urllib.parse import urlparse
+
+from streamlit.MediaFileManager import media_file_manager
 
 LOGGER = get_logger(__name__)
 
@@ -96,14 +97,14 @@ def _verify_np_shape(array):
     return array
 
 
-def _bytes_to_b64(data, width, format):
+def _normalize_to_bytes(data, width, format):
     format = format.lower()
     ext = imghdr.what(None, data)
 
     if format is None:
-        mime_type = mimetypes.guess_type("image.%s" % ext)[0]
+        mimetype = mimetypes.guess_type("image.%s" % ext)[0]
     else:
-        mime_type = "image/" + format
+        mimetype = "image/" + format
 
     image = Image.open(io.BytesIO(data))
     actual_width, actual_height = image.size
@@ -118,13 +119,11 @@ def _bytes_to_b64(data, width, format):
             data = _PIL_to_bytes(image, format=format, quality=90)
 
             if format is None:
-                mime_type = "image/png"
+                mimetype = "image/png"
             else:
-                mime_type = "image/" + format
+                mimetype = "image/" + format
 
-    b64 = base64.b64encode(data).decode("utf-8")
-
-    return b64, mime_type
+    return data, mimetype
 
 
 def _clip_image(image, clamp):
@@ -221,21 +220,14 @@ def marshall_images(
             except UnicodeDecodeError:
                 pass
 
-            # If not, see if it's a file.
-            try:
-                # If file, open and continue.
-                with open(image, "rb") as f:
-                    data = f.read()
-            # Ok, then it must be bytes inside a str. This happens with
-            # Python2's version of open().
-            except TypeError:
-                data = image
+            # If not, see if it's a file. Allow OS filesystem errors to raise.
+            with open(image, "rb") as f:
+                data = f.read()
 
-        # By default, image payload is bytes
+        # Assume input in bytes.
         else:
             data = image
 
-        (b64, mime_type) = _bytes_to_b64(data, width, format)
-
-        proto_img.data.base64 = b64
-        proto_img.data.mime_type = mime_type
+        (data, mimetype) = _normalize_to_bytes(data, width, format)
+        this_file = media_file_manager.add(data, mimetype=mimetype)
+        proto_img.url = this_file.url

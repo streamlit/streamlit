@@ -18,11 +18,11 @@ syntax = "proto3";
 
 // An image which can be displayed on the screen.
 message Image {
-  oneof type {
-    ImageData data = 1;
-    string url = 3;
-  }
+  string url = 3;
   string caption = 2;
+
+  reserved 1;
+  reserved "data";
 }
 
 // A set of images.
@@ -34,9 +34,4 @@ message ImageList {
   // -1 means use the image width
   // -2 means use the column width
   int32 width = 2;
-}
-
-message ImageData {
-  string base64 = 1;
-  string mime_type = 2;
 }
