@@ -209,6 +209,24 @@ def _get_mutated_output_error_message():
     return message
 
 
+def _create_mem_cache(max_entries, ttl):
+    """Create an in-memory cache object with the given parameters."""
+    if max_entries is None:
+        max_entries = math.inf
+    elif not isinstance(max_entries, int):
+        raise Exception("`max_entries` must be an int or None")
+
+    if not isinstance(ttl, (float, int)) and ttl is not None:
+        raise Exception("`ttl` must be a float or None")
+
+    # If ttl is none, just create an LRUCache. (TTLCache is simply an
+    # LRUCache that adds a ttl option.)
+    if ttl is None:
+        return LRUCache(maxsize=max_entries)
+    else:
+        return TTLCache(maxsize=max_entries, ttl=ttl, timer=TTLCACHE_TIMER)
+
+
 def _read_from_mem_cache(mem_cache, key, allow_output_mutation, hash_funcs):
     if key in mem_cache:
         entry = mem_cache[key]
@@ -421,20 +439,7 @@ def cache(
         )
 
     # Create the function's in-memory cache.
-    if max_entries is None:
-        max_entries = math.inf
-    elif not isinstance(max_entries, int):
-        raise Exception("`max_entries` must be an int or None")
-
-    if not isinstance(ttl, (float, int)) and ttl is not None:
-        raise Exception("`ttl` must be a float or None")
-
-    # If ttl is none, just create an LRUCache. (TTLCache is simply an
-    # LRUCache that adds a ttl option.)
-    if ttl is None:
-        mem_cache = LRUCache(maxsize=max_entries)
-    else:
-        mem_cache = TTLCache(ttl=ttl, maxsize=max_entries, timer=TTLCACHE_TIMER)
+    mem_cache = _create_mem_cache(max_entries, ttl)
 
     @functools_wraps(func)
     def wrapped_func(*args, **kwargs):
@@ -453,7 +458,7 @@ def cache(
         else:
             message = "Running %s(...)." % name
 
-        def get_or_set_cache():
+        def get_or_set_cached_value():
             hasher = hashlib.new("md5")
 
             args_hasher = CodeHasher("md5", hasher, hash_funcs)
@@ -499,9 +504,9 @@ def cache(
 
         if show_spinner:
             with st.spinner(message):
-                return get_or_set_cache()
+                return get_or_set_cached_value()
         else:
-            return get_or_set_cache()
+            return get_or_set_cached_value()
 
     # Make this a well-behaved decorator by preserving important function
     # attributes.
