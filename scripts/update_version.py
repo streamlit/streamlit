@@ -62,6 +62,7 @@ PYTHON = {
     "docs/troubleshooting/sanity-checks.md": r"(?P<pre>.*number printed is `).*(?P<post>`.$)",
 }
 
+# TODO not working for dev versions
 NODE = {"frontend/package.json": r'(?P<pre>^  "version": ").*(?P<post>",$)'}
 
 

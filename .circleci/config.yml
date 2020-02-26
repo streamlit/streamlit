@@ -32,7 +32,6 @@ workflows:
             - cypress-approval
 
   # TODO why isn't this being triggered by circleci?
-
   create-nightly-tag:
     triggers:
       - schedule:
@@ -42,6 +41,7 @@ workflows:
             branches:
               only:
                 - develop
+    # TODO this job requires changes to work
     jobs:
       - create-tag
 
