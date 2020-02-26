@@ -25,16 +25,18 @@ import ast
 import contextlib
 import hashlib
 import inspect
+import math
 import os
 import pickle
 import shutil
 import struct
 import textwrap
 import threading
+import time
 from collections import namedtuple
 from typing import Any, Dict
 
-from cachetools import LRUCache
+from cachetools import LRUCache, TTLCache
 
 import streamlit as st
 from streamlit.util import functools_wraps
@@ -59,6 +61,9 @@ to suppress the warning.
 
 
 LOGGER = get_logger(__name__)
+
+# The timer function we use with TTLCache.
+TTLCACHE_TIMER = time.monotonic
 
 
 class CacheError(Exception):
@@ -304,7 +309,8 @@ def cache(
     suppress_st_warning=False,
     hash_funcs=None,
     ignore_hash=False,
-    max_size=128,
+    max_entries=None,
+    ttl=None,
 ):
     """Function decorator to memoize function executions.
 
@@ -338,10 +344,14 @@ def cache(
         check to see if its type matches a key in this dict and, if so, will use the provided
         function to generate a hash for it. See below for an example of how this can be used.
 
-    max_size : int or None
-        The maximum number of values to keep in the cache, or None
-        for an unbounded cache. When a new value is added to a full cache,
-        the oldest cached value will be removed.
+    max_entries : int or None
+        The maximum number of entries to keep in the cache, or None
+        for an unbounded cache. (When a new entry is added to a full cache,
+        the oldest cached entry will be removed.) The default is None.
+
+    ttl : float or None
+        The maximum number of seconds to keep an entry in the cache, or
+        None if cache entries should not expire. The default is None.
 
     ignore_hash : boolean
         DEPRECATED. Please use allow_output_mutation instead.
@@ -406,15 +416,25 @@ def cache(
             show_spinner=show_spinner,
             suppress_st_warning=suppress_st_warning,
             hash_funcs=hash_funcs,
-            max_size=max_size,
+            max_entries=max_entries,
+            ttl=ttl,
         )
 
-    # Each function gets its own in-memory cache. If max_size is None,
-    # the function's cache is unbounded; otherwise it gets an LRUCache.
-    if max_size is None:
-        mem_cache = {}
+    # Create the function's in-memory cache.
+    if max_entries is None:
+        max_entries = math.inf
+    elif not isinstance(max_entries, int):
+        raise Exception("`max_entries` must be an int or None")
+
+    if not isinstance(ttl, (float, int)) and ttl is not None:
+        raise Exception("`ttl` must be a float or None")
+
+    # If ttl is none, just create an LRUCache. (TTLCache is simply an
+    # LRUCache that adds a ttl option.)
+    if ttl is None:
+        mem_cache = LRUCache(maxsize=max_entries)
     else:
-        mem_cache = LRUCache(maxsize=max_size)
+        mem_cache = TTLCache(ttl=ttl, maxsize=max_entries, timer=TTLCACHE_TIMER)
 
     @functools_wraps(func)
     def wrapped_func(*args, **kwargs):

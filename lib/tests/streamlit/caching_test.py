@@ -213,7 +213,7 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
         """The oldest object should be evicted when maxsize is reached."""
         called_values = []
 
-        @st.cache(max_size=2)
+        @st.cache(max_entries=2)
         def f(x):
             called_values.append(x)
             return x
@@ -247,7 +247,7 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
         """If max_size is None, the cache is unbounded."""
         called_values = []
 
-        @st.cache(max_size=None)
+        @st.cache(max_entries=None)
         def f(x):
             called_values.append(x)
             return x
@@ -262,6 +262,31 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
         for ii in range(256):
             f(ii)
         self.assertEqual([], called_values)
+
+    @patch("streamlit.caching.TTLCACHE_TIMER")
+    def test_ttl(self, timer_patch):
+        """Entries should expire after the given ttl."""
+        called_values = []
+
+        @st.cache(ttl=1)
+        def f(x):
+            called_values.append(x)
+            return x
+
+        # Store a value at time 0
+        timer_patch.return_value = 0
+        f(0)
+        self.assertEqual([0], called_values)
+
+        # Advance our timer, but not enough to expire our value.
+        timer_patch.return_value = 0.5
+        f(0)
+        self.assertEqual([0], called_values)
+
+        # Advance our timer enough to expire our value.
+        timer_patch.return_value = 1.5
+        f(0)
+        self.assertEqual([0, 0], called_values)
 
 
 # Temporarily turn off these tests since there's no Cache object in __init__

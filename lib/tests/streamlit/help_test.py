@@ -121,7 +121,8 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
                     "suppress_st_warning=False, "
                     "hash_funcs=None, "
                     "ignore_hash=False, "
-                    "max_size=128)"
+                    "max_entries=None, "
+                    "ttl=None)"
                 ),
             )
             self.assertTrue(ds.doc_string.startswith("Function decorator to"))
