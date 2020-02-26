@@ -1307,7 +1307,7 @@ class DeltaGenerator(object):
         ...         hist_data, group_labels, bin_size=[.1, .25, .5])
         >>>
         >>> # Plot!
-        >>> st.plotly_chart(fig)
+        >>> st.plotly_chart(fig, use_container_width=True)
 
         .. output::
            https://share.streamlit.io/0.56.0-xTAd/index.html?id=TuP96xX8JnsoQeUGAPjkGQ
@@ -1424,7 +1424,7 @@ class DeltaGenerator(object):
         ...
         >>> p.line(x, y, legend='Trend', line_width=2)
         >>>
-        >>> st.bokeh_chart(p)
+        >>> st.bokeh_chart(p, use_container_width=True)
 
         .. output::
            https://share.streamlit.io/0.56.0-xTAd/index.html?id=Fdhg51uMbGMLRRxXV6ubzp
