@@ -32,13 +32,23 @@ def create_tag():
     current_version = streamlit.version._get_installed_streamlit_version()
 
     # Update micro
-    version_with_inc_micro = (current_version[0], current_version[1], current_version[2] + 1,)
+    version_with_inc_micro = (
+        current_version[0],
+        current_version[1],
+        current_version[2] + 1,
+    )
 
     # Append todays date
-    version_with_date = ".".join([str(x) for x in version_with_inc_micro]) + ".dev" + date.today().strftime("%Y%m%d")
+    version_with_date = (
+        ".".join([str(x) for x in version_with_inc_micro])
+        + ".dev"
+        + date.today().strftime("%Y%m%d")
+    )
 
     # Verify if version is PEP440 compliant.
-    packaging.version.Version(version_with_date)  # TODO test what happens in circleci if this raises an error
+    packaging.version.Version(
+        version_with_date
+    )  # TODO test what happens in circleci if this raises an error
 
     return version_with_date
 
