@@ -533,7 +533,7 @@ class ReportSession(object):
             widget_states=self._widget_states,
             request_queue=self._script_request_queue,
             uploaded_file_mgr=self._uploaded_file_mgr,
-            # XXX pass in session ID 
+            report_session_id=self.id,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()

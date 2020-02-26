@@ -22,7 +22,7 @@ LOGGER = get_logger(__name__)
 
 
 class ReportContext(object):
-    def __init__(self, enqueue, widgets, widget_ids_this_run, uploaded_file_mgr):
+    def __init__(self, enqueue, widgets, widget_ids_this_run, uploaded_file_mgr, report_session_id):
         # (dict) Mapping of container (type str or BlockPath) to top-level
         # cursor (type AbstractCursor).
         self.cursors = {}
@@ -35,8 +35,8 @@ class ReportContext(object):
         self.widget_ids_this_run = widget_ids_this_run
         # (UploadedFileManager) Object that manages files uploaded by this user.
         self.uploaded_file_mgr = uploaded_file_mgr
-
-        # XXX add session ID here 
+        # ReportSession ID: needed to keep and expire objects in MediaFileManager cache.
+        self.report_session_id = report_session_id
 
     def reset(self):
         self.cursors = {}
