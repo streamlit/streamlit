@@ -25,6 +25,7 @@ import functools
 import os
 import sys
 import subprocess
+from typing import Any, List
 
 from streamlit import env_util
 
@@ -53,7 +54,7 @@ else:
 
 def memoize(func):
     """Decorator to memoize the result of a no-args func."""
-    result = []
+    result = []  # type: List[Any]
 
     @functools_wraps(func)
     def wrapped_func():

@@ -356,4 +356,4 @@ connect-circleci:
 .PHONY: flake8
 # Run flake8 and show errors: E9,F63,F7,F82
 flake8:
-	flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=./frontend,./lib/build
+	scripts/flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=./frontend,./lib/build

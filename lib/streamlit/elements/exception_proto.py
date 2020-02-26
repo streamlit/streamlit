@@ -16,6 +16,7 @@
 import os
 import sys
 import traceback
+from typing import Optional
 
 import streamlit
 from streamlit.errors import StreamlitAPIException, MarkdownFormattedException
@@ -175,6 +176,7 @@ def _get_stack_trace(
 
     """
     # Get and extract the traceback for the exception.
+    extracted_traceback = None  # type: Optional[traceback.StackSummary]
     if exception_traceback is not None:
         extracted_traceback = traceback.extract_tb(exception_traceback)
     elif hasattr(exception, "__traceback__"):
@@ -198,11 +200,13 @@ def _get_stack_trace(
         ]
     else:
         if strip_streamlit_stack_entries:
-            extracted_traceback = [
+            extracted_frames = [
                 frame
                 for frame in extracted_traceback
                 if not _is_in_streamlit_package(_get_stackframe_filename(frame))
             ]
-        stack_trace = traceback.format_list(extracted_traceback)
+            stack_trace = traceback.format_list(extracted_frames)
+        else:
+            stack_trace = traceback.format_list(extracted_traceback)
 
     return stack_trace

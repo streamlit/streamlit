@@ -14,10 +14,10 @@
 # limitations under the License.
 
 import mock
-import requests
 import tornado.testing
 import tornado.web
 import tornado.websocket
+import urllib.parse
 from tornado import gen
 from tornado.concurrent import Future
 
@@ -41,7 +41,7 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         # to no-op. This prevents it from shutting down the
         # ioloop when it stops.
         self.server = Server(self.io_loop, "/not/a/script.py", "test command line")
-        self.server._on_stopped = mock.MagicMock()
+        self.server._on_stopped = mock.MagicMock()  # type: ignore[assignment]
         app = self.server._create_app()
         return app
 
@@ -72,9 +72,9 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         # get_url() gives us a result with the 'http' scheme;
         # we swap it out for 'ws'.
         url = self.get_url(path)
-        parts = list(requests.utils.urlparse(url))
+        parts = list(urllib.parse.urlparse(url))
         parts[0] = "ws"
-        return requests.utils.urlunparse(tuple(parts))
+        return urllib.parse.urlunparse(tuple(parts))
 
     def ws_connect(self):
         """Open a websocket connection to the server.

@@ -34,6 +34,8 @@ import sys
 import textwrap
 import tempfile
 import threading
+import types
+from typing import Any, Callable, Dict, List, Union
 
 import streamlit as st
 from streamlit import compatibility
@@ -44,8 +46,7 @@ from streamlit.errors import UnhashableType, UserHashError, InternalHashError
 from streamlit.folder_black_list import FolderBlackList
 from streamlit.logger import get_logger
 
-if sys.version_info >= (3, 0):
-    from streamlit.hashing_py3 import get_referenced_objects
+from streamlit.hashing_py3 import get_referenced_objects
 
 LOGGER = get_logger(__name__)
 
@@ -84,18 +85,18 @@ class HashStacks(object):
     """
 
     def __init__(self):
-        self.stacks = collections.defaultdict(list)
+        self.stacks = collections.defaultdict(list)  # type: Dict[int, List[int]]
 
     def push(self, val):
-        thread_id = threading.current_thread().ident
+        thread_id = threading.current_thread().ident or -1
         self.stacks[thread_id].append(id(val))
 
     def pop(self):
-        thread_id = threading.current_thread().ident
+        thread_id = threading.current_thread().ident or -1
         self.stacks[thread_id].pop()
 
     def __contains__(self, val):
-        thread_id = threading.current_thread().ident
+        thread_id = threading.current_thread().ident or -1
         return id(val) in self.stacks[thread_id]
 
 
@@ -108,8 +109,8 @@ def _is_magicmock(obj):
     )
 
 
-def _get_context(func):
-    code = func.__code__
+def _get_context(func) -> Context:
+    code = func.__code__  # type: types.CodeType
     # Mapping from variable name to the value if we can resolve it.
     # Otherwise map to the name.
     cells = {}
@@ -118,7 +119,7 @@ def _get_context(func):
     if code.co_freevars:
         assert len(code.co_freevars) == len(func.__closure__)
         cells.update(
-            zip(code.co_freevars, map(lambda c: c.cell_contents, func.__closure__))
+            zip(code.co_freevars, map(lambda c: c.cell_contents, func.__closure__))  # type: ignore[no-any-return]
         )
 
     varnames = {}
@@ -156,7 +157,7 @@ def _key(obj, context):
         return (
             isinstance(obj, bytes)
             or isinstance(obj, bytearray)
-            or isinstance(obj, string_types)  # noqa: F821
+            or isinstance(obj, str)
             or isinstance(obj, float)
             or isinstance(obj, int)
             or isinstance(obj, bool)
@@ -345,9 +346,7 @@ class CodeHasher:
                 return self.to_bytes(id(obj))
             elif isinstance(obj, bytes) or isinstance(obj, bytearray):
                 return obj
-            elif isinstance(obj, string_types):  # noqa: F821
-                # Don't allow the user to override string since
-                # str == bytes on python 2
+            elif isinstance(obj, str):
                 return obj.encode()
             elif type(obj) in self.hash_funcs:
                 # Escape hatch for unsupported objects
@@ -417,13 +416,13 @@ class CodeHasher:
             elif hasattr(obj, "name") and (
                 isinstance(obj, io.IOBase)
                 # Handle temporary files used during testing
-                or isinstance(obj, tempfile._TemporaryFileWrapper)
-                or (not compatibility.is_running_py3() and isinstance(obj, file))
+                or isinstance(obj, tempfile._TemporaryFileWrapper)  # type: ignore[attr-defined]
             ):
                 # Hash files as name + last modification date + offset.
                 h = hashlib.new(self.name)
-                self._update(h, obj.name)
-                self._update(h, os.path.getmtime(obj.name))
+                obj_name = obj.name  # type: ignore[union-attr]
+                self._update(h, obj_name)
+                self._update(h, os.path.getmtime(obj_name))
                 self._update(h, obj.tell())
                 return h.digest()
             elif type_util.is_type(obj, "numpy.ufunc"):
@@ -509,8 +508,7 @@ class CodeHasher:
         consts = [
             n
             for n in code.co_consts
-            if not isinstance(n, string_types)  # noqa: F821
-            or not n.endswith(".<lambda>")
+            if not isinstance(n, str) or not n.endswith(".<lambda>")
         ]
         self._update(h, consts, context)
 
