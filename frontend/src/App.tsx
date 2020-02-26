@@ -56,6 +56,7 @@ import {
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
 import { SessionInfo } from "lib/SessionInfo"
 import { MetricsManager } from "lib/MetricsManager"
+import { FileUploadClient } from "lib/FileUploadClient"
 import {
   flattenElements,
   hashString,
@@ -98,12 +99,13 @@ declare global {
 }
 
 export class App extends PureComponent<Props, State> {
-  sessionEventDispatcher: SessionEventDispatcher
-  statusWidgetRef: React.RefObject<StatusWidget>
-  connectionManager: ConnectionManager | null
-  widgetMgr: WidgetStateManager
-  elementListBuffer: Elements | null
-  elementListBufferTimerIsSet: boolean
+  private readonly sessionEventDispatcher: SessionEventDispatcher
+  private readonly statusWidgetRef: React.RefObject<StatusWidget>
+  private connectionManager: ConnectionManager | null
+  private readonly widgetMgr: WidgetStateManager
+  private uploadClient: FileUploadClient
+  private elementListBuffer: Elements | null
+  private elementListBufferTimerIsSet: boolean
 
   constructor(props: Props) {
     super(props)
@@ -135,6 +137,11 @@ export class App extends PureComponent<Props, State> {
     this.connectionManager = null
     this.widgetMgr = new WidgetStateManager((msg: IBackMsg) => {
       this.sendBackMsg(new BackMsg(msg))
+    })
+    this.uploadClient = new FileUploadClient(() => {
+      return this.connectionManager
+        ? this.connectionManager.getBaseUriParts()
+        : undefined
     })
     this.elementListBufferTimerIsSet = false
     this.elementListBuffer = null
@@ -284,9 +291,21 @@ export class App extends PureComponent<Props, State> {
    */
 
   handleInitialize = (initializeMsg: Initialize): void => {
-    const { environmentInfo, userInfo, config, sessionState } = initializeMsg
+    const {
+      sessionId,
+      environmentInfo,
+      userInfo,
+      config,
+      sessionState,
+    } = initializeMsg
 
-    if (!environmentInfo || !userInfo || !config || !sessionState) {
+    if (
+      sessionId == null ||
+      !environmentInfo ||
+      !userInfo ||
+      !config ||
+      !sessionState
+    ) {
       throw new Error("InitializeMsg is missing a required field")
     }
 
@@ -297,6 +316,7 @@ export class App extends PureComponent<Props, State> {
     }
 
     SessionInfo.current = new SessionInfo({
+      sessionId: sessionId,
       streamlitVersion: environmentInfo.streamlitVersion,
       pythonVersion: environmentInfo.pythonVersion,
       installationId: userInfo.installationId,
@@ -755,7 +775,7 @@ export class App extends PureComponent<Props, State> {
   /**
    * Sends a message back to the server.
    */
-  sendBackMsg = (msg: BackMsg): void => {
+  private sendBackMsg = (msg: BackMsg): void => {
     if (this.connectionManager) {
       logMessage(msg)
       this.connectionManager.sendMessage(msg)
@@ -867,6 +887,7 @@ export class App extends PureComponent<Props, State> {
             widgetsDisabled={
               this.state.connectionState !== ConnectionState.CONNECTED
             }
+            uploadClient={this.uploadClient}
           />
 
           {dialog}

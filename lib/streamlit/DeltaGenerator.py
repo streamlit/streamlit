@@ -18,6 +18,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+from streamlit.server.Server import Server
 
 setup_2_3_shims(globals())
 
@@ -2039,7 +2040,8 @@ class DeltaGenerator(object):
     def file_uploader(self, element, label, type=None, encoding="auto", key=None):
         """Display a file uploader widget.
 
-        By default, uploaded files are limited to 50MB but you can configure that using the `server.maxUploadSize` config option.
+        By default, uploaded files are limited to 50MB but you can configure
+        that using the `server.maxUploadSize` config option.
 
         Parameters
         ----------
@@ -2086,8 +2088,9 @@ class DeltaGenerator(object):
         data = None
         ctx = get_report_ctx()
         if ctx is not None:
-            progress, data = ctx.uploaded_file_mgr.get_data(element.file_uploader.id)
-            element.file_uploader.progress = progress
+            data = ctx.uploaded_file_mgr.get_file_data(
+                session_id=ctx.session_id, widget_id=element.file_uploader.id
+            )
 
         if data is None:
             return NoValue
