@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { PureComponent, ReactNode } from "react"
 import { Map as ImmutableMap } from "immutable"
 import { Progress as UIProgress } from "reactstrap"
 
@@ -28,11 +28,11 @@ interface Props {
 
 const FAST_UPDATE_MS = 50
 
-class Progress extends React.PureComponent<Props> {
+class Progress extends PureComponent<Props> {
   lastValue = -1
   lastAnimatedTime = -1
 
-  public render(): React.ReactNode {
+  public render(): ReactNode {
     const { element, width } = this.props
     const value = element.get("value")
     const time = new Date().getTime()
@@ -41,7 +41,9 @@ class Progress extends React.PureComponent<Props> {
     const isMovingBackwards = value < this.lastValue
     const isMovingSuperFast = time - this.lastAnimatedTime < FAST_UPDATE_MS
     const className =
-      isMovingBackwards || isMovingSuperFast
+      isMovingBackwards ||
+      isMovingSuperFast ||
+      document.visibilityState === "hidden"
         ? "without-transition"
         : "with-transition"
 
