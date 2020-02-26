@@ -22,7 +22,8 @@ LOGGER = get_logger(__name__)
 
 
 class ReportContext(object):
-    def __init__(self, enqueue, widgets, widget_ids_this_run, uploaded_file_mgr, report_session_id):
+    def __init__(self, enqueue, widgets, widget_ids_this_run, uploaded_file_mgr, 
+                report_session_id="whatever"):
         # (dict) Mapping of container (type str or BlockPath) to top-level
         # cursor (type AbstractCursor).
         self.cursors = {}
@@ -85,11 +86,11 @@ class ReportThread(threading.Thread):
 
     def __init__(
         self, enqueue, widgets, target=None, name=None, uploaded_file_mgr=None,
+        report_session_id=None,
     ):
         super(ReportThread, self).__init__(target=target, name=name)
         self.streamlit_report_ctx = ReportContext(
-            enqueue, widgets, _WidgetIDSet(), uploaded_file_mgr
-        )
+            enqueue, widgets, _WidgetIDSet(), uploaded_file_mgr, report_session_id)
 
 
 def add_report_ctx(thread=None, ctx=None):
@@ -139,6 +140,5 @@ def get_report_ctx():
         LOGGER.warning("Thread '%s': missing ReportContext" % thread.name)
     return ctx
 
-
-# Avoid circular dependencies in Python 2
+# to avoid circular dependencies
 import streamlit
