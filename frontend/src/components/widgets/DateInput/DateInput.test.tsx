@@ -98,10 +98,12 @@ describe("DateInput widget", () => {
     })
 
     expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual(newDate)
-    expect(
-      props.widgetMgr.setStringValue
-    ).toHaveBeenCalledWith(props.element.get("id"), "2020/02/06", {
-      fromUi: true,
-    })
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element.get("id"),
+      "2020/02/06",
+      {
+        fromUi: true,
+      }
+    )
   })
 })

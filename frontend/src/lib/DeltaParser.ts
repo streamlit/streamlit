@@ -59,9 +59,7 @@ export function applyDelta(
 
   dispatchOneOf(delta, "type", {
     newElement: (element: SimpleElement) => {
-      const currentElement: ReportElement = elements[container].getIn(
-        deltaPath
-      )
+      const currentElement: ReportElement = elements[container].getIn(deltaPath)
 
       elements[container] = elements[container].setIn(
         deltaPath,

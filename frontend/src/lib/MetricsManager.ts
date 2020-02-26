@@ -61,11 +61,7 @@ export class MetricsManager {
    */
   public static current: MetricsManager = new MetricsManager()
 
-  public initialize({
-    gatherUsageStats,
-  }: {
-    gatherUsageStats: boolean
-  }): void {
+  public initialize({ gatherUsageStats }: { gatherUsageStats: boolean }): void {
     this.initialized = true
     this.actuallySendMetrics = gatherUsageStats
 

@@ -44,8 +44,7 @@ describe("linkReference", () => {
     )
   })
   it("renders a link without title", () => {
-    const body =
-      "Everybody loves [The Internet Archive](https://archive.org/)."
+    const body = "Everybody loves [The Internet Archive](https://archive.org/)."
     const component = create(getMarkdownElement(body))
     const instance = component.root
     expect(instance.findByType(linkWithTargetBlank).props.href).toBe(

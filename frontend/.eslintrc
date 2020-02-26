@@ -44,15 +44,14 @@
     "@typescript-eslint/no-console": "off",
     // Empty interfaces are ok
     "@typescript-eslint/no-empty-interface": "off",
+    // Warn about empty functions
+    "@typescript-eslint/no-empty-function": "warn",
     // We prefer not using `any`, but don't disallow it
     "@typescript-eslint/no-explicit-any": "off",
     // Don't warn about unused function params
     "@typescript-eslint/no-unused-vars": ["warn", { "args": "none" }],
     // It's safe to use functions before they're defined
-    "@typescript-eslint/no-use-before-define": [
-      "warn",
-      { "functions": false }
-    ],
+    "@typescript-eslint/no-use-before-define": ["warn", { "functions": false }],
     // Functions must have return types, but we allow
     // inline function expressions to omit them
     "@typescript-eslint/explicit-function-return-type": [

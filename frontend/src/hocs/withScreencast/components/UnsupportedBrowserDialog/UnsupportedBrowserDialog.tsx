@@ -37,8 +37,7 @@ class UnsupportedBrowserDialog extends PureComponent<Props> {
             </span>
             <p>
               Due to limitations with some browsers, this feature is only
-              supported on recent desktop versions of Chrome, Firefox, and
-              Edge.
+              supported on recent desktop versions of Chrome, Firefox, and Edge.
             </p>
           </div>
         </ModalBody>

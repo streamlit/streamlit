@@ -101,9 +101,7 @@ class ReportView extends PureComponent<Props> {
                 elements={this.props.elements.main}
                 reportId={this.props.reportId}
                 reportRunState={this.props.reportRunState}
-                showStaleElementIndicator={
-                  this.props.showStaleElementIndicator
-                }
+                showStaleElementIndicator={this.props.showStaleElementIndicator}
                 widgetMgr={this.props.widgetMgr}
                 widgetsDisabled={this.props.widgetsDisabled}
               />

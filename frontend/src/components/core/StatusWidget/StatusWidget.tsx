@@ -237,10 +237,7 @@ export class StatusWidget extends PureComponent<Props, State> {
         // re-running the report in a second or two, but we can appear
         // more responsive by claiming it's started immemdiately.
         return this.renderReportIsRunning()
-      } else if (
-        !RERUN_PROMPT_MODAL_DIALOG &&
-        this.state.reportChangedOnDisk
-      ) {
+      } else if (!RERUN_PROMPT_MODAL_DIALOG && this.state.reportChangedOnDisk) {
         return this.renderRerunReportPrompt()
       }
     }
@@ -288,11 +285,7 @@ export class StatusWidget extends PureComponent<Props, State> {
           this.state.statusMinimized ? "report-is-running-minimized" : ""
         }
       >
-        <img
-          className="ReportRunningIcon"
-          src={iconRunning}
-          alt="Running..."
-        />
+        <img className="ReportRunningIcon" src={iconRunning} alt="Running..." />
         <label>Running...</label>
         {stopButton}
         {this.state.statusMinimized ? (

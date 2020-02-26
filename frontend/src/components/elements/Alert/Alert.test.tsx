@@ -32,10 +32,7 @@ const getProps = (elementProps: object = {}): AlertProps => ({
   width: 100,
 })
 
-function elementClassIsCorrect(
-  element: ReactElement,
-  format: number
-): boolean {
+function elementClassIsCorrect(element: ReactElement, format: number): boolean {
   return element.props.className.includes(getAlertCSSClass(format))
 }
 

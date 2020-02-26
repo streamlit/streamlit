@@ -375,11 +375,7 @@ function getTargetColorFromTargetColorRGBAColumns(d: any): number[] {
 function parseGetters(type: any, spec: any): void {
   // If this is a layer that accepts a getPosition argument, build that
   // argument from getLatiude and getLongitude.
-  if (
-    POSITION_LAYER_TYPES.has(type) &&
-    spec.getLatitude &&
-    spec.getLongitude
-  ) {
+  if (POSITION_LAYER_TYPES.has(type) && spec.getLatitude && spec.getLongitude) {
     const latField = spec.getLatitude
     const lonField = spec.getLongitude
     spec.getPosition = (d: any) => [d[lonField], d[latField]]

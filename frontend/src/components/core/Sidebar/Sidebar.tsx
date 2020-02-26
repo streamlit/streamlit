@@ -48,9 +48,7 @@ class Sidebar extends PureComponent<Props, State> {
     const { innerWidth } = window || {}
 
     this.state = {
-      collapsedSidebar: innerWidth
-        ? innerWidth <= MEDIUM_BREAKPOINT_PX
-        : false,
+      collapsedSidebar: innerWidth ? innerWidth <= MEDIUM_BREAKPOINT_PX : false,
     }
   }
 

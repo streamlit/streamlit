@@ -216,9 +216,7 @@ class VegaLiteChart extends React.PureComponent<PropsWithHeight, State> {
       return
     }
 
-    const [prevNumRows, prevNumCols] = tableGetRowsAndCols(
-      prevData.get("data")
-    )
+    const [prevNumRows, prevNumCols] = tableGetRowsAndCols(prevData.get("data"))
     const [numRows, numCols] = tableGetRowsAndCols(data.get("data"))
 
     // Check if dataframes have same "shape" but the new one has more rows.

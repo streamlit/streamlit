@@ -108,10 +108,7 @@ export class ConnectionManager {
       }
     } catch (err) {
       logError(err.message)
-      this.setConnectionState(
-        ConnectionState.DISCONNECTED_FOREVER,
-        err.message
-      )
+      this.setConnectionState(ConnectionState.DISCONNECTED_FOREVER, err.message)
     }
   }
 

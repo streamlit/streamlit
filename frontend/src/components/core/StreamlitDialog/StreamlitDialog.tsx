@@ -221,11 +221,7 @@ function rerunScriptDialog(props: RerunScriptProps): ReactElement {
           <Button outline color="secondary" onClick={props.onClose}>
             Cancel
           </Button>{" "}
-          <Button
-            outline
-            color="primary"
-            onClick={() => props.rerunCallback()}
-          >
+          <Button outline color="primary" onClick={() => props.rerunCallback()}>
             Rerun
           </Button>
         </ModalFooter>

@@ -124,11 +124,7 @@ export class WidgetStateManager {
     return undefined
   }
 
-  public setStringValue(
-    widgetId: string,
-    value: string,
-    source: Source
-  ): void {
+  public setStringValue(widgetId: string, value: string, source: Source): void {
     this.getOrCreateWidgetStateProto(widgetId).stringValue = value
     this.maybeSendUpdateWidgetsMessage(source)
   }

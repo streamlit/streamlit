@@ -465,9 +465,7 @@ export function addRows(element: any, namedDataSet: any): any {
     newDataFrame = newRows
   } else {
     newDataFrame = dataframeToModify
-      .update("index", (index: any) =>
-        concatIndex(index, newRows.get("index"))
-      )
+      .update("index", (index: any) => concatIndex(index, newRows.get("index")))
       .updateIn(["data", "cols"], (cols: any) => {
         return cols.zipWith(
           (col1: any, col2: any) => concatAnyArray(col1, col2),
@@ -647,8 +645,7 @@ function pushNamedDataSet(element: any, namedDataset: any): any {
  */
 function setDataFrameInNamedDataSet(element: any, index: any, df: any): any {
   return updateOneOf(element, "type", {
-    vegaLiteChart: (chart: any) =>
-      chart.setIn(["datasets", index, "data"], df),
+    vegaLiteChart: (chart: any) => chart.setIn(["datasets", index, "data"], df),
   })
 }
 

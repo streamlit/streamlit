@@ -23,10 +23,7 @@ import url from "url"
  * @param reportId the report ID of the resource to fetch
  * @param objName the name of the resource to fetch
  */
-export function getReportObjectPath(
-  reportId: string,
-  objName: string
-): string {
+export function getReportObjectPath(reportId: string, objName: string): string {
   const { pathname } = url.parse(window.location.href, true)
 
   let resourceRoot = ""

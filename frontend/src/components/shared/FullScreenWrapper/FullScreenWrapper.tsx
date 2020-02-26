@@ -87,8 +87,7 @@ class FullScreenWrapper extends PureComponent<Props, State> {
   convertScssRemValueToPixels = (scssValue: string): number => {
     const remValue = parseFloat(scssValue)
     return (
-      remValue *
-      parseFloat(getComputedStyle(document.documentElement).fontSize)
+      remValue * parseFloat(getComputedStyle(document.documentElement).fontSize)
     )
   }
 
