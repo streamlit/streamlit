@@ -31,9 +31,10 @@ import shutil
 import struct
 import textwrap
 import threading
-import types
 from collections import namedtuple
-from typing import Any, Dict, List
+from typing import Any, Dict
+
+from cachetools import LRUCache
 
 import streamlit as st
 from streamlit.util import functools_wraps
@@ -75,10 +76,6 @@ class CachedObjectWasMutatedError(ValueError):
 
 CacheEntry = namedtuple("CacheEntry", ["value", "hash"])
 DiskCacheEntry = namedtuple("DiskCacheEntry", ["value"])
-
-
-# The in memory cache.
-_mem_cache = {}  # type: Dict[str, CacheEntry]
 
 
 # A thread-local counter that's incremented when we enter @st.cache
@@ -207,9 +204,9 @@ def _get_mutated_output_error_message():
     return message
 
 
-def _read_from_mem_cache(key, allow_output_mutation, hash_funcs):
-    if key in _mem_cache:
-        entry = _mem_cache[key]
+def _read_from_mem_cache(mem_cache, key, allow_output_mutation, hash_funcs):
+    if key in mem_cache:
+        entry = mem_cache[key]
 
         if (
             allow_output_mutation
@@ -225,13 +222,13 @@ def _read_from_mem_cache(key, allow_output_mutation, hash_funcs):
         raise CacheKeyNotFoundError("Key not found in mem cache")
 
 
-def _write_to_mem_cache(key, value, allow_output_mutation, hash_funcs):
+def _write_to_mem_cache(mem_cache, key, value, allow_output_mutation, hash_funcs):
     if allow_output_mutation:
         hash = None
     else:
         hash = get_hash(value, hash_funcs=hash_funcs)
 
-    _mem_cache[key] = CacheEntry(value=value, hash=hash)
+    mem_cache[key] = CacheEntry(value=value, hash=hash)
 
 
 def _read_from_disk_cache(key):
@@ -269,9 +266,7 @@ def _write_to_disk_cache(key, value):
         raise CacheError("Unable to write to cache: %s" % e)
 
 
-def _read_from_cache(
-    key, persisted, allow_output_mutation, func_or_code, hash_funcs=None
-):
+def _read_from_cache(mem_cache, key, persisted, allow_output_mutation, hash_funcs=None):
     """
     Read the value from the cache. Our goal is to read from memory
     if possible. If the data was mutated (hash changed), we show a
@@ -279,20 +274,24 @@ def _read_from_cache(
     or rerun the code.
     """
     try:
-        return _read_from_mem_cache(key, allow_output_mutation, hash_funcs)
+        return _read_from_mem_cache(mem_cache, key, allow_output_mutation, hash_funcs)
     except CachedObjectWasMutatedError as e:
         st.warning(_get_mutated_output_error_message())
         return e.cached_value
     except CacheKeyNotFoundError as e:
         if persisted:
             value = _read_from_disk_cache(key)
-            _write_to_mem_cache(key, value, allow_output_mutation, hash_funcs)
+            _write_to_mem_cache(
+                mem_cache, key, value, allow_output_mutation, hash_funcs
+            )
             return value
         raise e
 
 
-def _write_to_cache(key, value, persist, allow_output_mutation, hash_funcs=None):
-    _write_to_mem_cache(key, value, allow_output_mutation, hash_funcs)
+def _write_to_cache(
+    mem_cache, key, value, persist, allow_output_mutation, hash_funcs=None
+):
+    _write_to_mem_cache(mem_cache, key, value, allow_output_mutation, hash_funcs)
     if persist:
         _write_to_disk_cache(key, value)
 
@@ -305,6 +304,7 @@ def cache(
     suppress_st_warning=False,
     hash_funcs=None,
     ignore_hash=False,
+    max_size=128,
 ):
     """Function decorator to memoize function executions.
 
@@ -337,6 +337,11 @@ def cache(
         inside Streamlit's caching mechanism: when the hasher encounters an object, it will first
         check to see if its type matches a key in this dict and, if so, will use the provided
         function to generate a hash for it. See below for an example of how this can be used.
+
+    max_size : int or None
+        The maximum number of values to keep in the cache, or None
+        for an unbounded cache. When a new value is added to a full cache,
+        the oldest cached value will be removed.
 
     ignore_hash : boolean
         DEPRECATED. Please use allow_output_mutation instead.
@@ -401,7 +406,15 @@ def cache(
             show_spinner=show_spinner,
             suppress_st_warning=suppress_st_warning,
             hash_funcs=hash_funcs,
+            max_size=max_size,
         )
+
+    # Each function gets its own in-memory cache. If max_size is None,
+    # the function's cache is unbounded; otherwise it gets an LRUCache.
+    if max_size is None:
+        mem_cache = {}
+    else:
+        mem_cache = LRUCache(maxsize=max_size)
 
     @functools_wraps(func)
     def wrapped_func(*args, **kwargs):
@@ -436,7 +449,11 @@ def cache(
 
             try:
                 return_value = _read_from_cache(
-                    key, persist, allow_output_mutation, func, hash_funcs
+                    mem_cache=mem_cache,
+                    key=key,
+                    persisted=persist,
+                    allow_output_mutation=allow_output_mutation,
+                    hash_funcs=hash_funcs,
                 )
                 LOGGER.debug("Cache hit: %s", func)
             except CacheKeyNotFoundError:
@@ -450,6 +467,7 @@ def cache(
                         return_value = func(*args, **kwargs)
 
                 _write_to_cache(
+                    mem_cache=mem_cache,
                     key=key,
                     value=return_value,
                     persist=persist,
@@ -506,6 +524,7 @@ class Cache(Dict[Any, Any]):
     def __init__(self, persist=False, allow_output_mutation=False):
         self._persist = persist
         self._allow_output_mutation = allow_output_mutation
+        self._mem_cache = {}
 
         dict.__init__(self)
 
@@ -560,7 +579,10 @@ class Cache(Dict[Any, Any]):
 
         try:
             value, _ = _read_from_cache(
-                key, self._persist, self._allow_output_mutation, code, None
+                mem_cache=self._mem_cache,
+                key=key,
+                persisted=self._persist,
+                allow_output_mutation=self._allow_output_mutation,
             )
             self.update(value)
         except CacheKeyNotFoundError:
@@ -568,12 +590,17 @@ class Cache(Dict[Any, Any]):
                 # If we don't hash the results, we don't need to use exec and just return True.
                 # This way line numbers will be correct.
                 _write_to_cache(
-                    key=key, value=self, persist=False, allow_output_mutation=True
+                    mem_cache=self._mem_cache,
+                    key=key,
+                    value=self,
+                    persist=False,
+                    allow_output_mutation=True,
                 )
                 return True
 
             exec(code, caller_frame.f_globals, caller_frame.f_locals)
             _write_to_cache(
+                mem_cache=self._mem_cache,
                 key=key,
                 value=self,
                 persist=self._persist,

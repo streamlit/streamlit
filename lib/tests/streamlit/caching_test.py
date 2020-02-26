@@ -209,6 +209,60 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
         # The other thread should not have modified the main thread
         self.assertEqual(1, get_counter())
 
+    def test_max_size(self):
+        """The oldest object should be evicted when maxsize is reached."""
+        called_values = []
+
+        @st.cache(max_size=2)
+        def f(x):
+            called_values.append(x)
+            return x
+
+        self.assertEqual([], called_values)
+
+        # Stick two items in the cache, filling it up.
+        f(0)
+        f(1)
+        self.assertEqual([0, 1], called_values)
+
+        # 0, 1 are already cached, so called_values shouldn't change.
+        f(0)
+        f(1)
+        self.assertEqual([0, 1], called_values)
+
+        # Add a new item to the cache. 0 should be evicted; 1 and 2
+        # should be present.
+        f(2)
+
+        # f(0) again should cause 0 to be added again, since it was
+        # previously evicted.
+        f(1)
+        f(0)
+        self.assertEqual([0, 1, 2, 0], called_values)
+
+    # Reduce the huge amount of logspam we get from hashing/caching
+    @patch("streamlit.hashing.LOGGER.debug")
+    @patch("streamlit.caching.LOGGER.debug")
+    def test_no_max_size(self, _1, _2):
+        """If max_size is None, the cache is unbounded."""
+        called_values = []
+
+        @st.cache(max_size=None)
+        def f(x):
+            called_values.append(x)
+            return x
+
+        # Stick a bunch of items in the cache.
+        for ii in range(256):
+            f(ii)
+
+        # Clear called_values, and test that accessing the same bunch of
+        # items doesn't result in f() being called.
+        called_values = []
+        for ii in range(256):
+            f(ii)
+        self.assertEqual([], called_values)
+
 
 # Temporarily turn off these tests since there's no Cache object in __init__
 # right now.

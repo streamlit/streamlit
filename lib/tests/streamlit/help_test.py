@@ -114,8 +114,14 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(
                 ds.signature,
                 (
-                    "(func=None, persist=False, "
-                    "allow_output_mutation=False, show_spinner=True, suppress_st_warning=False, hash_funcs=None, ignore_hash=False)"
+                    "(func=None, "
+                    "persist=False, "
+                    "allow_output_mutation=False, "
+                    "show_spinner=True, "
+                    "suppress_st_warning=False, "
+                    "hash_funcs=None, "
+                    "ignore_hash=False, "
+                    "max_size=128)"
                 ),
             )
             self.assertTrue(ds.doc_string.startswith("Function decorator to"))
