@@ -40,7 +40,7 @@ describe("FileUploadClient", () => {
       authorEmail: "ae",
       maxCachedMessageAge: 2,
       commandLine: "command line",
-      mapboxToken: "mpt",
+      userMapboxToken: "mockUserMapboxToken",
     })
   })
 
