@@ -56,6 +56,7 @@ class ScriptRunner(object):
         widget_states,
         request_queue,
         uploaded_file_mgr=None,
+        report_session_id=None,
     ):
         """Initialize the ScriptRunner.
 
@@ -82,6 +83,7 @@ class ScriptRunner(object):
         self._enqueue_forward_msg = enqueue_forward_msg
         self._request_queue = request_queue
         self._uploaded_file_mgr = uploaded_file_mgr
+        self._report_session_id = report_session_id
 
         self._widgets = Widgets()
         self._widgets.set_state(widget_states)
@@ -131,7 +133,7 @@ class ScriptRunner(object):
             target=self._process_request_queue,
             name="ScriptRunner.scriptThread",
             uploaded_file_mgr=self._uploaded_file_mgr,
-            report_session_id=self.report_session_id,
+            report_session_id=self._report_session_id,
         )
         self._script_thread.start()
 
