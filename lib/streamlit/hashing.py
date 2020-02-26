@@ -402,7 +402,7 @@ class _CodeHasher:
         ):
             # Hash files as name + last modification date + offset.
             h = hashlib.new("md5")
-            obj_name = getattr(obj, "name", "file")
+            obj_name = getattr(obj, "name", "wonthappen")  # Just to appease MyPy.
             self.update(h, obj_name)
             self.update(h, os.path.getmtime(obj_name))
             self.update(h, obj.tell())
