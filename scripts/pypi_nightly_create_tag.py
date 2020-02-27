@@ -29,13 +29,13 @@ def create_tag():
     """Create tag with updated version and date."""
 
     # Get latest version
-    current_version = streamlit.version._get_installed_streamlit_version()
+    current_version = streamlit.version._get_latest_streamlit_version()
 
     # Update micro
     version_with_inc_micro = (
-        current_version[0],
-        current_version[1],
-        current_version[2] + 1,
+        current_version.major,
+        current_version.minor,
+        current_version.micro + 1,
     )
 
     # Append todays date
