@@ -65,6 +65,9 @@ LOGGER = get_logger(__name__)
 # The timer function we use with TTLCache.
 TTLCACHE_TIMER = time.monotonic
 
+# A list of all mem-caches we've created.
+_all_mem_caches = []
+
 
 class CacheError(Exception):
     pass
@@ -211,20 +214,30 @@ def _get_mutated_output_error_message():
 
 def _create_mem_cache(max_entries, ttl):
     """Create an in-memory cache object with the given parameters."""
-    if max_entries is None:
-        max_entries = math.inf
-    elif not isinstance(max_entries, int):
-        raise Exception("`max_entries` must be an int or None")
-
-    if not isinstance(ttl, (float, int)) and ttl is not None:
-        raise Exception("`ttl` must be a float or None")
-
-    # If ttl is none, just create an LRUCache. (TTLCache is simply an
-    # LRUCache that adds a ttl option.)
-    if ttl is None:
-        return LRUCache(maxsize=max_entries)
+    if max_entries is None and ttl is None:
+        # If we have no max_entries or TTL, we can just use a regular dict.
+        mem_cache = {}
     else:
-        return TTLCache(maxsize=max_entries, ttl=ttl, timer=TTLCACHE_TIMER)
+        if max_entries is None:
+            max_entries = math.inf
+        elif not isinstance(max_entries, int):
+            raise Exception("`max_entries` must be an int or None")
+
+        if not isinstance(ttl, (float, int)) and ttl is not None:
+            raise Exception("`ttl` must be a float or None")
+
+        # If ttl is none, just create an LRUCache. (TTLCache is simply an
+        # LRUCache that adds a ttl option.)
+        if ttl is None:
+            mem_cache = LRUCache(maxsize=max_entries)
+        else:
+            mem_cache = TTLCache(maxsize=max_entries, ttl=ttl, timer=TTLCACHE_TIMER)
+
+    # Stick the new cache in our global list
+    global _all_mem_caches
+    _all_mem_caches.append(mem_cache)
+
+    return mem_cache
 
 
 def _read_from_mem_cache(mem_cache, key, allow_output_mutation, hash_funcs):
@@ -549,7 +562,7 @@ class Cache(Dict[Any, Any]):
     def __init__(self, persist=False, allow_output_mutation=False):
         self._persist = persist
         self._allow_output_mutation = allow_output_mutation
-        self._mem_cache = {}
+        self._mem_cache = _create_mem_cache(None, None)
 
         dict.__init__(self)
 
@@ -679,5 +692,7 @@ def _clear_disk_cache():
 
 
 def _clear_mem_cache():
-    global _mem_cache
-    _mem_cache = {}
+    global _all_mem_caches
+    # Copy _all_mem_caches to guard against threading errors
+    for mem_cache in list(_all_mem_caches):
+        mem_cache.clear()
