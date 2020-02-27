@@ -304,9 +304,10 @@ class CodeHasher:
         hash_stacks.push(obj)
 
         try:
-            LOGGER.debug("About to hash: %s", obj)
+            # These were super noisy so i turned them off.  --NM
+            # LOGGER.debug("About to hash: %s", obj)
             b = self._to_bytes(obj, context)
-            LOGGER.debug("Done hashing: %s", obj)
+            # LOGGER.debug("Done hashing: %s", obj)
 
             self.size += sys.getsizeof(b)
 

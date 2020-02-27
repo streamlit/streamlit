@@ -25,6 +25,7 @@ from streamlit import magic
 from streamlit import source_util
 from streamlit.ReportThread import ReportThread
 from streamlit.ReportThread import get_report_ctx
+from streamlit.MediaFileManager import media_file_manager
 from streamlit.ScriptRequestQueue import ScriptRequest
 from streamlit.logger import get_logger
 from streamlit.widgets import Widgets
@@ -332,7 +333,7 @@ class ScriptRunner(object):
             # ScriptRunner.
 
         finally:
-            # XXX call media_manager.reset_files_for_session
+            media_file_manager.reset_files_for_session()
             self._widgets.reset_triggers()
             self.on_event.send(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
 

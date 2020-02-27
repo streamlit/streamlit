@@ -73,7 +73,7 @@ class MediaFileManager(object):
     """In-memory file manager for MediaFile objects."""
 
     def __init__(self):
-        self._files = collections.defaultdict(set)
+        self._files = collections.defaultdict()
         self._session_id_to_files = collections.defaultdict(set)
 
     def _remove(self, mediafile_or_id):
