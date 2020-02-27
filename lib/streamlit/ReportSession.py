@@ -25,6 +25,7 @@ from streamlit import __version__
 from streamlit import caching
 from streamlit import config
 from streamlit import url_util
+# from streamlit.MediaFileManager import media_file_manager     # XXX
 from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.Report import Report
 from streamlit.ScriptRequestQueue import RerunData
@@ -294,6 +295,7 @@ class ReportSession(object):
                 self.enqueue(msg)
 
         elif event == ScriptRunnerEvent.SHUTDOWN:
+            # XXX media_file_manager.reset_files_for_session()
             # When ScriptRunner shuts down, update our local reference to it,
             # and check to see if we need to spawn a new one. (This is run on
             # the main thread.)

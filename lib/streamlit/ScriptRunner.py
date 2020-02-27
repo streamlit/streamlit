@@ -23,9 +23,9 @@ from blinker import Signal
 from streamlit import config
 from streamlit import magic
 from streamlit import source_util
+from streamlit.MediaFileManager import media_file_manager
 from streamlit.ReportThread import ReportThread
 from streamlit.ReportThread import get_report_ctx
-from streamlit.MediaFileManager import media_file_manager
 from streamlit.ScriptRequestQueue import ScriptRequest
 from streamlit.logger import get_logger
 from streamlit.widgets import Widgets
@@ -241,6 +241,7 @@ class ScriptRunner(object):
         LOGGER.debug("Running script %s", rerun_data)
 
         # Reset DeltaGenerators and widgets.
+        media_file_manager.reset_files_for_session()
         get_report_ctx().reset()
 
         self.on_event.send(ScriptRunnerEvent.SCRIPT_STARTED)
@@ -333,7 +334,6 @@ class ScriptRunner(object):
             # ScriptRunner.
 
         finally:
-            media_file_manager.reset_files_for_session()
             self._widgets.reset_triggers()
             self.on_event.send(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
 

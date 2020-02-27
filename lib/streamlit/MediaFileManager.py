@@ -18,14 +18,22 @@
 import hashlib
 import collections
 
-from streamlit.ReportThread import get_report_ctx as _get_report_ctx
+from streamlit.ReportThread import get_report_ctx
 
 STATIC_MEDIA_ENDPOINT = "/media"
 
 
+
 def _get_session_id():
-    """Semantic wrapper to retrieve current ReportSession ID"""
-    return _get_report_ctx().report_session_id
+    """Semantic wrapper to retrieve current ReportSession ID."""
+    ctx = get_report_ctx()
+    if ctx is None:
+        # This is only None when running "python myscript.py" rather than
+        # "streamlit run myscript.py". In which case the session ID doesn't
+        # matter and can just be a constant, as there's only ever "session".
+        return "dontcare"
+    else:
+        return ctx.report_session_id
 
 
 def _get_file_id(data, mimetype=None):
@@ -73,11 +81,12 @@ class MediaFileManager(object):
     """In-memory file manager for MediaFile objects."""
 
     def __init__(self):
-        self._files = collections.defaultdict()
-        self._session_id_to_files = collections.defaultdict(set)
+        self._files = {}
+        self._session_id_to_file_ids = collections.defaultdict(set)
 
     def _remove(self, mediafile_or_id):
         """Deletes MediaFile via file_id lookup.
+
         Raises KeyError if not found.
         """
         if type(mediafile_or_id) is MediaFile:
@@ -90,14 +99,20 @@ class MediaFileManager(object):
 
         Should be called whenever ScriptRunner completes.
         """
-        for file_id in self._session_id_to_files[_get_session_id()]:
+        for file_id in self._session_id_to_file_ids[_get_session_id()]:
             entry = self._files[file_id]
             entry.refcount -= 1
 
             if entry.refcount == 0:
                 self._remove(file_id)
 
-        del self._session_id_to_files[_get_session_id()]
+        del self._session_id_to_file_ids[_get_session_id()]
+        print("DELETED FILES FOR SESSION ID", _get_session_id())
+        print()
+        print("Current files:")
+        print(self._files)
+        print("Sessions still active:")
+        print(self._session_id_to_file_ids)
 
     def add(self, content, mimetype):
         """Adds new MediaFile with given parameters; returns the object.
@@ -123,13 +138,11 @@ class MediaFileManager(object):
         else:
             self._files[file_id].refcount += 1
 
-        self._session_id_to_files[_get_session_id()].add(file_id)
+        self._session_id_to_file_ids[_get_session_id()].add(file_id)
         return self._files[file_id]
 
     def get(self, mediafile_or_id):
         """Returns MediaFile object for given file_id and decrements its refcount.
-
-        If the MediaFile's refcount goes to zero, the file is deleted.
 
         Raises KeyError if not found.
         """
