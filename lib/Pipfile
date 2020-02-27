@@ -43,9 +43,7 @@ blinker = "*"
 boto3 = "*"
 botocore = "*"
 click = ">=7.0"
-# Pin python-dateutil to work around a botocore issue: https://github.com/boto/botocore/issues/1872
-# TODO: Remove this pin when the above issue is fixed.
-python-dateutil = "<=2.8.0"
+python-dateutil = "*"
 enum-compat = "*"
 # python3 code backported to python2
 future = "*"
