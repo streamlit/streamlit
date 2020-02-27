@@ -15,6 +15,7 @@
 
 """Provides global MediaFileManager object as `media_file_manager`."""
 
+import typing
 import hashlib
 import collections
 
@@ -81,7 +82,7 @@ class MediaFileManager(object):
 
     def __init__(self):
         self._files = {}
-        self._session_id_to_file_ids = collections.defaultdict(set)
+        self._session_id_to_file_ids = collections.defaultdict(set) # type: typing.DefaultDict[str, typing.Set[str]]
 
     def _remove(self, mediafile_or_id):
         """Deletes MediaFile via file_id lookup.
