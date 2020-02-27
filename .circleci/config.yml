@@ -58,6 +58,7 @@ jobs:
 
       # TODO we need to install streamlit for the `pypi_nightly_create_tag.py`
       # script to work because it calls `import streamlit.version`
+      # where is packaging module being installed?
 
       - run:
           name: Create tag
@@ -278,7 +279,6 @@ jobs:
       #################################################################
       - run:
           name: Run mypy
-          # TODO CHANGE BACK TO 3.8
           command: |
             if [ "${CIRCLE_JOB}" != "python-3.8" ] ; then
               echo "Mypy is only run in python-3.8 job"
@@ -436,6 +436,7 @@ jobs:
 
       - run:
           name: create packages
+          no_output_timeout: 30m
           command: |
             make frontend
             make install
