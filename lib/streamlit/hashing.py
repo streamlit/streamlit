@@ -398,7 +398,7 @@ class _CodeHasher:
         elif hasattr(obj, "name") and (
             isinstance(obj, io.IOBase)
             # Handle temporary files used during testing
-            or isinstance(obj, tempfile._TemporaryFileWrapper)
+            or isinstance(obj, tempfile._TemporaryFileWrapper)  # type: ignore[attr-defined]
         ):
             # Hash files as name + last modification date + offset.
             h = hashlib.new("md5")
