@@ -7,18 +7,16 @@ workflows:
   version: 2
   circleci:
     jobs:
-      # TODO undisable this
-      #- python-3.5 # Oldest supported Python minor version.
+      - python-3.5 # Oldest supported Python minor version.
       - python-3.8 # Latest supported Python minor version.
-      # TODO uncomment this, don't run tests before nightly-release for now
-      #    filters:
-      #      tags:
-      #        only: /^([0-9]+\.){3}dev[0-9]+/ # 0.55.1.dev20201129
+      - python-3.x:
+          filters:
+            tags:
+              only: /^([0-9]+\.){3}dev[0-9]+/ # 0.55.1.dev20201129
       - nightly-release:
-          # TODO uncomment this, don't run tests before nightly-release for now
-          #    requires:
-          #      # TODO run 3.5 and cypress non flaky tests (later)
-          #      - python-3.8
+          requires:
+            # TODO run 3.5, 3.8 and cypress non flaky tests (later)
+            - python-3.x
           filters:
             tags:
               only: /^([0-9]+\.){3}dev[0-9]+/
@@ -47,6 +45,16 @@ workflows:
       - create-tag
 
 jobs:
+  python-3.x:
+    docker:
+      - image: circleci/python:3.8.1
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout:
+          name: Checkout Streamlit code
+
   create-tag:
     docker:
       - image: circleci/python:3.8.1
