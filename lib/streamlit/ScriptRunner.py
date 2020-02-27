@@ -51,12 +51,12 @@ class ScriptRunnerEvent(Enum):
 class ScriptRunner(object):
     def __init__(
         self,
+        session_id,
         report,
         enqueue_forward_msg,
         widget_states,
         request_queue,
         uploaded_file_mgr=None,
-        report_session_id=None,
     ):
         """Initialize the ScriptRunner.
 
@@ -64,6 +64,9 @@ class ScriptRunner(object):
 
         Parameters
         ----------
+        session_id : str
+            The ReportSession's id.
+
         report : Report
             The ReportSession's report.
 
@@ -79,11 +82,11 @@ class ScriptRunner(object):
             The File manager to store the data uploaded by the file_uploader widget.
 
         """
+        self._session_id = session_id
         self._report = report
         self._enqueue_forward_msg = enqueue_forward_msg
         self._request_queue = request_queue
         self._uploaded_file_mgr = uploaded_file_mgr
-        self._report_session_id = report_session_id
 
         self._widgets = Widgets()
         self._widgets.set_state(widget_states)
@@ -128,12 +131,13 @@ class ScriptRunner(object):
             raise Exception("ScriptRunner was already started")
 
         self._script_thread = ReportThread(
+            session_id=self._session_id,
             enqueue=self._enqueue_forward_msg,
             widgets=self._widgets,
+            uploaded_file_mgr=self._uploaded_file_mgr,
             target=self._process_request_queue,
             name="ScriptRunner.scriptThread",
             uploaded_file_mgr=self._uploaded_file_mgr,
-            report_session_id=self._report_session_id,
         )
         self._script_thread.start()
 

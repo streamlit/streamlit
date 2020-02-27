@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import threading
-from collections import namedtuple
 
 from streamlit.logger import get_logger
 
@@ -24,26 +23,36 @@ LOGGER = get_logger(__name__)
 class ReportContext(object):
     def __init__(
         self,
+        session_id,
         enqueue,
         widgets,
         widget_ids_this_run,
         uploaded_file_mgr,
-        report_session_id,
     ):
+        """Construct a ReportContext.
+
+        Parameters
+        ----------
+        session_id : str
+            The ReportSession's id.
+        enqueue : callable
+            Function that enqueues ForwardMsg protos in the websocket.
+        widgets : Widgets
+            The Widgets state object for the report.
+        widget_ids_this_run : _WidgetIDSet
+            The set of widget IDs that have been assigned in the
+            current report run. This set is cleared at the start of each run.
+        uploaded_file_mgr : UploadedFileManager
+            The manager for files uploaded by all users.
+        """
         # (dict) Mapping of container (type str or BlockPath) to top-level
         # cursor (type AbstractCursor).
         self.cursors = {}
-        # (callable) Function that enqueues ForwardMsg protos in the websocket.
+        self.session_id = session_id
         self.enqueue = enqueue
-        # (Widgets) The Widgets state object for the report
         self.widgets = widgets
-        # (_WidgetIDSet) The set of widget IDs that have been assigned in the
-        # current report run. This set is cleared at the start of each run.
         self.widget_ids_this_run = widget_ids_this_run
-        # (UploadedFileManager) Object that manages files uploaded by this user.
         self.uploaded_file_mgr = uploaded_file_mgr
-        # ReportSession ID: needed to keep and expire objects in MediaFileManager cache.
-        self.report_session_id = report_session_id
 
     def reset(self):
         self.cursors = {}
@@ -90,18 +99,34 @@ REPORT_CONTEXT_ATTR_NAME = "streamlit_report_ctx"
 class ReportThread(threading.Thread):
     """Extends threading.Thread with a ReportContext member"""
 
-    def __init__(
-        self,
-        enqueue,
-        widgets,
-        target=None,
-        name=None,
-        uploaded_file_mgr=None,
-        report_session_id=None,
-    ):
+    def __init__(self, session_id, enqueue, widgets, uploaded_file_mgr=None, target=None, name=None):
+        """Construct a ReportThread.
+
+        Parameters
+        ----------
+        session_id : str
+            The ReportSession's id.
+        enqueue : callable
+            Function that enqueues ForwardMsg protos in the websocket.
+        widgets : Widgets
+            The Widgets state object for the report.
+        uploaded_file_mgr : UploadedFileManager
+            The manager for files uploaded by all users.
+        target : callable
+            The callable object to be invoked by the run() method.
+            Defaults to None, meaning nothing is called.
+        name : str
+            The thread name. By default, a unique name is constructed of
+            the form "Thread-N" where N is a small decimal number.
+
+        """
         super(ReportThread, self).__init__(target=target, name=name)
         self.streamlit_report_ctx = ReportContext(
-            enqueue, widgets, _WidgetIDSet(), uploaded_file_mgr, report_session_id
+            session_id=session_id,
+            enqueue=enqueue,
+            widgets=widgets,
+            uploaded_file_mgr=uploaded_file_mgr,
+            widget_ids_this_run=_WidgetIDSet(),
         )
 
 

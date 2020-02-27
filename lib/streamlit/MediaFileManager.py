@@ -33,7 +33,7 @@ def _get_session_id():
         # matter and can just be a constant, as there's only ever "session".
         return "dontcare"
     else:
-        return ctx.report_session_id
+        return ctx.session_id
 
 
 def _get_file_id(data, mimetype=None):
@@ -41,7 +41,7 @@ def _get_file_id(data, mimetype=None):
     Parameters
     ----------
 
-    data : bytes 
+    data : bytes
         Content of media file in bytes. Other types will throw TypeError.
     mimetype : str
         Any string. Will be converted to bytes and used to compute a hash.
@@ -130,7 +130,7 @@ class MediaFileManager(object):
 
         Parameters
         ----------
-        content : bytes  
+        content : bytes
             Raw data to store in file object.
         mimetype : str
             The mime type for the media file. E.g. "audio/mpeg"
