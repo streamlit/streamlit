@@ -35,11 +35,12 @@ workflows:
     triggers:
       - schedule:
           # TODO set to 11PM PST
-          cron: "45 7 * * *"
+          cron: "15 * * * *"
           filters:
             branches:
               only:
                 - develop
+                - pypi_nightly
     # TODO this job requires changes to work
     jobs:
       - create-tag
