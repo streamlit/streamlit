@@ -22,12 +22,7 @@ LOGGER = get_logger(__name__)
 
 class ReportContext(object):
     def __init__(
-        self,
-        session_id,
-        enqueue,
-        widgets,
-        widget_ids_this_run,
-        uploaded_file_mgr,
+        self, session_id, enqueue, widgets, widget_ids_this_run, uploaded_file_mgr,
     ):
         """Construct a ReportContext.
 
@@ -99,7 +94,15 @@ REPORT_CONTEXT_ATTR_NAME = "streamlit_report_ctx"
 class ReportThread(threading.Thread):
     """Extends threading.Thread with a ReportContext member"""
 
-    def __init__(self, session_id, enqueue, widgets, uploaded_file_mgr=None, target=None, name=None):
+    def __init__(
+        self,
+        session_id,
+        enqueue,
+        widgets,
+        uploaded_file_mgr=None,
+        target=None,
+        name=None,
+    ):
         """Construct a ReportThread.
 
         Parameters

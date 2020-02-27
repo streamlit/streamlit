@@ -87,6 +87,7 @@ class MediaFileHandler(tornado.web.RequestHandler):
         self.set_header("Content-Type:", media.mimetype)
         self.set_status(200)
 
+
 class _SpecialRequestHandler(tornado.web.RequestHandler):
     """Superclass for "special" endpoints, like /healthz."""
 

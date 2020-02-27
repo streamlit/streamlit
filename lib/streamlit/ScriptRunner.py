@@ -137,7 +137,6 @@ class ScriptRunner(object):
             uploaded_file_mgr=self._uploaded_file_mgr,
             target=self._process_request_queue,
             name="ScriptRunner.scriptThread",
-            uploaded_file_mgr=self._uploaded_file_mgr,
         )
         self._script_thread.start()
 
