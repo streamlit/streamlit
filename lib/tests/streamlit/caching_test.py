@@ -211,34 +211,50 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
 
     def test_max_size(self):
         """The oldest object should be evicted when maxsize is reached."""
-        called_values = []
+        # Create 2 cached functions to test that they don't interfere
+        # with each other.
+
+        foo_vals = []
 
         @st.cache(max_entries=2)
-        def f(x):
-            called_values.append(x)
+        def foo(x):
+            foo_vals.append(x)
             return x
 
-        self.assertEqual([], called_values)
+        bar_vals = []
 
-        # Stick two items in the cache, filling it up.
-        f(0)
-        f(1)
-        self.assertEqual([0, 1], called_values)
+        @st.cache(max_entries=3)
+        def bar(x):
+            bar_vals.append(x)
+            return x
+
+        self.assertEqual([], foo_vals)
+        self.assertEqual([], bar_vals)
+
+        # Stick two items in both caches. foo will be filled.
+        foo(0), foo(1)
+        bar(0), bar(1)
+        self.assertEqual([0, 1], foo_vals)
+        self.assertEqual([0, 1], bar_vals)
 
         # 0, 1 are already cached, so called_values shouldn't change.
-        f(0)
-        f(1)
-        self.assertEqual([0, 1], called_values)
+        foo(0), foo(1)
+        bar(0), bar(1)
+        self.assertEqual([0, 1], foo_vals)
+        self.assertEqual([0, 1], bar_vals)
 
-        # Add a new item to the cache. 0 should be evicted; 1 and 2
-        # should be present.
-        f(2)
+        # Add a new item to the cache.
+        # foo: 0 should be evicted; 1 and 2 should be present.
+        # bar: 0, 1, 2 present.
+        foo(2)
+        bar(2)
 
-        # f(0) again should cause 0 to be added again, since it was
-        # previously evicted.
-        f(1)
-        f(0)
-        self.assertEqual([0, 1, 2, 0], called_values)
+        # foo(0) again should cause 0 to be added again, since it was
+        # previously evicted. Nothing will have been evicted from bar.
+        foo(1), foo(0)
+        bar(1), bar(0)
+        self.assertEqual([0, 1, 2, 0], foo_vals)
+        self.assertEqual([0, 1, 2], bar_vals)
 
     # Reduce the huge amount of logspam we get from hashing/caching
     @patch("streamlit.hashing.LOGGER.debug")
@@ -266,27 +282,42 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
     @patch("streamlit.caching.TTLCACHE_TIMER")
     def test_ttl(self, timer_patch):
         """Entries should expire after the given ttl."""
-        called_values = []
+        # Create 2 cached functions to test that they don't interfere
+        # with each other.
+        foo_vals = []
 
         @st.cache(ttl=1)
-        def f(x):
-            called_values.append(x)
+        def foo(x):
+            foo_vals.append(x)
+            return x
+
+        bar_vals = []
+
+        @st.cache(ttl=5)
+        def bar(x):
+            bar_vals.append(x)
             return x
 
         # Store a value at time 0
         timer_patch.return_value = 0
-        f(0)
-        self.assertEqual([0], called_values)
+        foo(0)
+        bar(0)
+        self.assertEqual([0], foo_vals)
+        self.assertEqual([0], bar_vals)
 
         # Advance our timer, but not enough to expire our value.
         timer_patch.return_value = 0.5
-        f(0)
-        self.assertEqual([0], called_values)
+        foo(0)
+        bar(0)
+        self.assertEqual([0], foo_vals)
+        self.assertEqual([0], bar_vals)
 
-        # Advance our timer enough to expire our value.
+        # Advance our timer enough to expire foo, but not bar.
         timer_patch.return_value = 1.5
-        f(0)
-        self.assertEqual([0, 0], called_values)
+        foo(0)
+        bar(0)
+        self.assertEqual([0, 0], foo_vals)
+        self.assertEqual([0], bar_vals)
 
 
 # Temporarily turn off these tests since there's no Cache object in __init__
