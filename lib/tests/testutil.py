@@ -85,6 +85,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
                     widgets=Widgets(),
                     widget_ids_this_run=_WidgetIDSet(),
                     uploaded_file_mgr=UploadedFileManager(),
+                    report_session_id=0,
                 ),
             )
 
