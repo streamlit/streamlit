@@ -58,37 +58,6 @@ jobs:
       - checkout:
           name: Checkout Streamlit code
 
-  create-tag:
-    docker:
-      - image: circleci/python:3.8.1
-
-    working_directory: ~/repo
-
-    steps:
-      - checkout:
-          name: Checkout Streamlit code
-
-      - run:
-          name: Install python dependencies
-          command: |
-            pip install packaging
-            pip install streamlit
-
-      - run:
-          name: Create tag
-          command: |
-            TAG="$(./scripts/pypi_nightly_create_tag.py)"
-
-            ./scripts/update_version.py $TAG
-
-            git add lib/setup.py
-            git add docs/troubleshooting/sanity-checks.md
-            git add frontend/package.json
-            git commit -m"Update version in files"
-
-            git tag -a $TAG -m "Streamlit nightly $TAG"
-            git push origin $TAG
-
   python-3.8: &job-template
     docker:
       - image: circleci/python:3.8.1
@@ -366,6 +335,92 @@ jobs:
     docker:
       - image: circleci/python:3.5.9
 
+  create-tag:
+    docker:
+      - image: circleci/python:3.8.1
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout:
+          name: Checkout Streamlit code
+
+      #################################################################
+      # Pre Cache Steps
+      #################################################################
+      - run:
+          <<: *get_make_checksum
+
+      - run:
+          <<: *get_dot_checksum
+
+      - run:
+          <<: *create_python_cache_key
+
+      - run:
+          <<: *create_yarn_cache_key
+
+      #################################################################
+      # Restore from cache
+      #################################################################
+      - restore_cache:
+          <<: *restore_virtualenv
+
+      - restore_cache:
+          <<: *restore_nvm
+
+      - restore_cache:
+          <<: *restore_make
+
+      - restore_cache:
+          <<: *restore_dot
+
+      #################################################################
+      # Pre Make commands
+      #################################################################
+      - run:
+          <<: *install_make
+
+      - run:
+          <<: *install_dot
+
+      - run:
+          <<: *install_nodejs
+
+      - run:
+          <<: *activate_virtualenv
+
+      - run:
+          <<: *make_develop
+
+      - run:
+          <<: *generate_protobufs
+
+      - run:
+          name: Make SCSS vars
+          command: |
+            make scssvars
+
+      #- run:
+      #    name: Install python dependencies
+      #    command: |
+      #      pip install packaging
+
+      - run:
+          name: Create tag
+          command: |
+            TAG="$(./scripts/pypi_nightly_create_tag.py)"
+
+            ./scripts/update_version.py $TAG
+
+            git add lib/setup.py
+            git add docs/troubleshooting/sanity-checks.md
+            git add frontend/package.json
+            git commit -m"Update version in files"
+
+            git tag -a $TAG -m "Streamlit nightly $TAG"
+            git push origin $TAG
+
   nightly-release:
     docker:
       - image: circleci/python:3.8.1
@@ -450,7 +505,7 @@ jobs:
 
       - run:
           name: create packages
-          no_output_timeout: 30m
+          no_output_timeout: 2h
           command: |
             make frontend
             make install
