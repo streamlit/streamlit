@@ -458,7 +458,7 @@ def cache(
         else:
             message = "Running %s(...)." % name
 
-        def get_or_set_cached_value():
+        def get_or_create_cached_value():
             hasher = hashlib.new("md5")
 
             args_hasher = CodeHasher("md5", hasher, hash_funcs)
@@ -504,9 +504,9 @@ def cache(
 
         if show_spinner:
             with st.spinner(message):
-                return get_or_set_cached_value()
+                return get_or_create_cached_value()
         else:
-            return get_or_set_cached_value()
+            return get_or_create_cached_value()
 
     # Make this a well-behaved decorator by preserving important function
     # attributes.
