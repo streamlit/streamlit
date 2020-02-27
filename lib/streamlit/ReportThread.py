@@ -153,5 +153,5 @@ def get_report_ctx():
     return ctx
 
 
-# to avoid circular dependencies
+# Needed to avoid circular dependencies.
 import streamlit
