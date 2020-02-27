@@ -76,7 +76,7 @@ class UploadedFileManagerTest(unittest.TestCase):
 
     def tearDown(self):
         mfm._files.clear()
-        mfm._session_id_to_files.clear()
+        mfm._session_id_to_file_ids.clear()
 
     def test__get_file_id(self):
         """Test that file_id generation from data works as expected."""

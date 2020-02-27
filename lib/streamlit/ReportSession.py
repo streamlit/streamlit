@@ -25,7 +25,7 @@ from streamlit import __version__
 from streamlit import caching
 from streamlit import config
 from streamlit import url_util
-# from streamlit.MediaFileManager import media_file_manager     # XXX
+from streamlit.MediaFileManager import media_file_manager
 from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.Report import Report
 from streamlit.ScriptRequestQueue import RerunData
@@ -131,6 +131,7 @@ class ReportSession(object):
         if self._state != ReportSessionState.SHUTDOWN_REQUESTED:
             LOGGER.debug("Shutting down (id=%s)", self.id)
             self._uploaded_file_mgr.delete_all_files()
+            media_file_manager.reset_files_for_session(self.id)
 
             # Shut down the ScriptRunner, if one is active.
             # self._state must not be set to SHUTDOWN_REQUESTED until
@@ -295,11 +296,11 @@ class ReportSession(object):
                 self.enqueue(msg)
 
         elif event == ScriptRunnerEvent.SHUTDOWN:
-            # XXX media_file_manager.reset_files_for_session()
             # When ScriptRunner shuts down, update our local reference to it,
             # and check to see if we need to spawn a new one. (This is run on
             # the main thread.)
             def on_shutdown():
+                # media_file_manager.reset_files_for_session(self.id)
                 self._widget_states = widget_states
                 self._scriptrunner = None
                 # Because a new ScriptEvent could have been enqueued while the

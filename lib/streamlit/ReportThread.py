@@ -28,7 +28,7 @@ class ReportContext(object):
         widgets,
         widget_ids_this_run,
         uploaded_file_mgr,
-        report_session_id,
+        report_session_id=None,
     ):
         # (dict) Mapping of container (type str or BlockPath) to top-level
         # cursor (type AbstractCursor).

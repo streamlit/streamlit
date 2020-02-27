@@ -94,20 +94,23 @@ class MediaFileManager(object):
         else:
             del self._files[mediafile_or_id]
 
-    def reset_files_for_session(self):
+    def reset_files_for_session(self, session_id=None):
         """Clears all stored files for a given ReportSession id.
 
         Should be called whenever ScriptRunner completes.
         """
-        for file_id in self._session_id_to_file_ids[_get_session_id()]:
+        if session_id is None:
+            session_id = _get_session_id()
+
+        for file_id in self._session_id_to_file_ids[session_id]:
             entry = self._files[file_id]
             entry.refcount -= 1
 
             if entry.refcount == 0:
                 self._remove(file_id)
 
-        del self._session_id_to_file_ids[_get_session_id()]
-        print("DELETED FILES FOR SESSION ID", _get_session_id())
+        del self._session_id_to_file_ids[session_id]
+        print("DELETED FILES FOR SESSION ID", session_id)
         print()
         print("Current files:")
         print(self._files)

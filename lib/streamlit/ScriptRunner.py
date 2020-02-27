@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,9 +22,9 @@ from blinker import Signal
 from streamlit import config
 from streamlit import magic
 from streamlit import source_util
-from streamlit.MediaFileManager import media_file_manager
 from streamlit.ReportThread import ReportThread
 from streamlit.ReportThread import get_report_ctx
+from streamlit.MediaFileManager import media_file_manager
 from streamlit.ScriptRequestQueue import ScriptRequest
 from streamlit.logger import get_logger
 from streamlit.widgets import Widgets
@@ -241,8 +240,8 @@ class ScriptRunner(object):
         LOGGER.debug("Running script %s", rerun_data)
 
         # Reset DeltaGenerators and widgets.
-        media_file_manager.reset_files_for_session()
         get_report_ctx().reset()
+        media_file_manager.reset_files_for_session()
 
         self.on_event.send(ScriptRunnerEvent.SCRIPT_STARTED)
 
