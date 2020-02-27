@@ -155,11 +155,13 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         frequency = 440
         length = 5
 
-        t = np.linspace(0, length, sampleRate * length)  #  Produces a 5 second Audio-File
+        t = np.linspace(
+            0, length, sampleRate * length
+        )  #  Produces a 5 second Audio-File
         y = np.sin(frequency * 2 * np.pi * t)  #  Has frequency of 440Hz
 
-        wavfile.write('test.wav', sampleRate, y)
-        
+        wavfile.write("test.wav", sampleRate, y)
+
         with io.open("test.wav", "rb") as f:
             st.audio(f)
 
