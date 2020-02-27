@@ -21,20 +21,10 @@ import {
   FloatArray,
   WidgetState,
   WidgetStates,
-  UploadFile,
-  UploadFileChunk,
-  DeleteUploadedFile,
 } from "autogen/proto"
 
 import { Set as ImmutableSet } from "immutable"
 import { Long } from "protobufjs"
-
-/**
- * The maximum size of each file upload chunk, measured in bytes. The default
- * file size allowed by server config is 50MB, but we achieved best results
- * with 10MB.
- */
-const FILE_UPLOAD_MAX_CHUNK_SIZE_BYTES = 10e6 // ~10MB
 
 export interface Source {
   fromUi: boolean
@@ -202,48 +192,6 @@ export class WidgetStateManager {
         this.deleteWidgetStateProto(key)
       }
     })
-  }
-
-  public sendUploadFileMessage(
-    widgetId: string,
-    name: string,
-    lastModified: number,
-    data: Uint8Array
-  ): void {
-    // We send the file in severals chunks to avoid server webservices freezing.
-
-    const sendBackMsg = this.sendBackMsg
-    const uploadFileMessage = new UploadFile()
-
-    uploadFileMessage.widgetId = widgetId
-    uploadFileMessage.name = name
-    uploadFileMessage.size = data.length
-    uploadFileMessage.lastModified = lastModified
-    // The number of chunks the server should be wait
-    uploadFileMessage.chunks = Math.ceil(
-      data.length / FILE_UPLOAD_MAX_CHUNK_SIZE_BYTES
-    )
-    sendBackMsg({ uploadFile: uploadFileMessage })
-
-    for (let i = 0; i < uploadFileMessage.chunks; i++) {
-      const message = new UploadFileChunk()
-      message.widgetId = widgetId
-      message.index = i
-      const dataIndex = i * FILE_UPLOAD_MAX_CHUNK_SIZE_BYTES
-      message.data = data.slice(
-        dataIndex,
-        dataIndex + FILE_UPLOAD_MAX_CHUNK_SIZE_BYTES
-      )
-      setTimeout(function() {
-        sendBackMsg({ uploadFileChunk: message })
-      }, 0)
-    }
-  }
-
-  public sendDeleteUploadedFileMessage(widgetId: string): void {
-    const deleteUploadedFileMessage = new DeleteUploadedFile()
-    deleteUploadedFileMessage.widgetId = widgetId
-    this.sendBackMsg({ deleteUploadedFile: deleteUploadedFileMessage })
   }
 
   private createWigetStatesMsg(): WidgetStates {

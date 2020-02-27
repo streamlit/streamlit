@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import sys
+import uuid
 from enum import Enum
 
 import tornado.gen
@@ -61,9 +62,7 @@ class ReportSession(object):
     A ReportSession is attached to each thread involved in running its Report.
     """
 
-    _next_id = 0
-
-    def __init__(self, ioloop, script_path, command_line):
+    def __init__(self, ioloop, script_path, command_line, uploaded_file_manager):
         """Initialize the ReportSession.
 
         Parameters
@@ -77,17 +76,18 @@ class ReportSession(object):
         command_line : str
             Command line as input by the user.
 
+        uploaded_file_manager : UploadedFileManager
+            The server's UploadedFileManager.
+
         """
-        # Each ReportSession gets a unique string ID.
-        self.id = str(ReportSession._next_id)
-        ReportSession._next_id += 1
+        # Each ReportSession has a unique string ID.
+        self.id = str(uuid.uuid4())
 
         self._ioloop = ioloop
         self._report = Report(script_path, command_line)
+        self._uploaded_file_mgr = uploaded_file_manager
 
         self._state = ReportSessionState.REPORT_NOT_RUNNING
-
-        self._uploaded_file_mgr = UploadedFileManager()
 
         self._widget_states = WidgetStates()
         self._local_sources_watcher = LocalSourcesWatcher(
@@ -129,7 +129,7 @@ class ReportSession(object):
         """
         if self._state != ReportSessionState.SHUTDOWN_REQUESTED:
             LOGGER.debug("Shutting down (id=%s)", self.id)
-            self._uploaded_file_mgr.delete_all_files()
+            self._uploaded_file_mgr.remove_session_files(self.id)
 
             # Shut down the ScriptRunner, if one is active.
             # self._state must not be set to SHUTDOWN_REQUESTED until
@@ -372,6 +372,7 @@ class ReportSession(object):
             imsg.user_info.email = ""
 
         imsg.command_line = self._report.command_line
+        imsg.session_id = self.id
 
         self.enqueue(msg)
 
@@ -431,31 +432,6 @@ class ReportSession(object):
                 return
 
         self.request_rerun(widget_state)
-
-    def handle_upload_file(self, upload_file):
-        self._uploaded_file_mgr.create_or_clear_file(
-            widget_id=upload_file.widget_id,
-            name=upload_file.name,
-            size=upload_file.size,
-            last_modified=upload_file.lastModified,
-            chunks=upload_file.chunks,
-        )
-
-        self.handle_rerun_script_request(widget_state=self._widget_states)
-
-    def handle_upload_file_chunk(self, upload_file_chunk):
-        progress = self._uploaded_file_mgr.process_chunk(
-            widget_id=upload_file_chunk.widget_id,
-            index=upload_file_chunk.index,
-            data=upload_file_chunk.data,
-        )
-
-        if progress == 1:
-            self.handle_rerun_script_request(widget_state=self._widget_states)
-
-    def handle_delete_uploaded_file(self, delete_uploaded_file):
-        self._uploaded_file_mgr.delete_file(widget_id=delete_uploaded_file.widget_id)
-        self.handle_rerun_script_request(widget_state=self._widget_states)
 
     def handle_stop_script_request(self):
         """Tell the ScriptRunner to stop running its report."""
@@ -528,6 +504,7 @@ class ReportSession(object):
 
         # Create the ScriptRunner, attach event handlers, and start it
         self._scriptrunner = ScriptRunner(
+            session_id=self.id,
             report=self._report,
             enqueue_forward_msg=self.enqueue,
             widget_states=self._widget_states,

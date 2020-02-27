@@ -24,6 +24,7 @@ import { WidgetStateManager } from "lib/WidgetStateManager"
 import { makeElementWithInfoText } from "lib/utils"
 import { IForwardMsgMetadata } from "autogen/proto"
 import { ReportElement, BlockElement, SimpleElement } from "lib/DeltaParser"
+import { FileUploadClient } from "lib/FileUploadClient"
 
 // Load (non-lazy) elements.
 import Alert from "components/elements/Alert/"
@@ -85,6 +86,7 @@ interface Props {
   reportRunState: ReportRunState
   showStaleElementIndicator: boolean
   widgetMgr: WidgetStateManager
+  uploadClient: FileUploadClient
   widgetsDisabled: boolean
 }
 
@@ -136,6 +138,7 @@ class Block extends PureComponent<Props> {
           reportRunState={this.props.reportRunState}
           showStaleElementIndicator={this.props.showStaleElementIndicator}
           widgetMgr={this.props.widgetMgr}
+          uploadClient={this.props.uploadClient}
           widgetsDisabled={this.props.widgetsDisabled}
         />
       </div>
@@ -344,6 +347,7 @@ class Block extends PureComponent<Props> {
           element={el}
           width={width}
           widgetStateManager={widgetProps.widgetMgr}
+          uploadClient={this.props.uploadClient}
           disabled={widgetProps.disabled}
         />
       ),

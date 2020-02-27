@@ -18,6 +18,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function, division, unicode_literals, absolute_import
 from streamlit.compatibility import setup_2_3_shims
+from streamlit.server.Server import Server
 
 setup_2_3_shims(globals())
 
@@ -1197,7 +1198,7 @@ class DeltaGenerator(object):
         ''')
 
         .. output::
-           https://share.streamlit.io/0.37.0-2PGsB/index.html?id=QFXRFT19mzA3brW8XCAcK8
+           https://share.streamlit.io/0.56.0-xTAd/index.html?id=GBn3GXZie5K1kXuBKe4yQL
            height: 400px
 
         """
@@ -1307,10 +1308,10 @@ class DeltaGenerator(object):
         ...         hist_data, group_labels, bin_size=[.1, .25, .5])
         >>>
         >>> # Plot!
-        >>> st.plotly_chart(fig)
+        >>> st.plotly_chart(fig, use_container_width=True)
 
         .. output::
-           https://share.streamlit.io/0.32.0-2KznC/index.html?id=NbyKJnNQ2XcrpWTno643uD
+           https://share.streamlit.io/0.56.0-xTAd/index.html?id=TuP96xX8JnsoQeUGAPjkGQ
            height: 400px
 
         """
@@ -1424,10 +1425,10 @@ class DeltaGenerator(object):
         ...
         >>> p.line(x, y, legend='Trend', line_width=2)
         >>>
-        >>> st.bokeh_chart(p)
+        >>> st.bokeh_chart(p, use_container_width=True)
 
         .. output::
-           https://share.streamlit.io/0.34.0-2Ezo2/index.html?id=kWNtYxGUFpA3PRXt3uVff
+           https://share.streamlit.io/0.56.0-xTAd/index.html?id=Fdhg51uMbGMLRRxXV6ubzp
            height: 600px
 
         """
@@ -2039,7 +2040,8 @@ class DeltaGenerator(object):
     def file_uploader(self, element, label, type=None, encoding="auto", key=None):
         """Display a file uploader widget.
 
-        By default, uploaded files are limited to 50MB but you can configure that using the `server.maxUploadSize` config option.
+        By default, uploaded files are limited to 200MB. You can configure
+        this using the `server.maxUploadSize` config option.
 
         Parameters
         ----------
@@ -2086,8 +2088,9 @@ class DeltaGenerator(object):
         data = None
         ctx = get_report_ctx()
         if ctx is not None:
-            progress, data = ctx.uploaded_file_mgr.get_data(element.file_uploader.id)
-            element.file_uploader.progress = progress
+            data = ctx.uploaded_file_mgr.get_file_data(
+                session_id=ctx.session_id, widget_id=element.file_uploader.id
+            )
 
         if data is None:
             return NoValue

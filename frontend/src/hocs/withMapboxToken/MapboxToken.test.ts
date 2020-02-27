@@ -21,6 +21,7 @@ import fetchMock from "fetch-mock"
 
 function setSessionInfoWithMapboxToken(userMapboxToken: string): void {
   SessionInfo.current = new SessionInfo({
+    sessionId: "mockSessionId",
     streamlitVersion: "sv",
     pythonVersion: "pv",
     installationId: "iid",
