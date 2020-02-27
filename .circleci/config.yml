@@ -9,7 +9,7 @@ workflows:
     jobs:
       # TODO reenable
       #- python-3.5 # Oldest supported Python minor version.
-      #- python-3.8 # Latest supported Python minor version.
+      - python-3.8 # Latest supported Python minor version.
       - python-3.x:
           filters:
             tags:
