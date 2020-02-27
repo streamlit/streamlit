@@ -23,7 +23,6 @@ from streamlit.ReportThread import get_report_ctx
 STATIC_MEDIA_ENDPOINT = "/media"
 
 
-
 def _get_session_id():
     """Semantic wrapper to retrieve current ReportSession ID."""
     ctx = get_report_ctx()
