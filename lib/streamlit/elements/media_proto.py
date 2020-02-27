@@ -91,7 +91,7 @@ def _marshall_av_media(proto, data, mimetype):
     elif isinstance(data, io.BytesIO):
         data.seek(0)
         data = data.getvalue()
-    elif isinstance(data, io.RawIOBase):
+    elif isinstance(data, io.RawIOBase) or isinstance(data, io.BufferedReader):
         data.seek(0)
         data = data.read()
     elif type_util.is_type(data, "numpy.ndarray"):
