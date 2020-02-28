@@ -411,7 +411,13 @@ jobs:
             git config user.email "jonathan@streamlit.io"
             git config user.name "CircleCI"
 
-            git add .
+            git add lib/setup.py
+            git add docs/troubleshooting/sanity-checks.md
+            git add frontend/package.json
+
+            git add lib/streamlit/__init__.py
+            git add lib/streamlit/version.py
+
             git commit -m"Update version and project name in files"
 
             git tag -a $TAG -m "Streamlit nightly $TAG"
