@@ -502,15 +502,14 @@ jobs:
             cd lib
             python setup.py verify
 
-      # TODO update pypi username
-      # TODO add password to streamlit project ENV
-      # https://ui.circleci.com/settings/project/github/streamlit/streamlit/environment-variables?return-to=https%3A%2F%2Fcircleci.com%2Fdashboard
+      # Password added to circleci environment
+      # https://ui.circleci.com/settings/project/github/streamlit/streamlit/environment-variables
       - run:
           name: init .pypirc
           command: |
             cd lib
             echo -e "[pypi]" >> ~/.pypirc
-            echo -e "username = jrhone" >> ~/.pypirc
+            echo -e "username = streamlit" >> ~/.pypirc
             echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
 
       - run:
