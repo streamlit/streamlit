@@ -110,7 +110,7 @@ def _with_element(method):
     @_wraps_with_cleaned_sig(method, 1)  # Remove self and element from sig.
     def wrapped_method(dg, *args, **kwargs):
         # Warn if we're called from within an @st.cache function
-        caching.maybe_show_cached_st_function_warning(dg)
+        caching.maybe_show_cached_st_function_warning(dg, method.__name__)
 
         delta_type = method.__name__
         last_index = None

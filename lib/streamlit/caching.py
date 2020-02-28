@@ -62,7 +62,7 @@ _mem_cache = {}  # type: Dict[str, CacheEntry]
 # and decremented when we exit.
 class ThreadLocalCacheInfo(threading.local):
     def __init__(self):
-        self.within_cached_func = 0
+        self.cached_func_stack = []
         self.suppress_st_function_warning = 0
 
 
@@ -70,12 +70,12 @@ _cache_info = ThreadLocalCacheInfo()
 
 
 @contextlib.contextmanager
-def _calling_cached_function():
-    _cache_info.within_cached_func += 1
+def _calling_cached_function(func):
+    _cache_info.cached_func_stack.append(func)
     try:
         yield
     finally:
-        _cache_info.within_cached_func -= 1
+        _cache_info.cached_func_stack.pop()
 
 
 @contextlib.contextmanager
@@ -88,26 +88,15 @@ def suppress_cached_st_function_warning():
         assert _cache_info.suppress_st_function_warning >= 0
 
 
-def _show_cached_st_function_warning(dg):
+def _show_cached_st_function_warning(dg, st_func_name, cached_func):
     # Avoid infinite recursion by suppressing additional cached
     # function warnings from within the cached function warning.
     with suppress_cached_st_function_warning():
-        e = CachedStFunctionWarning(
-            """
-Your script writes to your Streamlit app from within a cached function. This
-code will only be called when we detect a cache "miss", which can lead to
-unexpected results.
-
-How to resolve this warning:
-* Move the Streamlit function call outside the cached function.
-* Or, if you know what you're doing, use `@st.cache(suppress_st_warning=True)`
-to suppress the warning.
-"""
-        )
+        e = CachedStFunctionWarning(st_func_name, cached_func)
         dg.exception(e)
 
 
-def maybe_show_cached_st_function_warning(dg):
+def maybe_show_cached_st_function_warning(dg, st_func_name):
     """If appropriate, warn about calling st.foo inside @cache.
 
     DeltaGenerator's @_with_element and @_widget wrappers use this to warn
@@ -119,12 +108,16 @@ def maybe_show_cached_st_function_warning(dg):
     dg : DeltaGenerator
         The DeltaGenerator to publish the warning to.
 
+    st_func_name : str
+        The name of the Streamlit function that was called.
+
     """
     if (
-        _cache_info.within_cached_func > 0
+        len(_cache_info.cached_func_stack) > 0
         and _cache_info.suppress_st_function_warning <= 0
     ):
-        _show_cached_st_function_warning(dg)
+        cached_func = _cache_info.cached_func_stack[-1]
+        _show_cached_st_function_warning(dg, st_func_name, cached_func)
 
 
 class _AddCopy(ast.NodeTransformer):
@@ -180,30 +173,6 @@ class _AddCopy(ast.NodeTransformer):
         return node
 
 
-def _show_mutated_output_warning(func):
-    if hasattr(func, "__name__"):
-        func_name = "`%s()`" % func.__name__
-    else:
-        func_name = ""
-
-    msg = (
-        """
-Return value of cached function %(func_name)s should not be mutated.
-
-By default, Streamlit's cache should be treated as immutable. You
-received this warning because Streamlit thinks you mutated an object
-returned by %(func_name)s, which is a cached function.
-
-[Click here to see how to fix this issue.]
-(https://docs.streamlit.io/advanced_caching.html)
-"""
-        % {"func_name": func_name}
-    ).strip("\n")
-
-    e = CachedObjectMutationWarning(msg)
-    st.exception(e)
-
-
 def _read_from_mem_cache(key, allow_output_mutation, func_or_code, hash_funcs):
     if key in _mem_cache:
         entry = _mem_cache[key]
@@ -216,7 +185,7 @@ def _read_from_mem_cache(key, allow_output_mutation, func_or_code, hash_funcs):
 
             if computed_output_hash != stored_output_hash:
                 LOGGER.debug("Cached object was mutated: %s", key)
-                raise CachedObjectWasMutatedError(entry.value)
+                raise CachedObjectWasMutatedError(entry.value, func_or_code)
 
         LOGGER.debug("Memory cache HIT: %s", type(entry.value))
         return entry.value
@@ -479,13 +448,13 @@ def cache(
                 LOGGER.debug("Cache hit: %s", func)
 
             except CachedObjectWasMutatedError as e:
-                _show_mutated_output_warning(func)
+                st.exception(CachedObjectMutationWarning(e))
                 return e.cached_value
 
             except CacheKeyNotFoundError:
                 LOGGER.debug("Cache miss: %s", func)
 
-                with _calling_cached_function():
+                with _calling_cached_function(func):
                     if suppress_st_warning:
                         with suppress_cached_st_function_warning():
                             return_value = func(*args, **kwargs)
@@ -703,13 +672,71 @@ class CacheKeyNotFoundError(Exception):
 
 
 class CachedObjectWasMutatedError(ValueError):
-    def __init__(self, cached_value):
+    def __init__(self, cached_value, func_or_code):
         self.cached_value = cached_value
+        if inspect.iscode(func_or_code):
+            self.cached_func_name = "a code block"
+        else:
+            self.cached_func_name = _get_cached_func_name_md(func_or_code)
 
 
 class CachedStFunctionWarning(StreamlitAPIWarning):
-    pass
+    def __init__(self, st_func_name, cached_func):
+        msg = self._get_message(st_func_name, cached_func)
+        super(CachedStFunctionWarning, self).__init__(msg)
+
+    def _get_message(self, st_func_name, cached_func):
+        args = {
+            "st_func_name": "`st.%s()` or `st.write()`" % st_func_name,
+            "func_name": _get_cached_func_name_md(cached_func),
+        }
+
+        return (
+            """
+Your script uses %(st_func_name)s to write to your Streamlit app from within
+some cached code at %(func_name)s. This code will only be called when we detect
+a cache "miss", which can lead to unexpected results.
+
+How to fix this:
+* Move the %(st_func_name)s call outside %(func_name)s.
+* Or, if you know what you're doing, use `@st.cache(suppress_st_warning=True)`
+to suppress the warning.
+            """
+            % args
+        ).strip("\n")
 
 
 class CachedObjectMutationWarning(StreamlitAPIWarning):
-    pass
+    def __init__(self, orig_exc):
+        msg = self._get_message(orig_exc)
+        super(CachedObjectMutationWarning, self).__init__(msg)
+
+    def _get_message(self, orig_exc):
+        return (
+            """
+Return value of %(func_name)s was mutated between runs.
+
+By default, Streamlit's cache should be treated as immutable, or it may behave
+in unexpected ways. You received this warning because Streamlit detected
+that an object returned by %(func_name)s was mutated outside of %(func_name)s.
+
+How to fix this:
+* If you did not mean to mutate that return value:
+  - If possible, inspect your code to find and remove that mutation.
+  - Otherwise, you could also clone the returned value so you can freely
+    mutate it.
+* If you actually meant to mutate the return value and know the consequences of
+doing so, just annotate the function with `@st.cache(allow_output_mutation=True)`.
+
+For more information and detailed solutions check out [our documentation.]
+(https://docs.streamlit.io/advanced_caching.html)
+            """
+            % {"func_name": orig_exc.cached_func_name}
+        ).strip("\n")
+
+
+def _get_cached_func_name_md(func):
+    if hasattr(func, "__name__"):
+        return "`%s()`" % func.__name__
+    else:
+        return "a cached function"
