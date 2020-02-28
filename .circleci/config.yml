@@ -13,7 +13,7 @@ workflows:
       - python-3.x:
           filters:
             tags:
-              only: /^([0-9]+\.){3}dev[0-9]+/ # 0.55.1.dev20201129
+              only: /^([0-9]+\.){3}dev[0-9]+/ # 0.56.1.dev20201129
       - nightly-release:
           requires:
             # TODO run 3.5, 3.8 and cypress non flaky tests (later)
@@ -406,6 +406,7 @@ jobs:
             TAG="$(./scripts/pypi_nightly_create_tag.py)"
 
             ./scripts/update_version.py $TAG
+            ./scripts/update_name.py streamlit-nightly
 
             git config user.email "jonathan@streamlit.io"
             git config user.name "CircleCI"

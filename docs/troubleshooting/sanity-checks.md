@@ -26,9 +26,7 @@ $ pip install --upgrade streamlit
 $ streamlit version
 ```
 
-# TODO revert version number to 0.56.0 before merging
-
-...and then verify that the version number printed is `0.56.1.dev20200227`.
+...and then verify that the version number printed is `0.56.0`.
 
 **Try reproducing the issue now.** If not fixed, keep reading on.
 
