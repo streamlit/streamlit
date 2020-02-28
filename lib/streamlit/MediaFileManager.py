@@ -19,7 +19,10 @@ import typing
 import hashlib
 import collections
 
+from streamlit.logger import get_logger
 from streamlit.ReportThread import get_report_ctx
+
+LOGGER = get_logger(__name__)
 
 STATIC_MEDIA_ENDPOINT = "/media"
 
@@ -112,12 +115,8 @@ class MediaFileManager(object):
                 self._remove(file_id)
 
         del self._session_id_to_file_ids[session_id]
-        print("DELETED FILES FOR SESSION ID", session_id)
-        print()
-        print("Current files:")
-        print(self._files)
-        print("Sessions still active:")
-        print(self._session_id_to_file_ids)
+        LOGGER.debug("Reset files for session with ID %s" % session_id)
+        LOGGER.debug("Sessions still active: %r" % self._session_id_to_file_ids)
 
     def add(self, content, mimetype):
         """Adds new MediaFile with given parameters; returns the object.
