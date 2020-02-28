@@ -20,7 +20,6 @@ import mock
 
 from streamlit.MediaFileManager import MediaFileManager
 from streamlit.MediaFileManager import _get_file_id
-from streamlit.ReportThread import get_report_ctx as _get_report_ctx
 
 
 mfm = MediaFileManager()
