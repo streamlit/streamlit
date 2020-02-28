@@ -35,7 +35,7 @@ workflows:
     triggers:
       - schedule:
           # TODO set to 11PM PST
-          cron: "27 * * * *"
+          cron: "30 * * * *"
           filters:
             branches:
               only:
@@ -411,10 +411,8 @@ jobs:
             git config user.email "jonathan@streamlit.io"
             git config user.name "CircleCI"
 
-            git add lib/setup.py
-            git add docs/troubleshooting/sanity-checks.md
-            git add frontend/package.json
-            git commit -m"Update version in files"
+            git add .
+            git commit -m"Update version and project name in files"
 
             git tag -a $TAG -m "Streamlit nightly $TAG"
             git push origin $TAG
