@@ -92,7 +92,6 @@ x.text("Converting wave...")
 fh.writeframes(sine_wave)
 
 fh.close()
-x.text("sending wave...")
 
 with io.open("sound.wav", "rb") as f:
     x.text("Sending wave...")
