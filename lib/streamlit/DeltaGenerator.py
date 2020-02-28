@@ -2612,7 +2612,7 @@ class DeltaGenerator(object):
         element.deck_gl_json_chart.json = streamlit_map.to_deckgl_json(data, zoom)
 
     @_with_element
-    def deck_gl_chart(self, element, spec=None, **kwargs):
+    def deck_gl_chart(self, element, spec=None, use_container_width=False, **kwargs):
         """Draw a map chart using the Deck.GL library.
 
         This API closely follows Deck.GL's JavaScript API
@@ -2676,6 +2676,10 @@ class DeltaGenerator(object):
                   - Instead of "getSourceColor" : use the same as above.
                   - Instead of "getTargetColor" : use "getTargetColorR", etc.
 
+        use_container_width : bool
+            If True, set the chart width to the column width. This takes
+            precedence over the figure's native `width` value.
+
         **kwargs : any
             Same as spec, but as keywords. Keys are "unflattened" at the
             underscore characters. For example, foo_bar_baz=123 becomes
@@ -2709,22 +2713,21 @@ class DeltaGenerator(object):
            height: 530px
 
         """
-        # TODO: Add this in around 2020-01-31
-        #
-        # suppress_deprecation_warning = config.get_option(
-        #     "global.suppressDeprecationWarnings"
-        # )
-        # if not suppress_deprecation_warning:
-        #     import streamlit as st
-        #
-        #     st.warning("""
-        #         The `deck_gl_chart` widget is deprecated and will be removed on
-        #         2020-03-04. To render a map, you should use `st.pydeck_chart` widget.
-        #     """)
+
+        suppress_deprecation_warning = config.get_option(
+            "global.suppressDeprecationWarnings"
+        )
+        if not suppress_deprecation_warning:
+            import streamlit as st
+
+            st.warning("""
+                The `deck_gl_chart` widget is deprecated and will be removed on
+                2020-05-01. To render a map, you should use `st.pydeck_chart` widget.
+            """)
 
         import streamlit.elements.deck_gl as deck_gl
 
-        deck_gl.marshall(element.deck_gl_chart, spec, **kwargs)
+        deck_gl.marshall(element.deck_gl_chart, spec, use_container_width, **kwargs)
 
     @_with_element
     def pydeck_chart(self, element, pydeck_obj=None):
