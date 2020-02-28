@@ -8,8 +8,9 @@ from pipenv.project import Project
 from pipenv.utils import convert_deps_to_pip
 from setuptools.command.install import install
 
-# circleci.py version
 VERSION = "0.56.1.dev20200227"  # PEP-440
+
+NAME = "streamlit"
 
 pipfile = Project(chdir=False).parsed_pipfile
 
@@ -56,7 +57,7 @@ class VerifyVersionCommand(install):
 
 
 setuptools.setup(
-    name="streamlit",  # TODO use streamlit-nightly in pypi only
+    name=NAME,
     version=VERSION,
     description="Frontend library for machine learning engineers",
     long_description=readme(),

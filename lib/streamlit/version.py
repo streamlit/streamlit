@@ -34,7 +34,6 @@ CHECK_PYPI_PROBABILITY = 0.10
 
 def _version_str_to_obj(version_str):
     return packaging.version.Version(version_str)
-    # return pkg_resources.parse_version(version_str)
 
 
 def _get_installed_streamlit_version():

@@ -8,7 +8,8 @@ module.exports = {
       // HardSourceWebpackPlugin adds aggressive build caching
       // to speed up our slow builds.
       // https://github.com/mzgoddard/hard-source-webpack-plugin
-      // webpackConfig.plugins.unshift(new HardSourceWebpackPlugin())
+      // TODO disable hard-source on circleci? create issue
+      webpackConfig.plugins.unshift(new HardSourceWebpackPlugin())
 
       return webpackConfig
     },

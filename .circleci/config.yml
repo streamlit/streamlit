@@ -31,7 +31,6 @@ workflows:
           requires:
             - cypress-approval
 
-  # TODO why isn't this being triggered by circleci?
   create-nightly-tag:
     triggers:
       - schedule:
@@ -43,11 +42,11 @@ workflows:
                 - develop
                 # TODO remove this branch before merge
                 - pypi_nightly
-    # TODO this job requires changes to work
     jobs:
       - create-tag
 
 jobs:
+  # TODO remove this before merge and cleanup above
   python-3.x:
     docker:
       - image: circleci/python:3.8.1
@@ -480,6 +479,7 @@ jobs:
       - run:
           <<: *activate_virtualenv
 
+      # TODO remove this since we're installing?
       - run:
           <<: *make_develop
 
@@ -490,8 +490,6 @@ jobs:
           name: Make SCSS vars
           command: |
             make scssvars
-
-      # TODO what steps are different above for making a build?
 
       - run:
           name: verify git tag vs. version
