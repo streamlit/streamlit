@@ -16,7 +16,7 @@
 
 """Create a tag for the PYPI nightly version
 
-Increment the version number and add todays date
+Increment the version number, add a dev suffix and add todays date
 """
 import packaging.version
 
@@ -26,7 +26,7 @@ import streamlit.version
 
 
 def create_tag():
-    """Create tag with updated version and date."""
+    """Create tag with updated version, a suffix and date."""
 
     # Get latest version
     current_version = streamlit.version._get_latest_streamlit_version()

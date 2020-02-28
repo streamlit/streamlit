@@ -34,9 +34,8 @@ class VersionTest(unittest.TestCase):
 
     def test_get_latest_streamlit_version(self):
         with requests_mock.mock() as m:
-            v = pkg_version("1.2.3")
             m.get(PYPI_STREAMLIT_URL, json={"info": {"version": "1.2.3"}})
-            self.assertEqual(v, _get_latest_streamlit_version())
+            self.assertEqual(pkg_version("1.2.3"), _get_latest_streamlit_version())
 
     def test_should_show_new_version_notice_skip(self):
         with mock.patch(
