@@ -298,8 +298,8 @@ class ReportSession(object):
             # When ScriptRunner shuts down, update our local reference to it,
             # and check to see if we need to spawn a new one. (This is run on
             # the main thread.)
+
             def on_shutdown():
-                media_file_manager.reset_files_for_session(self.id)
                 self._widget_states = widget_states
                 self._scriptrunner = None
                 # Because a new ScriptEvent could have been enqueued while the
