@@ -504,12 +504,13 @@ jobs:
 
       # Password added to circleci environment
       # https://ui.circleci.com/settings/project/github/streamlit/streamlit/environment-variables
+      # TODO change username to `streamlit` before merging PR into develop
       - run:
           name: init .pypirc
           command: |
             cd lib
             echo -e "[pypi]" >> ~/.pypirc
-            echo -e "username = streamlit" >> ~/.pypirc
+            echo -e "username = jrhone" >> ~/.pypirc
             echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
 
       - run:
