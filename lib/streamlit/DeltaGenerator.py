@@ -1134,7 +1134,7 @@ class DeltaGenerator(object):
         )
 
     @_with_element
-    def graphviz_chart(self, element, figure_or_dot, width=0, height=0):
+    def graphviz_chart(self, element, figure_or_dot, width=0, height=0, use_container_width=False):
         """Display a graph using the dagre-d3 library.
 
         Parameters
@@ -1151,6 +1151,10 @@ class DeltaGenerator(object):
             Deprecated. If != 0 (default), will show an alert.
             From now on you should set the height directly in the Graphviz
             spec. Please refer to the Graphviz documentation for details.
+
+        use_container_width : bool
+            If True, set the chart width to the column width. This takes
+            precedence over the figure's native `width` value.
 
         Example
         -------
@@ -1223,7 +1227,7 @@ class DeltaGenerator(object):
                 "The `height` argument in `st.graphviz` is deprecated and will be removed on 2020-03-04"
             )
 
-        graphviz_chart.marshall(element.graphviz_chart, figure_or_dot)
+        graphviz_chart.marshall(element.graphviz_chart, figure_or_dot, use_container_width)
 
     @_with_element
     def plotly_chart(
