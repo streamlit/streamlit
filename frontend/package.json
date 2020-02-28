@@ -6,7 +6,7 @@
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
     "start": "export NODE_OPTIONS=--max_old_space_size=4096 && craco start",
-    "build": "export NODE_OPTIONS=--max_old_space_size=16384 && craco build",
+    "build": "export NODE_OPTIONS=--max_old_space_size=8192 && craco build",
     "test": "export NODE_OPTIONS=--max_old_space_size=4096 && craco test --env=jsdom",
     "test:coverage": "export NODE_OPTIONS=--max_old_space_size=4096 && craco test --env=jsdom --coverage --watchAll false --watch false ./",
     "cy:open": "unset NODE_OPTIONS && cypress open --env devicePixelRatio=1",

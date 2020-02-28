@@ -39,6 +39,7 @@ def create_tag():
     )
 
     # Append todays date
+    # TODO should this be the date in PST?
     version_with_date = (
         ".".join([str(x) for x in version_with_inc_micro])
         + ".dev"

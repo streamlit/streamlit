@@ -342,16 +342,6 @@ jobs:
     working_directory: ~/repo
 
     steps:
-      # TODO I think we only need this if we're using a r/w deploy key
-      #- add_ssh_keys:
-      # TODO create user key or r/w deploy key or machine user for main streamlit repo
-      # TODO change to use the fingerprint for main streamlit repo
-      # https://circleci.com/:vcs-type/:org-name/:project-name/edit#checkout
-      # https://ui.circleci.com/settings/project/github/jrhone/streamlit-1/ssh?return-to=https%3A%2F%2Fcircleci.com%2Fdashboard
-      # https://support.circleci.com/hc/en-us/articles/360018860473-How-to-push-a-commit-back-to-the-same-repository-as-part-of-the-CircleCI-job
-      #    fingerprints:
-      #      - "4c:89:2d:d0:cf:e9:fb:42:ce:05:5a:94:2b:58:e8:b3"
-
       - checkout:
           name: Checkout Streamlit code
 
@@ -411,11 +401,6 @@ jobs:
           command: |
             make scssvars
 
-      #- run:
-      #    name: Install python dependencies
-      #    command: |
-      #      pip install packaging
-
       - run:
           name: Create tag
           command: |
@@ -437,6 +422,12 @@ jobs:
   nightly-release:
     docker:
       - image: circleci/python:3.8.1
+
+    # TODO are we on a paid plan?
+    # https://circleci.com/docs/2.0/configuration-reference/#resource_class
+    #  If you are on a container plan you will need to open a support ticket and speak with a CircleCI Sales representative about enabling this feature.
+    # https://support.circleci.com/hc/en-us/requests/new
+    resource_class: large
 
     working_directory: ~/repo
 
@@ -508,6 +499,9 @@ jobs:
             cd lib
             python setup.py verify
 
+      # TODO update pypi username
+      # TODO add password to streamlit project ENV
+      # https://ui.circleci.com/settings/project/github/streamlit/streamlit/environment-variables?return-to=https%3A%2F%2Fcircleci.com%2Fdashboard
       - run:
           name: init .pypirc
           command: |
