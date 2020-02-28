@@ -36,7 +36,7 @@ workflows:
     triggers:
       - schedule:
           # TODO set to 11PM PST
-          cron: "15 * * * *"
+          cron: "27 * * * *"
           filters:
             branches:
               only:
@@ -342,6 +342,16 @@ jobs:
     working_directory: ~/repo
 
     steps:
+      # TODO I think we only need this if we're using a r/w deploy key
+      #- add_ssh_keys:
+      # TODO create user key or r/w deploy key or machine user for main streamlit repo
+      # TODO change to use the fingerprint for main streamlit repo
+      # https://circleci.com/:vcs-type/:org-name/:project-name/edit#checkout
+      # https://ui.circleci.com/settings/project/github/jrhone/streamlit-1/ssh?return-to=https%3A%2F%2Fcircleci.com%2Fdashboard
+      # https://support.circleci.com/hc/en-us/articles/360018860473-How-to-push-a-commit-back-to-the-same-repository-as-part-of-the-CircleCI-job
+      #    fingerprints:
+      #      - "4c:89:2d:d0:cf:e9:fb:42:ce:05:5a:94:2b:58:e8:b3"
+
       - checkout:
           name: Checkout Streamlit code
 
@@ -412,6 +422,9 @@ jobs:
             TAG="$(./scripts/pypi_nightly_create_tag.py)"
 
             ./scripts/update_version.py $TAG
+
+            git config user.email "jonathan@streamlit.io"
+            git config user.name "CircleCI"
 
             git add lib/setup.py
             git add docs/troubleshooting/sanity-checks.md
