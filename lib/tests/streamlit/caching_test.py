@@ -275,7 +275,10 @@ class CacheErrorsTest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue(-2).new_element
         self.assertEqual(el.exception.type, "CachedStFunctionWarning")
-        self.assertEqual(normalize_md(el.exception.message), normalize_md("""
+        self.assertEqual(
+            normalize_md(el.exception.message),
+            normalize_md(
+                """
 Your script uses `st.markdown()` or `st.write()` to write to your Streamlit app
 from within some cached code at `st_warning_text_func()`. This code will only be
 called when we detect a cache "miss", which can lead to unexpected results.
@@ -285,7 +288,8 @@ How to fix this:
 * Or, if you know what you're doing, use `@st.cache(suppress_st_warning=True)`
 to suppress the warning.
         """
-        ))
+            ),
+        )
         self.assertNotEqual(len(el.exception.stack_trace), 0)
         self.assertEqual(el.exception.message_is_markdown, True)
         self.assertEqual(el.exception.is_warning, True)
@@ -299,13 +303,15 @@ to suppress the warning.
             return []
 
         a = mutation_warning_func()
-        a.append('mutated!')
+        a.append("mutated!")
         mutation_warning_func()
 
         el = self.get_delta_from_queue(-1).new_element
         self.assertEqual(el.exception.type, "CachedObjectMutationWarning")
-        self.assertEqual(normalize_md(el.exception.message), normalize_md(
-            """
+        self.assertEqual(
+            normalize_md(el.exception.message),
+            normalize_md(
+                """
 Return value of `mutation_warning_func()` was mutated between runs.
 
 By default, Streamlit\'s cache should be treated as immutable, or it may behave
@@ -324,7 +330,8 @@ doing so, just annotate the function with `@st.cache(allow_output_mutation=True)
 For more information and detailed solutions check out [our
 documentation.](https://docs.streamlit.io/advanced_caching.html)
             """
-        ))
+            ),
+        )
         self.assertNotEqual(len(el.exception.stack_trace), 0)
         self.assertEqual(el.exception.message_is_markdown, True)
         self.assertEqual(el.exception.is_warning, True)
@@ -332,7 +339,7 @@ documentation.](https://docs.streamlit.io/advanced_caching.html)
     def test_unhashable_type(self):
         @st.cache
         def unhashable_type_func():
-            return threading.Thread()
+            return threading.Lock()
 
         with self.assertRaises(hashing.UnhashableTypeError) as cm:
             unhashable_type_func()
@@ -341,7 +348,11 @@ documentation.](https://docs.streamlit.io/advanced_caching.html)
         exception_proto.marshall(ep, cm.exception)
 
         self.assertEqual(ep.type, "UnhashableTypeError")
-        self.assertTrue(normalize_md(ep.message).startswith(normalize_md("""
+
+        self.assertTrue(
+            normalize_md(ep.message).startswith(
+                normalize_md(
+                    """
 Cannot hash object of type `_thread.lock`, found in the return value of
 `unhashable_type_func()`.
 
@@ -363,11 +374,14 @@ from, try looking at the hash chain below for an object that you do recognize,
 then pass that to `hash_funcs` instead:
 
 ```
-Object of type _thread.lock: <unlocked _thread.lock object at
-            """)))
+Object of type _thread.lock:
+                    """
+                )
+            )
+        )
 
         # Stack trace doesn't show in test :(
-        #self.assertNotEqual(len(ep.stack_trace), 0)
+        # self.assertNotEqual(len(ep.stack_trace), 0)
         self.assertEqual(ep.message_is_markdown, True)
         self.assertEqual(ep.is_warning, False)
 
@@ -391,7 +405,10 @@ Object of type _thread.lock: <unlocked _thread.lock object at
         exception_proto.marshall(ep, cm.exception)
 
         self.assertEqual(ep.type, "TypeError")
-        self.assertTrue(normalize_md(ep.message).startswith(normalize_md("""
+        self.assertTrue(
+            normalize_md(ep.message).startswith(
+                normalize_md(
+                    """
 unsupported operand type(s) for +=: 'MyObj' and 'int'
 
 This error is likely due to a bug in `bad_hash_func()`, which is a
@@ -406,10 +423,13 @@ pass that to `hash_funcs` instead:
 ```
 Object of type caching_test.MyObj:
 <caching_test.CacheErrorsTest.test_user_hash_error.<locals>.MyObj object at
-        """)))
+        """
+                )
+            )
+        )
 
         # Stack trace doesn't show in test :(
-        #self.assertNotEqual(len(ep.stack_trace), 0)
+        # self.assertNotEqual(len(ep.stack_trace), 0)
         self.assertEqual(ep.message_is_markdown, True)
         self.assertEqual(ep.is_warning, False)
 
