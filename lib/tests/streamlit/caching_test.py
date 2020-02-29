@@ -179,15 +179,14 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
         st.text("foo")
         warning.assert_not_called()
 
-    def test_caching_counter(self):
-        """Test that _within_cached_function_counter behaves properly in
-        multiple threads."""
+    def test_multithread_stack(self):
+        """Test that cached_func_stack behaves properly in multiple threads."""
 
         def get_counter():
-            return caching._cache_info.within_cached_func
+            return len(caching._cache_info.cached_func_stack)
 
         def set_counter(val):
-            caching._cache_info.within_cached_func = val
+            caching._cache_info.cached_func_stack = ['foo'] * val
 
         self.assertEqual(0, get_counter())
         set_counter(1)
@@ -208,6 +207,9 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
 
         # The other thread should not have modified the main thread
         self.assertEqual(1, get_counter())
+
+        # Reset test
+        set_counter(0)
 
 
 # Temporarily turn off these tests since there's no Cache object in __init__
