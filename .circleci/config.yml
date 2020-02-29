@@ -40,7 +40,7 @@ workflows:
     triggers:
       - schedule:
           # TODO set to 11PM PST (7AM UTC) before merging
-          cron: "30 * * * *"
+          cron: "55 * * * *"
           filters:
             branches:
               only:
@@ -515,7 +515,7 @@ jobs:
           command: |
             cd lib
             echo -e "[pypi]" >> ~/.pypirc
-            echo -e "username = jrhone" >> ~/.pypirc
+            echo -e "username = streamlit" >> ~/.pypirc
             echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
 
       - run:
