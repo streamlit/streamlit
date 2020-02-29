@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import sys
+import uuid
 from enum import Enum
 
 import tornado.gen
@@ -26,7 +27,6 @@ from streamlit import caching
 from streamlit import config
 from streamlit import url_util
 from streamlit.UploadedFileManager import UploadedFileManager
-from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.Report import Report
 from streamlit.ScriptRequestQueue import RerunData
 from streamlit.ScriptRequestQueue import ScriptRequest
@@ -35,7 +35,6 @@ from streamlit.ScriptRunner import ScriptRunner
 from streamlit.ScriptRunner import ScriptRunnerEvent
 from streamlit.credentials import Credentials
 from streamlit.logger import get_logger
-from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Widget_pb2 import WidgetStates
 from streamlit.server.server_util import serialize_forward_msg
@@ -63,9 +62,7 @@ class ReportSession(object):
     A ReportSession is attached to each thread involved in running its Report.
     """
 
-    _next_id = 0
-
-    def __init__(self, ioloop, script_path, command_line):
+    def __init__(self, ioloop, script_path, command_line, uploaded_file_manager):
         """Initialize the ReportSession.
 
         Parameters
@@ -79,17 +76,18 @@ class ReportSession(object):
         command_line : str
             Command line as input by the user.
 
+        uploaded_file_manager : UploadedFileManager
+            The server's UploadedFileManager.
+
         """
-        # Each ReportSession gets a unique ID
-        self.id = ReportSession._next_id
-        ReportSession._next_id += 1
+        # Each ReportSession has a unique string ID.
+        self.id = str(uuid.uuid4())
 
         self._ioloop = ioloop
         self._report = Report(script_path, command_line)
+        self._uploaded_file_mgr = uploaded_file_manager
 
         self._state = ReportSessionState.REPORT_NOT_RUNNING
-
-        self._uploaded_file_mgr = UploadedFileManager()
 
         self._widget_states = WidgetStates()
         self._local_sources_watcher = LocalSourcesWatcher(
@@ -109,7 +107,7 @@ class ReportSession(object):
         LOGGER.debug("ReportSession initialized (id=%s)", self.id)
 
     def flush_browser_queue(self):
-        """Clears the report queue and returns the messages it contained.
+        """Clear the report queue and return the messages it contained.
 
         The Server calls this periodically to deliver new messages
         to the browser connected to this report.
@@ -124,14 +122,14 @@ class ReportSession(object):
         return self._report.flush_browser_queue()
 
     def shutdown(self):
-        """Shuts down the ReportSession.
+        """Shut down the ReportSession.
 
         It's an error to use a ReportSession after it's been shut down.
 
         """
         if self._state != ReportSessionState.SHUTDOWN_REQUESTED:
             LOGGER.debug("Shutting down (id=%s)", self.id)
-            self._uploaded_file_mgr.delete_all_files()
+            self._uploaded_file_mgr.remove_session_files(self.id)
 
             # Shut down the ScriptRunner, if one is active.
             # self._state must not be set to SHUTDOWN_REQUESTED until
@@ -143,7 +141,7 @@ class ReportSession(object):
             self._local_sources_watcher.close()
 
     def enqueue(self, msg):
-        """Enqueues a new ForwardMsg to our browser queue.
+        """Enqueue a new ForwardMsg to our browser queue.
 
         This can be called on both the main thread and a ScriptRunner
         run thread.
@@ -173,7 +171,7 @@ class ReportSession(object):
         self._report.enqueue(msg)
 
     def enqueue_exception(self, e):
-        """Enqueues an Exception message.
+        """Enqueue an Exception message.
 
         Parameters
         ----------
@@ -374,6 +372,7 @@ class ReportSession(object):
             imsg.user_info.email = ""
 
         imsg.command_line = self._report.command_line
+        imsg.session_id = self.id
 
         self.enqueue(msg)
 
@@ -386,7 +385,7 @@ class ReportSession(object):
         self.enqueue(msg)
 
     def _enqueue_report_finished_message(self, status):
-        """Enqueues a report_finished ForwardMsg.
+        """Enqueue a report_finished ForwardMsg.
 
         Parameters
         ----------
@@ -400,7 +399,7 @@ class ReportSession(object):
     def handle_rerun_script_request(
         self, command_line=None, widget_state=None, is_preheat=False
     ):
-        """Tells the ScriptRunner to re-run its report.
+        """Tell the ScriptRunner to re-run its report.
 
         Parameters
         ----------
@@ -434,37 +433,12 @@ class ReportSession(object):
 
         self.request_rerun(widget_state)
 
-    def handle_upload_file(self, upload_file):
-        self._uploaded_file_mgr.create_or_clear_file(
-            widget_id=upload_file.widget_id,
-            name=upload_file.name,
-            size=upload_file.size,
-            last_modified=upload_file.lastModified,
-            chunks=upload_file.chunks,
-        )
-
-        self.handle_rerun_script_request(widget_state=self._widget_states)
-
-    def handle_upload_file_chunk(self, upload_file_chunk):
-        progress = self._uploaded_file_mgr.process_chunk(
-            widget_id=upload_file_chunk.widget_id,
-            index=upload_file_chunk.index,
-            data=upload_file_chunk.data,
-        )
-
-        if progress == 1:
-            self.handle_rerun_script_request(widget_state=self._widget_states)
-
-    def handle_delete_uploaded_file(self, delete_uploaded_file):
-        self._uploaded_file_mgr.delete_file(widget_id=delete_uploaded_file.widget_id)
-        self.handle_rerun_script_request(widget_state=self._widget_states)
-
     def handle_stop_script_request(self):
-        """Tells the ScriptRunner to stop running its report."""
+        """Tell the ScriptRunner to stop running its report."""
         self._enqueue_script_request(ScriptRequest.STOP)
 
     def handle_clear_cache_request(self):
-        """Clears this report's cache.
+        """Clear this report's cache.
 
         Because this cache is global, it will be cleared for all users.
 
@@ -476,7 +450,7 @@ class ReportSession(object):
         caching.clear_cache()
 
     def handle_set_run_on_save_request(self, new_value):
-        """Changes our run_on_save flag to the given value.
+        """Change our run_on_save flag to the given value.
 
         The browser will be notified of the change.
 
@@ -530,6 +504,7 @@ class ReportSession(object):
 
         # Create the ScriptRunner, attach event handlers, and start it
         self._scriptrunner = ScriptRunner(
+            session_id=self.id,
             report=self._report,
             enqueue_forward_msg=self.enqueue,
             widget_states=self._widget_states,

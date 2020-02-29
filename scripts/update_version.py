@@ -98,7 +98,7 @@ def update_files(data, python=True):
         filename = os.path.join(BASE_DIR, filename)
         matched = False
         pattern = re.compile(regex)
-        for line in fileinput.input(filename, inplace=1):
+        for line in fileinput.input(filename, inplace=True):
             if pattern.match(line.rstrip()):
                 matched = True
             line = re.sub(regex, r"\g<pre>%s\g<post>" % version, line.rstrip())

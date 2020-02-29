@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from streamlit import type_util
 from streamlit.compatibility import setup_2_3_shims
 
 setup_2_3_shims(globals())
@@ -22,6 +23,7 @@ import re
 
 from validators import url
 
+from streamlit import type_util
 from streamlit.proto import Video_pb2
 from streamlit.MediaFileManager import media_file_manager
 
@@ -67,12 +69,12 @@ def _marshall_av_media(proto, data, mimetype):
     Given a string, check if it's a url; if so, send it out without modification.
     Otherwise assume strings are filenames and let any OS errors raise.
 
-    Load data either from file or through bytes-processing methods into a 
+    Load data either from file or through bytes-processing methods into a
     MediaFile object.  Pack proto with generated Tornado-based URL.
     """
     # Audio and Video methods have already checked if this is a URL by this point.
 
-    if isinstance(data, string_types):
+    if isinstance(data, str):
         # Assume it's a filename or blank.  Allow OS-based file errors.
         with open(data, "rb") as fh:
             this_file = media_file_manager.add(fh.read(), mimetype)
@@ -88,11 +90,11 @@ def _marshall_av_media(proto, data, mimetype):
         pass
     elif isinstance(data, io.BytesIO):
         data.seek(0)
-        data = date.getvalue()
-    elif isinstance(data, io.IOBase):
+        data = data.getvalue()
+    elif isinstance(data, io.RawIOBase):
         data.seek(0)
         data = data.read()
-    elif is_type(data, "numpy.ndarray"):
+    elif type_util.is_type(data, "numpy.ndarray"):
         data = data.tobytes()
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
@@ -125,7 +127,7 @@ def marshall_video(proto, data, mimetype="video/mp4", start_time=0):
     # "type" distinguishes between YouTube and non-YouTube links
     proto.type = Video_pb2.Video.Type.NATIVE
 
-    if isinstance(data, string_types) and url(data):  # noqa: F821
+    if isinstance(data, str) and url(data):
         youtube_url = _reshape_youtube_url(data)
         if youtube_url:
             proto.url = youtube_url
@@ -157,7 +159,7 @@ def marshall_audio(proto, data, mimetype="audio/wav", start_time=0):
 
     proto.start_time = start_time
 
-    if isinstance(data, string_types) and url(data):  # noqa: F821
+    if isinstance(data, str) and url(data):
         proto.url = data
 
     else:

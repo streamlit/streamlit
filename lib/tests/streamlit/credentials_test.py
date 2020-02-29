@@ -200,7 +200,7 @@ class CredentialsClassTest(unittest.TestCase):
 
             c.save()
 
-            make_dirs.assert_called_once_with(streamlit_root_path)
+            make_dirs.assert_called_once_with(streamlit_root_path, exist_ok=True)
             open.return_value.write.assert_called_once_with(truth)
 
     @patch("streamlit.credentials.file_util.get_streamlit_file_path", mock_get_path)

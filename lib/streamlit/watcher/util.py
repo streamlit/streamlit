@@ -53,7 +53,7 @@ def calc_md5_with_blocking_retries(file_path):
         The MD5 checksum.
 
     """
-    file_bytes = None
+    file_bytes = b""
 
     # There's a race condition where sometimes file_path no longer exists when
     # we try to read it (since the file is in the process of being written).

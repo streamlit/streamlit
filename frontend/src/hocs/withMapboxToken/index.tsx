@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,23 +13,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
-syntax = "proto3";
-
-// file_uploader widget
-message FileUploader {
-  // The widget id
-  string id = 1;
-
-  // Text to be displayed before the widget
-  string label = 2;
-
-  // Supported types: For example: ["png","jpg","img"]
-  repeated string type = 3;
-
-  // Max file size allowed by server config
-  int32 max_upload_size_mb = 4;
-
-  reserved 5;
-}
+export { default } from "./withMapboxToken"
