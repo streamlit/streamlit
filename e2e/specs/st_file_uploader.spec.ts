@@ -41,7 +41,16 @@ describe("st.file_uploader", () => {
     cy.fixture(fileName).then(fileContent => {
       cy.get('[data-baseweb="file-uploader"] > div').upload(
         { fileContent, fileName, mimeType: "application/json" },
-        { force: true, subjectType: "drag-n-drop" }
+        {
+          force: true,
+          subjectType: "drag-n-drop",
+
+          // We intentionally omit the "dragleave" trigger event here;
+          // the page may start re-rendering after the "drop" event completes,
+          // which causes a cypress error due to the element being detached
+          // from the DOM when "dragleave" is emitted.
+          events: ["dragenter", "drop"]
+        }
       );
 
       cy.get(".uploadError").should(
@@ -62,7 +71,11 @@ describe("st.file_uploader", () => {
     cy.fixture(fileName).then(fileContent => {
       cy.get('[data-baseweb="file-uploader"] > div').upload(
         { fileContent, fileName, mimeType: "text/plain" },
-        { force: true, subjectType: "drag-n-drop" }
+        {
+          force: true,
+          subjectType: "drag-n-drop",
+          events: ["dragenter", "drop"]
+        }
       );
 
       cy.get(".uploadDone").should("have.text", fileName);
