@@ -40,7 +40,7 @@ workflows:
     triggers:
       - schedule:
           # TODO set to 11PM PST (7AM UTC) before merging
-          cron: "55 * * * *"
+          cron: "5 * * * *"
           filters:
             branches:
               only:
