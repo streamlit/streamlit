@@ -63,7 +63,7 @@ def marshall(exception_proto, exception):
             # the user what to fix.
             exception_proto.message = _format_syntax_error_message(exception)
         else:
-            exception_proto.message = str(exception)
+            exception_proto.message = str(exception).strip()
             exception_proto.message_is_markdown = is_markdown_exception
     except Exception as str_exception:
         # Sometimes the exception's __str__/__unicode__ method itself
@@ -177,8 +177,6 @@ def _get_stack_trace_str_list(exception, strip_streamlit_stack_entries=False):
     else:
         if strip_streamlit_stack_entries:
             extracted_frames = get_nonstreamlit_traceback(extracted_traceback)
-            # XXX WAS LIKE THIS
-            # stack_trace_str_list = traceback.format_list(extracted_traceback)
             stack_trace_str_list = traceback.format_list(extracted_frames)
         else:
             stack_trace_str_list = traceback.format_list(extracted_traceback)

@@ -672,6 +672,11 @@ class CacheKeyNotFoundError(Exception):
 
 
 class CachedObjectWasMutatedError(ValueError):
+    """This is used internally, but never shown to the user.
+
+    Users see CachedObjectMutationWarning instead.
+    """
+
     def __init__(self, cached_value, func_or_code):
         self.cached_value = cached_value
         if inspect.iscode(func_or_code):
