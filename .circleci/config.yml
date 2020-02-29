@@ -522,6 +522,7 @@ jobs:
           name: create packages
           no_output_timeout: 2h
           command: |
+            ${SUDO} apt-get install rsync
             make frontend
             make install
             make wheel
@@ -529,8 +530,7 @@ jobs:
       - run:
           name: upload to pypi
           command: |
-            cd lib
-            twine upload dist/*
+            make distribute
 
   cypress:
     docker:
