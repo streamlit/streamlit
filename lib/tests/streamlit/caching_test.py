@@ -186,7 +186,7 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
             return len(caching._cache_info.cached_func_stack)
 
         def set_counter(val):
-            caching._cache_info.cached_func_stack = ['foo'] * val
+            caching._cache_info.cached_func_stack = ["foo"] * val
 
         self.assertEqual(0, get_counter())
         set_counter(1)
