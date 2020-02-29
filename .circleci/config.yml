@@ -47,6 +47,7 @@ workflows:
                 - develop
                 # TODO remove this branch before merge
                 - pypi_nightly
+                - feature/nightly
     jobs:
       - create-tag
 
