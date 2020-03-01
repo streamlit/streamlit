@@ -31,6 +31,7 @@ from streamlit import cursor
 from streamlit import metrics
 from streamlit import type_util
 from streamlit.ReportThread import get_report_ctx
+from streamlit.server.Server import Server
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException
 from streamlit.errors import NoSessionContext
@@ -1026,7 +1027,7 @@ class DeltaGenerator(object):
         ...     columns=['a', 'b', 'c'])
         >>>
         >>> st.vega_lite_chart(df, {
-        ...     'mark': 'circle',
+        ...     'mark': {'type': 'circle', 'tooltip': True},
         ...     'encoding': {
         ...         'x': {'field': 'a', 'type': 'quantitative'},
         ...         'y': {'field': 'b', 'type': 'quantitative'},
@@ -1091,9 +1092,9 @@ class DeltaGenerator(object):
         ...     columns=['a', 'b', 'c'])
         ...
         >>> c = alt.Chart(df).mark_circle().encode(
-        ...     x='a', y='b', size='c', color='c')
+        ...     x='a', y='b', size='c', color='c', tooltip=['a', 'b', 'c'])
         >>>
-        >>> st.altair_chart(c, width=-1)
+        >>> st.altair_chart(c, use_container_width=True)
 
         .. output::
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
@@ -1183,7 +1184,7 @@ class DeltaGenerator(object):
         ''')
 
         .. output::
-           https://share.streamlit.io/0.37.0-2PGsB/index.html?id=QFXRFT19mzA3brW8XCAcK8
+           https://share.streamlit.io/0.56.0-xTAd/index.html?id=GBn3GXZie5K1kXuBKe4yQL
            height: 400px
 
         """
@@ -1293,10 +1294,10 @@ class DeltaGenerator(object):
         ...         hist_data, group_labels, bin_size=[.1, .25, .5])
         >>>
         >>> # Plot!
-        >>> st.plotly_chart(fig)
+        >>> st.plotly_chart(fig, use_container_width=True)
 
         .. output::
-           https://share.streamlit.io/0.32.0-2KznC/index.html?id=NbyKJnNQ2XcrpWTno643uD
+           https://share.streamlit.io/0.56.0-xTAd/index.html?id=TuP96xX8JnsoQeUGAPjkGQ
            height: 400px
 
         """
@@ -1410,10 +1411,10 @@ class DeltaGenerator(object):
         ...
         >>> p.line(x, y, legend='Trend', line_width=2)
         >>>
-        >>> st.bokeh_chart(p)
+        >>> st.bokeh_chart(p, use_container_width=True)
 
         .. output::
-           https://share.streamlit.io/0.34.0-2Ezo2/index.html?id=kWNtYxGUFpA3PRXt3uVff
+           https://share.streamlit.io/0.56.0-xTAd/index.html?id=Fdhg51uMbGMLRRxXV6ubzp
            height: 600px
 
         """
@@ -2025,7 +2026,8 @@ class DeltaGenerator(object):
     def file_uploader(self, element, label, type=None, encoding="auto", key=None):
         """Display a file uploader widget.
 
-        By default, uploaded files are limited to 50MB but you can configure that using the `server.maxUploadSize` config option.
+        By default, uploaded files are limited to 200MB. You can configure
+        this using the `server.maxUploadSize` config option.
 
         Parameters
         ----------
@@ -2072,8 +2074,9 @@ class DeltaGenerator(object):
         data = None
         ctx = get_report_ctx()
         if ctx is not None:
-            progress, data = ctx.uploaded_file_mgr.get_data(element.file_uploader.id)
-            element.file_uploader.progress = progress
+            data = ctx.uploaded_file_mgr.get_file_data(
+                session_id=ctx.session_id, widget_id=element.file_uploader.id
+            )
 
         if data is None:
             return NoValue

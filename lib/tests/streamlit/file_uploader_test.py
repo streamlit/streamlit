@@ -27,7 +27,6 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.file_uploader
         self.assertEqual(c.label, "the label")
-        self.assertEqual(c.progress, 0.0)
 
     def test_string_typel(self):
         """Test that it can be called using a string for type parameter."""
@@ -35,7 +34,6 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.file_uploader
         self.assertEqual(c.type, ["png"])
-        self.assertEqual(c.progress, 0.0)
 
     def test_several_types(self):
         """Test that it can be called using an array for type parameter."""
@@ -43,7 +41,6 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.file_uploader
         self.assertEqual(c.type, ["png", "svg", "jpeg"])
-        self.assertEqual(c.progress, 0.0)
 
     def test_max_upload_size_mb(self):
         """Test that the max upload size is the configuration value."""
@@ -53,4 +50,3 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(
             c.max_upload_size_mb, config.get_option("server.maxUploadSize")
         )
-        self.assertEqual(c.progress, 0.0)

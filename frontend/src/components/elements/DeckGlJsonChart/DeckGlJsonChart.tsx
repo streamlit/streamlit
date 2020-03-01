@@ -27,6 +27,7 @@ import { CSVLoader } from "@loaders.gl/csv"
 import { registerLoaders } from "@loaders.gl/core"
 
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
+import withMapboxToken from "hocs/withMapboxToken"
 
 import "mapbox-gl/dist/mapbox-gl.css"
 import "./DeckGlJsonChart.scss"
@@ -54,11 +55,9 @@ registerLoaders([CSVLoader])
 
 const jsonConverter = new JSONConverter({ configuration })
 
-const MAPBOX_ACCESS_TOKEN =
-  "pk.eyJ1IjoidGhpYWdvdCIsImEiOiJjamh3bm85NnkwMng4M3dydnNveWwzeWNzIn0.vCBDzNsEF2uFSFk2AM0WZQ"
-
 export interface Props {
   width: number
+  mapboxToken: string
   element: Immutable.Map<string, any>
 }
 
@@ -158,7 +157,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
                   : deck.mapStyle[0]
                 : undefined
             }
-            mapboxApiAccessToken={MAPBOX_ACCESS_TOKEN}
+            mapboxApiAccessToken={this.props.mapboxToken}
           />
         </DeckGL>
       </div>
@@ -166,4 +165,4 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
   }
 }
 
-export default withFullScreenWrapper(DeckGlJsonChart)
+export default withMapboxToken(withFullScreenWrapper(DeckGlJsonChart))

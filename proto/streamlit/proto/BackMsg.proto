@@ -18,36 +18,6 @@ syntax = "proto3";
 
 import "streamlit/proto/Widget.proto";
 
-message UploadFile {
-  string widget_id = 1;
-
-  // The name (with extension) of the file on client pc
-  string name = 2;
-
-  // The size (in bytes) of the file on client pc
-  uint64 size = 3;
-
-  // The date of last modified of the file on client pc
-  uint64 lastModified = 4;
-
-  // Number of chunks the server should wait for
-  uint32 chunks = 5;
-}
-
-message UploadFileChunk {
-  string widget_id = 1;
-
-  // Index of the chunk
-  uint32 index = 2;
-
-  // Byte array with the data
-  bytes data = 3;
-}
-
-message DeleteUploadedFile {
-  string widget_id = 1;
-}
-
 // A message from the browser to the server.
 message BackMsg {
   oneof type {
@@ -79,14 +49,5 @@ message BackMsg {
 
     // Set to true to ask the server to close the connection
     bool close_connection = 10;
-
-    // Start to upload a new file to the server
-    UploadFile upload_file = 11;
-
-    // Upload a file chunk to the server
-    UploadFileChunk upload_file_chunk = 12;
-
-    // Delete uploaded file
-    DeleteUploadedFile delete_uploaded_file = 13;
   }
 }

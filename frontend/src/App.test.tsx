@@ -59,13 +59,14 @@ jest.mock("moment", () =>
 describe("App", () => {
   beforeEach(() => {
     SessionInfo.current = new SessionInfo({
+      sessionId: "sessionId",
       streamlitVersion: "sv",
       pythonVersion: "pv",
       installationId: "iid",
       authorEmail: "ae",
       maxCachedMessageAge: 2,
       commandLine: "command line",
-      mapboxToken: "mpt",
+      userMapboxToken: "mpt",
     } as SessionInfoArgs)
     MetricsManager.current = getMetricsManagerForTest()
   })
@@ -92,6 +93,7 @@ describe("App", () => {
       environmentInfo: {
         streamlitVersion: "svv",
       },
+      sessionId: "sessionId",
       userInfo: {},
       config: {},
       sessionState: {},

@@ -302,6 +302,7 @@ class ConfigTest(unittest.TestCase):
                 "server.fileWatcherType",
                 "server.headless",
                 "server.liveSave",
+                "server.address",
                 "server.port",
                 "server.runOnSave",
                 "server.maxUploadSize",
@@ -354,7 +355,7 @@ class ConfigTest(unittest.TestCase):
             config._check_conflicts()
         self.assertEqual(
             str(e.value),
-            "browser.serverPort does not work when global.developmentMode is " "true.",
+            "browser.serverPort does not work when global.developmentMode is true.",
         )
 
     def test_check_conflicts_s3_sharing_mode(self):
@@ -636,4 +637,4 @@ class ConfigLoadingTest(unittest.TestCase):
             self.assertEqual("local_accessKeyId", config.get_option("s3.accessKeyId"))
 
     def test_upload_file_default_values(self):
-        self.assertEqual(50, config.get_option("server.maxUploadSize"))
+        self.assertEqual(200, config.get_option("server.maxUploadSize"))

@@ -38,16 +38,15 @@ function withFullScreenWrapper(
       WrappedComponent.name})`
 
     render(): ReactNode {
-      const { element, index, width, height } = this.props
+      const { width, height, ...passThroughProps } = this.props
 
       return (
         <FullScreenWrapper width={width} height={height}>
           {({ width, height }) => (
             <WrappedComponent
-              element={element}
-              index={index}
               width={width}
               height={height}
+              {...passThroughProps}
             />
           )}
         </FullScreenWrapper>
