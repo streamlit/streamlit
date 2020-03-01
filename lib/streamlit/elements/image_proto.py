@@ -20,7 +20,6 @@ import imghdr
 import mimetypes
 
 import numpy as np
-import six
 
 from PIL import Image, ImageFile
 
@@ -161,7 +160,7 @@ def marshall_images(
     if type(caption) is list:
         captions = caption
     else:
-        if isinstance(caption, six.string_types):
+        if isinstance(caption, str):
             captions = [caption]
         # You can pass in a 1-D Numpy array as captions.
         elif type(caption) == np.ndarray and len(caption.shape) == 1:
@@ -210,7 +209,7 @@ def marshall_images(
             data = _np_array_to_bytes(data, format=format)
 
         # Strings
-        elif isinstance(image, six.string_types):
+        elif isinstance(image, str):
             # If it's a url, then set the protobuf and continue
             try:
                 p = urlparse(image)

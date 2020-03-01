@@ -15,12 +15,6 @@
 
 """A hashing utility for code."""
 
-# Python 2/3 compatibility
-from __future__ import absolute_import, division, print_function, unicode_literals
-from streamlit.compatibility import setup_2_3_shims
-
-setup_2_3_shims(globals())
-
 import collections
 import dis
 import functools
@@ -38,7 +32,6 @@ import types
 from typing import Any, Callable, Dict, List, Union
 
 import streamlit as st
-from streamlit import compatibility
 from streamlit import config
 from streamlit import file_util
 from streamlit import type_util
