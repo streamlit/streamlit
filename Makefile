@@ -48,7 +48,7 @@ setup:
 .PHONY: pipenv-install
 pipenv-install: lib/Pipfile
 	@# Runs pipenv install; doesn't update the Pipfile.lock.
-	cd lib; pipenv install --dev --skip-lock
+	cd lib; pipenv install --dev
 
 .PHONY: pylint
 # Run "black", our Python formatter, to verify that our source files
