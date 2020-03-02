@@ -433,9 +433,7 @@ jobs:
     docker:
       - image: circleci/python:3.8.1
 
-    # TODO sign up for paid plan and open support ticket to use `large` resource class
-    # https://circleci.com/docs/2.0/configuration-reference/#resource_class
-    # https://support.circleci.com/hc/en-us/requests/new
+    # TODO is medium+ enough or do we need large?
     resource_class: large
 
     working_directory: ~/repo
@@ -488,10 +486,6 @@ jobs:
 
       - run:
           <<: *activate_virtualenv
-
-      # TODO verify this works removed (we're doing make install below), and remove these lines
-      #- run:
-      #    <<: *make_develop
 
       - run:
           <<: *generate_protobufs

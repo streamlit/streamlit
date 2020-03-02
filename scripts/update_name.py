@@ -53,9 +53,7 @@ def update_files(data, python=True):
             line = re.sub(regex, r"\g<pre>%s\g<post>" % project_name, line.rstrip())
             print(line)
         if not matched:
-            # TODO should this script and update_version fail in this case
-            # instead of logging since we're using them in CircleCI?
-            logging.error('In file "%s", did not find regex "%s"', filename, regex)
+            raise Exception('In file "%s", did not find regex "%s"' % (filename, regex))
 
 
 def main():
