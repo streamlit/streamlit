@@ -36,6 +36,7 @@ workflows:
   create-nightly-tag:
     triggers:
       - schedule:
+          # Run job at 10.30pm PST or 11.30pm PDT
           cron: "30 6 * * *"
           filters:
             branches:
