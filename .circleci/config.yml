@@ -7,22 +7,19 @@ workflows:
   version: 2
   circleci:
     jobs:
-      # TODO reenable 3.5 before merging
-      #- python-3.5 # Oldest supported Python minor version.
-      - python-3.8 # Latest supported Python minor version.
-      # TODO remove 3.x after nightly release job works
-      - python-3.x:
+      - python-3.5: # Oldest supported Python minor version.
           filters:
             tags:
               only: /^([0-9]+\.){3}dev[0-9]+/ # 0.56.1.dev20201129
+      - python-3.8: # Latest supported Python minor version.
+          filters:
+            tags:
+              only: /^([0-9]+\.){3}dev[0-9]+/
       - nightly-release:
           requires:
-            # TODO add job for cypress non flaky tests (later)
-            # TODO enable 3.5 and 3.8 before merge
-            # - python-3.5
-            # - python-3.8
-            # TODO remove 3.x after nightly release job works
-            - python-3.x
+            # TODO add job for cypress non flaky tests
+            - python-3.5
+            - python-3.8
           filters:
             tags:
               only: /^([0-9]+\.){3}dev[0-9]+/
@@ -39,30 +36,16 @@ workflows:
   create-nightly-tag:
     triggers:
       - schedule:
-          # TODO set to 11PM PST (7AM UTC) before merging
-          cron: "35 * * * *"
+          # Run job at 10.30pm PST or 11.30pm PDT
+          cron: "30 6 * * *"
           filters:
             branches:
               only:
                 - develop
-                # TODO remove this branch before merge
-                - pypi_nightly
-                - feature/nightly
     jobs:
       - create-tag
 
 jobs:
-  # TODO remove 3.x job before merge
-  python-3.x:
-    docker:
-      - image: circleci/python:3.8.1
-
-    working_directory: ~/repo
-
-    steps:
-      - checkout:
-          name: Checkout Streamlit code
-
   python-3.8: &job-template
     docker:
       - image: circleci/python:3.8.1
@@ -433,8 +416,7 @@ jobs:
     docker:
       - image: circleci/python:3.8.1
 
-    # TODO is medium+ enough or do we need large?
-    resource_class: large
+    resource_class: medium+
 
     working_directory: ~/repo
 
@@ -503,7 +485,6 @@ jobs:
 
       # Password added to circleci environment
       # https://ui.circleci.com/settings/project/github/streamlit/streamlit/environment-variables
-      # TODO change username to `streamlit` before merging PR into develop
       - run:
           name: init .pypirc
           command: |
