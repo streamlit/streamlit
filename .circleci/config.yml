@@ -433,8 +433,7 @@ jobs:
     docker:
       - image: circleci/python:3.8.1
 
-    # TODO is medium+ enough or do we need large?
-    resource_class: medium
+    resource_class: medium+
 
     working_directory: ~/repo
 
