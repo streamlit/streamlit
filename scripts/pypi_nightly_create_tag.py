@@ -19,8 +19,10 @@
 Increment the version number, add a dev suffix and add todays date
 """
 import packaging.version
+import pytz
+import sys
 
-from datetime import date
+from datetime import datetime
 
 import streamlit.version
 
@@ -39,17 +41,14 @@ def create_tag():
     )
 
     # Append todays date
-    # TODO should this be the date in PST?
     version_with_date = (
         ".".join([str(x) for x in version_with_inc_micro])
         + ".dev"
-        + date.today().strftime("%Y%m%d")
+        + datetime.now(pytz.timezone("US/Pacific")).strftime("%Y%m%d")
     )
 
     # Verify if version is PEP440 compliant.
-    packaging.version.Version(
-        version_with_date
-    )  # TODO test what happens in circleci if this raises an error
+    packaging.version.Version(version_with_date)
 
     return version_with_date
 
