@@ -44,13 +44,11 @@ def create_tag():
     version_with_date = (
         ".".join([str(x) for x in version_with_inc_micro])
         + ".dev"
-        + datetime.now(pytz.timezone('US/Pacific')).strftime("%Y%m%d")
+        + datetime.now(pytz.timezone("US/Pacific")).strftime("%Y%m%d")
     )
 
     # Verify if version is PEP440 compliant.
-    packaging.version.Version(
-        version_with_date
-    )
+    packaging.version.Version(version_with_date)
 
     return version_with_date
 
