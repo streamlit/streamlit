@@ -2566,7 +2566,7 @@ class DeltaGenerator(object):
         element.empty.unused = True
 
     @_with_element
-    def map(self, element, data=None, zoom=None):
+    def map(self, element, data=None, zoom=None, use_container_width=True):
         """Display a map with points on it.
 
         This is a wrapper around st.pydeck_chart to quickly create scatterplot
@@ -2610,6 +2610,7 @@ class DeltaGenerator(object):
         import streamlit.elements.map as streamlit_map
 
         element.deck_gl_json_chart.json = streamlit_map.to_deckgl_json(data, zoom)
+        element.deck_gl_json_chart.use_container_width = use_container_width
 
     @_with_element
     def deck_gl_chart(self, element, spec=None, use_container_width=False, **kwargs):
@@ -2730,7 +2731,7 @@ class DeltaGenerator(object):
         deck_gl.marshall(element.deck_gl_chart, spec, use_container_width, **kwargs)
 
     @_with_element
-    def pydeck_chart(self, element, pydeck_obj=None):
+    def pydeck_chart(self, element, pydeck_obj=None, use_container_width=False):
         """Draw a chart using the PyDeck library.
 
         This supports 3D maps, point clouds, and more! More info about PyDeck
@@ -2800,7 +2801,7 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.deck_gl_json_chart as deck_gl_json_chart
 
-        deck_gl_json_chart.marshall(element, pydeck_obj)
+        deck_gl_json_chart.marshall(element, pydeck_obj, use_container_width)
 
     @_with_element
     def table(self, element, data=None):
