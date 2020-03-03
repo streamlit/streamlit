@@ -242,9 +242,9 @@ class ScriptRunner(object):
 
         LOGGER.debug("Running script %s", rerun_data)
 
+        media_file_manager.reset_files_for_session()
         # Reset DeltaGenerators and widgets.
         get_report_ctx().reset()
-        media_file_manager.reset_files_for_session()
 
         self.on_event.send(ScriptRunnerEvent.SCRIPT_STARTED)
 
