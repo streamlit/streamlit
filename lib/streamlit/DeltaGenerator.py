@@ -15,13 +15,6 @@
 
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
-# Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
-from streamlit.compatibility import setup_2_3_shims
-from streamlit.server.Server import Server
-
-setup_2_3_shims(globals())
-
 import io
 import functools
 import json
@@ -38,6 +31,7 @@ from streamlit import cursor
 from streamlit import metrics
 from streamlit import type_util
 from streamlit.ReportThread import get_report_ctx
+from streamlit.server.Server import Server
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException
 from streamlit.errors import NoSessionContext
@@ -224,15 +218,7 @@ def _get_widget_ui_value(widget_type, element, user_key=None):
 
 
 def _get_pandas_index_attr(data, attr):
-    python3_attr = getattr(data.index, attr, None)
-    python2_attr = getattr(data.index, "__dict__", None)
-
-    if python3_attr:
-        return python3_attr
-    elif python2_attr:
-        return data.index.__dict__["_" + attr]
-    else:
-        return None
+    return getattr(data.index, attr, None)
 
 
 class NoValue(object):
@@ -1198,7 +1184,7 @@ class DeltaGenerator(object):
         ''')
 
         .. output::
-           https://share.streamlit.io/0.37.0-2PGsB/index.html?id=QFXRFT19mzA3brW8XCAcK8
+           https://share.streamlit.io/0.56.0-xTAd/index.html?id=GBn3GXZie5K1kXuBKe4yQL
            height: 400px
 
         """
@@ -1308,10 +1294,10 @@ class DeltaGenerator(object):
         ...         hist_data, group_labels, bin_size=[.1, .25, .5])
         >>>
         >>> # Plot!
-        >>> st.plotly_chart(fig)
+        >>> st.plotly_chart(fig, use_container_width=True)
 
         .. output::
-           https://share.streamlit.io/0.32.0-2KznC/index.html?id=NbyKJnNQ2XcrpWTno643uD
+           https://share.streamlit.io/0.56.0-xTAd/index.html?id=TuP96xX8JnsoQeUGAPjkGQ
            height: 400px
 
         """
@@ -1425,10 +1411,10 @@ class DeltaGenerator(object):
         ...
         >>> p.line(x, y, legend='Trend', line_width=2)
         >>>
-        >>> st.bokeh_chart(p)
+        >>> st.bokeh_chart(p, use_container_width=True)
 
         .. output::
-           https://share.streamlit.io/0.34.0-2Ezo2/index.html?id=kWNtYxGUFpA3PRXt3uVff
+           https://share.streamlit.io/0.56.0-xTAd/index.html?id=Fdhg51uMbGMLRRxXV6ubzp
            height: 600px
 
         """
@@ -2040,8 +2026,8 @@ class DeltaGenerator(object):
     def file_uploader(self, element, label, type=None, encoding="auto", key=None):
         """Display a file uploader widget.
 
-        By default, uploaded files are limited to 50MB but you can configure
-        that using the `server.maxUploadSize` config option.
+        By default, uploaded files are limited to 200MB. You can configure
+        this using the `server.maxUploadSize` config option.
 
         Parameters
         ----------
