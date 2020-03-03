@@ -14,36 +14,26 @@
 # limitations under the License.
 
 import threading
+from typing import Dict
+from typing import List
+from typing import NamedTuple
 
 from blinker import Signal
 
+# An uploaded file's data and metadata
+UploadedFile = NamedTuple("UploadedFile", [("name", str), ("data", bytes)])
 
-class UploadedFile(object):
-    """Encapsulates an uploaded file's data and metadata."""
+# A list of UploadedFiles, and associated ID
+_UploadedFileListBase = NamedTuple(
+    "_UploadedFileListBase",
+    [("session_id", str), ("widget_id", str), ("files", List[UploadedFile])],
+)
 
-    def __init__(self, session_id, widget_id, name, data):
-        """Construct a new File object.
 
-        Parameters
-        ----------
-        session_id : str
-            The session ID of the report that created owns the file.
-        widget_id : str
-            The widget ID of the FileUploader that uploaded the file.
-        name : str
-            The file's name.
-        data : bytes
-            The file's data.
-
-        """
-        self.session_id = session_id
-        self.widget_id = widget_id
-        self.name = name
-        self.data = data
-
+class UploadedFileList(_UploadedFileListBase):
     @property
     def id(self):
-        """The file's unique ID."""
+        """The list's unique ID."""
         return self.session_id, self.widget_id
 
 
@@ -53,39 +43,45 @@ class UploadedFileManager(object):
     """
 
     def __init__(self):
-        self._files = {}
+        self._files_by_id = {}  # type: Dict[(str, str), UploadedFileList]
         self._files_lock = threading.Lock()
-        self.on_file_added = Signal(
-            doc="""Emitted when a file is added to the manager.
+        self.on_files_added = Signal(
+            doc="""Emitted when a file list is added to the manager.
 
             Parameters
             ----------
-            file : UploadedFile
-                The file that was added.
+            files : UploadedFileList
+                The file list that was added.
             """
         )
 
-    def add_file(self, file):
-        """Add a new file to the FileManager.
+    def add_files(self, session_id, widget_id, files):
+        """Add a list of files to the FileManager.
 
-        If another file with the same ID exists, it will be replaced with this
-        one.
+        If another list with the same (session_id, widget_id) key exists,
+        it will be replaced with this one.
 
-        The "on_file_added" Signal will be emitted after the file is added.
+        The "on_file_added" Signal will be emitted after the list is added.
 
         Parameters
         ----------
-        file : UploadedFile
-            The file to add.
+        session_id : str
+            The session ID of the report that owns the files.
+        widget_id : str
+            The widget ID of the FileUploader that created the files.
+        files : List[UploadedFile]
+            The files to add.
 
         """
+        file_list = UploadedFileList(
+            session_id=session_id, widget_id=widget_id, files=files
+        )
         with self._files_lock:
-            self._files[file.id] = file
-        self.on_file_added.send(file)
+            self._files_by_id[file_list.id] = file_list
+        self.on_files_added.send(file_list)
 
-    def get_file_data(self, session_id, widget_id):
-        """Return the file data for a file with the given ID, or None
-        if the file doesn't exist.
+    def get_files(self, session_id, widget_id):
+        """Return the file list with the given ID, or None if the ID doesn't exist.
 
         Parameters
         ----------
@@ -96,17 +92,16 @@ class UploadedFileManager(object):
 
         Returns
         -------
-        bytes or None
-            The file's data, or None if the file does not exist.
+        list of UploadedFile or None
 
         """
-        file_id = session_id, widget_id
+        files_id = session_id, widget_id
         with self._files_lock:
-            file = self._files.get(file_id, None)
-        return file.data if file is not None else None
+            file_list = self._files_by_id.get(files_id, None)
+        return file_list.files if file_list is not None else None
 
-    def remove_file(self, session_id, widget_id):
-        """Remove the file with the given ID, if it exists.
+    def remove_files(self, session_id, widget_id):
+        """Remove the file list with the given ID, if it exists.
 
         Parameters
         ----------
@@ -115,9 +110,9 @@ class UploadedFileManager(object):
         widget_id : str
             The widget ID of the FileUploader that created the file.
         """
-        file_id = session_id, widget_id
+        files_id = session_id, widget_id
         with self._files_lock:
-            self._files.pop(file_id, None)
+            self._files_by_id.pop(files_id, None)
 
     def remove_session_files(self, session_id):
         """Remove all files that belong to the given report.
@@ -129,6 +124,6 @@ class UploadedFileManager(object):
 
         """
         # Copy the keys into a list, because we'll be mutating the dictionary.
-        for file_id in list(self._files.keys()):
-            if file_id[0] == session_id:
-                self.remove_file(*file_id)
+        for files_id in list(self._files_by_id.keys()):
+            if files_id[0] == session_id:
+                self.remove_files(*files_id)

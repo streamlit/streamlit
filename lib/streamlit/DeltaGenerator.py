@@ -15,7 +15,6 @@
 
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
-import io
 import functools
 import json
 import random
@@ -28,13 +27,12 @@ from datetime import time
 from streamlit import caching
 from streamlit import config
 from streamlit import cursor
-from streamlit import metrics
 from streamlit import type_util
 from streamlit.ReportThread import get_report_ctx
-from streamlit.server.Server import Server
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException
 from streamlit.errors import NoSessionContext
+from streamlit.file_util import get_encoded_file_data
 from streamlit.js_number import JSNumber
 from streamlit.js_number import JSNumberBoundsException
 from streamlit.proto import Alert_pb2
@@ -43,9 +41,6 @@ from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto.NumberInput_pb2 import NumberInput
 from streamlit.proto.TextInput_pb2 import TextInput
-
-
-# setup logging
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
@@ -2023,7 +2018,9 @@ class DeltaGenerator(object):
         return current_value if single_value else tuple(current_value)
 
     @_with_element
-    def file_uploader(self, element, label, type=None, encoding="auto", key=None):
+    def file_uploader(
+        self, element, label, type=None, encoding="auto", key=None, multiple_files=False
+    ):
         """Display a file uploader widget.
 
         By default, uploaded files are limited to 200MB. You can configure
@@ -2045,13 +2042,19 @@ class DeltaGenerator(object):
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+        multiple_files : bool
+            If True, the uploader widget will accept multiple files, and the
+            returned value will be a list of all files. Defaults to False.
 
         Returns
         -------
-        BytesIO or StringIO or None
-            The data for the uploaded file. If the file is in a well-known
-            textual format (or if the encoding parameter is set), returns a
-            StringIO. Otherwise BytesIO. If no file is loaded, returns None.
+        BytesIO or StringIO or or list of BytesIO/StringIO or None
+            If no file has been uploaded, returns None. Otherwise, returns
+            the data for the uploaded file(s):
+            - If the file is in a well-known textual format (or if the encoding
+            parameter is set), the file data is a StringIO.
+            - Otherwise the file data is BytesIO.
+            - If multiple_files is True, a list of file datas will be returned.
 
             Note that BytesIO/StringIO are "file-like", which means you can
             pass them anywhere where a file is expected!
@@ -2064,7 +2067,6 @@ class DeltaGenerator(object):
         ...     st.write(data)
 
         """
-        from streamlit.string_util import is_binary_string
 
         if isinstance(type, str):
             type = [type]
@@ -2074,31 +2076,21 @@ class DeltaGenerator(object):
         element.file_uploader.max_upload_size_mb = config.get_option(
             "server.maxUploadSize"
         )
+        element.file_uploader.multiple_files = multiple_files
         _set_widget_id("file_uploader", element, user_key=key)
 
-        data = None
+        files = None
         ctx = get_report_ctx()
         if ctx is not None:
-            data = ctx.uploaded_file_mgr.get_file_data(
+            files = ctx.uploaded_file_mgr.get_files(
                 session_id=ctx.session_id, widget_id=element.file_uploader.id
             )
 
-        if data is None:
+        if files is None:
             return NoValue
 
-        if encoding == "auto":
-            if is_binary_string(data):
-                encoding = None
-            else:
-                # If the file does not look like a pure binary file, assume
-                # it's utf-8. It would be great if we could guess it a little
-                # more smartly here, but it is what it is!
-                encoding = "utf-8"
-
-        if encoding:
-            return io.StringIO(data.decode(encoding))
-
-        return io.BytesIO(data)
+        file_datas = [get_encoded_file_data(file.data, encoding) for file in files]
+        return file_datas if multiple_files else file_datas[0]
 
     @_with_element
     def text_input(self, element, label, value="", key=None, type="default"):

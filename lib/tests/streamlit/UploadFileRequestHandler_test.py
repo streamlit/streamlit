@@ -21,6 +21,7 @@ import tornado.testing
 import tornado.web
 import tornado.websocket
 
+from streamlit.UploadedFileManager import UploadedFile
 from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.logger import get_logger
 from streamlit.server.UploadFileRequestHandler import UploadFileRequestHandler
@@ -50,17 +51,34 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             "/upload_file", method=req.method, headers=req.headers, body=req.body
         )
 
-    def test_upload(self):
+    def test_upload_one_file(self):
         """Uploading a file should populate our file_mgr."""
+        file = UploadedFile("image.png", b"123")
         params = {
-            "image.png": ("image.png", b"1234"),
+            file.name: file,
+            "sessionId": (None, "fooReport"),
+            "widgetId": (None, "barWidget"),
+        }
+        response = self._upload_file(params)
+        self.assertEqual(200, response.code)
+        self.assertEqual([file], self.file_mgr.get_files("fooReport", "barWidget"))
+
+    def test_upload_multiple_files(self):
+        file1 = UploadedFile("image1.png", b"123")
+        file2 = UploadedFile("image2.png", b"456")
+        file3 = UploadedFile("image3.png", b"789")
+
+        params = {
+            file1.name: file1,
+            file2.name: file2,
+            file3.name: file3,
             "sessionId": (None, "fooReport"),
             "widgetId": (None, "barWidget"),
         }
         response = self._upload_file(params)
         self.assertEqual(200, response.code)
         self.assertEqual(
-            b"1234", self.file_mgr.get_file_data("fooReport", "barWidget")
+            [file1, file2, file3], self.file_mgr.get_files("fooReport", "barWidget"),
         )
 
     def test_missing_params(self):
@@ -84,4 +102,4 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         }
         response = self._upload_file(params)
         self.assertEqual(400, response.code)
-        self.assertIn("Expected 1 file, but got 0", response.reason)
+        self.assertIn("Expected at least 1 file, but got 0", response.reason)
