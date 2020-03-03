@@ -287,7 +287,7 @@ def _write_to_disk_cache(key, value):
     # In python 2, it's pickle struct error.
     # In python 3, it's an open error in util.
     # XXX
-    except util.Error as e:      #  struct.error) as e:
+    except util.Error as e:  #  struct.error) as e:
         LOGGER.debug(e)
         # Clean up file so we don't leave zero byte files.
         try:
@@ -644,10 +644,6 @@ class Cache(Dict[Any, Any]):
         return False
 
     def __bool__(self):
-        return self.has_changes()
-
-    # Python 2 doesn't have __bool__
-    def __nonzero__(self):
         return self.has_changes()
 
     def __getattr__(self, key):
