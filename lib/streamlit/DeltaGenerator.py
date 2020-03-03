@@ -2040,6 +2040,11 @@ class DeltaGenerator(object):
             The encoding to use when opening textual files (i.e. non-binary).
             For example: 'utf-8'. If set to 'auto', will try to guess the
             encoding. If None, will assume the file is binary.
+        key : str
+            An optional string to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. Multiple widgets of the same type may
+            not share the same key.
 
         Returns
         -------
