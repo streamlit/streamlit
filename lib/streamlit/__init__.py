@@ -343,6 +343,8 @@ def write(*args, **kwargs):
        height: 200px
 
     """
+    # XXX
+
     # Python2 doesn't support this syntax
     #   def write(*args, unsafe_allow_html=False)
     # so we do this instead:

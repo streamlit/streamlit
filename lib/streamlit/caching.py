@@ -272,7 +272,7 @@ def _read_from_disk_cache(key):
         LOGGER.error(e)
         raise CacheError("Unable to read from cache: %s" % e)
 
-    except (OSError, FileNotFoundError):  # Python 2  # Python 3
+    except FileNotFoundError:
         raise CacheKeyNotFoundError("Key not found in disk cache")
     return value
 
@@ -286,7 +286,8 @@ def _write_to_disk_cache(key, value):
             pickle.dump(entry, output, pickle.HIGHEST_PROTOCOL)
     # In python 2, it's pickle struct error.
     # In python 3, it's an open error in util.
-    except (util.Error, struct.error) as e:
+    # XXX
+    except util.Error as e:      #  struct.error) as e:
         LOGGER.debug(e)
         # Clean up file so we don't leave zero byte files.
         try:

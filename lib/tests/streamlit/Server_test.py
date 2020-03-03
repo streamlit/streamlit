@@ -308,7 +308,7 @@ class ServerTest(ServerTestCase):
                 )
             )
 
-            self.assertEquals(
+            self.assertEqual(
                 self.server._uploaded_file_mgr.get_file_data(
                     session_info1.session.id, "widget_id"
                 ),

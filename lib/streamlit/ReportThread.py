@@ -171,5 +171,5 @@ def get_report_ctx():
     return ctx
 
 
-# Avoid circular dependencies in Python 2
+# Needed to avoid circular dependencies.
 import streamlit
