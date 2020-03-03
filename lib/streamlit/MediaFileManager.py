@@ -118,13 +118,6 @@ class MediaFileManager(object):
         del self._session_id_to_file_ids[session_id]
         LOGGER.debug("Sessions still active: %r" % self._session_id_to_file_ids)
 
-    def clear_empty_sessions(self):
-        """Expunges records pointing to files that have already been removed."""
-        for sess_id in self._session_id_to_file_ids:
-            if len(self._session_id_to_file_ids[sess_id].intersection(self._files.keys())) == 0:
-                LOGGER.debug("Removing orphaned session map for %s" % sess_id)
-                del self._session_id_to_file_ids[sess_id]
-
     def add(self, content, mimetype):
         """Adds new MediaFile with given parameters; returns the object.
 
