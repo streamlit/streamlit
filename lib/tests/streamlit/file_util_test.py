@@ -72,7 +72,7 @@ class FileUtilTest(unittest.TestCase):
         ) as makedirs, file_util.streamlit_write(FILENAME) as output:
             output.write("some data")
             open().write.assert_called_once_with("some data")
-            makedirs.assert_called_once_with(dirname)
+            makedirs.assert_called_once_with(dirname, exist_ok=True)
 
     @patch("streamlit.file_util.get_streamlit_file_path", mock_get_path)
     @patch("streamlit.env_util.IS_DARWIN", True)
