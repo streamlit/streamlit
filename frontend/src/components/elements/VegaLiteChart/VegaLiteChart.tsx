@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { PureComponent } from "react"
 import { logMessage } from "lib/log"
 import { Map as ImmutableMap } from "immutable"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
@@ -56,7 +56,7 @@ interface Props {
   element: ImmutableMap<string, any>
 }
 
-interface PropsWithHeight extends Props {
+export interface PropsWithHeight extends Props {
   height: number | undefined
 }
 
@@ -64,7 +64,7 @@ interface State {
   error?: Error
 }
 
-class VegaLiteChart extends React.PureComponent<PropsWithHeight, State> {
+export class VegaLiteChart extends PureComponent<PropsWithHeight, State> {
   /**
    * The Vega view object
    */
@@ -80,23 +80,8 @@ class VegaLiteChart extends React.PureComponent<PropsWithHeight, State> {
    */
   private element: HTMLDivElement | null = null
 
-  public constructor(props: PropsWithHeight) {
-    super(props)
-
-    this.state = {
-      error: undefined,
-    }
-  }
-
-  public render(): JSX.Element {
-    if (this.state.error) {
-      throw this.state.error
-    }
-
-    return (
-      // Create the container Vega draws inside.
-      <div className="stVegaLiteChart" ref={c => (this.element = c)} />
-    )
+  readonly state = {
+    error: undefined,
   }
 
   public async componentDidMount(): Promise<void> {
@@ -105,36 +90,6 @@ class VegaLiteChart extends React.PureComponent<PropsWithHeight, State> {
     } catch (error) {
       this.setState({ error })
     }
-  }
-
-  public generateSpec = (): any => {
-    const el = this.props.element
-    const spec = JSON.parse(el.get("spec"))
-    const useContainerWidth = JSON.parse(el.get("useContainerWidth"))
-
-    if (this.props.height) {
-      //fullscreen
-      spec.width = this.props.width - EMBED_PADDING
-      spec.height = this.props.height
-    } else {
-      if (useContainerWidth) {
-        spec.width = this.props.width - EMBED_PADDING
-      }
-    }
-
-    if (!spec.padding) {
-      spec.padding = {}
-    }
-
-    if (spec.padding.bottom == null) {
-      spec.padding.bottom = BOTTOM_PADDING
-    }
-
-    if (spec.datasets) {
-      throw new Error("Datasets should not be passed as part of the spec")
-    }
-
-    return spec
   }
 
   public async componentDidUpdate(prevProps: PropsWithHeight): Promise<void> {
@@ -183,6 +138,36 @@ class VegaLiteChart extends React.PureComponent<PropsWithHeight, State> {
     }
 
     this.vegaView.resize().runAsync()
+  }
+
+  public generateSpec = (): any => {
+    const el = this.props.element
+    const spec = JSON.parse(el.get("spec"))
+    const useContainerWidth = JSON.parse(el.get("useContainerWidth"))
+
+    if (this.props.height) {
+      //fullscreen
+      spec.width = this.props.width - EMBED_PADDING
+      spec.height = this.props.height
+    } else {
+      if (useContainerWidth) {
+        spec.width = this.props.width - EMBED_PADDING
+      }
+    }
+
+    if (!spec.padding) {
+      spec.padding = {}
+    }
+
+    if (spec.padding.bottom == null) {
+      spec.padding.bottom = BOTTOM_PADDING
+    }
+
+    if (spec.datasets) {
+      throw new Error("Datasets should not be passed as part of the spec")
+    }
+
+    return spec
   }
 
   /**
@@ -294,6 +279,17 @@ class VegaLiteChart extends React.PureComponent<PropsWithHeight, State> {
     // Fix bug where the "..." menu button overlaps with charts where width is
     // set to -1 on first load.
     this.vegaView.resize().runAsync()
+  }
+
+  public render(): JSX.Element {
+    if (this.state.error) {
+      throw this.state.error
+    }
+
+    return (
+      // Create the container Vega draws inside.
+      <div className="stVegaLiteChart" ref={c => (this.element = c)} />
+    )
   }
 }
 
