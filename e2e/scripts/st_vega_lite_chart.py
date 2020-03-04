@@ -43,79 +43,79 @@ spec_with_width = {
 }
 
 st.vega_lite_chart(df, spec, use_container_width=True)
-# st.vega_lite_chart(df, spec, use_container_width=True)
-# st.vega_lite_chart(df, spec)
-# st.vega_lite_chart(df, spec_with_width)
-#
-# # Screenshot comparison
-#
-# st.header("Different ways to get the exact same plot")
-#
-# df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
-#
-# st.write("Using a top-level `df` and a `spec` dict:")
-#
-# st.vega_lite_chart(
-#     df,
-#     {
-#         "mark": "bar",
-#         "encoding": {
-#             "x": {"field": "a", "type": "ordinal"},
-#             "y": {"field": "b", "type": "quantitative"},
-#         },
-#     },
-#     use_container_width=True,
-# )
-#
-# st.write("Using a top-level `df` and keywords as a spec:")
-#
-# st.vega_lite_chart(
-#     df,
-#     mark="bar",
-#     x_field="a",
-#     x_type="ordinal",
-#     y_field="b",
-#     y_type="quantitative",
-#     use_container_width=True,
-# )
-#
-# st.write("Putting the `df` inside the spec, as a `dataset`:")
-#
-# st.vega_lite_chart(
-#     {
-#         "datasets": {"foo": df},
-#         "data": {"name": "foo"},
-#         "mark": "bar",
-#         "encoding": {
-#             "x": {"field": "a", "type": "ordinal"},
-#             "y": {"field": "b", "type": "quantitative"},
-#         },
-#     },
-#     use_container_width=True,
-# )
-#
-# st.write("Putting the `df` inside the spec, as inline `data`:")
-#
-# st.vega_lite_chart(
-#     {
-#         "data": df,
-#         "mark": "bar",
-#         "encoding": {
-#             "x": {"field": "a", "type": "ordinal"},
-#             "y": {"field": "b", "type": "quantitative"},
-#         },
-#     },
-#     use_container_width=True,
-# )
-#
-# # st.write("Putting the `df` inside the spec, as inline `data` (different notation):")
-# # This fails now, but not a big deal. It's a weird notation.
-#
-# # st.vega_lite_chart({
-# #     'data': {'values': df},
-# #     'mark': 'bar',
-# #     'encoding': {
-# #       'x': {'field': 'a', 'type': 'ordinal'},
-# #       'y': {'field': 'b', 'type': 'quantitative'}
-# #     }
-# #   })
+st.vega_lite_chart(df, spec, use_container_width=True)
+st.vega_lite_chart(df, spec)
+st.vega_lite_chart(df, spec_with_width)
+
+# Screenshot comparison
+
+st.header("Different ways to get the exact same plot")
+
+df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+
+st.write("Using a top-level `df` and a `spec` dict:")
+
+st.vega_lite_chart(
+    df,
+    {
+        "mark": "bar",
+        "encoding": {
+            "x": {"field": "a", "type": "ordinal"},
+            "y": {"field": "b", "type": "quantitative"},
+        },
+    },
+    use_container_width=True,
+)
+
+st.write("Using a top-level `df` and keywords as a spec:")
+
+st.vega_lite_chart(
+    df,
+    mark="bar",
+    x_field="a",
+    x_type="ordinal",
+    y_field="b",
+    y_type="quantitative",
+    use_container_width=True,
+)
+
+st.write("Putting the `df` inside the spec, as a `dataset`:")
+
+st.vega_lite_chart(
+    {
+        "datasets": {"foo": df},
+        "data": {"name": "foo"},
+        "mark": "bar",
+        "encoding": {
+            "x": {"field": "a", "type": "ordinal"},
+            "y": {"field": "b", "type": "quantitative"},
+        },
+    },
+    use_container_width=True,
+)
+
+st.write("Putting the `df` inside the spec, as inline `data`:")
+
+st.vega_lite_chart(
+    {
+        "data": df,
+        "mark": "bar",
+        "encoding": {
+            "x": {"field": "a", "type": "ordinal"},
+            "y": {"field": "b", "type": "quantitative"},
+        },
+    },
+    use_container_width=True,
+)
+
+# st.write("Putting the `df` inside the spec, as inline `data` (different notation):")
+# This fails now, but not a big deal. It's a weird notation.
+
+# st.vega_lite_chart({
+#     'data': {'values': df},
+#     'mark': 'bar',
+#     'encoding': {
+#       'x': {'field': 'a', 'type': 'ordinal'},
+#       'y': {'field': 'b', 'type': 'quantitative'}
+#     }
+#   })
