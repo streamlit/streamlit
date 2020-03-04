@@ -141,7 +141,7 @@ class PollingFileWatcherTest(unittest.TestCase):
 
         def sleep():
             try:
-                # TODO: Remove depedency on time.sleep!
+                # TODO: Remove dependency on time.sleep!
                 time.sleep(5 * PollingFileWatcher._POLLING_PERIOD_SECS)
             except AssertionError:
                 pass
