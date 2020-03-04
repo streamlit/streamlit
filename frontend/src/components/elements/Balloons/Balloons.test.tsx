@@ -52,7 +52,7 @@ describe("Balloons element", () => {
   })
 
   it("should render one time per session", async () => {
-    jest.setTimeout(10000)
+    jest.setTimeout(30000)
 
     const props = getProps()
     const wrapper = shallow(<Balloons {...props} />)
