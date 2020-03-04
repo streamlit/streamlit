@@ -68,7 +68,7 @@ class Selectbox extends React.PureComponent<Props, State> {
     )
   }
 
-  // Add a custom filterOptions method to filter labels only based on labels.
+  // Add a custom filterOptions method to filter options only based on labels.
   // The baseweb default method filters based on labels or indeces
   // More details: https://github.com/streamlit/streamlit/issues/1010
   private filterOptions = (
