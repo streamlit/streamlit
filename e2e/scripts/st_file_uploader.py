@@ -16,13 +16,13 @@
 import streamlit as st
 
 
-result = st.file_uploader("Drop a file:", type=["txt"], multiple_files=False)
+result = st.file_uploader("Drop a file:", type=["txt"], accept_multiple_files=False)
 if result is not None:
     st.text(result.getvalue())
 else:
     st.text("No upload")
 
-result = st.file_uploader("Drop multiple files:", type=["txt"], multiple_files=True)
+result = st.file_uploader("Drop multiple files:", type=["txt"], accept_multiple_files=True)
 if result is not None:
     strings = sorted([s.getvalue() for s in result])
     st.text("\n".join(strings))

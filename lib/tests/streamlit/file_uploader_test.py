@@ -48,22 +48,22 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
 
     @patch("streamlit.UploadedFileManager.UploadedFileManager.get_files")
     def test_multiple_files(self, get_files_patch):
-        """Test the multiple_files flag"""
+        """Test the accept_multiple_files flag"""
         files = [UploadedFile("file1", b"123"), UploadedFile("file2", b"456")]
         file_vals = [get_encoded_file_data(file.data).getvalue() for file in files]
 
         get_files_patch.return_value = files
 
-        for multiple_files in [True, False]:
+        for accept_multiple in [True, False]:
             return_val = st.file_uploader(
-                "label", type="png", multiple_files=multiple_files
+                "label", type="png", accept_multiple_files=accept_multiple
             )
             c = self.get_delta_from_queue().new_element.file_uploader
-            self.assertEqual(multiple_files, c.multiple_files)
+            self.assertEqual(accept_multiple, c.multiple_files)
 
-            # If "multiple_files" is True, then we should get a list of values
+            # If "accept_multiple_files" is True, then we should get a list of values
             # back. Otherwise, we should just get a single value.
-            if multiple_files:
+            if accept_multiple:
                 self.assertEqual(file_vals, [val.getvalue() for val in return_val])
             else:
                 self.assertEqual(file_vals[0], return_val.getvalue())

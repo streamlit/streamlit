@@ -2019,7 +2019,7 @@ class DeltaGenerator(object):
 
     @_with_element
     def file_uploader(
-        self, element, label, type=None, encoding="auto", key=None, multiple_files=False
+        self, element, label, type=None, encoding="auto", key=None, accept_multiple_files=False
     ):
         """Display a file uploader widget.
 
@@ -2042,7 +2042,7 @@ class DeltaGenerator(object):
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
-        multiple_files : bool
+        accept_multiple_files : bool
             If True, the uploader widget will accept multiple files, and the
             returned value will be a list of all files. Defaults to False.
 
@@ -2076,7 +2076,7 @@ class DeltaGenerator(object):
         element.file_uploader.max_upload_size_mb = config.get_option(
             "server.maxUploadSize"
         )
-        element.file_uploader.multiple_files = multiple_files
+        element.file_uploader.multiple_files = accept_multiple_files
         _set_widget_id("file_uploader", element, user_key=key)
 
         files = None
@@ -2090,7 +2090,7 @@ class DeltaGenerator(object):
             return NoValue
 
         file_datas = [get_encoded_file_data(file.data, encoding) for file in files]
-        return file_datas if multiple_files else file_datas[0]
+        return file_datas if accept_multiple_files else file_datas[0]
 
     @_with_element
     def text_input(self, element, label, value="", key=None, type="default"):
