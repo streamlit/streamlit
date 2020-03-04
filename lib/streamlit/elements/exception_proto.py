@@ -174,12 +174,10 @@ def _get_stack_trace(
 
     """
     # Get and extract the traceback for the exception.
-    extracted_traceback = None  # type: Optional[traceback.StackSummary]
-
-    if exception_traceback is not None:
-        extracted_traceback = traceback.extract_tb(exception_traceback)
-    else:
+    if not exception_traceback:
         extracted_traceback = traceback.extract_tb(exception.__traceback__)
+    else:
+        extracted_traceback = traceback.extract_tb(exception_traceback)
 
     # Format the extracted traceback and add it to the protobuf element.
     if extracted_traceback is None:
