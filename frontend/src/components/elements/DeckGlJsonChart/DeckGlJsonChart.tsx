@@ -70,12 +70,10 @@ interface State {
   initialized: boolean
 }
 
-export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
-  static defaultProps = {
-    height: 500,
-  }
+export const DEFAULT_DECK_GL_HEIGHT = 500
 
-  state = {
+export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
+  readonly state = {
     initialized: false,
   }
 
@@ -90,10 +88,23 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
 
   getDeckObject = (): DeckObject => {
     const { element, width, height } = this.props
+    const useContainerWidth = element.get("useContainerWidth")
     const json = JSON.parse(element.get("json"))
 
-    json.initialViewState.height = height
-    json.initialViewState.width = width
+    // The graph dimensions could be set from props ( like withFullscreen ) or
+    // from the generated element object
+    if (height) {
+      json.initialViewState.height = height
+      json.initialViewState.width = width
+    } else {
+      if (!json.initialViewState.height) {
+        json.initialViewState.height = DEFAULT_DECK_GL_HEIGHT
+      }
+
+      if (useContainerWidth) {
+        json.initialViewState.width = width
+      }
+    }
 
     delete json.views // We are not using views. This avoids a console warning.
 
