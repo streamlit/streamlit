@@ -29,6 +29,11 @@ from streamlit.server.UploadFileRequestHandler import UploadFileRequestHandler
 LOGGER = get_logger(__name__)
 
 
+def _get_filename(file):
+    """Sort key for lists of UploadedFiles"""
+    return file.name
+
+
 class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
     """Tests the /upload_file endpoint."""
 
@@ -78,7 +83,10 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         response = self._upload_files(params)
         self.assertEqual(200, response.code)
         self.assertEqual(
-            [file1, file2, file3], self.file_mgr.get_files("fooReport", "barWidget"),
+            sorted([file1, file2, file3], key=_get_filename),
+            sorted(
+                self.file_mgr.get_files("fooReport", "barWidget"), key=_get_filename
+            ),
         )
 
     def test_missing_params(self):
