@@ -17,6 +17,7 @@ import threading
 from typing import Dict
 from typing import List
 from typing import NamedTuple
+from typing import Tuple
 
 from blinker import Signal
 
@@ -43,7 +44,7 @@ class UploadedFileManager(object):
     """
 
     def __init__(self):
-        self._files_by_id = {}  # type: Dict[(str, str), UploadedFileList]
+        self._files_by_id = {}  # type: Dict[Tuple[str, str], UploadedFileList]
         self._files_lock = threading.Lock()
         self.on_files_added = Signal(
             doc="""Emitted when a file list is added to the manager.
