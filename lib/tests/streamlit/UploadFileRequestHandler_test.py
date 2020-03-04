@@ -38,7 +38,7 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             [("/upload_file", UploadFileRequestHandler, dict(file_mgr=self.file_mgr))]
         )
 
-    def _upload_file(self, params):
+    def _upload_files(self, params):
         # We use requests.Request to construct our multipart/form-data request
         # here, because they are absurdly fiddly to compose, and Tornado
         # doesn't include a utility for building them. We then use self.fetch()
@@ -59,7 +59,7 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             "sessionId": (None, "fooReport"),
             "widgetId": (None, "barWidget"),
         }
-        response = self._upload_file(params)
+        response = self._upload_files(params)
         self.assertEqual(200, response.code)
         self.assertEqual([file], self.file_mgr.get_files("fooReport", "barWidget"))
 
@@ -75,7 +75,7 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             "sessionId": (None, "fooReport"),
             "widgetId": (None, "barWidget"),
         }
-        response = self._upload_file(params)
+        response = self._upload_files(params)
         self.assertEqual(200, response.code)
         self.assertEqual(
             [file1, file2, file3], self.file_mgr.get_files("fooReport", "barWidget"),
@@ -89,7 +89,7 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             # "widgetId": (None, 'barWidget'),
         }
 
-        response = self._upload_file(params)
+        response = self._upload_files(params)
         self.assertEqual(400, response.code)
         self.assertIn("Missing 'widgetId'", response.reason)
 
@@ -100,6 +100,6 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             "sessionId": (None, "fooReport"),
             "widgetId": (None, "barWidget"),
         }
-        response = self._upload_file(params)
+        response = self._upload_files(params)
         self.assertEqual(400, response.code)
         self.assertIn("Expected at least 1 file, but got 0", response.reason)

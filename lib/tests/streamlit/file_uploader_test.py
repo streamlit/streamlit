@@ -15,9 +15,13 @@
 
 """file_uploader unit test."""
 
-from tests import testutil
+from mock import patch
+
 import streamlit as st
 from streamlit import config
+from streamlit.UploadedFileManager import UploadedFile
+from streamlit.file_util import get_encoded_file_data
+from tests import testutil
 
 
 class FileUploaderTest(testutil.DeltaGeneratorTestCase):
@@ -42,12 +46,27 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.file_uploader
         self.assertEqual(c.type, ["png", "svg", "jpeg"])
 
-    def test_multiple_files(self):
+    @patch("streamlit.UploadedFileManager.UploadedFileManager.get_files")
+    def test_multiple_files(self, get_files_patch):
         """Test the multiple_files flag"""
+        files = [UploadedFile("file1", b"123"), UploadedFile("file2", b"456")]
+        file_vals = [get_encoded_file_data(file.data).getvalue() for file in files]
+
+        get_files_patch.return_value = files
+
         for multiple_files in [True, False]:
-            st.file_uploader("label", type="png", multiple_files=multiple_files)
+            return_val = st.file_uploader(
+                "label", type="png", multiple_files=multiple_files
+            )
             c = self.get_delta_from_queue().new_element.file_uploader
             self.assertEqual(multiple_files, c.multiple_files)
+
+            # If "multiple_files" is True, then we should get a list of values
+            # back. Otherwise, we should just get a single value.
+            if multiple_files:
+                self.assertEqual(file_vals, [val.getvalue() for val in return_val])
+            else:
+                self.assertEqual(file_vals[0], return_val.getvalue())
 
     def test_max_upload_size_mb(self):
         """Test that the max upload size is the configuration value."""
