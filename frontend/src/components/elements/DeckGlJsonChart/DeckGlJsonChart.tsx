@@ -72,7 +72,7 @@ interface State {
 export const DEFAULT_DECK_GL_HEIGHT = 500
 
 export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
-  state = {
+  readonly state = {
     initialized: false,
   }
 
@@ -85,17 +85,14 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     })
   }
 
-  fixHexLayerBug = (): void => {
-    this.setState({ initialized: true })
-  }
-
   getDeckObject = (): DeckObject => {
     const { element, width, height } = this.props
     const useContainerWidth = element.get("useContainerWidth")
     const json = JSON.parse(element.get("json"))
 
+    // The graph dimensions could be set from props ( like withFullscreen ) or
+    // from the generated element object
     if (height) {
-      //fullscreen
       json.initialViewState.height = height
       json.initialViewState.width = width
     } else {

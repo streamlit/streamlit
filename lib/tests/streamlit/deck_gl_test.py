@@ -72,3 +72,10 @@ class DeckGLTest(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.deck_gl_chart
         self.assertEqual(c.HasField("data"), False)
         self.assertEqual(json.loads(c.spec), {})
+
+    def test_use_container_width_true(self):
+        """Test that it can be called with no args."""
+        st.deck_gl_chart(use_container_width=True)
+
+        c = self.get_delta_from_queue().new_element.deck_gl_chart
+        self.assertEqual(c.use_container_width, True)
