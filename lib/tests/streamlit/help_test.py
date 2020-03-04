@@ -62,12 +62,8 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         ds = self.get_delta_from_queue().new_element.doc_string
         self.assertEqual("audio", ds.name)
         self.assertEqual("streamlit", ds.module)
-        if is_python_2:
-            self.assertEqual("<type 'instancemethod'>", ds.type)
-            self.assertEqual("(data, format=u'audio/wav', start_time=0)", ds.signature)
-        else:
-            self.assertEqual("<class 'method'>", ds.type)
-            self.assertEqual("(data, format='audio/wav', start_time=0)", ds.signature)
+        self.assertEqual("<class 'method'>", ds.type)
+        self.assertEqual("(data, format='audio/wav', start_time=0)", ds.signature)
         self.assertTrue(ds.doc_string.startswith("Display an audio player"))
 
     def test_unwrapped_deltagenerator_func(self):
@@ -77,10 +73,7 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         ds = self.get_delta_from_queue().new_element.doc_string
         self.assertEqual("dataframe", ds.name)
         self.assertEqual("streamlit", ds.module)
-        if is_python_2:
-            self.assertEqual("<type 'instancemethod'>", ds.type)
-        else:
-            self.assertEqual("<class 'method'>", ds.type)
+        self.assertEqual("<class 'method'>", ds.type)
         self.assertEqual("(data=None, width=None, height=None)", ds.signature)
         self.assertTrue(ds.doc_string.startswith("Display a dataframe"))
 
