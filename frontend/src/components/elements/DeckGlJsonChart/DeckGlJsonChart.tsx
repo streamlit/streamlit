@@ -56,13 +56,13 @@ registerLoaders([CSVLoader])
 
 const jsonConverter = new JSONConverter({ configuration })
 
-export interface Props {
+interface Props {
   width: number
   mapboxToken: string
   element: Immutable.Map<string, any>
 }
 
-interface PropsWithHeight extends Props {
+export interface PropsWithHeight extends Props {
   height: number | undefined
 }
 
