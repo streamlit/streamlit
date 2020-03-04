@@ -70,12 +70,7 @@ def streamlit_write(path, binary=False):
     if binary:
         mode += "b"
     path = get_streamlit_file_path(path)
-    try:
-        os.makedirs(os.path.dirname(path))
-    except Exception:
-        # Python 3 supports exist_ok=True which avoids the try/except,
-        # but Python 2 does not.
-        pass
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     try:
         with open(path, mode) as handle:
             yield handle
