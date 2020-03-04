@@ -345,12 +345,13 @@ def write(*args, **kwargs):
     """
     try:
         string_buffer = []  # type: List[str]
+        unsafe_allow_html = kwargs.get("unsafe_allow_html", False)
 
         def flush_buffer():
             if string_buffer:
                 markdown(
                     " ".join(string_buffer),
-                    unsafe_allow_html=kwargs.get("unsafe_allow_html", False),
+                    unsafe_allow_html=unsafe_allow_html,
                 )  # noqa: F821
                 string_buffer[:] = []
 
