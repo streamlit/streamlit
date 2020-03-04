@@ -2019,7 +2019,13 @@ class DeltaGenerator(object):
 
     @_with_element
     def file_uploader(
-        self, element, label, type=None, encoding="auto", key=None, accept_multiple_files=False
+        self,
+        element,
+        label,
+        type=None,
+        encoding="auto",
+        key=None,
+        accept_multiple_files=False,
     ):
         """Display a file uploader widget.
 

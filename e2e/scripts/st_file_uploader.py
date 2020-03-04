@@ -22,7 +22,9 @@ if result is not None:
 else:
     st.text("No upload")
 
-result = st.file_uploader("Drop multiple files:", type=["txt"], accept_multiple_files=True)
+result = st.file_uploader(
+    "Drop multiple files:", type=["txt"], accept_multiple_files=True
+)
 if result is not None:
     strings = sorted([s.getvalue() for s in result])
     st.text("\n".join(strings))
