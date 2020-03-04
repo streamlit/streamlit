@@ -16,24 +16,33 @@
  */
 
 export interface Args {
+  sessionId: string
   streamlitVersion?: string | null
   pythonVersion?: string | null
   installationId?: string | null
   authorEmail?: string | null
   maxCachedMessageAge?: number | null
   commandLine?: string | null
-  mapboxToken?: string | null
+  userMapboxToken?: string | null
 }
 
 export class SessionInfo {
   // Fields that don't change during the lifetime of a session (i.e. a browser tab).
+  public readonly sessionId: string
   public readonly streamlitVersion: string
   public readonly pythonVersion: string
   public readonly installationId: string
   public readonly authorEmail: string
   public readonly maxCachedMessageAge: number
   public readonly commandLine: string
-  public readonly mapboxToken: string
+
+  /**
+   * The user-supplied mapbox token. By default, this will be the empty string,
+   * which indicates that we should fetch Streamlit's mapbox token and use
+   * that instead. Do not use this value directly; use `MapboxToken.get()`
+   * instead.
+   */
+  public readonly userMapboxToken: string
 
   /**
    * Singleton SessionInfo object. The reasons we're using a singleton here
@@ -60,32 +69,35 @@ export class SessionInfo {
   }
 
   constructor({
+    sessionId,
     streamlitVersion,
     pythonVersion,
     installationId,
     authorEmail,
     maxCachedMessageAge,
     commandLine,
-    mapboxToken,
+    userMapboxToken,
   }: Args) {
     if (
+      sessionId == null ||
       streamlitVersion == null ||
       pythonVersion == null ||
       installationId == null ||
       authorEmail == null ||
       maxCachedMessageAge == null ||
       commandLine == null ||
-      mapboxToken == null
+      userMapboxToken == null
     ) {
-      throw new Error("SessionInfo arguments must be strings")
+      throw new Error("SessionInfo arguments must be non-null")
     }
 
+    this.sessionId = sessionId
     this.streamlitVersion = streamlitVersion
     this.pythonVersion = pythonVersion
     this.installationId = installationId
     this.authorEmail = authorEmail
     this.maxCachedMessageAge = maxCachedMessageAge
     this.commandLine = commandLine
-    this.mapboxToken = mapboxToken
+    this.userMapboxToken = userMapboxToken
   }
 }

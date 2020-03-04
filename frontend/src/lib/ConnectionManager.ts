@@ -16,7 +16,7 @@
  */
 
 import { BackMsg, ForwardMsg, StaticManifest } from "autogen/proto"
-import { getWindowBaseUriParts } from "lib/UriUtil"
+import { BaseUriParts, getWindowBaseUriParts } from "lib/UriUtil"
 import { ReactNode } from "react"
 import url from "url"
 import { IS_SHARED_REPORT } from "./baseconsts"
@@ -75,6 +75,18 @@ export class ConnectionManager {
   // A "static" connection is the one that runs in S3
   public isStaticConnection(): boolean {
     return this.connectionState === ConnectionState.STATIC
+  }
+
+  /**
+   * Return the BaseUriParts for the server we're connected to,
+   * if we are connected to a server.
+   */
+  public getBaseUriParts(): BaseUriParts | undefined {
+    if (this.connection instanceof WebsocketConnection) {
+      return this.connection.getBaseUriParts()
+    } else {
+      return undefined
+    }
   }
 
   public sendMessage(obj: BackMsg): void {

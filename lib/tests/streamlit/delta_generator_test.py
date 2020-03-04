@@ -15,16 +15,6 @@
 
 """DeltaGenerator Unittest."""
 
-# Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
-from streamlit.compatibility import setup_2_3_shims
-
-setup_2_3_shims(globals())
-
 import json
 import mock
 import sys

@@ -19,12 +19,13 @@ import tornado.gen
 import tornado.testing
 from mock import MagicMock, patch
 
-from streamlit.ReportQueue import ReportQueue
 from streamlit.ReportSession import ReportSession
+from streamlit.ReportSession import ReportSessionState
 from streamlit.ReportThread import ReportContext
 from streamlit.ReportThread import add_report_ctx
 from streamlit.ReportThread import get_report_ctx
 from streamlit.ScriptRunner import ScriptRunner
+from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
 from tests.MockStorage import MockStorage
@@ -51,7 +52,7 @@ class ReportSessionTest(unittest.TestCase):
 
         patched_config.get_option.side_effect = get_option
 
-        rs = ReportSession(None, "", "")
+        rs = ReportSession(None, "", "", UploadedFileManager())
         mock_script_runner = MagicMock()
         mock_script_runner._install_tracer = ScriptRunner._install_tracer
         rs._scriptrunner = mock_script_runner
@@ -87,7 +88,7 @@ class ReportSessionTest(unittest.TestCase):
 
         patched_config.get_option.side_effect = get_option
 
-        rs = ReportSession(None, "", "")
+        rs = ReportSession(None, "", "", UploadedFileManager())
         mock_script_runner = MagicMock()
         rs._scriptrunner = mock_script_runner
 
@@ -102,6 +103,29 @@ class ReportSessionTest(unittest.TestCase):
         # likely because there's a bug in the enqueue function (which should
         # skip func when installTracer is on).
         func.assert_not_called()
+
+    @patch("streamlit.ReportSession.LocalSourcesWatcher")
+    def test_shutdown(self, _1):
+        """Test that ReportSession.shutdown behaves sanely."""
+        file_mgr = MagicMock(spec=UploadedFileManager)
+        rs = ReportSession(None, "", "", file_mgr)
+
+        rs.shutdown()
+        self.assertEquals(ReportSessionState.SHUTDOWN_REQUESTED, rs._state)
+        file_mgr.remove_session_files.assert_called_once_with(rs.id)
+
+        # A 2nd shutdown call should have no effect.
+        rs.shutdown()
+        self.assertEquals(ReportSessionState.SHUTDOWN_REQUESTED, rs._state)
+        file_mgr.remove_session_files.assert_called_once_with(rs.id)
+
+    @patch("streamlit.ReportSession.LocalSourcesWatcher")
+    def test_unique_id(self, _1):
+        """Each ReportSession should have a unique ID"""
+        file_mgr = MagicMock(spec=UploadedFileManager)
+        rs1 = ReportSession(None, "", "", file_mgr)
+        rs2 = ReportSession(None, "", "", file_mgr)
+        self.assertNotEquals(rs1.id, rs2.id)
 
 
 def _create_mock_websocket():
@@ -120,11 +144,11 @@ class ReportSessionSerializationTest(tornado.testing.AsyncTestCase):
     def test_handle_save_request(self, _1):
         """Test that handle_save_request serializes files correctly."""
         # Create a ReportSession with some mocked bits
-        rs = ReportSession(self.io_loop, "mock_report.py", "")
+        rs = ReportSession(self.io_loop, "mock_report.py", "", UploadedFileManager())
         rs._report.report_id = "TestReportID"
 
         orig_ctx = get_report_ctx()
-        ctx = ReportContext(rs._report.enqueue, None, None, None)
+        ctx = ReportContext("TestSessionID", rs._report.enqueue, None, None, None)
         add_report_ctx(ctx=ctx)
 
         rs._scriptrunner = MagicMock()

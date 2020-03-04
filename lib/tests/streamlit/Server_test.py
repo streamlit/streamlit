@@ -30,6 +30,7 @@ from tornado import gen
 import streamlit.server.Server
 from streamlit import config
 from streamlit.ReportSession import ReportSession
+from streamlit.UploadedFileManager import UploadedFile
 from streamlit.server.Server import MAX_PORT_SEARCH_RETRIES
 from streamlit.ForwardMsgCache import ForwardMsgCache
 from streamlit.ForwardMsgCache import populate_hash_if_needed
@@ -100,7 +101,7 @@ class ServerTest(ServerTestCase):
             self.assertTrue(self.server.browser_is_connected)
 
             # Get this client's SessionInfo object
-            self.assertEquals(1, len(self.server._session_info_by_id))
+            self.assertEqual(1, len(self.server._session_info_by_id))
             session_info = list(self.server._session_info_by_id.values())[0]
 
             # Close the connection
@@ -111,7 +112,7 @@ class ServerTest(ServerTestCase):
             # Ensure ReportSession.shutdown() was called, and that our
             # SessionInfo was cleared.
             session_info.session.shutdown.assert_called_once()
-            self.assertEquals(0, len(self.server._session_info_by_id))
+            self.assertEqual(0, len(self.server._session_info_by_id))
 
     @tornado.testing.gen_test
     def test_multiple_connections(self):
@@ -283,6 +284,64 @@ class ServerTest(ServerTestCase):
             # should be evicted from the cache.
             finish_report(True)
             self.assertFalse(is_data_msg_cached())
+
+    @tornado.testing.gen_test
+    def test_uploaded_file_triggers_rerun(self):
+        """Uploading a file should trigger a re-run in the associated
+        ReportSession."""
+        with self._patch_report_session():
+            yield self.start_server_loop()
+
+            # Connect twice and get associated ReportSessions
+            yield self.ws_connect()
+            yield self.ws_connect()
+            session_info1 = list(self.server._session_info_by_id.values())[0]
+            session_info2 = list(self.server._session_info_by_id.values())[1]
+
+            # "Upload a file" for Session1
+            self.server._uploaded_file_mgr.add_file(
+                UploadedFile(
+                    session_id=session_info1.session.id,
+                    widget_id="widget_id",
+                    name="file.txt",
+                    data=b"file contents",
+                )
+            )
+
+            self.assertEquals(
+                self.server._uploaded_file_mgr.get_file_data(
+                    session_info1.session.id, "widget_id"
+                ),
+                b"file contents",
+            )
+
+            # Session1 should have a rerun request; Session2 should not
+            session_info1.session.request_rerun.assert_called_once()
+            session_info2.session.request_rerun.assert_not_called()
+
+    @tornado.testing.gen_test
+    def test_orphaned_upload_file_deletion(self):
+        """An uploaded file with no associated ReportSession should be
+        deleted."""
+        with self._patch_report_session():
+            yield self.start_server_loop()
+            yield self.ws_connect()
+
+            # "Upload a file" for a session that doesn't exist
+            self.server._uploaded_file_mgr.add_file(
+                UploadedFile(
+                    session_id="no_such_session",
+                    widget_id="widget_id",
+                    name="file.txt",
+                    data=b"file contents",
+                )
+            )
+
+            self.assertIsNone(
+                self.server._uploaded_file_mgr.get_file_data(
+                    "no_such_session", "widget_id"
+                )
+            )
 
     @staticmethod
     def _create_mock_report_session(*args, **kwargs):

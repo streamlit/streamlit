@@ -36,9 +36,11 @@ from streamlit.ForwardMsgCache import ForwardMsgCache
 from streamlit.ForwardMsgCache import create_reference_msg
 from streamlit.ForwardMsgCache import populate_hash_if_needed
 from streamlit.ReportSession import ReportSession
+from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.server.UploadFileRequestHandler import UploadFileRequestHandler
 from streamlit.server.routes import AddSlashHandler
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
@@ -126,10 +128,11 @@ def start_listening(app):
     call_count = 0
 
     while call_count < MAX_PORT_SEARCH_RETRIES:
+        address = config.get_option("server.address")
         port = config.get_option("server.port")
 
         try:
-            app.listen(port)
+            app.listen(port, address)
             break  # It worked! So let's break out of the loop.
 
         except (OSError, socket.error) as e:
@@ -169,7 +172,12 @@ class Server(object):
 
     @classmethod
     def get_current(cls):
-        """Return the singleton instance."""
+        """
+        Returns
+        -------
+        Server
+            The singleton Server object.
+        """
         if cls._singleton is None:
             raise RuntimeError("Server has not been initialized yet")
 
@@ -203,7 +211,44 @@ class Server(object):
         self._state = None
         self._set_state(State.INITIAL)
         self._message_cache = ForwardMsgCache()
+        self._uploaded_file_mgr = UploadedFileManager()
+        self._uploaded_file_mgr.on_file_added.connect(self._on_file_uploaded)
         self._report = None  # type: Optional[Report]
+
+    def _on_file_uploaded(self, file):
+        """Event handler for UploadedFileManager.on_file_added.
+
+        When a file is uploaded by a user, schedule a re-run of the
+        corresponding ReportSession.
+
+        Parameters
+        ----------
+        file : File
+            The file that was just uploaded.
+
+        """
+        session_info = self._get_session_info(file.session_id)
+        if session_info is not None:
+            session_info.session.request_rerun()
+        else:
+            # If an uploaded file doesn't belong to an existing session,
+            # remove it so it doesn't stick around forever.
+            self._uploaded_file_mgr.remove_file(file.session_id, file.widget_id)
+
+    def _get_session_info(self, session_id):
+        """Return the SessionInfo with the given id, or None if no such
+        session exists.
+
+        Parameters
+        ----------
+        session_id : str
+
+        Returns
+        -------
+        SessionInfo or None
+
+        """
+        return self._session_info_by_id.get(session_id, None)
 
     def start(self, on_started):
         """Start the server.
@@ -260,6 +305,11 @@ class Server(object):
                 make_url_path_regex(base, "message"),
                 MessageCacheHandler,
                 dict(cache=self._message_cache),
+            ),
+            (
+                make_url_path_regex(base, "upload_file"),
+                UploadFileRequestHandler,
+                dict(file_mgr=self._uploaded_file_mgr),
             ),
             (make_url_path_regex(base, "media/(.*)"), MediaFileHandler),
         ]
@@ -466,6 +516,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
                 ioloop=self._ioloop,
                 script_path=self._script_path,
                 command_line=self._command_line,
+                uploaded_file_manager=self._uploaded_file_mgr,
             )
 
         assert session.id not in self._session_info_by_id, (
@@ -488,7 +539,6 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         ----------
         session_id : str
             The ReportSession's id string.
-
         """
         if session_id in self._session_info_by_id:
             session_info = self._session_info_by_id[session_id]
@@ -530,14 +580,7 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
             msg.ParseFromString(payload)
             msg_type = msg.WhichOneof("type")
 
-            if msg_type == "upload_file_chunk":
-                LOGGER.debug(
-                    "Received the following upload_file_chunk back message:\nfile_uploaded {\n   widget_id: %s\n   index: %s\n   data: #####\n}",
-                    msg.upload_file_chunk.widget_id,
-                    msg.upload_file_chunk.index,
-                )
-            else:
-                LOGGER.debug("Received the following back message:\n%s", msg)
+            LOGGER.debug("Received the following back message:\n%s", msg)
 
             if msg_type == "cloud_upload":
                 yield self._session.handle_save_request(self)
@@ -552,16 +595,6 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
             elif msg_type == "update_widgets":
                 self._session.handle_rerun_script_request(
                     widget_state=msg.update_widgets
-                )
-            elif msg_type == "upload_file":
-                self._session.handle_upload_file(upload_file=msg.upload_file)
-            elif msg_type == "upload_file_chunk":
-                self._session.handle_upload_file_chunk(
-                    upload_file_chunk=msg.upload_file_chunk
-                )
-            elif msg_type == "delete_uploaded_file":
-                self._session.handle_delete_uploaded_file(
-                    delete_uploaded_file=msg.delete_uploaded_file
                 )
             elif msg_type == "close_connection":
                 if config.get_option("global.developmentMode"):

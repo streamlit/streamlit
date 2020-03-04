@@ -15,12 +15,6 @@
 
 """st.help unit test."""
 
-# Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
-from streamlit.compatibility import setup_2_3_shims
-
-setup_2_3_shims(globals())
-
 import sys
 
 from tests import testutil
@@ -114,8 +108,15 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(
                 ds.signature,
                 (
-                    "(func=None, persist=False, "
-                    "allow_output_mutation=False, show_spinner=True, suppress_st_warning=False, hash_funcs=None, ignore_hash=False)"
+                    "(func=None, "
+                    "persist=False, "
+                    "allow_output_mutation=False, "
+                    "show_spinner=True, "
+                    "suppress_st_warning=False, "
+                    "hash_funcs=None, "
+                    "ignore_hash=False, "
+                    "max_entries=None, "
+                    "ttl=None)"
                 ),
             )
             self.assertTrue(ds.doc_string.startswith("Function decorator to"))
