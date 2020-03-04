@@ -170,6 +170,7 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     // Hack to hide drag-and-drop message and leave space for filename.
     let overrides: any = fileUploaderOverrides
+    let filenameText = ""
 
     if (status === "UPLOADED") {
       overrides = { ...overrides }
@@ -178,13 +179,21 @@ class FileUploader extends React.PureComponent<Props, State> {
       overrides.ContentMessage.style.visibility = "hidden"
       overrides.ContentMessage.style.overflow = "hidden"
       overrides.ContentMessage.style.height = "0.625rem" // half of lineHeightTight
+
+      if (multipleFiles) {
+        filenameText = this.state.acceptedFiles
+          .map(file => file.name)
+          .join(", ")
+      } else {
+        filenameText = this.state.acceptedFiles[0].name
+      }
     }
 
     return (
       <>
         {status === "UPLOADED" ? (
           <div className="uploadOverlay uploadDone">
-            <span className="body">{this.state.acceptedFiles[0].name}</span>
+            <span className="body">{filenameText}</span>
           </div>
         ) : null}
         <FileUploaderBaseui

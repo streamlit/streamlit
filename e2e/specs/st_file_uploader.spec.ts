@@ -119,6 +119,15 @@ describe("st.file_uploader", () => {
             events: ["dragenter", "drop"]
           });
 
+        // The widget should show the names of the uploaded files.
+        const filenames = [fileName1, fileName2].join(", ");
+        cy.get(".uploadDone")
+          .eq(0) // eq(0), instead of eq(1), because the first widget won't have an uploadDone
+          .should("have.text", filenames);
+
+        // The script should have printed the contents of the two files
+        // into an st.text. (This tests that the upload actually went
+        // through.)
         const content = [file1, file2].sort().join("\n");
         cy.get(".fixed-width.stText")
           .eq(1)
