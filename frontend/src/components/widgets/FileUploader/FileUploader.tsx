@@ -86,22 +86,17 @@ class FileUploader extends React.PureComponent<Props, State> {
       }
     }
 
+    this.setState({ acceptedFiles, status: "UPLOADING" })
+
     // Upload all the files
     this.currentUploadCanceller = axios.CancelToken.source()
-    const promises: Promise<void>[] = []
-    for (const file of acceptedFiles) {
-      const p = this.props.uploadClient.uploadFile(
+    this.props.uploadClient
+      .uploadFiles(
         this.props.element.get("id"),
-        file,
+        acceptedFiles,
         undefined,
         this.currentUploadCanceller.token
       )
-      promises.push(p)
-    }
-
-    this.setState({ acceptedFiles, status: "UPLOADING" })
-
-    Promise.all(promises)
       .then(() => {
         this.currentUploadCanceller = undefined
         this.setState({ status: "UPLOADED" })
@@ -171,6 +166,8 @@ class FileUploader extends React.PureComponent<Props, State> {
       .toArray()
       .map((value: string) => "." + value)
 
+    const multipleFiles: boolean = element.get("multipleFiles")
+
     // Hack to hide drag-and-drop message and leave space for filename.
     let overrides: any = fileUploaderOverrides
 
@@ -196,6 +193,7 @@ class FileUploader extends React.PureComponent<Props, State> {
           accept={accept.length === 0 ? undefined : accept}
           disabled={this.props.disabled}
           overrides={overrides}
+          multiple={multipleFiles}
         />
       </>
     )
