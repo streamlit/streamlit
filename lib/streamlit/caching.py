@@ -284,10 +284,8 @@ def _write_to_disk_cache(key, value):
         with file_util.streamlit_write(path, binary=True) as output:
             entry = DiskCacheEntry(value=value)
             pickle.dump(entry, output, pickle.HIGHEST_PROTOCOL)
-    # In python 2, it's pickle struct error.
-    # In python 3, it's an open error in util.
-    # XXX
-    except util.Error as e:  #  struct.error) as e:
+
+    except util.Error as e:
         LOGGER.debug(e)
         # Clean up file so we don't leave zero byte files.
         try:
