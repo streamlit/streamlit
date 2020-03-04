@@ -343,20 +343,14 @@ def write(*args, **kwargs):
        height: 200px
 
     """
-    # XXX
-
-    # Python2 doesn't support this syntax
-    #   def write(*args, unsafe_allow_html=False)
-    # so we do this instead:
-    unsafe_allow_html = kwargs.get("unsafe_allow_html", False)
-
     try:
         string_buffer = []  # type: List[str]
 
         def flush_buffer():
             if string_buffer:
                 markdown(
-                    " ".join(string_buffer), unsafe_allow_html=unsafe_allow_html
+                    " ".join(string_buffer), 
+                    unsafe_allow_html=kwargs.get("unsafe_allow_html", False)
                 )  # noqa: F821
                 string_buffer[:] = []
 
