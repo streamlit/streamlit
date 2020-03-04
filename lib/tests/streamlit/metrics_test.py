@@ -14,7 +14,6 @@
 # limitations under the License.
 
 """Metrics Module Unittest."""
-import sys
 import unittest
 
 import pytest
@@ -64,10 +63,7 @@ class MetricsTest(unittest.TestCase):
         config.set_option("global.metrics", True)
 
         client = streamlit.metrics.Client.get_current()
-        if sys.version_info <= (3, 0):
-            builtin_import = "__builtin__.__import__"
-        else:
-            builtin_import = "builtins.__import__"
+        builtin_import = "builtins.__import__"
 
         with pytest.raises(ImportError) as e:
             with patch(builtin_import, side_effect=ImportError):

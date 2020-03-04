@@ -13,9 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-
-if sys.version_info[0] == 2:
-    import nested_module_child as NESTED_MODULE_CHILD
-else:
-    import tests.streamlit.watcher.test_data.nested_module_child as NESTED_MODULE_CHILD
+import tests.streamlit.watcher.test_data.nested_module_child as NESTED_MODULE_CHILD

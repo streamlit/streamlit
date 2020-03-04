@@ -17,7 +17,6 @@
 
 import json
 import mock
-import sys
 import unittest
 
 try:
@@ -371,10 +370,7 @@ class DeltaGeneratorWriteTest(testutil.DeltaGeneratorTestCase):
         st.json(obj)
 
         element = self.get_delta_from_queue().new_element
-        if sys.version_info >= (3, 0):
-            self.assertEqual("\"<class 'module'>\"", element.json.body)
-        else:
-            self.assertEqual("\"<type 'module'>\"", element.json.body)
+        self.assertEqual("\"<class 'module'>\"", element.json.body)
 
     def test_markdown(self):
         """Test Markdown element."""

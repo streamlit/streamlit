@@ -16,7 +16,6 @@
 """Unit test for data_frame_proto."""
 
 import json
-import sys
 import unittest
 
 import numpy as np
@@ -253,11 +252,7 @@ class DataFrameProtoTest(unittest.TestCase):
 
         with pytest.raises(NotImplementedError) as e:
             data_frame_proto._marshall_any_array(str_data, str_proto)
-        if sys.version_info >= (3, 0):
-            err_msg = "Dtype <U6 not understood."
-        else:
-            err_msg = "Dtype |S6 not understood."
-        self.assertEqual(err_msg, str(e.value))
+        self.assertEqual("Dtype <U6 not understood.", str(e.value))
 
     def test_add_rows(self):
         """Test streamlit.data_frame_proto._add_rows."""
