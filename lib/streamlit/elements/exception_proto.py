@@ -144,7 +144,7 @@ def _is_in_streamlit_package(file):
 
 def _get_stackframe_filename(frame):
     """Return the filename component of a traceback frame."""
-    return frame[0]
+    return frame.filename
 
 
 def _get_stack_trace(
