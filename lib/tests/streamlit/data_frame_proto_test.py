@@ -250,9 +250,8 @@ class DataFrameProtoTest(unittest.TestCase):
         str_data = np.array(["random", "string"])
         str_proto = AnyArray()
 
-        with pytest.raises(NotImplementedError) as e:
+        with pytest.raises(NotImplementedError, match="^Dtype <U6 not understood.$"):
             data_frame_proto._marshall_any_array(str_data, str_proto)
-        self.assertEqual("Dtype <U6 not understood.", str(e.value))
 
     def test_add_rows(self):
         """Test streamlit.data_frame_proto._add_rows."""

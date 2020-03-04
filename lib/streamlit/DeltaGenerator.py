@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -2505,17 +2504,18 @@ class DeltaGenerator(object):
         ...     my_bar.progress(percent_complete + 1)
 
         """
-        int_value = isinstance(value, numbers.Integral)
-        float_value = isinstance(value, float)
+        
+        #TODO: standardize numerical type checking across st.* functions.
 
-        if float_value:
+        if isinstance(value, float):
             if 0.0 <= value <= 1.0:
                 element.progress.value = int(value * 100)
             else:
                 raise StreamlitAPIException(
                     "Progress Value has invalid value [0.0, 1.0]: %f" % value
                 )
-        elif int_value:
+
+        elif isinstance(value, numbers.Integral):
             if 0 <= value <= 100:
                 element.progress.value = value
             else:
