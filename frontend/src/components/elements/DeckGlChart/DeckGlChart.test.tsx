@@ -15,16 +15,6 @@
  * limitations under the License.
  */
 
-const mockSessionInfo = {
-  SessionInfo: {
-    current: {
-      mapboxToken: "asdfkmasdfom123mpomasdf",
-    },
-  },
-}
-
-jest.mock("lib/SessionInfo", () => mockSessionInfo)
-
 import React from "react"
 import DeckGL from "deck.gl"
 import { shallow } from "enzyme"
@@ -32,9 +22,7 @@ import { fromJS } from "immutable"
 import { StaticMap } from "react-map-gl"
 
 import mockDeckGl from "./mock"
-import { PropsWithHeight } from "./DeckGlChart"
-
-const DeckGlChart = require("./DeckGlChart").DeckGlChart
+import { DeckGlChart, PropsWithHeight } from "./DeckGlChart"
 
 const getProps = (elementProps: object = {}): PropsWithHeight => ({
   element: fromJS({
@@ -43,6 +31,7 @@ const getProps = (elementProps: object = {}): PropsWithHeight => ({
   }),
   width: 698,
   height: 500,
+  mapboxToken: "mapboxToken",
 })
 
 describe("DeckGlChart Element", () => {
@@ -76,7 +65,7 @@ describe("DeckGlChart Element", () => {
     expect(wrapper.find(DeckGL).props()).toHaveProperty("controller")
     expect(wrapper.find(DeckGL).prop("layers")).toMatchSnapshot()
     expect(wrapper.find(StaticMap).prop("mapboxApiAccessToken")).toBe(
-      mockSessionInfo.SessionInfo.current.mapboxToken
+      props.mapboxToken
     )
   })
 })

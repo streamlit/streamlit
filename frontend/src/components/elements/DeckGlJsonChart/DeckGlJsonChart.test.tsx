@@ -28,6 +28,7 @@ const getProps = (elementProps: object = {}): Props => ({
     ...elementProps,
   }),
   width: 0,
+  mapboxToken: "mapboxToken",
 })
 
 describe("DeckGlJsonChart element", () => {

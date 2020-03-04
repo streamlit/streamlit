@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { mount } from "enzyme"
 import { fromJS } from "immutable"
 
 import mock from "./mock"
@@ -34,7 +34,7 @@ const getProps = (elementProps: object = {}): Props => ({
 describe("Table Element", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<Table {...props} />)
+    const wrapper = mount(<Table {...props} />)
 
     expect(wrapper.find(ReactTable).length).toBe(1)
     expect(wrapper.find(".stTable").length).toBe(1)
