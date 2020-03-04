@@ -2524,7 +2524,7 @@ class DeltaGenerator(object):
                 )
         else:
             raise StreamlitAPIException(
-                "Progress Value has invalid type: %s" % type(value)
+                "Progress Value has invalid type: %s" % type(value).__name__
             )
 
     @_with_element
