@@ -144,8 +144,6 @@ def _is_in_streamlit_package(file):
 
 def _get_stackframe_filename(frame):
     """Return the filename component of a traceback frame."""
-    # Python 3 has a frame.filename variable, but frames in
-    # Python 2 are just tuples. This code works in both versions.
     return frame[0]
 
 
@@ -177,20 +175,11 @@ def _get_stack_trace(
     """
     # Get and extract the traceback for the exception.
     extracted_traceback = None  # type: Optional[traceback.StackSummary]
+
     if exception_traceback is not None:
         extracted_traceback = traceback.extract_tb(exception_traceback)
-    elif hasattr(exception, "__traceback__"):
-        # This is the Python 3 way to get the traceback.
-        extracted_traceback = traceback.extract_tb(exception.__traceback__)
     else:
-        # Hack for Python 2 which will extract the traceback as long as this
-        # method was called on the exception as it was caught, which is
-        # likely what the user would do.
-        _, live_exception, live_traceback = sys.exc_info()
-        if exception == live_exception:
-            extracted_traceback = traceback.extract_tb(live_traceback)
-        else:
-            extracted_traceback = None
+        extracted_traceback = traceback.extract_tb(exception.__traceback__)
 
     # Format the extracted traceback and add it to the protobuf element.
     if extracted_traceback is None:
