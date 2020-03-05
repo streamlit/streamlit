@@ -21,7 +21,9 @@ LOGGER = get_logger(__name__)
 
 
 class ReportContext(object):
-    def __init__(self, session_id, enqueue, widgets, widget_ids_this_run, uploaded_file_mgr):
+    def __init__(
+        self, session_id, enqueue, widgets, widget_ids_this_run, uploaded_file_mgr,
+    ):
         """Construct a ReportContext.
 
         Parameters
@@ -92,7 +94,15 @@ REPORT_CONTEXT_ATTR_NAME = "streamlit_report_ctx"
 class ReportThread(threading.Thread):
     """Extends threading.Thread with a ReportContext member"""
 
-    def __init__(self, session_id, enqueue, widgets, uploaded_file_mgr=None, target=None, name=None):
+    def __init__(
+        self,
+        session_id,
+        enqueue,
+        widgets,
+        uploaded_file_mgr=None,
+        target=None,
+        name=None,
+    ):
         """Construct a ReportThread.
 
         Parameters
@@ -171,5 +181,5 @@ def get_report_ctx():
     return ctx
 
 
-# Avoid circular dependencies in Python 2
+# Needed to avoid circular dependencies.
 import streamlit
