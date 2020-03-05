@@ -84,7 +84,7 @@ class MediaFile(object):
         return self._content
 
     @property
-    def mimetype(self:
+    def mimetype(self):
         return self._mimetype
 
 
@@ -110,7 +110,8 @@ class MediaFileManager(object):
     def reset_files_for_session(self, session_id=None):
         """Clears all stored files for a given ReportSession id.
 
-        Should be called whenever ScriptRunner completes.
+        Should be called whenever ScriptRunner completes and when
+        a session ends.
         """
         if session_id is None:
             session_id = _get_session_id()
@@ -122,9 +123,9 @@ class MediaFileManager(object):
             if entry.session_count == 0:
                 self._remove(file_id)
 
-        LOGGER.debug("Reset files for session with ID %s" % session_id)
+        LOGGER.debug("Reset files for session with ID %s", session_id)
         del self._session_id_to_file_ids[session_id]
-        LOGGER.debug("Sessions still active: %r" % self._session_id_to_file_ids)
+        LOGGER.debug("Sessions still active: %r", self._session_id_to_file_ids)
 
     def add(self, content, mimetype):
         """Adds new MediaFile with given parameters; returns the object.
