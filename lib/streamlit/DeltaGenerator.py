@@ -2504,8 +2504,8 @@ class DeltaGenerator(object):
         ...     my_bar.progress(percent_complete + 1)
 
         """
-        
-        #TODO: standardize numerical type checking across st.* functions.
+
+        # TODO: standardize numerical type checking across st.* functions.
 
         if isinstance(value, float):
             if 0.0 <= value <= 1.0:
