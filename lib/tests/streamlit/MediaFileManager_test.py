@@ -116,7 +116,7 @@ class UploadedFileManagerTest(unittest.TestCase):
 
         mediafile = mfm.add(sample["content"], sample["mimetype"])
         self.assertTrue(file_id in mfm)
-        self.assertEqual(mediafile.file_id, file_id)
+        self.assertEqual(mediafile.id, file_id)
 
     @mock.patch("streamlit.MediaFileManager._get_session_id")
     def test_add_file_different_mimetypes(self, _get_session_id):
@@ -129,7 +129,7 @@ class UploadedFileManagerTest(unittest.TestCase):
         self.assertTrue(file_id in mfm)
 
         mediafile = mfm.add(sample["content"], "video/mp4")
-        self.assertNotEqual(file_id, mediafile.file_id)
+        self.assertNotEqual(file_id, mediafile.id)
 
     @mock.patch("streamlit.MediaFileManager._get_session_id")
     def test_remove_file(self, _get_session_id):
