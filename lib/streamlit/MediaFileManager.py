@@ -64,20 +64,28 @@ class MediaFile(object):
     """Abstraction for audiovisual/image file objects."""
 
     def __init__(self, file_id=None, content=None, mimetype=None, session_count=1):
-        self.file_id = file_id
-        self.content = content
-        self.mimetype = mimetype
+        self._file_id = file_id
+        self._content = content
+        self._mimetype = mimetype
         self.session_count = session_count
 
     @property
     def url(self):
         return "{}/{}.{}".format(
-            STATIC_MEDIA_ENDPOINT, self.file_id, self.mimetype.split("/")[1]
+            STATIC_MEDIA_ENDPOINT, self.id, self.mimetype.split("/")[1]
         )
 
     @property
     def id(self):
-        return self.file_id
+        return self._file_id
+
+    @property
+    def content(self):
+        return self._content
+
+    @property
+    def mimetype(self:
+        return self._mimetype
 
 
 class MediaFileManager(object):
