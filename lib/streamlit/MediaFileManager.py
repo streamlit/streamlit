@@ -15,10 +15,28 @@
 
 """Provides global MediaFileManager object as `media_file_manager`."""
 
+import typing
 import hashlib
-from datetime import datetime
+import collections
+
+from streamlit.logger import get_logger
+from streamlit.ReportThread import get_report_ctx
+
+LOGGER = get_logger(__name__)
 
 STATIC_MEDIA_ENDPOINT = "/media"
+
+
+def _get_session_id():
+    """Semantic wrapper to retrieve current ReportSession ID."""
+    ctx = get_report_ctx()
+    if ctx is None:
+        # This is only None when running "python myscript.py" rather than
+        # "streamlit run myscript.py". In which case the session ID doesn't
+        # matter and can just be a constant, as there's only ever "session".
+        return "dontcare"
+    else:
+        return ctx.session_id
 
 
 def _get_file_id(data, mimetype=None):
@@ -45,16 +63,29 @@ def _get_file_id(data, mimetype=None):
 class MediaFile(object):
     """Abstraction for audiovisual/image file objects."""
 
-    def __init__(self, file_id=None, content=None, mimetype=None):
-        self.file_id = file_id
-        self.content = content
-        self.mimetype = mimetype
+    def __init__(self, file_id=None, content=None, mimetype=None, session_count=1):
+        self._file_id = file_id
+        self._content = content
+        self._mimetype = mimetype
+        self.session_count = session_count
 
     @property
     def url(self):
         return "{}/{}.{}".format(
-            STATIC_MEDIA_ENDPOINT, self.file_id, self.mimetype.split("/")[1]
+            STATIC_MEDIA_ENDPOINT, self.id, self.mimetype.split("/")[1]
         )
+
+    @property
+    def id(self):
+        return self._file_id
+
+    @property
+    def content(self):
+        return self._content
+
+    @property
+    def mimetype(self):
+        return self._mimetype
 
 
 class MediaFileManager(object):
@@ -62,25 +93,45 @@ class MediaFileManager(object):
 
     def __init__(self):
         self._files = {}
+        self._session_id_to_file_ids = collections.defaultdict(
+            set
+        )  # type: typing.DefaultDict[str, typing.Set[str]]
 
-    def clear(self):
-        """Deletes all files from the file manager. """
-        self._files.clear()
-
-    def delete(self, mediafile_or_id):
+    def _remove(self, mediafile_or_id):
         """Deletes MediaFile via file_id lookup.
+
         Raises KeyError if not found.
         """
         if type(mediafile_or_id) is MediaFile:
-            del self._files[MediaFile.file_id]
+            del self._files[mediafile_or_id.id]
         else:
             del self._files[mediafile_or_id]
+
+    def reset_files_for_session(self, session_id=None):
+        """Clears all stored files for a given ReportSession id.
+
+        Should be called whenever ScriptRunner completes and when
+        a session ends.
+        """
+        if session_id is None:
+            session_id = _get_session_id()
+
+        for file_id in self._session_id_to_file_ids[session_id]:
+            entry = self._files[file_id]
+            entry.session_count -= 1
+
+            if entry.session_count == 0:
+                self._remove(file_id)
+
+        LOGGER.debug("Reset files for session with ID %s", session_id)
+        del self._session_id_to_file_ids[session_id]
+        LOGGER.debug("Sessions still active: %r", self._session_id_to_file_ids)
 
     def add(self, content, mimetype):
         """Adds new MediaFile with given parameters; returns the object.
 
         If an identical file already exists, returns the existing object
-        rather than creating a new one.
+        and increments its session_count by one.
 
         mimetype must be set, as this string will be used in the
         "Content-Type" header when the file is sent via HTTP GET.
@@ -97,19 +148,27 @@ class MediaFileManager(object):
         if not file_id in self._files:
             new = MediaFile(file_id=file_id, content=content, mimetype=mimetype,)
             self._files[file_id] = new
+        else:
+            self._files[file_id].session_count += 1
+
+        self._session_id_to_file_ids[_get_session_id()].add(file_id)
         return self._files[file_id]
 
     def get(self, mediafile_or_id):
-        """Returns MediaFile object for given file_id.
+        """Returns MediaFile object for given file_id and decrements its session_count.
+
         Raises KeyError if not found.
         """
-        if type(mediafile_or_id) is MediaFile:
-            return mediafile_or_id
-        return self._files[mediafile_or_id]
+        mf = (
+            mediafile_or_id
+            if type(mediafile_or_id) is MediaFile
+            else self._files[mediafile_or_id]
+        )
+        return mf
 
     def __contains__(self, mediafile_or_id):
         if type(mediafile_or_id) is MediaFile:
-            return mediafile_or_id.file_id in self._files
+            return mediafile_or_id.id in self._files
         return mediafile_or_id in self._files
 
     def __len__(self):
