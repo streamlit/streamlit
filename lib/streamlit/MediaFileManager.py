@@ -63,11 +63,11 @@ def _get_file_id(data, mimetype=None):
 class MediaFile(object):
     """Abstraction for audiovisual/image file objects."""
 
-    def __init__(self, file_id=None, content=None, mimetype=None, refcount=1):
+    def __init__(self, file_id=None, content=None, mimetype=None, session_count=1):
         self.file_id = file_id
         self.content = content
         self.mimetype = mimetype
-        self.refcount = refcount
+        self.session_count = session_count
 
     @property
     def url(self):
@@ -109,9 +109,9 @@ class MediaFileManager(object):
 
         for file_id in self._session_id_to_file_ids[session_id]:
             entry = self._files[file_id]
-            entry.refcount -= 1
+            entry.session_count -= 1
 
-            if entry.refcount == 0:
+            if entry.session_count == 0:
                 self._remove(file_id)
 
         LOGGER.debug("Reset files for session with ID %s" % session_id)
@@ -122,7 +122,7 @@ class MediaFileManager(object):
         """Adds new MediaFile with given parameters; returns the object.
 
         If an identical file already exists, returns the existing object
-        and increments its refcount by one.
+        and increments its session_count by one.
 
         mimetype must be set, as this string will be used in the
         "Content-Type" header when the file is sent via HTTP GET.
@@ -140,13 +140,13 @@ class MediaFileManager(object):
             new = MediaFile(file_id=file_id, content=content, mimetype=mimetype,)
             self._files[file_id] = new
         else:
-            self._files[file_id].refcount += 1
+            self._files[file_id].session_count += 1
 
         self._session_id_to_file_ids[_get_session_id()].add(file_id)
         return self._files[file_id]
 
     def get(self, mediafile_or_id):
-        """Returns MediaFile object for given file_id and decrements its refcount.
+        """Returns MediaFile object for given file_id and decrements its session_count.
 
         Raises KeyError if not found.
         """
