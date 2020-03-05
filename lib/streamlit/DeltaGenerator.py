@@ -2515,7 +2515,7 @@ class DeltaGenerator(object):
                     "Progress Value has invalid value [0.0, 1.0]: %f" % value
                 )
 
-        elif isinstance(value, numbers.Integral):
+        elif isinstance(value, int):
             if 0 <= value <= 100:
                 element.progress.value = value
             else:
