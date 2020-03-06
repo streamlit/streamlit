@@ -37,14 +37,11 @@ workflows:
     triggers:
       - schedule:
           # Run job at 10.30pm PST or 11.30pm PDT
-          # TODO revert to '30 6'
-          cron: "55 * * * *"
+          cron: "30 6 * * *"
           filters:
             branches:
-              # TODO remove nightly branch
               only:
                 - develop
-                - feature/nightly
     jobs:
       - create-tag
 
