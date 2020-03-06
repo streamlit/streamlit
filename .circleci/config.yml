@@ -38,7 +38,7 @@ workflows:
       - schedule:
           # Run job at 10.30pm PST or 11.30pm PDT
           # TODO revert to '45 6'
-          cron: "50 * * * *"
+          cron: "55 * * * *"
           filters:
             branches:
               # TODO remove nightly branch
