@@ -19,12 +19,6 @@ These are functions that only make sense within the watcher. In particular,
 functions that use streamlit.config can go here to avoid a dependency cycle.
 """
 
-# Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
-from streamlit.compatibility import setup_2_3_shims
-
-setup_2_3_shims(globals())
-
 import hashlib
 import time
 
