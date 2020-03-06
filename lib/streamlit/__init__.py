@@ -349,8 +349,7 @@ def write(*args, **kwargs):
         def flush_buffer():
             if string_buffer:
                 markdown(
-                    " ".join(string_buffer),
-                    unsafe_allow_html=unsafe_allow_html,
+                    " ".join(string_buffer), unsafe_allow_html=unsafe_allow_html,
                 )  # noqa: F821
                 string_buffer[:] = []
 
