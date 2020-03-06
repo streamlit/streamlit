@@ -19,7 +19,7 @@ import unittest
 
 import mock
 import requests_mock
-from packaging.version import Version as pkg_version
+from packaging.version import Version as PkgVersion
 
 from streamlit import version
 from streamlit.version import PYPI_STREAMLIT_URL
@@ -30,12 +30,12 @@ from streamlit.version import should_show_new_version_notice
 
 class VersionTest(unittest.TestCase):
     def test_get_installed_streamlit_version(self):
-        self.assertIsInstance(_get_installed_streamlit_version(), pkg_version)
+        self.assertIsInstance(_get_installed_streamlit_version(), PkgVersion)
 
     def test_get_latest_streamlit_version(self):
         with requests_mock.mock() as m:
             m.get(PYPI_STREAMLIT_URL, json={"info": {"version": "1.2.3"}})
-            self.assertEqual(pkg_version("1.2.3"), _get_latest_streamlit_version())
+            self.assertEqual(PkgVersion("1.2.3"), _get_latest_streamlit_version())
 
     def test_should_show_new_version_notice_skip(self):
         with mock.patch(
@@ -53,8 +53,8 @@ class VersionTest(unittest.TestCase):
         ) as get_installed:
 
             version.CHECK_PYPI_PROBABILITY = 1
-            get_installed.side_effect = [pkg_version("1.0.0")]
-            get_latest.side_effect = [pkg_version("1.2.3")]
+            get_installed.side_effect = [PkgVersion("1.0.0")]
+            get_latest.side_effect = [PkgVersion("1.2.3")]
 
             self.assertTrue(should_show_new_version_notice())
             get_installed.assert_called_once()
@@ -68,8 +68,8 @@ class VersionTest(unittest.TestCase):
         ) as get_installed:
 
             version.CHECK_PYPI_PROBABILITY = 1
-            get_installed.side_effect = [pkg_version("1.2.3")]
-            get_latest.side_effect = [pkg_version("1.2.3")]
+            get_installed.side_effect = [PkgVersion("1.2.3")]
+            get_latest.side_effect = [PkgVersion("1.2.3")]
 
             self.assertFalse(should_show_new_version_notice())
             get_installed.assert_called_once()
@@ -83,8 +83,8 @@ class VersionTest(unittest.TestCase):
         ) as get_installed:
 
             version.CHECK_PYPI_PROBABILITY = 1
-            get_installed.side_effect = [pkg_version("1.2.3")]
-            get_latest.side_effect = [pkg_version("1.0.0")]
+            get_installed.side_effect = [PkgVersion("1.2.3")]
+            get_latest.side_effect = [PkgVersion("1.0.0")]
 
             self.assertFalse(should_show_new_version_notice())
             get_installed.assert_called_once()
@@ -98,7 +98,7 @@ class VersionTest(unittest.TestCase):
         ) as get_installed:
 
             version.CHECK_PYPI_PROBABILITY = 1
-            get_installed.side_effect = [pkg_version("1.2.3")]
+            get_installed.side_effect = [PkgVersion("1.2.3")]
             get_latest.side_effect = RuntimeError("apocalypse!")
 
             self.assertFalse(should_show_new_version_notice())
