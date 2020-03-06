@@ -22,7 +22,7 @@ LOGGER = get_logger(__name__)
 
 class ReportContext(object):
     def __init__(
-        self, session_id, enqueue, widgets, widget_ids_this_run, uploaded_file_mgr
+        self, session_id, enqueue, widgets, widget_ids_this_run, uploaded_file_mgr,
     ):
         """Construct a ReportContext.
 
@@ -181,5 +181,5 @@ def get_report_ctx():
     return ctx
 
 
-# Avoid circular dependencies in Python 2
+# Needed to avoid circular dependencies.
 import streamlit
