@@ -34,7 +34,6 @@ import types
 from typing import Any, List
 
 import streamlit as st
-from streamlit import compatibility
 from streamlit import config
 from streamlit import file_util
 from streamlit import type_util
@@ -259,9 +258,10 @@ class _CodeHasher:
         hash_stacks.current.push(obj)
 
         try:
-            LOGGER.debug("About to hash: %s", obj)
+            # These were super noisy so i turned them off.  --NM
+            # LOGGER.debug("About to hash: %s", obj)
             b = self._to_bytes(obj, context)
-            LOGGER.debug("Done hashing: %s", obj)
+            # LOGGER.debug("Done hashing: %s", obj)
 
             # Hmmm... It's psosible that the size calculation is wrong. When we
             # call to_bytes inside _to_bytes things get double-counted.

@@ -26,6 +26,9 @@ message DeckGlChart {
   string spec = 2;
 
   repeated DeckGLLayer layers = 3;
+
+  // If True, will overwrite the chart width spec to fit to container.
+  bool use_container_width = 4;
 }
 
 message DeckGLLayer {

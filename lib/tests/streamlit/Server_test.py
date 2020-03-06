@@ -101,7 +101,7 @@ class ServerTest(ServerTestCase):
             self.assertTrue(self.server.browser_is_connected)
 
             # Get this client's SessionInfo object
-            self.assertEquals(1, len(self.server._session_info_by_id))
+            self.assertEqual(1, len(self.server._session_info_by_id))
             session_info = list(self.server._session_info_by_id.values())[0]
 
             # Close the connection
@@ -112,7 +112,7 @@ class ServerTest(ServerTestCase):
             # Ensure ReportSession.shutdown() was called, and that our
             # SessionInfo was cleared.
             session_info.session.shutdown.assert_called_once()
-            self.assertEquals(0, len(self.server._session_info_by_id))
+            self.assertEqual(0, len(self.server._session_info_by_id))
 
     @tornado.testing.gen_test
     def test_multiple_connections(self):

@@ -15,24 +15,22 @@
 
 """A library of caching utilities."""
 
-# Python 2/3 compatibility
-from __future__ import absolute_import, division, print_function
-from streamlit.compatibility import setup_2_3_shims
-
-setup_2_3_shims(globals())
-
 import ast
 import contextlib
 import hashlib
 import inspect
+import math
 import os
 import pickle
 import shutil
 import struct
 import textwrap
 import threading
+import time
 from collections import namedtuple
 from typing import Any, Dict
+
+from cachetools import LRUCache, TTLCache
 
 from streamlit import config
 from streamlit import file_util
@@ -49,13 +47,15 @@ import streamlit as st
 
 LOGGER = get_logger(__name__)
 
+# The timer function we use with TTLCache.
+_TTLCACHE_TIMER = time.monotonic
+
+# A list of all mem-caches we've created.
+_all_mem_caches = []
+
 
 CacheEntry = namedtuple("CacheEntry", ["value", "hash"])
 DiskCacheEntry = namedtuple("DiskCacheEntry", ["value"])
-
-
-# The in memory cache.
-_mem_cache = {}  # type: Dict[str, CacheEntry]
 
 
 # A thread-local counter that's incremented when we enter @st.cache
@@ -173,9 +173,38 @@ class _AddCopy(ast.NodeTransformer):
         return node
 
 
-def _read_from_mem_cache(key, allow_output_mutation, func_or_code, hash_funcs):
-    if key in _mem_cache:
-        entry = _mem_cache[key]
+def _create_mem_cache(max_entries, ttl):
+    """Create an in-memory cache object with the given parameters."""
+    if max_entries is None and ttl is None:
+        # If we have no max_entries or TTL, we can just use a regular dict.
+        mem_cache = {}
+    else:
+        if max_entries is None:
+            max_entries = math.inf
+        elif not isinstance(max_entries, int):
+            raise Exception("`max_entries` must be an int or None")
+
+        if not isinstance(ttl, (float, int)) and ttl is not None:
+            raise Exception("`ttl` must be a float or None")
+
+        # If ttl is none, just create an LRUCache. (TTLCache is simply an
+        # LRUCache that adds a ttl option.)
+        if ttl is None:
+            mem_cache = LRUCache(maxsize=max_entries)
+        else:
+            mem_cache = TTLCache(maxsize=max_entries, ttl=ttl, timer=_TTLCACHE_TIMER)
+
+    # Stick the new cache in our global list
+    _all_mem_caches.append(mem_cache)
+
+    return mem_cache
+
+
+def _read_from_mem_cache(
+    mem_cache, key, allow_output_mutation, func_or_code, hash_funcs
+):
+    if key in mem_cache:
+        entry = mem_cache[key]
 
         if not allow_output_mutation:
             computed_output_hash = _get_output_hash(
@@ -195,13 +224,15 @@ def _read_from_mem_cache(key, allow_output_mutation, func_or_code, hash_funcs):
         raise CacheKeyNotFoundError("Key not found in mem cache")
 
 
-def _write_to_mem_cache(key, value, allow_output_mutation, func_or_code, hash_funcs):
+def _write_to_mem_cache(
+    mem_cache, key, value, allow_output_mutation, func_or_code, hash_funcs
+):
     if allow_output_mutation:
         hash = None
     else:
         hash = _get_output_hash(value, func_or_code, hash_funcs)
 
-    _mem_cache[key] = CacheEntry(value=value, hash=hash)
+    mem_cache[key] = CacheEntry(value=value, hash=hash)
 
 
 def _get_output_hash(value, func_or_code, hash_funcs):
@@ -252,7 +283,7 @@ def _write_to_disk_cache(key, value):
 
 
 def _read_from_cache(
-    key, persist, allow_output_mutation, func_or_code, hash_funcs=None
+    mem_cache, key, persist, allow_output_mutation, func_or_code, hash_funcs=None
 ):
     """Read a value from the cache.
 
@@ -262,22 +293,24 @@ def _read_from_cache(
     """
     try:
         return _read_from_mem_cache(
-            key, allow_output_mutation, func_or_code, hash_funcs
+            mem_cache, key, allow_output_mutation, func_or_code, hash_funcs
         )
     except CacheKeyNotFoundError as e:
         if persist:
             value = _read_from_disk_cache(key)
             _write_to_mem_cache(
-                key, value, allow_output_mutation, func_or_code, hash_funcs
+                mem_cache, key, value, allow_output_mutation, func_or_code, hash_funcs
             )
             return value
         raise e
 
 
 def _write_to_cache(
-    key, value, persist, allow_output_mutation, func_or_code, hash_funcs=None
+    mem_cache, key, value, persist, allow_output_mutation, func_or_code, hash_funcs=None
 ):
-    _write_to_mem_cache(key, value, allow_output_mutation, func_or_code, hash_funcs)
+    _write_to_mem_cache(
+        mem_cache, key, value, allow_output_mutation, func_or_code, hash_funcs
+    )
     if persist:
         _write_to_disk_cache(key, value)
 
@@ -290,6 +323,8 @@ def cache(
     suppress_st_warning=False,
     hash_funcs=None,
     ignore_hash=False,
+    max_entries=None,
+    ttl=None,
 ):
     """Function decorator to memoize function executions.
 
@@ -322,6 +357,15 @@ def cache(
         inside Streamlit's caching mechanism: when the hasher encounters an object, it will first
         check to see if its type matches a key in this dict and, if so, will use the provided
         function to generate a hash for it. See below for an example of how this can be used.
+
+    max_entries : int or None
+        The maximum number of entries to keep in the cache, or None
+        for an unbounded cache. (When a new entry is added to a full cache,
+        the oldest cached entry will be removed.) The default is None.
+
+    ttl : float or None
+        The maximum number of seconds to keep an entry in the cache, or
+        None if cache entries should not expire. The default is None.
 
     ignore_hash : boolean
         DEPRECATED. Please use allow_output_mutation instead.
@@ -386,7 +430,12 @@ def cache(
             show_spinner=show_spinner,
             suppress_st_warning=suppress_st_warning,
             hash_funcs=hash_funcs,
+            max_entries=max_entries,
+            ttl=ttl,
         )
+
+    # Create the function's in-memory cache.
+    mem_cache = _create_mem_cache(max_entries, ttl)
 
     @functools_wraps(func)
     def wrapped_func(*args, **kwargs):
@@ -405,7 +454,7 @@ def cache(
         else:
             message = "Running `%s(...)`." % name
 
-        def get_or_set_cache():
+        def get_or_create_cached_value():
             hasher = hashlib.new("md5")
 
             if args:
@@ -439,6 +488,7 @@ def cache(
 
             try:
                 return_value = _read_from_cache(
+                    mem_cache=mem_cache,
                     key=key,
                     persist=persist,
                     allow_output_mutation=allow_output_mutation,
@@ -462,6 +512,7 @@ def cache(
                         return_value = func(*args, **kwargs)
 
                 _write_to_cache(
+                    mem_cache=mem_cache,
                     key=key,
                     value=return_value,
                     persist=persist,
@@ -474,9 +525,9 @@ def cache(
 
         if show_spinner:
             with st.spinner(message):
-                return get_or_set_cache()
+                return get_or_create_cached_value()
         else:
-            return get_or_set_cache()
+            return get_or_create_cached_value()
 
     # Make this a well-behaved decorator by preserving important function
     # attributes.
@@ -519,6 +570,7 @@ class Cache(Dict[Any, Any]):
     def __init__(self, persist=False, allow_output_mutation=False):
         self._persist = persist
         self._allow_output_mutation = allow_output_mutation
+        self._mem_cache = _create_mem_cache(None, None)
 
         dict.__init__(self)
 
@@ -578,6 +630,7 @@ class Cache(Dict[Any, Any]):
 
         try:
             value, _ = _read_from_cache(
+                mem_cache=self._mem_cache,
                 key=key,
                 persist=self._persist,
                 allow_output_mutation=self._allow_output_mutation,
@@ -589,6 +642,7 @@ class Cache(Dict[Any, Any]):
                 # If we don't hash the results, we don't need to use exec and just return True.
                 # This way line numbers will be correct.
                 _write_to_cache(
+                    mem_cache=self._mem_cache,
                     key=key,
                     value=self,
                     persist=False,
@@ -599,6 +653,7 @@ class Cache(Dict[Any, Any]):
 
             exec(code, caller_frame.f_globals, caller_frame.f_locals)
             _write_to_cache(
+                mem_cache=self._mem_cache,
                 key=key,
                 value=self,
                 persist=self._persist,
@@ -653,8 +708,9 @@ def _clear_disk_cache():
 
 
 def _clear_mem_cache():
-    global _mem_cache
-    _mem_cache = {}
+    # Copy _all_mem_caches to guard against threading errors
+    for mem_cache in list(_all_mem_caches):
+        mem_cache.clear()
 
 
 def _get_frame_info(caller_frame):
