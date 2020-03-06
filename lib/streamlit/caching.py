@@ -401,9 +401,9 @@ def cache(
         name = func.__name__
 
         if len(args) == 0 and len(kwargs) == 0:
-            message = "Running %s()." % name
+            message = "Running `%s()`." % name
         else:
-            message = "Running %s(...)." % name
+            message = "Running `%s(...)`." % name
 
         def get_or_set_cache():
             hasher = hashlib.new("md5")
