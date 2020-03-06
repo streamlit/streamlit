@@ -1119,7 +1119,9 @@ class DeltaGenerator(object):
         )
 
     @_with_element
-    def graphviz_chart(self, element, figure_or_dot, width=0, height=0, use_container_width=False):
+    def graphviz_chart(
+        self, element, figure_or_dot, width=0, height=0, use_container_width=False
+    ):
         """Display a graph using the dagre-d3 library.
 
         Parameters
@@ -1212,7 +1214,9 @@ class DeltaGenerator(object):
                 "The `height` argument in `st.graphviz` is deprecated and will be removed on 2020-03-04"
             )
 
-        graphviz_chart.marshall(element.graphviz_chart, figure_or_dot, use_container_width)
+        graphviz_chart.marshall(
+            element.graphviz_chart, figure_or_dot, use_container_width
+        )
 
     @_with_element
     def plotly_chart(
@@ -2708,10 +2712,12 @@ class DeltaGenerator(object):
         if not suppress_deprecation_warning:
             import streamlit as st
 
-            st.warning("""
+            st.warning(
+                """
                 The `deck_gl_chart` widget is deprecated and will be removed on
                 2020-05-01. To render a map, you should use `st.pydeck_chart` widget.
-            """)
+            """
+            )
 
         import streamlit.elements.deck_gl as deck_gl
 
