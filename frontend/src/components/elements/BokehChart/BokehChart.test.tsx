@@ -16,8 +16,9 @@
  */
 
 import React from "react"
-import { shallow, mount } from "enzyme"
 import { fromJS } from "immutable"
+import { shallow, mount } from "enzyme"
+import { BokehChart as BokehChartProto } from "autogen/proto"
 
 import Figure from "./mock"
 
@@ -33,7 +34,9 @@ jest.mock("bokehjs", () => mockBokehEmbed)
 
 const BokehChart = require("./BokehChart").BokehChart
 
-const getProps = (elementProps: object = {}): PropsWithHeight => ({
+const getProps = (
+  elementProps: Partial<BokehChartProto> = {}
+): PropsWithHeight => ({
   element: fromJS({
     figure: JSON.stringify(Figure),
     useContainerWidth: false,

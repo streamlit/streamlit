@@ -15,18 +15,19 @@
  * limitations under the License.
  */
 
-window.HTMLCanvasElement.prototype.getContext = jest.fn()
-
 import React from "react"
 import { mount } from "enzyme"
 import { fromJS } from "immutable"
+import { VegaLiteChart as VegaLiteChartProto } from "autogen/proto"
 
 import mock from "./mock"
 import { PropsWithHeight } from "./VegaLiteChart"
 
 const VegaLiteChart = require("./VegaLiteChart").VegaLiteChart
 
-const getProps = (elementProps: object = {}): PropsWithHeight => ({
+const getProps = (
+  elementProps: Partial<VegaLiteChartProto> = {}
+): PropsWithHeight => ({
   element: fromJS({
     ...mock,
     ...elementProps,

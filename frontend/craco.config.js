@@ -13,4 +13,11 @@ module.exports = {
       return webpackConfig
     },
   },
+  jest: {
+    configure: jestConfig => {
+      jestConfig.setupFiles = ["jest-canvas-mock"]
+
+      return jestConfig
+    },
+  },
 }

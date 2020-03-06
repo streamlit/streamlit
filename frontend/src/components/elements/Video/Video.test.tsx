@@ -22,7 +22,7 @@ import { Video as VideoProto } from "autogen/proto"
 
 import Video, { Props } from "./Video"
 
-const getProps = (elementProps: object = {}): Props => ({
+const getProps = (elementProps: Partial<VideoProto> = {}): Props => ({
   element: fromJS({
     url: "https://www.w3schools.com/html/mov_bbb.mp4",
     type: VideoProto.Type.UNUSED,
