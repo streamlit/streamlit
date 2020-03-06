@@ -58,7 +58,7 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 # but the version number so we can throw any valid PEP440 version in
 # there.
 PYTHON = {
-    "lib/setup.py": r"(?P<pre>.*version=\").*(?P<post>\",  # PEP-440$)",
+    "lib/setup.py": r"(?P<pre>.*VERSION = \").*(?P<post>\"  # PEP-440$)",
     "docs/troubleshooting/sanity-checks.md": r"(?P<pre>.*number printed is `).*(?P<post>`.$)",
 }
 
@@ -104,7 +104,7 @@ def update_files(data, python=True):
             line = re.sub(regex, r"\g<pre>%s\g<post>" % version, line.rstrip())
             print(line)
         if not matched:
-            logging.error('In file "%s", did not find regex "%s"', filename, regex)
+            raise Exception('In file "%s", did not find regex "%s"' % (filename, regex))
 
 
 def main():
