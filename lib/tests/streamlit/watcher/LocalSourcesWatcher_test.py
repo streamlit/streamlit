@@ -96,14 +96,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
     def test_permission_error(self, fob, _):
-        from streamlit import compatibility
-
-        if compatibility.is_running_py3():
-            ErrorType = PermissionError
-        else:
-            ErrorType = OSError
-
-        fob.side_effect = ErrorType("This error should be caught!")
+        fob.side_effect = PermissionError("This error should be caught!")
         lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
@@ -238,14 +231,14 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         config.set_option("server.fileWatcherType", "poll")
         if LocalSourcesWatcher.get_file_watcher_class() is not None:
-            self.assertEquals(
+            self.assertEqual(
                 LocalSourcesWatcher.get_file_watcher_class().__name__,
                 "PollingFileWatcher",
             )
 
         config.set_option("server.fileWatcherType", "watchdog")
         if LocalSourcesWatcher.get_file_watcher_class() is not None:
-            self.assertEquals(
+            self.assertEqual(
                 LocalSourcesWatcher.get_file_watcher_class().__name__,
                 "EventBasedFileWatcher",
             )
@@ -254,12 +247,12 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         self.assertIsNotNone(LocalSourcesWatcher.get_file_watcher_class())
 
         if sys.modules["streamlit.watcher.EventBasedFileWatcher"] is not None:
-            self.assertEquals(
+            self.assertEqual(
                 LocalSourcesWatcher.get_file_watcher_class().__name__,
                 "EventBasedFileWatcher",
             )
         else:
-            self.assertEquals(
+            self.assertEqual(
                 LocalSourcesWatcher.get_file_watcher_class().__name__,
                 "PollingFileWatcher",
             )

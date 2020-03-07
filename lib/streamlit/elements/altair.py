@@ -15,9 +15,6 @@
 
 """A Python wrapper around Altair."""
 
-# Python 2/3 compatibility
-from __future__ import absolute_import
-
 from datetime import date
 
 from streamlit import type_util

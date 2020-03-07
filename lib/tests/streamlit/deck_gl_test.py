@@ -15,12 +15,6 @@
 
 """deck_gl unit test."""
 
-# Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
-from streamlit.compatibility import setup_2_3_shims
-
-setup_2_3_shims(globals())
-
 from google.protobuf import json_format
 import pandas as pd
 import json
@@ -72,3 +66,10 @@ class DeckGLTest(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.deck_gl_chart
         self.assertEqual(c.HasField("data"), False)
         self.assertEqual(json.loads(c.spec), {})
+
+    def test_use_container_width_true(self):
+        """Test that it can be called with no args."""
+        st.deck_gl_chart(use_container_width=True)
+
+        c = self.get_delta_from_queue().new_element.deck_gl_chart
+        self.assertEqual(c.use_container_width, True)

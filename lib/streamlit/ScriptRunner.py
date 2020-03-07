@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +24,7 @@ from streamlit import magic
 from streamlit import source_util
 from streamlit.ReportThread import ReportThread
 from streamlit.ReportThread import get_report_ctx
+from streamlit.MediaFileManager import media_file_manager
 from streamlit.ScriptRequestQueue import ScriptRequest
 from streamlit.logger import get_logger
 from streamlit.widgets import Widgets
@@ -242,6 +242,7 @@ class ScriptRunner(object):
 
         LOGGER.debug("Running script %s", rerun_data)
 
+        media_file_manager.reset_files_for_session()
         # Reset DeltaGenerators and widgets.
         get_report_ctx().reset()
 
@@ -254,6 +255,7 @@ class ScriptRunner(object):
             # Python 3 got rid of the native execfile() command, so we read
             # the file, compile it, and exec() it. This implementation is
             # compatible with both 2 and 3.
+
             with source_util.open_python_file(self._report.script_path) as f:
                 filebody = f.read()
 

@@ -15,15 +15,13 @@
 
 """Streamlit support for GraphViz charts."""
 
-from six import string_types
-
 from streamlit import type_util
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
 
-def marshall(proto, figure_or_dot):
+def marshall(proto, figure_or_dot, use_container_width):
     """Construct a GraphViz chart object.
 
     See DeltaGenerator.graphviz_chart for docs.
@@ -31,9 +29,10 @@ def marshall(proto, figure_or_dot):
 
     if type_util.is_graphviz_chart(figure_or_dot):
         dot = figure_or_dot.source
-    elif isinstance(figure_or_dot, string_types):
+    elif isinstance(figure_or_dot, str):
         dot = figure_or_dot
     else:
         raise Exception("Unhandled type for graphviz chart: %s" % type(figure_or_dot))
 
     proto.spec = dot
+    proto.use_container_width = use_container_width
