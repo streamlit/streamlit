@@ -1115,7 +1115,9 @@ class DeltaGenerator(object):
         )
 
     @_with_element
-    def graphviz_chart(self, element, figure_or_dot, width=0, height=0):
+    def graphviz_chart(
+        self, element, figure_or_dot, width=0, height=0, use_container_width=False
+    ):
         """Display a graph using the dagre-d3 library.
 
         Parameters
@@ -1132,6 +1134,10 @@ class DeltaGenerator(object):
             Deprecated. If != 0 (default), will show an alert.
             From now on you should set the height directly in the Graphviz
             spec. Please refer to the Graphviz documentation for details.
+
+        use_container_width : bool
+            If True, set the chart width to the column width. This takes
+            precedence over the figure's native `width` value.
 
         Example
         -------
@@ -1204,7 +1210,9 @@ class DeltaGenerator(object):
                 "The `height` argument in `st.graphviz` is deprecated and will be removed on 2020-03-04"
             )
 
-        graphviz_chart.marshall(element.graphviz_chart, figure_or_dot)
+        graphviz_chart.marshall(
+            element.graphviz_chart, figure_or_dot, use_container_width
+        )
 
     @_with_element
     def plotly_chart(
@@ -2551,7 +2559,7 @@ class DeltaGenerator(object):
         element.empty.unused = True
 
     @_with_element
-    def map(self, element, data=None, zoom=None):
+    def map(self, element, data=None, zoom=None, use_container_width=True):
         """Display a map with points on it.
 
         This is a wrapper around st.pydeck_chart to quickly create scatterplot
@@ -2595,9 +2603,10 @@ class DeltaGenerator(object):
         import streamlit.elements.map as streamlit_map
 
         element.deck_gl_json_chart.json = streamlit_map.to_deckgl_json(data, zoom)
+        element.deck_gl_json_chart.use_container_width = use_container_width
 
     @_with_element
-    def deck_gl_chart(self, element, spec=None, **kwargs):
+    def deck_gl_chart(self, element, spec=None, use_container_width=False, **kwargs):
         """Draw a map chart using the Deck.GL library.
 
         This API closely follows Deck.GL's JavaScript API
@@ -2661,6 +2670,10 @@ class DeltaGenerator(object):
                   - Instead of "getSourceColor" : use the same as above.
                   - Instead of "getTargetColor" : use "getTargetColorR", etc.
 
+        use_container_width : bool
+            If True, set the chart width to the column width. This takes
+            precedence over the figure's native `width` value.
+
         **kwargs : any
             Same as spec, but as keywords. Keys are "unflattened" at the
             underscore characters. For example, foo_bar_baz=123 becomes
@@ -2694,25 +2707,26 @@ class DeltaGenerator(object):
            height: 530px
 
         """
-        # TODO: Add this in around 2020-01-31
-        #
-        # suppress_deprecation_warning = config.get_option(
-        #     "global.suppressDeprecationWarnings"
-        # )
-        # if not suppress_deprecation_warning:
-        #     import streamlit as st
-        #
-        #     st.warning("""
-        #         The `deck_gl_chart` widget is deprecated and will be removed on
-        #         2020-03-04. To render a map, you should use `st.pydeck_chart` widget.
-        #     """)
+
+        suppress_deprecation_warning = config.get_option(
+            "global.suppressDeprecationWarnings"
+        )
+        if not suppress_deprecation_warning:
+            import streamlit as st
+
+            st.warning(
+                """
+                The `deck_gl_chart` widget is deprecated and will be removed on
+                2020-05-01. To render a map, you should use `st.pydeck_chart` widget.
+            """
+            )
 
         import streamlit.elements.deck_gl as deck_gl
 
-        deck_gl.marshall(element.deck_gl_chart, spec, **kwargs)
+        deck_gl.marshall(element.deck_gl_chart, spec, use_container_width, **kwargs)
 
     @_with_element
-    def pydeck_chart(self, element, pydeck_obj=None):
+    def pydeck_chart(self, element, pydeck_obj=None, use_container_width=False):
         """Draw a chart using the PyDeck library.
 
         This supports 3D maps, point clouds, and more! More info about PyDeck
@@ -2782,7 +2796,7 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.deck_gl_json_chart as deck_gl_json_chart
 
-        deck_gl_json_chart.marshall(element, pydeck_obj)
+        deck_gl_json_chart.marshall(element, pydeck_obj, use_container_width)
 
     @_with_element
     def table(self, element, data=None):
