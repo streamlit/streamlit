@@ -189,7 +189,7 @@ class CredentialsClassTest(unittest.TestCase):
 
         with patch(
             "streamlit.credentials.open", mock_open(), create=True
-        ) as open, patch("streamlit.credentials.os.makedirs") as make_dirs:
+        ) as open, patch("os.makedirs") as make_dirs:
 
             c.save()
 
