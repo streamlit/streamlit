@@ -99,7 +99,7 @@ class _HashStack(object):
     def __init__(self):
         self._stack = (
             collections.OrderedDict()
-        )  # type: collections.OrderedDict[int, List[int]]
+        )  # type: collections.OrderedDict[int, List[Any]]
 
         # The reason why we're doing this hashing, for debug purposes.
         self.hash_reason = None
@@ -109,13 +109,13 @@ class _HashStack(object):
         # st.Cache codeblock.
         self.hash_source = None
 
-    def push(self, val):
+    def push(self, val: Any):
         self._stack[id(val)] = val
 
     def pop(self):
-        return self._stack.popitem()
+        self._stack.popitem()
 
-    def __contains__(self, val):
+    def __contains__(self, val: Any):
         return id(val) in self._stack
 
     def pretty_print(self):
