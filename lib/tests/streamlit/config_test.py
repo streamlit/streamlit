@@ -551,9 +551,10 @@ class ConfigLoadingTest(unittest.TestCase):
         ) = "/mock/home/folder/.streamlit/config.toml"
 
         open_patch = patch("streamlit.config.open", mock_open(read_data=global_config))
-        makedirs_patch = patch("os.makedirs")
+        # patch streamlit.*.os.* instead of os.* for py35 compat
+        makedirs_patch = patch("streamlit.config.os.makedirs")
         makedirs_patch.return_value = True
-        pathexists_patch = patch("os.path.exists")
+        pathexists_patch = patch("streamlit.config.os.path.exists")
         pathexists_patch.side_effect = lambda path: path == global_config_path
 
         with open_patch, makedirs_patch, pathexists_patch:
@@ -577,7 +578,8 @@ class ConfigLoadingTest(unittest.TestCase):
         local_config_path = os.path.join(os.getcwd(), ".streamlit/config.toml")
 
         open_patch = patch("streamlit.config.open", mock_open(read_data=local_config))
-        makedirs_patch = patch("os.makedirs")
+        # patch streamlit.*.os.* instead of os.* for py35 compat
+        makedirs_patch = patch("streamlit.config.os.makedirs")
         makedirs_patch.return_value = True
         pathexists_patch = patch("streamlit.config.os.path.exists")
         pathexists_patch.side_effect = lambda path: path == local_config_path
@@ -615,7 +617,8 @@ class ConfigLoadingTest(unittest.TestCase):
         open.side_effect = [global_open.return_value, local_open.return_value]
 
         open_patch = patch("streamlit.config.open", open)
-        makedirs_patch = patch("os.makedirs")
+        # patch streamlit.*.os.* instead of os.* for py35 compat
+        makedirs_patch = patch("streamlit.config.os.makedirs")
         makedirs_patch.return_value = True
         pathexists_patch = patch("streamlit.config.os.path.exists")
         pathexists_patch.side_effect = lambda path: path in [
