@@ -1,3 +1,4 @@
+// Serialized BokehChart data for testing purposes
 export default {
   target_id: null,
   root_id: "1088",

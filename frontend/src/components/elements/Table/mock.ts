@@ -1,3 +1,4 @@
+// Serialized Table data for testing purposes
 export default {
   data: {
     cols: [

@@ -1,3 +1,4 @@
+// Serialized DataFrame object for testing purposes
 export default {
   data: {
     cols: [

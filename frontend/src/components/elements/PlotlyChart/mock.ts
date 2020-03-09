@@ -1,3 +1,4 @@
+// Serialized Plotly object for testing purposes
 export default {
   useContainerWidth: false,
   figure: {

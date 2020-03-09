@@ -1,3 +1,4 @@
+// Serialized Vega object for testing purposes
 export default {
   datasets: [],
   spec:

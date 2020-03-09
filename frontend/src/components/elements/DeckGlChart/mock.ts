@@ -1,3 +1,4 @@
+// DeckGL serialized data for testing purposes
 export default {
   layers: [
     {
