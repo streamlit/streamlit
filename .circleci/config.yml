@@ -175,7 +175,8 @@ workflows:
           type: approval
           requires:
             - python-3.8
-      - cypress-flaky: # Flaky Cypress tests
+      - cypress: # Flaky Cypress tests
+          flaky: true
           requires:
             - cypress-flaky-approval
 
@@ -478,6 +479,12 @@ jobs:
 
     working_directory: ~/repo
 
+    parameters:
+      flaky:
+        description: "Run flaky tests"
+        default: false
+        type: boolean
+
     steps:
       - checkout:
           name: Checkout Streamlit code
@@ -517,13 +524,29 @@ jobs:
             ${SUDO} apt-get install -y xvfb libgtk2.0-0 libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2
 
       - run:
-          name: Cypress
+          name: Init credentials
           command: |
             mkdir ~/.streamlit
             echo '[general]' >  ~/.streamlit/credentials.toml
             echo 'email = "test@streamlit.io"' >> ~/.streamlit/credentials.toml
-            cd frontend
-            yarn run cy:serve-and-run-all
+
+      - when:
+          condition: << parameters.flaky >>
+          steps:
+            - run:
+                name: Cypress
+                command: |
+                  cd frontend
+                  yarn run cy:serve-and-run-flaky
+
+      - unless:
+          condition: << parameters.flaky >>
+          steps:
+            - run:
+                name: Cypress
+                command: |
+                  cd frontend
+                  yarn run cy:serve-and-run-all
 
       - store_test_results: &store_results
           path: frontend/test-reports
