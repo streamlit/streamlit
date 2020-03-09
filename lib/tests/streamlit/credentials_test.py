@@ -190,7 +190,7 @@ class CredentialsClassTest(unittest.TestCase):
         # patch streamlit.*.os.makedirs instead of os.makedirs for py35 compat
         with patch(
             "streamlit.credentials.open", mock_open(), create=True
-        ) as open, patch("streamlit.credentials.os.makedirs") as make_dirs: 
+        ) as open, patch("streamlit.credentials.os.makedirs") as make_dirs:
 
             c.save()
 
