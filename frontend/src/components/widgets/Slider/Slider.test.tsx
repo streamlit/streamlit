@@ -18,7 +18,6 @@
 import React from "react"
 import { shallow } from "enzyme"
 import { fromJS } from "immutable"
-import { timeout } from "lib/utils"
 import { sliderOverrides } from "lib/widgetTheme"
 import { Slider as UISlider } from "baseui/slider"
 import { WidgetStateManager } from "lib/WidgetStateManager"
@@ -45,6 +44,13 @@ const getProps = (elementProps: object = {}): Props => ({
 })
 
 describe("Slider widget", () => {
+  jest.useFakeTimers()
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    jest.clearAllTimers()
+  })
+
   it("should show a label", () => {
     const props = getProps()
     const wrapper = shallow(<Slider {...props} />)
@@ -58,7 +64,7 @@ describe("Slider widget", () => {
     const wrapper = shallow(<Slider {...props} />)
 
     // We need to do this as we are using a debounce when the widget value is set
-    await timeout(200)
+    jest.runAllTimers()
 
     expect(props.widgetMgr.setFloatArrayValue).toHaveBeenCalledWith(
       props.element.get("id"),
@@ -140,7 +146,8 @@ describe("Slider widget", () => {
         value: [10],
       })
 
-      await timeout(200)
+      // We need to do this as we are using a debounce when the widget value is set
+      jest.runAllTimers()
 
       expect(props.widgetMgr.setFloatArrayValue).toHaveBeenCalledWith(
         props.element.get("id"),
@@ -241,7 +248,7 @@ describe("Slider widget", () => {
       })
 
       // We need to do this as we are using a debounce when the widget value is set
-      await timeout(200)
+      jest.runAllTimers()
 
       expect(props.widgetMgr.setFloatArrayValue).toHaveBeenCalledWith(
         props.element.get("id"),
