@@ -176,6 +176,7 @@ workflows:
           requires:
             - python-3-8
       - cypress: # Flaky Cypress tests
+          name: cypress-flaky
           flaky: true
           requires:
             - cypress-flaky-approval
