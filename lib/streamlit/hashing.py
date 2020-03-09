@@ -125,6 +125,11 @@ class _HashStack(object):
             except:
                 return "<Unable to convert item to string>"
 
+        # IDEA: Maybe we should remove our internal "hash_funcs" from the
+        # stack. I'm not removing those now because even though those aren't
+        # useful to users I think they might be useful when we're debugging an
+        # issue sent by a user. So let's wait a few months and see if they're
+        # indeed useful...
         return "\n".join(to_str(x) for x in reversed(self._stack.values()))
 
 
@@ -747,7 +752,6 @@ def _get_error_message_args(orig_exc, failed_obj):
     hash_reason = hash_stacks.current.hash_reason
     hash_source = hash_stacks.current.hash_source
 
-    # failed_obj_type_str = str(type(failed_obj)).split("'")[1]
     failed_obj_type_str = type_util.get_fqn_type(failed_obj)
 
     if hash_source is None or hash_reason is None:
