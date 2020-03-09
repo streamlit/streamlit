@@ -270,7 +270,7 @@ class CodeHasher:
 
     def update(self, obj, context=None):
         """Update the hash with the provided object."""
-        self._update(self.hasher, obj, context)
+        self._update_hasher(self.hasher, obj, context)
 
     def digest(self):
         return self.hasher.digest()
@@ -312,7 +312,7 @@ class CodeHasher:
 
         return b
 
-    def _update(self, hasher, obj, context=None):
+    def _update_hasher(self, hasher, obj, context=None):
         """Update the provided hasher with the hash of an object."""
         b = self.to_bytes(obj, context)
         hasher.update(b)
@@ -359,16 +359,16 @@ class CodeHasher:
 
                 # Hash the name of the container so that ["a"] hashes differently from ("a",)
                 # Otherwise we'd only be hashing the data and the hashes would be the same.
-                self._update(h, type(obj).__name__.encode() + b":")
+                self._update_hasher(h, type(obj).__name__.encode() + b":")
                 for item in obj:
-                    self._update(h, item, context)
+                    self._update_hasher(h, item, context)
                 return h.digest()
             elif isinstance(obj, dict):
                 h = hashlib.new(self.name)
 
-                self._update(h, type(obj).__name__.encode() + b":")
+                self._update_hasher(h, type(obj).__name__.encode() + b":")
                 for item in obj.items():
-                    self._update(h, item, context)
+                    self._update_hasher(h, item, context)
                 return h.digest()
             elif obj is None:
                 # Special string since hashes change between sessions.
@@ -394,7 +394,7 @@ class CodeHasher:
                     return pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
             elif type_util.is_type(obj, "numpy.ndarray"):
                 h = hashlib.new(self.name)
-                self._update(h, obj.shape)
+                self._update_hasher(h, obj.shape)
 
                 if obj.size >= NP_SIZE_LARGE:
                     import numpy as np
@@ -402,7 +402,7 @@ class CodeHasher:
                     state = np.random.RandomState(0)
                     obj = state.choice(obj.flat, size=NP_SAMPLE_SIZE)
 
-                self._update(h, obj.tobytes())
+                self._update_hasher(h, obj.tobytes())
                 return h.digest()
             elif inspect.isbuiltin(obj):
                 return self.to_bytes(obj.__name__)
@@ -414,9 +414,9 @@ class CodeHasher:
                 # Hash files as name + last modification date + offset.
                 h = hashlib.new(self.name)
                 obj_name = obj.name  # type: ignore[union-attr]
-                self._update(h, obj_name)
-                self._update(h, os.path.getmtime(obj_name))
-                self._update(h, obj.tell())
+                self._update_hasher(h, obj_name)
+                self._update_hasher(h, os.path.getmtime(obj_name))
+                self._update_hasher(h, obj.tell())
                 return h.digest()
             elif type_util.is_type(obj, "numpy.ufunc"):
                 # For object of type numpy.ufunc returns ufunc:<object name>
@@ -436,12 +436,12 @@ class CodeHasher:
                 if self._file_should_be_hashed(obj.__code__.co_filename):
                     context = _get_context(obj)
                     if obj.__defaults__:
-                        self._update(h, obj.__defaults__, context)
+                        self._update_hasher(h, obj.__defaults__, context)
                     h.update(self._code_to_bytes(obj.__code__, context))
                 else:
                     # Don't hash code that is not in the current working directory.
-                    self._update(h, obj.__module__)
-                    self._update(h, obj.__name__)
+                    self._update_hasher(h, obj.__module__)
+                    self._update_hasher(h, obj.__name__)
                 return h.digest()
             elif inspect.iscode(obj):
                 return self._code_to_bytes(obj, context)
@@ -467,14 +467,14 @@ class CodeHasher:
                 # it's a callable object that remembers the original function plus
                 # the values you pickled into it. So here we need to special-case it.
                 h = hashlib.new(self.name)
-                self._update(h, obj.args)
-                self._update(h, obj.func)
-                self._update(h, obj.keywords)
+                self._update_hasher(h, obj.args)
+                self._update_hasher(h, obj.func)
+                self._update_hasher(h, obj.keywords)
                 return h.digest()
             else:
                 # As a last resort, hash the output of the object's __reduce__ method
                 h = hashlib.new(self.name)
-                self._update(h, type(obj).__name__.encode() + b":")
+                self._update_hasher(h, type(obj).__name__.encode() + b":")
 
                 try:
                     reduce_data = obj.__reduce__()
@@ -483,7 +483,7 @@ class CodeHasher:
                     raise UnhashableType(msg).with_traceback(e.__traceback__)
 
                 for item in reduce_data:
-                    self._update(h, item, context)
+                    self._update_hasher(h, item, context)
                 return h.digest()
         except (UnhashableType, UserHashError, InternalHashError):
             raise
@@ -495,7 +495,7 @@ class CodeHasher:
         h = hashlib.new(self.name)
 
         # Hash the bytecode.
-        self._update(h, code.co_code)
+        self._update_hasher(h, code.co_code)
 
         # Hash constants that are referenced by the bytecode but ignore names of lambdas.
         consts = [
@@ -503,32 +503,32 @@ class CodeHasher:
             for n in code.co_consts
             if not isinstance(n, str) or not n.endswith(".<lambda>")
         ]
-        self._update(h, consts, context)
+        self._update_hasher(h, consts, context)
 
         # Hash non-local names and functions referenced by the bytecode.
         if hasattr(dis, "get_instructions"):  # get_instructions is new since Python 3.4
             for ref in get_referenced_objects(code, context):
-                self._update(h, ref, context)
+                self._update_hasher(h, ref, context)
         else:
             # This won't correctly follow nested calls like `foo.bar.baz()`.
             for name in code.co_names:
                 if name in context.globals:
                     try:
-                        self._update(h, context.globals[name], context)
+                        self._update_hasher(h, context.globals[name], context)
                     except Exception:
-                        self._update(h, name)
+                        self._update_hasher(h, name)
                 else:
                     try:
                         module = importlib.import_module(name)
-                        self._update(h, module, context)
+                        self._update_hasher(h, module, context)
                     except ImportError:
-                        self._update(h, name, context)
+                        self._update_hasher(h, name, context)
 
             for name, value in context.cells.items():
                 try:
-                    self._update(h, value, context)
+                    self._update_hasher(h, value, context)
                 except Exception:
-                    self._update(h, name)
+                    self._update_hasher(h, name)
 
         return h.digest()
 
