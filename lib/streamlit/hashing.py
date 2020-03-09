@@ -368,11 +368,11 @@ class _CodeHasher:
             if len(obj) >= _PANDAS_ROWS_LARGE:
                 obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
             try:
-                return pd.util.hash_pandas_object(obj).sum()
+                return b"%s" % pd.util.hash_pandas_object(obj).sum()
             except TypeError:
                 # Use pickle if pandas cannot hash the object for example if
                 # it contains unhashable objects.
-                return pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
+                return b"%s" % pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
 
         elif type_util.is_type(obj, "numpy.ndarray"):
             h = hashlib.new("md5")
