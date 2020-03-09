@@ -29,9 +29,8 @@ import textwrap
 import tempfile
 import threading
 import types
-from typing import Any, Callable, Dict, List, Union
+from typing import Dict, List
 
-import streamlit as st
 from streamlit import config
 from streamlit import file_util
 from streamlit import type_util
