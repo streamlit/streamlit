@@ -77,9 +77,7 @@ class FileUtilTest(unittest.TestCase):
     @patch("streamlit.env_util.IS_DARWIN", True)
     def test_streamlit_write_exception(self):
         """Test streamlitfile_util.streamlit_write."""
-        with patch("streamlit.file_util.open", mock_open()) as p, patch(
-            "os.makedirs"
-        ):
+        with patch("streamlit.file_util.open", mock_open()) as p, patch("os.makedirs"):
             p.side_effect = OSError(errno.EINVAL, "[Errno 22] Invalid argument")
             with pytest.raises(util.Error) as e, file_util.streamlit_write(
                 FILENAME
