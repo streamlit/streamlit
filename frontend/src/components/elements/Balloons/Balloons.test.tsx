@@ -18,7 +18,6 @@
 import React from "react"
 import { shallow } from "enzyme"
 import { fromJS } from "immutable"
-import { timeout } from "lib/utils"
 import { Balloons as BalloonsProto } from "autogen/proto"
 
 import Balloons, {
@@ -37,6 +36,13 @@ const getProps = (): Props => ({
 })
 
 describe("Balloons element", () => {
+  jest.useFakeTimers()
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    jest.clearAllTimers()
+  })
+
   it("renders without crashing", () => {
     const props = getProps()
     const wrapper = shallow(<Balloons {...props} />)
@@ -52,13 +58,18 @@ describe("Balloons element", () => {
   })
 
   it("should render one time per session", async () => {
-    jest.setTimeout(30000)
-
     const props = getProps()
     const wrapper = shallow(<Balloons {...props} />)
 
-    await timeout(MAX_ANIMATION_DURATION_MS + DELAY_MAX_MS + 100)
+    expect(wrapper.html()).not.toBeNull()
+    expect(setTimeout).toHaveBeenCalledWith(
+      expect.any(Function),
+      MAX_ANIMATION_DURATION_MS + DELAY_MAX_MS + 100
+    )
+    expect(setTimeout).toBeCalledTimes(1)
 
-    expect(wrapper.html()).toBeNull()
+    jest.runAllTimers()
+
+    expect(wrapper.state("drawnId")).toBe(props.element.get("executionId"))
   })
 })
