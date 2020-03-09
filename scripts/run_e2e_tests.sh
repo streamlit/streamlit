@@ -32,8 +32,12 @@ record_results_flag=
 # Set to "--env updateSnapshots=true" to turn on.
 snapshots_flag=
 
+# Parent folder of the specs and scripts.
+# 'e2e' for tests we expect to pass or 'e2e_flaky' for tests with known issues.
+specs_parent_folder="e2e"
+
 # Handle command line named arguments, passed as `-c .. -a true`
-while getopts ":c:a:r:u" opt; do
+while getopts ":c:a:r:u:f" opt; do
   case $opt in
     c) cwd="$OPTARG"
     ;;
@@ -42,6 +46,8 @@ while getopts ":c:a:r:u" opt; do
     r) record_results_flag="--record"
     ;;
     u) snapshots_flag="--env updateSnapshots=true"
+    ;;
+    f) specs_parent_folder="e2e_flaky"
     ;;
     \?) echo "Invalid option -$OPTARG" >&2
     ;;
@@ -91,9 +97,9 @@ function run_test {
   then
     file=$2
     filename=$(basename $file)
-    specpath="../e2e/specs/${filename%.*}.spec.ts"
+    specpath="../$specs_parent_folder/specs/${filename%.*}.spec.ts"
   else
-    specpath="../e2e/specs/st_hello.spec.ts"
+    specpath="../$specs_parent_folder/specs/st_hello.spec.ts"
   fi
 
   # Infinite loop to support retries.
@@ -164,7 +170,7 @@ fi
 
 # Test core streamlit elements
 
-for file in ../e2e/scripts/*.py
+for file in ../$specs_parent_folder/scripts/*.py
 do
   snapshots_flag_for_this_run=$snapshots_flag
   run_test run $file
