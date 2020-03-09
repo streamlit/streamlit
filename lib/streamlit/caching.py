@@ -214,7 +214,7 @@ def _read_from_mem_cache(
 
             if computed_output_hash != stored_output_hash:
                 LOGGER.debug("Cached object was mutated: %s", key)
-                raise CachedObjectWasMutatedError(entry.value, func_or_code)
+                raise CachedObjectMutationError(entry.value, func_or_code)
 
         LOGGER.debug("Memory cache HIT: %s", type(entry.value))
         return entry.value
@@ -497,7 +497,7 @@ def cache(
                 )
                 LOGGER.debug("Cache hit: %s", func)
 
-            except CachedObjectWasMutatedError as e:
+            except CachedObjectMutationError as e:
                 st.exception(CachedObjectMutationWarning(e))
                 return e.cached_value
 
@@ -727,7 +727,7 @@ class CacheKeyNotFoundError(Exception):
     pass
 
 
-class CachedObjectWasMutatedError(ValueError):
+class CachedObjectMutationError(ValueError):
     """This is used internally, but never shown to the user.
 
     Users see CachedObjectMutationWarning instead.
