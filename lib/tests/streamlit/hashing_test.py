@@ -77,17 +77,6 @@ class HashTest(unittest.TestCase):
         b.append(b)
         self.assertEqual(get_hash(a), get_hash(b))
 
-    def test_dict(self):
-        d1 = {"cat": "hat"}
-        d2 = {"things": [1, 2]}
-
-        self.assertEqual(get_hash(d1), get_hash(d1))
-        self.assertNotEqual(get_hash(d1), get_hash(d2))
-
-        # test that we can hash self-referencing dictionaries
-        d2 = {"book": d1}
-        self.assertNotEqual(get_hash(d2), get_hash(d1))
-
     def test_tuple(self):
         self.assertEqual(get_hash((1, 2)), get_hash((1, 2)))
         self.assertNotEqual(get_hash((1, 2)), get_hash((2, 2)))
@@ -104,6 +93,17 @@ class HashTest(unittest.TestCase):
         with self.assertRaises(UnhashableType):
             get_hash(dict_gen)
         get_hash(dict_gen, hash_funcs={types.GeneratorType: id})
+
+    def test_self_reference_dict(self):
+        d1 = {"cat": "hat"}
+        d2 = {"things": [1, 2]}
+
+        self.assertEqual(get_hash(d1), get_hash(d1))
+        self.assertNotEqual(get_hash(d1), get_hash(d2))
+
+        # test that we can hash self-referencing dictionaries
+        d2 = {"book": d1}
+        self.assertNotEqual(get_hash(d2), get_hash(d1))
 
     def test_reduce_(self):
         class A(object):
