@@ -316,6 +316,36 @@ class ScriptRunnerTest(unittest.TestCase):
         scriptrunner.join()
         self._assert_no_exceptions(scriptrunner)
 
+    def test_rerun_caching(self):
+        """Test that st.caches are maintained across script runs."""
+
+        # Run st_cache_script.
+        runner = TestScriptRunner("st_cache_script.py")
+        runner.enqueue_rerun()
+        runner.start()
+        runner.join()
+
+        # The script has 4 cached functions, each of which writes out
+        # the same text.
+        self._assert_text_deltas(
+            runner,
+            [
+                "cached function called",
+                "cached function called",
+                "cached function called",
+                "cached function called",
+            ],
+        )
+
+        # Re-run the script on a second runner.
+        runner = TestScriptRunner("st_cache_script.py")
+        runner.enqueue_rerun()
+        runner.start()
+        runner.join()
+
+        # The cached functions should not have been called on this second run
+        self._assert_text_deltas(runner, [])
+
     def _assert_no_exceptions(self, scriptrunner):
         """Asserts that no uncaught exceptions were thrown in the
         scriptrunner's run thread.
@@ -361,14 +391,15 @@ class ScriptRunnerTest(unittest.TestCase):
         text_deltas : List[str]
 
         """
-        self.assertEqual(
-            text_deltas,
-            [
-                delta.new_element.text.body
-                for delta in scriptrunner.deltas()
-                if delta.HasField("new_element") and delta.new_element.HasField("text")
-            ],
-        )
+        self.assertEqual(text_deltas, self._get_text_deltas(scriptrunner))
+
+    @staticmethod
+    def _get_text_deltas(scriptrunner):
+        return [
+            delta.new_element.text.body
+            for delta in scriptrunner.deltas()
+            if delta.HasField("new_element") and delta.new_element.HasField("text")
+        ]
 
 
 class TestScriptRunner(ScriptRunner):

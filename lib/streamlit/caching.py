@@ -82,9 +82,10 @@ class _MemCaches(object):
 
     def __init__(self):
         # Contains a cache object for each st.cache'd function
+        self._lock = threading.RLock()
         self._function_caches = {}  # type: Dict[Any, TTLCache]
 
-    def get_cache(self, key: Any, max_entries, ttl) -> TTLCache:
+    def get_cache(self, key, max_entries, ttl) -> TTLCache:
         """Return the mem cache for the given key.
 
         If it doesn't exist, create a new one with the given params.
@@ -97,28 +98,30 @@ class _MemCaches(object):
 
         # Get the existing cache, if it exists, and validate that its params
         # haven't changed.
-        mem_cache = self._function_caches.get(key)
-        if (
-            mem_cache is not None
-            and mem_cache.ttl == ttl
-            and mem_cache.maxsize == max_entries
-        ):
-            return mem_cache
+        with self._lock:
+            mem_cache = self._function_caches.get(key)
+            if (
+                mem_cache is not None
+                and mem_cache.ttl == ttl
+                and mem_cache.maxsize == max_entries
+            ):
+                return mem_cache
 
-        # Create a new cache object and put it in our dict
-        LOGGER.debug(
-            "Creating new mem_cache (key=%s, max_entries=%s, ttl=%s)",
-            key,
-            max_entries,
-            ttl,
-        )
-        mem_cache = TTLCache(maxsize=max_entries, ttl=ttl, timer=TTLCACHE_TIMER)
-        self._function_caches[key] = mem_cache
-        return mem_cache
+            # Create a new cache object and put it in our dict
+            LOGGER.debug(
+                "Creating new mem_cache (key=%s, max_entries=%s, ttl=%s)",
+                key,
+                max_entries,
+                ttl,
+            )
+            mem_cache = TTLCache(maxsize=max_entries, ttl=ttl, timer=TTLCACHE_TIMER)
+            self._function_caches[key] = mem_cache
+            return mem_cache
 
     def clear(self) -> None:
         """Clear all caches"""
-        self._function_caches = {}
+        with self._lock:
+            self._function_caches = {}
 
 
 # Our singleton _MemCaches instance
@@ -252,6 +255,7 @@ def _get_mutated_output_error_message():
 
 
 def _read_from_mem_cache(mem_cache, key, allow_output_mutation, hash_funcs):
+    # TODO: this is broken
     if key in mem_cache:
         entry = mem_cache[key]
 
@@ -464,10 +468,11 @@ def cache(
 
     # Get the unique key for this function's cache. This is calculated
     # at function-creation time.
-    func_hasher = hashlib.new("md5")
-    CodeHasher("md5", func_hasher, hash_funcs).update(func)
+    func_hasher = CodeHasher("md5", None, hash_funcs)
+    func_hasher.update(func.__qualname__)
+    func_hasher.update(func)
     func_key = func_hasher.hexdigest()
-    LOGGER.debug("mem_cache key for %s: %s", func.__name__, func_key)
+    LOGGER.debug("mem_cache key for %s: %s", func.__qualname__, func_key)
 
     @functools_wraps(func)
     def wrapped_func(*args, **kwargs):
@@ -479,7 +484,7 @@ def cache(
             LOGGER.debug("Purposefully skipping cache")
             return func(*args, **kwargs)
 
-        name = func.__name__
+        name = func.__qualname__
 
         if len(args) == 0 and len(kwargs) == 0:
             message = "Running %s()." % name
