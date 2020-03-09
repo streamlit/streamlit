@@ -412,11 +412,22 @@ class CodeHasher:
                 or isinstance(obj, tempfile._TemporaryFileWrapper)  # type: ignore[attr-defined]
             ):
                 # Hash files as name + last modification date + offset.
+                # NB: we're using hasattr("name") to differentiate between
+                # on-disk and in-memory StringIO/BytesIO file representations.
+                # That means that this condition must come *before* the next
+                # condition, which just checks for StringIO/BytesIO.
                 h = hashlib.new(self.name)
                 obj_name = obj.name  # type: ignore[union-attr]
                 self._update_hasher(h, obj_name)
                 self._update_hasher(h, os.path.getmtime(obj_name))
                 self._update_hasher(h, obj.tell())
+                return h.digest()
+            elif isinstance(obj, io.StringIO) or isinstance(obj, io.BytesIO):
+                # Hash in-memory StringIO/BytesIO by their full contents
+                # and seek position.
+                h = hashlib.new(self.name)
+                self._update_hasher(h, obj.tell())
+                self._update_hasher(h, obj.getvalue())
                 return h.digest()
             elif type_util.is_type(obj, "numpy.ufunc"):
                 # For object of type numpy.ufunc returns ufunc:<object name>
