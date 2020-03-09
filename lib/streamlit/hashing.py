@@ -183,7 +183,7 @@ def _get_context(func) -> Context:
 
 def _int_to_bytes(i):
     num_bytes = (i.bit_length() + 8) // 8
-    return b"int:%s" % i.to_bytes(num_bytes, "little", signed=True)
+    return i.to_bytes(num_bytes, "little", signed=True)
 
 
 def _key(obj):
@@ -250,7 +250,7 @@ class _CodeHasher:
 
             # Add a tombstone hash to break recursive calls.
             self._counter += 1
-            self._hashes[key] = _int_to_bytes(self._counter)
+            self._hashes[key] = b"tombstone:%s" % _int_to_bytes(self._counter)
 
         if obj in hash_stacks.current:
             return _CYCLE_PLACEHOLDER
@@ -260,7 +260,8 @@ class _CodeHasher:
         try:
             # These were super noisy so i turned them off.  --NM
             # LOGGER.debug("About to hash: %s", obj)
-            b = self._to_bytes(obj, context)
+            tname = type(obj).__name__.encode()
+            b = b"%s:%s" % (tname, self._to_bytes(obj, context))
             # LOGGER.debug("Done hashing: %s", obj)
 
             # Hmmm... It's psosible that the size calculation is wrong. When we
@@ -312,12 +313,7 @@ class _CodeHasher:
             return self.to_bytes("mock:%s" % id(obj))
 
         elif isinstance(obj, bytes) or isinstance(obj, bytearray):
-            return b"bytes:%s" % obj
-
-        elif isinstance(obj, str):
-            # Don't allow the user to override string since
-            # str == bytes on python 2
-            return b"str:%s" % obj.encode()
+            return obj
 
         elif type(obj) in self._hash_funcs:
             # Escape hatch for unsupported objects
@@ -329,6 +325,9 @@ class _CodeHasher:
 
             return self.to_bytes(output)
 
+        elif isinstance(obj, str):
+            return obj.encode()
+
         elif isinstance(obj, float):
             return self.to_bytes(hash(obj))
 
@@ -337,33 +336,24 @@ class _CodeHasher:
 
         elif isinstance(obj, (list, tuple)):
             h = hashlib.new("md5")
-
-            # Hash the name of the container so that ["a"] hashes differently from ("a",)
-            # Otherwise we'd only be hashing the data and the hashes would be the same.
-            self.update(h, type(obj).__name__.encode() + b":")
             for item in obj:
                 self.update(h, item, context)
             return h.digest()
 
         elif isinstance(obj, dict):
             h = hashlib.new("md5")
-
-            self.update(h, type(obj).__name__.encode() + b":")
             for item in obj.items():
                 self.update(h, item, context)
             return h.digest()
 
         elif obj is None:
-            # Special string since hashes change between sessions.
-            # We don't use Python's `hash` since hashes are not consistent
-            # across runs.
-            return b"none:0"
+            return b"0"
 
         elif obj is True:
-            return b"bool:1"
+            return b"1"
 
         elif obj is False:
-            return b"bool:0"
+            return b"0"
 
         elif type_util.is_type(obj, "pandas.core.frame.DataFrame") or type_util.is_type(
             obj, "pandas.core.series.Series"
@@ -393,7 +383,7 @@ class _CodeHasher:
             return h.digest()
 
         elif inspect.isbuiltin(obj):
-            return b"builtin:%s" % obj.__name__.encode()
+            return obj.__name__.encode()
 
         elif hasattr(obj, "name") and (
             isinstance(obj, io.IOBase)
@@ -471,8 +461,6 @@ class _CodeHasher:
         else:
             # As a last resort, hash the output of the object's __reduce__ method
             h = hashlib.new("md5")
-            self.update(h, type(obj).__name__.encode() + b":")
-
             try:
                 reduce_data = obj.__reduce__()
             except BaseException as e:

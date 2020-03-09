@@ -307,17 +307,6 @@ class HashTest(unittest.TestCase):
         hash_funcs = {int: lambda x: "hello"}
         self.assertNotEqual(get_hash(1), get_hash(1, hash_funcs=hash_funcs))
 
-    def test_multiple_hash_funcs(self):
-        """Test that the output of a user provided hash function will be hashed
-        by another user provided hash function if appropriate
-        """
-
-        hash_funcs = {list: len, int: str}
-
-        self.assertEqual(
-            get_hash([], hash_funcs=hash_funcs), get_hash(0, hash_funcs=hash_funcs)
-        )
-
 
 class CodeHashTest(unittest.TestCase):
     def test_simple(self):
