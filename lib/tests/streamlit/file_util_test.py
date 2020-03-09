@@ -67,7 +67,7 @@ class FileUtilTest(unittest.TestCase):
 
         dirname = os.path.dirname(file_util.get_streamlit_file_path(FILENAME))
         with patch("streamlit.file_util.open", mock_open()) as open, patch(
-            "os.makedirs"
+            "streamlit.util.os.makedirs"
         ) as makedirs, file_util.streamlit_write(FILENAME) as output:
             output.write("some data")
             open().write.assert_called_once_with("some data")
@@ -77,7 +77,9 @@ class FileUtilTest(unittest.TestCase):
     @patch("streamlit.env_util.IS_DARWIN", True)
     def test_streamlit_write_exception(self):
         """Test streamlitfile_util.streamlit_write."""
-        with patch("streamlit.file_util.open", mock_open()) as p, patch("os.makedirs"):
+        with patch("streamlit.file_util.open", mock_open()) as p, patch(
+            "streamlit.util.os.makedirs"
+        ):
             p.side_effect = OSError(errno.EINVAL, "[Errno 22] Invalid argument")
             with pytest.raises(util.Error) as e, file_util.streamlit_write(
                 FILENAME
