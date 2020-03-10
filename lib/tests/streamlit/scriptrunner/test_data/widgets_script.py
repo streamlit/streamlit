@@ -36,7 +36,7 @@ st.text("%s" % button)
 
 # Loop forever so that our test can check widget states
 # without the scriptrunner shutting down.
-placeholder = st.empty()
+placeholder = st.text("loop_forever")
 while True:
-    time.sleep(0.01)
+    time.sleep(0.1)
     placeholder.text("loop_forever")
