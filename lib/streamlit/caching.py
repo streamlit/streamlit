@@ -295,6 +295,11 @@ def _read_from_cache(
         return _read_from_mem_cache(
             mem_cache, key, allow_output_mutation, func_or_code, hash_funcs
         )
+
+    except CachedObjectMutationError as e:
+        st.exception(CachedObjectMutationWarning(e))
+        return e.cached_value
+
     except CacheKeyNotFoundError as e:
         if persist:
             value = _read_from_disk_cache(key)
@@ -497,10 +502,6 @@ def cache(
                 )
                 LOGGER.debug("Cache hit: %s", func)
 
-            except CachedObjectMutationError as e:
-                st.exception(CachedObjectMutationWarning(e))
-                return e.cached_value
-
             except CacheKeyNotFoundError:
                 LOGGER.debug("Cache miss: %s", func)
 
@@ -637,6 +638,7 @@ class Cache(Dict[Any, Any]):
                 func_or_code=code,
             )
             self.update(value)
+
         except CacheKeyNotFoundError:
             if self._allow_output_mutation and not self._persist:
                 # If we don't hash the results, we don't need to use exec and just return True.
