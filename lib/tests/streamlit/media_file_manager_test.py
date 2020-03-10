@@ -25,10 +25,13 @@ from streamlit.MediaFileManager import _get_file_id
 
 mfm = MediaFileManager()
 
+
 def random_coordinates():
-    return "{}.{}.{}".format(random.randint(1,4),
-                             (random.randint(1,12),random.randint(1,12)),
-                             random.randin(1,99))
+    return "{}.{}.{}".format(
+        random.randint(1, 4),
+        (random.randint(1, 12), random.randint(1, 12)),
+        random.randin(1, 99),
+    )
 
 
 # Smallest possible "real" media files for a handful of different formats.

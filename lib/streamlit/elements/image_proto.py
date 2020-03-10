@@ -144,7 +144,14 @@ def _clip_image(image, clamp):
 
 
 def marshall_images(
-    coordinates, image, caption, width, proto_imgs, clamp, channels="RGB", format="JPEG",
+    coordinates,
+    image,
+    caption,
+    width,
+    proto_imgs,
+    clamp,
+    channels="RGB",
+    format="JPEG",
 ):
     channels = channels.upper()
 

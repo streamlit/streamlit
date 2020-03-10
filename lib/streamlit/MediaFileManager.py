@@ -93,7 +93,9 @@ class MediaFileManager(object):
 
     def __init__(self):
         self._files = {}
-        self._session_id_to_file_ids = collections.defaultdict(lambda: {}) # type: typing.DefaultDict[str, dict[str]]
+        self._session_id_to_file_ids = collections.defaultdict(
+            lambda: {}
+        )  # type: typing.DefaultDict[str, dict[str]]
 
     def _remove(self, mediafile_or_id):
         """Deletes MediaFile via file_id lookup.
@@ -124,7 +126,7 @@ class MediaFileManager(object):
 
     def _add_to_session(self, file_id, coordinates):
         """Syntactic sugar around session->coordinate->file_id mapping."""
-        # Was there already a media file at this position? If so, 
+        # Was there already a media file at this position? If so,
         # remove from this session.
         print(self._session_id_to_file_ids)
         print(self._session_id_to_file_ids.get(coordinates, None))
@@ -163,7 +165,7 @@ class MediaFileManager(object):
             self._files[file_id] = new
         else:
             self._files[file_id].session_count += 1
-            
+
         self._add_to_session(file_id, coordinates)
         return self._files[file_id]
 
