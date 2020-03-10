@@ -2068,7 +2068,7 @@ class DeltaGenerator(object):
             - If the file is in a well-known textual format (or if the encoding
             parameter is set), the file data is a StringIO.
             - Otherwise the file data is BytesIO.
-            - If multiple_files is True, a list of file datas will be returned.
+            - If multiple_files is True, a list of file data will be returned.
 
             Note that BytesIO/StringIO are "file-like", which means you can
             pass them anywhere where a file is expected!
