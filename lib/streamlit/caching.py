@@ -465,13 +465,29 @@ def cache(
             ttl=ttl,
         )
 
-    # Get the unique key for this function's cache. This is calculated
-    # at function-creation time.
+    # Create the unique key for this function's cache. The cache will be
+    # retrieved from inside the wrapped function.
+    #
+    # A naive implementation would involve simply creating the cache object
+    # right here in the wrapper, which in a normal Python script would be
+    # executed only once. But in Streamlit, we reload all modules related to a
+    # user's app when the app is re-run, which means that - among other
+    # things - all function decorators in the app will be re-run, and so any
+    # decorator-local objects will be recreated.
+    #
+    # Furthermore, our caches can be destroyed and recreated (in response
+    # to cache clearing, for example), which means that retrieving the
+    # function's cache here (so that the wrapped function can save a lookup)
+    # is incorrect: the cache itself may be recreated between
+    # decorator-evaluation time and decorated-function-execution time. So
+    # we must retrieve the cache object *and* perform the cached-value lookup
+    # inside the decorated function.
+
     func_hasher = CodeHasher("md5", None, hash_funcs)
     func_hasher.update(func.__qualname__)
     func_hasher.update(func)
-    func_key = func_hasher.hexdigest()
-    LOGGER.debug("mem_cache key for %s: %s", func.__qualname__, func_key)
+    cache_key = func_hasher.hexdigest()
+    LOGGER.debug("mem_cache key for %s: %s", func.__qualname__, cache_key)
 
     @functools_wraps(func)
     def wrapped_func(*args, **kwargs):
@@ -494,7 +510,7 @@ def cache(
             # First, get the cache that's attached to this function.
             # This cache's key is generated (above) from the function's code.
             global _mem_caches
-            mem_cache = _mem_caches.get_cache(func_key, max_entries, ttl)
+            mem_cache = _mem_caches.get_cache(cache_key, max_entries, ttl)
 
             # Next, calculate the key for the value we'll be searching for
             # within that cache. This key is generated from both the function's
