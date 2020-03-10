@@ -260,9 +260,8 @@ class ScriptRunnerTest(unittest.TestCase):
 
     def test_multiple_scriptrunners(self):
         """Tests that multiple scriptrunners can run simultaneously."""
-        # This scriptrunner will run in parallel to the other 3. It's used to
-        # retrieve the widget id before initializing deltas on other runners.
-        # Wait a beat to access deltas.
+        # This scriptrunner will run before the other 3. It's used to retrieve
+        # the widget id before initializing deltas on other runners.
         scriptrunner = TestScriptRunner("widgets_script.py")
         scriptrunner.enqueue_rerun()
         scriptrunner.start()
@@ -487,8 +486,8 @@ def require_widgets_deltas(
         if len(runner.deltas()) < NUM_DELTAS:
             err_string += "\n- incomplete deltas: {}".format(runner.text_deltas())
 
-    # Shutdown all runners before throwing an error, so that the
-    # script doesn't hang forever.
+    # Shutdown all runners before throwing an error, so that the script
+    # doesn't hang forever.
     for runner in runners:
         runner.enqueue_shutdown()
     for runner in runners:
