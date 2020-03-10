@@ -255,7 +255,6 @@ def _get_mutated_output_error_message():
 
 
 def _read_from_mem_cache(mem_cache, key, allow_output_mutation, hash_funcs):
-    # TODO: this is broken
     if key in mem_cache:
         entry = mem_cache[key]
 
