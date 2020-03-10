@@ -593,7 +593,7 @@ class Cache(Dict[Any, Any]):
     def __init__(self, persist=False, allow_output_mutation=False):
         self._persist = persist
         self._allow_output_mutation = allow_output_mutation
-        self._mem_cache = _create_mem_cache(None, None)
+        self._mem_cache = {}
 
         dict.__init__(self)
 
