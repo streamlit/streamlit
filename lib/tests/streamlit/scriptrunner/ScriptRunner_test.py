@@ -290,7 +290,7 @@ class ScriptRunnerTest(unittest.TestCase):
 
         # Make this test a little less flaky, by waiting for all runners to
         # run for long enough (measured in number of deltas produced).
-        while time.time() - t0 < 1:
+        while time.time() - t0 < 5:
             time.sleep(0.1)
             if all(len(runner.deltas()) >= 9 for runner in runners):
                 # widgets_script.py has 8 deltas, then a 1-delta loop. If 9
