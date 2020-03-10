@@ -28,9 +28,9 @@ import textwrap
 import threading
 import time
 from collections import namedtuple
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
-from cachetools import LRUCache, TTLCache
+from cachetools import TTLCache
 
 import streamlit as st
 from streamlit.util import functools_wraps
@@ -56,11 +56,9 @@ to suppress the warning.
 
 LOGGER = get_logger(__name__)
 
-# The timer function we use with TTLCache.
+# The timer function we use with TTLCache. This is the default timer func, but
+# is exposed here as a constant so that it can be patched in unit tests.
 TTLCACHE_TIMER = time.monotonic
-
-# A list of all mem-caches we've created.
-_all_mem_caches = []
 
 
 class CacheError(Exception):
@@ -78,6 +76,64 @@ class CachedObjectWasMutatedError(ValueError):
 
 CacheEntry = namedtuple("CacheEntry", ["value", "hash"])
 DiskCacheEntry = namedtuple("DiskCacheEntry", ["value"])
+
+
+class _MemCaches(object):
+    """Manages all in-memory st.cache caches"""
+
+    def __init__(self):
+        # Contains a cache object for each st.cache'd function
+        self._lock = threading.RLock()
+        self._function_caches = {}  # type: Dict[str, TTLCache]
+
+    def get_cache(
+        self, key: str, max_entries: Optional[float], ttl: Optional[float]
+    ) -> TTLCache:
+        """Return the mem cache for the given key.
+
+        If it doesn't exist, create a new one with the given params.
+        """
+
+        if max_entries is None:
+            max_entries = math.inf
+        if ttl is None:
+            ttl = math.inf
+
+        if not isinstance(max_entries, (int, float)):
+            raise RuntimeError("max_entries must be an int")
+        if not isinstance(ttl, (int, float)):
+            raise RuntimeError("ttl must be a float")
+
+        # Get the existing cache, if it exists, and validate that its params
+        # haven't changed.
+        with self._lock:
+            mem_cache = self._function_caches.get(key)
+            if (
+                mem_cache is not None
+                and mem_cache.ttl == ttl
+                and mem_cache.maxsize == max_entries
+            ):
+                return mem_cache
+
+            # Create a new cache object and put it in our dict
+            LOGGER.debug(
+                "Creating new mem_cache (key=%s, max_entries=%s, ttl=%s)",
+                key,
+                max_entries,
+                ttl,
+            )
+            mem_cache = TTLCache(maxsize=max_entries, ttl=ttl, timer=TTLCACHE_TIMER)
+            self._function_caches[key] = mem_cache
+            return mem_cache
+
+    def clear(self) -> None:
+        """Clear all caches"""
+        with self._lock:
+            self._function_caches = {}
+
+
+# Our singleton _MemCaches instance
+_mem_caches = _MemCaches()
 
 
 # A thread-local counter that's incremented when we enter @st.cache
@@ -204,34 +260,6 @@ def _get_mutated_output_error_message():
     ).strip("\n")
 
     return message
-
-
-def _create_mem_cache(max_entries, ttl):
-    """Create an in-memory cache object with the given parameters."""
-    if max_entries is None and ttl is None:
-        # If we have no max_entries or TTL, we can just use a regular dict.
-        mem_cache = {}
-    else:
-        if max_entries is None:
-            max_entries = math.inf
-        elif not isinstance(max_entries, int):
-            raise Exception("`max_entries` must be an int or None")
-
-        if not isinstance(ttl, (float, int)) and ttl is not None:
-            raise Exception("`ttl` must be a float or None")
-
-        # If ttl is none, just create an LRUCache. (TTLCache is simply an
-        # LRUCache that adds a ttl option.)
-        if ttl is None:
-            mem_cache = LRUCache(maxsize=max_entries)
-        else:
-            mem_cache = TTLCache(maxsize=max_entries, ttl=ttl, timer=TTLCACHE_TIMER)
-
-    # Stick the new cache in our global list
-    global _all_mem_caches
-    _all_mem_caches.append(mem_cache)
-
-    return mem_cache
 
 
 def _read_from_mem_cache(mem_cache, key, allow_output_mutation, hash_funcs):
@@ -445,8 +473,36 @@ def cache(
             ttl=ttl,
         )
 
-    # Create the function's in-memory cache.
-    mem_cache = _create_mem_cache(max_entries, ttl)
+    # Create the unique key for this function's cache. The cache will be
+    # retrieved from inside the wrapped function.
+    #
+    # A naive implementation would involve simply creating the cache object
+    # right here in the wrapper, which in a normal Python script would be
+    # executed only once. But in Streamlit, we reload all modules related to a
+    # user's app when the app is re-run, which means that - among other
+    # things - all function decorators in the app will be re-run, and so any
+    # decorator-local objects will be recreated.
+    #
+    # Furthermore, our caches can be destroyed and recreated (in response
+    # to cache clearing, for example), which means that retrieving the
+    # function's cache here (so that the wrapped function can save a lookup)
+    # is incorrect: the cache itself may be recreated between
+    # decorator-evaluation time and decorated-function-execution time. So
+    # we must retrieve the cache object *and* perform the cached-value lookup
+    # inside the decorated function.
+
+    func_hasher = CodeHasher("md5", None, hash_funcs)
+    # Include the function's module and qualified name in the hash.
+    # This means that two identical functions in different modules
+    # will not share a hash; it also means that two identical *nested*
+    # functions in the same module will not share a hash.
+    func_hasher.update(func.__module__)
+    func_hasher.update(func.__qualname__)
+    func_hasher.update(func)
+    cache_key = func_hasher.hexdigest()
+    LOGGER.debug(
+        "mem_cache key for %s.%s: %s", func.__module__, func.__qualname__, cache_key
+    )
 
     @functools_wraps(func)
     def wrapped_func(*args, **kwargs):
@@ -458,7 +514,7 @@ def cache(
             LOGGER.debug("Purposefully skipping cache")
             return func(*args, **kwargs)
 
-        name = func.__name__
+        name = func.__qualname__
 
         if len(args) == 0 and len(kwargs) == 0:
             message = "Running %s()." % name
@@ -466,23 +522,34 @@ def cache(
             message = "Running %s(...)." % name
 
         def get_or_create_cached_value():
-            hasher = hashlib.new("md5")
+            # First, get the cache that's attached to this function.
+            # This cache's key is generated (above) from the function's code.
+            global _mem_caches
+            mem_cache = _mem_caches.get_cache(cache_key, max_entries, ttl)
 
-            args_hasher = CodeHasher("md5", hasher, hash_funcs)
+            # Next, calculate the key for the value we'll be searching for
+            # within that cache. This key is generated from both the function's
+            # code and the arguments that are passed into it. (Even though this
+            # key is used to index into a per-function cache, it must be
+            # globally unique, because it is *also* used for a global on-disk
+            # cache that is *not* per-function.)
+            value_hasher = hashlib.new("md5")
+
+            args_hasher = CodeHasher("md5", value_hasher, hash_funcs)
             args_hasher.update([args, kwargs])
             LOGGER.debug("Hashing arguments to %s of %i bytes.", name, args_hasher.size)
 
-            code_hasher = CodeHasher("md5", hasher, hash_funcs)
+            code_hasher = CodeHasher("md5", value_hasher, hash_funcs)
             code_hasher.update(func)
             LOGGER.debug("Hashing function %s in %i bytes.", name, code_hasher.size)
 
-            key = hasher.hexdigest()
-            LOGGER.debug("Cache key: %s", key)
+            value_key = value_hasher.hexdigest()
+            LOGGER.debug("Cache key: %s", value_key)
 
             try:
                 return_value = _read_from_cache(
                     mem_cache=mem_cache,
-                    key=key,
+                    key=value_key,
                     persisted=persist,
                     allow_output_mutation=allow_output_mutation,
                     hash_funcs=hash_funcs,
@@ -500,7 +567,7 @@ def cache(
 
                 _write_to_cache(
                     mem_cache=mem_cache,
-                    key=key,
+                    key=value_key,
                     value=return_value,
                     persist=persist,
                     allow_output_mutation=allow_output_mutation,
@@ -556,7 +623,7 @@ class Cache(Dict[Any, Any]):
     def __init__(self, persist=False, allow_output_mutation=False):
         self._persist = persist
         self._allow_output_mutation = allow_output_mutation
-        self._mem_cache = _create_mem_cache(None, None)
+        self._mem_cache = {}
 
         dict.__init__(self)
 
@@ -686,7 +753,5 @@ def _clear_disk_cache():
 
 
 def _clear_mem_cache():
-    global _all_mem_caches
-    # Copy _all_mem_caches to guard against threading errors
-    for mem_cache in list(_all_mem_caches):
-        mem_cache.clear()
+    global _mem_caches
+    _mem_caches.clear()
