@@ -101,7 +101,6 @@ def _with_element(method):
         A new DeltaGenerator method with arguments (self, ...)
 
     """
-
     @_wraps_with_cleaned_sig(method, 1)  # Remove self and element from sig.
     def wrapped_method(dg, *args, **kwargs):
         # Warn if we're called from within an @st.cache function
@@ -312,6 +311,13 @@ class DeltaGenerator(object):
             return cursor.get_container_cursor(self._container)
         else:
             return self._provided_cursor
+
+    def _get_coordinates(self):
+        """Returns the element's 4-component location as string like "M.(1,2).3"."""
+        container = self._container     # proto index of container (e.g. MAIN=1)
+        path = self._cursor.path        # [uint, uint] - "breadcrumbs" w/ ancestor positions
+        index = self._cursor.index      # index - element's own position
+        return "{}.{}.{}".format(container, path, index)
 
     def _enqueue_new_element_delta(
         self,
@@ -1497,8 +1503,10 @@ class DeltaGenerator(object):
         elif width <= 0:
             raise StreamlitAPIException("Image width must be positive.")
 
+
         image_proto.marshall_images(
-            image, caption, width, element.imgs, clamp, channels, format
+            self._get_coordinates(),
+            image, caption, width, element.imgs, clamp, channels, format,
         )
 
     @_with_element
