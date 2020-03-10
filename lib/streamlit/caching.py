@@ -484,10 +484,17 @@ def cache(
     # inside the decorated function.
 
     func_hasher = CodeHasher("md5", None, hash_funcs)
+    # Include the function's module and qualified name in the hash.
+    # This means that two identical functions in different modules
+    # will not share a hash; it also means that two identical *nested*
+    # functions in the same module will not share a hash.
+    func_hasher.update(func.__module__)
     func_hasher.update(func.__qualname__)
     func_hasher.update(func)
     cache_key = func_hasher.hexdigest()
-    LOGGER.debug("mem_cache key for %s: %s", func.__qualname__, cache_key)
+    LOGGER.debug(
+        "mem_cache key for %s.%s: %s", func.__module__, func.__qualname__, cache_key
+    )
 
     @functools_wraps(func)
     def wrapped_func(*args, **kwargs):
