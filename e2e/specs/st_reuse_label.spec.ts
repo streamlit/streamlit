@@ -23,6 +23,10 @@ describe("reuse widget label", () => {
   });
 
   it("reuses a widget label for different widget types", () => {
+    // TODO verify this is the correct fix for this test
+    // shouldn't we be able to simplify the python script accordingly?
+    cy.get(".stButton button").click();
+
     cy.get('.stSlider [role="slider"]').should("exist");
 
     cy.get(".stSelectbox").should("not.exist");
