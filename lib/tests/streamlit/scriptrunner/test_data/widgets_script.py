@@ -18,6 +18,9 @@ import time
 
 import streamlit as st
 
+# IMPORTANT: ScriptRunner_test.py expects this file to produce 8 deltas + a
+# 1-delta loop. If you change this, please change that file too.
+
 checkbox = st.checkbox("checkbox", False)
 st.text("%s" % checkbox)
 
