@@ -360,14 +360,7 @@ class ScriptRunnerTest(unittest.TestCase):
         text_deltas : List[str]
 
         """
-        self.assertEqual(
-            text_deltas,
-            [
-                delta.new_element.text.body
-                for delta in scriptrunner.deltas()
-                if delta.HasField("new_element") and delta.new_element.HasField("text")
-            ],
-        )
+        self.assertEqual(text_deltas, scriptrunner.text_deltas())
 
 
 class TestScriptRunner(ScriptRunner):
@@ -445,6 +438,14 @@ class TestScriptRunner(ScriptRunner):
         """Returns the delta messages in our ReportQueue"""
         return [msg.delta for msg in self.report_queue._queue if msg.HasField("delta")]
 
+    def text_deltas(self) -> List[str]:
+        """Return the string contents of text deltas in our ReportQueue"""
+        return [
+            delta.new_element.text.body
+            for delta in self.deltas()
+            if delta.HasField("new_element") and delta.new_element.HasField("text")
+        ]
+
     def get_widget_id(self, widget_type, label):
         """Returns the id of the widget with the specified type and label"""
         for delta in self.deltas():
@@ -478,15 +479,19 @@ def require_widgets_deltas(
             return
 
     # If we get here, at least 1 runner hasn't yet completed before our
-    # timeout. Shutdown all runners before throwing an error, so that the
+    # timeout. Create an error string for debugging.
+    err_string = "require_widgets_deltas() timed out after {}s ({}/{} runners complete)".format(
+        timeout, num_complete, len(runners)
+    )
+    for runner in runners:
+        if len(runner.deltas()) < NUM_DELTAS:
+            err_string += "\n- incomplete deltas: {}".format(runner.text_deltas())
+
+    # Shutdown all runners before throwing an error, so that the
     # script doesn't hang forever.
     for runner in runners:
         runner.enqueue_shutdown()
     for runner in runners:
         runner.join()
 
-    raise RuntimeError(
-        "require_widgets_deltas() timed out after {}s ({}/{} runners complete)".format(
-            timeout, num_complete, len(runners)
-        )
-    )
+    raise RuntimeError(err_string)
