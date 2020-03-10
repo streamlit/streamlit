@@ -59,9 +59,7 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         }
         response = self._upload_file(params)
         self.assertEqual(200, response.code)
-        self.assertEqual(
-            b"1234", self.file_mgr.get_file_data("fooReport", "barWidget")
-        )
+        self.assertEqual(b"1234", self.file_mgr.get_file_data("fooReport", "barWidget"))
 
     def test_missing_params(self):
         """Missing params in the body should fail with 400 status."""

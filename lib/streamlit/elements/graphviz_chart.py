@@ -35,4 +35,4 @@ def marshall(proto, figure_or_dot, use_container_width):
         raise Exception("Unhandled type for graphviz chart: %s" % type(figure_or_dot))
 
     proto.spec = dot
-    proto.use_container_width=use_container_width
+    proto.use_container_width = use_container_width

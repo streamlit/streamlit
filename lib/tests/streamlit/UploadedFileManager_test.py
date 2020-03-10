@@ -21,24 +21,15 @@ from streamlit.UploadedFileManager import UploadedFile
 from streamlit.UploadedFileManager import UploadedFileManager
 
 FILE_1A = UploadedFile(
-    session_id="session",
-    widget_id="widget",
-    name="FILE_1A",
-    data=b"FILE_1A",
+    session_id="session", widget_id="widget", name="FILE_1A", data=b"FILE_1A",
 )
 
 FILE_1B = UploadedFile(
-    session_id="session",
-    widget_id="widget",
-    name="FILE_1B",
-    data=b"FILE_1B",
+    session_id="session", widget_id="widget", name="FILE_1B", data=b"FILE_1B",
 )
 
 FILE_2 = UploadedFile(
-    session_id="session2",
-    widget_id="widget",
-    name="FILE_2",
-    data=b"FILE_2",
+    session_id="session2", widget_id="widget", name="FILE_2", data=b"FILE_2",
 )
 
 
