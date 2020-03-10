@@ -28,7 +28,7 @@ import textwrap
 import threading
 import time
 from collections import namedtuple
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from cachetools import TTLCache
 
@@ -56,7 +56,8 @@ to suppress the warning.
 
 LOGGER = get_logger(__name__)
 
-# The timer function we use with TTLCache.
+# The timer function we use with TTLCache. This is the default timer func, but
+# is exposed here as a constant so that it can be patched in unit tests.
 TTLCACHE_TIMER = time.monotonic
 
 
@@ -83,9 +84,11 @@ class _MemCaches(object):
     def __init__(self):
         # Contains a cache object for each st.cache'd function
         self._lock = threading.RLock()
-        self._function_caches = {}  # type: Dict[Any, TTLCache]
+        self._function_caches = {}  # type: Dict[str, TTLCache]
 
-    def get_cache(self, key, max_entries, ttl) -> TTLCache:
+    def get_cache(
+        self, key: str, max_entries: Optional[float], ttl: Optional[float]
+    ) -> TTLCache:
         """Return the mem cache for the given key.
 
         If it doesn't exist, create a new one with the given params.
@@ -95,6 +98,11 @@ class _MemCaches(object):
             max_entries = math.inf
         if ttl is None:
             ttl = math.inf
+
+        if not isinstance(max_entries, (int, float)):
+            raise RuntimeError("max_entries must be an int")
+        if not isinstance(ttl, (int, float)):
+            raise RuntimeError("ttl must be a float")
 
         # Get the existing cache, if it exists, and validate that its params
         # haven't changed.
