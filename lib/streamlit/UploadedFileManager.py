@@ -45,6 +45,9 @@ class UploadedFileManager(object):
 
     def __init__(self):
         self._files_by_id = {}  # type: Dict[Tuple[str, str], UploadedFileList]
+        # Prevents concurrent access to the _files_by_id dict.
+        # In remove_session_files(), we iterate over the dict's keys. It's
+        # an error to mutate a dict while iterating; this lock prevents that.
         self._files_lock = threading.Lock()
         self.on_files_added = Signal(
             doc="""Emitted when a file list is added to the manager.
@@ -125,6 +128,9 @@ class UploadedFileManager(object):
 
         """
         # Copy the keys into a list, because we'll be mutating the dictionary.
-        for files_id in list(self._files_by_id.keys()):
+        with self._files_lock:
+            all_ids = list(self._files_by_id.keys())
+
+        for files_id in all_ids:
             if files_id[0] == session_id:
                 self.remove_files(*files_id)
