@@ -513,13 +513,13 @@ def cache(
             code_hasher.update(func)
             LOGGER.debug("Hashing function %s in %i bytes.", name, code_hasher.size)
 
-            value_hasher = value_hasher.hexdigest()
-            LOGGER.debug("Cache key: %s", value_hasher)
+            value_key = value_hasher.hexdigest()
+            LOGGER.debug("Cache key: %s", value_key)
 
             try:
                 return_value = _read_from_cache(
                     mem_cache=mem_cache,
-                    key=value_hasher,
+                    key=value_key,
                     persisted=persist,
                     allow_output_mutation=allow_output_mutation,
                     hash_funcs=hash_funcs,
@@ -537,7 +537,7 @@ def cache(
 
                 _write_to_cache(
                     mem_cache=mem_cache,
-                    key=value_hasher,
+                    key=value_key,
                     value=return_value,
                     persist=persist,
                     allow_output_mutation=allow_output_mutation,
