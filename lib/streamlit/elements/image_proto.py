@@ -144,7 +144,7 @@ def _clip_image(image, clamp):
 
 
 def marshall_images(
-    image, caption, width, proto_imgs, clamp, channels="RGB", format="JPEG"
+    coordinates, image, caption, width, proto_imgs, clamp, channels="RGB", format="JPEG",
 ):
     channels = channels.upper()
 
@@ -228,5 +228,5 @@ def marshall_images(
             data = image
 
         (data, mimetype) = _normalize_to_bytes(data, width, format)
-        this_file = media_file_manager.add(data, mimetype=mimetype)
+        this_file = media_file_manager.add(data, mimetype, coordinates)
         proto_img.url = this_file.url

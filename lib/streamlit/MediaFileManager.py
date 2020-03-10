@@ -93,19 +93,17 @@ class MediaFileManager(object):
 
     def __init__(self):
         self._files = {}
-        self._session_id_to_file_ids = collections.defaultdict(
-            set
-        )  # type: typing.DefaultDict[str, typing.Set[str]]
+        self._session_id_to_file_ids = collections.defaultdict(lambda: {}) # type: typing.DefaultDict[str, dict[str]]
 
     def _remove(self, mediafile_or_id):
         """Deletes MediaFile via file_id lookup.
 
         Raises KeyError if not found.
         """
-        if type(mediafile_or_id) is MediaFile:
-            del self._files[mediafile_or_id.id]
-        else:
-            del self._files[mediafile_or_id]
+        mf = self.get(mediafile_or_id)
+        mf.session_count -= 1
+        if mf.session_count == 0:
+            del self._files[mf.id]
 
     def reset_files_for_session(self, session_id=None):
         """Clears all stored files for a given ReportSession id.
@@ -116,18 +114,29 @@ class MediaFileManager(object):
         if session_id is None:
             session_id = _get_session_id()
 
-        for file_id in self._session_id_to_file_ids[session_id]:
-            entry = self._files[file_id]
-            entry.session_count -= 1
-
-            if entry.session_count == 0:
-                self._remove(file_id)
+        for coordinates in self._session_id_to_file_ids[session_id]:
+            file_id = self._session_id_to_file_ids[session_id][coordinates]
+            self._remove(file_id)
 
         LOGGER.debug("Reset files for session with ID %s", session_id)
         del self._session_id_to_file_ids[session_id]
         LOGGER.debug("Sessions still active: %r", self._session_id_to_file_ids)
 
-    def add(self, content, mimetype):
+    def _add_to_session(self, file_id, coordinates):
+        """Syntactic sugar around session->coordinate->file_id mapping."""
+        # Was there already a media file at this position? If so, 
+        # remove from this session.
+        print(self._session_id_to_file_ids)
+        print(self._session_id_to_file_ids.get(coordinates, None))
+
+        old_file_id = self._session_id_to_file_ids.get(coordinates, None)
+        if old_file_id:
+            # print("Removing %s" % old_file_id)
+            self._remove(old_file_id)
+
+        self._session_id_to_file_ids[_get_session_id()][coordinates] = file_id
+
+    def add(self, content, mimetype, coordinates):
         """Adds new MediaFile with given parameters; returns the object.
 
         If an identical file already exists, returns the existing object
@@ -136,12 +145,16 @@ class MediaFileManager(object):
         mimetype must be set, as this string will be used in the
         "Content-Type" header when the file is sent via HTTP GET.
 
+        coordinates should look like this: "MAIN.3.-14.5"
+
         Parameters
         ----------
         content : bytes
             Raw data to store in file object.
         mimetype : str
             The mime type for the media file. E.g. "audio/mpeg"
+        coordinates : str
+            Unique string uniquely IDing a widget's location.
         """
         file_id = _get_file_id(content, mimetype)
 
@@ -150,8 +163,8 @@ class MediaFileManager(object):
             self._files[file_id] = new
         else:
             self._files[file_id].session_count += 1
-
-        self._session_id_to_file_ids[_get_session_id()].add(file_id)
+            
+        self._add_to_session(file_id, coordinates)
         return self._files[file_id]
 
     def get(self, mediafile_or_id):
