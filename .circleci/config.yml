@@ -359,24 +359,9 @@ jobs:
       - checkout:
           name: Checkout Streamlit code
 
-      #################################################################
-      # Pre Cache Steps
-      #################################################################
       - pre-cache
-
-      #################################################################
-      # Restore from cache
-      #################################################################
       - restore-from-cache
-
-      #################################################################
-      # Pre Make commands
-      #################################################################
       - pre-make
-
-      #################################################################
-      # Run 'make init'
-      #################################################################
       - make-init
 
       - run: &make_scss_vars
@@ -422,24 +407,9 @@ jobs:
       - checkout:
           name: Checkout Streamlit code
 
-      #################################################################
-      # Pre Cache Steps
-      #################################################################
       - pre-cache
-
-      #################################################################
-      # Restore from cache
-      #################################################################
       - restore-from-cache
-
-      #################################################################
-      # Pre Make commands
-      #################################################################
       - pre-make
-
-      #################################################################
-      # Run 'make init'
-      #################################################################
       - make-init
 
       - run:
@@ -491,27 +461,11 @@ jobs:
       - checkout:
           name: Checkout Streamlit code
 
-      #################################################################
-      # Pre Cache Steps
-      #################################################################
-      - pre-cache
-
-      #################################################################
-      # Restore from cache
-      #################################################################
-      - restore-from-cache
-
-      #################################################################
-      # Pre Make commands
-      #################################################################
-      - pre-make
-
       # NOTE restore protobuf from cache wasn't
       # working so generating protobufs instead.
-
-      #################################################################
-      # Run 'make init'
-      #################################################################
+      - pre-cache
+      - restore-from-cache
+      - pre-make
       - make-init
 
       - run:
@@ -562,63 +516,3 @@ jobs:
 
       - store_artifacts: &store_snapshots
           path: frontend/cypress/snapshots
-
-  cypress-flaky:
-    docker:
-      - image: circleci/python:3.7.4-stretch
-
-    working_directory: ~/repo
-
-    steps:
-      - checkout:
-          name: Checkout Streamlit code
-
-      #################################################################
-      # Pre Cache Steps
-      #################################################################
-      - pre-cache
-
-      #################################################################
-      # Restore from cache
-      #################################################################
-      - restore-from-cache
-
-      #################################################################
-      # Pre Make commands
-      #################################################################
-      - pre-make
-
-      #################################################################
-      # Run 'make init'
-      #################################################################
-      - make-init
-
-      - run:
-          <<: *make_scss_vars
-
-      - run:
-          <<: *make_develop
-
-      - run:
-          <<: *install_cypress_dependencies
-
-      - run:
-          name: Cypress
-          command: |
-            mkdir ~/.streamlit
-            echo '[general]' >  ~/.streamlit/credentials.toml
-            echo 'email = "test@streamlit.io"' >> ~/.streamlit/credentials.toml
-            cd frontend
-            yarn run cy:serve-and-run-flaky
-
-      - store_test_results:
-          <<: *store_results
-
-      - store_artifacts:
-          <<: *store_report
-
-      - store_artifacts:
-          <<: *store_videos
-
-      - store_artifacts:
-          <<: *store_snapshots

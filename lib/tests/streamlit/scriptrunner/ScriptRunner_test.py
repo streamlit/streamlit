@@ -199,8 +199,7 @@ class ScriptRunnerTest(unittest.TestCase):
         )
         self._assert_text_deltas(scriptrunner, ["loop_forever"])
 
-    # TODO re-enable
-    def off_test_widgets(self):
+    def test_widgets(self):
         """Tests that widget values behave as expected."""
         scriptrunner = TestScriptRunner("widgets_script.py")
         scriptrunner.enqueue_rerun()
