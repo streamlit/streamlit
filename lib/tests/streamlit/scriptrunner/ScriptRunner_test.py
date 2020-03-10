@@ -207,7 +207,7 @@ class ScriptRunnerTest(unittest.TestCase):
         scriptrunner.start()
 
         # Default widget values
-        time.sleep(0.1)
+        wait_for_widgets_script_deltas([scriptrunner])
         self._assert_text_deltas(
             scriptrunner, ["False", "ahoy!", "0", "False", "loop_forever"]
         )
@@ -224,7 +224,7 @@ class ScriptRunnerTest(unittest.TestCase):
         _create_widget(w4_id, states).trigger_value = True
 
         scriptrunner.enqueue_rerun(widget_state=states)
-        time.sleep(0.1)
+        wait_for_widgets_script_deltas([scriptrunner])
         self._assert_text_deltas(
             scriptrunner, ["True", "matey!", "2", "True", "loop_forever"]
         )
@@ -232,7 +232,7 @@ class ScriptRunnerTest(unittest.TestCase):
         # Rerun with previous values. Our button should be reset;
         # everything else should be the same.
         scriptrunner.enqueue_rerun()
-        time.sleep(0.1)
+        wait_for_widgets_script_deltas([scriptrunner])
         self._assert_text_deltas(
             scriptrunner, ["True", "matey!", "2", "False", "loop_forever"]
         )
@@ -269,7 +269,7 @@ class ScriptRunnerTest(unittest.TestCase):
         scriptrunner = TestScriptRunner("widgets_script.py")
         scriptrunner.enqueue_rerun()
         scriptrunner.start()
-        time.sleep(0.1)
+        wait_for_widgets_script_deltas([scriptrunner])
 
         # Build several runners. Each will set a different int value for
         # its radio button.
@@ -287,7 +287,7 @@ class ScriptRunnerTest(unittest.TestCase):
         for runner in runners:
             runner.start()
 
-        time.sleep(0.1)
+        wait_for_widgets_script_deltas(runners)
 
         # Ensure that each runner's radio value is as expected.
         for ii, runner in enumerate(runners):
@@ -456,3 +456,23 @@ class TestScriptRunner(ScriptRunner):
             if widget_label == label:
                 return widget.id
         return None
+
+
+def wait_for_widgets_script_deltas(runners):
+    """Wait for the 9 deltas produces by the first loop of widgets_script.py.
+
+    This is meant to deflake tests that previously depended on timing to ensure
+    we had all the deltas we needed.
+    """
+    t0 = time.time()
+
+    # Make this test a little less flaky, by waiting for all runners to
+    # run for long enough (measured in number of deltas produced).
+    while time.time() - t0 < 5:
+        time.sleep(0.1)
+        if all(len(runner.deltas()) >= 9 for runner in runners):
+            # widgets_script.py has 8 deltas, then a 1-delta loop. If 9
+            # have been emitted, we can proceed with the test..
+            break
+    else:  # Python supports "else" on loops.
+        print("Deflaker timed out")
