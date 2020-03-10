@@ -19,13 +19,8 @@ import React from "react"
 import { shallow } from "enzyme"
 import { FileUploader as FileUploaderBaseui } from "baseui/file-uploader"
 import { fromJS } from "immutable"
-import { WidgetStateManager } from "lib/WidgetStateManager"
-import { FileUploadClient } from "lib/FileUploadClient"
 
 import FileUploader, { Props } from "./FileUploader"
-
-jest.mock("lib/WidgetStateManager")
-jest.mock("lib/FileUploadClient")
 
 const blobFile = new File(["Text in a file!"], "filename.txt", {
   type: "text/plain",
@@ -41,8 +36,10 @@ const getProps = (elementProps: object = {}): Props => ({
   }),
   width: 0,
   disabled: false,
-  widgetStateManager: new WidgetStateManager(jest.fn()),
-  uploadClient: new FileUploadClient(jest.fn()),
+  // @ts-ignore
+  widgetStateManager: jest.fn(),
+  // @ts-ignore
+  uploadClient: { uploadFiles: jest.fn().mockResolvedValue(undefined) },
 })
 
 describe("FileUploader widget", () => {
@@ -67,7 +64,7 @@ describe("FileUploader widget", () => {
     const internalFileUploader = wrapper.find(FileUploaderBaseui)
     internalFileUploader.props().onDrop([blobFile], [], null)
 
-    expect(props.uploadClient.uploadFile.mock.calls.length).toBe(1)
+    expect(props.uploadClient.uploadFiles.mock.calls.length).toBe(1)
   })
 
   it("should change status when dropping a File", () => {
