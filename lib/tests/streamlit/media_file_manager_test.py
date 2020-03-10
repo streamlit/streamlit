@@ -17,12 +17,18 @@
 
 import unittest
 import mock
+import random
 
 from streamlit.MediaFileManager import MediaFileManager
 from streamlit.MediaFileManager import _get_file_id
 
 
 mfm = MediaFileManager()
+
+def random_coordinates():
+    return "{}.{}.{}".format(random.randint(1,4),
+                             (random.randint(1,12),random.randint(1,12)),
+                             random.randin(1,99))
 
 
 # Smallest possible "real" media files for a handful of different formats.
@@ -95,12 +101,16 @@ class UploadedFileManagerTest(unittest.TestCase):
         """Test that MediaFileManager.add works as expected."""
         _get_session_id.return_value = "TEST"
 
+        coord = random_coordinates()
+
         # Make sure we reject files containing None
         with self.assertRaises(TypeError):
-            mfm.add(None, "media/any")
+            mfm.add(None, "media/any", coord)
 
         for sample in ALL_FIXTURES.values():
-            mfm.add(sample["content"], sample["mimetype"])
+            # TODO: do not generate randomly (this will fail by generating same coords at least once!)
+            coord = random_coordinates()
+            mfm.add(sample["content"], sample["mimetype"], coord)
             file_id = _get_file_id(sample["content"], sample["mimetype"])
             self.assertTrue(file_id in mfm)
 
@@ -123,8 +133,10 @@ class UploadedFileManagerTest(unittest.TestCase):
         """Test that we create a new file if new mimetype, even with same bytes for content."""
         _get_session_id.return_value = "TEST"
 
+        coord = random_coordinates()
+
         sample = AUDIO_FIXTURES["mp3"]
-        mfm.add(sample["content"], sample["mimetype"])
+        mfm.add(sample["content"], sample["mimetype"], coord)
         file_id = _get_file_id(sample["content"], sample["mimetype"])
         self.assertTrue(file_id in mfm)
 
@@ -136,8 +148,10 @@ class UploadedFileManagerTest(unittest.TestCase):
         """Test remove operation on specific MediaFile."""
         _get_session_id.return_value = "TEST"
 
+        coord = random_coordinates()
+
         sample = AUDIO_FIXTURES["wav"]
-        mfm.add(sample["content"], sample["mimetype"])
+        mfm.add(sample["content"], sample["mimetype"], coord)
         file_id = _get_file_id(sample["content"], sample["mimetype"])
         self.assertTrue(file_id in mfm)
 
@@ -153,13 +167,15 @@ class UploadedFileManagerTest(unittest.TestCase):
         """Test that MediaFileManager removes all files when requested (even if empty)."""
         _get_session_id.return_value = "TEST"
 
+        coord = random_coordinates()
+
         self.assertEqual(len(mfm), 0)
         mfm.reset_files_for_session()
 
         self.assertEqual(len(mfm), 0)
 
         for sample in VIDEO_FIXTURES.values():
-            mfm.add(sample["content"], sample["mimetype"])
+            mfm.add(sample["content"], sample["mimetype"], coord)
 
         self.assertEqual(len(VIDEO_FIXTURES), len(mfm))
         mfm.reset_files_for_session()
