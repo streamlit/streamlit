@@ -99,7 +99,7 @@ function run_test {
     filename=$(basename $file)
     specpath="../$specs_parent_folder/specs/${filename%.*}.spec.ts"
   else
-    specpath="../$specs_parent_folder/specs/st_hello.spec.ts"
+    specpath="../e2e/specs/st_hello.spec.ts"
   fi
 
   # Infinite loop to support retries.
@@ -111,6 +111,7 @@ function run_test {
     yarn \
       cy:run \
       --spec $specpath \
+      --config integrationFolder=../$specs_parent_folder/specs \
       $record_results_flag $snapshots_flag_for_this_run
 
     EXITCODE="$?"
