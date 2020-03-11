@@ -100,7 +100,7 @@ def _with_element(method):
     @_wraps_with_cleaned_sig(method, 1)  # Remove self and element from sig.
     def wrapped_method(dg, *args, **kwargs):
         # Warn if we're called from within an @st.cache function
-        caching.maybe_show_cached_st_function_warning(dg)
+        caching.maybe_show_cached_st_function_warning(dg, method.__name__)
 
         delta_type = method.__name__
         last_index = None
@@ -761,17 +761,13 @@ class DeltaGenerator(object):
         doc_string.marshall(element, obj)
 
     @_with_element
-    def exception(self, element, exception, exception_traceback=None):
+    def exception(self, element, exception):
         """Display an exception.
 
         Parameters
         ----------
         exception : Exception
             The exception to display.
-        exception_traceback : Exception Traceback or None
-            If None or False, does not show display the trace. If True,
-            tries to capture a trace automatically. If a Traceback object,
-            displays the given traceback.
 
         Example
         -------
@@ -781,7 +777,7 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.exception_proto as exception_proto
 
-        exception_proto.marshall(element.exception, exception, exception_traceback)
+        exception_proto.marshall(element.exception, exception)
 
     def dataframe(self, data=None, width=None, height=None):
         """Display a dataframe as an interactive table.
