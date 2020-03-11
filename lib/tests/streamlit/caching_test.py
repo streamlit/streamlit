@@ -259,8 +259,8 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual([0, 1, 2], bar_vals)
 
     # Reduce the huge amount of logspam we get from hashing/caching
-    @patch("streamlit.hashing.LOGGER.debug")
-    @patch("streamlit.caching.LOGGER.debug")
+    @patch("streamlit.hashing._LOGGER.debug")
+    @patch("streamlit.caching._LOGGER.debug")
     def test_no_max_size(self, _1, _2):
         """If max_size is None, the cache is unbounded."""
         called_values = []

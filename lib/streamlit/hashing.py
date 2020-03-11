@@ -41,7 +41,7 @@ from streamlit.errors import StreamlitAPIException, MarkdownFormattedException
 from streamlit.folder_black_list import FolderBlackList
 from streamlit.logger import get_logger
 
-LOGGER = get_logger(__name__)
+_LOGGER = get_logger(__name__)
 
 
 # If a dataframe has more than this many rows, we consider it large and hash a sample.
@@ -263,11 +263,11 @@ class _CodeHasher:
         hash_stacks.current.push(obj)
 
         try:
-            # These were super noisy so i turned them off.  --NM
-            # LOGGER.debug("About to hash: %s", obj)
+            # Turn these on for debugging.
+            # _LOGGER.debug("About to hash: %s", obj)
             tname = type(obj).__name__.encode()
             b = b"%s:%s" % (tname, self._to_bytes(obj, context))
-            # LOGGER.debug("Done hashing: %s", obj)
+            # _LOGGER.debug("Done hashing: %s", obj)
 
             # Hmmm... It's psosible that the size calculation is wrong. When we
             # call to_bytes inside _to_bytes things get double-counted.
