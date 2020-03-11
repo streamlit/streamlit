@@ -31,7 +31,7 @@ import textwrap
 import threading
 import weakref
 import types
-from typing import Dict, Any, List
+from typing import Any, List
 
 from streamlit import config
 from streamlit import file_util
