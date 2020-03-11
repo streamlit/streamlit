@@ -6,14 +6,15 @@ import cv2
 text_placeholder = st.empty()
 
 image_placeholder = st.empty()
-if st.button('Start'):
-     video = cv2.VideoCapture('https://videos3.earthcam.com/fecnetwork/9974.flv/chunklist_w372707020.m3u8?__fvd__')
-     while True:
-         success, image = video.read()
-         image_placeholder.image(image)      # ttl=20)      # , replace=True)
+if st.button("Start"):
+    video = cv2.VideoCapture(
+        "https://videos3.earthcam.com/fecnetwork/9974.flv/chunklist_w372707020.m3u8?__fvd__"
+    )
+    while True:
+        success, image = video.read()
+        image_placeholder.image(image)  # ttl=20)      # , replace=True)
 
-         text_placeholder.markdown("%r" % media_file_manager._files)
-
+        text_placeholder.markdown("%r" % media_file_manager._files)
 
 
 # Expire by date:
@@ -25,5 +26,5 @@ if st.button('Start'):
 # Expire by obsolence:
 #       * User-set flag on media protos telling Streamlit to "replace" files for same widget ID
 #       * MFM keeps a map of widget IDs to file hashes.
-#       * If file is added with same widget ID, it replaces the 
+#       * If file is added with same widget ID, it replaces the
 #       * Not as versatile a feature as expire-by-date.
