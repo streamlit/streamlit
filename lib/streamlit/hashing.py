@@ -409,7 +409,7 @@ class _CodeHasher:
         elif isinstance(obj, io.StringIO) or isinstance(obj, io.BytesIO):
             # Hash in-memory StringIO/BytesIO by their full contents
             # and seek position.
-            h = hashlib.new(self.name)
+            h = hashlib.new("md5")
             self.update(h, obj.tell())
             self.update(h, obj.getvalue())
             return h.digest()
