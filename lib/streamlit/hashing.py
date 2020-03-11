@@ -33,7 +33,6 @@ import weakref
 import types
 from typing import Any, List
 
-import streamlit as st
 from streamlit import config
 from streamlit import file_util
 from streamlit import type_util
@@ -396,11 +395,23 @@ class _CodeHasher:
             or isinstance(obj, tempfile._TemporaryFileWrapper)  # type: ignore[attr-defined]
         ):
             # Hash files as name + last modification date + offset.
+            # NB: we're using hasattr("name") to differentiate between
+            # on-disk and in-memory StringIO/BytesIO file representations.
+            # That means that this condition must come *before* the next
+            # condition, which just checks for StringIO/BytesIO.
             h = hashlib.new("md5")
             obj_name = getattr(obj, "name", "wonthappen")  # Just to appease MyPy.
             self.update(h, obj_name)
             self.update(h, os.path.getmtime(obj_name))
             self.update(h, obj.tell())
+            return h.digest()
+
+        elif isinstance(obj, io.StringIO) or isinstance(obj, io.BytesIO):
+            # Hash in-memory StringIO/BytesIO by their full contents
+            # and seek position.
+            h = hashlib.new("md5")
+            self.update(h, obj.tell())
+            self.update(h, obj.getvalue())
             return h.digest()
 
         elif type_util.is_type(obj, "numpy.ufunc"):

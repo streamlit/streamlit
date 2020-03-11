@@ -24,6 +24,8 @@ import tempfile
 import time
 import types
 import unittest
+from io import BytesIO
+from io import StringIO
 
 import altair.vegalite.v3
 import numpy as np
@@ -83,17 +85,6 @@ class HashTest(unittest.TestCase):
         b.append(b)
         self.assertEqual(get_hash(a), get_hash(b))
 
-    def test_dict(self):
-        d1 = {"cat": "hat"}
-        d2 = {"things": [1, 2]}
-
-        self.assertEqual(get_hash(d1), get_hash(d1))
-        self.assertNotEqual(get_hash(d1), get_hash(d2))
-
-        # test that we can hash self-referencing dictionaries
-        d2 = {"book": d1}
-        self.assertNotEqual(get_hash(d2), get_hash(d1))
-
     def test_tuple(self):
         self.assertEqual(get_hash((1, 2)), get_hash((1, 2)))
         self.assertNotEqual(get_hash((1, 2)), get_hash((2, 2)))
@@ -110,6 +101,17 @@ class HashTest(unittest.TestCase):
         with self.assertRaises(UnhashableTypeError):
             get_hash(dict_gen)
         get_hash(dict_gen, hash_funcs={types.GeneratorType: id})
+
+    def test_self_reference_dict(self):
+        d1 = {"cat": "hat"}
+        d2 = {"things": [1, 2]}
+
+        self.assertEqual(get_hash(d1), get_hash(d1))
+        self.assertNotEqual(get_hash(d1), get_hash(d2))
+
+        # test that we can hash self-referencing dictionaries
+        d2 = {"book": d1}
+        self.assertNotEqual(get_hash(d2), get_hash(d1))
 
     def test_reduce_(self):
         class A(object):
@@ -232,6 +234,31 @@ class HashTest(unittest.TestCase):
         np5 = np.zeros(_NP_SIZE_LARGE)
 
         self.assertEqual(get_hash(np4), get_hash(np5))
+
+    def test_io(self):
+        b1 = BytesIO(b"123")
+        b2 = BytesIO(b"456")
+        b3 = BytesIO(b"123")
+
+        self.assertEqual(get_hash(b1), get_hash(b3))
+        self.assertNotEqual(get_hash(b1), get_hash(b2))
+
+        # Changing the stream position should change the hash
+        b1.seek(1)
+        b3.seek(0)
+        self.assertNotEqual(get_hash(b1), get_hash(b3))
+
+        s1 = StringIO("123")
+        s2 = StringIO("456")
+        s3 = StringIO("123")
+
+        self.assertEqual(get_hash(s1), get_hash(s3))
+        self.assertNotEqual(get_hash(s1), get_hash(s2))
+
+        # Changing the stream position should change the hash
+        s1.seek(1)
+        s3.seek(0)
+        self.assertNotEqual(get_hash(s1), get_hash(s3))
 
     def test_partial(self):
         p1 = functools.partial(int, base=2)
