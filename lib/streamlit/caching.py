@@ -27,63 +27,97 @@ import textwrap
 import threading
 import time
 from collections import namedtuple
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
-from cachetools import LRUCache, TTLCache
+from cachetools import TTLCache
 
-import streamlit as st
-from streamlit.util import functools_wraps
 from streamlit import config
 from streamlit import file_util
 from streamlit import util
-from streamlit.hashing import CodeHasher
+from streamlit.errors import StreamlitAPIWarning
+from streamlit.errors import StreamlitDeprecationWarning
 from streamlit.hashing import Context
-from streamlit.hashing import get_hash
+from streamlit.hashing import update_hash
+from streamlit.hashing import HashReason
 from streamlit.logger import get_logger
-
-CACHED_ST_FUNCTION_WARNING = """
-Your script writes to your Streamlit app from within a cached function. This
-code will only be called when we detect a cache "miss", which can lead to
-unexpected results.
-
-How to resolve this warning:
-* Move the streamlit function call outside the cached function.
-* Or, if you know what you're doing, use `@st.cache(suppress_st_warning=True)`
-to suppress the warning.
-"""
+from streamlit.util import functools_wraps
+import streamlit as st
 
 
-LOGGER = get_logger(__name__)
+_LOGGER = get_logger(__name__)
 
-# The timer function we use with TTLCache.
-TTLCACHE_TIMER = time.monotonic
-
-# A list of all mem-caches we've created.
-_all_mem_caches = []
+# The timer function we use with TTLCache. This is the default timer func, but
+# is exposed here as a constant so that it can be patched in unit tests.
+_TTLCACHE_TIMER = time.monotonic
 
 
-class CacheError(Exception):
-    pass
+_CacheEntry = namedtuple("_CacheEntry", ["value", "hash"])
+_DiskCacheEntry = namedtuple("_DiskCacheEntry", ["value"])
 
 
-class CacheKeyNotFoundError(Exception):
-    pass
+class _MemCaches(object):
+    """Manages all in-memory st.cache caches"""
+
+    def __init__(self):
+        # Contains a cache object for each st.cache'd function
+        self._lock = threading.RLock()
+        self._function_caches = {}  # type: Dict[str, TTLCache]
+
+    def get_cache(
+        self, key: str, max_entries: Optional[float], ttl: Optional[float]
+    ) -> TTLCache:
+        """Return the mem cache for the given key.
+
+        If it doesn't exist, create a new one with the given params.
+        """
+
+        if max_entries is None:
+            max_entries = math.inf
+        if ttl is None:
+            ttl = math.inf
+
+        if not isinstance(max_entries, (int, float)):
+            raise RuntimeError("max_entries must be an int")
+        if not isinstance(ttl, (int, float)):
+            raise RuntimeError("ttl must be a float")
+
+        # Get the existing cache, if it exists, and validate that its params
+        # haven't changed.
+        with self._lock:
+            mem_cache = self._function_caches.get(key)
+            if (
+                mem_cache is not None
+                and mem_cache.ttl == ttl
+                and mem_cache.maxsize == max_entries
+            ):
+                return mem_cache
+
+            # Create a new cache object and put it in our dict
+            _LOGGER.debug(
+                "Creating new mem_cache (key=%s, max_entries=%s, ttl=%s)",
+                key,
+                max_entries,
+                ttl,
+            )
+            mem_cache = TTLCache(maxsize=max_entries, ttl=ttl, timer=_TTLCACHE_TIMER)
+            self._function_caches[key] = mem_cache
+            return mem_cache
+
+    def clear(self) -> None:
+        """Clear all caches"""
+        with self._lock:
+            self._function_caches = {}
 
 
-class CachedObjectWasMutatedError(ValueError):
-    def __init__(self, cached_value):
-        self.cached_value = cached_value
-
-
-CacheEntry = namedtuple("CacheEntry", ["value", "hash"])
-DiskCacheEntry = namedtuple("DiskCacheEntry", ["value"])
+# Our singleton _MemCaches instance
+_mem_caches = _MemCaches()
 
 
 # A thread-local counter that's incremented when we enter @st.cache
 # and decremented when we exit.
 class ThreadLocalCacheInfo(threading.local):
     def __init__(self):
-        self.within_cached_func = 0
+        self.cached_func_stack = []
         self.suppress_st_function_warning = 0
 
 
@@ -91,12 +125,12 @@ _cache_info = ThreadLocalCacheInfo()
 
 
 @contextlib.contextmanager
-def _calling_cached_function():
-    _cache_info.within_cached_func += 1
+def _calling_cached_function(func):
+    _cache_info.cached_func_stack.append(func)
     try:
         yield
     finally:
-        _cache_info.within_cached_func -= 1
+        _cache_info.cached_func_stack.pop()
 
 
 @contextlib.contextmanager
@@ -109,14 +143,15 @@ def suppress_cached_st_function_warning():
         assert _cache_info.suppress_st_function_warning >= 0
 
 
-def _show_cached_st_function_warning(dg):
+def _show_cached_st_function_warning(dg, st_func_name, cached_func):
     # Avoid infinite recursion by suppressing additional cached
     # function warnings from within the cached function warning.
     with suppress_cached_st_function_warning():
-        dg.warning(CACHED_ST_FUNCTION_WARNING)
+        e = CachedStFunctionWarning(st_func_name, cached_func)
+        dg.exception(e)
 
 
-def maybe_show_cached_st_function_warning(dg):
+def maybe_show_cached_st_function_warning(dg, st_func_name):
     """If appropriate, warn about calling st.foo inside @cache.
 
     DeltaGenerator's @_with_element and @_widget wrappers use this to warn
@@ -128,12 +163,16 @@ def maybe_show_cached_st_function_warning(dg):
     dg : DeltaGenerator
         The DeltaGenerator to publish the warning to.
 
+    st_func_name : str
+        The name of the Streamlit function that was called.
+
     """
     if (
-        _cache_info.within_cached_func > 0
+        len(_cache_info.cached_func_stack) > 0
         and _cache_info.suppress_st_function_warning <= 0
     ):
-        _show_cached_st_function_warning(dg)
+        cached_func = _cache_info.cached_func_stack[-1]
+        _show_cached_st_function_warning(dg, st_func_name, cached_func)
 
 
 class _AddCopy(ast.NodeTransformer):
@@ -189,75 +228,51 @@ class _AddCopy(ast.NodeTransformer):
         return node
 
 
-def _get_mutated_output_error_message():
-    message = textwrap.dedent(
-        """
-        **WARNING: Cached Object Mutated**
-
-        By default, Streamlit’s cache is immutable. You received this warning
-        because Streamlit thinks you modified a cached object.
-
-        [Click here to see how to fix this issue.]
-        (https://docs.streamlit.io/advanced_caching.html)
-        """
-    ).strip("\n")
-
-    return message
-
-
-def _create_mem_cache(max_entries, ttl):
-    """Create an in-memory cache object with the given parameters."""
-    if max_entries is None and ttl is None:
-        # If we have no max_entries or TTL, we can just use a regular dict.
-        mem_cache = {}
-    else:
-        if max_entries is None:
-            max_entries = math.inf
-        elif not isinstance(max_entries, int):
-            raise Exception("`max_entries` must be an int or None")
-
-        if not isinstance(ttl, (float, int)) and ttl is not None:
-            raise Exception("`ttl` must be a float or None")
-
-        # If ttl is none, just create an LRUCache. (TTLCache is simply an
-        # LRUCache that adds a ttl option.)
-        if ttl is None:
-            mem_cache = LRUCache(maxsize=max_entries)
-        else:
-            mem_cache = TTLCache(maxsize=max_entries, ttl=ttl, timer=TTLCACHE_TIMER)
-
-    # Stick the new cache in our global list
-    global _all_mem_caches
-    _all_mem_caches.append(mem_cache)
-
-    return mem_cache
-
-
-def _read_from_mem_cache(mem_cache, key, allow_output_mutation, hash_funcs):
+def _read_from_mem_cache(
+    mem_cache, key, allow_output_mutation, func_or_code, hash_funcs
+):
     if key in mem_cache:
         entry = mem_cache[key]
 
-        if (
-            allow_output_mutation
-            or get_hash(entry.value, hash_funcs=hash_funcs) == entry.hash
-        ):
-            LOGGER.debug("Memory cache HIT: %s", type(entry.value))
-            return entry.value
-        else:
-            LOGGER.debug("Cache object was mutated: %s", key)
-            raise CachedObjectWasMutatedError(entry.value)
+        if not allow_output_mutation:
+            computed_output_hash = _get_output_hash(
+                entry.value, func_or_code, hash_funcs
+            )
+            stored_output_hash = entry.hash
+
+            if computed_output_hash != stored_output_hash:
+                _LOGGER.debug("Cached object was mutated: %s", key)
+                raise CachedObjectMutationError(entry.value, func_or_code)
+
+        _LOGGER.debug("Memory cache HIT: %s", type(entry.value))
+        return entry.value
+
     else:
-        LOGGER.debug("Memory cache MISS: %s", key)
+        _LOGGER.debug("Memory cache MISS: %s", key)
         raise CacheKeyNotFoundError("Key not found in mem cache")
 
 
-def _write_to_mem_cache(mem_cache, key, value, allow_output_mutation, hash_funcs):
+def _write_to_mem_cache(
+    mem_cache, key, value, allow_output_mutation, func_or_code, hash_funcs
+):
     if allow_output_mutation:
         hash = None
     else:
-        hash = get_hash(value, hash_funcs=hash_funcs)
+        hash = _get_output_hash(value, func_or_code, hash_funcs)
 
-    mem_cache[key] = CacheEntry(value=value, hash=hash)
+    mem_cache[key] = _CacheEntry(value=value, hash=hash)
+
+
+def _get_output_hash(value, func_or_code, hash_funcs):
+    hasher = hashlib.new("md5")
+    update_hash(
+        value,
+        hasher=hasher,
+        hash_funcs=hash_funcs,
+        hash_reason=HashReason.CACHING_FUNC_OUTPUT,
+        hash_source=func_or_code,
+    )
+    return hasher.digest()
 
 
 def _read_from_disk_cache(key):
@@ -266,9 +281,9 @@ def _read_from_disk_cache(key):
         with file_util.streamlit_read(path, binary=True) as input:
             entry = pickle.load(input)
             value = entry.value
-            LOGGER.debug("Disk cache HIT: %s", type(value))
+            _LOGGER.debug("Disk cache HIT: %s", type(value))
     except util.Error as e:
-        LOGGER.error(e)
+        _LOGGER.error(e)
         raise CacheError("Unable to read from cache: %s" % e)
 
     except FileNotFoundError:
@@ -281,9 +296,8 @@ def _write_to_disk_cache(key, value):
 
     try:
         with file_util.streamlit_write(path, binary=True) as output:
-            entry = DiskCacheEntry(value=value)
+            entry = _DiskCacheEntry(value=value)
             pickle.dump(entry, output, pickle.HIGHEST_PROTOCOL)
-
     except util.Error as e:
         LOGGER.debug(e)
         # Clean up file so we don't leave zero byte files.
@@ -294,32 +308,40 @@ def _write_to_disk_cache(key, value):
         raise CacheError("Unable to write to cache: %s" % e)
 
 
-def _read_from_cache(mem_cache, key, persisted, allow_output_mutation, hash_funcs=None):
-    """
-    Read the value from the cache. Our goal is to read from memory
-    if possible. If the data was mutated (hash changed), we show a
-    warning. If reading from memory fails, we either read from disk
-    or rerun the code.
+def _read_from_cache(
+    mem_cache, key, persist, allow_output_mutation, func_or_code, hash_funcs=None
+):
+    """Read a value from the cache.
+
+    Our goal is to read from memory if possible. If the data was mutated (hash
+    changed), we show a warning. If reading from memory fails, we either read
+    from disk or rerun the code.
     """
     try:
-        return _read_from_mem_cache(mem_cache, key, allow_output_mutation, hash_funcs)
-    except CachedObjectWasMutatedError as e:
-        st.warning(_get_mutated_output_error_message())
+        return _read_from_mem_cache(
+            mem_cache, key, allow_output_mutation, func_or_code, hash_funcs
+        )
+
+    except CachedObjectMutationError as e:
+        st.exception(CachedObjectMutationWarning(e))
         return e.cached_value
+
     except CacheKeyNotFoundError as e:
-        if persisted:
+        if persist:
             value = _read_from_disk_cache(key)
             _write_to_mem_cache(
-                mem_cache, key, value, allow_output_mutation, hash_funcs
+                mem_cache, key, value, allow_output_mutation, func_or_code, hash_funcs
             )
             return value
         raise e
 
 
 def _write_to_cache(
-    mem_cache, key, value, persist, allow_output_mutation, hash_funcs=None
+    mem_cache, key, value, persist, allow_output_mutation, func_or_code, hash_funcs=None
 ):
-    _write_to_mem_cache(mem_cache, key, value, allow_output_mutation, hash_funcs)
+    _write_to_mem_cache(
+        mem_cache, key, value, allow_output_mutation, func_or_code, hash_funcs
+    )
     if persist:
         _write_to_disk_cache(key, value)
 
@@ -420,12 +442,12 @@ def cache(
     ...     return MongoClient(url)
 
     """
-    LOGGER.debug("Entering st.cache: %s", func)
+    _LOGGER.debug("Entering st.cache: %s", func)
 
     # Help users migrate to the new kwarg
     # Remove this warning after 2020-03-16.
     if ignore_hash:
-        raise Exception(
+        raise StreamlitDeprecationWarning(
             "The `ignore_hash` argument has been renamed to `allow_output_mutation`."
         )
 
@@ -443,8 +465,42 @@ def cache(
             ttl=ttl,
         )
 
-    # Create the function's in-memory cache.
-    mem_cache = _create_mem_cache(max_entries, ttl)
+    # Create the unique key for this function's cache. The cache will be
+    # retrieved from inside the wrapped function.
+    #
+    # A naive implementation would involve simply creating the cache object
+    # right here in the wrapper, which in a normal Python script would be
+    # executed only once. But in Streamlit, we reload all modules related to a
+    # user's app when the app is re-run, which means that - among other
+    # things - all function decorators in the app will be re-run, and so any
+    # decorator-local objects will be recreated.
+    #
+    # Furthermore, our caches can be destroyed and recreated (in response
+    # to cache clearing, for example), which means that retrieving the
+    # function's cache here (so that the wrapped function can save a lookup)
+    # is incorrect: the cache itself may be recreated between
+    # decorator-evaluation time and decorated-function-execution time. So
+    # we must retrieve the cache object *and* perform the cached-value lookup
+    # inside the decorated function.
+
+    func_hasher = hashlib.new("md5")
+
+    # Include the function's module and qualified name in the hash.
+    # This means that two identical functions in different modules
+    # will not share a hash; it also means that two identical *nested*
+    # functions in the same module will not share a hash.
+    update_hash(
+        (func.__module__, func.__qualname__, func),
+        hasher=func_hasher,
+        hash_funcs=hash_funcs,
+        hash_reason=HashReason.CACHING_FUNC_BODY,
+        hash_source=func,
+    )
+
+    cache_key = func_hasher.hexdigest()
+    _LOGGER.debug(
+        "mem_cache key for %s.%s: %s", func.__module__, func.__qualname__, cache_key
+    )
 
     @functools_wraps(func)
     def wrapped_func(*args, **kwargs):
@@ -453,43 +509,70 @@ def cache(
         directory."""
 
         if not config.get_option("client.caching"):
-            LOGGER.debug("Purposefully skipping cache")
+            _LOGGER.debug("Purposefully skipping cache")
             return func(*args, **kwargs)
 
-        name = func.__name__
+        name = func.__qualname__
 
         if len(args) == 0 and len(kwargs) == 0:
-            message = "Running %s()." % name
+            message = "Running `%s()`." % name
         else:
-            message = "Running %s(...)." % name
+            message = "Running `%s(...)`." % name
 
         def get_or_create_cached_value():
-            hasher = hashlib.new("md5")
+            # First, get the cache that's attached to this function.
+            # This cache's key is generated (above) from the function's code.
+            mem_cache = _mem_caches.get_cache(cache_key, max_entries, ttl)
 
-            args_hasher = CodeHasher("md5", hasher, hash_funcs)
-            args_hasher.update([args, kwargs])
-            LOGGER.debug("Hashing arguments to %s of %i bytes.", name, args_hasher.size)
+            # Next, calculate the key for the value we'll be searching for
+            # within that cache. This key is generated from both the function's
+            # code and the arguments that are passed into it. (Even though this
+            # key is used to index into a per-function cache, it must be
+            # globally unique, because it is *also* used for a global on-disk
+            # cache that is *not* per-function.)
+            value_hasher = hashlib.new("md5")
 
-            code_hasher = CodeHasher("md5", hasher, hash_funcs)
-            code_hasher.update(func)
-            LOGGER.debug("Hashing function %s in %i bytes.", name, code_hasher.size)
+            if args:
+                update_hash(
+                    args,
+                    hasher=value_hasher,
+                    hash_funcs=hash_funcs,
+                    hash_reason=HashReason.CACHING_FUNC_ARGS,
+                    hash_source=func,
+                )
 
-            key = hasher.hexdigest()
-            LOGGER.debug("Cache key: %s", key)
+            if kwargs:
+                update_hash(
+                    kwargs,
+                    hasher=value_hasher,
+                    hash_funcs=hash_funcs,
+                    hash_reason=HashReason.CACHING_FUNC_ARGS,
+                    hash_source=func,
+                )
+
+            value_key = value_hasher.hexdigest()
+
+            # Avoid recomputing the body's hash by just appending the
+            # previously-computed hash to the arg hash.
+            value_key = "%s-%s" % (value_key, cache_key)
+
+            _LOGGER.debug("Cache key: %s", value_key)
 
             try:
                 return_value = _read_from_cache(
                     mem_cache=mem_cache,
-                    key=key,
-                    persisted=persist,
+                    key=value_key,
+                    persist=persist,
                     allow_output_mutation=allow_output_mutation,
+                    func_or_code=func,
                     hash_funcs=hash_funcs,
                 )
-                LOGGER.debug("Cache hit: %s", func)
-            except CacheKeyNotFoundError:
-                LOGGER.debug("Cache miss: %s", func)
+                _LOGGER.debug("Cache hit: %s", func)
 
-                with _calling_cached_function():
+            except CacheKeyNotFoundError:
+                _LOGGER.debug("Cache miss: %s", func)
+
+                with _calling_cached_function(func):
                     if suppress_st_warning:
                         with suppress_cached_st_function_warning():
                             return_value = func(*args, **kwargs)
@@ -498,10 +581,11 @@ def cache(
 
                 _write_to_cache(
                     mem_cache=mem_cache,
-                    key=key,
+                    key=value_key,
                     value=return_value,
                     persist=persist,
                     allow_output_mutation=allow_output_mutation,
+                    func_or_code=func,
                     hash_funcs=hash_funcs,
                 )
 
@@ -554,12 +638,13 @@ class Cache(Dict[Any, Any]):
     def __init__(self, persist=False, allow_output_mutation=False):
         self._persist = persist
         self._allow_output_mutation = allow_output_mutation
-        self._mem_cache = _create_mem_cache(None, None)
+        self._mem_cache = {}
 
         dict.__init__(self)
 
     def has_changes(self) -> bool:
         current_frame = inspect.currentframe()
+
         assert current_frame is not None
         caller_frame = current_frame.f_back
 
@@ -569,8 +654,7 @@ class Cache(Dict[Any, Any]):
         if real_caller_is_parent_frame:
             caller_frame = caller_frame.f_back
 
-        frameinfo = inspect.getframeinfo(caller_frame)
-        filename, caller_lineno, _, code_context, _ = frameinfo
+        filename, caller_lineno, code_context = _get_frame_info(caller_frame)
 
         assert code_context is not None
         code_context = code_context[0]
@@ -600,21 +684,28 @@ class Cache(Dict[Any, Any]):
         context = Context(dict(caller_frame.f_globals, **caller_frame.f_locals), {}, {})
         code = compile(program, filename, "exec")
 
-        code_hasher = CodeHasher("md5")
-        code_hasher.update(code, context)
-        LOGGER.debug("Hashing block in %i bytes.", code_hasher.size)
+        hasher = hashlib.new("md5")
+        update_hash(
+            code,
+            hasher=hasher,
+            context=context,
+            hash_reason=HashReason.CACHING_BLOCK,
+            hash_source=code,
+        )
 
-        key = code_hasher.hexdigest()
-        LOGGER.debug("Cache key: %s", key)
+        key = hasher.hexdigest()
+        _LOGGER.debug("Cache key: %s", key)
 
         try:
             value, _ = _read_from_cache(
                 mem_cache=self._mem_cache,
                 key=key,
-                persisted=self._persist,
+                persist=self._persist,
                 allow_output_mutation=self._allow_output_mutation,
+                func_or_code=code,
             )
             self.update(value)
+
         except CacheKeyNotFoundError:
             if self._allow_output_mutation and not self._persist:
                 # If we don't hash the results, we don't need to use exec and just return True.
@@ -625,6 +716,7 @@ class Cache(Dict[Any, Any]):
                     value=self,
                     persist=False,
                     allow_output_mutation=True,
+                    func_or_code=code,
                 )
                 return True
 
@@ -635,6 +727,7 @@ class Cache(Dict[Any, Any]):
                 value=self,
                 persist=self._persist,
                 allow_output_mutation=self._allow_output_mutation,
+                func_or_code=code,
             )
 
         # Return False so that we have control over the execution.
@@ -680,7 +773,95 @@ def _clear_disk_cache():
 
 
 def _clear_mem_cache():
-    global _all_mem_caches
-    # Copy _all_mem_caches to guard against threading errors
-    for mem_cache in list(_all_mem_caches):
-        mem_cache.clear()
+    _mem_caches.clear()
+
+
+def _get_frame_info(caller_frame):
+    frameinfo = inspect.getframeinfo(caller_frame)
+    filename, caller_lineno, _, code_context, _ = frameinfo
+    return filename, caller_lineno, code_context
+
+
+class CacheError(Exception):
+    pass
+
+
+class CacheKeyNotFoundError(Exception):
+    pass
+
+
+class CachedObjectMutationError(ValueError):
+    """This is used internally, but never shown to the user.
+
+    Users see CachedObjectMutationWarning instead.
+    """
+
+    def __init__(self, cached_value, func_or_code):
+        self.cached_value = cached_value
+        if inspect.iscode(func_or_code):
+            self.cached_func_name = "a code block"
+        else:
+            self.cached_func_name = _get_cached_func_name_md(func_or_code)
+
+
+class CachedStFunctionWarning(StreamlitAPIWarning):
+    def __init__(self, st_func_name, cached_func):
+        msg = self._get_message(st_func_name, cached_func)
+        super(CachedStFunctionWarning, self).__init__(msg)
+
+    def _get_message(self, st_func_name, cached_func):
+        args = {
+            "st_func_name": "`st.%s()` or `st.write()`" % st_func_name,
+            "func_name": _get_cached_func_name_md(cached_func),
+        }
+
+        return (
+            """
+Your script uses %(st_func_name)s to write to your Streamlit app from within
+some cached code at %(func_name)s. This code will only be called when we detect
+a cache "miss", which can lead to unexpected results.
+
+How to fix this:
+* Move the %(st_func_name)s call outside %(func_name)s.
+* Or, if you know what you're doing, use `@st.cache(suppress_st_warning=True)`
+to suppress the warning.
+            """
+            % args
+        ).strip("\n")
+
+
+class CachedObjectMutationWarning(StreamlitAPIWarning):
+    def __init__(self, orig_exc):
+        msg = self._get_message(orig_exc)
+        super(CachedObjectMutationWarning, self).__init__(msg)
+
+    def _get_message(self, orig_exc):
+        return (
+            """
+Return value of %(func_name)s was mutated between runs.
+
+By default, Streamlit's cache should be treated as immutable, or it may behave
+in unexpected ways. You received this warning because Streamlit detected
+that an object returned by %(func_name)s was mutated outside of %(func_name)s.
+
+How to fix this:
+* If you did not mean to mutate that return value:
+  - If possible, inspect your code to find and remove that mutation.
+  - Otherwise, you could also clone the returned value so you can freely
+    mutate it.
+* If you actually meant to mutate the return value and know the consequences of
+doing so, just annotate the function with `@st.cache(allow_output_mutation=True)`.
+
+For more information and detailed solutions check out [our documentation.]
+(https://docs.streamlit.io/advanced_caching.html)
+            """
+            % {"func_name": orig_exc.cached_func_name}
+        ).strip("\n")
+
+
+def _get_cached_func_name_md(func):
+    """Get markdown representation of the function name."""
+    if hasattr(func, "__name__"):
+        return "`%s()`" % func.__name__
+    else:
+        return "a cached function"

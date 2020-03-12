@@ -297,21 +297,20 @@ class ServerTest(ServerTestCase):
             session_info1 = list(self.server._session_info_by_id.values())[0]
             session_info2 = list(self.server._session_info_by_id.values())[1]
 
+            file = UploadedFile("file.txt", b"123")
+
             # "Upload a file" for Session1
-            self.server._uploaded_file_mgr.add_file(
-                UploadedFile(
-                    session_id=session_info1.session.id,
-                    widget_id="widget_id",
-                    name="file.txt",
-                    data=b"file contents",
-                )
+            self.server._uploaded_file_mgr.add_files(
+                session_id=session_info1.session.id,
+                widget_id="widget_id",
+                files=[file],
             )
 
             self.assertEqual(
                 self.server._uploaded_file_mgr.get_file_data(
                     session_info1.session.id, "widget_id"
                 ),
-                b"file contents",
+                [file],
             )
 
             # Session1 should have a rerun request; Session2 should not
@@ -327,19 +326,14 @@ class ServerTest(ServerTestCase):
             yield self.ws_connect()
 
             # "Upload a file" for a session that doesn't exist
-            self.server._uploaded_file_mgr.add_file(
-                UploadedFile(
-                    session_id="no_such_session",
-                    widget_id="widget_id",
-                    name="file.txt",
-                    data=b"file contents",
-                )
+            self.server._uploaded_file_mgr.add_files(
+                session_id="no_such_session",
+                widget_id="widget_id",
+                files=[UploadedFile("file.txt", b"123")],
             )
 
             self.assertIsNone(
-                self.server._uploaded_file_mgr.get_file_data(
-                    "no_such_session", "widget_id"
-                )
+                self.server._uploaded_file_mgr.get_files("no_such_session", "widget_id")
             )
 
     @staticmethod

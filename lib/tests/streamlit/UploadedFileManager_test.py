@@ -17,60 +17,59 @@
 import unittest
 
 from streamlit.UploadedFileManager import UploadedFile
+from streamlit.UploadedFileManager import UploadedFileList
 from streamlit.UploadedFileManager import UploadedFileManager
 
-FILE_1A = UploadedFile(
-    session_id="session", widget_id="widget", name="FILE_1A", data=b"FILE_1A",
-)
-
-FILE_1B = UploadedFile(
-    session_id="session", widget_id="widget", name="FILE_1B", data=b"FILE_1B",
-)
-
-FILE_2 = UploadedFile(
-    session_id="session2", widget_id="widget", name="FILE_2", data=b"FILE_2",
-)
+file1 = UploadedFile(name="file1", data=b"file1")
+file2 = UploadedFile(name="file2", data=b"file2")
 
 
 class UploadedFileManagerTest(unittest.TestCase):
     def setUp(self):
         self.mgr = UploadedFileManager()
-        self.file_added_events = []
-        self.mgr.on_file_added.connect(self._on_file_added)
+        self.filemgr_events = []
+        self.mgr.on_files_added.connect(self._on_files_added)
 
-    def _on_file_added(self, file, **kwargs):
-        self.file_added_events.append(file)
+    def _on_files_added(self, file_list, **kwargs):
+        self.filemgr_events.append(file_list)
 
     def test_add_file(self):
-        self.assertIsNone(self.mgr.get_file_data("non-report", "non-widget"))
+        self.assertIsNone(self.mgr.get_files("non-report", "non-widget"))
 
-        self.mgr.add_file(FILE_1A)
-        self.assertEqual(b"FILE_1A", self.mgr.get_file_data("session", "widget"))
-        self.assertEqual([FILE_1A], self.file_added_events)
+        event1 = UploadedFileList("session", "widget", [file1])
+        event2 = UploadedFileList("session", "widget", [file2])
+
+        self.mgr.add_files("session", "widget", [file1])
+        self.assertEqual([file1], self.mgr.get_files("session", "widget"))
+        self.assertEqual([event1], self.filemgr_events)
 
         # Add another file with the same ID
-        self.mgr.add_file(FILE_1B)
-        self.assertEqual([FILE_1A, FILE_1B], self.file_added_events)
-        self.assertEqual(b"FILE_1B", self.mgr.get_file_data("session", "widget"))
+        self.mgr.add_files("session", "widget", [file2])
+        self.assertEqual([file2], self.mgr.get_files("session", "widget"))
+        self.assertEqual([event1, event2], self.filemgr_events)
 
     def test_remove_file(self):
         # This should not error.
-        self.mgr.remove_file("non-report", "non-widget")
+        self.mgr.remove_files("non-report", "non-widget")
 
-        self.mgr.add_file(FILE_1A)
-        self.assertEqual(b"FILE_1A", self.mgr.get_file_data("session", "widget"))
+        self.mgr.add_files("session", "widget", [file1])
+        self.assertEqual([file1], self.mgr.get_files("session", "widget"))
 
-        self.mgr.remove_file("session", "widget")
-        self.assertIsNone(self.mgr.get_file_data("session", "widget"))
-        self.assertEqual([FILE_1A], self.file_added_events)
+        self.mgr.remove_files("session", "widget")
+        self.assertIsNone(self.mgr.get_files("session", "widget"))
 
     def test_remove_all_files(self):
+        # This should not error.
         self.mgr.remove_session_files("non-report")
 
-        self.mgr.add_file(FILE_1A)
-        self.mgr.add_file(FILE_2)
+        # Add two files with different session IDs, but the same widget ID.
+        self.mgr.add_files("session1", "widget", [file1])
+        self.mgr.add_files("session2", "widget", [file1])
 
-        self.mgr.remove_session_files("session")
-        self.assertIsNone(self.mgr.get_file_data("session", "widget"))
-        self.assertEqual(b"FILE_2", self.mgr.get_file_data("session2", "widget"))
-        self.assertEqual([FILE_1A, FILE_2], self.file_added_events)
+        event1 = UploadedFileList("session1", "widget", [file1])
+        event2 = UploadedFileList("session2", "widget", [file1])
+
+        self.mgr.remove_session_files("session1")
+        self.assertIsNone(self.mgr.get_files("session1", "widget"))
+        self.assertEqual([file1], self.mgr.get_files("session2", "widget"))
+        self.assertEqual([event1, event2], self.filemgr_events)

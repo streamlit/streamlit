@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from typing import Dict, Any
+from typing import List
 
 import tornado.web
 import tornado.httputil
@@ -85,7 +86,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
 
     def post(self):
         args = {}  # type: Dict[str, str]
-        files = {}  # type: Dict[str, Any]
+        files = {}  # type: Dict[str, List[Any]]
 
         tornado.httputil.parse_body_arguments(
             content_type=self.request.headers["Content-Type"],
@@ -94,20 +95,6 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             files=files,
         )
 
-        if len(files) != 1:
-            self.send_error(400, reason="Expected 1 file, but got %s" % len(files))
-            return
-
-        # Grab the first file entry. Because multiple files with the same
-        # name can be uploaded, this entry is itself a list. Ensure
-        # there's only one in there as well.
-        file_list = list(files.values())[0]
-        if len(file_list) != 1:
-            self.send_error(400, reason="Expected 1 file, but got %s" % len(file_list))
-            return
-
-        file = file_list[0]
-
         try:
             session_id = self._require_arg(args, "sessionId")
             widget_id = self._require_arg(args, "widgetId")
@@ -115,13 +102,22 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             self.send_error(400, reason=str(e))
             return
 
-        self._file_mgr.add_file(
-            UploadedFile(
-                session_id=session_id,
-                widget_id=widget_id,
-                name=file["filename"],
-                data=file["body"],
-            )
+        # Create an UploadedFile object for each file.
+        uploaded_files = []
+        for flist in files.values():
+            # Because multiple files with the same name can be uploaded, each
+            # entry in the files dict is itself a list.
+            for file in flist:
+                uploaded_files.append(
+                    UploadedFile(name=file["filename"], data=file["body"])
+                )
+
+        if len(uploaded_files) == 0:
+            self.send_error(400, reason="Expected at least 1 file, but got 0")
+            return
+
+        self._file_mgr.add_files(
+            session_id=session_id, widget_id=widget_id, files=uploaded_files,
         )
 
         self.set_status(200)

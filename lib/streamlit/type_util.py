@@ -40,14 +40,19 @@ def is_type(obj, fqn_type_pattern):
     >>> is_type(foo, 'matplotlib.figure.Figure')
 
     """
+    fqn_type = get_fqn_type(obj)
+    if isinstance(fqn_type_pattern, str):
+        return fqn_type_pattern == fqn_type
+    else:
+        return fqn_type_pattern.match(fqn_type) is not None
+
+
+def get_fqn_type(obj):
+    """Get module.type_name for a given object."""
     the_type = type(obj)
     module = the_type.__module__
     name = the_type.__name__
-    actual_fqn = "%s.%s" % (module, name)
-    if isinstance(fqn_type_pattern, str):
-        return fqn_type_pattern == actual_fqn
-    else:
-        return fqn_type_pattern.match(actual_fqn) is not None
+    return "%s.%s" % (module, name)
 
 
 _PANDAS_DF_TYPE_STR = "pandas.core.frame.DataFrame"
