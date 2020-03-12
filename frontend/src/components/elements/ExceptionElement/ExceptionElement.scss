@@ -25,19 +25,12 @@
     margin-top: 0.5rem;
   }
 
-  .stack-trace-title {
-    font-family: $font-family-monospace;
-    font-size: $font-size-sm;
-    margin-top: 0.5rem;
-    margin-bottom: 0.5rem;
+  .stack-trace-row:first-child {
+    margin-top: 0;
   }
 
-  &.alert pre.stack-trace,
-  &.alert pre.stack-trace code {
-    background: none;
-    padding: 0;
-    color: inherit;
-    white-space: pre-wrap;
-    overflow-wrap: break-word;
+  .stack-trace-title {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
   }
 }

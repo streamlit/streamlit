@@ -26,61 +26,113 @@ describe("st.file_uploader", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stFileUploader").should("have.length", 1);
-    cy.get(".stFileUploader label").should("have.text", "Drop a file:");
+    cy.get(".stFileUploader")
+      .first()
+      .should("exist");
+    cy.get(".stFileUploader label")
+      .first()
+      .should("have.text", "Drop a file:");
 
-    cy.get(".stFileUploader").matchImageSnapshot("file_uploader");
+    cy.get(".stFileUploader")
+      .first()
+      .matchImageSnapshot("file_uploader");
   });
 
   it("shows error message for not allowed files", () => {
-    cy.get(".stFileUploader").should("have.length", 1);
-    cy.get(".stFileUploader label").should("have.text", "Drop a file:");
-
     const fileName = "example.json";
 
     cy.fixture(fileName).then(fileContent => {
-      cy.get('[data-baseweb="file-uploader"] > div').upload(
-        { fileContent, fileName, mimeType: "application/json" },
-        {
-          force: true,
-          subjectType: "drag-n-drop",
+      cy.get('[data-baseweb="file-uploader"] > div')
+        .first()
+        .upload(
+          { fileContent, fileName, mimeType: "application/json" },
+          {
+            force: true,
+            subjectType: "drag-n-drop",
 
-          // We intentionally omit the "dragleave" trigger event here;
-          // the page may start re-rendering after the "drop" event completes,
-          // which causes a cypress error due to the element being detached
-          // from the DOM when "dragleave" is emitted.
-          events: ["dragenter", "drop"]
-        }
-      );
+            // We intentionally omit the "dragleave" trigger event here;
+            // the page may start re-rendering after the "drop" event completes,
+            // which causes a cypress error due to the element being detached
+            // from the DOM when "dragleave" is emitted.
+            events: ["dragenter", "drop"]
+          }
+        );
 
-      cy.get(".uploadError").should(
-        "have.text",
-        " application/json files are not allowedOK"
-      );
+      cy.get(".uploadError")
+        .first()
+        .should("have.text", " application/json files are not allowedOK");
 
-      cy.get(".stFileUploader").matchImageSnapshot("file_uploader-error");
+      cy.get(".stFileUploader")
+        .first()
+        .matchImageSnapshot("file_uploader-error");
     });
   });
 
-  it("shows uploaded file name", () => {
-    cy.get(".stFileUploader").should("have.length", 1);
-    cy.get(".stFileUploader label").should("have.text", "Drop a file:");
-
-    const fileName = "example.txt";
+  it("uploads single files", () => {
+    const fileName = "file1.txt";
 
     cy.fixture(fileName).then(fileContent => {
-      cy.get('[data-baseweb="file-uploader"] > div').upload(
-        { fileContent, fileName, mimeType: "text/plain" },
-        {
-          force: true,
-          subjectType: "drag-n-drop",
-          events: ["dragenter", "drop"]
-        }
-      );
+      cy.get('[data-baseweb="file-uploader"] > div')
+        .first()
+        .upload(
+          { fileContent, fileName, mimeType: "text/plain" },
+          {
+            force: true,
+            subjectType: "drag-n-drop",
+            events: ["dragenter", "drop"]
+          }
+        );
 
-      cy.get(".uploadDone").should("have.text", fileName);
+      cy.get(".uploadDone")
+        .first()
+        .should("have.text", fileName);
+      cy.get(".fixed-width.stText")
+        .first()
+        .should("have.text", fileContent);
 
-      cy.get(".stFileUploader").matchImageSnapshot("file_uploader-uploaded");
+      cy.get(".stFileUploader")
+        .first()
+        .matchImageSnapshot("file_uploader-uploaded");
+    });
+  });
+
+  it("uploads multiple files", () => {
+    const fileName1 = "file1.txt";
+    const fileName2 = "file2.txt";
+
+    // Yes, this actually is the recommended way to load multiple fixtures
+    // in Cypress (!!) using Cypress.Promise.all is buggy. See:
+    // https://github.com/cypress-io/cypress-example-recipes/blob/master/examples/fundamentals__fixtures/cypress/integration/multiple-fixtures-spec.js
+
+    cy.fixture(fileName1).then(file1 => {
+      cy.fixture(fileName2).then(file2 => {
+        const files = [
+          { fileContent: file1, fileName: fileName1, mimeType: "text/plain" },
+          { fileContent: file2, fileName: fileName2, mimeType: "text/plain" }
+        ];
+
+        cy.get('[data-baseweb="file-uploader"] > div')
+          .eq(1)
+          .upload(files, {
+            force: true,
+            subjectType: "drag-n-drop",
+            events: ["dragenter", "drop"]
+          });
+
+        // The widget should show the names of the uploaded files.
+        const filenames = [fileName1, fileName2].join(", ");
+        cy.get(".uploadDone")
+          .eq(0) // eq(0), instead of eq(1), because the first widget won't have an uploadDone
+          .should("have.text", filenames);
+
+        // The script should have printed the contents of the two files
+        // into an st.text. (This tests that the upload actually went
+        // through.)
+        const content = [file1, file2].sort().join("\n");
+        cy.get(".fixed-width.stText")
+          .eq(1)
+          .should("have.text", content);
+      });
     });
   });
 });

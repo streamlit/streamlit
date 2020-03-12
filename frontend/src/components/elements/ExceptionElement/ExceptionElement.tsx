@@ -15,7 +15,8 @@
  * limitations under the License.
  */
 
-import React, { PureComponent, ReactNode } from "react"
+import React, { ReactNode, PureComponent } from "react"
+import classNames from "classnames"
 import { Map as ImmutableMap } from "immutable"
 import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
 import "./ExceptionElement.scss"
@@ -35,6 +36,7 @@ class ExceptionElement extends PureComponent<Props> {
     const type = element.get("type")
     const message = element.get("message")
     const stackTrace = element.get("stackTrace")
+    const isWarning = element.get("isWarning")
 
     // Build the message display.
     // On the backend, we use the StreamlitException type for errors that
@@ -75,11 +77,13 @@ class ExceptionElement extends PureComponent<Props> {
       )
     }
 
+    const wrapperClasses = classNames("alert", "exception", "stException", {
+      "alert-danger": !isWarning,
+      "alert-warning": isWarning,
+    })
+
     return (
-      <div
-        className="alert alert-danger exception stException"
-        style={{ width }}
-      >
+      <div className={wrapperClasses} style={{ width }}>
         <div className="message">{messageNode}</div>
         {stackTraceNode}
       </div>

@@ -934,7 +934,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 -----
 
-The following software may be included in this product: @turf/area, @turf/centroid, @turf/helpers, @turf/meta. A copy of the source code may be downloaded from git://github.com/Turfjs/turf.git (@turf/area), git://github.com/Turfjs/turf.git (@turf/centroid), git://github.com/Turfjs/turf.git (@turf/helpers), git://github.com/Turfjs/turf.git (@turf/meta). This software contains the following license and notice below:
+The following software may be included in this product: @turf/area, @turf/bbox, @turf/centroid, @turf/helpers, @turf/meta. A copy of the source code may be downloaded from git://github.com/Turfjs/turf.git (@turf/area), git://github.com/Turfjs/turf.git (@turf/bbox), git://github.com/Turfjs/turf.git (@turf/centroid), git://github.com/Turfjs/turf.git (@turf/helpers), git://github.com/Turfjs/turf.git (@turf/meta). This software contains the following license and notice below:
 
 The MIT License (MIT)
 
@@ -959,7 +959,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 -----
 
-The following software may be included in this product: @types/babel__core, @types/babel__generator, @types/babel__template, @types/babel__traverse, @types/eslint-visitor-keys, @types/fast-json-stable-stringify, @types/istanbul-lib-coverage, @types/istanbul-lib-report, @types/istanbul-reports, @types/jquery, @types/json-schema, @types/long, @types/node, @types/prop-types, @types/q, @types/react, @types/sizzle, @types/slickgrid, @types/stack-utils, @types/yargs, @types/yargs-parser. A copy of the source code may be downloaded from https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/babel__core), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/babel__generator), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/babel__template), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/babel__traverse), https://www.github.com/DefinitelyTyped/DefinitelyTyped.git (@types/eslint-visitor-keys), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/fast-json-stable-stringify), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/istanbul-lib-coverage), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/istanbul-lib-report), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/istanbul-reports), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/jquery), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/json-schema), https://www.github.com/DefinitelyTyped/DefinitelyTyped.git (@types/long), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/node), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/prop-types), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/q), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/sizzle), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/slickgrid), https://www.github.com/DefinitelyTyped/DefinitelyTyped.git (@types/stack-utils), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/yargs), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/yargs-parser). This software contains the following license and notice below:
+The following software may be included in this product: @types/babel__core, @types/babel__generator, @types/babel__template, @types/babel__traverse, @types/color-name, @types/eslint-visitor-keys, @types/fast-json-stable-stringify, @types/istanbul-lib-coverage, @types/istanbul-lib-report, @types/istanbul-reports, @types/jquery, @types/json-schema, @types/long, @types/node, @types/prop-types, @types/q, @types/react, @types/sizzle, @types/slickgrid, @types/stack-utils, @types/yargs, @types/yargs-parser. A copy of the source code may be downloaded from https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/babel__core), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/babel__generator), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/babel__template), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/babel__traverse), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/color-name), https://www.github.com/DefinitelyTyped/DefinitelyTyped.git (@types/eslint-visitor-keys), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/fast-json-stable-stringify), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/istanbul-lib-coverage), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/istanbul-lib-report), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/istanbul-reports), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/jquery), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/json-schema), https://www.github.com/DefinitelyTyped/DefinitelyTyped.git (@types/long), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/node), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/prop-types), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/q), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/sizzle), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/slickgrid), https://www.github.com/DefinitelyTyped/DefinitelyTyped.git (@types/stack-utils), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/yargs), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/yargs-parser). This software contains the following license and notice below:
 
 MIT License
 
@@ -2078,7 +2078,7 @@ THE SOFTWARE.
 
 -----
 
-The following software may be included in this product: ansi-escapes, ansi-regex, ansi-styles, binary-extensions, callsites, camelcase, chalk, decamelize, del, execa, find-up, get-stream, globals, globby, gzip-size, has-flag, import-fresh, import-local, internal-ip, invert-kv, is-blob, is-generator-fn, is-root, is-svg, lcid, leven, locate-path, make-dir, mem, mimic-fn, normalize-url, open, opn, os-locale, p-is-promise, p-limit, p-locate, p-map, p-try, parent-module, parse-json, path-type, pify, pkg-dir, pretty-bytes, read-pkg, read-pkg-up, resolve-from, slash, string-length, string-width, strip-ansi, strip-json-comments, supports-color, wrap-ansi. A copy of the source code may be downloaded from https://github.com/sindresorhus/ansi-escapes.git (ansi-escapes), https://github.com/chalk/ansi-regex.git (ansi-regex), https://github.com/chalk/ansi-styles.git (ansi-styles), https://github.com/sindresorhus/binary-extensions.git (binary-extensions), https://github.com/sindresorhus/callsites.git (callsites), https://github.com/sindresorhus/camelcase.git (camelcase), https://github.com/chalk/chalk.git (chalk), https://github.com/sindresorhus/decamelize.git (decamelize), https://github.com/sindresorhus/del.git (del), https://github.com/sindresorhus/execa.git (execa), https://github.com/sindresorhus/find-up.git (find-up), https://github.com/sindresorhus/get-stream.git (get-stream), https://github.com/sindresorhus/globals.git (globals), https://github.com/sindresorhus/globby.git (globby), https://github.com/sindresorhus/gzip-size.git (gzip-size), https://github.com/sindresorhus/has-flag.git (has-flag), https://github.com/sindresorhus/import-fresh.git (import-fresh), https://github.com/sindresorhus/import-local.git (import-local), https://github.com/sindresorhus/internal-ip.git (internal-ip), https://github.com/sindresorhus/invert-kv.git (invert-kv), https://github.com/sindresorhus/is-blob.git (is-blob), https://github.com/sindresorhus/is-generator-fn.git (is-generator-fn), https://github.com/sindresorhus/is-root.git (is-root), https://github.com/sindresorhus/is-svg.git (is-svg), https://github.com/sindresorhus/lcid.git (lcid), https://github.com/sindresorhus/leven.git (leven), https://github.com/sindresorhus/locate-path.git (locate-path), https://github.com/sindresorhus/make-dir.git (make-dir), https://github.com/sindresorhus/mem.git (mem), https://github.com/sindresorhus/mimic-fn.git (mimic-fn), https://github.com/sindresorhus/normalize-url.git (normalize-url), https://github.com/sindresorhus/open.git (open), https://github.com/sindresorhus/opn.git (opn), https://github.com/sindresorhus/os-locale.git (os-locale), https://github.com/sindresorhus/p-is-promise.git (p-is-promise), https://github.com/sindresorhus/p-limit.git (p-limit), https://github.com/sindresorhus/p-locate.git (p-locate), https://github.com/sindresorhus/p-map.git (p-map), https://github.com/sindresorhus/p-try.git (p-try), https://github.com/sindresorhus/parent-module.git (parent-module), https://github.com/sindresorhus/parse-json.git (parse-json), https://github.com/sindresorhus/path-type.git (path-type), https://github.com/sindresorhus/pify.git (pify), https://github.com/sindresorhus/pkg-dir.git (pkg-dir), https://github.com/sindresorhus/pretty-bytes.git (pretty-bytes), https://github.com/sindresorhus/read-pkg.git (read-pkg), https://github.com/sindresorhus/read-pkg-up.git (read-pkg-up), https://github.com/sindresorhus/resolve-from.git (resolve-from), https://github.com/sindresorhus/slash.git (slash), https://github.com/sindresorhus/string-length.git (string-length), https://github.com/sindresorhus/string-width.git (string-width), https://github.com/chalk/strip-ansi.git (strip-ansi), https://github.com/sindresorhus/strip-json-comments.git (strip-json-comments), https://github.com/chalk/supports-color.git (supports-color), https://github.com/chalk/wrap-ansi.git (wrap-ansi). This software contains the following license and notice below:
+The following software may be included in this product: ansi-escapes, ansi-regex, ansi-styles, binary-extensions, callsites, camelcase, chalk, decamelize, del, execa, find-up, get-stream, globals, globby, gzip-size, has-flag, import-fresh, import-local, internal-ip, invert-kv, is-blob, is-fullwidth-code-point, is-generator-fn, is-root, is-svg, lcid, leven, locate-path, make-dir, mem, mimic-fn, normalize-url, open, opn, os-locale, p-is-promise, p-limit, p-locate, p-map, p-try, parent-module, parse-json, path-exists, path-type, pify, pkg-dir, pretty-bytes, read-pkg, read-pkg-up, resolve-from, slash, string-length, string-width, strip-ansi, strip-json-comments, supports-color, wrap-ansi. A copy of the source code may be downloaded from https://github.com/sindresorhus/ansi-escapes.git (ansi-escapes), https://github.com/chalk/ansi-regex.git (ansi-regex), https://github.com/chalk/ansi-styles.git (ansi-styles), https://github.com/sindresorhus/binary-extensions.git (binary-extensions), https://github.com/sindresorhus/callsites.git (callsites), https://github.com/sindresorhus/camelcase.git (camelcase), https://github.com/chalk/chalk.git (chalk), https://github.com/sindresorhus/decamelize.git (decamelize), https://github.com/sindresorhus/del.git (del), https://github.com/sindresorhus/execa.git (execa), https://github.com/sindresorhus/find-up.git (find-up), https://github.com/sindresorhus/get-stream.git (get-stream), https://github.com/sindresorhus/globals.git (globals), https://github.com/sindresorhus/globby.git (globby), https://github.com/sindresorhus/gzip-size.git (gzip-size), https://github.com/sindresorhus/has-flag.git (has-flag), https://github.com/sindresorhus/import-fresh.git (import-fresh), https://github.com/sindresorhus/import-local.git (import-local), https://github.com/sindresorhus/internal-ip.git (internal-ip), https://github.com/sindresorhus/invert-kv.git (invert-kv), https://github.com/sindresorhus/is-blob.git (is-blob), https://github.com/sindresorhus/is-fullwidth-code-point.git (is-fullwidth-code-point), https://github.com/sindresorhus/is-generator-fn.git (is-generator-fn), https://github.com/sindresorhus/is-root.git (is-root), https://github.com/sindresorhus/is-svg.git (is-svg), https://github.com/sindresorhus/lcid.git (lcid), https://github.com/sindresorhus/leven.git (leven), https://github.com/sindresorhus/locate-path.git (locate-path), https://github.com/sindresorhus/make-dir.git (make-dir), https://github.com/sindresorhus/mem.git (mem), https://github.com/sindresorhus/mimic-fn.git (mimic-fn), https://github.com/sindresorhus/normalize-url.git (normalize-url), https://github.com/sindresorhus/open.git (open), https://github.com/sindresorhus/opn.git (opn), https://github.com/sindresorhus/os-locale.git (os-locale), https://github.com/sindresorhus/p-is-promise.git (p-is-promise), https://github.com/sindresorhus/p-limit.git (p-limit), https://github.com/sindresorhus/p-locate.git (p-locate), https://github.com/sindresorhus/p-map.git (p-map), https://github.com/sindresorhus/p-try.git (p-try), https://github.com/sindresorhus/parent-module.git (parent-module), https://github.com/sindresorhus/parse-json.git (parse-json), https://github.com/sindresorhus/path-exists.git (path-exists), https://github.com/sindresorhus/path-type.git (path-type), https://github.com/sindresorhus/pify.git (pify), https://github.com/sindresorhus/pkg-dir.git (pkg-dir), https://github.com/sindresorhus/pretty-bytes.git (pretty-bytes), https://github.com/sindresorhus/read-pkg.git (read-pkg), https://github.com/sindresorhus/read-pkg-up.git (read-pkg-up), https://github.com/sindresorhus/resolve-from.git (resolve-from), https://github.com/sindresorhus/slash.git (slash), https://github.com/sindresorhus/string-length.git (string-length), https://github.com/sindresorhus/string-width.git (string-width), https://github.com/chalk/strip-ansi.git (strip-ansi), https://github.com/sindresorhus/strip-json-comments.git (strip-json-comments), https://github.com/chalk/supports-color.git (supports-color), https://github.com/chalk/wrap-ansi.git (wrap-ansi). This software contains the following license and notice below:
 
 MIT License
 
@@ -7639,6 +7639,65 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 -----
 
+The following software may be included in this product: d3-geo-projection. A copy of the source code may be downloaded from https://github.com/d3/d3-geo-projection.git. This software contains the following license and notice below:
+
+Copyright 2013-2016 Mike Bostock
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+* Neither the name of the author nor the names of contributors may be used to
+  endorse or promote products derived from this software without specific prior
+  written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+
+
+MIT License for https://github.com/scijs/integrate-adaptive-simpson
+
+The MIT License (MIT)
+
+Copyright (c) 2015 Ricky Reusser
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+-----
+
 The following software may be included in this product: d3-graphviz. A copy of the source code may be downloaded from https://github.com/magjac/d3-graphviz.git. This software contains the following license and notice below:
 
 Copyright 2017, Magnus Jacobsson
@@ -10339,6 +10398,32 @@ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
 CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+-----
+
+The following software may be included in this product: fast-json-stable-stringify. A copy of the source code may be downloaded from git://github.com/epoberezkin/fast-json-stable-stringify.git. This software contains the following license and notice below:
+
+This software is released under the MIT license:
+
+Copyright (c) 2017 Evgeny Poberezkin
+Copyright (c) 2013 James Halliday
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 -----
 
@@ -17421,7 +17506,7 @@ The following software may be included in this product: plotly.js. A copy of the
 
 The MIT License (MIT)
 
-Copyright (c) 2019 Plotly, Inc
+Copyright (c) 2020 Plotly, Inc
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22182,6 +22267,24 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 -----
 
+The following software may be included in this product: topojson-client. A copy of the source code may be downloaded from https://github.com/topojson/topojson-client.git. This software contains the following license and notice below:
+
+Copyright 2012-2019 Michael Bostock
+
+Permission to use, copy, modify, and/or distribute this software for any purpose
+with or without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.
+
+-----
+
 The following software may be included in this product: tough-cookie. A copy of the source code may be downloaded from git://github.com/salesforce/tough-cookie.git. This software contains the following license and notice below:
 
 Copyright (c) 2015, Salesforce.com, Inc.
@@ -23135,7 +23238,7 @@ SOFTWARE.
 
 -----
 
-The following software may be included in this product: vega, vega-canvas, vega-dataflow, vega-encode, vega-event-selector, vega-expression, vega-force, vega-functions, vega-geo, vega-hierarchy, vega-loader, vega-parser, vega-projection, vega-regression, vega-runtime, vega-scale, vega-scenegraph, vega-selections, vega-statistics, vega-transforms, vega-typings, vega-util, vega-view, vega-view-transforms, vega-voronoi, vega-wordcloud. A copy of the source code may be downloaded from https://github.com/vega/vega.git (vega), https://github.com/vega/vega.git (vega-canvas), https://github.com/vega/vega.git (vega-dataflow), https://github.com/vega/vega.git (vega-encode), https://github.com/vega/vega.git (vega-event-selector), https://github.com/vega/vega.git (vega-expression), https://github.com/vega/vega.git (vega-force), https://github.com/vega/vega.git (vega-functions), https://github.com/vega/vega.git (vega-geo), https://github.com/vega/vega.git (vega-hierarchy), https://github.com/vega/vega.git (vega-loader), https://github.com/vega/vega.git (vega-parser), https://github.com/vega/vega.git (vega-projection), https://github.com/vega/vega.git (vega-regression), https://github.com/vega/vega.git (vega-runtime), https://github.com/vega/vega.git (vega-scale), https://github.com/vega/vega.git (vega-scenegraph), https://github.com/vega/vega.git (vega-selections), https://github.com/vega/vega.git (vega-statistics), https://github.com/vega/vega.git (vega-transforms), https://github.com/vega/vega.git (vega-typings), https://github.com/vega/vega.git (vega-util), https://github.com/vega/vega.git (vega-view), https://github.com/vega/vega.git (vega-view-transforms), https://github.com/vega/vega.git (vega-voronoi), https://github.com/vega/vega.git (vega-wordcloud). This software contains the following license and notice below:
+The following software may be included in this product: vega, vega-canvas, vega-dataflow, vega-encode, vega-event-selector, vega-expression, vega-force, vega-functions, vega-geo, vega-hierarchy, vega-loader, vega-parser, vega-projection, vega-regression, vega-runtime, vega-scale, vega-scenegraph, vega-selections, vega-statistics, vega-time, vega-transforms, vega-typings, vega-util, vega-view, vega-view-transforms, vega-voronoi, vega-wordcloud. A copy of the source code may be downloaded from https://github.com/vega/vega.git (vega), https://github.com/vega/vega.git (vega-canvas), https://github.com/vega/vega.git (vega-dataflow), https://github.com/vega/vega.git (vega-encode), https://github.com/vega/vega.git (vega-event-selector), https://github.com/vega/vega.git (vega-expression), https://github.com/vega/vega.git (vega-force), https://github.com/vega/vega.git (vega-functions), https://github.com/vega/vega.git (vega-geo), https://github.com/vega/vega.git (vega-hierarchy), https://github.com/vega/vega.git (vega-loader), https://github.com/vega/vega.git (vega-parser), https://github.com/vega/vega.git (vega-projection), https://github.com/vega/vega.git (vega-regression), https://github.com/vega/vega.git (vega-runtime), https://github.com/vega/vega.git (vega-scale), https://github.com/vega/vega.git (vega-scenegraph), https://github.com/vega/vega.git (vega-selections), https://github.com/vega/vega.git (vega-statistics), https://github.com/vega/vega.git (vega-time), https://github.com/vega/vega.git (vega-transforms), https://github.com/vega/vega.git (vega-typings), https://github.com/vega/vega.git (vega-util), https://github.com/vega/vega.git (vega-view), https://github.com/vega/vega.git (vega-view-transforms), https://github.com/vega/vega.git (vega-voronoi), https://github.com/vega/vega.git (vega-wordcloud). This software contains the following license and notice below:
 
 Copyright (c) 2015-2018, University of Washington Interactive Data Lab
 All rights reserved.
