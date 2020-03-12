@@ -16,8 +16,8 @@
  */
 
 import React from "react"
-import { embed as BokehEmbed } from "bokehjs"
 import { Map as ImmutableMap } from "immutable"
+import { embed as BokehEmbed } from "@bokeh/bokehjs"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 
 interface Props {
