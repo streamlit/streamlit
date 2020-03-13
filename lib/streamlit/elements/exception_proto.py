@@ -179,10 +179,6 @@ def _get_stack_trace(
         extracted_traceback = traceback.extract_tb(exception_traceback)
 
     # Format the extracted traceback and add it to the protobuf element.
-    stack_trace = [
-        "Cannot extract the stack trace for this exception. "
-        "Try calling exception() within the `catch` block."
-    ]
     if strip_streamlit_stack_entries:
         extracted_frames = [
             frame
