@@ -23,6 +23,12 @@ describe("reuse widget label", () => {
   });
 
   it("reuses a widget label for different widget types", () => {
+    cy.get('.stSlider [role="slider"]').should("not.exist");
+
+    cy.get(".stSelectbox").should("exist");
+
+    cy.get(".stButton button").click();
+
     cy.get('.stSlider [role="slider"]').should("exist");
 
     cy.get(".stSelectbox").should("not.exist");
