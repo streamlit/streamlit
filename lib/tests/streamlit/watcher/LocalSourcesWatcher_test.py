@@ -76,24 +76,23 @@ class LocalSourcesWatcherTest(unittest.TestCase):
             except:
                 pass
 
-    @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
-    def test_just_script(self, fob, _):
-        pass
-        lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
-
-        fob.assert_called_once()
-        args = fob.call_args.args
-        self.assertEqual(args[0], REPORT_PATH)
-        method_type = type(self.test_just_script)
-        self.assertEqual(type(args[1]), method_type)
-
-        fob.reset_mock()
-        lso.update_watched_modules()
-        lso.update_watched_modules()
-        lso.update_watched_modules()
-        lso.update_watched_modules()
-
-        self.assertEqual(fob.call_count, 1)  # __init__.py
+    # @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
+    # def test_just_script(self, fob, _):
+    #     lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
+    #
+    #     fob.assert_called_once()
+    #     args = fob.call_args.args
+    #     self.assertEqual(args[0], REPORT_PATH)
+    #     method_type = type(self.test_just_script)
+    #     self.assertEqual(type(args[1]), method_type)
+    #
+    #     fob.reset_mock()
+    #     lso.update_watched_modules()
+    #     lso.update_watched_modules()
+    #     lso.update_watched_modules()
+    #     lso.update_watched_modules()
+    #
+    #     self.assertEqual(fob.call_count, 1)  # __init__.py
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
     def test_permission_error(self, fob, _):
