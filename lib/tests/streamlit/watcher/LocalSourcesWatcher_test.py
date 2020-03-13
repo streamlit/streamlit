@@ -78,6 +78,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
     def test_just_script(self, fob, _):
+        pass
         lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
 
         fob.assert_called_once()
