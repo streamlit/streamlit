@@ -77,7 +77,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
                 pass
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
-    def test_just_script(self, fob, _):
+    def off_test_just_script(self, fob, _):
         lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
 
         fob.assert_called_once()
@@ -100,7 +100,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
-    def test_script_and_2_modules_at_once(self, fob, _):
+    def off_test_script_and_2_modules_at_once(self, fob, _):
         lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
 
         fob.assert_called_once()
@@ -132,7 +132,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         self.assertEqual(fob.call_count, 0)
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
-    def test_script_and_2_modules_in_series(self, fob, _):
+    def off_test_script_and_2_modules_in_series(self, fob, _):
         lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
 
         fob.assert_called_once()
