@@ -493,7 +493,7 @@ jobs:
                 name: Cypress
                 command: |
                   cd frontend
-                  yarn run cy:serve-and-run-flaky
+                  yarn run cy:serve-and-run-all-flaky
 
       - unless:
           condition: << parameters.flaky >>
