@@ -24,4 +24,8 @@ describe("st.empty", () => {
     // Make the ribbon decoration line disappear
     cy.get(".decoration").invoke("css", "display", "none");
   });
+
+  it("matches the snapshot", () => {
+    cy.get(".block-container").matchImageSnapshot("stEmpty");
+  });
 });
