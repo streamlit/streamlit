@@ -124,7 +124,7 @@ commands:
             else
               echo 'Virtualenv already exists, not creating'
             fi
-            echo "source $PWD/venv/bin/activate" >> $BASH_ENV
+            echo 'source venv/bin/activate' >> $BASH_ENV
 
       - run: &generate_protobufs
           name: Generate protobufs
