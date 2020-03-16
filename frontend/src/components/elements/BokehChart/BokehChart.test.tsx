@@ -30,7 +30,7 @@ const mockBokehEmbed = {
   },
 }
 
-jest.mock("bokehjs", () => mockBokehEmbed)
+jest.mock("@bokeh/bokehjs", () => mockBokehEmbed)
 
 const BokehChart = require("./BokehChart").BokehChart
 
