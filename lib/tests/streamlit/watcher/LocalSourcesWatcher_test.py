@@ -76,6 +76,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
             except:
                 pass
 
+    # TODO re-enable
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
     def off_test_just_script(self, fob, _):
         lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
