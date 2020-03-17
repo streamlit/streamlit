@@ -230,11 +230,23 @@ def _key(obj):
     return NoResult
 
 
+def _get_fqn_of_type(the_type):
+    """Get module.type_name for a given type."""
+    module = the_type.__module__
+    name = the_type.__name__
+    return "%s.%s" % (module, name)
+
+
 class _CodeHasher:
     """A hasher that can hash code objects including dependencies."""
 
     def __init__(self, hash_funcs=None):
-        self._hash_funcs = hash_funcs or {}
+        if hash_funcs:
+            self._hash_funcs = {
+                _get_fqn_of_type(k): v for k,v in hash_funcs.items()
+            }
+        else:
+            self._hash_funcs = {}
 
         self._hashes = {}
 
@@ -319,9 +331,9 @@ class _CodeHasher:
         elif isinstance(obj, bytes) or isinstance(obj, bytearray):
             return obj
 
-        elif type(obj) in self._hash_funcs:
+        elif type_util.get_fqn_type(obj) in self._hash_funcs:
             # Escape hatch for unsupported objects
-            hash_func = self._hash_funcs[type(obj)]
+            hash_func = self._hash_funcs[type_util.get_fqn_type(obj)]
             try:
                 output = hash_func(obj)
             except BaseException as e:
