@@ -242,9 +242,7 @@ class _CodeHasher:
 
     def __init__(self, hash_funcs=None):
         if hash_funcs:
-            self._hash_funcs = {
-                _get_fqn_of_type(k): v for k,v in hash_funcs.items()
-            }
+            self._hash_funcs = {_get_fqn_of_type(k): v for k, v in hash_funcs.items()}
         else:
             self._hash_funcs = {}
 
