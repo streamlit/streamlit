@@ -83,7 +83,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         fob.assert_called_once()
         args = fob.call_args.args
         self.assertEqual(args[0], REPORT_PATH)
-        method_type = type(self.test_just_script)
+        method_type = type(self.setUp)
         self.assertEqual(type(args[1]), method_type)
 
         fob.reset_mock()
@@ -113,7 +113,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         self.assertEqual(fob.call_count, 3)  # dummy modules and __init__.py
 
-        method_type = type(self.test_just_script)
+        method_type = type(self.setUp)
 
         call_args_list = sort_args_list(fob.call_args_list)
 
@@ -144,7 +144,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         self.assertEqual(fob.call_count, 2)  # dummy module and __init__.py
 
-        method_type = type(self.test_just_script)
+        method_type = type(self.setUp)
 
         call_args_list = sort_args_list(fob.call_args_list)
 
