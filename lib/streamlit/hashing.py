@@ -25,6 +25,7 @@ import inspect
 import io
 import os
 import pickle
+import re
 import sys
 import tempfile
 import textwrap
@@ -404,6 +405,12 @@ class _CodeHasher:
             self.update(h, obj_name)
             self.update(h, os.path.getmtime(obj_name))
             self.update(h, obj.tell())
+            return h.digest()
+
+        elif isinstance(obj, re.Pattern):
+            h = hashlib.new("md5")
+            self.update(h, obj.pattern)
+            self.update(h, obj.flags)
             return h.digest()
 
         elif isinstance(obj, io.StringIO) or isinstance(obj, io.BytesIO):
