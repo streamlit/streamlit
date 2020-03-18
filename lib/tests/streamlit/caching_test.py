@@ -17,6 +17,7 @@
 import threading
 import unittest
 import pytest
+import types
 
 from mock import patch
 
@@ -524,6 +525,26 @@ Object of type _thread.lock:
         # self.assertNotEqual(len(ep.stack_trace), 0)
         self.assertEqual(ep.message_is_markdown, True)
         self.assertEqual(ep.is_warning, False)
+
+
+    def test_hash_funcs_acceptable_keys(self):
+        @st.cache
+        def unhashable_type_func():
+            return (x for x in range(1))
+
+        @st.cache(hash_funcs={types.GeneratorType: id})
+        def hf_key_as_type():
+            return (x for x in range(1))
+
+        @st.cache(hash_funcs={"builtins.generator": id})
+        def hf_key_as_str():
+            return (x for x in range(1))
+
+        with self.assertRaises(hashing.UnhashableTypeError) as cm:
+            unhashable_type_func()
+
+        self.assertEqual(list(hf_key_as_type()), list(hf_key_as_str()))
+
 
     def test_user_hash_error(self):
         class MyObj(object):
