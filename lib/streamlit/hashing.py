@@ -247,7 +247,10 @@ class _CodeHasher:
         # See LocalSourcesWatcher.py:on_file_changed
         # This causes type comparisons to fail, however the fqn is the same.
         if hash_funcs:
-            self._hash_funcs = {k if isinstance(k, str) else _get_fqn_of_type(k): v for k, v in hash_funcs.items()}
+            self._hash_funcs = {
+                k if isinstance(k, str) else _get_fqn_of_type(k): v
+                for k, v in hash_funcs.items()
+            }
         else:
             self._hash_funcs = {}
 
