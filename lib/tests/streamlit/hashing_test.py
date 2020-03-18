@@ -16,6 +16,7 @@
 """st.hashing unit tests."""
 
 import functools
+import hashlib
 import os
 import re
 import sys
@@ -23,6 +24,8 @@ import tempfile
 import time
 import types
 import unittest
+from io import BytesIO
+from io import StringIO
 
 import altair.vegalite.v3
 import numpy as np
@@ -35,10 +38,14 @@ try:
 except ImportError:
     pass
 
-import streamlit as st
-from streamlit.errors import UnhashableType, UserHashError, InternalHashError
+from streamlit.hashing import InternalHashError
+from streamlit.hashing import UnhashableTypeError
+from streamlit.hashing import UserHashError
+from streamlit.hashing import _CodeHasher
+from streamlit.hashing import _NP_SIZE_LARGE
+from streamlit.hashing import _PANDAS_ROWS_LARGE
 from streamlit.util import functools_wraps
-from streamlit.hashing import NP_SIZE_LARGE, PANDAS_ROWS_LARGE, CodeHasher
+import streamlit as st
 
 from tests import testutil
 
@@ -46,10 +53,11 @@ get_main_script_director = MagicMock(return_value=os.getcwd())
 
 # Get code hasher and mock the main script directory.
 def get_hash(f, context=None, hash_funcs=None):
-    hasher = CodeHasher("md5", hash_funcs=hash_funcs)
-    hasher._get_main_script_directory = MagicMock()
-    hasher._get_main_script_directory.return_value = os.getcwd()
-    hasher.update(f, context)
+    hasher = hashlib.new("md5")
+    ch = _CodeHasher(hash_funcs=hash_funcs)
+    ch._get_main_script_directory = MagicMock()
+    ch._get_main_script_directory.return_value = os.getcwd()
+    ch.update(hasher, f, context)
     return hasher.digest()
 
 
@@ -77,17 +85,6 @@ class HashTest(unittest.TestCase):
         b.append(b)
         self.assertEqual(get_hash(a), get_hash(b))
 
-    def test_dict(self):
-        d1 = {"cat": "hat"}
-        d2 = {"things": [1, 2]}
-
-        self.assertEqual(get_hash(d1), get_hash(d1))
-        self.assertNotEqual(get_hash(d1), get_hash(d2))
-
-        # test that we can hash self-referencing dictionaries
-        d2 = {"book": d1}
-        self.assertNotEqual(get_hash(d2), get_hash(d1))
-
     def test_tuple(self):
         self.assertEqual(get_hash((1, 2)), get_hash((1, 2)))
         self.assertNotEqual(get_hash((1, 2)), get_hash((2, 2)))
@@ -101,9 +98,20 @@ class HashTest(unittest.TestCase):
         self.assertNotEqual(get_hash({1: 1}), get_hash({1: 2}))
         self.assertNotEqual(get_hash({1: 1}), get_hash([(1, 1)]))
 
-        with self.assertRaises(UnhashableType):
+        with self.assertRaises(UnhashableTypeError):
             get_hash(dict_gen)
         get_hash(dict_gen, hash_funcs={types.GeneratorType: id})
+
+    def test_self_reference_dict(self):
+        d1 = {"cat": "hat"}
+        d2 = {"things": [1, 2]}
+
+        self.assertEqual(get_hash(d1), get_hash(d1))
+        self.assertNotEqual(get_hash(d1), get_hash(d2))
+
+        # test that we can hash self-referencing dictionaries
+        d2 = {"book": d1}
+        self.assertNotEqual(get_hash(d2), get_hash(d1))
 
     def test_reduce_(self):
         class A(object):
@@ -122,12 +130,12 @@ class HashTest(unittest.TestCase):
         self.assertNotEqual(get_hash(A()), get_hash(B()))
         self.assertNotEqual(get_hash(A()), get_hash(A().__reduce__()))
 
-        with self.assertRaises(UnhashableType):
+        with self.assertRaises(UnhashableTypeError):
             get_hash(C())
         get_hash(C(), hash_funcs={types.GeneratorType: id})
 
     def test_generator(self):
-        with self.assertRaises(UnhashableType):
+        with self.assertRaises(UnhashableTypeError):
             get_hash((x for x in range(1)))
 
     def test_hashing_broken_code(self):
@@ -155,7 +163,7 @@ class HashTest(unittest.TestCase):
 
             exc = str(ctx.exception)
             self.assertEqual(exc.find(exc_msg) >= 0, True)
-            self.assertNotEqual(re.search(r"Error in `.+` near line `\d+`", exc), None)
+            self.assertNotEqual(re.search(r"a bug in `.+` near line `\d+`", exc), None)
             self.assertEqual(exc.find(code_msg) >= 0, True)
 
     def test_hash_funcs_error(self):
@@ -196,8 +204,8 @@ class HashTest(unittest.TestCase):
         self.assertEqual(get_hash(df1), get_hash(df3))
         self.assertNotEqual(get_hash(df1), get_hash(df2))
 
-        df4 = pd.DataFrame(np.zeros((PANDAS_ROWS_LARGE, 4)), columns=list("ABCD"))
-        df5 = pd.DataFrame(np.zeros((PANDAS_ROWS_LARGE, 4)), columns=list("ABCD"))
+        df4 = pd.DataFrame(np.zeros((_PANDAS_ROWS_LARGE, 4)), columns=list("ABCD"))
+        df5 = pd.DataFrame(np.zeros((_PANDAS_ROWS_LARGE, 4)), columns=list("ABCD"))
 
         self.assertEqual(get_hash(df4), get_hash(df5))
 
@@ -209,8 +217,8 @@ class HashTest(unittest.TestCase):
         self.assertEqual(get_hash(series1), get_hash(series3))
         self.assertNotEqual(get_hash(series1), get_hash(series2))
 
-        series4 = pd.Series(range(PANDAS_ROWS_LARGE))
-        series5 = pd.Series(range(PANDAS_ROWS_LARGE))
+        series4 = pd.Series(range(_PANDAS_ROWS_LARGE))
+        series5 = pd.Series(range(_PANDAS_ROWS_LARGE))
 
         self.assertEqual(get_hash(series4), get_hash(series5))
 
@@ -222,10 +230,35 @@ class HashTest(unittest.TestCase):
         self.assertEqual(get_hash(np1), get_hash(np3))
         self.assertNotEqual(get_hash(np1), get_hash(np2))
 
-        np4 = np.zeros(NP_SIZE_LARGE)
-        np5 = np.zeros(NP_SIZE_LARGE)
+        np4 = np.zeros(_NP_SIZE_LARGE)
+        np5 = np.zeros(_NP_SIZE_LARGE)
 
         self.assertEqual(get_hash(np4), get_hash(np5))
+
+    def test_io(self):
+        b1 = BytesIO(b"123")
+        b2 = BytesIO(b"456")
+        b3 = BytesIO(b"123")
+
+        self.assertEqual(get_hash(b1), get_hash(b3))
+        self.assertNotEqual(get_hash(b1), get_hash(b2))
+
+        # Changing the stream position should change the hash
+        b1.seek(1)
+        b3.seek(0)
+        self.assertNotEqual(get_hash(b1), get_hash(b3))
+
+        s1 = StringIO("123")
+        s2 = StringIO("456")
+        s3 = StringIO("123")
+
+        self.assertEqual(get_hash(s1), get_hash(s3))
+        self.assertNotEqual(get_hash(s1), get_hash(s2))
+
+        # Changing the stream position should change the hash
+        s1.seek(1)
+        s3.seek(0)
+        self.assertNotEqual(get_hash(s1), get_hash(s3))
 
     def test_partial(self):
         p1 = functools.partial(int, base=2)
@@ -278,7 +311,7 @@ class HashTest(unittest.TestCase):
         tf_session_class = type(tf_session)
 
         # Unhashable object raises an error
-        with self.assertRaises(UnhashableType):
+        with self.assertRaises(UnhashableTypeError):
             get_hash(tf_session)
 
         id_hash_func = {tf_session_class: id}
@@ -300,17 +333,6 @@ class HashTest(unittest.TestCase):
 
         hash_funcs = {int: lambda x: "hello"}
         self.assertNotEqual(get_hash(1), get_hash(1, hash_funcs=hash_funcs))
-
-    def test_multiple_hash_funcs(self):
-        """Test that the output of a user provided hash function will be hashed
-        by another user provided hash function if appropriate
-        """
-
-        hash_funcs = {list: len, int: str}
-
-        self.assertEqual(
-            get_hash([], hash_funcs=hash_funcs), get_hash(0, hash_funcs=hash_funcs)
-        )
 
 
 class CodeHashTest(unittest.TestCase):
@@ -584,7 +606,6 @@ class CodeHashTest(unittest.TestCase):
         self.assertNotEqual(hash_prog_1(), hash_prog_2())
         self.assertEqual(hash_prog_1(), hash_prog_3())
 
-    @pytest.mark.skipif(sys.version_info < (3,), reason="Requires Python 3.")
     def test_class_referenced(self):
         """Test hash for classes with methods that reference values."""
 
@@ -750,11 +771,8 @@ class CodeHashTest(unittest.TestCase):
         def g(y):
             return tf_session
 
-        # Function with unhashable object raises an error in python 3
-        # In python 2 we fallback to hashing the function name
-        if sys.version_info >= (3, 0):
-            with self.assertRaises(UnhashableType):
-                get_hash(f)
+        with self.assertRaises(UnhashableTypeError):
+            get_hash(f)
 
         hash_funcs = {tf_session_class: id}
 

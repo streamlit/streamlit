@@ -212,7 +212,7 @@ class Server(object):
         self._set_state(State.INITIAL)
         self._message_cache = ForwardMsgCache()
         self._uploaded_file_mgr = UploadedFileManager()
-        self._uploaded_file_mgr.on_file_added.connect(self._on_file_uploaded)
+        self._uploaded_file_mgr.on_files_added.connect(self._on_file_uploaded)
         self._report = None  # type: Optional[Report]
 
     def _on_file_uploaded(self, file):
@@ -233,7 +233,7 @@ class Server(object):
         else:
             # If an uploaded file doesn't belong to an existing session,
             # remove it so it doesn't stick around forever.
-            self._uploaded_file_mgr.remove_file(file.session_id, file.widget_id)
+            self._uploaded_file_mgr.remove_files(file.session_id, file.widget_id)
 
     def _get_session_info(self, session_id):
         """Return the SessionInfo with the given id, or None if no such
