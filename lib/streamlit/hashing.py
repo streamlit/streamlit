@@ -32,7 +32,7 @@ import textwrap
 import threading
 import weakref
 import types
-from typing import Any, List
+from typing import Any, List, Pattern
 
 from streamlit import config
 from streamlit import file_util
@@ -407,7 +407,7 @@ class _CodeHasher:
             self.update(h, obj.tell())
             return h.digest()
 
-        elif isinstance(obj, re.Pattern):
+        elif isinstance(obj, Pattern):
             h = hashlib.new("md5")
             self.update(h, obj.pattern)
             self.update(h, obj.flags)
