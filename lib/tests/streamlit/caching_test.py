@@ -526,7 +526,6 @@ Object of type _thread.lock:
         self.assertEqual(ep.message_is_markdown, True)
         self.assertEqual(ep.is_warning, False)
 
-
     def test_hash_funcs_acceptable_keys(self):
         @st.cache
         def unhashable_type_func():
@@ -544,7 +543,6 @@ Object of type _thread.lock:
             unhashable_type_func()
 
         self.assertEqual(list(hf_key_as_type()), list(hf_key_as_str()))
-
 
     def test_user_hash_error(self):
         class MyObj(object):
