@@ -154,9 +154,9 @@ class VegaLiteChart extends React.PureComponent<PropsWithHeight, State> {
   private finalizeView = (): any => {
     if (this.vegaFinalizer) {
       this.vegaFinalizer()
-      this.vegaFinalizer = undefined
-      this.vegaView = undefined
     }
+    this.vegaFinalizer = undefined
+    this.vegaView = undefined
   }
 
   public async componentDidUpdate(prevProps: PropsWithHeight): Promise<void> {
