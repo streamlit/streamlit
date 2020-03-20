@@ -50,7 +50,10 @@ from streamlit.server.routes import MetricsHandler
 from streamlit.server.routes import StaticFileHandler
 from streamlit.server.server_util import MESSAGE_SIZE_LIMIT
 from streamlit.server.server_util import is_cacheable_msg
-from streamlit.server.server_util import is_url_from_allowed_origins
+from streamlit.server.server_util import (
+    is_url_from_allowed_origins,
+    check_if_cross_origin,
+)
 from streamlit.server.server_util import make_url_path_regex
 from streamlit.server.server_util import serialize_forward_msg
 
@@ -558,7 +561,10 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def check_origin(self, origin):
         """Set up CORS."""
-        return super().check_origin(origin) or is_url_from_allowed_origins(origin)
+        host = self.request.headers.get("Host")
+        return check_if_cross_origin(host, origin) or is_url_from_allowed_origins(
+            origin
+        )
 
     def open(self):
         self._session = self._server._create_report_session(self)

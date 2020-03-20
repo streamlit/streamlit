@@ -16,6 +16,8 @@
 """Server related utility functions"""
 
 from typing import Callable, List, Optional, Union
+from urllib.parse import urlparse
+import re
 
 from streamlit import config
 from streamlit import net_util
@@ -139,6 +141,37 @@ def is_url_from_allowed_origins(url):
             return True
 
     return False
+
+
+def check_if_cross_origin(host, origin):
+    """Return True if request is from same server.
+
+    Parameters
+    ----------
+    host : str
+        The host serving the resources
+
+    origin : str
+        The server request for the resources
+
+    Returns
+    -------
+    bool
+        if it's from same server
+
+    """
+    parsed_origin = urlparse(origin)
+    origin = parsed_origin.netloc
+    origin = origin.lower()
+
+    if origin == host:
+        return True
+
+    # in case even though it's hosted on same server, however proxying with ports
+    origin_server = re.split(":", origin)[0]
+    host_server = re.split(":", host)[0]
+
+    return origin_server == host_server
 
 
 def _get_server_address_if_manually_set() -> Optional[str]:
