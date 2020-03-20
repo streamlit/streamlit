@@ -15,10 +15,15 @@
  * limitations under the License.
  */
 
+jest.mock("@bokeh/bokehjs", () => ({
+  embed: jest.fn(),
+}))
+
 import React from "react"
 import ReactDOM from "react-dom"
 import { Map as ImmutableMap } from "immutable"
-import BokehChart from "./BokehChart"
+
+const BokehChart = require("./BokehChart").default
 
 describe("BokehChart element", () => {
   it("renders without crashing", () => {

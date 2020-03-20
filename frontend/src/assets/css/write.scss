@@ -77,12 +77,19 @@
 
     code,
     pre {
-      background: $white-a50;
+      background: $white-a25;
+      color: inherit;
 
       code,
       pre {
         background: none;
+        color: inherit;
       }
+    }
+
+    code {
+      background: transparent;
+      padding: 0;
     }
 
     a {

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +24,7 @@ from streamlit import magic
 from streamlit import source_util
 from streamlit.ReportThread import ReportThread
 from streamlit.ReportThread import get_report_ctx
+from streamlit.MediaFileManager import media_file_manager
 from streamlit.ScriptRequestQueue import ScriptRequest
 from streamlit.logger import get_logger
 from streamlit.widgets import Widgets
@@ -242,6 +242,7 @@ class ScriptRunner(object):
 
         LOGGER.debug("Running script %s", rerun_data)
 
+        media_file_manager.reset_files_for_session()
         # Reset DeltaGenerators and widgets.
         get_report_ctx().reset()
 

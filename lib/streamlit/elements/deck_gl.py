@@ -27,7 +27,7 @@ from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 
-def marshall(proto, spec=None, **kwargs):
+def marshall(proto, spec=None, use_container_width=False, **kwargs):
     """Marshall a proto with DeckGL chart info.
 
     See DeltaGenerator.deck_gl_chart for docs.
@@ -71,3 +71,4 @@ def marshall(proto, spec=None, **kwargs):
     # Dump JSON after removing DataFrames (see loop above), because DataFrames
     # are not JSON-serializable.
     proto.spec = json.dumps(spec)
+    proto.use_container_width = use_container_width

@@ -35,11 +35,6 @@ interface PropsWithHeight extends Props {
   height: number | undefined
 }
 
-interface Dimensions {
-  width: number
-  height: number
-}
-
 const DEFAULT_HEIGHT = 450
 
 class PlotlyChart extends React.PureComponent<PropsWithHeight> {
@@ -57,19 +52,18 @@ class PlotlyChart extends React.PureComponent<PropsWithHeight> {
     return <iframe title="Plotly" src={url} style={{ width, height }} />
   }
 
-  public generateSpec = (figure: ImmutableMap<string, any>): any => {
-    const el = this.props.element
-    const spec = JSON.parse(figure.get("spec"))
-    const useContainerWidth = JSON.parse(el.get("useContainerWidth"))
+  private isFullScreen = (): boolean => !!this.props.height
 
-    if (this.props.height) {
-      //fullscreen
-      spec.layout.width = this.props.width
-      spec.layout.height = this.props.height
-    } else {
-      if (useContainerWidth) {
-        spec.layout.width = this.props.width
-      }
+  private generateSpec = (figure: ImmutableMap<string, any>): any => {
+    const { element, height, width } = this.props
+    const spec = JSON.parse(figure.get("spec"))
+    const useContainerWidth = JSON.parse(element.get("useContainerWidth"))
+
+    if (this.isFullScreen()) {
+      spec.layout.width = width
+      spec.layout.height = height
+    } else if (useContainerWidth) {
+      spec.layout.width = width
     }
 
     return spec
@@ -78,16 +72,17 @@ class PlotlyChart extends React.PureComponent<PropsWithHeight> {
   private renderFigure = (
     figure: ImmutableMap<string, any>
   ): React.ReactNode => {
-    const spec = this.generateSpec(figure)
     const config = JSON.parse(figure.get("config"))
+    const { data, layout, frames } = this.generateSpec(figure)
 
     return (
       <Plot
+        key={this.isFullScreen() ? "fullscreen" : "original"}
         className="stPlotlyChart"
-        data={spec.data}
-        layout={spec.layout}
+        data={data}
+        layout={layout}
         config={config}
-        frames={spec.frames}
+        frames={frames}
       />
     )
   }

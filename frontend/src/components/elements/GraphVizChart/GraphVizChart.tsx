@@ -56,11 +56,14 @@ class GraphVizChart extends React.PureComponent<PropsWithHeight> {
   public getChartDimensions = (): Dimensions => {
     let width = this.originalWidth
     let height = this.originalHeight
+    const useContainerWidth = this.props.element.get("useContainerWidth")
 
     if (this.props.height) {
       //fullscreen
       width = this.props.width
       height = this.props.height
+    } else if (useContainerWidth) {
+      width = this.props.width
     }
     return { width, height }
   }
@@ -107,9 +110,14 @@ class GraphVizChart extends React.PureComponent<PropsWithHeight> {
   }
 
   public render = (): React.ReactNode => {
-    const width: number = this.props.element.get("width") || this.props.width
-    const height: number =
-      this.props.element.get("height") || this.props.height
+    const elementDimensions = this.getChartDimensions()
+    const width: number = elementDimensions.width
+      ? elementDimensions.width
+      : this.props.width
+    const height: number | undefined = elementDimensions.height
+      ? elementDimensions.height
+      : this.props.height
+
     return (
       <div
         className="graphviz stGraphVizChart"

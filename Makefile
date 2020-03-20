@@ -280,7 +280,13 @@ jsformat:
 .PHONY: jstest
 # Run JS unit tests.
 jstest:
+ifndef CIRCLECI
 	cd frontend; yarn run test
+else
+	# Use --runInBand on CircleCI, per
+	# https://jestjs.io/docs/en/troubleshooting#tests-are-extremely-slow-on-docker-andor-continuous-integration-ci-server
+	cd frontend; yarn run test --runInBand
+endif
 
 .PHONY: jscoverage
 # Run JS unit tests and generate a coverage report
