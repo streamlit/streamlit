@@ -8,9 +8,9 @@ from pipenv.project import Project
 from pipenv.utils import convert_deps_to_pip
 from setuptools.command.install import install
 
-VERSION = "0.56.0"  # PEP-440
+VERSION = "0.56.1.dev20200320"  # PEP-440
 
-NAME = "streamlit"
+NAME = "streamlit-nightly"
 
 pipfile = Project(chdir=False).parsed_pipfile
 
