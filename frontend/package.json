@@ -76,9 +76,9 @@
     "styletron-engine-atomic": "^1.4.1",
     "styletron-react": "^5.2.1",
     "typed-signals": "^1.0.5",
-    "vega": "^5.9.0",
-    "vega-embed": "^6.0.0",
-    "vega-lite": "^4.4.0",
+    "vega": "^5.10.0",
+    "vega-embed": "^6.5.1",
+    "vega-lite": "^4.7.0",
     "which-browser": "^0.5.1",
     "xxhashjs": "^0.2.2"
   },
