@@ -449,6 +449,7 @@ to suppress the warning.
 
         el = self.get_delta_from_queue(-1).new_element
         self.assertEqual(el.exception.type, "CachedObjectMutationWarning")
+
         self.assertEqual(
             normalize_md(el.exception.message),
             normalize_md(
@@ -575,12 +576,12 @@ user-defined hash function that was passed into the `@st.cache` decorator of
 `user_hash_error_func()`.
 
 `bad_hash_func()` failed when hashing an object of type
-`caching_test.MyObj`.  If you don't know where that object is coming from,
-try looking at the hash chain below for an object that you do recognize, then
-pass that to `hash_funcs` instead:
+`caching_test.CacheErrorsTest.test_user_hash_error.<locals>.MyObj`.  If you
+don't know where that object is coming from, try looking at the hash chain
+below for an object that you do recognize, then pass that to `hash_funcs` instead:
 
 ```
-Object of type caching_test.MyObj:
+Object of type caching_test.CacheErrorsTest.test_user_hash_error.<locals>.MyObj:
 <caching_test.CacheErrorsTest.test_user_hash_error.<locals>.MyObj object at
         """
                 )

@@ -233,7 +233,7 @@ def _key(obj):
 def _get_fqn_of_type(the_type):
     """Get module.type_name for a given type."""
     module = the_type.__module__
-    name = the_type.__name__
+    name = the_type.__qualname__
     return "%s.%s" % (module, name)
 
 
@@ -282,7 +282,7 @@ class _CodeHasher:
         try:
             # Turn these on for debugging.
             # _LOGGER.debug("About to hash: %s", obj)
-            tname = type(obj).__name__.encode()
+            tname = type(obj).__qualname__.encode()
             b = b"%s:%s" % (tname, self._to_bytes(obj, context))
             # _LOGGER.debug("Done hashing: %s", obj)
 

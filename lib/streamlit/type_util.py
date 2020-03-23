@@ -52,7 +52,7 @@ def get_fqn_type(obj):
     """Get module.type_name for a given object."""
     the_type = type(obj)
     module = the_type.__module__
-    name = the_type.__name__
+    name = the_type.__qualname__
     return "%s.%s" % (module, name)
 
 
