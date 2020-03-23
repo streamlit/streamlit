@@ -664,13 +664,13 @@ class _BetaNamespace(object):
 class _ExperimentalNamespace(object):
     """This namespace holds highly experimental Streamlit features.
 
-    "Experiment features" are features that we are still trying to understand.
-    If they are successful, they will at some point become part of core
-    Streamlit, by moving to the `st.beta` namespace and then core `st`. If
+    "Experimental features" are features that we are still trying to
+    understand.  If they are successful, they will at some point become part of
+    core Streamlit, by moving to the `st.beta` namespace and then core `st`. If
     unsuccessful, they may be removed.
 
     Why this exists: we used to provide several Github Gists that allowed
-    people to hack experimental features into Streamlit, but is was hard to
+    people to hack experimental features into Streamlit, but it was hard to
     guarantee that the Gists always worked when a new version of Streamlit came
     out. Our solution is to move all that code out of Gists and into
     `st.experimental` so we can run tests against them and provide at least
