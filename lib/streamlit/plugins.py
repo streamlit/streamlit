@@ -14,10 +14,21 @@
 # limitations under the License.
 
 import hashlib
+import json
+from typing import Callable
 from typing import Dict
 from typing import Optional
+from typing import Union
 
+import tornado.web
+
+import streamlit.server.routes
+from streamlit import StreamlitAPIException
+from streamlit.DeltaGenerator import DeltaGenerator
+from streamlit.DeltaGenerator import NoValue
+from streamlit.DeltaGenerator import _get_widget_ui_value
 from streamlit.logger import get_logger
+from streamlit.proto.Element_pb2 import Element
 
 LOGGER = get_logger(__name__)
 
@@ -25,9 +36,91 @@ LOGGER = get_logger(__name__)
 # - Allow multiple files to be registered in a single plugin
 # - Allow actual files to be registered, instead of just strings
 # - Add FileWatcher support, and emit a signal when a plugin is changed on disk
+# - Attach plugin functions to the DeltaGenerator class
+
+
+class MarshallPluginException(StreamlitAPIException):
+    pass
+
+
+def plugin(javascript: str) -> Callable[[DeltaGenerator, Dict], Optional[Dict]]:
+    """Register a new plugin, and return a function that can be used to
+    create an instance of it.
+    """
+
+    # Register this plugin with our global registry.
+    plugin_id = PluginRegistry.instance().register_plugin(javascript)
+
+    # Build our plugin function.
+    def plugin_instance(dg: DeltaGenerator, args: Dict) -> Optional[Dict]:
+        try:
+            args_json = json.dumps(args)
+        except BaseException as e:
+            raise MarshallPluginException("Could not convert plugin args to JSON", e)
+
+        def marshall_plugin(element: Element) -> Union[Dict, NoValue]:
+            element.plugin_instance.args_json = args_json
+            element.plugin_instance.plugin_id = plugin_id
+            widget_value = _get_widget_ui_value("plugin_instance", element)
+            if widget_value is not None:
+                try:
+                    widget_value = json.loads(widget_value)
+                except BaseException as e:
+                    raise MarshallPluginException("Could not not parse plugin JSON", e)
+
+            # Coerce None -> NoValue, which is what _enqueue_new_element_delta
+            # expects.
+            return widget_value if widget_value is not None else NoValue
+
+        return dg._enqueue_new_element_delta(
+            marshall_element=marshall_plugin, delta_type="plugin"
+        )
+
+    return plugin_instance
+
+
+class PluginRequestHandler(tornado.web.RequestHandler):
+    """Serves plugin files"""
+
+    @staticmethod
+    def get_url(file_id: str) -> str:
+        """Return the URL for a plugin file with the given ID."""
+        return "plugins/{}".format(file_id)
+
+    def initialize(self, registry: "PluginRegistry") -> None:
+        self._registry = registry
+
+    def get(self, filename: str) -> None:
+        LOGGER.debug("PluginFileManager: GET %s" % filename)
+        file = self._registry.get_plugin(filename)
+        if file is None:
+            self.write("%s not found" % filename)
+            self.set_status(404)
+            return
+
+        self.write(file)
+        self.set_header("Content-Type", "text/javascript")
+
+    def set_default_headers(self) -> None:
+        if streamlit.server.routes.allow_cross_origin_requests():
+            self.set_header("Access-Control-Allow-Origin", "*")
+
+    def options(self) -> None:
+        """/OPTIONS handler for preflight CORS checks."""
+        self.set_status(204)
+        self.finish()
 
 
 class PluginRegistry:
+    _instance = None  # type: Optional[PluginRegistry]
+
+    @classmethod
+    def instance(cls) -> "PluginRegistry":
+        """Returns the singleton PluginRegistry"""
+        if cls._instance is None:
+            cls._instance = PluginRegistry()
+        return cls._instance
+
     def __init__(self):
         self._plugins = {}  # type: Dict[str, str]
 
