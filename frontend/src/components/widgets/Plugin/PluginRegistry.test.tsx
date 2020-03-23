@@ -17,8 +17,8 @@
 
 import axios from "axios"
 import MockAdapter from "axios-mock-adapter"
-import { SessionInfo } from "../../../lib/SessionInfo"
-import { buildHttpUri } from "../../../lib/UriUtil"
+import { SessionInfo } from "lib/SessionInfo"
+import { buildHttpUri } from "lib/UriUtil"
 import { PluginRegistry } from "./PluginRegistry"
 
 const MOCK_SERVER_URI = {
