@@ -72,7 +72,7 @@ class MyCallback(keras.callbacks.Callback):
         if batch % 100 == 99:
             rows = {"loss": [logs["loss"]], "accuracy": [logs["accuracy"]]}
             self._summary_chart.add_rows(rows)
-        percent_complete = logs["batch"] * logs["size"] / self.params["samples"]
+        percent_complete = batch * logs.get("size", 0) / self.params["samples"]
         self._epoch_progress.progress(math.ceil(percent_complete * 100))
         ts = time.time() - self._ts
         self._epoch_summary.text(
