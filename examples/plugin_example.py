@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-javascript = "Hello, world!"
+javascript = "return 'Hello, world!'"
 
 my_plugin = st.plugin(javascript)
 

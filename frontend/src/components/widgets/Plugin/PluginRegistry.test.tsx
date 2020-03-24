@@ -31,6 +31,9 @@ const MOCK_PLUGIN_ENDPOINT = new RegExp(
   buildHttpUri(MOCK_SERVER_URI, "/plugin/*")
 )
 
+const GOOD_JAVASCRIPT = "function hello () { return 'Hello, world!'; }"
+const BAD_JAVASCRIPT = "this should not compile"
+
 describe("PluginRegistry", () => {
   let axiosMock: MockAdapter
 
@@ -54,26 +57,31 @@ describe("PluginRegistry", () => {
   })
 
   test("retrieves data from server", async () => {
-    const javascript = "some javascript!"
-
-    axiosMock.onGet(MOCK_PLUGIN_ENDPOINT).replyOnce(200, javascript)
+    axiosMock.onGet(MOCK_PLUGIN_ENDPOINT).replyOnce(200, GOOD_JAVASCRIPT)
 
     const registry = new PluginRegistry(() => MOCK_SERVER_URI)
-    await expect(registry.getPlugin("123")).resolves.toEqual(javascript)
+    await expect(registry.getPlugin("123")).resolves.toBeDefined()
     expect(axiosMock.history.get.length).toBe(1)
 
     // Call the function a second time. It should resolve, but we shouldn't
     // have any more calls to the server.
-    await expect(registry.getPlugin("123")).resolves.toEqual(javascript)
+    await expect(registry.getPlugin("123")).resolves.toBeDefined()
     expect(axiosMock.history.get.length).toBe(1)
   })
 
-  test("throws an error on missing data", async () => {
+  test("errors on missing data", async () => {
     axiosMock.onGet(MOCK_PLUGIN_ENDPOINT).replyOnce(404)
 
     const registry = new PluginRegistry(() => MOCK_SERVER_URI)
     await expect(registry.getPlugin("123")).rejects.toEqual(
       new Error("Request failed with status code 404")
     )
+  })
+
+  test("errors on bad javascript", async () => {
+    axiosMock.onGet(MOCK_PLUGIN_ENDPOINT).replyOnce(200, BAD_JAVASCRIPT)
+
+    const registry = new PluginRegistry(() => MOCK_SERVER_URI)
+    await expect(registry.getPlugin("123")).rejects.toBeInstanceOf(SyntaxError)
   })
 })

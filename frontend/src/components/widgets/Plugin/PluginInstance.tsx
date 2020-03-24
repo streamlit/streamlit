@@ -35,8 +35,8 @@ export interface Props {
 }
 
 export interface State {
-  pluginCode?: string
-  pluginCodeError?: Error
+  plugin?: Function
+  pluginError?: Error
 }
 
 export class PluginInstance extends React.PureComponent<Props, State> {
@@ -44,8 +44,8 @@ export class PluginInstance extends React.PureComponent<Props, State> {
     super(props)
 
     this.state = {
-      pluginCode: undefined,
-      pluginCodeError: undefined,
+      plugin: undefined,
+      pluginError: undefined,
     }
     this.initPlugin()
   }
@@ -54,24 +54,24 @@ export class PluginInstance extends React.PureComponent<Props, State> {
   private initPlugin = (): void => {
     this.props.registry
       .getPlugin(this.props.element.get("pluginId"))
-      .then(code => this.setState({ pluginCode: code }))
-      .catch(error => this.setState({ pluginCodeError: error }))
+      .then(plugin => this.setState({ plugin: plugin }))
+      .catch(error => this.setState({ pluginError: error }))
   }
 
   public render = (): JSX.Element => {
     // If we failed to download the plugin, show an error.
-    if (this.state.pluginCodeError != null) {
+    if (this.state.pluginError != null) {
       return (
         <ErrorElement
           width={this.props.width}
           name={"Error loading plugin"}
-          message={this.state.pluginCodeError.message}
+          message={this.state.pluginError.message}
         />
       )
     }
 
     // If we're retrieving our plugin, show a loading alert
-    if (this.state.pluginCode === undefined) {
+    if (this.state.plugin === undefined) {
       return (
         <Alert
           element={makeElementWithInfoText("Loading...").get("alert")}
@@ -104,7 +104,7 @@ export class PluginInstance extends React.PureComponent<Props, State> {
         <div className="json-text-container stJson" style={styleProp}>
           {args}
         </div>
-        <div>{this.state.pluginCode}</div>
+        <div>{this.state.plugin()}</div>
       </>
     )
   }

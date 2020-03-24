@@ -18,17 +18,29 @@
 import axios from "axios"
 import { BaseUriParts, buildHttpUri } from "lib/UriUtil"
 
+/**
+ * Compile a plugin's code. This does *not* execute that code.
+ * Throws a SyntaxError if the code isn't compilable.
+ */
+function compilePlugin(code: string): Function {
+  /* eslint-disable no-new-func */
+  return new Function(code)
+}
+
+/**
+ * Downloads and compiles plugins from the server.
+ */
 export class PluginRegistry {
   private readonly getServerUri: () => BaseUriParts | undefined
 
   // Plugin javascript by ID
-  private readonly plugins = new Map<string, Promise<string>>()
+  private readonly plugins = new Map<string, Promise<Function>>()
 
   public constructor(getServerUri: () => BaseUriParts | undefined) {
     this.getServerUri = getServerUri
   }
 
-  public getPlugin(id: string): Promise<string> {
+  public getPlugin(id: string): Promise<Function> {
     // Has the plugin already been registered?
     let pluginPromise = this.plugins.get(id)
     if (pluginPromise != null) {
@@ -43,6 +55,7 @@ export class PluginRegistry {
     pluginPromise = axios
       .get(buildHttpUri(serverURI, `plugin/${id}`))
       .then(rsp => rsp.data)
+      .then(data => compilePlugin(data))
 
     this.plugins.set(id, pluginPromise)
 
