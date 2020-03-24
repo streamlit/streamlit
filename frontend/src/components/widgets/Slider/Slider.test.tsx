@@ -43,11 +43,14 @@ const getProps = (elementProps: object = {}): Props => ({
   widgetMgr: new WidgetStateManager(sendBackMsg),
 })
 
-function timeout(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
-
 describe("Slider widget", () => {
+  jest.useFakeTimers()
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    jest.clearAllTimers()
+  })
+
   it("should show a label", () => {
     const props = getProps()
     const wrapper = shallow(<Slider {...props} />)
@@ -61,7 +64,7 @@ describe("Slider widget", () => {
     const wrapper = shallow(<Slider {...props} />)
 
     // We need to do this as we are using a debounce when the widget value is set
-    await timeout(200)
+    jest.runAllTimers()
 
     expect(props.widgetMgr.setFloatArrayValue).toHaveBeenCalledWith(
       props.element.get("id"),
@@ -143,7 +146,8 @@ describe("Slider widget", () => {
         value: [10],
       })
 
-      await timeout(200)
+      // We need to do this as we are using a debounce when the widget value is set
+      jest.runAllTimers()
 
       expect(props.widgetMgr.setFloatArrayValue).toHaveBeenCalledWith(
         props.element.get("id"),
@@ -244,7 +248,7 @@ describe("Slider widget", () => {
       })
 
       // We need to do this as we are using a debounce when the widget value is set
-      await timeout(200)
+      jest.runAllTimers()
 
       expect(props.widgetMgr.setFloatArrayValue).toHaveBeenCalledWith(
         props.element.get("id"),

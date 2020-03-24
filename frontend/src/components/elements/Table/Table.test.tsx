@@ -15,4 +15,28 @@
  * limitations under the License.
  */
 
-export { default } from "./Chart"
+import React from "react"
+import { mount } from "enzyme"
+import { fromJS } from "immutable"
+
+import mock from "./mock"
+import { Table, Props } from "./Table"
+import { Table as ReactTable } from "reactstrap"
+
+const getProps = (elementProps: object = {}): Props => ({
+  element: fromJS({
+    ...mock,
+    ...elementProps,
+  }),
+  width: 0,
+})
+
+describe("Table Element", () => {
+  it("renders without crashing", () => {
+    const props = getProps()
+    const wrapper = mount(<Table {...props} />)
+
+    expect(wrapper.find(ReactTable).length).toBe(1)
+    expect(wrapper.find(".stTable").length).toBe(1)
+  })
+})

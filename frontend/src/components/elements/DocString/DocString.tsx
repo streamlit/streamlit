@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { PureComponent } from "react"
 import { Map as ImmutableMap } from "immutable"
 import "./DocString.scss"
 
-interface Props {
+export interface Props {
   width: number
   element: ImmutableMap<string, any>
 }
@@ -27,7 +27,7 @@ interface Props {
 /**
  * Functional element representing formatted text.
  */
-class DocString extends React.PureComponent<Props> {
+class DocString extends PureComponent<Props> {
   public render(): React.ReactNode {
     const { element, width } = this.props
 
@@ -52,7 +52,11 @@ class DocString extends React.PureComponent<Props> {
         {signature}
       </span>
     )
-    const typeHtml = <span className="doc-type">{type}</span>
+    const typeHtml = (
+      <span key="type" className="doc-type">
+        {type}
+      </span>
+    )
 
     // Put it all together into a nice little html view.
     return (

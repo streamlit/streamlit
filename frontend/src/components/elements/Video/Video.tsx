@@ -15,21 +15,21 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { createRef, PureComponent, ReactNode } from "react"
 import { Map as ImmutableMap } from "immutable"
 import { Video as VideoProto } from "autogen/proto"
 import {
-  getWindowBaseUriParts as get_base_uri_parts,
   buildHttpUri,
+  getWindowBaseUriParts as get_base_uri_parts,
 } from "lib/UriUtil"
 
-interface Props {
+export interface Props {
   width: number
   element: ImmutableMap<string, any>
 }
 
-class Video extends React.PureComponent<Props> {
-  private videoRef = React.createRef<HTMLVideoElement>()
+class Video extends PureComponent<Props> {
+  private videoRef = createRef<HTMLVideoElement>()
 
   public componentDidMount = (): void => {
     this.updateTime()
@@ -39,50 +39,68 @@ class Video extends React.PureComponent<Props> {
     this.updateTime()
   }
 
-  private updateTime(): void {
+  private updateTime = (): void => {
     if (this.videoRef.current) {
-      const startTime = this.props.element.get("startTime")
-      this.videoRef.current.currentTime = startTime
+      const { element } = this.props
+
+      this.videoRef.current.currentTime = element.get("startTime")
     }
   }
 
-  public render(): React.ReactNode {
+  private getYoutubeSrc = (): string => {
+    const { element } = this.props
+    const startTime = element.get("startTime")
+    const url = element.get("url")
+
+    if (startTime) {
+      return `${url}?start=${startTime}`
+    }
+
+    return url
+  }
+
+  private getVideoURI = (): string => {
+    const { element } = this.props
+    const url = element.get("url")
+
+    if (url.startsWith("/media")) {
+      return buildHttpUri(get_base_uri_parts(), url)
+    }
+
+    return url
+  }
+
+  public render(): ReactNode {
     /* Element may contain "url" or "data" property. */
 
     const { element, width } = this.props
+    const url = element.get("url")
+    const type = element.get("type")
 
     /* Is this a YouTube link? If so we need a fancier tag.
        NOTE: This part assumes the URL is already an "embed" link.
     */
-    if (element.get("type") === VideoProto.Type.YOUTUBE_IFRAME) {
+    if (type === VideoProto.Type.YOUTUBE_IFRAME) {
       const height = width * 0.75
-      const src = element.get("startTime")
-        ? `${element.get("url")}?start=${element.get("startTime")}`
-        : element.get("url")
+
       return (
         <iframe
-          title={element.get("url")}
-          src={src}
+          title={url}
+          src={this.getYoutubeSrc()}
           width={width}
           height={height}
           frameBorder="0"
           allow="autoplay; encrypted-media"
           allowFullScreen
-        ></iframe>
+        />
       )
-    }
-
-    let uri = element.get("url")
-
-    if (element.get("url").startsWith("/media")) {
-      uri = buildHttpUri(get_base_uri_parts(), element.get("url"))
     }
 
     return (
       <video
         ref={this.videoRef}
         controls
-        src={uri}
+        src={this.getVideoURI()}
         className="stVideo"
         style={{ width }}
       />
