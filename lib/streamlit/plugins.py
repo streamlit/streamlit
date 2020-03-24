@@ -43,7 +43,9 @@ class MarshallPluginException(StreamlitAPIException):
     pass
 
 
-def plugin(javascript: str) -> Callable[[DeltaGenerator, Dict], Optional[Dict]]:
+def plugin(
+    javascript: str,
+) -> Callable[[DeltaGenerator, Optional[Dict]], Optional[Dict]]:
     """Register a new plugin, and return a function that can be used to
     create an instance of it.
     """
@@ -52,7 +54,7 @@ def plugin(javascript: str) -> Callable[[DeltaGenerator, Dict], Optional[Dict]]:
     plugin_id = PluginRegistry.instance().register_plugin(javascript)
 
     # Build our plugin function.
-    def plugin_instance(dg: DeltaGenerator, args: Dict) -> Optional[Dict]:
+    def plugin_instance(dg: DeltaGenerator, args: Optional[Dict]) -> Optional[Dict]:
         try:
             args_json = json.dumps(args)
         except BaseException as e:

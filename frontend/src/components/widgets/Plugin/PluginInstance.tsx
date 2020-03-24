@@ -15,13 +15,14 @@
  * limitations under the License.
  */
 
+import React from "react"
+import ReactJson from "react-json-view"
+
 import Alert from "components/elements/Alert"
 import ErrorElement from "components/shared/ErrorElement"
 import { Map as ImmutableMap } from "immutable"
+import { makeElementWithInfoText } from "lib/utils"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import React from "react"
-import ReactJson from "react-json-view"
-import { makeElementWithInfoText } from "../../../lib/utils"
 import { PluginRegistry } from "./PluginRegistry"
 
 export interface Props {
@@ -81,18 +82,27 @@ export class PluginInstance extends React.PureComponent<Props, State> {
 
     // Render the actual plugin!
     const styleProp = { width: this.props.width }
-    const bodyObject = JSON.parse(this.props.element.get("jsonArgs"))
+    const argsJSON = JSON.parse(this.props.element.get("argsJson"))
+
+    let args: React.ReactNode
+    if (argsJSON != null) {
+      args = (
+        <ReactJson
+          src={argsJSON}
+          displayDataTypes={false}
+          displayObjectSize={false}
+          name={false}
+          style={{ font: "" }} // Unset so we can style via a CSS file.
+        />
+      )
+    } else {
+      args = "null"
+    }
 
     return (
       <>
         <div className="json-text-container stJson" style={styleProp}>
-          <ReactJson
-            src={bodyObject}
-            displayDataTypes={false}
-            displayObjectSize={false}
-            name={false}
-            style={{ font: "" }} // Unset so we can style via a CSS file.
-          />
+          {args}
         </div>
         <div>{this.state.pluginCode}</div>
       </>
