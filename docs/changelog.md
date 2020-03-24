@@ -22,6 +22,23 @@ See highlights, bug fixes, and known issues for Streamlit releases:
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.57.0
+
+_Release date: March 24, 2020_
+
+**Highlights:**
+
+- ⏲️ Ability to set expiration options for `@st.cache`'ed functions by setting
+  the `max_entries` and `ttl` arguments. See
+  [docs](https://docs.streamlit.io/api.html?highlight=cache#streamlit.cache).
+- 🆙 Improved the machinery behind `st.file_uploader`, so it's much more
+  performant now! Also increased the default upload limit to 200MB
+  (configurable via `server.max_upload_size`).
+- 🔒 The `server.address` config option now _binds_ the server to that address
+  for added security.
+- 📄 Even more details added to error messages for `@st.cache` for easier
+  debugging.
+
 ## Version 0.56.0
 
 _Release date: February 15, 2020_
