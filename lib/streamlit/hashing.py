@@ -332,7 +332,7 @@ class _CodeHasher:
         if _is_magicmock(obj):
             # MagicMock can result in objects that appear to be infinitely
             # deep, so we don't try to hash them at all.
-            return self.to_bytes("mock:%s" % id(obj))
+            return self.to_bytes(id(obj))
 
         elif isinstance(obj, bytes) or isinstance(obj, bytearray):
             return obj
@@ -433,9 +433,8 @@ class _CodeHasher:
             return h.digest()
 
         elif type_util.is_type(obj, "numpy.ufunc"):
-            # For object of type numpy.ufunc returns ufunc:<object name>
-            # For example, for numpy.remainder, this is ufunc:remainder
-            return ("%s:%s" % (obj.__class__.__name__, obj.__name__)).encode()
+            # For numpy.remainder, this returns remainder
+            return obj.__name__.encode()
 
         elif inspect.isroutine(obj):
             if hasattr(obj, "__wrapped__"):
