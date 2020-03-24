@@ -114,7 +114,6 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
                     "show_spinner=True, "
                     "suppress_st_warning=False, "
                     "hash_funcs=None, "
-                    "ignore_hash=False, "
                     "max_entries=None, "
                     "ttl=None)"
                 ),

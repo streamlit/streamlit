@@ -44,18 +44,6 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(foo(), 42)
         self.assertEqual(foo(), 42)
 
-    def test_deprecated_kwarg(self):
-        with pytest.raises(Exception) as e:
-
-            @st.cache(ignore_hash=True)
-            def foo():
-                return 42
-
-        assert (
-            "The `ignore_hash` argument has been renamed to `allow_output_mutation`."
-            in str(e.value)
-        )
-
     @patch.object(st, "exception")
     def test_args(self, exception):
         called = [False]
