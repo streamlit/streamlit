@@ -36,6 +36,7 @@ import Json from "components/elements/Json/"
 import Markdown from "components/elements/Markdown/"
 import Table from "components/elements/Table/"
 import Text from "components/elements/Text/"
+import { PluginInstance, PluginRegistry } from "components/widgets/Plugin/"
 
 import Maybe from "components/core/Maybe/"
 
@@ -87,6 +88,7 @@ interface Props {
   widgetMgr: WidgetStateManager
   uploadClient: FileUploadClient
   widgetsDisabled: boolean
+  pluginRegistry: PluginRegistry
 }
 
 class Block extends PureComponent<Props> {
@@ -139,6 +141,7 @@ class Block extends PureComponent<Props> {
           widgetMgr={this.props.widgetMgr}
           uploadClient={this.props.uploadClient}
           widgetsDisabled={this.props.widgetsDisabled}
+          pluginRegistry={this.props.pluginRegistry}
         />
       </div>
     )
@@ -376,6 +379,14 @@ class Block extends PureComponent<Props> {
       numberInput: (el: SimpleElement) => (
         <NumberInput
           key={el.get("id")}
+          element={el}
+          width={width}
+          {...widgetProps}
+        />
+      ),
+      pluginInstance: (el: SimpleElement) => (
+        <PluginInstance
+          registry={this.props.pluginRegistry}
           element={el}
           width={width}
           {...widgetProps}

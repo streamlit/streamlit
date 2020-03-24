@@ -15,19 +15,5 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { WidgetStateManager } from "lib/WidgetStateManager"
-import { Map as ImmutableMap } from "immutable"
-
-export interface Props {
-  disabled: boolean
-  element: ImmutableMap<string, any>
-  widgetMgr: WidgetStateManager
-  width: number
-}
-
-class Plugin extends React.PureComponent<Props> {
-  public render(): React.ReactNode {
-    return <div>I'm a plugin!</div>
-  }
-}
+export { PluginInstance } from "./PluginInstance"
+export { PluginRegistry } from "./PluginRegistry"

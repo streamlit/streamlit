@@ -69,6 +69,7 @@ import "assets/css/theme.scss"
 import "./App.scss"
 import "assets/css/header.scss"
 import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
+import { PluginRegistry } from "./components/widgets/Plugin"
 
 import withScreencast, {
   ScreenCastHOC,
@@ -103,9 +104,10 @@ export class App extends PureComponent<Props, State> {
   private readonly statusWidgetRef: React.RefObject<StatusWidget>
   private connectionManager: ConnectionManager | null
   private readonly widgetMgr: WidgetStateManager
-  private uploadClient: FileUploadClient
+  private readonly uploadClient: FileUploadClient
   private elementListBuffer: Elements | null
   private elementListBufferTimerIsSet: boolean
+  private readonly pluginRegistry: PluginRegistry
 
   constructor(props: Props) {
     super(props)
@@ -139,6 +141,11 @@ export class App extends PureComponent<Props, State> {
       this.sendBackMsg(new BackMsg(msg))
     })
     this.uploadClient = new FileUploadClient(() => {
+      return this.connectionManager
+        ? this.connectionManager.getBaseUriParts()
+        : undefined
+    })
+    this.pluginRegistry = new PluginRegistry(() => {
       return this.connectionManager
         ? this.connectionManager.getBaseUriParts()
         : undefined
@@ -888,6 +895,7 @@ export class App extends PureComponent<Props, State> {
               this.state.connectionState !== ConnectionState.CONNECTED
             }
             uploadClient={this.uploadClient}
+            pluginRegistry={this.pluginRegistry}
           />
 
           {dialog}
