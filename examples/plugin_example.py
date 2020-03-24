@@ -1,9 +1,12 @@
-# TODO: remove me!
-
 import streamlit as st
 
-javascript = "return 'Hello, world!'"
+javascript = """
+return function (args) {
+    return "Hello, " + args["name"] + "!"
+}
+"""
 
 my_plugin = st.plugin(javascript)
 
-my_plugin(st._main, None)
+my_plugin(st._main, {"name": "Streamlit"})
+my_plugin(st._main, {"name": "everyone else"})

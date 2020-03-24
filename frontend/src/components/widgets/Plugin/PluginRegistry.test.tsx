@@ -31,7 +31,7 @@ const MOCK_PLUGIN_ENDPOINT = new RegExp(
   buildHttpUri(MOCK_SERVER_URI, "/plugin/*")
 )
 
-const GOOD_JAVASCRIPT = "function hello () { return 'Hello, world!'; }"
+const GOOD_JAVASCRIPT = "return function () { return 'Hello, world!'; }"
 const BAD_JAVASCRIPT = "this should not compile"
 
 describe("PluginRegistry", () => {

@@ -15,8 +15,7 @@
  * limitations under the License.
  */
 
-import React from "react"
-import ReactJson from "react-json-view"
+import React, { ReactNode } from "react"
 
 import Alert from "components/elements/Alert"
 import ErrorElement from "components/shared/ErrorElement"
@@ -24,6 +23,7 @@ import { Map as ImmutableMap } from "immutable"
 import { makeElementWithInfoText } from "lib/utils"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { PluginRegistry } from "./PluginRegistry"
+import { StPlugin } from "./StPlugin"
 
 export interface Props {
   registry: PluginRegistry
@@ -35,7 +35,7 @@ export interface Props {
 }
 
 export interface State {
-  plugin?: Function
+  plugin?: StPlugin
   pluginError?: Error
 }
 
@@ -58,7 +58,7 @@ export class PluginInstance extends React.PureComponent<Props, State> {
       .catch(error => this.setState({ pluginError: error }))
   }
 
-  public render = (): JSX.Element => {
+  public render = (): ReactNode => {
     // If we failed to download the plugin, show an error.
     if (this.state.pluginError != null) {
       return (
@@ -81,31 +81,7 @@ export class PluginInstance extends React.PureComponent<Props, State> {
     }
 
     // Render the actual plugin!
-    const styleProp = { width: this.props.width }
-    const argsJSON = JSON.parse(this.props.element.get("argsJson"))
-
-    let args: React.ReactNode
-    if (argsJSON != null) {
-      args = (
-        <ReactJson
-          src={argsJSON}
-          displayDataTypes={false}
-          displayObjectSize={false}
-          name={false}
-          style={{ font: "" }} // Unset so we can style via a CSS file.
-        />
-      )
-    } else {
-      args = "null"
-    }
-
-    return (
-      <>
-        <div className="json-text-container stJson" style={styleProp}>
-          {args}
-        </div>
-        <div>{this.state.plugin()}</div>
-      </>
-    )
+    const args = JSON.parse(this.props.element.get("argsJson"))
+    return this.state.plugin.render(args)
   }
 }
