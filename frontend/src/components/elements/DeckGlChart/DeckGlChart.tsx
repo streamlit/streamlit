@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { PureComponent } from "react"
 import DeckGL, {
   ArcLayer,
   GridLayer,
@@ -29,6 +29,7 @@ import DeckGL, {
 } from "deck.gl"
 import Immutable from "immutable"
 import { StaticMap } from "react-map-gl"
+import { flowRight as compose } from "lodash"
 import { dataFrameToArrayOfDicts } from "lib/dataFrameProto"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import withMapboxToken from "hocs/withMapboxToken/withMapboxToken"
@@ -41,7 +42,7 @@ interface Props {
   element: Immutable.Map<string, any>
 }
 
-interface PropsWithHeight extends Props {
+export interface PropsWithHeight extends Props {
   height: number | undefined
 }
 
@@ -63,7 +64,7 @@ interface ViewPort extends ViewState {
   mapStyle: string
 }
 
-class DeckGlChart extends React.PureComponent<PropsWithHeight, State> {
+export class DeckGlChart extends PureComponent<PropsWithHeight, State> {
   static defaultProps = {
     height: 500,
   }
@@ -475,4 +476,7 @@ function parseGetters(type: any, spec: any): void {
   })
 }
 
-export default withMapboxToken(withFullScreenWrapper(DeckGlChart))
+export default compose(
+  withMapboxToken,
+  withFullScreenWrapper
+)(DeckGlChart)

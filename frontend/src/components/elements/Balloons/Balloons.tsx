@@ -24,14 +24,14 @@ import StarFaceEmoji from "assets/img/emoji/emoji_u1f929.png"
 import CoolFaceEmoji from "assets/img/emoji/emoji_u1f60e.png"
 import "./Balloons.scss"
 
-const NUM_BALLOONS = 15
+export const NUM_BALLOONS = 15
 const POS_MIN_VW = 30
 const POS_MAX_VW = 70
-const DELAY_MAX_MS = 500
+export const DELAY_MAX_MS = 500
 
 const BALLOON_PROB = 0.5
 
-const MAX_ANIMATION_DURATION_MS = 1000 // see CSS
+export const MAX_ANIMATION_DURATION_MS = 1000 // see CSS
 
 const BALLOONS_INDICES = Array.from({ length: NUM_BALLOONS })
 

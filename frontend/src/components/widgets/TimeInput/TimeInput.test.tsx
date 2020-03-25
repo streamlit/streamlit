@@ -20,6 +20,7 @@ import moment from "moment"
 import { shallow } from "enzyme"
 import { fromJS } from "immutable"
 import { WidgetStateManager } from "lib/WidgetStateManager"
+import { TimeInput as TimeInputProto } from "autogen/proto"
 
 import TimeInput, { Props } from "./TimeInput"
 import { TimePicker as UITimePicker } from "baseui/datepicker"
@@ -27,7 +28,7 @@ import { TimePicker as UITimePicker } from "baseui/datepicker"
 jest.mock("lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
-const getProps = (elementProps: object = {}): Props => ({
+const getProps = (elementProps: Partial<TimeInputProto> = {}): Props => ({
   element: fromJS({
     id: 123,
     label: "Label",

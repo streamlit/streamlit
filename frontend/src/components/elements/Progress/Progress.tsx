@@ -21,12 +21,12 @@ import { Progress as UIProgress } from "reactstrap"
 
 import "./Progress.scss"
 
-interface Props {
+export interface Props {
   width: number
   element: ImmutableMap<string, any>
 }
 
-const FAST_UPDATE_MS = 50
+export const FAST_UPDATE_MS = 50
 
 class Progress extends PureComponent<Props> {
   lastValue = -1

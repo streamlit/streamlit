@@ -26,4 +26,11 @@ module.exports = {
       }),
     ],
   },
+  jest: {
+    configure: jestConfig => {
+      jestConfig.setupFiles = ["jest-canvas-mock"]
+
+      return jestConfig
+    },
+  },
 }

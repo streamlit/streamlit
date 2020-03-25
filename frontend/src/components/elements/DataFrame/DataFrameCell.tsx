@@ -19,7 +19,7 @@ import React, { PureComponent } from "react"
 import { SortDirection } from "./SortDirection"
 import Icon from "components/shared/Icon"
 
-interface Props {
+export interface Props {
   /** The cell's column index in the DataFrame */
   columnIndex: number
 
@@ -121,10 +121,10 @@ function drawSortIcon(sortDirection?: SortDirection): React.ReactNode {
   // to ensure proper column width padding
   switch (sortDirection) {
     case SortDirection.ASCENDING:
-      return <Icon className="sort-arrow-icon" type="chevron-top"></Icon>
+      return <Icon className="sort-arrow-icon" type="chevron-top" />
 
     case SortDirection.DESCENDING:
-      return <Icon className="sort-arrow-icon" type="chevron-bottom"></Icon>
+      return <Icon className="sort-arrow-icon" type="chevron-bottom" />
 
     case undefined:
     default:
