@@ -43,12 +43,8 @@ class MarshallPluginException(StreamlitAPIException):
     pass
 
 
-def plugin(
-    javascript: str,
-) -> Callable[[DeltaGenerator, Optional[Dict]], Optional[Dict]]:
-    """Register a new plugin, and return a function that can be used to
-    create an instance of it.
-    """
+def plugin(name: str, javascript: str) -> None:
+    """Register a new plugin."""
 
     # Register this plugin with our global registry.
     plugin_id = PluginRegistry.instance().register_plugin(javascript)
@@ -78,7 +74,11 @@ def plugin(
             marshall_element=marshall_plugin, delta_type="plugin"
         )
 
-    return plugin_instance
+    # Register the plugin as a member function of DeltaGenerator, and as
+    # a standalone function in the streamlit namespace.
+    # TODO: disallow collisions with important streamlit functions!
+    setattr(DeltaGenerator, name, plugin_instance)
+    setattr(streamlit, name, lambda args: plugin_instance(streamlit._main, args))
 
 
 class PluginRequestHandler(tornado.web.RequestHandler):

@@ -6,7 +6,7 @@ return function (args) {
 }
 """
 
-my_plugin = st.plugin(javascript)
+st.plugin("my_plugin", javascript)
 
-my_plugin(st._main, {"name": "Streamlit"})
-my_plugin(st._main, {"name": "everyone else"})
+st.my_plugin({"name": "Streamlit"})
+st.sidebar.my_plugin({"name": "Sidebar"})
