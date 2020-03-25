@@ -29,11 +29,4 @@ describe("st.pyplot with kwargs", () => {
     // Make the ribbon decoration line disappear
     cy.get(".decoration").invoke("css", "display", "none");
   });
-
-  it("draws long text strings correctly", () => {
-    cy.get(".stImage")
-      .find("img")
-      .should("have.attr", "src");
-    cy.get(".stImage > img").matchImageSnapshot("pyplot-long-text-strings");
-  });
 });
