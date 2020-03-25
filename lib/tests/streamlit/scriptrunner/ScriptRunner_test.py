@@ -258,6 +258,7 @@ class ScriptRunnerTest(unittest.TestCase):
         )
         self._assert_text_deltas(scriptrunner, [text_utf])
 
+    # TODO re-enable after flakyness is fixed
     def off_test_multiple_scriptrunners(self):
         """Tests that multiple scriptrunners can run simultaneously."""
         # This scriptrunner will run before the other 3. It's used to retrieve

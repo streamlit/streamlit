@@ -48,12 +48,16 @@ def is_type(obj, fqn_type_pattern):
         return fqn_type_pattern.match(fqn_type) is not None
 
 
+def get_fqn(the_type):
+    """Get module.type_name for a given type."""
+    module = the_type.__module__
+    name = the_type.__qualname__
+    return "%s.%s" % (module, name)
+
+
 def get_fqn_type(obj):
     """Get module.type_name for a given object."""
-    the_type = type(obj)
-    module = the_type.__module__
-    name = the_type.__name__
-    return "%s.%s" % (module, name)
+    return get_fqn(type(obj))
 
 
 _PANDAS_DF_TYPE_STR = "pandas.core.frame.DataFrame"
