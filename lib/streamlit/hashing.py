@@ -230,25 +230,20 @@ def _key(obj):
     return NoResult
 
 
-def _get_fqn_of_type(the_type):
-    """Get module.type_name for a given type."""
-    module = the_type.__module__
-    name = the_type.__qualname__
-    return "%s.%s" % (module, name)
-
-
 class _CodeHasher:
     """A hasher that can hash code objects including dependencies."""
 
     def __init__(self, hash_funcs=None):
-        # Accept both a type and a fqn string as the key for a hash func, because
+        # Can't use types as the keys in the internal _hash_funcs because
         # we always remove user-written modules from memory when rerunning a
-        # script, in order to reload it and grab the latest code changes.
-        # See LocalSourcesWatcher.py:on_file_changed
-        # This causes type comparisons to fail, however the fqn is the same.
+        # script in order to reload it and grab the latest code changes.
+        # (See LocalSourcesWatcher.py:on_file_changed) This causes
+        # the type object to refer to different underlying class instances each run,
+        # so type-based comparisons fail. To solve this, we use the types converted
+        # to fully-qualified strings as keys in our internal dict.
         if hash_funcs:
             self._hash_funcs = {
-                k if isinstance(k, str) else _get_fqn_of_type(k): v
+                k if isinstance(k, str) else type_util.get_fqn(k): v
                 for k, v in hash_funcs.items()
             }
         else:
@@ -433,7 +428,7 @@ class _CodeHasher:
             return h.digest()
 
         elif type_util.is_type(obj, "numpy.ufunc"):
-            # For numpy.remainder, this returns remainder
+            # For numpy.remainder, this returns remainder.
             return obj.__name__.encode()
 
         elif inspect.isroutine(obj):

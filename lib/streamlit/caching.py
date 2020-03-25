@@ -439,13 +439,17 @@ def cache(
     ...     return data
 
 
-    To override the default hashing behavior, pass a mapping of type or fqn to hash function:
+    To override the default hashing behavior, pass a custom hash function.
+    You can do that by mapping a type (e.g. `MongoClient`) to a hash function (`id`) like this:
 
     >>> @st.cache(hash_funcs={MongoClient: id})
     ... def connect_to_database(url):
     ...     return MongoClient(url)
 
-    >>> @st.cache(hash_funcs={'pymongo.mongo_client.MongoClient': id})
+    Alternatively, you can map the type's fully-qualified name
+    (e.g. `"pymongo.mongo_client.MongoClient"`) to the hash function instead:
+
+    >>> @st.cache(hash_funcs={"pymongo.mongo_client.MongoClient": id})
     ... def connect_to_database(url):
     ...     return MongoClient(url)
 
