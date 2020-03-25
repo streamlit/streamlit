@@ -15,13 +15,13 @@
 
 import hashlib
 import json
-from typing import Callable
 from typing import Dict
 from typing import Optional
 from typing import Union
 
 import tornado.web
 
+import streamlit as st  # plugins_test relies on this import name, for patching
 import streamlit.server.routes
 from streamlit import StreamlitAPIException
 from streamlit.DeltaGenerator import DeltaGenerator
@@ -36,7 +36,6 @@ LOGGER = get_logger(__name__)
 # - Allow multiple files to be registered in a single plugin
 # - Allow actual files to be registered, instead of just strings
 # - Add FileWatcher support, and emit a signal when a plugin is changed on disk
-# - Attach plugin functions to the DeltaGenerator class
 
 
 class MarshallPluginException(StreamlitAPIException):
@@ -78,7 +77,7 @@ def plugin(name: str, javascript: str) -> None:
     # a standalone function in the streamlit namespace.
     # TODO: disallow collisions with important streamlit functions!
     setattr(DeltaGenerator, name, plugin_instance)
-    setattr(streamlit, name, lambda args: plugin_instance(streamlit._main, args))
+    setattr(st, name, lambda args: plugin_instance(streamlit._main, args))
 
 
 class PluginRequestHandler(tornado.web.RequestHandler):

@@ -12,15 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import json
 import unittest
 from typing import Callable
-from typing import Tuple
 from unittest import mock
 
 import tornado.testing
 import tornado.web
 
+import streamlit
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.plugins import MarshallPluginException
 from streamlit.plugins import PluginRegistry
@@ -29,7 +30,7 @@ from streamlit.plugins import plugin
 from tests.testutil import DeltaGeneratorTestCase
 
 JAVASCRIPT_1 = """
-export default (args, st) => {
+return function (args, st) => {
   return <div>Hello, lovely world!</div>
 }
 """
@@ -46,25 +47,32 @@ class PluginTest(DeltaGeneratorTestCase):
         super().setUp(override_root)
         self.registry = PluginRegistry()
 
-    def _register_plugin(self, javascript) -> Tuple[Callable, str]:
-        with mock.patch("streamlit.plugins.PluginRegistry.instance") as p:
-            p.return_value = self.registry
+    def _register_plugin(self, name, javascript) -> [str, Callable]:
+        registry_patch = mock.patch(
+            "streamlit.plugins.PluginRegistry.instance", return_value=self.registry
+        )
+        st_patch = mock.patch("streamlit.plugins.st")
+        dg_patch = mock.patch("streamlit.plugins.DeltaGenerator")
 
-            plugin_func = plugin(javascript)
+        with registry_patch, st_patch, dg_patch:
+            plugin(name, javascript)
             plugin_id = self.registry._get_id(javascript)
 
-            return plugin_func, plugin_id
+            # Test that we're properly adding functions to st and DeltaGenerator
+            self.assertTrue(hasattr(streamlit.plugins.st, name))
+            self.assertTrue(hasattr(streamlit.plugins.DeltaGenerator, name))
+
+            return plugin_id, getattr(streamlit.plugins.DeltaGenerator, name)
 
     def test_register_plugin(self):
         """Test the output of st.plugin"""
-        plugin_func, plugin_id = self._register_plugin(JAVASCRIPT_1)
-        # Ensure our Registry was filled in.
-        self.assertIsNotNone(plugin_func)
+        plugin_id, plugin_func = self._register_plugin("test", JAVASCRIPT_1)
         self.assertEqual(JAVASCRIPT_1, self.registry.get_plugin(plugin_id))
+        self.assertIsNotNone(plugin_func)
 
     def test_plugin_func_none(self):
         """Test `plugin_func(None)`"""
-        plugin_func, plugin_id = self._register_plugin(JAVASCRIPT_1)
+        plugin_id, plugin_func = self._register_plugin("test", JAVASCRIPT_1)
 
         return_value = plugin_func(DeltaGenerator(), None)
         self.assertIsNone(return_value)
@@ -75,7 +83,7 @@ class PluginTest(DeltaGeneratorTestCase):
 
     def test_plugin_func_args(self):
         """Test `plugin_func() with complex args"""
-        plugin_func, plugin_id = self._register_plugin(JAVASCRIPT_1)
+        plugin_id, plugin_func = self._register_plugin("test", JAVASCRIPT_1)
 
         args = {
             "foo": "bar",
@@ -92,7 +100,7 @@ class PluginTest(DeltaGeneratorTestCase):
 
     def test_plugin_func_bad_args(self):
         """Test `plugin_func()` with non-JSON-friendly args"""
-        plugin_func, plugin_id = self._register_plugin(JAVASCRIPT_1)
+        plugin_id, plugin_func = self._register_plugin("test", JAVASCRIPT_1)
 
         with self.assertRaises(MarshallPluginException):
             plugin_func(DeltaGenerator(), {"bad": DeltaGenerator()})
