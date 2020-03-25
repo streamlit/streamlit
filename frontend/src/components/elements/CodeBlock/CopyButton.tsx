@@ -16,7 +16,7 @@
  */
 
 import Clipboard from "clipboard"
-import React, { PureComponent } from "react"
+import React, { PureComponent, ReactNode, createRef } from "react"
 import { Copy as CopyIcon } from "react-feather"
 
 interface Props {
@@ -24,11 +24,12 @@ interface Props {
 }
 
 class CopyButton extends PureComponent<Props> {
-  private button = React.createRef<HTMLButtonElement>()
+  private button = createRef<HTMLButtonElement>()
   private clipboard: ClipboardJS | null = null
 
   public componentDidMount = (): void => {
     const node = this.button.current
+
     if (node !== null) {
       this.clipboard = new Clipboard(node)
     }
@@ -40,7 +41,7 @@ class CopyButton extends PureComponent<Props> {
     }
   }
 
-  public render = (): React.ReactNode => (
+  public render = (): ReactNode => (
     <button
       className="overlayBtn"
       title="Copy to clipboard"

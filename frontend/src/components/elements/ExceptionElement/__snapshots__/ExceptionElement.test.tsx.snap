@@ -1,0 +1,10 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`ExceptionElement Element renders without crashing 1`] = `"<div class=\\"alert exception stException alert-danger\\" style=\\"width:0\\"><div class=\\"message\\"><span class=\\"type\\">RuntimeError</span>: This is an exception of type RuntimeError</div><div class=\\"stack-trace-title\\">Traceback:</div><pre class=\\"stack-trace\\"><code><div class=\\"stack-trace-row\\">step 1</div><div class=\\"stack-trace-row\\">step 2</div><div class=\\"stack-trace-row\\">step 3</div></code></pre></div>"`;
+
+exports[`ExceptionElement Element should render markdown when it has messageIsMarkdown 1`] = `
+Object {
+  "allowHTML": false,
+  "source": "**RuntimeError**: This is an exception of type RuntimeError",
+}
+`;

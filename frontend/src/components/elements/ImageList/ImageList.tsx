@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { PureComponent, ReactNode } from "react"
 import { Map as ImmutableMap } from "immutable"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import {
@@ -24,7 +24,7 @@ import {
 } from "lib/UriUtil"
 import "./ImageList.scss"
 
-interface Props {
+export interface Props {
   width: number
   element: ImmutableMap<string, any>
 }
@@ -40,8 +40,8 @@ function getImageURI(imgProto: ImmutableMap<string, any>): string {
 /**
  * Functional element for a horizontal list of images.
  */
-class ImageList extends React.PureComponent<Props> {
-  public render(): React.ReactNode {
+export class ImageList extends PureComponent<Props> {
+  public render(): ReactNode {
     const { element, width } = this.props
     // The width field in the proto sets the image width, but has special
     // cases for -1 and -2.
