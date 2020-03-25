@@ -21,6 +21,7 @@ from mock import patch
 
 from streamlit import caching
 from streamlit import hashing
+from streamlit.hashing import UserHashError
 from streamlit.elements import exception_proto
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 from tests import testutil
@@ -543,7 +544,7 @@ Object of type _thread.lock:
         ep = ExceptionProto()
         exception_proto.marshall(ep, cm.exception)
 
-        self.assertEqual(ep.type, "TypeError")
+        self.assertEqual(ep.type, "UserHashError")
         self.assertTrue(
             normalize_md(ep.message).startswith(
                 normalize_md(
