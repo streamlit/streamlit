@@ -21,12 +21,4 @@ describe("st.bokeh_chart", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
   });
-
-  it("displays a bokeh chart", () => {
-    cy.get(".element-container .stBokehChart").should(
-      "have.css",
-      "height",
-      "600px"
-    );
-  });
 });

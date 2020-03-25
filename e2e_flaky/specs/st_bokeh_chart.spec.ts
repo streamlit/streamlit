@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,15 +15,18 @@
  * limitations under the License.
  */
 
-@import 'src/assets/css/variables';
+/// <reference types="cypress" />
 
+describe("st.bokeh_chart", () => {
+  before(() => {
+    cy.visit("http://localhost:3000/");
+  });
 
-.stChart {
-  font-size: $font-size-sm;
-
-  li {
-    font-size: $font-size-sm;
-    margin: 0 1rem;
-    padding: 0;
-  }
-}
+  it("displays a bokeh chart", () => {
+    cy.get(".element-container .stBokehChart").should(
+      "have.css",
+      "height",
+      "600px"
+    );
+  });
+});

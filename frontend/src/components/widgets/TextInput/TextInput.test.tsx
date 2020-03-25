@@ -27,7 +27,7 @@ import { TextInput as TextInputProto } from "autogen/proto"
 jest.mock("lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
-const getProps = (elementProps: object = {}): Props => ({
+const getProps = (elementProps: Partial<TextInputProto> = {}): Props => ({
   element: fromJS({
     label: "Label",
     default: "",

@@ -21,7 +21,7 @@ if st.button("Rerun test"):
 if hasattr(st, "test_run_count"):
     st.test_run_count += 1
 else:
-    st.test_run_count = 0 if st.get_option("server.headless") else -1
+    st.test_run_count = -1 if st.get_option("server.headless") else -2
 
 if st.test_run_count < 1:
     w1 = st.slider("label", 0, 100, 25, 1)
