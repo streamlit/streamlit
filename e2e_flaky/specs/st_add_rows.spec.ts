@@ -17,15 +17,32 @@
 
 /// <reference types="cypress" />
 
-describe("st.graphviz_chart", () => {
+describe("st.add_rows", () => {
+  // Doesn't have to run before each, since these tests are stateless.
   before(() => {
     cy.visit("http://localhost:3000/");
+
+    // Rerun the script because we want to test that JS-side coalescing works.
+    cy.get(".stApp .decoration").trigger("keypress", {
+      keyCode: 82, // "r"
+      which: 82 // "r"
+    });
+
+    // Wait for 'stale-element' class to go away, so the snapshot looks right.
+    cy.get(".element-container").should("not.have.class", "stale-element");
 
     // Make the ribbon decoration line disappear
     cy.get(".decoration").invoke("css", "display", "none");
   });
 
   beforeEach(() => {
-    return cy.get(".stGraphVizChart").should("have.length", 3);
+    // Check that the app is fully loaded
+    return cy.get(".element-container").should("have.length", 26);
+  });
+
+  it("correctly adds rows to charts", () => {
+    cy.get(".element-container .stVegaLiteChart").each((el, i) => {
+      return cy.get(el).matchImageSnapshot(`stVegaLiteChart-${i}`);
+    });
   });
 });
