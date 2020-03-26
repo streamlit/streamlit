@@ -30,5 +30,8 @@ message FileUploader {
   // Max file size allowed by server config
   int32 max_upload_size_mb = 4;
 
+  // If true, the widget accepts multiple files for upload.
+  bool multiple_files = 6;
+
   reserved 5;
 }

@@ -73,10 +73,13 @@ describe("FileUploadClient", () => {
 
     mockUploadResponseStatus(200)
 
-    const file = new File(["File contents"], "file.txt")
+    const files = [
+      new File(["file1"], "file1.txt"),
+      new File(["file2"], "file2.txt"),
+    ]
 
     await expect(
-      uploader.uploadFile("widgetId", file)
+      uploader.uploadFiles("widgetId", files)
     ).resolves.toBeUndefined()
   })
 
@@ -85,9 +88,12 @@ describe("FileUploadClient", () => {
 
     mockUploadResponseStatus(400)
 
-    const file = new File(["File contents"], "file.txt")
+    const files = [
+      new File(["file1"], "file1.txt"),
+      new File(["file2"], "file2.txt"),
+    ]
 
-    await expect(uploader.uploadFile("widgetId", file)).rejects.toEqual(
+    await expect(uploader.uploadFiles("widgetId", files)).rejects.toEqual(
       new Error("Request failed with status code 400")
     )
   })

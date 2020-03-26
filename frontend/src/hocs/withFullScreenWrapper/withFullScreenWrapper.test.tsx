@@ -26,7 +26,9 @@ import withFullScreenWrapper, {
 
 const testComponent: ComponentType = () => <div>test</div>
 
-const getProps = (props: object = {}): ReportElementProps => ({
+const getProps = (
+  props: Partial<ReportElementProps> = {}
+): ReportElementProps => ({
   element: fromJS({
     id: 1,
     label: "Label",

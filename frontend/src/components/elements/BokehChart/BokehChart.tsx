@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { embed as BokehEmbed } from "bokehjs"
+import React, { PureComponent, ReactNode } from "react"
 import { Map as ImmutableMap } from "immutable"
+import { embed as BokehEmbed } from "@bokeh/bokehjs"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 
 interface Props {
@@ -26,7 +26,7 @@ interface Props {
   index: number
 }
 
-interface PropsWithHeight extends Props {
+export interface PropsWithHeight extends Props {
   height: number | undefined
 }
 
@@ -35,7 +35,7 @@ interface Dimensions {
   height: number
 }
 
-class BokehChart extends React.PureComponent<PropsWithHeight> {
+export class BokehChart extends PureComponent<PropsWithHeight> {
   private chartId = "bokeh-chart-" + this.props.index
 
   private getChartData = (): any => {
@@ -75,8 +75,10 @@ class BokehChart extends React.PureComponent<PropsWithHeight> {
       data && data.doc && data.doc.roots && data.doc.roots.references
         ? data.doc.roots.references.find((e: any) => e.type === "Plot")
         : undefined
+
     if (plot) {
       const { width, height } = this.getChartDimensions(plot)
+
       if (width > 0) {
         plot.attributes.plot_width = width
       }
@@ -107,7 +109,7 @@ class BokehChart extends React.PureComponent<PropsWithHeight> {
     this.updateChart(data)
   }
 
-  public render = (): React.ReactNode => (
+  public render = (): ReactNode => (
     <div id={this.chartId} className="stBokehChart" />
   )
 }

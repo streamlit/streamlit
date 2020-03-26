@@ -97,4 +97,15 @@ describe("Alert element", () => {
       "It's dangerous to go alone."
     )
   })
+
+  it("should throw an error when the format is invalid", () => {
+    const props = getProps({
+      format: "test",
+      body: "It's dangerous to go alone.",
+    })
+
+    expect(() => {
+      shallow(<Alert {...props} />)
+    }).toThrow("Unexpected alert type: test")
+  })
 })

@@ -1,5 +1,4 @@
 {
-  "projectId": "r53s63",
   "reporter": "mocha-multi-reporters",
   "reporterOptions": {
     "configFile": "reporter-config.json"

@@ -25,7 +25,7 @@ import { BaseUriParts, buildHttpUri } from "lib/UriUtil"
 export class FileUploadClient {
   private readonly getServerUri: () => BaseUriParts | undefined
 
-  constructor(getServerUri: () => BaseUriParts | undefined) {
+  public constructor(getServerUri: () => BaseUriParts | undefined) {
     this.getServerUri = getServerUri
   }
 
@@ -33,13 +33,13 @@ export class FileUploadClient {
    * Upload a file to the server. It will be associated with this browser's sessionID.
    *
    * @param widgetId: the ID of the FileUploader widget that's doing the upload.
-   * @param file: the file to upload.
+   * @param files: the files to upload.
    * @param onUploadProgress: an optional function that will be called repeatedly with progress events during the upload.
    * @param cancelToken: an optional axios CancelToken that can be used to cancel the in-progress upload.
    */
-  public async uploadFile(
+  public async uploadFiles(
     widgetId: string,
-    file: File,
+    files: File[],
     onUploadProgress?: (progressEvent: any) => void,
     cancelToken?: CancelToken
   ): Promise<void> {
@@ -51,8 +51,9 @@ export class FileUploadClient {
     const form = new FormData()
     form.append("sessionId", SessionInfo.current.sessionId)
     form.append("widgetId", widgetId)
-    form.append("lastModified", file.lastModified.toString())
-    form.append(file.name, file)
+    for (const file of files) {
+      form.append(file.name, file)
+    }
 
     await axios.request({
       cancelToken: cancelToken,
