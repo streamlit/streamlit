@@ -421,10 +421,7 @@ class _CodeHasher:
             return h.digest()
 
         elif isinstance(obj, Pattern):
-            h = hashlib.new("md5")
-            self.update(h, obj.pattern)
-            self.update(h, obj.flags)
-            return h.digest()
+            return self.to_bytes([obj.pattern, obj.flags])
 
         elif isinstance(obj, io.StringIO) or isinstance(obj, io.BytesIO):
             # Hash in-memory StringIO/BytesIO by their full contents
