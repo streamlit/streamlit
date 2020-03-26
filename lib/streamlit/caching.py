@@ -299,7 +299,7 @@ def _write_to_disk_cache(key, value):
             entry = _DiskCacheEntry(value=value)
             pickle.dump(entry, output, pickle.HIGHEST_PROTOCOL)
     except util.Error as e:
-        LOGGER.debug(e)
+        _LOGGER.debug(e)
         # Clean up file so we don't leave zero byte files.
         try:
             os.remove(path)
