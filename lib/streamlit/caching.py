@@ -387,10 +387,11 @@ def cache(
         the cached function.
 
     hash_funcs : dict or None
-        Mapping of types to hash functions. This is used to override the behavior of the hasher
-        inside Streamlit's caching mechanism: when the hasher encounters an object, it will first
-        check to see if its type matches a key in this dict and, if so, will use the provided
-        function to generate a hash for it. See below for an example of how this can be used.
+        Mapping of types or fully qualified names to hash functions. This is used to override
+        the behavior of the hasher inside Streamlit's caching mechanism: when the hasher
+        encounters an object, it will first check to see if its type matches a key in this
+        dict and, if so, will use the provided function to generate a hash for it. See below
+        for an example of how this can be used.
 
     max_entries : int or None
         The maximum number of entries to keep in the cache, or None
@@ -438,9 +439,17 @@ def cache(
     ...     return data
 
 
-    To override the default hashing behavior, pass a mapping of type to hash function:
+    To override the default hashing behavior, pass a custom hash function.
+    You can do that by mapping a type (e.g. `MongoClient`) to a hash function (`id`) like this:
 
     >>> @st.cache(hash_funcs={MongoClient: id})
+    ... def connect_to_database(url):
+    ...     return MongoClient(url)
+
+    Alternatively, you can map the type's fully-qualified name
+    (e.g. `"pymongo.mongo_client.MongoClient"`) to the hash function instead:
+
+    >>> @st.cache(hash_funcs={"pymongo.mongo_client.MongoClient": id})
     ... def connect_to_database(url):
     ...     return MongoClient(url)
 

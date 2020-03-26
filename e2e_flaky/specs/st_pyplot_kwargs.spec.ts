@@ -17,8 +17,23 @@
 
 /// <reference types="cypress" />
 
-describe("st.bokeh_chart", () => {
+describe("st.pyplot with kwargs", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
+
+    // Wait for the site to be fully loaded
+    cy.contains("Done!", { timeout: 100000 }).should($els => {
+      expect($els).to.have.length.of.at.least(1);
+    });
+
+    // Make the ribbon decoration line disappear
+    cy.get(".decoration").invoke("css", "display", "none");
+  });
+
+  it("draws long text strings correctly", () => {
+    cy.get(".stImage")
+      .find("img")
+      .should("have.attr", "src");
+    cy.get(".stImage > img").matchImageSnapshot("pyplot-long-text-strings");
   });
 });
