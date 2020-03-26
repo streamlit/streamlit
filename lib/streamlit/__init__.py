@@ -412,8 +412,8 @@ def write(*args, **kwargs):
         exception(exc, exc_tb)  # noqa: F821
 
 
-def show(*args):
-    """Write arguments to your app for debugging purposes.
+def _show(*args):
+    """Write arguments and *argument names* to your app for debugging purposes.
 
     Show() has similar properties to write():
 
@@ -436,10 +436,11 @@ def show(*args):
 
     Notes
     -----
-    This is an experimental feature with usage limitations.
 
-    - The method must be called with the name `show`
-    - Must be called in one line of code, and only once per line
+    This is an experimental feature with usage limitations:
+
+    - The method must be called with the name `show`.
+    - Must be called in one line of code, and only once per line.
     - When passing multiple arguments the inclusion of `,` or `)` in a string
     argument may cause an error.
 
@@ -621,3 +622,74 @@ def _maybe_print_repl_warning():
                 ),
                 script_name,
             )
+
+
+# Feature namespaces
+
+class _BetaNamespace(object):
+    """This namespace holds Streamlit features that are in currently in beta.
+
+    "Beta features" are features that are planned to become part of the
+    Streamlit core but whose APIs/behavior have not stabilized yet. They may
+    change in ways that are not backward-compatible.
+
+    The lifecycle of a beta feature is:
+
+    1. Feature is added to the beta namespace.
+    2. After a few months: the feature's API stabilizes and the feature is
+       *cloned* into the `st` namespace, so it will exist in both `st` and
+       `st.beta`. At this point, users will see a warning when using the
+       version of the feature that lives in the beta namespace -- but the
+       `st.beta` feature will otherwise still work.
+    3. After 3 months: the feature is *removed* from the `st.beta` namespace,
+       but there will still be a stub in `st.beta` that shows an error with
+       appropriate instructions.
+    4. After 3 months: the stub in `st.beta` is removed.
+
+    The main difference between `st.beta` and `st.experimental` is that beta
+    features will always make it into the `st` namespace at some point, while
+    experimental ones often do not.
+
+    """
+    # Add beta features here. For example:
+    #foo = _foo
+    pass
+
+
+class _ExperimentalNamespace(object):
+    """This namespace holds highly experimental Streamlit features.
+
+    "Experimental features" are features that we are still trying to
+    understand.  If they are successful, they will at some point become part of
+    core Streamlit, by moving to the `st.beta` namespace and then core `st`. If
+    unsuccessful, they may be removed.
+
+    Why this exists: we used to provide several Github Gists that allowed
+    people to hack experimental features into Streamlit, but it was hard to
+    guarantee that the Gists always worked when a new version of Streamlit came
+    out. Our solution is to move all that code out of Gists and into
+    `st.experimental` so we can run tests against them and provide at least
+    *some* forward-compatibility.
+
+    Note, however, that the API for experimental features may change at any
+    point!
+
+    The lifecycle of an experimental feature is:
+
+    1. Feature is added to the experimental namespace.
+    2. Feature is possibly tweaked over time, with possible API/behavior
+       breakages.
+    3. At some point, we either move the feature into `st.beta` or remove it
+       from `st.experimental`. Either way, we leave a stub in `st.experimental`
+       that shows an error with appropriate instructions.
+
+    The main difference between `st.experimental` and `st.beta` is that beta
+    features will always make it into the `st` namespace at some point, while
+    experimental ones often do not.
+    """
+    # Add experimental features here. For example:
+    #foo = _foo
+    show = _show
+
+beta = _BetaNamespace
+experimental = _ExperimentalNamespace

@@ -16,6 +16,7 @@
 import threading
 import unittest
 import pytest
+import types
 
 from mock import patch
 
@@ -448,6 +449,7 @@ to suppress the warning.
 
         el = self.get_delta_from_queue(-1).new_element
         self.assertEqual(el.exception.type, "CachedObjectMutationWarning")
+
         self.assertEqual(
             normalize_md(el.exception.message),
             normalize_md(
@@ -525,6 +527,24 @@ Object of type _thread.lock:
         self.assertEqual(ep.message_is_markdown, True)
         self.assertEqual(ep.is_warning, False)
 
+    def test_hash_funcs_acceptable_keys(self):
+        @st.cache
+        def unhashable_type_func():
+            return (x for x in range(1))
+
+        @st.cache(hash_funcs={types.GeneratorType: id})
+        def hf_key_as_type():
+            return (x for x in range(1))
+
+        @st.cache(hash_funcs={"builtins.generator": id})
+        def hf_key_as_str():
+            return (x for x in range(1))
+
+        with self.assertRaises(hashing.UnhashableTypeError) as cm:
+            unhashable_type_func()
+
+        self.assertEqual(list(hf_key_as_type()), list(hf_key_as_str()))
+
     def test_user_hash_error(self):
         class MyObj(object):
             pass
@@ -556,12 +576,12 @@ user-defined hash function that was passed into the `@st.cache` decorator of
 `user_hash_error_func()`.
 
 `bad_hash_func()` failed when hashing an object of type
-`caching_test.MyObj`.  If you don't know where that object is coming from,
-try looking at the hash chain below for an object that you do recognize, then
-pass that to `hash_funcs` instead:
+`caching_test.CacheErrorsTest.test_user_hash_error.<locals>.MyObj`.  If you
+don't know where that object is coming from, try looking at the hash chain
+below for an object that you do recognize, then pass that to `hash_funcs` instead:
 
 ```
-Object of type caching_test.MyObj:
+Object of type caching_test.CacheErrorsTest.test_user_hash_error.<locals>.MyObj:
 <caching_test.CacheErrorsTest.test_user_hash_error.<locals>.MyObj object at
         """
                 )

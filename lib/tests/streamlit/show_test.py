@@ -25,7 +25,7 @@ class ShowTest(unittest.TestCase):
     """Test helper methods of `show()` in Streamlit.__init__.py."""
 
     def test_st_show(self):
-        """Test st.show.
+        """Test st.experimental.show.
 
         Ideally we could test the order and content of the deltas.
         But not possible to inject a shared queue in `streamlit._with_dg()`
@@ -37,7 +37,7 @@ class ShowTest(unittest.TestCase):
 
         with patch("streamlit.write") as write:
             with patch("streamlit.markdown") as markdown:
-                st.show(thing)
+                st.experimental.show(thing)
                 write.assert_called_once()
                 markdown.assert_called_once()
 
@@ -45,7 +45,7 @@ class ShowTest(unittest.TestCase):
 
         with patch("streamlit.write") as write:
             with patch("streamlit.markdown") as markdown:
-                st.show(foo_show_bar)
+                st.experimental.show(foo_show_bar)
                 write.assert_called_once()
                 markdown.assert_called_once()
 

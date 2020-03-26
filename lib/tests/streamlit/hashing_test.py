@@ -164,6 +164,19 @@ class HashTest(unittest.TestCase):
             self.assertNotEqual(re.search(r"a bug in `.+` near line `\d+`", exc), None)
             self.assertEqual(exc.find(code_msg) >= 0, True)
 
+    def test_hash_funcs_acceptable_keys(self):
+        class C(object):
+            def __init__(self):
+                self.x = (x for x in range(1))
+
+        with self.assertRaises(UnhashableTypeError):
+            get_hash(C())
+
+        self.assertEqual(
+            get_hash(C(), hash_funcs={types.GeneratorType: id}),
+            get_hash(C(), hash_funcs={"builtins.generator": id}),
+        )
+
     def test_hash_funcs_error(self):
         with self.assertRaises(UserHashError):
             get_hash(1, hash_funcs={int: lambda x: "a" + x})

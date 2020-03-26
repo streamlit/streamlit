@@ -15,6 +15,8 @@ pip install streamlit
 streamlit hello
 ```
 
+We also have suggestions for installing Streamlit in a virtual environment in [Windows](https://github.com/streamlit/streamlit/wiki/Installing-in-a-virtual-environment#on-windows), [Mac](https://github.com/streamlit/streamlit/wiki/Installing-in-a-virtual-environment#on-mac--linux), and [Linux](https://github.com/streamlit/streamlit/wiki/Installing-in-a-virtual-environment#on-mac--linux).
+
 ## Example
 
 Streamlit lets you build interactive apps ridiculously easily:
