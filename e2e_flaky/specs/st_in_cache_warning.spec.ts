@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,27 +13,26 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
-syntax = "proto3";
+/// <reference types="cypress" />
 
-import "streamlit/proto/DataFrame.proto";
+describe("st calls within cached functions", () => {
+  beforeEach(() => {
+    cy.visit("http://localhost:3000/");
+  });
 
-message Chart {
-  string type = 1;
-  DataFrame data = 2;
-  uint32 width = 3;
-  uint32 height = 4;
-  repeated ChartComponent components = 5;
-  repeated ChartProperty props = 6;
-}
+  it("displays expected results", () => {
+    // We should have two alerts
+    cy.get(".element-container > .alert-warning").should("have.length", 2);
 
-message ChartComponent {
-  string type = 1;
-  repeated ChartProperty props = 2;
-}
+    // One button
+    cy.get(".element-container > .stButton").should("have.length", 1);
 
-message ChartProperty {
-  string key = 1;
-  string value = 2;
-}
+    // And two texts
+    cy.get(".element-container > .markdown-text-container").should(
+      "have.length",
+      3
+    );
+  });
+});

@@ -15,4 +15,17 @@
  * limitations under the License.
  */
 
-export { default } from "./Chart"
+/// <reference types="cypress" />
+
+describe("st.empty", () => {
+  before(() => {
+    cy.visit("http://localhost:3000/");
+
+    // Make the ribbon decoration line disappear
+    cy.get(".decoration").invoke("css", "display", "none");
+  });
+
+  it("matches the snapshot", () => {
+    cy.get(".block-container").matchImageSnapshot("stEmpty");
+  });
+});

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { PureComponent } from "react"
 import { logMessage } from "lib/log"
 import { Map as ImmutableMap } from "immutable"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
@@ -56,7 +56,7 @@ interface Props {
   element: ImmutableMap<string, any>
 }
 
-interface PropsWithHeight extends Props {
+export interface PropsWithHeight extends Props {
   height: number | undefined
 }
 
@@ -64,11 +64,17 @@ interface State {
   error?: Error
 }
 
-class VegaLiteChart extends React.PureComponent<PropsWithHeight, State> {
+export class VegaLiteChart extends PureComponent<PropsWithHeight, State> {
   /**
    * The Vega view object
    */
-  private vegaView: vega.View | undefined
+  private vegaView?: vega.View
+
+  /**
+   * Finalizer for the embedded vega object. Must be called to dispose
+   * of the vegaView when it's no longer used.
+   */
+  private vegaFinalizer?: () => void
 
   /**
    * The default data name to add to.
@@ -80,23 +86,8 @@ class VegaLiteChart extends React.PureComponent<PropsWithHeight, State> {
    */
   private element: HTMLDivElement | null = null
 
-  public constructor(props: PropsWithHeight) {
-    super(props)
-
-    this.state = {
-      error: undefined,
-    }
-  }
-
-  public render(): JSX.Element {
-    if (this.state.error) {
-      throw this.state.error
-    }
-
-    return (
-      // Create the container Vega draws inside.
-      <div className="stVegaLiteChart" ref={c => (this.element = c)} />
-    )
+  readonly state = {
+    error: undefined,
   }
 
   public async componentDidMount(): Promise<void> {
@@ -107,34 +98,20 @@ class VegaLiteChart extends React.PureComponent<PropsWithHeight, State> {
     }
   }
 
-  public generateSpec = (): any => {
-    const el = this.props.element
-    const spec = JSON.parse(el.get("spec"))
-    const useContainerWidth = JSON.parse(el.get("useContainerWidth"))
+  public componentWillUnmount(): void {
+    this.finalizeView()
+  }
 
-    if (this.props.height) {
-      //fullscreen
-      spec.width = this.props.width - EMBED_PADDING
-      spec.height = this.props.height
-    } else {
-      if (useContainerWidth) {
-        spec.width = this.props.width - EMBED_PADDING
-      }
+  /**
+   * Finalize the view so it can be garbage collected. This should be done
+   * when a new view is created, and when the component unmounts.
+   */
+  private finalizeView = (): any => {
+    if (this.vegaFinalizer) {
+      this.vegaFinalizer()
     }
-
-    if (!spec.padding) {
-      spec.padding = {}
-    }
-
-    if (spec.padding.bottom == null) {
-      spec.padding.bottom = BOTTOM_PADDING
-    }
-
-    if (spec.datasets) {
-      throw new Error("Datasets should not be passed as part of the spec")
-    }
-
-    return spec
+    this.vegaFinalizer = undefined
+    this.vegaView = undefined
   }
 
   public async componentDidUpdate(prevProps: PropsWithHeight): Promise<void> {
@@ -183,6 +160,36 @@ class VegaLiteChart extends React.PureComponent<PropsWithHeight, State> {
     }
 
     this.vegaView.resize().runAsync()
+  }
+
+  public generateSpec = (): any => {
+    const el = this.props.element
+    const spec = JSON.parse(el.get("spec"))
+    const useContainerWidth = JSON.parse(el.get("useContainerWidth"))
+
+    if (this.props.height) {
+      //fullscreen
+      spec.width = this.props.width - EMBED_PADDING
+      spec.height = this.props.height
+    } else {
+      if (useContainerWidth) {
+        spec.width = this.props.width - EMBED_PADDING
+      }
+    }
+
+    if (!spec.padding) {
+      spec.padding = {}
+    }
+
+    if (spec.padding.bottom == null) {
+      spec.padding.bottom = BOTTOM_PADDING
+    }
+
+    if (spec.datasets) {
+      throw new Error("Datasets should not be passed as part of the spec")
+    }
+
+    return spec
   }
 
   /**
@@ -258,14 +265,15 @@ class VegaLiteChart extends React.PureComponent<PropsWithHeight, State> {
       throw Error("Element missing.")
     }
 
-    if (this.vegaView) {
-      // Finalize the previous view so it can be garbage collected.
-      this.vegaView.finalize()
-    }
+    // Finalize the previous view so it can be garbage collected.
+    this.finalizeView()
 
     const el = this.props.element
     const spec = this.generateSpec()
-    const { vgSpec, view } = await embed(this.element, spec)
+    const { vgSpec, view, finalize } = await embed(this.element, spec)
+
+    this.vegaView = view
+    this.vegaFinalizer = finalize
 
     const datasets = getDataArrays(el)
 
@@ -287,13 +295,22 @@ class VegaLiteChart extends React.PureComponent<PropsWithHeight, State> {
       }
     }
 
-    this.vegaView = view
-
     await view.runAsync()
 
     // Fix bug where the "..." menu button overlaps with charts where width is
     // set to -1 on first load.
     this.vegaView.resize().runAsync()
+  }
+
+  public render(): JSX.Element {
+    if (this.state.error) {
+      throw this.state.error
+    }
+
+    return (
+      // Create the container Vega draws inside.
+      <div className="stVegaLiteChart" ref={c => (this.element = c)} />
+    )
   }
 }
 

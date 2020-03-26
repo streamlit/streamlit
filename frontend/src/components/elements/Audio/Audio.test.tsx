@@ -60,4 +60,29 @@ describe("Audio Element", () => {
       expect(audioElement.prop("src")).toBe(props.element.get("url"))
     })
   })
+
+  it("should update time when the prop is changed", () => {
+    const props = getProps({
+      url: "http://localhost:80/media/sound.wav",
+    })
+
+    const wrapper = shallow(<Audio {...props} />)
+    const instance = wrapper.instance()
+
+    // @ts-ignore
+    instance.audioRef = {
+      current: {
+        currentTime: 0,
+      },
+    }
+
+    wrapper.setProps(
+      getProps({
+        startTime: 10,
+      })
+    )
+
+    // @ts-ignore
+    expect(instance.audioRef.current.currentTime).toBe(10)
+  })
 })

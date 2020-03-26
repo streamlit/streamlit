@@ -37,7 +37,7 @@ const SORT_ICON_WIDTH_PX = 10
 /**
  * Minimum size of a dataframe cell.
  */
-const MIN_CELL_WIDTH_PX = 25
+export const MIN_CELL_WIDTH_PX = 25
 
 /**
  * Maximum size of a dataframe cell.
@@ -49,7 +49,7 @@ const MAX_CELL_WIDTH_PX = 200
  */
 const MAX_LONELY_CELL_WIDTH_PX = 400
 
-interface Props {
+export interface Props {
   width: number
   height: number | undefined
   element: ImmutableMap<string, any>
@@ -114,7 +114,7 @@ const DEFAULT_HEIGHT = 300
 /**
  * Functional element representing a DataFrame.
  */
-class DataFrame extends React.PureComponent<Props, State> {
+export class DataFrame extends React.PureComponent<Props, State> {
   private multiGridRef = React.createRef<MultiGrid>()
 
   public constructor(props: Props) {
