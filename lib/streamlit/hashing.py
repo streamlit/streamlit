@@ -25,13 +25,14 @@ import inspect
 import io
 import os
 import pickle
+import re
 import sys
 import tempfile
 import textwrap
 import threading
 import weakref
 import types
-from typing import Any, List
+from typing import Any, List, Pattern
 
 from streamlit import config
 from streamlit import file_util
@@ -418,6 +419,9 @@ class _CodeHasher:
             self.update(h, os.path.getmtime(obj_name))
             self.update(h, obj.tell())
             return h.digest()
+
+        elif isinstance(obj, Pattern):
+            return self.to_bytes([obj.pattern, obj.flags])
 
         elif isinstance(obj, io.StringIO) or isinstance(obj, io.BytesIO):
             # Hash in-memory StringIO/BytesIO by their full contents
