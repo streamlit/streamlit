@@ -544,7 +544,7 @@ Object of type _thread.lock:
         ep = ExceptionProto()
         exception_proto.marshall(ep, cm.exception)
 
-        self.assertEqual(ep.type, "UserHashError")
+        self.assertEqual(ep.type, "TypeError")
         self.assertTrue(
             normalize_md(ep.message).startswith(
                 normalize_md(
