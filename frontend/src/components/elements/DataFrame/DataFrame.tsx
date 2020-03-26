@@ -440,6 +440,10 @@ function getCellContentsGetter(
 
 /**
  * Computes various dimensions for the table.
+ *
+ * First of all we create an array containing all the calculated column widths,
+ * if the difference between the total of columns and the container width is negative
+ * we put a width limit, if not, we divide the remaining space by each exceeding width
  */
 function getWidths(
   cols: number,
