@@ -132,6 +132,7 @@ class MediaFileManager(object):
         # remove from this session.
         old_file_id = self._session_id_to_file_ids.get(coordinates, None)
         if old_file_id:
+            LOGGER.debug("Removing file %s", old_file_id)
             self._remove(old_file_id)
 
         self._session_id_to_file_ids[_get_session_id()][coordinates] = file_id
@@ -168,7 +169,7 @@ class MediaFileManager(object):
         return self._files[file_id]
 
     def get(self, mediafile_or_id):
-        """Returns MediaFile object for given file_id and decrements its session_count.
+        """Returns MediaFile object for given file_id or MediaFile object.
 
         Raises KeyError if not found.
         """
