@@ -47,8 +47,6 @@ click = ">=7.0"
 packaging = "*"
 python-dateutil = "*"
 enum-compat = "*"
-# python3 code backported to python2
-future = "*"
 numpy = "*"
 pandas = ">=0.21.0"
 pillow = ">=6.2.0"
@@ -59,7 +57,7 @@ pydeck = ">=0.1.dev5"
 requests = "*"
 toml = "*"
 # 5.0 has a fix for etag header: https://github.com/tornadoweb/tornado/issues/2262
-# 6.0 doesn't support Python 2
+# TODO: upgrade tornado to 6.x now that we don't have to support Python 2
 tornado = ">=5.0,<6.0"
 tzlocal = "*"
 validators = "*"
