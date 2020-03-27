@@ -186,4 +186,6 @@ class UploadedFileManagerTest(unittest.TestCase):
 
         self.assertEqual(len(VIDEO_FIXTURES), len(mfm))
         mfm.reset_files_for_session()
+        print(mfm._files)
+
         self.assertEqual(len(mfm), 0)
