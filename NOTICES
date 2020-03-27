@@ -11191,60 +11191,6 @@ the licensed code:
 
 -----
 
-The following software may be included in this product: fsevents. A copy of the source code may be downloaded from https://github.com/fsevents/fsevents.git. This software contains the following license and notice below:
-
-MIT License
------------
-
-Copyright (C) 2010-2019 by Philipp Dunkel, Ben Noordhuis, Elan Shankar
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-
------
-
-The following software may be included in this product: fsevents. A copy of the source code may be downloaded from https://github.com/strongloop/fsevents.git. This software contains the following license and notice below:
-
-MIT License
------------
-
-Copyright (C) 2010-2014 Philipp Dunkel
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-
------
-
 The following software may be included in this product: function-bind. A copy of the source code may be downloaded from git://github.com/Raynos/function-bind.git. This software contains the following license and notice below:
 
 Copyright (c) 2013 Raynos.
@@ -20218,7 +20164,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 -----
 
-The following software may be included in this product: require-main-filename, set-blocking, test-exclude, yargs-parser. A copy of the source code may be downloaded from git+ssh://git@github.com/yargs/require-main-filename.git (require-main-filename), git+https://github.com/yargs/set-blocking.git (set-blocking), git+https://github.com/istanbuljs/istanbuljs.git (test-exclude), git@github.com:yargs/yargs-parser.git (yargs-parser). This software contains the following license and notice below:
+The following software may be included in this product: require-main-filename, set-blocking, test-exclude, yargs-parser. A copy of the source code may be downloaded from git+ssh://git@github.com/yargs/require-main-filename.git (require-main-filename), git+https://github.com/yargs/set-blocking.git (set-blocking), git+https://github.com/istanbuljs/istanbuljs.git (test-exclude), https://github.com/yargs/yargs-parser.git (yargs-parser). This software contains the following license and notice below:
 
 Copyright (c) 2016, Contributors
 
@@ -23354,7 +23300,7 @@ SOFTWARE.
 
 -----
 
-The following software may be included in this product: vega, vega-canvas, vega-dataflow, vega-encode, vega-event-selector, vega-expression, vega-force, vega-functions, vega-geo, vega-hierarchy, vega-loader, vega-parser, vega-projection, vega-regression, vega-runtime, vega-scale, vega-scenegraph, vega-selections, vega-statistics, vega-time, vega-transforms, vega-typings, vega-util, vega-view, vega-view-transforms, vega-voronoi, vega-wordcloud. A copy of the source code may be downloaded from https://github.com/vega/vega.git (vega), https://github.com/vega/vega.git (vega-canvas), https://github.com/vega/vega.git (vega-dataflow), https://github.com/vega/vega.git (vega-encode), https://github.com/vega/vega.git (vega-event-selector), https://github.com/vega/vega.git (vega-expression), https://github.com/vega/vega.git (vega-force), https://github.com/vega/vega.git (vega-functions), https://github.com/vega/vega.git (vega-geo), https://github.com/vega/vega.git (vega-hierarchy), https://github.com/vega/vega.git (vega-loader), https://github.com/vega/vega.git (vega-parser), https://github.com/vega/vega.git (vega-projection), https://github.com/vega/vega.git (vega-regression), https://github.com/vega/vega.git (vega-runtime), https://github.com/vega/vega.git (vega-scale), https://github.com/vega/vega.git (vega-scenegraph), https://github.com/vega/vega.git (vega-selections), https://github.com/vega/vega.git (vega-statistics), https://github.com/vega/vega.git (vega-time), https://github.com/vega/vega.git (vega-transforms), https://github.com/vega/vega.git (vega-typings), https://github.com/vega/vega.git (vega-util), https://github.com/vega/vega.git (vega-view), https://github.com/vega/vega.git (vega-view-transforms), https://github.com/vega/vega.git (vega-voronoi), https://github.com/vega/vega.git (vega-wordcloud). This software contains the following license and notice below:
+The following software may be included in this product: vega, vega-canvas, vega-dataflow, vega-encode, vega-event-selector, vega-expression, vega-force, vega-functions, vega-geo, vega-hierarchy, vega-loader, vega-parser, vega-projection, vega-regression, vega-runtime, vega-scale, vega-scenegraph, vega-selections, vega-statistics, vega-time, vega-transforms, vega-util, vega-view, vega-view-transforms, vega-voronoi, vega-wordcloud. A copy of the source code may be downloaded from https://github.com/vega/vega.git (vega), https://github.com/vega/vega.git (vega-canvas), https://github.com/vega/vega.git (vega-dataflow), https://github.com/vega/vega.git (vega-encode), https://github.com/vega/vega.git (vega-event-selector), https://github.com/vega/vega.git (vega-expression), https://github.com/vega/vega.git (vega-force), https://github.com/vega/vega.git (vega-functions), https://github.com/vega/vega.git (vega-geo), https://github.com/vega/vega.git (vega-hierarchy), https://github.com/vega/vega.git (vega-loader), https://github.com/vega/vega.git (vega-parser), https://github.com/vega/vega.git (vega-projection), https://github.com/vega/vega.git (vega-regression), https://github.com/vega/vega.git (vega-runtime), https://github.com/vega/vega.git (vega-scale), https://github.com/vega/vega.git (vega-scenegraph), https://github.com/vega/vega.git (vega-selections), https://github.com/vega/vega.git (vega-statistics), https://github.com/vega/vega.git (vega-time), https://github.com/vega/vega.git (vega-transforms), https://github.com/vega/vega.git (vega-util), https://github.com/vega/vega.git (vega-view), https://github.com/vega/vega.git (vega-view-transforms), https://github.com/vega/vega.git (vega-voronoi), https://github.com/vega/vega.git (vega-wordcloud). This software contains the following license and notice below:
 
 Copyright (c) 2015-2018, University of Washington Interactive Data Lab
 All rights reserved.
