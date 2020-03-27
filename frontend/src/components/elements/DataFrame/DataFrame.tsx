@@ -498,7 +498,7 @@ function getWidths(
   )
   const totalTableWidth = tableColumnWidth.reduce((a, b) => a + b, 0)
   const remainingSpace = containerWidth - totalTableWidth
-  const getColumnsThatExceedsMaxWidth = (
+  const getColumnsThatExceedMaxWidth = (
     columns: Array<number>
   ): Array<number> => columns.filter(width => width > maxWidth)
 
@@ -507,11 +507,11 @@ function getWidths(
       width > maxWidth ? maxWidth : width
     )
   } else {
-    const columnsThatExceeds = getColumnsThatExceedsMaxWidth(tableColumnWidth)
-    const remainingSpaceByColumn = remainingSpace / columnsThatExceeds.length
+    const columnsThatExceed = getColumnsThatExceedMaxWidth(tableColumnWidth)
+    const remainingSpaceByColumn = remainingSpace / columnsThatExceed.length
 
     distributedTable = tableColumnWidth.map((width, id) => {
-      if (id in columnsThatExceeds.keys()) {
+      if (id in columnsThatExceed.keys()) {
         return width + remainingSpaceByColumn
       }
 
