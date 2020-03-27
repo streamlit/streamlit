@@ -32,7 +32,7 @@ from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 
-def marshall(new_element_proto, fig=None, clear_figure=True, **kwargs):
+def marshall(coordinates, new_element_proto, fig=None, clear_figure=True, **kwargs):
     """Construct a matplotlib.pyplot figure.
 
     See DeltaGenerator.vega_lite_chart for docs.
@@ -55,7 +55,7 @@ def marshall(new_element_proto, fig=None, clear_figure=True, **kwargs):
 
     image = io.BytesIO()
     fig.savefig(image, **kwargs)
-    image_proto.marshall_images(
+    image_proto.marshall_images(coordinates,
         image, None, -2, new_element_proto.imgs, False, channels="RGB", format="PNG"
     )
 
