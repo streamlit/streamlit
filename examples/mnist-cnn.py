@@ -15,12 +15,6 @@
 
 """An example of monitoring a simple neural net as it trains."""
 
-# Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
-from streamlit.compatibility import setup_2_3_shims
-
-setup_2_3_shims(globals())
-
 import streamlit as st
 from streamlit import config
 
@@ -72,7 +66,7 @@ class MyCallback(keras.callbacks.Callback):
         if batch % 100 == 99:
             rows = {"loss": [logs["loss"]], "accuracy": [logs["accuracy"]]}
             self._summary_chart.add_rows(rows)
-        percent_complete = logs["batch"] * logs["size"] / self.params["samples"]
+        percent_complete = batch * logs.get("size", 0) / self.params["samples"]
         self._epoch_progress.progress(math.ceil(percent_complete * 100))
         ts = time.time() - self._ts
         self._epoch_summary.text(
