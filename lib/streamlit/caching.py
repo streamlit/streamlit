@@ -353,7 +353,6 @@ def cache(
     show_spinner=True,
     suppress_st_warning=False,
     hash_funcs=None,
-    ignore_hash=False,
     max_entries=None,
     ttl=None,
 ):
@@ -363,8 +362,6 @@ def cache(
     ----------
     func : callable
         The function to cache. Streamlit hashes the function and dependent code.
-        Streamlit can only hash nested objects (e.g. `bar` in `foo.bar`) in
-        Python 3.4+.
 
     persist : boolean
         Whether to persist the cache on disk.
@@ -398,10 +395,6 @@ def cache(
     ttl : float or None
         The maximum number of seconds to keep an entry in the cache, or
         None if cache entries should not expire. The default is None.
-
-    ignore_hash : boolean
-        DEPRECATED. Please use allow_output_mutation instead.
-        This argument will be fully removed after 2020-03-16.
 
     Example
     -------
@@ -452,13 +445,6 @@ def cache(
 
     """
     _LOGGER.debug("Entering st.cache: %s", func)
-
-    # Help users migrate to the new kwarg
-    # Remove this warning after 2020-03-16.
-    if ignore_hash:
-        raise StreamlitDeprecationWarning(
-            "The `ignore_hash` argument has been renamed to `allow_output_mutation`."
-        )
 
     # Support passing the params via function decorator, e.g.
     # @st.cache(persist=True, allow_output_mutation=True)

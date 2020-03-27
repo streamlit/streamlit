@@ -45,8 +45,10 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.file_uploader
         self.assertEqual(c.type, ["png", "svg", "jpeg"])
 
+    # Don't test this yet! Feature was not released. Remove "x" from name to
+    # turn this back on.
     @patch("streamlit.UploadedFileManager.UploadedFileManager.get_files")
-    def test_multiple_files(self, get_files_patch):
+    def xtest_multiple_files(self, get_files_patch):
         """Test the accept_multiple_files flag"""
         files = [UploadedFile("file1", b"123"), UploadedFile("file2", b"456")]
         file_vals = [get_encoded_file_data(file.data).getvalue() for file in files]

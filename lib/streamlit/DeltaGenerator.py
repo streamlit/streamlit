@@ -2022,13 +2022,7 @@ class DeltaGenerator(object):
 
     @_with_element
     def file_uploader(
-        self,
-        element,
-        label,
-        type=None,
-        encoding="auto",
-        key=None,
-        accept_multiple_files=False,
+        self, element, label, type=None, encoding="auto", key=None,
     ):
         """Display a file uploader widget.
 
@@ -2051,9 +2045,6 @@ class DeltaGenerator(object):
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
-        accept_multiple_files : bool
-            If True, the uploader widget will accept multiple files, and the
-            returned value will be a list of all files. Defaults to False.
 
         Returns
         -------
@@ -2076,6 +2067,9 @@ class DeltaGenerator(object):
         ...     st.write(data)
 
         """
+        # Don't release this just yet. (When ready to release, turn test back
+        # on at file_uploader_test.py)
+        accept_multiple_files = False
 
         if isinstance(type, str):
             type = [type]
