@@ -74,7 +74,7 @@ def _marshall_av_media(coordinates, proto, data, mimetype):
     if isinstance(data, str):
         # Assume it's a filename or blank.  Allow OS-based file errors.
         with open(data, "rb") as fh:
-            this_file = media_file_manager.add(fh.read(), mimetype)
+            this_file = media_file_manager.add(fh.read(), mimetype, coordinates)
             proto.url = this_file.url
             return
 
