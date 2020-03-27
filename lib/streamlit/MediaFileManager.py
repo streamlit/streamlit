@@ -129,10 +129,9 @@ class MediaFileManager(object):
     def _add_to_session(self, file_id, coordinates):
         """Syntactic sugar around session->coordinate->file_id mapping."""
         # Was there already a media file at this position? If so,
-        # remove from this session.
-        old_file_id = self._session_id_to_file_ids.get(coordinates, None)
+        # remove file from this session (and from mfm._files if no longer used).
+        old_file_id = self._session_id_to_file_ids[_get_session_id()].get(coordinates, None)
         if old_file_id:
-            LOGGER.debug("Removing file %s", old_file_id)
             self._remove(old_file_id)
 
         self._session_id_to_file_ids[_get_session_id()][coordinates] = file_id
