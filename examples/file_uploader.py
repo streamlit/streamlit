@@ -14,18 +14,18 @@
 # limitations under the License.
 
 import streamlit as st
-import numpy as np
-import pandas as pd
-import altair as alt
 
-df = pd.DataFrame(np.random.randn(200, 3), columns=["a", "b", "c"])
+"""
+# File Uploader
 
-c = alt.Chart(df).mark_circle().encode(x="a", y="b", size="c", color="c").interactive()
+It's hard to test the ability to upload files in an automated way, so here you
+should test it by hand. Please upload a CSV file and make sure a table shows up
+below with its contents.
+"""
 
-st.title("These two should look exactly the same")
+w = st.file_uploader("Upload a CSV file", type="csv")
+if w:
+    import pandas as pd
 
-st.write("Altair chart using `st.altair_chart`:")
-st.altair_chart(c)
-
-st.write("And the same chart using `st.write`:")
-st.write(c)
+    data = pd.read_csv(w)
+    st.write(data)
