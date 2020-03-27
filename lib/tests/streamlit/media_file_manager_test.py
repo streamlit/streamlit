@@ -30,7 +30,7 @@ def random_coordinates():
     return "{}.{}.{}".format(
         random.randint(1, 4),
         (random.randint(1, 12), random.randint(1, 12)),
-        random.randin(1, 99),
+        random.randint(1, 99),
     )
 
 
@@ -110,10 +110,12 @@ class UploadedFileManagerTest(unittest.TestCase):
         with self.assertRaises(TypeError):
             mfm.add(None, "media/any", coord)
 
+        sample_coords = set()
+        while len(sample_coords) < len(ALL_FIXTURES):
+            sample_coords.add(random_coordinates())
+
         for sample in ALL_FIXTURES.values():
-            # TODO: do not generate randomly (this will fail by generating same coords at least once!)
-            coord = random_coordinates()
-            mfm.add(sample["content"], sample["mimetype"], coord)
+            mfm.add(sample["content"], sample["mimetype"], sample_coords.pop())
             file_id = _get_file_id(sample["content"], sample["mimetype"])
             self.assertTrue(file_id in mfm)
 
@@ -123,11 +125,13 @@ class UploadedFileManagerTest(unittest.TestCase):
         _get_session_id.return_value = "TEST"
 
         sample = IMAGE_FIXTURES["png"]
-        mfm.add(sample["content"], sample["mimetype"])
+        coord = random_coordinates() 
+
+        mfm.add(sample["content"], sample["mimetype"], coord)
         file_id = _get_file_id(sample["content"], sample["mimetype"])
         self.assertTrue(file_id in mfm)
 
-        mediafile = mfm.add(sample["content"], sample["mimetype"])
+        mediafile = mfm.add(sample["content"], sample["mimetype"], coord)
         self.assertTrue(file_id in mfm)
         self.assertEqual(mediafile.id, file_id)
 
@@ -143,7 +147,7 @@ class UploadedFileManagerTest(unittest.TestCase):
         file_id = _get_file_id(sample["content"], sample["mimetype"])
         self.assertTrue(file_id in mfm)
 
-        mediafile = mfm.add(sample["content"], "video/mp4")
+        mediafile = mfm.add(sample["content"], "video/mp4", coord)
         self.assertNotEqual(file_id, mediafile.id)
 
     @mock.patch("streamlit.MediaFileManager._get_session_id")
