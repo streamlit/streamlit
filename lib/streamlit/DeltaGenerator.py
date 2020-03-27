@@ -1538,8 +1538,8 @@ class DeltaGenerator(object):
         from .elements import media_proto
 
         media_proto.marshall_audio(
-            self._get_coordinates(),
-            element.audio, data, format, start_time)
+            self._get_coordinates(), element.audio, data, format, start_time
+        )
 
     @_with_element
     def video(self, element, data, format="video/mp4", start_time=0):
@@ -1575,8 +1575,8 @@ class DeltaGenerator(object):
         from .elements import media_proto
 
         media_proto.marshall_video(
-            self._get_coordinates(),
-            element.video, data, format, start_time)
+            self._get_coordinates(), element.video, data, format, start_time
+        )
 
     @_with_element
     def button(self, element, label, key=None):
