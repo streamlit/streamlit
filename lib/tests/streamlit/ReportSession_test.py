@@ -122,9 +122,10 @@ class ReportSessionTest(unittest.TestCase):
     def test_unique_id(self, _1):
         """Each ReportSession should have a unique ID"""
         file_mgr = MagicMock(spec=UploadedFileManager)
-        rs1 = ReportSession(False, "", "", file_mgr)
-        rs2 = ReportSession(False, "", "", file_mgr)
+        rs1 = ReportSession(False, None, "", "", file_mgr)
+        rs2 = ReportSession(False, None, "", "", file_mgr)
         self.assertNotEqual(rs1.id, rs2.id)
+
 
 def _create_mock_websocket():
     @tornado.gen.coroutine
