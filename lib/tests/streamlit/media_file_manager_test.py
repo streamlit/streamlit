@@ -162,7 +162,11 @@ class UploadedFileManagerTest(unittest.TestCase):
         file_id = _get_file_id(sample["content"], sample["mimetype"])
         self.assertTrue(file_id in mfm)
 
+        # hack the "ttd" on the MediaFile so it expires right away.
+        mfm._files[file_id].ttd = 0
+
         mfm._remove(file_id)
+
         self.assertFalse(file_id in mfm)
 
         # Make sure we throw an error when looking for an invalid file_id.
@@ -186,6 +190,10 @@ class UploadedFileManagerTest(unittest.TestCase):
 
         self.assertEqual(len(VIDEO_FIXTURES), len(mfm))
         mfm.reset_files_for_session()
-        print(mfm._files)
 
-        self.assertEqual(len(mfm), 0)
+        # The files left behind will be orphaned with a still-valid timestamp,
+        # so the effect we're testing here is that their session counts have been
+        # decremented.
+        for file_id, mf in mfm._files.items():
+            self.assertEqual(mf.session_count, 0)
+
