@@ -308,8 +308,16 @@ class DeltaGenerator(object):
             return self._provided_cursor
 
     def _get_coordinates(self):
-        """Returns the element's 4-component location as string like "M.(1,2).3"."""
-        container = self._container  # proto index of container (e.g. MAIN=1)
+        """Returns the element's 4-component location as string like "M.(1,2).3".
+
+        This function uniquely identifies the element's position in the front-end, 
+        which allows (among other potential uses) the MediaFileManager to maintain
+        session-specific maps of MediaFile objects placed with their "coordinates".
+
+        This way, users can (say) use st.image with a stream of different images,
+        and Streamlit will expire the older images and replace them in place.
+        """
+        container = self._container  # Proto index of container (e.g. MAIN=1)
         path = self._cursor.path  # [uint, uint] - "breadcrumbs" w/ ancestor positions
         index = self._cursor.index  # index - element's own position
         return "{}.{}.{}".format(container, path, index)
