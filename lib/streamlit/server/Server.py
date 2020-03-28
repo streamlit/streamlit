@@ -509,6 +509,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             LOGGER.debug("Reusing preheated context for ws %s", ws)
             session = self._session_info_by_id[PREHEATED_ID].session
             del self._session_info_by_id[PREHEATED_ID]
+            session.id = 0
         else:
             LOGGER.debug("Creating new context for ws %s", ws)
             session = ReportSession(
