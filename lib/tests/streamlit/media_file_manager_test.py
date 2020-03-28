@@ -125,7 +125,7 @@ class UploadedFileManagerTest(unittest.TestCase):
         _get_session_id.return_value = "TEST"
 
         sample = IMAGE_FIXTURES["png"]
-        coord = random_coordinates() 
+        coord = random_coordinates()
 
         mfm.add(sample["content"], sample["mimetype"], coord)
         file_id = _get_file_id(sample["content"], sample["mimetype"])
@@ -196,4 +196,3 @@ class UploadedFileManagerTest(unittest.TestCase):
         # decremented.
         for file_id, mf in mfm._files.items():
             self.assertEqual(mf.session_count, 0)
-

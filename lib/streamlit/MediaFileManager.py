@@ -99,8 +99,8 @@ class MediaFileManager(object):
 
     def __init__(self):
         self._files = {}
-        self._session_id_to_file_ids = collections.defaultdict(
-            lambda: {}
+        self._session_id_to_coordinate_map = collections.defaultdict(
+            lambda: dict
         )  # type: typing.DefaultDict[str, dict[str]]
 
     def _remove(self, mediafile_or_id):
@@ -126,25 +126,25 @@ class MediaFileManager(object):
         if session_id is None:
             session_id = _get_session_id()
 
-        for coordinates in self._session_id_to_file_ids[session_id]:
-            file_id = self._session_id_to_file_ids[session_id][coordinates]
+        for coordinates in self._session_id_to_coordinate_map[session_id]:
+            file_id = self._session_id_to_coordinate_map[session_id][coordinates]
             self._remove(file_id)
 
         LOGGER.debug("Reset files for session with ID %s", session_id)
-        del self._session_id_to_file_ids[session_id]
-        LOGGER.debug("Sessions still active: %r", self._session_id_to_file_ids)
+        del self._session_id_to_coordinate_map[session_id]
+        LOGGER.debug("Sessions still active: %r", self._session_id_to_coordinate_map)
 
     def _add_to_session(self, file_id, coordinates):
         """Syntactic sugar around session->coordinate->file_id mapping."""
         # Was there already a media file at this position? If so,
         # remove file from this session.
-        old_file_id = self._session_id_to_file_ids[_get_session_id()].get(
+        old_file_id = self._session_id_to_coordinate_map[_get_session_id()].get(
             coordinates, None
         )
         if old_file_id:
             self._remove(old_file_id)
 
-        self._session_id_to_file_ids[_get_session_id()][coordinates] = file_id
+        self._session_id_to_coordinate_map[_get_session_id()][coordinates] = file_id
 
     def add(self, content, mimetype, coordinates):
         """Adds new MediaFile with given parameters; returns the object.
