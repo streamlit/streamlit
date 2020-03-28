@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,6 +22,7 @@ from mock import patch
 
 from streamlit import caching
 from streamlit import hashing
+from streamlit.hashing import UserHashError
 from streamlit.elements import exception_proto
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 from tests import testutil

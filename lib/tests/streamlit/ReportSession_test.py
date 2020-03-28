@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -111,12 +110,12 @@ class ReportSessionTest(unittest.TestCase):
         rs = ReportSession(False, None, "", "", file_mgr)
 
         rs.shutdown()
-        self.assertEquals(ReportSessionState.SHUTDOWN_REQUESTED, rs._state)
+        self.assertEqual(ReportSessionState.SHUTDOWN_REQUESTED, rs._state)
         file_mgr.remove_session_files.assert_called_once_with(rs.id)
 
         # A 2nd shutdown call should have no effect.
         rs.shutdown()
-        self.assertEquals(ReportSessionState.SHUTDOWN_REQUESTED, rs._state)
+        self.assertEqual(ReportSessionState.SHUTDOWN_REQUESTED, rs._state)
         file_mgr.remove_session_files.assert_called_once_with(rs.id)
 
     @patch("streamlit.ReportSession.LocalSourcesWatcher")
@@ -125,7 +124,7 @@ class ReportSessionTest(unittest.TestCase):
         file_mgr = MagicMock(spec=UploadedFileManager)
         rs1 = ReportSession(False, None, "", "", file_mgr)
         rs2 = ReportSession(False, None, "", "", file_mgr)
-        self.assertNotEquals(rs1.id, rs2.id)
+        self.assertNotEqual(rs1.id, rs2.id)
 
 
 def _create_mock_websocket():

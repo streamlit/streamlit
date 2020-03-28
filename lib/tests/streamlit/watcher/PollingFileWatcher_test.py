@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -141,7 +140,7 @@ class PollingFileWatcherTest(unittest.TestCase):
 
         def sleep():
             try:
-                # TODO: Remove depedency on time.sleep!
+                # TODO: Remove dependency on time.sleep!
                 time.sleep(5 * PollingFileWatcher._POLLING_PERIOD_SECS)
             except AssertionError:
                 pass

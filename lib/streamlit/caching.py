@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -287,7 +286,7 @@ def _read_from_disk_cache(key):
         _LOGGER.error(e)
         raise CacheError("Unable to read from cache: %s" % e)
 
-    except (OSError, FileNotFoundError):  # Python 2  # Python 3
+    except FileNotFoundError:
         raise CacheKeyNotFoundError("Key not found in disk cache")
     return value
 
@@ -299,9 +298,7 @@ def _write_to_disk_cache(key, value):
         with file_util.streamlit_write(path, binary=True) as output:
             entry = _DiskCacheEntry(value=value)
             pickle.dump(entry, output, pickle.HIGHEST_PROTOCOL)
-    # In python 2, it's pickle struct error.
-    # In python 3, it's an open error in util.
-    except (util.Error, struct.error) as e:
+    except util.Error as e:
         _LOGGER.debug(e)
         # Clean up file so we don't leave zero byte files.
         try:
@@ -732,10 +729,6 @@ class Cache(Dict[Any, Any]):
         return False
 
     def __bool__(self):
-        return self.has_changes()
-
-    # Python 2 doesn't have __bool__
-    def __nonzero__(self):
         return self.has_changes()
 
     def __getattr__(self, key):
