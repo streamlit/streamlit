@@ -28,6 +28,7 @@ LOGGER = get_logger(__name__)
 STATIC_MEDIA_ENDPOINT = "/media"
 
 # Seconds to keep media files that have been obsoleted by replacement-in-place.
+# Without this, files may get scrubbed before browsers have a chance to request them.
 KEEP_DELAY = 2
 
 
@@ -72,6 +73,11 @@ class MediaFile(object):
         self._content = content
         self._mimetype = mimetype
         self.session_count = session_count
+
+        # "Time to Die": a timestamp set slightly ahead in the future
+        # so the file will not be scrubbed too quickly when it is replaced.
+        # This prevents 404s on browser requests for files that were displayed
+        # for a short time.
         self.ttd = KEEP_DELAY + datetime.timestamp(datetime.now())
 
     @property
@@ -102,19 +108,19 @@ class MediaFileManager(object):
             lambda: dict
         )  # type: typing.DefaultDict[str, dict[str]]
 
-    def _remove(self, mediafile_or_id):
-        """Deletes MediaFile via file_id lookup.
-
-        Raises KeyError if not found.
+    def _scrub(self):
+        """ Remove media files that have expired and are session-orphans.
+        (A MediaFile is a session-orphan when its session_count < 1.)
         """
-        mf = self.get(mediafile_or_id)
-        mf.session_count -= 1
         ts = datetime.timestamp(datetime.now())
-
-        # Remove files that have expired AND are orphans.
         for file_id, mf in list(self._files.items()):
             if mf.session_count == 0 and mf.ttd < ts:
                 del self._files[file_id]
+
+    def _remove(self, file_id):
+        """ Given a file_id, decrements that MediaFile's session_count by one. """
+        mf = self.get(file_id)
+        mf.session_count -= 1
 
     def reset_files_for_session(self, session_id=None):
         """Clears all stored files for a given ReportSession id.
@@ -135,8 +141,8 @@ class MediaFileManager(object):
 
     def _add_to_session(self, file_id, coordinates):
         """Syntactic sugar around session->coordinate->file_id mapping."""
-        # Was there already a media file at this position? If so,
-        # remove file from this session.
+        # If there already was a media file at these coordinates in this session,
+        # remove file from this session and save the older ID.
         old_file_id = self._session_id_to_coordinate_map[_get_session_id()].get(
             coordinates, None
         )
@@ -144,6 +150,7 @@ class MediaFileManager(object):
             self._remove(old_file_id)
 
         self._session_id_to_coordinate_map[_get_session_id()][coordinates] = file_id
+        self._scrub()
 
     def add(self, content, mimetype, coordinates):
         """Adds new MediaFile with given parameters; returns the object.
