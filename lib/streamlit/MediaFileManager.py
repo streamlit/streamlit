@@ -171,6 +171,8 @@ class MediaFileManager(object):
             The mime type for the media file. E.g. "audio/mpeg"
         coordinates : str
             Unique string identifying an element's location.
+            Prevents memory leak of "forgotten" file IDs when element media
+            is being replaced-in-place (e.g. an st.image stream).
         """
         file_id = _get_file_id(content, mimetype)
 
