@@ -29,7 +29,8 @@ LOGGER = get_logger(__name__)
 STATIC_MEDIA_ENDPOINT = "/media"
 
 # Seconds to keep media files that have been obsoleted by replacement-in-place.
-KEEP_DELAY = 2  
+KEEP_DELAY = 2
+
 
 def _get_session_id():
     """Semantic wrapper to retrieve current ReportSession ID."""
@@ -137,7 +138,9 @@ class MediaFileManager(object):
         """Syntactic sugar around session->coordinate->file_id mapping."""
         # Was there already a media file at this position? If so,
         # remove file from this session.
-        old_file_id = self._session_id_to_file_ids[_get_session_id()].get(coordinates, None)
+        old_file_id = self._session_id_to_file_ids[_get_session_id()].get(
+            coordinates, None
+        )
         if old_file_id:
             self._remove(old_file_id)
 
@@ -173,7 +176,7 @@ class MediaFileManager(object):
 
         self._add_to_session(file_id, coordinates)
 
-        #return (self._files[file_id], _make_url(coordinates, self._files[file_id]))
+        # return (self._files[file_id], _make_url(coordinates, self._files[file_id]))
         return self._files[file_id]
 
     def get(self, mediafile_or_id):
