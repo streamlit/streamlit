@@ -15,9 +15,11 @@
 
 """Provides global MediaFileManager object as `media_file_manager`."""
 
+import time
 import typing
 import hashlib
 import collections
+from datetime import datetime
 
 from streamlit.logger import get_logger
 from streamlit.ReportThread import get_report_ctx
@@ -26,6 +28,8 @@ LOGGER = get_logger(__name__)
 
 STATIC_MEDIA_ENDPOINT = "/media"
 
+# Seconds to keep media files that have been obsoleted by replacement-in-place.
+KEEP_DELAY = 2  
 
 def _get_session_id():
     """Semantic wrapper to retrieve current ReportSession ID."""
@@ -68,6 +72,7 @@ class MediaFile(object):
         self._content = content
         self._mimetype = mimetype
         self.session_count = session_count
+        self.ttd = KEEP_DELAY + datetime.timestamp(datetime.now())
 
     @property
     def url(self):
@@ -104,8 +109,12 @@ class MediaFileManager(object):
         """
         mf = self.get(mediafile_or_id)
         mf.session_count -= 1
-        if mf.session_count == 0:
-            del self._files[mf.id]
+        ts = datetime.timestamp(datetime.now())
+
+        # Remove files that have expired AND are orphans.
+        for file_id, mf in list(self._files.items()):
+            if mf.session_count == 0 and mf.ttd < ts:
+                del self._files[file_id]
 
     def reset_files_for_session(self, session_id=None):
         """Clears all stored files for a given ReportSession id.
@@ -124,12 +133,10 @@ class MediaFileManager(object):
         del self._session_id_to_file_ids[session_id]
         LOGGER.debug("Sessions still active: %r", self._session_id_to_file_ids)
 
-        LOGGER.debug("MediaFileManager files remaining: %r", self._files)
-
     def _add_to_session(self, file_id, coordinates):
         """Syntactic sugar around session->coordinate->file_id mapping."""
         # Was there already a media file at this position? If so,
-        # remove file from this session (and from mfm._files if no longer used).
+        # remove file from this session.
         old_file_id = self._session_id_to_file_ids[_get_session_id()].get(coordinates, None)
         if old_file_id:
             self._remove(old_file_id)
@@ -145,7 +152,7 @@ class MediaFileManager(object):
         mimetype must be set, as this string will be used in the
         "Content-Type" header when the file is sent via HTTP GET.
 
-        coordinates should look like this: "MAIN.3.-14.5"
+        coordinates should look like this: "1.(3.-14).5"
 
         Parameters
         ----------
@@ -165,6 +172,8 @@ class MediaFileManager(object):
             self._files[file_id].session_count += 1
 
         self._add_to_session(file_id, coordinates)
+
+        #return (self._files[file_id], _make_url(coordinates, self._files[file_id]))
         return self._files[file_id]
 
     def get(self, mediafile_or_id):
