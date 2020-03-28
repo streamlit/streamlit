@@ -34,8 +34,9 @@ from streamlit.ConfigOption import ConfigOption
 from streamlit.ForwardMsgCache import ForwardMsgCache
 from streamlit.ForwardMsgCache import create_reference_msg
 from streamlit.ForwardMsgCache import populate_hash_if_needed
-from streamlit.ReportSession import PREHEATED_ID
+from streamlit.ReportSession import CLAIMED_PREHEATED_ID
 from streamlit.ReportSession import ReportSession
+from streamlit.ReportSession import UNCLAIMED_PREHEATED_ID
 from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
@@ -503,11 +504,12 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             The newly-created ReportSession for this browser connection.
 
         """
-        if PREHEATED_ID in self._session_info_by_id:
+        if UNCLAIMED_PREHEATED_ID in self._session_info_by_id:
             assert len(self._session_info_by_id) == 1
             LOGGER.debug("Reusing preheated context for ws %s", ws)
-            session = self._session_info_by_id[PREHEATED_ID].session
-            del self._session_info_by_id[PREHEATED_ID]
+            session = self._session_info_by_id[UNCLAIMED_PREHEATED_ID].session
+            del self._session_info_by_id[UNCLAIMED_PREHEATED_ID]
+            session.id = CLAIMED_PREHEATED_ID
         else:
             LOGGER.debug("Creating new context for ws %s", ws)
             session = ReportSession(
