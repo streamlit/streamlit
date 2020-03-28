@@ -161,7 +161,7 @@ class MediaFileManager(object):
         mimetype must be set, as this string will be used in the
         "Content-Type" header when the file is sent via HTTP GET.
 
-        coordinates should look like this: "1.(3.-14).5"
+        coordinates are generated for the element in DeltaGenerator.
 
         Parameters
         ----------
@@ -170,7 +170,7 @@ class MediaFileManager(object):
         mimetype : str
             The mime type for the media file. E.g. "audio/mpeg"
         coordinates : str
-            Unique string uniquely IDing a widget's location.
+            Unique string identifying an element's location.
         """
         file_id = _get_file_id(content, mimetype)
 
@@ -181,8 +181,6 @@ class MediaFileManager(object):
             self._files[file_id].session_count += 1
 
         self._add_to_session(file_id, coordinates)
-
-        # return (self._files[file_id], _make_url(coordinates, self._files[file_id]))
         return self._files[file_id]
 
     def get(self, mediafile_or_id):
