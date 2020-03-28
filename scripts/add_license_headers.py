@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -72,7 +71,7 @@ COMMENT_STYLES = {
     "ts": ("/**\n * @license\n", " *", "\n */"),
     "tsx": ("/**\n * @license\n", " *", "\n */"),
     "proto": ("/**\n", " *", "\n*/"),
-    "py": ("# -*- coding: utf-8 -*-\n", "#", ""),
+    "py": ("", "#", ""),
     "sh": ("", "#", ""),
 }
 

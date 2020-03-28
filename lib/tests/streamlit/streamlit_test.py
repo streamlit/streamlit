@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,7 +20,6 @@ import json
 import os
 import io
 import re
-import sys
 import textwrap
 import unittest
 
@@ -287,16 +285,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.exception.message, "Test Exception")
         # We will test stack_trace when testing
         # streamlit.elements.exception_element
-        if sys.version_info >= (3, 0):
-            self.assertEqual(el.exception.stack_trace, [])
-        else:
-            self.assertEqual(
-                el.exception.stack_trace,
-                [
-                    "Cannot extract the stack trace for this exception. Try "
-                    "calling exception() within the `catch` block."
-                ],
-            )
+        self.assertEqual(el.exception.stack_trace, [])
 
     def test_st_header(self):
         """Test st.header."""
@@ -315,10 +304,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertTrue(
             el.doc_string.doc_string.startswith("Display text in header formatting.")
         )
-        if sys.version_info >= (3, 0):
-            self.assertEqual(el.doc_string.type, "<class 'method'>")
-        else:
-            self.assertEqual(el.doc_string.type, "<type 'instancemethod'>")
+        self.assertEqual(el.doc_string.type, "<class 'method'>")
         self.assertEqual(el.doc_string.signature, "(body)")
 
     def test_st_image_PIL_image(self):

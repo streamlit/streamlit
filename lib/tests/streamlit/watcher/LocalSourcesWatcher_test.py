@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,19 +24,11 @@ from streamlit import config
 from streamlit.Report import Report
 from streamlit.watcher import LocalSourcesWatcher
 
-if sys.version_info[0] == 2:
-    import test_data.dummy_module1 as DUMMY_MODULE_1
-    import test_data.dummy_module2 as DUMMY_MODULE_2
-    import test_data.misbehaved_module as MISBEHAVED_MODULE
-
-    import test_data.nested_module_parent as NESTED_MODULE_PARENT
-    import test_data.nested_module_child as NESTED_MODULE_CHILD
-else:
-    import tests.streamlit.watcher.test_data.dummy_module1 as DUMMY_MODULE_1
-    import tests.streamlit.watcher.test_data.dummy_module2 as DUMMY_MODULE_2
-    import tests.streamlit.watcher.test_data.misbehaved_module as MISBEHAVED_MODULE
-    import tests.streamlit.watcher.test_data.nested_module_parent as NESTED_MODULE_PARENT
-    import tests.streamlit.watcher.test_data.nested_module_child as NESTED_MODULE_CHILD
+import tests.streamlit.watcher.test_data.dummy_module1 as DUMMY_MODULE_1
+import tests.streamlit.watcher.test_data.dummy_module2 as DUMMY_MODULE_2
+import tests.streamlit.watcher.test_data.misbehaved_module as MISBEHAVED_MODULE
+import tests.streamlit.watcher.test_data.nested_module_parent as NESTED_MODULE_PARENT
+import tests.streamlit.watcher.test_data.nested_module_child as NESTED_MODULE_CHILD
 
 REPORT_PATH = os.path.join(os.path.dirname(__file__), "test_data/not_a_real_script.py")
 REPORT = Report(REPORT_PATH, "test command line")

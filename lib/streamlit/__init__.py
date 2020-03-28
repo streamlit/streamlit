@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -343,18 +342,14 @@ def write(*args, **kwargs):
        height: 200px
 
     """
-    # Python2 doesn't support this syntax
-    #   def write(*args, unsafe_allow_html=False)
-    # so we do this instead:
-    unsafe_allow_html = kwargs.get("unsafe_allow_html", False)
-
     try:
         string_buffer = []  # type: List[str]
+        unsafe_allow_html = kwargs.get("unsafe_allow_html", False)
 
         def flush_buffer():
             if string_buffer:
                 markdown(
-                    " ".join(string_buffer), unsafe_allow_html=unsafe_allow_html
+                    " ".join(string_buffer), unsafe_allow_html=unsafe_allow_html,
                 )  # noqa: F821
                 string_buffer[:] = []
 
