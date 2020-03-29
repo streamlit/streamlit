@@ -28,13 +28,13 @@ describe("Dataframe format", () => {
       .as("cells");
   });
 
-  it("The first cell has the correct format", () => {
+  it("correctly formats the first cell", () => {
     cy.get("@cells")
       .first()
       .should("have.text", "3.14");
   });
 
-  it("The last cell has the correct format", () => {
+  it("correctly formats the last cell", () => {
     cy.get("@cells")
       .last()
       .should("have.text", "3.10");
