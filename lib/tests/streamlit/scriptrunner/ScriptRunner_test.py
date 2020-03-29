@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -95,7 +94,7 @@ class ScriptRunnerTest(unittest.TestCase):
 
     def test_compile_error(self):
         """Tests that we get an exception event when a script can't compile."""
-        scriptrunner = TestScriptRunner("compile_error.py")
+        scriptrunner = TestScriptRunner("compile_error.py.txt")
         scriptrunner.enqueue_rerun()
         scriptrunner.start()
         scriptrunner.join()

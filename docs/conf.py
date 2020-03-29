@@ -19,9 +19,9 @@ sys.path.append(os.path.abspath("./_ext"))
 
 # -- Project information -----------------------------------------------------
 
-project = u"Streamlit"
-copyright = u"2019, Streamlit Inc."
-author = u"Streamlit Inc."
+project = "Streamlit"
+copyright = "2019, Streamlit Inc."
+author = "Streamlit Inc."
 display_version = True
 
 # The full version, including alpha/beta/rc tags
@@ -143,8 +143,8 @@ latex_documents = [
     (
         master_doc,
         "Streamlit.tex",
-        u"Streamlit Documentation",
-        u"Streamlit Inc.",
+        "Streamlit Documentation",
+        "Streamlit Inc.",
         "manual",
     )
 ]
@@ -154,7 +154,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [(master_doc, "streamlit", u"Streamlit Documentation", [author], 1)]
+man_pages = [(master_doc, "streamlit", "Streamlit Documentation", [author], 1)]
 
 
 # -- Options for Texinfo output ----------------------------------------------
@@ -166,7 +166,7 @@ texinfo_documents = [
     (
         master_doc,
         "Streamlit",
-        u"Streamlit Documentation",
+        "Streamlit Documentation",
         author,
         "Streamlit",
         "One line description of project.",

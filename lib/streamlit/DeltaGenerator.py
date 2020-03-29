@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -309,8 +308,16 @@ class DeltaGenerator(object):
             return self._provided_cursor
 
     def _get_coordinates(self):
-        """Returns the element's 4-component location as string like "M.(1,2).3"."""
-        container = self._container  # proto index of container (e.g. MAIN=1)
+        """Returns the element's 4-component location as string like "M.(1,2).3".
+
+        This function uniquely identifies the element's position in the front-end, 
+        which allows (among other potential uses) the MediaFileManager to maintain
+        session-specific maps of MediaFile objects placed with their "coordinates".
+
+        This way, users can (say) use st.image with a stream of different images,
+        and Streamlit will expire the older images and replace them in place.
+        """
+        container = self._container  # Proto index of container (e.g. MAIN=1)
         path = self._cursor.path  # [uint, uint] - "breadcrumbs" w/ ancestor positions
         index = self._cursor.index  # index - element's own position
         return "{}.{}.{}".format(container, path, index)
@@ -1380,8 +1387,7 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.pyplot as pyplot
 
-        pyplot.marshall(self._get_coordinates,
-                element, fig, clear_figure, **kwargs)
+        pyplot.marshall(self._get_coordinates, element, fig, clear_figure, **kwargs)
 
     @_with_element
     def bokeh_chart(self, element, figure, use_container_width=False):
@@ -2525,16 +2531,18 @@ class DeltaGenerator(object):
         ...     my_bar.progress(percent_complete + 1)
 
         """
-        # Needed for python 2/3 compatibility
-        value_type = type(value).__name__
-        if value_type == "float":
+
+        # TODO: standardize numerical type checking across st.* functions.
+
+        if isinstance(value, float):
             if 0.0 <= value <= 1.0:
                 element.progress.value = int(value * 100)
             else:
                 raise StreamlitAPIException(
                     "Progress Value has invalid value [0.0, 1.0]: %f" % value
                 )
-        elif value_type == "int":
+
+        elif isinstance(value, int):
             if 0 <= value <= 100:
                 element.progress.value = value
             else:
@@ -2543,7 +2551,7 @@ class DeltaGenerator(object):
                 )
         else:
             raise StreamlitAPIException(
-                "Progress Value has invalid type: %s" % value_type
+                "Progress Value has invalid type: %s" % type(value).__name__
             )
 
     @_with_element

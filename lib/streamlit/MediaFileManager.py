@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -166,7 +165,9 @@ class MediaFileManager(object):
         mimetype : str
             The mime type for the media file. E.g. "audio/mpeg"
         coordinates : str
-            Unique string uniquely IDing a widget's location.
+            Unique string identifying an element's location.
+            Prevents memory leak of "forgotten" file IDs when element media
+            is being replaced-in-place (e.g. an st.image stream).
 
         """
         file_id = _calculate_file_id(content, mimetype)

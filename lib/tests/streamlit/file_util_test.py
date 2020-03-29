@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -67,12 +66,13 @@ class FileUtilTest(unittest.TestCase):
         """Test streamlitfile_util.streamlit_write."""
 
         dirname = os.path.dirname(file_util.get_streamlit_file_path(FILENAME))
+        # patch streamlit.*.os.makedirs instead of os.makedirs for py35 compat
         with patch("streamlit.file_util.open", mock_open()) as open, patch(
             "streamlit.util.os.makedirs"
         ) as makedirs, file_util.streamlit_write(FILENAME) as output:
             output.write("some data")
             open().write.assert_called_once_with("some data")
-            makedirs.assert_called_once_with(dirname)
+            makedirs.assert_called_once_with(dirname, exist_ok=True)
 
     @patch("streamlit.file_util.get_streamlit_file_path", mock_get_path)
     @patch("streamlit.env_util.IS_DARWIN", True)
