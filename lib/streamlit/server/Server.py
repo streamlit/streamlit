@@ -486,10 +486,10 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         This is used to start running the user's script even before the first
         browser connects.
         """
-        session = self._create_report_session(ws=None)
+        session = self._create_or_reuse_report_session(ws=None)
         session.handle_rerun_script_request(is_preheat=True)
 
-    def _create_report_session(self, ws):
+    def _create_or_reuse_report_session(self, ws):
         """Register a connected browser with the server.
 
         Parameters
@@ -504,13 +504,25 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             The newly-created ReportSession for this browser connection.
 
         """
-        if PREHEATED_ID in self._session_info_by_id:
-            assert len(self._session_info_by_id) == 1
-            LOGGER.debug("Reusing preheated context for ws %s", ws)
-            session = self._session_info_by_id[PREHEATED_ID].session
-            del self._session_info_by_id[PREHEATED_ID]
+        preheated_session_info = self._session_info_by_id.get(PREHEATED_ID, None)
+
+        preheated_session_is_unclaimed = (
+            preheated_session_info and preheated_session_info.ws is None
+        )
+
+        current_session_is_actual_browser = ws is not None
+
+        # If the preheated session has no websocket assigned to it, and this
+        # function was called with a ws, just reuse the preheated session.
+        if preheated_session_is_unclaimed and current_session_is_actual_browser:
+            LOGGER.debug("Claim preheated context for ws %s", ws)
+            preheated_session_info.ws = ws
+            session = preheated_session_info.session
+
+        # Otherwise, create a new session.
         else:
-            LOGGER.debug("Creating new context for ws %s", ws)
+            LOGGER.debug("Creating new session for ws %s", ws)
+
             session = ReportSession(
                 is_preheat=(ws is None),
                 ioloop=self._ioloop,
@@ -519,11 +531,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
                 uploaded_file_manager=self._uploaded_file_mgr,
             )
 
-        assert session.id not in self._session_info_by_id, (
-            "session.id '%s' registered multiple times!" % session.id
-        )
-
-        self._session_info_by_id[session.id] = SessionInfo(ws, session)
+            self._session_info_by_id[session.id] = SessionInfo(ws, session)
 
         if ws is not None:
             self._set_state(State.ONE_OR_MORE_BROWSERS_CONNECTED)
@@ -562,7 +570,7 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
         return super().check_origin(origin) or is_url_from_allowed_origins(origin)
 
     def open(self):
-        self._session = self._server._create_report_session(self)
+        self._session = self._server._create_or_reuse_report_session(self)
 
     def on_close(self):
         if not self._session:
