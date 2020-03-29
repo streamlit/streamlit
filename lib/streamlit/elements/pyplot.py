@@ -39,6 +39,8 @@ def marshall(new_element_proto, fig=None, clear_figure=None, **kwargs):
     # You can call .savefig() on a Figure object or directly on the pyplot
     # module, in which case you're doing it to the latest Figure.
     if not fig:
+        if clear_figure is None:
+            clear_figure = True
         fig = plt
 
     # Normally, dpi is set to 'figure', and the figure's dpi is set to 100.
@@ -60,5 +62,5 @@ def marshall(new_element_proto, fig=None, clear_figure=None, **kwargs):
 
     # Clear the figure after rendering it. This means that subsequent
     # plt calls will be starting fresh.
-    if clear_figure or not fig:
+    if clear_figure:
         fig.clf()
