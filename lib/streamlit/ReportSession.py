@@ -20,28 +20,28 @@ from enum import Enum
 import tornado.gen
 import tornado.ioloop
 
-import streamlit.elements.exception_proto as exception_proto
 from streamlit import __installation_id__
 from streamlit import __version__
 from streamlit import caching
 from streamlit import config
 from streamlit import url_util
 from streamlit.MediaFileManager import media_file_manager
-from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.Report import Report
 from streamlit.ScriptRequestQueue import RerunData
 from streamlit.ScriptRequestQueue import ScriptRequest
 from streamlit.ScriptRequestQueue import ScriptRequestQueue
 from streamlit.ScriptRunner import ScriptRunner
 from streamlit.ScriptRunner import ScriptRunnerEvent
+from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.credentials import Credentials
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Widget_pb2 import WidgetStates
 from streamlit.server.server_util import serialize_forward_msg
-from streamlit.storage.S3Storage import S3Storage
 from streamlit.storage.FileStorage import FileStorage
+from streamlit.storage.S3Storage import S3Storage
 from streamlit.watcher.LocalSourcesWatcher import LocalSourcesWatcher
+import streamlit.elements.exception_proto as exception_proto
 
 LOGGER = get_logger(__name__)
 
@@ -143,7 +143,6 @@ class ReportSession(object):
         if self._state != ReportSessionState.SHUTDOWN_REQUESTED:
             LOGGER.debug("Shutting down (id=%s)", self.id)
             self._uploaded_file_mgr.remove_session_files(self.id)
-            media_file_manager.reset_files_for_session(self.id)
 
             # Shut down the ScriptRunner, if one is active.
             # self._state must not be set to SHUTDOWN_REQUESTED until
@@ -311,6 +310,11 @@ class ReportSession(object):
             # When ScriptRunner shuts down, update our local reference to it,
             # and check to see if we need to spawn a new one. (This is run on
             # the main thread.)
+
+            if self._state == ReportSessionState.SHUTDOWN_REQUESTED:
+                # Only clear media files if the script is done running AND the
+                # report session is actually shutting down.
+                media_file_manager.clear_session_files(self.id)
 
             def on_shutdown():
                 self._widget_states = widget_states
