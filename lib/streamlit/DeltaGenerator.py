@@ -1442,6 +1442,7 @@ class DeltaGenerator(object):
             OR an RGBA image of shape (w,h,4)
             OR a URL to fetch the image from
             OR a list of one of the above, to display multiple images.
+            OR conforming to _repr_jpeg_ or _repr_png_ from IPython.display.display
         caption : str or list of str
             Image caption. If displaying multiple images, caption should be a
             list of captions (one for each image).
@@ -1478,6 +1479,10 @@ class DeltaGenerator(object):
            height: 630px
 
         """
+
+        if getattr(image, f"_repr_{format.lower()}_", None):
+            image = getattr(image, f"_repr_{format.lower()}_")()
+
         from .elements import image_proto
 
         if use_column_width:
