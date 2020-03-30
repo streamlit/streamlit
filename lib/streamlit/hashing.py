@@ -434,6 +434,9 @@ class _CodeHasher:
             # For numpy.remainder, this returns remainder.
             return obj.__name__.encode()
 
+        elif type_util.is_type(obj, "tensorflow.python.client.session.Session"):
+            return self.to_bytes(id(obj))
+
         elif inspect.isroutine(obj):
             if hasattr(obj, "__wrapped__"):
                 # Ignore the wrapper of wrapped functions.
