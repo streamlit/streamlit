@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -307,7 +306,7 @@ class ServerTest(ServerTestCase):
                 files=[file],
             )
 
-            self.assertEquals(
+            self.assertEqual(
                 self.server._uploaded_file_mgr.get_files(
                     session_info1.session.id, "widget_id"
                 ),

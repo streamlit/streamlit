@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -84,7 +83,7 @@ class MediaFileHandler(tornado.web.RequestHandler):
             "MediaFileManager: Sending %s file %s" % (media.mimetype, requested_hash)
         )
         self.write(media.content)
-        self.set_header("Content-Type:", media.mimetype)
+        self.set_header("Content-Type", media.mimetype)
         self.set_status(200)
 
 

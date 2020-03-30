@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,13 +14,9 @@
 
 """st.help unit test."""
 
-import sys
-
 from tests import testutil
 import streamlit as st
 import numpy as np
-
-is_python_2 = sys.version_info[0] == 2
 
 
 class StHelpTest(testutil.DeltaGeneratorTestCase):
@@ -39,10 +34,7 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         ds = self.get_delta_from_queue().new_element.doc_string
         self.assertEqual("my_func", ds.name)
         self.assertEqual("help_test", ds.module)
-        if is_python_2:
-            self.assertEqual("<type 'function'>", ds.type)
-        else:
-            self.assertEqual("<class 'function'>", ds.type)
+        self.assertEqual("<class 'function'>", ds.type)
         self.assertEqual("(some_param, another_param=123)", ds.signature)
         self.assertEqual("This is the doc", ds.doc_string)
 
@@ -57,10 +49,7 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         ds = self.get_delta_from_queue().new_element.doc_string
         self.assertEqual("my_func", ds.name)
         self.assertEqual("help_test", ds.module)
-        if is_python_2:
-            self.assertEqual("<type 'function'>", ds.type)
-        else:
-            self.assertEqual("<class 'function'>", ds.type)
+        self.assertEqual("<class 'function'>", ds.type)
         self.assertEqual("(some_param, another_param=123)", ds.signature)
         self.assertEqual("No docs available.", ds.doc_string)
 
@@ -72,12 +61,8 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         ds = self.get_delta_from_queue().new_element.doc_string
         self.assertEqual("audio", ds.name)
         self.assertEqual("streamlit", ds.module)
-        if is_python_2:
-            self.assertEqual("<type 'instancemethod'>", ds.type)
-            self.assertEqual("(data, format=u'audio/wav', start_time=0)", ds.signature)
-        else:
-            self.assertEqual("<class 'method'>", ds.type)
-            self.assertEqual("(data, format='audio/wav', start_time=0)", ds.signature)
+        self.assertEqual("<class 'method'>", ds.type)
+        self.assertEqual("(data, format='audio/wav', start_time=0)", ds.signature)
         self.assertTrue(ds.doc_string.startswith("Display an audio player"))
 
     def test_unwrapped_deltagenerator_func(self):
@@ -87,10 +72,7 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         ds = self.get_delta_from_queue().new_element.doc_string
         self.assertEqual("dataframe", ds.name)
         self.assertEqual("streamlit", ds.module)
-        if is_python_2:
-            self.assertEqual("<type 'instancemethod'>", ds.type)
-        else:
-            self.assertEqual("<class 'method'>", ds.type)
+        self.assertEqual("<class 'method'>", ds.type)
         self.assertEqual("(data=None, width=None, height=None)", ds.signature)
         self.assertTrue(ds.doc_string.startswith("Display a dataframe"))
 
@@ -101,25 +83,21 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         ds = self.get_delta_from_queue().new_element.doc_string
         self.assertEqual("cache", ds.name)
         self.assertEqual("streamlit", ds.module)
-        if is_python_2:
-            self.assertEqual("<type 'function'>", ds.type)
-        else:
-            self.assertEqual("<class 'function'>", ds.type)
-            self.assertEqual(
-                ds.signature,
-                (
-                    "(func=None, "
-                    "persist=False, "
-                    "allow_output_mutation=False, "
-                    "show_spinner=True, "
-                    "suppress_st_warning=False, "
-                    "hash_funcs=None, "
-                    "ignore_hash=False, "
-                    "max_entries=None, "
-                    "ttl=None)"
-                ),
-            )
-            self.assertTrue(ds.doc_string.startswith("Function decorator to"))
+        self.assertEqual("<class 'function'>", ds.type)
+        self.assertEqual(
+            ds.signature,
+            (
+                "(func=None, "
+                "persist=False, "
+                "allow_output_mutation=False, "
+                "show_spinner=True, "
+                "suppress_st_warning=False, "
+                "hash_funcs=None, "
+                "max_entries=None, "
+                "ttl=None)"
+            ),
+        )
+        self.assertTrue(ds.doc_string.startswith("Function decorator to"))
 
     def test_st_write(self):
         """Test st.write function (since it's from __init__)."""
@@ -128,10 +106,7 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         ds = self.get_delta_from_queue().new_element.doc_string
         self.assertEqual("write", ds.name)
         self.assertEqual("streamlit", ds.module)
-        if is_python_2:
-            self.assertEqual("<type 'function'>", ds.type)
-        else:
-            self.assertEqual("<class 'function'>", ds.type)
+        self.assertEqual("<class 'function'>", ds.type)
         self.assertEqual("(*args, **kwargs)", ds.signature)
         self.assertTrue(ds.doc_string.startswith("Write arguments to the"))
 
@@ -141,12 +116,8 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
 
         ds = self.get_delta_from_queue().new_element.doc_string
         self.assertEqual("dir", ds.name)
-        if is_python_2:
-            self.assertEqual("__builtin__", ds.module)
-            self.assertEqual("<type 'builtin_function_or_method'>", ds.type)
-        else:
-            self.assertEqual("builtins", ds.module)
-            self.assertEqual("<class 'builtin_function_or_method'>", ds.type)
+        self.assertEqual("builtins", ds.module)
+        self.assertEqual("<class 'builtin_function_or_method'>", ds.type)
         self.assertEqual("", ds.signature)
         self.assertTrue(len(ds.doc_string) > 0)
 
@@ -157,10 +128,7 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         ds = self.get_delta_from_queue().new_element.doc_string
         self.assertEqual("", ds.name)
         self.assertEqual("", ds.module)
-        if is_python_2:
-            self.assertEqual("<type 'int'>", ds.type)
-        else:
-            self.assertEqual("<class 'int'>", ds.type)
+        self.assertEqual("<class 'int'>", ds.type)
         self.assertEqual("", ds.signature)
         self.assertTrue(len(ds.doc_string) > 0)
 

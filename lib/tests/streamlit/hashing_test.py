@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +18,6 @@ import functools
 import hashlib
 import os
 import re
-import sys
 import tempfile
 import time
 import types
@@ -208,6 +206,13 @@ class HashTest(unittest.TestCase):
     def test_builtins(self):
         self.assertEqual(get_hash(abs), get_hash(abs))
         self.assertNotEqual(get_hash(abs), get_hash(type))
+
+    def test_regex(self):
+        p2 = re.compile(".*")
+        p1 = re.compile(".*")
+        p3 = re.compile(".*", re.I)
+        self.assertEqual(get_hash(p1), get_hash(p2))
+        self.assertNotEqual(get_hash(p1), get_hash(p3))
 
     def test_pandas_dataframe(self):
         df1 = pd.DataFrame({"foo": [12]})

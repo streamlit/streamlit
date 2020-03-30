@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,6 +22,7 @@ from mock import patch
 
 from streamlit import caching
 from streamlit import hashing
+from streamlit.hashing import UserHashError
 from streamlit.elements import exception_proto
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 from tests import testutil
@@ -43,18 +43,6 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
 
         self.assertEqual(foo(), 42)
         self.assertEqual(foo(), 42)
-
-    def test_deprecated_kwarg(self):
-        with pytest.raises(Exception) as e:
-
-            @st.cache(ignore_hash=True)
-            def foo():
-                return 42
-
-        assert (
-            "The `ignore_hash` argument has been renamed to `allow_output_mutation`."
-            in str(e.value)
-        )
 
     @patch.object(st, "exception")
     def test_args(self, exception):

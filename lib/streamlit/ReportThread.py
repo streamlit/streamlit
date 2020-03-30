@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -181,5 +180,5 @@ def get_report_ctx():
     return ctx
 
 
-# Needed to avoid circular dependencies.
+# Needed to avoid circular dependencies while running tests.
 import streamlit

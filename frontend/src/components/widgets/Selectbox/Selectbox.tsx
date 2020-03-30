@@ -76,7 +76,9 @@ class Selectbox extends React.PureComponent<Props, State> {
     filterValue: string
   ): readonly Option[] => {
     return options.filter((value: Option) =>
-      (value as SelectOption).label.includes(filterValue.toString())
+      (value as SelectOption).label
+        .toLowerCase()
+        .includes(filterValue.toString().toLowerCase())
     )
   }
 

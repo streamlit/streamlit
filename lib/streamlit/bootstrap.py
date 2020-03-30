@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -232,8 +231,8 @@ def run(script_path, command_line, args):
     server = Server(ioloop, script_path, command_line)
     server.start(_on_server_start)
 
-    # (Must com after start(), because this starts a new thread and start() may
-    # call sys.exit() which doesn't kill other threads.
+    # (Must come after start(), because this starts a new thread and start()
+    # may call sys.exit() which doesn't kill other threads.
     server.add_preheated_report_session()
 
     # Start the ioloop. This function will not return until the

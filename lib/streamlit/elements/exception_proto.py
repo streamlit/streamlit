@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -158,15 +157,6 @@ def _get_stack_trace_str_list(exception, strip_streamlit_stack_entries=False):
         extracted_traceback = exception.tacked_on_stack
     elif hasattr(exception, "__traceback__"):
         extracted_traceback = traceback.extract_tb(exception.__traceback__)
-    else:
-        # Hack for Python 2 which will extract the traceback as long as this
-        # method was called on the exception as it was caught, which is
-        # likely what the user would do.
-        _, live_exception, live_traceback = sys.exc_info()
-        if exception == live_exception:
-            extracted_traceback = traceback.extract_tb(live_traceback)
-        else:
-            extracted_traceback = None
 
     # Format the extracted traceback and add it to the protobuf element.
     if extracted_traceback is None:
