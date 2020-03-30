@@ -15,27 +15,25 @@
 
 import hashlib
 import json
-from typing import Dict
-from typing import Optional
-from typing import Union
+import mimetypes
+import os
+from typing import Any, Dict, Optional, Type, Union, cast
 
 import tornado.web
 
 import streamlit as st  # plugins_test relies on this import name, for patching
 import streamlit.server.routes
-from streamlit import StreamlitAPIException
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.DeltaGenerator import NoValue
 from streamlit.DeltaGenerator import _get_widget_ui_value
+from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.Element_pb2 import Element
 
 LOGGER = get_logger(__name__)
 
-# TODO:
-# - Allow multiple files to be registered in a single plugin
-# - Allow actual files to be registered, instead of just strings
-# - Add FileWatcher support, and emit a signal when a plugin is changed on disk
+# Type aliases.
+JSONDict = Dict[str, Any]
 
 
 class MarshallPluginException(StreamlitAPIException):
@@ -49,13 +47,15 @@ def plugin(name: str, javascript: str) -> None:
     plugin_id = PluginRegistry.instance().register_plugin(javascript)
 
     # Build our plugin function.
-    def plugin_instance(dg: DeltaGenerator, args: Optional[Dict]) -> Optional[Dict]:
+    def plugin_instance(
+        dg: DeltaGenerator, args: Optional[JSONDict]
+    ) -> Optional[JSONDict]:
         try:
             args_json = json.dumps(args)
         except BaseException as e:
             raise MarshallPluginException("Could not convert plugin args to JSON", e)
 
-        def marshall_plugin(element: Element) -> Union[Dict, NoValue]:
+        def marshall_plugin(element: Element) -> Union[JSONDict, Type[NoValue]]:
             element.plugin_instance.args_json = args_json
             element.plugin_instance.plugin_id = plugin_id
             widget_value = _get_widget_ui_value("plugin_instance", element)
@@ -69,9 +69,13 @@ def plugin(name: str, javascript: str) -> None:
             # expects.
             return widget_value if widget_value is not None else NoValue
 
-        return dg._enqueue_new_element_delta(
+        result = dg._enqueue_new_element_delta(
             marshall_element=marshall_plugin, delta_type="plugin"
         )
+
+        # _enqueue_new_element_delta lies about its return type,
+        # so we need to make mypy happy.
+        return cast(Optional[JSONDict], result)
 
     # Register the plugin as a member function of DeltaGenerator, and as
     # a standalone function in the streamlit namespace.
@@ -81,26 +85,48 @@ def plugin(name: str, javascript: str) -> None:
 
 
 class PluginRequestHandler(tornado.web.RequestHandler):
-    """Serves plugin files"""
-
-    @staticmethod
-    def get_url(file_id: str) -> str:
-        """Return the URL for a plugin file with the given ID."""
-        return "plugins/{}".format(file_id)
-
-    def initialize(self, registry: "PluginRegistry") -> None:
+    def initialize(self, registry: "PluginRegistry"):
         self._registry = registry
 
-    def get(self, filename: str) -> None:
-        LOGGER.debug("PluginFileManager: GET %s" % filename)
-        file = self._registry.get_plugin(filename)
-        if file is None:
-            self.write("%s not found" % filename)
+    def get(self, path: str) -> None:
+        parts = path.split("/")
+        plugin_id = parts[0]
+        plugin_root = self._registry.get_plugin_path(plugin_id)
+        if plugin_root is None:
+            self.write("%s not found" % path)
             self.set_status(404)
             return
 
-        self.write(file)
-        self.set_header("Content-Type", "text/javascript")
+        filename = "/".join(parts[1:])
+        abspath = os.path.join(plugin_root, filename)
+
+        LOGGER.debug("PluginFileManager: GET: %s -> %s", path, abspath)
+
+        try:
+            with open(abspath, "r") as file:
+                contents = file.read()
+        except OSError as e:
+            self.write("%s read error: %s" % (path, e))
+            self.set_status(404)
+            return
+
+        self.write(contents)
+        self.set_header("Content-Type", self.get_content_type(abspath))
+
+        self.set_extra_headers(path)
+
+    def set_extra_headers(self, path):
+        """Disable cache for HTML files.
+
+        Other assets like JS and CSS are suffixed with their hash, so they can
+        be cached indefinitely.
+        """
+        is_index_url = len(path) == 0
+
+        if is_index_url or path.endswith(".html"):
+            self.set_header("Cache-Control", "no-cache")
+        else:
+            self.set_header("Cache-Control", "public")
 
     def set_default_headers(self) -> None:
         if streamlit.server.routes.allow_cross_origin_requests():
@@ -110,6 +136,31 @@ class PluginRequestHandler(tornado.web.RequestHandler):
         """/OPTIONS handler for preflight CORS checks."""
         self.set_status(204)
         self.finish()
+
+    @staticmethod
+    def get_content_type(abspath):
+        """Returns the ``Content-Type`` header to be used for this request.
+        From tornado.web.StaticFileHandler.
+        """
+        mime_type, encoding = mimetypes.guess_type(abspath)
+        # per RFC 6713, use the appropriate type for a gzip compressed file
+        if encoding == "gzip":
+            return "application/gzip"
+        # As of 2015-07-21 there is no bzip2 encoding defined at
+        # http://www.iana.org/assignments/media-types/media-types.xhtml
+        # So for that (and any other encoding), use octet-stream.
+        elif encoding is not None:
+            return "application/octet-stream"
+        elif mime_type is not None:
+            return mime_type
+        # if mime_type not detected, use application/octet-stream
+        else:
+            return "application/octet-stream"
+
+    @staticmethod
+    def get_url(file_id: str) -> str:
+        """Return the URL for a plugin file with the given ID."""
+        return "plugins/{}".format(file_id)
 
 
 class PluginRegistry:
@@ -125,34 +176,40 @@ class PluginRegistry:
     def __init__(self):
         self._plugins = {}  # type: Dict[str, str]
 
-    def register_plugin(self, javascript: str) -> str:
-        """Register a javascript string as a plugin.
+    def register_plugin(self, path: str) -> str:
+        """Register a filesystem path as a plugin.
 
-        If the javascript has already been registered, this is a no-op.
+        If the path has already been registered, this is a no-op.
 
         Parameters
         ----------
-        javascript : str
-            The contents of a javascript file.
+        path : str
+            The path to the directory that contains the plugin's contents.
 
         Returns
         -------
         str
             The plugin's ID.
         """
-        id = self._get_id(javascript)
-        self._plugins[id] = javascript
+        abspath = os.path.abspath(path)
+        if not os.path.isdir(abspath):
+            raise StreamlitAPIException("No such plugin directory: '%s'" % abspath)
+        id = self._get_id(abspath)
+        self._plugins[id] = abspath
         return id
 
-    def get_plugin(self, id: str) -> Optional[str]:
+    def get_plugin_path(self, id: str) -> Optional[str]:
         """Return the javascript for the plugin with the given ID.
         If no such plugin is registered, None will be returned instead.
         """
         return self._plugins.get(id, None)
 
     @staticmethod
-    def _get_id(javascript: str) -> str:
+    def _get_id(path: str) -> str:
         """Compute the ID of a plugin."""
+        # TODO: For this to be useful, we need to cache something in the
+        # contents. We probably want to just use Watchdog instead, and let
+        # a plugin's ID be its name!
         hasher = hashlib.new("md5")
-        hasher.update(javascript.encode())
+        hasher.update(path.encode())
         return hasher.hexdigest()

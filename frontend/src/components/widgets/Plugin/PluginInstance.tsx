@@ -16,14 +16,9 @@
  */
 
 import React, { ReactNode } from "react"
-
-import Alert from "components/elements/Alert"
-import ErrorElement from "components/shared/ErrorElement"
 import { Map as ImmutableMap } from "immutable"
-import { makeElementWithInfoText } from "lib/utils"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { PluginRegistry } from "./PluginRegistry"
-import { StPlugin } from "./StPlugin"
 
 export interface Props {
   registry: PluginRegistry
@@ -34,54 +29,24 @@ export interface Props {
   width: number
 }
 
-export interface State {
-  plugin?: StPlugin
-  pluginError?: Error
-}
+export interface State {}
 
 export class PluginInstance extends React.PureComponent<Props, State> {
   public constructor(props: Props) {
     super(props)
 
-    this.state = {
-      plugin: undefined,
-      pluginError: undefined,
-    }
-    this.initPlugin()
-  }
-
-  /** Fetch our plugin code from the registry. */
-  private initPlugin = (): void => {
-    this.props.registry
-      .getPlugin(this.props.element.get("pluginId"))
-      .then(plugin => this.setState({ plugin: plugin }))
-      .catch(error => this.setState({ pluginError: error }))
+    this.state = {}
   }
 
   public render = (): ReactNode => {
-    // If we failed to download the plugin, show an error.
-    if (this.state.pluginError != null) {
-      return (
-        <ErrorElement
-          width={this.props.width}
-          name={"Error loading plugin"}
-          message={this.state.pluginError.message}
-        />
-      )
-    }
+    const pluginId = this.props.element.get("pluginId")
+    const src = this.props.registry.getPluginURL(pluginId, "index.html")
+    return (
+      <iframe src={src} width={this.props.width} allowFullScreen={false} />
+    )
 
-    // If we're retrieving our plugin, show a loading alert
-    if (this.state.plugin === undefined) {
-      return (
-        <Alert
-          element={makeElementWithInfoText("Loading...").get("alert")}
-          width={this.props.width}
-        />
-      )
-    }
-
-    // Render the actual plugin!
-    const args = JSON.parse(this.props.element.get("argsJson"))
-    return this.state.plugin.render(args)
+    // // Render the actual plugin!
+    // const args = JSON.parse(this.props.element.get("argsJson"))
+    // return this.state.plugin.render(args)
   }
 }
