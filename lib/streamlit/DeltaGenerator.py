@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -2023,13 +2022,7 @@ class DeltaGenerator(object):
 
     @_with_element
     def file_uploader(
-        self,
-        element,
-        label,
-        type=None,
-        encoding="auto",
-        key=None,
-        accept_multiple_files=False,
+        self, element, label, type=None, encoding="auto", key=None,
     ):
         """Display a file uploader widget.
 
@@ -2052,9 +2045,6 @@ class DeltaGenerator(object):
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
-        accept_multiple_files : bool
-            If True, the uploader widget will accept multiple files, and the
-            returned value will be a list of all files. Defaults to False.
 
         Returns
         -------
@@ -2077,6 +2067,9 @@ class DeltaGenerator(object):
         ...     st.write(data)
 
         """
+        # Don't release this just yet. (When ready to release, turn test back
+        # on at file_uploader_test.py)
+        accept_multiple_files = False
 
         if isinstance(type, str):
             type = [type]
@@ -2512,16 +2505,18 @@ class DeltaGenerator(object):
         ...     my_bar.progress(percent_complete + 1)
 
         """
-        # Needed for python 2/3 compatibility
-        value_type = type(value).__name__
-        if value_type == "float":
+
+        # TODO: standardize numerical type checking across st.* functions.
+
+        if isinstance(value, float):
             if 0.0 <= value <= 1.0:
                 element.progress.value = int(value * 100)
             else:
                 raise StreamlitAPIException(
                     "Progress Value has invalid value [0.0, 1.0]: %f" % value
                 )
-        elif value_type == "int":
+
+        elif isinstance(value, int):
             if 0 <= value <= 100:
                 element.progress.value = value
             else:
@@ -2530,7 +2525,7 @@ class DeltaGenerator(object):
                 )
         else:
             raise StreamlitAPIException(
-                "Progress Value has invalid type: %s" % value_type
+                "Progress Value has invalid type: %s" % type(value).__name__
             )
 
     @_with_element

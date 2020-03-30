@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -52,7 +51,7 @@ class ReportSessionTest(unittest.TestCase):
 
         patched_config.get_option.side_effect = get_option
 
-        rs = ReportSession(None, "", "", UploadedFileManager())
+        rs = ReportSession(False, None, "", "", UploadedFileManager())
         mock_script_runner = MagicMock()
         mock_script_runner._install_tracer = ScriptRunner._install_tracer
         rs._scriptrunner = mock_script_runner
@@ -88,7 +87,7 @@ class ReportSessionTest(unittest.TestCase):
 
         patched_config.get_option.side_effect = get_option
 
-        rs = ReportSession(None, "", "", UploadedFileManager())
+        rs = ReportSession(False, None, "", "", UploadedFileManager())
         mock_script_runner = MagicMock()
         rs._scriptrunner = mock_script_runner
 
@@ -108,24 +107,24 @@ class ReportSessionTest(unittest.TestCase):
     def test_shutdown(self, _1):
         """Test that ReportSession.shutdown behaves sanely."""
         file_mgr = MagicMock(spec=UploadedFileManager)
-        rs = ReportSession(None, "", "", file_mgr)
+        rs = ReportSession(False, None, "", "", file_mgr)
 
         rs.shutdown()
-        self.assertEquals(ReportSessionState.SHUTDOWN_REQUESTED, rs._state)
+        self.assertEqual(ReportSessionState.SHUTDOWN_REQUESTED, rs._state)
         file_mgr.remove_session_files.assert_called_once_with(rs.id)
 
         # A 2nd shutdown call should have no effect.
         rs.shutdown()
-        self.assertEquals(ReportSessionState.SHUTDOWN_REQUESTED, rs._state)
+        self.assertEqual(ReportSessionState.SHUTDOWN_REQUESTED, rs._state)
         file_mgr.remove_session_files.assert_called_once_with(rs.id)
 
     @patch("streamlit.ReportSession.LocalSourcesWatcher")
     def test_unique_id(self, _1):
         """Each ReportSession should have a unique ID"""
         file_mgr = MagicMock(spec=UploadedFileManager)
-        rs1 = ReportSession(None, "", "", file_mgr)
-        rs2 = ReportSession(None, "", "", file_mgr)
-        self.assertNotEquals(rs1.id, rs2.id)
+        rs1 = ReportSession(False, None, "", "", file_mgr)
+        rs2 = ReportSession(False, None, "", "", file_mgr)
+        self.assertNotEqual(rs1.id, rs2.id)
 
 
 def _create_mock_websocket():
@@ -144,7 +143,9 @@ class ReportSessionSerializationTest(tornado.testing.AsyncTestCase):
     def test_handle_save_request(self, _1):
         """Test that handle_save_request serializes files correctly."""
         # Create a ReportSession with some mocked bits
-        rs = ReportSession(self.io_loop, "mock_report.py", "", UploadedFileManager())
+        rs = ReportSession(
+            False, self.io_loop, "mock_report.py", "", UploadedFileManager()
+        )
         rs._report.report_id = "TestReportID"
 
         orig_ctx = get_report_ctx()

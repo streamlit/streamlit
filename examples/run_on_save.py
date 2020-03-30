@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -82,4 +81,4 @@ os.system(cmd)
 
 status.text("Touched %s" % __file__)
 
-# MODIFIED AT: 1580332945.720056
+# MODIFIED AT: 1585009354.4169521

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,7 +34,9 @@ from streamlit.ConfigOption import ConfigOption
 from streamlit.ForwardMsgCache import ForwardMsgCache
 from streamlit.ForwardMsgCache import create_reference_msg
 from streamlit.ForwardMsgCache import populate_hash_if_needed
+from streamlit.ReportSession import CLAIMED_PREHEATED_ID
 from streamlit.ReportSession import ReportSession
+from streamlit.ReportSession import UNCLAIMED_PREHEATED_ID
 from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.logger import get_logger
 from streamlit.plugins import PluginRegistry
@@ -69,10 +70,6 @@ TORNADO_SETTINGS = {
     "websocket_max_message_size": MESSAGE_SIZE_LIMIT,  # Up the WS size limit.
 }
 
-
-# Dictionary key used to mark the script execution context that starts
-# up before the first browser connects.
-PREHEATED_REPORT_SESSION = "PREHEATED_REPORT_SESSION"
 
 # When server.port is not available it will look for the next available port
 # up to MAX_PORT_SEARCH_RETRIES.
@@ -380,7 +377,8 @@ class Server(object):
                     session_infos = list(self._session_info_by_id.values())
 
                     for session_info in session_infos:
-                        if session_info.ws is PREHEATED_REPORT_SESSION:
+                        if session_info.ws is None:
+                            # Preheated.
                             continue
                         msg_list = session_info.session.flush_browser_queue()
                         for msg in msg_list:
@@ -495,7 +493,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         This is used to start running the user's script even before the first
         browser connects.
         """
-        session = self._create_report_session(PREHEATED_REPORT_SESSION)
+        session = self._create_report_session(ws=None)
         session.handle_rerun_script_request(is_preheat=True)
 
     def _create_report_session(self, ws):
@@ -503,8 +501,9 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
 
         Parameters
         ----------
-        ws : _BrowserWebSocketHandler or PREHEATED_REPORT_SESSION
-            The newly-connected websocket handler.
+        ws : _BrowserWebSocketHandler or None
+            The newly-connected websocket handler or None if preheated
+            connection.
 
         Returns
         -------
@@ -512,14 +511,16 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             The newly-created ReportSession for this browser connection.
 
         """
-        if PREHEATED_REPORT_SESSION in self._session_info_by_id:
+        if UNCLAIMED_PREHEATED_ID in self._session_info_by_id:
             assert len(self._session_info_by_id) == 1
             LOGGER.debug("Reusing preheated context for ws %s", ws)
-            session = self._session_info_by_id[PREHEATED_REPORT_SESSION].session
-            del self._session_info_by_id[PREHEATED_REPORT_SESSION]
+            session = self._session_info_by_id[UNCLAIMED_PREHEATED_ID].session
+            del self._session_info_by_id[UNCLAIMED_PREHEATED_ID]
+            session.id = CLAIMED_PREHEATED_ID
         else:
             LOGGER.debug("Creating new context for ws %s", ws)
             session = ReportSession(
+                is_preheat=(ws is None),
                 ioloop=self._ioloop,
                 script_path=self._script_path,
                 command_line=self._command_line,
@@ -529,9 +530,10 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         assert session.id not in self._session_info_by_id, (
             "session.id '%s' registered multiple times!" % session.id
         )
+
         self._session_info_by_id[session.id] = SessionInfo(ws, session)
 
-        if ws is not PREHEATED_REPORT_SESSION:
+        if ws is not None:
             self._set_state(State.ONE_OR_MORE_BROWSERS_CONNECTED)
 
         return session

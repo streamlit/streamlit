@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +15,6 @@
 """Unit test for data_frame_proto."""
 
 import json
-import sys
 import unittest
 
 import numpy as np
@@ -251,13 +249,8 @@ class DataFrameProtoTest(unittest.TestCase):
         str_data = np.array(["random", "string"])
         str_proto = AnyArray()
 
-        with pytest.raises(NotImplementedError) as e:
+        with pytest.raises(NotImplementedError, match="^Dtype <U6 not understood.$"):
             data_frame_proto._marshall_any_array(str_data, str_proto)
-        if sys.version_info >= (3, 0):
-            err_msg = "Dtype <U6 not understood."
-        else:
-            err_msg = "Dtype |S6 not understood."
-        self.assertEqual(err_msg, str(e.value))
 
     def test_add_rows(self):
         """Test streamlit.data_frame_proto._add_rows."""

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -287,7 +286,7 @@ def _read_from_disk_cache(key):
         _LOGGER.error(e)
         raise CacheError("Unable to read from cache: %s" % e)
 
-    except (OSError, FileNotFoundError):  # Python 2  # Python 3
+    except FileNotFoundError:
         raise CacheKeyNotFoundError("Key not found in disk cache")
     return value
 
@@ -299,9 +298,7 @@ def _write_to_disk_cache(key, value):
         with file_util.streamlit_write(path, binary=True) as output:
             entry = _DiskCacheEntry(value=value)
             pickle.dump(entry, output, pickle.HIGHEST_PROTOCOL)
-    # In python 2, it's pickle struct error.
-    # In python 3, it's an open error in util.
-    except (util.Error, struct.error) as e:
+    except util.Error as e:
         _LOGGER.debug(e)
         # Clean up file so we don't leave zero byte files.
         try:
@@ -356,7 +353,6 @@ def cache(
     show_spinner=True,
     suppress_st_warning=False,
     hash_funcs=None,
-    ignore_hash=False,
     max_entries=None,
     ttl=None,
 ):
@@ -366,8 +362,6 @@ def cache(
     ----------
     func : callable
         The function to cache. Streamlit hashes the function and dependent code.
-        Streamlit can only hash nested objects (e.g. `bar` in `foo.bar`) in
-        Python 3.4+.
 
     persist : boolean
         Whether to persist the cache on disk.
@@ -401,10 +395,6 @@ def cache(
     ttl : float or None
         The maximum number of seconds to keep an entry in the cache, or
         None if cache entries should not expire. The default is None.
-
-    ignore_hash : boolean
-        DEPRECATED. Please use allow_output_mutation instead.
-        This argument will be fully removed after 2020-03-16.
 
     Example
     -------
@@ -455,13 +445,6 @@ def cache(
 
     """
     _LOGGER.debug("Entering st.cache: %s", func)
-
-    # Help users migrate to the new kwarg
-    # Remove this warning after 2020-03-16.
-    if ignore_hash:
-        raise StreamlitDeprecationWarning(
-            "The `ignore_hash` argument has been renamed to `allow_output_mutation`."
-        )
 
     # Support passing the params via function decorator, e.g.
     # @st.cache(persist=True, allow_output_mutation=True)
@@ -746,10 +729,6 @@ class Cache(Dict[Any, Any]):
         return False
 
     def __bool__(self):
-        return self.has_changes()
-
-    # Python 2 doesn't have __bool__
-    def __nonzero__(self):
         return self.has_changes()
 
     def __getattr__(self, key):
