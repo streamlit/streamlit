@@ -41,7 +41,7 @@ def _get_session_id():
         return ctx.session_id
 
 
-def _calculate_file_id(data, mimetype=None):
+def _calculate_file_id(data, mimetype):
     """Return an ID by hashing the data and mime.
 
     Parameters
@@ -51,14 +51,12 @@ def _calculate_file_id(data, mimetype=None):
     mimetype : str
         Any string. Will be converted to bytes and used to compute a hash.
         None will be converted to empty string.  [default: None]
+
     """
+    filehash = hashlib.new("sha224")
+    filehash.update(data)
+    filehash.update(bytes(mimetype.encode()))
 
-    if mimetype is None:
-        mimetype = ""
-
-    # Use .update() to prevent making another copy of the data to compute the hash.
-    filehash = hashlib.sha224(data)
-    filehash.update(bytes(mimetype.encode("utf-8")))
     return filehash.hexdigest()
 
 
