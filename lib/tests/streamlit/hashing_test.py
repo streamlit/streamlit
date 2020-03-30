@@ -341,8 +341,7 @@ class HashTest(unittest.TestCase):
         id_hash_func = {types.GeneratorType: id}
 
         self.assertEqual(
-            get_hash(g, hash_funcs=id_hash_func),
-            get_hash(g, hash_funcs=id_hash_func),
+            get_hash(g, hash_funcs=id_hash_func), get_hash(g, hash_funcs=id_hash_func),
         )
 
         unique_hash_func = {types.GeneratorType: lambda x: time.time()}
