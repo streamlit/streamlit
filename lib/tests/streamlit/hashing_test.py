@@ -400,7 +400,7 @@ class HashTest(unittest.TestCase):
         #            auth_url, creator=connect_with_args, connect_args={"user": "bar"}
         #        )
         #    ),
-        #)
+        # )
 
 
 class CodeHashTest(unittest.TestCase):
