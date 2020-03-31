@@ -433,6 +433,7 @@ class _CodeHasher:
         elif type_util.is_type(obj, "sqlalchemy.engine.base.Engine"):
             # Hash the entire `url` and `dialect` objects while selectively hashing
             # attributes of the `pool`, since it contains an unhashable thread lock.
+            # https://docs.sqlalchemy.org/en/13/core/engines.html#sqlalchemy.create_engine
             pool = obj.pool
             return self.to_bytes(
                 [

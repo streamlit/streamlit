@@ -25,6 +25,7 @@ parameterized = "*"
 pydot = "*"
 tensorflow = {version = ">=2.0.0", markers = "python_version < '3.8'"}
 seaborn = "*"
+sqlalchemy = "*"
 prometheus-client = "*"
 opencv-python = "*"
 requests-mock = "*"
@@ -62,4 +63,3 @@ tornado = ">=5.0,<6.0"
 tzlocal = "*"
 validators = "*"
 watchdog = "*"
-
