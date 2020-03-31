@@ -22,6 +22,7 @@ chart-studio = "*"
 bokeh = "*"
 graphviz = "*"
 parameterized = "*"
+psycopg2-binary = "*"
 pydot = "*"
 tensorflow = {version = ">=2.0.0", markers = "python_version < '3.8'"}
 seaborn = "*"
