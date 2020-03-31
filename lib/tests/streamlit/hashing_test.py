@@ -352,6 +352,48 @@ class HashTest(unittest.TestCase):
         hash_funcs = {int: lambda x: "hello"}
         self.assertNotEqual(get_hash(1), get_hash(1, hash_funcs=hash_funcs))
 
+    def test_sqlalchemy_engine(self):
+        import sqlalchemy as db
+        import psycopg2
+
+        def connect():
+            return psycopg2.connect(user='name')
+
+        def connect_with_args(user):
+            return psycopg2.connect(user=user)
+
+        url = 'postgresql://localhost/db'
+        auth_url = 'postgresql://user:pass@localhost/db'
+
+        # Engine.url
+        self.assertEqual(
+            get_hash(db.create_engine(url)), get_hash(db.create_engine(url))
+        )
+
+        # Engine.url
+        self.assertNotEqual(
+            get_hash(db.create_engine(url)),
+            get_hash(db.create_engine(auth_url))
+        )
+
+        # Engine.dialect
+        self.assertNotEqual(
+            get_hash(db.create_engine(url, encoding='utf-8')),
+            get_hash(db.create_engine(url, encoding='ascii'))
+        )
+
+        # Engine.pool._creator
+        self.assertNotEqual(
+            get_hash(db.create_engine(auth_url)),
+            get_hash(db.create_engine(auth_url, creator=connect))
+        )
+
+        # Engine.pool._creator
+        self.assertNotEqual(
+            get_hash(db.create_engine(auth_url, creator=connect)),
+            get_hash(db.create_engine(auth_url, creator=connect_with_args, connect_args={'user': 'name'}))
+        )
+
 
 class CodeHashTest(unittest.TestCase):
     def test_simple(self):

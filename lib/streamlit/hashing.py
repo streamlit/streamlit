@@ -430,6 +430,15 @@ class _CodeHasher:
             self.update(h, obj.getvalue())
             return h.digest()
 
+        elif type_util.is_type(obj, "sqlalchemy.engine.base.Engine"):
+            # Hash the entire `url` and `dialect` objects while selectively hashing
+            # attributes of the `pool`, since it contains an unhashable thread lock.
+            pool = obj.pool
+            return self.to_bytes([
+                obj.url, obj.dialect, pool._creator, pool._max_overflow, pool._pre_ping,
+                pool._recycle, pool._reset_on_return, pool._timeout, pool._use_threadlocal,
+            ])
+
         elif type_util.is_type(obj, "numpy.ufunc"):
             # For numpy.remainder, this returns remainder.
             return obj.__name__.encode()
