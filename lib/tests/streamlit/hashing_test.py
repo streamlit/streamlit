@@ -357,13 +357,13 @@ class HashTest(unittest.TestCase):
         import psycopg2
 
         def connect():
-            return psycopg2.connect(user='name')
+            return psycopg2.connect(user="name")
 
         def connect_with_args(user):
             return psycopg2.connect(user=user)
 
-        url = 'postgresql://localhost/db'
-        auth_url = 'postgresql://user:pass@localhost/db'
+        url = "postgresql://localhost/db"
+        auth_url = "postgresql://user:pass@localhost/db"
 
         # Engine.url
         self.assertEqual(
@@ -372,26 +372,29 @@ class HashTest(unittest.TestCase):
 
         # Engine.url
         self.assertNotEqual(
-            get_hash(db.create_engine(url)),
-            get_hash(db.create_engine(auth_url))
+            get_hash(db.create_engine(url)), get_hash(db.create_engine(auth_url))
         )
 
         # Engine.dialect
         self.assertNotEqual(
-            get_hash(db.create_engine(url, encoding='utf-8')),
-            get_hash(db.create_engine(url, encoding='ascii'))
+            get_hash(db.create_engine(url, encoding="utf-8")),
+            get_hash(db.create_engine(url, encoding="ascii")),
         )
 
         # Engine.pool._creator
         self.assertNotEqual(
             get_hash(db.create_engine(auth_url)),
-            get_hash(db.create_engine(auth_url, creator=connect))
+            get_hash(db.create_engine(auth_url, creator=connect)),
         )
 
         # Engine.pool._creator
         self.assertNotEqual(
             get_hash(db.create_engine(auth_url, creator=connect)),
-            get_hash(db.create_engine(auth_url, creator=connect_with_args, connect_args={'user': 'name'}))
+            get_hash(
+                db.create_engine(
+                    auth_url, creator=connect_with_args, connect_args={"user": "name"}
+                )
+            ),
         )
 
 
