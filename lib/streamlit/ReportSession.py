@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,7 +46,8 @@ LOGGER = get_logger(__name__)
 
 # ID used to mark the script execution context that starts up before the first
 # browser connects.
-PREHEATED_ID = "PREHEATED_ID"
+UNCLAIMED_PREHEATED_ID = "UNCLAIMED_PREHEATED_ID"
+CLAIMED_PREHEATED_ID = "CLAIMED_PREHEATED_ID"
 
 
 class ReportSessionState(Enum):
@@ -92,7 +92,7 @@ class ReportSession(object):
         """
         # Each ReportSession has a unique string ID.
         if is_preheat:
-            self.id = PREHEATED_ID
+            self.id = UNCLAIMED_PREHEATED_ID
         else:
             self.id = str(uuid.uuid4())
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -434,6 +433,9 @@ class _CodeHasher:
         elif type_util.is_type(obj, "numpy.ufunc"):
             # For numpy.remainder, this returns remainder.
             return obj.__name__.encode()
+
+        elif type_util.is_type(obj, "tensorflow.python.client.session.Session"):
+            return self.to_bytes(id(obj))
 
         elif inspect.isroutine(obj):
             if hasattr(obj, "__wrapped__"):

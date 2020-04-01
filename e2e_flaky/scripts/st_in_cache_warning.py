@@ -1,1 +1,0 @@
-../../e2e/scripts/st_in_cache_warning.py

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -343,18 +342,14 @@ def write(*args, **kwargs):
        height: 200px
 
     """
-    # Python2 doesn't support this syntax
-    #   def write(*args, unsafe_allow_html=False)
-    # so we do this instead:
-    unsafe_allow_html = kwargs.get("unsafe_allow_html", False)
-
     try:
         string_buffer = []  # type: List[str]
+        unsafe_allow_html = kwargs.get("unsafe_allow_html", False)
 
         def flush_buffer():
             if string_buffer:
                 markdown(
-                    " ".join(string_buffer), unsafe_allow_html=unsafe_allow_html
+                    " ".join(string_buffer), unsafe_allow_html=unsafe_allow_html,
                 )  # noqa: F821
                 string_buffer[:] = []
 
@@ -631,6 +626,7 @@ def _maybe_print_repl_warning():
 
 # Feature namespaces
 
+
 class _BetaNamespace(object):
     """This namespace holds Streamlit features that are in currently in beta.
 
@@ -656,8 +652,9 @@ class _BetaNamespace(object):
     experimental ones often do not.
 
     """
+
     # Add beta features here. For example:
-    #foo = _foo
+    # foo = _foo
     pass
 
 
@@ -692,9 +689,11 @@ class _ExperimentalNamespace(object):
     features will always make it into the `st` namespace at some point, while
     experimental ones often do not.
     """
+
     # Add experimental features here. For example:
-    #foo = _foo
+    # foo = _foo
     show = _show
+
 
 beta = _BetaNamespace
 experimental = _ExperimentalNamespace

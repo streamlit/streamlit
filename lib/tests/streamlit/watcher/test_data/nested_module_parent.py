@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,9 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-
-if sys.version_info[0] == 2:
-    import nested_module_child as NESTED_MODULE_CHILD
-else:
-    import tests.streamlit.watcher.test_data.nested_module_child as NESTED_MODULE_CHILD
+import tests.streamlit.watcher.test_data.nested_module_child as NESTED_MODULE_CHILD
