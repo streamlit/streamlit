@@ -626,6 +626,7 @@ def _maybe_print_repl_warning():
 
 # Feature namespaces
 
+
 class _BetaNamespace(object):
     """This namespace holds Streamlit features that are in currently in beta.
 
@@ -651,8 +652,9 @@ class _BetaNamespace(object):
     experimental ones often do not.
 
     """
+
     # Add beta features here. For example:
-    #foo = _foo
+    # foo = _foo
     pass
 
 
@@ -687,9 +689,11 @@ class _ExperimentalNamespace(object):
     features will always make it into the `st` namespace at some point, while
     experimental ones often do not.
     """
+
     # Add experimental features here. For example:
-    #foo = _foo
+    # foo = _foo
     show = _show
+
 
 beta = _BetaNamespace
 experimental = _ExperimentalNamespace
