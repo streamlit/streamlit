@@ -44,10 +44,6 @@ from streamlit.watcher.LocalSourcesWatcher import LocalSourcesWatcher
 
 LOGGER = get_logger(__name__)
 
-# ID used to mark the script execution context that starts up before the first
-# browser connects.
-PREHEATED_ID = "PREHEATED_ID"
-
 
 class ReportSessionState(Enum):
     REPORT_NOT_RUNNING = "REPORT_NOT_RUNNING"

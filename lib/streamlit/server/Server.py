@@ -34,7 +34,6 @@ from streamlit.ConfigOption import ConfigOption
 from streamlit.ForwardMsgCache import ForwardMsgCache
 from streamlit.ForwardMsgCache import create_reference_msg
 from streamlit.ForwardMsgCache import populate_hash_if_needed
-from streamlit.ReportSession import PREHEATED_ID
 from streamlit.ReportSession import ReportSession
 from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.logger import get_logger
