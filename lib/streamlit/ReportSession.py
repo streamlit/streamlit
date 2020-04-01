@@ -46,8 +46,7 @@ LOGGER = get_logger(__name__)
 
 # ID used to mark the script execution context that starts up before the first
 # browser connects.
-UNCLAIMED_PREHEATED_ID = "UNCLAIMED_PREHEATED_ID"
-CLAIMED_PREHEATED_ID = "CLAIMED_PREHEATED_ID"
+PREHEATED_ID = "PREHEATED_ID"
 
 
 class ReportSessionState(Enum):
@@ -67,16 +66,11 @@ class ReportSession(object):
     A ReportSession is attached to each thread involved in running its Report.
     """
 
-    def __init__(
-        self, is_preheat, ioloop, script_path, command_line, uploaded_file_manager
-    ):
+    def __init__(self, ioloop, script_path, command_line, uploaded_file_manager):
         """Initialize the ReportSession.
 
         Parameters
         ----------
-        is_preheat : bool
-            True if this is the "preheated" session.
-
         ioloop : tornado.ioloop.IOLoop
             The Tornado IOLoop that we're running within.
 
@@ -91,10 +85,7 @@ class ReportSession(object):
 
         """
         # Each ReportSession has a unique string ID.
-        if is_preheat:
-            self.id = UNCLAIMED_PREHEATED_ID
-        else:
-            self.id = str(uuid.uuid4())
+        self.id = str(uuid.uuid4())
 
         self._ioloop = ioloop
         self._report = Report(script_path, command_line)
