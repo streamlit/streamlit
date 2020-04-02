@@ -15,9 +15,10 @@
  * limitations under the License.
  */
 
-import { MapboxToken, TOKENS_URL } from "hocs/withMapboxToken/MapboxToken"
+import axios from "axios"
 import { SessionInfo } from "lib/SessionInfo"
-import fetchMock from "fetch-mock"
+import AxiosMockAdapter from "axios-mock-adapter"
+import { MapboxToken, TOKENS_URL } from "hocs/withMapboxToken/MapboxToken"
 
 function setSessionInfoWithMapboxToken(userMapboxToken: string): void {
   SessionInfo.current = new SessionInfo({
@@ -33,18 +34,23 @@ function setSessionInfoWithMapboxToken(userMapboxToken: string): void {
 }
 
 describe("MapboxToken", () => {
+  let axiosMock: AxiosMockAdapter
+
   beforeEach(() => {
+    window.location.hostname = "localhost"
+    axiosMock = new AxiosMockAdapter(axios)
     setSessionInfoWithMapboxToken("")
   })
 
   afterEach(() => {
-    SessionInfo["singleton"] = undefined
+    axiosMock.restore()
     MapboxToken["token"] = undefined
-    fetchMock.restore()
+    SessionInfo["singleton"] = undefined
   })
 
   test("Returns cached token if defined", async () => {
     MapboxToken["token"] = "cached"
+
     await expect(MapboxToken.get()).resolves.toEqual("cached")
   })
 
@@ -61,7 +67,8 @@ describe("MapboxToken", () => {
   test("Fetches remote token if userMapboxToken is empty", async () => {
     const remoteToken = "remoteMapboxToken"
 
-    fetchMock.get(TOKENS_URL, { mapbox: remoteToken })
+    axiosMock.onGet(TOKENS_URL).reply(200, { mapbox: remoteToken })
+
     await expect(MapboxToken.get()).resolves.toEqual(remoteToken)
 
     // The token should also be cached.
@@ -69,7 +76,7 @@ describe("MapboxToken", () => {
   })
 
   test("Errors if remote token is missing", async () => {
-    fetchMock.get(TOKENS_URL, { ohNo: "noTokenHere" })
+    axiosMock.onGet(TOKENS_URL).replyOnce(200, { ohNo: "noTokenHere" })
 
     await expect(MapboxToken.get()).rejects.toEqual(
       new Error(`Missing token "mapbox" (${TOKENS_URL})`)
@@ -78,13 +85,24 @@ describe("MapboxToken", () => {
     // No cached token after failure.
     expect(MapboxToken["token"]).toBeUndefined()
 
-    fetchMock.restore()
-    fetchMock.get(TOKENS_URL, 404)
+    axiosMock.onGet(TOKENS_URL).replyOnce(404, {})
     await expect(MapboxToken.get()).rejects.toEqual(
-      new Error(`Bad status: 404 (${TOKENS_URL})`)
+      new Error(`Request failed with status code 404 (${TOKENS_URL})`)
     )
 
     // No cached token after failure.
     expect(MapboxToken["token"]).toBeUndefined()
+  })
+
+  it("Errors if localhost and missing token", async () => {
+    delete window.location
+    window.location = { hostname: "http://streamlit.io" } as Location
+    setSessionInfoWithMapboxToken("")
+
+    await expect(MapboxToken.get()).rejects.toEqual(
+      new Error(
+        "To use this you'll need a Mapbox access token. Please add it to your config."
+      )
+    )
   })
 })

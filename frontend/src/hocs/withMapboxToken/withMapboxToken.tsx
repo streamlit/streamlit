@@ -29,6 +29,7 @@ interface Props {
 interface State {
   mapboxToken?: string
   mapboxTokenError?: Error
+  isFetching: boolean
 }
 
 /**
@@ -47,50 +48,62 @@ function withMapboxToken(
       super(props)
 
       this.state = {
+        isFetching: true,
         mapboxToken: undefined,
         mapboxTokenError: undefined,
       }
+
       this.initMapboxToken()
     }
 
     /**
      * Fetch our MapboxToken.
      */
-    private initMapboxToken = (): void => {
-      MapboxToken.get()
-        .then(token => this.setState({ mapboxToken: token }))
-        .catch(error => this.setState({ mapboxTokenError: error }))
+    private initMapboxToken = async (): Promise<void> => {
+      try {
+        const mapboxToken = await MapboxToken.get()
+
+        this.setState({
+          mapboxToken,
+          isFetching: false,
+        })
+      } catch (error) {
+        this.setState({
+          mapboxTokenError: error,
+          isFetching: false,
+        })
+      }
     }
 
     public render = (): JSX.Element => {
+      const { mapboxToken, mapboxTokenError, isFetching } = this.state
+      const { width } = this.props
+
       // We got an error when fetching our mapbox token: show the error.
-      if (this.state.mapboxTokenError != null) {
+      if (mapboxTokenError) {
+        const { message } = mapboxTokenError
+
         return (
           <ErrorElement
-            width={this.props.width}
+            width={width}
             name="Error fetching Mapbox token"
-            message={this.state.mapboxTokenError.message}
+            message={message}
           />
         )
       }
 
       // If our mapboxToken hasn't been retrieved yet, show a loading alert.
-      if (this.state.mapboxToken === undefined) {
+      if (isFetching) {
         return (
           <Alert
             element={makeElementWithInfoText("Loading...").get("alert")}
-            width={this.props.width}
+            width={width}
           />
         )
       }
 
       // We have the mapbox token. Pass it through to our component.
-      return (
-        <WrappedComponent
-          mapboxToken={this.state.mapboxToken}
-          {...this.props}
-        />
-      )
+      return <WrappedComponent mapboxToken={mapboxToken} {...this.props} />
     }
   }
 

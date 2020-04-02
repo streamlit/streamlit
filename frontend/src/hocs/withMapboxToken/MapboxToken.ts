@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+import axios from "axios"
 import { SessionInfo } from "lib/SessionInfo"
 
 /**
@@ -34,7 +35,16 @@ export class MapboxToken {
    * only be fetched once per session.)
    */
   public static async get(): Promise<string> {
-    if (MapboxToken.token == null) {
+    if (
+      !this.isItRunningLocal() &&
+      SessionInfo.current.userMapboxToken === ""
+    ) {
+      throw new Error(
+        "To use this you'll need a Mapbox access token. Please add it to your config."
+      )
+    }
+
+    if (!MapboxToken.token) {
       if (SessionInfo.current.userMapboxToken !== "") {
         MapboxToken.token = SessionInfo.current.userMapboxToken
       } else {
@@ -45,30 +55,27 @@ export class MapboxToken {
     return MapboxToken.token
   }
 
+  private static isItRunningLocal = (): boolean => {
+    const { hostname } = window.location
+
+    return hostname === "localhost" || hostname === "127.0.0.1"
+  }
+
   private static async fetchToken(
     url: string,
     tokenName: string
   ): Promise<string> {
-    let rsp: Response
     try {
-      rsp = await fetch(url)
+      const response = await axios.get(url)
+      const { mapbox: token } = response.data
+
+      if (token == null || token === "") {
+        throw new Error(`Missing token "${tokenName}"`)
+      }
+
+      return token
     } catch (e) {
-      // Fetch error messages are abysmal, and give virtually no useful
-      // context. Catch errors and append the offending URL to their messages
-      // to make them a bit more useful.
       throw new Error(`${e.message} (${url})`)
     }
-
-    if (!rsp.ok) {
-      throw new Error(`Bad status: ${rsp.status} (${url})`)
-    }
-
-    const json = await rsp.json()
-    const token = json[tokenName]
-    if (token == null || token === "") {
-      throw new Error(`Missing token "${tokenName}" (${url})`)
-    }
-
-    return token
   }
 }
