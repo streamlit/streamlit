@@ -56,7 +56,7 @@ def mapping_demo():
     def from_data_file(filename):
         url = (
             "https://raw.githubusercontent.com/streamlit/"
-            "streamlit/develop/examples/data/%s" % filename)
+            "example-data/master/hello/v1/%s" % filename)
         return pd.read_json(url)
 
     try:
