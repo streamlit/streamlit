@@ -123,20 +123,27 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     tooltip = JSON.parse(tooltip)
 
     // NB: https://deckgl.readthedocs.io/en/latest/tooltip.html
-    tooltip = tooltip.html ? tooltip.html : tooltip.text
+    if (tooltip.html) {
+      tooltip.html = this.interpolate(info, tooltip.html)
+    } else {
+      tooltip.text = this.interpolate(info, tooltip.text)
+    }
 
-    const matchedVariables = tooltip.match(/{(.*?)}/g)
+    return tooltip
+  }
+
+  interpolate = (info: PickingInfo, body: string): string => {
+    const matchedVariables = body.match(/{(.*?)}/g)
     if (matchedVariables) {
       matchedVariables.forEach((match: string) => {
         const variable = match.substring(1, match.length - 1)
 
         if (variable in info.object) {
-          tooltip = tooltip.replace(match, info.object[variable])
+          body = body.replace(match, info.object[variable])
         }
       })
     }
-
-    return tooltip
+    return body
   }
 
   render(): ReactNode {
