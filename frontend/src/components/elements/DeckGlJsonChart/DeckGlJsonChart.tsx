@@ -23,6 +23,7 @@ import * as layers from "@deck.gl/layers"
 import { JSONConverter } from "@deck.gl/json"
 import { flowRight as compose } from "lodash"
 import * as aggregationLayers from "@deck.gl/aggregation-layers"
+import * as geoLayers from "@deck.gl/geo-layers"
 
 import { CSVLoader } from "@loaders.gl/csv"
 import { registerLoaders } from "@loaders.gl/core"
@@ -49,7 +50,7 @@ interface DeckObject {
 }
 
 const configuration = {
-  classes: { ...layers, ...aggregationLayers },
+  classes: { ...layers, ...aggregationLayers, ...geoLayers },
 }
 
 registerLoaders([CSVLoader])
@@ -121,14 +122,16 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
 
     tooltip = JSON.parse(tooltip)
 
-    const matchedVariables = tooltip.html.match(/{(.*?)}/g)
+    // NB: https://deckgl.readthedocs.io/en/latest/tooltip.html
+    tooltip = tooltip.html ? tooltip.html : tooltip.text
 
+    const matchedVariables = tooltip.match(/{(.*?)}/g)
     if (matchedVariables) {
-      matchedVariables.forEach((el: string) => {
-        const variable = el.substring(1, el.length - 1)
+      matchedVariables.forEach((match: string) => {
+        const variable = match.substring(1, match.length - 1)
 
-        if (info.object[variable]) {
-          tooltip.html = tooltip.html.replace(el, info.object[variable])
+        if (variable in info.object) {
+          tooltip = tooltip.replace(match, info.object[variable])
         }
       })
     }
