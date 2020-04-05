@@ -57,6 +57,6 @@ describe("DeckGlJsonChart element", () => {
       },
     })
 
-    expect(createdTooltip.html).toBe("<b>Elevation Value:</b> 10")
+    expect(createdTooltip).toBe("<b>Elevation Value:</b> 10")
   })
 })
