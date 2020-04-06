@@ -435,9 +435,14 @@ class _CodeHasher:
             # attributes of the `pool`, since it contains an unhashable thread lock.
             # https://docs.sqlalchemy.org/en/13/core/engines.html#sqlalchemy.create_engine
             pool = obj.pool
+
+            # Get connect_args from the closure of the creator function
+            creator_args = pool._creator.__closure__
+            connect_kwargs = creator_args[1].cell_contents if creator_args else []
+
             return self.to_bytes(
                 [
-                    obj.url,
+                    # obj.url,
                     obj.dialect,
                     pool._creator,
                     pool._max_overflow,
@@ -446,6 +451,7 @@ class _CodeHasher:
                     pool._reset_on_return,
                     pool._timeout,
                     pool._use_threadlocal,
+                    connect_kwargs,
                 ]
             )
 

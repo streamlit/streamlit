@@ -386,21 +386,12 @@ class HashTest(unittest.TestCase):
             get_hash(db.create_engine(auth_url, creator=connect)),
         )
 
-        # BAD: We don't have access to the connect_args so we will
-        # incorrectly hash the connection information in this case.
-        #
-        # self.assertNotEqual(
-        #    get_hash(
-        #        db.create_engine(
-        #            auth_url, creator=connect_with_args, connect_args={"user": "foo"}
-        #        )
-        #    ),
-        #    get_hash(
-        #        db.create_engine(
-        #            auth_url, creator=connect_with_args, connect_args={"user": "bar"}
-        #        )
-        #    ),
-        # )
+        # TODO test when passing in custom pool argument
+
+        self.assertNotEqual(
+           get_hash(db.create_engine(auth_url, connect_args={"user": "foo"})),
+           get_hash(db.create_engine(auth_url, connect_args={"user": "bar"})),
+        )
 
 
 class CodeHashTest(unittest.TestCase):
