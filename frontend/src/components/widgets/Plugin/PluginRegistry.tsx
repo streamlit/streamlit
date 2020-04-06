@@ -15,40 +15,24 @@
  * limitations under the License.
  */
 
-import axios from "axios"
 import { BaseUriParts, buildHttpUri } from "lib/UriUtil"
-import { StPlugin } from "./StPlugin"
 
 /**
  * Downloads and compiles plugins from the server.
  */
 export class PluginRegistry {
   private readonly getServerUri: () => BaseUriParts | undefined
-  private readonly plugins = new Map<string, Promise<StPlugin>>()
 
   public constructor(getServerUri: () => BaseUriParts | undefined) {
     this.getServerUri = getServerUri
   }
 
-  public getPlugin(id: string): Promise<StPlugin> {
-    // Has the plugin already been registered?
-    let pluginPromise = this.plugins.get(id)
-    if (pluginPromise != null) {
-      return pluginPromise
-    }
-
+  public getPluginURL(pluginId: string, path: string): string {
     const serverURI = this.getServerUri()
     if (serverURI === undefined) {
       throw new Error("Can't get plugin: not connected to a server")
     }
 
-    pluginPromise = axios
-      .get(buildHttpUri(serverURI, `plugin/${id}`))
-      .then(rsp => rsp.data)
-      .then(data => new StPlugin(data))
-
-    this.plugins.set(id, pluginPromise)
-
-    return pluginPromise
+    return buildHttpUri(serverURI, `plugin/${pluginId}/${path}`)
   }
 }
