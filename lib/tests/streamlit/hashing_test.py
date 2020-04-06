@@ -389,8 +389,8 @@ class HashTest(unittest.TestCase):
         # TODO test when passing in custom pool argument
 
         self.assertNotEqual(
-           get_hash(db.create_engine(auth_url, connect_args={"user": "foo"})),
-           get_hash(db.create_engine(auth_url, connect_args={"user": "bar"})),
+            get_hash(db.create_engine(auth_url, connect_args={"user": "foo"})),
+            get_hash(db.create_engine(auth_url, connect_args={"user": "bar"})),
         )
 
 
