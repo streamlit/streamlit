@@ -17,7 +17,7 @@ import hashlib
 import json
 import mimetypes
 import os
-from typing import Any, Dict, Optional, Type, Union, cast
+from typing import Any, Dict, Optional, Type, Union
 
 import tornado.web
 
@@ -40,22 +40,20 @@ class MarshallPluginException(StreamlitAPIException):
     pass
 
 
-def plugin(name: str, javascript: str) -> None:
+def plugin(name: str, path: str) -> None:
     """Register a new plugin."""
 
     # Register this plugin with our global registry.
-    plugin_id = PluginRegistry.instance().register_plugin(javascript)
+    plugin_id = PluginRegistry.instance().register_plugin(path)
 
     # Build our plugin function.
-    def plugin_instance(
-        dg: DeltaGenerator, args: Optional[JSONDict]
-    ) -> Optional[JSONDict]:
+    def plugin_instance(dg: DeltaGenerator, args: Optional[JSONDict]) -> Optional[Any]:
         try:
             args_json = json.dumps(args)
         except BaseException as e:
             raise MarshallPluginException("Could not convert plugin args to JSON", e)
 
-        def marshall_plugin(element: Element) -> Union[JSONDict, Type[NoValue]]:
+        def marshall_plugin(element: Element) -> Union[Any, Type[NoValue]]:
             element.plugin_instance.args_json = args_json
             element.plugin_instance.plugin_id = plugin_id
             widget_value = _get_widget_ui_value("plugin_instance", element)
@@ -65,17 +63,16 @@ def plugin(name: str, javascript: str) -> None:
                 except BaseException as e:
                     raise MarshallPluginException("Could not not parse plugin JSON", e)
 
-            # Coerce None -> NoValue, which is what _enqueue_new_element_delta
-            # expects.
+            # widget_value will be either None or whatever the plugin's most
+            # recent setWidgetValue value is. We coerce None -> NoValue,
+            # because that's what _enqueue_new_element_delta expects.
             return widget_value if widget_value is not None else NoValue
 
         result = dg._enqueue_new_element_delta(
             marshall_element=marshall_plugin, delta_type="plugin"
         )
 
-        # _enqueue_new_element_delta lies about its return type,
-        # so we need to make mypy happy.
-        return cast(Optional[JSONDict], result)
+        return result
 
     # Register the plugin as a member function of DeltaGenerator, and as
     # a standalone function in the streamlit namespace.
