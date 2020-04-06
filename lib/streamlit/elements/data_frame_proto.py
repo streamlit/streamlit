@@ -157,15 +157,19 @@ def _get_custom_display_values(df, translated_style):
     default_formatter = df.style._display_funcs[(0, 0)]
 
     def has_custom_display_value(cell):
-        value = str(cell["value"])
-        display_value = str(cell["display_value"])
-        if value == display_value:
+        value = cell["value"]
+        display_value = cell["display_value"]
+
+        if type(value) is type(display_value) and str(value) == str(display_value):
             return False
 
         # Pandas applies a default style to all float values, regardless
         # of whether they have a user-specified display format. We test
         # for that here.
-        return default_formatter(value) != display_value
+        return (
+            type(value) is not type(display_value)
+            or default_formatter(value) != display_value
+        )
 
     cell_selector_regex = re.compile(r"row(\d+)_col(\d+)")
     header_selector_regex = re.compile(r"level(\d+)_row(\d+)")

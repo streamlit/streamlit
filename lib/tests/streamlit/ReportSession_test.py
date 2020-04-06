@@ -51,7 +51,7 @@ class ReportSessionTest(unittest.TestCase):
 
         patched_config.get_option.side_effect = get_option
 
-        rs = ReportSession(False, None, "", "", UploadedFileManager())
+        rs = ReportSession(None, "", "", UploadedFileManager())
         mock_script_runner = MagicMock()
         mock_script_runner._install_tracer = ScriptRunner._install_tracer
         rs._scriptrunner = mock_script_runner
@@ -87,7 +87,7 @@ class ReportSessionTest(unittest.TestCase):
 
         patched_config.get_option.side_effect = get_option
 
-        rs = ReportSession(False, None, "", "", UploadedFileManager())
+        rs = ReportSession(None, "", "", UploadedFileManager())
         mock_script_runner = MagicMock()
         rs._scriptrunner = mock_script_runner
 
@@ -107,7 +107,7 @@ class ReportSessionTest(unittest.TestCase):
     def test_shutdown(self, _1):
         """Test that ReportSession.shutdown behaves sanely."""
         file_mgr = MagicMock(spec=UploadedFileManager)
-        rs = ReportSession(False, None, "", "", file_mgr)
+        rs = ReportSession(None, "", "", file_mgr)
 
         rs.shutdown()
         self.assertEqual(ReportSessionState.SHUTDOWN_REQUESTED, rs._state)
@@ -122,8 +122,8 @@ class ReportSessionTest(unittest.TestCase):
     def test_unique_id(self, _1):
         """Each ReportSession should have a unique ID"""
         file_mgr = MagicMock(spec=UploadedFileManager)
-        rs1 = ReportSession(False, None, "", "", file_mgr)
-        rs2 = ReportSession(False, None, "", "", file_mgr)
+        rs1 = ReportSession(None, "", "", file_mgr)
+        rs2 = ReportSession(None, "", "", file_mgr)
         self.assertNotEqual(rs1.id, rs2.id)
 
 
@@ -143,9 +143,7 @@ class ReportSessionSerializationTest(tornado.testing.AsyncTestCase):
     def test_handle_save_request(self, _1):
         """Test that handle_save_request serializes files correctly."""
         # Create a ReportSession with some mocked bits
-        rs = ReportSession(
-            False, self.io_loop, "mock_report.py", "", UploadedFileManager()
-        )
+        rs = ReportSession(self.io_loop, "mock_report.py", "", UploadedFileManager())
         rs._report.report_id = "TestReportID"
 
         orig_ctx = get_report_ctx()

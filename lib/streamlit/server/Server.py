@@ -34,9 +34,7 @@ from streamlit.ConfigOption import ConfigOption
 from streamlit.ForwardMsgCache import ForwardMsgCache
 from streamlit.ForwardMsgCache import create_reference_msg
 from streamlit.ForwardMsgCache import populate_hash_if_needed
-from streamlit.ReportSession import CLAIMED_PREHEATED_ID
 from streamlit.ReportSession import ReportSession
-from streamlit.ReportSession import UNCLAIMED_PREHEATED_ID
 from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.logger import get_logger
 from streamlit.plugins import PluginRegistry
@@ -213,6 +211,7 @@ class Server(object):
         self._uploaded_file_mgr = UploadedFileManager()
         self._uploaded_file_mgr.on_files_added.connect(self._on_file_uploaded)
         self._report = None  # type: Optional[Report]
+        self._preheated_session_id = None  # type: Optional[str]
 
     def _on_file_uploaded(self, file):
         """Event handler for UploadedFileManager.on_file_added.
@@ -511,29 +510,42 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             The newly-created ReportSession for this browser connection.
 
         """
-        if UNCLAIMED_PREHEATED_ID in self._session_info_by_id:
+        if self._preheated_session_id is not None:
             assert len(self._session_info_by_id) == 1
-            LOGGER.debug("Reusing preheated context for ws %s", ws)
-            session = self._session_info_by_id[UNCLAIMED_PREHEATED_ID].session
-            del self._session_info_by_id[UNCLAIMED_PREHEATED_ID]
-            session.id = CLAIMED_PREHEATED_ID
+            assert ws is not None
+
+            session_id = self._preheated_session_id
+            self._preheated_session_id = None
+
+            session_info = self._session_info_by_id[session_id]
+            session_info.ws = ws
+            session = session_info.session
+
+            LOGGER.debug(
+                "Reused preheated session for ws %s. Session ID: %s", id(ws), session_id
+            )
+
         else:
-            LOGGER.debug("Creating new context for ws %s", ws)
             session = ReportSession(
-                is_preheat=(ws is None),
                 ioloop=self._ioloop,
                 script_path=self._script_path,
                 command_line=self._command_line,
                 uploaded_file_manager=self._uploaded_file_mgr,
             )
 
-        assert session.id not in self._session_info_by_id, (
-            "session.id '%s' registered multiple times!" % session.id
-        )
+            LOGGER.debug(
+                "Created new session for ws %s. Session ID: %s", id(ws), session.id
+            )
+
+            assert session.id not in self._session_info_by_id, (
+                "session.id '%s' registered multiple times!" % session.id
+            )
 
         self._session_info_by_id[session.id] = SessionInfo(ws, session)
 
-        if ws is not None:
+        if ws is None:
+            self._preheated_session_id = session.id
+        else:
             self._set_state(State.ONE_OR_MORE_BROWSERS_CONNECTED)
 
         return session
