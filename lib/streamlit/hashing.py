@@ -436,12 +436,16 @@ class _CodeHasher:
             # https://docs.sqlalchemy.org/en/13/core/engines.html#sqlalchemy.create_engine
             pool = obj.pool
 
-            # Get connect_args from the closure of the creator function
+            # Get connect_args from the closure of the creator function. It includes
+            # arguments parsed from the URL and those passed in via `connect_args`.
+            # However if a custom `creator` function is passed in then we don't
+            # expect to get this data.
             creator_args = pool._creator.__closure__
             connect_kwargs = creator_args[1].cell_contents if creator_args else []
 
             return self.to_bytes(
                 [
+                    # TODO remove this comment because the url gets parsed into `connect_kwargs`
                     # obj.url,
                     obj.dialect,
                     pool._creator,

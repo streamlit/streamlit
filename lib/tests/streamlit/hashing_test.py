@@ -358,15 +358,19 @@ class HashTest(unittest.TestCase):
         def connect():
             pass
 
-        def connect_with_args(user):
-            pass
-
         url = "postgresql://localhost/db"
         auth_url = "postgresql://user:pass@localhost/db"
 
         # Engine.url
         self.assertEqual(
             get_hash(db.create_engine(url)), get_hash(db.create_engine(url))
+        )
+
+        self.assertEqual(
+            get_hash(db.create_engine(auth_url)),
+            get_hash(db.create_engine(url, connect_args={"user": "user", "password": "pass"})),
+            # {'username': 'user', 'password': 'pass', 'port': None, 'database': 'db', 'query': None, 'host': 'localhost'}
+            # ([], {'host': 'localhost', 'database': 'db', 'user': 'user', 'password': 'pass', 'port': 5432})
         )
 
         # Engine.url
@@ -387,6 +391,7 @@ class HashTest(unittest.TestCase):
         )
 
         # TODO test when passing in custom pool argument
+        # TODO test another dialect, ex sqlite
 
         self.assertNotEqual(
             get_hash(db.create_engine(auth_url, connect_args={"user": "foo"})),
