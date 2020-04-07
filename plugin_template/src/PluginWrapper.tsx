@@ -1,6 +1,5 @@
 import hoistNonReactStatics from "hoist-non-react-statics";
 import React, { ComponentType, ReactNode } from "react";
-import { Streamlit } from "./StComponentAPI";
 
 // TODO: Figure this out
 const TARGET_ORIGIN = "*";
@@ -43,8 +42,6 @@ function StreamlitPlugin(
    * Plugin writers *do not* edit this class.
    */
   class PluginWrapper extends React.PureComponent<Props, State> {
-    private readonly streamlitAPI: Streamlit;
-
     public constructor(props: Props) {
       super(props);
 
@@ -52,13 +49,6 @@ function StreamlitPlugin(
         readyForFirstRender: false,
         renderArgs: {},
         renderDisabled: false
-      };
-
-      // Build the API that the plugin uses to communicate to Streamlit.
-      // We send our back messages
-      this.streamlitAPI = {
-        setWidgetValue: value =>
-          this.sendBackMsg(PluginBackMsgType.SET_WIDGET_VALUE, { value })
       };
     }
 
@@ -137,10 +127,12 @@ function StreamlitPlugin(
 
       return (
         <WrappedComponent
-          st={this.streamlitAPI}
           width={window.innerWidth}
           disabled={this.state.renderDisabled}
           args={this.state.renderArgs}
+          setWidgetValue={(value: any) =>
+            this.sendBackMsg(PluginBackMsgType.SET_WIDGET_VALUE, { value })
+          }
         />
       );
     };

@@ -103,7 +103,7 @@ class RadioButton extends React.PureComponent<StComponentProps, State> {
       const value =
         options != null && index < options.length ? options[index] : null;
       // Send our current value to Streamlit!
-      this.props.st.setWidgetValue(value);
+      this.props.setWidgetValue(value);
     });
   };
 }
