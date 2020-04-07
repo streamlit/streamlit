@@ -368,7 +368,9 @@ class HashTest(unittest.TestCase):
 
         self.assertEqual(
             get_hash(db.create_engine(auth_url)),
-            get_hash(db.create_engine(url, connect_args={"user": "user", "password": "pass"})),
+            get_hash(
+                db.create_engine(url, connect_args={"user": "user", "password": "pass"})
+            ),
             # {'username': 'user', 'password': 'pass', 'port': None, 'database': 'db', 'query': None, 'host': 'localhost'}
             # ([], {'host': 'localhost', 'database': 'db', 'user': 'user', 'password': 'pass', 'port': 5432})
         )
