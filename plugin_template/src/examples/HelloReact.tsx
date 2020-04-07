@@ -1,5 +1,6 @@
 import React from "react";
 import "../App.css";
+import StreamlitPlugin from "../PluginWrapper";
 import { StComponentProps } from "../StComponentAPI";
 import logo from "../logo.svg";
 
@@ -27,4 +28,4 @@ class HelloReact extends React.PureComponent<StComponentProps> {
   };
 }
 
-export default HelloReact;
+export default StreamlitPlugin(HelloReact);

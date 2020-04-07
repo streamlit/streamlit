@@ -1,6 +1,7 @@
 import { Radio, RadioGroup } from "baseui/radio";
 import React from "react";
 import "../App.css";
+import StreamlitPlugin from "../PluginWrapper";
 import { StComponentProps } from "../StComponentAPI";
 
 import { Client as Styletron } from "styletron-engine-atomic";
@@ -107,4 +108,4 @@ class RadioButton extends React.PureComponent<StComponentProps, State> {
   };
 }
 
-export default RadioButton;
+export default StreamlitPlugin(RadioButton);
