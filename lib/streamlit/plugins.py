@@ -32,9 +32,6 @@ from streamlit.proto.Element_pb2 import Element
 
 LOGGER = get_logger(__name__)
 
-# Type aliases.
-JSONDict = Dict[str, Any]
-
 
 class MarshallPluginException(StreamlitAPIException):
     pass
@@ -47,19 +44,22 @@ def plugin(name: str, path: str) -> None:
     plugin_id = PluginRegistry.instance().register_plugin(path)
 
     # Build our plugin function.
-    def plugin_instance(dg: DeltaGenerator, args: Optional[JSONDict]) -> Optional[Any]:
+    def plugin_instance(dg: DeltaGenerator, *args, **kwargs) -> Optional[Any]:
+        if len(args) > 0:
+            raise MarshallPluginException("Argument '%s' needs a label" % args[0])
+
         try:
-            args_json = json.dumps(args)
+            args_json = json.dumps(kwargs)
         except BaseException as e:
             raise MarshallPluginException("Could not convert plugin args to JSON", e)
 
         # If args["default"] is set, then it's the default widget value we
         # return when the user hasn't interacted yet.
-        default_value = args.get("default", None)
+        default_value = kwargs.get("default", None)
 
         # If args["key"] is set, it is the user_key we use to generate our
         # widget ID.
-        user_key = args.get("key", None)
+        user_key = kwargs.get("key", None)
 
         def marshall_plugin(element: Element) -> Union[Any, Type[NoValue]]:
             element.plugin_instance.args_json = args_json
@@ -82,11 +82,16 @@ def plugin(name: str, path: str) -> None:
 
         return result
 
+    # Build st.[plugin_name], which just calls plugin_instance with the
+    # main DeltaGenerator.
+    def plugin_instance_main(*args, **kwargs):
+        return plugin_instance(streamlit._main, *args, **kwargs)
+
     # Register the plugin as a member function of DeltaGenerator, and as
     # a standalone function in the streamlit namespace.
     # TODO: disallow collisions with important streamlit functions!
     setattr(DeltaGenerator, name, plugin_instance)
-    setattr(st, name, lambda args: plugin_instance(streamlit._main, args))
+    setattr(st, name, plugin_instance_main)
 
 
 class PluginRequestHandler(tornado.web.RequestHandler):
