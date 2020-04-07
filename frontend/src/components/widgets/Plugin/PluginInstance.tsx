@@ -125,7 +125,7 @@ export class PluginInstance extends React.PureComponent<Props> {
 
   /** The component set a new widget value. Send it back to Streamlit. */
   private handleSetWidgetValue = (data: any, source: Source): void => {
-    let value = tryGetValue(data, "value")
+    const value = tryGetValue(data, "value")
     if (value === undefined) {
       logWarning(`handleSetWidgetValue: missing 'value' prop`)
     }
