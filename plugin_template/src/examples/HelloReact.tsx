@@ -4,8 +4,7 @@ import { StComponentProps } from "../StComponentAPI";
 import logo from "../logo.svg";
 
 /**
- * Example plugin.
- * Plugin writers *do* edit this class.
+ * Hello World example plugin, using React.
  */
 class HelloReact extends React.PureComponent<StComponentProps> {
   public render = (): React.ReactNode => {
@@ -13,7 +12,7 @@ class HelloReact extends React.PureComponent<StComponentProps> {
       <div className="App">
         <header className="App-header">
           <img src={logo} className="App-logo" alt="logo" />
-          <p>Hello, {`${this.getArg("name")}`}!</p>
+          <p>Hello, {`${this.props.args["name"]}`}!</p>
           <a
             className="App-link"
             href="https://reactjs.org"
@@ -26,15 +25,6 @@ class HelloReact extends React.PureComponent<StComponentProps> {
       </div>
     );
   };
-
-  /** Return the argument with the given name. */
-  private getArg(argName: string): any | undefined {
-    if (this.props.args == null || !(argName in this.props.args)) {
-      return undefined;
-    }
-
-    return this.props.args[argName];
-  }
 }
 
 export default HelloReact;

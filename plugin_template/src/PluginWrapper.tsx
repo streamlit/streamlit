@@ -1,5 +1,5 @@
 import React, { ReactNode } from "react";
-import HelloReact from "./examples/HelloReact";
+import RadioButton from "./examples/RadioButton";
 import { Streamlit } from "./StComponentAPI";
 
 // TODO: Figure this out
@@ -21,7 +21,7 @@ enum PluginBackMsgType {
 /** Messages from Streamlit -> Plugin */
 enum PluginForwardMsgType {
   // Sent by Streamlit when the plugin should re-render.
-  // Data: { args: any, width: number }
+  // Data: { args: any, disabled: boolean }
   RENDER = "render"
 }
 
@@ -30,7 +30,7 @@ interface Props {}
 interface State {
   readyForFirstRender: boolean;
   renderArgs: any;
-  renderWidth: number;
+  renderDisabled: boolean;
 }
 
 /**
@@ -48,14 +48,14 @@ class PluginWrapper extends React.PureComponent<Props, State> {
     this.state = {
       readyForFirstRender: false,
       renderArgs: {},
-      renderWidth: 0
+      renderDisabled: false
     };
 
     // Build the API that the plugin uses to communicate to Streamlit.
     // We send our back messages
     this.streamlitAPI = {
       setWidgetValue: value =>
-        this.sendBackMsg(PluginBackMsgType.SET_WIDGET_VALUE, value)
+        this.sendBackMsg(PluginBackMsgType.SET_WIDGET_VALUE, { value })
     };
   }
 
@@ -102,22 +102,19 @@ class PluginWrapper extends React.PureComponent<Props, State> {
       args = {};
     }
 
-    let width: any = data["width"];
-    if (width == null) {
-      console.error("Got null width in onRenderMessage!");
-      width = 100;
-    }
+    let disabled = Boolean(data["disabled"]);
 
     // Update our state to prepare for the render!
     this.setState({
       readyForFirstRender: true,
       renderArgs: args,
-      renderWidth: width
+      renderDisabled: disabled
     });
   };
 
   /** Send a BackMsg to the Streamlit app */
   private sendBackMsg = (type: PluginBackMsgType, data?: any): void => {
+    console.log(`PluginWrapper.sendBackMsg: ${type}, ${data}`);
     window.parent.postMessage(
       {
         // TODO? StreamlitMessageVersion: some string
@@ -136,9 +133,10 @@ class PluginWrapper extends React.PureComponent<Props, State> {
     }
 
     return (
-      <HelloReact
+      <RadioButton
         st={this.streamlitAPI}
-        width={this.state.renderWidth}
+        width={window.innerWidth}
+        disabled={this.state.renderDisabled}
         args={this.state.renderArgs}
       />
     );

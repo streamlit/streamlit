@@ -14,6 +14,8 @@
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-scripts": "3.4.1",
+    "styletron-engine-atomic": "^1.4.6",
+    "styletron-react": "^5.2.7",
     "typescript": "~3.7.2"
   },
   "scripts": {
@@ -38,5 +40,9 @@
     ]
   },
   "homepage": ".",
-  "devDependencies": {}
+  "devDependencies": {
+    "@types/styletron-engine-atomic": "^1.1.0",
+    "@types/styletron-react": "^5.0.2",
+    "@types/styletron-standard": "^2.0.0"
+  }
 }

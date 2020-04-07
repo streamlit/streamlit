@@ -37,7 +37,7 @@ enum PluginBackMsgType {
 /** Messages from Streamlit -> Plugin */
 enum PluginForwardMsgType {
   // Sent by Streamlit when the plugin should re-render.
-  // Data: { args: any, width: number }
+  // Data: { args: any, disabled: boolean }
   RENDER = "render",
 }
 
@@ -124,7 +124,11 @@ export class PluginInstance extends React.PureComponent<Props> {
   }
 
   /** The component set a new widget value. Send it back to Streamlit. */
-  private handleSetWidgetValue = (value: any, source: Source): void => {
+  private handleSetWidgetValue = (data: any, source: Source): void => {
+    let value = tryGetValue(data, "value")
+    if (value === undefined) {
+      logWarning(`handleSetWidgetValue: missing 'value' prop`)
+    }
     const widgetId: string = this.props.element.get("id")
 
     // TODO: handle debouncing, or expose some debouncing primitives?
@@ -137,7 +141,7 @@ export class PluginInstance extends React.PureComponent<Props> {
     } else if (typeof value === "string") {
       this.props.widgetMgr.setStringValue(widgetId, String(value), source)
     } else {
-      logWarning(`Unsupported value type! ${value}`)
+      logWarning(`PluginInstance: unsupported value type! ${value}`)
     }
   }
 
@@ -173,9 +177,7 @@ export class PluginInstance extends React.PureComponent<Props> {
       // The plugin has loaded. Send it a new render message immediately.
       this.sendForwardMsg(PluginForwardMsgType.RENDER, {
         args: renderArgs,
-        // TODO: do we actually need to send width along here, since
-        // we're passing it to the iframe?
-        width: this.props.width,
+        disabled: this.props.disabled,
       })
     } else {
       // The plugin hasn't yet loaded. Save these render args; we'll
@@ -194,4 +196,13 @@ export class PluginInstance extends React.PureComponent<Props> {
       />
     )
   }
+}
+
+/** Return the property with the given name, if it exists. */
+function tryGetValue(
+  obj: any,
+  name: string,
+  defaultValue: any = undefined
+): any | undefined {
+  return obj.hasOwnProperty(name) ? obj[name] : defaultValue
 }

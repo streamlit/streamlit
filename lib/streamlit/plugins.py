@@ -53,15 +53,23 @@ def plugin(name: str, path: str) -> None:
         except BaseException as e:
             raise MarshallPluginException("Could not convert plugin args to JSON", e)
 
+        # If args["default"] is set, then it's the default widget value we
+        # return when the user hasn't interacted yet.
+        default_value = args.get("default", None)
+
+        # If args["key"] is set, it is the user_key we use to generate our
+        # widget ID.
+        user_key = args.get("key", None)
+
         def marshall_plugin(element: Element) -> Union[Any, Type[NoValue]]:
             element.plugin_instance.args_json = args_json
             element.plugin_instance.plugin_id = plugin_id
-            widget_value = _get_widget_ui_value("plugin_instance", element)
-            if widget_value is not None:
-                try:
-                    widget_value = json.loads(widget_value)
-                except BaseException as e:
-                    raise MarshallPluginException("Could not not parse plugin JSON", e)
+            widget_value = _get_widget_ui_value(
+                "plugin_instance", element, user_key=user_key
+            )
+
+            if widget_value is None:
+                widget_value = default_value
 
             # widget_value will be either None or whatever the plugin's most
             # recent setWidgetValue value is. We coerce None -> NoValue,
