@@ -1,14 +1,13 @@
 import React from "react";
-import "./App.css";
-import logo from "./logo.svg";
-import { StComponentProps } from "./StComponentAPI";
-import { Radio as UIRadio, RadioGroup } from "baseui/radio";
+import "../App.css";
+import { StComponentProps } from "../StComponentAPI";
+import logo from "../logo.svg";
 
 /**
  * Example plugin.
  * Plugin writers *do* edit this class.
  */
-class Plugin extends React.PureComponent<StComponentProps> {
+class HelloReact extends React.PureComponent<StComponentProps> {
   public render = (): React.ReactNode => {
     return (
       <div className="App">
@@ -38,4 +37,4 @@ class Plugin extends React.PureComponent<StComponentProps> {
   }
 }
 
-export default Plugin;
+export default HelloReact;

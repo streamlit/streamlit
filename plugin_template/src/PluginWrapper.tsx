@@ -1,5 +1,5 @@
 import React, { ReactNode } from "react";
-import Plugin from "./Plugin";
+import HelloReact from "./examples/HelloReact";
 import { Streamlit } from "./StComponentAPI";
 
 // TODO: Figure this out
@@ -136,7 +136,7 @@ class PluginWrapper extends React.PureComponent<Props, State> {
     }
 
     return (
-      <Plugin
+      <HelloReact
         st={this.streamlitAPI}
         width={this.state.renderWidth}
         args={this.state.renderArgs}
