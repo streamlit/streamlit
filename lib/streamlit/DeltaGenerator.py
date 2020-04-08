@@ -2124,7 +2124,7 @@ class DeltaGenerator(object):
 
         """
         element.color_picker.label = label
-        element.color_picker.default = str(value)
+        element.color_picker.default = "#000000"
 
         ui_value = _get_widget_ui_value("color_picker", element, user_key=key)
         current_value = ui_value if ui_value is not None else value

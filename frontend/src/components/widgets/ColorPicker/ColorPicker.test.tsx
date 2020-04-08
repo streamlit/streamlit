@@ -31,15 +31,14 @@ const getProps = (elementProps: Partial<ColorPickerProto> = {}): Props => ({
   element: fromJS({
     id: 1,
     label: "Label",
-    default: "",
+    default: "#000000",
     ...elementProps,
   }),
   width: 0,
-  disabled: false,
   widgetMgr: new WidgetStateManager(sendBackMsg),
 })
 
-describe("TextArea widget", () => {
+describe("ColorPicker widget", () => {
   const props = getProps()
   const wrapper = shallow(<ColorPicker {...props} />)
 
@@ -67,5 +66,11 @@ describe("TextArea widget", () => {
 
     // @ts-ignore
     expect(style.width).toBe(getProps().width)
+  })
+
+  it("should render a default color", () => {
+    expect(wrapper.find("input").prop("value")).toStrictEqual(
+      new String(props.element.get("default"))
+    )
   })
 })

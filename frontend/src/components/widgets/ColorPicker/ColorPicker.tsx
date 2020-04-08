@@ -20,18 +20,12 @@ import { Map as ImmutableMap } from "immutable"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 
 export interface Props {
-  disabled: boolean
   element: ImmutableMap<string, any>
   widgetMgr: WidgetStateManager
   width: number
 }
 
 interface State {
-  /**
-   * True if the user-specified state.value has not yet been synced to the WidgetStateManager.
-   */
-  dirty: boolean
-
   /**
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, the default value is used.
@@ -41,7 +35,6 @@ interface State {
 
 class ColorPicker extends React.PureComponent<Props, State> {
   public state: State = {
-    dirty: false,
     value: this.props.element.get("default"),
   }
 
@@ -52,19 +45,20 @@ class ColorPicker extends React.PureComponent<Props, State> {
   private setWidgetValue = (source: Source): void => {
     const widgetId: string = this.props.element.get("id")
     this.props.widgetMgr.setStringValue(widgetId, this.state.value, source)
-    this.setState({ dirty: false })
   }
 
   private onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    this.setState({
-      dirty: true,
-      value: e.target.value,
-    })
+    this.setState(
+      {
+        value: e.target.value,
+      },
+      () => this.setWidgetValue({ fromUi: true })
+    )
   }
 
   public render = (): React.ReactNode => {
-    const { element, disabled, width } = this.props
-    const { value, dirty } = this.state
+    const { element, width } = this.props
+    const { value } = this.state
 
     const style = { width }
     const label = element.get("label")
@@ -77,7 +71,6 @@ class ColorPicker extends React.PureComponent<Props, State> {
           name={label}
           value={value}
           onChange={this.onChange}
-          disabled={disabled}
         />
       </div>
     )
