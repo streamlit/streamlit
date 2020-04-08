@@ -30,6 +30,7 @@ interface State {
   readyForFirstRender: boolean;
   renderArgs: any;
   renderDisabled: boolean;
+  pluginError?: Error;
 }
 
 function StreamlitPlugin(
@@ -48,9 +49,16 @@ function StreamlitPlugin(
       this.state = {
         readyForFirstRender: false,
         renderArgs: {},
-        renderDisabled: false
+        renderDisabled: false,
+        pluginError: undefined
       };
     }
+
+    public static getDerivedStateFromError = (
+      error: Error
+    ): Partial<State> => {
+      return { pluginError: error };
+    };
 
     public componentDidMount = (): void => {
       // Set up event listeners, and signal to Streamlit that we're ready.
@@ -120,8 +128,18 @@ function StreamlitPlugin(
     };
 
     public render = (): ReactNode => {
+      // If our wrapped component threw an error, display it.
+      if (this.state.pluginError != null) {
+        return (
+          <div>
+            <h1>Plugin Error</h1>
+            <span>{this.state.pluginError.message}</span>
+          </div>
+        );
+      }
+
+      // Don't render until we've gotten our first message from Streamlit
       if (!this.state.readyForFirstRender) {
-        // Don't render until we've gotten our first message from Streamlit
         return null;
       }
 
