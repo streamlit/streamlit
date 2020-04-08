@@ -337,6 +337,12 @@ export const radioOverrides = {
       borderBottomRightRadius: borderRadius,
     }),
   },
+  Checkmark: {
+    style: ({ $checked }: { $checked: boolean }) => ({
+      backgroundColor: $checked ? primary : "",
+      borderWidth: "2px",
+    }),
+  },
 }
 
 export const checkboxOverrides = radioOverrides
@@ -392,7 +398,6 @@ const themeOverrides = {
     popoverBorderRadius: borderRadius,
     surfaceBorderRadius: borderRadius,
   },
-
   typography: {
     // Here we override some fonts that are used in widgets. We don't care
     // about the ones that are not used.
@@ -407,13 +412,20 @@ const themeOverrides = {
     font470: { ...fontStyles }, // Button
     font500: { ...fontStyles }, // Selected items in selectbox
     font600: {},
+
+    LabelXSmall: { ...fontStyles },
+    LabelSmall: { ...fontStyles },
+    LabelMedium: { ...fontStyles },
+    LabelLarge: { ...fontStyles },
   },
 
   colors: {
-    white: white,
-    black: black,
-    tickMarkFillDisabled: grayLighter,
-    tickFillDisabled: gray,
+    // white: white,
+    // black: 'red',
+    contentPrimary: black,
+    // backgroundPrimary: "red",
+    // tickMarkFillDisabled: grayLighter,
+    // tickFillDisabled: gray,
   },
 }
 
