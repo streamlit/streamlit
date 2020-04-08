@@ -17,7 +17,7 @@
 
 import { Map as ImmutableMap } from "immutable"
 import { logWarning } from "lib/log"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { Source, WidgetStateManager } from "lib/WidgetStateManager"
 import React, { createRef, ReactNode } from "react"
 import { PluginRegistry } from "./PluginRegistry"
 
@@ -28,13 +28,16 @@ enum PluginBackMsgType {
   // No data.
   PLUGIN_READY = "pluginReady",
 
-  // TODO: Widget update messages
+  // The plugin has a new widget value. Send it back to Streamlit, which
+  // will then re-run the app.
+  // Data: { value: any }
+  SET_WIDGET_VALUE = "setWidgetValue",
 }
 
 /** Messages from Streamlit -> Plugin */
 enum PluginForwardMsgType {
   // Sent by Streamlit when the plugin should re-render.
-  // Data: args: any - the args JSON dict sent from the backend
+  // Data: { args: any, disabled: boolean }
   RENDER = "render",
 }
 
@@ -80,7 +83,7 @@ export class PluginInstance extends React.PureComponent<Props> {
       return false
     }
 
-    return event.source == this.iframeRef.current.contentWindow
+    return event.source === this.iframeRef.current.contentWindow
   }
 
   private onMessageEvent = (event: MessageEvent): void => {
@@ -107,8 +110,38 @@ export class PluginInstance extends React.PureComponent<Props> {
         }
         break
 
+      case PluginBackMsgType.SET_WIDGET_VALUE:
+        if (!this.pluginReady) {
+          logWarning(`Got ${type} before ${PluginBackMsgType.PLUGIN_READY}!`)
+        } else {
+          this.handleSetWidgetValue(data, { fromUi: true })
+        }
+        break
+
       default:
         logWarning(`Unrecognized PluginBackMsg: ${type}`)
+    }
+  }
+
+  /** The component set a new widget value. Send it back to Streamlit. */
+  private handleSetWidgetValue = (data: any, source: Source): void => {
+    const value = tryGetValue(data, "value")
+    if (value === undefined) {
+      logWarning(`handleSetWidgetValue: missing 'value' prop`)
+    }
+    const widgetId: string = this.props.element.get("id")
+
+    // TODO: handle debouncing, or expose some debouncing primitives?
+    // TODO: ints, arrays, "button triggers", ... dataframes?
+
+    if (typeof value === "boolean") {
+      this.props.widgetMgr.setBoolValue(widgetId, Boolean(value), source)
+    } else if (typeof value === "number") {
+      this.props.widgetMgr.setFloatValue(widgetId, Number(value), source)
+    } else if (typeof value === "string") {
+      this.props.widgetMgr.setStringValue(widgetId, String(value), source)
+    } else {
+      logWarning(`PluginInstance: unsupported value type! ${value}`)
     }
   }
 
@@ -142,10 +175,14 @@ export class PluginInstance extends React.PureComponent<Props> {
     const renderArgs = JSON.parse(this.props.element.get("argsJson"))
     if (this.pluginReady) {
       // The plugin has loaded. Send it a new render message immediately.
-      this.sendForwardMsg(PluginForwardMsgType.RENDER, { args: renderArgs })
+      this.sendForwardMsg(PluginForwardMsgType.RENDER, {
+        args: renderArgs,
+        disabled: this.props.disabled,
+      })
     } else {
       // The plugin hasn't yet loaded. Save these render args; we'll
       // send the RENDER message as soon as the plugin is ready.
+      // It is *not* an error for a plugin to never send the ready message.
       this.pendingRenderArgs = renderArgs
     }
 
@@ -159,4 +196,13 @@ export class PluginInstance extends React.PureComponent<Props> {
       />
     )
   }
+}
+
+/** Return the property with the given name, if it exists. */
+function tryGetValue(
+  obj: any,
+  name: string,
+  defaultValue: any = undefined
+): any | undefined {
+  return obj.hasOwnProperty(name) ? obj[name] : defaultValue
 }
