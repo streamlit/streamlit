@@ -422,8 +422,11 @@ const themeOverrides = {
   colors: {
     // white: white,
     // black: 'red',
+    borderFocus: primary,
     contentPrimary: black,
-    // backgroundPrimary: "red",
+    inputFill: grayLightest,
+    inputBorder: grayLightest,
+    inputFillActive: grayLightest,
     // tickMarkFillDisabled: grayLighter,
     // tickFillDisabled: gray,
   },
