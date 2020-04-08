@@ -322,6 +322,17 @@ export const multiSelectOverrides = {
       minHeight: "44px",
     }),
   },
+  MultiValue: {
+    props: {
+      overrides: {
+        Root: {
+          style: {
+            fontSize: "12px",
+          },
+        },
+      },
+    },
+  },
 }
 
 export const radioOverrides = {
@@ -402,6 +413,7 @@ const themeOverrides = {
     // Here we override some fonts that are used in widgets. We don't care
     // about the ones that are not used.
     font100: {},
+    font150: { ...fontStyles }, // Popup menus
     font200: {},
     font250: {},
     font300: { ...fontStyles }, // Popup menus
@@ -417,14 +429,18 @@ const themeOverrides = {
     LabelSmall: { ...fontStyles },
     LabelMedium: { ...fontStyles },
     LabelLarge: { ...fontStyles },
+    ParagraphSmall: { ...fontStyles },
   },
 
   colors: {
     // white: white,
     // black: 'red',
+    tagPrimarySolidBackground: primary,
+
     borderFocus: primary,
-    contentPrimary: black,
+    contentPrimary: grayDark,
     inputFill: grayLightest,
+    inputPlaceholder: grayDark,
     inputBorder: grayLightest,
     inputFillActive: grayLightest,
     // tickMarkFillDisabled: grayLighter,

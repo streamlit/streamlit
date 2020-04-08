@@ -119,6 +119,7 @@ class Multiselect extends React.PureComponent<Props, State> {
           onChange={this.onChange}
           value={this.valueFromState}
           disabled={disabled}
+          size={"compact"}
           overrides={multiSelectOverrides}
         />
       </div>
