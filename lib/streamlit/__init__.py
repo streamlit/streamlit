@@ -47,18 +47,38 @@ For more detailed info, see https://docs.streamlit.io.
 # identifiers actually exist in the namespace.
 
 # Must be at the top, to avoid circular dependency.
+from streamlit.util import functools_wraps as _functools_wraps
+from streamlit.proto import BlockPath_pb2 as _BlockPath_pb2
+from streamlit.errors import StreamlitAPIException
+from streamlit.ReportThread import get_report_ctx as _get_report_ctx
+from streamlit.ReportThread import add_report_ctx as _add_report_ctx
+from streamlit.DeltaGenerator import DeltaGenerator as _DeltaGenerator
+from streamlit import type_util as _type_util
+from streamlit import string_util as _string_util
+from streamlit import source_util as _source_util
+from streamlit import env_util as _env_util
+from streamlit import code_util as _code_util
+import numpy as _np
+import json as _json
+import types as _types
+import traceback as _traceback
+import threading as _threading
+import textwrap as _textwrap
+import sys as _sys
+import re as _re
+import contextlib as _contextlib
+from typing import Any, List, Tuple, Type
+import os
+import platform
+import subprocess
+import uuid as _uuid
+import pkg_resources as _pkg_resources
 from streamlit import logger as _logger
 from streamlit import config as _config
 
 _LOGGER = _logger.get_logger("root")
 
 # Give the package a version.
-import pkg_resources as _pkg_resources
-import uuid as _uuid
-import subprocess
-import platform
-import os
-from typing import Any, List, Tuple, Type
 
 # This used to be pkg_resources.require('streamlit') but it would cause
 # pex files to fail. See #394 for more details.
@@ -82,29 +102,6 @@ elif os.path.isfile("/var/lib/dbus/machine-id"):
         machine_id = f.read()
 
 __installation_id__ = str(_uuid.uuid5(_uuid.NAMESPACE_DNS, machine_id))
-
-
-import contextlib as _contextlib
-import re as _re
-import sys as _sys
-import textwrap as _textwrap
-import threading as _threading
-import traceback as _traceback
-import types as _types
-import json as _json
-import numpy as _np
-
-from streamlit import code_util as _code_util
-from streamlit import env_util as _env_util
-from streamlit import source_util as _source_util
-from streamlit import string_util as _string_util
-from streamlit import type_util as _type_util
-from streamlit.DeltaGenerator import DeltaGenerator as _DeltaGenerator
-from streamlit.ReportThread import add_report_ctx as _add_report_ctx
-from streamlit.ReportThread import get_report_ctx as _get_report_ctx
-from streamlit.errors import StreamlitAPIException
-from streamlit.proto import BlockPath_pb2 as _BlockPath_pb2
-from streamlit.util import functools_wraps as _functools_wraps
 
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
@@ -140,6 +137,7 @@ bar_chart = _main.bar_chart  # noqa: E221
 bokeh_chart = _main.bokeh_chart  # noqa: E221
 button = _main.button  # noqa: E221
 checkbox = _main.checkbox  # noqa: E221
+color_picker = _main.color_picker  # noqa: E221
 code = _main.code  # noqa: E221
 dataframe = _main.dataframe  # noqa: E221
 date_input = _main.date_input  # noqa: E221

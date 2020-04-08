@@ -2096,6 +2096,41 @@ class DeltaGenerator(object):
         return file_datas if accept_multiple_files else file_datas[0]
 
     @_with_element
+    def color_picker(self, element, label, value="", key=None):
+        """Display a color picker widget.
+
+        Parameters
+        ----------
+        label : str
+            A short label explaining to the user what this input is for.
+        value : any
+            The hex value of this widget when it first renders. This will be
+            cast to str internally. Attach a hash to the string if it doesn't have it.
+        key : str
+            An optional string to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. Multiple widgets of the same type may
+            not share the same key.
+
+        Returns
+        -------
+        str
+            The current value of the text input widget.
+
+        Example
+        -------
+        >>> color = st.color_picker('Pick A Color', '#414141')
+        >>> st.write('The current color is', color)
+
+        """
+        element.color_picker.label = label
+        element.color_picker.default = str(value)
+
+        ui_value = _get_widget_ui_value("color_picker", element, user_key=key)
+        current_value = ui_value if ui_value is not None else value
+        return str(current_value)
+
+    @_with_element
     def text_input(self, element, label, value="", key=None, type="default"):
         """Display a single-line text input widget.
 
