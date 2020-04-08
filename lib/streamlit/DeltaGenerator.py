@@ -1387,8 +1387,7 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.pyplot as pyplot
 
-        pyplot.marshall(self._get_coordinates,
-                element, fig, clear_figure, **kwargs)
+        pyplot.marshall(self._get_coordinates, element, fig, clear_figure, **kwargs)
 
     @_with_element
     def bokeh_chart(self, element, figure, use_container_width=False):

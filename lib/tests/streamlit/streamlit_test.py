@@ -36,7 +36,7 @@ from streamlit.proto.Balloons_pb2 import Balloons
 from streamlit.proto.Alert_pb2 import Alert
 
 from streamlit.MediaFileManager import media_file_manager
-from streamlit.MediaFileManager import _get_file_id
+from streamlit.MediaFileManager import _calculate_file_id
 from streamlit.MediaFileManager import STATIC_MEDIA_ENDPOINT
 
 from tests import testutil
@@ -140,7 +140,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
 
         # locate resultant file in MediaFileManager and test its properties.
-        file_id = _get_file_id(fake_audio_data, "audio/wav")
+        file_id = _calculate_file_id(fake_audio_data, "audio/wav")
         self.assertTrue(file_id in media_file_manager)
 
         afile = media_file_manager.get(file_id)
@@ -193,7 +193,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_audio_options(self):
         """Test st.audio with options."""
-        from streamlit.MediaFileManager import _get_file_id
+        from streamlit.MediaFileManager import _calculate_file_id
 
         fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
         st.audio(fake_audio_data, format="audio/mp3", start_time=10)
@@ -201,7 +201,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.audio.start_time, 10)
         self.assertTrue(el.audio.url.startswith(STATIC_MEDIA_ENDPOINT))
-        self.assertTrue(_get_file_id(fake_audio_data, "audio/mp3"), el.audio.url)
+        self.assertTrue(_calculate_file_id(fake_audio_data, "audio/mp3"), el.audio.url)
 
     def test_st_balloons(self):
         """Test st.balloons."""
@@ -320,7 +320,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         # locate resultant file in the file manager and check its metadata.
         from streamlit.elements.image_proto import _PIL_to_bytes
 
-        file_id = _get_file_id(_PIL_to_bytes(img, format="PNG"), "image/png")
+        file_id = _calculate_file_id(_PIL_to_bytes(img, format="PNG"), "image/png")
         self.assertTrue(file_id in media_file_manager)
 
         afile = media_file_manager.get(file_id)
@@ -351,7 +351,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         from streamlit.elements.image_proto import _PIL_to_bytes
 
         for idx in range(len(imgs)):
-            file_id = _get_file_id(_PIL_to_bytes(imgs[idx], format="PNG"), "image/png")
+            file_id = _calculate_file_id(_PIL_to_bytes(imgs[idx], format="PNG"), "image/png")
             self.assertEqual(el.imgs.imgs[idx].caption, "some caption")
             self.assertTrue(file_id in media_file_manager)
             afile = media_file_manager.get(file_id)
@@ -651,7 +651,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
 
         # locate resultant file in MediaFileManager and test its properties.
-        file_id = _get_file_id(fake_video_data, "video/mp4")
+        file_id = _calculate_file_id(fake_video_data, "video/mp4")
         self.assertTrue(file_id in media_file_manager)
 
         afile = media_file_manager.get(file_id)
@@ -700,7 +700,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
     def test_st_video_options(self):
         """Test st.video with options."""
 
-        from streamlit.MediaFileManager import _get_file_id
+        from streamlit.MediaFileManager import _calculate_file_id
 
         fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
         st.video(fake_video_data, format="video/mp4", start_time=10)
@@ -708,7 +708,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.video.start_time, 10)
         self.assertTrue(el.video.url.startswith(STATIC_MEDIA_ENDPOINT))
-        self.assertTrue(_get_file_id(fake_video_data, "video/mp4") in el.video.url)
+        self.assertTrue(_calculate_file_id(fake_video_data, "video/mp4") in el.video.url)
 
     def test_st_warning(self):
         """Test st.warning."""

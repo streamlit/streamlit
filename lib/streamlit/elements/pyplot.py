@@ -54,8 +54,15 @@ def marshall(coordinates, new_element_proto, fig=None, clear_figure=True, **kwar
 
     image = io.BytesIO()
     fig.savefig(image, **kwargs)
-    image_proto.marshall_images(coordinates,
-        image, None, -2, new_element_proto.imgs, False, channels="RGB", format="PNG"
+    image_proto.marshall_images(
+        coordinates,
+        image,
+        None,
+        -2,
+        new_element_proto.imgs,
+        False,
+        channels="RGB",
+        format="PNG",
     )
 
     # Clear the figure after rendering it. This means that subsequent
