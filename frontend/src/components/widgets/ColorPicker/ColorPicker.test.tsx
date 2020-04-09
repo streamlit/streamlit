@@ -20,9 +20,9 @@ import { shallow } from "enzyme"
 import { fromJS } from "immutable"
 import { ColorPicker as ColorPickerProto } from "autogen/proto"
 import { WidgetStateManager } from "lib/WidgetStateManager"
+import { SketchPicker } from "react-color"
 
 import ColorPicker, { Props } from "./ColorPicker"
-import { Input } from "reactstrap"
 
 jest.mock("lib/WidgetStateManager")
 

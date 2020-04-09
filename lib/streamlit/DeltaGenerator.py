@@ -19,6 +19,7 @@ import json
 import random
 import textwrap
 import numbers
+import re
 from datetime import datetime
 from datetime import date
 from datetime import time
@@ -2096,7 +2097,7 @@ class DeltaGenerator(object):
         return file_datas if accept_multiple_files else file_datas[0]
 
     @_with_element
-    def color_picker(self, element, label, value="#00f900", key=None):
+    def color_picker(self, element, label, value="#000000", key=None):
         """Display a color picker widget.
 
         Parameters

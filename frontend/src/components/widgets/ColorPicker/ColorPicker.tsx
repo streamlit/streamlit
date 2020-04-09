@@ -18,6 +18,7 @@
 import React from "react"
 import { Map as ImmutableMap } from "immutable"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
+import { SketchPicker } from "react-color"
 
 export interface Props {
   disabled: boolean
@@ -67,6 +68,7 @@ class ColorPicker extends React.PureComponent<Props, State> {
     return (
       <div className="Widget stColorPicker" style={style}>
         <label>{label}</label>
+        <SketchPicker />
         <input
           type="color"
           name={label}
