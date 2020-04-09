@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { PureComponent } from "react"
 import DeckGL, {
   ArcLayer,
   GridLayer,
@@ -29,6 +29,7 @@ import DeckGL, {
 } from "deck.gl"
 import Immutable from "immutable"
 import { StaticMap } from "react-map-gl"
+import { flowRight as compose } from "lodash"
 import { dataFrameToArrayOfDicts } from "lib/dataFrameProto"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import withMapboxToken from "hocs/withMapboxToken/withMapboxToken"
@@ -41,7 +42,7 @@ interface Props {
   element: Immutable.Map<string, any>
 }
 
-interface PropsWithHeight extends Props {
+export interface PropsWithHeight extends Props {
   height: number | undefined
 }
 
@@ -49,76 +50,88 @@ interface State {
   initialized: boolean
 }
 
-class DeckGlChart extends React.PureComponent<PropsWithHeight, State> {
+interface ViewState {
+  width: number
+  height: number
+  longitude: number
+  latitude: number
+  pitch: number
+  bearing: number
+  zoom: number
+}
+
+interface ViewPort extends ViewState {
+  mapStyle: string
+}
+
+export class DeckGlChart extends PureComponent<PropsWithHeight, State> {
   static defaultProps = {
     height: 500,
   }
 
-  private readonly initialViewState: {
-    width: number
-    height: number
-    longitude: number
-    latitude: number
-    pitch: number
-    bearing: number
-    zoom: number
+  state = {
+    initialized: false,
   }
 
-  private readonly mapStyle: string
-  private readonly fixHexLayerBug_bound: () => void
-
-  public constructor(props: PropsWithHeight) {
-    super(props)
-
-    const specStr = this.props.element.get("spec")
-    const spec = specStr ? JSON.parse(specStr) : {}
-    const v = spec.viewport || {}
-    const { width, height } = this.props
-    this.initialViewState = {
-      width: v.width || width,
-      height: v.height || height,
-      longitude: v.longitude || 0,
-      latitude: v.latitude || 0,
-      pitch: v.pitch || 0,
-      bearing: v.bearing || 0,
-      zoom: v.zoom || 1,
-    }
-
-    this.mapStyle = getStyleUrl(v.mapStyle)
-
-    this.fixHexLayerBug_bound = this.fixHexLayerBug.bind(this)
-    this.state = { initialized: false }
-
+  componentDidMount(): void {
     // HACK: Load layers a little after loading the map, to hack around a bug
     // where HexagonLayers were not drawing on first load but did load when the
     // script got re-executed.
-    setTimeout(this.fixHexLayerBug_bound, 0)
+    this.setState({
+      initialized: true,
+    })
   }
 
-  private fixHexLayerBug(): void {
-    this.setState({ initialized: true })
+  private getViewport(): ViewPort {
+    const { element } = this.props
+
+    const specStr = element.get("spec")
+    const spec = specStr ? JSON.parse(specStr) : {}
+
+    return spec.viewport || {}
+  }
+
+  private generateViewState(viewPort: ViewPort): ViewState {
+    const { element, width, height } = this.props
+
+    const useContainerWidth = element.get("useContainerWidth")
+
+    return {
+      width: !viewPort.width || useContainerWidth ? width : viewPort.width,
+      height: viewPort.height || height,
+      longitude: viewPort.longitude || 0,
+      latitude: viewPort.latitude || 0,
+      pitch: viewPort.pitch || 0,
+      bearing: viewPort.bearing || 0,
+      zoom: viewPort.zoom || 1,
+    } as ViewState
   }
 
   public render(): JSX.Element {
+    const viewPort = this.getViewport()
+
+    const initialViewState = this.generateViewState(viewPort)
+    const mapStyle = getStyleUrl(viewPort.mapStyle)
+
     return (
       <div
         className="deckglchart stDeckGlChart"
         style={{
-          height: this.initialViewState.height,
-          width: this.initialViewState.width,
+          height: initialViewState.height,
+          width: initialViewState.width,
         }}
       >
         <DeckGL
-          initialViewState={this.initialViewState}
-          height={this.initialViewState.height}
-          width={this.initialViewState.width}
+          initialViewState={initialViewState}
+          height={initialViewState.height}
+          width={initialViewState.width}
           controller
           layers={this.state.initialized ? this.buildLayers() : []}
         >
           <StaticMap
-            height={this.initialViewState.height}
-            width={this.initialViewState.width}
-            mapStyle={this.mapStyle}
+            height={initialViewState.height}
+            width={initialViewState.width}
+            mapStyle={mapStyle}
             mapboxApiAccessToken={this.props.mapboxToken}
           />
         </DeckGL>
@@ -463,4 +476,7 @@ function parseGetters(type: any, spec: any): void {
   })
 }
 
-export default withMapboxToken(withFullScreenWrapper(DeckGlChart))
+export default compose(
+  withMapboxToken,
+  withFullScreenWrapper
+)(DeckGlChart)

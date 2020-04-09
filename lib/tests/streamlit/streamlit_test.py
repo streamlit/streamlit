@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,8 +18,8 @@ from io import BytesIO
 from mock import patch
 import json
 import os
+import io
 import re
-import sys
 import textwrap
 import unittest
 
@@ -28,6 +27,7 @@ from google.protobuf import json_format
 import PIL.Image as Image
 import numpy as np
 import pandas as pd
+from scipy.io import wavfile
 
 from streamlit import __version__
 from streamlit.errors import StreamlitAPIException
@@ -47,7 +47,7 @@ def get_version():
     """Get version by parsing out setup.py."""
     dirname = os.path.dirname(__file__)
     base_dir = os.path.abspath(os.path.join(dirname, "../.."))
-    pattern = re.compile(r"(?:.*version=\")(?P<version>.*)(?:\",  # PEP-440$)")
+    pattern = re.compile(r"(?:.*VERSION = \")(?P<version>.*)(?:\"  # PEP-440$)")
     for line in open(os.path.join(base_dir, "setup.py")).readlines():
         m = pattern.match(line)
         if m:
@@ -147,7 +147,28 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(afile.mimetype, "audio/wav")
         self.assertEqual(afile.url, el.audio.url)
 
-        # test using a URL instead of data
+        # Test using generated data in a file-like object.
+
+        sampleRate = 44100
+        frequency = 440
+        length = 5
+
+        t = np.linspace(
+            0, length, sampleRate * length
+        )  #  Produces a 5 second Audio-File
+        y = np.sin(frequency * 2 * np.pi * t)  #  Has frequency of 440Hz
+
+        wavfile.write("test.wav", sampleRate, y)
+
+        with io.open("test.wav", "rb") as f:
+            st.audio(f)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertTrue(".wav" in el.audio.url)
+
+        os.remove("test.wav")
+
+        # Test using a URL instead of data
         some_url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
         st.audio(some_url)
 
@@ -264,16 +285,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.exception.message, "Test Exception")
         # We will test stack_trace when testing
         # streamlit.elements.exception_element
-        if sys.version_info >= (3, 0):
-            self.assertEqual(el.exception.stack_trace, [])
-        else:
-            self.assertEqual(
-                el.exception.stack_trace,
-                [
-                    "Cannot extract the stack trace for this exception. Try "
-                    "calling exception() within the `catch` block."
-                ],
-            )
+        self.assertEqual(el.exception.stack_trace, [])
 
     def test_st_header(self):
         """Test st.header."""
@@ -292,10 +304,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertTrue(
             el.doc_string.doc_string.startswith("Display text in header formatting.")
         )
-        if sys.version_info >= (3, 0):
-            self.assertEqual(el.doc_string.type, "<class 'method'>")
-        else:
-            self.assertEqual(el.doc_string.type, "<type 'instancemethod'>")
+        self.assertEqual(el.doc_string.type, "<class 'method'>")
         self.assertEqual(el.doc_string.signature, "(body)")
 
     def test_st_image_PIL_image(self):

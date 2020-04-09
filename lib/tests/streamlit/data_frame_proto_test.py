@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +15,6 @@
 """Unit test for data_frame_proto."""
 
 import json
-import sys
 import unittest
 
 import numpy as np
@@ -251,13 +249,8 @@ class DataFrameProtoTest(unittest.TestCase):
         str_data = np.array(["random", "string"])
         str_proto = AnyArray()
 
-        with pytest.raises(NotImplementedError) as e:
+        with pytest.raises(NotImplementedError, match="^Dtype <U6 not understood.$"):
             data_frame_proto._marshall_any_array(str_data, str_proto)
-        if sys.version_info >= (3, 0):
-            err_msg = "Dtype <U6 not understood."
-        else:
-            err_msg = "Dtype |S6 not understood."
-        self.assertEqual(err_msg, str(e.value))
 
     def test_add_rows(self):
         """Test streamlit.data_frame_proto._add_rows."""
@@ -518,16 +511,6 @@ class DataFrameProtoTest(unittest.TestCase):
         err_msg = "Cannot extract DataFrame from None."
         self.assertEqual(err_msg, str(e.value))
 
-        # Test delta = new_element, a name is used and type is chart, df, table
-        with pytest.raises(ValueError) as e:
-            delta = Delta()
-            # TODO(armando): test df and table
-            delta.new_element.chart.type = "some chart"
-            data_frame_proto._get_data_frame(delta, name="some name")
-
-        err_msg = "Dataset names not supported for st.chart"
-        self.assertEqual(err_msg, str(e.value))
-
         # Generic Data
         aa = AnyArray()
         aa.int64s.data.extend([1, 2, 3])
@@ -543,12 +526,6 @@ class DataFrameProtoTest(unittest.TestCase):
         delta_table.new_element.table.data.cols.extend([aa])
         df = data_frame_proto._get_data_frame(delta_table)
         self.assertEqual(df, delta_table.new_element.table)
-
-        # Delta Chart
-        delta_chart = Delta()
-        delta_chart.new_element.chart.data.data.cols.extend([aa])
-        df = data_frame_proto._get_data_frame(delta_chart)
-        self.assertEqual(df, delta_chart.new_element.chart.data)
 
         # Vega-Lite Chart
         delta_vega = Delta()

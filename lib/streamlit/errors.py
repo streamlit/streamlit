@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,7 +26,9 @@ class NoSessionContext(Exception):
 
 
 class MarkdownFormattedException(Exception):
-    """Instances of this class can use markdown in their messages, which will get
+    """Exceptions with Markdown in their description.
+
+    Instances of this class can use markdown in their messages, which will get
     nicely formatted on the frontend.
     """
 
@@ -55,15 +56,27 @@ class DuplicateWidgetID(StreamlitAPIException):
     pass
 
 
-class UnhashableType(StreamlitAPIException):
-    pass
+class StreamlitAPIWarning(StreamlitAPIException, Warning):
+    """Used to display a warning.
+
+    Note that this should not be "raised", but passed to st.exception
+    instead.
+    """
+
+    def __init__(self, *args):
+        super(StreamlitAPIWarning, self).__init__(*args)
+        import inspect
+        import traceback
+
+        f = inspect.currentframe()
+        self.tacked_on_stack = traceback.extract_stack(f)
 
 
-class UserHashError(StreamlitAPIException):
-    pass
+class StreamlitDeprecationWarning(StreamlitAPIWarning):
+    """Used to display a warning.
 
-
-class InternalHashError(MarkdownFormattedException):
-    """Exception in Streamlit hashing code (i.e. not a user error)"""
+    Note that this should not be "raised", but passed to st.exception
+    instead.
+    """
 
     pass

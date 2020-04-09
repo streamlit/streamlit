@@ -21,7 +21,6 @@ import "streamlit/proto/Audio.proto";
 import "streamlit/proto/Balloons.proto";
 import "streamlit/proto/BokehChart.proto";
 import "streamlit/proto/Button.proto";
-import "streamlit/proto/Chart.proto";
 import "streamlit/proto/Checkbox.proto";
 import "streamlit/proto/DataFrame.proto";
 import "streamlit/proto/DateInput.proto";
@@ -59,7 +58,6 @@ message Element {
     Balloons balloons = 12;
     BokehChart bokeh_chart = 17;
     Button button = 19;
-    Chart chart = 4;
     Checkbox checkbox = 20;
     DataFrame data_frame = 3;
     DataFrame table = 11;
@@ -87,7 +85,7 @@ message Element {
     TimeInput time_input = 26;
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
-    
+
     // Next ID: 35
   }
 

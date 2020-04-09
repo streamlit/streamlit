@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,24 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import sys
 import traceback
 from typing import Optional
 
-import streamlit
-from streamlit.errors import StreamlitAPIException, MarkdownFormattedException
+from streamlit.error_util import get_nonstreamlit_traceback
+from streamlit.errors import MarkdownFormattedException
+from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIWarning
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
-# Extract the streamlit package path
-_streamlit_dir = os.path.dirname(streamlit.__file__)
-# Make it absolute, and ensure there's a trailing path separator
-_streamlit_dir = os.path.join(os.path.realpath(_streamlit_dir), "")
 
-
-def marshall(exception_proto, exception, exception_traceback=None):
+def marshall(exception_proto, exception):
     """Marshalls an Exception.proto message.
 
     Parameters
@@ -40,23 +35,25 @@ def marshall(exception_proto, exception, exception_traceback=None):
 
     exception : BaseException
         The exception whose data we're extracting
-
-    exception_traceback : traceback or None
-        An optional alternate traceback to use. If this is None, the traceback
-        will be extracted from the exception.
     """
-    exception_proto.type = type(exception).__name__
-
     # If this is a StreamlitAPIException, we prune all Streamlit entries
     # from the exception's stack trace.
     is_api_exception = isinstance(exception, StreamlitAPIException)
     is_markdown_exception = isinstance(exception, MarkdownFormattedException)
 
-    stack_trace = _get_stack_trace(
-        exception, exception_traceback, strip_streamlit_stack_entries=is_api_exception
+    stack_trace = _get_stack_trace_str_list(
+        exception, strip_streamlit_stack_entries=is_api_exception
     )
 
+    # Some exceptions (like UserHashError) have an alternate_name attribute so
+    # we can pretend to the user that the exception is called something else.
+    if getattr(exception, "alternate_name", None) is not None:
+        exception_proto.type = exception.alternate_name
+    else:
+        exception_proto.type = type(exception).__name__
+
     exception_proto.stack_trace.extend(stack_trace)
+    exception_proto.is_warning = isinstance(exception, Warning)
 
     try:
         if isinstance(exception, SyntaxError):
@@ -65,7 +62,7 @@ def marshall(exception_proto, exception, exception_traceback=None):
             # the user what to fix.
             exception_proto.message = _format_syntax_error_message(exception)
         else:
-            exception_proto.message = str(exception)
+            exception_proto.message = str(exception).strip()
             exception_proto.message_is_markdown = is_markdown_exception
     except Exception as str_exception:
         # Sometimes the exception's __str__/__unicode__ method itself
@@ -91,7 +88,7 @@ Traceback:
             % {
                 "etype": type(exception).__name__,
                 "str_exception": str_exception,
-                "str_exception_tb": "\n".join(_get_stack_trace(str_exception)),
+                "str_exception_tb": "\n".join(_get_stack_trace_str_list(str_exception)),
             }
         )
 
@@ -135,33 +132,13 @@ def _format_syntax_error_message(exception):
     return str(exception)
 
 
-def _is_in_streamlit_package(file):
-    """True if the given file is part of the streamlit package."""
-    return (
-        os.path.commonprefix([os.path.realpath(file), _streamlit_dir]) == _streamlit_dir
-    )
-
-
-def _get_stackframe_filename(frame):
-    """Return the filename component of a traceback frame."""
-    # Python 3 has a frame.filename variable, but frames in
-    # Python 2 are just tuples. This code works in both versions.
-    return frame[0]
-
-
-def _get_stack_trace(
-    exception, exception_traceback=None, strip_streamlit_stack_entries=False
-):
+def _get_stack_trace_str_list(exception, strip_streamlit_stack_entries=False):
     """Get the stack trace for the given exception.
 
     Parameters
     ----------
     exception : BaseException
         The exception to extract the traceback from
-
-    exception_traceback : traceback or None
-        An optional alternate traceback to use. If this is None, the traceback
-        will be extracted from the exception.
 
     strip_streamlit_stack_entries : bool
         If True, all traceback entries that are in the Streamlit package
@@ -175,38 +152,25 @@ def _get_stack_trace(
         The exception traceback as a list of strings
 
     """
-    # Get and extract the traceback for the exception.
     extracted_traceback = None  # type: Optional[traceback.StackSummary]
-    if exception_traceback is not None:
-        extracted_traceback = traceback.extract_tb(exception_traceback)
+    if isinstance(exception, StreamlitAPIWarning):
+        extracted_traceback = exception.tacked_on_stack
     elif hasattr(exception, "__traceback__"):
-        # This is the Python 3 way to get the traceback.
         extracted_traceback = traceback.extract_tb(exception.__traceback__)
-    else:
-        # Hack for Python 2 which will extract the traceback as long as this
-        # method was called on the exception as it was caught, which is
-        # likely what the user would do.
-        _, live_exception, live_traceback = sys.exc_info()
-        if exception == live_exception:
-            extracted_traceback = traceback.extract_tb(live_traceback)
-        else:
-            extracted_traceback = None
 
     # Format the extracted traceback and add it to the protobuf element.
     if extracted_traceback is None:
-        stack_trace = [
+        stack_trace_str_list = [
             "Cannot extract the stack trace for this exception. "
             "Try calling exception() within the `catch` block."
         ]
     else:
         if strip_streamlit_stack_entries:
-            extracted_frames = [
-                frame
-                for frame in extracted_traceback
-                if not _is_in_streamlit_package(_get_stackframe_filename(frame))
-            ]
-            stack_trace = traceback.format_list(extracted_frames)
+            extracted_frames = get_nonstreamlit_traceback(extracted_traceback)
+            stack_trace_str_list = traceback.format_list(extracted_frames)
         else:
-            stack_trace = traceback.format_list(extracted_traceback)
+            stack_trace_str_list = traceback.format_list(extracted_traceback)
 
-    return stack_trace
+    stack_trace_str_list = [item.strip() for item in stack_trace_str_list]
+
+    return stack_trace_str_list

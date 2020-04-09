@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,10 +15,10 @@
 """Unit tests for MediaFileManager"""
 
 import unittest
+import mock
 
 from streamlit.MediaFileManager import MediaFileManager
 from streamlit.MediaFileManager import _get_file_id
-from datetime import date
 
 
 mfm = MediaFileManager()
@@ -73,7 +72,8 @@ class UploadedFileManagerTest(unittest.TestCase):
         pass
 
     def tearDown(self):
-        mfm.clear()
+        mfm._files.clear()
+        mfm._session_id_to_file_ids.clear()
 
     def test__get_file_id(self):
         """Test that file_id generation from data works as expected."""
@@ -89,8 +89,11 @@ class UploadedFileManagerTest(unittest.TestCase):
             _get_file_id(fake_bytes, "audio/wav"), _get_file_id(fake_bytes, "video/mp4")
         )
 
-    def test_add_file(self):
+    @mock.patch("streamlit.MediaFileManager._get_session_id")
+    def test_add_file(self, _get_session_id):
         """Test that MediaFileManager.add works as expected."""
+        _get_session_id.return_value = "TEST"
+
         # Make sure we reject files containing None
         with self.assertRaises(TypeError):
             mfm.add(None, "media/any")
@@ -100,8 +103,10 @@ class UploadedFileManagerTest(unittest.TestCase):
             file_id = _get_file_id(sample["content"], sample["mimetype"])
             self.assertTrue(file_id in mfm)
 
-    def test_add_file_already_exists(self):
+    @mock.patch("streamlit.MediaFileManager._get_session_id")
+    def test_add_file_already_exists(self, _get_session_id):
         """Test that we return existing file instead of creating a new one."""
+        _get_session_id.return_value = "TEST"
 
         sample = IMAGE_FIXTURES["png"]
         mfm.add(sample["content"], sample["mimetype"])
@@ -110,36 +115,45 @@ class UploadedFileManagerTest(unittest.TestCase):
 
         mediafile = mfm.add(sample["content"], sample["mimetype"])
         self.assertTrue(file_id in mfm)
-        self.assertEqual(mediafile.file_id, file_id)
+        self.assertEqual(mediafile.id, file_id)
 
-    def test_add_file_different_mimetypes(self):
+    @mock.patch("streamlit.MediaFileManager._get_session_id")
+    def test_add_file_different_mimetypes(self, _get_session_id):
         """Test that we create a new file if new mimetype, even with same bytes for content."""
+        _get_session_id.return_value = "TEST"
+
         sample = AUDIO_FIXTURES["mp3"]
         mfm.add(sample["content"], sample["mimetype"])
         file_id = _get_file_id(sample["content"], sample["mimetype"])
         self.assertTrue(file_id in mfm)
 
         mediafile = mfm.add(sample["content"], "video/mp4")
-        self.assertNotEqual(file_id, mediafile.file_id)
+        self.assertNotEqual(file_id, mediafile.id)
 
-    def test_delete_file(self):
-        """Test delete operation on specific MediaFile."""
+    @mock.patch("streamlit.MediaFileManager._get_session_id")
+    def test_remove_file(self, _get_session_id):
+        """Test remove operation on specific MediaFile."""
+        _get_session_id.return_value = "TEST"
+
         sample = AUDIO_FIXTURES["wav"]
         mfm.add(sample["content"], sample["mimetype"])
         file_id = _get_file_id(sample["content"], sample["mimetype"])
         self.assertTrue(file_id in mfm)
 
-        mfm.delete(file_id)
+        mfm._remove(file_id)
         self.assertFalse(file_id in mfm)
 
         # Make sure we throw an error when looking for an invalid file_id.
         with self.assertRaises(KeyError):
-            mfm.delete(file_id)
+            mfm._remove(file_id)
 
-    def test_clear_files(self):
+    @mock.patch("streamlit.MediaFileManager._get_session_id")
+    def test_reset_files_for_session(self, _get_session_id):
         """Test that MediaFileManager removes all files when requested (even if empty)."""
+        _get_session_id.return_value = "TEST"
+
         self.assertEqual(len(mfm), 0)
-        mfm.clear()
+        mfm.reset_files_for_session()
 
         self.assertEqual(len(mfm), 0)
 
@@ -147,5 +161,5 @@ class UploadedFileManagerTest(unittest.TestCase):
             mfm.add(sample["content"], sample["mimetype"])
 
         self.assertEqual(len(VIDEO_FIXTURES), len(mfm))
-        mfm.clear()
+        mfm.reset_files_for_session()
         self.assertEqual(len(mfm), 0)

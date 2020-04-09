@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,13 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-
 from tests import testutil
 import streamlit as st
 
 
-class DeltaGeneratorWriteTest(testutil.DeltaGeneratorTestCase):
+class EchoTest(testutil.DeltaGeneratorTestCase):
     def test_echo(self):
         # The empty lines below are part of the test. Do not remove them.
         with st.echo():
@@ -66,10 +63,7 @@ class MyClass(object):
         self.assertEqual("Hello", element.markdown.body)
 
     def test_root_level_echo(self):
-        if sys.version_info[0] == 2:
-            import echo_test_data.root_level_echo
-        else:
-            import tests.streamlit.echo_test_data.root_level_echo
+        import tests.streamlit.echo_test_data.root_level_echo
 
         expected = """```python
 a = 123

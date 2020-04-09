@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { Select as UISelect, OnChangeParams } from "baseui/select"
+import { Select as UISelect, OnChangeParams, Option } from "baseui/select"
 import { Map as ImmutableMap } from "immutable"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { logWarning } from "lib/log"
@@ -68,6 +68,20 @@ class Selectbox extends React.PureComponent<Props, State> {
     )
   }
 
+  // Add a custom filterOptions method to filter options only based on labels.
+  // The baseweb default method filters based on labels or indeces
+  // More details: https://github.com/streamlit/streamlit/issues/1010
+  private filterOptions = (
+    options: readonly Option[],
+    filterValue: string
+  ): readonly Option[] => {
+    return options.filter((value: Option) =>
+      (value as SelectOption).label
+        .toLowerCase()
+        .includes(filterValue.toString().toLowerCase())
+    )
+  }
+
   public render = (): React.ReactNode => {
     const style = { width: this.props.width }
     const label = this.props.element.get("label")
@@ -106,6 +120,7 @@ class Selectbox extends React.PureComponent<Props, State> {
           labelKey="label"
           onChange={this.onChange}
           options={selectOptions}
+          filterOptions={this.filterOptions}
           value={value}
           valueKey="value"
         />

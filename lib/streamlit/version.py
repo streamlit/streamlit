@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +15,7 @@
 """Streamlit version utilities."""
 import random
 
+import packaging.version
 import pkg_resources
 import requests
 
@@ -31,8 +31,8 @@ PYPI_STREAMLIT_URL = "https://pypi.org/pypi/streamlit/json"
 CHECK_PYPI_PROBABILITY = 0.10
 
 
-def _version_str_to_tuple(version_str):
-    return tuple(int(x) for x in version_str.split("."))
+def _version_str_to_obj(version_str):
+    return packaging.version.Version(version_str)
 
 
 def _get_installed_streamlit_version():
@@ -45,7 +45,7 @@ def _get_installed_streamlit_version():
 
     """
     version_str = pkg_resources.get_distribution("streamlit").version
-    return _version_str_to_tuple(version_str)
+    return _version_str_to_obj(version_str)
 
 
 def _get_latest_streamlit_version(timeout=None):
@@ -71,7 +71,7 @@ def _get_latest_streamlit_version(timeout=None):
         version_str = rsp.json()["info"]["version"]
     except Exception as e:
         raise RuntimeError("Got unexpected response from PyPI", e)
-    return _version_str_to_tuple(version_str)
+    return _version_str_to_obj(version_str)
 
 
 def should_show_new_version_notice():

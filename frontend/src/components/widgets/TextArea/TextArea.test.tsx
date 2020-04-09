@@ -18,6 +18,7 @@
 import React from "react"
 import { shallow } from "enzyme"
 import { fromJS } from "immutable"
+import { TextArea as TextAreaProto } from "autogen/proto"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import TextArea, { Props } from "./TextArea"
@@ -27,7 +28,7 @@ jest.mock("lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
 
-const getProps = (elementProps: object = {}): Props => ({
+const getProps = (elementProps: Partial<TextAreaProto> = {}): Props => ({
   element: fromJS({
     id: 1,
     label: "Label",

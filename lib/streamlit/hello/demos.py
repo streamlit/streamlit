@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,9 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import division, unicode_literals
-
-import urllib
+import urllib.error
 
 import streamlit as st
 
@@ -59,7 +56,7 @@ def mapping_demo():
     def from_data_file(filename):
         url = (
             "https://raw.githubusercontent.com/streamlit/"
-            "streamlit/develop/examples/data/%s" % filename)
+            "example-data/master/hello/v1/%s" % filename)
         return pd.read_json(url)
 
     try:

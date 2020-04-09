@@ -41,14 +41,14 @@ astor = "*"
 base58 = "*"
 blinker = "*"
 boto3 = "*"
-botocore = "*"
+botocore = ">=1.13.44"
+cachetools = ">=4.0"
 click = ">=7.0"
-# Pin python-dateutil to work around a botocore issue: https://github.com/boto/botocore/issues/1872
-# TODO: Remove this pin when the above issue is fixed.
-python-dateutil = "<=2.8.0"
+packaging = "*"
+python-dateutil = "*"
 enum-compat = "*"
-# python3 code backported to python2
-future = "*"
+numpy = "*"
+pandas = ">=0.21.0"
 pillow = ">=6.2.0"
 # Set protobuf version based on the protoc version on the release machine.
 # (i.e. Thiago's machine)
@@ -57,19 +57,9 @@ pydeck = ">=0.1.dev5"
 requests = "*"
 toml = "*"
 # 5.0 has a fix for etag header: https://github.com/tornadoweb/tornado/issues/2262
-# 6.0 doesn't support Python 2
+# TODO: upgrade tornado to 6.x now that we don't have to support Python 2
 tornado = ">=5.0,<6.0"
 tzlocal = "*"
 validators = "*"
 watchdog = "*"
 
-# Only Python 3.x packages
-[python3]
-pandas = ">=0.21.0"
-numpy = "*"
-
-# Only Python 2.x packages
-[python2]
-futures = "*"
-pandas = ">=0.21.0,<0.25.0"
-numpy = "<1.17.0"

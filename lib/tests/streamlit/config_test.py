@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -552,6 +551,7 @@ class ConfigLoadingTest(unittest.TestCase):
         ) = "/mock/home/folder/.streamlit/config.toml"
 
         open_patch = patch("streamlit.config.open", mock_open(read_data=global_config))
+        # patch streamlit.*.os.* instead of os.* for py35 compat
         makedirs_patch = patch("streamlit.config.os.makedirs")
         makedirs_patch.return_value = True
         pathexists_patch = patch("streamlit.config.os.path.exists")
@@ -578,6 +578,7 @@ class ConfigLoadingTest(unittest.TestCase):
         local_config_path = os.path.join(os.getcwd(), ".streamlit/config.toml")
 
         open_patch = patch("streamlit.config.open", mock_open(read_data=local_config))
+        # patch streamlit.*.os.* instead of os.* for py35 compat
         makedirs_patch = patch("streamlit.config.os.makedirs")
         makedirs_patch.return_value = True
         pathexists_patch = patch("streamlit.config.os.path.exists")
@@ -616,6 +617,7 @@ class ConfigLoadingTest(unittest.TestCase):
         open.side_effect = [global_open.return_value, local_open.return_value]
 
         open_patch = patch("streamlit.config.open", open)
+        # patch streamlit.*.os.* instead of os.* for py35 compat
         makedirs_patch = patch("streamlit.config.os.makedirs")
         makedirs_patch.return_value = True
         pathexists_patch = patch("streamlit.config.os.path.exists")
@@ -637,4 +639,4 @@ class ConfigLoadingTest(unittest.TestCase):
             self.assertEqual("local_accessKeyId", config.get_option("s3.accessKeyId"))
 
     def test_upload_file_default_values(self):
-        self.assertEqual(50, config.get_option("server.maxUploadSize"))
+        self.assertEqual(200, config.get_option("server.maxUploadSize"))

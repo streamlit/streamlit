@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { PureComponent } from "react"
 import { Table as ReactTable } from "reactstrap"
 import { toFormattedString } from "lib/format"
 import { Map as ImmutableMap } from "immutable"
@@ -26,12 +26,12 @@ import "./Table.scss"
 /**
  * Functional element representing a DataFrame.
  */
-interface Props {
+export interface Props {
   width: number
   element: ImmutableMap<string, any>
 }
 
-class Table extends React.PureComponent<Props> {
+export class Table extends PureComponent<Props> {
   render(): JSX.Element {
     const { element } = this.props
     const { headerRows, rows, cols } = dataFrameGetDimensions(element)

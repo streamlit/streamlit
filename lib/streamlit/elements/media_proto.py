@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,9 +13,6 @@
 # limitations under the License.
 
 from streamlit import type_util
-from streamlit.compatibility import setup_2_3_shims
-
-setup_2_3_shims(globals())
 
 import io
 import re
@@ -91,7 +87,7 @@ def _marshall_av_media(proto, data, mimetype):
     elif isinstance(data, io.BytesIO):
         data.seek(0)
         data = data.getvalue()
-    elif isinstance(data, io.RawIOBase):
+    elif isinstance(data, io.RawIOBase) or isinstance(data, io.BufferedReader):
         data.seek(0)
         data = data.read()
     elif type_util.is_type(data, "numpy.ndarray"):

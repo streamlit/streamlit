@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +14,6 @@
 
 """streamlit.credentials unit test."""
 import os
-import sys
 import textwrap
 import unittest
 from parameterized import parameterized
@@ -31,9 +29,6 @@ from streamlit import config
 from streamlit.credentials import Activation
 from streamlit.credentials import Credentials
 from streamlit.credentials import _verify_email
-
-if sys.version_info < (3, 0):
-    FileNotFoundError = IOError
 
 PROMPT = "streamlit.credentials.click.prompt"
 
@@ -132,8 +127,6 @@ class CredentialsClassTest(unittest.TestCase):
     @patch("streamlit.credentials.file_util.get_streamlit_file_path", mock_get_path)
     def test_Credentials_load_permission_denied(self):
         """Test Credentials.load() with Perission denied."""
-        if sys.version_info < (3, 0):
-            return
         with patch("streamlit.credentials.open") as m:
             m.side_effect = PermissionError(
                 "[Errno 13] Permission denied: ~/.streamlit/credentials.toml"
@@ -194,6 +187,7 @@ class CredentialsClassTest(unittest.TestCase):
             "/mock/home/folder", file_util.CONFIG_FOLDER_NAME
         )
 
+        # patch streamlit.*.os.makedirs instead of os.makedirs for py35 compat
         with patch(
             "streamlit.credentials.open", mock_open(), create=True
         ) as open, patch("streamlit.credentials.os.makedirs") as make_dirs:

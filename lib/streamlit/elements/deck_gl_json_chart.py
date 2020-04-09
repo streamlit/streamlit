@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,13 +19,14 @@ import json
 EMPTY_MAP = {"initialViewState": {"latitude": 0, "longitude": 0, "pitch": 0, "zoom": 1}}
 
 
-def marshall(element, pydeck_obj):
+def marshall(element, pydeck_obj, use_container_width):
     if pydeck_obj is None:
         spec = json.dumps(EMPTY_MAP)
     else:
         spec = pydeck_obj.to_json()
 
     element.deck_gl_json_chart.json = spec
+    element.deck_gl_json_chart.use_container_width = use_container_width
 
     if pydeck_obj is not None and isinstance(pydeck_obj.deck_widget.tooltip, dict):
         element.deck_gl_json_chart.tooltip = json.dumps(pydeck_obj.deck_widget.tooltip)

@@ -37,7 +37,7 @@ const SORT_ICON_WIDTH_PX = 10
 /**
  * Minimum size of a dataframe cell.
  */
-const MIN_CELL_WIDTH_PX = 25
+export const MIN_CELL_WIDTH_PX = 25
 
 /**
  * Maximum size of a dataframe cell.
@@ -49,7 +49,7 @@ const MAX_CELL_WIDTH_PX = 200
  */
 const MAX_LONELY_CELL_WIDTH_PX = 400
 
-interface Props {
+export interface Props {
   width: number
   height: number | undefined
   element: ImmutableMap<string, any>
@@ -114,7 +114,7 @@ const DEFAULT_HEIGHT = 300
 /**
  * Functional element representing a DataFrame.
  */
-class DataFrame extends React.PureComponent<Props, State> {
+export class DataFrame extends React.PureComponent<Props, State> {
   private multiGridRef = React.createRef<MultiGrid>()
 
   public constructor(props: Props) {
@@ -440,26 +440,31 @@ function getCellContentsGetter(
 
 /**
  * Computes various dimensions for the table.
+ *
+ * First of all we create an array containing all the calculated column widths,
+ * if the difference between the total of columns and the container width is negative
+ * we put a width limit, if not, we divide the remaining space by each exceeding width
  */
 function getWidths(
   cols: number,
   rows: number,
   headerCols: number,
   headerRows: number,
-  width: number,
+  containerWidth: number,
   cellContentsGetter: CellContentsGetter
 ): ComputedWidths {
+  const minWidth = MIN_CELL_WIDTH_PX
+  const maxWidth =
+    cols > 2 // 2 because 1 column is the index.
+      ? MAX_CELL_WIDTH_PX
+      : MAX_LONELY_CELL_WIDTH_PX
+
   // Calculate column width based on character count alone.
-  let columnWidth = ({ index }: { index: number }): number => {
+  const calculateColumnWidth = ({ index }: { index: number }): number => {
     const colIndex = index
     const fontSize = 10
     const charWidth = (fontSize * 8) / 10
     const padding = 14 + SORT_ICON_WIDTH_PX // 14 for whitespace; an extra 10 for the optional sort arrow icon
-    const minWidth = MIN_CELL_WIDTH_PX
-    const maxWidth =
-      cols > 2 // 2 because 1 column is the index.
-        ? MAX_CELL_WIDTH_PX
-        : MAX_LONELY_CELL_WIDTH_PX
 
     // Set the colWidth to the maximum width of a column.
     const maxRows = 100
@@ -479,44 +484,64 @@ function getWidths(
       const contents = cellContentsGetter(colIndex, rowIndex).contents
       const nChars = contents ? contents.length : 0
       const cellWidth = nChars * charWidth + padding
-      if (cellWidth > maxWidth) {
-        return maxWidth
-      } else if (cellWidth > colWidth) {
+
+      if (cellWidth > colWidth) {
         colWidth = cellWidth
       }
     }
     return colWidth
   }
 
-  // Increase column with if the table is somewhat narrow (but not super narrow)
+  let distributedTable: Array<number> = []
+  const tableColumnWidth: Array<number> = Array.from(Array(cols), (_, index) =>
+    calculateColumnWidth({ index })
+  )
+  const totalTableWidth = tableColumnWidth.reduce((a, b) => a + b, 0)
+  const remainingSpace = containerWidth - totalTableWidth
+  const getColumnsThatExceedMaxWidth = (
+    columns: Array<number>
+  ): Array<number> => columns.filter(width => width > maxWidth)
 
-  let tableWidth = 0
-  let headerWidth = 0
-
-  for (let colIndex = 0; colIndex < cols; colIndex++) {
-    const colWidth = columnWidth({ index: colIndex })
-    tableWidth += colWidth
-    if (colIndex < headerCols) {
-      headerWidth += colWidth
-    } else if (tableWidth >= width) {
-      // No need to continue. We already know the following "if" condition will fail.
-      break
-    }
-  }
-
-  let elementWidth = Math.min(tableWidth, width)
-
-  if (tableWidth > width * (2 / 3) && tableWidth < width) {
-    const widthArray = Array.from(
-      { length: cols },
-      (_, colIndex) =>
-        columnWidth({ index: colIndex }) + (width - tableWidth) / cols
+  if (remainingSpace < 0) {
+    distributedTable = tableColumnWidth.map(width =>
+      width > maxWidth ? maxWidth : width
     )
-    columnWidth = ({ index }) => widthArray[index]
-    elementWidth = width
+  } else {
+    const columnsThatExceed = getColumnsThatExceedMaxWidth(tableColumnWidth)
+    const remainingSpaceByColumn = remainingSpace / columnsThatExceed.length
+
+    distributedTable = tableColumnWidth.map((width, id) => {
+      if (id in columnsThatExceed.keys()) {
+        return width + remainingSpaceByColumn
+      }
+
+      return width
+    })
   }
 
-  return { elementWidth, columnWidth, headerWidth }
+  let distributedTableTotal = distributedTable.reduce((a, b) => a + b, 0)
+  if (
+    distributedTableTotal > containerWidth * (2 / 3) &&
+    distributedTableTotal < containerWidth
+  ) {
+    const remainingSpace = (containerWidth - distributedTableTotal) / cols
+    distributedTable = distributedTable.map(width => width + remainingSpace)
+    distributedTableTotal = distributedTable.reduce((a, b) => a + b, 0)
+  }
+
+  const elementWidth = Math.min(distributedTableTotal, containerWidth)
+  const columnWidth = ({ index }: { index: number }): number =>
+    distributedTable[index]
+
+  const headerWidth = distributedTable
+    .slice(0, headerCols)
+    .reduce((prev, curr) => prev + curr)
+
+  return {
+    elementWidth,
+    columnWidth,
+    headerWidth,
+  }
 }
 
 export default withFullScreenWrapper(DataFrame)

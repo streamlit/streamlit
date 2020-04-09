@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,91 +12,124 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import threading
+from typing import Dict
+from typing import List
+from typing import NamedTuple
+from typing import Tuple
 
-class File(object):
-    """Queue that smartly accumulates the report's messages."""
+from blinker import Signal
 
-    def __init__(self, widget_id, name, size, last_modified, chunks):
+# An uploaded file's data and metadata
+UploadedFile = NamedTuple("UploadedFile", [("name", str), ("data", bytes)])
 
-        self.widget_id = widget_id
-        self.name = name
-        self.size = size
-        self.last_modified = last_modified
-        self.total_chunks = chunks
-        self.buffers = {}
-        self.data = None
+# A list of UploadedFiles, and associated ID
+_UploadedFileListBase = NamedTuple(
+    "_UploadedFileListBase",
+    [("session_id", str), ("widget_id", str), ("files", List[UploadedFile])],
+)
 
-    def process_chunk(self, index, data):
-        """Process an incoming file chunk and return percent done."""
 
-        if index in self.buffers:
-            raise RuntimeError("File chunk was already processed")
-
-        self.buffers[index] = data
-        if len(self.buffers) == self.total_chunks:
-            self._coalesce_chunks()
-            return 1
-
-        if len(self.buffers) > 0:
-            return float(len(self.buffers)) / self.total_chunks
-
-    def _coalesce_chunks(self):
-        self.data = bytearray()
-        index = 0
-        while self.buffers.get(index) != None:
-            self.data.extend(self.buffers[index])
-            del self.buffers[index]
-            index += 1
-
-        self.buffers = {}
+class UploadedFileList(_UploadedFileListBase):
+    @property
+    def id(self):
+        """The list's unique ID."""
+        return self.session_id, self.widget_id
 
 
 class UploadedFileManager(object):
+    """Holds files uploaded by users of the running Streamlit app,
+    and emits an event signal when a file is added.
+    """
+
     def __init__(self):
-        self._file_list = {}
+        self._files_by_id = {}  # type: Dict[Tuple[str, str], UploadedFileList]
+        # Prevents concurrent access to the _files_by_id dict.
+        # In remove_session_files(), we iterate over the dict's keys. It's
+        # an error to mutate a dict while iterating; this lock prevents that.
+        self._files_lock = threading.Lock()
+        self.on_files_added = Signal(
+            doc="""Emitted when a file list is added to the manager.
 
-    def delete_all_files(self):
-        for widget_id in list(self._file_list):
-            self.delete_file(widget_id)
-
-    def delete_file(self, widget_id):
-        del self._file_list[widget_id]
-
-    def create_or_clear_file(self, widget_id, name, size, last_modified, chunks):
-        if widget_id in self._file_list:
-            self.delete_file(widget_id)
-
-        file = File(
-            widget_id=widget_id,
-            name=name,
-            size=size,
-            last_modified=last_modified,
-            chunks=chunks,
+            Parameters
+            ----------
+            files : UploadedFileList
+                The file list that was added.
+            """
         )
-        self._file_list[widget_id] = file
 
-    def process_chunk(self, widget_id, index, data):
-        """Process an incoming file chunk and return percent done."""
+    def add_files(self, session_id, widget_id, files):
+        """Add a list of files to the FileManager.
 
-        if widget_id not in self._file_list:
-            # Handle possible race condition when you cancel an upload
-            # and an old file chunk is received.
-            return 0
+        If another list with the same (session_id, widget_id) key exists,
+        it will be replaced with this one.
 
-        return self._file_list[widget_id].process_chunk(index, data)
+        The "on_file_added" Signal will be emitted after the list is added.
 
-    def get_data(self, widget_id):
-        """Get a tuple with file progress and data bytes (or None)."""
+        Parameters
+        ----------
+        session_id : str
+            The session ID of the report that owns the files.
+        widget_id : str
+            The widget ID of the FileUploader that created the files.
+        files : List[UploadedFile]
+            The files to add.
 
-        if widget_id not in self._file_list:
-            return 0, None
+        """
+        file_list = UploadedFileList(
+            session_id=session_id, widget_id=widget_id, files=files
+        )
+        with self._files_lock:
+            self._files_by_id[file_list.id] = file_list
+        self.on_files_added.send(file_list)
 
-        file = self._file_list[widget_id]
+    def get_files(self, session_id, widget_id):
+        """Return the file list with the given ID, or None if the ID doesn't exist.
 
-        progress = 100
+        Parameters
+        ----------
+        session_id : str
+            The session ID of the report that owns the file.
+        widget_id : str
+            The widget ID of the FileUploader that created the file.
 
-        if file.data is None:
-            progress = float(len(file.buffers)) / file.total_chunks
-            progress = round(100 * progress)
+        Returns
+        -------
+        list of UploadedFile or None
 
-        return progress, file.data
+        """
+        files_id = session_id, widget_id
+        with self._files_lock:
+            file_list = self._files_by_id.get(files_id, None)
+        return file_list.files if file_list is not None else None
+
+    def remove_files(self, session_id, widget_id):
+        """Remove the file list with the given ID, if it exists.
+
+        Parameters
+        ----------
+        session_id : str
+            The session ID of the report that owns the file.
+        widget_id : str
+            The widget ID of the FileUploader that created the file.
+        """
+        files_id = session_id, widget_id
+        with self._files_lock:
+            self._files_by_id.pop(files_id, None)
+
+    def remove_session_files(self, session_id):
+        """Remove all files that belong to the given report.
+
+        Parameters
+        ----------
+        session_id : str
+            The session ID of the report whose files we're removing.
+
+        """
+        # Copy the keys into a list, because we'll be mutating the dictionary.
+        with self._files_lock:
+            all_ids = list(self._files_by_id.keys())
+
+        for files_id in all_ids:
+            if files_id[0] == session_id:
+                self.remove_files(*files_id)

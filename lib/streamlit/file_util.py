@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,15 +14,47 @@
 
 import contextlib
 import errno
+import io
 import os
 
 import fnmatch
 
 from streamlit import env_util
 from streamlit import util
+from streamlit.string_util import is_binary_string
 
 # Configuration and credentials are stored inside the ~/.streamlit folder
 CONFIG_FOLDER_NAME = ".streamlit"
+
+
+def get_encoded_file_data(data, encoding="auto"):
+    """Coerce bytes to a BytesIO or a StringIO.
+
+    Parameters
+    ----------
+    data : bytes
+    encoding : str
+
+    Returns
+    -------
+    BytesIO or StringIO
+        If the file's data is in a well-known textual format (or if the encoding
+        parameter is set), return a StringIO. Otherwise, return BytesIO.
+
+    """
+    if encoding == "auto":
+        if is_binary_string(data):
+            encoding = None
+        else:
+            # If the file does not look like a pure binary file, assume
+            # it's utf-8. It would be great if we could guess it a little
+            # more smartly here, but it is what it is!
+            encoding = "utf-8"
+
+    if encoding:
+        return io.StringIO(data.decode(encoding))
+
+    return io.BytesIO(data)
 
 
 @contextlib.contextmanager
@@ -70,12 +101,7 @@ def streamlit_write(path, binary=False):
     if binary:
         mode += "b"
     path = get_streamlit_file_path(path)
-    try:
-        os.makedirs(os.path.dirname(path))
-    except Exception:
-        # Python 3 supports exist_ok=True which avoids the try/except,
-        # but Python 2 does not.
-        pass
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     try:
         with open(path, mode) as handle:
             yield handle

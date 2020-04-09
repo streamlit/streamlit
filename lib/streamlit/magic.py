@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +14,6 @@
 
 import ast
 import sys
-from streamlit import compatibility
 
 
 def add_magic(code, script_path):
@@ -34,11 +32,9 @@ def add_magic(code, script_path):
         The syntax tree for the code.
 
     """
-    if compatibility.is_running_py3():
-        # Pass script_path so we get pretty exceptions.
-        tree = ast.parse(code, script_path, "exec")
-        return _modify_ast_subtree(tree, is_root=True)
-    return code
+    # Pass script_path so we get pretty exceptions.
+    tree = ast.parse(code, script_path, "exec")
+    return _modify_ast_subtree(tree, is_root=True)
 
 
 def _modify_ast_subtree(tree, body_attr="body", is_root=False):

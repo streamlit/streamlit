@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,13 +13,6 @@
 # limitations under the License.
 
 """Loads the configuration data."""
-
-# Python 2/3 compatibility
-from __future__ import print_function, division, unicode_literals, absolute_import
-
-from streamlit.compatibility import setup_2_3_shims
-
-setup_2_3_shims(globals())
 
 import os
 import toml
@@ -485,9 +477,11 @@ def _server_enable_cors():
 def _server_max_upload_size():
     """Max size, in megabytes, for files uploaded with the file_uploader.
 
-    Default: '50'
+    Default: 200
     """
-    return 50
+    # If this default is changed, please also update the docstring
+    # for `DeltaGenerator.file_uploader`.
+    return 200
 
 
 # Config Section: Browser #

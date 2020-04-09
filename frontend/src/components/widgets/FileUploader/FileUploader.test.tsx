@@ -19,17 +19,14 @@ import React from "react"
 import { shallow } from "enzyme"
 import { FileUploader as FileUploaderBaseui } from "baseui/file-uploader"
 import { fromJS } from "immutable"
-import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import FileUploader, { Props } from "./FileUploader"
 
-jest.mock("lib/WidgetStateManager")
-
-const blolbFile = new File([""], "filename.txt", {
+const blobFile = new File(["Text in a file!"], "filename.txt", {
   type: "text/plain",
   lastModified: 0,
 })
-const sendBackMsg = jest.fn()
+
 const getProps = (elementProps: object = {}): Props => ({
   element: fromJS({
     type: [],
@@ -39,7 +36,10 @@ const getProps = (elementProps: object = {}): Props => ({
   }),
   width: 0,
   disabled: false,
-  widgetStateManager: new WidgetStateManager(sendBackMsg),
+  // @ts-ignore
+  widgetStateManager: jest.fn(),
+  // @ts-ignore
+  uploadClient: { uploadFiles: jest.fn().mockResolvedValue(undefined) },
 })
 
 describe("FileUploader widget", () => {
@@ -52,38 +52,37 @@ describe("FileUploader widget", () => {
   })
 
   it("should show a label", () => {
-    const props = getProps({
-      label: "Test label",
-    })
+    const props = getProps({ label: "Test label" })
     const wrapper = shallow(<FileUploader {...props} />)
 
     expect(wrapper.find("label").text()).toBe(props.element.get("label"))
   })
 
-  it("should change the status drop a File", () => {
+  it("should upload files", () => {
     const props = getProps()
     const wrapper = shallow(<FileUploader {...props} />)
     const internalFileUploader = wrapper.find(FileUploaderBaseui)
+    internalFileUploader.props().onDrop([blobFile], [], null)
 
-    const promise = internalFileUploader
-      .props()
-      .onDrop([blolbFile], [], null)
-      .then(() => {
-        expect(wrapper.state("status")).toBe("UPLOADING")
-        expect(wrapper.find("div.uploadProgress").length).toBe(1)
-      })
-    expect(wrapper.state("status")).toBe("READING")
-    return promise
+    expect(props.uploadClient.uploadFiles.mock.calls.length).toBe(1)
+  })
+
+  it("should change status when dropping a File", () => {
+    const props = getProps()
+    const wrapper = shallow(<FileUploader {...props} />)
+    const internalFileUploader = wrapper.find(FileUploaderBaseui)
+    internalFileUploader.props().onDrop([blobFile], [], null)
+
+    expect(wrapper.state("status")).toBe("UPLOADING")
+    expect(wrapper.find("div.uploadProgress").length).toBe(1)
   })
 
   it("should fail when File extension is not allowed", () => {
-    const props = getProps({
-      type: ["png"],
-    })
+    const props = getProps({ type: ["png"] })
     const wrapper = shallow(<FileUploader {...props} />)
     const internalFileUploader = wrapper.find(FileUploaderBaseui)
+    internalFileUploader.props().onDrop([], [blobFile], null)
 
-    internalFileUploader.props().onDrop([], [blolbFile], null)
     expect(wrapper.state("status")).toBe("ERROR")
     expect(wrapper.state("errorMessage")).toBe(
       "text/plain files are not allowed"
@@ -92,13 +91,11 @@ describe("FileUploader widget", () => {
   })
 
   it("should fail when maxUploadSizeMb = 0", () => {
-    const props = getProps({
-      maxUploadSizeMb: 0,
-    })
+    const props = getProps({ maxUploadSizeMb: 0 })
     const wrapper = shallow(<FileUploader {...props} />)
     const internalFileUploader = wrapper.find(FileUploaderBaseui)
+    internalFileUploader.props().onDrop([blobFile], [], null)
 
-    internalFileUploader.props().onDrop([blolbFile], [], null)
     expect(wrapper.state("status")).toBe("ERROR")
     expect(wrapper.state("errorMessage")).toBe(
       "The max file size allowed is 0MB"

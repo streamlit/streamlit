@@ -21,6 +21,7 @@ import Immutable from "immutable"
 import { StaticMap } from "react-map-gl"
 import * as layers from "@deck.gl/layers"
 import { JSONConverter } from "@deck.gl/json"
+import { flowRight as compose } from "lodash"
 import * as aggregationLayers from "@deck.gl/aggregation-layers"
 
 import { CSVLoader } from "@loaders.gl/csv"
@@ -55,13 +56,13 @@ registerLoaders([CSVLoader])
 
 const jsonConverter = new JSONConverter({ configuration })
 
-export interface Props {
+interface Props {
   width: number
   mapboxToken: string
   element: Immutable.Map<string, any>
 }
 
-interface PropsWithHeight extends Props {
+export interface PropsWithHeight extends Props {
   height: number | undefined
 }
 
@@ -69,12 +70,10 @@ interface State {
   initialized: boolean
 }
 
-export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
-  static defaultProps = {
-    height: 500,
-  }
+export const DEFAULT_DECK_GL_HEIGHT = 500
 
-  state = {
+export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
+  readonly state = {
     initialized: false,
   }
 
@@ -87,16 +86,25 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     })
   }
 
-  fixHexLayerBug = (): void => {
-    this.setState({ initialized: true })
-  }
-
   getDeckObject = (): DeckObject => {
     const { element, width, height } = this.props
+    const useContainerWidth = element.get("useContainerWidth")
     const json = JSON.parse(element.get("json"))
 
-    json.initialViewState.height = height
-    json.initialViewState.width = width
+    // The graph dimensions could be set from props ( like withFullscreen ) or
+    // from the generated element object
+    if (height) {
+      json.initialViewState.height = height
+      json.initialViewState.width = width
+    } else {
+      if (!json.initialViewState.height) {
+        json.initialViewState.height = DEFAULT_DECK_GL_HEIGHT
+      }
+
+      if (useContainerWidth) {
+        json.initialViewState.width = width
+      }
+    }
 
     delete json.views // We are not using views. This avoids a console warning.
 
@@ -165,4 +173,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
   }
 }
 
-export default withMapboxToken(withFullScreenWrapper(DeckGlJsonChart))
+export default compose(
+  withMapboxToken,
+  withFullScreenWrapper
+)(DeckGlJsonChart)

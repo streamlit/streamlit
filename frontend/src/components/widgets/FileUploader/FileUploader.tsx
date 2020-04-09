@@ -15,29 +15,35 @@
  * limitations under the License.
  */
 
-import React from "react"
-import Icon from "components/shared/Icon"
-import { Button, Spinner } from "reactstrap"
+import axios, { CancelTokenSource } from "axios"
 import { FileUploader as FileUploaderBaseui } from "baseui/file-uploader"
+import Icon from "components/shared/Icon"
 import { Map as ImmutableMap } from "immutable"
+import { FileUploadClient } from "lib/FileUploadClient"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { fileUploaderOverrides } from "lib/widgetTheme"
+import React from "react"
+import { Button, Spinner } from "reactstrap"
 import "./FileUploader.scss"
 
 export interface Props {
   disabled: boolean
   element: ImmutableMap<string, any>
   widgetStateManager: WidgetStateManager
+  uploadClient: FileUploadClient
   width: number
 }
 
 interface State {
-  status: "READY" | "READING" | "UPLOADING" | "UPLOADED" | "ERROR"
+  status: "READY" | "UPLOADING" | "UPLOADED" | "ERROR"
   errorMessage?: string
   acceptedFiles: File[]
 }
 
 class FileUploader extends React.PureComponent<Props, State> {
+  /** Used to cancel the current upload, if there is one. */
+  private currentUploadCanceller?: CancelTokenSource
+
   public constructor(props: Props) {
     super(props)
     this.state = {
@@ -47,38 +53,11 @@ class FileUploader extends React.PureComponent<Props, State> {
     }
   }
 
-  private handleFileRead = (
-    ev: ProgressEvent<FileReader>,
-    file: File
-  ): Promise<void> => {
-    if (ev.target !== null) {
-      if (ev.target.result instanceof ArrayBuffer) {
-        this.props.widgetStateManager.sendUploadFileMessage(
-          this.props.element.get("id"),
-          file.name,
-          file.lastModified,
-          new Uint8Array(ev.target.result)
-        )
-      } else {
-        const error = "This file is not ArrayBuffer type."
-        console.warn(error)
-        return Promise.reject(error)
-      }
-    }
-
-    return new Promise(resolve => {
-      this.setState({ status: "UPLOADING" }, () => {
-        resolve()
-      })
-    })
-  }
-
   private dropHandler = (
     acceptedFiles: File[],
     rejectedFiles: File[],
     event: React.SyntheticEvent<HTMLElement>
-  ): Promise<void[]> => {
-    const promises: Promise<void>[] = []
+  ): void => {
     const { element } = this.props
     const maxSizeMb = element.get("maxUploadSizeMb")
 
@@ -89,54 +68,55 @@ class FileUploader extends React.PureComponent<Props, State> {
         status: "ERROR",
         errorMessage: errorMessage,
       })
-      return Promise.reject(errorMessage)
+
+      return
     }
 
-    this.setState({
-      acceptedFiles,
-      status: "READING",
-    })
-
-    acceptedFiles.forEach((file: File) => {
-      const fileSizeMB = file.size / 1024 / 1024
-      if (fileSizeMB < maxSizeMb) {
-        const fileReader = new FileReader()
-
-        promises.push(
-          new Promise((resolve, reject) => {
-            fileReader.onerror = () => {
-              fileReader.abort()
-              reject(new DOMException("Problem parsing input file."))
-            }
-
-            fileReader.onload = (ev: ProgressEvent<FileReader>) => {
-              this.handleFileRead(ev, file).then(() => {
-                resolve()
-              })
-            }
-            fileReader.readAsArrayBuffer(file)
-          })
-        )
-      } else {
+    // validate file sizes
+    const maxSizeBytes = maxSizeMb * 1024 * 1024
+    for (const file of acceptedFiles) {
+      if (file.size > maxSizeBytes) {
+        const errorMessage = `The max file size allowed is ${maxSizeMb}MB`
         this.setState({
           status: "ERROR",
-          errorMessage: `The max file size allowed is ${maxSizeMb}MB`,
+          errorMessage: errorMessage,
         })
+
+        return
       }
-    })
-
-    return Promise.all(promises)
-  }
-
-  public componentDidUpdate(oldProps: Props): void {
-    // This is the wrong place for this logic! Need to move it somewhere else.
-    const progress = this.props.element.get("progress")
-    if (this.state.status === "UPLOADING" && progress >= 100) {
-      this.setState({ status: "UPLOADED" })
     }
+
+    this.setState({ acceptedFiles, status: "UPLOADING" })
+
+    // Upload all the files
+    this.currentUploadCanceller = axios.CancelToken.source()
+    this.props.uploadClient
+      .uploadFiles(
+        this.props.element.get("id"),
+        acceptedFiles,
+        undefined,
+        this.currentUploadCanceller.token
+      )
+      .then(() => {
+        this.currentUploadCanceller = undefined
+        this.setState({ status: "UPLOADED" })
+      })
+      .catch(err => {
+        if (axios.isCancel(err)) {
+          // If this was a cancel error, we don't show the user an error -
+          // the cancellation was in response to an action they took
+          this.currentUploadCanceller = undefined
+          this.setState({ status: "UPLOADED" })
+        } else {
+          this.setState({
+            status: "ERROR",
+            errorMessage: err ? err.toString() : "Unknown error",
+          })
+        }
+      })
   }
 
-  reset = (): void => {
+  private reset = (): void => {
     this.setState({
       status: "READY",
       errorMessage: undefined,
@@ -144,7 +124,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     })
   }
 
-  renderErrorMessage = (): React.ReactNode => {
+  private renderErrorMessage = (): React.ReactNode => {
     const { errorMessage } = this.state
     return (
       <div className="uploadStatus uploadError">
@@ -158,29 +138,27 @@ class FileUploader extends React.PureComponent<Props, State> {
     )
   }
 
-  renderUploadingMessage = (): React.ReactNode => {
+  private renderUploadingMessage = (): React.ReactNode => {
     return (
       <div className="uploadStatus uploadProgress">
         <span className="body">
           <Spinner color="secondary" size="sm" /> Uploading...
         </span>
-        <Button
-          outline
-          size="sm"
-          onClick={() => {
-            this.setState({ status: "UPLOADED", errorMessage: undefined })
-            this.props.widgetStateManager.sendDeleteUploadedFileMessage(
-              this.props.element.get("id")
-            )
-          }}
-        >
+        <Button outline size="sm" onClick={this.cancelCurrentUpload}>
           Cancel
         </Button>
       </div>
     )
   }
 
-  renderFileUploader = (): React.ReactNode => {
+  private cancelCurrentUpload = (): void => {
+    if (this.currentUploadCanceller != null) {
+      this.currentUploadCanceller.cancel()
+      this.currentUploadCanceller = undefined
+    }
+  }
+
+  private renderFileUploader = (): React.ReactNode => {
     const { status, errorMessage } = this.state
     const { element } = this.props
     const accept: string[] = element
@@ -188,8 +166,11 @@ class FileUploader extends React.PureComponent<Props, State> {
       .toArray()
       .map((value: string) => "." + value)
 
+    const multipleFiles: boolean = element.get("multipleFiles")
+
     // Hack to hide drag-and-drop message and leave space for filename.
     let overrides: any = fileUploaderOverrides
+    let filenameText = ""
 
     if (status === "UPLOADED") {
       overrides = { ...overrides }
@@ -198,13 +179,21 @@ class FileUploader extends React.PureComponent<Props, State> {
       overrides.ContentMessage.style.visibility = "hidden"
       overrides.ContentMessage.style.overflow = "hidden"
       overrides.ContentMessage.style.height = "0.625rem" // half of lineHeightTight
+
+      if (multipleFiles) {
+        filenameText = this.state.acceptedFiles
+          .map(file => file.name)
+          .join(", ")
+      } else {
+        filenameText = this.state.acceptedFiles[0].name
+      }
     }
 
     return (
       <>
         {status === "UPLOADED" ? (
           <div className="uploadOverlay uploadDone">
-            <span className="body">{this.state.acceptedFiles[0].name}</span>
+            <span className="body">{filenameText}</span>
           </div>
         ) : null}
         <FileUploaderBaseui
@@ -213,6 +202,7 @@ class FileUploader extends React.PureComponent<Props, State> {
           accept={accept.length === 0 ? undefined : accept}
           disabled={this.props.disabled}
           overrides={overrides}
+          multiple={multipleFiles}
         />
       </>
     )

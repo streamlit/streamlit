@@ -119,4 +119,37 @@ describe("Selectbox widget", () => {
       value: "1",
     })
   })
+
+  it("should not filter options based on index", () => {
+    const options = wrapper.find(UISelect).prop("options")
+    const filterOptionsFn = wrapper.find(UISelect).prop("filterOptions")
+    if (filterOptionsFn === undefined || options === undefined) {
+      fail("Unexepcted undefined value")
+      return 0
+    }
+    const filteredOptions = filterOptionsFn(options, "1")
+    expect(filteredOptions).toEqual([])
+  })
+
+  it("should filter options based on label with case insensitive", () => {
+    const options = wrapper.find(UISelect).prop("options")
+    const filterOptionsFn = wrapper.find(UISelect).prop("filterOptions")
+    if (filterOptionsFn === undefined || options === undefined) {
+      fail("Unexepcted undefined value")
+      return 0
+    }
+    expect(filterOptionsFn(options, "b")).toEqual([
+      {
+        label: "b",
+        value: "1",
+      },
+    ])
+
+    expect(filterOptionsFn(options, "B")).toEqual([
+      {
+        label: "b",
+        value: "1",
+      },
+    ])
+  })
 })

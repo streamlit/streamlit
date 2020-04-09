@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,4 +15,18 @@
 import streamlit as st
 
 
-st.file_uploader("Drop a file:", type=["txt"])
+result = st.file_uploader("Drop a file:", type=["txt"])
+# result = st.file_uploader("Drop a file:", type=["txt"], accept_multiple_files=False)
+if result is not None:
+    st.text(result.getvalue())
+else:
+    st.text("No upload")
+
+# result = st.file_uploader(
+#     "Drop multiple files:", type=["txt"], accept_multiple_files=True
+# )
+# if result is not None:
+#     strings = sorted([s.getvalue() for s in result])
+#     st.text("\n".join(strings))
+# else:
+#     st.text("No upload")

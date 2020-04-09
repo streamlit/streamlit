@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,14 +13,6 @@
 # limitations under the License.
 
 """This is a script which is run when the Streamlit package is executed."""
-
-# Python 2/3 compatibility
-from __future__ import print_function, division, absolute_import
-
-# Not importing unicode_literals from __future__ because click doesn't like it.
-from streamlit.compatibility import setup_2_3_shims
-
-setup_2_3_shims(globals())
 
 from streamlit import config as _config
 

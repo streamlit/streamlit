@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,54 +16,60 @@
 
 import unittest
 
+from streamlit.UploadedFileManager import UploadedFile
+from streamlit.UploadedFileManager import UploadedFileList
 from streamlit.UploadedFileManager import UploadedFileManager
-from datetime import date
+
+file1 = UploadedFile(name="file1", data=b"file1")
+file2 = UploadedFile(name="file2", data=b"file2")
 
 
 class UploadedFileManagerTest(unittest.TestCase):
-    def test_msg_hash(self):
-        """Test that ForwardMsg hash generation works as expected"""
+    def setUp(self):
+        self.mgr = UploadedFileManager()
+        self.filemgr_events = []
+        self.mgr.on_files_added.connect(self._on_files_added)
 
-        widget_idA = "A0123456789"
-        widget_idB = "B0123456789"
-        file_name = "example_file.png"
-        file_bytes = bytearray(
-            "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789",
-            "utf-8",
-        )
-        uploaded_file_mgr = UploadedFileManager()
+    def _on_files_added(self, file_list, **kwargs):
+        self.filemgr_events.append(file_list)
 
-        uploaded_file_mgr.create_or_clear_file(
-            widget_idA, file_name, len(file_bytes), date.today(), 1
-        )
-        uploaded_file_mgr.create_or_clear_file(
-            widget_idB, file_name, len(file_bytes), date.today(), 2
-        )
+    def test_add_file(self):
+        self.assertIsNone(self.mgr.get_files("non-report", "non-widget"))
 
-        progress_a = uploaded_file_mgr.process_chunk(widget_idA, 0, file_bytes)
-        self.assertEqual(progress_a, 1)
+        event1 = UploadedFileList("session", "widget", [file1])
+        event2 = UploadedFileList("session", "widget", [file2])
 
-        progress_b = uploaded_file_mgr.process_chunk(widget_idB, 0, file_bytes[0:50])
-        self.assertEqual(progress_b, 0.5)
+        self.mgr.add_files("session", "widget", [file1])
+        self.assertEqual([file1], self.mgr.get_files("session", "widget"))
+        self.assertEqual([event1], self.filemgr_events)
 
-        progress_b = uploaded_file_mgr.process_chunk(widget_idB, 1, file_bytes[50:100])
-        self.assertEqual(progress_b, 1)
+        # Add another file with the same ID
+        self.mgr.add_files("session", "widget", [file2])
+        self.assertEqual([file2], self.mgr.get_files("session", "widget"))
+        self.assertEqual([event1, event2], self.filemgr_events)
 
-        progress_a, data_a = uploaded_file_mgr.get_data(widget_idA)
-        progress_b, data_b = uploaded_file_mgr.get_data(widget_idB)
-        self.assertEqual(progress_a, 100)
-        self.assertEqual(progress_b, 100)
-        self.assertEqual(len(data_a), len(file_bytes))
-        self.assertEqual(data_a, file_bytes)
-        self.assertEqual(data_a, data_b)
+    def test_remove_file(self):
+        # This should not error.
+        self.mgr.remove_files("non-report", "non-widget")
 
-        uploaded_file_mgr.delete_file(widget_idA)
+        self.mgr.add_files("session", "widget", [file1])
+        self.assertEqual([file1], self.mgr.get_files("session", "widget"))
 
-        progress_a, data_a = uploaded_file_mgr.get_data(widget_idA)
-        self.assertEqual(progress_a, 0)
-        self.assertEqual(data_a, None)
+        self.mgr.remove_files("session", "widget")
+        self.assertIsNone(self.mgr.get_files("session", "widget"))
 
-        uploaded_file_mgr.delete_all_files()
-        progress_b, data_b = uploaded_file_mgr.get_data(widget_idB)
-        self.assertEqual(progress_b, 0)
-        self.assertEqual(data_b, None)
+    def test_remove_all_files(self):
+        # This should not error.
+        self.mgr.remove_session_files("non-report")
+
+        # Add two files with different session IDs, but the same widget ID.
+        self.mgr.add_files("session1", "widget", [file1])
+        self.mgr.add_files("session2", "widget", [file1])
+
+        event1 = UploadedFileList("session1", "widget", [file1])
+        event2 = UploadedFileList("session2", "widget", [file1])
+
+        self.mgr.remove_session_files("session1")
+        self.assertIsNone(self.mgr.get_files("session1", "widget"))
+        self.assertEqual([file1], self.mgr.get_files("session2", "widget"))
+        self.assertEqual([event1, event2], self.filemgr_events)

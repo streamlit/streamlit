@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,7 +26,7 @@ from streamlit.MediaFileManager import media_file_manager
 LOGGER = get_logger(__name__)
 
 
-def _allow_cross_origin_requests():
+def allow_cross_origin_requests():
     """True if cross-origin requests are allowed.
 
     We only allow cross-origin requests when using the Node server. This is
@@ -63,7 +62,7 @@ class AddSlashHandler(tornado.web.RequestHandler):
 
 class MediaFileHandler(tornado.web.RequestHandler):
     def set_default_headers(self):
-        if _allow_cross_origin_requests():
+        if allow_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
 
     def get(self, filename):
@@ -84,7 +83,7 @@ class MediaFileHandler(tornado.web.RequestHandler):
             "MediaFileManager: Sending %s file %s" % (media.mimetype, requested_hash)
         )
         self.write(media.content)
-        self.set_header("Content-Type:", media.mimetype)
+        self.set_header("Content-Type", media.mimetype)
         self.set_status(200)
 
 
@@ -93,7 +92,7 @@ class _SpecialRequestHandler(tornado.web.RequestHandler):
 
     def set_default_headers(self):
         self.set_header("Cache-Control", "no-cache")
-        if _allow_cross_origin_requests():
+        if allow_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
 
     def options(self):
@@ -175,7 +174,7 @@ class MessageCacheHandler(tornado.web.RequestHandler):
         self._cache = cache
 
     def set_default_headers(self):
-        if _allow_cross_origin_requests():
+        if allow_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
 
     def get(self):

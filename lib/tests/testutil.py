@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -81,6 +80,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
             add_report_ctx(
                 threading.current_thread(),
                 ReportContext(
+                    session_id="test session id",
                     enqueue=self.report_queue.enqueue,
                     widgets=Widgets(),
                     widget_ids_this_run=_WidgetIDSet(),

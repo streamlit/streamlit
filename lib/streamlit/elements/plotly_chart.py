@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,8 +16,6 @@
 
 import json
 import urllib.parse
-
-from six import string_types
 
 from streamlit import caching
 from streamlit import type_util
@@ -60,7 +57,7 @@ def marshall(proto, figure_or_data, use_container_width, sharing, **kwargs):
             figure_or_data, validate_figure=True
         )
 
-    if not isinstance(sharing, string_types) or sharing.lower() not in SHARING_MODES:
+    if not isinstance(sharing, str) or sharing.lower() not in SHARING_MODES:
         raise ValueError("Invalid sharing mode for Plotly chart: %s" % sharing)
 
     proto.use_container_width = use_container_width

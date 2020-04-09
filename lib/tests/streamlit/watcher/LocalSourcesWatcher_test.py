@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,19 +24,11 @@ from streamlit import config
 from streamlit.Report import Report
 from streamlit.watcher import LocalSourcesWatcher
 
-if sys.version_info[0] == 2:
-    import test_data.dummy_module1 as DUMMY_MODULE_1
-    import test_data.dummy_module2 as DUMMY_MODULE_2
-    import test_data.misbehaved_module as MISBEHAVED_MODULE
-
-    import test_data.nested_module_parent as NESTED_MODULE_PARENT
-    import test_data.nested_module_child as NESTED_MODULE_CHILD
-else:
-    import tests.streamlit.watcher.test_data.dummy_module1 as DUMMY_MODULE_1
-    import tests.streamlit.watcher.test_data.dummy_module2 as DUMMY_MODULE_2
-    import tests.streamlit.watcher.test_data.misbehaved_module as MISBEHAVED_MODULE
-    import tests.streamlit.watcher.test_data.nested_module_parent as NESTED_MODULE_PARENT
-    import tests.streamlit.watcher.test_data.nested_module_child as NESTED_MODULE_CHILD
+import tests.streamlit.watcher.test_data.dummy_module1 as DUMMY_MODULE_1
+import tests.streamlit.watcher.test_data.dummy_module2 as DUMMY_MODULE_2
+import tests.streamlit.watcher.test_data.misbehaved_module as MISBEHAVED_MODULE
+import tests.streamlit.watcher.test_data.nested_module_parent as NESTED_MODULE_PARENT
+import tests.streamlit.watcher.test_data.nested_module_child as NESTED_MODULE_CHILD
 
 REPORT_PATH = os.path.join(os.path.dirname(__file__), "test_data/not_a_real_script.py")
 REPORT = Report(REPORT_PATH, "test command line")
@@ -83,7 +74,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         fob.assert_called_once()
         args = fob.call_args.args
         self.assertEqual(args[0], REPORT_PATH)
-        method_type = type(self.test_just_script)
+        method_type = type(self.setUp)
         self.assertEqual(type(args[1]), method_type)
 
         fob.reset_mock()
@@ -96,14 +87,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
     def test_permission_error(self, fob, _):
-        from streamlit import compatibility
-
-        if compatibility.is_running_py3():
-            ErrorType = PermissionError
-        else:
-            ErrorType = OSError
-
-        fob.side_effect = ErrorType("This error should be caught!")
+        fob.side_effect = PermissionError("This error should be caught!")
         lso = LocalSourcesWatcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
 
     @patch("streamlit.watcher.LocalSourcesWatcher.FileWatcher")
@@ -120,7 +104,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         self.assertEqual(fob.call_count, 3)  # dummy modules and __init__.py
 
-        method_type = type(self.test_just_script)
+        method_type = type(self.setUp)
 
         call_args_list = sort_args_list(fob.call_args_list)
 
@@ -151,7 +135,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         self.assertEqual(fob.call_count, 2)  # dummy module and __init__.py
 
-        method_type = type(self.test_just_script)
+        method_type = type(self.setUp)
 
         call_args_list = sort_args_list(fob.call_args_list)
 
@@ -238,14 +222,14 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         config.set_option("server.fileWatcherType", "poll")
         if LocalSourcesWatcher.get_file_watcher_class() is not None:
-            self.assertEquals(
+            self.assertEqual(
                 LocalSourcesWatcher.get_file_watcher_class().__name__,
                 "PollingFileWatcher",
             )
 
         config.set_option("server.fileWatcherType", "watchdog")
         if LocalSourcesWatcher.get_file_watcher_class() is not None:
-            self.assertEquals(
+            self.assertEqual(
                 LocalSourcesWatcher.get_file_watcher_class().__name__,
                 "EventBasedFileWatcher",
             )
@@ -254,12 +238,12 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         self.assertIsNotNone(LocalSourcesWatcher.get_file_watcher_class())
 
         if sys.modules["streamlit.watcher.EventBasedFileWatcher"] is not None:
-            self.assertEquals(
+            self.assertEqual(
                 LocalSourcesWatcher.get_file_watcher_class().__name__,
                 "EventBasedFileWatcher",
             )
         else:
-            self.assertEquals(
+            self.assertEqual(
                 LocalSourcesWatcher.get_file_watcher_class().__name__,
                 "PollingFileWatcher",
             )
