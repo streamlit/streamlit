@@ -372,6 +372,12 @@ export const radioOverrides = {
       borderBottomRightRadius: borderRadius,
     }),
   },
+  RadioMarkInner: {
+    style: ({ $checked }: { $checked: boolean }) => ({
+      height: $checked ? "6px" : "16px",
+      width: $checked ? "6px" : "16px",
+    }),
+  },
   Checkmark: {
     style: ({ $checked }: { $checked: boolean }) => ({
       backgroundColor: $checked ? primary : "",
