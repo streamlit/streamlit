@@ -290,11 +290,11 @@ for i in range(100):
 
 ## Record a screencast
 
-After you've built a Streamlit report, it's easy to share. With screencast, you can record your interactions as you move through a report and add a voice over to explain what you're doing. When you're finished, you can stop the recording, save it and share it.
+After you've built a Streamlit app, you may want to discuss some of it with co-workers over email or Slack, or share it with the world on Twitter. A great way to do that is with Streamlit's built-in screencast recorder. With screencast, you can stop record, save, and share with a few clicks.
 
-To start a screencast, locate the menu in the upper right corner of your report (**☰**), select **Record a screencast**, and follow the prompts. Before the recording starts, you'll see a countdown -- this means it's showtime.
+To start a screencast, locate the menu in the upper right corner of your app (**☰**), select **Record a screencast**, and follow the prompts. Before the recording starts, you'll see a countdown — this means it's showtime.
 
-To stop your screencast, go back to the menu (**☰**) and select **Stop recording** (or hit the **ESC** key). Follow the prompts to preview your recording and save it to disk. That's it, you're ready to share your Streamlit report.
+To stop your screencast, go back to the menu (**☰**) and select **Stop recording** (or hit the **ESC** key). Follow the prompts to preview your recording and save it to disk. That's it, you're ready to share your Streamlit app.
 
 ```eval_rst
 .. image:: ./media/screenshare.gif
