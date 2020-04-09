@@ -430,34 +430,30 @@ class _CodeHasher:
             self.update(h, obj.getvalue())
             return h.digest()
 
-        elif type_util.is_type(obj, "sqlalchemy.engine.base.Engine"):
-            # Hash the entire `url` and `dialect` objects while selectively hashing
-            # attributes of the `pool`, since it contains an unhashable thread lock.
-            # https://docs.sqlalchemy.org/en/13/core/engines.html#sqlalchemy.create_engine
-            pool = obj.pool
-
+        elif any(type_util.get_fqn(x) == "sqlalchemy.pool.base.Pool" for x in type(obj).__bases__):
             # Get connect_args from the closure of the creator function. It includes
             # arguments parsed from the URL and those passed in via `connect_args`.
             # However if a custom `creator` function is passed in then we don't
             # expect to get this data.
-            creator_args = pool._creator.__closure__
+            creator_args = obj._creator.__closure__
             connect_kwargs = creator_args[1].cell_contents if creator_args else []
 
-            return self.to_bytes(
-                [
-                    # TODO remove this comment because the url gets parsed into `connect_kwargs`
-                    # obj.url,
-                    obj.dialect,
-                    pool._creator,
-                    pool._max_overflow,
-                    pool._pre_ping,
-                    pool._recycle,
-                    pool._reset_on_return,
-                    pool._timeout,
-                    pool._use_threadlocal,
-                    connect_kwargs,
-                ]
-            )
+            # Remove thread related objects
+            reduce_data = obj.__reduce__()
+            del reduce_data[2]['_threadconns']
+
+            # From the QueuePool and SingletonThreadPool
+            for attr in ['_overflow_lock', '_pool', '_conn', '_fairy']:
+                reduce_data[2].pop(attr, None)
+
+            return self.to_bytes([reduce_data, connect_kwargs])
+
+        elif type_util.is_type(obj, "sqlalchemy.engine.base.Engine"):
+            # Remove the url because it's overwritten by creator and connect_args
+            reduce_data = obj.__reduce__()
+            del reduce_data[2]['url']
+
+            return self.to_bytes(reduce_data)
 
         elif type_util.is_type(obj, "numpy.ufunc"):
             # For numpy.remainder, this returns remainder.
