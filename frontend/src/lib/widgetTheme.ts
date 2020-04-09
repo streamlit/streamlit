@@ -466,8 +466,9 @@ const themeOverrides = {
   },
 
   colors: {
-    // white: white,
-    // black: 'red',
+    white: white,
+    black: black,
+    primary: primary,
     primaryA: primary,
     tagPrimarySolidBackground: primary,
     borderFocus: primary,
