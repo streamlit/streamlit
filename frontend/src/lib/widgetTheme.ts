@@ -378,6 +378,10 @@ export const radioOverrides = {
       width: $checked ? "6px" : "16px",
     }),
   },
+}
+
+export const checkboxOverrides = {
+  ...radioOverrides,
   Checkmark: {
     style: ({ $checked }: { $checked: boolean }) => ({
       backgroundColor: $checked ? primary : "",
@@ -385,8 +389,6 @@ export const radioOverrides = {
     }),
   },
 }
-
-export const checkboxOverrides = radioOverrides
 
 // Theme primitives. See lightThemePrimitives for what's available. These are
 // used to create a large JSON-style structure with theme values for all
