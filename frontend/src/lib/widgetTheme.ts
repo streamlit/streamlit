@@ -142,8 +142,10 @@ export const fileUploaderOverrides: FileUploaderOverrides<StyleProps> = {
     }) => ({
       borderRadius,
       display: "flex",
-      flexDirection: "column",
+      color: grayDark,
       fontSize: fontSizeSm,
+      lineHeight: lineHeightTight,
+      flexDirection: "column",
       justifyContent: "center",
       paddingTop: "0.25rem",
       paddingBottom: "0.25rem",
@@ -158,8 +160,15 @@ export const fileUploaderOverrides: FileUploaderOverrides<StyleProps> = {
         outline: "none",
         borderColor: primary,
       },
-      lineHeight: lineHeightTight,
     }),
+  },
+  ContentSeparator: {
+    style: {
+      fontSize: fontSizeSm,
+      color: grayDark,
+      lineHeight: lineHeightTight,
+      display: "",
+    },
   },
   ContentMessage: {
     style: {
@@ -181,7 +190,12 @@ export const fileUploaderOverrides: FileUploaderOverrides<StyleProps> = {
             paddingRight: "0.25em",
             paddingTop: 0,
             textTransform: "lowercase",
+            color: primary,
             ":hover": {
+              backgroundColor: "transparent",
+              textDecoration: "underline",
+            },
+            ":active": {
               backgroundColor: "transparent",
               textDecoration: "underline",
             },
