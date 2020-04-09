@@ -2105,7 +2105,7 @@ class DeltaGenerator(object):
             A short label explaining to the user what this input is for.
         value : any
             The hex value of this widget when it first renders. This will be
-            cast to str internally. Attach a hash to the string if it doesn't have it.
+            cast to str internally. Internally prepend a hash to the string if it doesn't have it.
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -2115,7 +2115,7 @@ class DeltaGenerator(object):
         Returns
         -------
         str
-            The current value of the text input widget.
+            The current value of the color picker widget.
 
         Example
         -------

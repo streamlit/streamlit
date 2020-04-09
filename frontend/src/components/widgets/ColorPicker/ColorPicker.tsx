@@ -20,6 +20,7 @@ import { Map as ImmutableMap } from "immutable"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 
 export interface Props {
+  disabled: boolean
   element: ImmutableMap<string, any>
   widgetMgr: WidgetStateManager
   width: number
@@ -70,6 +71,7 @@ class ColorPicker extends React.PureComponent<Props, State> {
           type="color"
           name={label}
           value={value}
+          disabled={this.props.disabled}
           onChange={this.onChange}
         />
       </div>

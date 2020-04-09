@@ -22,6 +22,7 @@ import { ColorPicker as ColorPickerProto } from "autogen/proto"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import ColorPicker, { Props } from "./ColorPicker"
+import { Input } from "reactstrap"
 
 jest.mock("lib/WidgetStateManager")
 
@@ -35,6 +36,7 @@ const getProps = (elementProps: Partial<ColorPickerProto> = {}): Props => ({
     ...elementProps,
   }),
   width: 0,
+  disabled: false,
   widgetMgr: new WidgetStateManager(sendBackMsg),
 })
 
@@ -43,7 +45,11 @@ describe("ColorPicker widget", () => {
   const wrapper = shallow(<ColorPicker {...props} />)
 
   it("renders without crashing", () => {
-    expect(wrapper).toBeDefined()
+    expect(wrapper.find("input").length).toBe(1)
+  })
+
+  it("should render a label", () => {
+    expect(wrapper.find("label").text()).toBe(props.element.get("label"))
   })
 
   it("should set widget value on did mount", () => {
@@ -72,5 +78,9 @@ describe("ColorPicker widget", () => {
     expect(wrapper.find("input").prop("value")).toStrictEqual(
       new String(props.element.get("default"))
     )
+  })
+
+  it("could be disabled", () => {
+    expect(wrapper.find("input").prop("disabled")).toBe(props.disabled)
   })
 })
