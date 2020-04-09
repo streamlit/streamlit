@@ -336,6 +336,16 @@ export const multiSelectOverrides = {
       minHeight: "44px",
     }),
   },
+  ClearIcon: {
+    style: {
+      color: grayDark,
+    },
+  },
+  SearchIcon: {
+    style: {
+      color: grayDark,
+    },
+  },
   MultiValue: {
     props: {
       overrides: {
@@ -452,7 +462,7 @@ const themeOverrides = {
     primaryA: primary,
     tagPrimarySolidBackground: primary,
     borderFocus: primary,
-    contentPrimary: grayDark,
+    contentPrimary: black,
     inputFill: grayLightest,
     inputPlaceholder: grayDark,
     inputBorder: grayLightest,
