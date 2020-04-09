@@ -183,6 +183,7 @@ export const fileUploaderOverrides: FileUploaderOverrides<StyleProps> = {
       overrides: {
         BaseButton: {
           style: {
+            color: primary,
             fontSize: fontSizeSm,
             lineHeight: lineHeightTight,
             paddingBottom: 0,
@@ -190,7 +191,6 @@ export const fileUploaderOverrides: FileUploaderOverrides<StyleProps> = {
             paddingRight: "0.25em",
             paddingTop: 0,
             textTransform: "lowercase",
-            // color: primary,
             ":hover": {
               backgroundColor: "transparent",
               textDecoration: "underline",
