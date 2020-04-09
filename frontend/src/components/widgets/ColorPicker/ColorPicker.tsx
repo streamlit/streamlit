@@ -18,7 +18,25 @@
 import React from "react"
 import { Map as ImmutableMap } from "immutable"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
-import { SketchPicker } from "react-color"
+import {
+  AlphaPicker,
+  BlockPicker,
+  ChromePicker,
+  CirclePicker,
+  CompactPicker,
+  GithubPicker,
+  HuePicker,
+  MaterialPicker,
+  PhotoshopPicker,
+  SketchPicker,
+  SliderPicker,
+  SwatchesPicker,
+  TwitterPicker,
+  CustomPicker,
+  InjectedColorProps,
+  ColorResult,
+  Color,
+} from "react-color"
 
 export interface Props {
   disabled: boolean
@@ -58,6 +76,15 @@ class ColorPicker extends React.PureComponent<Props, State> {
     )
   }
 
+  private onChangeComplete = (color: ColorResult) => {
+    this.setState(
+      {
+        value: color.hex,
+      },
+      () => this.setWidgetValue({ fromUi: true })
+    )
+  }
+
   public render = (): React.ReactNode => {
     const { element, width } = this.props
     const { value } = this.state
@@ -68,7 +95,7 @@ class ColorPicker extends React.PureComponent<Props, State> {
     return (
       <div className="Widget stColorPicker" style={style}>
         <label>{label}</label>
-        <SketchPicker />
+        <SketchPicker color={value} onChangeComplete={this.onChangeComplete} />
         <input
           type="color"
           name={label}
