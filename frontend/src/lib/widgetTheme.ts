@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+import { Theme } from "baseui/theme"
 import { createTheme, lightThemePrimitives } from "baseui"
 import { PLACEMENT as POPOVER_PLACEMENT } from "baseui/popover"
 import { logMessage } from "lib/log"
@@ -137,7 +138,7 @@ export const fileUploaderOverrides: FileUploaderOverrides<StyleProps> = {
       $theme,
       $isDragActive,
     }: {
-      $theme: any
+      $theme: Theme
       $isDragActive: boolean
     }) => ({
       borderRadius,
@@ -247,7 +248,7 @@ export const datePickerOverrides = {
     },
   },
   PrevButton: {
-    style: {
+    style: () => ({
       // Align icon to the center of the button.
       display: "flex",
       alignItems: "center",
@@ -259,7 +260,7 @@ export const datePickerOverrides = {
       ":focus": {
         backgroundColor: "transparent",
       },
-    },
+    }),
   },
   NextButton: {
     style: {
@@ -479,6 +480,8 @@ const themeOverrides = {
     tickFillDisabled: gray,
     tickMarkFill: grayLightest,
     tickFillSelected: primary,
+    calendarHeaderForegroundDisabled: grayLight,
+    calendarDayBackgroundSelectedHighlighted: primary,
   },
 }
 
@@ -495,7 +498,13 @@ export const sidebarWidgetTheme = createTheme(
     mono300: white, // Disabled widget background
     mono400: grayLight, // Slider track
   },
-  themeOverrides
+  {
+    ...themeOverrides,
+    colors: {
+      ...themeOverrides.colors,
+      inputFill: white,
+    },
+  }
 )
 
 // Log the widget theme just for debug purposes.
