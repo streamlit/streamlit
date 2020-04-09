@@ -430,7 +430,10 @@ class _CodeHasher:
             self.update(h, obj.getvalue())
             return h.digest()
 
-        elif any(type_util.get_fqn(x) == "sqlalchemy.pool.base.Pool" for x in type(obj).__bases__):
+        elif any(
+            type_util.get_fqn(x) == "sqlalchemy.pool.base.Pool"
+            for x in type(obj).__bases__
+        ):
             # Get connect_args from the closure of the creator function. It includes
             # arguments parsed from the URL and those passed in via `connect_args`.
             # However if a custom `creator` function is passed in then we don't
@@ -440,10 +443,10 @@ class _CodeHasher:
 
             # Remove thread related objects
             reduce_data = obj.__reduce__()
-            del reduce_data[2]['_threadconns']
+            del reduce_data[2]["_threadconns"]
 
             # From the QueuePool and SingletonThreadPool
-            for attr in ['_overflow_lock', '_pool', '_conn', '_fairy']:
+            for attr in ["_overflow_lock", "_pool", "_conn", "_fairy"]:
                 reduce_data[2].pop(attr, None)
 
             return self.to_bytes([reduce_data, connect_kwargs])
@@ -451,7 +454,7 @@ class _CodeHasher:
         elif type_util.is_type(obj, "sqlalchemy.engine.base.Engine"):
             # Remove the url because it's overwritten by creator and connect_args
             reduce_data = obj.__reduce__()
-            del reduce_data[2]['url']
+            del reduce_data[2]["url"]
 
             return self.to_bytes(reduce_data)
 
