@@ -467,8 +467,10 @@ const themeOverrides = {
     inputPlaceholder: grayDark,
     inputBorder: grayLightest,
     inputFillActive: grayLightest,
-    // tickMarkFillDisabled: grayLighter,
-    // tickFillDisabled: gray,
+    tickMarkFillDisabled: grayLighter,
+    tickFillDisabled: gray,
+    tickMarkFill: grayLightest,
+    tickFillSelected: primary,
   },
 }
 
