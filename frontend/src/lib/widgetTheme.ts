@@ -190,7 +190,7 @@ export const fileUploaderOverrides: FileUploaderOverrides<StyleProps> = {
             paddingRight: "0.25em",
             paddingTop: 0,
             textTransform: "lowercase",
-            color: primary,
+            // color: primary,
             ":hover": {
               backgroundColor: "transparent",
               textDecoration: "underline",
@@ -449,8 +449,8 @@ const themeOverrides = {
   colors: {
     // white: white,
     // black: 'red',
+    primaryA: primary,
     tagPrimarySolidBackground: primary,
-
     borderFocus: primary,
     contentPrimary: grayDark,
     inputFill: grayLightest,
