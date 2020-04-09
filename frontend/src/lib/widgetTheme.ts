@@ -384,10 +384,9 @@ export const radioOverrides = {
 export const checkboxOverrides = {
   ...radioOverrides,
   Checkmark: {
-    style: ({ $checked }: { $checked: boolean }) => ({
-      backgroundColor: $checked ? primary : "",
+    style: {
       borderWidth: "2px",
-    }),
+    },
   },
 }
 
