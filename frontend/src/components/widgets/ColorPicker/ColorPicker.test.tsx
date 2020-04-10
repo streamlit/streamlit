@@ -96,4 +96,8 @@ describe("ColorPicker widget", () => {
       { fromUi: true }
     )
   })
+
+  it("should disable alpha property for now", () => {
+    expect(wrapper.find(ChromePicker).prop("disableAlpha")).toStrictEqual(true)
+  })
 })
