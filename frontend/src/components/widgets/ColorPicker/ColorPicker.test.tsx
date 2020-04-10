@@ -20,7 +20,7 @@ import { shallow } from "enzyme"
 import { fromJS } from "immutable"
 import { ColorPicker as ColorPickerProto } from "autogen/proto"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import { ChromePicker, ColorResult } from "react-color"
+import { ChromePicker } from "react-color"
 
 import ColorPicker, { Props } from "./ColorPicker"
 

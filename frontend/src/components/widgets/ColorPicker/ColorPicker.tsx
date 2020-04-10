@@ -49,7 +49,7 @@ class ColorPicker extends React.PureComponent<Props, State> {
     this.props.widgetMgr.setStringValue(widgetId, this.state.value, source)
   }
 
-  private onChangeComplete = (color: ColorResult) => {
+  private onChangeComplete = (color: ColorResult): void => {
     this.setState(
       {
         value: color.hex,
