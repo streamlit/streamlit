@@ -355,19 +355,19 @@ class HashTest(unittest.TestCase):
 
     def test_sqlite_sqlalchemy_engine(self):
         # File database
-        file_based_engine = create_engine('sqlite:///foo.db')
+        file_based_engine = create_engine("sqlite:///foo.db")
 
         # Memory database
-        in_memory_engine = create_engine('sqlite://')
+        in_memory_engine = create_engine("sqlite://")
 
     def test_mssql_sqlalchemy_engine(self):
-        engine = create_engine('mssql://')
+        engine = create_engine("mssql://")
 
         # mssql: fails
         # try instead, https://docs.sqlalchemy.org/en/13/dialects/mssql.html#pass-through-exact-pyodbc-string
         self.assertEqual(
             gh_ce(auth_url),
-            gh_ce(url, connect_args={"user": "user", password_key: "pass"})
+            gh_ce(url, connect_args={"user": "user", password_key: "pass"}),
         )
 
         # mssql: false positive.. different hashes but same connection
@@ -398,19 +398,23 @@ class HashTest(unittest.TestCase):
         auth_url = "%s://user:pass@localhost/db" % dialect
 
         self.assertEqual(gh_ce(url), gh_ce(url))
-        self.assertEqual(gh_ce(auth_url, creator=connect), gh_ce(auth_url, creator=connect))
+        self.assertEqual(
+            gh_ce(auth_url, creator=connect), gh_ce(auth_url, creator=connect)
+        )
         # Note: Hashing an engine with a creator can only be equal to the hash of another
         # engine with a creator, even if the underlying connection arguments are the same
         self.assertNotEqual(gh_ce(url), gh_ce(url, creator=connect))
 
         self.assertNotEqual(gh_ce(url), gh_ce(auth_url))
-        self.assertNotEqual(gh_ce(url, creator=connect), gh_ce(url, creator=lambda: True))
+        self.assertNotEqual(
+            gh_ce(url, creator=connect), gh_ce(url, creator=lambda: True)
+        )
         self.assertNotEqual(gh_ce(url, encoding="utf-8"), gh_ce(url, encoding="ascii"))
 
         if dialect != "mssql":
             self.assertEqual(
                 gh_ce(auth_url),
-                gh_ce(url, connect_args={"user": "user", password_key: "pass"})
+                gh_ce(url, connect_args={"user": "user", password_key: "pass"}),
             )
 
             self.assertNotEqual(

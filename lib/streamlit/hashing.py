@@ -443,7 +443,11 @@ class _CodeHasher:
 
             # Sort kwargs since hashing dicts is sensitive to key order
             if cargs:
-                cargs[1] = dict(collections.OrderedDict(sorted(cargs[1].items(), key=lambda t: t[0])))
+                cargs[1] = dict(
+                    collections.OrderedDict(
+                        sorted(cargs[1].items(), key=lambda t: t[0])
+                    )
+                )
 
             # Remove thread related objects
             reduce_data = obj.__reduce__()
