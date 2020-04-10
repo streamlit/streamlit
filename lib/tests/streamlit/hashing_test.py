@@ -22,6 +22,7 @@ import tempfile
 import time
 import types
 import unittest
+import urllib
 from io import BytesIO
 from io import StringIO
 
@@ -29,6 +30,7 @@ import altair.vegalite.v3
 import numpy as np
 import pandas as pd
 import pytest
+import sqlalchemy as db
 from mock import patch, MagicMock
 from parameterized import parameterized
 
@@ -356,24 +358,36 @@ class HashTest(unittest.TestCase):
     def test_sqlite_sqlalchemy_engine(self):
         # File database
         file_based_engine = create_engine("sqlite:///foo.db")
-
         # Memory database
         in_memory_engine = create_engine("sqlite://")
+        # TODO
 
     def test_mssql_sqlalchemy_engine(self):
-        engine = create_engine("mssql://")
+        """Specialized tests for mssql since it uses a different way of
+        passing connection arguments to the engine
+        """
 
-        # mssql: fails
-        # try instead, https://docs.sqlalchemy.org/en/13/dialects/mssql.html#pass-through-exact-pyodbc-string
+        url = "mssql:///?odbc_connect"
+        auth_url = "mssql://foo:pass@localhost/db"
+        params_foo = urllib.parse.quote_plus("Server=localhost;Database=db;UID=foo;PWD=pass")
+        params_bar = urllib.parse.quote_plus("Server=localhost;Database=db;UID=bar;PWD=pass")
+
+        # Todo: If `Server` is passed as `SERVER` the hash mismatches but ?the connection works?
         self.assertEqual(
-            gh_ce(auth_url),
-            gh_ce(url, connect_args={"user": "user", password_key: "pass"}),
+            get_hash(db.create_engine(auth_url)),
+            get_hash(db.create_engine("%s=%s" % (url, params_foo))),
         )
 
-        # mssql: false positive.. different hashes but same connection
         self.assertNotEqual(
-            gh_ce(url, connect_args={"user": "foo"}),
-            gh_ce(url, connect_args={"user": "bar"}),
+            get_hash(db.create_engine("%s=%s" % (url, params_foo))),
+            get_hash(db.create_engine("%s=%s" % (url, params_bar))),
+        )
+
+        # Note: False positive because `connect_args` doesn't affect the
+        # connection string but it alters the hash
+        self.assertNotEqual(
+            get_hash(db.create_engine(url, connect_args={"user": "foo"})),
+            get_hash(db.create_engine(url, connect_args={"user": "bar"})),
         )
 
     @parameterized.expand(
@@ -381,12 +395,10 @@ class HashTest(unittest.TestCase):
             ("postgresql", "password"),
             ("mysql", "passwd"),
             ("oracle", "password"),
-            ("mssql", "password"),  # brew install unixodbc
+            ("mssql", "password"),  # Todo: Need in CircleCI? `brew install unixodbc`
         ]
     )
     def test_sqlalchemy_engine(self, dialect, password_key):
-        import sqlalchemy as db
-
         # Helper function to hash an engine
         def gh_ce(*args, **kwargs):
             return get_hash(db.create_engine(*args, **kwargs))
@@ -401,16 +413,18 @@ class HashTest(unittest.TestCase):
         self.assertEqual(
             gh_ce(auth_url, creator=connect), gh_ce(auth_url, creator=connect)
         )
+
         # Note: Hashing an engine with a creator can only be equal to the hash of another
         # engine with a creator, even if the underlying connection arguments are the same
         self.assertNotEqual(gh_ce(url), gh_ce(url, creator=connect))
 
         self.assertNotEqual(gh_ce(url), gh_ce(auth_url))
+        self.assertNotEqual(gh_ce(url, encoding="utf-8"), gh_ce(url, encoding="ascii"))
         self.assertNotEqual(
             gh_ce(url, creator=connect), gh_ce(url, creator=lambda: True)
         )
-        self.assertNotEqual(gh_ce(url, encoding="utf-8"), gh_ce(url, encoding="ascii"))
 
+        # mssql doesn't use `connect_args`
         if dialect != "mssql":
             self.assertEqual(
                 gh_ce(auth_url),
