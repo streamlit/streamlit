@@ -65,7 +65,7 @@ behind Streamlit, then go over how to install and create apps with it.
 
 Follow these steps and to get a sample app running in less than 5 minutes.
 
-1. Make sure that you have [Python 2.7.0 / Python 3.6.0](https://www.python.org/downloads/) or greater installed.
+1. Make sure that you have [Python 3.6](https://www.python.org/downloads/) or greater installed.
 1. Install Streamlit using [PIP](https://pip.pypa.io/en/stable/installing/):
    ```bash
    $ pip install streamlit
