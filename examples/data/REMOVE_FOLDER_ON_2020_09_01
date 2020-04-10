@@ -1,0 +1,8 @@
+These files have since been moved to https://github.com/streamlit/hello-data.
+
+However, since the Github URL for these files used to be referenced inside
+`streamlit hello` up to Streamlit v0.57.2, for backward compatibility we
+should not remove these files from the repo for another 6 months. So that's
+September 2020.
+
+See you then!
