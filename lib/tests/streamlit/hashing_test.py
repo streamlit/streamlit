@@ -369,8 +369,14 @@ class HashTest(unittest.TestCase):
 
         url = "mssql:///?odbc_connect"
         auth_url = "mssql://foo:pass@localhost/db"
-        params_foo = urllib.parse.quote_plus("Server=localhost;Database=db;UID=foo;PWD=pass")
-        params_bar = urllib.parse.quote_plus("Server=localhost;Database=db;UID=bar;PWD=pass")
+
+        # Todo: Ordering of the keys affects the hash
+        params_foo = urllib.parse.quote_plus(
+            "Server=localhost;Database=db;UID=foo;PWD=pass"
+        )
+        params_bar = urllib.parse.quote_plus(
+            "Server=localhost;Database=db;UID=bar;PWD=pass"
+        )
 
         # Todo: If `Server` is passed as `SERVER` the hash mismatches but ?the connection works?
         self.assertEqual(
