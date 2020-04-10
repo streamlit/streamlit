@@ -20,7 +20,7 @@ import { shallow } from "enzyme"
 import { fromJS } from "immutable"
 import { ColorPicker as ColorPickerProto } from "autogen/proto"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import { SketchPicker } from "react-color"
+import { ChromePicker, ColorResult } from "react-color"
 
 import ColorPicker, { Props } from "./ColorPicker"
 
@@ -45,11 +45,12 @@ describe("ColorPicker widget", () => {
   const wrapper = shallow(<ColorPicker {...props} />)
 
   it("renders without crashing", () => {
-    expect(wrapper.find("input").length).toBe(1)
+    expect(wrapper.find(ChromePicker).length).toBe(1)
   })
 
-  it("should render a label", () => {
-    expect(wrapper.find("label").text()).toBe(props.element.get("label"))
+  it("should render a label in the title", () => {
+    const wrappedDiv = wrapper.find("div").first()
+    expect(wrappedDiv.prop("title")).toBe(props.element.get("label"))
   })
 
   it("should set widget value on did mount", () => {
@@ -75,12 +76,8 @@ describe("ColorPicker widget", () => {
   })
 
   it("should render a default color", () => {
-    expect(wrapper.find("input").prop("value")).toStrictEqual(
+    expect(wrapper.find(ChromePicker).prop("color")).toStrictEqual(
       new String(props.element.get("default"))
     )
-  })
-
-  it("could be disabled", () => {
-    expect(wrapper.find("input").prop("disabled")).toBe(props.disabled)
   })
 })

@@ -18,25 +18,7 @@
 import React from "react"
 import { Map as ImmutableMap } from "immutable"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
-import {
-  AlphaPicker,
-  BlockPicker,
-  ChromePicker,
-  CirclePicker,
-  CompactPicker,
-  GithubPicker,
-  HuePicker,
-  MaterialPicker,
-  PhotoshopPicker,
-  SketchPicker,
-  SliderPicker,
-  SwatchesPicker,
-  TwitterPicker,
-  CustomPicker,
-  InjectedColorProps,
-  ColorResult,
-  Color,
-} from "react-color"
+import { ChromePicker, ColorResult } from "react-color"
 
 export interface Props {
   disabled: boolean
@@ -67,15 +49,6 @@ class ColorPicker extends React.PureComponent<Props, State> {
     this.props.widgetMgr.setStringValue(widgetId, this.state.value, source)
   }
 
-  private onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    this.setState(
-      {
-        value: e.target.value,
-      },
-      () => this.setWidgetValue({ fromUi: true })
-    )
-  }
-
   private onChangeComplete = (color: ColorResult) => {
     this.setState(
       {
@@ -93,15 +66,11 @@ class ColorPicker extends React.PureComponent<Props, State> {
     const label = element.get("label")
 
     return (
-      <div className="Widget stColorPicker" style={style}>
-        <label>{label}</label>
-        <SketchPicker color={value} onChangeComplete={this.onChangeComplete} />
-        <input
-          type="color"
-          name={label}
-          value={value}
-          disabled={this.props.disabled}
-          onChange={this.onChange}
+      <div className="Widget stColorPicker" style={style} title={label}>
+        <ChromePicker
+          color={value}
+          onChangeComplete={this.onChangeComplete}
+          disableAlpha={true}
         />
       </div>
     )

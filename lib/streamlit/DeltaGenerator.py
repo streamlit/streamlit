@@ -2130,7 +2130,18 @@ class DeltaGenerator(object):
 
         ui_value = _get_widget_ui_value("color_picker", element, user_key=key)
         current_value = ui_value if ui_value is not None else value
-        return str(current_value)
+
+        match = re.match(r'^#([0-9a-fA-F]{3}){1,2}$', current_value)
+        if match:
+            return str(current_value)
+        else:
+            if ui_value is None:
+                return "#000000"
+            else:
+                raise StreamlitAPIException(
+                    "'%s' is not a valid hex code for colors. Valid ones are like '#00FFAA' or '#000'."
+                    % current_value
+                )
 
     @_with_element
     def text_input(self, element, label, value="", key=None, type="default"):
