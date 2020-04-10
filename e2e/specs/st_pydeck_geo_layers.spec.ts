@@ -32,7 +32,7 @@ describe("st.pydeck_chart geo layers", () => {
       .matchImageSnapshot("h3-hexagon-layer");
   });
 
-  it("checks if the layer has tooltip", () => {
+  it("checks if layers have tooltip", () => {
     cy.get(".element-container .stDeckGlJsonChart")
       .find(".deck-tooltip")
       .should("exist");
