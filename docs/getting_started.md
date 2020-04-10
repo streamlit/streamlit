@@ -23,8 +23,7 @@ Use the links below to jump to a specific section:
 Before you get started, you're going to need a few things:
 
 - Your favorite IDE or text editor
-- [Python 2.7.0 or later / Python 3.6.x or
-  later](https://www.python.org/downloads/)
+- [Python 3.6 or later](https://www.python.org/downloads/)
 - [PIP](https://pip.pypa.io/en/stable/installing/)
 - [Streamlit](index.md) — This one's kind of important, so don't forget to
   install.
