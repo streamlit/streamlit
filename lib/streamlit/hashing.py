@@ -438,8 +438,12 @@ class _CodeHasher:
             # arguments parsed from the URL and those passed in via `connect_args`.
             # However if a custom `creator` function is passed in then we don't
             # expect to get this data.
-            creator_args = obj._creator.__closure__
-            connect_kwargs = creator_args[1].cell_contents if creator_args else []
+            cargs = obj._creator.__closure__
+            cargs = [cargs[0].cell_contents, cargs[1].cell_contents] if cargs else None
+
+            # Sort kwargs since hashing dicts is sensitive to key order
+            if cargs:
+                cargs[1] = dict(collections.OrderedDict(sorted(cargs[1].items(), key=lambda t: t[0])))
 
             # Remove thread related objects
             reduce_data = obj.__reduce__()
@@ -449,7 +453,7 @@ class _CodeHasher:
             for attr in ["_overflow_lock", "_pool", "_conn", "_fairy"]:
                 reduce_data[2].pop(attr, None)
 
-            return self.to_bytes([reduce_data, connect_kwargs])
+            return self.to_bytes([reduce_data, cargs])
 
         elif type_util.is_type(obj, "sqlalchemy.engine.base.Engine"):
             # Remove the url because it's overwritten by creator and connect_args

@@ -30,6 +30,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from mock import patch, MagicMock
+from parameterized import parameterized
 
 try:
     import tensorflow as tf
@@ -352,47 +353,70 @@ class HashTest(unittest.TestCase):
         hash_funcs = {int: lambda x: "hello"}
         self.assertNotEqual(get_hash(1), get_hash(1, hash_funcs=hash_funcs))
 
-    def test_sqlalchemy_engine(self):
+    def test_sqlite_sqlalchemy_engine(self):
+        # File database
+        file_based_engine = create_engine('sqlite:///foo.db')
+
+        # Memory database
+        in_memory_engine = create_engine('sqlite://')
+
+    def test_mssql_sqlalchemy_engine(self):
+        engine = create_engine('mssql://')
+
+        # mssql: fails
+        # try instead, https://docs.sqlalchemy.org/en/13/dialects/mssql.html#pass-through-exact-pyodbc-string
+        self.assertEqual(
+            gh_ce(auth_url),
+            gh_ce(url, connect_args={"user": "user", password_key: "pass"})
+        )
+
+        # mssql: false positive.. different hashes but same connection
+        self.assertNotEqual(
+            gh_ce(url, connect_args={"user": "foo"}),
+            gh_ce(url, connect_args={"user": "bar"}),
+        )
+
+    @parameterized.expand(
+        [
+            ("postgresql", "password"),
+            ("mysql", "passwd"),
+            ("oracle", "password"),
+            ("mssql", "password"),  # brew install unixodbc
+        ]
+    )
+    def test_sqlalchemy_engine(self, dialect, password_key):
         import sqlalchemy as db
+
+        # Helper function to hash an engine
+        def gh_ce(*args, **kwargs):
+            return get_hash(db.create_engine(*args, **kwargs))
 
         def connect():
             pass
 
-        url = "postgresql://localhost/db"
-        auth_url = "postgresql://user:pass@localhost/db"
+        url = "%s://localhost/db" % dialect
+        auth_url = "%s://user:pass@localhost/db" % dialect
 
-        self.assertEqual(
-            get_hash(db.create_engine(url)), get_hash(db.create_engine(url))
-        )
+        self.assertEqual(gh_ce(url), gh_ce(url))
+        self.assertEqual(gh_ce(auth_url, creator=connect), gh_ce(auth_url, creator=connect))
+        # Note: Hashing an engine with a creator can only be equal to the hash of another
+        # engine with a creator, even if the underlying connection arguments are the same
+        self.assertNotEqual(gh_ce(url), gh_ce(url, creator=connect))
 
-        self.assertEqual(
-            get_hash(db.create_engine(auth_url)),
-            get_hash(
-                db.create_engine(url, connect_args={"user": "user", "password": "pass"})
-            ),
-        )
+        self.assertNotEqual(gh_ce(url), gh_ce(auth_url))
+        self.assertNotEqual(gh_ce(url, creator=connect), gh_ce(url, creator=lambda: True))
+        self.assertNotEqual(gh_ce(url, encoding="utf-8"), gh_ce(url, encoding="ascii"))
 
-        self.assertNotEqual(
-            get_hash(db.create_engine(url)), get_hash(db.create_engine(auth_url))
-        )
+        if dialect != "mssql":
+            self.assertEqual(
+                gh_ce(auth_url),
+                gh_ce(url, connect_args={"user": "user", password_key: "pass"})
+            )
 
-        self.assertNotEqual(
-            get_hash(db.create_engine(url, encoding="utf-8")),
-            get_hash(db.create_engine(url, encoding="ascii")),
-        )
-
-        self.assertNotEqual(
-            get_hash(db.create_engine(auth_url)),
-            get_hash(db.create_engine(auth_url, creator=connect)),
-        )
-
-        # TODO test when passing in custom pool obj
-        # TODO test another dialect, ex sqlite
-
-        self.assertNotEqual(
-            get_hash(db.create_engine(auth_url, connect_args={"user": "foo"})),
-            get_hash(db.create_engine(auth_url, connect_args={"user": "bar"})),
-        )
+            self.assertNotEqual(
+                gh_ce(url, connect_args={"user": "foo"}),
+                gh_ce(url, connect_args={"user": "bar"}),
+            )
 
 
 class CodeHashTest(unittest.TestCase):
