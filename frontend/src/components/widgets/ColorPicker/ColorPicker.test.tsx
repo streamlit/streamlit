@@ -80,4 +80,20 @@ describe("ColorPicker widget", () => {
       new String(props.element.get("default"))
     )
   })
+
+  it("should update the widget value when it's changed", () => {
+    const newColor = "#E91E63"
+
+    // @ts-ignore
+    wrapper.find(ChromePicker).prop("onChangeComplete")({
+      hex: newColor,
+    })
+
+    expect(wrapper.find(ChromePicker).prop("color")).toEqual(newColor)
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element.get("id"),
+      "#E91E63",
+      { fromUi: true }
+    )
+  })
 })
