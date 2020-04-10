@@ -138,7 +138,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
       matchedVariables.forEach((match: string) => {
         const variable = match.substring(1, match.length - 1)
 
-        if (variable in info.object) {
+        if (info.object.hasOwnProperty(variable)) {
           body = body.replace(match, info.object[variable])
         }
       })

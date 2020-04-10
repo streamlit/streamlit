@@ -23,15 +23,16 @@ describe("st.pydeck_chart geo layers", () => {
   });
 
   it("displays H3 hexagon layer", () => {
-    // NB: view-default-view needs to be invisible to capture the layer.
+    // NB: #view-default-view needs to be invisible
+    // to be able to capture the layer.
     cy.get("#view-default-view").invoke("css", "display", "none");
 
     cy.get(".element-container .stDeckGlJsonChart")
-      .find("canvas#deckgl-overlay")
+      .find("#deckgl-overlay")
       .matchImageSnapshot("h3-hexagon-layer");
   });
 
-  it("checks if the map has tooltip", () => {
+  it("checks if the layer has tooltip", () => {
     cy.get(".element-container .stDeckGlJsonChart")
       .find(".deck-tooltip")
       .should("exist");
