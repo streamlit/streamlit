@@ -102,10 +102,10 @@ luckily Streamlit allows you to cache the data.
    see anything change. Let’s tweak your file a little bit more so that you can
    see the power of caching.
 
-3. Replace the line `st.write('Done!')` with this:
+3. Replace the line `data_load_state.text('Loading data...done!')` with this:
 
    ```python
-   st.write('Done! (using st.cache)')
+   data_load_state.text("Done! (using st.cache)")
    ```
 
 4. Now save. See how the line you added appeared immediately? If you take a
@@ -330,7 +330,7 @@ def load_data(nrows):
 
 data_load_state = st.text('Loading data...')
 data = load_data(10000)
-data_load_state.text('Loading data... done!')
+data_load_state.text("Done! (using st.cache)")
 
 if st.checkbox('Show raw data'):
     st.subheader('Raw data')

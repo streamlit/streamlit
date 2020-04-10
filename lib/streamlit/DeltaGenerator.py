@@ -1142,7 +1142,7 @@ class DeltaGenerator(object):
         >>> import graphviz as graphviz
         >>>
         >>> # Create a graphlib graph object
-        >>> graph = graphviz.DiGraph()
+        >>> graph = graphviz.Digraph()
         >>> graph.edge('run', 'intr')
         >>> graph.edge('intr', 'runbl')
         >>> graph.edge('runbl', 'run')
