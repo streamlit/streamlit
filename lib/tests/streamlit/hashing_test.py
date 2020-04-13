@@ -449,7 +449,7 @@ class HashTest(unittest.TestCase):
             ("postgresql", "password"),
             ("mysql", "passwd"),
             ("oracle", "password"),
-            ("mssql", "password"),  # Todo: Need in CircleCI? `brew install unixodbc`
+            ("mssql", "password"),
         ]
     )
     def test_sqlalchemy_engine(self, dialect, password_key):

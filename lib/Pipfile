@@ -30,10 +30,7 @@ tensorflow = {version = ">=2.0.0", markers = "python_version < '3.8'"}
 seaborn = "*"
 sqlalchemy = "*"
 prometheus-client = "*"
-
-pyodbc = "*"  # ModuleNotFoundError: No module named 'pyodbc'
-# https://docs.microsoft.com/en-us/sql/connect/odbc/linux-mac/installing-the-microsoft-odbc-driver-for-sql-server?view=sql-server-2017
-
+pyodbc = "*"
 opencv-python = "*"
 requests-mock = "*"
 mypy = "==0.761"
