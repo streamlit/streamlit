@@ -386,7 +386,8 @@ class HashTest(unittest.TestCase):
         )
 
         self.assertNotEqual(
-            hash_engine(foo, creator=lambda: False), hash_engine(foo, creator=lambda: True)
+            hash_engine(foo, creator=lambda: False),
+            hash_engine(foo, creator=lambda: True),
         )
 
     def test_mssql_sqlalchemy_engine(self):
@@ -411,8 +412,7 @@ class HashTest(unittest.TestCase):
         )
 
         self.assertEqual(
-            hash_engine(auth_url),
-            hash_engine("%s=%s" % (url, params_foo)),
+            hash_engine(auth_url), hash_engine("%s=%s" % (url, params_foo)),
         )
         self.assertNotEqual(
             hash_engine("%s=%s" % (url, params_foo)),
@@ -456,7 +456,8 @@ class HashTest(unittest.TestCase):
 
         self.assertEqual(hash_engine(url), hash_engine(url))
         self.assertEqual(
-            hash_engine(auth_url, creator=connect), hash_engine(auth_url, creator=connect)
+            hash_engine(auth_url, creator=connect),
+            hash_engine(auth_url, creator=connect),
         )
 
         # Note: Hashing an engine with a creator can only be equal to the hash of another
@@ -464,7 +465,9 @@ class HashTest(unittest.TestCase):
         self.assertNotEqual(hash_engine(url), hash_engine(url, creator=connect))
 
         self.assertNotEqual(hash_engine(url), hash_engine(auth_url))
-        self.assertNotEqual(hash_engine(url, encoding="utf-8"), hash_engine(url, encoding="ascii"))
+        self.assertNotEqual(
+            hash_engine(url, encoding="utf-8"), hash_engine(url, encoding="ascii")
+        )
         self.assertNotEqual(
             hash_engine(url, creator=connect), hash_engine(url, creator=lambda: True)
         )
