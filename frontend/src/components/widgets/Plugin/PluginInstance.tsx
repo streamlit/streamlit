@@ -218,7 +218,18 @@ export class PluginInstance extends React.PureComponent<Props, State> {
       this.pendingRenderArgs = renderArgs
     }
 
-    // Render the iframe
+    // Render the iframe. We set scrolling="no", because we don't want
+    // scrollbars to appear; instead, we want plugins to properly auto-size
+    // themselves.
+    //
+    // Without this, there is a potential for a scrollbar to
+    // appear for a brief moment after an iframe's content gets bigger,
+    // and before it sends the "setFrameHeight" message back to Streamlit.
+    //
+    // We may ultimately want to give plugins control over the "scrolling"
+    // property.
+    //
+    // TODO: make sure horizontal scrolling still works!
     return (
       <iframe
         ref={this.iframeRef}
@@ -227,6 +238,7 @@ export class PluginInstance extends React.PureComponent<Props, State> {
         height={this.state.frameHeight}
         allowFullScreen={false}
         seamless={true}
+        scrolling="no"
       />
     )
   }
