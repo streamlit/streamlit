@@ -47,13 +47,9 @@ describe("st.selectbox", () => {
   });
 
   it("handles no options", () => {
-    cy.get(".stSelectbox")
+    cy.get(".stSelectbox div[aria-selected]")
       .eq(2)
-      .then(el => {
-        cy.wrap(el)
-          .find("[aria-selected]")
-          .should("have.text", "No options to select.");
-      });
+      .should("have.text", "No options to select.");
 
     cy.get(".stSelectbox input")
       .eq(2)
