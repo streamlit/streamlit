@@ -1,11 +1,11 @@
 import React from "react";
 import ReactDOM from "react-dom";
-import RadioButton from "./examples/RadioButton";
+import Resizer from "./examples/Resizer";
 import "./index.css";
 
 ReactDOM.render(
   <React.StrictMode>
-    <RadioButton />
+    <Resizer />
   </React.StrictMode>,
   document.getElementById("root")
 );
