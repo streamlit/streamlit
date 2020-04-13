@@ -64,7 +64,9 @@ def get_hash(f, context=None, hash_funcs=None):
 
 # Helper function to hash an engine
 def hash_engine(*args, **kwargs):
-    return get_hash(db.create_engine(*args, **kwargs))
+    # Don't have support for `_pytest.capture.EncodedFile`
+    hash_func = {'_pytest.capture.EncodedFile': None}
+    return get_hash(db.create_engine(*args, **kwargs), hash_funcs=hash_func)
 
 
 class HashTest(unittest.TestCase):

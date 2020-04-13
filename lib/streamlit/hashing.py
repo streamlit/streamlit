@@ -464,10 +464,6 @@ class _CodeHasher:
             reduce_data = obj.__reduce__()
             del reduce_data[2]["url"]
 
-            # Remove the logger because sometimes it contains a
-            # `_pytest.capture.EncodedFile` which we don't handle
-            del reduce_data[2]["logger"]
-
             return self.to_bytes(reduce_data)
 
         elif type_util.is_type(obj, "numpy.ufunc"):
