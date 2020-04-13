@@ -503,6 +503,7 @@ export const sidebarWidgetTheme = createTheme(
     colors: {
       ...themeOverrides.colors,
       inputFill: white,
+      inputFillActive: white,
     },
   }
 )
