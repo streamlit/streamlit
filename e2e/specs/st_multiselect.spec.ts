@@ -128,8 +128,9 @@ describe("st.multiselect", () => {
 
       describe("when the user deselects the first option", () => {
         beforeEach(() => {
-          cy.get('[role="button"]')
-            .eq(1) // this is the 'close button' element for 'Male'
+          // this is the 'close button' element for 'Male'
+          cy.get('.stMultiSelect span[data-baseweb="tag"] span:last-child')
+            .eq(0)
             .click();
         });
         it("outputs the correct value", () => {
@@ -144,9 +145,11 @@ describe("st.multiselect", () => {
 
       describe("when the user click the clear button", () => {
         beforeEach(() => {
-          cy.get('[role="button"]')
-            .eq(4) // this is the clear button element
-            .click();
+          cy.get(
+            '.stMultiSelect [role="button"][aria-label="Clear all"]'
+          ).each(el => {
+            return cy.wrap(el).click();
+          });
         });
         it("outputs the correct value", () => {
           cy.get(".stText")
