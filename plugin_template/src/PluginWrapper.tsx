@@ -75,6 +75,10 @@ function StreamlitPlugin(
       this.sendBackMsg(PluginBackMsgType.PLUGIN_READY);
     };
 
+    public componentWillUnmount = (): void => {
+      window.removeEventListener("message", this.onMessageEvent);
+    };
+
     /**
      * Called by the plugin when its height has changed. This should be called
      * every time the plugin changes its DOM - that is, in componentDidMount
