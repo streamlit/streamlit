@@ -41,15 +41,19 @@ describe("st.selectbox", () => {
   });
 
   it("formats display values", () => {
-    cy.get(".stSelectbox span")
+    cy.get(".stSelectbox div[aria-selected]")
       .eq(1)
       .should("have.text", "Male");
   });
 
   it("handles no options", () => {
-    cy.get(".stSelectbox span")
+    cy.get(".stSelectbox")
       .eq(2)
-      .should("have.text", "No options to select.");
+      .then(el => {
+        cy.wrap(el)
+          .find("[aria-selected]")
+          .should("have.text", "No options to select.");
+      });
 
     cy.get(".stSelectbox input")
       .eq(2)
