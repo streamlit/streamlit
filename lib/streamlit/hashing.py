@@ -449,12 +449,10 @@ class _CodeHasher:
                     )
                 )
 
-            # Remove thread related objects
             reduce_data = obj.__reduce__()
-            del reduce_data[2]["_threadconns"]
 
-            # From the QueuePool and SingletonThreadPool
-            for attr in ["_overflow_lock", "_pool", "_conn", "_fairy"]:
+            # Remove thread related objects
+            for attr in ["_overflow_lock", "_pool", "_conn", "_fairy", "_threadconns", "logger"]:
                 reduce_data[2].pop(attr, None)
 
             return self.to_bytes([reduce_data, cargs])
@@ -462,7 +460,8 @@ class _CodeHasher:
         elif type_util.is_type(obj, "sqlalchemy.engine.base.Engine"):
             # Remove the url because it's overwritten by creator and connect_args
             reduce_data = obj.__reduce__()
-            del reduce_data[2]["url"]
+            reduce_data[2].pop("url", None)
+            reduce_data[2].pop("logger", None)
 
             return self.to_bytes(reduce_data)
 
