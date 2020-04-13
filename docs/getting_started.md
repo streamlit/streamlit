@@ -23,8 +23,7 @@ Use the links below to jump to a specific section:
 Before you get started, you're going to need a few things:
 
 - Your favorite IDE or text editor
-- [Python 2.7.0 or later / Python 3.6.x or
-  later](https://www.python.org/downloads/)
+- [Python 3.6 or later](https://www.python.org/downloads/)
 - [PIP](https://pip.pypa.io/en/stable/installing/)
 - [Streamlit](index.md) — This one's kind of important, so don't forget to
   install.
@@ -286,6 +285,18 @@ for i in range(100):
   time.sleep(0.1)
 
 '...and now we\'re done!'
+```
+
+## Record a screencast
+
+After you've built a Streamlit app, you may want to discuss some of it with co-workers over email or Slack, or share it with the world on Twitter. A great way to do that is with Streamlit's built-in screencast recorder. With it, you can record, narrate, stop, save, and share with a few clicks.
+
+To start a screencast, locate the menu in the upper right corner of your app (**☰**), select **Record a screencast**, and follow the prompts. Before the recording starts, you'll see a countdown — this means it's showtime.
+
+To stop your screencast, go back to the menu (**☰**) and select **Stop recording** (or hit the **ESC** key). Follow the prompts to preview your recording and save it to disk. That's it, you're ready to share your Streamlit app.
+
+```eval_rst
+.. image:: ./media/screenshare.gif
 ```
 
 ## Get help
