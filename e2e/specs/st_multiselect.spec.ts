@@ -145,11 +145,9 @@ describe("st.multiselect", () => {
 
       describe("when the user click the clear button", () => {
         beforeEach(() => {
-          cy.get(
-            '.stMultiSelect [role="button"][aria-label="Clear all"]'
-          ).each(el => {
-            return cy.wrap(el).click();
-          });
+          cy.get('.stMultiSelect [role="button"][aria-label="Clear all"]')
+            .eq(0)
+            .click();
         });
         it("outputs the correct value", () => {
           cy.get(".stText")
