@@ -356,12 +356,39 @@ class HashTest(unittest.TestCase):
         self.assertNotEqual(get_hash(1), get_hash(1, hash_funcs=hash_funcs))
 
     def test_sqlite_sqlalchemy_engine(self):
-        # File database
-        file_based_engine = create_engine("sqlite:///foo.db")
-        # Memory database
-        in_memory_engine = create_engine("sqlite://")
-        # TODO
+        """Separate tests for sqlite since it uses a file based
+        and in memory database and has no auth
+        """
 
+        mem = "sqlite://"
+        foo = "sqlite:///foo.db"
+
+        # Helper function to hash an engine
+        def gh_ce(*args, **kwargs):
+            return get_hash(db.create_engine(*args, **kwargs))
+
+        self.assertEqual(gh_ce(mem), gh_ce(mem))
+        self.assertEqual(gh_ce(foo), gh_ce(foo))
+        self.assertNotEqual(gh_ce(foo), gh_ce("sqlite:///bar.db"))
+        self.assertNotEqual(gh_ce(foo), gh_ce(mem))
+
+        # Need to use absolute paths otherwise one path resolves
+        # relatively and the other absolute
+        self.assertEqual(
+            gh_ce("sqlite:////foo.db", connect_args={'uri': True}),
+            gh_ce("sqlite:////foo.db?uri=true")
+        )
+
+        self.assertNotEqual(
+            gh_ce(foo, connect_args={'uri': True}),
+            gh_ce(foo, connect_args={'uri': False})
+        )
+
+        self.assertNotEqual(
+            gh_ce(foo, creator=lambda: False), gh_ce(foo, creator=lambda: True)
+        )
+
+    # https://docs.sqlalchemy.org/en/13/dialects/mssql.html#pass-through-exact-pyodbc-string
     def test_mssql_sqlalchemy_engine(self):
         """Specialized tests for mssql since it uses a different way of
         passing connection arguments to the engine
