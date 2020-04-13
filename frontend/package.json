@@ -67,7 +67,7 @@
     "react-map-gl": "^5.2.1",
     "react-markdown": "^4.2.2",
     "react-plotly.js": "^2.4.0",
-    "react-scripts": "3.4.1",
+    "react-scripts": "^3.0.1",
     "react-test-renderer": "^16.10.2",
     "react-transition-group": "^4.3.0",
     "react-virtualized": "^9.21.0",
