@@ -26,6 +26,14 @@ class HelloReact extends React.PureComponent<StComponentProps> {
       </div>
     );
   };
+
+  public componentDidUpdate = (): void => {
+    this.props.updateFrameHeight();
+  };
+
+  public componentDidMount = (): void => {
+    this.props.updateFrameHeight();
+  };
 }
 
 export default StreamlitPlugin(HelloReact);

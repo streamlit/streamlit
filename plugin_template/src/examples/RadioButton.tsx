@@ -93,6 +93,14 @@ class RadioButton extends React.PureComponent<StComponentProps, State> {
     );
   };
 
+  public componentDidUpdate = (): void => {
+    this.props.updateFrameHeight();
+  };
+
+  public componentDidMount = (): void => {
+    this.props.updateFrameHeight();
+  };
+
   private onSelectionChanged = (
     e: React.ChangeEvent<HTMLInputElement>
   ): void => {

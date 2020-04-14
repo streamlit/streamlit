@@ -32,6 +32,10 @@ enum PluginBackMsgType {
   // will then re-run the app.
   // Data: { value: any }
   SET_WIDGET_VALUE = "setWidgetValue",
+
+  // The plugin has a new height for its iframe.
+  // Data: { height: number }
+  SET_FRAME_HEIGHT = "setFrameHeight",
 }
 
 /** Messages from Streamlit -> Plugin */
@@ -41,7 +45,7 @@ enum PluginForwardMsgType {
   RENDER = "render",
 }
 
-export interface Props {
+interface Props {
   registry: PluginRegistry
   widgetMgr: WidgetStateManager
 
@@ -50,9 +54,13 @@ export interface Props {
   width: number
 }
 
+interface State {
+  frameHeight?: number
+}
+
 // TODO: catch errors and display them in render()
 
-export class PluginInstance extends React.PureComponent<Props> {
+export class PluginInstance extends React.PureComponent<Props, State> {
   private iframeRef = createRef<HTMLIFrameElement>()
   // True when we've received the PLUGIN_READY message
   private pluginReady = false
@@ -60,6 +68,9 @@ export class PluginInstance extends React.PureComponent<Props> {
 
   public constructor(props: Props) {
     super(props)
+
+    this.state = { frameHeight: undefined }
+
     // TODO: Do *not* listen for messages in each PluginInstance.
     // Instead, a central plugin message processor should dispatch
     // messages to PluginInstances as appropriate.
@@ -118,6 +129,14 @@ export class PluginInstance extends React.PureComponent<Props> {
         }
         break
 
+      case PluginBackMsgType.SET_FRAME_HEIGHT:
+        if (!this.pluginReady) {
+          logWarning(`Got ${type} before ${PluginBackMsgType.PLUGIN_READY}!`)
+        } else {
+          this.handleSetFrameHeight(data)
+        }
+        break
+
       default:
         logWarning(`Unrecognized PluginBackMsg: ${type}`)
     }
@@ -128,7 +147,9 @@ export class PluginInstance extends React.PureComponent<Props> {
     const value = tryGetValue(data, "value")
     if (value === undefined) {
       logWarning(`handleSetWidgetValue: missing 'value' prop`)
+      return
     }
+
     const widgetId: string = this.props.element.get("id")
 
     // TODO: handle debouncing, or expose some debouncing primitives?
@@ -143,6 +164,17 @@ export class PluginInstance extends React.PureComponent<Props> {
     } else {
       logWarning(`PluginInstance: unsupported value type! ${value}`)
     }
+  }
+
+  /** The component has a new height. We'll resize the iframe. */
+  private handleSetFrameHeight = (data: any): void => {
+    const height: number | undefined = tryGetValue(data, "height")
+    if (height === undefined) {
+      logWarning(`handleSetFrameHeight: missing 'height' prop`)
+      return
+    }
+
+    this.setState({ frameHeight: height })
   }
 
   private sendForwardMsg = (type: PluginForwardMsgType, data: any): void => {
@@ -186,13 +218,27 @@ export class PluginInstance extends React.PureComponent<Props> {
       this.pendingRenderArgs = renderArgs
     }
 
-    // Render the iframe
+    // Render the iframe. We set scrolling="no", because we don't want
+    // scrollbars to appear; instead, we want plugins to properly auto-size
+    // themselves.
+    //
+    // Without this, there is a potential for a scrollbar to
+    // appear for a brief moment after an iframe's content gets bigger,
+    // and before it sends the "setFrameHeight" message back to Streamlit.
+    //
+    // We may ultimately want to give plugins control over the "scrolling"
+    // property.
+    //
+    // TODO: make sure horizontal scrolling still works!
     return (
       <iframe
         ref={this.iframeRef}
         src={src}
         width={this.props.width}
+        height={this.state.frameHeight}
         allowFullScreen={false}
+        seamless={true}
+        scrolling="no"
       />
     )
   }
@@ -203,6 +249,6 @@ function tryGetValue(
   obj: any,
   name: string,
   defaultValue: any = undefined
-): any | undefined {
+): any {
   return obj.hasOwnProperty(name) ? obj[name] : defaultValue
 }

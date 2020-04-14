@@ -1,5 +1,6 @@
 import hoistNonReactStatics from "hoist-non-react-statics";
 import React, { ComponentType, ReactNode } from "react";
+import { StComponentProps } from "./StComponentAPI";
 
 // TODO: Figure this out
 const TARGET_ORIGIN = "*";
@@ -14,7 +15,11 @@ enum PluginBackMsgType {
   // The plugin has a new widget value. Send it back to Streamlit, which
   // will then re-run the app.
   // Data: { value: any }
-  SET_WIDGET_VALUE = "setWidgetValue"
+  SET_WIDGET_VALUE = "setWidgetValue",
+
+  // The plugin has a new height for its iframe.
+  // Data: { height: number }
+  SET_FRAME_HEIGHT = "setFrameHeight"
 }
 
 /** Messages from Streamlit -> Plugin */
@@ -34,8 +39,8 @@ interface State {
 }
 
 function StreamlitPlugin(
-  WrappedComponent: ComponentType<any>
-): ComponentType<any> {
+  WrappedComponent: ComponentType<StComponentProps>
+): ComponentType {
   /**
    * Plugin wrapper. Bootstraps the communication interface between
    * Streamlit and the plugin.
@@ -43,6 +48,9 @@ function StreamlitPlugin(
    * Plugin writers *do not* edit this class.
    */
   class PluginWrapper extends React.PureComponent<Props, State> {
+    /** The most recent frameHeight we've sent to Streamlit. */
+    private frameHeight?: number;
+
     public constructor(props: Props) {
       super(props);
 
@@ -71,6 +79,30 @@ function StreamlitPlugin(
       window.removeEventListener("message", this.onMessageEvent);
     };
 
+    /**
+     * Called by the plugin when its height has changed. This should be called
+     * every time the plugin changes its DOM - that is, in componentDidMount
+     * and componentDidUpdate.
+     */
+    private updateFrameHeight = (newHeight?: number): void => {
+      if (newHeight === undefined) {
+        // newHeight is optional. If undefined, it defaults to scrollHeight,
+        // which is the entire height of the element minus its border,
+        // scrollbar, and margin.
+        newHeight = document.body.scrollHeight;
+      }
+
+      if (this.frameHeight === newHeight) {
+        // Don't send a message if our height hasn't changed.
+        return;
+      }
+
+      this.frameHeight = newHeight;
+      this.sendBackMsg(PluginBackMsgType.SET_FRAME_HEIGHT, {
+        height: this.frameHeight
+      });
+    };
+
     /** Receive a ForwardMsg from the Streamlit app */
     private onMessageEvent = (event: MessageEvent): void => {
       // We only listen for Streamlit messages.
@@ -86,6 +118,7 @@ function StreamlitPlugin(
 
         default:
           console.warn(`Unrecognized Streamlit message '${type}`);
+          break;
       }
     };
 
@@ -151,6 +184,7 @@ function StreamlitPlugin(
           setWidgetValue={(value: any) =>
             this.sendBackMsg(PluginBackMsgType.SET_WIDGET_VALUE, { value })
           }
+          updateFrameHeight={this.updateFrameHeight}
         />
       );
     };
