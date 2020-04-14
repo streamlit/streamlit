@@ -240,12 +240,11 @@ export const datePickerOverrides = {
     },
   },
   Day: {
-    style: {
-      // The hover effect is very slow for this widget. Let's just turn it off.
-      ":hover": {
-        backgroundColor: "transparent",
+    style: ({ $selected }: { $selected: boolean }) => ({
+      "::after": {
+        borderColor: $selected ? "transparent" : "",
       },
-    },
+    }),
   },
   PrevButton: {
     style: () => ({
@@ -481,7 +480,10 @@ const themeOverrides = {
     tickMarkFill: grayLightest,
     tickFillSelected: primary,
     calendarHeaderForegroundDisabled: grayLight,
+    calendarDayBackgroundSelected: primary,
     calendarDayBackgroundSelectedHighlighted: primary,
+    calendarDayForegroundSelected: white,
+    calendarDayForegroundSelectedHighlighted: white,
   },
 }
 
