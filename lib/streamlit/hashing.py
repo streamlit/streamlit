@@ -452,7 +452,14 @@ class _CodeHasher:
             reduce_data = obj.__reduce__()
 
             # Remove thread related objects
-            for attr in ["_overflow_lock", "_pool", "_conn", "_fairy", "_threadconns", "logger"]:
+            for attr in [
+                "_overflow_lock",
+                "_pool",
+                "_conn",
+                "_fairy",
+                "_threadconns",
+                "logger",
+            ]:
                 reduce_data[2].pop(attr, None)
 
             return self.to_bytes([reduce_data, cargs])
