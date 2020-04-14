@@ -39,6 +39,8 @@ def marshall(coordinates, new_element_proto, fig=None, clear_figure=True, **kwar
     # You can call .savefig() on a Figure object or directly on the pyplot
     # module, in which case you're doing it to the latest Figure.
     if not fig:
+        if clear_figure is None:
+            clear_figure = True
         fig = plt
 
     # Normally, dpi is set to 'figure', and the figure's dpi is set to 100.

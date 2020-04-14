@@ -497,22 +497,22 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         # Assert that plt.clf() is called by st.pyplot() only if
         # clear_fig is True
-        for clear_figure in [True, False]:
+        for clear_figure in [True, False, None]:
             plt.hist(np.random.normal(1, 1, size=100), bins=20)
             with patch.object(plt, "clf", wraps=plt.clf, autospec=True) as plt_clf:
                 st.pyplot(clear_figure=clear_figure)
 
-                if clear_figure:
-                    plt_clf.assert_called_once()
-                else:
+                if clear_figure is False:
                     plt_clf.assert_not_called()
+                else:
+                    plt_clf.assert_called_once()
 
             # Manually clear for the next loop iteration
             plt.clf()
 
         # Assert that fig.clf() is called by st.pyplot(fig) only if
         # clear_figure is True
-        for clear_figure in [True, False]:
+        for clear_figure in [True, False, None]:
             fig = plt.figure()
             ax1 = fig.add_subplot(111)
             ax1.hist(np.random.normal(1, 1, size=100), bins=20)

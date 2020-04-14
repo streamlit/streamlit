@@ -1343,7 +1343,7 @@ class DeltaGenerator(object):
         )
 
     @_with_element
-    def pyplot(self, element, fig=None, clear_figure=True, **kwargs):
+    def pyplot(self, element, fig=None, clear_figure=None, **kwargs):
         """Display a matplotlib.pyplot figure.
 
         Parameters
@@ -1353,9 +1353,12 @@ class DeltaGenerator(object):
             the usual case, this function will render the global plot.
 
         clear_figure : bool
-            If True or unspecified, the figure will be cleared after being
-            rendered. (This simulates Jupyter's approach to matplotlib
-            rendering.)
+            If True, the figure will be cleared after being rendered. 
+            If False, the figure will not be cleared after being rendered.
+            If left unspecified, we pick a default based on the value of `fig`.
+            * If `fig` is set, defaults to `False`.
+            * If `fig` is not set, defaults to `True`. This simulates Jupyter's
+              approach to matplotlib rendering.
 
         **kwargs : any
             Arguments to pass to Matplotlib's savefig function.
