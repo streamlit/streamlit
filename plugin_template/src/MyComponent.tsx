@@ -1,6 +1,10 @@
 import React from "react";
 import { ComponentProps, StreamlitComponent } from "./StreamlitComponent";
 
+// We import bootstrap.css to get some simple default styling for our
+// text and button. You can remove or replace this.
+import "./bootstrap.css";
+
 interface State {
   numClicks: number;
 }
@@ -16,7 +20,7 @@ class MyComponent extends React.PureComponent<ComponentProps, State> {
     // via `this.props.args`. Here, we access the "name" arg.
     let name = this.props.args["name"];
     if (name === undefined) {
-      name = "Unspecified!";
+      name = "Unspecified";
     }
 
     // Create and return a div with some text in it.
@@ -24,15 +28,14 @@ class MyComponent extends React.PureComponent<ComponentProps, State> {
     // variable, and send its new value back to Streamlit, where it'll
     // be available to the Python program.
     return (
-      <div onClick={this.onClicked}>
-        Hello, {name}. You've clicked {this.state.numClicks} times!
+      <div>
+        <div>Hello, {name}!</div>
+        <button onClick={this.onClicked}>Click Me!</button>
       </div>
     );
   };
 
-  /**
-   * Click handler for our <div>.
-   */
+  /** Click handler for our "Click Me!" button. */
   private onClicked = (): void => {
     // Increment state.numClicks, and pass the new value back to
     // Streamlit via `this.props.setWidgetValue`.
