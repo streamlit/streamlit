@@ -2097,7 +2097,7 @@ class DeltaGenerator(object):
         return file_datas if accept_multiple_files else file_datas[0]
 
     @_with_element
-    def color_picker(self, element, label, value="#000000", key=None):
+    def color_picker(self, element, label, value=None, key=None):
         """Display a color picker widget.
 
         Parameters
@@ -2106,8 +2106,7 @@ class DeltaGenerator(object):
             A short label explaining to the user what this input is for.
         value : any
             The hex value of this widget when it first renders. This will be
-            cast to str internally. Internally prepend a hash to the string
-            if the hash symbol is absent.
+            cast to str internally.
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -2125,23 +2124,34 @@ class DeltaGenerator(object):
         >>> st.write('The current color is', color)
 
         """
+        # set value default
+        if value is None:
+            value = "#000000"
+
+        # make sure the value is a string
+        if not isinstance(value, str):
+            raise StreamlitAPIException(
+                # "The type of the value should be str."
+                "Color Picker Value has invalid type: %s. Expects a hex string like '#00FFAA' or '#000'." % type(value).__name__
+            )
+
+        # validate the value and expects a hex string
+        match = re.match(r"^#(?:[0-9a-fA-F]{3}){1,2}$", value)
+
+        if not match:
+            raise StreamlitAPIException(
+                "'%s' is not a valid hex code for colors. Valid ones are like '#00FFAA' or '#000'."
+                % value
+            )
+
+
         element.color_picker.label = label
         element.color_picker.default = str(value)
 
         ui_value = _get_widget_ui_value("color_picker", element, user_key=key)
         current_value = ui_value if ui_value is not None else value
 
-        match = re.match(r"^#(?:[0-9a-fA-F]{3}){1,2}$", current_value)
-        if match:
-            return str(current_value)
-        else:
-            if ui_value is None:
-                return element.color_picker.default
-            else:
-                raise StreamlitAPIException(
-                    "'%s' is not a valid hex code for colors. Valid ones are like '#00FFAA' or '#000'."
-                    % current_value
-                )
+        return str(current_value)
 
     @_with_element
     def text_input(self, element, label, value="", key=None, type="default"):

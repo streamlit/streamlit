@@ -50,7 +50,7 @@ describe("ColorPicker widget", () => {
 
   it("should render a label in the title", () => {
     const wrappedDiv = wrapper.find("div").first()
-    expect(wrappedDiv.prop("title")).toBe(props.element.get("label"))
+    expect(wrappedDiv.find("label").text()).toBe(props.element.get("label"))
   })
 
   it("should set widget value on did mount", () => {

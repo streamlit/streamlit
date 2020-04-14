@@ -1,0 +1,27 @@
+# Copyright 2018-2020 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import streamlit as st
+
+c1 = st.color_picker("Default Color")
+st.write("Color 1", c1)
+
+c2 = st.color_picker("Hex Shorthand", "#333")
+st.write("Color 2", c2)
+
+c3 = st.color_picker("Full Hex", "#333333")
+st.write("Color 3", c3)
+
+c4 = st.color_picker("Invalid string", "1234567")
+st.write("Color 4", c4)

@@ -66,7 +66,8 @@ class ColorPicker extends React.PureComponent<Props, State> {
     const label = element.get("label")
 
     return (
-      <div className="Widget stColorPicker" style={style} title={label}>
+      <div className="Widget stColorPicker" style={style}>
+        <label>{label}</label>
         <ChromePicker
           color={value}
           onChangeComplete={this.onChangeComplete}
