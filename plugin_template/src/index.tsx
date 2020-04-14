@@ -1,11 +1,10 @@
 import React from "react";
 import ReactDOM from "react-dom";
-import Resizer from "./examples/Resizer";
-import "./index.css";
+import MyComponent from "./MyComponent";
 
 ReactDOM.render(
   <React.StrictMode>
-    <Resizer />
+    <MyComponent />
   </React.StrictMode>,
   document.getElementById("root")
 );

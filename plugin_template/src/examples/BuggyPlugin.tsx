@@ -1,12 +1,11 @@
 import { PureComponent, ReactNode } from "react";
-import StreamlitPlugin from "../PluginWrapper";
-import { StComponentProps } from "../StComponentAPI";
+import { ComponentProps, StreamlitComponent } from "../StreamlitComponent";
 
-class BuggyPlugin extends PureComponent<StComponentProps> {
+class BuggyPlugin extends PureComponent<ComponentProps> {
   public render = (): ReactNode => {
     throw new Error("I explode!");
     return null;
   };
 }
 
-export default StreamlitPlugin(BuggyPlugin);
+export default StreamlitComponent(BuggyPlugin);

@@ -1,6 +1,5 @@
 import React from "react";
-import StreamlitPlugin from "../PluginWrapper";
-import { StComponentProps } from "../StComponentAPI";
+import { ComponentProps, StreamlitComponent } from "../StreamlitComponent";
 
 interface State {
   fontSize: number;
@@ -9,8 +8,8 @@ interface State {
 /**
  * Radio Button example, using BaseUI.
  */
-class Resizer extends React.PureComponent<StComponentProps, State> {
-  public constructor(props: StComponentProps) {
+class Resizer extends React.PureComponent<ComponentProps, State> {
+  public constructor(props: ComponentProps) {
     super(props);
     this.state = { fontSize: 18 };
   }
@@ -51,4 +50,4 @@ class Resizer extends React.PureComponent<StComponentProps, State> {
   };
 }
 
-export default StreamlitPlugin(Resizer);
+export default StreamlitComponent(Resizer);
