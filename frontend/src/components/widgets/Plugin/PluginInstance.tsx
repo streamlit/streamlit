@@ -22,11 +22,11 @@ import React, { createRef, ReactNode } from "react"
 import { PluginRegistry } from "./PluginRegistry"
 
 /** Messages from Plugin -> Streamlit */
-enum PluginBackMsgType {
+enum ComponentBackMsgType {
   // A plugin sends this message when it's ready to receive messages
   // from Streamlit. Streamlit won't send any messages until it gets this.
   // No data.
-  PLUGIN_READY = "pluginReady",
+  COMPONENT_READY = "componentReady",
 
   // The plugin has a new widget value. Send it back to Streamlit, which
   // will then re-run the app.
@@ -39,7 +39,7 @@ enum PluginBackMsgType {
 }
 
 /** Messages from Streamlit -> Plugin */
-enum PluginForwardMsgType {
+enum ComponentForwardMsgType {
   // Sent by Streamlit when the plugin should re-render.
   // Data: { args: any, disabled: boolean }
   RENDER = "render",
@@ -108,30 +108,34 @@ export class PluginInstance extends React.PureComponent<Props, State> {
 
   private onBackMsg = (type: string, data: any): void => {
     switch (type) {
-      case PluginBackMsgType.PLUGIN_READY:
+      case ComponentBackMsgType.COMPONENT_READY:
         if (this.pluginReady) {
           logWarning(`Got multiple PLUGIN_READY messages!`)
         } else {
           // Our plugin is ready to begin receiving messages. Send off its
           // first render message!
           this.pluginReady = true
-          this.sendForwardMsg(PluginForwardMsgType.RENDER, {
+          this.sendForwardMsg(ComponentForwardMsgType.RENDER, {
             args: this.pendingRenderArgs,
           })
         }
         break
 
-      case PluginBackMsgType.SET_WIDGET_VALUE:
+      case ComponentBackMsgType.SET_WIDGET_VALUE:
         if (!this.pluginReady) {
-          logWarning(`Got ${type} before ${PluginBackMsgType.PLUGIN_READY}!`)
+          logWarning(
+            `Got ${type} before ${ComponentBackMsgType.COMPONENT_READY}!`
+          )
         } else {
           this.handleSetWidgetValue(data, { fromUi: true })
         }
         break
 
-      case PluginBackMsgType.SET_FRAME_HEIGHT:
+      case ComponentBackMsgType.SET_FRAME_HEIGHT:
         if (!this.pluginReady) {
-          logWarning(`Got ${type} before ${PluginBackMsgType.PLUGIN_READY}!`)
+          logWarning(
+            `Got ${type} before ${ComponentBackMsgType.COMPONENT_READY}!`
+          )
         } else {
           this.handleSetFrameHeight(data)
         }
@@ -177,7 +181,10 @@ export class PluginInstance extends React.PureComponent<Props, State> {
     this.setState({ frameHeight: height })
   }
 
-  private sendForwardMsg = (type: PluginForwardMsgType, data: any): void => {
+  private sendForwardMsg = (
+    type: ComponentForwardMsgType,
+    data: any
+  ): void => {
     if (this.iframeRef.current == null) {
       // This should never happen
       logWarning("Can't send ForwardMsg; missing our iframe!")
@@ -207,7 +214,7 @@ export class PluginInstance extends React.PureComponent<Props, State> {
     const renderArgs = JSON.parse(this.props.element.get("argsJson"))
     if (this.pluginReady) {
       // The plugin has loaded. Send it a new render message immediately.
-      this.sendForwardMsg(PluginForwardMsgType.RENDER, {
+      this.sendForwardMsg(ComponentForwardMsgType.RENDER, {
         args: renderArgs,
         disabled: this.props.disabled,
       })

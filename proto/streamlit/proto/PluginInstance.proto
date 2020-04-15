@@ -12,7 +12,5 @@ message PluginInstance {
 
   // ID that uniquely identifies the plugin this is an instance of.
   // (Multiple PluginInstances can all share the same plugin type.)
-  // If the client has not yet seen this plugin type before, it will
-  // download the plugin's source code from the server via HTTP.
   string plugin_id = 3;
 }

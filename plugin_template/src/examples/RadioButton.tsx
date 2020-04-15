@@ -1,12 +1,10 @@
+import { BaseProvider, LightTheme } from "baseui";
 import { Radio, RadioGroup } from "baseui/radio";
 import React from "react";
-import "../App.css";
-import StreamlitPlugin from "../PluginWrapper";
-import { StComponentProps } from "../StComponentAPI";
 
 import { Client as Styletron } from "styletron-engine-atomic";
-import { LightTheme, BaseProvider } from "baseui";
 import { Provider as StyletronProvider } from "styletron-react";
+import { ComponentProps, StreamlitComponent } from "../StreamlitComponent";
 
 // Initialize our Styletron engine
 const engine = new Styletron();
@@ -38,8 +36,8 @@ interface State {
 /**
  * Radio Button example, using BaseUI.
  */
-class RadioButton extends React.PureComponent<StComponentProps, State> {
-  public constructor(props: StComponentProps) {
+class RadioButton extends React.PureComponent<ComponentProps, State> {
+  public constructor(props: ComponentProps) {
     super(props);
 
     // Determine our initially selected index
@@ -116,4 +114,4 @@ class RadioButton extends React.PureComponent<StComponentProps, State> {
   };
 }
 
-export default StreamlitPlugin(RadioButton);
+export default StreamlitComponent(RadioButton);
