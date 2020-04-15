@@ -2130,7 +2130,6 @@ class DeltaGenerator(object):
         # make sure the value is a string
         if not isinstance(value, str):
             raise StreamlitAPIException(
-                # "The type of the value should be str."
                 "Color Picker Value has invalid type: %s. Expects a hex string like '#00FFAA' or '#000'."
                 % type(value).__name__
             )
