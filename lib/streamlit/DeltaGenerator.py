@@ -2104,9 +2104,8 @@ class DeltaGenerator(object):
         ----------
         label : str
             A short label explaining to the user what this input is for.
-        value : any
-            The hex value of this widget when it first renders. This will be
-            cast to str internally.
+        value : str or None
+            The hex value of this widget when it first renders. If None, the default color is black.
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -2132,7 +2131,8 @@ class DeltaGenerator(object):
         if not isinstance(value, str):
             raise StreamlitAPIException(
                 # "The type of the value should be str."
-                "Color Picker Value has invalid type: %s. Expects a hex string like '#00FFAA' or '#000'." % type(value).__name__
+                "Color Picker Value has invalid type: %s. Expects a hex string like '#00FFAA' or '#000'."
+                % type(value).__name__
             )
 
         # validate the value and expects a hex string
@@ -2143,7 +2143,6 @@ class DeltaGenerator(object):
                 "'%s' is not a valid hex code for colors. Valid ones are like '#00FFAA' or '#000'."
                 % value
             )
-
 
         element.color_picker.label = label
         element.color_picker.default = str(value)

@@ -13,14 +13,14 @@
 # limitations under the License.
 
 """color_picker unit test."""
-
+import pytest
 from tests import testutil
 import streamlit as st
+from streamlit.errors import StreamlitAPIException
 from parameterized import parameterized
 
 
 class ColorPickerTest(testutil.DeltaGeneratorTestCase):
-
     def test_just_label(self):
         """Test that it can be called with no value."""
         st.color_picker("the label")
@@ -29,9 +29,7 @@ class ColorPickerTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.label, "the label")
         self.assertEqual(c.default, "#000000")
 
-    @parameterized.expand(
-        [("#333333", "#333333"), (None, "#000000")]
-    )
+    @parameterized.expand([("#333333", "#333333"), ("#333", "#333"), (None, "#000000")])
     def test_value_types(self, arg_value, proto_value):
         """Test that it supports different types of values."""
         st.color_picker("the label", arg_value)
@@ -39,3 +37,13 @@ class ColorPickerTest(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.color_picker
         self.assertEqual(c.label, "the label")
         self.assertEqual(c.default, proto_value)
+
+    def test_invalid_value_type_error(self):
+        """Tests that when the value type is invalid, an exception is generated"""
+        with pytest.raises(StreamlitAPIException) as exc_message:
+            st.color_picker("the label", 1234567)
+
+    def test_invalid_string(self):
+        """Tests that when the string doesn't match regex, an exception is generated"""
+        with pytest.raises(StreamlitAPIException) as exc_message:
+            st.color_picker("the label", "#invalid-string")

@@ -22,44 +22,11 @@ describe("st.color_picker", () => {
     cy.visit("http://localhost:3000/");
   });
 
-  it("shows labels", () => {
-    cy.get(".stColorPicker label")
-      .first()
-      .should("have.text", "Default Color");
-  });
+  it("shows the widget correctly", () => {
+    cy.get(".stColorPicker").should("have.length", 2);
 
-  it("displays a color picker", () => {
-    cy.get(".stColorPicker .chrome-picker").should("be.visible");
-  });
-
-  it("has correct default values", () => {
-    cy.get(".stColorPicker .chrome-picker input")
-      .first()
-      .should("have.value", "#000000");
-  });
-
-  it("has renders correct values for both shorthand and complete hex", () => {
-    cy.get(".stColorPicker .chrome-picker input")
-      .eq(1)
-      .should("have.value", "#333333");
-    cy.get(".stColorPicker .chrome-picker input")
-      .eq(2)
-      .should("have.value", "#333333");
-  });
-
-  it("handles value changes", () => {
-    /* the center color is #80404040 */
-    cy.get(".stColorPicker .chrome-picker > div")
-      .first()
-      .click("center");
-    cy.get(".stColorPicker .chrome-picker input")
-      .first()
-      .should("have.value", "#804040");
-  });
-
-  it("shows error message for invalid string", () => {
-    cy.get(".element-container")
-      .last()
-      .should("contain", "StreamlitAPIException");
+    cy.get(".stColorPicker").each((el, idx) => {
+      return cy.wrap(el).matchImageSnapshot("colorpicker" + idx);
+    });
   });
 });

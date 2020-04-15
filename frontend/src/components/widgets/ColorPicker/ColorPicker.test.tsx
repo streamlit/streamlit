@@ -81,6 +81,15 @@ describe("ColorPicker widget", () => {
     )
   })
 
+  it("supports hex shorthand", () => {
+    // @ts-ignore
+    wrapper.find(ChromePicker).prop("onChangeComplete")({
+      hex: "#333",
+    })
+
+    expect(wrapper.find(ChromePicker).prop("color")).toEqual("#333")
+  })
+
   it("should update the widget value when it's changed", () => {
     const newColor = "#E91E63"
 

@@ -17,11 +17,5 @@ import streamlit as st
 c1 = st.color_picker("Default Color")
 st.write("Color 1", c1)
 
-c2 = st.color_picker("Hex Shorthand", "#333")
+c2 = st.color_picker("New Color", "#333333")
 st.write("Color 2", c2)
-
-c3 = st.color_picker("Full Hex", "#333333")
-st.write("Color 3", c3)
-
-c4 = st.color_picker("Invalid string", "1234567")
-st.write("Color 4", c4)
