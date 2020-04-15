@@ -140,7 +140,6 @@ bar_chart = _main.bar_chart  # noqa: E221
 bokeh_chart = _main.bokeh_chart  # noqa: E221
 button = _main.button  # noqa: E221
 checkbox = _main.checkbox  # noqa: E221
-color_picker = _main.color_picker  # noqa: E221
 code = _main.code  # noqa: E221
 dataframe = _main.dataframe  # noqa: E221
 date_input = _main.date_input  # noqa: E221
@@ -628,6 +627,7 @@ class _BetaNamespace(object):
 
     # Add beta features here. For example:
     # foo = _foo
+    color_picker = _main.color_picker
     pass
 
 
