@@ -17,7 +17,7 @@
 
 /// <reference types="cypress" />
 
-describe("st.color_picker", () => {
+describe("st.beta.color_picker", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
   });

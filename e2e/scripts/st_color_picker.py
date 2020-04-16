@@ -14,8 +14,8 @@
 
 import streamlit as st
 
-c1 = st.color_picker("Default Color")
+c1 = st.beta.color_picker("Default Color")
 st.write("Color 1", c1)
 
-c2 = st.color_picker("New Color", "#333333")
+c2 = st.beta.color_picker("New Color", "#333333")
 st.write("Color 2", c2)
