@@ -628,7 +628,6 @@ class _BetaNamespace(object):
     # Add beta features here. For example:
     # foo = _foo
     color_picker = _main.color_picker
-    pass
 
 
 class _ExperimentalNamespace(object):
