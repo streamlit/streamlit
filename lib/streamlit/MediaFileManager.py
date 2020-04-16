@@ -110,7 +110,7 @@ class MediaFileManager(object):
         # Dict of file ID to MediaFile.
         self._files_by_id = (
             WeakValueDictionary()
-        )  # type: WeakValueDictionaryDict[str, MediaFile]
+        )  # type: WeakValueDictionary[str, MediaFile]
 
         # Dict[session ID][coordinates] -> MediaFile.
         self._files_by_session_and_coord = collections.defaultdict(
