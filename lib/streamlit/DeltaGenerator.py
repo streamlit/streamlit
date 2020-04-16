@@ -1339,7 +1339,7 @@ class DeltaGenerator(object):
             the usual case, this function will render the global plot.
 
         clear_figure : bool
-            If True, the figure will be cleared after being rendered. 
+            If True, the figure will be cleared after being rendered.
             If False, the figure will not be cleared after being rendered.
             If left unspecified, we pick a default based on the value of `fig`.
             * If `fig` is set, defaults to `False`.
@@ -2122,7 +2122,7 @@ class DeltaGenerator(object):
 
         Example
         -------
-        >>> color = st.color_picker('Pick A Color', '#00f900')
+        >>> color = st.beta.color_picker('Pick A Color', '#00f900')
         >>> st.write('The current color is', color)
 
         """
