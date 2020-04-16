@@ -258,6 +258,7 @@ export const datePickerOverrides = {
       },
       ":focus": {
         backgroundColor: "transparent",
+        outline: 0,
       },
     }),
   },
@@ -273,6 +274,7 @@ export const datePickerOverrides = {
       },
       ":focus": {
         backgroundColor: "transparent",
+        outline: 0,
       },
     },
   },
