@@ -351,7 +351,9 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         from streamlit.elements.image_proto import _PIL_to_bytes
 
         for idx in range(len(imgs)):
-            file_id = _calculate_file_id(_PIL_to_bytes(imgs[idx], format="PNG"), "image/png")
+            file_id = _calculate_file_id(
+                _PIL_to_bytes(imgs[idx], format="PNG"), "image/png"
+            )
             self.assertEqual(el.imgs.imgs[idx].caption, "some caption")
             self.assertTrue(file_id in media_file_manager)
             afile = media_file_manager.get(file_id)
@@ -708,7 +710,9 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.video.start_time, 10)
         self.assertTrue(el.video.url.startswith(STATIC_MEDIA_ENDPOINT))
-        self.assertTrue(_calculate_file_id(fake_video_data, "video/mp4") in el.video.url)
+        self.assertTrue(
+            _calculate_file_id(fake_video_data, "video/mp4") in el.video.url
+        )
 
     def test_st_warning(self):
         """Test st.warning."""
