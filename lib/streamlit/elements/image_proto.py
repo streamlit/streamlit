@@ -236,7 +236,8 @@ def marshall_images(
             data = image
 
         (data, mimetype) = _normalize_to_bytes(data, width, format)
-        this_file = media_file_manager.add(data, mimetype, 
-                                           "%s-%i" % (coordinates, coord_suffix))
+        this_file = media_file_manager.add(
+            data, mimetype, "%s-%i" % (coordinates, coord_suffix)
+        )
         proto_img.url = this_file.url
         coord_suffix += 1
