@@ -17,8 +17,11 @@
 
 import React from "react"
 import { Map as ImmutableMap } from "immutable"
+import { StatefulPopover as UIPopover } from "baseui/popover"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { ChromePicker, ColorResult } from "react-color"
+
+import "./ColorPicker.scss"
 
 export interface Props {
   disabled: boolean
@@ -61,18 +64,23 @@ class ColorPicker extends React.PureComponent<Props, State> {
   public render = (): React.ReactNode => {
     const { element, width } = this.props
     const { value } = this.state
-
     const style = { width }
+    const backgroundColor = { backgroundColor: value }
     const label = element.get("label")
-
     return (
       <div className="Widget stColorPicker" style={style}>
         <label>{label}</label>
-        <ChromePicker
-          color={value}
-          onChangeComplete={this.onChangeComplete}
-          disableAlpha={true}
-        />
+        <UIPopover
+          content={() => (
+            <ChromePicker
+              color={value}
+              onChangeComplete={this.onChangeComplete}
+              disableAlpha={true}
+            />
+          )}
+        >
+          <div className="color-preview" style={backgroundColor}></div>
+        </UIPopover>
       </div>
     )
   }
