@@ -23,12 +23,16 @@ import tornado.web
 
 import streamlit as st  # plugins_test relies on this import name, for patching
 import streamlit.server.routes
+from streamlit import type_util
 from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.DeltaGenerator import NoValue
 from streamlit.DeltaGenerator import _get_widget_ui_value
+from streamlit.elements import arrow_table
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.Element_pb2 import Element
+from streamlit.proto.PluginInstance_pb2 import ArgsDataframe
+
 
 LOGGER = get_logger(__name__)
 
@@ -48,8 +52,16 @@ def plugin(name: str, path: str) -> None:
         if len(args) > 0:
             raise MarshallPluginException("Argument '%s' needs a label" % args[0])
 
+        args_json = {}
+        args_df = {}
+        for key, value in kwargs.items():
+            if type_util.is_dataframe_compatible(value):
+                args_df[key] = value
+            else:
+                args_json[key] = value
+
         try:
-            args_json = json.dumps(kwargs)
+            args_json = json.dumps(args_json)
         except BaseException as e:
             raise MarshallPluginException("Could not convert plugin args to JSON", e)
 
@@ -64,6 +76,13 @@ def plugin(name: str, path: str) -> None:
         def marshall_plugin(element: Element) -> Union[Any, Type[NoValue]]:
             element.plugin_instance.args_json = args_json
             element.plugin_instance.plugin_id = plugin_id
+
+            for key, value in args_df.items():
+                new_args_dataframe = ArgsDataframe()
+                new_args_dataframe.key = key
+                arrow_table.marshall(new_args_dataframe.value.data, value)
+                element.plugin_instance.args_dataframe.append(new_args_dataframe)
+
             widget_value = _get_widget_ui_value(
                 "plugin_instance", element, user_key=user_key
             )

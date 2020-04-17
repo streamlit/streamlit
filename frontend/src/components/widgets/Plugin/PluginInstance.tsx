@@ -65,6 +65,7 @@ export class PluginInstance extends React.PureComponent<Props, State> {
   // True when we've received the PLUGIN_READY message
   private pluginReady = false
   private pendingRenderArgs = {}
+  private pendingRenderDfs = []
 
   public constructor(props: Props) {
     super(props)
@@ -117,6 +118,7 @@ export class PluginInstance extends React.PureComponent<Props, State> {
           this.pluginReady = true
           this.sendForwardMsg(ComponentForwardMsgType.RENDER, {
             args: this.pendingRenderArgs,
+            dfs: this.pendingRenderDfs,
           })
         }
         break
@@ -212,10 +214,13 @@ export class PluginInstance extends React.PureComponent<Props, State> {
     const src = this.props.registry.getPluginURL(pluginId, "index.html")
 
     const renderArgs = JSON.parse(this.props.element.get("argsJson"))
+    const renderDfs = this.props.element.get("argsDataframe").toJS()
+
     if (this.pluginReady) {
       // The plugin has loaded. Send it a new render message immediately.
       this.sendForwardMsg(ComponentForwardMsgType.RENDER, {
         args: renderArgs,
+        dfs: renderDfs,
         disabled: this.props.disabled,
       })
     } else {
@@ -223,6 +228,7 @@ export class PluginInstance extends React.PureComponent<Props, State> {
       // send the RENDER message as soon as the plugin is ready.
       // It is *not* an error for a plugin to never send the ready message.
       this.pendingRenderArgs = renderArgs
+      this.pendingRenderDfs = renderDfs
     }
 
     // Render the iframe. We set scrolling="no", because we don't want

@@ -1,5 +1,6 @@
 import hoistNonReactStatics from "hoist-non-react-statics";
 import React, { ReactNode } from "react";
+import ArrowTable, { ArrowDataframeProto } from "./lib/ArrowTable";
 
 /**
  * Props passed to custom components.
@@ -32,6 +33,11 @@ export interface ComponentProps {
   updateFrameHeight: (newHeight?: number) => void;
 }
 
+interface ArgsDataframe {
+  key: string;
+  value: ArrowDataframeProto;
+}
+
 /**
  * Component wrapper. Bootstraps the communication interface between
  * Streamlit and the component.
@@ -45,7 +51,8 @@ export function StreamlitComponent(
 
   interface WrapperState {
     readyForFirstRender: boolean;
-    renderArgs: any;
+    renderArgs: object;
+    renderDfs: object;
     renderDisabled: boolean;
     componentError?: Error;
   }
@@ -89,6 +96,7 @@ export function StreamlitComponent(
       this.state = {
         readyForFirstRender: false,
         renderArgs: {},
+        renderDfs: {},
         renderDisabled: false,
         componentError: undefined
       };
@@ -168,12 +176,18 @@ export function StreamlitComponent(
         args = {};
       }
 
+      const dfs =
+        data["dfs"] && data["dfs"].length > 0
+          ? this.argsDataframeToObject(data["dfs"])
+          : {};
+
       let disabled = Boolean(data["disabled"]);
 
       // Update our state to prepare for the render!
       this.setState({
         readyForFirstRender: true,
         renderArgs: args,
+        renderDfs: dfs,
         renderDisabled: disabled
       });
     };
@@ -189,6 +203,20 @@ export function StreamlitComponent(
         },
         TARGET_ORIGIN
       );
+    };
+
+    private argsDataframeToObject = (
+      argsDataframe: ArgsDataframe[]
+    ): object => {
+      const argsDataframeArrow = argsDataframe.map(
+        ({ key, value }: ArgsDataframe) => [key, this.toArrowTable(value)]
+      );
+      return Object.fromEntries(argsDataframeArrow);
+    };
+
+    private toArrowTable = (df: ArrowDataframeProto): ArrowTable => {
+      const { data, index, columns } = df.data;
+      return new ArrowTable(data, index, columns);
     };
 
     public render = (): ReactNode => {
@@ -207,11 +235,16 @@ export function StreamlitComponent(
         return null;
       }
 
+      const args = {
+        ...this.state.renderArgs,
+        ...this.state.renderDfs
+      };
+
       return (
         <WrappedComponent
           width={window.innerWidth}
           disabled={this.state.renderDisabled}
-          args={this.state.renderArgs}
+          args={args}
           setWidgetValue={(value: any) =>
             this.sendBackMsg(ComponentBackMsgType.SET_WIDGET_VALUE, { value })
           }
