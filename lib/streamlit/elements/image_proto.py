@@ -186,7 +186,7 @@ def marshall_images(
 
     proto_imgs.width = width
     # Each image in an image list needs to be kept track of at its own coordinates.
-    for coord_suffix, (image, proto) in enumerate(zip(images, captions)):
+    for coord_suffix, (image, caption) in enumerate(zip(images, captions)):
         proto_img = proto_imgs.imgs.add()
         if caption is not None:
             proto_img.caption = str(caption)
