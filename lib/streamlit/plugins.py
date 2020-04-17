@@ -61,7 +61,7 @@ def plugin(name: str, path: str) -> None:
                 args_json[key] = value
 
         try:
-            args_json = json.dumps(args_json)
+            serialized_args_json = json.dumps(args_json)
         except BaseException as e:
             raise MarshallPluginException("Could not convert plugin args to JSON", e)
 
@@ -74,7 +74,7 @@ def plugin(name: str, path: str) -> None:
         user_key = kwargs.get("key", None)
 
         def marshall_plugin(element: Element) -> Union[Any, Type[NoValue]]:
-            element.plugin_instance.args_json = args_json
+            element.plugin_instance.args_json = serialized_args_json
             element.plugin_instance.plugin_id = plugin_id
 
             for key, value in args_df.items():
