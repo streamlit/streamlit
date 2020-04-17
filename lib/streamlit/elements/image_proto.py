@@ -235,6 +235,9 @@ def marshall_images(
             data = image
 
         (data, mimetype) = _normalize_to_bytes(data, width, format)
+
+        # We use the index of the image in the input image list to identify this image inside
+        # MediaFileManager. For this, we just add the index to the image's "coordinates".
         this_file = media_file_manager.add(
             data, mimetype, "%s-%i" % (coordinates, coord_suffix)
         )
