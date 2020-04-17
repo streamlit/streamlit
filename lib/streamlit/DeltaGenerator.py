@@ -318,8 +318,15 @@ class DeltaGenerator(object):
         and Streamlit will expire the older images and replace them in place.
         """
         container = self._container  # Proto index of container (e.g. MAIN=1)
-        path = self._cursor.path  # [uint, uint] - "breadcrumbs" w/ ancestor positions
-        index = self._cursor.index  # index - element's own position
+
+        if self._cursor:
+            path = self._cursor.path  # [uint, uint] - "breadcrumbs" w/ ancestor positions
+            index = self._cursor.index  # index - element's own position
+        else:
+            # Case in which we have started up in headless mode.
+            path = "(,)"
+            index = ""
+
         return "{}.{}.{}".format(container, path, index)
 
     def _enqueue_new_element_delta(
