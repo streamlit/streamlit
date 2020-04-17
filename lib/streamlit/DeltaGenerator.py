@@ -320,7 +320,9 @@ class DeltaGenerator(object):
         container = self._container  # Proto index of container (e.g. MAIN=1)
 
         if self._cursor:
-            path = self._cursor.path  # [uint, uint] - "breadcrumbs" w/ ancestor positions
+            path = (
+                self._cursor.path
+            )  # [uint, uint] - "breadcrumbs" w/ ancestor positions
             index = self._cursor.index  # index - element's own position
         else:
             # Case in which we have started up in headless mode.
