@@ -158,7 +158,7 @@ export const fileUploaderOverrides: FileUploaderOverrides<StyleProps> = {
       borderStyle: "solid",
       borderWidth: "1px",
       ":focus": {
-        outline: "none",
+        outline: 0,
         borderColor: primary,
       },
     }),
@@ -203,6 +203,10 @@ export const fileUploaderOverrides: FileUploaderOverrides<StyleProps> = {
             ":disabled": {
               backgroundColor: "transparent",
               color: grayDark,
+            },
+            ":focus": {
+              outline: 0,
+              backgroundColor: "transparent",
             },
           },
         },

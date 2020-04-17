@@ -131,7 +131,7 @@ class FileUploader extends React.PureComponent<Props, State> {
         <span className="body">
           <Icon className="icon" type="warning" /> {errorMessage}
         </span>
-        <Button outline size="sm" onClick={this.reset}>
+        <Button color="link" onClick={this.reset}>
           OK
         </Button>
       </div>
@@ -144,7 +144,7 @@ class FileUploader extends React.PureComponent<Props, State> {
         <span className="body">
           <Spinner color="secondary" size="sm" /> Uploading...
         </span>
-        <Button outline size="sm" onClick={this.cancelCurrentUpload}>
+        <Button color="link" onClick={this.cancelCurrentUpload}>
           Cancel
         </Button>
       </div>
@@ -178,7 +178,6 @@ class FileUploader extends React.PureComponent<Props, State> {
       overrides.ContentMessage.style = { ...overrides.ContentMessage.style }
       overrides.ContentMessage.style.visibility = "hidden"
       overrides.ContentMessage.style.overflow = "hidden"
-      overrides.ContentMessage.style.height = "0.625rem" // half of lineHeightTight
 
       if (multipleFiles) {
         filenameText = this.state.acceptedFiles
@@ -191,11 +190,11 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     return (
       <>
-        {status === "UPLOADED" ? (
+        {status === "UPLOADED" && (
           <div className="uploadOverlay uploadDone">
             <span className="body">{filenameText}</span>
           </div>
-        ) : null}
+        )}
         <FileUploaderBaseui
           onDrop={this.dropHandler}
           errorMessage={errorMessage}
