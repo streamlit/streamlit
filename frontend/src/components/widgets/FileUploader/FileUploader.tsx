@@ -178,6 +178,10 @@ class FileUploader extends React.PureComponent<Props, State> {
       overrides.ContentMessage.style = { ...overrides.ContentMessage.style }
       overrides.ContentMessage.style.visibility = "hidden"
       overrides.ContentMessage.style.overflow = "hidden"
+      overrides.ContentMessage.style.height = "0.625rem" // half of lineHeightTight
+
+      overrides.ContentSeparator = { ...overrides.ContentSeparator }
+      overrides.ContentSeparator.style.visibility = "hidden"
 
       if (multipleFiles) {
         filenameText = this.state.acceptedFiles
