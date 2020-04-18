@@ -114,7 +114,7 @@ class Multiselect extends React.PureComponent<Props, State> {
           labelKey="label"
           valueKey="value"
           placeholder={placeholder}
-          type={TYPE.search}
+          type={TYPE.select}
           multi
           onChange={this.onChange}
           value={this.valueFromState}

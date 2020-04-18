@@ -47,14 +47,14 @@ describe("st.multiselect", () => {
       it("should show the correct placeholder", () => {
         cy.get(".stMultiSelect")
           .first()
-          .should("have.text", "selectbox 1searchChoose an option");
+          .should("have.text", "selectbox 1Choose an optionopen");
       });
     });
     describe("when there are no valid options", () => {
       it("should show the correct placeholder", () => {
         cy.get(".stMultiSelect")
           .eq(2)
-          .should("have.text", "selectbox 3searchNo options to select.");
+          .should("have.text", "selectbox 3No options to select.open");
       });
     });
   });
