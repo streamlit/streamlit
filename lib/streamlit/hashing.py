@@ -402,6 +402,9 @@ class _CodeHasher:
         elif inspect.isbuiltin(obj):
             return obj.__name__.encode()
 
+        elif type_util.is_type(obj, "builtins.CompiledFFI"):
+            return self.to_bytes(None)
+
         elif hasattr(obj, "name") and (
             isinstance(obj, io.IOBase)
             # Handle temporary files used during testing
