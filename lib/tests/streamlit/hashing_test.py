@@ -14,6 +14,7 @@
 
 """st.hashing unit tests."""
 
+import cffi
 import functools
 import hashlib
 import os
@@ -358,12 +359,27 @@ class HashTest(unittest.TestCase):
         hash_funcs = {int: lambda x: "hello"}
         self.assertNotEqual(get_hash(1), get_hash(1, hash_funcs=hash_funcs))
 
+    def _build_cffi(self, name):
+        ffibuilder = cffi.FFI()
+        ffibuilder.set_source(f"cffi_bin._{name}", rf"""
+            static int {name}(int x)
+            {{
+                return x + "A";
+            }}
+        """)
+
+        ffibuilder.cdef(f"int {name}(int);")
+        ffibuilder.compile(verbose=True)
+
     def test_compiled_ffi(self):
+        self._build_cffi("foo")
+        self._build_cffi("bar")
         from cffi_bin._foo import ffi as foo
         from cffi_bin._bar import ffi as bar
 
         assert is_type(foo, "builtins.CompiledFFI")
         self.assertEqual(get_hash(foo), get_hash(bar))
+
 
 class CodeHashTest(unittest.TestCase):
     def test_simple(self):
