@@ -42,6 +42,7 @@ from streamlit.hashing import UserHashError
 from streamlit.hashing import _CodeHasher
 from streamlit.hashing import _NP_SIZE_LARGE
 from streamlit.hashing import _PANDAS_ROWS_LARGE
+from streamlit.type_util import is_type
 from streamlit.util import functools_wraps
 import streamlit as st
 
@@ -88,6 +89,37 @@ class HashTest(unittest.TestCase):
         self.assertNotEqual(get_hash((1, 2)), get_hash((2, 2)))
         self.assertNotEqual(get_hash((1,)), get_hash(1))
         self.assertNotEqual(get_hash((1,)), get_hash([1]))
+
+    def test_mappingproxy(self):
+        a = types.MappingProxyType({"a": 1})
+        b = types.MappingProxyType({"a": 1})
+        c = types.MappingProxyType({"c": 1})
+
+        self.assertEqual(get_hash(a), get_hash(b))
+        self.assertNotEqual(get_hash(a), get_hash(c))
+
+    def test_dict_items(self):
+        a = types.MappingProxyType({"a": 1}).items()
+        b = types.MappingProxyType({"a": 1}).items()
+        c = types.MappingProxyType({"c": 1}).items()
+
+        assert is_type(a, "builtins.dict_items")
+        self.assertEqual(get_hash(a), get_hash(b))
+        self.assertNotEqual(get_hash(a), get_hash(c))
+
+    def test_getset_descriptor(self):
+        class A():
+            x = 1
+
+        class B():
+            x = 1
+
+        a = A.__dict__['__dict__']
+        b = B.__dict__['__dict__']
+        assert is_type(a, "builtins.getset_descriptor")
+
+        self.assertEqual(get_hash(a), get_hash(a))
+        self.assertNotEqual(get_hash(a), get_hash(b))
 
     def test_dict(self):
         dict_gen = {1: (x for x in range(1))}

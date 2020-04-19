@@ -402,6 +402,14 @@ class _CodeHasher:
         elif inspect.isbuiltin(obj):
             return obj.__name__.encode()
 
+        elif type_util.is_type(obj, "builtins.mappingproxy") or type_util.is_type(
+            obj, "builtins.dict_items"
+        ):
+            return self.to_bytes(dict(obj))
+
+        elif type_util.is_type(obj, "builtins.getset_descriptor"):
+            return obj.__qualname__.encode()
+
         elif hasattr(obj, "name") and (
             isinstance(obj, io.IOBase)
             # Handle temporary files used during testing
