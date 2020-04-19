@@ -361,13 +361,15 @@ class HashTest(unittest.TestCase):
 
     def _build_cffi(self, name):
         ffibuilder = cffi.FFI()
-        ffibuilder.set_source("cffi_bin._%s" % name,
+        ffibuilder.set_source(
+            "cffi_bin._%s" % name,
             r"""
                 static int %s(int x)
                 {
                     return x + "A";
                 }
-            """ % name
+            """
+            % name,
         )
 
         ffibuilder.cdef("int %s(int);" % name)
