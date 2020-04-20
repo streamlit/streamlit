@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "streamlit/proto/ArrowDataframe.proto";
+
 message PluginInstance {
   // Widget ID (meaningful only for bi-directional plugins)
   string id = 1;
@@ -8,9 +10,17 @@ message PluginInstance {
   string args_json = 2;
 
   // We'll probably want to transmit dataframe data separately (not in JSON).
-//  DataFrame args_data_frame = 4;
+  repeated ArgsDataframe args_dataframe = 3;
 
   // ID that uniquely identifies the plugin this is an instance of.
   // (Multiple PluginInstances can all share the same plugin type.)
-  string plugin_id = 3;
+  string plugin_id = 4;
+}
+
+message ArgsDataframe {
+  // Dataframe key
+  string key = 1;
+
+  // Dataframe value
+  ArrowDataframe value = 2;
 }

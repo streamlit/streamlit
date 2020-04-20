@@ -3,7 +3,7 @@ import { ComponentProps, StreamlitComponent } from "./StreamlitComponent";
 
 // We import bootstrap.css to get some simple default styling for our
 // text and button. You can remove or replace this.
-import "./bootstrap.css";
+import "bootstrap/dist/css/bootstrap.min.css";
 
 interface State {
   numClicks: number;

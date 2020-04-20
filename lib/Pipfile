@@ -23,7 +23,7 @@ bokeh = "*"
 graphviz = "*"
 parameterized = "*"
 pydot = "*"
-tensorflow = {version = ">=2.0.0", markers = "python_version < '3.8'"}
+tensorflow = {version = ">=2.0.0",markers = "python_version < '3.8'"}
 seaborn = "*"
 prometheus-client = "*"
 opencv-python = "*"
@@ -31,11 +31,11 @@ requests-mock = "*"
 mypy = "==0.761"
 mypy-protobuf = ">=1.17"
 flake8 = "*"
+
+[packages]
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if something is only required for testing, but not anything else, please
 # add to the dev dependencies above, instead.
-
-[packages]
 altair = ">=3.2.0"
 astor = "*"
 base58 = "*"
@@ -62,4 +62,4 @@ tornado = ">=5.0,<6.0"
 tzlocal = "*"
 validators = "*"
 watchdog = "*"
-
+pyarrow = "*"
