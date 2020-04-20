@@ -1,26 +1,26 @@
-import React from "react";
-import { ComponentProps, StreamlitComponent } from "./StreamlitComponent";
+import React from "react"
+import { ComponentProps, StreamlitComponent } from "./StreamlitComponent"
 
 // We import bootstrap.css to get some simple default styling for our
 // text and button. You can remove or replace this.
-import "bootstrap/dist/css/bootstrap.min.css";
+import "bootstrap/dist/css/bootstrap.min.css"
 
 interface State {
-  numClicks: number;
+  numClicks: number
 }
 
 /**
  * Streamlit component template. Edit this file to make your component!
  */
 class MyComponent extends React.PureComponent<ComponentProps, State> {
-  public state = { numClicks: 0 };
+  public state = { numClicks: 0 }
 
   public render = (): React.ReactNode => {
     // Arguments that are passed to the plugin in Python are accessible
     // via `this.props.args`. Here, we access the "name" arg.
-    let name = this.props.args["name"];
+    let name = this.props.args["name"]
     if (name === undefined) {
-      name = "Unspecified";
+      name = "Unspecified"
     }
 
     // Create and return a div with some text in it.
@@ -32,8 +32,8 @@ class MyComponent extends React.PureComponent<ComponentProps, State> {
         <div>Hello, {name}!</div>
         <button onClick={this.onClicked}>Click Me!</button>
       </div>
-    );
-  };
+    )
+  }
 
   /** Click handler for our "Click Me!" button. */
   private onClicked = (): void => {
@@ -42,19 +42,19 @@ class MyComponent extends React.PureComponent<ComponentProps, State> {
     this.setState(
       prevState => ({ numClicks: prevState.numClicks + 1 }),
       () => this.props.setWidgetValue(this.state.numClicks)
-    );
-  };
+    )
+  }
 
   public componentDidMount = (): void => {
     // After we're rendered for the first time, tell Streamlit that our height
     // has changed.
-    this.props.updateFrameHeight();
-  };
+    this.props.updateFrameHeight()
+  }
 
   public componentDidUpdate = (): void => {
     // After we're updated, tell Streamlit that our height may have changed.
-    this.props.updateFrameHeight();
-  };
+    this.props.updateFrameHeight()
+  }
 }
 
 // "StreamlitComponent" is a wrapper function. It bootstraps the
@@ -63,4 +63,4 @@ class MyComponent extends React.PureComponent<ComponentProps, State> {
 // Component -> Python.
 //
 // You don't need to edit StreamlitComponent (but you're welcome to!).
-export default StreamlitComponent(MyComponent);
+export default StreamlitComponent(MyComponent)

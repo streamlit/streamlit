@@ -1,6 +1,6 @@
-import React, { useEffect } from "react";
-import { ComponentProps, StreamlitComponent } from "../StreamlitComponent";
-import Table from "../components/Table/";
+import React, { useEffect } from "react"
+import { ComponentProps, StreamlitComponent } from "../StreamlitComponent"
+import Table from "../components/Table/"
 
 /**
  * Dataframe example using Apache Arrow.
@@ -8,10 +8,10 @@ import Table from "../components/Table/";
 
 const Dataframe = (props: ComponentProps) => {
   useEffect(() => {
-    props.updateFrameHeight();
-  });
+    props.updateFrameHeight()
+  })
 
-  return <Table element={props.args.data} />;
-};
+  return <Table element={props.args.data} />
+}
 
-export default StreamlitComponent(Dataframe);
+export default StreamlitComponent(Dataframe)
