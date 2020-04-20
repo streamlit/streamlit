@@ -1,18 +1,15 @@
 import React from "react"
-import { ComponentProps, connectToStreamlit } from "../StreamlitComponent"
+import { connectToStreamlit, StreamlitComponent } from "../streamlit"
 
 interface State {
   fontSize: number
 }
 
 /**
- * Radio Button example, using BaseUI.
+ * A component that grows and shrinks.
  */
-class Resizer extends React.PureComponent<ComponentProps, State> {
-  public constructor(props: ComponentProps) {
-    super(props)
-    this.state = { fontSize: 18 }
-  }
+class Resizer extends StreamlitComponent<State> {
+  public state = { fontSize: 18 }
 
   private smaller = (): void => {
     this.setState(prevState => ({
@@ -39,14 +36,6 @@ class Resizer extends React.PureComponent<ComponentProps, State> {
         </span>
       </div>
     )
-  }
-
-  public componentDidUpdate = (): void => {
-    this.props.updateFrameHeight()
-  }
-
-  public componentDidMount = (): void => {
-    this.props.updateFrameHeight()
   }
 }
 

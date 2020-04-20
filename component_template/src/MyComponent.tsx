@@ -1,5 +1,5 @@
 import React from "react"
-import { connectToStreamlit, StreamlitComponent } from "./StreamlitComponent"
+import { connectToStreamlit, StreamlitComponent } from "./streamlit"
 
 // We import bootstrap.css to get some simple default styling for our
 // text and button. You can remove or replace this.

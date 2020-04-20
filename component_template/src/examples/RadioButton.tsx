@@ -4,7 +4,11 @@ import React from "react"
 
 import { Client as Styletron } from "styletron-engine-atomic"
 import { Provider as StyletronProvider } from "styletron-react"
-import { ComponentProps, connectToStreamlit } from "../StreamlitComponent"
+import {
+  ComponentProps,
+  connectToStreamlit,
+  StreamlitComponent,
+} from "../streamlit"
 
 // Initialize our Styletron engine
 const engine = new Styletron()
@@ -36,12 +40,12 @@ interface State {
 /**
  * Radio Button example, using BaseUI.
  */
-class RadioButton extends React.PureComponent<ComponentProps, State> {
+class RadioButton extends StreamlitComponent<State> {
   public constructor(props: ComponentProps) {
     super(props)
 
     // Determine our initially selected index
-    const options = this.props.args["options"] as Array<string>
+    const options = this.props.args["options"] as string[]
     const defaultValue = this.props.args["default"] as string
     let selectedIndex = 0
     if (options != null && defaultValue != null) {
@@ -57,7 +61,7 @@ class RadioButton extends React.PureComponent<ComponentProps, State> {
   public render = (): React.ReactNode => {
     const style = { width: this.props.width }
     const label = String(this.props.args["label"])
-    let options = this.props.args["options"] as Array<string>
+    let options = this.props.args["options"] as string[]
     let disabled = this.props.disabled
 
     if (options == null || options.length === 0) {
@@ -91,21 +95,13 @@ class RadioButton extends React.PureComponent<ComponentProps, State> {
     )
   }
 
-  public componentDidUpdate = (): void => {
-    this.props.updateFrameHeight()
-  }
-
-  public componentDidMount = (): void => {
-    this.props.updateFrameHeight()
-  }
-
   private onSelectionChanged = (
     e: React.ChangeEvent<HTMLInputElement>
   ): void => {
     const index = parseInt(e.target.value, 10)
     this.setState({ selectedIndex: index }, () => {
       // Get the option name at the selected index
-      const options = this.props.args["options"] as Array<string>
+      const options = this.props.args["options"] as string[]
       const value =
         options != null && index < options.length ? options[index] : null
       // Send our current value to Streamlit!

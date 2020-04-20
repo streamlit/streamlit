@@ -1,7 +1,7 @@
-import { PureComponent, ReactNode } from "react"
-import { ComponentProps, connectToStreamlit } from "../StreamlitComponent"
+import { ReactNode } from "react"
+import { connectToStreamlit, StreamlitComponent } from "../streamlit"
 
-class BuggyComponent extends PureComponent<ComponentProps> {
+class BuggyComponent extends StreamlitComponent {
   public render = (): ReactNode => {
     throw new Error("I explode!")
     return null
