@@ -26,7 +26,7 @@ from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.components import MarshallComponentException
 from streamlit.components import ComponentRegistry
 from streamlit.components import ComponentRequestHandler
-from streamlit.components import component
+from streamlit.components import register_component
 from tests.testutil import DeltaGeneratorTestCase
 
 JAVASCRIPT_1 = """

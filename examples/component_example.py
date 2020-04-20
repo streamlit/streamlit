@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 
 # Register "my_component" as a Streamlit component.
-st.component("my_component", "component_template/build")
+st.register_component("my_component", "component_template/build")
 
 # # Create an instance of the component. Arguments we pass here
 # # will be available in an "args" dictionary in the component.

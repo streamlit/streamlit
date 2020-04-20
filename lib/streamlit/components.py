@@ -41,7 +41,7 @@ class MarshallComponentException(StreamlitAPIException):
     pass
 
 
-def component(name: str, path: str) -> None:
+def register_component(name: str, path: str) -> None:
     """Register a new custom component."""
 
     # Register this component with our global registry.
