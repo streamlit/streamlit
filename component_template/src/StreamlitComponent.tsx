@@ -33,6 +33,30 @@ export interface ComponentProps {
   updateFrameHeight: (newHeight?: number) => void
 }
 
+/**
+ * Optional Streamlit component base class.
+ *
+ * You are not required to extend this base class to create a Streamlit
+ * component. If you decide not to extend it, you should implement the
+ * `componentDidMount` and `componentDidUpdate` functions in your own class,
+ * so that your plugin properly resizes.
+ */
+export class StreamlitComponent<S = {}> extends React.PureComponent<
+  ComponentProps,
+  S
+> {
+  public componentDidMount(): void {
+    // After we're rendered for the first time, tell Streamlit that our height
+    // has changed.
+    this.props.updateFrameHeight()
+  }
+
+  public componentDidUpdate(): void {
+    // After we're updated, tell Streamlit that our height may have changed.
+    this.props.updateFrameHeight()
+  }
+}
+
 interface ArgsDataframe {
   key: string
   value: ArrowDataframeProto

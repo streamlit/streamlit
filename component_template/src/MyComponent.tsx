@@ -1,5 +1,5 @@
 import React from "react"
-import { ComponentProps, connectToStreamlit } from "./StreamlitComponent"
+import { connectToStreamlit, StreamlitComponent } from "./StreamlitComponent"
 
 // We import bootstrap.css to get some simple default styling for our
 // text and button. You can remove or replace this.
@@ -12,7 +12,7 @@ interface State {
 /**
  * Streamlit component template. Edit this file to make your component!
  */
-class MyComponent extends React.PureComponent<ComponentProps, State> {
+class MyComponent extends StreamlitComponent<State> {
   public state = { numClicks: 0 }
 
   public render = (): React.ReactNode => {
@@ -43,17 +43,6 @@ class MyComponent extends React.PureComponent<ComponentProps, State> {
       prevState => ({ numClicks: prevState.numClicks + 1 }),
       () => this.props.setWidgetValue(this.state.numClicks)
     )
-  }
-
-  public componentDidMount = (): void => {
-    // After we're rendered for the first time, tell Streamlit that our height
-    // has changed.
-    this.props.updateFrameHeight()
-  }
-
-  public componentDidUpdate = (): void => {
-    // After we're updated, tell Streamlit that our height may have changed.
-    this.props.updateFrameHeight()
   }
 }
 
