@@ -1,5 +1,5 @@
 import React, { useEffect } from "react"
-import { ComponentProps, StreamlitComponent } from "../StreamlitComponent"
+import { ComponentProps, connectToStreamlit } from "../StreamlitComponent"
 import Table from "../components/Table/"
 
 /**
@@ -14,4 +14,4 @@ const Dataframe = (props: ComponentProps) => {
   return <Table element={props.args.data} />
 }
 
-export default StreamlitComponent(Dataframe)
+export default connectToStreamlit(Dataframe)

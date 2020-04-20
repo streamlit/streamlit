@@ -4,7 +4,7 @@ import React from "react"
 
 import { Client as Styletron } from "styletron-engine-atomic"
 import { Provider as StyletronProvider } from "styletron-react"
-import { ComponentProps, StreamlitComponent } from "../StreamlitComponent"
+import { ComponentProps, connectToStreamlit } from "../StreamlitComponent"
 
 // Initialize our Styletron engine
 const engine = new Styletron()
@@ -114,4 +114,4 @@ class RadioButton extends React.PureComponent<ComponentProps, State> {
   }
 }
 
-export default StreamlitComponent(RadioButton)
+export default connectToStreamlit(RadioButton)

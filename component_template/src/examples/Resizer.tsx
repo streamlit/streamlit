@@ -1,5 +1,5 @@
 import React from "react"
-import { ComponentProps, StreamlitComponent } from "../StreamlitComponent"
+import { ComponentProps, connectToStreamlit } from "../StreamlitComponent"
 
 interface State {
   fontSize: number
@@ -50,4 +50,4 @@ class Resizer extends React.PureComponent<ComponentProps, State> {
   }
 }
 
-export default StreamlitComponent(Resizer)
+export default connectToStreamlit(Resizer)

@@ -1,5 +1,5 @@
 import React from "react"
-import { ComponentProps, StreamlitComponent } from "./StreamlitComponent"
+import { ComponentProps, connectToStreamlit } from "./StreamlitComponent"
 
 // We import bootstrap.css to get some simple default styling for our
 // text and button. You can remove or replace this.
@@ -57,10 +57,10 @@ class MyComponent extends React.PureComponent<ComponentProps, State> {
   }
 }
 
-// "StreamlitComponent" is a wrapper function. It bootstraps the
+// "connectToStreamlit" is a wrapper function. It bootstraps the
 // connection between your component and the Streamlit app, and handles
 // passing arguments from Python -> Component, and widget values from
 // Component -> Python.
 //
-// You don't need to edit StreamlitComponent (but you're welcome to!).
-export default StreamlitComponent(MyComponent)
+// You don't need to edit connectToStreamlit (but you're welcome to!).
+export default connectToStreamlit(MyComponent)

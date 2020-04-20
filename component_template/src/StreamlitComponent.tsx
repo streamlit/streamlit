@@ -44,7 +44,7 @@ interface ArgsDataframe {
  *
  * Component writers do not need to edit this function.
  */
-export function StreamlitComponent(
+export function connectToStreamlit(
   WrappedComponent: React.ComponentType<ComponentProps>
 ): React.ComponentType {
   interface WrapperProps {}

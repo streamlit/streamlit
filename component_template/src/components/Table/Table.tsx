@@ -114,7 +114,7 @@ const TableRow: SFC<TableRowProps> = props => {
 
     switch (type) {
       case "blank": {
-        return <th key={columnIndex} className={classNames}></th>
+        return <th key={columnIndex} className={classNames} />
       }
       case "index": {
         return (
