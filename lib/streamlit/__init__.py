@@ -109,7 +109,7 @@ from streamlit.util import functools_wraps as _functools_wraps
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
 from streamlit.caching import cache as cache  # noqa: F401
-from streamlit.plugins import plugin as plugin
+from streamlit.components import register_component as register_component
 
 # This is set to True inside cli._main_run(), and is False otherwise.
 # If False, we should assume that DeltaGenerator functions are effectively

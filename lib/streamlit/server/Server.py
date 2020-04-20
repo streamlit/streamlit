@@ -37,8 +37,8 @@ from streamlit.ForwardMsgCache import populate_hash_if_needed
 from streamlit.ReportSession import ReportSession
 from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.logger import get_logger
-from streamlit.plugins import PluginRegistry
-from streamlit.plugins import PluginRequestHandler
+from streamlit.components import ComponentRegistry
+from streamlit.components import ComponentRequestHandler
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.server.UploadFileRequestHandler import UploadFileRequestHandler
@@ -311,9 +311,9 @@ class Server(object):
             ),
             (make_url_path_regex(base, "media/(.*)"), MediaFileHandler),
             (
-                make_url_path_regex(base, "plugin/(.*)"),
-                PluginRequestHandler,
-                dict(registry=PluginRegistry.instance()),
+                make_url_path_regex(base, "component/(.*)"),
+                ComponentRequestHandler,
+                dict(registry=ComponentRegistry.instance()),
             ),
         ]
 

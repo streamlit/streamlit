@@ -23,7 +23,7 @@ import Sidebar from "components/core/Sidebar"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { FileUploadClient } from "lib/FileUploadClient"
-import { PluginRegistry } from "components/widgets/Plugin"
+import { ComponentRegistry } from "components/widgets/CustomComponent"
 
 import { ThemeProvider } from "baseui"
 import { BlockElement } from "lib/DeltaParser"
@@ -63,7 +63,7 @@ interface Props {
   // Wide mode
   wide: boolean
 
-  pluginRegistry: PluginRegistry
+  componentRegistry: ComponentRegistry
 }
 
 /**
@@ -96,7 +96,7 @@ class ReportView extends PureComponent<Props> {
                   widgetMgr={this.props.widgetMgr}
                   widgetsDisabled={this.props.widgetsDisabled}
                   uploadClient={this.props.uploadClient}
-                  pluginRegistry={this.props.pluginRegistry}
+                  componentRegistry={this.props.componentRegistry}
                 />
               </ThemeProvider>
             </div>
@@ -115,7 +115,7 @@ class ReportView extends PureComponent<Props> {
                 widgetMgr={this.props.widgetMgr}
                 widgetsDisabled={this.props.widgetsDisabled}
                 uploadClient={this.props.uploadClient}
-                pluginRegistry={this.props.pluginRegistry}
+                componentRegistry={this.props.componentRegistry}
               />
             </ThemeProvider>
           </div>

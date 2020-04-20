@@ -18,21 +18,21 @@
 import { BaseUriParts, buildHttpUri } from "lib/UriUtil"
 
 /**
- * Downloads and compiles plugins from the server.
+ * Downloads and compiles components from the server.
  */
-export class PluginRegistry {
+export class ComponentRegistry {
   private readonly getServerUri: () => BaseUriParts | undefined
 
   public constructor(getServerUri: () => BaseUriParts | undefined) {
     this.getServerUri = getServerUri
   }
 
-  public getPluginURL(pluginId: string, path: string): string {
+  public getComponentURL(componentId: string, path: string): string {
     const serverURI = this.getServerUri()
     if (serverURI === undefined) {
-      throw new Error("Can't get plugin: not connected to a server")
+      throw new Error("Can't fetch component: not connected to a server")
     }
 
-    return buildHttpUri(serverURI, `plugin/${pluginId}/${path}`)
+    return buildHttpUri(serverURI, `component/${componentId}/${path}`)
   }
 }

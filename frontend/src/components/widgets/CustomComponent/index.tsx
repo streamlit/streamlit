@@ -15,5 +15,5 @@
  * limitations under the License.
  */
 
-export { PluginInstance } from "./PluginInstance"
-export { PluginRegistry } from "./PluginRegistry"
+export { ComponentInstance } from "./ComponentInstance"
+export { ComponentRegistry } from "./ComponentRegistry"

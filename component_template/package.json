@@ -1,5 +1,5 @@
 {
-  "name": "plugin_template",
+  "name": "streamlit_component_template",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
