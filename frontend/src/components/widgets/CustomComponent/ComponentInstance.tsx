@@ -19,34 +19,34 @@ import { Map as ImmutableMap } from "immutable"
 import { logWarning } from "lib/log"
 import { Source, WidgetStateManager } from "lib/WidgetStateManager"
 import React, { createRef, ReactNode } from "react"
-import { PluginRegistry } from "./PluginRegistry"
+import { ComponentRegistry } from "./ComponentRegistry"
 
-/** Messages from Plugin -> Streamlit */
+/** Messages from Component -> Streamlit */
 enum ComponentBackMsgType {
-  // A plugin sends this message when it's ready to receive messages
+  // A component sends this message when it's ready to receive messages
   // from Streamlit. Streamlit won't send any messages until it gets this.
   // No data.
   COMPONENT_READY = "componentReady",
 
-  // The plugin has a new widget value. Send it back to Streamlit, which
+  // The component has a new widget value. Send it back to Streamlit, which
   // will then re-run the app.
   // Data: { value: any }
   SET_WIDGET_VALUE = "setWidgetValue",
 
-  // The plugin has a new height for its iframe.
+  // The component has a new height for its iframe.
   // Data: { height: number }
   SET_FRAME_HEIGHT = "setFrameHeight",
 }
 
-/** Messages from Streamlit -> Plugin */
+/** Messages from Streamlit -> Component */
 enum ComponentForwardMsgType {
-  // Sent by Streamlit when the plugin should re-render.
+  // Sent by Streamlit when the component should re-render.
   // Data: { args: any, disabled: boolean }
   RENDER = "render",
 }
 
 interface Props {
-  registry: PluginRegistry
+  registry: ComponentRegistry
   widgetMgr: WidgetStateManager
 
   disabled: boolean
@@ -60,10 +60,10 @@ interface State {
 
 // TODO: catch errors and display them in render()
 
-export class PluginInstance extends React.PureComponent<Props, State> {
+export class ComponentInstance extends React.PureComponent<Props, State> {
   private iframeRef = createRef<HTMLIFrameElement>()
-  // True when we've received the PLUGIN_READY message
-  private pluginReady = false
+  // True when we've received the COMPONENT_READY message
+  private componentReady = false
   private pendingRenderArgs = {}
   private pendingRenderDfs = []
 
@@ -72,9 +72,9 @@ export class PluginInstance extends React.PureComponent<Props, State> {
 
     this.state = { frameHeight: undefined }
 
-    // TODO: Do *not* listen for messages in each PluginInstance.
-    // Instead, a central plugin message processor should dispatch
-    // messages to PluginInstances as appropriate.
+    // TODO: Do *not* listen for messages in each ComponentInstance.
+    // Instead, a central component message processor should dispatch
+    // messages to ComponentInstances as appropriate.
     window.addEventListener("message", this.onMessageEvent)
   }
 
@@ -103,19 +103,19 @@ export class PluginInstance extends React.PureComponent<Props, State> {
       const type = event.data["type"]
       this.onBackMsg(type, event.data)
     } else {
-      console.log("onMessageEvent (non-plugin)")
+      console.log("onMessageEvent (non-component)")
     }
   }
 
   private onBackMsg = (type: string, data: any): void => {
     switch (type) {
       case ComponentBackMsgType.COMPONENT_READY:
-        if (this.pluginReady) {
-          logWarning(`Got multiple PLUGIN_READY messages!`)
+        if (this.componentReady) {
+          logWarning(`Got multiple COMPONENT_READY messages!`)
         } else {
-          // Our plugin is ready to begin receiving messages. Send off its
+          // Our component is ready to begin receiving messages. Send off its
           // first render message!
-          this.pluginReady = true
+          this.componentReady = true
           this.sendForwardMsg(ComponentForwardMsgType.RENDER, {
             args: this.pendingRenderArgs,
             dfs: this.pendingRenderDfs,
@@ -124,7 +124,7 @@ export class PluginInstance extends React.PureComponent<Props, State> {
         break
 
       case ComponentBackMsgType.SET_WIDGET_VALUE:
-        if (!this.pluginReady) {
+        if (!this.componentReady) {
           logWarning(
             `Got ${type} before ${ComponentBackMsgType.COMPONENT_READY}!`
           )
@@ -134,7 +134,7 @@ export class PluginInstance extends React.PureComponent<Props, State> {
         break
 
       case ComponentBackMsgType.SET_FRAME_HEIGHT:
-        if (!this.pluginReady) {
+        if (!this.componentReady) {
           logWarning(
             `Got ${type} before ${ComponentBackMsgType.COMPONENT_READY}!`
           )
@@ -144,7 +144,7 @@ export class PluginInstance extends React.PureComponent<Props, State> {
         break
 
       default:
-        logWarning(`Unrecognized PluginBackMsg: ${type}`)
+        logWarning(`Unrecognized ComponentBackMsgType: ${type}`)
     }
   }
 
@@ -168,7 +168,7 @@ export class PluginInstance extends React.PureComponent<Props, State> {
     } else if (typeof value === "string") {
       this.props.widgetMgr.setStringValue(widgetId, String(value), source)
     } else {
-      logWarning(`PluginInstance: unsupported value type! ${value}`)
+      logWarning(`ComponentInstance: unsupported value type! ${value}`)
     }
   }
 
@@ -210,36 +210,36 @@ export class PluginInstance extends React.PureComponent<Props, State> {
   }
 
   public render = (): ReactNode => {
-    const pluginId = this.props.element.get("pluginId")
-    const src = this.props.registry.getPluginURL(pluginId, "index.html")
+    const componentId = this.props.element.get("componentId")
+    const src = this.props.registry.getComponentURL(componentId, "index.html")
 
     const renderArgs = JSON.parse(this.props.element.get("argsJson"))
     const renderDfs = this.props.element.get("argsDataframe").toJS()
 
-    if (this.pluginReady) {
-      // The plugin has loaded. Send it a new render message immediately.
+    if (this.componentReady) {
+      // The component has loaded. Send it a new render message immediately.
       this.sendForwardMsg(ComponentForwardMsgType.RENDER, {
         args: renderArgs,
         dfs: renderDfs,
         disabled: this.props.disabled,
       })
     } else {
-      // The plugin hasn't yet loaded. Save these render args; we'll
-      // send the RENDER message as soon as the plugin is ready.
-      // It is *not* an error for a plugin to never send the ready message.
+      // The component hasn't yet loaded. Save these render args; we'll
+      // send the RENDER message as soon as the component is ready.
+      // It is *not* an error for a component to never send the ready message.
       this.pendingRenderArgs = renderArgs
       this.pendingRenderDfs = renderDfs
     }
 
     // Render the iframe. We set scrolling="no", because we don't want
-    // scrollbars to appear; instead, we want plugins to properly auto-size
+    // scrollbars to appear; instead, we want components to properly auto-size
     // themselves.
     //
     // Without this, there is a potential for a scrollbar to
     // appear for a brief moment after an iframe's content gets bigger,
     // and before it sends the "setFrameHeight" message back to Streamlit.
     //
-    // We may ultimately want to give plugins control over the "scrolling"
+    // We may ultimately want to give components control over the "scrolling"
     // property.
     //
     // TODO: make sure horizontal scrolling still works!

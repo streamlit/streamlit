@@ -23,10 +23,10 @@ import tornado.web
 
 import streamlit
 from streamlit.DeltaGenerator import DeltaGenerator
-from streamlit.plugins import MarshallPluginException
-from streamlit.plugins import PluginRegistry
-from streamlit.plugins import PluginRequestHandler
-from streamlit.plugins import plugin
+from streamlit.components import MarshallComponentException
+from streamlit.components import ComponentRegistry
+from streamlit.components import ComponentRequestHandler
+from streamlit.components import component
 from tests.testutil import DeltaGeneratorTestCase
 
 JAVASCRIPT_1 = """
@@ -48,24 +48,24 @@ class PluginTest(DeltaGeneratorTestCase):
     pass
     # def setUp(self, override_root=True) -> None:
     #     super().setUp(override_root)
-    #     self.registry = PluginRegistry()
+    #     self.registry = ComponentRegistry()
     #
     # def _register_plugin(self, name, javascript) -> [str, Callable]:
     #     registry_patch = mock.patch(
-    #         "streamlit.plugins.PluginRegistry.instance", return_value=self.registry
+    #         "streamlit.components.ComponentRegistry.instance", return_value=self.registry
     #     )
-    #     st_patch = mock.patch("streamlit.plugins.st")
-    #     dg_patch = mock.patch("streamlit.plugins.DeltaGenerator")
+    #     st_patch = mock.patch("streamlit.components.st")
+    #     dg_patch = mock.patch("streamlit.components.DeltaGenerator")
     #
     #     with registry_patch, st_patch, dg_patch:
     #         plugin(name, javascript)
     #         plugin_id = self.registry._get_id(javascript)
     #
     #         # Test that we're properly adding functions to st and DeltaGenerator
-    #         self.assertTrue(hasattr(streamlit.plugins.st, name))
-    #         self.assertTrue(hasattr(streamlit.plugins.DeltaGenerator, name))
+    #         self.assertTrue(hasattr(streamlit.components.st, name))
+    #         self.assertTrue(hasattr(streamlit.components.DeltaGenerator, name))
     #
-    #         return plugin_id, getattr(streamlit.plugins.DeltaGenerator, name)
+    #         return plugin_id, getattr(streamlit.components.DeltaGenerator, name)
     #
     # def test_register_plugin(self):
     #     """Test the output of st.plugin"""
@@ -105,22 +105,22 @@ class PluginTest(DeltaGeneratorTestCase):
     #     """Test `plugin_func()` with non-JSON-friendly args"""
     #     plugin_id, plugin_func = self._register_plugin("test", JAVASCRIPT_1)
     #
-    #     with self.assertRaises(MarshallPluginException):
+    #     with self.assertRaises(MarshallComponentException):
     #         plugin_func(DeltaGenerator(), {"bad": DeltaGenerator()})
 
 
-class PluginRegistryTest(unittest.TestCase):
+class ComponentRegistryTest(unittest.TestCase):
     """TODO!"""
 
     pass
     # def test_singleton(self):
-    #     self.assertIsNotNone(PluginRegistry.instance())
+    #     self.assertIsNotNone(ComponentRegistry.instance())
     #     self.assertEqual(
-    #         PluginRegistry.instance(), PluginRegistry.instance(),
+    #         ComponentRegistry.instance(), ComponentRegistry.instance(),
     #     )
     #
     # def test_register_plugin(self):
-    #     registry = PluginRegistry()
+    #     registry = ComponentRegistry()
     #     id1 = registry.register_plugin(JAVASCRIPT_1)
     #     id2 = registry.register_plugin(JAVASCRIPT_2)
     #     self.assertEqual(JAVASCRIPT_1, registry.get_plugin_path(id1))
@@ -129,20 +129,20 @@ class PluginRegistryTest(unittest.TestCase):
     # def test_register_duplicate(self):
     #     """Registering a duplicate is not an error and should result
     #     in the same ID."""
-    #     registry = PluginRegistry()
+    #     registry = ComponentRegistry()
     #     self.assertEqual(
     #         registry.register_plugin(JAVASCRIPT_1),
     #         registry.register_plugin(JAVASCRIPT_1),
     #     )
 
 
-class PluginRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
+class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
     """Tests the /plugin endpoint"""
 
     # TODO!
 
     def get_app(self):
-        self.registry = PluginRegistry()
+        self.registry = ComponentRegistry()
         return tornado.web.Application(
-            [("/plugin/(.*)", PluginRequestHandler, dict(registry=self.registry))]
+            [("/plugin/(.*)", ComponentRequestHandler, dict(registry=self.registry))]
         )
