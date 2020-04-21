@@ -1,6 +1,6 @@
 import hoistNonReactStatics from "hoist-non-react-statics"
 import React, { ReactNode } from "react"
-import ArrowTable, { ArrowDataframeProto } from "./ArrowTable"
+import { ArrowTable, ArrowDataframeProto } from "./ArrowTable"
 import { ComponentProps } from "./StreamlitComponent"
 
 interface ArgsDataframe {

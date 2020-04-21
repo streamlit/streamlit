@@ -15,10 +15,11 @@
  * limitations under the License.
  */
 
-import ArrowTable from "./ArrowTable"
-import { ComponentProps } from "./StreamlitComponent"
+// Workaround for type-only exports:
+// https://stackoverflow.com/questions/53728230/cannot-re-export-a-type-when-using-the-isolatedmodules-with-ts-3-2-2
+import { ComponentProps as ComponentProps_ } from "./StreamlitComponent"
 
 export { StreamlitComponent } from "./StreamlitComponent"
+export { ArrowTable } from "./ArrowTable"
 export { connectToStreamlit } from "./connectToStreamlit"
-export type ArrowTable = ArrowTable
-export type ComponentProps = ComponentProps
+export type ComponentProps = ComponentProps_

@@ -46,7 +46,7 @@ interface Styler {
   uuid: string
 }
 
-export default class ArrowTable {
+export class ArrowTable {
   private readonly dataTable: Table
   private readonly indexTable: Table
   private readonly columnsTable: Table
