@@ -252,6 +252,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
         allowFullScreen={false}
         seamless={true}
         scrolling="no"
+        sandbox="allow-forms allow-popups allow-scripts"
       />
     )
   }
