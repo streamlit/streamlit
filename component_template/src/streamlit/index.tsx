@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2019 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,4 +15,11 @@
  * limitations under the License.
  */
 
-export { default } from "./Table";
+// Workaround for type-only exports:
+// https://stackoverflow.com/questions/53728230/cannot-re-export-a-type-when-using-the-isolatedmodules-with-ts-3-2-2
+import { ComponentProps as ComponentProps_ } from "./StreamlitComponent"
+
+export { StreamlitComponent } from "./StreamlitComponent"
+export { ArrowTable } from "./ArrowTable"
+export { connectToStreamlit } from "./connectToStreamlit"
+export type ComponentProps = ComponentProps_

@@ -1,33 +1,30 @@
-import React from "react";
-import { ComponentProps, StreamlitComponent } from "../StreamlitComponent";
+import React from "react"
+import { connectToStreamlit, StreamlitComponent } from "../streamlit"
 
 interface State {
-  fontSize: number;
+  fontSize: number
 }
 
 /**
- * Radio Button example, using BaseUI.
+ * A component that grows and shrinks.
  */
-class Resizer extends React.PureComponent<ComponentProps, State> {
-  public constructor(props: ComponentProps) {
-    super(props);
-    this.state = { fontSize: 18 };
-  }
+class Resizer extends StreamlitComponent<State> {
+  public state = { fontSize: 18 }
 
   private smaller = (): void => {
     this.setState(prevState => ({
-      fontSize: Math.max(prevState.fontSize - 4, 18)
-    }));
-  };
+      fontSize: Math.max(prevState.fontSize - 4, 18),
+    }))
+  }
 
   private larger = (): void => {
     this.setState(prevState => ({
-      fontSize: prevState.fontSize + 4
-    }));
-  };
+      fontSize: prevState.fontSize + 4,
+    }))
+  }
 
   public render = (): React.ReactNode => {
-    const styleProp = { fontSize: this.state.fontSize };
+    const styleProp = { fontSize: this.state.fontSize }
     return (
       <div>
         <div style={styleProp}>I'm resizable!</div>
@@ -38,16 +35,8 @@ class Resizer extends React.PureComponent<ComponentProps, State> {
           <button onClick={this.larger}>Larger</button>
         </span>
       </div>
-    );
-  };
-
-  public componentDidUpdate = (): void => {
-    this.props.updateFrameHeight();
-  };
-
-  public componentDidMount = (): void => {
-    this.props.updateFrameHeight();
-  };
+    )
+  }
 }
 
-export default StreamlitComponent(Resizer);
+export default connectToStreamlit(Resizer)
