@@ -28,12 +28,10 @@ _Release date: April 22, 2020_
 
 **Highlights:**
 
-[TODO: Rephrase below as needed and add emojis!]
-
 - Made `st.selectbox` filtering case-insensitive.
 - Better support for Tensorflow sessions in `@st.cache`.
-- Changed behavior of `st.pyplot` to only autoclear the figure it you're using
-  the global Matplotlib figure (i.e. only you're calling `st.pyplot()` rather
+- Changed behavior of `st.pyplot` to only autoclear the figure if you're using
+  the global Matplotlib figure (i.e. only when calling `st.pyplot()` rather
   than `st.pyplot(fig)`).
 
 ## Version 0.57.0
