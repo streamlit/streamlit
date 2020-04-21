@@ -10,11 +10,11 @@ import React, {
 import { Table as UITable } from "reactstrap"
 import { ArrowTable, ComponentProps, connectToStreamlit } from "../streamlit"
 
-interface Props {
-  element: any
+interface TableProps {
+  element: ArrowTable
 }
 
-class Table extends PureComponent<Props> {
+class Table extends PureComponent<TableProps> {
   public render = (): ReactNode => {
     const table = this.props.element
 
@@ -138,8 +138,7 @@ const TableRow: SFC<TableRowProps> = props => {
 /**
  * Dataframe example using Apache Arrow.
  */
-
-const Dataframe = (props: ComponentProps) => {
+const DataframeComponent = (props: ComponentProps) => {
   useEffect(() => {
     props.updateFrameHeight()
   })
@@ -147,4 +146,4 @@ const Dataframe = (props: ComponentProps) => {
   return <Table element={props.args.data} />
 }
 
-export default connectToStreamlit(Dataframe)
+export default connectToStreamlit(DataframeComponent)
