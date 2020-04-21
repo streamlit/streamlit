@@ -55,7 +55,7 @@ def register_component(name: str, path: str) -> None:
         args_json = {}
         args_df = {}
         for key, value in kwargs.items():
-            if type_util.is_dataframe_compatible(value):
+            if type_util.is_dataframe_like(value):
                 args_df[key] = value
             else:
                 args_json[key] = value
