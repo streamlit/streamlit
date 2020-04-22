@@ -1,0 +1,20 @@
+version: 1
+update_configs:
+  # Keep package.json (& lockfiles) up to date as soon as
+  # new versions are published to the npm registry
+  - package_manager: "javascript"
+    directory: "/frontend"
+    update_schedule: "live"
+
+    default_labels:
+      - "needs triage"
+      - "infra"
+
+  # Keep Pipfile up to date, batching pull requests weekly
+  - package_manager: "python"
+    directory: "/lib"
+    update_schedule: "weekly"
+
+    default_labels:
+      - "needs triage"
+      - "infra"
