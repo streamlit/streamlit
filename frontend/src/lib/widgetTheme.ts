@@ -389,9 +389,18 @@ export const radioOverrides = {
 export const checkboxOverrides = {
   ...radioOverrides,
   Checkmark: {
-    style: {
+    style: ({
+      $isFocusVisible,
+      $checked,
+    }: {
+      $isFocusVisible: boolean
+      $checked: boolean
+    }) => ({
       borderWidth: "2px",
-    },
+      outline: 0,
+      boxShadow:
+        $isFocusVisible && $checked ? `0 0 0 0.2rem ${primaryA50}` : "",
+    }),
   },
 }
 
@@ -474,6 +483,7 @@ const themeOverrides = {
     black: black,
     primary: primary,
     primaryA: primary,
+    accent: primaryA50,
     tagPrimarySolidBackground: primary,
     borderFocus: primary,
     contentPrimary: black,
