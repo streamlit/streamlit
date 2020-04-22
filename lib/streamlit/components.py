@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hashlib
 import json
 import mimetypes
 import os
@@ -45,7 +44,7 @@ def register_component(name: str, path: str) -> None:
     """Register a new custom component."""
 
     # Register this component with our global registry.
-    component_id = ComponentRegistry.instance().register_component(path)
+    component_id = ComponentRegistry.instance().register_component(name, path)
 
     # Build our component function.
     def component_instance(dg: DeltaGenerator, *args, **kwargs) -> Optional[Any]:
@@ -207,40 +206,36 @@ class ComponentRegistry:
     def __init__(self):
         self._components = {}  # type: Dict[str, str]
 
-    def register_component(self, path: str) -> str:
+    def register_component(self, name: str, path: str) -> str:
         """Register a filesystem path as a custom component.
 
-        If the path has already been registered, this is a no-op.
+        Raises an Exception if the name has already been registered to a
+        component with a different path.
 
         Parameters
         ----------
+        name : str
+            The component's name.
         path : str
             The path to the directory that contains the component's contents.
 
         Returns
         -------
         str
-            The component's ID.
+            The component's ID. (This is just its name.)
         """
         abspath = os.path.abspath(path)
         if not os.path.isdir(abspath):
             raise StreamlitAPIException("No such component directory: '%s'" % abspath)
-        id = self._get_id(abspath)
-        self._components[id] = abspath
-        return id
+
+        if self._components.get(name) != abspath:
+            raise StreamlitAPIException("Component '{}' is already registered to '{}'".format(name, path))
+
+        self._components[name] = abspath
+        return name
 
     def get_component_path(self, id: str) -> Optional[str]:
-        """Return the javascript for the component with the given ID.
+        """Return the path for the component with the given ID.
         If no such component is registered, None will be returned instead.
         """
         return self._components.get(id, None)
-
-    @staticmethod
-    def _get_id(path: str) -> str:
-        """Compute the ID of a component."""
-        # TODO: For this to be useful, we need to cache something in the
-        # contents. We probably want to just use Watchdog instead, and let
-        # a component's ID be its name!
-        hasher = hashlib.new("md5")
-        hasher.update(path.encode())
-        return hasher.hexdigest()
