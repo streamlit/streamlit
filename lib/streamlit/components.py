@@ -228,8 +228,11 @@ class ComponentRegistry:
         if not os.path.isdir(abspath):
             raise StreamlitAPIException("No such component directory: '%s'" % abspath)
 
-        if self._components.get(name) != abspath:
-            raise StreamlitAPIException("Component '{}' is already registered to '{}'".format(name, path))
+        existing = self._components.get(name)
+        if existing is not None and existing != abspath:
+            raise StreamlitAPIException(
+                "Component '{}' is already registered to '{}'".format(name, path)
+            )
 
         self._components[name] = abspath
         return name

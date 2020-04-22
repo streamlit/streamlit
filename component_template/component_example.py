@@ -1,7 +1,7 @@
 import streamlit as st
 
 # Register "my_component" as a Streamlit component.
-st.register_component("my_component", "build")
+st.register_component("my_component", "component_template/build")
 
 # Create an instance of the component. Arguments we pass here
 # will be available in an "args" dictionary in the component.

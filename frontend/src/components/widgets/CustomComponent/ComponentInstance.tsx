@@ -16,7 +16,7 @@
  */
 
 import { Map as ImmutableMap } from "immutable"
-import { logWarning } from "lib/log"
+import { logError, logWarning } from "lib/log"
 import { Source, WidgetStateManager } from "lib/WidgetStateManager"
 import React, { createRef, ReactNode } from "react"
 import { ComponentRegistry } from "./ComponentRegistry"
@@ -69,45 +69,46 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
 
   public constructor(props: Props) {
     super(props)
-
     this.state = { frameHeight: undefined }
-
-    // TODO: Do *not* listen for messages in each ComponentInstance.
-    // Instead, a central component message processor should dispatch
-    // messages to ComponentInstances as appropriate.
-    window.addEventListener("message", this.onMessageEvent)
   }
 
-  public componentWillUnmount = (): void => {
-    window.removeEventListener("message", this.onMessageEvent)
-  }
-
-  /** True if the message comes from our iframe */
-  private isIFrameMessage(event: MessageEvent): boolean {
+  public componentDidMount = (): void => {
     if (this.iframeRef.current == null) {
-      // we have no iframe
-      return false
+      // This should not be possible.
+      logError(
+        `ComponentInstance does not have an iframeRef, and will not receive messages!`
+      )
+      return
     }
 
     if (this.iframeRef.current.contentWindow == null) {
-      // We have no iframe contentWindow. This should never happen;
-      // an iframe will have a contentWindow as soon as it's loaded.
-      return false
+      // Nor should this.
+      logError(
+        `ComponentInstance iframe does not have an iframeRef, and will not receive messages!`
+      )
+      return
     }
 
-    return event.source === this.iframeRef.current.contentWindow
+    this.props.registry.registerComponentInstance(
+      this.iframeRef.current.contentWindow,
+      this
+    )
   }
 
-  private onMessageEvent = (event: MessageEvent): void => {
-    if ("isStreamlitMessage" in event.data && this.isIFrameMessage(event)) {
-      const type = event.data["type"]
-      this.onBackMsg(type, event.data)
-    } else {
-      console.log("onMessageEvent (non-component)")
+  public componentWillUnmount = (): void => {
+    if (
+      this.iframeRef.current == null ||
+      this.iframeRef.current.contentWindow == null
+    ) {
+      return
     }
+
+    this.props.registry.deregisterComponentInstance(
+      this.iframeRef.current.contentWindow
+    )
   }
 
-  private onBackMsg = (type: string, data: any): void => {
+  public onBackMsg = (type: string, data: any): void => {
     switch (type) {
       case ComponentBackMsgType.COMPONENT_READY:
         if (this.componentReady) {
