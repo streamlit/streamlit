@@ -17,37 +17,46 @@
 
 import { logWarning } from "lib/log"
 import { BaseUriParts, buildHttpUri } from "lib/UriUtil"
-import { ComponentInstance } from "./ComponentInstance"
+import { ComponentBackMsgType } from "./ComponentInstance"
+
+export type ComponentMessageListener = (
+  type: ComponentBackMsgType,
+  data: any
+) => void
 
 /**
  * Dispatches iframe messages to ComponentInstances.
  */
 export class ComponentRegistry {
   private readonly getServerUri: () => BaseUriParts | undefined
-  private readonly instances = new Map<MessageEventSource, ComponentInstance>()
+  private readonly msgListeners = new Map<
+    MessageEventSource,
+    ComponentMessageListener
+  >()
 
   public constructor(getServerUri: () => BaseUriParts | undefined) {
     this.getServerUri = getServerUri
     window.addEventListener("message", this.onMessageEvent)
   }
 
-  public registerComponentInstance = (
-    messageEventSource: MessageEventSource,
-    instance: ComponentInstance
+  /**
+   * Register a listener for component messages dispatched by the given source.
+   */
+  public registerListener = (
+    source: MessageEventSource,
+    listener: ComponentMessageListener
   ): void => {
-    if (this.instances.has(messageEventSource)) {
-      logWarning(`ComponentInstance registered multiple times!`, instance)
+    if (this.msgListeners.has(source)) {
+      logWarning(`MessageEventSource registered multiple times!`, source)
     }
 
-    this.instances.set(messageEventSource, instance)
+    this.msgListeners.set(source, listener)
   }
 
-  public deregisterComponentInstance = (
-    messageEventSource: MessageEventSource
-  ): void => {
-    const removed = this.instances.delete(messageEventSource)
+  public deregisterListener = (source: MessageEventSource): void => {
+    const removed = this.msgListeners.delete(source)
     if (!removed) {
-      logWarning(`Could not deregister unregistered ComponentInstance!`)
+      logWarning(`Could not deregister unregistered MessageEventSource!`)
     }
   }
 
@@ -73,8 +82,8 @@ export class ComponentRegistry {
     }
 
     // Get the ComponentInstance associated with the event
-    const instance = this.instances.get(event.source)
-    if (instance == null) {
+    const listener = this.msgListeners.get(event.source)
+    if (listener == null) {
       logWarning(
         `Received component message for unregistered ComponentInstance!`,
         event.data
@@ -89,6 +98,6 @@ export class ComponentRegistry {
     }
 
     // Forward the message on to the appropriate ComponentInstance.
-    instance.onBackMsg(type, event.data)
+    listener(type, event.data)
   }
 }

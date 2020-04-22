@@ -22,7 +22,7 @@ import React, { createRef, ReactNode } from "react"
 import { ComponentRegistry } from "./ComponentRegistry"
 
 /** Messages from Component -> Streamlit */
-enum ComponentBackMsgType {
+export enum ComponentBackMsgType {
   // A component sends this message when it's ready to receive messages
   // from Streamlit. Streamlit won't send any messages until it gets this.
   // No data.
@@ -39,7 +39,7 @@ enum ComponentBackMsgType {
 }
 
 /** Messages from Streamlit -> Component */
-enum ComponentForwardMsgType {
+export enum ComponentForwardMsgType {
   // Sent by Streamlit when the component should re-render.
   // Data: { args: any, disabled: boolean }
   RENDER = "render",
@@ -89,9 +89,9 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       return
     }
 
-    this.props.registry.registerComponentInstance(
+    this.props.registry.registerListener(
       this.iframeRef.current.contentWindow,
-      this
+      this.onBackMsg
     )
   }
 
@@ -103,12 +103,15 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       return
     }
 
-    this.props.registry.deregisterComponentInstance(
+    this.props.registry.deregisterListener(
       this.iframeRef.current.contentWindow
     )
   }
 
-  public onBackMsg = (type: string, data: any): void => {
+  /**
+   * Receive a ComponentBackMsg from our component iframe.
+   */
+  private onBackMsg = (type: string, data: any): void => {
     switch (type) {
       case ComponentBackMsgType.COMPONENT_READY:
         if (this.componentReady) {
