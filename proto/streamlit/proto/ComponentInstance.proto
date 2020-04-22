@@ -12,7 +12,7 @@ message ComponentInstance {
   // We'll probably want to transmit dataframe data separately (not in JSON).
   repeated ArgsDataframe args_dataframe = 3;
 
-  // ID that uniquely identifies the component this is an instance of.
+  // The component's unique ID.
   string component_id = 4;
 }
 

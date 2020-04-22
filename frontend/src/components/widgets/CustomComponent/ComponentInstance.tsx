@@ -16,13 +16,13 @@
  */
 
 import { Map as ImmutableMap } from "immutable"
-import { logWarning } from "lib/log"
+import { logError, logWarning } from "lib/log"
 import { Source, WidgetStateManager } from "lib/WidgetStateManager"
 import React, { createRef, ReactNode } from "react"
 import { ComponentRegistry } from "./ComponentRegistry"
 
 /** Messages from Component -> Streamlit */
-enum ComponentBackMsgType {
+export enum ComponentBackMsgType {
   // A component sends this message when it's ready to receive messages
   // from Streamlit. Streamlit won't send any messages until it gets this.
   // No data.
@@ -39,7 +39,7 @@ enum ComponentBackMsgType {
 }
 
 /** Messages from Streamlit -> Component */
-enum ComponentForwardMsgType {
+export enum ComponentForwardMsgType {
   // Sent by Streamlit when the component should re-render.
   // Data: { args: any, disabled: boolean }
   RENDER = "render",
@@ -69,44 +69,48 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
 
   public constructor(props: Props) {
     super(props)
-
     this.state = { frameHeight: undefined }
-
-    // TODO: Do *not* listen for messages in each ComponentInstance.
-    // Instead, a central component message processor should dispatch
-    // messages to ComponentInstances as appropriate.
-    window.addEventListener("message", this.onMessageEvent)
   }
 
-  public componentWillUnmount = (): void => {
-    window.removeEventListener("message", this.onMessageEvent)
-  }
-
-  /** True if the message comes from our iframe */
-  private isIFrameMessage(event: MessageEvent): boolean {
+  public componentDidMount = (): void => {
     if (this.iframeRef.current == null) {
-      // we have no iframe
-      return false
+      // This should not be possible.
+      logError(
+        `ComponentInstance does not have an iframeRef, and will not receive messages!`
+      )
+      return
     }
 
     if (this.iframeRef.current.contentWindow == null) {
-      // We have no iframe contentWindow. This should never happen;
-      // an iframe will have a contentWindow as soon as it's loaded.
-      return false
+      // Nor should this.
+      logError(
+        `ComponentInstance iframe does not have an iframeRef, and will not receive messages!`
+      )
+      return
     }
 
-    return event.source === this.iframeRef.current.contentWindow
+    this.props.registry.registerListener(
+      this.iframeRef.current.contentWindow,
+      this.onBackMsg
+    )
   }
 
-  private onMessageEvent = (event: MessageEvent): void => {
-    if ("isStreamlitMessage" in event.data && this.isIFrameMessage(event)) {
-      const type = event.data["type"]
-      this.onBackMsg(type, event.data)
-    } else {
-      console.log("onMessageEvent (non-component)")
+  public componentWillUnmount = (): void => {
+    if (
+      this.iframeRef.current == null ||
+      this.iframeRef.current.contentWindow == null
+    ) {
+      return
     }
+
+    this.props.registry.deregisterListener(
+      this.iframeRef.current.contentWindow
+    )
   }
 
+  /**
+   * Receive a ComponentBackMsg from our component iframe.
+   */
   private onBackMsg = (type: string, data: any): void => {
     switch (type) {
       case ComponentBackMsgType.COMPONENT_READY:
