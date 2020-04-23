@@ -24,7 +24,7 @@ See highlights, bug fixes, and known issues for Streamlit releases:
 
 ## Nightly releases
 
-Along with major and minor releases, we are introducing what we call **Nightlies**. The nightly release is for anyone that wants the most up-to-date version of Streamlit. So here's how it works. At the end of each day (you could say, at night 🌛), all approved PRs are added to the nightly build, including our latest features, fixes, and enhancements. And while we can't say there won't be bugs, we can assure you that these releases are subjected to the same testing as general releases.
+Along with major and minor releases, we are introducing what we call **Nightlies**. The nightly release is for anyone that wants the most up-to-date version of Streamlit. So here's how it works. At the end of each day (at night 🌛), all approved PRs are added to the nightly build, including our latest features, fixes, and enhancements. And while we can't say there won't be bugs, we can assure you that these releases are subjected to the same testing as general releases.
 
 You might be thinking, "This is great! But why are you doing this?" That's easy. We want to make sure that you have the latest features and timely fixes to ensure that you can what you need out of Streamlit.
 
