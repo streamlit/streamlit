@@ -7,12 +7,6 @@
 See highlights, bug fixes, and known issues for Streamlit releases:
 
 ```eval_rst
-.. contents::
-    :local:
-    :depth: 1
-```
-
-```eval_rst
 .. tip::
 
    To upgrade to the latest version of Streamlit, run:
@@ -21,6 +15,28 @@ See highlights, bug fixes, and known issues for Streamlit releases:
 
       $ pip install --upgrade streamlit
 ```
+
+```eval_rst
+.. contents::
+    :local:
+    :depth: 1
+```
+
+## Nightly releases
+
+Along with major and minor releases, we are introducing what we call **Nightlies**. The nightly release is for anyone that wants the most up-to-date version of Streamlit. So here's how it works. At the end of each day (you could say, at night 🌛), all approved PRs are added to the nightly build, including our latest features, fixes, and enhancements. And while we can't say there won't be bugs, we can assure you that these releases are subjected to the same testing as general releases.
+
+You might be thinking, "This is great! But why are you doing this?" That's easy. We want to make sure that you have the latest features and timely fixes to ensure that you can what you need out of Streamlit.
+
+If you'd like to use the latest nightly build, just run:
+
+```
+$ pip install streamlit-nightly
+```
+
+If you'd like to use a specific version, you can find the version number in our [Release history](https://pypi.org/project/streamlit-nightly/#history). And if you'd like to review the changes for a nightly release, you can use the [comparison tool on GitHub](https://github.com/streamlit/streamlit/compare/0.57.3...0.57.4.dev20200412).
+
+As always, if you have any [feedback](https://discuss.streamlit.io/) we'd love to hear from you.
 
 ## Version 0.57.0
 
