@@ -168,30 +168,11 @@ def _fix_pydeck_mapbox_api_warning():
 
 def _print_url():
     title_message = "You can now view your Streamlit app in your browser."
-    named_urls = []
-
-    if config.is_manually_set("browser.serverAddress"):
-        named_urls = [
-            ("URL", Report.get_url(config.get_option("browser.serverAddress")))
-        ]
-
-    elif config.is_manually_set("server.address"):
-        named_urls = [
-            ("Network URL", Report.get_url(config.get_option("server.address"))),
-            ("External URL", Report.get_url(net_util.get_external_ip())),
-        ]
-
-    elif config.get_option("server.headless"):
-        named_urls = [
-            ("Network URL", Report.get_url(net_util.get_internal_ip())),
-            ("External URL", Report.get_url(net_util.get_external_ip())),
-        ]
-
-    else:
-        named_urls = [
-            ("Local URL", Report.get_url("localhost")),
-            ("Network URL", Report.get_url(net_util.get_internal_ip())),
-        ]
+    
+    named_urls = [
+        ("Local URL", Report.get_url("localhost")),
+        ("Network URL", Report.get_url(net_util.get_internal_ip())),
+    ]
 
     click.secho("")
     click.secho("  %s" % title_message, fg="blue", bold=True)
