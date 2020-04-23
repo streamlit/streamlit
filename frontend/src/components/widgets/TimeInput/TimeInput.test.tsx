@@ -23,7 +23,7 @@ import { WidgetStateManager } from "lib/WidgetStateManager"
 import { TimeInput as TimeInputProto } from "autogen/proto"
 
 import TimeInput, { Props } from "./TimeInput"
-import { TimePicker as UITimePicker } from "baseui/datepicker"
+import { TimePicker as UITimePicker } from "baseui/timepicker"
 
 jest.mock("lib/WidgetStateManager")
 

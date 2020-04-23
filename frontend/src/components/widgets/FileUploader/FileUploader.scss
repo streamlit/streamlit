@@ -30,7 +30,7 @@
     font-size: $font-size-sm;
     height: 4.25rem;
     justify-content: center;
-    line-height: 1.25rem;
+    line-height: 1.25;
     width: 100%;
 
     .btn {
@@ -38,10 +38,11 @@
       font-size: $font-size-sm;
       margin: 0.25em 0;
       padding: 0.125em 0.5em;
-    }
+      transition: none;
 
-    .btn:hover {
-      color: $primary;
+      &:hover {
+        color: $primary;
+      }
     }
   }
 
@@ -50,7 +51,7 @@
     display: flex;
     flex-direction: column;
     left: 0;
-    line-height: 1.25rem;
+    line-height: 1.25;
     padding-top: 0.75rem;
     pointer-events: none;
     position: absolute;
@@ -65,10 +66,8 @@
     flex-direction: column;
     font-family: "IBM Plex Sans", sans-serif;
     font-size: $font-size-sm;
-    margin-bottom: -0.25rem;
     max-width: 100%;
     overflow: hidden;
-    padding: 0.25rem 0.5rem 0;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
