@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+import { Theme } from "baseui/theme"
 import { createTheme, lightThemePrimitives } from "baseui"
 import { PLACEMENT as POPOVER_PLACEMENT } from "baseui/popover"
 import { logMessage } from "lib/log"
@@ -137,13 +138,15 @@ export const fileUploaderOverrides: FileUploaderOverrides<StyleProps> = {
       $theme,
       $isDragActive,
     }: {
-      $theme: any
+      $theme: Theme
       $isDragActive: boolean
     }) => ({
       borderRadius,
       display: "flex",
-      flexDirection: "column",
+      color: grayDark,
       fontSize: fontSizeSm,
+      lineHeight: lineHeightTight,
+      flexDirection: "column",
       justifyContent: "center",
       paddingTop: "0.25rem",
       paddingBottom: "0.25rem",
@@ -155,11 +158,18 @@ export const fileUploaderOverrides: FileUploaderOverrides<StyleProps> = {
       borderStyle: "solid",
       borderWidth: "1px",
       ":focus": {
-        outline: "none",
+        outline: 0,
         borderColor: primary,
       },
-      lineHeight: lineHeightTight,
     }),
+  },
+  ContentSeparator: {
+    style: {
+      fontSize: fontSizeSm,
+      color: grayDark,
+      lineHeight: lineHeightTight,
+      display: "",
+    },
   },
   ContentMessage: {
     style: {
@@ -174,6 +184,7 @@ export const fileUploaderOverrides: FileUploaderOverrides<StyleProps> = {
       overrides: {
         BaseButton: {
           style: {
+            color: primary,
             fontSize: fontSizeSm,
             lineHeight: lineHeightTight,
             paddingBottom: 0,
@@ -185,9 +196,17 @@ export const fileUploaderOverrides: FileUploaderOverrides<StyleProps> = {
               backgroundColor: "transparent",
               textDecoration: "underline",
             },
+            ":active": {
+              backgroundColor: "transparent",
+              textDecoration: "underline",
+            },
             ":disabled": {
               backgroundColor: "transparent",
               color: grayDark,
+            },
+            ":focus": {
+              outline: 0,
+              backgroundColor: "transparent",
             },
           },
         },
@@ -225,15 +244,14 @@ export const datePickerOverrides = {
     },
   },
   Day: {
-    style: {
-      // The hover effect is very slow for this widget. Let's just turn it off.
-      ":hover": {
-        backgroundColor: "transparent",
+    style: ({ $selected }: { $selected: boolean }) => ({
+      "::after": {
+        borderColor: $selected ? "transparent" : "",
       },
-    },
+    }),
   },
   PrevButton: {
-    style: {
+    style: () => ({
       // Align icon to the center of the button.
       display: "flex",
       alignItems: "center",
@@ -244,8 +262,9 @@ export const datePickerOverrides = {
       },
       ":focus": {
         backgroundColor: "transparent",
+        outline: 0,
       },
-    },
+    }),
   },
   NextButton: {
     style: {
@@ -259,6 +278,7 @@ export const datePickerOverrides = {
       },
       ":focus": {
         backgroundColor: "transparent",
+        outline: 0,
       },
     },
   },
@@ -322,6 +342,27 @@ export const multiSelectOverrides = {
       minHeight: "44px",
     }),
   },
+  ClearIcon: {
+    style: {
+      color: grayDark,
+    },
+  },
+  SearchIcon: {
+    style: {
+      color: grayDark,
+    },
+  },
+  MultiValue: {
+    props: {
+      overrides: {
+        Root: {
+          style: {
+            fontSize: "12px",
+          },
+        },
+      },
+    },
+  },
 }
 
 export const radioOverrides = {
@@ -337,9 +378,31 @@ export const radioOverrides = {
       borderBottomRightRadius: borderRadius,
     }),
   },
+  RadioMarkInner: {
+    style: ({ $checked }: { $checked: boolean }) => ({
+      height: $checked ? "6px" : "16px",
+      width: $checked ? "6px" : "16px",
+    }),
+  },
 }
 
-export const checkboxOverrides = radioOverrides
+export const checkboxOverrides = {
+  ...radioOverrides,
+  Checkmark: {
+    style: ({
+      $isFocusVisible,
+      $checked,
+    }: {
+      $isFocusVisible: boolean
+      $checked: boolean
+    }) => ({
+      borderWidth: "2px",
+      outline: 0,
+      boxShadow:
+        $isFocusVisible && $checked ? `0 0 0 0.2rem ${primaryA50}` : "",
+    }),
+  },
+}
 
 // Theme primitives. See lightThemePrimitives for what's available. These are
 // used to create a large JSON-style structure with theme values for all
@@ -392,11 +455,11 @@ const themeOverrides = {
     popoverBorderRadius: borderRadius,
     surfaceBorderRadius: borderRadius,
   },
-
   typography: {
     // Here we override some fonts that are used in widgets. We don't care
     // about the ones that are not used.
     font100: {},
+    font150: { ...fontStyles }, // Popup menus
     font200: {},
     font250: {},
     font300: { ...fontStyles }, // Popup menus
@@ -407,13 +470,36 @@ const themeOverrides = {
     font470: { ...fontStyles }, // Button
     font500: { ...fontStyles }, // Selected items in selectbox
     font600: {},
+
+    LabelXSmall: { ...fontStyles },
+    LabelSmall: { ...fontStyles },
+    LabelMedium: { ...fontStyles },
+    LabelLarge: { ...fontStyles },
+    ParagraphSmall: { ...fontStyles },
   },
 
   colors: {
     white: white,
     black: black,
+    primary: primary,
+    primaryA: primary,
+    accent: primaryA50,
+    tagPrimarySolidBackground: primary,
+    borderFocus: primary,
+    contentPrimary: black,
+    inputFill: grayLightest,
+    inputPlaceholder: grayDark,
+    inputBorder: grayLightest,
+    inputFillActive: grayLightest,
     tickMarkFillDisabled: grayLighter,
     tickFillDisabled: gray,
+    tickMarkFill: grayLightest,
+    tickFillSelected: primary,
+    calendarHeaderForegroundDisabled: grayLight,
+    calendarDayBackgroundSelected: primary,
+    calendarDayBackgroundSelectedHighlighted: primary,
+    calendarDayForegroundSelected: white,
+    calendarDayForegroundSelectedHighlighted: white,
   },
 }
 
@@ -430,7 +516,14 @@ export const sidebarWidgetTheme = createTheme(
     mono300: white, // Disabled widget background
     mono400: grayLight, // Slider track
   },
-  themeOverrides
+  {
+    ...themeOverrides,
+    colors: {
+      ...themeOverrides.colors,
+      inputFill: white,
+      inputFillActive: white,
+    },
+  }
 )
 
 // Log the widget theme just for debug purposes.
