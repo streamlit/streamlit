@@ -2,7 +2,7 @@
 name: Documentation improvement request
 about: Let us know how our docs could be better
 title: ""
-labels: docs
+labels: docs, needs triage
 assignees: ""
 ---
 
