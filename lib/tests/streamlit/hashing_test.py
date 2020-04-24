@@ -381,6 +381,8 @@ class HashTest(unittest.TestCase):
         from cffi_bin._foo import ffi as foo
         from cffi_bin._bar import ffi as bar
 
+        # Note: We've verified that all properties on CompiledFFI objects
+        # are global, except have not verified `error` either way.
         assert is_type(foo, "builtins.CompiledFFI")
         self.assertEqual(get_hash(foo), get_hash(bar))
 
