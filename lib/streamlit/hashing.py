@@ -405,6 +405,14 @@ class _CodeHasher:
         elif type_util.is_type(obj, "builtins.CompiledFFI"):
             return self.to_bytes(None)
 
+        elif type_util.is_type(obj, "builtins.mappingproxy") or type_util.is_type(
+            obj, "builtins.dict_items"
+        ):
+            return self.to_bytes(dict(obj))
+
+        elif type_util.is_type(obj, "builtins.getset_descriptor"):
+            return obj.__qualname__.encode()
+
         elif hasattr(obj, "name") and (
             isinstance(obj, io.IOBase)
             # Handle temporary files used during testing
