@@ -402,6 +402,9 @@ class _CodeHasher:
         elif inspect.isbuiltin(obj):
             return obj.__name__.encode()
 
+        elif type_util.is_type(obj, "builtins.CompiledFFI"):
+            return self.to_bytes(None)
+
         elif type_util.is_type(obj, "builtins.mappingproxy") or type_util.is_type(
             obj, "builtins.dict_items"
         ):

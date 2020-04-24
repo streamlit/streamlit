@@ -14,6 +14,7 @@
 
 """st.hashing unit tests."""
 
+import cffi
 import functools
 import hashlib
 import os
@@ -396,6 +397,33 @@ class HashTest(unittest.TestCase):
 
         hash_funcs = {int: lambda x: "hello"}
         self.assertNotEqual(get_hash(1), get_hash(1, hash_funcs=hash_funcs))
+
+    def _build_cffi(self, name):
+        ffibuilder = cffi.FFI()
+        ffibuilder.set_source(
+            "cffi_bin._%s" % name,
+            r"""
+                static int %s(int x)
+                {
+                    return x + "A";
+                }
+            """
+            % name,
+        )
+
+        ffibuilder.cdef("int %s(int);" % name)
+        ffibuilder.compile(verbose=True)
+
+    def test_compiled_ffi(self):
+        self._build_cffi("foo")
+        self._build_cffi("bar")
+        from cffi_bin._foo import ffi as foo
+        from cffi_bin._bar import ffi as bar
+
+        # Note: We've verified that all properties on CompiledFFI objects
+        # are global, except have not verified `error` either way.
+        assert is_type(foo, "builtins.CompiledFFI")
+        self.assertEqual(get_hash(foo), get_hash(bar))
 
     def test_sqlite_sqlalchemy_engine(self):
         """Separate tests for sqlite since it uses a file based
