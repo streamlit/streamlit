@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { TimePicker as UITimePicker } from "baseui/datepicker"
+import React, { PureComponent, ReactNode } from "react"
 import { Map as ImmutableMap } from "immutable"
+import { TimePicker as UITimePicker } from "baseui/timepicker"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 
 export interface Props {
@@ -35,7 +35,7 @@ interface State {
   value: string
 }
 
-class TimeInput extends React.PureComponent<Props, State> {
+class TimeInput extends PureComponent<Props, State> {
   public state: State = {
     value: this.props.element.get("default"),
   }
@@ -77,7 +77,7 @@ class TimeInput extends React.PureComponent<Props, State> {
     return hours + ":" + minutes
   }
 
-  public render = (): React.ReactNode => {
+  public render = (): ReactNode => {
     const { disabled, width, element } = this.props
     const style = { width }
     const label = element.get("label")

@@ -113,7 +113,7 @@ describe("Multiselect widget", () => {
   })
 
   it("should have correct type", () => {
-    expect(wrapper.find(UISelect).prop("type")).toBe(TYPE.search)
+    expect(wrapper.find(UISelect).prop("type")).toBe(TYPE.select)
   })
 
   it("could be disabled", () => {
