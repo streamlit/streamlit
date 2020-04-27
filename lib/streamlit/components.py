@@ -134,11 +134,7 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
             self.set_status(404)
             return
 
-        if len(parts) > 1:
-            filename = "/".join(parts[1:])
-        else:
-            filename = "index.html"
-
+        filename = "/".join(parts[1:])
         abspath = os.path.join(component_root, filename)
 
         LOGGER.debug("ComponentRequestHandler: GET: %s -> %s", path, abspath)
