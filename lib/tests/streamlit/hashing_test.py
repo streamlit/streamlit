@@ -32,6 +32,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import sqlalchemy as db
+import torch
 from mock import patch, MagicMock
 from parameterized import parameterized
 
@@ -369,6 +370,14 @@ class HashTest(unittest.TestCase):
 
         tf_session2 = tf.compat.v1.Session(config=tf_config)
         self.assertNotEqual(get_hash(tf_session), get_hash(tf_session2))
+
+    def test_torch_tensorbase(self):
+        a = torch.zeros((1))
+        b = torch.zeros((1))
+        c = torch.zeros((2))
+
+        self.assertEqual(get_hash(a), get_hash(b))
+        self.assertNotEqual(get_hash(a), get_hash(c))
 
     def test_non_hashable(self):
         """Test user provided hash functions."""
