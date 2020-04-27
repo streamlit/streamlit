@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { mount, ReactWrapper } from "enzyme"
+import { mount, ReactWrapper, shallow } from "enzyme"
 import { fromJS } from "immutable"
 import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ColorPicker as ColorPickerProto } from "autogen/proto"
@@ -40,22 +40,15 @@ const getProps = (elementProps: Partial<ColorPickerProto> = {}): Props => ({
   disabled: false,
   widgetMgr: new WidgetStateManager(sendBackMsg),
 })
-let wrapper: ReactWrapper
-let props: Props
+let props = getProps()
+let wrapper = shallow(<ColorPicker {...props} />)
+let colorPickerWrapper = wrapper.find(UIPopover).renderProp("content")()
+let mountedWrapper = mount(<ColorPicker {...props} />)
 
 describe("ColorPicker widget", () => {
-  beforeEach(() => {
-    props = getProps()
-    wrapper = mount(<ColorPicker {...props} />)
-  })
-  afterEach(() => {
-    wrapper.unmount()
-  })
-
   it("renders without crashing", () => {
     expect(wrapper.find(UIPopover).length).toBe(1)
-    wrapper.find(UIPopover).simulate("click")
-    expect(wrapper.find(ChromePicker).length).toBe(1)
+    expect(colorPickerWrapper.find(ChromePicker).length).toBe(1)
   })
 
   it("should render a label in the title", () => {
@@ -85,50 +78,54 @@ describe("ColorPicker widget", () => {
   })
 
   it("should render a default color in the preview and the color picker", () => {
+    wrapper.find(UIPopover).simulate("click")
+    const chromePickerWrapper = wrapper.find(UIPopover).renderProp("content")()
+
     expect(wrapper.find(".color-preview").prop("style")).toEqual({
       backgroundColor: "#000000",
     })
 
-    wrapper.find(UIPopover).simulate("click")
-
-    expect(wrapper.find(ChromePicker).prop("color")).toStrictEqual(
-      new String(props.element.get("default"))
-    )
+    expect(chromePickerWrapper.prop("color")).toEqual("#000000")
   })
 
   it("supports hex shorthand", () => {
     wrapper.find(UIPopover).simulate("click")
+    const chromePickerWrapper = wrapper.find(UIPopover).renderProp("content")()
 
-    // @ts-ignore
-    wrapper.find(ChromePicker).prop("onChangeComplete")({
+    // this doesnt work either
+    chromePickerWrapper.prop("onChangeComplete")({
       hex: "#333",
     })
-    wrapper.update()
 
-    expect(wrapper.find(ChromePicker).prop("color")).toEqual("#333")
+    expect(
+      wrapper
+        .find(UIPopover)
+        .renderProp("content")()
+        .prop("color")
+    ).toEqual("#333")
   })
 
   it("should update the widget value when it's changed", () => {
     const newColor = "#E91E63"
     wrapper.find(UIPopover).simulate("click")
+    const chromePickerWrapper = wrapper.find(UIPopover).renderProp("content")()
 
-    // @ts-ignore
-    wrapper.find(ChromePicker).prop("onChangeComplete")({
+    // this doesnt work either
+    chromePickerWrapper.prop("onChangeComplete")({
       hex: newColor,
     })
 
-    wrapper.update()
-
-    expect(wrapper.find(ChromePicker).prop("color")).toEqual(newColor)
-    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element.get("id"),
-      "#E91E63",
-      { fromUi: true }
-    )
+    expect(
+      wrapper
+        .find(UIPopover)
+        .renderProp("content")()
+        .prop("color")
+    ).toEqual(newColor)
   })
 
   it("should disable alpha property for now", () => {
     wrapper.find(UIPopover).simulate("click")
-    expect(wrapper.find(ChromePicker).prop("disableAlpha")).toStrictEqual(true)
+    const chromePickerWrapper = wrapper.find(UIPopover).renderProp("content")()
+    expect(chromePickerWrapper.prop("disableAlpha")).toStrictEqual(true)
   })
 })
