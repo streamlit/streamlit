@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { mount, ReactWrapper, shallow } from "enzyme"
+import { shallow } from "enzyme"
 import { fromJS } from "immutable"
 import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ColorPicker as ColorPickerProto } from "autogen/proto"
@@ -43,7 +43,6 @@ const getProps = (elementProps: Partial<ColorPickerProto> = {}): Props => ({
 let props = getProps()
 let wrapper = shallow(<ColorPicker {...props} />)
 let colorPickerWrapper = wrapper.find(UIPopover).renderProp("content")()
-let mountedWrapper = mount(<ColorPicker {...props} />)
 
 describe("ColorPicker widget", () => {
   it("renders without crashing", () => {
