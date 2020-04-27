@@ -211,7 +211,7 @@ class ComponentRegistry:
         return cls._instance
 
     def __init__(self):
-        self._components = {}  # type: Dict[str, str]
+        self._components = {}  # type: Dict[str, Optional[str]]
 
     def register_component(self, name: str, path: Optional[str] = None) -> str:
         """Register a filesystem path as a custom component.
@@ -229,14 +229,13 @@ class ComponentRegistry:
         str
             The component's ID. (This is just its name.)
         """
+        abspath = None
         if path is not None:
             abspath = os.path.abspath(path)
             if not os.path.isdir(abspath):
                 raise StreamlitAPIException(
                     "No such component directory: '%s'" % abspath
                 )
-        else:
-            abspath = None
 
         self._components[name] = abspath
         return name
