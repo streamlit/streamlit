@@ -40,9 +40,9 @@ const getProps = (elementProps: Partial<ColorPickerProto> = {}): Props => ({
   disabled: false,
   widgetMgr: new WidgetStateManager(sendBackMsg),
 })
-let props = getProps()
-let wrapper = shallow(<ColorPicker {...props} />)
-let colorPickerWrapper = wrapper.find(UIPopover).renderProp("content")()
+const props = getProps()
+const wrapper = shallow(<ColorPicker {...props} />)
+const colorPickerWrapper = wrapper.find(UIPopover).renderProp("content")()
 
 describe("ColorPicker widget", () => {
   it("renders without crashing", () => {
