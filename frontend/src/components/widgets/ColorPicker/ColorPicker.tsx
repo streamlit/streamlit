@@ -65,7 +65,10 @@ class ColorPicker extends React.PureComponent<Props, State> {
     const { element, width } = this.props
     const { value } = this.state
     const style = { width }
-    const backgroundColor = { backgroundColor: value }
+    const previewStyle = {
+      backgroundColor: value,
+      "box-shadow": `${value} 0px 0px 4px`,
+    }
     const label = element.get("label")
     return (
       <div className="Widget stColorPicker" style={style}>
@@ -79,7 +82,7 @@ class ColorPicker extends React.PureComponent<Props, State> {
             />
           )}
         >
-          <div className="color-preview" style={backgroundColor}></div>
+          <div className="color-preview" style={previewStyle}></div>
         </UIPopover>
       </div>
     )

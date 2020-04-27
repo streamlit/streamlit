@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { mount, ReactWrapper, shallow } from "enzyme"
+import { shallow } from "enzyme"
 import { fromJS } from "immutable"
 import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ColorPicker as ColorPickerProto } from "autogen/proto"
@@ -40,10 +40,9 @@ const getProps = (elementProps: Partial<ColorPickerProto> = {}): Props => ({
   disabled: false,
   widgetMgr: new WidgetStateManager(sendBackMsg),
 })
-let props = getProps()
-let wrapper = shallow(<ColorPicker {...props} />)
-let colorPickerWrapper = wrapper.find(UIPopover).renderProp("content")()
-let mountedWrapper = mount(<ColorPicker {...props} />)
+const props = getProps()
+const wrapper = shallow(<ColorPicker {...props} />)
+const colorPickerWrapper = wrapper.find(UIPopover).renderProp("content")()
 
 describe("ColorPicker widget", () => {
   it("renders without crashing", () => {
@@ -83,6 +82,7 @@ describe("ColorPicker widget", () => {
 
     expect(wrapper.find(".color-preview").prop("style")).toEqual({
       backgroundColor: "#000000",
+      "box-shadow": "#000000 0px 0px 4px",
     })
 
     expect(chromePickerWrapper.prop("color")).toEqual("#000000")
@@ -90,10 +90,10 @@ describe("ColorPicker widget", () => {
 
   it("supports hex shorthand", () => {
     wrapper.find(UIPopover).simulate("click")
-    const chromePickerWrapper = wrapper.find(UIPopover).renderProp("content")()
+    // const chromePickerWrapper = wrapper.find(UIPopover).renderProp("content")()
 
     // this doesnt work either
-    chromePickerWrapper.prop("onChangeComplete")({
+    colorPickerWrapper.prop("onChangeComplete")({
       hex: "#333",
     })
 
@@ -108,10 +108,8 @@ describe("ColorPicker widget", () => {
   it("should update the widget value when it's changed", () => {
     const newColor = "#E91E63"
     wrapper.find(UIPopover).simulate("click")
-    const chromePickerWrapper = wrapper.find(UIPopover).renderProp("content")()
 
-    // this doesnt work either
-    chromePickerWrapper.prop("onChangeComplete")({
+    colorPickerWrapper.prop("onChangeComplete")({
       hex: newColor,
     })
 
@@ -125,7 +123,6 @@ describe("ColorPicker widget", () => {
 
   it("should disable alpha property for now", () => {
     wrapper.find(UIPopover).simulate("click")
-    const chromePickerWrapper = wrapper.find(UIPopover).renderProp("content")()
-    expect(chromePickerWrapper.prop("disableAlpha")).toStrictEqual(true)
+    expect(colorPickerWrapper.prop("disableAlpha")).toStrictEqual(true)
   })
 })
