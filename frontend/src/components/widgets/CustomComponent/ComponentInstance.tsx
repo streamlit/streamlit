@@ -64,8 +64,8 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
   private iframeRef = createRef<HTMLIFrameElement>()
   // True when we've received the COMPONENT_READY message
   private componentReady = false
-  private pendingRenderArgs = {}
-  private pendingRenderDfs = []
+  private lastRenderArgs = {}
+  private lastRenderDataframes = []
 
   public constructor(props: Props) {
     super(props)
@@ -114,17 +114,17 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
   private onBackMsg = (type: string, data: any): void => {
     switch (type) {
       case ComponentBackMsgType.COMPONENT_READY:
-        if (this.componentReady) {
-          logWarning(`Got multiple COMPONENT_READY messages!`)
-        } else {
-          // Our component is ready to begin receiving messages. Send off its
-          // first render message!
-          this.componentReady = true
-          this.sendForwardMsg(ComponentForwardMsgType.RENDER, {
-            args: this.pendingRenderArgs,
-            dfs: this.pendingRenderDfs,
-          })
-        }
+        // Our component is ready to begin receiving messages. Send off its
+        // first render message! It is *not* an error to get multiple
+        // COMPONENT_READY messages. This can happen if a component is being
+        // served from the webpack dev server, and gets reloaded. We
+        // always respond to this message with the most recent render
+        // arguments.
+        this.componentReady = true
+        this.sendForwardMsg(ComponentForwardMsgType.RENDER, {
+          args: this.lastRenderArgs,
+          dfs: this.lastRenderDataframes,
+        })
         break
 
       case ComponentBackMsgType.SET_WIDGET_VALUE:
@@ -237,13 +237,16 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
         dfs: renderDfs,
         disabled: this.props.disabled,
       })
-    } else {
-      // The component hasn't yet loaded. Save these render args; we'll
-      // send the RENDER message as soon as the component is ready.
-      // It is *not* an error for a component to never send the ready message.
-      this.pendingRenderArgs = renderArgs
-      this.pendingRenderDfs = renderDfs
     }
+
+    // We always store the most recent render arguments in order to respond
+    // to COMPONENT_READY messages. Components can indicate that they're ready
+    // multiple times (this will happen if a plugin auto-reloads itself -
+    // for example, if it's being served from a webpack dev server). When
+    // component sends the COMPONENT_READY message, we send it the most
+    // recent render arguments.
+    this.lastRenderArgs = renderArgs
+    this.lastRenderDataframes = renderDfs
 
     // Render the iframe. We set scrolling="no", because we don't want
     // scrollbars to appear; instead, we want components to properly auto-size
