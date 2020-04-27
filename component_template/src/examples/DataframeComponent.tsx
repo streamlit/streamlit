@@ -8,7 +8,11 @@ import React, {
   useEffect,
 } from "react"
 import { Table as UITable } from "reactstrap"
-import { ArrowTable, ComponentProps, connectToStreamlit } from "../streamlit"
+import {
+  ArrowTable,
+  ComponentProps,
+  withStreamlitConnection,
+} from "../streamlit"
 
 interface TableProps {
   element: ArrowTable
@@ -146,4 +150,4 @@ const DataframeComponent = (props: ComponentProps) => {
   return <Table element={props.args.data} />
 }
 
-export default connectToStreamlit(DataframeComponent)
+export default withStreamlitConnection(DataframeComponent)

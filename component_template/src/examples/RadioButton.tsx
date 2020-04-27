@@ -6,7 +6,7 @@ import { Client as Styletron } from "styletron-engine-atomic"
 import { Provider as StyletronProvider } from "styletron-react"
 import {
   ComponentProps,
-  connectToStreamlit,
+  withStreamlitConnection,
   StreamlitComponent,
 } from "../streamlit"
 
@@ -110,4 +110,4 @@ class RadioButton extends StreamlitComponent<State> {
   }
 }
 
-export default connectToStreamlit(RadioButton)
+export default withStreamlitConnection(RadioButton)

@@ -1,5 +1,5 @@
 import React from "react"
-import { connectToStreamlit, StreamlitComponent } from "../streamlit"
+import { withStreamlitConnection, StreamlitComponent } from "../streamlit"
 
 interface State {
   fontSize: number
@@ -39,4 +39,4 @@ class Resizer extends StreamlitComponent<State> {
   }
 }
 
-export default connectToStreamlit(Resizer)
+export default withStreamlitConnection(Resizer)
