@@ -372,9 +372,9 @@ class HashTest(unittest.TestCase):
         self.assertNotEqual(get_hash(tf_session), get_hash(tf_session2))
 
     def test_torch_tensor(self):
-        a = torch.zeros([1,1], dtype=torch.int32)
-        b = torch.zeros([1,1], dtype=torch.int32)
-        c = torch.zeros([1,2], dtype=torch.int32)
+        a = torch.zeros([1, 1], dtype=torch.int32)
+        b = torch.zeros([1, 1], dtype=torch.int32)
+        c = torch.zeros([1, 2], dtype=torch.int32)
 
         self.assertEqual(get_hash(a), get_hash(b))
         self.assertNotEqual(get_hash(a), get_hash(c))
