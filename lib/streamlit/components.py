@@ -220,9 +220,6 @@ class ComponentRegistry:
     def register_component(self, name: str, path: Optional[str] = None) -> str:
         """Register a filesystem path as a custom component.
 
-        Raises an Exception if the name has already been registered to a
-        component with a different path.
-
         Parameters
         ----------
         name : str
@@ -244,12 +241,6 @@ class ComponentRegistry:
                 )
         else:
             abspath = None
-
-        existing = self._components.get(name)
-        if existing is not None and existing != abspath:
-            raise StreamlitAPIException(
-                "Component '{}' is already registered to '{}'".format(name, path)
-            )
 
         self._components[name] = abspath
         return name
