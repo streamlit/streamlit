@@ -217,9 +217,8 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     const componentId = this.props.element.get("componentId")
     const url = this.props.element.get("url")
 
-    // Determine the component iframe's src. If a URL is specified,
-    // we just use that. Otherwise, we derive the URL from the the
-    // component's ID.
+    // Determine the component iframe's src. If a URL is specified, we just
+    // use that. Otherwise, we derive the URL from the component's ID.
     let src: string
     if (url != null && url !== "") {
       src = url
