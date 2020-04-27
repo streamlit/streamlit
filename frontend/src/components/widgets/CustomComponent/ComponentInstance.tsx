@@ -215,7 +215,17 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
 
   public render = (): ReactNode => {
     const componentId = this.props.element.get("componentId")
-    const src = this.props.registry.getComponentURL(componentId, "index.html")
+    const url = this.props.element.get("url")
+
+    // Determine the component iframe's src. If a URL is specified,
+    // we just use that. Otherwise, we derive the URL from the the
+    // component's ID.
+    let src: string
+    if (url != null && url !== "") {
+      src = url
+    } else {
+      src = this.props.registry.getComponentURL(componentId, "index.html")
+    }
 
     const renderArgs = JSON.parse(this.props.element.get("argsJson"))
     const renderDfs = this.props.element.get("argsDataframe").toJS()

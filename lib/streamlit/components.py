@@ -40,8 +40,13 @@ class MarshallComponentException(StreamlitAPIException):
     pass
 
 
-def register_component(name: str, path: str) -> None:
+def register_component(
+    name: str, path: Optional[str] = None, url: Optional[str] = None
+) -> None:
     """Register a new custom component."""
+
+    if (path is None and url is None) or (path is not None and url is not None):
+        raise StreamlitAPIException("Either 'path' or 'url' must be set, but not both.")
 
     # Register this component with our global registry.
     component_id = ComponentRegistry.instance().register_component(name, path)
@@ -77,6 +82,8 @@ def register_component(name: str, path: str) -> None:
         def marshall_component(element: Element) -> Union[Any, Type[NoValue]]:
             element.component_instance.args_json = serialized_args_json
             element.component_instance.component_id = component_id
+            if url is not None:
+                element.component_instance.url = url
 
             for key, value in args_df.items():
                 new_args_dataframe = ArgsDataframe()
@@ -127,7 +134,11 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
             self.set_status(404)
             return
 
-        filename = "/".join(parts[1:])
+        if len(parts) > 1:
+            filename = "/".join(parts[1:])
+        else:
+            filename = "index.html"
+
         abspath = os.path.join(component_root, filename)
 
         LOGGER.debug("ComponentRequestHandler: GET: %s -> %s", path, abspath)
@@ -206,7 +217,7 @@ class ComponentRegistry:
     def __init__(self):
         self._components = {}  # type: Dict[str, str]
 
-    def register_component(self, name: str, path: str) -> str:
+    def register_component(self, name: str, path: Optional[str] = None) -> str:
         """Register a filesystem path as a custom component.
 
         Raises an Exception if the name has already been registered to a
@@ -216,17 +227,23 @@ class ComponentRegistry:
         ----------
         name : str
             The component's name.
-        path : str
-            The path to the directory that contains the component's contents.
+        path : str or None
+            The path to the directory that contains the component's contents,
+            or None if the component is being served as a URL.
 
         Returns
         -------
         str
             The component's ID. (This is just its name.)
         """
-        abspath = os.path.abspath(path)
-        if not os.path.isdir(abspath):
-            raise StreamlitAPIException("No such component directory: '%s'" % abspath)
+        if path is not None:
+            abspath = os.path.abspath(path)
+            if not os.path.isdir(abspath):
+                raise StreamlitAPIException(
+                    "No such component directory: '%s'" % abspath
+                )
+        else:
+            abspath = None
 
         existing = self._components.get(name)
         if existing is not None and existing != abspath:

@@ -14,6 +14,11 @@ message ComponentInstance {
 
   // The component's unique ID.
   string component_id = 4;
+
+  // Optional URL to load the component from. By default this is not set,
+  // but while testing, a user can e.g. point this to a local node server
+  // that they're developing their component in.
+  string url = 5;
 }
 
 message ArgsDataframe {
