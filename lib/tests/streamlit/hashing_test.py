@@ -22,6 +22,7 @@ import re
 import tempfile
 import time
 import types
+import torch
 import unittest
 import urllib
 from io import BytesIO
@@ -369,6 +370,14 @@ class HashTest(unittest.TestCase):
 
         tf_session2 = tf.compat.v1.Session(config=tf_config)
         self.assertNotEqual(get_hash(tf_session), get_hash(tf_session2))
+
+    def test_torch_tensor(self):
+        a = torch.zeros([1,1], dtype=torch.int32)
+        b = torch.zeros([1,1], dtype=torch.int32)
+        c = torch.zeros([1,2], dtype=torch.int32)
+
+        self.assertEqual(get_hash(a), get_hash(b))
+        self.assertNotEqual(get_hash(a), get_hash(c))
 
     def test_non_hashable(self):
         """Test user provided hash functions."""

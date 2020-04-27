@@ -490,6 +490,9 @@ class _CodeHasher:
         elif type_util.is_type(obj, "tensorflow.python.client.session.Session"):
             return self.to_bytes(id(obj))
 
+        elif type_util.is_type(obj, "torch.Tensor"):
+            return self.to_bytes(obj.numpy())
+
         elif inspect.isroutine(obj):
             if hasattr(obj, "__wrapped__"):
                 # Ignore the wrapper of wrapped functions.
