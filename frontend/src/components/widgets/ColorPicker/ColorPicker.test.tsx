@@ -90,10 +90,10 @@ describe("ColorPicker widget", () => {
 
   it("supports hex shorthand", () => {
     wrapper.find(UIPopover).simulate("click")
-    const chromePickerWrapper = wrapper.find(UIPopover).renderProp("content")()
+    // const chromePickerWrapper = wrapper.find(UIPopover).renderProp("content")()
 
     // this doesnt work either
-    chromePickerWrapper.prop("onChangeComplete")({
+    colorPickerWrapper.prop("onChangeComplete")({
       hex: "#333",
     })
 
@@ -108,10 +108,8 @@ describe("ColorPicker widget", () => {
   it("should update the widget value when it's changed", () => {
     const newColor = "#E91E63"
     wrapper.find(UIPopover).simulate("click")
-    const chromePickerWrapper = wrapper.find(UIPopover).renderProp("content")()
 
-    // this doesnt work either
-    chromePickerWrapper.prop("onChangeComplete")({
+    colorPickerWrapper.prop("onChangeComplete")({
       hex: newColor,
     })
 
@@ -125,7 +123,6 @@ describe("ColorPicker widget", () => {
 
   it("should disable alpha property for now", () => {
     wrapper.find(UIPopover).simulate("click")
-    const chromePickerWrapper = wrapper.find(UIPopover).renderProp("content")()
-    expect(chromePickerWrapper.prop("disableAlpha")).toStrictEqual(true)
+    expect(colorPickerWrapper.prop("disableAlpha")).toStrictEqual(true)
   })
 })
