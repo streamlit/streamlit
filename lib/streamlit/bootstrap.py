@@ -177,8 +177,7 @@ def _print_url():
 
     elif config.is_manually_set("server.address"):
         named_urls = [
-            ("Network URL", Report.get_url(config.get_option("server.address"))),
-            ("External URL", Report.get_url(net_util.get_external_ip())),
+            ("URL", Report.get_url(config.get_option("server.address"))),
         ]
 
     elif config.get_option("server.headless"):
