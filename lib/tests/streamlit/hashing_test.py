@@ -32,6 +32,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import sqlalchemy as db
+import torchvision
 from mock import patch, MagicMock
 from parameterized import parameterized
 
@@ -354,6 +355,14 @@ class HashTest(unittest.TestCase):
             self.assertNotEqual(h1, get_hash(f))
             f.seek(0)
             self.assertEqual(h1, get_hash(f))
+
+    def test_pycapsule(self):
+        self.assertEqual(
+            get_hash(torchvision.models.__dict__),
+            get_hash(torchvision.models.__dict__)
+        )
+
+        # TODO need a not equals check
 
     def test_magic_mock(self):
         """Test that MagicMocks never hash to the same thing."""

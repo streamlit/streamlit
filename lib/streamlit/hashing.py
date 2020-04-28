@@ -490,6 +490,17 @@ class _CodeHasher:
         elif type_util.is_type(obj, "tensorflow.python.client.session.Session"):
             return self.to_bytes(id(obj))
 
+        elif type_util.is_type(obj, "torch._C._TensorBase"):
+            # TODO handle `detach` here since TensorBase PR doesn't use it
+            return self.to_bytes(obj.detach().numpy())
+
+        elif type_util.is_type(obj, "builtins.PyCapsule"):
+            import ctypes
+            ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
+            ctypes.pythonapi.PyCapsule_GetPointer.argtypes = [ctypes.py_object, ctypes.c_char_p]
+            handle = ctypes.pythonapi.PyCapsule_GetPointer(obj, None)
+            return self.to_bytes(handle)
+
         elif inspect.isroutine(obj):
             if hasattr(obj, "__wrapped__"):
                 # Ignore the wrapper of wrapped functions.
