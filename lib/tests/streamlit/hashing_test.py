@@ -358,8 +358,7 @@ class HashTest(unittest.TestCase):
 
     def test_pycapsule(self):
         self.assertEqual(
-            get_hash(torchvision.models.__dict__),
-            get_hash(torchvision.models.__dict__)
+            get_hash(torchvision.models.__dict__), get_hash(torchvision.models.__dict__)
         )
 
         # TODO need a not equals check
