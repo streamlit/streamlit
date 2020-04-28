@@ -14,6 +14,7 @@
 
 """A hashing utility for code."""
 
+import ctypes
 import collections
 import dis
 import enum
@@ -495,8 +496,6 @@ class _CodeHasher:
             return self.to_bytes(obj.detach().numpy())
 
         elif type_util.is_type(obj, "builtins.PyCapsule"):
-            import ctypes
-
             ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
             ctypes.pythonapi.PyCapsule_GetPointer.argtypes = [
                 ctypes.py_object,
