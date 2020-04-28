@@ -1,5 +1,5 @@
 import { ReactNode } from "react"
-import { connectToStreamlit, StreamlitComponent } from "../streamlit"
+import { withStreamlitConnection, StreamlitComponent } from "../streamlit"
 
 class BuggyComponent extends StreamlitComponent {
   public render = (): ReactNode => {
@@ -8,4 +8,4 @@ class BuggyComponent extends StreamlitComponent {
   }
 }
 
-export default connectToStreamlit(BuggyComponent)
+export default withStreamlitConnection(BuggyComponent)

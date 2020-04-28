@@ -21,5 +21,5 @@ import { ComponentProps as ComponentProps_ } from "./StreamlitComponent"
 
 export { StreamlitComponent } from "./StreamlitComponent"
 export { ArrowTable } from "./ArrowTable"
-export { connectToStreamlit } from "./connectToStreamlit"
+export { withStreamlitConnection } from "./withStreamlitConnection"
 export type ComponentProps = ComponentProps_

@@ -1,5 +1,5 @@
-import React from "react"
-import { connectToStreamlit, StreamlitComponent } from "./streamlit"
+import React, { ReactNode } from "react"
+import { withStreamlitConnection, StreamlitComponent } from "./streamlit"
 
 // We import bootstrap.css to get some simple default styling for our
 // text and button. You can remove or replace this.
@@ -15,7 +15,7 @@ interface State {
 class MyComponent extends StreamlitComponent<State> {
   public state = { numClicks: 0 }
 
-  public render = (): React.ReactNode => {
+  public render = (): ReactNode => {
     // Arguments that are passed to the plugin in Python are accessible
     // via `this.props.args`. Here, we access the "name" arg.
     let name = this.props.args["name"]
@@ -46,10 +46,10 @@ class MyComponent extends StreamlitComponent<State> {
   }
 }
 
-// "connectToStreamlit" is a wrapper function. It bootstraps the
+// "withStreamlitConnection" is a wrapper function. It bootstraps the
 // connection between your component and the Streamlit app, and handles
 // passing arguments from Python -> Component, and widget values from
 // Component -> Python.
 //
-// You don't need to edit connectToStreamlit (but you're welcome to!).
-export default connectToStreamlit(MyComponent)
+// You don't need to edit withStreamlitConnection (but you're welcome to!).
+export default withStreamlitConnection(MyComponent)
