@@ -44,6 +44,8 @@
     "@typescript-eslint/no-console": "off",
     // Empty interfaces are ok
     "@typescript-eslint/no-empty-interface": "off",
+    // Empty functions are ok
+    "@typescript-eslint/no-empty-function": "off",
     // We prefer not using `any`, but don't disallow it
     "@typescript-eslint/no-explicit-any": "off",
     // Don't warn about unused function params

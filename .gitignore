@@ -20,6 +20,9 @@ eggs/
 .pytest_cache/
 test-reports
 
+# Test fixtures
+cffi_bin
+
 # Pyenv Stuff
 .python-version
 

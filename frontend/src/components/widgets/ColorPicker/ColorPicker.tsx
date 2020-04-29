@@ -15,10 +15,13 @@
  * limitations under the License.
  */
 
-import React, { PureComponent, ReactNode } from "react"
+import React from "react"
 import { Map as ImmutableMap } from "immutable"
-import { TimePicker as UITimePicker } from "baseui/timepicker"
+import { StatefulPopover as UIPopover } from "baseui/popover"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
+import { ChromePicker, ColorResult } from "react-color"
+
+import "./ColorPicker.scss"
 
 export interface Props {
   disabled: boolean
@@ -35,7 +38,7 @@ interface State {
   value: string
 }
 
-class TimeInput extends PureComponent<Props, State> {
+class ColorPicker extends React.PureComponent<Props, State> {
   public state: State = {
     value: this.props.element.get("default"),
   }
@@ -49,60 +52,41 @@ class TimeInput extends PureComponent<Props, State> {
     this.props.widgetMgr.setStringValue(widgetId, this.state.value, source)
   }
 
-  private handleChange = (newDate: Date): void => {
-    const value = this.dateToString(newDate)
-    this.setState({ value }, () => this.setWidgetValue({ fromUi: true }))
-  }
-
-  private stringToDate = (value: string): Date => {
-    const [hours, minutes] = value.split(":").map(Number)
-    const date = new Date()
-
-    date.setHours(hours)
-    date.setMinutes(minutes)
-
-    return date
-  }
-
-  private dateToString = (value: Date): string => {
-    const hours = value
-      .getHours()
-      .toString()
-      .padStart(2, "0")
-    const minutes = value
-      .getMinutes()
-      .toString()
-      .padStart(2, "0")
-
-    return hours + ":" + minutes
-  }
-
-  public render = (): ReactNode => {
-    const { disabled, width, element } = this.props
-    const style = { width }
-    const label = element.get("label")
-
-    const selectOverrides = {
-      Select: {
-        props: {
-          disabled,
-        },
+  private onChangeComplete = (color: ColorResult): void => {
+    this.setState(
+      {
+        value: color.hex,
       },
-    }
+      () => this.setWidgetValue({ fromUi: true })
+    )
+  }
 
+  public render = (): React.ReactNode => {
+    const { element, width } = this.props
+    const { value } = this.state
+    const style = { width }
+    const previewStyle = {
+      backgroundColor: value,
+      boxShadow: `${value} 0px 0px 4px`,
+    }
+    const label = element.get("label")
     return (
-      <div className="Widget stTimeInput" style={style}>
+      <div className="Widget stColorPicker" style={style}>
         <label>{label}</label>
-        <UITimePicker
-          format="24"
-          value={this.stringToDate(this.state.value)}
-          onChange={this.handleChange}
-          overrides={selectOverrides}
-          creatable
-        />
+        <UIPopover
+          content={() => (
+            <ChromePicker
+              color={value}
+              onChangeComplete={this.onChangeComplete}
+              disableAlpha={true}
+            />
+          )}
+        >
+          <div className="color-preview" style={previewStyle}></div>
+        </UIPopover>
       </div>
     )
   }
 }
 
-export default TimeInput
+export default ColorPicker
