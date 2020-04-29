@@ -493,7 +493,7 @@ jobs:
             mkdir ~/.streamlit
             echo '[general]' >  ~/.streamlit/credentials.toml
             echo 'email = "test@streamlit.io"' >> ~/.streamlit/credentials.toml
-            echo '[mapbox]' >  ~/.streamlit/credentials.toml
+            echo '[mapbox]' >>  ~/.streamlit/credentials.toml
             echo 'token = "'$MAPBOX_TOKEN'"' >> ~/.streamlit/credentials.toml
 
       - when:
