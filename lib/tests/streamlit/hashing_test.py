@@ -14,6 +14,7 @@
 
 """st.hashing unit tests."""
 
+import cffi
 import functools
 import hashlib
 import os
@@ -22,6 +23,7 @@ import tempfile
 import time
 import types
 import unittest
+import urllib
 from io import BytesIO
 from io import StringIO
 
@@ -29,7 +31,9 @@ import altair.vegalite.v3
 import numpy as np
 import pandas as pd
 import pytest
+import sqlalchemy as db
 from mock import patch, MagicMock
+from parameterized import parameterized
 
 try:
     import tensorflow as tf
@@ -42,6 +46,7 @@ from streamlit.hashing import UserHashError
 from streamlit.hashing import _CodeHasher
 from streamlit.hashing import _NP_SIZE_LARGE
 from streamlit.hashing import _PANDAS_ROWS_LARGE
+from streamlit.type_util import is_type
 from streamlit.util import functools_wraps
 import streamlit as st
 
@@ -57,6 +62,11 @@ def get_hash(f, context=None, hash_funcs=None):
     ch._get_main_script_directory.return_value = os.getcwd()
     ch.update(hasher, f, context)
     return hasher.digest()
+
+
+# Helper function to hash an engine
+def hash_engine(*args, **kwargs):
+    return get_hash(db.create_engine(*args, **kwargs))
 
 
 class HashTest(unittest.TestCase):
@@ -88,6 +98,37 @@ class HashTest(unittest.TestCase):
         self.assertNotEqual(get_hash((1, 2)), get_hash((2, 2)))
         self.assertNotEqual(get_hash((1,)), get_hash(1))
         self.assertNotEqual(get_hash((1,)), get_hash([1]))
+
+    def test_mappingproxy(self):
+        a = types.MappingProxyType({"a": 1})
+        b = types.MappingProxyType({"a": 1})
+        c = types.MappingProxyType({"c": 1})
+
+        self.assertEqual(get_hash(a), get_hash(b))
+        self.assertNotEqual(get_hash(a), get_hash(c))
+
+    def test_dict_items(self):
+        a = types.MappingProxyType({"a": 1}).items()
+        b = types.MappingProxyType({"a": 1}).items()
+        c = types.MappingProxyType({"c": 1}).items()
+
+        assert is_type(a, "builtins.dict_items")
+        self.assertEqual(get_hash(a), get_hash(b))
+        self.assertNotEqual(get_hash(a), get_hash(c))
+
+    def test_getset_descriptor(self):
+        class A:
+            x = 1
+
+        class B:
+            x = 1
+
+        a = A.__dict__["__dict__"]
+        b = B.__dict__["__dict__"]
+        assert is_type(a, "builtins.getset_descriptor")
+
+        self.assertEqual(get_hash(a), get_hash(a))
+        self.assertNotEqual(get_hash(a), get_hash(b))
 
     def test_dict(self):
         dict_gen = {1: (x for x in range(1))}
@@ -356,6 +397,157 @@ class HashTest(unittest.TestCase):
 
         hash_funcs = {int: lambda x: "hello"}
         self.assertNotEqual(get_hash(1), get_hash(1, hash_funcs=hash_funcs))
+
+    def _build_cffi(self, name):
+        ffibuilder = cffi.FFI()
+        ffibuilder.set_source(
+            "cffi_bin._%s" % name,
+            r"""
+                static int %s(int x)
+                {
+                    return x + "A";
+                }
+            """
+            % name,
+        )
+
+        ffibuilder.cdef("int %s(int);" % name)
+        ffibuilder.compile(verbose=True)
+
+    def test_compiled_ffi(self):
+        self._build_cffi("foo")
+        self._build_cffi("bar")
+        from cffi_bin._foo import ffi as foo
+        from cffi_bin._bar import ffi as bar
+
+        # Note: We've verified that all properties on CompiledFFI objects
+        # are global, except have not verified `error` either way.
+        assert is_type(foo, "builtins.CompiledFFI")
+        self.assertEqual(get_hash(foo), get_hash(bar))
+
+    def test_sqlite_sqlalchemy_engine(self):
+        """Separate tests for sqlite since it uses a file based
+        and in memory database and has no auth
+        """
+
+        mem = "sqlite://"
+        foo = "sqlite:///foo.db"
+
+        self.assertEqual(hash_engine(mem), hash_engine(mem))
+        self.assertEqual(hash_engine(foo), hash_engine(foo))
+        self.assertNotEqual(hash_engine(foo), hash_engine("sqlite:///bar.db"))
+        self.assertNotEqual(hash_engine(foo), hash_engine(mem))
+
+        # Need to use absolute paths otherwise one path resolves
+        # relatively and the other absolute
+        self.assertEqual(
+            hash_engine("sqlite:////foo.db", connect_args={"uri": True}),
+            hash_engine("sqlite:////foo.db?uri=true"),
+        )
+
+        self.assertNotEqual(
+            hash_engine(foo, connect_args={"uri": True}),
+            hash_engine(foo, connect_args={"uri": False}),
+        )
+
+        self.assertNotEqual(
+            hash_engine(foo, creator=lambda: False),
+            hash_engine(foo, creator=lambda: True),
+        )
+
+    def test_mssql_sqlalchemy_engine(self):
+        """Specialized tests for mssql since it uses a different way of
+        passing connection arguments to the engine
+        """
+
+        url = "mssql:///?odbc_connect"
+        auth_url = "mssql://foo:pass@localhost/db"
+
+        params_foo = urllib.parse.quote_plus(
+            "Server=localhost;Database=db;UID=foo;PWD=pass"
+        )
+        params_bar = urllib.parse.quote_plus(
+            "Server=localhost;Database=db;UID=bar;PWD=pass"
+        )
+        params_foo_caps = urllib.parse.quote_plus(
+            "SERVER=localhost;Database=db;UID=foo;PWD=pass"
+        )
+        params_foo_order = urllib.parse.quote_plus(
+            "Database=db;Server=localhost;UID=foo;PWD=pass"
+        )
+
+        self.assertEqual(
+            hash_engine(auth_url), hash_engine("%s=%s" % (url, params_foo)),
+        )
+        self.assertNotEqual(
+            hash_engine("%s=%s" % (url, params_foo)),
+            hash_engine("%s=%s" % (url, params_bar)),
+        )
+
+        # Note: False negative because the ordering of the keys affects
+        # the hash
+        self.assertNotEqual(
+            hash_engine("%s=%s" % (url, params_foo)),
+            hash_engine("%s=%s" % (url, params_foo_order)),
+        )
+
+        # Note: False negative because the keys are case insensitive
+        self.assertNotEqual(
+            hash_engine("%s=%s" % (url, params_foo)),
+            hash_engine("%s=%s" % (url, params_foo_caps)),
+        )
+
+        # Note: False negative because `connect_args` doesn't affect the
+        # connection string
+        self.assertNotEqual(
+            hash_engine(url, connect_args={"user": "foo"}),
+            hash_engine(url, connect_args={"user": "bar"}),
+        )
+
+    @parameterized.expand(
+        [
+            ("postgresql", "password"),
+            ("mysql", "passwd"),
+            ("oracle", "password"),
+            ("mssql", "password"),
+        ]
+    )
+    def test_sqlalchemy_engine(self, dialect, password_key):
+        def connect():
+            pass
+
+        url = "%s://localhost/db" % dialect
+        auth_url = "%s://user:pass@localhost/db" % dialect
+
+        self.assertEqual(hash_engine(url), hash_engine(url))
+        self.assertEqual(
+            hash_engine(auth_url, creator=connect),
+            hash_engine(auth_url, creator=connect),
+        )
+
+        # Note: Hashing an engine with a creator can only be equal to the hash of another
+        # engine with a creator, even if the underlying connection arguments are the same
+        self.assertNotEqual(hash_engine(url), hash_engine(url, creator=connect))
+
+        self.assertNotEqual(hash_engine(url), hash_engine(auth_url))
+        self.assertNotEqual(
+            hash_engine(url, encoding="utf-8"), hash_engine(url, encoding="ascii")
+        )
+        self.assertNotEqual(
+            hash_engine(url, creator=connect), hash_engine(url, creator=lambda: True)
+        )
+
+        # mssql doesn't use `connect_args`
+        if dialect != "mssql":
+            self.assertEqual(
+                hash_engine(auth_url),
+                hash_engine(url, connect_args={"user": "user", password_key: "pass"}),
+            )
+
+            self.assertNotEqual(
+                hash_engine(url, connect_args={"user": "foo"}),
+                hash_engine(url, connect_args={"user": "bar"}),
+            )
 
 
 class CodeHashTest(unittest.TestCase):
