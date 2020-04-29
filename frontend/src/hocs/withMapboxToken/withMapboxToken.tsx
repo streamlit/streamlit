@@ -82,12 +82,14 @@ function withMapboxToken(
       // We got an error when fetching our mapbox token: show the error.
       if (mapboxTokenError) {
         const { message } = mapboxTokenError
-
+        const messageWithHTML = (
+          <div dangerouslySetInnerHTML={{ __html: message }} />
+        )
         return (
           <ErrorElement
             width={width}
             name="Error fetching Mapbox token"
-            message={message}
+            message={messageWithHTML}
           />
         )
       }

@@ -20,7 +20,10 @@ import { SessionInfo } from "lib/SessionInfo"
 import AxiosMockAdapter from "axios-mock-adapter"
 import { MapboxToken, TOKENS_URL } from "hocs/withMapboxToken/MapboxToken"
 
-function setSessionInfoWithMapboxToken(userMapboxToken: string): void {
+function setSessionInfo(
+  userMapboxToken: string,
+  commandLine = "streamlit hello"
+): void {
   SessionInfo.current = new SessionInfo({
     sessionId: "mockSessionId",
     streamlitVersion: "sv",
@@ -28,8 +31,8 @@ function setSessionInfoWithMapboxToken(userMapboxToken: string): void {
     installationId: "iid",
     authorEmail: "ae",
     maxCachedMessageAge: 2,
-    commandLine: "cl",
-    userMapboxToken: userMapboxToken,
+    commandLine,
+    userMapboxToken,
   })
 }
 
@@ -39,7 +42,7 @@ describe("MapboxToken", () => {
   beforeEach(() => {
     window.location.hostname = "localhost"
     axiosMock = new AxiosMockAdapter(axios)
-    setSessionInfoWithMapboxToken("")
+    setSessionInfo("")
   })
 
   afterEach(() => {
@@ -57,7 +60,7 @@ describe("MapboxToken", () => {
   test("Returns userMapboxToken if non-empty", async () => {
     const userToken = "nonEmptyToken"
 
-    setSessionInfoWithMapboxToken(userToken)
+    setSessionInfo(userToken)
     await expect(MapboxToken.get()).resolves.toEqual(userToken)
 
     // The token should also be cached.
@@ -94,15 +97,17 @@ describe("MapboxToken", () => {
     expect(MapboxToken["token"]).toBeUndefined()
   })
 
-  it("Errors if localhost and missing token", async () => {
+  it("Errors if not localhost and missing token", async () => {
     delete window.location
     window.location = { hostname: "http://streamlit.io" } as Location
-    setSessionInfoWithMapboxToken("")
+    setSessionInfo("")
 
-    await expect(MapboxToken.get()).rejects.toEqual(
-      new Error(
-        "To use this you'll need a Mapbox access token. Please add it to your config."
-      )
-    )
+    await expect(MapboxToken.get()).rejects.toMatchSnapshot()
+  })
+
+  it("Errors if not hello.py and missing token", async () => {
+    setSessionInfo("", "streamlit run example.py")
+
+    await expect(MapboxToken.get()).rejects.toMatchSnapshot()
   })
 })

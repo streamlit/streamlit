@@ -26,6 +26,12 @@ export const TOKENS_URL = "https://data.streamlit.io/tokens.json"
 export class MapboxToken {
   private static token?: string
 
+  private static isItRunningLocal = (): boolean => {
+    const { hostname } = window.location
+
+    return hostname === "localhost" || hostname === "127.0.0.1"
+  }
+
   /**
    * Expose a singleton MapboxToken:
    * - If the user specified a token in their streamlit config, return it.
@@ -35,30 +41,33 @@ export class MapboxToken {
    * only be fetched once per session.)
    */
   public static async get(): Promise<string> {
-    if (
-      !this.isItRunningLocal() &&
-      SessionInfo.current.userMapboxToken === ""
-    ) {
-      throw new Error(
-        "To use this you'll need a Mapbox access token. Please add it to your config."
-      )
-    }
-
     if (!MapboxToken.token) {
       if (SessionInfo.current.userMapboxToken !== "") {
         MapboxToken.token = SessionInfo.current.userMapboxToken
       } else {
-        MapboxToken.token = await this.fetchToken(TOKENS_URL, "mapbox")
+        const { commandLine } = SessionInfo.current
+
+        if (
+          this.isItRunningLocal() &&
+          commandLine.toLowerCase() === "streamlit hello"
+        ) {
+          MapboxToken.token = await this.fetchToken(TOKENS_URL, "mapbox")
+        } else {
+          throw new Error(
+            `
+            To use this you'll need a Mapbox access token. Please add it to your config.
+            
+            To get a token for yourself, create an account at
+            <a href="https://mapbox.com">https://mapbox.com</a>. It's free! (for moderate usage levels) See
+            <a href="https://docs.streamlit.io/cli.html#view-all-config-options">our documentation</a> for more
+            info on how to set config options.
+            `
+          )
+        }
       }
     }
 
     return MapboxToken.token
-  }
-
-  private static isItRunningLocal = (): boolean => {
-    const { hostname } = window.location
-
-    return hostname === "localhost" || hostname === "127.0.0.1"
   }
 
   private static async fetchToken(

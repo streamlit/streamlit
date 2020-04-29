@@ -35,7 +35,7 @@ function waitOneTick(): Promise<void> {
 }
 
 describe("withMapboxToken", () => {
-  function getProps(): any {
+  function getProps(): object {
     return { label: "label" }
   }
 
