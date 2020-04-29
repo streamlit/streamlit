@@ -1,11 +1,11 @@
 import streamlit as st
 
 # Register "my_component" as a Streamlit component.
-st.register_component("my_component", path="component_template/build")
+# st.register_component("my_component", path="component_template/build")
 
 # Alternately, you can serve your in-development component with node,
 # and edit it live. Pass its URL instead of a path:
-# st.register_component("my_component", url="http://localhost:3001")
+st.register_component("my_component", url="http://localhost:3001")
 
 # Create an instance of the component. Arguments we pass here
 # will be available in an "args" dictionary in the component.
