@@ -485,10 +485,10 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         This is used to start running the user's script even before the first
         browser connects.
         """
-        session = self._create_report_session(ws=None)
+        session = self._create_or_reuse_report_session(ws=None)
         session.handle_rerun_script_request(is_preheat=True)
 
-    def _create_report_session(self, ws):
+    def _create_or_reuse_report_session(self, ws):
         """Register a connected browser with the server.
 
         Parameters
@@ -575,7 +575,7 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
         return super().check_origin(origin) or is_url_from_allowed_origins(origin)
 
     def open(self):
-        self._session = self._server._create_report_session(self)
+        self._session = self._server._create_or_reuse_report_session(self)
 
     def on_close(self):
         if not self._session:

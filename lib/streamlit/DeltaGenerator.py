@@ -308,6 +308,30 @@ class DeltaGenerator(object):
         else:
             return self._provided_cursor
 
+    def _get_coordinates(self):
+        """Returns the element's 4-component location as string like "M.(1,2).3".
+
+        This function uniquely identifies the element's position in the front-end, 
+        which allows (among other potential uses) the MediaFileManager to maintain
+        session-specific maps of MediaFile objects placed with their "coordinates".
+
+        This way, users can (say) use st.image with a stream of different images,
+        and Streamlit will expire the older images and replace them in place.
+        """
+        container = self._container  # Proto index of container (e.g. MAIN=1)
+
+        if self._cursor:
+            path = (
+                self._cursor.path
+            )  # [uint, uint] - "breadcrumbs" w/ ancestor positions
+            index = self._cursor.index  # index - element's own position
+        else:
+            # Case in which we have started up in headless mode.
+            path = "(,)"
+            index = ""
+
+        return "{}.{}.{}".format(container, path, index)
+
     def _enqueue_new_element_delta(
         self,
         marshall_element,
@@ -1342,7 +1366,9 @@ class DeltaGenerator(object):
             If True, the figure will be cleared after being rendered.
             If False, the figure will not be cleared after being rendered.
             If left unspecified, we pick a default based on the value of `fig`.
+
             * If `fig` is set, defaults to `False`.
+
             * If `fig` is not set, defaults to `True`. This simulates Jupyter's
               approach to matplotlib rendering.
 
@@ -1376,7 +1402,7 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.pyplot as pyplot
 
-        pyplot.marshall(element, fig, clear_figure, **kwargs)
+        pyplot.marshall(self._get_coordinates, element, fig, clear_figure, **kwargs)
 
     @_with_element
     def bokeh_chart(self, element, figure, use_container_width=False):
@@ -1492,7 +1518,14 @@ class DeltaGenerator(object):
             raise StreamlitAPIException("Image width must be positive.")
 
         image_proto.marshall_images(
-            image, caption, width, element.imgs, clamp, channels, format
+            self._get_coordinates(),
+            image,
+            caption,
+            width,
+            element.imgs,
+            clamp,
+            channels,
+            format,
         )
 
     @_with_element
@@ -1526,7 +1559,9 @@ class DeltaGenerator(object):
         """
         from .elements import media_proto
 
-        media_proto.marshall_audio(element.audio, data, format, start_time)
+        media_proto.marshall_audio(
+            self._get_coordinates(), element.audio, data, format, start_time
+        )
 
     @_with_element
     def video(self, element, data, format="video/mp4", start_time=0):
@@ -1561,7 +1596,9 @@ class DeltaGenerator(object):
         """
         from .elements import media_proto
 
-        media_proto.marshall_video(element.video, data, format, start_time)
+        media_proto.marshall_video(
+            self._get_coordinates(), element.video, data, format, start_time
+        )
 
     @_with_element
     def button(self, element, label, key=None):
