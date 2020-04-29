@@ -498,7 +498,6 @@ jobs:
       - run:
           name: Init credentials
           command: |
-            mkdir ~/.streamlit
             echo '[general]' >  ~/.streamlit/credentials.toml
             echo 'email = "test@streamlit.io"' >> ~/.streamlit/credentials.toml
 
