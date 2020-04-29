@@ -82,7 +82,7 @@ describe("ColorPicker widget", () => {
 
     expect(wrapper.find(".color-preview").prop("style")).toEqual({
       backgroundColor: "#000000",
-      "box-shadow": "#000000 0px 0px 4px",
+      boxShadow: "#000000 0px 0px 4px",
     })
 
     expect(chromePickerWrapper.prop("color")).toEqual("#000000")
@@ -90,7 +90,6 @@ describe("ColorPicker widget", () => {
 
   it("supports hex shorthand", () => {
     wrapper.find(UIPopover).simulate("click")
-    // const chromePickerWrapper = wrapper.find(UIPopover).renderProp("content")()
 
     // this doesnt work either
     colorPickerWrapper.prop("onChangeComplete")({

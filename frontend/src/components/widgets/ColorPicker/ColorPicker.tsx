@@ -67,7 +67,7 @@ class ColorPicker extends React.PureComponent<Props, State> {
     const style = { width }
     const previewStyle = {
       backgroundColor: value,
-      "box-shadow": `${value} 0px 0px 4px`,
+      boxShadow: `${value} 0px 0px 4px`,
     }
     const label = element.get("label")
     return (
