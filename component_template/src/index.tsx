@@ -10,3 +10,6 @@ ReactDOM.render(
   </React.StrictMode>,
   document.getElementById("root")
 )
+
+// For a non-React, "vanilla" implementation, import this instead:
+// import "./VanillaComponent"

@@ -18,8 +18,11 @@
 // Workaround for type-only exports:
 // https://stackoverflow.com/questions/53728230/cannot-re-export-a-type-when-using-the-isolatedmodules-with-ts-3-2-2
 import { ComponentProps as ComponentProps_ } from "./StreamlitComponent"
+import { RenderData as RenderData_ } from "./streamlit"
 
 export { StreamlitComponent } from "./StreamlitComponent"
 export { ArrowTable } from "./ArrowTable"
 export { withStreamlitConnection } from "./withStreamlitConnection"
+export { Streamlit } from "./streamlit"
 export type ComponentProps = ComponentProps_
+export type RenderData = RenderData_

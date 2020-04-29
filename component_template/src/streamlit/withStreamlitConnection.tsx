@@ -1,18 +1,29 @@
+/**
+ * @license
+ * Copyright 2018-2020 Streamlit Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import hoistNonReactStatics from "hoist-non-react-statics"
 import React, { ReactNode } from "react"
-import { ArrowTable, ArrowDataframeProto } from "./ArrowTable"
+import { RenderData, Streamlit } from "./streamlit"
 import { ComponentProps } from "./StreamlitComponent"
 
-interface ArgsDataframe {
-  key: string
-  value: ArrowDataframeProto
-}
-
 /**
- * Component wrapper. Bootstraps the communication interface between
- * Streamlit and the component.
+ * Wrapper for React-based Streamlit components.
  *
- * Component writers do not need to edit this function.
+ * Bootstraps the communication interface between Streamlit and the component.
  */
 export function withStreamlitConnection(
   WrappedComponent: React.ComponentType<ComponentProps>
@@ -20,37 +31,8 @@ export function withStreamlitConnection(
   interface WrapperProps {}
 
   interface WrapperState {
-    readyForFirstRender: boolean
-    renderArgs: object
-    renderDfs: object
-    renderDisabled: boolean
+    renderData?: RenderData
     componentError?: Error
-  }
-
-  const TARGET_ORIGIN = "*"
-
-  /** Messages from Component -> Streamlit */
-  enum ComponentBackMsgType {
-    // A component sends this message when it's ready to receive messages
-    // from Streamlit. Streamlit won't send any messages until it gets this.
-    // No data.
-    COMPONENT_READY = "componentReady",
-
-    // The component has a new widget value. Send it back to Streamlit, which
-    // will then re-run the app.
-    // Data: { value: any }
-    SET_WIDGET_VALUE = "setWidgetValue",
-
-    // The component has a new height for its iframe.
-    // Data: { height: number }
-    SET_FRAME_HEIGHT = "setFrameHeight",
-  }
-
-  /** Messages from Streamlit -> Component */
-  enum ComponentForwardMsgType {
-    // Sent by Streamlit when the component should re-render.
-    // Data: { args: any, disabled: boolean }
-    RENDER = "render",
   }
 
   class ComponentWrapper extends React.PureComponent<
@@ -62,12 +44,8 @@ export function withStreamlitConnection(
 
     public constructor(props: WrapperProps) {
       super(props)
-
       this.state = {
-        readyForFirstRender: false,
-        renderArgs: {},
-        renderDfs: {},
-        renderDisabled: false,
+        renderData: undefined,
         componentError: undefined,
       }
     }
@@ -80,13 +58,19 @@ export function withStreamlitConnection(
 
     public componentDidMount = (): void => {
       // Set up event listeners, and signal to Streamlit that we're ready.
-      // We won't render the component until we receive the first RENDER message.
-      window.addEventListener("message", this.onMessageEvent)
-      this.sendBackMsg(ComponentBackMsgType.COMPONENT_READY)
+      // We won't render the component until we receive the first RENDER_EVENT.
+      Streamlit.events.addEventListener(
+        Streamlit.RENDER_EVENT,
+        this.onRenderEvent
+      )
+      Streamlit.setComponentReady()
     }
 
     public componentWillUnmount = (): void => {
-      window.removeEventListener("message", this.onMessageEvent)
+      Streamlit.events.removeEventListener(
+        Streamlit.RENDER_EVENT,
+        this.onRenderEvent
+      )
     }
 
     /**
@@ -108,28 +92,7 @@ export function withStreamlitConnection(
       }
 
       this.frameHeight = newHeight
-      this.sendBackMsg(ComponentBackMsgType.SET_FRAME_HEIGHT, {
-        height: this.frameHeight,
-      })
-    }
-
-    /** Receive a ForwardMsg from the Streamlit app */
-    private onMessageEvent = (event: MessageEvent): void => {
-      // We only listen for Streamlit messages.
-      if (!event.data.hasOwnProperty("isStreamlitMessage")) {
-        return
-      }
-
-      const type = event.data["type"]
-      switch (type) {
-        case ComponentForwardMsgType.RENDER:
-          this.onRenderMessage(event.data)
-          break
-
-        default:
-          console.warn(`Unrecognized Streamlit message '${type}`)
-          break
-      }
+      Streamlit.setFrameHeight(this.frameHeight)
     }
 
     /**
@@ -137,56 +100,10 @@ export function withStreamlitConnection(
      * We save the render data in State, so that it can be passed to the
      * component in our own render() function.
      */
-    private onRenderMessage = (data: any): void => {
-      let args = data["args"]
-      if (args == null) {
-        console.error(
-          `Got null args in onRenderMessage. This should never happen`
-        )
-        args = {}
-      }
-
-      const dfs =
-        data["dfs"] && data["dfs"].length > 0
-          ? this.argsDataframeToObject(data["dfs"])
-          : {}
-
-      let disabled = Boolean(data["disabled"])
-
-      // Update our state to prepare for the render!
-      this.setState({
-        readyForFirstRender: true,
-        renderArgs: args,
-        renderDfs: dfs,
-        renderDisabled: disabled,
-      })
-    }
-
-    /** Send a BackMsg to the Streamlit app */
-    private sendBackMsg = (type: ComponentBackMsgType, data?: any): void => {
-      window.parent.postMessage(
-        {
-          // TODO? StreamlitMessageVersion: some string
-          isStreamlitMessage: true,
-          type: type,
-          ...data,
-        },
-        TARGET_ORIGIN
-      )
-    }
-
-    private argsDataframeToObject = (
-      argsDataframe: ArgsDataframe[]
-    ): object => {
-      const argsDataframeArrow = argsDataframe.map(
-        ({ key, value }: ArgsDataframe) => [key, this.toArrowTable(value)]
-      )
-      return Object.fromEntries(argsDataframeArrow)
-    }
-
-    private toArrowTable = (df: ArrowDataframeProto): ArrowTable => {
-      const { data, index, columns } = df.data
-      return new ArrowTable(data, index, columns)
+    private onRenderEvent = (event: Event): void => {
+      // Update our state with the newest render data
+      const renderEvent = event as CustomEvent<RenderData>
+      this.setState({ renderData: renderEvent.detail })
     }
 
     public render = (): ReactNode => {
@@ -201,23 +118,16 @@ export function withStreamlitConnection(
       }
 
       // Don't render until we've gotten our first message from Streamlit
-      if (!this.state.readyForFirstRender) {
+      if (this.state.renderData == null) {
         return null
-      }
-
-      const args = {
-        ...this.state.renderArgs,
-        ...this.state.renderDfs,
       }
 
       return (
         <WrappedComponent
           width={window.innerWidth}
-          disabled={this.state.renderDisabled}
-          args={args}
-          setWidgetValue={(value: any) =>
-            this.sendBackMsg(ComponentBackMsgType.SET_WIDGET_VALUE, { value })
-          }
+          disabled={this.state.renderData.disabled}
+          args={this.state.renderData.args}
+          setWidgetValue={Streamlit.setWidgetValue}
           updateFrameHeight={this.updateFrameHeight}
         />
       )
