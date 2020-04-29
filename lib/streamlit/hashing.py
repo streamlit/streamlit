@@ -491,7 +491,9 @@ class _CodeHasher:
         elif type_util.is_type(obj, "tensorflow.python.client.session.Session"):
             return self.to_bytes(id(obj))
 
-        elif type_util.is_type(obj, "torch._C._TensorBase") or type_util.is_type(obj, "torch.Tensor"):
+        elif type_util.is_type(obj, "torch._C._TensorBase") or type_util.is_type(
+            obj, "torch.Tensor"
+        ):
             # TODO handle `detach` here since TensorBase PR doesn't use it
             # RuntimeError: Can't call numpy() on Variable that requires grad.
             # Use var.detach().numpy() instead.
