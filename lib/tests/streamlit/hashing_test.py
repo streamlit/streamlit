@@ -357,9 +357,15 @@ class HashTest(unittest.TestCase):
             self.assertEqual(h1, get_hash(f))
 
     def test_pycapsule(self):
-        self.assertEqual(
-            get_hash(torchvision.models.__dict__), get_hash(torchvision.models.__dict__)
-        )
+        capsule = torchvision.models.__dict__['__builtins__']
+        capsule = dict(capsule)['__pybind11_internals_v3__']
+
+        assert(is_type(capsule, "builtins.PyCapsule"))
+        self.assertEqual(get_hash(capsule), get_hash(capsule))
+
+        # Originally reported error case
+        a = torchvision.models.__dict__['resnet18']() # (pretrained=True), # OSError: Read-only file system: '/mock'`
+        self.assertEqual(get_hash(a), get_hash(a))
 
         # TODO need a not equals check
 
