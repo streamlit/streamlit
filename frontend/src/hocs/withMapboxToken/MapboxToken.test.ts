@@ -70,7 +70,7 @@ describe("MapboxToken", () => {
   test("Fetches remote token if userMapboxToken is empty", async () => {
     const remoteToken = "remoteMapboxToken"
 
-    axiosMock.onGet(TOKENS_URL).reply(200, { mapbox: remoteToken })
+    axiosMock.onGet(TOKENS_URL).reply(200, { "mapbox-localhost": remoteToken })
 
     await expect(MapboxToken.get()).resolves.toEqual(remoteToken)
 
