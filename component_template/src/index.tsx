@@ -11,5 +11,6 @@ ReactDOM.render(
   document.getElementById("root")
 )
 
-// For a non-React, "vanilla" implementation, import this instead:
+// For a non-React, "vanilla" implementation, delete everything above this
+// line, and uncomment this:
 // import "./VanillaComponent"
