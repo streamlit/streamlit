@@ -539,7 +539,7 @@ _create_option(
     description="""Configure Streamlit to use a custom Mapbox
                 token for elements like st.deck_gl_chart and st.map.
                 To get a token for yourself, create an account at
-                https://mapbox.com. It's free! (for moderate usage levels)""",
+                https://mapbox.com. It's free (for moderate usage levels)!""",
     default_val="",
 )
 
