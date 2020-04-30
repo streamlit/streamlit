@@ -58,7 +58,7 @@ export class MapboxToken {
             To use this you'll need a Mapbox access token. Please add it to your config.
             
             To get a token for yourself, create an account at
-            <a href="https://mapbox.com">https://mapbox.com</a>. It's free! (for moderate usage levels) See
+            <a href="https://mapbox.com">https://mapbox.com</a>. It's free (for moderate usage levels)! See
             <a href="https://docs.streamlit.io/cli.html#view-all-config-options">our documentation</a> for more
             info on how to set config options.
             `
