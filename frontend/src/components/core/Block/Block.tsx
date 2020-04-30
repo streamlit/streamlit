@@ -69,6 +69,7 @@ const Video = React.lazy(() => import("components/elements/Video/"))
 // Lazy-load widgets.
 const Button = React.lazy(() => import("components/widgets/Button/"))
 const Checkbox = React.lazy(() => import("components/widgets/Checkbox/"))
+const ColorPicker = React.lazy(() => import("components/widgets/ColorPicker"))
 const DateInput = React.lazy(() => import("components/widgets/DateInput/"))
 const Multiselect = React.lazy(() => import("components/widgets/Multiselect/"))
 const Progress = React.lazy(() => import("components/elements/Progress/"))
@@ -307,6 +308,14 @@ class Block extends PureComponent<Props> {
       ),
       checkbox: (el: SimpleElement) => (
         <Checkbox
+          key={el.get("id")}
+          element={el}
+          width={width}
+          {...widgetProps}
+        />
+      ),
+      colorPicker: (el: SimpleElement) => (
+        <ColorPicker
           key={el.get("id")}
           element={el}
           width={width}

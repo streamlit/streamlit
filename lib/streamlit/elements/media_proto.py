@@ -59,7 +59,7 @@ def _reshape_youtube_url(url):
     return None
 
 
-def _marshall_av_media(proto, data, mimetype):
+def _marshall_av_media(coordinates, proto, data, mimetype):
     """ Fill audio or video proto based on contents of data.
 
     Given a string, check if it's a url; if so, send it out without modification.
@@ -73,7 +73,7 @@ def _marshall_av_media(proto, data, mimetype):
     if isinstance(data, str):
         # Assume it's a filename or blank.  Allow OS-based file errors.
         with open(data, "rb") as fh:
-            this_file = media_file_manager.add(fh.read(), mimetype)
+            this_file = media_file_manager.add(fh.read(), mimetype, coordinates)
             proto.url = this_file.url
             return
 
@@ -95,15 +95,16 @@ def _marshall_av_media(proto, data, mimetype):
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
-    this_file = media_file_manager.add(data, mimetype)
+    this_file = media_file_manager.add(data, mimetype, coordinates)
     proto.url = this_file.url
 
 
-def marshall_video(proto, data, mimetype="video/mp4", start_time=0):
+def marshall_video(coordinates, proto, data, mimetype="video/mp4", start_time=0):
     """Marshalls a video proto, using url processors as needed.
 
     Parameters
     ----------
+    coordinates : str
     proto : the proto to fill. Must have a string field called "data".
     data : str, bytes, BytesIO, numpy.ndarray, or file opened with
            io.open().
@@ -132,14 +133,15 @@ def marshall_video(proto, data, mimetype="video/mp4", start_time=0):
             proto.url = data
 
     else:
-        _marshall_av_media(proto, data, mimetype)
+        _marshall_av_media(coordinates, proto, data, mimetype)
 
 
-def marshall_audio(proto, data, mimetype="audio/wav", start_time=0):
+def marshall_audio(coordinates, proto, data, mimetype="audio/wav", start_time=0):
     """Marshalls an audio proto, using data and url processors as needed.
 
     Parameters
     ----------
+    coordinates : str
     proto : The proto to fill. Must have a string field called "url".
     data : str, bytes, BytesIO, numpy.ndarray, or file opened with
             io.open()
@@ -159,4 +161,4 @@ def marshall_audio(proto, data, mimetype="audio/wav", start_time=0):
         proto.url = data
 
     else:
-        _marshall_av_media(proto, data, mimetype)
+        _marshall_av_media(coordinates, proto, data, mimetype)

@@ -62,7 +62,7 @@ pylint:
 		$(BLACK) --check docs/ ; \
 		$(BLACK) --check examples/ ; \
 		$(BLACK) --check lib/streamlit/ --exclude=/*_pb2.py$/ ; \
-		$(BLACK) --check lib/tests/ --exclude=compile_error.py ; \
+		$(BLACK) --check lib/tests/ ; \
 		$(BLACK) --check e2e/scripts/ ; \
 	fi
 
@@ -76,7 +76,7 @@ pyformat:
 		$(BLACK) docs/ ; \
 		$(BLACK) examples/ ; \
 		$(BLACK) lib/streamlit/ --exclude=/*_pb2.py$/ ; \
-		$(BLACK) lib/tests/ --exclude=compile_error.py ; \
+		$(BLACK) lib/tests/ ; \
 		$(BLACK) e2e/scripts/ ; \
 	fi
 
