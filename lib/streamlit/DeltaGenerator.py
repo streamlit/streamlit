@@ -19,6 +19,7 @@ import json
 import random
 import textwrap
 import numbers
+import re
 from datetime import datetime
 from datetime import date
 from datetime import time
@@ -306,6 +307,30 @@ class DeltaGenerator(object):
             return cursor.get_container_cursor(self._container)
         else:
             return self._provided_cursor
+
+    def _get_coordinates(self):
+        """Returns the element's 4-component location as string like "M.(1,2).3".
+
+        This function uniquely identifies the element's position in the front-end, 
+        which allows (among other potential uses) the MediaFileManager to maintain
+        session-specific maps of MediaFile objects placed with their "coordinates".
+
+        This way, users can (say) use st.image with a stream of different images,
+        and Streamlit will expire the older images and replace them in place.
+        """
+        container = self._container  # Proto index of container (e.g. MAIN=1)
+
+        if self._cursor:
+            path = (
+                self._cursor.path
+            )  # [uint, uint] - "breadcrumbs" w/ ancestor positions
+            index = self._cursor.index  # index - element's own position
+        else:
+            # Case in which we have started up in headless mode.
+            path = "(,)"
+            index = ""
+
+        return "{}.{}.{}".format(container, path, index)
 
     def _enqueue_new_element_delta(
         self,
@@ -1338,10 +1363,12 @@ class DeltaGenerator(object):
             the usual case, this function will render the global plot.
 
         clear_figure : bool
-            If True, the figure will be cleared after being rendered. 
+            If True, the figure will be cleared after being rendered.
             If False, the figure will not be cleared after being rendered.
             If left unspecified, we pick a default based on the value of `fig`.
+
             * If `fig` is set, defaults to `False`.
+
             * If `fig` is not set, defaults to `True`. This simulates Jupyter's
               approach to matplotlib rendering.
 
@@ -1375,7 +1402,7 @@ class DeltaGenerator(object):
         """
         import streamlit.elements.pyplot as pyplot
 
-        pyplot.marshall(element, fig, clear_figure, **kwargs)
+        pyplot.marshall(self._get_coordinates, element, fig, clear_figure, **kwargs)
 
     @_with_element
     def bokeh_chart(self, element, figure, use_container_width=False):
@@ -1491,7 +1518,14 @@ class DeltaGenerator(object):
             raise StreamlitAPIException("Image width must be positive.")
 
         image_proto.marshall_images(
-            image, caption, width, element.imgs, clamp, channels, format
+            self._get_coordinates(),
+            image,
+            caption,
+            width,
+            element.imgs,
+            clamp,
+            channels,
+            format,
         )
 
     @_with_element
@@ -1525,7 +1559,9 @@ class DeltaGenerator(object):
         """
         from .elements import media_proto
 
-        media_proto.marshall_audio(element.audio, data, format, start_time)
+        media_proto.marshall_audio(
+            self._get_coordinates(), element.audio, data, format, start_time
+        )
 
     @_with_element
     def video(self, element, data, format="video/mp4", start_time=0):
@@ -1560,7 +1596,9 @@ class DeltaGenerator(object):
         """
         from .elements import media_proto
 
-        media_proto.marshall_video(element.video, data, format, start_time)
+        media_proto.marshall_video(
+            self._get_coordinates(), element.video, data, format, start_time
+        )
 
     @_with_element
     def button(self, element, label, key=None):
@@ -2097,6 +2135,61 @@ class DeltaGenerator(object):
 
         file_datas = [get_encoded_file_data(file.data, encoding) for file in files]
         return file_datas if accept_multiple_files else file_datas[0]
+
+    @_with_element
+    def color_picker(self, element, label, value=None, key=None):
+        """Display a color picker widget.
+
+        Parameters
+        ----------
+        label : str
+            A short label explaining to the user what this input is for.
+        value : str or None
+            The hex value of this widget when it first renders. If None, the default color is black.
+        key : str
+            An optional string to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. Multiple widgets of the same type may
+            not share the same key.
+
+        Returns
+        -------
+        str
+            The current value of the color picker widget.
+
+        Example
+        -------
+        >>> color = st.beta.color_picker('Pick A Color', '#00f900')
+        >>> st.write('The current color is', color)
+
+        """
+        # set value default
+        if value is None:
+            value = "#000000"
+
+        # make sure the value is a string
+        if not isinstance(value, str):
+            raise StreamlitAPIException(
+                "Color Picker Value has invalid type: %s. Expects a hex string like '#00FFAA' or '#000'."
+                % type(value).__name__
+            )
+
+        # validate the value and expects a hex string
+        match = re.match(r"^#(?:[0-9a-fA-F]{3}){1,2}$", value)
+
+        if not match:
+            raise StreamlitAPIException(
+                "'%s' is not a valid hex code for colors. Valid ones are like '#00FFAA' or '#000'."
+                % value
+            )
+
+        element.color_picker.label = label
+        element.color_picker.default = str(value)
+
+        ui_value = _get_widget_ui_value("color_picker", element, user_key=key)
+        current_value = ui_value if ui_value is not None else value
+
+        return str(current_value)
 
     @_with_element
     def text_input(self, element, label, value="", key=None, type="default"):

@@ -47,14 +47,14 @@ describe("st.multiselect", () => {
       it("should show the correct placeholder", () => {
         cy.get(".stMultiSelect")
           .first()
-          .should("have.text", "selectbox 1searchChoose an option");
+          .should("have.text", "selectbox 1Choose an optionopen");
       });
     });
     describe("when there are no valid options", () => {
       it("should show the correct placeholder", () => {
         cy.get(".stMultiSelect")
           .eq(2)
-          .should("have.text", "selectbox 3searchNo options to select.");
+          .should("have.text", "selectbox 3No options to select.open");
       });
     });
   });
@@ -128,8 +128,9 @@ describe("st.multiselect", () => {
 
       describe("when the user deselects the first option", () => {
         beforeEach(() => {
-          cy.get('[role="button"]')
-            .eq(1) // this is the 'close button' element for 'Male'
+          // this is the 'close button' element for 'Male'
+          cy.get('.stMultiSelect span[data-baseweb="tag"] span:last-child')
+            .eq(0)
             .click();
         });
         it("outputs the correct value", () => {
@@ -144,8 +145,8 @@ describe("st.multiselect", () => {
 
       describe("when the user click the clear button", () => {
         beforeEach(() => {
-          cy.get('[role="button"]')
-            .eq(4) // this is the clear button element
+          cy.get('.stMultiSelect [role="button"][aria-label="Clear all"]')
+            .eq(0)
             .click();
         });
         it("outputs the correct value", () => {
