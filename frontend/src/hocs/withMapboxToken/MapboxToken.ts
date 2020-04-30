@@ -76,7 +76,7 @@ export class MapboxToken {
   ): Promise<string> {
     try {
       const response = await axios.get(url)
-      const { mapbox: token } = response.data
+      const { "mapbox-localhost": token } = response.data
 
       if (token == null || token === "") {
         throw new Error(`Missing token "${tokenName}"`)
