@@ -4,7 +4,7 @@
 
 # Changelog
 
-See highlights, bug fixes, and known issues for Streamlit releases:
+This page lists highlights, bug fixes, and known issues for official Streamlit releases. If you're looking for information about nightly releases, beta features, or experimental features, see [Try pre-release features](pre_release_features.md).
 
 ```eval_rst
 .. tip::
@@ -21,22 +21,6 @@ See highlights, bug fixes, and known issues for Streamlit releases:
     :local:
     :depth: 1
 ```
-
-## Nightly releases
-
-Along with major and minor releases, we are introducing what we call **Nightlies**. The nightly release is for anyone that wants the most up-to-date version of Streamlit. So here's how it works. At the end of each day (at night 🌛), all approved PRs are added to the nightly build, including our latest features, fixes, and enhancements. And while we can't say there won't be bugs, we can assure you that these releases are subjected to the same testing as general releases.
-
-You might be thinking, "This is great! But why are you doing this?" That's easy. We want to make sure that you have the latest features and timely fixes to ensure that you can what you need out of Streamlit.
-
-If you'd like to use the latest nightly build, just run:
-
-```
-$ pip install streamlit-nightly
-```
-
-If you'd like to use a specific version, you can find the version number in our [Release history](https://pypi.org/project/streamlit-nightly/#history). And if you'd like to review the changes for a nightly release, you can use the [comparison tool on GitHub](https://github.com/streamlit/streamlit/compare/0.57.3...0.57.4.dev20200412).
-
-As always, if you have any [feedback](https://discuss.streamlit.io/) we'd love to hear from you.
 
 ## Version 0.57.0
 
@@ -315,9 +299,9 @@ _Release date: July 28, 2019_
 
 **Highlights:**
 
-• ⚡ Lightning-fast reconnect when you do a ctrl-c/rerun on your Streamlit code
-• 📣 Useful error messages when the connection fails
-• 💎 Fixed multiple bugs and improved polish of our newly-released interactive widgets
+* ⚡ Lightning-fast reconnect when you do a ctrl-c/rerun on your Streamlit code
+* 📣 Useful error messages when the connection fails
+* 💎 Fixed multiple bugs and improved polish of our newly-released interactive widgets
 
 ## Version 0.43.0
 
@@ -399,7 +383,7 @@ If you run `$ python your_script.py` the script will execute from top to bottom,
 
 **What if something breaks?**
 
-If the new Streamlit isn’t working, please let us know by Slack or email. You can downgrade at any time with these commands:
+If the new Streamlit isn't working, please let us know by Slack or email. You can downgrade at any time with these commands:
 
 ```bash
 $ pip install --upgrade streamlit==0.37
@@ -409,9 +393,9 @@ $ pip install --upgrade streamlit==0.37
 $ conda install streamlit=0.37
 ```
 
-**What’s next?**
+**What's next?**
 
-Thank you for staying with us on this journey! This version of Streamlit lays the foundation for interactive widgets, a new feature of Streamlit we’re really excited to share with you in the next few months.
+Thank you for staying with us on this journey! This version of Streamlit lays the foundation for interactive widgets, a new feature of Streamlit we're really excited to share with you in the next few months.
 
 ## Version 0.36.0
 
