@@ -167,7 +167,7 @@ documentation on [magic commands](api.html#magic-commands).
 ## Draw charts and maps
 
 Streamlit supports several popular data charting libraries like [Matplotlib,
-Altair, Deck.Gl, and more](api.html#display-charts). In this section, you'll
+Altair, deck.gl, and more](api.html#display-charts). In this section, you'll
 add a bar chart, line chart, and a map to your app.
 
 ### Draw a line chart
