@@ -42,7 +42,7 @@ automatically update your app every time you change its source code.
 This allows you to work in a fast interactive loop: you type some code, save
 it, try it out live, then type some more code, save it, try it out, and so on
 until you're happy with the results. This tight loop between coding and viewing
-results live is one of that ways Streamlit makes your life easier.
+results live is one of the ways Streamlit makes your life easier.
 
 ```eval_rst
 .. tip::
