@@ -372,12 +372,16 @@ class HashTest(unittest.TestCase):
         self.assertNotEqual(get_hash(tf_session), get_hash(tf_session2))
 
     def test_torch_tensor(self):
-        a = torch.zeros([1, 1], dtype=torch.int32)
-        b = torch.zeros([1, 1], dtype=torch.int32)
-        c = torch.zeros([1, 2], dtype=torch.int32)
+        a = torch.ones([1, 1])
+        b = torch.ones([1, 1], requires_grad=True)
+        c = torch.ones([1, 2])
 
         self.assertEqual(get_hash(a), get_hash(b))
         self.assertNotEqual(get_hash(a), get_hash(c))
+
+        b.mean().backward()
+
+        self.assertNotEqual(get_hash(a), get_hash(b))
 
     def test_non_hashable(self):
         """Test user provided hash functions."""

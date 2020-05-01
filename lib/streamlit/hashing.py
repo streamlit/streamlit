@@ -491,7 +491,7 @@ class _CodeHasher:
             return self.to_bytes(id(obj))
 
         elif type_util.is_type(obj, "torch.Tensor"):
-            return self.to_bytes(obj.numpy())
+            return self.to_bytes([obj.detach().numpy(), obj.grad])
 
         elif inspect.isroutine(obj):
             if hasattr(obj, "__wrapped__"):
