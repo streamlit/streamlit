@@ -19,6 +19,7 @@ import functools
 import hashlib
 import os
 import re
+import socket
 import tempfile
 import time
 import types
@@ -354,6 +355,13 @@ class HashTest(unittest.TestCase):
             self.assertNotEqual(h1, get_hash(f))
             f.seek(0)
             self.assertEqual(h1, get_hash(f))
+
+    def test_socket(self):
+        a = socket.socket()
+        b = socket.socket()
+
+        self.assertEqual(get_hash(a), get_hash(a))
+        self.assertNotEqual(get_hash(a), get_hash(b))
 
     def test_magic_mock(self):
         """Test that MagicMocks never hash to the same thing."""
