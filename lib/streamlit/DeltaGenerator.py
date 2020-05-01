@@ -311,7 +311,7 @@ class DeltaGenerator(object):
     def _get_coordinates(self):
         """Returns the element's 4-component location as string like "M.(1,2).3".
 
-        This function uniquely identifies the element's position in the front-end, 
+        This function uniquely identifies the element's position in the front-end,
         which allows (among other potential uses) the MediaFileManager to maintain
         session-specific maps of MediaFile objects placed with their "coordinates".
 
@@ -2137,15 +2137,20 @@ class DeltaGenerator(object):
         return file_datas if accept_multiple_files else file_datas[0]
 
     @_with_element
-    def color_picker(self, element, label, value=None, key=None):
+    def beta_color_picker(self, element, label, value=None, key=None):
         """Display a color picker widget.
+
+        Note: This is a beta feature. See
+        https://api.streamlit.docs/pre_release_features.html for more
+        information.
 
         Parameters
         ----------
         label : str
             A short label explaining to the user what this input is for.
         value : str or None
-            The hex value of this widget when it first renders. If None, the default color is black.
+            The hex value of this widget when it first renders. If None,
+            defaults to black.
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -2155,11 +2160,11 @@ class DeltaGenerator(object):
         Returns
         -------
         str
-            The current value of the color picker widget.
+            The selected color as a hex string.
 
         Example
         -------
-        >>> color = st.beta.color_picker('Pick A Color', '#00f900')
+        >>> color = st.beta_color_picker('Pick A Color', '#00f900')
         >>> st.write('The current color is', color)
 
         """
@@ -2170,7 +2175,10 @@ class DeltaGenerator(object):
         # make sure the value is a string
         if not isinstance(value, str):
             raise StreamlitAPIException(
-                "Color Picker Value has invalid type: %s. Expects a hex string like '#00FFAA' or '#000'."
+                """
+                Color Picker Value has invalid type: %s. Expects a hex string
+                like '#00FFAA' or '#000'.
+                """
                 % type(value).__name__
             )
 
@@ -2179,7 +2187,10 @@ class DeltaGenerator(object):
 
         if not match:
             raise StreamlitAPIException(
-                "'%s' is not a valid hex code for colors. Valid ones are like '#00FFAA' or '#000'."
+                """
+                '%s' is not a valid hex code for colors. Valid ones are like
+                '#00FFAA' or '#000'.
+                """
                 % value
             )
 
