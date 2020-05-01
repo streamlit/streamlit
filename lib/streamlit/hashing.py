@@ -487,6 +487,9 @@ class _CodeHasher:
             # For numpy.remainder, this returns remainder.
             return obj.__name__.encode()
 
+        elif type_util.is_type(obj, "socket.socket"):
+            return self.to_bytes(id(obj))
+
         elif type_util.is_type(obj, "tensorflow.python.client.session.Session"):
             return self.to_bytes(id(obj))
 
