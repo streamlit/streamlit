@@ -31,6 +31,7 @@ pydot = "*"
 tensorflow = {version = ">=2.0.0", markers = "python_version < '3.8'"}
 seaborn = "*"
 sqlalchemy = "*"
+torch = "*"
 prometheus-client = "*"
 pyodbc = "*"
 opencv-python = "*"
