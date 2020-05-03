@@ -1,13 +1,17 @@
-import { BaseProvider, LightTheme } from "baseui";
-import { Radio, RadioGroup } from "baseui/radio";
-import React from "react";
+import { BaseProvider, LightTheme } from "baseui"
+import { Radio, RadioGroup } from "baseui/radio"
+import React from "react"
 
-import { Client as Styletron } from "styletron-engine-atomic";
-import { Provider as StyletronProvider } from "styletron-react";
-import { ComponentProps, StreamlitComponent } from "../StreamlitComponent";
+import { Client as Styletron } from "styletron-engine-atomic"
+import { Provider as StyletronProvider } from "styletron-react"
+import {
+  ComponentProps,
+  withStreamlitConnection,
+  StreamlitComponent,
+} from "../streamlit"
 
 // Initialize our Styletron engine
-const engine = new Styletron();
+const engine = new Styletron()
 
 // Style overrides for our Radio buttons
 const radioOverrides = {
@@ -20,49 +24,49 @@ const radioOverrides = {
       borderTopLeftRadius: ".25rem",
       borderTopRightRadius: ".25rem",
       borderBottomLeftRadius: ".25rem",
-      borderBottomRightRadius: ".25rem"
-    })
-  }
-};
+      borderBottomRightRadius: ".25rem",
+    }),
+  },
+}
 
 interface State {
   /**
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, the default value is used.
    */
-  selectedIndex: number;
+  selectedIndex: number
 }
 
 /**
  * Radio Button example, using BaseUI.
  */
-class RadioButton extends React.PureComponent<ComponentProps, State> {
+class RadioButton extends StreamlitComponent<State> {
   public constructor(props: ComponentProps) {
-    super(props);
+    super(props)
 
     // Determine our initially selected index
-    const options = this.props.args["options"] as Array<string>;
-    const defaultValue = this.props.args["default"] as string;
-    let selectedIndex = 0;
+    const options = this.props.args["options"] as string[]
+    const defaultValue = this.props.args["default"] as string
+    let selectedIndex = 0
     if (options != null && defaultValue != null) {
-      selectedIndex = options.indexOf(defaultValue);
+      selectedIndex = options.indexOf(defaultValue)
       if (selectedIndex < 0) {
-        selectedIndex = 0;
+        selectedIndex = 0
       }
     }
 
-    this.state = { selectedIndex };
+    this.state = { selectedIndex }
   }
 
   public render = (): React.ReactNode => {
-    const style = { width: this.props.width };
-    const label = String(this.props.args["label"]);
-    let options = this.props.args["options"] as Array<string>;
-    let disabled = this.props.disabled;
+    const style = { width: this.props.width }
+    const label = String(this.props.args["label"])
+    let options = this.props.args["options"] as string[]
+    let disabled = this.props.disabled
 
     if (options == null || options.length === 0) {
-      options = ["No options to select."];
-      disabled = true;
+      options = ["No options to select."]
+      disabled = true
     }
 
     return (
@@ -88,30 +92,22 @@ class RadioButton extends React.PureComponent<ComponentProps, State> {
           </div>
         </BaseProvider>
       </StyletronProvider>
-    );
-  };
-
-  public componentDidUpdate = (): void => {
-    this.props.updateFrameHeight();
-  };
-
-  public componentDidMount = (): void => {
-    this.props.updateFrameHeight();
-  };
+    )
+  }
 
   private onSelectionChanged = (
     e: React.ChangeEvent<HTMLInputElement>
   ): void => {
-    const index = parseInt(e.target.value, 10);
+    const index = parseInt(e.target.value, 10)
     this.setState({ selectedIndex: index }, () => {
       // Get the option name at the selected index
-      const options = this.props.args["options"] as Array<string>;
+      const options = this.props.args["options"] as string[]
       const value =
-        options != null && index < options.length ? options[index] : null;
+        options != null && index < options.length ? options[index] : null
       // Send our current value to Streamlit!
-      this.props.setWidgetValue(value);
-    });
-  };
+      this.props.setWidgetValue(value)
+    })
+  }
 }
 
-export default StreamlitComponent(RadioButton);
+export default withStreamlitConnection(RadioButton)

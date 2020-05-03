@@ -69,7 +69,7 @@ import "assets/css/theme.scss"
 import "./App.scss"
 import "assets/css/header.scss"
 import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
-import { PluginRegistry } from "./components/widgets/Plugin"
+import { ComponentRegistry } from "./components/widgets/CustomComponent"
 
 import withScreencast, {
   ScreenCastHOC,
@@ -107,7 +107,7 @@ export class App extends PureComponent<Props, State> {
   private readonly uploadClient: FileUploadClient
   private elementListBuffer: Elements | null
   private elementListBufferTimerIsSet: boolean
-  private readonly pluginRegistry: PluginRegistry
+  private readonly componentRegistry: ComponentRegistry
 
   constructor(props: Props) {
     super(props)
@@ -145,7 +145,7 @@ export class App extends PureComponent<Props, State> {
         ? this.connectionManager.getBaseUriParts()
         : undefined
     })
-    this.pluginRegistry = new PluginRegistry(() => {
+    this.componentRegistry = new ComponentRegistry(() => {
       return this.connectionManager
         ? this.connectionManager.getBaseUriParts()
         : undefined
@@ -895,7 +895,7 @@ export class App extends PureComponent<Props, State> {
               this.state.connectionState !== ConnectionState.CONNECTED
             }
             uploadClient={this.uploadClient}
-            pluginRegistry={this.pluginRegistry}
+            componentRegistry={this.componentRegistry}
           />
 
           {dialog}

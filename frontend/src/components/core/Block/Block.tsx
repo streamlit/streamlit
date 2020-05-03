@@ -36,7 +36,10 @@ import Json from "components/elements/Json/"
 import Markdown from "components/elements/Markdown/"
 import Table from "components/elements/Table/"
 import Text from "components/elements/Text/"
-import { PluginInstance, PluginRegistry } from "components/widgets/Plugin/"
+import {
+  ComponentInstance,
+  ComponentRegistry,
+} from "components/widgets/CustomComponent/"
 
 import Maybe from "components/core/Maybe/"
 
@@ -66,6 +69,7 @@ const Video = React.lazy(() => import("components/elements/Video/"))
 // Lazy-load widgets.
 const Button = React.lazy(() => import("components/widgets/Button/"))
 const Checkbox = React.lazy(() => import("components/widgets/Checkbox/"))
+const ColorPicker = React.lazy(() => import("components/widgets/ColorPicker"))
 const DateInput = React.lazy(() => import("components/widgets/DateInput/"))
 const Multiselect = React.lazy(() => import("components/widgets/Multiselect/"))
 const Progress = React.lazy(() => import("components/elements/Progress/"))
@@ -88,7 +92,7 @@ interface Props {
   widgetMgr: WidgetStateManager
   uploadClient: FileUploadClient
   widgetsDisabled: boolean
-  pluginRegistry: PluginRegistry
+  componentRegistry: ComponentRegistry
 }
 
 class Block extends PureComponent<Props> {
@@ -141,7 +145,7 @@ class Block extends PureComponent<Props> {
           widgetMgr={this.props.widgetMgr}
           uploadClient={this.props.uploadClient}
           widgetsDisabled={this.props.widgetsDisabled}
-          pluginRegistry={this.props.pluginRegistry}
+          componentRegistry={this.props.componentRegistry}
         />
       </div>
     )
@@ -310,6 +314,14 @@ class Block extends PureComponent<Props> {
           {...widgetProps}
         />
       ),
+      colorPicker: (el: SimpleElement) => (
+        <ColorPicker
+          key={el.get("id")}
+          element={el}
+          width={width}
+          {...widgetProps}
+        />
+      ),
       dateInput: (el: SimpleElement) => (
         <DateInput
           key={el.get("id")}
@@ -384,9 +396,9 @@ class Block extends PureComponent<Props> {
           {...widgetProps}
         />
       ),
-      pluginInstance: (el: SimpleElement) => (
-        <PluginInstance
-          registry={this.props.pluginRegistry}
+      componentInstance: (el: SimpleElement) => (
+        <ComponentInstance
+          registry={this.props.componentRegistry}
           element={el}
           width={width}
           {...widgetProps}

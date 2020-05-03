@@ -1,5 +1,5 @@
 {
-  "name": "plugin_template",
+  "name": "streamlit_component_template",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -51,6 +51,7 @@
     "@types/hoist-non-react-statics": "^3.3.1",
     "@types/styletron-engine-atomic": "^1.1.0",
     "@types/styletron-react": "^5.0.2",
-    "@types/styletron-standard": "^2.0.0"
+    "@types/styletron-standard": "^2.0.0",
+    "prettier": "^2.0.4"
   }
 }

@@ -14,12 +14,15 @@
 
 """Provides global MediaFileManager object as `media_file_manager`."""
 
-import typing
-import hashlib
+from typing import Dict, DefaultDict
+from weakref import WeakValueDictionary
 import collections
+import datetime as dt
+import hashlib
+import time
 
-from streamlit.logger import get_logger
 from streamlit.ReportThread import get_report_ctx
+from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
@@ -38,35 +41,32 @@ def _get_session_id():
         return ctx.session_id
 
 
-def _get_file_id(data, mimetype=None):
-    """
+def _calculate_file_id(data, mimetype):
+    """Return an ID by hashing the data and mime.
+
     Parameters
     ----------
-
     data : bytes
         Content of media file in bytes. Other types will throw TypeError.
     mimetype : str
         Any string. Will be converted to bytes and used to compute a hash.
         None will be converted to empty string.  [default: None]
+
     """
+    filehash = hashlib.new("sha224")
+    filehash.update(data)
+    filehash.update(bytes(mimetype.encode()))
 
-    if mimetype is None:
-        mimetype = ""
-
-    # Use .update() to prevent making another copy of the data to compute the hash.
-    filehash = hashlib.sha224(data)
-    filehash.update(bytes(mimetype.encode("utf-8")))
     return filehash.hexdigest()
 
 
 class MediaFile(object):
     """Abstraction for audiovisual/image file objects."""
 
-    def __init__(self, file_id=None, content=None, mimetype=None, session_count=1):
+    def __init__(self, file_id=None, content=None, mimetype=None):
         self._file_id = file_id
         self._content = content
         self._mimetype = mimetype
-        self.session_count = session_count
 
     @property
     def url(self):
@@ -88,25 +88,40 @@ class MediaFile(object):
 
 
 class MediaFileManager(object):
-    """In-memory file manager for MediaFile objects."""
+    """In-memory file manager for MediaFile objects.
+
+    This keeps track of:
+    - Which files exist, and what their IDs are. This is important so we can
+      serve files by ID -- that's the whole point of this class!
+    - Which files are being used by which ReportSession (by ID). This is
+      important so we can remove files from memory when no more sessions need
+      them.
+    - The exact location in the report where each file is being used (i.e. the
+      file's "coordinates"). This is is important so we can mark a file as "not
+      being used by a certain session" if it gets replaced by another file at
+      the same coordinates. For example, when doing an animation where the same
+      image is constantly replace with new frames. (This doesn't solve the case
+      where the file's coordinates keep changing for some reason, though! e.g.
+      if new elements keep being prepended to the app. Unlikely to happen, but
+      we should address it at some point.)
+    """
 
     def __init__(self):
-        self._files = {}
-        self._session_id_to_file_ids = collections.defaultdict(
-            set
-        )  # type: typing.DefaultDict[str, typing.Set[str]]
+        # Dict of file ID to MediaFile.
+        self._files_by_id = (
+            WeakValueDictionary()
+        )  # type: WeakValueDictionary[str, MediaFile]
 
-    def _remove(self, mediafile_or_id):
-        """Deletes MediaFile via file_id lookup.
+        # Dict[session ID][coordinates] -> MediaFile.
+        self._files_by_session_and_coord = collections.defaultdict(
+            dict
+        )  # type: DefaultDict[str, Dict[str, MediaFile]]
 
-        Raises KeyError if not found.
-        """
-        if type(mediafile_or_id) is MediaFile:
-            del self._files[mediafile_or_id.id]
-        else:
-            del self._files[mediafile_or_id]
+        # Since _files_by_id is a weak dict, when a MediaFile is removed from
+        # _files_by_session_and_coord it automatically gets removed from
+        # _files_by_id.
 
-    def reset_files_for_session(self, session_id=None):
+    def clear_session_files(self, session_id=None):
         """Clears all stored files for a given ReportSession id.
 
         Should be called whenever ScriptRunner completes and when
@@ -115,25 +130,31 @@ class MediaFileManager(object):
         if session_id is None:
             session_id = _get_session_id()
 
-        for file_id in self._session_id_to_file_ids[session_id]:
-            entry = self._files[file_id]
-            entry.session_count -= 1
+        LOGGER.debug("Disconnecting files for session with ID %s", session_id)
 
-            if entry.session_count == 0:
-                self._remove(file_id)
+        if session_id in self._files_by_session_and_coord:
+            del self._files_by_session_and_coord[session_id]
 
-        LOGGER.debug("Reset files for session with ID %s", session_id)
-        del self._session_id_to_file_ids[session_id]
-        LOGGER.debug("Sessions still active: %r", self._session_id_to_file_ids)
+        LOGGER.debug(
+            "Sessions still active: %r", self._files_by_session_and_coord.keys()
+        )
 
-    def add(self, content, mimetype):
+        LOGGER.debug(
+            "Files: %s; Sessions with files: %s",
+            len(self._files_by_id),
+            len(self._files_by_session_and_coord),
+        )
+
+    def add(self, content, mimetype, coordinates):
         """Adds new MediaFile with given parameters; returns the object.
 
         If an identical file already exists, returns the existing object
-        and increments its session_count by one.
+        and registers the current session as a user.
 
         mimetype must be set, as this string will be used in the
         "Content-Type" header when the file is sent via HTTP GET.
+
+        coordinates should look like this: "1.(3.-14).5"
 
         Parameters
         ----------
@@ -141,37 +162,45 @@ class MediaFileManager(object):
             Raw data to store in file object.
         mimetype : str
             The mime type for the media file. E.g. "audio/mpeg"
+        coordinates : str
+            Unique string identifying an element's location.
+            Prevents memory leak of "forgotten" file IDs when element media
+            is being replaced-in-place (e.g. an st.image stream).
+
         """
-        file_id = _get_file_id(content, mimetype)
+        file_id = _calculate_file_id(content, mimetype)
+        mf = self._files_by_id.get(file_id, None)
 
-        if not file_id in self._files:
-            new = MediaFile(file_id=file_id, content=content, mimetype=mimetype,)
-            self._files[file_id] = new
+        if mf is None:
+            LOGGER.debug("Adding media file %s", file_id)
+            mf = MediaFile(file_id=file_id, content=content, mimetype=mimetype)
         else:
-            self._files[file_id].session_count += 1
+            LOGGER.debug("Overwriting media file %s", file_id)
 
-        self._session_id_to_file_ids[_get_session_id()].add(file_id)
-        return self._files[file_id]
+        session_id = _get_session_id()
+        self._files_by_id[mf.id] = mf
+        self._files_by_session_and_coord[session_id][coordinates] = mf
+
+        LOGGER.debug(
+            "Files: %s; Sessions with files: %s",
+            len(self._files_by_id),
+            len(self._files_by_session_and_coord),
+        )
+
+        return mf
 
     def get(self, mediafile_or_id):
-        """Returns MediaFile object for given file_id and decrements its session_count.
+        """Returns MediaFile object for given file_id or MediaFile object.
 
         Raises KeyError if not found.
         """
-        mf = (
-            mediafile_or_id
-            if type(mediafile_or_id) is MediaFile
-            else self._files[mediafile_or_id]
-        )
-        return mf
+        return self._files_by_id[mediafile_or_id]
 
     def __contains__(self, mediafile_or_id):
-        if type(mediafile_or_id) is MediaFile:
-            return mediafile_or_id.id in self._files
-        return mediafile_or_id in self._files
+        return mediafile_or_id in self._files_by_id
 
     def __len__(self):
-        return len(self._files)
+        return len(self._files_by_id)
 
 
 media_file_manager = MediaFileManager()

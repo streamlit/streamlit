@@ -15,24 +15,5 @@
  * limitations under the License.
  */
 
-import { BaseUriParts, buildHttpUri } from "lib/UriUtil"
-
-/**
- * Downloads and compiles plugins from the server.
- */
-export class PluginRegistry {
-  private readonly getServerUri: () => BaseUriParts | undefined
-
-  public constructor(getServerUri: () => BaseUriParts | undefined) {
-    this.getServerUri = getServerUri
-  }
-
-  public getPluginURL(pluginId: string, path: string): string {
-    const serverURI = this.getServerUri()
-    if (serverURI === undefined) {
-      throw new Error("Can't get plugin: not connected to a server")
-    }
-
-    return buildHttpUri(serverURI, `plugin/${pluginId}/${path}`)
-  }
-}
+export { ComponentInstance } from "./ComponentInstance"
+export { ComponentRegistry } from "./ComponentRegistry"
