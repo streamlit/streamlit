@@ -30,9 +30,17 @@ all-devel: init develop
 	@echo "    make frontend"
 	@echo ""
 
+.PHONY: mini-devel
+# Get minimal dependencies and install Streamlit into Python environment -- but do not build the frontend.
+all-devel: mini-init develop
+
 .PHONY: init
-# Install Python and JS dependencies.
-init: setup pipenv-install react-init scssvars protobuf # react-build release
+# Install all Python and JS dependencies for development.
+init: setup pipenv-install react-init scssvars protobuf
+
+.PHONY: mini-init
+# Install minimal Python and JS dependencies for development.
+mini-init: setup pipenv-dev-install react-init scssvars protobuf
 
 .PHONY: frontend
 # Build frontend into static files.
@@ -41,14 +49,23 @@ frontend: react-build
 .PHONY: setup
 setup:
 	pip install pip-tools pipenv ; \
-	if [[ $(PY_VERSION) == "3.6.0" || $(PY_VERSION) > "3.6.0" ]] ; then \
-		pip install black ; \
+	if [[ $(PY_VERSION) == "3.6.0" || $(PY_VERSION) > "3.6.0" ]]; then \
+		pip install black; \
 	fi
 
 .PHONY: pipenv-install
-pipenv-install: lib/Pipfile
+pipenv-install: pipenv-dev-install pipenv-test-install
+
+.PHONY: pipenv-dev-install
+pipenv-dev-install: lib/Pipfile
 	@# Runs pipenv install; doesn't update the Pipfile.lock.
-	cd lib; pipenv install --dev --skip-lock
+	cd lib; \
+		pipenv install --dev --skip-lock
+
+.PHONY: pipenv-test-install
+pipenv-test-install: lib/Pipfile
+	cd lib; \
+		pip install -r test-requirements.txt
 
 .PHONY: pylint
 # Run "black", our Python formatter, to verify that our source files

@@ -4,46 +4,29 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+flake8 = "*"
 mock = "*"
+mypy = "==0.761"
+mypy-protobuf = ">=1.17"
+parameterized = "*"
 pipenv = "*"
 pytest = "*"
 pytest-cov = "*"
+requests-mock = "*"
 testfixtures = "*"
 twine = "*"
 wheel = "*"
 # Doc builder packages:
 Sphinx = "==1.8.5"
-sphinx-rtd-theme = "*"
 recommonmark = "*"
 sphinx-markdown-tables = "*"
-# Packages used in unit tests:
-cffi = "*"
-matplotlib = "*"
-plotly = "*"
-chart-studio = "*"
-cx_oracle = "*"
-bokeh = "*"
-graphviz = "*"
-mysqlclient = "*"
-parameterized = "*"
-psycopg2-binary = "*"
-pydot = "*"
-tensorflow = {version = ">=2.0.0", markers = "python_version < '3.8'"}
-seaborn = "*"
-sqlalchemy = "*"
-torch = "*"
-prometheus-client = "*"
-pyodbc = "*"
-opencv-python = "*"
-requests-mock = "*"
-mypy = "==0.761"
-mypy-protobuf = ">=1.17"
-flake8 = "*"
-# IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
-# And if something is only required for testing, but not anything else, please
-# add to the dev dependencies above, instead.
+sphinx-rtd-theme = "*"
+# IMPORTANT: If you need to add a package just for testing, please add it to
+# test-requirements.txt instead.
 
 [packages]
+# IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
+# And if you do add one, make the required version as general as possible.
 altair = ">=3.2.0"
 astor = "*"
 base58 = "*"
@@ -52,14 +35,12 @@ boto3 = "*"
 botocore = ">=1.13.44"
 cachetools = ">=4.0"
 click = ">=7.0"
-packaging = "*"
-python-dateutil = "*"
 enum-compat = "*"
 numpy = "*"
+packaging = "*"
 pandas = ">=0.21.0"
 pillow = ">=6.2.0"
-# Set protobuf version based on the protoc version on the release machine.
-# (i.e. Thiago's machine)
+python-dateutil = "*"
 protobuf = ">=3.6.0"
 pydeck = ">=0.1.dev5"
 requests = "*"
