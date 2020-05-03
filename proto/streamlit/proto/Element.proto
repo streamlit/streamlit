@@ -22,6 +22,7 @@ import "streamlit/proto/Balloons.proto";
 import "streamlit/proto/BokehChart.proto";
 import "streamlit/proto/Button.proto";
 import "streamlit/proto/Checkbox.proto";
+import "streamlit/proto/ColorPicker.proto";
 import "streamlit/proto/DataFrame.proto";
 import "streamlit/proto/DateInput.proto";
 import "streamlit/proto/DeckGlChart.proto";
@@ -37,7 +38,7 @@ import "streamlit/proto/NumberInput.proto";
 import "streamlit/proto/Markdown.proto";
 import "streamlit/proto/MultiSelect.proto";
 import "streamlit/proto/PlotlyChart.proto";
-import "streamlit/proto/PluginInstance.proto";
+import "streamlit/proto/ComponentInstance.proto";
 import "streamlit/proto/Progress.proto";
 import "streamlit/proto/Radio.proto";
 import "streamlit/proto/Selectbox.proto";
@@ -60,6 +61,8 @@ message Element {
     BokehChart bokeh_chart = 17;
     Button button = 19;
     Checkbox checkbox = 20;
+    ColorPicker color_picker = 35;
+    ComponentInstance component_instance = 36;
     DataFrame data_frame = 3;
     DataFrame table = 11;
     DateInput date_input = 27;
@@ -76,7 +79,6 @@ message Element {
     MultiSelect multiselect = 28;
     NumberInput number_input = 32;
     PlotlyChart plotly_chart = 16;
-    PluginInstance plugin_instance = 35;
     Progress progress = 5;
     Radio radio = 23;
     Selectbox selectbox = 25;
@@ -88,7 +90,7 @@ message Element {
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
 
-    // Next ID: 36
+    // Next ID: 37
   }
 
   reserved 9;

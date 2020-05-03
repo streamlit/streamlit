@@ -1,26 +1,30 @@
-import React from "react";
-import { ComponentProps, StreamlitComponent } from "./StreamlitComponent";
+import React, { ReactNode } from "react"
+import { withStreamlitConnection, StreamlitComponent } from "./streamlit"
 
 // We import bootstrap.css to get some simple default styling for our
 // text and button. You can remove or replace this.
+<<<<<<< HEAD:plugin_template/src/MyComponent.tsx
 import "bootstrap/dist/css/bootstrap.min.css";
+=======
+import "bootstrap/dist/css/bootstrap.min.css"
+>>>>>>> 83fbc3748d27bc551ab913b6ecda83caa1b70289:component_template/src/MyComponent.tsx
 
 interface State {
-  numClicks: number;
+  numClicks: number
 }
 
 /**
  * Streamlit component template. Edit this file to make your component!
  */
-class MyComponent extends React.PureComponent<ComponentProps, State> {
-  public state = { numClicks: 0 };
+class MyComponent extends StreamlitComponent<State> {
+  public state = { numClicks: 0 }
 
-  public render = (): React.ReactNode => {
+  public render = (): ReactNode => {
     // Arguments that are passed to the plugin in Python are accessible
     // via `this.props.args`. Here, we access the "name" arg.
-    let name = this.props.args["name"];
+    let name = this.props.args["name"]
     if (name === undefined) {
-      name = "Unspecified";
+      name = "Unspecified"
     }
 
     // Create and return a div with some text in it.
@@ -32,8 +36,8 @@ class MyComponent extends React.PureComponent<ComponentProps, State> {
         <div>Hello, {name}!</div>
         <button onClick={this.onClicked}>Click Me!</button>
       </div>
-    );
-  };
+    )
+  }
 
   /** Click handler for our "Click Me!" button. */
   private onClicked = (): void => {
@@ -42,25 +46,14 @@ class MyComponent extends React.PureComponent<ComponentProps, State> {
     this.setState(
       prevState => ({ numClicks: prevState.numClicks + 1 }),
       () => this.props.setWidgetValue(this.state.numClicks)
-    );
-  };
-
-  public componentDidMount = (): void => {
-    // After we're rendered for the first time, tell Streamlit that our height
-    // has changed.
-    this.props.updateFrameHeight();
-  };
-
-  public componentDidUpdate = (): void => {
-    // After we're updated, tell Streamlit that our height may have changed.
-    this.props.updateFrameHeight();
-  };
+    )
+  }
 }
 
-// "StreamlitComponent" is a wrapper function. It bootstraps the
+// "withStreamlitConnection" is a wrapper function. It bootstraps the
 // connection between your component and the Streamlit app, and handles
 // passing arguments from Python -> Component, and widget values from
 // Component -> Python.
 //
-// You don't need to edit StreamlitComponent (but you're welcome to!).
-export default StreamlitComponent(MyComponent);
+// You don't need to edit withStreamlitConnection (but you're welcome to!).
+export default withStreamlitConnection(MyComponent)

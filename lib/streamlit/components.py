@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hashlib
 import json
 import mimetypes
 import os
@@ -31,26 +30,43 @@ from streamlit.elements import arrow_table
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.Element_pb2 import Element
+<<<<<<< HEAD:lib/streamlit/plugins.py
 from streamlit.proto.PluginInstance_pb2 import ArgsDataframe
+=======
+from streamlit.proto.ComponentInstance_pb2 import ArgsDataframe
+>>>>>>> 83fbc3748d27bc551ab913b6ecda83caa1b70289:lib/streamlit/components.py
 
 
 LOGGER = get_logger(__name__)
 
 
-class MarshallPluginException(StreamlitAPIException):
+class MarshallComponentException(StreamlitAPIException):
     pass
 
 
-def plugin(name: str, path: str) -> None:
-    """Register a new plugin."""
+def register_component(
+    name: str, path: Optional[str] = None, url: Optional[str] = None
+) -> None:
+    """Register a new custom component."""
 
-    # Register this plugin with our global registry.
-    plugin_id = PluginRegistry.instance().register_plugin(path)
+    if (path is None and url is None) or (path is not None and url is not None):
+        raise StreamlitAPIException("Either 'path' or 'url' must be set, but not both.")
 
-    # Build our plugin function.
-    def plugin_instance(dg: DeltaGenerator, *args, **kwargs) -> Optional[Any]:
+    # Register this component with our global registry.
+    component_id = ComponentRegistry.instance().register_component(name, path)
+
+    # Build our component function.
+    def component_instance(dg: DeltaGenerator, *args, **kwargs) -> Optional[Any]:
         if len(args) > 0:
-            raise MarshallPluginException("Argument '%s' needs a label" % args[0])
+            raise MarshallComponentException("Argument '%s' needs a label" % args[0])
+
+        args_json = {}
+        args_df = {}
+        for key, value in kwargs.items():
+            if type_util.is_dataframe_like(value):
+                args_df[key] = value
+            else:
+                args_json[key] = value
 
         args_json = {}
         args_df = {}
@@ -63,7 +79,9 @@ def plugin(name: str, path: str) -> None:
         try:
             serialized_args_json = json.dumps(args_json)
         except BaseException as e:
-            raise MarshallPluginException("Could not convert plugin args to JSON", e)
+            raise MarshallComponentException(
+                "Could not convert component args to JSON", e
+            )
 
         # If args["default"] is set, then it's the default widget value we
         # return when the user hasn't interacted yet.
@@ -73,63 +91,75 @@ def plugin(name: str, path: str) -> None:
         # widget ID.
         user_key = kwargs.get("key", None)
 
+<<<<<<< HEAD:lib/streamlit/plugins.py
         def marshall_plugin(element: Element) -> Union[Any, Type[NoValue]]:
             element.plugin_instance.args_json = serialized_args_json
             element.plugin_instance.plugin_id = plugin_id
+=======
+        def marshall_component(element: Element) -> Union[Any, Type[NoValue]]:
+            element.component_instance.args_json = serialized_args_json
+            element.component_instance.component_id = component_id
+            if url is not None:
+                element.component_instance.url = url
+>>>>>>> 83fbc3748d27bc551ab913b6ecda83caa1b70289:lib/streamlit/components.py
 
             for key, value in args_df.items():
                 new_args_dataframe = ArgsDataframe()
                 new_args_dataframe.key = key
                 arrow_table.marshall(new_args_dataframe.value.data, value)
+<<<<<<< HEAD:lib/streamlit/plugins.py
                 element.plugin_instance.args_dataframe.append(new_args_dataframe)
+=======
+                element.component_instance.args_dataframe.append(new_args_dataframe)
+>>>>>>> 83fbc3748d27bc551ab913b6ecda83caa1b70289:lib/streamlit/components.py
 
             widget_value = _get_widget_ui_value(
-                "plugin_instance", element, user_key=user_key
+                "component_instance", element, user_key=user_key
             )
 
             if widget_value is None:
                 widget_value = default_value
 
-            # widget_value will be either None or whatever the plugin's most
+            # widget_value will be either None or whatever the component's most
             # recent setWidgetValue value is. We coerce None -> NoValue,
             # because that's what _enqueue_new_element_delta expects.
             return widget_value if widget_value is not None else NoValue
 
         result = dg._enqueue_new_element_delta(
-            marshall_element=marshall_plugin, delta_type="plugin"
+            marshall_element=marshall_component, delta_type="component"
         )
 
         return result
 
-    # Build st.[plugin_name], which just calls plugin_instance with the
+    # Build st.[component_name], which just calls component_instance with the
     # main DeltaGenerator.
-    def plugin_instance_main(*args, **kwargs):
-        return plugin_instance(streamlit._main, *args, **kwargs)
+    def component_instance_main(*args, **kwargs):
+        return component_instance(streamlit._main, *args, **kwargs)
 
-    # Register the plugin as a member function of DeltaGenerator, and as
+    # Register the component as a member function of DeltaGenerator, and as
     # a standalone function in the streamlit namespace.
     # TODO: disallow collisions with important streamlit functions!
-    setattr(DeltaGenerator, name, plugin_instance)
-    setattr(st, name, plugin_instance_main)
+    setattr(DeltaGenerator, name, component_instance)
+    setattr(st, name, component_instance_main)
 
 
-class PluginRequestHandler(tornado.web.RequestHandler):
-    def initialize(self, registry: "PluginRegistry"):
+class ComponentRequestHandler(tornado.web.RequestHandler):
+    def initialize(self, registry: "ComponentRegistry"):
         self._registry = registry
 
     def get(self, path: str) -> None:
         parts = path.split("/")
-        plugin_id = parts[0]
-        plugin_root = self._registry.get_plugin_path(plugin_id)
-        if plugin_root is None:
+        component_id = parts[0]
+        component_root = self._registry.get_component_path(component_id)
+        if component_root is None:
             self.write("%s not found" % path)
             self.set_status(404)
             return
 
         filename = "/".join(parts[1:])
-        abspath = os.path.join(plugin_root, filename)
+        abspath = os.path.join(component_root, filename)
 
-        LOGGER.debug("PluginFileManager: GET: %s -> %s", path, abspath)
+        LOGGER.debug("ComponentRequestHandler: GET: %s -> %s", path, abspath)
 
         try:
             with open(abspath, "r") as file:
@@ -188,57 +218,52 @@ class PluginRequestHandler(tornado.web.RequestHandler):
 
     @staticmethod
     def get_url(file_id: str) -> str:
-        """Return the URL for a plugin file with the given ID."""
-        return "plugins/{}".format(file_id)
+        """Return the URL for a component file with the given ID."""
+        return "components/{}".format(file_id)
 
 
-class PluginRegistry:
-    _instance = None  # type: Optional[PluginRegistry]
+class ComponentRegistry:
+    _instance = None  # type: Optional[ComponentRegistry]
 
     @classmethod
-    def instance(cls) -> "PluginRegistry":
-        """Returns the singleton PluginRegistry"""
+    def instance(cls) -> "ComponentRegistry":
+        """Returns the singleton ComponentRegistry"""
         if cls._instance is None:
-            cls._instance = PluginRegistry()
+            cls._instance = ComponentRegistry()
         return cls._instance
 
     def __init__(self):
-        self._plugins = {}  # type: Dict[str, str]
+        self._components = {}  # type: Dict[str, Optional[str]]
 
-    def register_plugin(self, path: str) -> str:
-        """Register a filesystem path as a plugin.
-
-        If the path has already been registered, this is a no-op.
+    def register_component(self, name: str, path: Optional[str] = None) -> str:
+        """Register a filesystem path as a custom component.
 
         Parameters
         ----------
-        path : str
-            The path to the directory that contains the plugin's contents.
+        name : str
+            The component's name.
+        path : str or None
+            The path to the directory that contains the component's contents,
+            or None if the component is being served as a URL.
 
         Returns
         -------
         str
-            The plugin's ID.
+            The component's ID. (This is just its name.)
         """
-        abspath = os.path.abspath(path)
-        if not os.path.isdir(abspath):
-            raise StreamlitAPIException("No such plugin directory: '%s'" % abspath)
-        id = self._get_id(abspath)
-        self._plugins[id] = abspath
-        return id
+        abspath = None
+        if path is not None:
+            abspath = os.path.abspath(path)
+            if not os.path.isdir(abspath):
+                raise StreamlitAPIException(
+                    "No such component directory: '%s'" % abspath
+                )
 
-    def get_plugin_path(self, id: str) -> Optional[str]:
-        """Return the javascript for the plugin with the given ID.
-        If no such plugin is registered, None will be returned instead.
+        self._components[name] = abspath
+        return name
+
+    def get_component_path(self, id: str) -> Optional[str]:
+        """Return the path for the component with the given ID.
+        If no such component is registered, None will be returned instead.
         """
-        return self._plugins.get(id, None)
-
-    @staticmethod
-    def _get_id(path: str) -> str:
-        """Compute the ID of a plugin."""
-        # TODO: For this to be useful, we need to cache something in the
-        # contents. We probably want to just use Watchdog instead, and let
-        # a plugin's ID be its name!
-        hasher = hashlib.new("md5")
-        hasher.update(path.encode())
-        return hasher.hexdigest()
+        return self._components.get(id, None)

@@ -95,7 +95,6 @@ Python's [`id`](https://docs.python.org/3/library/functions.html#id) function | 
 
 - Speed: Fast
 - Use case: If you're hashing a singleton object, like an open database connection or a TensorFlow session. These are objects that will only be instantiated once, no matter how many times your script reruns.
-- [Example](#example-1-pass-a-database-connection-around)<br/>
 
 `lambda _: None` | [Example](#example-2-turn-off-hashing-for-a-specific-type)
 

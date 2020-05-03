@@ -143,7 +143,14 @@ def _clip_image(image, clamp):
 
 
 def marshall_images(
-    image, caption, width, proto_imgs, clamp, channels="RGB", format="JPEG"
+    coordinates,
+    image,
+    caption,
+    width,
+    proto_imgs,
+    clamp,
+    channels="RGB",
+    format="JPEG",
 ):
     channels = channels.upper()
 
@@ -178,7 +185,8 @@ def marshall_images(
     )
 
     proto_imgs.width = width
-    for image, caption in zip(images, captions):
+    # Each image in an image list needs to be kept track of at its own coordinates.
+    for coord_suffix, (image, caption) in enumerate(zip(images, captions)):
         proto_img = proto_imgs.imgs.add()
         if caption is not None:
             proto_img.caption = str(caption)
@@ -227,5 +235,10 @@ def marshall_images(
             data = image
 
         (data, mimetype) = _normalize_to_bytes(data, width, format)
-        this_file = media_file_manager.add(data, mimetype=mimetype)
+
+        # We use the index of the image in the input image list to identify this image inside
+        # MediaFileManager. For this, we just add the index to the image's "coordinates".
+        this_file = media_file_manager.add(
+            data, mimetype, "%s-%i" % (coordinates, coord_suffix)
+        )
         proto_img.url = this_file.url

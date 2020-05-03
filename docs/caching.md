@@ -133,7 +133,7 @@ The first run is a "Cache miss", but when you press **R** each subsequent run is
 
 ```eval_rst
 .. tip::
-   if you change the function back the result will already be in the Streamlit cache from a previous run. Try it out!
+   If you change the function back the result will already be in the Streamlit cache from a previous run. Try it out!
 ```
 
 ## Example 4: When an inner function changes
