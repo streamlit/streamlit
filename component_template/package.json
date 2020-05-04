@@ -3,17 +3,22 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@testing-library/jest-dom": "^4.2.4",
-    "@testing-library/react": "^9.3.2",
-    "@testing-library/user-event": "^7.1.2",
-    "@types/jest": "^24.0.0",
-    "@types/lodash": "^4.14.149",
-    "@types/node": "^12.0.0",
-    "@types/react": "^16.9.0",
-    "@types/react-dom": "^16.9.0",
+    "@devexpress/dx-react-core": "^2.6.2",
+    "@devexpress/dx-react-grid": "^2.6.2",
+    "@devexpress/dx-react-grid-material-ui": "^2.6.2",
+    "@material-ui/core": "^4.9.12",
+    "@material-ui/icons": "^4.9.1",
+    "@testing-library/jest-dom": "^5.5.0",
+    "@testing-library/react": "^10.0.4",
+    "@testing-library/user-event": "^10.1.0",
+    "@types/jest": "^25.2.1",
+    "@types/lodash": "^4.14.150",
+    "@types/node": "^13.13.4",
+    "@types/react": "^16.9.34",
+    "@types/react-dom": "^16.9.7",
     "@types/reactstrap": "^8.4.2",
-    "apache-arrow": "^0.16.0",
-    "baseui": "^9.67.2",
+    "apache-arrow": "^0.17.0",
+    "baseui": "^9.73.2",
     "bootstrap": "^4.4.1",
     "hoist-non-react-statics": "^3.3.2",
     "lodash": "^4.17.15",
@@ -23,7 +28,7 @@
     "reactstrap": "^8.4.1",
     "styletron-engine-atomic": "^1.4.6",
     "styletron-react": "^5.2.7",
-    "typescript": "~3.7.2"
+    "typescript": "~3.8.3"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -52,6 +57,6 @@
     "@types/styletron-engine-atomic": "^1.1.0",
     "@types/styletron-react": "^5.0.2",
     "@types/styletron-standard": "^2.0.0",
-    "prettier": "^2.0.4"
+    "prettier": "^2.0.5"
   }
 }
