@@ -33,6 +33,7 @@ export class ComponentRegistry {
     MessageEventSource,
     ComponentMessageListener
   >()
+  private cachedServerUri?: BaseUriParts
 
   public constructor(getServerUri: () => BaseUriParts | undefined) {
     this.getServerUri = getServerUri
@@ -61,12 +62,19 @@ export class ComponentRegistry {
   }
 
   public getComponentURL = (componentId: string, path: string): string => {
-    const serverURI = this.getServerUri()
-    if (serverURI === undefined) {
-      throw new Error("Can't fetch component: not connected to a server")
+    // Fetch the server URI. If our server is disconnected, this will return
+    // undefined, in which case we default to the most recent cached value
+    // of the URI.
+    let serverUri = this.getServerUri()
+    if (serverUri === undefined) {
+      if (this.cachedServerUri === undefined) {
+        throw new Error("Can't fetch component: not connected to a server")
+      }
+      serverUri = this.cachedServerUri
     }
 
-    return buildHttpUri(serverURI, `component/${componentId}/${path}`)
+    this.cachedServerUri = serverUri
+    return buildHttpUri(serverUri, `component/${componentId}/${path}`)
   }
 
   private onMessageEvent = (event: MessageEvent): void => {

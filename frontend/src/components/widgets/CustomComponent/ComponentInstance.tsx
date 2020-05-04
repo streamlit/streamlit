@@ -205,7 +205,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
 
   private sendForwardMsg = (type: StreamlitMessageType, data: any): void => {
     if (this.iframeRef.current == null) {
-      // This should never happen
+      // This should never happen!
       logWarning("Can't send ForwardMsg; missing our iframe!")
       return
     }
@@ -236,20 +236,33 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       )
     }
 
-    const componentId = this.props.element.get("componentId")
-    const url = this.props.element.get("url")
-
-    // Determine the component iframe's src. If a URL is specified, we just
-    // use that. Otherwise, we derive the URL from the component's ID.
+    // Parse the component's arguments and src URL.
+    // Some of these steps may throw an exception, so we wrap them in a
+    // try-catch. If we catch an error, we set this.state.componentError
+    // and bail. The error will be displayed in the next call to render,
+    // which will be triggered immediately. (This will not cause an infinite
+    // loop.)
+    let renderArgs: any
+    let renderDfs: any
     let src: string
-    if (url != null && url !== "") {
-      src = url
-    } else {
-      src = this.props.registry.getComponentURL(componentId, "index.html")
-    }
+    try {
+      // Determine the component iframe's src. If a URL is specified, we just
+      // use that. Otherwise, we derive the URL from the component's ID.
+      const componentId = this.props.element.get("componentId")
+      const url = this.props.element.get("url")
+      if (url != null && url !== "") {
+        src = url
+      } else {
+        src = this.props.registry.getComponentURL(componentId, "index.html")
+      }
 
-    const renderArgs = JSON.parse(this.props.element.get("argsJson"))
-    const renderDfs = this.props.element.get("argsDataframe").toJS()
+      // Parse arguments
+      renderArgs = JSON.parse(this.props.element.get("argsJson"))
+      renderDfs = this.props.element.get("argsDataframe").toJS()
+    } catch (err) {
+      this.setState({ componentError: err })
+      return undefined
+    }
 
     if (this.componentReady) {
       // The component has loaded. Send it a new render message immediately.
