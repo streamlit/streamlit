@@ -1721,10 +1721,11 @@ class DeltaGenerator(object):
                 return None
 
             if not isinstance(default_values, list):
-                if not default_values and not (
-                    is_type(default_values, "numpy.ndarray")
-                    or is_type(default_values, "pandas.core.series.Series")
+                if is_type(default_values, "numpy.ndarray") or is_type(
+                    default_values, "pandas.core.series.Series"
                 ):
+                    default_values = list(default_values)
+                elif not default_values:
                     default_values = [default_values]
                 else:
                     default_values = list(default_values)
