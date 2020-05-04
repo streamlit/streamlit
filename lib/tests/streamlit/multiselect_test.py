@@ -108,12 +108,7 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.options, ["Coffee", "Tea", "Water"])
 
     @parameterized.expand(
-        [
-            (("Tea", "Water"), [1, 2]),
-            ((i for i in ("Tea", "Water")), [1, 2]),
-            (np.array(["Coffee", "Tea"]), [0, 1]),
-            (pd.Series(np.array(["Cofee", "Tea"])), [0, 1]),
-        ]
+        [(("Tea", "Water"), [1, 2]), ((i for i in ("Tea", "Water")), [1, 2]),]
     )
     def test_default_types(self, defaults, expected):
         """Test that iterables other than lists can be passed as defaults."""
