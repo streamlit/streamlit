@@ -12,7 +12,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
 syntax = "proto3";
 
@@ -40,6 +40,7 @@ message WidgetState {
     string string_value = 6;
     IntArray int_array_value = 8;
     FloatArray float_array_value = 7;
+    string json_value = 9;
   }
 }
 

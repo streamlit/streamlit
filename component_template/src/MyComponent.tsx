@@ -3,11 +3,7 @@ import { withStreamlitConnection, StreamlitComponent } from "./streamlit"
 
 // We import bootstrap.css to get some simple default styling for our
 // text and button. You can remove or replace this.
-<<<<<<< HEAD:plugin_template/src/MyComponent.tsx
-import "bootstrap/dist/css/bootstrap.min.css";
-=======
 import "bootstrap/dist/css/bootstrap.min.css"
->>>>>>> 83fbc3748d27bc551ab913b6ecda83caa1b70289:component_template/src/MyComponent.tsx
 
 interface State {
   numClicks: number

@@ -70,7 +70,3 @@ tornado = ">=5.0,<6.0"
 tzlocal = "*"
 validators = "*"
 watchdog = "*"
-<<<<<<< HEAD
-pyarrow = "*"
-=======
->>>>>>> 83fbc3748d27bc551ab913b6ecda83caa1b70289
