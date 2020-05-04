@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+import ErrorElement from "components/shared/ErrorElement"
 import { Map as ImmutableMap } from "immutable"
 import { logError, logWarning } from "lib/log"
 import { Source, WidgetStateManager } from "lib/WidgetStateManager"
@@ -63,6 +64,7 @@ interface Props {
 
 interface State {
   frameHeight?: number
+  componentError?: Error
 }
 
 // TODO: catch errors and display them in render()
@@ -76,7 +78,11 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
 
   public constructor(props: Props) {
     super(props)
-    this.state = { frameHeight: undefined }
+    // Default to a frameHeight of 0. If this is undefined, browsers
+    // default to something > 100 pixels, which can look strange.
+    // In the future, we may want to allow component creators to specify
+    // the initial frameHeight.
+    this.state = { frameHeight: 0 }
   }
 
   public componentDidMount = (): void => {
@@ -131,7 +137,11 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
         if (apiVersion !== CUSTOM_COMPONENT_API_VERSION) {
           // In the future, we may end up with multiple API versions we
           // need to support. For now, we just have the one.
-          logWarning(`Unrecognized API version '${apiVersion}'!`)
+          this.setState({
+            componentError: new Error(
+              `Unrecognized component API version: '${apiVersion}'`
+            ),
+          })
         } else {
           this.componentReady = true
           this.sendForwardMsg(StreamlitMessageType.RENDER, {
@@ -216,6 +226,16 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
   }
 
   public render = (): ReactNode => {
+    if (this.state.componentError != null) {
+      // If we have an error, display it and bail.
+      return (
+        <ErrorElement
+          name={this.state.componentError.name}
+          message={this.state.componentError.message}
+        />
+      )
+    }
+
     const componentId = this.props.element.get("componentId")
     const url = this.props.element.get("url")
 
