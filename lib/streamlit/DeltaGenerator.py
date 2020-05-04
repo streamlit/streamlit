@@ -1720,8 +1720,8 @@ class DeltaGenerator(object):
                 return None
 
             if not isinstance(default_values, list):
-                if default_values is None:
-                    default_values = [None]
+                if not default_values:
+                    default_values = [default_values]
                 else:
                     default_values = list(default_values)
 
