@@ -42,6 +42,7 @@ from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto.NumberInput_pb2 import NumberInput
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.logger import get_logger
+from streamlit.type_util import is_type
 
 LOGGER = get_logger(__name__)
 
@@ -1720,7 +1721,10 @@ class DeltaGenerator(object):
                 return None
 
             if not isinstance(default_values, list):
-                if not default_values:
+                if not default_values and not (
+                    is_type(default_values, "numpy.ndarray")
+                    or is_type(default_values, "pandas.core.series.Series")
+                ):
                     default_values = [default_values]
                 else:
                     default_values = list(default_values)
