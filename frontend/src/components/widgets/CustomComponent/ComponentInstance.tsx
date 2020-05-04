@@ -165,15 +165,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     // TODO: handle debouncing, or expose some debouncing primitives?
     // TODO: ints, arrays, "button triggers", ... dataframes?
 
-    if (typeof value === "boolean") {
-      this.props.widgetMgr.setBoolValue(widgetId, Boolean(value), source)
-    } else if (typeof value === "number") {
-      this.props.widgetMgr.setFloatValue(widgetId, Number(value), source)
-    } else if (typeof value === "string") {
-      this.props.widgetMgr.setStringValue(widgetId, String(value), source)
-    } else {
-      logWarning(`ComponentInstance: unsupported value type! ${value}`)
-    }
+    this.props.widgetMgr.setJsonValue(widgetId, value, source)
   }
 
   /** The component has a new height. We'll resize the iframe. */

@@ -173,6 +173,26 @@ export class WidgetStateManager {
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
+  public getJsonValue(widgetId: string): string | undefined {
+    const state = this.getWidgetStateProto(widgetId)
+    if (state != null && state.value === "jsonValue") {
+      return state.jsonValue
+    }
+
+    return undefined
+  }
+
+  public setJsonValue(
+    widgetId: string,
+    value: number[],
+    source: Source
+  ): void {
+    this.getOrCreateWidgetStateProto(widgetId).jsonValue = JSON.stringify(
+      value
+    )
+    this.maybeSendUpdateWidgetsMessage(source)
+  }
+
   private maybeSendUpdateWidgetsMessage(source: Source): void {
     if (source.fromUi) {
       this.sendUpdateWidgetsMessage()
