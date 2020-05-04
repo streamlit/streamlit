@@ -62,17 +62,10 @@ interface State {
 
 export class ComponentInstance extends React.PureComponent<Props, State> {
   private iframeRef = createRef<HTMLIFrameElement>()
-<<<<<<< HEAD:frontend/src/components/widgets/Plugin/PluginInstance.tsx
-  // True when we've received the PLUGIN_READY message
-  private pluginReady = false
-  private pendingRenderArgs = {}
-  private pendingRenderDfs = []
-=======
   // True when we've received the COMPONENT_READY message
   private componentReady = false
   private lastRenderArgs = {}
   private lastRenderDataframes = []
->>>>>>> 83fbc3748d27bc551ab913b6ecda83caa1b70289:frontend/src/components/widgets/CustomComponent/ComponentInstance.tsx
 
   public constructor(props: Props) {
     super(props)
@@ -121,19 +114,6 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
   private onBackMsg = (type: string, data: any): void => {
     switch (type) {
       case ComponentBackMsgType.COMPONENT_READY:
-<<<<<<< HEAD:frontend/src/components/widgets/Plugin/PluginInstance.tsx
-        if (this.pluginReady) {
-          logWarning(`Got multiple PLUGIN_READY messages!`)
-        } else {
-          // Our plugin is ready to begin receiving messages. Send off its
-          // first render message!
-          this.pluginReady = true
-          this.sendForwardMsg(ComponentForwardMsgType.RENDER, {
-            args: this.pendingRenderArgs,
-            dfs: this.pendingRenderDfs,
-          })
-        }
-=======
         // Our component is ready to begin receiving messages. Send off its
         // first render message! It is *not* an error to get multiple
         // COMPONENT_READY messages. This can happen if a component is being
@@ -145,7 +125,6 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
           args: this.lastRenderArgs,
           dfs: this.lastRenderDataframes,
         })
->>>>>>> 83fbc3748d27bc551ab913b6ecda83caa1b70289:frontend/src/components/widgets/CustomComponent/ComponentInstance.tsx
         break
 
       case ComponentBackMsgType.SET_WIDGET_VALUE:
@@ -186,15 +165,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     // TODO: handle debouncing, or expose some debouncing primitives?
     // TODO: ints, arrays, "button triggers", ... dataframes?
 
-    if (typeof value === "boolean") {
-      this.props.widgetMgr.setBoolValue(widgetId, Boolean(value), source)
-    } else if (typeof value === "number") {
-      this.props.widgetMgr.setFloatValue(widgetId, Number(value), source)
-    } else if (typeof value === "string") {
-      this.props.widgetMgr.setStringValue(widgetId, String(value), source)
-    } else {
-      logWarning(`ComponentInstance: unsupported value type! ${value}`)
-    }
+    this.props.widgetMgr.setJsonValue(widgetId, value, source)
   }
 
   /** The component has a new height. We'll resize the iframe. */
@@ -250,27 +221,13 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     const renderArgs = JSON.parse(this.props.element.get("argsJson"))
     const renderDfs = this.props.element.get("argsDataframe").toJS()
 
-<<<<<<< HEAD:frontend/src/components/widgets/Plugin/PluginInstance.tsx
-    if (this.pluginReady) {
-      // The plugin has loaded. Send it a new render message immediately.
-=======
     if (this.componentReady) {
       // The component has loaded. Send it a new render message immediately.
->>>>>>> 83fbc3748d27bc551ab913b6ecda83caa1b70289:frontend/src/components/widgets/CustomComponent/ComponentInstance.tsx
       this.sendForwardMsg(ComponentForwardMsgType.RENDER, {
         args: renderArgs,
         dfs: renderDfs,
         disabled: this.props.disabled,
       })
-<<<<<<< HEAD:frontend/src/components/widgets/Plugin/PluginInstance.tsx
-    } else {
-      // The plugin hasn't yet loaded. Save these render args; we'll
-      // send the RENDER message as soon as the plugin is ready.
-      // It is *not* an error for a plugin to never send the ready message.
-      this.pendingRenderArgs = renderArgs
-      this.pendingRenderDfs = renderDfs
-=======
->>>>>>> 83fbc3748d27bc551ab913b6ecda83caa1b70289:frontend/src/components/widgets/CustomComponent/ComponentInstance.tsx
     }
 
     // We always store the most recent render arguments in order to respond

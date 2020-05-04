@@ -30,11 +30,7 @@ from streamlit.elements import arrow_table
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.Element_pb2 import Element
-<<<<<<< HEAD:lib/streamlit/plugins.py
-from streamlit.proto.PluginInstance_pb2 import ArgsDataframe
-=======
 from streamlit.proto.ComponentInstance_pb2 import ArgsDataframe
->>>>>>> 83fbc3748d27bc551ab913b6ecda83caa1b70289:lib/streamlit/components.py
 
 
 LOGGER = get_logger(__name__)
@@ -91,27 +87,17 @@ def register_component(
         # widget ID.
         user_key = kwargs.get("key", None)
 
-<<<<<<< HEAD:lib/streamlit/plugins.py
-        def marshall_plugin(element: Element) -> Union[Any, Type[NoValue]]:
-            element.plugin_instance.args_json = serialized_args_json
-            element.plugin_instance.plugin_id = plugin_id
-=======
         def marshall_component(element: Element) -> Union[Any, Type[NoValue]]:
             element.component_instance.args_json = serialized_args_json
             element.component_instance.component_id = component_id
             if url is not None:
                 element.component_instance.url = url
->>>>>>> 83fbc3748d27bc551ab913b6ecda83caa1b70289:lib/streamlit/components.py
 
             for key, value in args_df.items():
                 new_args_dataframe = ArgsDataframe()
                 new_args_dataframe.key = key
                 arrow_table.marshall(new_args_dataframe.value.data, value)
-<<<<<<< HEAD:lib/streamlit/plugins.py
-                element.plugin_instance.args_dataframe.append(new_args_dataframe)
-=======
                 element.component_instance.args_dataframe.append(new_args_dataframe)
->>>>>>> 83fbc3748d27bc551ab913b6ecda83caa1b70289:lib/streamlit/components.py
 
             widget_value = _get_widget_ui_value(
                 "component_instance", element, user_key=user_key
