@@ -17,10 +17,10 @@
 
 import { logWarning } from "lib/log"
 import { BaseUriParts, buildHttpUri } from "lib/UriUtil"
-import { ComponentBackMsgType } from "./ComponentInstance"
+import { ComponentMessageType } from "./ComponentInstance"
 
 export type ComponentMessageListener = (
-  type: ComponentBackMsgType,
+  type: ComponentMessageType,
   data: any
 ) => void
 
