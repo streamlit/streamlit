@@ -99,16 +99,16 @@ def register_component(
             # considers it a new widget instance and it loses its previous
             # state.
             #
-            # However! If a *component* has a `user_key` argument, then the
+            # However! If a *component* has a `key` argument, then the
             # component's hash identity is determined by entirely by
-            # `component_id + url + user_key`. This means that, when `user_key`
+            # `component_id + url + key`. This means that, when `key`
             # exists, the component will maintain its identity even when its
             # other arguments change, and the component's iframe won't be
             # remounted on the frontend.
             #
-            # So: if `user_key` is None, we marshall the element's arguments
+            # So: if `key` is None, we marshall the element's arguments
             # *before* computing its widget_ui_value (which creates its hash).
-            # If `user_key` is not None, we marshall the arguments *after*.
+            # If `key` is not None, we marshall the arguments *after*.
 
             def marshall_element_args():
                 element.component_instance.args_json = serialized_args_json
