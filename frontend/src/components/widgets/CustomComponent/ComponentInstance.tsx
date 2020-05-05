@@ -67,6 +67,62 @@ interface State {
   componentError?: Error
 }
 
+/**
+ * Our iframe sandbox options.
+ * See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe#Attributes
+ *
+ * From that page:
+ * "When the embedded document has the same origin as the embedding page, it is
+ * strongly discouraged to use both allow-scripts and allow-same-origin, as
+ * that lets the embedded document remove the sandbox attribute — making it no
+ * more secure than not using the sandbox attribute at all."
+ *
+ * TODO: we need both allow-scripts (for obvious reasons) *and*
+ * allow-same-origin (or else we'll fails CORS checks for loading static
+ * resources). Do we need to therefore serve component content from a
+ * different origin, somehow?
+ */
+const SANDBOX_POLICY = [
+  // Allows for downloads to occur without a gesture from the user.
+  // "allow-downloads-without-user-activation",
+
+  // Allows the resource to submit forms. If this keyword is not used, form submission is blocked.
+  "allow-forms",
+
+  // Lets the resource open modal windows.
+  "allow-modals",
+
+  // Lets the resource lock the screen orientation.
+  // "allow-orientation-lock",
+
+  // Lets the resource use the Pointer Lock API.
+  // "allow-pointer-lock",
+
+  // Allows popups (such as window.open(), target="_blank", or showModalDialog()). If this keyword is not used, the popup will silently fail to open.
+  "allow-popups",
+
+  // Lets the sandboxed document open new windows without those windows inheriting the sandboxing. For example, this can safely sandbox an advertisement without forcing the same restrictions upon the page the ad links to.
+  "allow-popups-to-escape-sandbox",
+
+  // Lets the resource start a presentation session.
+  // "allow-presentation",
+
+  // If this token is not used, the resource is treated as being from a special origin that always fails the same-origin policy.
+  "allow-same-origin",
+
+  // Lets the resource run scripts (but not create popup windows).
+  "allow-scripts",
+
+  // Lets the resource request access to the parent's storage capabilities with the Storage Access API.
+  "allow-storage-access-by-user-activation",
+
+  // Lets the resource navigate the top-level browsing context (the one named _top).
+  // "allow-top-navigation",
+
+  // Lets the resource navigate the top-level browsing context, but only if initiated by a user gesture.
+  // "allow-top-navigation-by-user-activation",
+].join(" ")
+
 // TODO: catch errors and display them in render()
 
 export class ComponentInstance extends React.PureComponent<Props, State> {
@@ -303,7 +359,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
         allowFullScreen={false}
         seamless={true}
         scrolling="no"
-        sandbox="allow-forms allow-popups allow-scripts allow-same-origin"
+        sandbox={SANDBOX_POLICY}
       />
     )
   }
