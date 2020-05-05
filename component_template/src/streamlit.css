@@ -1,0 +1,146 @@
+/**
+ * Copyright 2018-2020 Streamlit Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/* Mono */
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-weight: 400;
+  font-style: normal;
+  src: url("./fonts/IBM_Plex_Mono/IBMPlexMono-Regular.ttf");
+}
+/* Sans, regular */
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-weight: 300;
+  font-style: normal;
+  src: url("./fonts/IBM_Plex_Sans/IBMPlexSans-Light.ttf");
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-weight: 400;
+  font-style: normal;
+  src: url("./fonts/IBM_Plex_Sans/IBMPlexSans-Regular.ttf");
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-weight: 500;
+  font-style: normal;
+  src: url("./fonts/IBM_Plex_Sans/IBMPlexSans-Medium.ttf");
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-weight: 700;
+  font-style: normal;
+  src: url("./fonts/IBM_Plex_Sans/IBMPlexSans-Bold.ttf");
+}
+/* Sans, italic */
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-weight: 300;
+  font-style: italic;
+  src: url("./fonts/IBM_Plex_Sans/IBMPlexSans-LightItalic.ttf");
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-weight: 400;
+  font-style: italic;
+  src: url("./fonts/IBM_Plex_Sans/IBMPlexSans-Italic.ttf");
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-weight: 500;
+  font-style: italic;
+  src: url("./fonts/IBM_Plex_Sans/IBMPlexSans-MediumItalic.ttf");
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-weight: 700;
+  font-style: italic;
+  src: url("./fonts/IBM_Plex_Sans/IBMPlexSans-BoldItalic.ttf");
+}
+
+::-webkit-scrollbar {
+  background-color: transparent;
+  border-radius: 100px;
+  height: 6px;
+  width: 6px;
+}
+
+::-webkit-scrollbar:hover {
+  background-color: rgba(0, 0, 0, 0.09);
+}
+
+::-webkit-scrollbar-thumb:vertical,
+::-webkit-scrollbar-thumb:horizontal {
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 100px;
+}
+
+::-webkit-scrollbar-thumb:vertical:active,
+::-webkit-scrollbar-thumb:horizontal:active {
+  background: rgba(0, 0, 0, 0.61);
+  border-radius: 100px;
+}
+
+body {
+  background: transparent;
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+code,
+pre {
+  font-family: "IBM Plex Mono", monospace;
+}
+
+a,
+a:visited {
+  color: #f63366;
+}
+
+a:hover,
+a:active {
+  color: #f63366;
+  text-decoration: underline;
+}
+
+.primary {
+  color: #f63366;
+}
+
+.secondary {
+  color: #a3a8b4;
+}
+
+.gray {
+  color: #a3a8b4;
+}
+
+.red {
+  color: #ff2b2b;
+}
+
+.yellow {
+  color: #faca2b;
+}
+
+.blue {
+  color: #0068c9;
+}
+
+.green {
+  color: #09ab3b;
+}
