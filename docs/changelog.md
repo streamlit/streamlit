@@ -311,9 +311,9 @@ _Release date: July 28, 2019_
 
 **Highlights:**
 
-* ⚡ Lightning-fast reconnect when you do a ctrl-c/rerun on your Streamlit code
-* 📣 Useful error messages when the connection fails
-* 💎 Fixed multiple bugs and improved polish of our newly-released interactive widgets
+- ⚡ Lightning-fast reconnect when you do a ctrl-c/rerun on your Streamlit code
+- 📣 Useful error messages when the connection fails
+- 💎 Fixed multiple bugs and improved polish of our newly-released interactive widgets
 
 ## Version 0.43.0
 
