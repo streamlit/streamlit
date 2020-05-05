@@ -2141,7 +2141,7 @@ class DeltaGenerator(object):
         """Display a color picker widget.
 
         Note: This is a beta feature. See
-        https://api.streamlit.docs/pre_release_features.html for more
+        https://docs.streamlit.io/pre_release_features.html for more
         information.
 
         Parameters
