@@ -88,20 +88,48 @@ def register_component(
         user_key = kwargs.get("key", None)
 
         def marshall_component(element: Element) -> Union[Any, Type[NoValue]]:
-            element.component_instance.args_json = serialized_args_json
             element.component_instance.component_id = component_id
             if url is not None:
                 element.component_instance.url = url
 
-            for key, value in args_df.items():
-                new_args_dataframe = ArgsDataframe()
-                new_args_dataframe.key = key
-                arrow_table.marshall(new_args_dataframe.value.data, value)
-                element.component_instance.args_dataframe.append(new_args_dataframe)
+            # Normally, a widget's element_hash (which determines
+            # its identity across multiple runs of an app) is computed
+            # by hashing the entirety of its protobuf. This means that,
+            # if any of the arguments to the widget are changed, Streamlit
+            # considers it a new widget instance and it loses its previous
+            # state.
+            #
+            # However! If a *component* has a `key` argument, then the
+            # component's hash identity is determined by entirely by
+            # `component_id + url + key`. This means that, when `key`
+            # exists, the component will maintain its identity even when its
+            # other arguments change, and the component's iframe won't be
+            # remounted on the frontend.
+            #
+            # So: if `key` is None, we marshall the element's arguments
+            # *before* computing its widget_ui_value (which creates its hash).
+            # If `key` is not None, we marshall the arguments *after*.
+
+            def marshall_element_args():
+                element.component_instance.args_json = serialized_args_json
+                for key, value in args_df.items():
+                    new_args_dataframe = ArgsDataframe()
+                    new_args_dataframe.key = key
+                    arrow_table.marshall(new_args_dataframe.value.data, value)
+                    element.component_instance.args_dataframe.append(new_args_dataframe)
+
+            if user_key is None:
+                marshall_element_args()
 
             widget_value = _get_widget_ui_value(
-                "component_instance", element, user_key=user_key
+                element_type="component_instance",
+                element=element,
+                user_key=user_key,
+                widget_func_name=name,
             )
+
+            if user_key is not None:
+                marshall_element_args()
 
             if widget_value is None:
                 widget_value = default_value
