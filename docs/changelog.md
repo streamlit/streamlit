@@ -101,7 +101,7 @@ _Release date: January 29, 2020_
 
 ## Version 0.53.0
 
-_Release date: January 14, 2019_
+_Release date: January 14, 2020_
 
 **Highlights:**
 
