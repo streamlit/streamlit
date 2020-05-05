@@ -22,6 +22,20 @@ See highlights, bug fixes, and known issues for Streamlit releases:
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.59.0
+
+_Release date: May 06, 2020_
+
+**Highlights:**
+
+- New color-picker widget! Use it with
+  [`st.beta_color_picker()`](https://docs.streamlit.io/api.html#streamlit.beta_color_picker)
+- Introducing `st.beta_*` and `st.experimental_*` function prefixes, for faster
+  Streamlit feature releases. See
+  [docs](https://docs.streamlit.io/pre_release_features.html) for more info.
+- Improved st.cache support for SQL Alchemy objects, CompiledFFI, PyTorch
+  Tensors, and `builtins.mappingproxy`.
+
 ## Version 0.58.0
 
 _Release date: April 22, 2020_
@@ -42,7 +56,7 @@ _Release date: March 26, 2020_
 
 - ⏲️ Ability to set expiration options for `@st.cache`'ed functions by setting
   the `max_entries` and `ttl` arguments. See
-  [docs](https://docs.streamlit.io/api.html?highlight=cache#streamlit.cache).
+  [docs](https://docs.streamlit.io/api.html#streamlit.cache).
 - 🆙 Improved the machinery behind `st.file_uploader`, so it's much more
   performant now! Also increased the default upload limit to 200MB
   (configurable via `server.max_upload_size`).
