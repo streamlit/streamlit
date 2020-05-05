@@ -9,7 +9,7 @@ graphviz
 mysqlclient
 psycopg2-binary
 pydot
-tensorflow>=2.0.0
+tensorflow>=2.0.0rc3
 seaborn
 sqlalchemy
 torch
