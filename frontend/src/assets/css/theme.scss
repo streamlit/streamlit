@@ -18,6 +18,7 @@
 @import "fonts";
 @import "~bootstrap/scss/bootstrap";
 @import "src/assets/css/mixins";
+@import "scrollbars";
 
 // IMPORTANT! This must come after the bootstrap import.
 // Styletron creates classes called h1, h2, etc., which conflict with Bootstrap classes.
@@ -161,40 +162,4 @@ pre {
 .icon {
   width: 0.9rem;
   height: 0.9rem;
-}
-
-// Undo bootstrap changes to classes that Styletron uses and we don't.
-
-.h1,
-.h2,
-.h3,
-.h4,
-.h5,
-.h6 {
-  all: unset;
-}
-
-// Make scrollbars awesome on Chrome.
-
-::-webkit-scrollbar {
-  background-color: transparent;
-  border-radius: 100px;
-  height: 6px;
-  width: 6px;
-}
-
-::-webkit-scrollbar:hover {
-  background-color: rgba(0, 0, 0, 0.09);
-}
-
-::-webkit-scrollbar-thumb:vertical,
-::-webkit-scrollbar-thumb:horizontal {
-  background: rgba(0, 0, 0, 0.5);
-  border-radius: 100px;
-}
-
-::-webkit-scrollbar-thumb:vertical:active,
-::-webkit-scrollbar-thumb:horizontal:active {
-  background: rgba(0, 0, 0, 0.61);
-  border-radius: 100px;
 }
