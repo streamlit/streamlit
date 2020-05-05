@@ -15,34 +15,42 @@
  * limitations under the License.
  */
 
+import ErrorElement from "components/shared/ErrorElement"
 import { Map as ImmutableMap } from "immutable"
 import { logError, logWarning } from "lib/log"
 import { Source, WidgetStateManager } from "lib/WidgetStateManager"
 import React, { createRef, ReactNode } from "react"
 import { ComponentRegistry } from "./ComponentRegistry"
 
+/**
+ * The current custom component API version. If our API changes,
+ * this value must be incremented. ComponentInstances send their API
+ * version in the COMPONENT_READY call.
+ */
+export const CUSTOM_COMPONENT_API_VERSION = 1
+
 /** Messages from Component -> Streamlit */
-export enum ComponentBackMsgType {
+export enum ComponentMessageType {
   // A component sends this message when it's ready to receive messages
   // from Streamlit. Streamlit won't send any messages until it gets this.
-  // No data.
-  COMPONENT_READY = "componentReady",
+  // Data: { apiVersion: number }
+  COMPONENT_READY = "streamlit:componentReady",
 
   // The component has a new widget value. Send it back to Streamlit, which
   // will then re-run the app.
   // Data: { value: any }
-  SET_WIDGET_VALUE = "setWidgetValue",
+  SET_WIDGET_VALUE = "streamlit:setWidgetValue",
 
   // The component has a new height for its iframe.
   // Data: { height: number }
-  SET_FRAME_HEIGHT = "setFrameHeight",
+  SET_FRAME_HEIGHT = "streamlit:setFrameHeight",
 }
 
 /** Messages from Streamlit -> Component */
-export enum ComponentForwardMsgType {
+export enum StreamlitMessageType {
   // Sent by Streamlit when the component should re-render.
   // Data: { args: any, disabled: boolean }
-  RENDER = "render",
+  RENDER = "streamlit:render",
 }
 
 interface Props {
@@ -56,6 +64,7 @@ interface Props {
 
 interface State {
   frameHeight?: number
+  componentError?: Error
 }
 
 // TODO: catch errors and display them in render()
@@ -69,7 +78,11 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
 
   public constructor(props: Props) {
     super(props)
-    this.state = { frameHeight: undefined }
+    // Default to a frameHeight of 0. If this is undefined, browsers
+    // default to something > 100 pixels, which can look strange.
+    // In the future, we may want to allow component creators to specify
+    // the initial frameHeight.
+    this.state = { frameHeight: 0 }
   }
 
   public componentDidMount = (): void => {
@@ -113,34 +126,45 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
    */
   private onBackMsg = (type: string, data: any): void => {
     switch (type) {
-      case ComponentBackMsgType.COMPONENT_READY:
+      case ComponentMessageType.COMPONENT_READY:
         // Our component is ready to begin receiving messages. Send off its
         // first render message! It is *not* an error to get multiple
         // COMPONENT_READY messages. This can happen if a component is being
         // served from the webpack dev server, and gets reloaded. We
         // always respond to this message with the most recent render
         // arguments.
-        this.componentReady = true
-        this.sendForwardMsg(ComponentForwardMsgType.RENDER, {
-          args: this.lastRenderArgs,
-          dfs: this.lastRenderDataframes,
-        })
+        const apiVersion = data["apiVersion"]
+        if (apiVersion !== CUSTOM_COMPONENT_API_VERSION) {
+          // In the future, we may end up with multiple API versions we
+          // need to support. For now, we just have the one.
+          this.setState({
+            componentError: new Error(
+              `Unrecognized component API version: '${apiVersion}'`
+            ),
+          })
+        } else {
+          this.componentReady = true
+          this.sendForwardMsg(StreamlitMessageType.RENDER, {
+            args: this.lastRenderArgs,
+            dfs: this.lastRenderDataframes,
+          })
+        }
         break
 
-      case ComponentBackMsgType.SET_WIDGET_VALUE:
+      case ComponentMessageType.SET_WIDGET_VALUE:
         if (!this.componentReady) {
           logWarning(
-            `Got ${type} before ${ComponentBackMsgType.COMPONENT_READY}!`
+            `Got ${type} before ${ComponentMessageType.COMPONENT_READY}!`
           )
         } else {
           this.handleSetWidgetValue(data, { fromUi: true })
         }
         break
 
-      case ComponentBackMsgType.SET_FRAME_HEIGHT:
+      case ComponentMessageType.SET_FRAME_HEIGHT:
         if (!this.componentReady) {
           logWarning(
-            `Got ${type} before ${ComponentBackMsgType.COMPONENT_READY}!`
+            `Got ${type} before ${ComponentMessageType.COMPONENT_READY}!`
           )
         } else {
           this.handleSetFrameHeight(data)
@@ -179,12 +203,9 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     this.setState({ frameHeight: height })
   }
 
-  private sendForwardMsg = (
-    type: ComponentForwardMsgType,
-    data: any
-  ): void => {
+  private sendForwardMsg = (type: StreamlitMessageType, data: any): void => {
     if (this.iframeRef.current == null) {
-      // This should never happen
+      // This should never happen!
       logWarning("Can't send ForwardMsg; missing our iframe!")
       return
     }
@@ -197,7 +218,6 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
 
     this.iframeRef.current.contentWindow.postMessage(
       {
-        isStreamlitMessage: true,
         type: type,
         ...data,
       },
@@ -206,24 +226,47 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
   }
 
   public render = (): ReactNode => {
-    const componentId = this.props.element.get("componentId")
-    const url = this.props.element.get("url")
-
-    // Determine the component iframe's src. If a URL is specified, we just
-    // use that. Otherwise, we derive the URL from the component's ID.
-    let src: string
-    if (url != null && url !== "") {
-      src = url
-    } else {
-      src = this.props.registry.getComponentURL(componentId, "index.html")
+    if (this.state.componentError != null) {
+      // If we have an error, display it and bail.
+      return (
+        <ErrorElement
+          name={this.state.componentError.name}
+          message={this.state.componentError.message}
+        />
+      )
     }
 
-    const renderArgs = JSON.parse(this.props.element.get("argsJson"))
-    const renderDfs = this.props.element.get("argsDataframe").toJS()
+    // Parse the component's arguments and src URL.
+    // Some of these steps may throw an exception, so we wrap them in a
+    // try-catch. If we catch an error, we set this.state.componentError
+    // and bail. The error will be displayed in the next call to render,
+    // which will be triggered immediately. (This will not cause an infinite
+    // loop.)
+    let renderArgs: any
+    let renderDfs: any
+    let src: string
+    try {
+      // Determine the component iframe's src. If a URL is specified, we just
+      // use that. Otherwise, we derive the URL from the component's ID.
+      const componentId = this.props.element.get("componentId")
+      const url = this.props.element.get("url")
+      if (url != null && url !== "") {
+        src = url
+      } else {
+        src = this.props.registry.getComponentURL(componentId, "index.html")
+      }
+
+      // Parse arguments
+      renderArgs = JSON.parse(this.props.element.get("argsJson"))
+      renderDfs = this.props.element.get("argsDataframe").toJS()
+    } catch (err) {
+      this.setState({ componentError: err })
+      return undefined
+    }
 
     if (this.componentReady) {
       // The component has loaded. Send it a new render message immediately.
-      this.sendForwardMsg(ComponentForwardMsgType.RENDER, {
+      this.sendForwardMsg(StreamlitMessageType.RENDER, {
         args: renderArgs,
         dfs: renderDfs,
         disabled: this.props.disabled,

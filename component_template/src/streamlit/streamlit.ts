@@ -23,6 +23,23 @@ export interface RenderData {
   disabled: boolean
 }
 
+/** Messages from Component -> Streamlit */
+enum ComponentMessageType {
+  // A component sends this message when it's ready to receive messages
+  // from Streamlit. Streamlit won't send any messages until it gets this.
+  // Data: { apiVersion: number }
+  COMPONENT_READY = "streamlit:componentReady",
+
+  // The component has a new widget value. Send it back to Streamlit, which
+  // will then re-run the app.
+  // Data: { value: any }
+  SET_WIDGET_VALUE = "streamlit:setWidgetValue",
+
+  // The component has a new height for its iframe.
+  // Data: { height: number }
+  SET_FRAME_HEIGHT = "streamlit:setFrameHeight",
+}
+
 /**
  * Streamlit communication API.
  *
@@ -30,7 +47,13 @@ export interface RenderData {
  * and receive data from Streamlit via the `events` property.
  */
 export class Streamlit {
-  public static readonly RENDER_EVENT = "render"
+  /**
+   * The Streamlit component API version we're targetting.
+   * There's currently only 1!
+   */
+  public static readonly API_VERSION = 1
+
+  public static readonly RENDER_EVENT = "streamlit:render"
 
   /** Dispatches events received from Streamlit. */
   public static readonly events = new EventTarget()
@@ -49,7 +72,9 @@ export class Streamlit {
       Streamlit.registeredMessageListener = true
     }
 
-    Streamlit.sendBackMsg("componentReady")
+    Streamlit.sendBackMsg(ComponentMessageType.COMPONENT_READY, {
+      apiVersion: Streamlit.API_VERSION,
+    })
   }
 
   /**
@@ -65,7 +90,7 @@ export class Streamlit {
       height = document.body.scrollHeight
     }
 
-    Streamlit.sendBackMsg("setFrameHeight", { height })
+    Streamlit.sendBackMsg(ComponentMessageType.SET_FRAME_HEIGHT, { height })
   }
 
   /**
@@ -73,24 +98,15 @@ export class Streamlit {
    * This value will be returned to the Python script.
    */
   public static setWidgetValue = (value: any): void => {
-    Streamlit.sendBackMsg("setWidgetValue", { value })
+    Streamlit.sendBackMsg(ComponentMessageType.SET_WIDGET_VALUE, { value })
   }
 
   /** Receive a ForwardMsg from the Streamlit app */
   private static onMessageEvent = (event: MessageEvent): void => {
-    // We only listen for Streamlit messages.
-    if (!event.data.hasOwnProperty("isStreamlitMessage")) {
-      return
-    }
-
     const type = event.data["type"]
     switch (type) {
-      case "render":
+      case Streamlit.RENDER_EVENT:
         Streamlit.onRenderMessage(event.data)
-        break
-
-      default:
-        console.warn(`Unrecognized Streamlit message '${type}`)
         break
     }
   }
@@ -147,7 +163,6 @@ export class Streamlit {
   private static sendBackMsg = (type: string, data?: any): void => {
     window.parent.postMessage(
       {
-        // TODO? StreamlitMessageVersion: some string
         isStreamlitMessage: true,
         type: type,
         ...data,

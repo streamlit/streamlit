@@ -13,7 +13,7 @@ At the end of each day (at night 🌛), our bots run automated tests against the
 
 Official Streamlit releases go through both automated and rigorous manual testing, while nightly releases only have automated tests. It's important to keep in mind that new features introduced in nightly releases often lack polish. In our official releases, we make sure all new features are ready for prime time.
 
-**How do I use the nightly release?** 
+**How do I use the nightly release?**
 
 All you need to do is install the `streamlit-nightly` package:
 
@@ -32,7 +32,7 @@ pip install streamlit-nightly --upgrade
 
 Because you can't wait for official releases, and you want to help us find bugs early.
 
-**Why shouldn't I use the nightly release?** 
+**Why shouldn't I use the nightly release?**
 
 While our automated tests have high coverage, there's still a significant likelihood that there will be some bugs in the code. If you encounter bugs, please create an [issue](https://github.com/streamlit/streamlit/issues/new/choose).
 
@@ -52,7 +52,7 @@ In addition to nightly releases, we're also introducing two new namespaces for S
 - **st.beta**: this is where all new features land before they find their way to `st`. This gives you a chance to try the next big thing we're cooking up weeks or months before we're ready to stabilize its API.
 - **st.experimental**: this is where we'll put features that may or may not ever make it into `st`. We don't know whether these features have a future, but we want you to have access to everything we're trying, and work with us to figure them out.
 
-The main difference between `st.beta` and `st.experimental` is that beta features are expected to make it into the `st` namespace at some point soon, while experimental features may never make it. 
+The main difference between `st.beta` and `st.experimental` is that beta features are expected to make it into the `st` namespace at some point soon, while experimental features may never make it.
 
 ### Beta
 
@@ -61,9 +61,9 @@ Features in the beta namespace are all scheduled to become part of `st`, or core
 **The lifecycle of a beta feature**
 
 1. A feature is added to the beta namespace.
-2. The feature's API stabilizes and the feature is *cloned* into the `st` namespace, so it exists in both st and `st.beta`. At this point, users will see a warning when using the version of the feature that lives in the beta namespace -- but the `st.beta` feature will still work.
-3. The feature is *removed* from the `st.beta` namespace, but there will still be a stub in `st.beta` that shows an error with appropriate instructions.
-4. The stub in `st.beta` is removed. 
+2. The feature's API stabilizes and the feature is _cloned_ into the `st` namespace, so it exists in both st and `st.beta`. At this point, users will see a warning when using the version of the feature that lives in the beta namespace -- but the `st.beta` feature will still work.
+3. The feature is _removed_ from the `st.beta` namespace, but there will still be a stub in `st.beta` that shows an error with appropriate instructions.
+4. The stub in `st.beta` is removed.
 
 **Keeping up-to-date with beta features**
 
