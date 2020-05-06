@@ -157,6 +157,32 @@ describe("TextArea widget", () => {
     expect(resize).toBe("vertical")
   })
 
+  it("should limit the length if max_chars is passed", () => {
+    const props = getProps({
+      height: 500,
+      maxChars: 10,
+    })
+    const wrapper = shallow(<TextArea {...props} />)
+
+    // @ts-ignore
+    wrapper.find(UITextArea).prop("onChange")({
+      target: {
+        value: "0123456789",
+      },
+    } as EventTarget)
+
+    expect(wrapper.find(UITextArea).prop("value")).toBe("0123456789")
+
+    // @ts-ignore
+    wrapper.find(UITextArea).prop("onChange")({
+      target: {
+        value: "0123456789a",
+      },
+    } as EventTarget)
+
+    expect(wrapper.find(UITextArea).prop("value")).toBe("0123456789")
+  })
+
   describe("On mac it should", () => {
     Object.defineProperty(navigator, "platform", {
       value: "MacIntel",

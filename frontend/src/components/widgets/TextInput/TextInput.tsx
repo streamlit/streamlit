@@ -64,10 +64,17 @@ class TextInput extends React.PureComponent<Props, State> {
   }
 
   private onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    this.setState({
-      dirty: true,
-      value: e.target.value,
-    })
+    const { value } = e.target
+    const { element } = this.props
+
+    const maxChars = element.get("maxChars")
+
+    if (!maxChars || value.length <= maxChars) {
+      this.setState({
+        dirty: true,
+        value,
+      })
+    }
   }
 
   private onKeyPress = (e: React.KeyboardEvent<HTMLInputElement>): void => {

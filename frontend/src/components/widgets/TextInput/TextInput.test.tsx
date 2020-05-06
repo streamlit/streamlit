@@ -161,4 +161,29 @@ describe("TextInput widget", () => {
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
   })
+
+  it("should limit the length if max_chars is passed", () => {
+    const props = getProps({
+      maxChars: 10,
+    })
+    const wrapper = shallow(<TextInput {...props} />)
+
+    // @ts-ignore
+    wrapper.find(UIInput).prop("onChange")({
+      target: {
+        value: "0123456789",
+      },
+    } as EventTarget)
+
+    expect(wrapper.find(UIInput).prop("value")).toBe("0123456789")
+
+    // @ts-ignore
+    wrapper.find(UIInput).prop("onChange")({
+      target: {
+        value: "0123456789a",
+      },
+    } as EventTarget)
+
+    expect(wrapper.find(UIInput).prop("value")).toBe("0123456789")
+  })
 })

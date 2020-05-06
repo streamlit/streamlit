@@ -2192,7 +2192,7 @@ class DeltaGenerator(object):
         return str(current_value)
 
     @_with_element
-    def text_input(self, element, label, value="", key=None, type="default"):
+    def text_input(self, element, label, value="", max_chars=None, key=None, type="default"):
         """Display a single-line text input widget.
 
         Parameters
@@ -2202,6 +2202,8 @@ class DeltaGenerator(object):
         value : any
             The text value of this widget when it first renders. This will be
             cast to str internally.
+        max_chars : int or None
+            Max number of characters allowed in text input.
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -2225,6 +2227,10 @@ class DeltaGenerator(object):
         """
         element.text_input.label = label
         element.text_input.default = str(value)
+
+        if max_chars is not None:
+            element.text_input.max_chars = max_chars
+
         if type == "default":
             element.text_input.type = TextInput.DEFAULT
         elif type == "password":
@@ -2240,7 +2246,7 @@ class DeltaGenerator(object):
         return str(current_value)
 
     @_with_element
-    def text_area(self, element, label, value="", height=None, key=None):
+    def text_area(self, element, label, value="", height=None, max_chars=None, key=None):
         """Display a multi-line text input widget.
 
         Parameters
@@ -2253,6 +2259,8 @@ class DeltaGenerator(object):
         height : int or None
             Desired height of the UI element expressed in pixels. If None, a
             default height is used.
+        max_chars : int or None
+            Max number of characters allowed in text area.
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -2279,8 +2287,11 @@ class DeltaGenerator(object):
         element.text_area.label = label
         element.text_area.default = str(value)
 
-        if  height is not None:
+        if height is not None:
             element.text_area.height = height
+
+        if max_chars is not None:
+            element.text_area.max_chars = max_chars
 
         ui_value = _get_widget_ui_value("text_area", element, user_key=key)
         current_value = ui_value if ui_value is not None else value
