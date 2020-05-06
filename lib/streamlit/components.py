@@ -49,7 +49,7 @@ def register_component(
         raise StreamlitAPIException("Either 'path' or 'url' must be set, but not both.")
 
     # Register this component with our global registry.
-    component_id = ComponentRegistry.instance().register_component(name, path)
+    ComponentRegistry.instance().register_component(name, path)
 
     # Build our component function.
     def component_instance(dg: DeltaGenerator, *args, **kwargs) -> Optional[Any]:
@@ -88,7 +88,7 @@ def register_component(
         user_key = kwargs.get("key", None)
 
         def marshall_component(element: Element) -> Union[Any, Type[NoValue]]:
-            element.component_instance.component_id = component_id
+            element.component_instance.component_name = name
             if url is not None:
                 element.component_instance.url = url
 
@@ -101,7 +101,7 @@ def register_component(
             #
             # However! If a *component* has a `key` argument, then the
             # component's hash identity is determined by entirely by
-            # `component_id + url + key`. This means that, when `key`
+            # `component_name + url + key`. This means that, when `key`
             # exists, the component will maintain its identity even when its
             # other arguments change, and the component's iframe won't be
             # remounted on the frontend.
@@ -163,8 +163,8 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
 
     def get(self, path: str) -> None:
         parts = path.split("/")
-        component_id = parts[0]
-        component_root = self._registry.get_component_path(component_id)
+        component_name = parts[0]
+        component_root = self._registry.get_component_path(component_name)
         if component_root is None:
             self.write("%s not found" % path)
             self.set_status(404)
@@ -249,7 +249,7 @@ class ComponentRegistry:
     def __init__(self):
         self._components = {}  # type: Dict[str, Optional[str]]
 
-    def register_component(self, name: str, path: Optional[str] = None) -> str:
+    def register_component(self, name: str, path: Optional[str] = None) -> None:
         """Register a filesystem path as a custom component.
 
         Parameters
@@ -259,11 +259,6 @@ class ComponentRegistry:
         path : str or None
             The path to the directory that contains the component's contents,
             or None if the component is being served as a URL.
-
-        Returns
-        -------
-        str
-            The component's ID. (This is just its name.)
         """
         abspath = None
         if path is not None:
@@ -274,10 +269,9 @@ class ComponentRegistry:
                 )
 
         self._components[name] = abspath
-        return name
 
-    def get_component_path(self, id: str) -> Optional[str]:
-        """Return the path for the component with the given ID.
+    def get_component_path(self, name: str) -> Optional[str]:
+        """Return the path for the component with the given name.
         If no such component is registered, None will be returned instead.
         """
-        return self._components.get(id, None)
+        return self._components.get(name, None)

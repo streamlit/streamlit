@@ -61,7 +61,7 @@ export class ComponentRegistry {
     }
   }
 
-  public getComponentURL = (componentId: string, path: string): string => {
+  public getComponentURL = (componentName: string, path: string): string => {
     // Fetch the server URI. If our server is disconnected, this will return
     // undefined, in which case we default to the most recent cached value
     // of the URI.
@@ -74,7 +74,7 @@ export class ComponentRegistry {
     }
 
     this.cachedServerUri = serverUri
-    return buildHttpUri(serverUri, `component/${componentId}/${path}`)
+    return buildHttpUri(serverUri, `component/${componentName}/${path}`)
   }
 
   private onMessageEvent = (event: MessageEvent): void => {

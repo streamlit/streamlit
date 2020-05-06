@@ -12,8 +12,8 @@ message ComponentInstance {
   // We'll probably want to transmit dataframe data separately (not in JSON).
   repeated ArgsDataframe args_dataframe = 3;
 
-  // The component's unique ID.
-  string component_id = 4;
+  // The component's unique name.
+  string component_name = 4;
 
   // Optional URL to load the component from. By default this is not set,
   // but while testing, a user can e.g. point this to a local node server
