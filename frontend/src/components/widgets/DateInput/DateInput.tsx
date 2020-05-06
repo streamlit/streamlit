@@ -56,19 +56,33 @@ class DateInput extends React.PureComponent<Props, State> {
     this.setState({ value }, () => this.setWidgetValue({ fromUi: true }))
   }
 
+  private getMaxDate = (): Date | undefined => {
+    const { element } = this.props
+    const maxDate = element.get("maxDate")
+
+    return maxDate && maxDate.length > 0 ? stringToDate(maxDate) : undefined
+  }
+
   public render = (): React.ReactNode => {
-    const style = { width: this.props.width }
-    const label = this.props.element.get("label")
+    const { width, element, disabled } = this.props
+    const { value } = this.state
+
+    const style = { width }
+    const label = element.get("label")
+    const minDate = element.get("minDate")
+    const maxDate = this.getMaxDate()
 
     return (
       <div className="Widget stDateInput" style={style}>
         <label>{label}</label>
         <UIDatePicker
           formatString="yyyy/MM/dd"
-          disabled={this.props.disabled}
+          disabled={disabled}
           onChange={this.handleChange}
           overrides={datePickerOverrides}
-          value={stringToDate(this.state.value)}
+          value={stringToDate(value)}
+          minDate={stringToDate(minDate)}
+          maxDate={maxDate}
         />
       </div>
     )
