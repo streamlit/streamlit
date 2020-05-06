@@ -21,7 +21,6 @@ import Immutable from "immutable"
 import { StaticMap } from "react-map-gl"
 import * as layers from "@deck.gl/layers"
 import { JSONConverter } from "@deck.gl/json"
-import { flowRight as compose } from "lodash"
 import * as aggregationLayers from "@deck.gl/aggregation-layers"
 import * as geoLayers from "@deck.gl/geo-layers"
 
@@ -183,7 +182,4 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
   }
 }
 
-export default compose(
-  withMapboxToken,
-  withFullScreenWrapper
-)(DeckGlJsonChart)
+export default withMapboxToken(withFullScreenWrapper(DeckGlJsonChart))
