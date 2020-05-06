@@ -402,6 +402,17 @@ class _CodeHasher:
         elif inspect.isbuiltin(obj):
             return obj.__name__.encode()
 
+        elif type_util.is_type(obj, "builtins.CompiledFFI"):
+            return self.to_bytes(None)
+
+        elif type_util.is_type(obj, "builtins.mappingproxy") or type_util.is_type(
+            obj, "builtins.dict_items"
+        ):
+            return self.to_bytes(dict(obj))
+
+        elif type_util.is_type(obj, "builtins.getset_descriptor"):
+            return obj.__qualname__.encode()
+
         elif hasattr(obj, "name") and (
             isinstance(obj, io.IOBase)
             # Handle temporary files used during testing
@@ -430,12 +441,60 @@ class _CodeHasher:
             self.update(h, obj.getvalue())
             return h.digest()
 
+        elif any(
+            type_util.get_fqn(x) == "sqlalchemy.pool.base.Pool"
+            for x in type(obj).__bases__
+        ):
+            # Get connect_args from the closure of the creator function. It includes
+            # arguments parsed from the URL and those passed in via `connect_args`.
+            # However if a custom `creator` function is passed in then we don't
+            # expect to get this data.
+            cargs = obj._creator.__closure__
+            cargs = [cargs[0].cell_contents, cargs[1].cell_contents] if cargs else None
+
+            # Sort kwargs since hashing dicts is sensitive to key order
+            if cargs:
+                cargs[1] = dict(
+                    collections.OrderedDict(
+                        sorted(cargs[1].items(), key=lambda t: t[0])
+                    )
+                )
+
+            reduce_data = obj.__reduce__()
+
+            # Remove thread related objects
+            for attr in [
+                "_overflow_lock",
+                "_pool",
+                "_conn",
+                "_fairy",
+                "_threadconns",
+                "logger",
+            ]:
+                reduce_data[2].pop(attr, None)
+
+            return self.to_bytes([reduce_data, cargs])
+
+        elif type_util.is_type(obj, "sqlalchemy.engine.base.Engine"):
+            # Remove the url because it's overwritten by creator and connect_args
+            reduce_data = obj.__reduce__()
+            reduce_data[2].pop("url", None)
+            reduce_data[2].pop("logger", None)
+
+            return self.to_bytes(reduce_data)
+
         elif type_util.is_type(obj, "numpy.ufunc"):
             # For numpy.remainder, this returns remainder.
             return obj.__name__.encode()
 
+        elif type_util.is_type(obj, "socket.socket"):
+            return self.to_bytes(id(obj))
+
         elif type_util.is_type(obj, "tensorflow.python.client.session.Session"):
             return self.to_bytes(id(obj))
+
+        elif type_util.is_type(obj, "torch.Tensor"):
+            return self.to_bytes([obj.detach().numpy(), obj.grad])
 
         elif inspect.isroutine(obj):
             if hasattr(obj, "__wrapped__"):
