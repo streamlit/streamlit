@@ -311,7 +311,7 @@ class DeltaGenerator(object):
     def _get_coordinates(self):
         """Returns the element's 4-component location as string like "M.(1,2).3".
 
-        This function uniquely identifies the element's position in the front-end, 
+        This function uniquely identifies the element's position in the front-end,
         which allows (among other potential uses) the MediaFileManager to maintain
         session-specific maps of MediaFile objects placed with their "coordinates".
 
@@ -2240,7 +2240,7 @@ class DeltaGenerator(object):
         return str(current_value)
 
     @_with_element
-    def text_area(self, element, label, value="", key=None):
+    def text_area(self, element, label, value="", height=None, key=None):
         """Display a multi-line text input widget.
 
         Parameters
@@ -2250,6 +2250,9 @@ class DeltaGenerator(object):
         value : any
             The text value of this widget when it first renders. This will be
             cast to str internally.
+        height : int or None
+            Desired height of the UI element expressed in pixels. If None, a
+            default height is used.
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -2275,6 +2278,9 @@ class DeltaGenerator(object):
         """
         element.text_area.label = label
         element.text_area.default = str(value)
+
+        if  height is not None:
+            element.text_area.height = height
 
         ui_value = _get_widget_ui_value("text_area", element, user_key=key)
         current_value = ui_value if ui_value is not None else value
