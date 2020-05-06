@@ -363,7 +363,6 @@ class HashTest(unittest.TestCase):
 
         assert is_type(capsule, "builtins.PyCapsule")
         self.assertEqual(get_hash(capsule), get_hash(capsule))
-        # TODO need a not equals check
 
     def test_magic_mock(self):
         """Test that MagicMocks never hash to the same thing."""
