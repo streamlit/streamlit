@@ -20,12 +20,12 @@ st.register_component("my_component", MyComponent)
 # argument that specifies the initial return value of my_component, before the
 # user has interacted with it.
 num_clicks = st.my_component(name="Streamlit", default=0)
-st.markdown("You clicked %s times!" % int(num_clicks))
+st.markdown("You've clicked %s times!" % int(num_clicks))
 
 # We can create multiple instances of the component.
-num_clicks = st.my_component(name="World", default=0)
-st.markdown("You clicked %s times!" % int(num_clicks))
+num_clicks = st.my_component(name="again", default=0)
+st.markdown("You've clicked %s times!" % int(num_clicks))
 
 # It can live in the sidebar.
 num_clicks = st.sidebar.my_component(name="Sidebar", default=0)
-st.sidebar.markdown("You clicked %s times!" % int(num_clicks))
+st.sidebar.markdown("You've clicked %s times!" % int(num_clicks))

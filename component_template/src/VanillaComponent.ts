@@ -1,11 +1,11 @@
 import { Streamlit, RenderData } from "./streamlit"
 
-// Import Streamlit's default CSS
-import "./index.css"
-
 // We import bootstrap.css to get some simple default styling for our
 // text and button. You can remove or replace this.
 import "bootstrap/dist/css/bootstrap.min.css"
+
+// Import Streamlit's default CSS
+import "./streamlit.css"
 
 // Add text and a button to the DOM. (You could also add these directly
 // to index.html.)
