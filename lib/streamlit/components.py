@@ -29,30 +29,31 @@ from streamlit.DeltaGenerator import _get_widget_ui_value
 from streamlit.elements import arrow_table
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
-from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.ComponentInstance_pb2 import ArgsDataframe
-
+from streamlit.proto.Element_pb2 import Element
 
 LOGGER = get_logger(__name__)
 
 
 class MarshallComponentException(StreamlitAPIException):
+    """Class for exceptions generated during custom component marshalling."""
     pass
 
 
-def register_component(
-    name: str, path: Optional[str] = None, url: Optional[str] = None
-) -> None:
-    """Register a new custom component."""
+class CustomComponent:
+    """
+    A Custom Component declaration. Instances of this class aren't
+    used directly; you must first call `st.register_component` to register
+    the Component as a named Streamlit function.
+    """
+    def __init__(self, path: Optional[str] = None, url: Optional[str] = None):
+        if (path is None and url is None) or (path is not None and url is not None):
+            raise StreamlitAPIException("Either 'path' or 'url' must be set, but not both.")
+        self.path = path
+        self.url = url
 
-    if (path is None and url is None) or (path is not None and url is not None):
-        raise StreamlitAPIException("Either 'path' or 'url' must be set, but not both.")
-
-    # Register this component with our global registry.
-    ComponentRegistry.instance().register_component(name, path)
-
-    # Build our component function.
-    def component_instance(dg: DeltaGenerator, *args, **kwargs) -> Optional[Any]:
+    def create_instance(self, component_name: str, dg: DeltaGenerator, *args, **kwargs) -> Optional[Any]:
+        """Create a new instance of the component."""
         if len(args) > 0:
             raise MarshallComponentException("Argument '%s' needs a label" % args[0])
 
@@ -88,9 +89,9 @@ def register_component(
         user_key = kwargs.get("key", None)
 
         def marshall_component(element: Element) -> Union[Any, Type[NoValue]]:
-            element.component_instance.component_name = name
-            if url is not None:
-                element.component_instance.url = url
+            element.component_instance.component_name = component_name
+            if self.url is not None:
+                element.component_instance.url = self.url
 
             # Normally, a widget's element_hash (which determines
             # its identity across multiple runs of an app) is computed
@@ -125,7 +126,7 @@ def register_component(
                 element_type="component_instance",
                 element=element,
                 user_key=user_key,
-                widget_func_name=name,
+                widget_func_name=component_name,
             )
 
             if user_key is not None:
@@ -145,16 +146,31 @@ def register_component(
 
         return result
 
+
+def declare_component(path: Optional[str] = None, url: Optional[str] = None) -> CustomComponent:
+    """Declare a new custom component."""
+    return CustomComponent(path, url)
+
+
+def register_component(name: str, component: CustomComponent) -> None:
+    """Register a custom component."""
+    # Register this component with our global registry.
+    ComponentRegistry.instance().register_component(name, component.path)
+
+    # Build our component function.
+    def create_instance(dg: DeltaGenerator, *args, **kwargs) -> Optional[Any]:
+        return component.create_instance(name, dg, *args, **kwargs)
+
     # Build st.[component_name], which just calls component_instance with the
     # main DeltaGenerator.
-    def component_instance_main(*args, **kwargs):
-        return component_instance(streamlit._main, *args, **kwargs)
+    def create_instance_main(*args, **kwargs):
+        return create_instance(streamlit._main, *args, **kwargs)
 
     # Register the component as a member function of DeltaGenerator, and as
     # a standalone function in the streamlit namespace.
     # TODO: disallow collisions with important streamlit functions!
-    setattr(DeltaGenerator, name, component_instance)
-    setattr(st, name, component_instance_main)
+    setattr(DeltaGenerator, name, create_instance)
+    setattr(st, name, create_instance_main)
 
 
 class ComponentRequestHandler(tornado.web.RequestHandler):
