@@ -4,13 +4,7 @@
 
 # Changelog
 
-See highlights, bug fixes, and known issues for Streamlit releases:
-
-```eval_rst
-.. contents::
-    :local:
-    :depth: 1
-```
+This page lists highlights, bug fixes, and known issues for official Streamlit releases. If you're looking for information about nightly releases, beta features, or experimental features, see [Try pre-release features](pre_release_features.md).
 
 ```eval_rst
 .. tip::
@@ -21,6 +15,24 @@ See highlights, bug fixes, and known issues for Streamlit releases:
 
       $ pip install --upgrade streamlit
 ```
+
+```eval_rst
+.. contents::
+    :local:
+    :depth: 1
+```
+
+## Version 0.58.0
+
+_Release date: April 22, 2020_
+
+**Highlights:**
+
+- 💼 Made `st.selectbox` filtering case-insensitive.
+- ㈬ Better support for Tensorflow sessions in `@st.cache`.
+- 📊 Changed behavior of `st.pyplot` to auto-clear the figure only when using
+  the global Matplotlib figure (i.e. only when calling `st.pyplot()` rather
+  than `st.pyplot(fig)`).
 
 ## Version 0.57.0
 
@@ -89,7 +101,7 @@ _Release date: January 29, 2020_
 
 ## Version 0.53.0
 
-_Release date: January 14, 2019_
+_Release date: January 14, 2020_
 
 **Highlights:**
 
@@ -299,9 +311,9 @@ _Release date: July 28, 2019_
 
 **Highlights:**
 
-• ⚡ Lightning-fast reconnect when you do a ctrl-c/rerun on your Streamlit code
-• 📣 Useful error messages when the connection fails
-• 💎 Fixed multiple bugs and improved polish of our newly-released interactive widgets
+* ⚡ Lightning-fast reconnect when you do a ctrl-c/rerun on your Streamlit code
+* 📣 Useful error messages when the connection fails
+* 💎 Fixed multiple bugs and improved polish of our newly-released interactive widgets
 
 ## Version 0.43.0
 
@@ -383,7 +395,7 @@ If you run `$ python your_script.py` the script will execute from top to bottom,
 
 **What if something breaks?**
 
-If the new Streamlit isn’t working, please let us know by Slack or email. You can downgrade at any time with these commands:
+If the new Streamlit isn't working, please let us know by Slack or email. You can downgrade at any time with these commands:
 
 ```bash
 $ pip install --upgrade streamlit==0.37
@@ -393,9 +405,9 @@ $ pip install --upgrade streamlit==0.37
 $ conda install streamlit=0.37
 ```
 
-**What’s next?**
+**What's next?**
 
-Thank you for staying with us on this journey! This version of Streamlit lays the foundation for interactive widgets, a new feature of Streamlit we’re really excited to share with you in the next few months.
+Thank you for staying with us on this journey! This version of Streamlit lays the foundation for interactive widgets, a new feature of Streamlit we're really excited to share with you in the next few months.
 
 ## Version 0.36.0
 

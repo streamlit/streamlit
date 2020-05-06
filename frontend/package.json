@@ -1,6 +1,6 @@
 {
   "name": "streamlit-browser",
-  "version": "0.57.3",
+  "version": "0.58.0",
   "private": true,
   "homepage": ".",
   "scripts": {
@@ -57,6 +57,7 @@
     "prismjs": "^1.15.0",
     "protobufjs": "^6.8.8",
     "react": "^16.8.6",
+    "react-color": "^2.18.0",
     "react-copy-to-clipboard": "^5.0.1",
     "react-dom": "^16.8.4",
     "react-feather": "^2.0.3",
@@ -106,6 +107,7 @@
     "@types/plotly.js": "^1.44.8",
     "@types/prismjs": "^1.16.0",
     "@types/react": "^16.9.17",
+    "@types/react-color": "^3.0.1",
     "@types/react-copy-to-clipboard": "^4.2.6",
     "@types/react-dom": "^16.8.4",
     "@types/react-map-gl": "^5.0.1",
@@ -149,6 +151,8 @@
   },
   "resolutions": {
     "esm": "^3.1.0",
+    "https-proxy-agent": "^2.2.4",
+    "jquery": "^3.5.0",
     "kind-of": "^6.0.3",
     "minimist": "^0.2.1",
     "serialize-javascript": "^2.1.1",

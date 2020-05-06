@@ -488,6 +488,9 @@ class _CodeHasher:
             # For numpy.remainder, this returns remainder.
             return obj.__name__.encode()
 
+        elif type_util.is_type(obj, "socket.socket"):
+            return self.to_bytes(id(obj))
+
         elif type_util.is_type(obj, "tensorflow.python.client.session.Session"):
             return self.to_bytes(id(obj))
 
@@ -499,6 +502,9 @@ class _CodeHasher:
             ]
             handle = ctypes.pythonapi.PyCapsule_GetPointer(obj, None)
             return self.to_bytes(handle)
+
+        elif type_util.is_type(obj, "torch.Tensor"):
+            return self.to_bytes([obj.detach().numpy(), obj.grad])
 
         elif inspect.isroutine(obj):
             if hasattr(obj, "__wrapped__"):
