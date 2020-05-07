@@ -143,6 +143,20 @@ describe("TextArea widget", () => {
     )
   })
 
+  it("should set widget height if it is passed from props", () => {
+    const props = getProps({
+      height: 500,
+    })
+    const wrapper = shallow(<TextArea {...props} />)
+    const overrides = wrapper.find(UITextArea).prop("overrides")
+
+    // @ts-ignore
+    const { height, resize } = overrides.Input.style
+
+    expect(height).toBe("500px")
+    expect(resize).toBe("vertical")
+  })
+
   describe("On mac it should", () => {
     Object.defineProperty(navigator, "platform", {
       value: "MacIntel",
