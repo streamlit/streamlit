@@ -46,12 +46,6 @@ to Streamlit.
 
 How to start a simple HTTP server:
 
-- Python 2:
-
-  ```bash
-  $ python -m SimpleHTTPServer [port]
-  ```
-
 - Python 3:
 
   ```bash

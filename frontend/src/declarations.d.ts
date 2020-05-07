@@ -24,6 +24,8 @@ declare module "@deck.gl/layers"
 
 declare module "@deck.gl/aggregation-layers"
 
+declare module "@deck.gl/geo-layers"
+
 declare module "@loaders.gl/core"
 
 declare module "@loaders.gl/csv"

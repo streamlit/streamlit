@@ -29,7 +29,6 @@ import DeckGL, {
 } from "deck.gl"
 import Immutable from "immutable"
 import { StaticMap } from "react-map-gl"
-import { flowRight as compose } from "lodash"
 import { dataFrameToArrayOfDicts } from "lib/dataFrameProto"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import withMapboxToken from "hocs/withMapboxToken/withMapboxToken"
@@ -476,7 +475,4 @@ function parseGetters(type: any, spec: any): void {
   })
 }
 
-export default compose(
-  withMapboxToken,
-  withFullScreenWrapper
-)(DeckGlChart)
+export default withMapboxToken(withFullScreenWrapper(DeckGlChart))
