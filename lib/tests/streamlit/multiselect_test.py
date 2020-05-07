@@ -109,6 +109,23 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
+            (("Tea", "Water"), [1, 2]),
+            ((i for i in ("Tea", "Water")), [1, 2]),
+            (np.array(["Coffee", "Tea"]), [0, 1]),
+            (pd.Series(np.array(["Coffee", "Tea"])), [0, 1]),
+        ]
+    )
+    def test_default_types(self, defaults, expected):
+        """Test that iterables other than lists can be passed as defaults."""
+        st.multiselect("the label", ["Coffee", "Tea", "Water"], defaults)
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        self.assertEqual(c.label, "the label")
+        self.assertListEqual(c.default[:], expected)
+        self.assertEqual(c.options, ["Coffee", "Tea", "Water"])
+
+    @parameterized.expand(
+        [
             (["Tea", "Vodka", None], StreamlitAPIException),
             ([1, 2], StreamlitAPIException),
         ]
