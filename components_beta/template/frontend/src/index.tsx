@@ -11,7 +11,7 @@ const textDiv = document.body.appendChild(document.createElement("div"))
 const button = document.body.appendChild(document.createElement("button"))
 button.textContent = "Click Me!"
 
-// Add a click handler to our button
+// Add a click handler to our button. It will send data back to Streamlit.
 let numClicks = 0
 button.onclick = function(): void {
   // Increment numClicks, and pass the new value back to
@@ -20,21 +20,12 @@ button.onclick = function(): void {
   Streamlit.setWidgetValue(numClicks)
 }
 
-// Tell Streamlit we're ready to start receiving data. We won't get our
-// first RENDER_EVENT until we call this function.
-Streamlit.setComponentReady()
-
-// Tell Streamlit to update our height. We omit the `height` parameter here
-// to have it default to our scrollHeight.
-Streamlit.setFrameHeight()
-
-// Finally, subscribe to the Streamlit RENDER_EVENT. This event will be
-// dispatched when Streamlit has new data to send to the component. It
-// will always be dispatched at least once, after the component indicates
-// that it's ready.
-Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, function(
-  event: Event
-): void {
+/**
+ * The component's render function. This will be called immediately after
+ * the component is initially loaded, and then again every time the
+ * component gets new data from Python.
+ */
+function onRender(event: Event): void {
   // Get the RenderData from the event
   const data = (event as CustomEvent<RenderData>).detail
 
@@ -44,17 +35,24 @@ Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, function(
   // RenderData.args is the JSON dictionary of arguments sent from the
   // Python script.
   let name = data.args["name"]
-  if (name == null) {
-    name = "Undefined"
-  }
-
   textDiv.textContent = `Hello, ${name}!`
 
   // This isn't strictly necessary for the example because our height stays
   // fixed, but we can also have Streamlit update our frameHeight after each
   // render event in case it should change.
   Streamlit.setFrameHeight()
-})
+}
+
+// Attach our `onRender` handler to Streamlit's render event.
+Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, onRender)
+
+// Tell Streamlit we're ready to start receiving data. We won't get our
+// first RENDER_EVENT until we call this function.
+Streamlit.setComponentReady()
+
+// Finally, tell Streamlit to update our intiial height. We omit the
+// `height` parameter here to have it default to our scrollHeight.
+Streamlit.setFrameHeight()
 
 /**
  REACT-BASED ALTERNATIVE
