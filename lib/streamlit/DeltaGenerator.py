@@ -1721,6 +1721,9 @@ class DeltaGenerator(object):
                 return None
 
             if not isinstance(default_values, list):
+                # This if is done before others because calling if not x (done
+                # right below) when x is of type pd.Series() or np.array() throws a
+                # ValueError exception.                
                 if is_type(default_values, "numpy.ndarray") or is_type(
                     default_values, "pandas.core.series.Series"
                 ):
