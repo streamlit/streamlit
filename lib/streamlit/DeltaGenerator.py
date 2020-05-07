@@ -2351,7 +2351,7 @@ class DeltaGenerator(object):
         return current_value
 
     @_with_element
-    def date_input(self, element, label, value=None, min_value=date(1970, 1, 1), max_value=None, key=None):
+    def date_input(self, element, label, value=None, min_value=datetime.min, max_value=None, key=None):
         """Display a date input widget.
 
         Parameters
@@ -2362,7 +2362,7 @@ class DeltaGenerator(object):
             The value of this widget when it first renders. This will be
             cast to str internally. Defaults to today.
         min_value : datetime.date or datetime.datetime
-            The minimum selectable date. Defaults to 1970/1/1.
+            The minimum selectable date. Defaults to datetime.min.
         max_value : datetime.date or datetime.datetime
             The maximum selectable date. Defaults to 2030/12.
         key : str
