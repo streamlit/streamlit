@@ -359,10 +359,11 @@ class HashTest(unittest.TestCase):
             self.assertEqual(h1, get_hash(f))
 
     def test_pycapsule(self):
-        # get pycapsule instance from torchvision internals
+        # Get pycapsule instance from torchvision internals.
         capsule = torchvision.models.__dict__["__builtins__"]
         capsule = dict(capsule)["__pybind11_internals_v3__"]
 
+        # Ideally we'd also have a `notEqual` test but it's tricky to create a PyCapsule instance.
         assert is_type(capsule, "builtins.PyCapsule")
         self.assertEqual(get_hash(capsule), get_hash(capsule))
 
