@@ -58,7 +58,7 @@ class DateInput extends React.PureComponent<Props, State> {
 
   private getMaxDate = (): Date | undefined => {
     const { element } = this.props
-    const maxDate = element.get("maxDate")
+    const maxDate = element.get("max")
 
     return maxDate && maxDate.length > 0 ? stringToDate(maxDate) : undefined
   }
@@ -69,7 +69,7 @@ class DateInput extends React.PureComponent<Props, State> {
 
     const style = { width }
     const label = element.get("label")
-    const minDate = element.get("minDate")
+    const minDate = element.get("min")
     const maxDate = this.getMaxDate()
 
     return (

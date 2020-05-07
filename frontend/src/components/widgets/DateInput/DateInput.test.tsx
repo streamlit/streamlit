@@ -33,7 +33,7 @@ const getProps = (elementProps: Partial<DateInputProto> = {}): Props => ({
     id: 1,
     label: "Label",
     default: "1970/01/01",
-    minDate: "1970/01/01",
+    min: "1970/01/01",
     ...elementProps,
   }),
   width: 0,
@@ -106,19 +106,19 @@ describe("DateInput widget", () => {
   })
 
   it("should have a minDate", () => {
-    expect(wrapper.find(UIDatePicker).prop("minDate")).toStrictEqual(
+    expect(wrapper.find(UIDatePicker).prop("min")).toStrictEqual(
       new Date("1970/1/1")
     )
-    expect(wrapper.find(UIDatePicker).prop("maxDate")).toBeUndefined()
+    expect(wrapper.find(UIDatePicker).prop("max")).toBeUndefined()
   })
 
   it("should have a maxDate if it is passed", () => {
     const props = getProps({
-      maxDate: "2030/02/06",
+      max: "2030/02/06",
     })
     const wrapper = shallow(<DateInput {...props} />)
 
-    expect(wrapper.find(UIDatePicker).prop("maxDate")).toStrictEqual(
+    expect(wrapper.find(UIDatePicker).prop("max")).toStrictEqual(
       new Date("2030/02/06")
     )
   })
