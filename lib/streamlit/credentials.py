@@ -54,7 +54,8 @@ TELEMETRY_TEXT = """
   %(telemetry)s As an open source project, we collect usage statistics.
   We cannot see and do not store information contained in Streamlit apps.
 
-  If you'd like to opt out, add the following to ~/.streamlit/config.toml,
+  If you'd like to opt out, add the following to ~/.streamlit/config.toml
+  (in Windows this would be %userprofile%/.streamlit/config.toml),
   creating that file if necessary:
 
     [browser]
