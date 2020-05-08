@@ -24,11 +24,7 @@ import subprocess
 subprocess.run(["wget", "https://github.com/protocolbuffers/protobuf/releases/download/v3.11.4/protoc-3.11.4-linux-x86_64.zip"])
 subprocess.run(["unzip", "protoc-3.11.4-linux-x86_64.zip"])
 #/home/docs/checkouts/readthedocs.org/user_builds/streamlit-streamlit/checkouts/latest/docs
-subprocess.run(["./bin/protoc",
-                "--proto_path=../proto",
-                "--python_out=../lib",
-		        "../proto/streamlit/proto/*.proto"
-                ])
+subprocess.run("./bin/protoc --proto_path=../proto --python_out=../lib ../proto/streamlit/proto/*.proto")
 subprocess.run(["ls", "../lib/streamlit/proto"])
 
 
