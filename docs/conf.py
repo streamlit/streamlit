@@ -21,7 +21,8 @@ sys.path.append(os.path.abspath("./_ext"))
 #RZ, 20200508: If protobufs don't exist, build them
 import subprocess
 
-subprocess.run(["pyrobuf", "--help"])
+subprocess.run(["wget", "https://github.com/protocolbuffers/protobuf/releases/download/v3.11.4/protoc-3.11.4-linux-x86_64.zip"])
+subprocess.run(["gunzip", "protoc-3.11.4-linux-x86_64.zip"])
 
 # -- Project information -----------------------------------------------------
 
