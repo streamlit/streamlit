@@ -11,3 +11,6 @@ unzip protoc-3.11.4-linux-x86_64.zip
 	../proto/streamlit/proto/*.proto
 
 ls -ltrh ../lib/streamlit/proto
+
+#re-run build process to make protobuf available
+/home/docs/checkouts/readthedocs.org/user_builds/streamlit-streamlit/envs/latest/bin/python -m pip install --upgrade --upgrade-strategy eager --no-cache-dir ./lib
