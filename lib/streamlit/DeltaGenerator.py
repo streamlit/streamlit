@@ -2362,16 +2362,20 @@ class DeltaGenerator(object):
         return current_value
 
     @_with_element
-    def date_input(self, element, label, value=None, key=None):
+    def date_input(self, element, label, value=None, min_value=datetime.min, max_value=None, key=None):
         """Display a date input widget.
 
         Parameters
         ----------
         label : str
             A short label explaining to the user what this date input is for.
-        value : datetime.date/datetime.datetime
+        value : datetime.date or datetime.datetime
             The value of this widget when it first renders. This will be
             cast to str internally. Defaults to today.
+        min_value : datetime.date or datetime.datetime
+            The minimum selectable date. Defaults to datetime.min.
+        max_value : datetime.date or datetime.datetime
+            The maximum selectable date. Defaults to today+10y.
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -2407,6 +2411,20 @@ class DeltaGenerator(object):
 
         element.date_input.label = label
         element.date_input.default = date.strftime(value, "%Y/%m/%d")
+
+        if isinstance(min_value, datetime):
+            min_value = min_value.date()
+
+        element.date_input.min = date.strftime(min_value, "%Y/%m/%d")
+
+        if max_value is None:
+            today = date.today()
+            max_value = date(today.year+10, today.month, today.day)
+
+        if isinstance(max_value, datetime):
+            max_value = max_value.date()
+
+        element.date_input.max = date.strftime(max_value, "%Y/%m/%d")
 
         ui_value = _get_widget_ui_value("date_input", element, user_key=key)
         current_value = (
