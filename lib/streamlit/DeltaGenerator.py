@@ -1723,7 +1723,7 @@ class DeltaGenerator(object):
             if not isinstance(default_values, list):
                 # This if is done before others because calling if not x (done
                 # right below) when x is of type pd.Series() or np.array() throws a
-                # ValueError exception.                
+                # ValueError exception.
                 if is_type(default_values, "numpy.ndarray") or is_type(
                     default_values, "pandas.core.series.Series"
                 ):
@@ -2282,7 +2282,7 @@ class DeltaGenerator(object):
             Desired height of the UI element expressed in pixels. If None, a
             default height is used.
         max_chars : int or None
-            Max number of characters allowed in text area.
+            Maximum number of characters allowed in text area.
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
