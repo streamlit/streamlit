@@ -27,7 +27,7 @@ import subprocess
 #subprocess.run("./bin/protoc --proto_path=/home/docs/checkouts/readthedocs.org/user_builds/streamlit-streamlit/checkouts/latest/proto --python_out=/home/docs/checkouts/readthedocs.org/user_builds/streamlit-streamlit/checkouts/latest/lib /home/docs/checkouts/readthedocs.org/user_builds/streamlit-streamlit/checkouts/latest/proto/streamlit/proto/*.proto")
 #subprocess.run(["ls", "/home/docs/checkouts/readthedocs.org/user_builds/streamlit-streamlit/checkouts/latest/lib/streamlit/proto"])
 
-subprocess.run(["bash", "env_setup.sh")
+subprocess.run(["bash", "env_setup.sh"])
 
 # -- Project information -----------------------------------------------------
 
