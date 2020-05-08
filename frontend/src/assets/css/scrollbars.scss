@@ -1,5 +1,4 @@
 /**
- * @license
  * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,18 +14,27 @@
  * limitations under the License.
  */
 
-/// <reference types="cypress" />
+// Make scrollbars awesome on Chrome.
 
-describe("st.pydeck_chart", () => {
-  before(() => {
-    cy.visit("http://localhost:3000/");
-  });
+::-webkit-scrollbar {
+  background-color: transparent;
+  border-radius: 100px;
+  height: 6px;
+  width: 6px;
+}
 
-  it("displays 2 maps", () => {
-    const els = cy.get(".element-container .stDeckGlJsonChart");
+::-webkit-scrollbar:hover {
+  background-color: rgba(0, 0, 0, 0.09);
+}
 
-    els.should("have.length", 2);
+::-webkit-scrollbar-thumb:vertical,
+::-webkit-scrollbar-thumb:horizontal {
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 100px;
+}
 
-    els.find("canvas").should("have.css", "height", "500px");
-  });
-});
+::-webkit-scrollbar-thumb:vertical:active,
+::-webkit-scrollbar-thumb:horizontal:active {
+  background: rgba(0, 0, 0, 0.61);
+  border-radius: 100px;
+}

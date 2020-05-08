@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import * as _ from "lodash"
+import without from "lodash/without"
 import { Map as ImmutableMap } from "immutable"
 import { multiSelectOverrides } from "lib/widgetTheme"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
@@ -70,7 +70,7 @@ class Multiselect extends React.PureComponent<Props, State> {
 
     switch (data.type) {
       case "remove": {
-        return { value: _.without(this.state.value, getIndex()) }
+        return { value: without(this.state.value, getIndex()) }
       }
       case "clear": {
         return { value: [] }

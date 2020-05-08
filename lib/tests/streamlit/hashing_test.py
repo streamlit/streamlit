@@ -19,9 +19,11 @@ import functools
 import hashlib
 import os
 import re
+import socket
 import tempfile
 import time
 import types
+import torch
 import unittest
 import urllib
 from io import BytesIO
@@ -32,6 +34,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import sqlalchemy as db
+import torch
 from mock import patch, MagicMock
 from parameterized import parameterized
 
@@ -355,6 +358,13 @@ class HashTest(unittest.TestCase):
             f.seek(0)
             self.assertEqual(h1, get_hash(f))
 
+    def test_socket(self):
+        a = socket.socket()
+        b = socket.socket()
+
+        self.assertEqual(get_hash(a), get_hash(a))
+        self.assertNotEqual(get_hash(a), get_hash(b))
+
     def test_magic_mock(self):
         """Test that MagicMocks never hash to the same thing."""
         # (This also tests that MagicMock can hash at all, without blowing the
@@ -369,6 +379,31 @@ class HashTest(unittest.TestCase):
 
         tf_session2 = tf.compat.v1.Session(config=tf_config)
         self.assertNotEqual(get_hash(tf_session), get_hash(tf_session2))
+
+    def test_torch_c_tensorbase(self):
+        a = torch.ones([1, 1]).__reduce__()[1][2]
+        b = torch.ones([1, 1], requires_grad=True).__reduce__()[1][2]
+        c = torch.ones([1, 2]).__reduce__()[1][2]
+
+        assert is_type(a, "torch._C._TensorBase")
+        self.assertEqual(get_hash(a), get_hash(b))
+        self.assertNotEqual(get_hash(a), get_hash(c))
+
+        b.mean().backward()
+        # Calling backward on a tensorbase doesn't seem to affect the gradient
+        self.assertEqual(get_hash(a), get_hash(b))
+
+    def test_torch_tensor(self):
+        a = torch.ones([1, 1])
+        b = torch.ones([1, 1], requires_grad=True)
+        c = torch.ones([1, 2])
+
+        self.assertEqual(get_hash(a), get_hash(b))
+        self.assertNotEqual(get_hash(a), get_hash(c))
+
+        b.mean().backward()
+
+        self.assertNotEqual(get_hash(a), get_hash(b))
 
     def test_non_hashable(self):
         """Test user provided hash functions."""

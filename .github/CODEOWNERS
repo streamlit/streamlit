@@ -1,1 +1,7 @@
+# These owners will be the default owners for everything in
+# the repo. Unless a later match takes precedence, that is.
 * @streamlit/eng
+
+# Owners of any files in the `/docs` directory in the root of
+# the repo.
+/docs/ @randyzwitch 
