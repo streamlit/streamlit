@@ -42,8 +42,8 @@ $ streamlit run --help
 .. tip::
   If you want to permanently set certain config options, just add them to
   `$CWD/.streamlit/config.toml` or to a global
-  `~/.streamlit/config.toml`. (in Windows this would be
-  `%userprofile%/.streamlit/config.toml`
+  `~/.streamlit/config.toml` (in Windows this would be
+  `%userprofile%/.streamlit/config.toml`).
   More info below.
 ```
 
