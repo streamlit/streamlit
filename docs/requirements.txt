@@ -1,2 +1,2 @@
 pipenv
-protobuf-compiler
+pyrobuf

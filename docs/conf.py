@@ -21,10 +21,7 @@ sys.path.append(os.path.abspath("./_ext"))
 #RZ, 20200508: If protobufs don't exist, build them
 import subprocess
 
-subprocess.run(["protopy", 
-		        "-d proto",
-		        "-o lib"
-                ])
+subprocess.run(["pyrobuf", "--help"])
 
 # -- Project information -----------------------------------------------------
 
