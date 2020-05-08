@@ -21,8 +21,8 @@ import Immutable from "immutable"
 import { StaticMap } from "react-map-gl"
 import * as layers from "@deck.gl/layers"
 import { JSONConverter } from "@deck.gl/json"
-import { flowRight as compose } from "lodash"
 import * as aggregationLayers from "@deck.gl/aggregation-layers"
+import * as geoLayers from "@deck.gl/geo-layers"
 
 import { CSVLoader } from "@loaders.gl/csv"
 import { registerLoaders } from "@loaders.gl/core"
@@ -49,7 +49,7 @@ interface DeckObject {
 }
 
 const configuration = {
-  classes: { ...layers, ...aggregationLayers },
+  classes: { ...layers, ...aggregationLayers, ...geoLayers },
 }
 
 registerLoaders([CSVLoader])
@@ -121,19 +121,28 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
 
     tooltip = JSON.parse(tooltip)
 
-    const matchedVariables = tooltip.html.match(/{(.*?)}/g)
-
-    if (matchedVariables) {
-      matchedVariables.forEach((el: string) => {
-        const variable = el.substring(1, el.length - 1)
-
-        if (info.object[variable]) {
-          tooltip.html = tooltip.html.replace(el, info.object[variable])
-        }
-      })
+    // NB: https://deckgl.readthedocs.io/en/latest/tooltip.html
+    if (tooltip.html) {
+      tooltip.html = this.interpolate(info, tooltip.html)
+    } else {
+      tooltip.text = this.interpolate(info, tooltip.text)
     }
 
     return tooltip
+  }
+
+  interpolate = (info: PickingInfo, body: string): string => {
+    const matchedVariables = body.match(/{(.*?)}/g)
+    if (matchedVariables) {
+      matchedVariables.forEach((match: string) => {
+        const variable = match.substring(1, match.length - 1)
+
+        if (info.object.hasOwnProperty(variable)) {
+          body = body.replace(match, info.object[variable])
+        }
+      })
+    }
+    return body
   }
 
   render(): ReactNode {
@@ -173,7 +182,4 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
   }
 }
 
-export default compose(
-  withMapboxToken,
-  withFullScreenWrapper
-)(DeckGlJsonChart)
+export default withMapboxToken(withFullScreenWrapper(DeckGlJsonChart))

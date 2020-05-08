@@ -42,6 +42,7 @@ from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto.NumberInput_pb2 import NumberInput
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.logger import get_logger
+from streamlit.type_util import is_type
 
 LOGGER = get_logger(__name__)
 
@@ -1720,7 +1721,17 @@ class DeltaGenerator(object):
                 return None
 
             if not isinstance(default_values, list):
-                default_values = [default_values]
+                # This if is done before others because calling if not x (done
+                # right below) when x is of type pd.Series() or np.array() throws a
+                # ValueError exception.                
+                if is_type(default_values, "numpy.ndarray") or is_type(
+                    default_values, "pandas.core.series.Series"
+                ):
+                    default_values = list(default_values)
+                elif not default_values:
+                    default_values = [default_values]
+                else:
+                    default_values = list(default_values)
 
             for value in default_values:
                 if value not in options:
@@ -2137,15 +2148,20 @@ class DeltaGenerator(object):
         return file_datas if accept_multiple_files else file_datas[0]
 
     @_with_element
-    def color_picker(self, element, label, value=None, key=None):
+    def beta_color_picker(self, element, label, value=None, key=None):
         """Display a color picker widget.
+
+        Note: This is a beta feature. See
+        https://docs.streamlit.io/pre_release_features.html for more
+        information.
 
         Parameters
         ----------
         label : str
             A short label explaining to the user what this input is for.
         value : str or None
-            The hex value of this widget when it first renders. If None, the default color is black.
+            The hex value of this widget when it first renders. If None,
+            defaults to black.
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -2155,11 +2171,11 @@ class DeltaGenerator(object):
         Returns
         -------
         str
-            The current value of the color picker widget.
+            The selected color as a hex string.
 
         Example
         -------
-        >>> color = st.beta.color_picker('Pick A Color', '#00f900')
+        >>> color = st.beta_color_picker('Pick A Color', '#00f900')
         >>> st.write('The current color is', color)
 
         """
@@ -2170,7 +2186,10 @@ class DeltaGenerator(object):
         # make sure the value is a string
         if not isinstance(value, str):
             raise StreamlitAPIException(
-                "Color Picker Value has invalid type: %s. Expects a hex string like '#00FFAA' or '#000'."
+                """
+                Color Picker Value has invalid type: %s. Expects a hex string
+                like '#00FFAA' or '#000'.
+                """
                 % type(value).__name__
             )
 
@@ -2179,7 +2198,10 @@ class DeltaGenerator(object):
 
         if not match:
             raise StreamlitAPIException(
-                "'%s' is not a valid hex code for colors. Valid ones are like '#00FFAA' or '#000'."
+                """
+                '%s' is not a valid hex code for colors. Valid ones are like
+                '#00FFAA' or '#000'.
+                """
                 % value
             )
 
