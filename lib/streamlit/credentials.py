@@ -55,7 +55,7 @@ TELEMETRY_TEXT = """
   We cannot see and do not store information contained in Streamlit apps.
 
   If you'd like to opt out, add the following to ~/.streamlit/config.toml
-  (in Windows this would be %userprofile%/.streamlit/config.toml),
+  (in Windows this would be %%userprofile%%/.streamlit/config.toml),
   creating that file if necessary:
 
     [browser]
