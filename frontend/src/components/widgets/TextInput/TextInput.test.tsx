@@ -89,19 +89,6 @@ describe("TextInput widget", () => {
     expect(wrapper.find(UIInput).prop("disabled")).toBe(props.disabled)
   })
 
-  it("should show Enter instructions", () => {
-    // @ts-ignore
-    wrapper.find(UIInput).prop("onChange")({
-      target: {
-        value: "testing",
-      },
-    } as React.ChangeEvent<HTMLTextAreaElement>)
-
-    expect(wrapper.find("div.instructions").text()).toBe(
-      "Press Enter to apply"
-    )
-  })
-
   it("should set widget value on blur", () => {
     const props = getProps()
     const wrapper = shallow(<TextInput {...props} />)

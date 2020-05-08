@@ -84,19 +84,6 @@ describe("TextArea widget", () => {
     expect(wrapper.find(UITextArea).prop("disabled")).toBe(props.disabled)
   })
 
-  it("should show Ctrl+Enter instructions", () => {
-    // @ts-ignore
-    wrapper.find(UITextArea).prop("onChange")({
-      target: {
-        value: "testing",
-      },
-    } as React.ChangeEvent<HTMLTextAreaElement>)
-
-    expect(wrapper.find("div.instructions").text()).toBe(
-      "Press Ctrl+Enter to apply"
-    )
-  })
-
   it("should set widget value on blur", () => {
     const props = getProps()
     const wrapper = shallow(<TextArea {...props} />)
@@ -191,19 +178,6 @@ describe("TextArea widget", () => {
 
     const props = getProps()
     const wrapper = shallow(<TextArea {...props} />)
-
-    it("show ⌘+Enter instructions", () => {
-      // @ts-ignore
-      wrapper.find(UITextArea).prop("onChange")({
-        target: {
-          value: "testing",
-        },
-      } as React.ChangeEvent<HTMLTextAreaElement>)
-
-      expect(wrapper.find("div.instructions").text()).toBe(
-        "Press ⌘+Enter to apply"
-      )
-    })
 
     it("should set widget value when ⌘+enter is pressed", () => {
       // @ts-ignore

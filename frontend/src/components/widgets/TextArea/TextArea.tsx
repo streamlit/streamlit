@@ -20,6 +20,7 @@ import { Map as ImmutableMap } from "immutable"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 
 import { Textarea as UITextArea } from "baseui/textarea"
+import InputInstructions from "components/shared/InputInstructions/InputInstructions"
 
 export interface Props {
   disabled: boolean
@@ -50,8 +51,6 @@ class TextArea extends React.PureComponent<Props, State> {
   public componentDidMount(): void {
     this.setWidgetValue({ fromUi: false })
   }
-
-  private isFromMac = /Mac/i.test(navigator.platform)
 
   private setWidgetValue = (source: Source): void => {
     const widgetId: string = this.props.element.get("id")
@@ -107,6 +106,7 @@ class TextArea extends React.PureComponent<Props, State> {
     const style = { width }
     const label = element.get("label")
     const height = element.get("height")
+    const maxChars = element.get("maxChars")
 
     return (
       <div className="Widget stTextArea" style={style}>
@@ -127,13 +127,12 @@ class TextArea extends React.PureComponent<Props, State> {
             },
           }}
         />
-        {dirty && !this.isFromMac && (
-          <div className="instructions">Press Ctrl+Enter to apply</div>
-        )}
-
-        {dirty && this.isFromMac && (
-          <div className="instructions">Press ⌘+Enter to apply</div>
-        )}
+        <InputInstructions
+          dirty={dirty}
+          value={value}
+          maxLength={maxChars}
+          type={"multiline"}
+        />
       </div>
     )
   }
