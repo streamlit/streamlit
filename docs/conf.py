@@ -19,14 +19,14 @@ sys.path.append(os.path.abspath("./_ext"))
 # -- RTD setup --------------------------------------------------------------
 
 #RZ, 20200508: If protobufs don't exist, build them
-import subprocess
+# import subprocess
 
-subprocess.run(["protoc", 
-		        "--proto_path=proto",
-		        "--python_out=lib",
-		        "--mypy_out=lib",
-		        "proto/streamlit/proto/*.proto"
-                ])
+# subprocess.run(["protoc", 
+# 		        "--proto_path=proto",
+# 		        "--python_out=lib",
+# 		        "--mypy_out=lib",
+# 		        "proto/streamlit/proto/*.proto"
+#                 ])
 
 # -- Project information -----------------------------------------------------
 
