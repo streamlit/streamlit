@@ -1,1 +1,2 @@
 pipenv
+mypy-protobuf

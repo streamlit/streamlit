@@ -6,9 +6,10 @@ apt install -y protobuf-compiler
 
 #build protobufs
 #assumes you are in docs/
-./bin/protoc \
+protoc \
     --proto_path=../proto \
 	--python_out=../lib \
+    --mypy_out=../lib \
 	../proto/streamlit/proto/*.proto
 
 ls -ltrh ../lib/streamlit/proto
