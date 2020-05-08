@@ -21,12 +21,13 @@ sys.path.append(os.path.abspath("./_ext"))
 #RZ, 20200508: If protobufs don't exist, build them
 import subprocess
 
-subprocess.run(["wget", "https://github.com/protocolbuffers/protobuf/releases/download/v3.11.4/protoc-3.11.4-linux-x86_64.zip"])
-subprocess.run(["unzip", "protoc-3.11.4-linux-x86_64.zip"])
+#subprocess.run(["wget", "https://github.com/protocolbuffers/protobuf/releases/download/v3.11.4/protoc-3.11.4-linux-x86_64.zip"])
+#subprocess.run(["unzip", "protoc-3.11.4-linux-x86_64.zip"])
 #/home/docs/checkouts/readthedocs.org/user_builds/streamlit-streamlit/checkouts/latest/docs
-subprocess.run("./bin/protoc --proto_path=/home/docs/checkouts/readthedocs.org/user_builds/streamlit-streamlit/checkouts/latest/proto --python_out=/home/docs/checkouts/readthedocs.org/user_builds/streamlit-streamlit/checkouts/latest/lib /home/docs/checkouts/readthedocs.org/user_builds/streamlit-streamlit/checkouts/latest/proto/streamlit/proto/*.proto")
-subprocess.run(["ls", "/home/docs/checkouts/readthedocs.org/user_builds/streamlit-streamlit/checkouts/latest/lib/streamlit/proto"])
+#subprocess.run("./bin/protoc --proto_path=/home/docs/checkouts/readthedocs.org/user_builds/streamlit-streamlit/checkouts/latest/proto --python_out=/home/docs/checkouts/readthedocs.org/user_builds/streamlit-streamlit/checkouts/latest/lib /home/docs/checkouts/readthedocs.org/user_builds/streamlit-streamlit/checkouts/latest/proto/streamlit/proto/*.proto")
+#subprocess.run(["ls", "/home/docs/checkouts/readthedocs.org/user_builds/streamlit-streamlit/checkouts/latest/lib/streamlit/proto"])
 
+subprocess.run("bash env_setup.sh")
 
 # -- Project information -----------------------------------------------------
 
