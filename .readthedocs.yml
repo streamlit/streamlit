@@ -16,7 +16,6 @@ formats: all
 python:
   version: 3.7
   install:
-    install:
-      - method: pip
-        path: lib
+    - method: pip
+      path: lib
     - requirements: docs/requirements.txt
