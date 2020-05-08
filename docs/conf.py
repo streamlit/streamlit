@@ -22,7 +22,8 @@ sys.path.append(os.path.abspath("./_ext"))
 import subprocess
 
 subprocess.run(["wget", "https://github.com/protocolbuffers/protobuf/releases/download/v3.11.4/protoc-3.11.4-linux-x86_64.zip"])
-subprocess.run(["gunzip", "protoc-3.11.4-linux-x86_64.zip"])
+subprocess.run(["unzip", "protoc-3.11.4-linux-x86_64.zip"])
+subprocess.run(["pwd"])
 
 # -- Project information -----------------------------------------------------
 
