@@ -1,1 +1,2 @@
 pipenv
+protobuf-compiler
