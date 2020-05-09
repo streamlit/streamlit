@@ -8,6 +8,7 @@ export interface Props {
   dirty: boolean
   value: string
   maxLength?: number
+  className?: string
   type?: "multiline" | "single"
 }
 
@@ -15,12 +16,15 @@ const InputInstructions = ({
   dirty,
   value,
   maxLength,
+  className,
   type = "single",
 }: Props): ReactElement => {
+  const baseClassName = ["instructions", className]
+
   if (value.length > 0 && maxLength) {
     return (
       <div
-        className={classNames("instructions", {
+        className={classNames(baseClassName, {
           blink: value.length >= maxLength,
         })}
       >
@@ -31,16 +35,24 @@ const InputInstructions = ({
 
   if (type === "multiline") {
     if (dirty && !isFromMac()) {
-      return <div className="instructions">Press Ctrl+Enter to apply</div>
+      return (
+        <div className={classNames(baseClassName)}>
+          Press Ctrl+Enter to apply
+        </div>
+      )
     }
 
     if (dirty && isFromMac()) {
-      return <div className="instructions">Press ⌘+Enter to apply</div>
+      return (
+        <div className={classNames(baseClassName)}>Press ⌘+Enter to apply</div>
+      )
     }
   }
 
   if (dirty) {
-    return <div className="instructions">Press Enter to apply</div>
+    return (
+      <div className={classNames(baseClassName)}>Press Enter to apply</div>
+    )
   }
 
   return <></>
