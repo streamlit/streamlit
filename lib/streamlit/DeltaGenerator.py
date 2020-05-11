@@ -126,7 +126,9 @@ def _with_element(method):
     return wrapped_method
 
 
-def _build_duplicate_widget_message(widget_func_name: str, user_key: Optional[str] = None):
+def _build_duplicate_widget_message(
+    widget_func_name: str, user_key: Optional[str] = None
+):
     if user_key is not None:
         message = textwrap.dedent(
             """
@@ -155,7 +157,12 @@ def _build_duplicate_widget_message(widget_func_name: str, user_key: Optional[st
     return message.strip("\n").format(widget_type=widget_func_name, user_key=user_key)
 
 
-def _set_widget_id(element_type: str, element: Element, user_key: Optional[str] = None, widget_func_name: Optional[str] = None):
+def _set_widget_id(
+    element_type: str,
+    element: Element,
+    user_key: Optional[str] = None,
+    widget_func_name: Optional[str] = None,
+):
     """Set the widget id.
 
     Parameters
@@ -195,7 +202,12 @@ def _set_widget_id(element_type: str, element: Element, user_key: Optional[str] 
     el.id = widget_id
 
 
-def _get_widget_ui_value(element_type: str, element: Element, user_key: Optional[str] = None, widget_func_name: Optional[str] = None):
+def _get_widget_ui_value(
+    element_type: str,
+    element: Element,
+    user_key: Optional[str] = None,
+    widget_func_name: Optional[str] = None,
+):
     """Get the widget ui_value from the report context.
     NOTE: This function should be called after the proto has been filled.
 
@@ -1739,7 +1751,7 @@ class DeltaGenerator(object):
             if not isinstance(default_values, list):
                 # This if is done before others because calling if not x (done
                 # right below) when x is of type pd.Series() or np.array() throws a
-                # ValueError exception.                
+                # ValueError exception.
                 if is_type(default_values, "numpy.ndarray") or is_type(
                     default_values, "pandas.core.series.Series"
                 ):
@@ -2317,7 +2329,7 @@ class DeltaGenerator(object):
         element.text_area.label = label
         element.text_area.default = str(value)
 
-        if  height is not None:
+        if height is not None:
             element.text_area.height = height
 
         ui_value = _get_widget_ui_value("text_area", element, user_key=key)
@@ -2378,7 +2390,15 @@ class DeltaGenerator(object):
         return current_value
 
     @_with_element
-    def date_input(self, element, label, value=None, min_value=datetime.min, max_value=None, key=None):
+    def date_input(
+        self,
+        element,
+        label,
+        value=None,
+        min_value=datetime.min,
+        max_value=None,
+        key=None,
+    ):
         """Display a date input widget.
 
         Parameters
@@ -2435,7 +2455,7 @@ class DeltaGenerator(object):
 
         if max_value is None:
             today = date.today()
-            max_value = date(today.year+10, today.month, today.day)
+            max_value = date(today.year + 10, today.month, today.day)
 
         if isinstance(max_value, datetime):
             max_value = max_value.date()
