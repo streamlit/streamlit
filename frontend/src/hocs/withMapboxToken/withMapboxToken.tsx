@@ -16,11 +16,12 @@
  */
 
 import React, { ComponentType, PureComponent } from "react"
+import { makeElementWithInfoText } from "lib/utils"
 import hoistNonReactStatics from "hoist-non-react-statics"
 import { MapboxToken } from "hocs/withMapboxToken/MapboxToken"
-import ErrorElement from "components/shared/ErrorElement"
+
+import MapboxTokenError from "./MapboxTokenError"
 import Alert from "components/elements/Alert"
-import { makeElementWithInfoText } from "lib/utils"
 
 interface Props {
   width: number
@@ -81,17 +82,7 @@ function withMapboxToken(
 
       // We got an error when fetching our mapbox token: show the error.
       if (mapboxTokenError) {
-        const { message } = mapboxTokenError
-        const messageWithHTML = (
-          <div dangerouslySetInnerHTML={{ __html: message }} />
-        )
-        return (
-          <ErrorElement
-            width={width}
-            name="Error fetching Mapbox token"
-            message={messageWithHTML}
-          />
-        )
+        return <MapboxTokenError width={width} error={mapboxTokenError} />
       }
 
       // If our mapboxToken hasn't been retrieved yet, show a loading alert.

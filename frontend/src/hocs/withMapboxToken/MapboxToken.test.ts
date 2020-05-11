@@ -104,13 +104,13 @@ describe("MapboxToken", () => {
     window.location = { hostname: "http://streamlit.io" } as Location
     setSessionInfo("")
 
-    await expect(MapboxToken.get()).rejects.toMatchSnapshot()
+    await expect(MapboxToken.get()).rejects.toThrow("No Mapbox token provided")
   })
 
   it("Errors if not hello.py and missing token", async () => {
     setSessionInfo("", "streamlit run example.py")
 
-    await expect(MapboxToken.get()).rejects.toMatchSnapshot()
+    await expect(MapboxToken.get()).rejects.toThrow("No Mapbox token provided")
   })
 
   it("Should reload token if command line has changed", async () => {

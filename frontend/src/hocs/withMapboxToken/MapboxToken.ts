@@ -18,6 +18,9 @@
 import axios from "axios"
 import { SessionInfo } from "lib/SessionInfo"
 
+export class MapboxTokenNotProvidedError extends Error {}
+export class MapboxTokenFetchingError extends Error {}
+
 /**
  * A remote file that stores user-visible tokens.
  */
@@ -57,16 +60,7 @@ export class MapboxToken {
         ) {
           MapboxToken.token = await this.fetchToken(TOKENS_URL, "mapbox")
         } else {
-          throw new Error(
-            `
-            To use this you'll need a Mapbox access token. Please add it to your config.
-            
-            To get a token for yourself, create an account at
-            <a href="https://mapbox.com">https://mapbox.com</a>. It's free (for moderate usage levels)! See
-            <a href="https://docs.streamlit.io/cli.html#view-all-config-options">our documentation</a> for more
-            info on how to set config options.
-            `
-          )
+          throw new MapboxTokenNotProvidedError("No Mapbox token provided")
         }
       }
 
@@ -90,7 +84,7 @@ export class MapboxToken {
 
       return token
     } catch (e) {
-      throw new Error(`${e.message} (${url})`)
+      throw new MapboxTokenFetchingError(`${e.message} (${url})`)
     }
   }
 }
