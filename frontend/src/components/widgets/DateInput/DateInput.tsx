@@ -52,35 +52,42 @@ class DateInput extends React.PureComponent<Props, State> {
   }
 
   private handleChange = ({ date }: { date: Date | Date[] }): void => {
-    const value = dateToString(date as Date)
+    const value = moment(date as Date).format("YYYY/MM/DD")
+
     this.setState({ value }, () => this.setWidgetValue({ fromUi: true }))
   }
 
+  private getMaxDate = (): Date | undefined => {
+    const { element } = this.props
+    const maxDate = element.get("max")
+
+    return maxDate && maxDate.length > 0 ? new Date(maxDate) : undefined
+  }
+
   public render = (): React.ReactNode => {
-    const style = { width: this.props.width }
-    const label = this.props.element.get("label")
+    const { width, element, disabled } = this.props
+    const { value } = this.state
+
+    const style = { width }
+    const label = element.get("label")
+    const minDate = new Date(element.get("min"))
+    const maxDate = this.getMaxDate()
 
     return (
       <div className="Widget stDateInput" style={style}>
         <label>{label}</label>
         <UIDatePicker
           formatString="yyyy/MM/dd"
-          disabled={this.props.disabled}
+          disabled={disabled}
           onChange={this.handleChange}
           overrides={datePickerOverrides}
-          value={stringToDate(this.state.value)}
+          value={new Date(value)}
+          minDate={minDate}
+          maxDate={maxDate}
         />
       </div>
     )
   }
-}
-
-function dateToString(date: Date): string {
-  return moment(date).format("YYYY/MM/DD")
-}
-
-function stringToDate(value: string): Date {
-  return moment(value, "YYYY/MM/DD").toDate()
 }
 
 export default DateInput

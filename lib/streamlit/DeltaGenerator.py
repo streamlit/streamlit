@@ -44,6 +44,7 @@ from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.NumberInput_pb2 import NumberInput
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.logger import get_logger
+from streamlit.type_util import is_type
 
 LOGGER = get_logger(__name__)
 
@@ -125,7 +126,9 @@ def _with_element(method):
     return wrapped_method
 
 
-def _build_duplicate_widget_message(widget_func_name: str, user_key: Optional[str] = None):
+def _build_duplicate_widget_message(
+    widget_func_name: str, user_key: Optional[str] = None
+):
     if user_key is not None:
         message = textwrap.dedent(
             """
@@ -154,7 +157,12 @@ def _build_duplicate_widget_message(widget_func_name: str, user_key: Optional[st
     return message.strip("\n").format(widget_type=widget_func_name, user_key=user_key)
 
 
-def _set_widget_id(element_type: str, element: Element, user_key: Optional[str] = None, widget_func_name: Optional[str] = None):
+def _set_widget_id(
+    element_type: str,
+    element: Element,
+    user_key: Optional[str] = None,
+    widget_func_name: Optional[str] = None,
+):
     """Set the widget id.
 
     Parameters
@@ -194,7 +202,12 @@ def _set_widget_id(element_type: str, element: Element, user_key: Optional[str] 
     el.id = widget_id
 
 
-def _get_widget_ui_value(element_type: str, element: Element, user_key: Optional[str] = None, widget_func_name: Optional[str] = None):
+def _get_widget_ui_value(
+    element_type: str,
+    element: Element,
+    user_key: Optional[str] = None,
+    widget_func_name: Optional[str] = None,
+):
     """Get the widget ui_value from the report context.
     NOTE: This function should be called after the proto has been filled.
 
@@ -1736,7 +1749,17 @@ class DeltaGenerator(object):
                 return None
 
             if not isinstance(default_values, list):
-                default_values = [default_values]
+                # This if is done before others because calling if not x (done
+                # right below) when x is of type pd.Series() or np.array() throws a
+                # ValueError exception.
+                if is_type(default_values, "numpy.ndarray") or is_type(
+                    default_values, "pandas.core.series.Series"
+                ):
+                    default_values = list(default_values)
+                elif not default_values:
+                    default_values = [default_values]
+                else:
+                    default_values = list(default_values)
 
             for value in default_values:
                 if value not in options:
@@ -2153,15 +2176,20 @@ class DeltaGenerator(object):
         return file_datas if accept_multiple_files else file_datas[0]
 
     @_with_element
-    def color_picker(self, element, label, value=None, key=None):
+    def beta_color_picker(self, element, label, value=None, key=None):
         """Display a color picker widget.
+
+        Note: This is a beta feature. See
+        https://docs.streamlit.io/pre_release_features.html for more
+        information.
 
         Parameters
         ----------
         label : str
             A short label explaining to the user what this input is for.
         value : str or None
-            The hex value of this widget when it first renders. If None, the default color is black.
+            The hex value of this widget when it first renders. If None,
+            defaults to black.
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -2171,11 +2199,11 @@ class DeltaGenerator(object):
         Returns
         -------
         str
-            The current value of the color picker widget.
+            The selected color as a hex string.
 
         Example
         -------
-        >>> color = st.beta.color_picker('Pick A Color', '#00f900')
+        >>> color = st.beta_color_picker('Pick A Color', '#00f900')
         >>> st.write('The current color is', color)
 
         """
@@ -2186,7 +2214,10 @@ class DeltaGenerator(object):
         # make sure the value is a string
         if not isinstance(value, str):
             raise StreamlitAPIException(
-                "Color Picker Value has invalid type: %s. Expects a hex string like '#00FFAA' or '#000'."
+                """
+                Color Picker Value has invalid type: %s. Expects a hex string
+                like '#00FFAA' or '#000'.
+                """
                 % type(value).__name__
             )
 
@@ -2195,7 +2226,10 @@ class DeltaGenerator(object):
 
         if not match:
             raise StreamlitAPIException(
-                "'%s' is not a valid hex code for colors. Valid ones are like '#00FFAA' or '#000'."
+                """
+                '%s' is not a valid hex code for colors. Valid ones are like
+                '#00FFAA' or '#000'.
+                """
                 % value
             )
 
@@ -2256,7 +2290,7 @@ class DeltaGenerator(object):
         return str(current_value)
 
     @_with_element
-    def text_area(self, element, label, value="", key=None):
+    def text_area(self, element, label, value="", height=None, key=None):
         """Display a multi-line text input widget.
 
         Parameters
@@ -2266,6 +2300,9 @@ class DeltaGenerator(object):
         value : any
             The text value of this widget when it first renders. This will be
             cast to str internally.
+        height : int or None
+            Desired height of the UI element expressed in pixels. If None, a
+            default height is used.
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -2291,6 +2328,9 @@ class DeltaGenerator(object):
         """
         element.text_area.label = label
         element.text_area.default = str(value)
+
+        if height is not None:
+            element.text_area.height = height
 
         ui_value = _get_widget_ui_value("text_area", element, user_key=key)
         current_value = ui_value if ui_value is not None else value
@@ -2350,16 +2390,28 @@ class DeltaGenerator(object):
         return current_value
 
     @_with_element
-    def date_input(self, element, label, value=None, key=None):
+    def date_input(
+        self,
+        element,
+        label,
+        value=None,
+        min_value=datetime.min,
+        max_value=None,
+        key=None,
+    ):
         """Display a date input widget.
 
         Parameters
         ----------
         label : str
             A short label explaining to the user what this date input is for.
-        value : datetime.date/datetime.datetime
+        value : datetime.date or datetime.datetime
             The value of this widget when it first renders. This will be
             cast to str internally. Defaults to today.
+        min_value : datetime.date or datetime.datetime
+            The minimum selectable date. Defaults to datetime.min.
+        max_value : datetime.date or datetime.datetime
+            The maximum selectable date. Defaults to today+10y.
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -2395,6 +2447,20 @@ class DeltaGenerator(object):
 
         element.date_input.label = label
         element.date_input.default = date.strftime(value, "%Y/%m/%d")
+
+        if isinstance(min_value, datetime):
+            min_value = min_value.date()
+
+        element.date_input.min = date.strftime(min_value, "%Y/%m/%d")
+
+        if max_value is None:
+            today = date.today()
+            max_value = date(today.year + 10, today.month, today.day)
+
+        if isinstance(max_value, datetime):
+            max_value = max_value.date()
+
+        element.date_input.max = date.strftime(max_value, "%Y/%m/%d")
 
         ui_value = _get_widget_ui_value("date_input", element, user_key=key)
         current_value = (

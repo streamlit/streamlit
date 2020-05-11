@@ -180,6 +180,7 @@ title = _main.title  # noqa: E221
 vega_lite_chart = _main.vega_lite_chart  # noqa: E221
 video = _main.video  # noqa: E221
 warning = _main.warning  # noqa: E221
+beta_color_picker = _main.beta_color_picker  # noqa: E221
 
 # Config
 
@@ -232,74 +233,100 @@ _HELP_TYPES = (
 
 def write(*args, **kwargs):
     """Write arguments to the app.
-    This is the swiss-army knife of Streamlit commands. It does different
-    things depending on what you throw at it.
+
+    This is the swiss-army knife of Streamlit commands. It does different things
+    depending on what you throw at it.
+
     Unlike other Streamlit commands, write() has some unique properties:
-        1. You can pass in multiple arguments, all of which will be written.
-        2. Its behavior depends on the input types as follows.
-        3. It returns None, so it's "slot" in the App cannot be reused.
+
+    1. You can pass in multiple arguments, all of which will be written.
+    2. Its behavior depends on the input types as follows.
+    3. It returns None, so it's "slot" in the App cannot be reused.
+
     Parameters
     ----------
     *args : any
         One or many objects to print to the App.
+
         Arguments are handled as follows:
-            - write(string)     : Prints the formatted Markdown string, with
-              support for LaTeX expression and emoji shortcodes.
-              See docs for st.markdown for more.
-            - write(data_frame) : Displays the DataFrame as a table.
-            - write(error)      : Prints an exception specially.
-            - write(func)       : Displays information about a function.
-            - write(module)     : Displays information about the module.
-            - write(dict)       : Displays dict in an interactive widget.
-            - write(obj)        : The default is to print str(obj).
-            - write(mpl_fig)    : Displays a Matplotlib figure.
-            - write(altair)     : Displays an Altair chart.
-            - write(keras)      : Displays a Keras model.
-            - write(graphviz)   : Displays a Graphviz graph.
-            - write(plotly_fig) : Displays a Plotly figure.
-            - write(bokeh_fig)  : Displays a Bokeh figure.
-            - write(sympy_expr) : Prints SymPy expression using LaTeX.
+
+        - write(string)     : Prints the formatted Markdown string, with
+          support for LaTeX expression and emoji shortcodes.
+          See docs for st.markdown for more.
+        - write(data_frame) : Displays the DataFrame as a table.
+        - write(error)      : Prints an exception specially.
+        - write(func)       : Displays information about a function.
+        - write(module)     : Displays information about the module.
+        - write(dict)       : Displays dict in an interactive widget.
+        - write(obj)        : The default is to print str(obj).
+        - write(mpl_fig)    : Displays a Matplotlib figure.
+        - write(altair)     : Displays an Altair chart.
+        - write(keras)      : Displays a Keras model.
+        - write(graphviz)   : Displays a Graphviz graph.
+        - write(plotly_fig) : Displays a Plotly figure.
+        - write(bokeh_fig)  : Displays a Bokeh figure.
+        - write(sympy_expr) : Prints SymPy expression using LaTeX.
+
     unsafe_allow_html : bool
         This is a keyword-only argument that defaults to False.
+
         By default, any HTML tags found in strings will be escaped and
         therefore treated as pure text. This behavior may be turned off by
         setting this argument to True.
+
         That said, *we strongly advise* against it*. It is hard to write secure
         HTML, so by using this argument you may be compromising your users'
         security. For more information, see:
+
         https://github.com/streamlit/streamlit/issues/152
+
         *Also note that `unsafe_allow_html` is a temporary measure and may be
         removed from Streamlit at any time.*
+
         If you decide to turn on HTML anyway, we ask you to please tell us your
         exact use case here:
+
         https://discuss.streamlit.io/t/96
+
         This will help us come up with safe APIs that allow you to do what you
         want.
+
     Example
     -------
+
     Its simplest use case is to draw Markdown-formatted text, whenever the
     input is a string:
+
     >>> write('Hello, *World!* :sunglasses:')
+
     .. output::
        https://share.streamlit.io/0.50.2-ZWk9/index.html?id=Pn5sjhgNs4a8ZbiUoSTRxE
        height: 50px
+
     As mentioned earlier, `st.write()` also accepts other data formats, such as
     numbers, data frames, styled data frames, and assorted objects:
+
     >>> st.write(1234)
     >>> st.write(pd.DataFrame({
     ...     'first column': [1, 2, 3, 4],
     ...     'second column': [10, 20, 30, 40],
     ... }))
+
     .. output::
        https://share.streamlit.io/0.25.0-2JkNY/index.html?id=FCp9AMJHwHRsWSiqMgUZGD
        height: 250px
+
     Finally, you can pass in multiple arguments to do things like:
+
     >>> st.write('1 + 1 = ', 2)
     >>> st.write('Below is a DataFrame:', data_frame, 'Above is a dataframe.')
+
     .. output::
        https://share.streamlit.io/0.25.0-2JkNY/index.html?id=DHkcU72sxYcGarkFbf4kK1
        height: 300px
+
     Oh, one more thing: `st.write` accepts chart objects too! For example:
+
     >>> import pandas as pd
     >>> import numpy as np
     >>> import altair as alt
@@ -312,9 +339,11 @@ def write(*args, **kwargs):
     ...     x='a', y='b', size='c', color='c', tooltip=['a', 'b', 'c'])
     >>>
     >>> st.write(c)
+
     .. output::
        https://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
        height: 200px
+
     """
     try:
         string_buffer = []  # type: List[str]
@@ -386,13 +415,16 @@ def write(*args, **kwargs):
         exception(exc, exc_tb)  # noqa: F821
 
 
-def _show(*args):
+def experimental_show(*args):
     """Write arguments and *argument names* to your app for debugging purposes.
 
     Show() has similar properties to write():
 
         1. You can pass in multiple arguments, all of which will be debugged.
         2. It returns None, so it's "slot" in the app cannot be reused.
+
+    Note: This is an experimental feature. See
+    https://docs.streamlit.io/pre_release_features.html for more information.
 
     Parameters
     ----------
@@ -406,7 +438,7 @@ def _show(*args):
     ...     'first column': [1, 2, 3, 4],
     ...     'second column': [10, 20, 30, 40],
     ... }))
-    >>> st.show(dataframe)
+    >>> st.experimental_show(dataframe)
 
     Notes
     -----
@@ -596,78 +628,3 @@ def _maybe_print_repl_warning():
                 ),
                 script_name,
             )
-
-
-# Feature namespaces
-
-
-class _BetaNamespace(object):
-    """This namespace holds Streamlit features that are in currently in beta.
-
-    "Beta features" are features that are planned to become part of the
-    Streamlit core but whose APIs/behavior have not stabilized yet. They may
-    change in ways that are not backward-compatible.
-
-    The lifecycle of a beta feature is:
-
-    1. Feature is added to the beta namespace.
-    2. After a few months: the feature's API stabilizes and the feature is
-       *cloned* into the `st` namespace, so it will exist in both `st` and
-       `st.beta`. At this point, users will see a warning when using the
-       version of the feature that lives in the beta namespace -- but the
-       `st.beta` feature will otherwise still work.
-    3. After 3 months: the feature is *removed* from the `st.beta` namespace,
-       but there will still be a stub in `st.beta` that shows an error with
-       appropriate instructions.
-    4. After 3 months: the stub in `st.beta` is removed.
-
-    The main difference between `st.beta` and `st.experimental` is that beta
-    features will always make it into the `st` namespace at some point, while
-    experimental ones often do not.
-
-    """
-
-    # Add beta features here. For example:
-    # foo = _foo
-    color_picker = _main.color_picker
-
-
-class _ExperimentalNamespace(object):
-    """This namespace holds highly experimental Streamlit features.
-
-    "Experimental features" are features that we are still trying to
-    understand.  If they are successful, they will at some point become part of
-    core Streamlit, by moving to the `st.beta` namespace and then core `st`. If
-    unsuccessful, they may be removed.
-
-    Why this exists: we used to provide several Github Gists that allowed
-    people to hack experimental features into Streamlit, but it was hard to
-    guarantee that the Gists always worked when a new version of Streamlit came
-    out. Our solution is to move all that code out of Gists and into
-    `st.experimental` so we can run tests against them and provide at least
-    *some* forward-compatibility.
-
-    Note, however, that the API for experimental features may change at any
-    point!
-
-    The lifecycle of an experimental feature is:
-
-    1. Feature is added to the experimental namespace.
-    2. Feature is possibly tweaked over time, with possible API/behavior
-       breakages.
-    3. At some point, we either move the feature into `st.beta` or remove it
-       from `st.experimental`. Either way, we leave a stub in `st.experimental`
-       that shows an error with appropriate instructions.
-
-    The main difference between `st.experimental` and `st.beta` is that beta
-    features will always make it into the `st` namespace at some point, while
-    experimental ones often do not.
-    """
-
-    # Add experimental features here. For example:
-    # foo = _foo
-    show = _show
-
-
-beta = _BetaNamespace
-experimental = _ExperimentalNamespace

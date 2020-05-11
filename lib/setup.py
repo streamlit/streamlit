@@ -8,13 +8,12 @@ from pipenv.project import Project
 from pipenv.utils import convert_deps_to_pip
 from setuptools.command.install import install
 
-VERSION = "0.58.0"  # PEP-440
+VERSION = "0.59.0"  # PEP-440
 
 NAME = "streamlit"
 
 pipfile = Project(chdir=False).parsed_pipfile
 
-# Combine [packages] with either [python3] or [python2]
 packages = pipfile["packages"].copy()
 requirements = convert_deps_to_pip(packages, r=False)
 

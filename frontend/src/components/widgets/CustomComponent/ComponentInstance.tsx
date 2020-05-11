@@ -84,6 +84,7 @@ interface State {
  */
 const SANDBOX_POLICY = [
   // Allows for downloads to occur without a gesture from the user.
+  // Experimental; limited browser support.
   // "allow-downloads-without-user-activation",
 
   // Allows the resource to submit forms. If this keyword is not used, form submission is blocked.
@@ -114,7 +115,8 @@ const SANDBOX_POLICY = [
   "allow-scripts",
 
   // Lets the resource request access to the parent's storage capabilities with the Storage Access API.
-  "allow-storage-access-by-user-activation",
+  // Experimental; limited browser support.
+  // "allow-storage-access-by-user-activation",
 
   // Lets the resource navigate the top-level browsing context (the one named _top).
   // "allow-top-navigation",
