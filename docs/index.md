@@ -4,7 +4,6 @@
    :maxdepth: 2
    :hidden:
 
-   Home <https://docs.streamlit.io/>
    getting_started
    main_concepts
 
