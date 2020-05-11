@@ -17,16 +17,24 @@
 
 /// <reference types="cypress" />
 
-describe("st.pydeck_chart", () => {
+describe("st.pydeck_chart geo layers", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
   });
 
-  it("displays 2 maps", () => {
-    const els = cy.get(".element-container .stDeckGlJsonChart");
+  it("displays H3 hexagon layer", () => {
+    // NB: #view-default-view needs to be invisible
+    // to be able to capture the layer.
+    cy.get("#view-default-view").invoke("css", "display", "none");
 
-    els.should("have.length", 2);
+    cy.get(".element-container .stDeckGlJsonChart")
+      .find("#deckgl-overlay")
+      .matchImageSnapshot("h3-hexagon-layer");
+  });
 
-    els.find("canvas").should("have.css", "height", "500px");
+  it("checks if layers have tooltip", () => {
+    cy.get(".element-container .stDeckGlJsonChart")
+      .find(".deck-tooltip")
+      .should("exist");
   });
 });
