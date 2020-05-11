@@ -32,10 +32,10 @@ all-devel: init develop
 
 .PHONY: mini-devel
 # Get minimal dependencies and install Streamlit into Python environment -- but do not build the frontend.
-all-devel: mini-init develop
+mini-devel: mini-init develop
 
 .PHONY: init
-# Install all Python and JS dependencies for development.
+# Install all Python and JS dependencies.
 init: setup pipenv-install react-init scssvars protobuf
 
 .PHONY: mini-init
@@ -63,7 +63,7 @@ pipenv-dev-install: lib/Pipfile
 		pipenv install --dev --skip-lock
 
 .PHONY: pipenv-test-install
-pipenv-test-install: lib/Pipfile
+pipenv-test-install: lib/test-requirements.txt
 	cd lib; \
 		pip install -r test-requirements.txt
 
