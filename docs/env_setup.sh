@@ -7,9 +7,9 @@ unzip protoc-3.11.4-linux-x86_64.zip
 #build protobufs
 ./bin/protoc \
     --proto_path=../proto \
-	--python_out=../lib \
+    --python_out=../lib \
     --mypy_out=../lib \
-	../proto/streamlit/proto/*.proto
+    ../proto/streamlit/proto/*.proto
 
 #re-run setup.py build process to make protobuf available
 #this is tremendously fragile, as ../lib is hardcoded in here
