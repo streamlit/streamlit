@@ -36,16 +36,14 @@ function waitOneTick(): Promise<void> {
 }
 
 describe("withMapboxToken", () => {
+  const token = "mockToken"
+  const commandLine = "streamlit run test.py"
+
   function getProps(): object {
     return { label: "label" }
   }
 
-  // Install a mock token in our token fetcher so that we don't hit
-  // the network.
-  beforeEach(() => {
-    const token = "mockToken"
-    const commandLine = "streamlit run test.py"
-
+  beforeAll(() => {
     SessionInfo.current = new SessionInfo({
       sessionId: "mockSessionId",
       streamlitVersion: "sv",
@@ -56,7 +54,11 @@ describe("withMapboxToken", () => {
       commandLine,
       userMapboxToken: token,
     })
+  })
 
+  // Install a mock token in our token fetcher so that we don't hit
+  // the network.
+  beforeEach(() => {
     MapboxToken["token"] = token
     MapboxToken["commandLine"] = commandLine
   })
