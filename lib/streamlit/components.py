@@ -41,9 +41,13 @@ class MarshallComponentException(StreamlitAPIException):
     pass
 
 
+# mypy doesn't support *args or **kwargs in Callable declarations, so this
+# is as close as we can get to a type for our _custom_wrapper type.
+_WrapperFunc = Callable[..., Any]
+
+
 class CustomComponent:
-    """
-    A Custom Component declaration. Instances of this class aren't
+    """A Custom Component declaration. Instances of this class aren't
     used directly; you must first call `st.register_component` to register
     the Component as a named Streamlit function.
     """
@@ -57,30 +61,38 @@ class CustomComponent:
             )
         self.path = path
         self.url = url
-        self._custom_wrapper = None  # type: Optional[Callable]
-
-        # `custom_wrapper` is intended to be used as a function decorator.
-        # We expose it as a property - rather than a function - so that code
-        # editors don't auto-add function call parens.
+        self._custom_wrapper = None  # type: Optional[_WrapperFunc]
+        # See the `_set_custom_wrapper` docstring for an explanation of this
+        # property.
         self.custom_wrapper = self._set_custom_wrapper
 
-    def _set_custom_wrapper(self, f: Callable) -> None:
-        """Assign a wrapper function to the Component."""
+    def _set_custom_wrapper(self, f: _WrapperFunc) -> None:
+        """Assign a wrapper function to the Component.
+
+        This function is exposed via @CustomComponent.custom_wrapper, and
+        is intended to be used as a function decorator. We expose it as
+        a property, rather than a function, so that code editors don't try to
+        auto-complete it as a function call.
+        """
         self._custom_wrapper = f
 
     def create_instance(
         self, component_name: str, dg: DeltaGenerator, *args, **kwargs
     ) -> Optional[Any]:
-        instance = ComponentInstance(self, component_name, dg)
+        """Create a new instance of this CustomComponent."""
+        builder = _ComponentInstanceBuilder(self, component_name, dg)
         if self._custom_wrapper is not None:
-            return self._custom_wrapper(instance.invoke, *args, **kwargs)
+            return self._custom_wrapper(builder.invoke, *args, **kwargs)
         else:
-            return instance.invoke(*args, **kwargs)
+            return builder.invoke(*args, **kwargs)
 
 
-class ComponentInstance:
-    """
-    A class that can build instances of a Custom Component.
+class _ComponentInstanceBuilder:
+    """A helper class that builds an instance of a CustomComponent.
+
+    (This class exists for readability purposes; it could alternately be
+    expressed as a closure within CustomComponent.create_instance(), but at
+    the expense of nesting functions absurdly deep.)
     """
 
     def __init__(
@@ -95,10 +107,10 @@ class ComponentInstance:
 
         Parameters
         ----------
-        args
+        *args
             This must be empty; all args must be named kwargs. This parameter
             only exists to catch incorrect use of the function.
-        kwargs
+        **kwargs
             Keyword args to pass to the component.
 
         Returns
