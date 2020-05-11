@@ -49,10 +49,7 @@ class CustomComponent:
     """
 
     def __init__(
-        self,
-        path: Optional[str] = None,
-        url: Optional[str] = None,
-        custom_wrapper: Optional[Callable] = None,
+        self, path: Optional[str] = None, url: Optional[str] = None,
     ):
         if (path is None and url is None) or (path is not None and url is not None):
             raise StreamlitAPIException(
@@ -60,14 +57,23 @@ class CustomComponent:
             )
         self.path = path
         self.url = url
-        self.custom_wrapper = custom_wrapper
+        self._custom_wrapper = None  # type: Optional[Callable]
+
+        # `custom_wrapper` is intended to be used as a function decorator.
+        # We expose it as a property - rather than a function - so that code
+        # editors don't auto-add function call parens.
+        self.custom_wrapper = self._set_custom_wrapper
+
+    def _set_custom_wrapper(self, f: Callable) -> None:
+        """Assign a wrapper function to the Component."""
+        self._custom_wrapper = f
 
     def create_instance(
         self, component_name: str, dg: DeltaGenerator, *args, **kwargs
     ) -> Optional[Any]:
         instance = ComponentInstance(self, component_name, dg)
-        if self.custom_wrapper is not None:
-            return self.custom_wrapper(instance.invoke, *args, **kwargs)
+        if self._custom_wrapper is not None:
+            return self._custom_wrapper(instance.invoke, *args, **kwargs)
         else:
             return instance.invoke(*args, **kwargs)
 
