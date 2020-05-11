@@ -53,7 +53,26 @@ class CustomComponent:
         self.url = url
 
     def create_instance(self, component_name: str, dg: DeltaGenerator, *args, **kwargs) -> Optional[Any]:
-        """Create a new instance of the component."""
+        """Create a new instance of the component.
+
+        Parameters
+        ----------
+        component_name : str
+            The name assigned to the component type via st.register_component.
+        dg : DeltaGenerator
+            The DeltaGenerator to create the instance on.
+        args
+            This must be empty; all args must be named kwargs. This parameter
+            only exists to catch incorrect use of the function.
+        kwargs
+            Keyword args to pass to the component.
+
+        Returns
+        -------
+        any or None
+            The component's widget value.
+
+        """
         if len(args) > 0:
             raise MarshallComponentException("Argument '%s' needs a label" % args[0])
 
