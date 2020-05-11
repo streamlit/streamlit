@@ -18,6 +18,7 @@
 import React from "react"
 import { shallow } from "enzyme"
 import { MapboxToken } from "./MapboxToken"
+import { setSessionInfo } from "./MapboxToken.test"
 
 import withMapboxToken from "./withMapboxToken"
 
@@ -42,11 +43,17 @@ describe("withMapboxToken", () => {
   // Install a mock token in our token fetcher so that we don't hit
   // the network.
   beforeEach(() => {
-    MapboxToken["token"] = "mockToken"
+    const token = "mockToken"
+    const commandLine = "streamlit run test.py"
+
+    setSessionInfo(token, commandLine)
+    MapboxToken["token"] = token
+    MapboxToken["commandLine"] = commandLine
   })
 
   afterEach(() => {
     MapboxToken["token"] = undefined
+    MapboxToken["commandLine"] = undefined
   })
 
   it("renders without crashing", async () => {

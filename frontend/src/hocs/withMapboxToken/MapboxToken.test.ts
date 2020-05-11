@@ -20,8 +20,8 @@ import { SessionInfo } from "lib/SessionInfo"
 import AxiosMockAdapter from "axios-mock-adapter"
 import { MapboxToken, TOKENS_URL } from "hocs/withMapboxToken/MapboxToken"
 
-function setSessionInfo(
-  userMapboxToken: string,
+export function setSessionInfo(
+  userMapboxToken = "",
   commandLine = "streamlit hello"
 ): void {
   SessionInfo.current = new SessionInfo({
@@ -48,11 +48,13 @@ describe("MapboxToken", () => {
   afterEach(() => {
     axiosMock.restore()
     MapboxToken["token"] = undefined
+    MapboxToken["commandLine"] = undefined
     SessionInfo["singleton"] = undefined
   })
 
   test("Returns cached token if defined", async () => {
     MapboxToken["token"] = "cached"
+    MapboxToken["commandLine"] = "streamlit hello"
 
     await expect(MapboxToken.get()).resolves.toEqual("cached")
   })
@@ -109,5 +111,19 @@ describe("MapboxToken", () => {
     setSessionInfo("", "streamlit run example.py")
 
     await expect(MapboxToken.get()).rejects.toMatchSnapshot()
+  })
+
+  it("Should reload token if command line has changed", async () => {
+    setSessionInfo()
+
+    const remoteToken = "remoteMapboxToken"
+
+    axiosMock.onGet(TOKENS_URL).reply(200, { "mapbox-localhost": remoteToken })
+
+    await expect(MapboxToken.get()).resolves.toEqual(remoteToken)
+
+    setSessionInfo("password", "streamlit run test.py")
+
+    await expect(MapboxToken.get()).resolves.toEqual("password")
   })
 })

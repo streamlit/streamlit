@@ -25,6 +25,7 @@ export const TOKENS_URL = "https://data.streamlit.io/tokens.json"
 
 export class MapboxToken {
   private static token?: string
+  private static commandLine?: string
 
   private static isItRunningLocal = (): boolean => {
     const { hostname } = window.location
@@ -41,12 +42,15 @@ export class MapboxToken {
    * only be fetched once per session.)
    */
   public static async get(): Promise<string> {
-    if (!MapboxToken.token) {
-      if (SessionInfo.current.userMapboxToken !== "") {
-        MapboxToken.token = SessionInfo.current.userMapboxToken
-      } else {
-        const { commandLine } = SessionInfo.current
+    const { commandLine, userMapboxToken } = SessionInfo.current
 
+    if (
+      !MapboxToken.token ||
+      MapboxToken.commandLine !== commandLine.toLowerCase()
+    ) {
+      if (userMapboxToken !== "") {
+        MapboxToken.token = userMapboxToken
+      } else {
         if (
           this.isItRunningLocal() &&
           commandLine.toLowerCase() === "streamlit hello"
@@ -65,6 +69,8 @@ export class MapboxToken {
           )
         }
       }
+
+      MapboxToken.commandLine = commandLine.toLowerCase()
     }
 
     return MapboxToken.token
