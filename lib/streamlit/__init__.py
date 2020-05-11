@@ -236,9 +236,9 @@ def write(*args, **kwargs):
     things depending on what you throw at it. Unlike other Streamlit commands,
     write() has some unique properties:
 
-        1. You can pass in multiple arguments, all of which will be written.
-        2. Its behavior depends on the input types as follows.
-        3. It returns None, so it's "slot" in the App cannot be reused.
+    1. You can pass in multiple arguments, all of which will be written.
+    2. Its behavior depends on the input types as follows.
+    3. It returns None, so it's "slot" in the App cannot be reused.
 
     Parameters
     ----------
@@ -247,22 +247,22 @@ def write(*args, **kwargs):
 
         Arguments are handled as follows:
 
-            - write(string)     : Prints the formatted Markdown string, with
-              support for LaTeX expression and emoji shortcodes.
-              See docs for st.markdown for more.
-            - write(data_frame) : Displays the DataFrame as a table.
-            - write(error)      : Prints an exception specially.
-            - write(func)       : Displays information about a function.
-            - write(module)     : Displays information about the module.
-            - write(dict)       : Displays dict in an interactive widget.
-            - write(obj)        : The default is to print str(obj).
-            - write(mpl_fig)    : Displays a Matplotlib figure.
-            - write(altair)     : Displays an Altair chart.
-            - write(keras)      : Displays a Keras model.
-            - write(graphviz)   : Displays a Graphviz graph.
-            - write(plotly_fig) : Displays a Plotly figure.
-            - write(bokeh_fig)  : Displays a Bokeh figure.
-            - write(sympy_expr) : Prints SymPy expression using LaTeX.
+        - write(string)     : Prints the formatted Markdown string, with
+            support for LaTeX expression and emoji shortcodes.
+            See docs for st.markdown for more.
+        - write(data_frame) : Displays the DataFrame as a table.
+        - write(error)      : Prints an exception specially.
+        - write(func)       : Displays information about a function.
+        - write(module)     : Displays information about the module.
+        - write(dict)       : Displays dict in an interactive widget.
+        - write(obj)        : The default is to print str(obj).
+        - write(mpl_fig)    : Displays a Matplotlib figure.
+        - write(altair)     : Displays an Altair chart.
+        - write(keras)      : Displays a Keras model.
+        - write(graphviz)   : Displays a Graphviz graph.
+        - write(plotly_fig) : Displays a Plotly figure.
+        - write(bokeh_fig)  : Displays a Bokeh figure.
+        - write(sympy_expr) : Prints SymPy expression using LaTeX.
 
     unsafe_allow_html : bool
         This is a keyword-only argument that defaults to False.
