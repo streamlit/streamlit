@@ -20,7 +20,7 @@ import { SessionInfo } from "lib/SessionInfo"
 import AxiosMockAdapter from "axios-mock-adapter"
 import { MapboxToken, TOKENS_URL } from "hocs/withMapboxToken/MapboxToken"
 
-export function setSessionInfo(
+function setSessionInfo(
   userMapboxToken = "",
   commandLine = "streamlit hello"
 ): void {

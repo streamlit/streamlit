@@ -18,7 +18,7 @@
 import React from "react"
 import { shallow } from "enzyme"
 import { MapboxToken } from "./MapboxToken"
-import { setSessionInfo } from "./MapboxToken.test"
+import { SessionInfo } from "lib/SessionInfo"
 
 import withMapboxToken from "./withMapboxToken"
 
@@ -46,7 +46,17 @@ describe("withMapboxToken", () => {
     const token = "mockToken"
     const commandLine = "streamlit run test.py"
 
-    setSessionInfo(token, commandLine)
+    SessionInfo.current = new SessionInfo({
+      sessionId: "mockSessionId",
+      streamlitVersion: "sv",
+      pythonVersion: "pv",
+      installationId: "iid",
+      authorEmail: "ae",
+      maxCachedMessageAge: 2,
+      commandLine,
+      userMapboxToken: token,
+    })
+
     MapboxToken["token"] = token
     MapboxToken["commandLine"] = commandLine
   })
