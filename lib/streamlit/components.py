@@ -16,7 +16,7 @@
 import json
 import mimetypes
 import os
-from typing import Any, Dict, Optional, Type, Union
+from typing import Any, Dict, Optional, Type, Union, Callable
 
 import tornado.web
 
@@ -37,6 +37,7 @@ LOGGER = get_logger(__name__)
 
 class MarshallComponentException(StreamlitAPIException):
     """Class for exceptions generated during custom component marshalling."""
+
     pass
 
 
@@ -46,21 +47,48 @@ class CustomComponent:
     used directly; you must first call `st.register_component` to register
     the Component as a named Streamlit function.
     """
-    def __init__(self, path: Optional[str] = None, url: Optional[str] = None):
+
+    def __init__(
+        self,
+        path: Optional[str] = None,
+        url: Optional[str] = None,
+        custom_wrapper: Optional[Callable] = None,
+    ):
         if (path is None and url is None) or (path is not None and url is not None):
-            raise StreamlitAPIException("Either 'path' or 'url' must be set, but not both.")
+            raise StreamlitAPIException(
+                "Either 'path' or 'url' must be set, but not both."
+            )
         self.path = path
         self.url = url
+        self.custom_wrapper = custom_wrapper
 
-    def create_instance(self, component_name: str, dg: DeltaGenerator, *args, **kwargs) -> Optional[Any]:
+    def create_instance(
+        self, component_name: str, dg: DeltaGenerator, *args, **kwargs
+    ) -> Optional[Any]:
+        instance = ComponentInstance(self, component_name, dg)
+        if self.custom_wrapper is not None:
+            return self.custom_wrapper(instance.invoke, *args, **kwargs)
+        else:
+            return instance.invoke(*args, **kwargs)
+
+
+class ComponentInstance:
+    """
+    A class that can build instances of a Custom Component.
+    """
+
+    def __init__(
+        self, component: CustomComponent, registered_name: str, dg: DeltaGenerator
+    ):
+        self.component = component
+        self.registered_name = registered_name
+        self.dg = dg
+
+    def invoke(self, *args, **kwargs) -> Optional[Any]:
         """Create a new instance of the component.
 
         Parameters
         ----------
-        component_name : str
-            The name assigned to the component type via st.register_component.
-        dg : DeltaGenerator
-            The DeltaGenerator to create the instance on.
         args
             This must be empty; all args must be named kwargs. This parameter
             only exists to catch incorrect use of the function.
@@ -100,9 +128,9 @@ class CustomComponent:
         user_key = kwargs.get("key", None)
 
         def marshall_component(element: Element) -> Union[Any, Type[NoValue]]:
-            element.component_instance.component_name = component_name
-            if self.url is not None:
-                element.component_instance.url = self.url
+            element.component_instance.component_name = self.registered_name
+            if self.component.url is not None:
+                element.component_instance.url = self.component.url
 
             # Normally, a widget's element_hash (which determines
             # its identity across multiple runs of an app) is computed
@@ -137,7 +165,7 @@ class CustomComponent:
                 element_type="component_instance",
                 element=element,
                 user_key=user_key,
-                widget_func_name=component_name,
+                widget_func_name=self.registered_name,
             )
 
             if user_key is not None:
@@ -151,14 +179,16 @@ class CustomComponent:
             # because that's what _enqueue_new_element_delta expects.
             return widget_value if widget_value is not None else NoValue
 
-        result = dg._enqueue_new_element_delta(
+        result = self.dg._enqueue_new_element_delta(
             marshall_element=marshall_component, delta_type="component"
         )
 
         return result
 
 
-def declare_component(path: Optional[str] = None, url: Optional[str] = None) -> CustomComponent:
+def declare_component(
+    path: Optional[str] = None, url: Optional[str] = None
+) -> CustomComponent:
     """Declare a new custom component."""
     return CustomComponent(path, url)
 
