@@ -82,7 +82,14 @@ function withMapboxToken(
 
       // We got an error when fetching our mapbox token: show the error.
       if (mapboxTokenError) {
-        return <MapboxTokenError width={width} error={mapboxTokenError} />
+        return (
+          <MapboxTokenError
+            width={width}
+            error={mapboxTokenError}
+            // @ts-ignore
+            deltaType={WrappedComponent.deltaType}
+          />
+        )
       }
 
       // If our mapboxToken hasn't been retrieved yet, show a loading alert.

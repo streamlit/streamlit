@@ -73,6 +73,8 @@ interface State {
 export const DEFAULT_DECK_GL_HEIGHT = 500
 
 export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
+  static readonly deltaType = "pydeck_chart"
+
   readonly state = {
     initialized: false,
   }

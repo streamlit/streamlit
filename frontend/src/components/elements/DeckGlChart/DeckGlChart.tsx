@@ -64,6 +64,8 @@ interface ViewPort extends ViewState {
 }
 
 export class DeckGlChart extends PureComponent<PropsWithHeight, State> {
+  static readonly deltaType = "deck_gl_chart"
+
   static defaultProps = {
     height: 500,
   }

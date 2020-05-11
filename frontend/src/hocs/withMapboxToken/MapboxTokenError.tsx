@@ -7,10 +7,15 @@ import {
 
 interface Props {
   error: Error | MapboxTokenFetchingError | MapboxTokenNotProvidedError
+  deltaType: string
   width: number
 }
 
-const MapboxTokenError = ({ error, width }: Props): ReactElement => {
+const MapboxTokenError = ({
+  error,
+  width,
+  deltaType,
+}: Props): ReactElement => {
   if (error instanceof MapboxTokenNotProvidedError) {
     return (
       <ErrorElement
@@ -18,7 +23,7 @@ const MapboxTokenError = ({ error, width }: Props): ReactElement => {
         name="No Mapbox token provided"
         message={
           <>
-            To use `st.pydeck_chart` you need to set up a Mapbox access token.
+            To use `st.{deltaType}` you need to set up a Mapbox access token.
             To get a token, create an account at{" "}
             <a href="https://mapbox.com">https://mapbox.com</a>. It's free for
             moderate usage levels! Once you have a token, just set it using the
