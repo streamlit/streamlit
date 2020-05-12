@@ -37,6 +37,8 @@ import sqlalchemy as db
 import torch
 from mock import patch, MagicMock
 from parameterized import parameterized
+from torchvision.models import resnet
+
 
 try:
     import tensorflow as tf
@@ -357,6 +359,15 @@ class HashTest(unittest.TestCase):
             self.assertNotEqual(h1, get_hash(f))
             f.seek(0)
             self.assertEqual(h1, get_hash(f))
+
+    def test_pytorch_model(self):
+        a = resnet.resnet18()
+        b = resnet.resnet18()
+        c = resnet.resnet34()
+
+        self.assertEqual(get_hash(a), get_hash(a))
+        self.assertNotEqual(get_hash(a), get_hash(b))
+        self.assertNotEqual(get_hash(a), get_hash(c))
 
     def test_socket(self):
         a = socket.socket()
