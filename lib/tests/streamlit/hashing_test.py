@@ -24,6 +24,7 @@ import tempfile
 import time
 import types
 import torch
+import torchvision
 import unittest
 import urllib
 from io import BytesIO
@@ -37,7 +38,6 @@ import sqlalchemy as db
 import torch
 from mock import patch, MagicMock
 from parameterized import parameterized
-from torchvision.models import resnet
 
 
 try:
@@ -361,11 +361,14 @@ class HashTest(unittest.TestCase):
             self.assertEqual(h1, get_hash(f))
 
     def test_pytorch_model(self):
-        a = resnet.resnet18()
-        b = resnet.resnet18()
+        import torchvision
+        a = torchvision.models.resnet.resnet18()
+        b = torchvision.models.resnet.resnet18()
+        c = torchvision.models.__dict__['resnet18']()
 
         self.assertEqual(get_hash(a), get_hash(a))
         self.assertNotEqual(get_hash(a), get_hash(b))
+        self.assertNotEqual(get_hash(a), get_hash(c))
 
     def test_socket(self):
         a = socket.socket()
