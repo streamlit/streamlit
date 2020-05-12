@@ -44,7 +44,7 @@ def _get_installed_streamlit_version():
         The version string specified in setup.py.
 
     """
-    version_str = pkg_resources.get_distribution("streamlit").version
+    version_str = pkg_resources.get_distribution("streamlit-nightly").version
     return _version_str_to_obj(version_str)
 
 
