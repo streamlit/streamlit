@@ -234,10 +234,9 @@ _HELP_TYPES = (
 def write(*args, **kwargs):
     """Write arguments to the app.
 
-    This is the swiss-army knife of Streamlit commands. It does different things
-    depending on what you throw at it.
-
-    Unlike other Streamlit commands, write() has some unique properties:
+    This is the Swiss Army knife of Streamlit commands: it does different
+    things depending on what you throw at it. Unlike other Streamlit commands,
+    write() has some unique properties:
 
     1. You can pass in multiple arguments, all of which will be written.
     2. Its behavior depends on the input types as follows.
@@ -251,8 +250,8 @@ def write(*args, **kwargs):
         Arguments are handled as follows:
 
         - write(string)     : Prints the formatted Markdown string, with
-          support for LaTeX expression and emoji shortcodes.
-          See docs for st.markdown for more.
+            support for LaTeX expression and emoji shortcodes.
+            See docs for st.markdown for more.
         - write(data_frame) : Displays the DataFrame as a table.
         - write(error)      : Prints an exception specially.
         - write(func)       : Displays information about a function.
@@ -280,13 +279,12 @@ def write(*args, **kwargs):
 
         https://github.com/streamlit/streamlit/issues/152
 
-        *Also note that `unsafe_allow_html` is a temporary measure and may be
-        removed from Streamlit at any time.*
+        **Also note that `unsafe_allow_html` is a temporary measure and may be
+        removed from Streamlit at any time.**
 
         If you decide to turn on HTML anyway, we ask you to please tell us your
         exact use case here:
-
-        https://discuss.streamlit.io/t/96
+        https://discuss.streamlit.io/t/96 .
 
         This will help us come up with safe APIs that allow you to do what you
         want.
