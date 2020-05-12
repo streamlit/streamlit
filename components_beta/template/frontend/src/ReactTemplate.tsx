@@ -45,10 +45,10 @@ class ReactTemplate extends StreamlitComponentBase<State> {
   /** Click handler for our "Click Me!" button. */
   private onClicked = (): void => {
     // Increment state.numClicks, and pass the new value back to
-    // Streamlit via `Streamlit.setWidgetValue`.
+    // Streamlit via `Streamlit.setComponentValue`.
     this.setState(
       prevState => ({ numClicks: prevState.numClicks + 1 }),
-      () => Streamlit.setWidgetValue(this.state.numClicks)
+      () => Streamlit.setComponentValue(this.state.numClicks)
     )
   }
 }

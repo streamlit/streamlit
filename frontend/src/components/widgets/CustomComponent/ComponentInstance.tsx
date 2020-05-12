@@ -36,10 +36,10 @@ export enum ComponentMessageType {
   // Data: { apiVersion: number }
   COMPONENT_READY = "streamlit:componentReady",
 
-  // The component has a new widget value. Send it back to Streamlit, which
+  // The component has a new value. Send it back to Streamlit, which
   // will then re-run the app.
   // Data: { value: any }
-  SET_WIDGET_VALUE = "streamlit:setWidgetValue",
+  SET_COMPONENT_VALUE = "streamlit:setComponentValue",
 
   // The component has a new height for its iframe.
   // Data: { height: number }
@@ -209,13 +209,13 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
         }
         break
 
-      case ComponentMessageType.SET_WIDGET_VALUE:
+      case ComponentMessageType.SET_COMPONENT_VALUE:
         if (!this.componentReady) {
           logWarning(
             `Got ${type} before ${ComponentMessageType.COMPONENT_READY}!`
           )
         } else {
-          this.handleSetWidgetValue(data, { fromUi: true })
+          this.handleSetComponentValue(data, { fromUi: true })
         }
         break
 
@@ -234,11 +234,11 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     }
   }
 
-  /** The component set a new widget value. Send it back to Streamlit. */
-  private handleSetWidgetValue = (data: any, source: Source): void => {
+  /** The component set a new value. Send it back to Streamlit. */
+  private handleSetComponentValue = (data: any, source: Source): void => {
     const value = tryGetValue(data, "value")
     if (value === undefined) {
-      logWarning(`handleSetWidgetValue: missing 'value' prop`)
+      logWarning(`handleSetComponentValue: missing 'value' prop`)
       return
     }
 
