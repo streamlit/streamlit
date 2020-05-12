@@ -124,7 +124,7 @@ def _set_log_level():
 # Make this file only depend on config option in an asynchronous manner. This
 # avoids a race condition when another file (such as a test file) tries to pass
 # in an alternative config.
-_config.on_config_parsed(_set_log_level)
+_config.on_config_parsed(_set_log_level, True)
 
 
 _main = _DeltaGenerator(container=_BlockPath_pb2.BlockPath.MAIN)

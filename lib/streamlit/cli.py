@@ -101,6 +101,8 @@ def _apply_config_options_from_cli(kwargs):
                 kwargs[config_option],
                 "command-line argument or environment variable",
             )
+    if _config._config_file_has_been_parsed:
+        _config._on_config_parsed.send()
 
 
 # Fetch remote file at url_path to script_path
