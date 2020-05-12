@@ -110,6 +110,7 @@ from streamlit.util import functools_wraps as _functools_wraps
 # syntax pass mypy checking with implicit_reexport disabled.
 from streamlit.caching import cache as cache  # noqa: F401
 from streamlit.components import register_component as register_component
+from streamlit.components import declare_component as declare_component
 
 # This is set to True inside cli._main_run(), and is False otherwise.
 # If False, we should assume that DeltaGenerator functions are effectively

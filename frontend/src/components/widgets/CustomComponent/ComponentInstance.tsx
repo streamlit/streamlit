@@ -306,12 +306,12 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     try {
       // Determine the component iframe's src. If a URL is specified, we just
       // use that. Otherwise, we derive the URL from the component's ID.
-      const componentId = this.props.element.get("componentId")
+      const componentName = this.props.element.get("componentName")
       const url = this.props.element.get("url")
       if (url != null && url !== "") {
         src = url
       } else {
-        src = this.props.registry.getComponentURL(componentId, "index.html")
+        src = this.props.registry.getComponentURL(componentName, "index.html")
       }
 
       // Parse arguments
