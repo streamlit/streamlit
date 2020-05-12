@@ -363,11 +363,9 @@ class HashTest(unittest.TestCase):
     def test_pytorch_model(self):
         a = resnet.resnet18()
         b = resnet.resnet18()
-        c = resnet.resnet34()
 
         self.assertEqual(get_hash(a), get_hash(a))
         self.assertNotEqual(get_hash(a), get_hash(b))
-        self.assertNotEqual(get_hash(a), get_hash(c))
 
     def test_socket(self):
         a = socket.socket()
