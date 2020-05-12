@@ -111,7 +111,7 @@ class RadioButton extends StreamlitComponentBase<State> {
       const value =
         options != null && index < options.length ? options[index] : null
       // Send our current value to Streamlit!
-      Streamlit.setWidgetValue(value)
+      Streamlit.setComponentValue(value)
     })
   }
 }

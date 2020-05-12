@@ -15,9 +15,9 @@ button.textContent = "Click Me!"
 let numClicks = 0
 button.onclick = function(): void {
   // Increment numClicks, and pass the new value back to
-  // Streamlit via `Streamlit.setWidgetValue`.
+  // Streamlit via `Streamlit.setComponentValue`.
   numClicks += 1
-  Streamlit.setWidgetValue(numClicks)
+  Streamlit.setComponentValue(numClicks)
 }
 
 /**

@@ -33,7 +33,7 @@ enum ComponentMessageType {
   // The component has a new widget value. Send it back to Streamlit, which
   // will then re-run the app.
   // Data: { value: any }
-  SET_WIDGET_VALUE = "streamlit:setWidgetValue",
+  SET_COMPONENT_VALUE = "streamlit:setComponentValue",
 
   // The component has a new height for its iframe.
   // Data: { height: number }
@@ -101,11 +101,22 @@ export class Streamlit {
   }
 
   /**
-   * Send the component's "widget value" to Streamlit.
-   * This value will be returned to the Python script.
+   * Set the component's value. This value will be returned to the Python
+   * script, and the script will be re-run.
+   *
+   * For example:
+   *
+   * JavaScript:
+   * Streamlit.setComponentValue("ahoy!")
+   *
+   * Python:
+   * value = st.my_component(...)
+   * st.write(value) # -> "ahoy!"
+   *
+   * The value must be serializable into JSON.
    */
-  public static setWidgetValue = (value: any): void => {
-    Streamlit.sendBackMsg(ComponentMessageType.SET_WIDGET_VALUE, { value })
+  public static setComponentValue = (value: any): void => {
+    Streamlit.sendBackMsg(ComponentMessageType.SET_COMPONENT_VALUE, { value })
   }
 
   /** Receive a ForwardMsg from the Streamlit app */

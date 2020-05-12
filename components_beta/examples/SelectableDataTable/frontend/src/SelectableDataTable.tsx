@@ -86,7 +86,7 @@ const SelectableDataTable = (props: ComponentProps) => {
 
   const handleSelectionChange = (value: any): void => {
     setSelection(value)
-    Streamlit.setWidgetValue(value)
+    Streamlit.setComponentValue(value)
   }
 
   const [selection, setSelection] = useState<Array<number | string>>([])
