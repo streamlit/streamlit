@@ -1,11 +1,17 @@
 @import "src/assets/css/variables";
 
 .instructions {
-  &.blink {
-    color: $red;
-    animation-name: blinker;
-    animation-duration: 0.5s;
-    animation-iteration-count: 5;
+  .separator {
+    margin: 0 5px 0 5px;
+  }
+
+  .counter {
+    &.blink {
+      color: $red;
+      animation-name: blinker;
+      animation-duration: 0.5s;
+      animation-iteration-count: 5;
+    }
   }
 }
 

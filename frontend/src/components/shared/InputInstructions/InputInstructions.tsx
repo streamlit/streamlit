@@ -19,40 +19,39 @@ const InputInstructions = ({
   className,
   type = "single",
 }: Props): ReactElement => {
-  const baseClassName = ["instructions", className]
+  const containerClassName = classNames("instructions", className)
+  let message
 
-  if (value.length > 0 && maxLength) {
+  if (type === "multiline") {
+    if (isFromMac()) {
+      message = "Press ⌘+Enter to apply"
+    }
+
+    if (!isFromMac()) {
+      message = "Press Ctrl+Enter to apply"
+    }
+  } else {
+    message = "Press Enter to apply"
+  }
+
+  if (dirty && maxLength && value.length > 0) {
     return (
-      <div
-        className={classNames(baseClassName, {
-          blink: value.length >= maxLength,
-        })}
-      >
-        {value.length}/{maxLength}
+      <div className={containerClassName}>
+        <span className="message">{message}</span>
+        <span className="separator">•</span>
+        <span
+          className={classNames("counter", {
+            blink: value.length >= maxLength,
+          })}
+        >
+          {value.length}/{maxLength}
+        </span>
       </div>
     )
   }
 
-  if (type === "multiline") {
-    if (dirty && !isFromMac()) {
-      return (
-        <div className={classNames(baseClassName)}>
-          Press Ctrl+Enter to apply
-        </div>
-      )
-    }
-
-    if (dirty && isFromMac()) {
-      return (
-        <div className={classNames(baseClassName)}>Press ⌘+Enter to apply</div>
-      )
-    }
-  }
-
   if (dirty) {
-    return (
-      <div className={classNames(baseClassName)}>Press Enter to apply</div>
-    )
+    return <div className={containerClassName}>{message}</div>
   }
 
   return <></>

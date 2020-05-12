@@ -61,6 +61,16 @@ describe("InputInstructions", () => {
 
       expect(wrapper.text()).toBe("Press ⌘+Enter to apply")
     })
+
+    it("should show instructions for max length", () => {
+      const props = getProps({
+        type: "multiline",
+        maxLength: 3,
+      })
+      const wrapper = shallow(<InputInstructions {...props} />)
+
+      expect(wrapper.text()).toBe("Press ⌘+Enter to apply•3/3")
+    })
   })
 
   it("should show instructions for max length", () => {
@@ -69,6 +79,6 @@ describe("InputInstructions", () => {
     })
     const wrapper = shallow(<InputInstructions {...props} />)
 
-    expect(wrapper.text()).toBe("3/3")
+    expect(wrapper.text()).toBe("Press Enter to apply•3/3")
   })
 })
