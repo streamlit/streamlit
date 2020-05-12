@@ -40,7 +40,7 @@ describe("st.text_area", () => {
         'value 2: " default text "' +
         'value 3: " 1234 "' +
         'value 4: " None "' +
-        'value 5: " None "'
+        'value 5: "  "'
     );
   });
 
@@ -55,7 +55,7 @@ describe("st.text_area", () => {
         'value 2: " default text "' +
         'value 3: " 1234 "' +
         'value 4: " None "' +
-        'value 5: " None "'
+        'value 5: "  "'
     );
   });
 
@@ -70,7 +70,7 @@ describe("st.text_area", () => {
         'value 2: " default text "' +
         'value 3: " 1234 "' +
         'value 4: " None "' +
-        'value 5: " None "'
+        'value 5: "  "'
     );
   });
 
@@ -85,7 +85,7 @@ describe("st.text_area", () => {
         'value 2: " default text "' +
         'value 3: " 1234 "' +
         'value 4: " None "' +
-        'value 5: " None "'
+        'value 5: "  "'
     );
   });
 
@@ -101,22 +101,23 @@ describe("st.text_area", () => {
         'value 2: " default text "' +
         'value 3: " 1234 "' +
         'value 4: " None "' +
-        'value 5: " None "'
+        'value 5: "  "'
     );
   });
 
   it("sets value correctly with max_chars enabled", () => {
     cy.get(".stTextArea textarea")
-      .first()
-      .type("test area{command}{enter}");
+      .last()
+      .type("test area! this shouldn't be returned")
+      .blur();
 
     cy.get(".stMarkdown").should(
       "have.text",
-      'value 1: " test area "' +
+      'value 1: "  "' +
         'value 2: " default text "' +
         'value 3: " 1234 "' +
         'value 4: " None "' +
-        'value 5: " test area "'
+        'value 5: " test area! "'
     );
   });
 });
