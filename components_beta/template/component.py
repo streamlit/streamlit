@@ -12,7 +12,7 @@ MyComponent = st.declare_component(url="http://localhost:3001")
 # Add a wrapper function to the component.
 # This is an optional step that enables you to customize your component's
 # API, pre-process its input args, and post-process its output value.
-@MyComponent.custom_wrapper
+@MyComponent
 def create_instance(f, name, key=None):
     return f(name=name, key=key, default=0)
 

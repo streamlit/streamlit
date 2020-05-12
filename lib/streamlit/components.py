@@ -62,19 +62,23 @@ class CustomComponent:
         self.path = path
         self.url = url
         self._custom_wrapper = None  # type: Optional[_WrapperFunc]
-        # See the `_set_custom_wrapper` docstring for an explanation of this
-        # property.
-        self.custom_wrapper = self._set_custom_wrapper
 
-    def _set_custom_wrapper(self, f: _WrapperFunc) -> None:
+    def __call__(self, *args, **kwargs):
         """Assign a wrapper function to the Component.
 
-        This function is exposed via @CustomComponent.custom_wrapper, and
-        is intended to be used as a function decorator. We expose it as
-        a property, rather than a function, so that code editors don't try to
-        auto-complete it as a function call.
+        This is intended to be used as a function decorator, e.g.:
+
+        >>> MyComponent = st.declare_component(...)
+        >>> @MyComponent
+        ... def wrapper(f, foo, bar):
+        ...   return f(foo=foo, bar=bar, default=0)
+
         """
-        self._custom_wrapper = f
+
+        if len(args) != 1 or not callable(args[0]):
+            raise StreamlitAPIException("Expected a single argument of type 'callable'")
+
+        self._custom_wrapper = args[0]
 
     def create_instance(
         self, component_name: str, dg: DeltaGenerator, *args, **kwargs
