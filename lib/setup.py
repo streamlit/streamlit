@@ -14,7 +14,6 @@ NAME = "streamlit"
 
 pipfile = Project(chdir=False).parsed_pipfile
 
-# Combine [packages] with either [python3] or [python2]
 packages = pipfile["packages"].copy()
 requirements = convert_deps_to_pip(packages, r=False)
 
