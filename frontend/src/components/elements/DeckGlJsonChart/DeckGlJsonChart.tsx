@@ -18,7 +18,6 @@
 import React, { PureComponent, ReactNode } from "react"
 import DeckGL from "deck.gl"
 import Immutable from "immutable"
-import compose from "lodash/flowRight"
 import { StaticMap } from "react-map-gl"
 import * as layers from "@deck.gl/layers"
 import { JSONConverter } from "@deck.gl/json"
@@ -183,7 +182,6 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
   }
 }
 
-export default compose(
-  withFullScreenWrapper,
-  withMapboxToken("st.pydeck_chart")
-)(DeckGlJsonChart)
+export default withMapboxToken("st.pydeck_chart")(
+  withFullScreenWrapper(DeckGlJsonChart)
+)
