@@ -20,41 +20,46 @@ const InputInstructions = ({
   type = "single",
 }: Props): ReactElement => {
   const containerClassName = classNames("instructions", className)
-  let message
+  const messages = []
 
-  if (type === "multiline") {
-    if (isFromMac()) {
-      message = "Press ⌘+Enter to apply"
+  if (dirty) {
+    if (type === "multiline") {
+      if (isFromMac()) {
+        messages.push(
+          <span key={0} className="message">
+            Press ⌘+Enter to apply
+          </span>
+        )
+      } else {
+        messages.push(
+          <span key={0} className="message">
+            Press Ctrl+Enter to apply
+          </span>
+        )
+      }
+    } else {
+      messages.push(
+        <span key={0} className="message">
+          Press Enter to apply
+        </span>
+      )
     }
-
-    if (!isFromMac()) {
-      message = "Press Ctrl+Enter to apply"
-    }
-  } else {
-    message = "Press Enter to apply"
   }
 
-  if (dirty && maxLength && value.length > 0) {
-    return (
-      <div className={containerClassName}>
-        <span className="message">{message}</span>
-        <span className="separator">•</span>
-        <span
-          className={classNames("counter", {
-            blink: value.length >= maxLength,
-          })}
-        >
-          {value.length}/{maxLength}
-        </span>
-      </div>
+  if (maxLength) {
+    messages.push(
+      <span
+        key={1}
+        className={classNames("message", "counter", {
+          blink: dirty && value.length >= maxLength,
+        })}
+      >
+        {value.length}/{maxLength}
+      </span>
     )
   }
 
-  if (dirty) {
-    return <div className={containerClassName}>{message}</div>
-  }
-
-  return <></>
+  return <div className={containerClassName}>{messages}</div>
 }
 
 export default InputInstructions

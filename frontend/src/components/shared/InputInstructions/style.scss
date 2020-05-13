@@ -1,7 +1,11 @@
 @import "src/assets/css/variables";
 
 .instructions {
-  .separator {
+  .message:not(:first-child)::before {
+    opacity: 1;
+    content: "•";
+    animation: none;
+    color: $gray-600;
     margin: 0 5px 0 5px;
   }
 

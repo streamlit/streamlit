@@ -69,7 +69,7 @@ describe("InputInstructions", () => {
       })
       const wrapper = shallow(<InputInstructions {...props} />)
 
-      expect(wrapper.text()).toBe("Press ⌘+Enter to apply•3/3")
+      expect(wrapper.text()).toBe("Press ⌘+Enter to apply3/3")
     })
   })
 
@@ -79,6 +79,6 @@ describe("InputInstructions", () => {
     })
     const wrapper = shallow(<InputInstructions {...props} />)
 
-    expect(wrapper.text()).toBe("Press Enter to apply•3/3")
+    expect(wrapper.text()).toBe("Press Enter to apply3/3")
   })
 })
