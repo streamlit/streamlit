@@ -28,6 +28,7 @@ from testfixtures import tempdir
 
 import streamlit
 from streamlit import cli
+from streamlit import config
 from streamlit.cli import _convert_config_option_to_click_option
 from streamlit.cli import _apply_config_options_from_cli
 from streamlit.ConfigOption import ConfigOption
@@ -40,6 +41,7 @@ class CliTest(unittest.TestCase):
         cli.name = "test"
         self.runner = CliRunner()
         streamlit._is_running_with_streamlit = False
+        patch.object(config._on_config_parsed, "send").start()
 
     def test_run_no_arguments(self):
         """streamlit run should fail if run with no arguments."""
@@ -186,6 +188,7 @@ class CliTest(unittest.TestCase):
             "server_headless": True,
             "browser_serverAddress": "localhost",
             "global_minCachedMessageSize": None,
+            "global_logLevel": "error",
         }
 
         _apply_config_options_from_cli(kwargs)
@@ -205,9 +208,50 @@ class CliTest(unittest.TestCase):
                     "localhost",
                     "command-line argument or environment variable",
                 ),
+                mock.call(
+                    "global.logLevel",
+                    "error",
+                    "command-line argument or environment variable",
+                ),
             ],
             any_order=True,
         )
+
+    @patch("streamlit.cli._config._on_config_parsed.send")
+    def test_apply_config_options_from_cli_pre_parse(
+        self, patched___send_on_config_parsed
+    ):
+        """Test that _apply_config_options_from_cli does not trigger on_config_parsed
+        """
+
+        kwargs = {
+            "server_port": 3005,
+            "server_headless": True,
+            "browser_serverAddress": "localhost",
+            "global_minCachedMessageSize": None,
+            "global_logLevel": "error",
+        }
+        with patch.object(config, "_config_file_has_been_parsed", new=False):
+            _apply_config_options_from_cli(kwargs)
+            self.assertFalse(patched___send_on_config_parsed.called)
+
+    @patch("streamlit.cli._config._on_config_parsed.send")
+    def test_apply_config_options_from_cli_post_parse(
+        self, patched___send_on_config_parsed
+    ):
+        """Test that _apply_config_options_from_cli triggers on_config_parsed
+        """
+
+        kwargs = {
+            "server_port": 3005,
+            "server_headless": True,
+            "browser_serverAddress": "localhost",
+            "global_minCachedMessageSize": None,
+            "global_logLevel": "error",
+        }
+        with patch.object(config, "_config_file_has_been_parsed", new=True):
+            _apply_config_options_from_cli(kwargs)
+            self.assertTrue(patched___send_on_config_parsed.called)
 
     def test_credentials_headless_no_config(self):
         """If headless mode and no config is present,
