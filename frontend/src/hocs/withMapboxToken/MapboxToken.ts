@@ -54,10 +54,7 @@ export class MapboxToken {
       if (userMapboxToken !== "") {
         MapboxToken.token = userMapboxToken
       } else {
-        if (
-          this.isItRunningLocal() &&
-          commandLine.toLowerCase() === "streamlit hello"
-        ) {
+        if (this.isItRunningLocal() && SessionInfo.isHello) {
           MapboxToken.token = await this.fetchToken(TOKENS_URL, "mapbox")
         } else {
           throw new MapboxTokenNotProvidedError("No Mapbox token provided")
