@@ -972,7 +972,9 @@ def on_config_parsed(func, connect_signal=False):
     If the config file has already been parsed, just calls fun immediately.
 
     """
-    if _config_file_has_been_parsed and connect_signal is False:
+    if connect_signal:
+        _on_config_parsed.connect(lambda _: func(), weak=False)
+    elif _config_file_has_been_parsed:
         func()
     else:
         # weak=False, because we're using an anonymous lambda that
