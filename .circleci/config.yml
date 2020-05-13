@@ -487,7 +487,7 @@ jobs:
           name: Init config
           command: |
             mkdir ~/.streamlit
-            MAPBOX_TOKEN=$(curl -sS https://data.streamlit.io/tokens.json | jq -r '.mapbox-localhost')
+            MAPBOX_TOKEN=$(curl -sS https://data.streamlit.io/tokens.json | jq -r '.["mapbox-localhost"]')
             echo '[mapbox]' >  ~/.streamlit/config.toml
             echo 'token = "'$MAPBOX_TOKEN'"' >> ~/.streamlit/config.toml
 
