@@ -37,10 +37,13 @@ interface State {
  * A higher-order component that fetches our mapbox token and passes
  * it through to the wrapped component. If the token fetch fails, an error
  * will be rendered in place of the wrapped component.
+ *
+ * @param {string} deltaType In case of an exception we show an error with this
  */
-function withMapboxToken(
+
+const withMapboxToken = (deltaType: string) => (
   WrappedComponent: ComponentType<any>
-): ComponentType<any> {
+): ComponentType<any> => {
   class WithMapboxToken extends PureComponent<Props, State> {
     public static readonly displayName = `withMapboxToken(${WrappedComponent.displayName ||
       WrappedComponent.name})`
@@ -86,8 +89,7 @@ function withMapboxToken(
           <MapboxTokenError
             width={width}
             error={mapboxTokenError}
-            // @ts-ignore
-            deltaType={WrappedComponent.deltaType}
+            deltaType={deltaType}
           />
         )
       }

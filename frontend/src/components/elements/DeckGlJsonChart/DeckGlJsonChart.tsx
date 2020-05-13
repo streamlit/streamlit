@@ -18,11 +18,12 @@
 import React, { PureComponent, ReactNode } from "react"
 import DeckGL from "deck.gl"
 import Immutable from "immutable"
+import compose from "lodash/flowRight"
 import { StaticMap } from "react-map-gl"
 import * as layers from "@deck.gl/layers"
 import { JSONConverter } from "@deck.gl/json"
-import * as aggregationLayers from "@deck.gl/aggregation-layers"
 import * as geoLayers from "@deck.gl/geo-layers"
+import * as aggregationLayers from "@deck.gl/aggregation-layers"
 
 import { CSVLoader } from "@loaders.gl/csv"
 import { registerLoaders } from "@loaders.gl/core"
@@ -73,8 +74,6 @@ interface State {
 export const DEFAULT_DECK_GL_HEIGHT = 500
 
 export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
-  static readonly deltaType = "pydeck_chart"
-
   readonly state = {
     initialized: false,
   }
@@ -184,4 +183,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
   }
 }
 
-export default withMapboxToken(withFullScreenWrapper(DeckGlJsonChart))
+export default compose(
+  withFullScreenWrapper,
+  withMapboxToken("st.pydeck_chart")
+)(DeckGlJsonChart)

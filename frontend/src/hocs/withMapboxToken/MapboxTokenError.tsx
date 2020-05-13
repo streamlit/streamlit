@@ -24,8 +24,8 @@ const MapboxTokenError = ({
         message={
           <>
             <p>
-              To use <code>st.{deltaType}</code> you need to set up a Mapbox
-              access token.
+              To use <code>st.{deltaType}</code> or <code>st.map</code> you
+              need to set up a Mapbox access token.
             </p>
 
             <p>

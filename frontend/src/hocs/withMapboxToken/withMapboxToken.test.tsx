@@ -70,7 +70,7 @@ describe("withMapboxToken", () => {
 
   it("renders without crashing", async () => {
     const props = getProps()
-    const WrappedComponent = withMapboxToken(TestComponent)
+    const WrappedComponent = withMapboxToken("st.test")(TestComponent)
     const wrapper = shallow(<WrappedComponent {...props} />)
 
     expect(wrapper.html()).not.toBeNull()
@@ -78,7 +78,7 @@ describe("withMapboxToken", () => {
 
   it("passes mapboxToken to wrapped component", async () => {
     const props = getProps()
-    const WrappedComponent = withMapboxToken(TestComponent)
+    const WrappedComponent = withMapboxToken("st.test")(TestComponent)
     const wrapper = shallow(<WrappedComponent {...props} />)
 
     // Wait one tick for our MapboxToken promise to resolve

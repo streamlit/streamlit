@@ -28,6 +28,7 @@ import DeckGL, {
   // @ts-ignore
 } from "deck.gl"
 import Immutable from "immutable"
+import compose from "lodash/flowRight"
 import { StaticMap } from "react-map-gl"
 import { dataFrameToArrayOfDicts } from "lib/dataFrameProto"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
@@ -64,8 +65,6 @@ interface ViewPort extends ViewState {
 }
 
 export class DeckGlChart extends PureComponent<PropsWithHeight, State> {
-  static readonly deltaType = "deck_gl_chart"
-
   static defaultProps = {
     height: 500,
   }
@@ -477,4 +476,7 @@ function parseGetters(type: any, spec: any): void {
   })
 }
 
-export default withMapboxToken(withFullScreenWrapper(DeckGlChart))
+export default compose(
+  withFullScreenWrapper,
+  withMapboxToken("st.deck_gl_chart")
+)(DeckGlChart)
