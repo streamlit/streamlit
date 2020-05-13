@@ -23,15 +23,31 @@ const MapboxTokenError = ({
         name="No Mapbox token provided"
         message={
           <>
-            To use `st.{deltaType}` you need to set up a Mapbox access token.
-            To get a token, create an account at{" "}
-            <a href="https://mapbox.com">https://mapbox.com</a>. It's free for
-            moderate usage levels! Once you have a token, just set it using the
-            Streamlit config option `mapbox.token`. See{" "}
-            <a href="https://docs.streamlit.io/cli.html#view-all-config-options">
-              our documentation
-            </a>{" "}
-            for more info on how to set config options.
+            <p>
+              To use <code>st.{deltaType}</code> you need to set up a Mapbox
+              access token.
+            </p>
+
+            <p>
+              To get a token, create an account at{" "}
+              <a href="https://mapbox.com">https://mapbox.com</a>. It's free
+              for moderate usage levels!
+            </p>
+
+            <p>
+              Once you have a token, just set it using the Streamlit config
+              option <code>mapbox.token</code> and don't forget to restart your
+              Streamlit server at this point if it's still running, then reload
+              this tab.
+            </p>
+
+            <p>
+              See{" "}
+              <a href="https://docs.streamlit.io/cli.html#view-all-config-options">
+                our documentation
+              </a>{" "}
+              for more info on how to set config options.
+            </p>
           </>
         }
       />
@@ -45,13 +61,15 @@ const MapboxTokenError = ({
         name="Error fetching Streamlit Mapbox token"
         message={
           <>
-            This app requires an internet connection. Please when that your
-            connection is working and try again. If you think this is a bug,
-            please file bug report{" "}
-            <a href="https://github.com/streamlit/streamlit/issues/new/choose">
-              here
-            </a>
-            .
+            <p>This app requires an internet connection.</p>
+            <p>Please check your connection and try again.</p>
+            <p>
+              If you think this is a bug, please file bug report{" "}
+              <a href="https://github.com/streamlit/streamlit/issues/new/choose">
+                here
+              </a>
+              .
+            </p>
           </>
         }
       />
