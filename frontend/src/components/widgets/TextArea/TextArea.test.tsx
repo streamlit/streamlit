@@ -84,19 +84,6 @@ describe("TextArea widget", () => {
     expect(wrapper.find(UITextArea).prop("disabled")).toBe(props.disabled)
   })
 
-  it("should show Ctrl+Enter instructions", () => {
-    // @ts-ignore
-    wrapper.find(UITextArea).prop("onChange")({
-      target: {
-        value: "testing",
-      },
-    } as React.ChangeEvent<HTMLTextAreaElement>)
-
-    expect(wrapper.find("div.instructions").text()).toBe(
-      "Press Ctrl+Enter to apply"
-    )
-  })
-
   it("should set widget value on blur", () => {
     const props = getProps()
     const wrapper = shallow(<TextArea {...props} />)
@@ -157,6 +144,32 @@ describe("TextArea widget", () => {
     expect(resize).toBe("vertical")
   })
 
+  it("should limit the length if max_chars is passed", () => {
+    const props = getProps({
+      height: 500,
+      maxChars: 10,
+    })
+    const wrapper = shallow(<TextArea {...props} />)
+
+    // @ts-ignore
+    wrapper.find(UITextArea).prop("onChange")({
+      target: {
+        value: "0123456789",
+      },
+    } as EventTarget)
+
+    expect(wrapper.find(UITextArea).prop("value")).toBe("0123456789")
+
+    // @ts-ignore
+    wrapper.find(UITextArea).prop("onChange")({
+      target: {
+        value: "0123456789a",
+      },
+    } as EventTarget)
+
+    expect(wrapper.find(UITextArea).prop("value")).toBe("0123456789")
+  })
+
   describe("On mac it should", () => {
     Object.defineProperty(navigator, "platform", {
       value: "MacIntel",
@@ -165,19 +178,6 @@ describe("TextArea widget", () => {
 
     const props = getProps()
     const wrapper = shallow(<TextArea {...props} />)
-
-    it("show ⌘+Enter instructions", () => {
-      // @ts-ignore
-      wrapper.find(UITextArea).prop("onChange")({
-        target: {
-          value: "testing",
-        },
-      } as React.ChangeEvent<HTMLTextAreaElement>)
-
-      expect(wrapper.find("div.instructions").text()).toBe(
-        "Press ⌘+Enter to apply"
-      )
-    })
 
     it("should set widget value when ⌘+enter is pressed", () => {
       // @ts-ignore
