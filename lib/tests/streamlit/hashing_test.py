@@ -363,6 +363,9 @@ class HashTest(unittest.TestCase):
         a = VGG16(include_top=False, weights=None)
         b = VGG16(include_top=False, weights=None)
 
+        # This test still passes if we remove the default hash func for Keras
+        # models. Ideally we'd be able to seed the weights before creating
+        # the models but it's difficult to do so.
         self.assertEqual(get_hash(a), get_hash(a))
         self.assertNotEqual(get_hash(a), get_hash(b))
 
