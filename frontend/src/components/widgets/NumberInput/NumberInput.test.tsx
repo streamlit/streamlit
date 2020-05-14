@@ -283,15 +283,4 @@ describe("NumberInput widget", () => {
       expect(preventDefault).toHaveBeenCalled()
     })
   })
-
-  it("should show a message when it's dirty", () => {
-    const props = getIntProps()
-    const wrapper = shallow(<NumberInput {...props} />)
-
-    wrapper.setState({
-      dirty: true,
-    })
-
-    expect(wrapper.find("div.instructions").length).toBe(1)
-  })
 })
