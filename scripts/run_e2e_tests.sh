@@ -106,7 +106,7 @@ function run_test {
   while true
   do
     # Run next test
-    streamlit "$@" &
+    streamlit "$@" --global.logLevel="error" &
 
     yarn \
       cy:run \
