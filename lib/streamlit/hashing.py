@@ -498,6 +498,9 @@ class _CodeHasher:
         ):
             return self.to_bytes([obj.detach().numpy(), obj.grad])
 
+        elif type_util.is_type(obj, "keras.engine.training.Model"):
+            return self.to_bytes(id(obj))
+
         elif inspect.isroutine(obj):
             if hasattr(obj, "__wrapped__"):
                 # Ignore the wrapper of wrapped functions.

@@ -35,6 +35,7 @@ import pandas as pd
 import pytest
 import sqlalchemy as db
 import torch
+from keras.applications.vgg16 import VGG16
 from mock import patch, MagicMock
 from parameterized import parameterized
 
@@ -357,6 +358,13 @@ class HashTest(unittest.TestCase):
             self.assertNotEqual(h1, get_hash(f))
             f.seek(0)
             self.assertEqual(h1, get_hash(f))
+
+    def test_keras_model(self):
+        a = VGG16(include_top=False, weights=None)
+        b = VGG16(include_top=False, weights=None)
+
+        self.assertEqual(get_hash(a), get_hash(a))
+        self.assertNotEqual(get_hash(a), get_hash(b))
 
     def test_socket(self):
         a = socket.socket()
