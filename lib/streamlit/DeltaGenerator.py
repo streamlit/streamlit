@@ -2373,14 +2373,22 @@ class DeltaGenerator(object):
         return current_value
 
     @_with_element
-    def date_input(self, element, label, value=None, min_value=datetime.min, max_value=None, key=None):
+    def date_input(
+        self,
+        element,
+        label,
+        value=None,
+        min_value=datetime.min,
+        max_value=None,
+        key=None
+    ):
         """Display a date input widget.
 
         Parameters
         ----------
         label : str
             A short label explaining to the user what this date input is for.
-        value : datetime.date or datetime.datetime
+        value : datetime.date or datetime.datetime or list/tuple of datetime.date or datetime.datetime or None
             The value of this widget when it first renders. This will be
             cast to str internally. Defaults to today.
         min_value : datetime.date or datetime.datetime
@@ -2408,20 +2416,23 @@ class DeltaGenerator(object):
         """
         # Set value default.
         if value is None:
-            value = datetime.now().date()
+            value = [datetime.now().date(), datetime.now().date()]
 
-        # Ensure that the value is either datetime/time
-        if not isinstance(value, datetime) and not isinstance(value, date):
+        single_value = isinstance(value, (date, datetime))
+        range_value = isinstance(value, (list, tuple)) and len(value) == 2
+        if not single_value and not range_value:
             raise StreamlitAPIException(
-                "The type of the date_input value should be either `datetime` or `date`."
+                "DateInput value should either be an date/datetime or a list/tuple of "
+                "date/datetime"
             )
 
-        # Convert datetime to date
-        if isinstance(value, datetime):
-            value = value.date()
+        if single_value:
+            value = [value, value]
+
+        value = [v.date() if isinstance(v, datetime) else v for v in value]
 
         element.date_input.label = label
-        element.date_input.default = date.strftime(value, "%Y/%m/%d")
+        element.date_input.default[:] = [date.strftime(v, "%Y/%m/%d") for v in value]
 
         if isinstance(min_value, datetime):
             min_value = min_value.date()
@@ -2437,13 +2448,11 @@ class DeltaGenerator(object):
 
         element.date_input.max = date.strftime(max_value, "%Y/%m/%d")
 
+        result = value
         ui_value = _get_widget_ui_value("date_input", element, user_key=key)
-        current_value = (
-            datetime.strptime(ui_value, "%Y/%m/%d").date()
-            if ui_value is not None
-            else value
-        )
-        return current_value
+        if ui_value is not None:
+            result = getattr(ui_value, "data")
+        return tuple(map(lambda dt: datetime.strptime(dt, "%Y/%m/%d").date() if isinstance(dt, str) else dt,result))
 
     @_with_element
     def number_input(

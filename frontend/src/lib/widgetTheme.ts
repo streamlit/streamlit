@@ -282,6 +282,11 @@ export const datePickerOverrides = {
       },
     },
   },
+  Input: {
+    props: {
+      maskChar: null,
+    },
+  },
 }
 
 export const buttonOverrides = {

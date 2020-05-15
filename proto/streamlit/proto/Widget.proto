@@ -16,6 +16,8 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/DataFrame.proto";
+
 // Contains updated state for each widget in a report
 message WidgetStates {
   repeated WidgetState widgets = 1;
@@ -38,8 +40,9 @@ message WidgetState {
     double float_value = 4;
     sint64 int_value = 5;
     string string_value = 6;
-    IntArray int_array_value = 8;
     FloatArray float_array_value = 7;
+    IntArray int_array_value = 8;
+    StringArray string_array_value = 9;
   }
 }
 
