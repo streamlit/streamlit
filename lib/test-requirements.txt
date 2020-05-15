@@ -13,6 +13,7 @@ tensorflow>=2.0.0rc3
 seaborn
 sqlalchemy
 torch
+torchvision
 prometheus-client
 pyodbc
 opencv-python
