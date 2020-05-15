@@ -35,9 +35,13 @@ import pandas as pd
 import pytest
 import sqlalchemy as db
 import torch
-from keras.applications.vgg16 import VGG16
 from mock import patch, MagicMock
 from parameterized import parameterized
+
+try:
+    import keras
+except ImportError:
+    pass
 
 try:
     import tensorflow as tf
@@ -359,13 +363,22 @@ class HashTest(unittest.TestCase):
             f.seek(0)
             self.assertEqual(h1, get_hash(f))
 
+    @testutil.requires_tensorflow
     def test_keras_model(self):
-        a = VGG16(include_top=False, weights=None)
-        b = VGG16(include_top=False, weights=None)
+        a = keras.applications.vgg16.VGG16(include_top=False, weights=None)
+        b = keras.applications.vgg16.VGG16(include_top=False, weights=None)
 
         # This test still passes if we remove the default hash func for Keras
-        # models. Ideally we'd be able to seed the weights before creating
-        # the models but it's difficult to do so.
+        # models. Ideally we'd seed the weights before creating the models
+        # but not clear how to do so.
+        self.assertEqual(get_hash(a), get_hash(a))
+        self.assertNotEqual(get_hash(a), get_hash(b))
+
+    @testutil.requires_tensorflow
+    def test_tf_keras_model(self):
+        a = tf.keras.applications.vgg16.VGG16(include_top=False, weights=None)
+        b = tf.keras.applications.vgg16.VGG16(include_top=False, weights=None)
+
         self.assertEqual(get_hash(a), get_hash(a))
         self.assertNotEqual(get_hash(a), get_hash(b))
 

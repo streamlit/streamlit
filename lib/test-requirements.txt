@@ -1,18 +1,19 @@
 # Packages used to test things users may do with Streamlit.
+bokeh
 cffi
-matplotlib
-plotly
 chart-studio
 cx_oracle
-bokeh
 graphviz
+keras
+matplotlib
 mysqlclient
+opencv-python
+plotly
+prometheus-client
 psycopg2-binary
 pydot
-tensorflow>=2.0.0rc3
+pyodbc
 seaborn
 sqlalchemy
+tensorflow>=2.0.0rc3
 torch
-prometheus-client
-pyodbc
-opencv-python
