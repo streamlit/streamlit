@@ -24,6 +24,7 @@ import tempfile
 import time
 import types
 import torch
+import torchvision
 import unittest
 import urllib
 from io import BytesIO
@@ -37,6 +38,7 @@ import sqlalchemy as db
 import torch
 from mock import patch, MagicMock
 from parameterized import parameterized
+
 
 try:
     import keras
@@ -378,6 +380,13 @@ class HashTest(unittest.TestCase):
     def test_tf_keras_model(self):
         a = tf.keras.applications.vgg16.VGG16(include_top=False, weights=None)
         b = tf.keras.applications.vgg16.VGG16(include_top=False, weights=None)
+
+        self.assertEqual(get_hash(a), get_hash(a))
+        self.assertNotEqual(get_hash(a), get_hash(b))
+
+    def test_pytorch_model(self):
+        a = torchvision.models.resnet.resnet18()
+        b = torchvision.models.resnet.resnet18()
 
         self.assertEqual(get_hash(a), get_hash(a))
         self.assertNotEqual(get_hash(a), get_hash(b))

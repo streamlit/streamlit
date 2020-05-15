@@ -33,6 +33,7 @@ commands:
           command: |
             md5sum $(which python) > ~/python_version.md5
             md5sum lib/Pipfile >> ~/python_version.md5
+            md5sum lib/test-requirements.txt >> ~/python_version.md5
             date +%F >> ~/python_version.md5
 
       - run: &create_yarn_cache_key

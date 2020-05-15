@@ -490,6 +490,12 @@ class _CodeHasher:
         elif type_util.is_type(obj, "socket.socket"):
             return self.to_bytes(id(obj))
 
+        elif any(
+            type_util.get_fqn(x) == "torch.nn.modules.module.Module"
+            for x in type(obj).__bases__
+        ):
+            return self.to_bytes(id(obj))
+
         elif type_util.is_type(obj, "tensorflow.python.client.session.Session"):
             return self.to_bytes(id(obj))
 
