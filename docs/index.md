@@ -4,9 +4,8 @@
    :maxdepth: 2
    :hidden:
 
-   Home <https://docs.streamlit.io/>
-   main_concepts
    getting_started
+   main_concepts
 
    tutorial/index
    caching
@@ -15,6 +14,7 @@
 
    api
    cli
+   pre_release_features
    changelog
 
 .. toctree::

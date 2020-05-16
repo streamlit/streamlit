@@ -16,7 +16,7 @@
 import json
 import mimetypes
 import os
-from typing import Any, Dict, Optional, Type, Union
+from typing import Any, Dict, Optional, Type, Union, Callable
 
 import tornado.web
 
@@ -29,30 +29,100 @@ from streamlit.DeltaGenerator import _get_widget_ui_value
 from streamlit.elements import arrow_table
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
-from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.ComponentInstance_pb2 import ArgsDataframe
-
+from streamlit.proto.Element_pb2 import Element
 
 LOGGER = get_logger(__name__)
 
 
 class MarshallComponentException(StreamlitAPIException):
+    """Class for exceptions generated during custom component marshalling."""
+
     pass
 
 
-def register_component(
-    name: str, path: Optional[str] = None, url: Optional[str] = None
-) -> None:
-    """Register a new custom component."""
+# mypy doesn't support *args or **kwargs in Callable declarations, so this
+# is as close as we can get to a type for our _custom_wrapper type.
+_WrapperFunc = Callable[..., Any]
 
-    if (path is None and url is None) or (path is not None and url is not None):
-        raise StreamlitAPIException("Either 'path' or 'url' must be set, but not both.")
 
-    # Register this component with our global registry.
-    component_id = ComponentRegistry.instance().register_component(name, path)
+class CustomComponent:
+    """A Custom Component declaration. Instances of this class aren't
+    used directly; you must first call `st.register_component` to register
+    the Component as a named Streamlit function.
+    """
 
-    # Build our component function.
-    def component_instance(dg: DeltaGenerator, *args, **kwargs) -> Optional[Any]:
+    def __init__(
+        self, path: Optional[str] = None, url: Optional[str] = None,
+    ):
+        if (path is None and url is None) or (path is not None and url is not None):
+            raise StreamlitAPIException(
+                "Either 'path' or 'url' must be set, but not both."
+            )
+        self.path = path
+        self.url = url
+        self._custom_wrapper = None  # type: Optional[_WrapperFunc]
+
+    def __call__(self, *args, **kwargs):
+        """Assign a wrapper function to the Component.
+
+        This is intended to be used as a function decorator, e.g.:
+
+        >>> MyComponent = st.declare_component(...)
+        >>> @MyComponent
+        ... def wrapper(f, foo, bar):
+        ...   return f(foo=foo, bar=bar, default=0)
+
+        """
+
+        if len(args) != 1 or not callable(args[0]):
+            raise StreamlitAPIException("Expected a single argument of type 'callable'")
+
+        self._custom_wrapper = args[0]
+
+    def create_instance(
+        self, component_name: str, dg: DeltaGenerator, *args, **kwargs
+    ) -> Optional[Any]:
+        """Create a new instance of this CustomComponent."""
+        builder = _ComponentInstanceBuilder(self, component_name, dg)
+        if self._custom_wrapper is not None:
+            return self._custom_wrapper(builder.invoke, *args, **kwargs)
+        else:
+            return builder.invoke(*args, **kwargs)
+
+
+class _ComponentInstanceBuilder:
+    """A helper class that builds an instance of a CustomComponent.
+
+    (This class exists for readability purposes; it could alternately be
+    expressed as a closure within CustomComponent.create_instance(), but at
+    the expense of nesting functions absurdly deep.)
+    """
+
+    def __init__(
+        self, component: CustomComponent, registered_name: str, dg: DeltaGenerator
+    ):
+        self.component = component
+        self.registered_name = registered_name
+        self.dg = dg
+
+    def invoke(self, *args, **kwargs) -> Optional[Any]:
+        """Create a new instance of the component.
+
+        Parameters
+        ----------
+        *args
+            This must be empty; all args must be named kwargs. This parameter
+            only exists to catch incorrect use of the function.
+        **kwargs
+            Keyword args to pass to the component.
+
+        Returns
+        -------
+        any or None
+            The component's widget value.
+
+        """
         if len(args) > 0:
             raise MarshallComponentException("Argument '%s' needs a label" % args[0])
 
@@ -88,20 +158,48 @@ def register_component(
         user_key = kwargs.get("key", None)
 
         def marshall_component(element: Element) -> Union[Any, Type[NoValue]]:
-            element.component_instance.args_json = serialized_args_json
-            element.component_instance.component_id = component_id
-            if url is not None:
-                element.component_instance.url = url
+            element.component_instance.component_name = self.registered_name
+            if self.component.url is not None:
+                element.component_instance.url = self.component.url
 
-            for key, value in args_df.items():
-                new_args_dataframe = ArgsDataframe()
-                new_args_dataframe.key = key
-                arrow_table.marshall(new_args_dataframe.value.data, value)
-                element.component_instance.args_dataframe.append(new_args_dataframe)
+            # Normally, a widget's element_hash (which determines
+            # its identity across multiple runs of an app) is computed
+            # by hashing the entirety of its protobuf. This means that,
+            # if any of the arguments to the widget are changed, Streamlit
+            # considers it a new widget instance and it loses its previous
+            # state.
+            #
+            # However! If a *component* has a `key` argument, then the
+            # component's hash identity is determined by entirely by
+            # `component_name + url + key`. This means that, when `key`
+            # exists, the component will maintain its identity even when its
+            # other arguments change, and the component's iframe won't be
+            # remounted on the frontend.
+            #
+            # So: if `key` is None, we marshall the element's arguments
+            # *before* computing its widget_ui_value (which creates its hash).
+            # If `key` is not None, we marshall the arguments *after*.
+
+            def marshall_element_args():
+                element.component_instance.args_json = serialized_args_json
+                for key, value in args_df.items():
+                    new_args_dataframe = ArgsDataframe()
+                    new_args_dataframe.key = key
+                    arrow_table.marshall(new_args_dataframe.value.data, value)
+                    element.component_instance.args_dataframe.append(new_args_dataframe)
+
+            if user_key is None:
+                marshall_element_args()
 
             widget_value = _get_widget_ui_value(
-                "component_instance", element, user_key=user_key
+                element_type="component_instance",
+                element=element,
+                user_key=user_key,
+                widget_func_name=self.registered_name,
             )
+
+            if user_key is not None:
+                marshall_element_args()
 
             if widget_value is None:
                 widget_value = default_value
@@ -111,22 +209,39 @@ def register_component(
             # because that's what _enqueue_new_element_delta expects.
             return widget_value if widget_value is not None else NoValue
 
-        result = dg._enqueue_new_element_delta(
+        result = self.dg._enqueue_new_element_delta(
             marshall_element=marshall_component, delta_type="component"
         )
 
         return result
 
+
+def declare_component(
+    path: Optional[str] = None, url: Optional[str] = None
+) -> CustomComponent:
+    """Declare a new custom component."""
+    return CustomComponent(path, url)
+
+
+def register_component(name: str, component: CustomComponent) -> None:
+    """Register a custom component."""
+    # Register this component with our global registry.
+    ComponentRegistry.instance().register_component(name, component.path)
+
+    # Build our component function.
+    def create_instance(dg: DeltaGenerator, *args, **kwargs) -> Optional[Any]:
+        return component.create_instance(name, dg, *args, **kwargs)
+
     # Build st.[component_name], which just calls component_instance with the
     # main DeltaGenerator.
-    def component_instance_main(*args, **kwargs):
-        return component_instance(streamlit._main, *args, **kwargs)
+    def create_instance_main(*args, **kwargs):
+        return create_instance(streamlit._main, *args, **kwargs)
 
     # Register the component as a member function of DeltaGenerator, and as
     # a standalone function in the streamlit namespace.
     # TODO: disallow collisions with important streamlit functions!
-    setattr(DeltaGenerator, name, component_instance)
-    setattr(st, name, component_instance_main)
+    setattr(DeltaGenerator, name, create_instance)
+    setattr(st, name, create_instance_main)
 
 
 class ComponentRequestHandler(tornado.web.RequestHandler):
@@ -135,8 +250,8 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
 
     def get(self, path: str) -> None:
         parts = path.split("/")
-        component_id = parts[0]
-        component_root = self._registry.get_component_path(component_id)
+        component_name = parts[0]
+        component_root = self._registry.get_component_path(component_name)
         if component_root is None:
             self.write("%s not found" % path)
             self.set_status(404)
@@ -221,7 +336,7 @@ class ComponentRegistry:
     def __init__(self):
         self._components = {}  # type: Dict[str, Optional[str]]
 
-    def register_component(self, name: str, path: Optional[str] = None) -> str:
+    def register_component(self, name: str, path: Optional[str] = None) -> None:
         """Register a filesystem path as a custom component.
 
         Parameters
@@ -231,11 +346,6 @@ class ComponentRegistry:
         path : str or None
             The path to the directory that contains the component's contents,
             or None if the component is being served as a URL.
-
-        Returns
-        -------
-        str
-            The component's ID. (This is just its name.)
         """
         abspath = None
         if path is not None:
@@ -246,10 +356,9 @@ class ComponentRegistry:
                 )
 
         self._components[name] = abspath
-        return name
 
-    def get_component_path(self, id: str) -> Optional[str]:
-        """Return the path for the component with the given ID.
+    def get_component_path(self, name: str) -> Optional[str]:
+        """Return the path for the component with the given name.
         If no such component is registered, None will be returned instead.
         """
-        return self._components.get(id, None)
+        return self._components.get(name, None)

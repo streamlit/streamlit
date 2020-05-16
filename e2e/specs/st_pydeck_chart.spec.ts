@@ -17,7 +17,7 @@
 
 /// <reference types="cypress" />
 
-describe("st.deck_gl_chart", () => {
+describe("st.pydeck_chart", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
   });

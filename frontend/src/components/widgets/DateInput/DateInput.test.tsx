@@ -19,6 +19,7 @@ import React from "react"
 import { shallow } from "enzyme"
 import { fromJS } from "immutable"
 import { WidgetStateManager } from "lib/WidgetStateManager"
+import { DateInput as DateInputProto } from "autogen/proto"
 
 import DateInput, { Props } from "./DateInput"
 import { Datepicker as UIDatePicker } from "baseui/datepicker"
@@ -27,11 +28,12 @@ jest.mock("lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
 
-const getProps = (elementProps: object = {}): Props => ({
+const getProps = (elementProps: Partial<DateInputProto> = {}): Props => ({
   element: fromJS({
     id: 1,
     label: "Label",
     default: "1970/01/01",
+    min: "1970/1/1",
     ...elementProps,
   }),
   width: 0,
@@ -100,6 +102,24 @@ describe("DateInput widget", () => {
       props.element.get("id"),
       "2020/02/06",
       { fromUi: true }
+    )
+  })
+
+  it("should have a minDate", () => {
+    expect(wrapper.find(UIDatePicker).prop("minDate")).toStrictEqual(
+      new Date("1970/1/1")
+    )
+    expect(wrapper.find(UIDatePicker).prop("maxDate")).toBeUndefined()
+  })
+
+  it("should have a maxDate if it is passed", () => {
+    const props = getProps({
+      max: "2030/02/06",
+    })
+    const wrapper = shallow(<DateInput {...props} />)
+
+    expect(wrapper.find(UIDatePicker).prop("maxDate")).toStrictEqual(
+      new Date("2030/02/06")
     )
   })
 })

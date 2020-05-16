@@ -404,8 +404,10 @@ class Server(object):
             self._set_state(State.STOPPED)
 
         except Exception as e:
-            print("EXCEPTION!", e)
-            traceback.print_stack(file=sys.stdout)
+            # Can't just re-raise here because co-routines use Tornado
+            # exceptions for control flow, which appears to swallow the reraised
+            # exception.
+            traceback.print_exc()
             LOGGER.info(
                 """
 Please report this bug at https://github.com/streamlit/streamlit/issues.

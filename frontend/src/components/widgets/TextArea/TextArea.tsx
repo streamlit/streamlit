@@ -99,6 +99,7 @@ class TextArea extends React.PureComponent<Props, State> {
 
     const style = { width }
     const label = element.get("label")
+    const height = element.get("height")
 
     return (
       <div className="Widget stTextArea" style={style}>
@@ -109,6 +110,15 @@ class TextArea extends React.PureComponent<Props, State> {
           onChange={this.onChange}
           onKeyDown={this.onKeyDown}
           disabled={disabled}
+          overrides={{
+            Input: {
+              style: {
+                height: height ? `${height}px` : "",
+                minHeight: "95px",
+                resize: height ? "vertical" : "none",
+              },
+            },
+          }}
         />
         {dirty && !this.isFromMac && (
           <div className="instructions">Press Ctrl+Enter to apply</div>
