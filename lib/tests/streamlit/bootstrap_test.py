@@ -115,6 +115,56 @@ class BootstrapPrintTest(unittest.TestCase):
         self.assertTrue("Network URL: http://internal-ip" in out)
         self.assertTrue("External URL: http://external-ip" in out)
 
+    @patch("streamlit.net_util.get_external_ip")
+    @patch("streamlit.net_util.get_internal_ip")
+    def test_print_urls_remote_no_external(
+        self, mock_get_internal_ip, mock_get_external_ip
+    ):
+
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {"server.headless": True}
+        )
+
+        mock_get_internal_ip.return_value = "internal-ip"
+        mock_get_external_ip.return_value = None
+
+        with patch.object(config, "get_option", new=mock_get_option), patch.object(
+            config, "is_manually_set", new=mock_is_manually_set
+        ):
+            bootstrap._print_url()
+
+        out = sys.stdout.getvalue()
+        self.assertTrue("Network URL: http://internal-ip" in out)
+        self.assertTrue("External URL: http://external-ip" not in out)
+
+    @patch("streamlit.net_util.get_external_ip")
+    @patch("streamlit.net_util.get_internal_ip")
+    def test_print_urls_remote_no_internal(
+        self, mock_get_internal_ip, mock_get_external_ip
+    ):
+
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {"server.headless": True}
+        )
+
+        mock_get_internal_ip.return_value = None
+        mock_get_external_ip.return_value = "external-ip"
+
+        with patch.object(config, "get_option", new=mock_get_option), patch.object(
+            config, "is_manually_set", new=mock_is_manually_set
+        ):
+            bootstrap._print_url()
+
+        out = sys.stdout.getvalue()
+        self.assertTrue("Network URL: http://internal-ip" not in out)
+        self.assertTrue("External URL: http://external-ip" in out)
+
     @patch("streamlit.net_util.get_internal_ip")
     def test_print_urls_local(self, mock_get_internal_ip):
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(
@@ -179,3 +229,28 @@ class BootstrapPrintTest(unittest.TestCase):
         out = sys.stdout.getvalue()
         self.assertTrue("Local URL: http://localhost:8501/foo" in out)
         self.assertTrue("Network URL: http://internal-ip:8501/foo" in out)
+
+    @patch("streamlit.net_util.get_internal_ip")
+    def test_print_urls_base_no_internal(self, mock_get_internal_ip):
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.headless": False,
+                "server.baseUrlPath": "foo",
+                "server.port": 8501,
+                "global.useNode": False,
+            }
+        )
+
+        mock_get_internal_ip.return_value = None
+
+        with patch.object(config, "get_option", new=mock_get_option), patch.object(
+            config, "is_manually_set", new=mock_is_manually_set
+        ):
+            bootstrap._print_url()
+
+        out = sys.stdout.getvalue()
+        self.assertTrue("Local URL: http://localhost:8501/foo" in out)
+        self.assertTrue("Network URL: http://internal-ip:8501/foo" not in out)

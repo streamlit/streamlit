@@ -18,8 +18,9 @@
 import React from "react"
 import { Input as UIInput } from "baseui/input"
 import { Map as ImmutableMap } from "immutable"
-import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { TextInput as TextInputProto } from "autogen/proto"
+import { WidgetStateManager, Source } from "lib/WidgetStateManager"
+import InputInstructions from "components/shared/InputInstructions/InputInstructions"
 
 export interface Props {
   disabled: boolean
@@ -64,10 +65,17 @@ class TextInput extends React.PureComponent<Props, State> {
   }
 
   private onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    this.setState({
-      dirty: true,
-      value: e.target.value,
-    })
+    const { value } = e.target
+    const { element } = this.props
+
+    const maxChars = element.get("maxChars")
+
+    if (!maxChars || value.length <= maxChars) {
+      this.setState({
+        dirty: true,
+        value,
+      })
+    }
   }
 
   private onKeyPress = (e: React.KeyboardEvent<HTMLInputElement>): void => {
@@ -83,23 +91,25 @@ class TextInput extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const label: string = this.props.element.get("label")
-    const style = { width: this.props.width }
+    const { dirty, value } = this.state
+    const { element, width, disabled } = this.props
+
+    const label: string = element.get("label")
+    const maxChars = element.get("maxChars")
+    const style = { width }
 
     return (
       <div className="Widget row-widget stTextInput" style={style}>
         <label>{label}</label>
         <UIInput
-          value={this.state.value}
+          value={value}
           onBlur={this.onBlur}
           onChange={this.onChange}
           onKeyPress={this.onKeyPress}
-          disabled={this.props.disabled}
+          disabled={disabled}
           type={this.getTypeString()}
         />
-        {this.state.dirty ? (
-          <div className="instructions">Press Enter to apply</div>
-        ) : null}
+        <InputInstructions dirty={dirty} value={value} maxLength={maxChars} />
       </div>
     )
   }
