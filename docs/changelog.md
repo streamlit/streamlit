@@ -16,6 +16,23 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.60.0
+
+_Release date: May 18, 2020_
+
+**Highlights:**
+
+- ↕️ Ability to set the height of an `st.text_area` with the `height` argument
+  (expressed in pixels). See
+  [docs](https://docs.streamlit.io/api.html#streamlit.text_area) for more.
+- 🔡 Ability to set the maximimum number of characters allowed in `st.text_area`
+  or `st.text_input`. Check out the `max_chars` argument in the
+  [docs](https://docs.streamlit.io/api.html#streamlit.text_area).
+- 🗺️ Better DeckGL support for the [H3](https://h3geo.org/) geospatial indexing
+  system. So now you can use things like `H3HexagonLayer` in
+  [`st.pydeck_chart`](https://docs.streamlit.io/api.html#streamlit.pydeck_chart).
+- 📦 Improved `@st.cache` support for PyTorch TensorBase and Model.
+
 ## Version 0.59.0
 
 _Release date: May 05, 2020_
