@@ -1576,7 +1576,6 @@ class DeltaGenerator(object):
             Includes support for YouTube URLs.
             Numpy arrays and raw data formats must include all necessary file
             headers to match specified file format.
-        start_time: int
         format : str
             The mime type for the video file. Defaults to 'video/mp4'.
             See https://tools.ietf.org/html/rfc4281 for more info.
@@ -2214,7 +2213,9 @@ class DeltaGenerator(object):
         return str(current_value)
 
     @_with_element
-    def text_input(self, element, label, value="", max_chars=None, key=None, type="default"):
+    def text_input(
+        self, element, label, value="", max_chars=None, key=None, type="default"
+    ):
         """Display a single-line text input widget.
 
         Parameters
@@ -2268,7 +2269,9 @@ class DeltaGenerator(object):
         return str(current_value)
 
     @_with_element
-    def text_area(self, element, label, value="", height=None, max_chars=None, key=None):
+    def text_area(
+        self, element, label, value="", height=None, max_chars=None, key=None
+    ):
         """Display a multi-line text input widget.
 
         Parameters
@@ -2373,7 +2376,15 @@ class DeltaGenerator(object):
         return current_value
 
     @_with_element
-    def date_input(self, element, label, value=None, min_value=datetime.min, max_value=None, key=None):
+    def date_input(
+        self,
+        element,
+        label,
+        value=None,
+        min_value=datetime.min,
+        max_value=None,
+        key=None,
+    ):
         """Display a date input widget.
 
         Parameters
@@ -2430,7 +2441,7 @@ class DeltaGenerator(object):
 
         if max_value is None:
             today = date.today()
-            max_value = date(today.year+10, today.month, today.day)
+            max_value = date(today.year + 10, today.month, today.day)
 
         if isinstance(max_value, datetime):
             max_value = max_value.date()
