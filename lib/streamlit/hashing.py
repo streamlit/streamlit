@@ -510,6 +510,9 @@ class _CodeHasher:
         elif type_util.is_type(obj, "tensorflow.python.keras.engine.training.Model"):
             return self.to_bytes(id(obj))
 
+        elif type_util.is_type(obj, "tensorflow.python.saved_model.load.Loader._recreate_base_user_object.<locals>._UserObject"):
+            return self.to_bytes(id(obj))
+
         elif inspect.isroutine(obj):
             if hasattr(obj, "__wrapped__"):
                 # Ignore the wrapper of wrapped functions.
