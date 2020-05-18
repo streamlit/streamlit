@@ -966,20 +966,18 @@ def _set_development_mode():
     development.is_development_mode = get_option("global.developmentMode")
 
 
-def on_config_parsed(func, connect_signal=False):
+def on_config_parsed(func, force_connect=False):
     """Wait for the config file to be parsed then call func.
 
     If the config file has already been parsed, just calls fun immediately.
 
     """
-    if connect_signal:
-        _on_config_parsed.connect(lambda _: func(), weak=False)
-    elif _config_file_has_been_parsed:
-        func()
-    else:
+    if force_connect or not _config_file_has_been_parsed:
         # weak=False, because we're using an anonymous lambda that
         # goes out of scope immediately.
         _on_config_parsed.connect(lambda _: func(), weak=False)
+    else:
+        func()
 
 
 # Run _check_conflicts only once the config file is parsed in order to avoid

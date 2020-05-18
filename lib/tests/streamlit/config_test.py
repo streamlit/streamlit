@@ -22,6 +22,7 @@ import pytest
 from mock import MagicMock
 from mock import mock_open
 from mock import patch
+from parameterized import parameterized
 
 from streamlit import config
 from streamlit import env_util
@@ -511,32 +512,27 @@ class ConfigTest(unittest.TestCase):
         config.set_option("global.developmentMode", False)
         self.assertEqual("info", config.get_option("global.logLevel"))
 
-    def test_on_config_parsed(self):
+    @parameterized.expand([(True, True), (True, False), (False, False), (False, True)])
+    def test_on_config_parsed(self, config_parsed, connect_signal):
         """Tests to make sure callback is handled properly based upon
         _config_file_has_been_parsed and connect_signal."""
 
         mock_callback = MagicMock(return_value=None)
 
-        for config_parsed in [True, False, None]:
-            with patch.object(
-                config, "_config_file_has_been_parsed", new=config_parsed
-            ):
-                for connect_signal in [True, False, None]:
-                    with patch.object(
-                        config._on_config_parsed, "connect"
-                    ) as patched_connect:
-                        mock_callback.reset_mock()
-                        config.on_config_parsed(mock_callback, connect_signal)
+        with patch.object(config, "_config_file_has_been_parsed", new=config_parsed):
+            with patch.object(config._on_config_parsed, "connect") as patched_connect:
+                mock_callback.reset_mock()
+                config.on_config_parsed(mock_callback, connect_signal)
 
-                        if connect_signal:
-                            patched_connect.assert_called_once()
-                            mock_callback.assert_not_called()
-                        elif config_parsed:
-                            patched_connect.assert_not_called()
-                            mock_callback.assert_called_once()
-                        else:
-                            patched_connect.assert_called_once()
-                            mock_callback.assert_not_called()
+                if connect_signal:
+                    patched_connect.assert_called_once()
+                    mock_callback.assert_not_called()
+                elif config_parsed:
+                    patched_connect.assert_not_called()
+                    mock_callback.assert_called_once()
+                else:
+                    patched_connect.assert_called_once()
+                    mock_callback.assert_not_called()
 
 
 class ConfigLoadingTest(unittest.TestCase):

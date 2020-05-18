@@ -177,8 +177,11 @@ class CliTest(unittest.TestCase):
         self.assertEqual(result["description"], config_option.description)
         self.assertEqual(result["envvar"], "STREAMLIT_SERVER_CUSTOM_KEY")
 
+    @patch("streamlit.cli._config._on_config_parsed.send")
     @patch("streamlit.cli._config._set_option")
-    def test_apply_config_options_from_cli(self, patched__set_option):
+    def test_apply_config_options_from_cli(
+        self, patched__set_option, patched___send_on_config_parsed
+    ):
         """Test that _apply_config_options_from_cli parses the key properly and
         passes down the parameters.
         """
@@ -216,42 +219,7 @@ class CliTest(unittest.TestCase):
             ],
             any_order=True,
         )
-
-    @patch("streamlit.cli._config._on_config_parsed.send")
-    def test_apply_config_options_from_cli_pre_parse(
-        self, patched___send_on_config_parsed
-    ):
-        """Test that _apply_config_options_from_cli does not trigger on_config_parsed
-        """
-
-        kwargs = {
-            "server_port": 3005,
-            "server_headless": True,
-            "browser_serverAddress": "localhost",
-            "global_minCachedMessageSize": None,
-            "global_logLevel": "error",
-        }
-        with patch.object(config, "_config_file_has_been_parsed", new=False):
-            _apply_config_options_from_cli(kwargs)
-            self.assertFalse(patched___send_on_config_parsed.called)
-
-    @patch("streamlit.cli._config._on_config_parsed.send")
-    def test_apply_config_options_from_cli_post_parse(
-        self, patched___send_on_config_parsed
-    ):
-        """Test that _apply_config_options_from_cli triggers on_config_parsed
-        """
-
-        kwargs = {
-            "server_port": 3005,
-            "server_headless": True,
-            "browser_serverAddress": "localhost",
-            "global_minCachedMessageSize": None,
-            "global_logLevel": "error",
-        }
-        with patch.object(config, "_config_file_has_been_parsed", new=True):
-            _apply_config_options_from_cli(kwargs)
-            self.assertTrue(patched___send_on_config_parsed.called)
+        self.assertTrue(patched___send_on_config_parsed.called)
 
     def test_credentials_headless_no_config(self):
         """If headless mode and no config is present,

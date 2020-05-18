@@ -92,6 +92,11 @@ def _apply_config_options_from_cli(kwargs):
     config.toml file
 
     """
+    # Parse config files first before setting CLI args.
+    # Prevents CLI args from being overwritten
+    if not _config._config_file_has_been_parsed:
+        _config.parse_config_file()
+
     for config_option in kwargs:
         if kwargs[config_option] is not None:
             config_option_def_key = config_option.replace("_", ".")
@@ -101,8 +106,8 @@ def _apply_config_options_from_cli(kwargs):
                 kwargs[config_option],
                 "command-line argument or environment variable",
             )
-    if _config._config_file_has_been_parsed:
-        _config._on_config_parsed.send()
+
+    _config._on_config_parsed.send()
 
 
 # Fetch remote file at url_path to script_path
