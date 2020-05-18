@@ -67,7 +67,7 @@ to display geospatial data.
                 """
 This demo shows how to use `st.write` to visualize Pandas DataFrames.
 
-(Data courtesy of the [UN Data Exlorer](http://data.un.org/Explorer.aspx).)
+(Data courtesy of the [UN Data Explorer](http://data.un.org/Explorer.aspx).)
 """,
             ),
         ),
