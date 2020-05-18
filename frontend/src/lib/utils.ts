@@ -118,3 +118,10 @@ export function flattenElements(
 export function timeout(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
+
+/**
+ * Tests if the app is running from a Mac
+ */
+export function isFromMac(): boolean {
+  return /Mac/i.test(navigator.platform)
+}

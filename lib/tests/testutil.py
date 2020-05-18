@@ -89,7 +89,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
             )
 
     def tearDown(self):
-        self.report_queue._clear()
+        self.clear_queue()
         if self.override_root:
             add_report_ctx(threading.current_thread(), self.orig_report_ctx)
 
@@ -109,10 +109,12 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         -------
         Delta
         """
-        # return self.report_queue._queue[index].delta
         deltas = self.get_all_deltas_from_queue()
         return deltas[index]
 
     def get_all_deltas_from_queue(self):
         """Return all the delta messages in our ReportQueue"""
         return [msg.delta for msg in self.report_queue._queue if msg.HasField("delta")]
+
+    def clear_queue(self):
+        self.report_queue._clear()
