@@ -387,9 +387,9 @@ class HashTest(unittest.TestCase):
     def test_tf_saved_model(self):
         tempdir = tempfile.TemporaryDirectory()
 
-        model = tf.keras.models.Sequential([
-            tf.keras.layers.Dense(512, activation='relu', input_shape=(784,)),
-        ])
+        model = tf.keras.models.Sequential(
+            [tf.keras.layers.Dense(512, activation="relu", input_shape=(784,)),]
+        )
         model.save(tempdir.name)
 
         a = tf.saved_model.load(tempdir.name)
