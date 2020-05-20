@@ -91,6 +91,22 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     })
   }
 
+  static getDerivedStateFromProps(
+    props: Readonly<PropsWithHeight>,
+    state: Partial<State>
+  ): Partial<State> | null {
+    const deck = DeckGlJsonChart.getDeckObject(props)
+
+    if (!isEqual(deck.initialViewState, state.initialViewState)) {
+      return {
+        viewState: deck.initialViewState,
+        initialViewState: deck.initialViewState,
+      }
+    }
+
+    return null
+  }
+
   static getDeckObject = (props: PropsWithHeight): DeckObject => {
     const { element, width, height } = props
     const useContainerWidth = element.get("useContainerWidth")
@@ -152,22 +168,6 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
 
   onViewStateChange = ({ viewState }: State): void => {
     this.setState({ viewState })
-  }
-
-  static getDerivedStateFromProps(
-    props: Readonly<PropsWithHeight>,
-    state: Partial<State>
-  ): Partial<State> | null {
-    const deck = DeckGlJsonChart.getDeckObject(props)
-
-    if (!isEqual(deck.initialViewState, state.initialViewState)) {
-      return {
-        viewState: deck.initialViewState,
-        initialViewState: deck.initialViewState,
-      }
-    }
-
-    return null
   }
 
   render(): ReactNode {
