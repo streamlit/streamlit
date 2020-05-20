@@ -68,9 +68,9 @@ export interface PropsWithHeight extends Props {
 }
 
 interface State {
-  viewState: any
+  viewState: object | null
   initialized: boolean
-  initialViewState: any
+  initialViewState: object | null
 }
 
 export const DEFAULT_DECK_GL_HEIGHT = 500
@@ -91,7 +91,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     })
   }
 
-  static getDeckObject = (props: any): DeckObject => {
+  static getDeckObject = (props: PropsWithHeight): DeckObject => {
     const { element, width, height } = props
     const useContainerWidth = element.get("useContainerWidth")
     const json = JSON.parse(element.get("json"))
@@ -154,7 +154,10 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     this.setState({ viewState })
   }
 
-  static getDerivedStateFromProps(props: any, state: any): object | null {
+  static getDerivedStateFromProps(
+    props: any,
+    state: any
+  ): Partial<State> | null {
     const deck = DeckGlJsonChart.getDeckObject(props)
 
     if (!isEqual(deck.initialViewState, state.initialViewState)) {
