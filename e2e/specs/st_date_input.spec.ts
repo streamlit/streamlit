@@ -23,13 +23,18 @@ describe("st.date_input", () => {
   });
 
   it("shows labels", () => {
-    cy.get(".stDateInput label").should("have.text", "Label 1" + "Label 2");
+    cy.get(".stDateInput label").should(
+      "have.text",
+      "Label 1" + "Label 2" + "Label 3"
+    );
   });
 
   it("has correct values", () => {
     cy.get(".stMarkdown").should(
       "have.text",
-      "Value 1: 1970-01-01" + "Value 2: 2019-07-06"
+      "Value 1: (datetime.date(1970, 1, 1), datetime.date(1970, 1, 1))" +
+        "Value 2: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 6))" +
+        "Value 3: (datetime.date(2019, 7, 6), datetime.date(2019, 8, 6))"
     );
   });
 
@@ -46,7 +51,21 @@ describe("st.date_input", () => {
 
     cy.get(".stMarkdown").should(
       "have.text",
-      "Value 1: 1970-01-02" + "Value 2: 2019-07-06"
+      "Value 1: (datetime.date(1970, 1, 2),)" +
+        "Value 2: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 6))" +
+        "Value 3: (datetime.date(2019, 7, 6), datetime.date(2019, 8, 6))"
+    );
+
+    // select '1970/01/03'
+    cy.get(
+      '[data-baseweb="calendar"] [aria-label^="Choose Saturday, January 3rd 1970."]'
+    ).click();
+
+    cy.get(".stMarkdown").should(
+      "have.text",
+      "Value 1: (datetime.date(1970, 1, 2), datetime.date(1970, 1, 3))" +
+        "Value 2: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 6))" +
+        "Value 3: (datetime.date(2019, 7, 6), datetime.date(2019, 8, 6))"
     );
   });
 });

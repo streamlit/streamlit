@@ -21,3 +21,6 @@ st.write("Value 1:", w1)
 
 w2 = st.date_input("Label 2", datetime(2019, 7, 6, 21, 15))
 st.write("Value 2:", w2)
+
+w3 = st.date_input("Label 3", (datetime(2019, 7, 6, 21), datetime(2019, 8, 6, 21)))
+st.write("Value 3:", w3)
