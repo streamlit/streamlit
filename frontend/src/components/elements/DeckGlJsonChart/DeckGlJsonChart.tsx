@@ -18,6 +18,7 @@
 import React, { PureComponent, ReactNode } from "react"
 import DeckGL from "deck.gl"
 import Immutable from "immutable"
+import isEqual from "lodash/isEqual"
 import { StaticMap } from "react-map-gl"
 import * as layers from "@deck.gl/layers"
 import { JSONConverter } from "@deck.gl/json"
@@ -67,14 +68,18 @@ export interface PropsWithHeight extends Props {
 }
 
 interface State {
+  viewState: any
   initialized: boolean
+  initialViewState: any
 }
 
 export const DEFAULT_DECK_GL_HEIGHT = 500
 
 export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
   readonly state = {
+    viewState: null,
     initialized: false,
+    initialViewState: null,
   }
 
   componentDidMount = (): void => {
@@ -86,8 +91,8 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     })
   }
 
-  getDeckObject = (): DeckObject => {
-    const { element, width, height } = this.props
+  static getDeckObject = (props: any): DeckObject => {
+    const { element, width, height } = props
     const useContainerWidth = element.get("useContainerWidth")
     const json = JSON.parse(element.get("json"))
 
@@ -145,8 +150,27 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     return body
   }
 
+  onViewStateChange = ({ viewState }: State) => {
+    this.setState({ viewState })
+  }
+
+  static getDerivedStateFromProps(props: any, state: any) {
+    const deck = DeckGlJsonChart.getDeckObject(props)
+    let { viewState, initialViewState } = state
+
+    if (!isEqual(deck.initialViewState, state.initialViewState)) {
+      initialViewState = viewState = deck.initialViewState
+    }
+
+    return {
+      viewState,
+      initialViewState,
+    }
+  }
+
   render(): ReactNode {
-    const deck = this.getDeckObject()
+    const deck = DeckGlJsonChart.getDeckObject(this.props)
+    const { viewState } = this.state
 
     return (
       <div
@@ -157,7 +181,8 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
         }}
       >
         <DeckGL
-          initialViewState={deck.initialViewState}
+          viewState={viewState}
+          onViewStateChange={this.onViewStateChange}
           height={deck.initialViewState.height}
           width={deck.initialViewState.width}
           layers={this.state.initialized ? deck.layers : []}
