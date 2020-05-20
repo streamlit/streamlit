@@ -155,8 +155,8 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
   }
 
   static getDerivedStateFromProps(
-    props: any,
-    state: any
+    props: Readonly<PropsWithHeight>,
+    state: Partial<State>
   ): Partial<State> | null {
     const deck = DeckGlJsonChart.getDeckObject(props)
 
