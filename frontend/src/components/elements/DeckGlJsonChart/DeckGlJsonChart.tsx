@@ -77,6 +77,8 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     initialized: false,
   }
 
+  private deckRef = React.createRef<PureComponent>()
+
   componentDidMount = (): void => {
     // HACK: Load layers a little after loading the map, to hack around a bug
     // where HexagonLayers were not drawing on first load but did load when the
@@ -84,6 +86,16 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     this.setState({
       initialized: true,
     })
+  }
+
+  getDeckAndUpdateViewState = (): DeckObject => {
+    const ref = this.deckRef.current
+    const deck = this.getDeckObject()
+    if (ref) {
+      let dd = ref as any
+      dd["deck"].viewState = deck.initialViewState
+    }
+    return deck
   }
 
   getDeckObject = (): DeckObject => {
@@ -107,16 +119,15 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     }
 
     delete json.views // We are not using views. This avoids a console warning.
-
     return jsonConverter.convert(json)
   }
 
-  createTooltip = (info: PickingInfo): object | boolean => {
+  createTooltip = (info: PickingInfo): object | null => {
     const { element } = this.props
     let tooltip = element.get("tooltip")
 
     if (!info || !info.object || !tooltip) {
-      return false
+      return null
     }
 
     tooltip = JSON.parse(tooltip)
@@ -146,7 +157,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
   }
 
   render(): ReactNode {
-    const deck = this.getDeckObject()
+    const deck = this.getDeckAndUpdateViewState()
 
     return (
       <div
@@ -157,12 +168,13 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
         }}
       >
         <DeckGL
-          initialViewState={deck.initialViewState}
           height={deck.initialViewState.height}
           width={deck.initialViewState.width}
           layers={this.state.initialized ? deck.layers : []}
           getTooltip={this.createTooltip}
+          ref={this.deckRef}
           controller
+          effects={[]}
         >
           <StaticMap
             height={deck.initialViewState.height}

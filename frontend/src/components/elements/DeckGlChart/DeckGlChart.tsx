@@ -68,9 +68,11 @@ export class DeckGlChart extends PureComponent<PropsWithHeight, State> {
     height: 500,
   }
 
-  state = {
+  readonly state = {
     initialized: false,
   }
+
+  private deckRef = React.createRef<PureComponent>()
 
   componentDidMount(): void {
     // HACK: Load layers a little after loading the map, to hack around a bug
@@ -92,10 +94,10 @@ export class DeckGlChart extends PureComponent<PropsWithHeight, State> {
 
   private generateViewState(viewPort: ViewPort): ViewState {
     const { element, width, height } = this.props
-
+    const ref = this.deckRef.current
     const useContainerWidth = element.get("useContainerWidth")
 
-    return {
+    let viewState = {
       width: !viewPort.width || useContainerWidth ? width : viewPort.width,
       height: viewPort.height || height,
       longitude: viewPort.longitude || 0,
@@ -103,7 +105,14 @@ export class DeckGlChart extends PureComponent<PropsWithHeight, State> {
       pitch: viewPort.pitch || 0,
       bearing: viewPort.bearing || 0,
       zoom: viewPort.zoom || 1,
-    } as ViewState
+    }
+
+    if (ref) {
+      let dd = ref as any
+      dd["deck"].viewState = viewState
+    }
+
+    return viewState as ViewState
   }
 
   public render(): JSX.Element {
@@ -126,6 +135,8 @@ export class DeckGlChart extends PureComponent<PropsWithHeight, State> {
           width={initialViewState.width}
           controller
           layers={this.state.initialized ? this.buildLayers() : []}
+          ref={this.deckRef}
+          effects={[]}
         >
           <StaticMap
             height={initialViewState.height}
