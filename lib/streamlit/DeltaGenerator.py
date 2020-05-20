@@ -1766,10 +1766,10 @@ class DeltaGenerator(object):
         index : int
             The index of the preselected option on first render.
         format_func : function
-            Function to modify the display of selectbox options. It receives
+            Function to modify the display of radio options. It receives
             the raw option as an argument and should output the label to be
             shown for that option. This has no impact on the return value of
-            the selectbox.
+            the radio.
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
