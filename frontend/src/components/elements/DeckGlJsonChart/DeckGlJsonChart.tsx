@@ -150,22 +150,21 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     return body
   }
 
-  onViewStateChange = ({ viewState }: State) => {
+  onViewStateChange = ({ viewState }: State): void => {
     this.setState({ viewState })
   }
 
-  static getDerivedStateFromProps(props: any, state: any) {
+  static getDerivedStateFromProps(props: any, state: any): object | null {
     const deck = DeckGlJsonChart.getDeckObject(props)
-    let { viewState, initialViewState } = state
 
     if (!isEqual(deck.initialViewState, state.initialViewState)) {
-      initialViewState = viewState = deck.initialViewState
+      return {
+        viewState: deck.initialViewState,
+        initialViewState: deck.initialViewState,
+      }
     }
 
-    return {
-      viewState,
-      initialViewState,
-    }
+    return null
   }
 
   render(): ReactNode {
