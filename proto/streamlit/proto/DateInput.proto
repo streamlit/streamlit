@@ -22,4 +22,5 @@ message DateInput {
   repeated string default = 3;
   string min = 4;
   string max = 5;
+  bool range = 6;
 }

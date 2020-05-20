@@ -35,6 +35,7 @@ interface State {
    * widget's UI, the default value is used.
    */
   values: Date[]
+  range: boolean
 }
 
 class DateInput extends React.PureComponent<Props, State> {
@@ -43,6 +44,7 @@ class DateInput extends React.PureComponent<Props, State> {
       .get("default")
       .toJS()
       .map((val: string) => new Date(val)),
+    range: this.props.element.get("range"),
   }
 
   public componentDidMount(): void {
@@ -76,12 +78,13 @@ class DateInput extends React.PureComponent<Props, State> {
 
   public render = (): React.ReactNode => {
     const { width, element, disabled } = this.props
-    const { values } = this.state
+    const { values, range } = this.state
 
     const style = { width }
     const label = element.get("label")
     const minDate = new Date(element.get("min"))
     const maxDate = this.getMaxDate()
+    const dateMask = "9999/99/99"
 
     return (
       <div className="Widget stDateInput" style={style}>
@@ -94,8 +97,8 @@ class DateInput extends React.PureComponent<Props, State> {
           value={values}
           minDate={minDate}
           maxDate={maxDate}
-          range
-          mask="9999/99/99 – 9999/99/99"
+          range={range}
+          mask={range ? `${dateMask} – ${dateMask}` : dateMask}
         />
       </div>
     )

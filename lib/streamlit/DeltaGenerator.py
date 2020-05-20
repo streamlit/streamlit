@@ -1947,7 +1947,7 @@ class DeltaGenerator(object):
 
         # Ensure that the value is either a single value or a range of values.
         single_value = isinstance(value, (int, float))
-        range_value = isinstance(value, (list, tuple)) and len(value) == 2
+        range_value = isinstance(value, (list, tuple))
         if not single_value and not range_value:
             raise StreamlitAPIException(
                 "Slider value should either be an int/float or a list/tuple of "
@@ -2017,12 +2017,14 @@ class DeltaGenerator(object):
                     "and the `max_value` of %(max)s, inclusively."
                     % {"value": value, "min": min_value, "max": max_value}
                 )
-        else:
+        elif len(value) == 2:
             start, end = value
             if not min_value <= start <= end <= max_value:
                 raise StreamlitAPIException(
                     "The value and/or arguments are out of range."
                 )
+        else:
+            value = [min_value, max_value]
 
         # Bounds checks. JSNumber produces human-readable exceptions that
         # we simply re-package as StreamlitAPIExceptions.
@@ -2416,10 +2418,10 @@ class DeltaGenerator(object):
         """
         # Set value default.
         if value is None:
-            value = [datetime.now().date(), datetime.now().date()]
+            value = datetime.now().date()
 
         single_value = isinstance(value, (date, datetime))
-        range_value = isinstance(value, (list, tuple)) and len(value) == 2
+        range_value = isinstance(value, (list, tuple))
         if not single_value and not range_value:
             raise StreamlitAPIException(
                 "DateInput value should either be an date/datetime or a list/tuple of "
@@ -2427,7 +2429,9 @@ class DeltaGenerator(object):
             )
 
         if single_value:
-            value = [value, value]
+            value = [value]
+        else:
+            element.date_input.range = True
 
         value = [v.date() if isinstance(v, datetime) else v for v in value]
 
@@ -2452,7 +2456,11 @@ class DeltaGenerator(object):
         ui_value = _get_widget_ui_value("date_input", element, user_key=key)
         if ui_value is not None:
             result = getattr(ui_value, "data")
-        return tuple(map(lambda dt: datetime.strptime(dt, "%Y/%m/%d").date() if isinstance(dt, str) else dt,result))
+
+        if single_value:
+            return datetime.strptime(result[0], "%Y/%m/%d").date() if isinstance(result[0], str) else result[0]
+        else:
+            return tuple(map(lambda dt: datetime.strptime(dt, "%Y/%m/%d").date() if isinstance(dt, str) else dt,result))
 
     @_with_element
     def number_input(
