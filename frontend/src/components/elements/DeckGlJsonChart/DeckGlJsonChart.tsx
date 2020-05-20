@@ -92,7 +92,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     const ref = this.deckRef.current
     const deck = this.getDeckObject()
     if (ref) {
-      let dd = ref as any
+      const dd = ref as any
       dd["deck"].viewState = deck.initialViewState
     }
     return deck

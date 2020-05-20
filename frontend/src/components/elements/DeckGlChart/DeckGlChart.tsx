@@ -97,7 +97,7 @@ export class DeckGlChart extends PureComponent<PropsWithHeight, State> {
     const ref = this.deckRef.current
     const useContainerWidth = element.get("useContainerWidth")
 
-    let viewState = {
+    const viewState = {
       width: !viewPort.width || useContainerWidth ? width : viewPort.width,
       height: viewPort.height || height,
       longitude: viewPort.longitude || 0,
@@ -108,7 +108,7 @@ export class DeckGlChart extends PureComponent<PropsWithHeight, State> {
     }
 
     if (ref) {
-      let dd = ref as any
+      const dd = ref as any
       dd["deck"].viewState = viewState
     }
 
