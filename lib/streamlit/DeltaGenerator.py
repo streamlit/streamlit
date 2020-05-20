@@ -2394,8 +2394,9 @@ class DeltaGenerator(object):
         label : str
             A short label explaining to the user what this date input is for.
         value : datetime.date or datetime.datetime or list/tuple of datetime.date or datetime.datetime or None
-            The value of this widget when it first renders. This will be
-            cast to str internally. Defaults to today.
+            The value of this widget when it first renders. If a list/tuple with
+            0 to 2 date/datetime values is provided, the datepicker will allow
+            users to provide a range. Defaults to today as a single datepicker.
         min_value : datetime.date or datetime.datetime
             The minimum selectable date. Defaults to datetime.min.
         max_value : datetime.date or datetime.datetime
