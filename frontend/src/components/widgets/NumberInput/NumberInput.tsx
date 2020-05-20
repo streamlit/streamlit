@@ -15,15 +15,16 @@
  * limitations under the License.
  */
 
-import { NumberInput as NumberInputProto } from "autogen/proto"
 import React from "react"
 import { sprintf } from "sprintf-js"
-import { Input as UIInput } from "baseui/input"
-import { Map as ImmutableMap } from "immutable"
-import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { logWarning } from "lib/log"
+import { Map as ImmutableMap } from "immutable"
+import { NumberInput as NumberInputProto } from "autogen/proto"
+import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 
 import Icon from "components/shared/Icon"
+import { Input as UIInput } from "baseui/input"
+import InputInstructions from "components/shared/InputInstructions/InputInstructions"
 
 import "./NumberInput.scss"
 
@@ -281,7 +282,11 @@ class NumberInput extends React.PureComponent<Props, State> {
             </button>
           </div>
         </div>
-        {dirty && <div className="instructions">Press Enter to apply</div>}
+        <InputInstructions
+          dirty={dirty}
+          value={formattedValue}
+          className="input-instructions"
+        />
       </div>
     )
   }

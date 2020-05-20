@@ -539,8 +539,14 @@ _SPACES_RE = _re.compile("\\s*")
 
 
 @_contextlib.contextmanager
-def echo():
+def echo(code_location="above"):
     """Use in a `with` block to draw some code on the app, then execute it.
+
+    Parameters
+    ----------
+    code_location : "above" or "below"
+        Whether to show the echoed code before or after the results of the
+        executed code block.
 
     Example
     -------
@@ -549,7 +555,14 @@ def echo():
     >>>     st.write('This code will be printed')
 
     """
-    code = empty()  # noqa: F821
+    if code_location == "below":
+        show_code = code
+        show_warning = warning
+    else:
+        placeholder = empty()  # noqa: F821
+        show_code = placeholder.code
+        show_warning = placeholder.warning
+
     try:
         frame = _traceback.extract_stack()[-3]
         filename, start_line = frame.filename, frame.lineno
@@ -570,10 +583,11 @@ def echo():
                     break
                 lines_to_display.append(line)
         line_to_display = _textwrap.dedent("".join(lines_to_display))
-        code.code(line_to_display, "python")
+
+        show_code(line_to_display, "python")
 
     except FileNotFoundError as err:
-        code.warning("Unable to display code. %s" % err)
+        show_warning("Unable to display code. %s" % err)
 
 
 def _transparent_write(*args):

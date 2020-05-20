@@ -1,0 +1,3 @@
+pipenv
+mypy-protobuf
+sphinx_markdown_tables

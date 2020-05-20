@@ -6,8 +6,8 @@ SHELL=/bin/bash
 PYTHON_MODULES := $(foreach initpy, $(foreach dir, $(wildcard lib/*), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
 PY_VERSION := $(shell python -c 'import platform; print(platform.python_version())')
 
-# Configure Black to not depend on syntax only supported by Python >= 3.6.
-BLACK=black --target-version=py35
+# Configure Black to support only syntax supported by the minimum supported Python version in setup.py.
+BLACK=black --target-version=py36
 
 
 .PHONY: help

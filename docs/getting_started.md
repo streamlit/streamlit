@@ -38,7 +38,7 @@ these commands in a virtual environment. This ensures that the dependencies
 pulled in for Streamlit don't impact any other Python projects
 you're working on.
 
-- [pipenv](https://docs.pipenv.org/en/latest/)
+- [pipenv](https://pipenv.pypa.io/en/latest/)
 - [venv](https://docs.python.org/3/library/venv.html)
 - [virtualenv](https://virtualenv.pypa.io/en/latest/)
 - [conda](https://www.anaconda.com/distribution/)
