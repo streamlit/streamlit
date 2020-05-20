@@ -1576,7 +1576,6 @@ class DeltaGenerator(object):
             Includes support for YouTube URLs.
             Numpy arrays and raw data formats must include all necessary file
             headers to match specified file format.
-        start_time: int
         format : str
             The mime type for the video file. Defaults to 'video/mp4'.
             See https://tools.ietf.org/html/rfc4281 for more info.
@@ -1767,10 +1766,10 @@ class DeltaGenerator(object):
         index : int
             The index of the preselected option on first render.
         format_func : function
-            Function to modify the display of selectbox options. It receives
+            Function to modify the display of radio options. It receives
             the raw option as an argument and should output the label to be
             shown for that option. This has no impact on the return value of
-            the selectbox.
+            the radio.
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -2216,7 +2215,9 @@ class DeltaGenerator(object):
         return str(current_value)
 
     @_with_element
-    def text_input(self, element, label, value="", max_chars=None, key=None, type="default"):
+    def text_input(
+        self, element, label, value="", max_chars=None, key=None, type="default"
+    ):
         """Display a single-line text input widget.
 
         Parameters
@@ -2270,7 +2271,9 @@ class DeltaGenerator(object):
         return str(current_value)
 
     @_with_element
-    def text_area(self, element, label, value="", height=None, max_chars=None, key=None):
+    def text_area(
+        self, element, label, value="", height=None, max_chars=None, key=None
+    ):
         """Display a multi-line text input widget.
 
         Parameters
@@ -2382,7 +2385,7 @@ class DeltaGenerator(object):
         value=None,
         min_value=datetime.min,
         max_value=None,
-        key=None
+        key=None,
     ):
         """Display a date input widget.
 
@@ -2445,7 +2448,7 @@ class DeltaGenerator(object):
 
         if max_value is None:
             today = date.today()
-            max_value = date(today.year+10, today.month, today.day)
+            max_value = date(today.year + 10, today.month, today.day)
 
         if isinstance(max_value, datetime):
             max_value = max_value.date()

@@ -20,8 +20,8 @@ import glob
 from datetime import datetime
 
 
-if sys.version_info < (3, 5):
-    print("This script must be run with Python >= 3.5")
+if sys.version_info < (3, 6):
+    print("This script must be run with Python >= 3.6")
     sys.exit(-1)
 
 

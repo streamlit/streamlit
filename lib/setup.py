@@ -8,7 +8,7 @@ from pipenv.project import Project
 from pipenv.utils import convert_deps_to_pip
 from setuptools.command.install import install
 
-VERSION = "0.59.0"  # PEP-440
+VERSION = "0.60.0"  # PEP-440
 
 NAME = "streamlit"
 
@@ -59,7 +59,7 @@ setuptools.setup(
     url="https://streamlit.io",
     author="Streamlit Inc",
     author_email="hello@streamlit.io",
-    python_requires=">=3.5",
+    python_requires=">=3.6",
     license="Apache 2",
     packages=setuptools.find_packages(exclude=["tests", "tests.*"]),
     # Requirements
