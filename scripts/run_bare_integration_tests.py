@@ -28,9 +28,7 @@ from typing import Set
 
 import click
 
-IS_PYTHON_2 = sys.version_info[0] == 2
-
-IS_PYTHON_3_5 = sys.version_info[:2] == (3, 5)
+IS_PYTHON_3_6 = sys.version_info[:2] == (3, 6)
 
 # Where we expect to find the example files.
 E2E_DIR = "e2e/scripts"
@@ -49,8 +47,8 @@ try:
 except ImportError:
     EXCLUDED_FILENAMES |= set(["empty_charts.py", "pyplot.py", "pyplot_kwargs.py"])
 
-# magic.py uses the async keyword, which is Python 3.6+
-if IS_PYTHON_2 or IS_PYTHON_3_5:
+# magic.py uses contextlib.asynccontextmanager, which is Python 3.7+
+if IS_PYTHON_3_6:
     EXCLUDED_FILENAMES.add("st_magic.py")
 
 

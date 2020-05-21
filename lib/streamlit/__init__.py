@@ -232,10 +232,9 @@ _HELP_TYPES = (
 def write(*args, **kwargs):
     """Write arguments to the app.
 
-    This is the swiss-army knife of Streamlit commands. It does different things
-    depending on what you throw at it.
-
-    Unlike other Streamlit commands, write() has some unique properties:
+    This is the Swiss Army knife of Streamlit commands: it does different
+    things depending on what you throw at it. Unlike other Streamlit commands,
+    write() has some unique properties:
 
     1. You can pass in multiple arguments, all of which will be written.
     2. Its behavior depends on the input types as follows.
@@ -249,8 +248,8 @@ def write(*args, **kwargs):
         Arguments are handled as follows:
 
         - write(string)     : Prints the formatted Markdown string, with
-          support for LaTeX expression and emoji shortcodes.
-          See docs for st.markdown for more.
+            support for LaTeX expression and emoji shortcodes.
+            See docs for st.markdown for more.
         - write(data_frame) : Displays the DataFrame as a table.
         - write(error)      : Prints an exception specially.
         - write(func)       : Displays information about a function.
@@ -278,13 +277,12 @@ def write(*args, **kwargs):
 
         https://github.com/streamlit/streamlit/issues/152
 
-        *Also note that `unsafe_allow_html` is a temporary measure and may be
-        removed from Streamlit at any time.*
+        **Also note that `unsafe_allow_html` is a temporary measure and may be
+        removed from Streamlit at any time.**
 
         If you decide to turn on HTML anyway, we ask you to please tell us your
         exact use case here:
-
-        https://discuss.streamlit.io/t/96
+        https://discuss.streamlit.io/t/96 .
 
         This will help us come up with safe APIs that allow you to do what you
         want.
@@ -539,8 +537,14 @@ _SPACES_RE = _re.compile("\\s*")
 
 
 @_contextlib.contextmanager
-def echo():
+def echo(code_location="above"):
     """Use in a `with` block to draw some code on the app, then execute it.
+
+    Parameters
+    ----------
+    code_location : "above" or "below"
+        Whether to show the echoed code before or after the results of the
+        executed code block.
 
     Example
     -------
@@ -549,7 +553,14 @@ def echo():
     >>>     st.write('This code will be printed')
 
     """
-    code = empty()  # noqa: F821
+    if code_location == "below":
+        show_code = code
+        show_warning = warning
+    else:
+        placeholder = empty()  # noqa: F821
+        show_code = placeholder.code
+        show_warning = placeholder.warning
+
     try:
         frame = _traceback.extract_stack()[-3]
         filename, start_line = frame.filename, frame.lineno
@@ -570,10 +581,11 @@ def echo():
                     break
                 lines_to_display.append(line)
         line_to_display = _textwrap.dedent("".join(lines_to_display))
-        code.code(line_to_display, "python")
+
+        show_code(line_to_display, "python")
 
     except FileNotFoundError as err:
-        code.warning("Unable to display code. %s" % err)
+        show_warning("Unable to display code. %s" % err)
 
 
 def _transparent_write(*args):

@@ -26,7 +26,7 @@ describe("st.text_area", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stTextArea").should("have.length", 4);
+    cy.get(".stTextArea").should("have.length", 5);
 
     cy.get(".stTextArea").each((el, idx) => {
       return cy.wrap(el).matchImageSnapshot("text_area" + idx);
@@ -39,21 +39,23 @@ describe("st.text_area", () => {
       'value 1: "  "' +
         'value 2: " default text "' +
         'value 3: " 1234 "' +
-        'value 4: " None "'
+        'value 4: " None "' +
+        'value 5: "  "'
     );
   });
 
   it("sets value correctly when user types", () => {
     cy.get(".stTextArea textarea")
       .first()
-      .type("test area{enter}");
+      .type("test area{ctrl}{enter}");
 
     cy.get(".stMarkdown").should(
       "have.text",
-      'value 1: "  "' +
+      'value 1: " test area "' +
         'value 2: " default text "' +
         'value 3: " 1234 "' +
-        'value 4: " None "'
+        'value 4: " None "' +
+        'value 5: "  "'
     );
   });
 
@@ -67,7 +69,8 @@ describe("st.text_area", () => {
       'value 1: " test area "' +
         'value 2: " default text "' +
         'value 3: " 1234 "' +
-        'value 4: " None "'
+        'value 4: " None "' +
+        'value 5: "  "'
     );
   });
 
@@ -81,7 +84,8 @@ describe("st.text_area", () => {
       'value 1: " test area "' +
         'value 2: " default text "' +
         'value 3: " 1234 "' +
-        'value 4: " None "'
+        'value 4: " None "' +
+        'value 5: "  "'
     );
   });
 
@@ -96,7 +100,24 @@ describe("st.text_area", () => {
       'value 1: " test area "' +
         'value 2: " default text "' +
         'value 3: " 1234 "' +
-        'value 4: " None "'
+        'value 4: " None "' +
+        'value 5: "  "'
+    );
+  });
+
+  it("sets value correctly with max_chars enabled", () => {
+    cy.get(".stTextArea textarea")
+      .last()
+      .type("test area! this shouldn't be returned")
+      .blur();
+
+    cy.get(".stMarkdown").should(
+      "have.text",
+      'value 1: "  "' +
+        'value 2: " default text "' +
+        'value 3: " 1234 "' +
+        'value 4: " None "' +
+        'value 5: " test area! "'
     );
   });
 });

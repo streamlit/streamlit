@@ -113,7 +113,7 @@ def server_port_is_manually_set():
 
 
 def start_listening(app):
-    """Takes the server start listening at the configured port.
+    """Makes the server start listening at the configured port.
 
     In case the port is already taken it tries listening to the next available
     port.  It will error after MAX_PORT_SEARCH_RETRIES attempts.
@@ -397,8 +397,10 @@ class Server(object):
             self._set_state(State.STOPPED)
 
         except Exception as e:
-            print("EXCEPTION!", e)
-            traceback.print_stack(file=sys.stdout)
+            # Can't just re-raise here because co-routines use Tornado
+            # exceptions for control flow, which appears to swallow the reraised
+            # exception.
+            traceback.print_exc()
             LOGGER.info(
                 """
 Please report this bug at https://github.com/streamlit/streamlit/issues.
