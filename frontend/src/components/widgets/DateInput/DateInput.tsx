@@ -31,15 +31,23 @@ export interface Props {
 
 interface State {
   /**
-   * The value specified by the user via the UI. If the user didn't touch this
-   * widget's UI, the default value is used.
+   * An array with start and end date specified by the user via the UI. If the user
+   * didn't touch this widget's UI, the default value is used. End date is optional.
    */
-  value: string
+  values: Date[]
+  /**
+   * Boolean to toggle between single-date picker and range date picker.
+   */
+  isRange: boolean
 }
 
 class DateInput extends React.PureComponent<Props, State> {
   public state: State = {
-    value: this.props.element.get("default"),
+    values: this.props.element
+      .get("default")
+      .toJS()
+      .map((val: string) => new Date(val)),
+    isRange: this.props.element.get("isRange") || false,
   }
 
   public componentDidMount(): void {
@@ -48,13 +56,20 @@ class DateInput extends React.PureComponent<Props, State> {
 
   private setWidgetValue = (source: Source): void => {
     const widgetId: string = this.props.element.get("id")
-    this.props.widgetMgr.setStringValue(widgetId, this.state.value, source)
+
+    this.props.widgetMgr.setStringArrayValue(
+      widgetId,
+      this.state.values.map((value: Date) =>
+        moment(value as Date).format("YYYY/MM/DD")
+      ),
+      source
+    )
   }
 
   private handleChange = ({ date }: { date: Date | Date[] }): void => {
-    const value = moment(date as Date).format("YYYY/MM/DD")
-
-    this.setState({ value }, () => this.setWidgetValue({ fromUi: true }))
+    this.setState({ values: Array.isArray(date) ? date : [date] }, () =>
+      this.setWidgetValue({ fromUi: true })
+    )
   }
 
   private getMaxDate = (): Date | undefined => {
@@ -66,7 +81,7 @@ class DateInput extends React.PureComponent<Props, State> {
 
   public render = (): React.ReactNode => {
     const { width, element, disabled } = this.props
-    const { value } = this.state
+    const { values, isRange } = this.state
 
     const style = { width }
     const label = element.get("label")
@@ -81,9 +96,10 @@ class DateInput extends React.PureComponent<Props, State> {
           disabled={disabled}
           onChange={this.handleChange}
           overrides={datePickerOverrides}
-          value={new Date(value)}
+          value={values}
           minDate={minDate}
           maxDate={maxDate}
+          range={isRange}
         />
       </div>
     )

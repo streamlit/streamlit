@@ -32,7 +32,7 @@ const getProps = (elementProps: Partial<DateInputProto> = {}): Props => ({
   element: fromJS({
     id: 1,
     label: "Label",
-    default: "1970/01/01",
+    default: ["1970/01/01"],
     min: "1970/1/1",
     ...elementProps,
   }),
@@ -54,9 +54,9 @@ describe("DateInput widget", () => {
   })
 
   it("should set widget value on did mount", () => {
-    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element.get("id"),
-      props.element.get("default"),
+      props.element.get("default").toJS(),
       { fromUi: false }
     )
   })
@@ -76,9 +76,9 @@ describe("DateInput widget", () => {
   })
 
   it("should render a default value", () => {
-    expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual(
-      new Date(props.element.get("default"))
-    )
+    expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual([
+      new Date(props.element.get("default").toJS()),
+    ])
   })
 
   it("could be disabled", () => {
@@ -97,10 +97,10 @@ describe("DateInput widget", () => {
       date: newDate,
     })
 
-    expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual(newDate)
-    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+    expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual([newDate])
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element.get("id"),
-      "2020/02/06",
+      ["2020/02/06"],
       { fromUi: true }
     )
   })
