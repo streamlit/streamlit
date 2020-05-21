@@ -217,10 +217,6 @@ def data_frame_demo():
     import pandas as pd
     import altair as alt
 
-    if sys.version_info[0] < 3:
-        reload(sys) # noqa: F821 pylint:disable=undefined-variable
-        sys.setdefaultencoding("utf-8")
-
     @st.cache
     def get_UN_data():
         AWS_BUCKET_URL = "https://streamlit-demo-data.s3-us-west-2.amazonaws.com"
