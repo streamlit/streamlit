@@ -2151,7 +2151,7 @@ class DeltaGenerator(object):
         """Display a color picker widget.
 
         Note: This is a beta feature. See
-        https://docs.streamlit.io/pre_release_features.html for more
+        https://docs.streamlit.io/en/latest/pre_release_features.html for more
         information.
 
         Parameters
@@ -2726,7 +2726,7 @@ class DeltaGenerator(object):
 
         To get a token for yourself, create an account at
         https://mapbox.com. It's free! (for moderate usage levels) See
-        https://docs.streamlit.io/cli.html#view-all-config-options for more
+        https://docs.streamlit.io/en/latest/cli.html#view-all-config-options for more
         info on how to set config options.
 
         Parameters
@@ -2774,7 +2774,7 @@ class DeltaGenerator(object):
 
         To get a token for yourself, create an account at
         https://mapbox.com. It's free! (for moderate usage levels) See
-        https://docs.streamlit.io/cli.html#view-all-config-options for more
+        https://docs.streamlit.io/en/latest/cli.html#view-all-config-options for more
         info on how to set config options.
 
         Parameters
@@ -2898,7 +2898,7 @@ class DeltaGenerator(object):
 
         To get a token for yourself, create an account at
         https://mapbox.com. It's free! (for moderate usage levels) See
-        https://docs.streamlit.io/cli.html#view-all-config-options for more
+        https://docs.streamlit.io/en/latest/cli.html#view-all-config-options for more
         info on how to set config options.
 
         Parameters

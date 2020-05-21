@@ -420,7 +420,7 @@ def experimental_show(*args):
         2. It returns None, so it's "slot" in the app cannot be reused.
 
     Note: This is an experimental feature. See
-    https://docs.streamlit.io/pre_release_features.html for more information.
+    https://docs.streamlit.io/en/latest/pre_release_features.html for more information.
 
     Parameters
     ----------
