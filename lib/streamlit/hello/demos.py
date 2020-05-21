@@ -213,7 +213,6 @@ def plotting_demo():
 # compact code.
 # fmt: off
 def data_frame_demo():
-    import sys
     import pandas as pd
     import altair as alt
 
