@@ -31,11 +31,14 @@ export interface Props {
 
 interface State {
   /**
-   * The value specified by the user via the UI. If the user didn't touch this
-   * widget's UI, the default value is used.
+   * An array with start and end date specified by the user via the UI. If the user
+   * didn't touch this widget's UI, the default value is used. End date is optional.
    */
   values: Date[]
-  range: boolean
+  /**
+   * Boolean to toggle between single-date picker and range date picker.
+   */
+  isRange: boolean
 }
 
 class DateInput extends React.PureComponent<Props, State> {
@@ -44,7 +47,7 @@ class DateInput extends React.PureComponent<Props, State> {
       .get("default")
       .toJS()
       .map((val: string) => new Date(val)),
-    range: this.props.element.get("range"),
+    isRange: this.props.element.get("isRange") || false,
   }
 
   public componentDidMount(): void {
@@ -78,13 +81,12 @@ class DateInput extends React.PureComponent<Props, State> {
 
   public render = (): React.ReactNode => {
     const { width, element, disabled } = this.props
-    const { values, range } = this.state
+    const { values, isRange } = this.state
 
     const style = { width }
     const label = element.get("label")
     const minDate = new Date(element.get("min"))
     const maxDate = this.getMaxDate()
-    const dateMask = "9999/99/99"
 
     return (
       <div className="Widget stDateInput" style={style}>
@@ -97,8 +99,7 @@ class DateInput extends React.PureComponent<Props, State> {
           value={values}
           minDate={minDate}
           maxDate={maxDate}
-          range={range}
-          mask={range ? `${dateMask} – ${dateMask}` : dateMask}
+          range={isRange}
         />
       </div>
     )

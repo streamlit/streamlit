@@ -27,6 +27,7 @@ describe("st.date_input", () => {
       "have.text",
       "Single date" +
         "Single datetime" +
+        "Range, no date" +
         "Range, one date" +
         "Range, two dates"
     );
@@ -37,8 +38,9 @@ describe("st.date_input", () => {
       "have.text",
       "Value 1: 1970-01-01" +
         "Value 2: 2019-07-06" +
-        "Value 3: (datetime.date(2019, 7, 6),)" +
-        "Value 4: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))"
+        "Value 3: ()" +
+        "Value 4: (datetime.date(2019, 7, 6),)" +
+        "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))"
     );
   });
 
@@ -57,15 +59,16 @@ describe("st.date_input", () => {
       "have.text",
       "Value 1: 1970-01-02" +
         "Value 2: 2019-07-06" +
-        "Value 3: (datetime.date(2019, 7, 6),)" +
-        "Value 4: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))"
+        "Value 3: ()" +
+        "Value 4: (datetime.date(2019, 7, 6),)" +
+        "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))"
     );
   });
 
   it("handles range end date changes", () => {
     // open date picker
     cy.get(".stDateInput")
-      .eq(2)
+      .eq(3)
       .click();
 
     // select end date '2019/07/08'
@@ -77,15 +80,16 @@ describe("st.date_input", () => {
       "have.text",
       "Value 1: 1970-01-01" +
         "Value 2: 2019-07-06" +
-        "Value 3: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 10))" +
-        "Value 4: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))"
+        "Value 3: ()" +
+        "Value 4: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 10))" +
+        "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))"
     );
   });
 
   it("handles range start/end date changes", () => {
     // open date picker
     cy.get(".stDateInput")
-      .eq(3)
+      .eq(4)
       .click();
 
     // select start date '2019/07/10'
@@ -97,8 +101,9 @@ describe("st.date_input", () => {
       "have.text",
       "Value 1: 1970-01-01" +
         "Value 2: 2019-07-06" +
-        "Value 3: (datetime.date(2019, 7, 6),)" +
-        "Value 4: (datetime.date(2019, 7, 10),)"
+        "Value 3: ()" +
+        "Value 4: (datetime.date(2019, 7, 6),)" +
+        "Value 5: (datetime.date(2019, 7, 10),)"
     );
 
     // select end date '2019/07/10'
@@ -110,8 +115,9 @@ describe("st.date_input", () => {
       "have.text",
       "Value 1: 1970-01-01" +
         "Value 2: 2019-07-06" +
-        "Value 3: (datetime.date(2019, 7, 6),)" +
-        "Value 4: (datetime.date(2019, 7, 10), datetime.date(2019, 7, 12))"
+        "Value 3: ()" +
+        "Value 4: (datetime.date(2019, 7, 6),)" +
+        "Value 5: (datetime.date(2019, 7, 10), datetime.date(2019, 7, 12))"
     );
   });
 });

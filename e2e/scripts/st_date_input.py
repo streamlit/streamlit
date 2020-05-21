@@ -22,8 +22,11 @@ st.write("Value 1:", d1)
 d2 = st.date_input("Single datetime", datetime(2019, 7, 6, 21, 15))
 st.write("Value 2:", d2)
 
-d3 = st.date_input("Range, one date", [date(2019, 7, 6)])
+d3 = st.date_input("Range, no date", [])
 st.write("Value 3:", d3)
 
-d4 = st.date_input("Range, two dates", [date(2019, 7, 6), date(2019, 7, 8)])
+d4 = st.date_input("Range, one date", [date(2019, 7, 6)])
 st.write("Value 4:", d4)
+
+d4 = st.date_input("Range, two dates", [date(2019, 7, 6), date(2019, 7, 8)])
+st.write("Value 5:", d4)

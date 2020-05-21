@@ -284,6 +284,8 @@ export const datePickerOverrides = {
   },
   Input: {
     props: {
+      // The default maskChar ` ` causes empty dates to display as ` / / `
+      // Clearing the maskChar so empty dates will not display
       maskChar: null,
     },
   },

@@ -1946,11 +1946,11 @@ class DeltaGenerator(object):
 
         # Ensure that the value is either a single value or a range of values.
         single_value = isinstance(value, (int, float))
-        range_value = isinstance(value, (list, tuple))
+        range_value = isinstance(value, (list, tuple)) and len(value) in (0, 1, 2)
         if not single_value and not range_value:
             raise StreamlitAPIException(
                 "Slider value should either be an int/float or a list/tuple of "
-                "int/float"
+                "0 to 2 ints/floats"
             )
 
         # Ensure that the value is either an int/float or a list/tuple of ints/floats.
@@ -2396,7 +2396,7 @@ class DeltaGenerator(object):
         value : datetime.date or datetime.datetime or list/tuple of datetime.date or datetime.datetime or None
             The value of this widget when it first renders. If a list/tuple with
             0 to 2 date/datetime values is provided, the datepicker will allow
-            users to provide a range. Defaults to today as a single datepicker.
+            users to provide a range. Defaults to today as a single-date picker.
         min_value : datetime.date or datetime.datetime
             The minimum selectable date. Defaults to datetime.min.
         max_value : datetime.date or datetime.datetime
@@ -2425,17 +2425,17 @@ class DeltaGenerator(object):
             value = datetime.now().date()
 
         single_value = isinstance(value, (date, datetime))
-        range_value = isinstance(value, (list, tuple))
+        range_value = isinstance(value, (list, tuple)) and len(value) in (0, 1, 2)
         if not single_value and not range_value:
             raise StreamlitAPIException(
                 "DateInput value should either be an date/datetime or a list/tuple of "
-                "date/datetime"
+                "0 - 2 date/datetime values"
             )
 
         if single_value:
             value = [value]
-        else:
-            element.date_input.range = True
+
+        element.date_input.is_range = range_value
 
         value = [v.date() if isinstance(v, datetime) else v for v in value]
 
@@ -2456,15 +2456,16 @@ class DeltaGenerator(object):
 
         element.date_input.max = date.strftime(max_value, "%Y/%m/%d")
 
-        result = value
         ui_value = _get_widget_ui_value("date_input", element, user_key=key)
+
         if ui_value is not None:
-            result = getattr(ui_value, "data")
+            value = getattr(ui_value, "data")
+            value = [datetime.strptime(v, "%Y/%m/%d").date() for v in value]
 
         if single_value:
-            return datetime.strptime(result[0], "%Y/%m/%d").date() if isinstance(result[0], str) else result[0]
+            return value[0]
         else:
-            return tuple(map(lambda dt: datetime.strptime(dt, "%Y/%m/%d").date() if isinstance(dt, str) else dt,result))
+            return tuple(value)
 
     @_with_element
     def number_input(
