@@ -114,10 +114,6 @@ class MediaFileManager(object):
 
     def __init__(self):
         # Dict of file ID to MediaFile.
-        #self._files_by_id = (
-        #    WeakValueDictionary()
-        #)  # type: WeakValueDictionary[str, MediaFile]
-
         self._files_by_id = dict()
 
         # Dict[session ID][coordinates] -> MediaFile.
@@ -125,19 +121,16 @@ class MediaFileManager(object):
             dict
         )  # type: DefaultDict[str, Dict[str, MediaFile]]
 
-        # Since _files_by_id is a weak dict, when a MediaFile is removed from
-        # _files_by_session_and_coord it automatically gets removed from
-        # _files_by_id.
-
-
     def _del_expired_files(self):
         LOGGER.debug("Deleting expired files...")
 
         # Get a flat set of every file ID in the session ID map.
         active_file_ids = set()
-        for sessID in self._files_by_session_and_coord.keys():
-            for coord, file_id in self._files_by_session_and_coord[sessID]:
-                active_file_ids.add(file_id)
+
+        if len(self._files_by_session_and_coord.keys()) > 0:
+            for sessID in self._files_by_session_and_coord.keys():
+                for coord, file_id in self._files_by_session_and_coord[sessID]:
+                    active_file_ids.add(file_id)
 
         # Remove any file that is currently not in the file_ids set AND has
         # an expired TTD.
@@ -147,7 +140,7 @@ class MediaFileManager(object):
                     del self._files_by_id[file_id]
 
     def clear_session_files(self, session_id=None):
-        """Clears all stored files for a given ReportSession id.
+        """Removes ReportSession-coordinate mapping, deleting expired MediaFile objects.
 
         Should be called whenever ScriptRunner completes and when
         a session ends.
