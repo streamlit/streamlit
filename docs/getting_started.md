@@ -1,14 +1,14 @@
 # Get started
 
-The easiest way to learn how to use Streamlit is to try things out yourself. As
+The easiest way to learn Streamlit is to try things out yourself. As
 you read through this guide, test each method. As long as your app is running,
 every time you add a new element to your script and save, Streamlit's UI will
 ask if you'd like to rerun the app and view the changes. This allows you to
-work in a fast interactive loop: you write some code, save it, review the
-output, write some more, and so on, until you're happy with the results. The
-goal is to use Streamlit to create an interactive app for your data or model
-and along the way to use Streamlit to review, debug, perfect, and share your
-code.
+work in a fast interactive loop: write some code, save it, review the
+output, write some more, and so on, until you're happy with the results.
+
+The goal of this tutorial is to use Streamlit to create an interactive app for your data or model
+and along the way to use Streamlit to review, debug, perfect, and share your code.
 
 Use the links below to jump to a specific section:
 
@@ -31,7 +31,7 @@ Before you get started, you're going to need a few things:
 If you haven't already, take a few minutes to read through [Main
 concepts](main_concepts.md) to understand Streamlit's data flow model.
 
-## Set up your virtual environment
+## Set up a virtual environment
 
 Regardless of which package management tool you're using, we recommend running
 these commands in a virtual environment. This ensures that the dependencies
