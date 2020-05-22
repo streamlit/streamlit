@@ -133,10 +133,9 @@ class MediaFileManager(object):
 
         # Remove any file that is currently not in the file_ids set AND has
         # an expired TTD.
-        for file_id, mf in list(self._files_by_id.items()):
-            if file_id not in active_file_ids:
-                if mf.ttd < time.time():
-                    del self._files_by_id[file_id]
+        for file_id in set(list(self._files_by_id.keys())).difference(active_file_ids):
+            if self._files_by_id[file_id].ttd < time.time():
+                del self._files_by_id[file_id]
 
     def clear_session_files(self, session_id=None):
         """Removes ReportSession-coordinate mapping, deleting expired MediaFile objects.
