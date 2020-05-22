@@ -120,6 +120,7 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(c.format, "%" + char)
 
     def test_error_on_unsupported_formatters(self):
+        # XXX
         # note: The slightly-problematic %a, %X, %x, and %o have different effects in
         #       Python3 and Python2, so we're not testing for/against them until
         #       we finally sunset Python2.

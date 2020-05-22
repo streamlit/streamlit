@@ -251,6 +251,8 @@ class ScriptRunner(object):
         # Compile the script. Any errors thrown here will be surfaced
         # to the user via a modal dialog in the frontend, and won't result
         # in their previous report disappearing.
+
+        # XXX
         try:
             # Python 3 got rid of the native execfile() command, so we read
             # the file, compile it, and exec() it. This implementation is

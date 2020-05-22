@@ -25,6 +25,7 @@ from streamlit import env_util
 # URL of Streamlit's help page.
 HELP_DOC = "https://docs.streamlit.io/"
 
+
 def memoize(func):
     """Decorator to memoize the result of a no-args func."""
     result = []  # type: List[Any]

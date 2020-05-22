@@ -42,6 +42,7 @@ os.environ["MPLBACKEND"] = "Agg"
 
 # Scripts that rely on matplotlib can't be run in Python2. matplotlib
 # dropped Py2 support, and so we don't install it in our virtualenv.
+# XXX
 try:
     import matplotlib
 except ImportError:

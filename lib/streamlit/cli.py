@@ -179,6 +179,7 @@ def main_hello(**kwargs):
 
     filename = hello.__file__
 
+    # XXX
     # For Python 2 when Streamlit is actually installed (make install rather
     # than make develop).
     if filename.endswith(".pyc"):
