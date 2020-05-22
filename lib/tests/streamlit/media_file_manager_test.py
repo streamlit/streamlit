@@ -96,7 +96,8 @@ class UploadedFileManagerTest(unittest.TestCase):
 
         # Make sure we get different file ids for files with same bytes but diff't mimetypes.
         self.assertNotEqual(
-            _calculate_file_id(fake_bytes, "audio/wav"), _calculate_file_id(fake_bytes, "video/mp4")
+            _calculate_file_id(fake_bytes, "audio/wav"),
+            _calculate_file_id(fake_bytes, "video/mp4"),
         )
 
     @mock.patch("streamlit.MediaFileManager._get_session_id")
