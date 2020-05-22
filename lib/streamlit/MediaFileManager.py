@@ -127,10 +127,9 @@ class MediaFileManager(object):
         # Get a flat set of every file ID in the session ID map.
         active_file_ids = set()
 
-        if len(self._files_by_session_and_coord.keys()) > 0:
-            for sessID in self._files_by_session_and_coord.keys():
-                for coord, file_id in self._files_by_session_and_coord[sessID]:
-                    active_file_ids.add(file_id)
+        for sessID in self._files_by_session_and_coord.keys():
+            for coord, file_id in self._files_by_session_and_coord[sessID].items():
+                active_file_ids.add(file_id)
 
         # Remove any file that is currently not in the file_ids set AND has
         # an expired TTD.

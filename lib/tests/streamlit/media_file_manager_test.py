@@ -17,6 +17,7 @@
 import unittest
 import mock
 import random
+import time
 
 from streamlit.MediaFileManager import MediaFileManager
 from streamlit.MediaFileManager import _calculate_file_id
@@ -190,26 +191,22 @@ class UploadedFileManagerTest(unittest.TestCase):
         coord = random_coordinates()
 
         sample = AUDIO_FIXTURES["mp3"]
-        f = mfm.add(sample["content"], "audio/mp3", coord)
-        self.assertTrue(f.id in mfm)
+        f1 = mfm.add(sample["content"], "audio/mp3", coord)
+        self.assertTrue(f1.id in mfm)
 
-        # Do this so we don't keep a refence to the MediaFile, since the MFM
-        # depends on garbage collection.
-        f1_id = f.id
+        f2 = mfm.add(sample["content"], "video/mp4", coord)
+        self.assertNotEqual(f1.id, f2.id)
+        self.assertTrue(f2.id in mfm)
 
-        f = mfm.add(sample["content"], "video/mp4", coord)
-        self.assertNotEqual(f1_id, f.id)
-        self.assertTrue(f.id in mfm)
+        # There should be only 2 files in MFM, one for each mimetye.
+        self.assertEqual(len(mfm), 2)
 
-        # There should only 2 files in MFM, one for each mimetye.
-        self.assertEqual(len(mfm), 1)
-
-        # There should only be 1 session with registered files.
+        # There should be only 1 session with registered files.
         self.assertEqual(len(mfm._files_by_session_and_coord), 1)
 
     @mock.patch("streamlit.MediaFileManager._get_session_id")
     def test_clear_session_files(self, _get_session_id):
-        """Test that MediaFileManager removes all files when requested (even if empty)."""
+        """Test that MediaFileManager removes session maps when requested (even if empty)."""
         _get_session_id.return_value = "SESSION1"
 
         self.assertEqual(len(mfm), 0)
@@ -225,6 +222,11 @@ class UploadedFileManagerTest(unittest.TestCase):
 
         self.assertEqual(len(mfm), len(VIDEO_FIXTURES))
         self.assertEqual(len(mfm._files_by_session_and_coord), 1)
+
+        # force MediaFile to have a TTD of now, so we can see it get deleted w/o waiting.
+        for mf in mfm._files_by_id.values():
+            mf.ttd = time.time()
+
         mfm.clear_session_files()
 
         self.assertEqual(len(mfm), 0)
@@ -251,6 +253,10 @@ class UploadedFileManagerTest(unittest.TestCase):
 
         # There should be 2 sessions with registered files.
         self.assertEqual(len(mfm._files_by_session_and_coord), 2)
+
+        # force every MediaFile to have a TTD of now, so we can see it get deleted w/o waiting.
+        for mf in mfm._files_by_id.values():
+            mf.ttd = time.time()
 
         mfm.clear_session_files()
 
