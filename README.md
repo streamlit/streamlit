@@ -1,6 +1,8 @@
 # Welcome to Streamlit :wave:
 
-**The fastest way to build custom ML tools.**
+[![Documentation Status](https://readthedocs.com/projects/streamlit-streamlit/badge/?version=latest)](https://docs.streamlit.io/en/latest/?badge=latest)
+
+**The fastest way to build data apps.**
 
 Streamlit lets you create apps for your machine learning projects with deceptively simple Python scripts. It supports hot-reloading, so your app updates live as you edit and save your file. No need to mess with HTTP requests, HTML, JavaScript, etc. All you need is your favorite editor and a browser. Take a look at Streamlit in action:
 
@@ -47,7 +49,6 @@ streamlit run https://raw.githubusercontent.com/streamlit/demo-self-driving/mast
 
 - Our [launch post](https://towardsdatascience.com/coding-ml-tools-like-you-code-ml-models-ddba3357eace)
 - Our lovely [community](https://discuss.streamlit.io/)
-- Streamlit [documentation](https://docs.streamlit.io/)
 - More [demo projects](https://github.com/streamlit/)
 - If you would like to contribute, see [instructions here](https://github.com/streamlit/streamlit/wiki/Contributing)
 
