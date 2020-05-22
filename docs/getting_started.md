@@ -10,14 +10,6 @@ output, write some more, and so on, until you're happy with the results.
 The goal of this tutorial is to use Streamlit to create an interactive app for your data or model
 and along the way to use Streamlit to review, debug, perfect, and share your code.
 
-Use the links below to jump to a specific section:
-
-```eval_rst
-.. contents::
-    :local:
-    :depth: 1
-```
-
 ## Prerequisites
 
 Before you get started, you're going to need a few things:
