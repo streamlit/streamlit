@@ -28,6 +28,11 @@ LOGGER = get_logger(__name__)
 
 STATIC_MEDIA_ENDPOINT = "/media"
 
+# Length of time (seconds) to keep media files so that we don't pull the rug out from
+# under rapid-media-generating elements, e.g. using a slider to produce pyplots.
+# See Issues #1440, #1445, #1294
+KEEP_DELAY = 2
+
 
 def _get_session_id():
     """Semantic wrapper to retrieve current ReportSession ID."""
@@ -67,6 +72,7 @@ class MediaFile(object):
         self._file_id = file_id
         self._content = content
         self._mimetype = mimetype
+        self.ttd = time.time() + KEEP_DELAY
 
     @property
     def url(self):
@@ -108,9 +114,11 @@ class MediaFileManager(object):
 
     def __init__(self):
         # Dict of file ID to MediaFile.
-        self._files_by_id = (
-            WeakValueDictionary()
-        )  # type: WeakValueDictionary[str, MediaFile]
+        #self._files_by_id = (
+        #    WeakValueDictionary()
+        #)  # type: WeakValueDictionary[str, MediaFile]
+
+        self._files_by_id = dict()
 
         # Dict[session ID][coordinates] -> MediaFile.
         self._files_by_session_and_coord = collections.defaultdict(
@@ -120,6 +128,23 @@ class MediaFileManager(object):
         # Since _files_by_id is a weak dict, when a MediaFile is removed from
         # _files_by_session_and_coord it automatically gets removed from
         # _files_by_id.
+
+
+    def _del_expired_files(self):
+        LOGGER.debug("Deleting expired files...")
+
+        # Get a flat set of every file ID in the session ID map.
+        active_file_ids = set()
+        for sessID in self._files_by_session_and_coord.keys():
+            for coord, file_id in self._files_by_session_and_coord[sessID]:
+                active_file_ids.add(file_id)
+
+        # Remove any file that is currently not in the file_ids set AND has
+        # an expired TTD.
+        for file_id, mf in list(self._files_by_id.items()):
+            if file_id not in active_file_ids:
+                if mf.ttd < time.time():
+                    del self._files_by_id[file_id]
 
     def clear_session_files(self, session_id=None):
         """Clears all stored files for a given ReportSession id.
@@ -138,6 +163,7 @@ class MediaFileManager(object):
         LOGGER.debug(
             "Sessions still active: %r", self._files_by_session_and_coord.keys()
         )
+        self._del_expired_files()
 
         LOGGER.debug(
             "Files: %s; Sessions with files: %s",
