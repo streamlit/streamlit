@@ -58,12 +58,14 @@ if TYPE_CHECKING:
 
 LOGGER = get_logger(__name__)
 
-
+#IMPULSO HACK
+import os
 TORNADO_SETTINGS = {
     "compress_response": True,  # Gzip HTTP responses.
     "websocket_ping_interval": 20,  # Ping every 20s to keep WS alive.
     "websocket_ping_timeout": 30,  # Pings should be responded to within 30s.
     "websocket_max_message_size": MESSAGE_SIZE_LIMIT,  # Up the WS size limit.
+    "static_path": os.path.join(os.getcwd(), "static"),
 }
 
 
