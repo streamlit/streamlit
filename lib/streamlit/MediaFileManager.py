@@ -31,7 +31,7 @@ STATIC_MEDIA_ENDPOINT = "/media"
 # Length of time (seconds) to keep media files so that we don't pull the rug out from
 # under rapid-media-generating elements, e.g. using a slider to produce pyplots.
 # See Issues #1440, #1445, #1294
-KEEP_DELAY = 2
+KEEP_DELAY_SEC = 2
 
 
 def _get_session_id():
@@ -72,7 +72,7 @@ class MediaFile(object):
         self._file_id = file_id
         self._content = content
         self._mimetype = mimetype
-        self.ttd = time.time() + KEEP_DELAY
+        self.ttd = time.time() + KEEP_DELAY_SEC
 
     @property
     def url(self):
@@ -127,14 +127,13 @@ class MediaFileManager(object):
         # Get a flat set of every file ID in the session ID map.
         active_file_ids = set()
 
-        for sessID in self._files_by_session_and_coord.keys():
-            for coord, file_id in self._files_by_session_and_coord[sessID].items():
-                active_file_ids.add(file_id)
+        for files_by_coord in self._files_by_session_and_coord.values():
+            active_file_ids = active_file_ids.union(files_by_coord.values())
 
-        # Remove any file that is currently not in the file_ids set AND has
-        # an expired TTD.
-        for file_id in set(list(self._files_by_id.keys())).difference(active_file_ids):
-            if self._files_by_id[file_id].ttd < time.time():
+        now = time.time()
+        for file_id, mf in list(self._files_by_id.items()):
+            file_is_expired = mf.ttd < now
+            if file_id not in active_file_ids and file_is_expired:
                 del self._files_by_id[file_id]
 
     def clear_session_files(self, session_id=None):
