@@ -159,8 +159,8 @@ Here's an example of how you'd add a selectbox to your sidebar.
 import streamlit as st
 
 add_selectbox = st.sidebar.selectbox(
-    'How would you like to be contacted?',
-    ('Email', 'Home phone', 'Mobile phone'))
+    "How would you like to be contacted?",
+    ("Email", "Home phone", "Mobile phone")
 )
 ```
 

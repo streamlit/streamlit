@@ -115,7 +115,7 @@ def server_port_is_manually_set():
 
 
 def start_listening(app):
-    """Takes the server start listening at the configured port.
+    """Makes the server start listening at the configured port.
 
     In case the port is already taken it tries listening to the next available
     port.  It will error after MAX_PORT_SEARCH_RETRIES attempts.

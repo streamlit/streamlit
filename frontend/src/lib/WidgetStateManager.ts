@@ -19,6 +19,7 @@ import {
   IBackMsg,
   IntArray,
   FloatArray,
+  StringArray,
   WidgetState,
   WidgetStates,
 } from "autogen/proto"
@@ -120,6 +121,17 @@ export class WidgetStateManager {
     source: Source
   ): void {
     this.getOrCreateWidgetStateProto(widgetId).stringValue = value
+    this.maybeSendUpdateWidgetsMessage(source)
+  }
+
+  public setStringArrayValue(
+    widgetId: string,
+    value: string[],
+    source: Source
+  ): void {
+    this.getOrCreateWidgetStateProto(
+      widgetId
+    ).stringArrayValue = StringArray.fromObject({ data: value })
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
