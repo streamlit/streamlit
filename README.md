@@ -1,5 +1,9 @@
 # Welcome to Streamlit :wave:
 
+**MODIFIED BY THE IMPULSO TEAM**
+
+The modification allows a folder called "resources" on the same path from where the script was executed, to serve as a static folder for the server. It is accessible through /resources
+
 **The fastest way to build custom ML tools.**
 
 Streamlit lets you create apps for your machine learning projects with deceptively simple Python scripts. It supports hot-reloading, so your app updates live as you edit and save your file. No need to mess with HTTP requests, HTML, JavaScript, etc. All you need is your favorite editor and a browser. Take a look at Streamlit in action:
@@ -7,6 +11,48 @@ Streamlit lets you create apps for your machine learning projects with deceptive
 ![Example of live coding a dashboard in Streamlit|635x380](https://aws1.discourse-cdn.com/standard10/uploads/streamlit/original/1X/292e985f7f75ef7bef8c27b5899f71f76cd577e0.gif)
 
 **Check out our [launch blog post](https://towardsdatascience.com/coding-ml-tools-like-you-code-ml-models-ddba3357eace)!!**
+
+**1st Way** (Tested and safe)
+
+First install streamlit normally, then simply copy the modified file in /lib/streamlit/server/Server.py from this repo to the corresponding <streamlit_installation_path>/streamlit/server/Server.py target. You can find out where that place is by using
+
+```bash
+pip3 show streamlit
+```
+
+The problem is that this requires the user redoing the process after every streamlit update.
+
+**2nd Way** (Not implemented yet)
+
+If you have streamlit installed currently, uninstall it:
+
+```
+pip3 uninstall streamlit
+```
+
+Download the file in the directory "builds". Its a wheel file, then execute the command:
+
+```
+sudo pip3 install <filepath>
+```
+
+If you decide to revert to the original version do the same uninstall and then do
+
+```
+sudo pip3 install streamlit --no-cache-dir
+```
+
+**3rd Way** (Hard to work, not recommended)
+
+Building it. (Not recommended because its too heavy and requires lots of installations)
+Clone this repo:
+
+```
+https://github.com/ImpulsoGov/streamlit
+```
+
+Execute the `build.sh` script and when inside the virtualenv execute the `build-part2.sh` script.
+A .whl file will be generated outside the library's repo,then repeat the above procedure pip3 install procedure with this file.
 
 ## Installation
 
