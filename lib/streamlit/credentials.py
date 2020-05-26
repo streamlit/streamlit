@@ -15,6 +15,7 @@
 """Manage the user's Streamlit credentials."""
 
 import os
+import platform
 import sys
 import textwrap
 from collections import namedtuple
@@ -29,6 +30,10 @@ from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
+# WT_SESSION is a Windows Terminal specific environment variable. If it exists,
+# we are on the latest Windows Terminal that supports emojis
+SHOW_EMOJIS = platform.system() != "Windows" or os.environ.get("WT_SESSION")
+
 Activation = namedtuple(
     "Activation",
     [
@@ -37,15 +42,16 @@ Activation = namedtuple(
     ],
 )
 
-
 EMAIL_PROMPT = """
-  👋 %(welcome)s
+  {0}%(welcome)s
 
   If you are one of our development partners or are interested in
   getting personal technical support, please enter your email address
   below. Otherwise, you may leave the field blank.
 
-  %(email)s""" % {
+  %(email)s""".format(
+    "👋 " if SHOW_EMOJIS else ""
+) % {
     "welcome": click.style("Welcome to Streamlit!", bold=True),
     "email": click.style("Email: ", fg="blue"),
 }

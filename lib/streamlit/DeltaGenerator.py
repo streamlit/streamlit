@@ -1604,7 +1604,6 @@ class DeltaGenerator(object):
             Includes support for YouTube URLs.
             Numpy arrays and raw data formats must include all necessary file
             headers to match specified file format.
-        start_time: int
         format : str
             The mime type for the video file. Defaults to 'video/mp4'.
             See https://tools.ietf.org/html/rfc4281 for more info.
@@ -1795,10 +1794,10 @@ class DeltaGenerator(object):
         index : int
             The index of the preselected option on first render.
         format_func : function
-            Function to modify the display of selectbox options. It receives
+            Function to modify the display of radio options. It receives
             the raw option as an argument and should output the label to be
             shown for that option. This has no impact on the return value of
-            the selectbox.
+            the radio.
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -1975,11 +1974,11 @@ class DeltaGenerator(object):
 
         # Ensure that the value is either a single value or a range of values.
         single_value = isinstance(value, (int, float))
-        range_value = isinstance(value, (list, tuple)) and len(value) == 2
+        range_value = isinstance(value, (list, tuple)) and len(value) in (0, 1, 2)
         if not single_value and not range_value:
             raise StreamlitAPIException(
                 "Slider value should either be an int/float or a list/tuple of "
-                "int/float"
+                "0 to 2 ints/floats"
             )
 
         # Ensure that the value is either an int/float or a list/tuple of ints/floats.
@@ -2045,12 +2044,14 @@ class DeltaGenerator(object):
                     "and the `max_value` of %(max)s, inclusively."
                     % {"value": value, "min": min_value, "max": max_value}
                 )
-        else:
+        elif len(value) == 2:
             start, end = value
             if not min_value <= start <= end <= max_value:
                 raise StreamlitAPIException(
                     "The value and/or arguments are out of range."
                 )
+        else:
+            value = [min_value, max_value]
 
         # Bounds checks. JSNumber produces human-readable exceptions that
         # we simply re-package as StreamlitAPIExceptions.
@@ -2180,7 +2181,7 @@ class DeltaGenerator(object):
         """Display a color picker widget.
 
         Note: This is a beta feature. See
-        https://docs.streamlit.io/pre_release_features.html for more
+        https://docs.streamlit.io/en/latest/pre_release_features.html for more
         information.
 
         Parameters
@@ -2242,7 +2243,9 @@ class DeltaGenerator(object):
         return str(current_value)
 
     @_with_element
-    def text_input(self, element, label, value="", max_chars=None, key=None, type="default"):
+    def text_input(
+        self, element, label, value="", max_chars=None, key=None, type="default"
+    ):
         """Display a single-line text input widget.
 
         Parameters
@@ -2296,7 +2299,9 @@ class DeltaGenerator(object):
         return str(current_value)
 
     @_with_element
-    def text_area(self, element, label, value="", height=None, max_chars=None, key=None):
+    def text_area(
+        self, element, label, value="", height=None, max_chars=None, key=None
+    ):
         """Display a multi-line text input widget.
 
         Parameters
@@ -2416,9 +2421,10 @@ class DeltaGenerator(object):
         ----------
         label : str
             A short label explaining to the user what this date input is for.
-        value : datetime.date or datetime.datetime
-            The value of this widget when it first renders. This will be
-            cast to str internally. Defaults to today.
+        value : datetime.date or datetime.datetime or list/tuple of datetime.date or datetime.datetime or None
+            The value of this widget when it first renders. If a list/tuple with
+            0 to 2 date/datetime values is provided, the datepicker will allow
+            users to provide a range. Defaults to today as a single-date picker.
         min_value : datetime.date or datetime.datetime
             The minimum selectable date. Defaults to datetime.min.
         max_value : datetime.date or datetime.datetime
@@ -2446,18 +2452,23 @@ class DeltaGenerator(object):
         if value is None:
             value = datetime.now().date()
 
-        # Ensure that the value is either datetime/time
-        if not isinstance(value, datetime) and not isinstance(value, date):
+        single_value = isinstance(value, (date, datetime))
+        range_value = isinstance(value, (list, tuple)) and len(value) in (0, 1, 2)
+        if not single_value and not range_value:
             raise StreamlitAPIException(
-                "The type of the date_input value should be either `datetime` or `date`."
+                "DateInput value should either be an date/datetime or a list/tuple of "
+                "0 - 2 date/datetime values"
             )
 
-        # Convert datetime to date
-        if isinstance(value, datetime):
-            value = value.date()
+        if single_value:
+            value = [value]
+
+        element.date_input.is_range = range_value
+
+        value = [v.date() if isinstance(v, datetime) else v for v in value]
 
         element.date_input.label = label
-        element.date_input.default = date.strftime(value, "%Y/%m/%d")
+        element.date_input.default[:] = [date.strftime(v, "%Y/%m/%d") for v in value]
 
         if isinstance(min_value, datetime):
             min_value = min_value.date()
@@ -2474,12 +2485,15 @@ class DeltaGenerator(object):
         element.date_input.max = date.strftime(max_value, "%Y/%m/%d")
 
         ui_value = _get_widget_ui_value("date_input", element, user_key=key)
-        current_value = (
-            datetime.strptime(ui_value, "%Y/%m/%d").date()
-            if ui_value is not None
-            else value
-        )
-        return current_value
+
+        if ui_value is not None:
+            value = getattr(ui_value, "data")
+            value = [datetime.strptime(v, "%Y/%m/%d").date() for v in value]
+
+        if single_value:
+            return value[0]
+        else:
+            return tuple(value)
 
     @_with_element
     def number_input(
@@ -2751,7 +2765,7 @@ class DeltaGenerator(object):
 
         To get a token for yourself, create an account at
         https://mapbox.com. It's free! (for moderate usage levels) See
-        https://docs.streamlit.io/cli.html#view-all-config-options for more
+        https://docs.streamlit.io/en/latest/cli.html#view-all-config-options for more
         info on how to set config options.
 
         Parameters
@@ -2799,7 +2813,7 @@ class DeltaGenerator(object):
 
         To get a token for yourself, create an account at
         https://mapbox.com. It's free! (for moderate usage levels) See
-        https://docs.streamlit.io/cli.html#view-all-config-options for more
+        https://docs.streamlit.io/en/latest/cli.html#view-all-config-options for more
         info on how to set config options.
 
         Parameters
@@ -2923,7 +2937,7 @@ class DeltaGenerator(object):
 
         To get a token for yourself, create an account at
         https://mapbox.com. It's free! (for moderate usage levels) See
-        https://docs.streamlit.io/cli.html#view-all-config-options for more
+        https://docs.streamlit.io/en/latest/cli.html#view-all-config-options for more
         info on how to set config options.
 
         Parameters

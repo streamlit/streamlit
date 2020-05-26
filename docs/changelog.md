@@ -16,6 +16,23 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.60.0
+
+_Release date: May 18, 2020_
+
+**Highlights:**
+
+- ↕️ Ability to set the height of an `st.text_area` with the `height` argument
+  (expressed in pixels). See
+  [docs](https://docs.streamlit.io/en/latest/api.html#streamlit.text_area) for more.
+- 🔡 Ability to set the maximimum number of characters allowed in `st.text_area`
+  or `st.text_input`. Check out the `max_chars` argument in the
+  [docs](https://docs.streamlit.io/en/latest/api.html#streamlit.text_area).
+- 🗺️ Better DeckGL support for the [H3](https://h3geo.org/) geospatial indexing
+  system. So now you can use things like `H3HexagonLayer` in
+  [`st.pydeck_chart`](https://docs.streamlit.io/en/latest/api.html#streamlit.pydeck_chart).
+- 📦 Improved `@st.cache` support for PyTorch TensorBase and Model.
+
 ## Version 0.59.0
 
 _Release date: May 05, 2020_
@@ -23,10 +40,10 @@ _Release date: May 05, 2020_
 **Highlights:**
 
 - 🎨 New color-picker widget! Use it with
-  [`st.beta_color_picker()`](https://docs.streamlit.io/api.html#streamlit.beta_color_picker)
+  [`st.beta_color_picker()`](https://docs.streamlit.io/en/latest/api.html#streamlit.beta_color_picker)
 - 🧪 Introducing `st.beta_*` and `st.experimental_*` function prefixes, for faster
   Streamlit feature releases. See
-  [docs](https://docs.streamlit.io/pre_release_features.html) for more info.
+  [docs](https://docs.streamlit.io/en/latest/pre_release_features.html) for more info.
 - 📦 Improved `@st.cache` support for SQL Alchemy objects, CompiledFFI, PyTorch
   Tensors, and `builtins.mappingproxy`.
 
@@ -50,7 +67,7 @@ _Release date: March 26, 2020_
 
 - ⏲️ Ability to set expiration options for `@st.cache`'ed functions by setting
   the `max_entries` and `ttl` arguments. See
-  [docs](https://docs.streamlit.io/api.html#streamlit.cache).
+  [docs](https://docs.streamlit.io/en/latest/api.html#streamlit.cache).
 - 🆙 Improved the machinery behind `st.file_uploader`, so it's much more
   performant now! Also increased the default upload limit to 200MB
   (configurable via `server.max_upload_size`).
@@ -115,11 +132,11 @@ _Release date: January 14, 2020_
 
 - 🗺️ Support for all DeckGL features! Just use
   [Pydeck](https://deckgl.readthedocs.io/en/latest/) instead of
-  [`st.deck_gl_chart`](https://docs.streamlit.io/api.html#streamlit.pydeck_chart).
+  [`st.deck_gl_chart`](https://docs.streamlit.io/en/latest/api.html#streamlit.pydeck_chart).
   To do that, simply pass a PyDeck object to
-  [`st.pydeck_chart`](https://docs.streamlit.io/api.html#streamlit.pydeck_chart),
-  [`st.write`](https://docs.streamlit.io/api.html#streamlit.write),
-  or [magic](https://docs.streamlit.io/api.html#magic).
+  [`st.pydeck_chart`](https://docs.streamlit.io/en/latest/api.html#streamlit.pydeck_chart),
+  [`st.write`](https://docs.streamlit.io/en/latest/api.html#streamlit.write),
+  or [magic](https://docs.streamlit.io/en/latest/api.html#magic).
 
   _Note that as a **preview release** things may change in the near future.
   Looking forward to hearing input from the community before we stabilize the
@@ -157,7 +174,7 @@ _Release date: December 20, 2019_
 **Highlights:**
 
 - 📤 Preview release of the file uploader widget. To try it out just call
-  [`st.file_uploader`](https://docs.streamlit.io/api.html#streamlit.file_uploader)!
+  [`st.file_uploader`](https://docs.streamlit.io/en/latest/api.html#streamlit.file_uploader)!
 
   _Note that as a **preview release** things may change in the near future.
   Looking forward to hearing input from the community before we stabilize the
@@ -173,7 +190,7 @@ _Release date: December 20, 2019_
   having to call
   [`pyplot.clf`](https://matplotlib.org/3.1.1/api/_as_gen/matplotlib.pyplot.clf.html)
   every time. If you want to turn this behavior off, use
-  [`st.pyplot(clear_figure=False)`](https://docs.streamlit.io/api.html#streamlit.pyplot)
+  [`st.pyplot(clear_figure=False)`](https://docs.streamlit.io/en/latest/api.html#streamlit.pyplot)
 - 📣 `st.cache` no longer checks for input mutations. This is the first change
   of our ongoing effort to simplify the caching system and prepare Streamlit
   for the launch of other caching primitives like Session State!
@@ -285,7 +302,7 @@ _Release date: September 19, 2019_
 **Highlights:**
 
 - ✨ Magic commands! Use `st.write` without typing `st.write`. See
-  https://docs.streamlit.io/api.html#magic-commands
+  https://docs.streamlit.io/en/latest/api.html#magic-commands
 - 🎛️ New `st.multiselect` widget.
 - 🐍 Fixed numerous install issues so now you can use `pip install streamlit`
   even in Conda! We've therefore deactivated our Conda repo.
