@@ -77,7 +77,7 @@ ALL_FIXTURES.update(VIDEO_FIXTURES)
 ALL_FIXTURES.update(IMAGE_FIXTURES)
 
 
-class UploadedFileManagerTest(unittest.TestCase):
+class MediaFileManagerTest(unittest.TestCase):
     def setUp(self):
         random.seed(1337)
 
