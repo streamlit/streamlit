@@ -134,14 +134,6 @@ class _ComponentInstanceBuilder:
             else:
                 args_json[key] = value
 
-        args_json = {}
-        args_df = {}
-        for key, value in kwargs.items():
-            if type_util.is_dataframe_compatible(value):
-                args_df[key] = value
-            else:
-                args_json[key] = value
-
         try:
             serialized_args_json = json.dumps(args_json)
         except BaseException as e:
