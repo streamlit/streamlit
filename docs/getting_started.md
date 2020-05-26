@@ -1,41 +1,78 @@
-# Get started
+# 10-minute Streamlit Tutorial
 
-The easiest way to learn Streamlit is to try things out yourself. As
-you read through this guide, test each method. As long as your app is running,
-every time you add a new element to your script and save, Streamlit's UI will
-ask if you'd like to rerun the app and view the changes. This allows you to
-work in a fast interactive loop: write some code, save it, review the
-output, write some more, and so on, until you're happy with the results.
+The easiest way to learn Streamlit is to try things out yourself! As
+you work through this tutorial, be sure to run each line of code.
+Each time you make a change to your script and save, the Streamlit UI will
+ask if you'd like to rerun the app and view the changes. This workflow allows for
+working in a fast, interactive loop: write some code, save it, review the
+output, write some more, and so on until you're happy with the results.
 
-The goal of this tutorial is to use Streamlit to create an interactive app for your data or model
-and along the way to use Streamlit to review, debug, perfect, and share your code.
+## Part 1: Install Streamlit in a virtual environment
 
-## Prerequisites
-
-Before you get started, you're going to need a few things:
-
-- Your favorite IDE or text editor
-- [Python 3.6 or later](https://www.python.org/downloads/)
-- [PIP](https://pip.pypa.io/en/stable/installing/)
-- [Streamlit](index.md) — This one's kind of important, so don't forget to
-  install.
-
-If you haven't already, take a few minutes to read through [Main
-concepts](main_concepts.md) to understand Streamlit's data flow model.
-
-## Set up a virtual environment
-
-Regardless of which package management tool you're using, we recommend running
-these commands in a virtual environment. This ensures that the dependencies
-pulled in for Streamlit don't impact any other Python projects
+Regardless of which package manager you choose ([pipenv](https://pipenv.pypa.io/en/latest/),
+[conda](https://www.anaconda.com/distribution/), [venv](https://docs.python.org/3/library/venv.html), etc.),
+we recommend installing Streamlit in a separate virtual environment for each Streamlit application.
+This ensures that the dependencies pulled in for Streamlit don't impact any other Python projects
 you're working on.
 
-- [pipenv](https://pipenv.pypa.io/en/latest/)
-- [venv](https://docs.python.org/3/library/venv.html)
-- [virtualenv](https://virtualenv.pypa.io/en/latest/)
-- [conda](https://www.anaconda.com/distribution/)
+These instructions assume you have already installed Python 3.6 or higher on your machine. If you need to download Python,
+please see the [official Python.org website](https://www.python.org/downloads/). The [Streamlit wiki](https://github.com/streamlit/streamlit/wiki) also provides detailed instructions about [creating Python virtual environments](https://github.com/streamlit/streamlit/wiki/Installing-in-a-virtual-environment).
 
-## Install Streamlit
+#### Installing Streamlit on macOS and Linux using Pipenv
+
+Streamlit's officially-supported environment manager for macOS and Linux is [Pipenv](https://pypi.org/project/pipenv/):
+
+1. Navigate to your project folder `myproject`:
+
+   ```sh
+   cd myproject
+   ```
+
+2. Install Streamlit in your environment:
+
+   ```sh
+   pipenv install streamlit
+   ```
+
+   When you run the command above, two files named `Pipfile` and `Pipfile.lock` will appear in `myprojects/`. These files are where your Pipenv environment and its dependencies are declared.
+
+    <br />
+
+3. Activate your pipenv environment from the `myproject/` folder:
+
+   ```sh
+   pipenv shell
+   ```
+
+4. Test that the installation worked:
+
+   ```sh
+   streamlit hello
+   ```
+
+   Streamlit's Hello app should appear in a new tab in your web browser at [http://localhost:8501](http://localhost:8501)!
+
+#### Installing Streamlit on Windows using Anaconda
+
+<!--
+
+#### Use your new environment
+
+1. Any time you want to use the new environment, you first need to go to your project folder (where the `Pipenv` file lives) and run:
+
+   ```sh
+   pipenv shell
+   ```
+
+2. Now you can use Python and Streamlit as usual:
+
+   ```sh
+   streamlit run myfile.py
+   ```
+
+3. When you're done using this environment, just type `exit` or press `ctrl-D` to return to your normall shell.
+
+### Install Streamlit
 
 ```bash
 $ pip install streamlit
@@ -47,7 +84,7 @@ Now run the hello world app just to make sure everything it's working:
 $ streamlit hello
 ```
 
-## Import Streamlit
+### Import Streamlit
 
 Now that everything's installed, let's create a new Python script and import
 Streamlit.
@@ -303,4 +340,4 @@ run into difficulties here are a few things you can do.
   - [Tutorials](tutorial/index.md) to make an app
   - [Advanced concepts](advanced_concepts.md) for things like caching and
     inserting elements out of order
-  - [API reference](api.md) for examples of every Streamlit command
+  - [API reference](api.md) for examples of every Streamlit command -->
