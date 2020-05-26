@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +21,6 @@ import errno
 import traceback
 import click
 from enum import Enum
-from typing import Any, Dict, Optional, TYPE_CHECKING
 
 import tornado.concurrent
 import tornado.gen
@@ -30,20 +30,17 @@ import tornado.websocket
 
 from streamlit import config
 from streamlit import file_util
-from streamlit.ConfigOption import ConfigOption
 from streamlit.ForwardMsgCache import ForwardMsgCache
 from streamlit.ForwardMsgCache import create_reference_msg
 from streamlit.ForwardMsgCache import populate_hash_if_needed
 from streamlit.ReportSession import ReportSession
-from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.server.UploadFileRequestHandler import UploadFileRequestHandler
+from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.server.routes import AddSlashHandler
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
-from streamlit.server.routes import MediaFileHandler
 from streamlit.server.routes import MessageCacheHandler
 from streamlit.server.routes import MetricsHandler
 from streamlit.server.routes import StaticFileHandler
@@ -53,21 +50,22 @@ from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import make_url_path_regex
 from streamlit.server.server_util import serialize_forward_msg
 
-if TYPE_CHECKING:
-    from streamlit.Report import Report
+import os
 
 LOGGER = get_logger(__name__)
 
-#IMPULSO HACK
-import os
+
 TORNADO_SETTINGS = {
     "compress_response": True,  # Gzip HTTP responses.
     "websocket_ping_interval": 20,  # Ping every 20s to keep WS alive.
     "websocket_ping_timeout": 30,  # Pings should be responded to within 30s.
     "websocket_max_message_size": MESSAGE_SIZE_LIMIT,  # Up the WS size limit.
-    "static_path": os.path.join(os.getcwd(), "static"),
 }
 
+
+# Dictionary key used to mark the script execution context that starts
+# up before the first browser connects.
+PREHEATED_REPORT_SESSION = "PREHEATED_REPORT_SESSION"
 
 # When server.port is not available it will look for the next available port
 # up to MAX_PORT_SEARCH_RETRIES.
@@ -75,25 +73,21 @@ MAX_PORT_SEARCH_RETRIES = 100
 
 
 class SessionInfo(object):
-    """Type stored in our _session_info_by_id dict.
+    """Type stored in our _report_sessions dict.
 
     For each ReportSession, the server tracks that session's
     report_run_count. This is used to track the age of messages in
     the ForwardMsgCache.
     """
 
-    def __init__(self, ws, session):
+    def __init__(self, session):
         """Initialize a SessionInfo instance.
 
         Parameters
         ----------
         session : ReportSession
-            The ReportSession object.
-        ws : _BrowserWebSocketHandler
-            The websocket that owns this report.
         """
         self.session = session
-        self.ws = ws
         self.report_run_count = 0
 
 
@@ -115,7 +109,7 @@ def server_port_is_manually_set():
 
 
 def start_listening(app):
-    """Makes the server start listening at the configured port.
+    """Takes the server start listening at the configured port.
 
     In case the port is already taken it tries listening to the next available
     port.  It will error after MAX_PORT_SEARCH_RETRIES attempts.
@@ -125,11 +119,10 @@ def start_listening(app):
     call_count = 0
 
     while call_count < MAX_PORT_SEARCH_RETRIES:
-        address = config.get_option("server.address")
         port = config.get_option("server.port")
 
         try:
-            app.listen(port, address)
+            app.listen(port)
             break  # It worked! So let's break out of the loop.
 
         except (OSError, socket.error) as e:
@@ -148,7 +141,7 @@ def start_listening(app):
                         port += 1
 
                     config._set_option(
-                        "server.port", port, ConfigOption.STREAMLIT_DEFINITION
+                        "server.port", port, config.ConfigOption.STREAMLIT_DEFINITION
                     )
                     call_count += 1
             else:
@@ -165,16 +158,11 @@ def start_listening(app):
 
 class Server(object):
 
-    _singleton = None  # type: Optional[Server]
+    _singleton = None
 
     @classmethod
     def get_current(cls):
-        """
-        Returns
-        -------
-        Server
-            The singleton Server object.
-        """
+        """Return the singleton instance."""
         if cls._singleton is None:
             raise RuntimeError("Server has not been initialized yet")
 
@@ -201,52 +189,13 @@ class Server(object):
         self._script_path = script_path
         self._command_line = command_line
 
-        # Mapping of ReportSession.id -> SessionInfo.
-        self._session_info_by_id = {}
+        # Mapping of WebSocket->SessionInfo.
+        self._session_infos = {}
 
         self._must_stop = threading.Event()
         self._state = None
         self._set_state(State.INITIAL)
         self._message_cache = ForwardMsgCache()
-        self._uploaded_file_mgr = UploadedFileManager()
-        self._uploaded_file_mgr.on_files_added.connect(self._on_file_uploaded)
-        self._report = None  # type: Optional[Report]
-        self._preheated_session_id = None  # type: Optional[str]
-
-    def _on_file_uploaded(self, file):
-        """Event handler for UploadedFileManager.on_file_added.
-
-        When a file is uploaded by a user, schedule a re-run of the
-        corresponding ReportSession.
-
-        Parameters
-        ----------
-        file : File
-            The file that was just uploaded.
-
-        """
-        session_info = self._get_session_info(file.session_id)
-        if session_info is not None:
-            session_info.session.request_rerun()
-        else:
-            # If an uploaded file doesn't belong to an existing session,
-            # remove it so it doesn't stick around forever.
-            self._uploaded_file_mgr.remove_files(file.session_id, file.widget_id)
-
-    def _get_session_info(self, session_id):
-        """Return the SessionInfo with the given id, or None if no such
-        session exists.
-
-        Parameters
-        ----------
-        session_id : str
-
-        Returns
-        -------
-        SessionInfo or None
-
-        """
-        return self._session_info_by_id.get(session_id, None)
 
     def start(self, on_started):
         """Start the server.
@@ -272,10 +221,8 @@ class Server(object):
 
         self._ioloop.spawn_callback(self._loop_coroutine, on_started)
 
-    def get_debug(self) -> Dict[str, Dict[str, Any]]:
-        if self._report:
-            return {"report": self._report.get_debug()}
-        return {}
+    def get_debug(self):
+        return {"report": self._report.get_debug()}
 
     def _create_app(self):
         """Create our tornado web app.
@@ -305,12 +252,15 @@ class Server(object):
                 dict(cache=self._message_cache),
             ),
             (
-                make_url_path_regex(base, "upload_file"),
-                UploadFileRequestHandler,
-                dict(file_mgr=self._uploaded_file_mgr),
+                make_url_path_regex(base, "resources/(.*)"),
+                tornado.web.StaticFileHandler,
+                {
+                    "path": os.path.join(os.getcwd(), "resources"),
+                    "default_filename": "index.html",
+                },
             ),
-            (make_url_path_regex(base, "media/(.*)"), MediaFileHandler),
         ]
+        # IMPULSO HACK
 
         if config.get_option("global.developmentMode") and config.get_option(
             "global.useNode"
@@ -319,7 +269,6 @@ class Server(object):
         else:
             static_path = file_util.get_static_dir()
             LOGGER.debug("Serving static content from %s", static_path)
-
             routes.extend(
                 [
                     (
@@ -368,18 +317,19 @@ class Server(object):
                     # Shallow-clone our sessions into a list, so we can iterate
                     # over it and not worry about whether it's being changed
                     # outside this coroutine.
-                    session_infos = list(self._session_info_by_id.values())
+                    session_pairs = list(self._session_infos.items())
 
-                    for session_info in session_infos:
-                        if session_info.ws is None:
-                            # Preheated.
+                    for ws, session_info in session_pairs:
+                        if ws is PREHEATED_REPORT_SESSION:
+                            continue
+                        if ws is None:
                             continue
                         msg_list = session_info.session.flush_browser_queue()
                         for msg in msg_list:
                             try:
-                                self._send_message(session_info, msg)
+                                self._send_message(ws, session_info, msg)
                             except tornado.websocket.WebSocketClosedError:
-                                self._close_report_session(session_info.session.id)
+                                self._remove_browser_connection(ws)
                             yield
                         yield
 
@@ -393,16 +343,14 @@ class Server(object):
                 yield tornado.gen.sleep(0.01)
 
             # Shut down all ReportSessions
-            for session_info in list(self._session_info_by_id.values()):
+            for session_info in list(self._session_infos.values()):
                 session_info.session.shutdown()
 
             self._set_state(State.STOPPED)
 
         except Exception as e:
-            # Can't just re-raise here because co-routines use Tornado
-            # exceptions for control flow, which appears to swallow the reraised
-            # exception.
-            traceback.print_exc()
+            print("EXCEPTION!", e)
+            traceback.print_stack(file=sys.stdout)
             LOGGER.info(
                 """
 Please report this bug at https://github.com/streamlit/streamlit/issues.
@@ -412,7 +360,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         finally:
             self._on_stopped()
 
-    def _send_message(self, session_info, msg):
+    def _send_message(self, ws, session_info, msg):
         """Send a message to a client.
 
         If the client is likely to have already cached the message, we may
@@ -421,6 +369,8 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
 
         Parameters
         ----------
+        ws : _BrowserWebSocketHandler
+            The socket connected to the client
         session_info : SessionInfo
             The SessionInfo associated with websocket
         msg : ForwardMsg
@@ -467,7 +417,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             )
 
         # Ship it off!
-        session_info.ws.write_message(serialize_forward_msg(msg_to_send), binary=True)
+        ws.write_message(serialize_forward_msg(msg_to_send), binary=True)
 
     def stop(self):
         click.secho("  Stopping...", fg="blue")
@@ -489,81 +439,52 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         This is used to start running the user's script even before the first
         browser connects.
         """
-        session = self._create_or_reuse_report_session(ws=None)
+        session = self._add_browser_connection(PREHEATED_REPORT_SESSION)
         session.handle_rerun_script_request(is_preheat=True)
 
-    def _create_or_reuse_report_session(self, ws):
-        """Register a connected browser with the server.
+    def _add_browser_connection(self, ws):
+        """Register a connected browser with the server
 
         Parameters
         ----------
-        ws : _BrowserWebSocketHandler or None
-            The newly-connected websocket handler or None if preheated
-            connection.
+        ws : _BrowserWebSocketHandler or PREHEATED_REPORT_CONTEXT
+            The newly-connected websocket handler
 
         Returns
         -------
         ReportSession
-            The newly-created ReportSession for this browser connection.
+            The ReportSession associated with this browser connection
 
         """
-        if self._preheated_session_id is not None:
-            assert len(self._session_info_by_id) == 1
-            assert ws is not None
+        if ws not in self._session_infos:
 
-            session_id = self._preheated_session_id
-            self._preheated_session_id = None
+            if PREHEATED_REPORT_SESSION in self._session_infos:
+                assert len(self._session_infos) == 1
+                LOGGER.debug("Reusing preheated context for ws %s", ws)
+                session = self._session_infos[PREHEATED_REPORT_SESSION].session
+                del self._session_infos[PREHEATED_REPORT_SESSION]
+            else:
+                LOGGER.debug("Creating new context for ws %s", ws)
+                session = ReportSession(
+                    ioloop=self._ioloop,
+                    script_path=self._script_path,
+                    command_line=self._command_line,
+                )
 
-            session_info = self._session_info_by_id[session_id]
-            session_info.ws = ws
-            session = session_info.session
+            self._session_infos[ws] = SessionInfo(session)
 
-            LOGGER.debug(
-                "Reused preheated session for ws %s. Session ID: %s", id(ws), session_id
-            )
+            if ws is not PREHEATED_REPORT_SESSION:
+                self._set_state(State.ONE_OR_MORE_BROWSERS_CONNECTED)
 
-        else:
-            session = ReportSession(
-                ioloop=self._ioloop,
-                script_path=self._script_path,
-                command_line=self._command_line,
-                uploaded_file_manager=self._uploaded_file_mgr,
-            )
+        return self._session_infos[ws].session
 
-            LOGGER.debug(
-                "Created new session for ws %s. Session ID: %s", id(ws), session.id
-            )
-
-            assert session.id not in self._session_info_by_id, (
-                "session.id '%s' registered multiple times!" % session.id
-            )
-
-        self._session_info_by_id[session.id] = SessionInfo(ws, session)
-
-        if ws is None:
-            self._preheated_session_id = session.id
-        else:
-            self._set_state(State.ONE_OR_MORE_BROWSERS_CONNECTED)
-
-        return session
-
-    def _close_report_session(self, session_id):
-        """Shutdown and remove a ReportSession.
-
-        This function may be called multiple times for the same session,
-        which is not an error. (Subsequent calls just no-op.)
-
-        Parameters
-        ----------
-        session_id : str
-            The ReportSession's id string.
-        """
-        if session_id in self._session_info_by_id:
-            session_info = self._session_info_by_id[session_id]
-            del self._session_info_by_id[session_id]
+    def _remove_browser_connection(self, ws):
+        if ws in self._session_infos:
+            session_info = self._session_infos[ws]
+            del self._session_infos[ws]
             session_info.session.shutdown()
 
-        if len(self._session_info_by_id) == 0:
+        if len(self._session_infos) == 0:
             self._set_state(State.NO_BROWSERS_CONNECTED)
 
 
@@ -572,33 +493,33 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def initialize(self, server):
         self._server = server
-        self._session = None
 
     def check_origin(self, origin):
         """Set up CORS."""
         return super().check_origin(origin) or is_url_from_allowed_origins(origin)
 
     def open(self):
-        self._session = self._server._create_or_reuse_report_session(self)
+        self._session = self._server._add_browser_connection(self)
 
     def on_close(self):
-        if not self._session:
-            return
-        self._server._close_report_session(self._session.id)
-        self._session = None
+        self._server._remove_browser_connection(self)
 
     @tornado.gen.coroutine
     def on_message(self, payload):
-        if not self._session:
-            return
-
         msg = BackMsg()
 
         try:
             msg.ParseFromString(payload)
             msg_type = msg.WhichOneof("type")
 
-            LOGGER.debug("Received the following back message:\n%s", msg)
+            if msg_type == "upload_file_chunk":
+                LOGGER.debug(
+                    "Received the following upload_file_chunk back message:\nfile_uploaded {\n   widget_id: %s\n   index: %s\n   data: #####\n}",
+                    msg.upload_file_chunk.widget_id,
+                    msg.upload_file_chunk.index,
+                )
+            else:
+                LOGGER.debug("Received the following back message:\n%s", msg)
 
             if msg_type == "cloud_upload":
                 yield self._session.handle_save_request(self)
@@ -613,6 +534,16 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
             elif msg_type == "update_widgets":
                 self._session.handle_rerun_script_request(
                     widget_state=msg.update_widgets
+                )
+            elif msg_type == "upload_file":
+                self._session.handle_upload_file(upload_file=msg.upload_file)
+            elif msg_type == "upload_file_chunk":
+                self._session.handle_upload_file_chunk(
+                    upload_file_chunk=msg.upload_file_chunk
+                )
+            elif msg_type == "delete_uploaded_file":
+                self._session.handle_delete_uploaded_file(
+                    delete_uploaded_file=msg.delete_uploaded_file
                 )
             elif msg_type == "close_connection":
                 if config.get_option("global.developmentMode"):
