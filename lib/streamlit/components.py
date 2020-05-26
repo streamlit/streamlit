@@ -354,6 +354,12 @@ class ComponentRegistry:
                     "No such component directory: '%s'" % abspath
                 )
 
+        if name in self._components and self._components[name] != abspath:
+            LOGGER.warning(
+                "Component '%s': overriding previously registered path %s",
+                name,
+                self._components[name],
+            )
         self._components[name] = abspath
 
     def get_component_path(self, name: str) -> Optional[str]:
