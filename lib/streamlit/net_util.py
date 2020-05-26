@@ -45,7 +45,9 @@ def get_external_ip():
 
     response = _make_blocking_http_get(_AWS_CHECK_IP, timeout=5)
 
-    if response is None:
+    if _looks_like_an_ip_adress(response):
+        _external_ip = response
+    else:
         LOGGER.warning(
             # fmt: off
             "Did not auto detect external IP.\n"
@@ -53,8 +55,7 @@ def get_external_ip():
             # fmt: on
             util.HELP_DOC
         )
-    else:
-        _external_ip = response.strip()
+        _external_ip = None
 
     return _external_ip
 
@@ -93,6 +94,29 @@ def get_internal_ip():
 
 def _make_blocking_http_get(url, timeout=5):
     try:
-        return requests.get(url, timeout=timeout).text
+        text = requests.get(url, timeout=timeout).text
+        if isinstance(text, str):
+            text = text.strip()
+        return text
     except Exception as e:
         return None
+
+
+def _looks_like_an_ip_adress(address):
+    if address is None:
+        return False
+
+    try:
+        socket.inet_pton(socket.AF_INET, address)
+        return True  # Yup, this is an IPv4 address!
+    except (AttributeError, OSError):
+        pass
+
+    try:
+        socket.inet_pton(socket.AF_INET6, address)
+        return True  # Yup, this is an IPv6 address!
+    except (AttributeError, OSError):
+        pass
+
+    # Nope, this is not an IP address.
+    return False

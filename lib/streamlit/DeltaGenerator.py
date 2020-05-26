@@ -1708,8 +1708,8 @@ class DeltaGenerator(object):
         -------
         >>> options = st.multiselect(
         ...     'What are your favorite colors',
-                ('Yellow', 'Red')
-        ...     ('Green', 'Yellow', 'Red', 'Blue'))
+        ...     ['Green', 'Yellow', 'Red', 'Blue'],
+        ...     ['Yellow', 'Red'])
         >>>
         >>> st.write('You selected:', options)
 
