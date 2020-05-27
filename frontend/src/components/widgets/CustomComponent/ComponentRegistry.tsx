@@ -78,7 +78,10 @@ export class ComponentRegistry {
   }
 
   private onMessageEvent = (event: MessageEvent): void => {
-    if (!event.data.hasOwnProperty("isStreamlitMessage")) {
+    if (
+      event.data == null ||
+      !event.data.hasOwnProperty("isStreamlitMessage")
+    ) {
       // Disregard messages that don't come from components.
       return
     }
