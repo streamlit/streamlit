@@ -79,7 +79,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
   readonly state = {
     viewState: {
       bearing: 0,
-      pitch: 60,
+      pitch: 0,
       zoom: 11,
     },
     initialized: false,
