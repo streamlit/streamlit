@@ -1,4 +1,4 @@
-# 10-minute Streamlit Tutorial
+# Getting Started with Streamlit
 
 The easiest way to learn Streamlit is to try things out yourself! As
 you work through this tutorial, be sure to run each line of code.
