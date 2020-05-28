@@ -19,9 +19,6 @@ import React, { PureComponent, ReactNode } from "react"
 import DeckGL from "deck.gl"
 import Immutable from "immutable"
 import isEqual from "lodash/isEqual"
-import toPairs from "lodash/toPairs"
-import fromPairs from "lodash/fromPairs"
-import differenceWith from "lodash/differenceWith"
 import { StaticMap } from "react-map-gl"
 import * as layers from "@deck.gl/layers"
 import { JSONConverter } from "@deck.gl/json"
@@ -71,18 +68,22 @@ export interface PropsWithHeight extends Props {
 }
 
 interface State {
-  viewState: object | undefined
+  viewState: object
   initialized: boolean
-  initialViewState: object | undefined
+  initialViewState: object
 }
 
 export const DEFAULT_DECK_GL_HEIGHT = 500
 
 export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
   readonly state = {
-    viewState: undefined,
+    viewState: {
+      bearing: 0,
+      pitch: 60,
+      zoom: 11,
+    },
     initialized: false,
-    initialViewState: undefined,
+    initialViewState: {},
   }
 
   componentDidMount = (): void => {
@@ -102,12 +103,20 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
 
     // If the ViewState on the server has changed, apply the diff to the current state
     if (!isEqual(deck.initialViewState, state.initialViewState)) {
-      const diff = fromPairs(
-        differenceWith(
-          toPairs(deck.initialViewState),
-          toPairs(state.initialViewState || {}),
-          isEqual
-        )
+      const diff = Object.keys(deck.initialViewState).reduce(
+        (diff, key): any => {
+          // @ts-ignore
+          if (deck.initialViewState[key] === state.initialViewState[key]) {
+            return diff
+          }
+
+          return {
+            ...diff,
+            // @ts-ignore
+            [key]: deck.initialViewState[key],
+          }
+        },
+        {}
       )
 
       return {
