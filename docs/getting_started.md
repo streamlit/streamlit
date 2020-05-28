@@ -7,7 +7,7 @@ ask if you'd like to rerun the app and view the changes. This workflow allows fo
 working in a fast, interactive loop: write some code, save it, review the
 output, write some more, and so on until you're happy with the results.
 
-## Part 1: Install Streamlit in a virtual environment
+## Part 1: Installing Streamlit in a virtual environment
 
 Regardless of which package manager you choose ([pipenv](https://pipenv.pypa.io/en/latest/),
 [conda](https://www.anaconda.com/distribution/), [venv](https://docs.python.org/3/library/venv.html), etc.),
@@ -42,7 +42,7 @@ Once you have installed Anaconda, please follow the steps to [set up and manage 
 2. In the terminal that appears, type: `pip install streamlit`
 3. Test that the installation worked: `streamlit hello`
 
-The 'Streamlit Hello' should appear in a new tab in your web browser at [http://localhost:8501](http://localhost:8501)!
+The 'Streamlit Hello' app should appear in a new tab in your web browser at [http://localhost:8501](http://localhost:8501)!
 
 ## Part 2: Setting up a Streamlit app
 
