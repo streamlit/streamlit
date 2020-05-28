@@ -46,7 +46,7 @@ The 'Streamlit Hello' app should appear in a new tab in your web browser at [htt
 
 ## Part 2: Setting up a Streamlit app
 
-Now that Streamlit is installed our virtual environment and we've validated everything is working correctly,
+Now that Streamlit is installed in our virtual environment and we've validated everything is working correctly,
 let's set up a minimal Streamlit app:
 
 1. Create a new Python file named `first_app.py`, then open it with your IDE
