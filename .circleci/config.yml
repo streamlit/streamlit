@@ -46,22 +46,22 @@ commands:
       - restore_cache: &restore_virtualenv
           name: Restore virtualenv from cache
           keys:
-            - v12-python-venv-{{ checksum "~/python_version.md5" }}
+            - v13-python-venv-{{ checksum "~/python_version.md5" }}
 
       - restore_cache: &restore_nvm
           name: Restore nvm and node_modules from cache
           keys:
-            - v12-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
+            - v13-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
 
       - restore_cache: &restore_make
           name: Restore make from cache
           keys:
-            - v12_make.bin-{{ checksum "~/make.md5" }}
+            - v13_make.bin-{{ checksum "~/make.md5" }}
 
       - restore_cache: &restore_dot
           name: Restore dot from cache
           keys:
-            - v12_dot.bin-{{ checksum "~/dot.md5" }}
+            - v13_dot.bin-{{ checksum "~/dot.md5" }}
 
   pre-make:
     steps:
@@ -234,7 +234,7 @@ jobs:
       - restore_cache:
           name: Restore protobufs from cache
           keys:
-            - v12-protobuf-{{ checksum "~/protobuf.md5" }}
+            - v13-protobuf-{{ checksum "~/protobuf.md5" }}
 
       #################################################################
       # Pre Make commands
@@ -243,13 +243,13 @@ jobs:
 
       - save_cache:
           name: Save make to cache
-          key: v12_make.bin-{{ checksum "~/make.md5" }}
+          key: v13_make.bin-{{ checksum "~/make.md5" }}
           paths:
             - make.bin
 
       - save_cache:
           name: Save dot to cache
-          key: v12_dot.bin-{{ checksum "~/dot.md5" }}
+          key: v13_dot.bin-{{ checksum "~/dot.md5" }}
           paths:
             - dot.bin
 
@@ -329,20 +329,20 @@ jobs:
       #################################################################
       - save_cache:
           name: Save virtualenv to cache
-          key: v12-python-venv-{{ checksum "~/python_version.md5" }}
+          key: v13-python-venv-{{ checksum "~/python_version.md5" }}
           paths:
             - venv
 
       - save_cache:
           name: Save nvm and node_modules to cache
-          key: v12-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
+          key: v13-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
           paths:
             - ~/.nvm
             - ~/.cache
 
       - save_cache:
           name: Save generated protobufs to cache
-          key: v12-protobuf-{{ checksum "~/protobuf.md5" }}
+          key: v13-protobuf-{{ checksum "~/protobuf.md5" }}
           paths:
             - frontend/src/autogen/proto.js
             - lib/streamlit/proto
