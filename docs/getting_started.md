@@ -241,7 +241,7 @@ Most of the elements you can put into your app can also be put into a sidebar us
 - `st.sidebar.slider()`
 - `st.sidebar.line_chart()`
 
-Currently, the only exceptions to using widgets in the sidebar right now are `st.write` (you
+Currently, the only exceptions to using widgets in the sidebar are `st.write` (you
 should use `st.sidebar.markdown()` instead), `st.echo`, and `st.spinner`.
 
 #### Showing calculation progress
