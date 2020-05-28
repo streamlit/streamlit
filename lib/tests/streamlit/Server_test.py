@@ -148,6 +148,21 @@ class ServerTest(ServerTestCase):
             self.assertFalse(self.server.browser_is_connected)
 
     @tornado.testing.gen_test
+    def test_websocket_compression(self):
+        with self._patch_report_session():
+            yield self.start_server_loop()
+
+            # Connect to the server, and explicitly request compression.
+            ws_client = yield tornado.websocket.websocket_connect(
+                self.get_ws_url("/stream"), compression_options={}
+            )
+
+            # Ensure that the "permessage-deflate" extension is returned
+            # from the server.
+            extensions = ws_client.headers.get("Sec-Websocket-Extensions")
+            self.assertIn("permessage-deflate", extensions)
+
+    @tornado.testing.gen_test
     def test_forwardmsg_hashing(self):
         """Test that outgoing ForwardMsgs contain hashes."""
         with self._patch_report_session():
