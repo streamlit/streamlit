@@ -31,7 +31,7 @@ STATIC_MEDIA_ENDPOINT = "/media"
 # Length of time (seconds) to keep media files so that we don't pull the rug out from
 # under rapid-media-generating elements, e.g. using a slider to produce pyplots.
 # See Issues #1440, #1445, #1294
-KEEP_DELAY_SEC = 2
+KEEP_DELAY_SEC = 5
 
 
 def _get_session_id():
@@ -121,6 +121,8 @@ class MediaFileManager(object):
             dict
         )  # type: DefaultDict[str, Dict[str, MediaFile]]
 
+        self._ioloop = None
+
     def _del_expired_files(self):
         LOGGER.debug("Deleting expired files...")
 
@@ -153,7 +155,7 @@ class MediaFileManager(object):
         LOGGER.debug(
             "Sessions still active: %r", self._files_by_session_and_coord.keys()
         )
-        self._del_expired_files()
+        self._ioloop.call_later(KEEP_DELAY_SEC, self._del_expired_files)
 
         LOGGER.debug(
             "Files: %s; Sessions with files: %s",
@@ -211,6 +213,9 @@ class MediaFileManager(object):
         Raises KeyError if not found.
         """
         return self._files_by_id[mediafile_or_id]
+
+    def set_ioloop(self, ioloop):
+        self._ioloop = ioloop
 
     def __contains__(self, mediafile_or_id):
         return mediafile_or_id in self._files_by_id
