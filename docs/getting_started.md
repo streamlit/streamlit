@@ -1,7 +1,7 @@
 # Getting Started with Streamlit
 
 The easiest way to learn Streamlit is to try things out yourself! As
-you work through this tutorial, be sure to run each line of code.
+you work through this getting started guide, be sure to run each line of code.
 Each time you make a change to your script and save, the Streamlit UI will
 ask if you'd like to rerun the app and view the changes. This workflow allows for
 working in a fast, interactive loop: write some code, save it, review the
