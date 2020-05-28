@@ -1,13 +1,13 @@
-# Getting Started with Streamlit
+# Get Started with Streamlit
 
 The easiest way to learn Streamlit is to try things out yourself! As
-you work through this getting started guide, be sure to run each line of code.
+you work through this guide, be sure to run each line of code.
 Each time you make a change to your script and save, the Streamlit UI will
-ask if you'd like to rerun the app and view the changes. This workflow allows for
-working in a fast, interactive loop: write some code, save it, review the
+ask if you'd like to rerun the app and view the changes. This workflow allows the user to
+work in a fast, interactive loop: write some code, save it, review the
 output, write some more, and so on until you're happy with the results.
 
-## Part 1: Installing Streamlit in a virtual environment
+## Part 1: Install Streamlit in a virtual environment
 
 Regardless of which package manager you choose ([pipenv](https://pipenv.pypa.io/en/latest/),
 [conda](https://www.anaconda.com/distribution/), [venv](https://docs.python.org/3/library/venv.html), etc.),
@@ -16,9 +16,9 @@ This ensures that the dependencies pulled in for Streamlit don't impact any othe
 you're working on.
 
 These instructions assume you have already installed Python 3.6 or higher on your machine. If you need to download Python,
-please see the [official Python.org website](https://www.python.org/downloads/). Additionally, the [Streamlit wiki](https://github.com/streamlit/streamlit/wiki) provides detailed instructions for [creating Python virtual environments](https://github.com/streamlit/streamlit/wiki/Installing-in-a-virtual-environment).
+please see the [official Python.org website](https://www.python.org/downloads/). Additionally, the [Streamlit wiki](https://github.com/streamlit/streamlit/wiki) provides detailed instructions to [create Python virtual environments](https://github.com/streamlit/streamlit/wiki/Installing-in-a-virtual-environment).
 
-### Installing Streamlit on macOS and Linux using Pipenv
+### Install Streamlit on macOS and Linux with Pipenv
 
 The officially-supported environment manager for Streamlit on macOS and Linux is [Pipenv](https://pypi.org/project/pipenv/):
 
@@ -30,7 +30,7 @@ The officially-supported environment manager for Streamlit on macOS and Linux is
 
 The 'Streamlit Hello' app should appear in a new tab in your web browser at [http://localhost:8501](http://localhost:8501)!
 
-### Installing Streamlit on Windows using Anaconda
+### Install Streamlit on Windows with Anaconda
 
 The officially-supported environment manager for Streamlit on Windows is [Anaconda Navigator](https://docs.anaconda.com/anaconda/navigator/). If
 you don't have Anaconda installed yet, please follow the steps provided on the [Anaconda installation page](https://docs.anaconda.com/anaconda/install/windows/).
@@ -44,7 +44,7 @@ Once you have installed Anaconda, please follow the steps to [set up and manage 
 
 The 'Streamlit Hello' app should appear in a new tab in your web browser at [http://localhost:8501](http://localhost:8501)!
 
-## Part 2: Setting up a Streamlit app
+## Part 2: Set up a Streamlit app
 
 Now that Streamlit is installed in our virtual environment and we've validated everything is working correctly,
 let's set up a minimal Streamlit app:
@@ -54,7 +54,7 @@ let's set up a minimal Streamlit app:
 2. Next, import Streamlit.
    ```Python
    import streamlit as st
-   # To make things easier later, we're also importing numpy and pandas for
+   # To make things easier later, we also import numpy and pandas for
    # working with sample data.
    import numpy as np
    import pandas as pd
@@ -76,11 +76,11 @@ let's set up a minimal Streamlit app:
       `$ streamlit run https://raw.githubusercontent.com/streamlit/demo-uber-nyc-pickups/master/app.py`
    ```
 
-## Part 3: Adding widgets to a Streamlit app
+## Part 3: Add widgets to a Streamlit app
 
 Streamlit has dozens of ways to add UI widgets to your app. Check out our [API reference](api.md) for a complete list.
 
-### Adding a title
+### Add a title
 
 Let's add a title to our app by placing this text in the `first_app.py` file:
 
@@ -92,7 +92,7 @@ That's it, your app has a title! You can use specific text functions to add
 content to your app, or you can use [`st.write()`](api.html#streamlit.write)
 and add your own markdown.
 
-### Writing a data frame
+### Write a data frame
 
 Along with [magic commands](api.html#magic-commands),
 [`st.write()`](api.html#streamlit.write) is the "Swiss Army knife" of Streamlit. You
@@ -110,7 +110,7 @@ st.write(pd.DataFrame({
 
 There are other data specific functions like
 [`st.dataframe()`](api.html#streamlit.dataframe) and
-[`st.table()`](api.html#streamlit.table) that you can also use for displaying
+[`st.table()`](api.html#streamlit.table) that you can also use to display
 data. Check our advanced guides on displaying data to understand when to use
 these features and how to add colors and styling to your data frames.
 
@@ -128,7 +128,7 @@ these features and how to add colors and styling to your data frames.
 You can also write to your app without calling any
 Streamlit methods. Streamlit supports "[magic
 commands](api.html#magic-commands)," which means you don't have to use
-[`st.write()`](api.html#streamlit.write) at all! Try replacing the code above
+[`st.write()`](api.html#streamlit.write) at all! Replace the code above
 with this snippet:
 
 ```Python
@@ -149,13 +149,13 @@ Any time that Streamlit sees a variable or a literal value on its own line, it a
 writes its value to your app using [`st.write()`](api.html#streamlit.write). For more information,
 refer to the documentation on [magic commands](api.html#magic-commands).
 
-### Drawing charts and maps
+### Draw charts and maps
 
 Streamlit supports several popular data charting libraries like [Matplotlib,
 Altair, deck.gl, and more](api.html#display-charts). In this section, you'll
 add a bar chart, line chart, and a map to your app.
 
-#### Drawing a line chart
+#### Draw a line chart
 
 You can easily add a line chart to your app with
 [`st.line_chart()`](api.html#streamlit.line_chart). We'll generate a random
@@ -169,7 +169,7 @@ chart_data = pd.DataFrame(
 st.line_chart(chart_data)
 ```
 
-#### Plotting a map
+#### Plot a map
 
 With [`st.map()`](api.html#streamlit.map) you can display data points on a map.
 Let's use Numpy to generate some sample data and plot it on a map of
@@ -183,13 +183,13 @@ map_data = pd.DataFrame(
 st.map(map_data)
 ```
 
-### Adding interactivity with widgets
+### Add interactivity with widgets
 
 With widgets, Streamlit allows you to bake interactivity directly into your
 apps with checkboxes, buttons, sliders, and more. Check out our [API
 reference](api.md) for a full list of interactive widgets.
 
-#### Using checkboxes to show/hide data
+#### Use checkboxes to show/hide data
 
 One use case for checkboxes is to hide or show a specific chart or section in
 an app. [`st.checkbox()`](api.html#streamlit.checkbox) takes a single argument,
@@ -205,7 +205,7 @@ if st.checkbox('Show dataframe'):
     st.line_chart(chart_data)
 ```
 
-#### Using a selectbox for options
+#### Use a selectbox for options
 
 Use [`st.selectbox`](api.html#streamlit.selectbox) to choose from a series. You
 can write in the options you want as a literal array, or pass through an array or data frame
@@ -221,7 +221,7 @@ option = st.selectbox(
 'You selected: ', option
 ```
 
-#### Putting widgets in a sidebar
+#### Put widgets in a sidebar
 
 For a cleaner look, you can move your widgets into a sidebar. This keeps your
 app central, while widgets are pinned to the left. Here's how to use [`st.sidebar`](api.html#add-widgets-to-sidebar) in your app.
@@ -234,7 +234,7 @@ option = st.sidebar.selectbox(
 'You selected:', option
 ```
 
-Most of the elements you can put into your app can also be put into a sidebar using this syntax:
+Most of the elements you can put into your app can also be put into a sidebar with this syntax:
 `st.sidebar.[element_name]()`, including:
 
 - `st.sidebar.markdown()`
@@ -244,7 +244,7 @@ Most of the elements you can put into your app can also be put into a sidebar us
 Currently, the only exceptions to using widgets in the sidebar are `st.write` (you
 should use `st.sidebar.markdown()` instead), `st.echo`, and `st.spinner`.
 
-#### Showing calculation progress
+#### Show calculation progress
 
 When adding long running computations to an app, you can use
 [`st.progress()`](api.html#streamlit.progress) to display the calculation status.
@@ -272,7 +272,7 @@ for i in range(100):
 '...and now we\'re done!'
 ```
 
-## Part 4: Recording a screencast (optional)
+## Part 4: Record a screencast (optional)
 
 After you've built a Streamlit app, you may want to discuss some of it with co-workers over email or Slack, or share it with the world on Twitter.
 A great way to share your app is by using the Streamlit built-in screencast recorder. With it, you can record, narrate, stop, save, and share with a few clicks.
@@ -286,7 +286,7 @@ To stop your screencast, go back to the menu (**☰**) and select **Stop recordi
 .. image:: ./media/screenshare.gif
 ```
 
-## Getting help with Streamlit
+## Get help with Streamlit
 
 If you run into difficulties building your own Streamlit apps, here are a few resources you can turn to:
 
