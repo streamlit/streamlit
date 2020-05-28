@@ -592,6 +592,16 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
         self._server._close_report_session(self._session.id)
         self._session = None
 
+    def get_compression_options(self):
+        """Enable WebSocket compression.
+
+        By default, this method returns None, which means compression
+        is disabled. Returning an empty dict enables it.
+
+        (See the docstring in the parent class.)
+        """
+        return {}
+
     @tornado.gen.coroutine
     def on_message(self, payload):
         if not self._session:
