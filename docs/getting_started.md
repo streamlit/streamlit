@@ -16,78 +16,38 @@ This ensures that the dependencies pulled in for Streamlit don't impact any othe
 you're working on.
 
 These instructions assume you have already installed Python 3.6 or higher on your machine. If you need to download Python,
-please see the [official Python.org website](https://www.python.org/downloads/). The [Streamlit wiki](https://github.com/streamlit/streamlit/wiki) also provides detailed instructions about [creating Python virtual environments](https://github.com/streamlit/streamlit/wiki/Installing-in-a-virtual-environment).
+please see the [official Python.org website](https://www.python.org/downloads/). Additionally, the [Streamlit wiki](https://github.com/streamlit/streamlit/wiki) provides detailed instructions for [creating Python virtual environments](https://github.com/streamlit/streamlit/wiki/Installing-in-a-virtual-environment).
 
-#### Installing Streamlit on macOS and Linux using Pipenv
+### Installing Streamlit on macOS and Linux using Pipenv
 
-Streamlit's officially-supported environment manager for macOS and Linux is [Pipenv](https://pypi.org/project/pipenv/):
+The officially-supported environment manager for Streamlit on macOS and Linux is [Pipenv](https://pypi.org/project/pipenv/):
 
-1. Navigate to your project folder `myproject`:
+1. Navigate to your project folder: `cd <myproject>`
+2. Install Streamlit in your environment: `pipenv install streamlit`
+   <br />When you run the command above, two files named `Pipfile` and `Pipfile.lock` will appear in `myprojects/`. These files are where your Pipenv environment and its dependencies are declared.
+3. Activate your pipenv environment from the `<myproject>` folder: `pipenv shell`
+4. Test that the installation worked: `streamlit hello`
 
-   ```sh
-   cd myproject
-   ```
+The 'Streamlit Hello' app should appear in a new tab in your web browser at [http://localhost:8501](http://localhost:8501)!
 
-2. Install Streamlit in your environment:
+### Installing Streamlit on Windows using Anaconda
 
-   ```sh
-   pipenv install streamlit
-   ```
+The officially-supported environment manager for Streamlit on Windows is [Anaconda Navigator](https://docs.anaconda.com/anaconda/navigator/). If
+you don't have Anaconda installed yet, please follow the steps provided on the [Anaconda installation page](https://docs.anaconda.com/anaconda/install/windows/).
 
-   When you run the command above, two files named `Pipfile` and `Pipfile.lock` will appear in `myprojects/`. These files are where your Pipenv environment and its dependencies are declared.
+Once you have installed Anaconda, please follow the steps to [set up and manage your environment](https://docs.anaconda.com/anaconda/navigator/getting-started/#managing-environments) using the Anaconda Navigator.
 
-    <br />
+1. Select the "▶" icon next to your new environment. Then select "Open terminal":
+   !["Open terminal" in Anaconda Navigator](https://i.stack.imgur.com/EiiFc.png)
+2. In the terminal that appears, type: `pip install streamlit`
+3. Test that the installation worked: `streamlit hello`
 
-3. Activate your pipenv environment from the `myproject/` folder:
+The 'Streamlit Hello' should appear in a new tab in your web browser at [http://localhost:8501](http://localhost:8501)!
 
-   ```sh
-   pipenv shell
-   ```
+## Part 2: Setting up a Streamlit app
 
-4. Test that the installation worked:
-
-   ```sh
-   streamlit hello
-   ```
-
-   Streamlit's Hello app should appear in a new tab in your web browser at [http://localhost:8501](http://localhost:8501)!
-
-#### Installing Streamlit on Windows using Anaconda
-
-<!--
-
-#### Use your new environment
-
-1. Any time you want to use the new environment, you first need to go to your project folder (where the `Pipenv` file lives) and run:
-
-   ```sh
-   pipenv shell
-   ```
-
-2. Now you can use Python and Streamlit as usual:
-
-   ```sh
-   streamlit run myfile.py
-   ```
-
-3. When you're done using this environment, just type `exit` or press `ctrl-D` to return to your normall shell.
-
-### Install Streamlit
-
-```bash
-$ pip install streamlit
-```
-
-Now run the hello world app just to make sure everything it's working:
-
-```bash
-$ streamlit hello
-```
-
-### Import Streamlit
-
-Now that everything's installed, let's create a new Python script and import
-Streamlit.
+Now that Streamlit is installed our virtual environment and we've validated everything is working correctly,
+let's set up a minimal Streamlit app:
 
 1. Create a new Python file named `first_app.py`, then open it with your IDE
    or text editor.
@@ -99,15 +59,15 @@ Streamlit.
    import numpy as np
    import pandas as pd
    ```
-3. Run your app. A new tab will open in your default browser. It'll be blank
-   for now. That's OK.
+3. Run your app from a terminal window (i.e. `Terminal` for Linux/OSX, `Powershell` for Windows). A new tab will open in your default browser, which will be blank.
+   This is expected, as no Streamlit widgets have been defined yet.
 
    ```bash
    $ streamlit run first_app.py
    ```
 
-   Running a Streamlit app is no different than any other Python script.
-   Whenever you need to view the app, you can use this command.
+   Running a Streamlit app is no different than any other Python script. Whenever you want to view your app, run this command and your Streamlit app
+   will be served. You can stop your app at any time by typing **Ctrl+c** in the terminal or by closing its terminal window.
 
    ```eval_rst
    .. tip::
@@ -116,29 +76,26 @@ Streamlit.
       `$ streamlit run https://raw.githubusercontent.com/streamlit/demo-uber-nyc-pickups/master/app.py`
    ```
 
-4. You can kill the app at any time by typing **Ctrl+c** in the terminal.
+## Part 3: Adding widgets to a Streamlit app
 
-## Add text and data
+Streamlit has dozens of ways to add UI widgets to your app. Check out our [API reference](api.md) for a complete list.
 
-### Add a title
+### Adding a title
 
-Streamlit has a number of ways to add text to your app. Check out our
-[API reference](api.md) for a complete list.
-
-Let's add a title to test things out:
+Let's add a title to our app by placing this text in the `first_app.py` file:
 
 ```Python
 st.title('My first app')
 ```
 
-That's it! Your app has a title. You can use specific text functions to add
+That's it, your app has a title! You can use specific text functions to add
 content to your app, or you can use [`st.write()`](api.html#streamlit.write)
 and add your own markdown.
 
-### Write a data frame
+### Writing a data frame
 
 Along with [magic commands](api.html#magic-commands),
-[`st.write()`](api.html#streamlit.write) is Streamlit's "Swiss Army knife". You
+[`st.write()`](api.html#streamlit.write) is "Swiss Army knife" of Streamlit. You
 can pass almost anything to [`st.write()`](api.html#streamlit.write):
 text, data, Matplotlib figures, Altair charts, and more. Don't worry, Streamlit
 will figure it out and render things the right way.
@@ -166,9 +123,9 @@ these features and how to add colors and styling to your data frames.
    cache it.
 ```
 
-## Use magic
+### Streamlit "Magic"
 
-If you're using Python 3, you can also write to your app without calling any
+You can also write to your app without calling any
 Streamlit methods. Streamlit supports "[magic
 commands](api.html#magic-commands)," which means you don't have to use
 [`st.write()`](api.html#streamlit.write) at all! Try replacing the code above
@@ -188,18 +145,17 @@ df = pd.DataFrame({
 df
 ```
 
-How it works is simple. Any time that Streamlit sees a variable or a literal
-value on its own line, it automatically writes that to your app using
-[`st.write()`](api.html#streamlit.write). For more information, refer to the
-documentation on [magic commands](api.html#magic-commands).
+Any time that Streamlit sees a variable or a literal value on its own line, it automatically
+writes its value to your app using [`st.write()`](api.html#streamlit.write). For more information,
+refer to the documentation on [magic commands](api.html#magic-commands).
 
-## Draw charts and maps
+### Drawing charts and maps
 
 Streamlit supports several popular data charting libraries like [Matplotlib,
 Altair, deck.gl, and more](api.html#display-charts). In this section, you'll
 add a bar chart, line chart, and a map to your app.
 
-### Draw a line chart
+#### Drawing a line chart
 
 You can easily add a line chart to your app with
 [`st.line_chart()`](api.html#streamlit.line_chart). We'll generate a random
@@ -213,7 +169,7 @@ chart_data = pd.DataFrame(
 st.line_chart(chart_data)
 ```
 
-### Plot a map
+#### Plotting a map
 
 With [`st.map()`](api.html#streamlit.map) you can display data points on a map.
 Let's use Numpy to generate some sample data and plot it on a map of
@@ -227,17 +183,17 @@ map_data = pd.DataFrame(
 st.map(map_data)
 ```
 
-## Add interactivity with widgets
+### Adding interactivity with widgets
 
 With widgets, Streamlit allows you to bake interactivity directly into your
 apps with checkboxes, buttons, sliders, and more. Check out our [API
 reference](api.md) for a full list of interactive widgets.
 
-### Use checkboxes to show/hide data
+#### Using checkboxes to show/hide data
 
 One use case for checkboxes is to hide or show a specific chart or section in
 an app. [`st.checkbox()`](api.html#streamlit.checkbox) takes a single argument,
-which is the widget label. In this sample, the checkbox is used to toggle a
+the widget's label. In this sample, the checkbox is used to toggle a
 conditional statement.
 
 ```Python
@@ -249,10 +205,10 @@ if st.checkbox('Show dataframe'):
     st.line_chart(chart_data)
 ```
 
-### Use a selectbox for options
+#### Using a selectbox for options
 
 Use [`st.selectbox`](api.html#streamlit.selectbox) to choose from a series. You
-can write in the options you want, or pass through an array or data frame
+can write in the options you want as a literal array, or pass through an array or data frame
 column.
 
 Let's use the `df` data frame we created earlier.
@@ -265,11 +221,10 @@ option = st.selectbox(
 'You selected: ', option
 ```
 
-### Put widgets in a sidebar
+#### Putting widgets in a sidebar
 
 For a cleaner look, you can move your widgets into a sidebar. This keeps your
-app central, while widgets are pinned to the left. Let's take a look at how you
-can use [`st.sidebar`](api.html#add-widgets-to-sidebar) in your app.
+app central, while widgets are pinned to the left. Here's how to use [`st.sidebar`](api.html#add-widgets-to-sidebar) in your app.
 
 ```Python
 option = st.sidebar.selectbox(
@@ -280,19 +235,20 @@ option = st.sidebar.selectbox(
 ```
 
 Most of the elements you can put into your app can also be put into a sidebar using this syntax:
-`st.sidebar.[element_name]()`. Here are a few examples that show how it's used: `st.sidebar.markdown()`, `st.sidebar.slider()`, `st.sidebar.line_chart()`.
+`st.sidebar.[element_name]()`, including:
 
-The only exceptions right now are `st.write` (you
-should use `st.sidebar.markdown()` instead), `st.echo`, and `st.spinner`. Rest
-assured, though, we're currently working on adding support for those too!
+- `st.sidebar.markdown()`
+- `st.sidebar.slider()`
+- `st.sidebar.line_chart()`
 
-## Show progress
+Currently, the only exceptions to using widgets in the sidebar right now are `st.write` (you
+should use `st.sidebar.markdown()` instead), `st.echo`, and `st.spinner`.
+
+#### Showing calculation progress
 
 When adding long running computations to an app, you can use
-[`st.progress()`](api.html#streamlit.progress) to display status in real time.
-
-First, let's import time. We're going to use the `time.sleep()` method to
-simulate a long running computation:
+[`st.progress()`](api.html#streamlit.progress) to display the calculation status.
+For this example, we'll use `time.sleep()` to simulate a long running computation:
 
 ```Python
 import time
@@ -316,11 +272,13 @@ for i in range(100):
 '...and now we\'re done!'
 ```
 
-## Record a screencast
+## Part 4: Recording a screencast (optional)
 
-After you've built a Streamlit app, you may want to discuss some of it with co-workers over email or Slack, or share it with the world on Twitter. A great way to do that is with Streamlit's built-in screencast recorder. With it, you can record, narrate, stop, save, and share with a few clicks.
+After you've built a Streamlit app, you may want to discuss some of it with co-workers over email or Slack, or share it with the world on Twitter.
+A great way to share your app is by using the Streamlit built-in screencast recorder. With it, you can record, narrate, stop, save, and share with a few clicks.
 
-To start a screencast, locate the menu in the upper right corner of your app (**☰**), select **Record a screencast**, and follow the prompts. Before the recording starts, you'll see a countdown — this means it's showtime.
+To start a screencast, locate the menu in the upper right corner of your app (**☰**), select **Record a screencast**, and follow the prompts.
+Before the recording starts, you'll see a countdown — this means it's showtime.
 
 To stop your screencast, go back to the menu (**☰**) and select **Stop recording** (or hit the **ESC** key). Follow the prompts to preview your recording and save it to disk. That's it, you're ready to share your Streamlit app.
 
@@ -328,16 +286,14 @@ To stop your screencast, go back to the menu (**☰**) and select **Stop recordi
 .. image:: ./media/screenshare.gif
 ```
 
-## Get help
+## Getting help with Streamlit
 
-That's it for getting started, now you can go and build your own apps! If you
-run into difficulties here are a few things you can do.
+If you run into difficulties building your own Streamlit apps, here are a few resources you can turn to:
 
-- Check out our [community forum](https://discuss.streamlit.io/) and post a
-  question
-- Quick help from command line with `$ streamlit --help`
-- Read more documentation! Check out:
+- Stop by the [community forum](https://discuss.streamlit.io/) and post a question
+- Get quick help from command line with `$ streamlit --help`
+- Read more documentation!
   - [Tutorials](tutorial/index.md) to make an app
   - [Advanced concepts](advanced_concepts.md) for things like caching and
     inserting elements out of order
-  - [API reference](api.md) for examples of every Streamlit command -->
+  - [API reference](api.md) for examples of every Streamlit command
