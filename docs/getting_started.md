@@ -291,7 +291,7 @@ To stop your screencast, go back to the menu (**☰**) and select **Stop recordi
 If you run into difficulties building your own Streamlit apps, here are a few resources you can turn to:
 
 - Stop by the [community forum](https://discuss.streamlit.io/) and post a question
-- Get quick help from command line with `$ streamlit --help`
+- Get quick help from the command line with `$ streamlit --help`
 - Read more documentation!
   - [Tutorials](tutorial/index.md) to make an app
   - [Advanced concepts](advanced_concepts.md) for things like caching and
