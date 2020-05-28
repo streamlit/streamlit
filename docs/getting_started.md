@@ -95,7 +95,7 @@ and add your own markdown.
 ### Writing a data frame
 
 Along with [magic commands](api.html#magic-commands),
-[`st.write()`](api.html#streamlit.write) is "Swiss Army knife" of Streamlit. You
+[`st.write()`](api.html#streamlit.write) is the "Swiss Army knife" of Streamlit. You
 can pass almost anything to [`st.write()`](api.html#streamlit.write):
 text, data, Matplotlib figures, Altair charts, and more. Don't worry, Streamlit
 will figure it out and render things the right way.
