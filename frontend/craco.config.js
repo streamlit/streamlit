@@ -6,7 +6,7 @@ module.exports = {
     configure: (webpackConfig, { env, paths }) => {
       webpackConfig.resolve.mainFields = ["main", "module"]
 
-      if (process.env["CI"] !== true) {
+      if (process.env["CI"] !== "true") {
         // HardSourceWebpackPlugin adds aggressive build caching to speed up our slow
         // builds. We do not enable it when we're running in CircleCI, because we don't
         // save this cache between builds.
