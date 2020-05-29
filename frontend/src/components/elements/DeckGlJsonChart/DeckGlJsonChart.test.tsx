@@ -62,12 +62,17 @@ describe("DeckGlJsonChart element", () => {
     expect(DeckGL.prop("onViewStateChange")).toBeDefined()
 
     // @ts-ignore
-    DeckGL.prop("onViewStateChange")({ viewState: { pitch: 5, zoom: 5 } })
+    DeckGL.prop("onViewStateChange")({
+      viewState: { pitch: 5, zoom: 5 },
+    })
 
     wrapper.setProps(getProps({}, { pitch: 40.5, zoom: 10 }))
 
     // @ts-ignore
-    expect(wrapper.state("viewState")).toStrictEqual({ pitch: 5, zoom: 10 })
+    expect(wrapper.state("viewState")).toStrictEqual({
+      pitch: 5,
+      zoom: 10,
+    })
   })
 
   it("should render tooltip", () => {
