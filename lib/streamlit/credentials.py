@@ -45,9 +45,9 @@ Activation = namedtuple(
 EMAIL_PROMPT = """
   {0}%(welcome)s
 
-  If you are one of our development partners or are interested in
-  getting personal technical support, please enter your email address
-  below. Otherwise, you may leave the field blank.
+  If you're one of our development partners or you're interested in getting
+  personal technical support or Streamlit updates, please enter your email
+  address below. Otherwise, you may leave the field blank.
 
   %(email)s""".format(
     "👋 " if SHOW_EMOJIS else ""
@@ -57,17 +57,21 @@ EMAIL_PROMPT = """
 }
 
 TELEMETRY_TEXT = """
-  %(telemetry)s As an open source project, we collect usage statistics.
-  We cannot see and do not store information contained in Streamlit apps.
+  %(privacy)s
+  As an open source project, we collect usage statistics. We cannot
+  see and do not store information contained in Streamlit apps.
+  You can find out more by reading our privacy policy at:
+  %(link)s
 
-  If you'd like to opt out, add the following to ~/.streamlit/config.toml
-  (in Windows this would be %%userprofile%%/.streamlit/config.toml),
+  If you'd like to opt out of usage statistics, add the following to %(config)s
   creating that file if necessary:
 
     [browser]
     gatherUsageStats = false
 """ % {
-    "telemetry": click.style("Telemetry:", fg="blue", bold=True)
+    "privacy": click.style("Privacy Policy:", bold=True),
+    "link": click.style("https://streamlit.io/privacy-policy", underline=True),
+    "config": click.style("~/.streamlit/config.toml" if platform.system() != "Windows" else "%%userprofile%%/.streamlit/config.toml")
 }
 
 INSTRUCTIONS_TEXT = """
