@@ -27,14 +27,22 @@ commands:
             fi
 
       - run: &create_python_cache_key
-          # Combine hashes of the Python interpreter and Pipfile plus today's
-          # date into a file whose checksum will key the Python environ. cache.
+          # Combine hashes of the Python interpreter, Pipfile, and today's
+          # date into a file whose checksum will key the Python virtualenv.
+          #
+          # This means that our virtualenv cache will expire each day. We do
+          # this because we are not using a lockfile to pin dependencies -
+          # instead, each time CircleCI rebuilds the virtualenv, it uses the
+          # latest compatible version of each dependency (which mirrors what
+          # happens when a user installs Streamlit locally). So we expire our
+          # virtualenv cache daily to prevent it from getting far out of sync
+          # with what a fresh Streamlit installation would look like.
           name: Create Python environment cache key
           command: |
-            md5sum $(which python) > ~/python_version.md5
-            md5sum lib/Pipfile >> ~/python_version.md5
-            md5sum lib/test-requirements.txt >> ~/python_version.md5
-            date +%F >> ~/python_version.md5
+            md5sum $(which python) > ~/python_cache_key.md5
+            md5sum lib/Pipfile >> ~/python_cache_key.md5
+            md5sum lib/test-requirements.txt >> ~/python_cache_key.md5
+            date +%F >> ~/python_cache_key.md5
 
       - run: &create_yarn_cache_key
           name: Create Yarn cache key
@@ -46,7 +54,7 @@ commands:
       - restore_cache: &restore_virtualenv
           name: Restore virtualenv from cache
           keys:
-            - v13-python-venv-{{ checksum "~/python_version.md5" }}
+            - v13-python-venv-{{ checksum "~/python_cache_key.md5" }}
 
       - restore_cache: &restore_nvm
           name: Restore nvm and node_modules from cache
@@ -117,10 +125,11 @@ commands:
             ${SUDO} apt-get install -y unixodbc-dev
 
       - run: &activate_virtualenv
-          name: Run make pipenv-lock and create virtualenv
+          name: Create virtualenv
           command: |
             echo 'Checking for virtualenv'
             if [ ! -d venv ] ; then
+              # The virtualenv was NOT restored from cache. Create a new one.
               python -m venv venv
               source venv/bin/activate
               pip install --upgrade pip
@@ -128,8 +137,12 @@ commands:
               make pipenv-install
               deactivate
             else
+              # The virtualenv WAS restored from cache. Don't create a new one.
               echo 'Virtualenv already exists, not creating'
             fi
+
+            # Add 'activate venv' to $BASH_ENV. This means that our venv will be active
+            # for the remainder of the job ($BASH_ENV is evaluated at each step).
             echo 'source venv/bin/activate' >> $BASH_ENV
 
       - run: &generate_protobufs
@@ -329,7 +342,7 @@ jobs:
       #################################################################
       - save_cache:
           name: Save virtualenv to cache
-          key: v13-python-venv-{{ checksum "~/python_version.md5" }}
+          key: v13-python-venv-{{ checksum "~/python_cache_key.md5" }}
           paths:
             - venv
 
