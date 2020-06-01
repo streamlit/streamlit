@@ -1,0 +1,10 @@
+/*float search box to right of navbar*/
+div[role="search"] {
+  float: right;
+}
+
+/*styles search bar*/
+#rtd-search-form > input[type="text"] {
+  width: 250px;
+  border-radius: 50px;
+}
