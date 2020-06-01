@@ -29,7 +29,14 @@ commands:
       - run: &create_python_cache_key
           # Combine hashes of the Python interpreter, Pipfile, and today's
           # date into a file whose checksum will key the Python virtualenv.
-          # (This means that our virtualenv cache will expire each day.)
+          #
+          # This means that our virtualenv cache will expire each day. We do
+          # this because we are not using a lockfile to pin dependencies -
+          # instead, each time CircleCI rebuilds the virtualenv, it uses the
+          # latest compatible version of each dependency (which mirrors what
+          # happens when a user installs Streamlit locally). So we expire our
+          # virtualenv cache daily to prevent it from getting far out of sync
+          # with what a fresh Streamlit installation would look like.
           name: Create Python environment cache key
           command: |
             md5sum $(which python) > ~/python_cache_key.md5
@@ -122,17 +129,17 @@ commands:
           command: |
             echo 'Checking for virtualenv'
             if [ ! -d venv ] ; then
+              # The virtualenv was NOT restored from cache. Create a new one.
               python -m venv venv
               source venv/bin/activate
               pip install --upgrade pip
+              make setup
+              make pipenv-install
               deactivate
             else
+              # The virtualenv WAS restored from cache. Don't create a new one.
               echo 'Virtualenv already exists, not creating'
             fi
-
-            source venv/bin/activate
-            make setup
-            make pipenv-install
 
             # Add 'activate venv' to $BASH_ENV. This means that our venv will be active
             # for the remainder of the job ($BASH_ENV is evaluated at each step).
