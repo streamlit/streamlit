@@ -124,7 +124,6 @@ commands:
             if [ ! -d venv ] ; then
               python -m venv venv
               source venv/bin/activate
-              make setup
               pip install --upgrade pip
               deactivate
             else
@@ -132,7 +131,12 @@ commands:
             fi
 
             source venv/bin/activate
+            make setup
             make pipenv-install
+
+            # Add 'activate venv' to $BASH_ENV. This means that our venv will be active
+            # for the remainder of the job ($BASH_ENV is evaluated at each step).
+            echo 'source venv/bin/activate' >> $BASH_ENV
 
       - run: &generate_protobufs
           name: Generate protobufs
