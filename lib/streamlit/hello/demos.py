@@ -213,13 +213,8 @@ def plotting_demo():
 # compact code.
 # fmt: off
 def data_frame_demo():
-    import sys
     import pandas as pd
     import altair as alt
-
-    if sys.version_info[0] < 3:
-        reload(sys) # noqa: F821 pylint:disable=undefined-variable
-        sys.setdefaultencoding("utf-8")
 
     @st.cache
     def get_UN_data():

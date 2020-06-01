@@ -18,6 +18,7 @@
 import React from "react"
 import { shallow } from "enzyme"
 import { MapboxToken } from "./MapboxToken"
+import { SessionInfo } from "lib/SessionInfo"
 
 import withMapboxToken from "./withMapboxToken"
 
@@ -35,23 +36,41 @@ function waitOneTick(): Promise<void> {
 }
 
 describe("withMapboxToken", () => {
-  function getProps(): any {
+  const token = "mockToken"
+  const commandLine = "streamlit run test.py"
+
+  function getProps(): object {
     return { label: "label" }
   }
+
+  beforeAll(() => {
+    SessionInfo.current = new SessionInfo({
+      sessionId: "mockSessionId",
+      streamlitVersion: "sv",
+      pythonVersion: "pv",
+      installationId: "iid",
+      authorEmail: "ae",
+      maxCachedMessageAge: 2,
+      commandLine,
+      userMapboxToken: token,
+    })
+  })
 
   // Install a mock token in our token fetcher so that we don't hit
   // the network.
   beforeEach(() => {
-    MapboxToken["token"] = "mockToken"
+    MapboxToken["token"] = token
+    MapboxToken["commandLine"] = commandLine
   })
 
   afterEach(() => {
     MapboxToken["token"] = undefined
+    MapboxToken["commandLine"] = undefined
   })
 
   it("renders without crashing", async () => {
     const props = getProps()
-    const WrappedComponent = withMapboxToken(TestComponent)
+    const WrappedComponent = withMapboxToken("st.test")(TestComponent)
     const wrapper = shallow(<WrappedComponent {...props} />)
 
     expect(wrapper.html()).not.toBeNull()
@@ -59,7 +78,7 @@ describe("withMapboxToken", () => {
 
   it("passes mapboxToken to wrapped component", async () => {
     const props = getProps()
-    const WrappedComponent = withMapboxToken(TestComponent)
+    const WrappedComponent = withMapboxToken("st.test")(TestComponent)
     const wrapper = shallow(<WrappedComponent {...props} />)
 
     // Wait one tick for our MapboxToken promise to resolve

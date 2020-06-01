@@ -15,7 +15,11 @@
  * limitations under the License.
  */
 
+import axios from "axios"
 import { SessionInfo } from "lib/SessionInfo"
+
+export class MapboxTokenNotProvidedError extends Error {}
+export class MapboxTokenFetchingError extends Error {}
 
 /**
  * A remote file that stores user-visible tokens.
@@ -24,6 +28,13 @@ export const TOKENS_URL = "https://data.streamlit.io/tokens.json"
 
 export class MapboxToken {
   private static token?: string
+  private static commandLine?: string
+
+  private static isItRunningLocal = (): boolean => {
+    const { hostname } = window.location
+
+    return hostname === "localhost" || hostname === "127.0.0.1"
+  }
 
   /**
    * Expose a singleton MapboxToken:
@@ -34,12 +45,23 @@ export class MapboxToken {
    * only be fetched once per session.)
    */
   public static async get(): Promise<string> {
-    if (MapboxToken.token == null) {
-      if (SessionInfo.current.userMapboxToken !== "") {
-        MapboxToken.token = SessionInfo.current.userMapboxToken
+    const { commandLine, userMapboxToken } = SessionInfo.current
+
+    if (
+      !MapboxToken.token ||
+      MapboxToken.commandLine !== commandLine.toLowerCase()
+    ) {
+      if (userMapboxToken !== "") {
+        MapboxToken.token = userMapboxToken
       } else {
-        MapboxToken.token = await this.fetchToken(TOKENS_URL, "mapbox")
+        if (this.isItRunningLocal() && SessionInfo.isHello) {
+          MapboxToken.token = await this.fetchToken(TOKENS_URL, "mapbox")
+        } else {
+          throw new MapboxTokenNotProvidedError("No Mapbox token provided")
+        }
       }
+
+      MapboxToken.commandLine = commandLine.toLowerCase()
     }
 
     return MapboxToken.token
@@ -49,26 +71,17 @@ export class MapboxToken {
     url: string,
     tokenName: string
   ): Promise<string> {
-    let rsp: Response
     try {
-      rsp = await fetch(url)
+      const response = await axios.get(url)
+      const { "mapbox-localhost": token } = response.data
+
+      if (token == null || token === "") {
+        throw new Error(`Missing token "${tokenName}"`)
+      }
+
+      return token
     } catch (e) {
-      // Fetch error messages are abysmal, and give virtually no useful
-      // context. Catch errors and append the offending URL to their messages
-      // to make them a bit more useful.
-      throw new Error(`${e.message} (${url})`)
+      throw new MapboxTokenFetchingError(`${e.message} (${url})`)
     }
-
-    if (!rsp.ok) {
-      throw new Error(`Bad status: ${rsp.status} (${url})`)
-    }
-
-    const json = await rsp.json()
-    const token = json[tokenName]
-    if (token == null || token === "") {
-      throw new Error(`Missing token "${tokenName}" (${url})`)
-    }
-
-    return token
   }
 }

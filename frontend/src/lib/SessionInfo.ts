@@ -68,6 +68,10 @@ export class SessionInfo {
     return SessionInfo.singleton != null
   }
 
+  public static get isHello(): boolean {
+    return this.current.commandLine === "streamlit hello"
+  }
+
   constructor({
     sessionId,
     streamlitVersion,

@@ -126,7 +126,7 @@ def _set_log_level():
 # Make this file only depend on config option in an asynchronous manner. This
 # avoids a race condition when another file (such as a test file) tries to pass
 # in an alternative config.
-_config.on_config_parsed(_set_log_level)
+_config.on_config_parsed(_set_log_level, True)
 
 
 _main = _DeltaGenerator(container=_BlockPath_pb2.BlockPath.MAIN)
@@ -422,7 +422,7 @@ def experimental_show(*args):
         2. It returns None, so it's "slot" in the app cannot be reused.
 
     Note: This is an experimental feature. See
-    https://docs.streamlit.io/pre_release_features.html for more information.
+    https://docs.streamlit.io/en/latest/pre_release_features.html for more information.
 
     Parameters
     ----------
