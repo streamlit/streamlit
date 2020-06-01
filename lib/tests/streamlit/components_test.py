@@ -145,7 +145,9 @@ class RegisterComponentTest(DeltaGeneratorTestCase):
         register_component("test_component", TestComponent)
         streamlit.test_component("foo")
         proto = self.get_delta_from_queue().new_element.component_instance
-        self.assertEqual(json.dumps({"name": "foo", "default": 0}), proto.args_json)
+        self.assertEqual(
+            json.dumps({"name": "foo", "key": None, "default": 0}), proto.args_json
+        )
 
 
 class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
