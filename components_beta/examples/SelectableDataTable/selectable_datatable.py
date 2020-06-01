@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 
-st.register_component("selectable_datatable", url="http://localhost:3001")
+SelectableDatatable = st.declare_component(url="http://localhost:3001")
+st.register_component("selectable_datatable", SelectableDatatable)
 
 raw_data = {
     "First Name": ["Jason", "Molly", "Tina", "Jake", "Amy"],

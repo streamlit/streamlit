@@ -4,7 +4,8 @@ Re-implements the Streamlit radiobutton as a custom component.
 
 import streamlit as st
 
-st.register_component("custom_radio_button", url="http://localhost:3001")
+RadioButton = st.declare_component(url="http://localhost:3001")
+st.register_component("custom_radio_button", RadioButton)
 
 result = st.custom_radio_button(
     label="How many bats?",

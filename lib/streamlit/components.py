@@ -17,6 +17,7 @@ import json
 import mimetypes
 import os
 from typing import Any, Dict, Optional, Type, Union, Callable
+import threading
 
 import tornado.web
 
@@ -130,14 +131,6 @@ class _ComponentInstanceBuilder:
         args_df = {}
         for key, value in kwargs.items():
             if type_util.is_dataframe_like(value):
-                args_df[key] = value
-            else:
-                args_json[key] = value
-
-        args_json = {}
-        args_df = {}
-        for key, value in kwargs.items():
-            if type_util.is_dataframe_compatible(value):
                 args_df[key] = value
             else:
                 args_json[key] = value
@@ -324,13 +317,19 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
 
 
 class ComponentRegistry:
+    _lock = threading.Lock()
     _instance = None  # type: Optional[ComponentRegistry]
 
     @classmethod
     def instance(cls) -> "ComponentRegistry":
         """Returns the singleton ComponentRegistry"""
+        # We use a double-checked locking optimization to avoid the overhead
+        # of acquiring the lock in the common case:
+        # https://en.wikipedia.org/wiki/Double-checked_locking
         if cls._instance is None:
-            cls._instance = ComponentRegistry()
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = ComponentRegistry()
         return cls._instance
 
     def __init__(self):
@@ -355,6 +354,12 @@ class ComponentRegistry:
                     "No such component directory: '%s'" % abspath
                 )
 
+        if name in self._components and self._components[name] != abspath:
+            LOGGER.warning(
+                "Component '%s': overriding previously registered path %s",
+                name,
+                self._components[name],
+            )
         self._components[name] = abspath
 
     def get_component_path(self, name: str) -> Optional[str]:
