@@ -123,8 +123,8 @@ commands:
             if [ ! -d venv ] ; then
               python -m venv venv
               source venv/bin/activate
-              make setup
               pip install --upgrade pip
+              make setup
               make pipenv-install
               deactivate
             else
