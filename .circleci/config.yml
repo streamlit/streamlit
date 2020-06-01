@@ -32,10 +32,10 @@ commands:
           # (This means that our virtualenv cache will expire each day.)
           name: Create Python environment cache key
           command: |
-            md5sum $(which python) > ~/python_version.md5
-            md5sum lib/Pipfile >> ~/python_version.md5
-            md5sum lib/test-requirements.txt >> ~/python_version.md5
-            date +%F >> ~/python_version.md5
+            md5sum $(which python) > ~/python_cache_key.md5
+            md5sum lib/Pipfile >> ~/python_cache_key.md5
+            md5sum lib/test-requirements.txt >> ~/python_cache_key.md5
+            date +%F >> ~/python_cache_key.md5
 
       - run: &create_yarn_cache_key
           name: Create Yarn cache key
@@ -47,7 +47,7 @@ commands:
       - restore_cache: &restore_virtualenv
           name: Restore virtualenv from cache
           keys:
-            - v12-python-venv-{{ checksum "~/python_version.md5" }}
+            - v12-python-venv-{{ checksum "~/python_cache_key.md5" }}
 
       - restore_cache: &restore_nvm
           name: Restore nvm and node_modules from cache
@@ -331,7 +331,7 @@ jobs:
       #################################################################
       - save_cache:
           name: Save virtualenv to cache
-          key: v12-python-venv-{{ checksum "~/python_version.md5" }}
+          key: v12-python-venv-{{ checksum "~/python_cache_key.md5" }}
           paths:
             - venv
 
