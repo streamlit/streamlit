@@ -27,8 +27,9 @@ commands:
             fi
 
       - run: &create_python_cache_key
-          # Combine hashes of the Python interpreter and Pipfile plus today's
-          # date into a file whose checksum will key the Python environ. cache.
+          # Combine hashes of the Python interpreter, Pipfile, and today's
+          # date into a file whose checksum will key the Python virtualenv.
+          # (This means that our virtualenv cache will expire each day.)
           name: Create Python environment cache key
           command: |
             md5sum $(which python) > ~/python_version.md5
@@ -117,7 +118,7 @@ commands:
             ${SUDO} apt-get install -y unixodbc-dev
 
       - run: &activate_virtualenv
-          name: Run make pipenv-lock and create virtualenv
+          name: Create virtualenv
           command: |
             echo 'Checking for virtualenv'
             if [ ! -d venv ] ; then
@@ -125,12 +126,13 @@ commands:
               source venv/bin/activate
               make setup
               pip install --upgrade pip
-              make pipenv-install
               deactivate
             else
               echo 'Virtualenv already exists, not creating'
             fi
-            echo 'source venv/bin/activate' >> $BASH_ENV
+
+            source venv/bin/activate
+            make pipenv-install
 
       - run: &generate_protobufs
           name: Generate protobufs
