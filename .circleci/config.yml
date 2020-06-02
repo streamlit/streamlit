@@ -141,6 +141,8 @@ commands:
               # make pipenv-install
               make pipenv-dev-install
               echo $(pip freeze | grep tornado)
+              pip install pipdeptree
+              echo $(pipdeptree -r -p tornado)
 
               deactivate
             else
