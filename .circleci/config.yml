@@ -140,15 +140,13 @@ commands:
               # properly resolved.
               # make pipenv-install
               make pipenv-dev-install
-              make pipenv-test-install
+              echo $(pip freeze | grep tornado)
 
               deactivate
             else
               # The virtualenv WAS restored from cache. Don't create a new one.
               echo 'Virtualenv already exists, not creating'
             fi
-
-            source venv/bin/activate
 
             # Add 'activate venv' to $BASH_ENV. This means that our venv will be active
             # for the remainder of the job ($BASH_ENV is evaluated at each step).
