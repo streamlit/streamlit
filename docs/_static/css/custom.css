@@ -1,3 +1,17 @@
+body {
+  font-family: Graphik, sans-serif;
+}
+
+/* background of content */
+.wy-nav-content {
+  background: #ffffff;
+}
+
+/* overflow color */
+.wy-body-for-nav {
+  background: #e5e5e5;
+}
+
 /*float search box to right of navbar*/
 div[role="search"] {
   float: right;
@@ -14,11 +28,31 @@ div[role="search"] {
   height: 40px;
 }
 
-/* overflow color */
-.wy-body-for-nav {
-  background: #e5e5e5;
+/* sidebar headings */
+.wy-menu-vertical p.caption {
+  color: #ff4b4b;
 }
 
-.wy-nav-content {
-  background: #ffffff;
+/*sidebar background color*/
+.wy-nav-side,
+.wy-menu-vertical li.current,
+.wy-menu-vertical li.toctree-l2.current > a,
+.wy-menu-vertical li.toctree-l2.current li.toctree-l3 > a {
+  background: #f3f6ff;
+}
+
+/*top-level font color*/
+.wy-menu-vertical a,
+.wy-side-nav-search > div.version {
+  color: #808495;
+}
+
+.wy-menu-vertical li.toctree-l1.current > a,
+.wy-menu-vertical li.current a {
+  border: none;
+}
+
+.wy-menu-vertical a:hover,
+.wy-menu-vertical li.current a:hover {
+  background-color: #ffffff;
 }

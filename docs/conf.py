@@ -102,7 +102,11 @@ html_theme = "sphinx_rtd_theme"
 # further.  For a list of options available for each theme, see the
 # documentation.
 
-html_theme_options = {"analytics_id": "UA-122023594-3", "logo_only": True}
+html_theme_options = {
+    "analytics_id": "UA-122023594-3",
+    "logo_only": True,
+    "style_nav_header_background": "#F3F6FF",
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
