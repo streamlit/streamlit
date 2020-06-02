@@ -42,13 +42,13 @@ commands:
             md5sum $(which python) > ~/python_cache_key.md5
             md5sum lib/Pipfile >> ~/python_cache_key.md5
             md5sum lib/test-requirements.txt >> ~/python_cache_key.md5
-            date +%F >> ~/python_cache_key.md5
+            date >> ~/python_cache_key.md5
 
       - run: &create_yarn_cache_key
           name: Create Yarn cache key
           command: |
             md5sum frontend/yarn.lock > ~/yarn.lock.md5
-            date +%F >> ~/yarn.lock.md5
+            date >> ~/yarn.lock.md5
 
   restore-from-cache:
     steps:
