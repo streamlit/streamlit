@@ -18,3 +18,7 @@ div[role="search"] {
 .wy-body-for-nav {
   background: #e5e5e5;
 }
+
+.wy-nav-content {
+  background: #ffffff;
+}
