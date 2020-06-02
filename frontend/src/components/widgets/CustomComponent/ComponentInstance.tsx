@@ -63,7 +63,6 @@ interface Props {
 }
 
 interface State {
-  frameHeight?: number
   componentError?: Error
 }
 
@@ -221,11 +220,8 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
 
   public constructor(props: Props) {
     super(props)
-    // Default to a frameHeight of 0. If this is undefined, browsers
-    // default to something > 100 pixels, which can look strange.
-    // In the future, we may want to allow component creators to specify
-    // the initial frameHeight.
-    this.state = { frameHeight: 0 }
+
+    this.state = { }
   }
 
   public componentDidMount = (): void => {
@@ -244,6 +240,12 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       )
       return
     }
+
+    // Default to a height of 0. If this is undefined, browsers
+    // default to something > 100 pixels, which can look strange.
+    // In the future, we may want to allow component creators to specify
+    // the initial height.
+    this.iframeRef.current.height = "0"
 
     this.props.registry.registerListener(
       this.iframeRef.current.contentWindow,
@@ -343,7 +345,13 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       return
     }
 
-    this.setState({ frameHeight: height })
+    if (this.iframeRef.current == null) {
+      // This should not be possible.
+      logWarning(`handleSetFrameHeight: ComponentInstance does not have an iframeRef`)
+      return
+    }
+
+    this.iframeRef.current.height = height.toString()
   }
 
   private sendForwardMsg = (type: StreamlitMessageType, data: any): void => {
@@ -444,7 +452,6 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
         ref={this.iframeRef}
         src={src}
         width={this.props.width}
-        height={this.state.frameHeight}
         allowFullScreen={false}
         scrolling="no"
         sandbox={SANDBOX_POLICY}
