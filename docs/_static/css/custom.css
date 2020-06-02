@@ -8,3 +8,8 @@ div[role="search"] {
   width: 250px;
   border-radius: 50px;
 }
+
+/*make logo smaller*/
+.wy-side-nav-search > a img.logo {
+  height: 40px;
+}

@@ -102,7 +102,7 @@ html_theme = "sphinx_rtd_theme"
 # further.  For a list of options available for each theme, see the
 # documentation.
 
-html_theme_options = {"analytics_id": "UA-122023594-3"}
+html_theme_options = {"analytics_id": "UA-122023594-3", "logo_only": True}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -114,6 +114,8 @@ html_favicon = "_static/img/favicon.png"
 html_css_files = [
     "css/custom.css",
 ]
+
+html_logo = "_static/img/logomark_website.png"
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
