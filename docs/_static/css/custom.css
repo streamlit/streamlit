@@ -47,12 +47,32 @@ div[role="search"] {
   color: #808495;
 }
 
+/*borders for hover*/
 .wy-menu-vertical li.toctree-l1.current > a,
 .wy-menu-vertical li.current a {
   border: none;
 }
 
+/*hover/selection color*/
 .wy-menu-vertical a:hover,
 .wy-menu-vertical li.current a:hover {
   background-color: #ffffff;
+}
+
+/* style notes */
+.rst-content .note,
+.rst-content .note .admonition-title {
+  background: #e4f5ff;
+}
+.rst-content .note .admonition-title {
+  color: #1c83e1;
+}
+
+/* style tip boxes */
+.rst-content .tip,
+.rst-content .tip .admonition-title {
+  background: #dffde9;
+}
+.rst-content .tip .admonition-title {
+  color: #21c354;
 }
