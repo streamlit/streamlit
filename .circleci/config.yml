@@ -129,6 +129,8 @@ commands:
           command: |
             echo 'Checking for virtualenv'
             if [ ! -d venv ] ; then
+              rm -rf ~/.cache/pipenv
+
               # The virtualenv was NOT restored from cache. Create a new one.
               python -m venv venv
               source venv/bin/activate
