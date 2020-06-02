@@ -136,7 +136,7 @@ commands:
               source venv/bin/activate
               pip install --upgrade pip
               make setup
-              make pipenv-dev-install
+              make pipenv-install
               deactivate
             else
               # The virtualenv WAS restored from cache. Don't create a new one.
