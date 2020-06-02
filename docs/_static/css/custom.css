@@ -13,3 +13,8 @@ div[role="search"] {
 .wy-side-nav-search > a img.logo {
   height: 40px;
 }
+
+/* overflow color */
+.wy-body-for-nav {
+  background: #e5e5e5;
+}
