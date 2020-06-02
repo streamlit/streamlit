@@ -282,14 +282,14 @@ jobs:
       #################################################################
       # Run mypy. (Only executed in one job.)
       #################################################################
-      - run:
-          name: Run mypy
-          command: |
-            if [ "${CIRCLE_JOB}" != "python-3-8" ] ; then
-              echo "Mypy is only run in python-3.8 job"
-            else
-              scripts/mypy --report
-            fi
+      # - run:
+      #     name: Run mypy
+      #     command: |
+      #       if [ "${CIRCLE_JOB}" != "python-3-8" ] ; then
+      #         echo "Mypy is only run in python-3.8 job"
+      #       else
+      #         scripts/mypy --report
+      #       fi
 
       - store_test_results:
           path: lib/test-reports
