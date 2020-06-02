@@ -204,8 +204,6 @@ jobs:
     docker:
       - image: circleci/python:3.8.1
 
-    resource_class: medium+
-
     working_directory: ~/repo
 
     steps:
@@ -356,8 +354,6 @@ jobs:
     docker:
       - image: circleci/python:3.6.5
 
-    resource_class: medium
-
   create-tag:
     docker:
       - image: circleci/python:3.8.1
@@ -457,6 +453,8 @@ jobs:
   cypress:
     docker:
       - image: circleci/python:3.7.4-stretch
+
+    resource_class: medium+
 
     working_directory: ~/repo
 
