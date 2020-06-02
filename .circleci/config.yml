@@ -136,16 +136,7 @@ commands:
               source venv/bin/activate
               pip install --upgrade pip
               make setup
-
-              # This step is non-deterministically failing on CircleCI, and
-              # leaving us with virtualenv without all our dependencies
-              # properly resolved.
-              # make pipenv-install
               make pipenv-dev-install
-              echo $(pip freeze | grep tornado)
-              pip install pipdeptree
-              echo $(pipdeptree -r -p tornado)
-
               deactivate
             else
               # The virtualenv WAS restored from cache. Don't create a new one.
