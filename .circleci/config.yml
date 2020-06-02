@@ -204,6 +204,8 @@ jobs:
     docker:
       - image: circleci/python:3.8.1
 
+    resource_class: medium+
+
     working_directory: ~/repo
 
     steps:
@@ -353,6 +355,8 @@ jobs:
     <<: *job-template
     docker:
       - image: circleci/python:3.6.5
+
+    resource_class: medium
 
   create-tag:
     docker:
