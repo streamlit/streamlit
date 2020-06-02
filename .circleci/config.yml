@@ -134,16 +134,22 @@ commands:
               python -m venv venv
               source venv/bin/activate
               pip install --upgrade pip
+
+              echo $(cd ~/.cache && find . | grep whl | grep tornado)
               make setup
 
               # This step is non-deterministically failing on CircleCI, and
               # leaving us with virtualenv without all our dependencies
               # properly resolved.
-              # make pipenv-install
+
+              echo $(cd ~/.cache && find . | grep whl | grep tornado)
               make pipenv-dev-install
+
+              echo $(cd ~/.cache && find . | grep whl | grep tornado)
               echo $(pip freeze | grep tornado)
-              pip install pipdeptree
-              echo $(python -m pipdeptree -r -p tornado)
+
+              # pip install pipdeptree
+              # echo $(python -m pipdeptree -r -p tornado)
 
               deactivate
             else
