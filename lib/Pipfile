@@ -46,7 +46,7 @@ python-dateutil = "*"
 requests = "*"
 toml = "*"
 # TODO: upgrade tornado to 6.x now that we don't have to support Python 2
-tornado = "~=5.1"
+tornado = "~=5.1,<6.0"
 tzlocal = "*"
 validators = "*"
 watchdog = "*"
