@@ -440,6 +440,8 @@ jobs:
     docker:
       - image: circleci/python:3.7.4-stretch
 
+    resource_class: medium+
+
     working_directory: ~/repo
 
     parameters:
