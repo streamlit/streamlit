@@ -178,10 +178,10 @@ commands:
 workflows:
   circleci:
     jobs:
-      - python-3-6: # Oldest supported Python minor version.
-          filters:
-            tags:
-              only: /^([0-9]+\.){3}dev[0-9]+/ # 0.56.1.dev20201129
+      # - python-3-6: # Oldest supported Python minor version.
+      #     filters:
+      #       tags:
+      #         only: /^([0-9]+\.){3}dev[0-9]+/ # 0.56.1.dev20201129
       - python-3-8: # Latest supported Python minor version.
           filters:
             tags:
@@ -194,7 +194,7 @@ workflows:
               only: /^([0-9]+\.){3}dev[0-9]+/
       - nightly-release:
           requires:
-            - python-3-6
+            # - python-3-6
             - python-3-8
             - cypress
           filters:

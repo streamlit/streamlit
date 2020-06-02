@@ -60,7 +60,7 @@ pipenv-install: pipenv-dev-install pipenv-test-install
 pipenv-dev-install: lib/Pipfile
 	@# Runs pipenv install; doesn't update the Pipfile.lock.
 	cd lib; \
-		pipenv install --dev --skip-lock
+		pipenv install --dev --skip-lock --verbose
 
 .PHONY: pipenv-test-install
 pipenv-test-install: lib/test-requirements.txt
