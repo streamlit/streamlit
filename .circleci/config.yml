@@ -54,12 +54,12 @@ commands:
       - restore_cache: &restore_virtualenv
           name: Restore virtualenv from cache
           keys:
-            - v13-python-venv-{{ checksum "~/python_cache_key.md5" }}
+            - v12-python-venv-{{ checksum "~/python_cache_key.md5" }}
 
       - restore_cache: &restore_nvm
           name: Restore nvm and node_modules from cache
           keys:
-            - v13-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
+            - v12-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
 
       - restore_cache: &restore_make
           name: Restore make from cache
@@ -324,13 +324,13 @@ jobs:
       #################################################################
       - save_cache:
           name: Save virtualenv to cache
-          key: v13-python-venv-{{ checksum "~/python_cache_key.md5" }}
+          key: v12-python-venv-{{ checksum "~/python_cache_key.md5" }}
           paths:
             - venv
 
       - save_cache:
           name: Save nvm and node_modules to cache
-          key: v13-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
+          key: v12-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
           paths:
             - ~/.nvm
             - ~/.cache
