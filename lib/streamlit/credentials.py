@@ -77,7 +77,7 @@ _TELEMETRY_TEXT = """
 """ % {
     "privacy": click.style("Privacy Policy:", bold=True),
     "link": click.style("https://streamlit.io/privacy-policy", underline=True),
-    "config": click.style(_CONFIG_FILE_PATH)
+    "config": click.style(_CONFIG_FILE_PATH),
 }
 
 # IMPORTANT: Break the text below at 80 chars.
