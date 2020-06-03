@@ -148,20 +148,16 @@ commands:
       - run: &generate_protobufs
           name: Generate protobufs
           command: |
-            # There's a chance this file could be a cached version when
-            # the protobuf cache is restored, so checkout from github to
-            # make sure.
-            git checkout -- lib/streamlit/proto/__init__.py
-            if [ ! -e frontend/src/autogen/proto.js -o ! -e lib/streamlit/proto/DataFrame_pb2.py ] ; then
-              # install protobuf v3
-              ${SUDO} apt-get update -y
-              ${SUDO} apt-get install -y gnupg
-              echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | ${SUDO} tee /etc/apt/sources.list.d/protobuf.list
-              ${SUDO} apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
-              ${SUDO} apt-get update -y
-              ${SUDO} apt-get install -y protobuf-compiler
-              make protobuf
-            fi
+            # install protobuf v3
+            ${SUDO} apt-get update -y
+            ${SUDO} apt-get install -y gnupg
+            echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | ${SUDO} tee /etc/apt/sources.list.d/protobuf.list
+            ${SUDO} apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
+            ${SUDO} apt-get update -y
+            ${SUDO} apt-get install -y protobuf-compiler
+
+            # Generate protobufs
+            make protobuf
 
 workflows:
   circleci:
@@ -228,26 +224,10 @@ jobs:
       #################################################################
       - pre-cache
 
-      - run:
-          # There is no lock file for the protobufs so we run a checksum
-          # across all the protos along with Python and the protobuf compilers
-          # and save that to a file to use as cache key.
-          name: Checksum all protobufs
-          command: |
-            md5sum proto/streamlit/proto/*.proto > ~/protobuf.md5
-            md5sum $(which python) >> ~/protobuf.md5
-            md5sum $(which protoc) >> ~/protobuf.md5
-            md5sum $(which protoc-gen-mypy) >> ~/protobuf.md5
-
       #################################################################
       # Restore from cache
       #################################################################
       - restore-from-cache
-
-      - restore_cache:
-          name: Restore protobufs from cache
-          keys:
-            - v13-protobuf-{{ checksum "~/protobuf.md5" }}
 
       #################################################################
       # Pre Make commands
@@ -338,7 +318,7 @@ jobs:
             fi
 
       #################################################################
-      # Save cache for python virtualenv, node_modules, protobuf
+      # Save cache for python virtualenv and node_modules.
       #################################################################
       - save_cache:
           name: Save virtualenv to cache
@@ -352,13 +332,6 @@ jobs:
           paths:
             - ~/.nvm
             - ~/.cache
-
-      - save_cache:
-          name: Save generated protobufs to cache
-          key: v13-protobuf-{{ checksum "~/protobuf.md5" }}
-          paths:
-            - frontend/src/autogen/proto.js
-            - lib/streamlit/proto
 
   # The following inherits from python-3-8. In a few cases, steps are skipped
   # based on the name of the current job (see, e.g., "Run frontend tests").
@@ -467,6 +440,8 @@ jobs:
     docker:
       - image: circleci/python:3.7.4-stretch
 
+    resource_class: medium+
+
     working_directory: ~/repo
 
     parameters:
@@ -479,8 +454,6 @@ jobs:
       - checkout:
           name: Checkout Streamlit code
 
-      # NOTE restore protobuf from cache wasn't
-      # working so generating protobufs instead.
       - pre-cache
       - restore-from-cache
       - pre-make

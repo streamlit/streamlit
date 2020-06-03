@@ -58,9 +58,13 @@ pipenv-install: pipenv-dev-install pipenv-test-install
 
 .PHONY: pipenv-dev-install
 pipenv-dev-install: lib/Pipfile
-	@# Runs pipenv install; doesn't update the Pipfile.lock.
+	# Run pipenv install; don't update the Pipfile.lock.
+	# We use `--sequential` here to ensure our results are...
+	# "more deterministic", per pipenv's documentation.
+	# (Omitting this flag is causing incorrect dependency version
+	# resolution on CircleCI.)
 	cd lib; \
-		pipenv install --dev --skip-lock
+		pipenv install --dev --skip-lock --sequential
 
 .PHONY: pipenv-test-install
 pipenv-test-install: lib/test-requirements.txt
