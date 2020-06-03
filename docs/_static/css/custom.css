@@ -5,6 +5,7 @@ body {
 /* background of content */
 .wy-nav-content {
   background: #ffffff;
+  min-height: 100vh;
 }
 
 /* overflow color */
