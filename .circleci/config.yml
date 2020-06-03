@@ -27,14 +27,22 @@ commands:
             fi
 
       - run: &create_python_cache_key
-          # Combine hashes of the Python interpreter and Pipfile plus today's
-          # date into a file whose checksum will key the Python environ. cache.
+          # Combine hashes of the Python interpreter, Pipfile, and today's
+          # date into a file whose checksum will key the Python virtualenv.
+          #
+          # This means that our virtualenv cache will expire each day. We do
+          # this because we are not using a lockfile to pin dependencies -
+          # instead, each time CircleCI rebuilds the virtualenv, it uses the
+          # latest compatible version of each dependency (which mirrors what
+          # happens when a user installs Streamlit locally). So we expire our
+          # virtualenv cache daily to prevent it from getting far out of sync
+          # with what a fresh Streamlit installation would look like.
           name: Create Python environment cache key
           command: |
-            md5sum $(which python) > ~/python_version.md5
-            md5sum lib/Pipfile >> ~/python_version.md5
-            md5sum lib/test-requirements.txt >> ~/python_version.md5
-            date +%F >> ~/python_version.md5
+            md5sum $(which python) > ~/python_cache_key.md5
+            md5sum lib/Pipfile >> ~/python_cache_key.md5
+            md5sum lib/test-requirements.txt >> ~/python_cache_key.md5
+            date +%F >> ~/python_cache_key.md5
 
       - run: &create_yarn_cache_key
           name: Create Yarn cache key
@@ -46,7 +54,7 @@ commands:
       - restore_cache: &restore_virtualenv
           name: Restore virtualenv from cache
           keys:
-            - v12-python-venv-{{ checksum "~/python_version.md5" }}
+            - v12-python-venv-{{ checksum "~/python_cache_key.md5" }}
 
       - restore_cache: &restore_nvm
           name: Restore nvm and node_modules from cache
@@ -117,38 +125,39 @@ commands:
             ${SUDO} apt-get install -y unixodbc-dev
 
       - run: &activate_virtualenv
-          name: Run make pipenv-lock and create virtualenv
+          name: Create virtualenv
           command: |
             echo 'Checking for virtualenv'
             if [ ! -d venv ] ; then
+              # The virtualenv was NOT restored from cache. Create a new one.
               python -m venv venv
               source venv/bin/activate
-              make setup
               pip install --upgrade pip
+              make setup
               make pipenv-install
               deactivate
             else
+              # The virtualenv WAS restored from cache. Don't create a new one.
               echo 'Virtualenv already exists, not creating'
             fi
+
+            # Add 'activate venv' to $BASH_ENV. This means that our venv will be active
+            # for the remainder of the job ($BASH_ENV is evaluated at each step).
             echo 'source venv/bin/activate' >> $BASH_ENV
 
       - run: &generate_protobufs
           name: Generate protobufs
           command: |
-            # There's a chance this file could be a cached version when
-            # the protobuf cache is restored, so checkout from github to
-            # make sure.
-            git checkout -- lib/streamlit/proto/__init__.py
-            if [ ! -e frontend/src/autogen/proto.js -o ! -e lib/streamlit/proto/DataFrame_pb2.py ] ; then
-              # install protobuf v3
-              ${SUDO} apt-get update -y
-              ${SUDO} apt-get install -y gnupg
-              echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | ${SUDO} tee /etc/apt/sources.list.d/protobuf.list
-              ${SUDO} apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
-              ${SUDO} apt-get update -y
-              ${SUDO} apt-get install -y protobuf-compiler
-              make protobuf
-            fi
+            # install protobuf v3
+            ${SUDO} apt-get update -y
+            ${SUDO} apt-get install -y gnupg
+            echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | ${SUDO} tee /etc/apt/sources.list.d/protobuf.list
+            ${SUDO} apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
+            ${SUDO} apt-get update -y
+            ${SUDO} apt-get install -y protobuf-compiler
+
+            # Generate protobufs
+            make protobuf
 
 workflows:
   circleci:
@@ -215,26 +224,10 @@ jobs:
       #################################################################
       - pre-cache
 
-      - run:
-          # There is no lock file for the protobufs so we run a checksum
-          # across all the protos along with Python and the protobuf compilers
-          # and save that to a file to use as cache key.
-          name: Checksum all protobufs
-          command: |
-            md5sum proto/streamlit/proto/*.proto > ~/protobuf.md5
-            md5sum $(which python) >> ~/protobuf.md5
-            md5sum $(which protoc) >> ~/protobuf.md5
-            md5sum $(which protoc-gen-mypy) >> ~/protobuf.md5
-
       #################################################################
       # Restore from cache
       #################################################################
       - restore-from-cache
-
-      - restore_cache:
-          name: Restore protobufs from cache
-          keys:
-            - v12-protobuf-{{ checksum "~/protobuf.md5" }}
 
       #################################################################
       # Pre Make commands
@@ -325,11 +318,11 @@ jobs:
             fi
 
       #################################################################
-      # Save cache for python virtualenv, node_modules, protobuf
+      # Save cache for python virtualenv and node_modules.
       #################################################################
       - save_cache:
           name: Save virtualenv to cache
-          key: v12-python-venv-{{ checksum "~/python_version.md5" }}
+          key: v12-python-venv-{{ checksum "~/python_cache_key.md5" }}
           paths:
             - venv
 
@@ -339,13 +332,6 @@ jobs:
           paths:
             - ~/.nvm
             - ~/.cache
-
-      - save_cache:
-          name: Save generated protobufs to cache
-          key: v12-protobuf-{{ checksum "~/protobuf.md5" }}
-          paths:
-            - frontend/src/autogen/proto.js
-            - lib/streamlit/proto
 
   # The following inherits from python-3-8. In a few cases, steps are skipped
   # based on the name of the current job (see, e.g., "Run frontend tests").
@@ -468,8 +454,6 @@ jobs:
       - checkout:
           name: Checkout Streamlit code
 
-      # NOTE restore protobuf from cache wasn't
-      # working so generating protobufs instead.
       - pre-cache
       - restore-from-cache
       - pre-make
