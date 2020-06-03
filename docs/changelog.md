@@ -31,16 +31,6 @@ _Release date: June 2, 2020_
   [docs](https://docs.streamlit.io/en/latest/api.html#streamlit.echo).
 - 📦 Improved `@st.cache` support for Keras models and Tensorflow `saved_models`.
 
-**Breaking changes:**
-
-- 🗺️ As detailed in
-  [this forum post](https://discuss.streamlit.io/t/deprecation-warning-deckgl-pydeck-maps-to-require-mapbox-token-for-production-usage/2982/4),
-  we no longer ship a Mapbox token with Streamlit. This means that if you want to use `st.map`,
-  `st.pydeck_chart`, or `st.deck_gl_chart` you'll need to provide us with your Mapbox token via the
-  `mapbox.token` config option. Please refer to
-  [the forum post](https://discuss.streamlit.io/t/deprecation-warning-deckgl-pydeck-maps-to-require-mapbox-token-for-production-usage/2982/4)
-  for more info.
-
 ## Version 0.60.0
 
 _Release date: May 18, 2020_
