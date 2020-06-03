@@ -58,9 +58,13 @@ pipenv-install: pipenv-dev-install pipenv-test-install
 
 .PHONY: pipenv-dev-install
 pipenv-dev-install: lib/Pipfile
-	@# Runs pipenv install; doesn't update the Pipfile.lock.
+	# Run pipenv install; don't update the Pipfile.lock.
+	# We use `--sequential` here to ensure our results are...
+	# "more deterministic", per pipenv's documentation.
+	# (Omitting this flag is causing incorrect dependency version
+	# resolution on CircleCI.)
 	cd lib; \
-		pipenv install --dev --skip-lock
+		pipenv install --dev --skip-lock --sequential
 
 .PHONY: pipenv-test-install
 pipenv-test-install: lib/test-requirements.txt
@@ -156,6 +160,7 @@ clean: clean-docs
 	find . -name '*.pyc' -type f -delete || true
 	find . -name __pycache__ -type d -delete || true
 	find . -name .pytest_cache -exec rm -rfv {} \; || true
+	rm -rf .mypy_cache
 	rm -f lib/streamlit/proto/*_pb2.py*
 	rm -rf lib/streamlit/static
 	rm -f lib/Pipfile.lock
