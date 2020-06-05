@@ -1,16 +1,32 @@
+:root {
+  --main-bg-color: #ffffff;
+
+  --sidebar-bg: #f3f6f6; /* light-gray: if you change this, change "style_nav_header_background" in conf.py to match */
+  --overflow-color: #e5e5e5; /* darker gray */
+  --sidefont-color: #808495; /* darkest gray */
+
+  --note-color: #e4f5ff; /* pale blue */
+  --note-title: #1c83e1; /* vivid blue */
+
+  --tip-color: #dffde9; /* pale green */
+  --tip-title: #21c354; /* vivid green */
+
+  --heading-color: #ff4b4b; /* salmon */
+}
+
 body {
   font-family: Graphik, sans-serif;
 }
 
 /* background of content */
 .wy-nav-content {
-  background: #ffffff;
+  background: var(--main-bg-color);
   min-height: 100vh;
 }
 
 /* overflow color */
 .wy-body-for-nav {
-  background: #e5e5e5;
+  background: var(--overflow-color);
 }
 
 /*float search box to right of navbar*/
@@ -31,7 +47,7 @@ div[role="search"] {
 
 /* sidebar headings */
 .wy-menu-vertical p.caption {
-  color: #ff4b4b;
+  color: var(--heading-color);
 }
 
 /*sidebar background color*/
@@ -39,13 +55,13 @@ div[role="search"] {
 .wy-menu-vertical li.current,
 .wy-menu-vertical li.toctree-l2.current > a,
 .wy-menu-vertical li.toctree-l2.current li.toctree-l3 > a {
-  background: #f3f6ff;
+  background: var(--sidebar-bg);
 }
 
 /*top-level font color*/
 .wy-menu-vertical a,
 .wy-side-nav-search > div.version {
-  color: #808495;
+  color: var(--sidefont-color);
 }
 
 /*borders for hover*/
@@ -56,24 +72,25 @@ div[role="search"] {
 
 /*hover/selection color*/
 .wy-menu-vertical a:hover,
-.wy-menu-vertical li.current a:hover {
-  background-color: #ffffff;
+.wy-menu-vertical li.current a:hover,
+.wy-menu.wy-menu-vertical > ul.current > li.toctree-l1.current > a {
+  background: var(--sidebar-bg);
 }
 
 /* style notes */
 .rst-content .note,
 .rst-content .note .admonition-title {
-  background: #e4f5ff;
+  background: var(--note-color);
 }
 .rst-content .note .admonition-title {
-  color: #1c83e1;
+  color: var(--note-title);
 }
 
 /* style tip boxes */
 .rst-content .tip,
 .rst-content .tip .admonition-title {
-  background: #dffde9;
+  background: var(--tip-color);
 }
 .rst-content .tip .admonition-title {
-  color: #21c354;
+  color: var(--tip-title);
 }
