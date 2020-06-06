@@ -498,6 +498,15 @@ def _server_max_upload_size():
     return 200
 
 
+@_create_option("server.enableWebsocketCompression", type_=bool)
+def _server_enable_websocket_compression():
+    """Enables support for websocket compression.
+
+    Default: true
+    """
+    return True
+
+
 # Config Section: Browser #
 
 _create_section("browser", "Configuration of browser front-end.")
