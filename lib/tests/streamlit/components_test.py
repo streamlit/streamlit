@@ -14,134 +14,133 @@
 # limitations under the License.
 
 import json
-import unittest
-from typing import Callable
-from unittest import mock
 
+import pandas as pd
+import pytest
 import tornado.testing
 import tornado.web
 
 import streamlit
-from streamlit.DeltaGenerator import DeltaGenerator
-from streamlit.components import MarshallComponentException
-from streamlit.components import ComponentRegistry
-from streamlit.components import ComponentRequestHandler
+from streamlit.components import CustomComponent
+from streamlit.components import declare_component as declare_component
+from streamlit.errors import StreamlitAPIException
 from tests.testutil import DeltaGeneratorTestCase
 
-JAVASCRIPT_1 = """
-return function (args, st) => {
-  return <div>Hello, lovely world!</div>
-}
-"""
-
-JAVASCRIPT_2 = """
-export default (args, st) => {
-  return <span>Goodbye, cruel world!</span>
-}
-"""
+URL = "http://not.a.real.url:3001"
+PATH = "not/a/real/path"
 
 
-class PluginTest(DeltaGeneratorTestCase):
-    """TODO!"""
+class DeclareComponentTest(DeltaGeneratorTestCase):
+    """Test declaration of custom component."""
 
-    pass
-    # def setUp(self, override_root=True) -> None:
-    #     super().setUp(override_root)
-    #     self.registry = ComponentRegistry()
-    #
-    # def _register_plugin(self, name, javascript) -> [str, Callable]:
-    #     registry_patch = mock.patch(
-    #         "streamlit.components.ComponentRegistry.instance", return_value=self.registry
-    #     )
-    #     st_patch = mock.patch("streamlit.components.st")
-    #     dg_patch = mock.patch("streamlit.components.DeltaGenerator")
-    #
-    #     with registry_patch, st_patch, dg_patch:
-    #         plugin(name, javascript)
-    #         plugin_id = self.registry._get_id(javascript)
-    #
-    #         # Test that we're properly adding functions to st and DeltaGenerator
-    #         self.assertTrue(hasattr(streamlit.components.st, name))
-    #         self.assertTrue(hasattr(streamlit.components.DeltaGenerator, name))
-    #
-    #         return plugin_id, getattr(streamlit.components.DeltaGenerator, name)
-    #
-    # def test_register_plugin(self):
-    #     """Test the output of st.plugin"""
-    #     plugin_id, plugin_func = self._register_plugin("test", JAVASCRIPT_1)
-    #     self.assertEqual(JAVASCRIPT_1, self.registry.get_plugin_path(plugin_id))
-    #     self.assertIsNotNone(plugin_func)
-    #
-    # def test_plugin_func_none(self):
-    #     """Test `plugin_func(None)`"""
-    #     plugin_id, plugin_func = self._register_plugin("test", JAVASCRIPT_1)
-    #
-    #     return_value = plugin_func(DeltaGenerator(), None)
-    #     self.assertIsNone(return_value)
-    #
-    #     proto = self.get_delta_from_queue().new_element.plugin_instance
-    #     self.assertEqual("null", proto.args_json)
-    #     self.assertEqual(plugin_id, proto.plugin_id)
-    #
-    # def test_plugin_func_args(self):
-    #     """Test `plugin_func() with complex args"""
-    #     plugin_id, plugin_func = self._register_plugin("test", JAVASCRIPT_1)
-    #
-    #     args = {
-    #         "foo": "bar",
-    #         "baz": None,
-    #         "qux": {"inner": 3.14},
-    #     }
-    #
-    #     return_value = plugin_func(DeltaGenerator(), args)
-    #     self.assertIsNone(return_value)
-    #
-    #     proto = self.get_delta_from_queue().new_element.plugin_instance
-    #     self.assertEqual(json.dumps(args), proto.args_json)
-    #     self.assertEqual(plugin_id, proto.plugin_id)
-    #
-    # def test_plugin_func_bad_args(self):
-    #     """Test `plugin_func()` with non-JSON-friendly args"""
-    #     plugin_id, plugin_func = self._register_plugin("test", JAVASCRIPT_1)
-    #
-    #     with self.assertRaises(MarshallComponentException):
-    #         plugin_func(DeltaGenerator(), {"bad": DeltaGenerator()})
+    def test_only_path(self):
+        """Test __init__ when only path is provided."""
+        instance = CustomComponent(PATH, None)
+        self.assertEqual(PATH, instance.path)
+        self.assertIsNone(instance.url)
+        self.assertIsNone(instance._custom_wrapper)
+
+    def test_only_url(self):
+        """Test __init__ when only url is provided."""
+        instance = CustomComponent(None, URL)
+        self.assertEqual(URL, instance.url)
+        self.assertIsNone(instance.path)
+        self.assertIsNone(instance._custom_wrapper)
+
+    def test_path_and_url(self):
+        """Test __init__ when both path and url are provided."""
+        with pytest.raises(StreamlitAPIException) as exception_message:
+            CustomComponent(PATH, URL)
+        self.assertEqual(
+            "Either 'path' or 'url' must be set, but not both.",
+            str(exception_message.value),
+        )
+
+    def test_no_path_and_no_url(self):
+        """Test __init__ when neither path nor url are provided."""
+        with pytest.raises(StreamlitAPIException) as exception_message:
+            CustomComponent(None, None)
+        self.assertEqual(
+            "Either 'path' or 'url' must be set, but not both.",
+            str(exception_message.value),
+        )
 
 
-class ComponentRegistryTest(unittest.TestCase):
-    """TODO!"""
+class RegisterComponentTest(DeltaGeneratorTestCase):
+    """Test registration of custom component."""
 
-    pass
-    # def test_singleton(self):
-    #     self.assertIsNotNone(ComponentRegistry.instance())
-    #     self.assertEqual(
-    #         ComponentRegistry.instance(), ComponentRegistry.instance(),
-    #     )
-    #
-    # def test_register_plugin(self):
-    #     registry = ComponentRegistry()
-    #     id1 = registry.register_plugin(JAVASCRIPT_1)
-    #     id2 = registry.register_plugin(JAVASCRIPT_2)
-    #     self.assertEqual(JAVASCRIPT_1, registry.get_plugin_path(id1))
-    #     self.assertEqual(JAVASCRIPT_2, registry.get_plugin_path(id2))
-    #
-    # def test_register_duplicate(self):
-    #     """Registering a duplicate is not an error and should result
-    #     in the same ID."""
-    #     registry = ComponentRegistry()
-    #     self.assertEqual(
-    #         registry.register_plugin(JAVASCRIPT_1),
-    #         registry.register_plugin(JAVASCRIPT_1),
-    #     )
+    def setUp(self):
+        super().setUp()
+        TestComponent = declare_component(url=URL)
+        register_component("test_component", TestComponent)
+
+    def test_st_binding(self):
+        """Test that component has been attached to st namespace"""
+        self.assertTrue(hasattr(streamlit.components.st, "test_component"))
+
+    def test_dg_binding(self):
+        """Test that component has been attached to DeltaGenerator"""
+        self.assertTrue(hasattr(streamlit.components.DeltaGenerator, "test_component"))
+
+    def test_only_json_args(self):
+        """Test that component with only json args is marshalled correctly."""
+        streamlit.test_component(foo="bar")
+        proto = self.get_delta_from_queue().new_element.component_instance
+        self.assertEqual(json.dumps({"foo": "bar"}), proto.args_json)
+        self.assertEqual("[]", str(proto.args_dataframe))
+
+    def test_only_df_args(self):
+        """Test that component with only dataframe args is marshalled correctly."""
+        raw_data = {
+            "First Name": ["Jason", "Molly"],
+            "Last Name": ["Miller", "Jacobson"],
+            "Age": [42, 52],
+        }
+        df = pd.DataFrame(raw_data, columns=["First Name", "Last Name", "Age"])
+        streamlit.test_component(df=df)
+        proto = self.get_delta_from_queue().new_element.component_instance
+        self.assertEqual("{}", proto.args_json)
+        # (HK) TODO: Add assertEqual check for Apache Arrow pybytes.
+        self.assertIsNotNone(proto.args_dataframe)
+
+    def test_no_args(self):
+        """Test that component with no args is marshalled correctly."""
+        streamlit.test_component()
+        proto = self.get_delta_from_queue().new_element.component_instance
+        self.assertEqual("{}", proto.args_json)
+        self.assertEqual("[]", str(proto.args_dataframe))
+
+    def test_json_and_df_args(self):
+        """Test that component with json and dataframe args is marshalled correctly."""
+        raw_data = {
+            "First Name": ["Jason", "Molly"],
+            "Last Name": ["Miller", "Jacobson"],
+            "Age": [42, 52],
+        }
+        df = pd.DataFrame(raw_data, columns=["First Name", "Last Name", "Age"])
+        streamlit.test_component(foo="bar", df=df)
+        proto = self.get_delta_from_queue().new_element.component_instance
+        self.assertEqual(json.dumps({"foo": "bar"}), proto.args_json)
+        # (HK) TODO: Add assertEqual check for Apache Arrow pybytes.
+        self.assertIsNotNone(proto.args_dataframe)
+
+    def test_decorator(self):
+        """Test component with decorator."""
+        TestComponent = declare_component(url=URL)
+
+        @TestComponent
+        def create_instance(f, name, key=None):
+            return f(name=name, key=key, default=0)
+
+        register_component("test_component", TestComponent)
+        streamlit.test_component("foo")
+        proto = self.get_delta_from_queue().new_element.component_instance
+        self.assertEqual(
+            json.dumps({"name": "foo", "key": None, "default": 0}), proto.args_json
+        )
 
 
 class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
-    """Tests the /plugin endpoint"""
+    """TODO!"""
 
-    # TODO!
-
-    def get_app(self):
-        self.registry = ComponentRegistry()
-        return tornado.web.Application(
-            [("/plugin/(.*)", ComponentRequestHandler, dict(registry=self.registry))]
-        )
+    pass
