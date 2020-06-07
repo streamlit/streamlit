@@ -36,8 +36,8 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ComponentInstance_pb2 import ArgsDataframe
 
 
-URL = "http://localhost:3001"
-PATH = "component_template/build"
+URL = "http://not.a.real.url:3001"
+PATH = "not/a/real/path"
 
 
 class DeclareComponentTest(DeltaGeneratorTestCase):
