@@ -63,9 +63,7 @@ class CustomComponent:
         if path is not None:
             abspath = os.path.abspath(path)
             if not os.path.isdir(abspath):
-                raise StreamlitAPIException(
-                    "No such component directory: '%s'" % abspath
-                )
+                raise StreamlitAPIException(f"No such component directory: '{abspath}'")
 
         self.name = name
         self.abspath = abspath
@@ -117,7 +115,7 @@ class CustomComponent:
 
         """
         if len(args) > 0:
-            raise MarshallComponentException("Argument '%s' needs a label" % args[0])
+            raise MarshallComponentException(f"Argument '{args[0]}' needs a label")
 
         # If loc is unspecified, we write to the main DeltaGenerator
         if loc is None:
@@ -271,7 +269,7 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
         component_name = parts[0]
         component_root = self._registry.get_component_path(component_name)
         if component_root is None:
-            self.write("%s not found" % path)
+            self.write(f"{path} not found")
             self.set_status(404)
             return
 
@@ -284,7 +282,7 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
             with open(abspath, "r") as file:
                 contents = file.read()
         except OSError as e:
-            self.write("%s read error: %s" % (path, e))
+            self.write(f"{path} read error: {e}")
             self.set_status(404)
             return
 
