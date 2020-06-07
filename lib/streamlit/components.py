@@ -224,40 +224,22 @@ def declare_component(
     # 2. Get the stack frame of our calling function.
     caller_frame = current_frame.f_back
 
-    # 3. Get the caller's package name. If the caller was the main
+    # 3. Get the caller's module name. If the caller was the main
     # module that was executed (that is, if the user executed
     # `python my_component.py`), then this name will be "__main__"
     # instead of the actual package name. TODO: handle this!
-    package_name = inspect.getmodule(caller_frame).__name__
-    assert package_name != "__main__"
+    module = inspect.getmodule(caller_frame)
+    assert module is not None
+
+    module_name = module.__name__
+    assert module_name != "__main__"
 
     # Create our component object, and register it.
-    component = CustomComponent(name=package_name, path=path, url=url)
+    component = CustomComponent(name=module_name, path=path, url=url)
     ComponentRegistry.instance().register_component(component)
 
     # The component itself is the Callable we return.
     return component
-
-
-def register_component(name: str, component: CustomComponent) -> None:
-    """Register a custom component."""
-    # Register this component with our global registry.
-    ComponentRegistry.instance().register_component(name, component.path)
-
-    # Build our component function.
-    def create_instance(dg: DeltaGenerator, *args, **kwargs) -> Optional[Any]:
-        return component.create_instance(name, dg, *args, **kwargs)
-
-    # Build st.[component_name], which just calls component_instance with the
-    # main DeltaGenerator.
-    def create_instance_main(*args, **kwargs):
-        return create_instance(streamlit._main, *args, **kwargs)
-
-    # Register the component as a member function of DeltaGenerator, and as
-    # a standalone function in the streamlit namespace.
-    # TODO: disallow collisions with important streamlit functions!
-    setattr(DeltaGenerator, name, create_instance)
-    setattr(st, name, create_instance_main)
 
 
 class ComponentRequestHandler(tornado.web.RequestHandler):
