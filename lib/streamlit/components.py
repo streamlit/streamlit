@@ -22,7 +22,6 @@ import inspect
 
 import tornado.web
 
-import streamlit as st  # plugins_test relies on this import name, for patching
 import streamlit.server.routes
 from streamlit import type_util
 from streamlit.DeltaGenerator import DeltaGenerator

@@ -13,10 +13,18 @@
 # limitations under the License.
 
 import unittest
+from collections import namedtuple
+from typing import Any
 from unittest import mock
 
 from streamlit import StreamlitAPIException
 from streamlit.components import ComponentRegistry
+
+MockComponent = namedtuple("MockComponent", ["name", "abspath", "url"])
+
+
+def _create_mock_component(name, path=None, url=None) -> Any:
+    return MockComponent(name, path, url)
 
 
 class ComponentRegistryTest(unittest.TestCase):
@@ -32,7 +40,9 @@ class ComponentRegistryTest(unittest.TestCase):
 
         registry = ComponentRegistry.instance()
         with mock.patch("streamlit.components.os.path.isdir", side_effect=isdir):
-            registry.register_component("test_component", test_path)
+            registry.register_component(
+                _create_mock_component("test_component", path=test_path)
+            )
 
         self.assertEqual(test_path, registry.get_component_path("test_component"))
 
@@ -44,7 +54,7 @@ class ComponentRegistryTest(unittest.TestCase):
         self.assertIsNone(registry.get_component_path("test_component"))
 
         # And also return None when the component doesn't have a path
-        registry.register_component("test_component", path=None)
+        registry.register_component(_create_mock_component("test_component", path=None))
         self.assertIsNone(registry.get_component_path("test_component"))
 
     def test_register_invalid_path(self):
@@ -55,7 +65,9 @@ class ComponentRegistryTest(unittest.TestCase):
 
         registry = ComponentRegistry.instance()
         with self.assertRaises(StreamlitAPIException) as ctx:
-            registry.register_component("test_component", test_path)
+            registry.register_component(
+                _create_mock_component("test_component", test_path)
+            )
             self.assertIn("No such component directory", ctx.exception)
 
     def test_register_duplicate_path(self):
@@ -70,9 +82,15 @@ class ComponentRegistryTest(unittest.TestCase):
 
         registry = ComponentRegistry.instance()
         with mock.patch("streamlit.components.os.path.isdir", side_effect=isdir):
-            registry.register_component("test_component", test_path_1)
-            registry.register_component("test_component", test_path_1)
+            registry.register_component(
+                _create_mock_component("test_component", test_path_1)
+            )
+            registry.register_component(
+                _create_mock_component("test_component", test_path_1)
+            )
             self.assertEqual(test_path_1, registry.get_component_path("test_component"))
 
-            registry.register_component("test_component", test_path_2)
+            registry.register_component(
+                _create_mock_component("test_component", test_path_2)
+            )
             self.assertEqual(test_path_2, registry.get_component_path("test_component"))
