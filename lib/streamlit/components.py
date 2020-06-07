@@ -58,15 +58,16 @@ class CustomComponent:
                 "Either 'path' or 'url' must be set, but not both."
             )
 
-        abspath = None
-        if path is not None:
-            abspath = os.path.abspath(path)
-            if not os.path.isdir(abspath):
-                raise StreamlitAPIException(f"No such component directory: '{abspath}'")
-
         self.name = name
-        self.abspath = abspath
+        self.path = path
         self.url = url
+
+    @property
+    def abspath(self) -> Optional[str]:
+        """The absolute path that the component is served from."""
+        if self.path is None:
+            return None
+        return os.path.abspath(self.path)
 
     def __call__(
         self,
@@ -198,7 +199,7 @@ class CustomComponent:
         return (
             isinstance(other, CustomComponent)
             and self.name == other.name
-            and self.abspath == other.abspath
+            and self.path == other.path
             and self.url == other.url
         )
 
@@ -212,7 +213,7 @@ class CustomComponent:
 
 def declare_component(
     path: Optional[str] = None, url: Optional[str] = None,
-) -> ComponentCallable:
+) -> CustomComponent:
     """Declare a new custom component."""
     # Discover the component's name:
 
@@ -237,7 +238,6 @@ def declare_component(
     component = CustomComponent(name=module_name, path=path, url=url)
     ComponentRegistry.instance().register_component(component)
 
-    # The component itself is the Callable we return.
     return component
 
 
@@ -348,6 +348,11 @@ class ComponentRegistry:
         component : CustomComponent
             The component to register.
         """
+
+        # Validate the component's path
+        abspath = component.abspath
+        if abspath is not None and not os.path.isdir(abspath):
+            raise StreamlitAPIException(f"No such component directory: '{abspath}'")
 
         with self._lock:
             existing = self._components.get(component.name)
