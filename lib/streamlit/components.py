@@ -94,7 +94,7 @@ class CustomComponent:
         ----------
         *args
             Must be empty; all args must be named. (This parameter exists to
-            enforce incorrect use of the function.)
+            enforce correct use of the function.)
         loc: DeltaGenerator or None
             The DeltaGenerator to write the component to. If unspecified,
             this defaults to st._main
