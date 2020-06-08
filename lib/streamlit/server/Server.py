@@ -64,6 +64,7 @@ TORNADO_SETTINGS = {
     "websocket_ping_interval": 20,  # Ping every 20s to keep WS alive.
     "websocket_ping_timeout": 30,  # Pings should be responded to within 30s.
     "websocket_max_message_size": MESSAGE_SIZE_LIMIT,  # Up the WS size limit.
+    "xsrf_cookies": True,
 }
 
 
@@ -329,7 +330,11 @@ class Server(object):
                 ]
             )
 
-        return tornado.web.Application(routes, **TORNADO_SETTINGS)
+        return tornado.web.Application(
+            routes,
+            cookie_secret=config.get_option("server.cookieSecret"),
+            **TORNADO_SETTINGS
+        )
 
     def _set_state(self, new_state):
         LOGGER.debug("Server state: %s -> %s" % (self._state, new_state))
@@ -571,6 +576,9 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
     def initialize(self, server):
         self._server = server
         self._session = None
+        # Reading xsrf_token will set the xsrf cookie
+        # https://www.tornadoweb.org/en/stable/guide/security.html#cross-site-request-forgery-protection
+        self.xsrf_token
 
     def check_origin(self, origin):
         """Set up CORS."""

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import { flattenElements } from "./utils"
+import { getCookie, flattenElements } from "./utils"
 import { BlockElement } from "lib/DeltaParser"
 import { List, Set as ImmutableSet, Map as ImmutableMap } from "immutable"
 
@@ -50,5 +50,19 @@ describe("flattenElements", () => {
     expect(elements).toEqual(
       ImmutableSet([simpleElement1, simpleElement2, simpleElement3])
     )
+  })
+})
+
+describe("getCookie", () => {
+  document.cookie = "flavor=chocolatechip"
+
+  it("get existing cookie", () => {
+    const cookie = getCookie("flavor")
+    expect(cookie).toEqual("chocolatechip")
+  })
+
+  it("get missing cookie", () => {
+    const cookie = getCookie("recipe")
+    expect(cookie).toEqual(undefined)
   })
 })
