@@ -8,10 +8,6 @@ from my_component import my_component
 num_clicks = my_component("World")
 st.markdown("You've clicked %s times!" % int(num_clicks))
 
-# It can live in the sidebar.
-num_clicks = my_component("Sidebar", loc=st.sidebar)
-st.sidebar.markdown("You've clicked %s times!" % int(num_clicks))
-
 name_input = st.text_input("Enter a name", value="Streamlit")
 
 # Use the special "key" argument to assign your component a fixed identity

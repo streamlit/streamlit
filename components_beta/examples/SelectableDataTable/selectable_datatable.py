@@ -4,8 +4,8 @@ import pandas as pd
 _selectable_datatable = st.declare_component(url="http://localhost:3001")
 
 
-def selectable_datatable(data, key=None, loc=None):
-    return _selectable_datatable(data=data, default=[], key=key, loc=loc)
+def selectable_datatable(data, key=None):
+    return _selectable_datatable(data=data, default=[], key=key)
 
 
 raw_data = {

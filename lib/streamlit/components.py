@@ -24,7 +24,6 @@ import tornado.web
 
 import streamlit.server.routes
 from streamlit import type_util
-from streamlit.DeltaGenerator import DeltaGenerator
 from streamlit.DeltaGenerator import NoValue
 from streamlit.DeltaGenerator import _get_widget_ui_value
 from streamlit.elements import arrow_table
@@ -70,23 +69,13 @@ class CustomComponent:
         return os.path.abspath(self.path)
 
     def __call__(
-        self,
-        *args,
-        loc: Optional[DeltaGenerator] = None,
-        default: Optional[Any] = None,
-        key: Optional[str] = None,
-        **kwargs,
+        self, *args, default: Optional[Any] = None, key: Optional[str] = None, **kwargs,
     ) -> Optional[Any]:
         """An alias for create_instance."""
-        return self.create_instance(*args, loc=loc, default=default, key=key, **kwargs)
+        return self.create_instance(*args, default=default, key=key, **kwargs)
 
     def create_instance(
-        self,
-        *args,
-        loc: Optional[DeltaGenerator] = None,
-        default: Optional[Any] = None,
-        key: Optional[str] = None,
-        **kwargs,
+        self, *args, default: Optional[Any] = None, key: Optional[str] = None, **kwargs,
     ) -> Optional[Any]:
         """Create a new instance of the component.
 
@@ -95,9 +84,6 @@ class CustomComponent:
         *args
             Must be empty; all args must be named. (This parameter exists to
             enforce correct use of the function.)
-        loc: DeltaGenerator or None
-            The DeltaGenerator to write the component to. If unspecified,
-            this defaults to st._main
         default: any or None
             The default return value for the component. This is returned when
             the component's frontend hasn't yet specified a value with
@@ -116,10 +102,6 @@ class CustomComponent:
         """
         if len(args) > 0:
             raise MarshallComponentException(f"Argument '{args[0]}' needs a label")
-
-        # If loc is unspecified, we write to the main DeltaGenerator
-        if loc is None:
-            loc = streamlit._main
 
         args_json = {}
         args_df = {}
@@ -188,7 +170,9 @@ class CustomComponent:
             # because that's what _enqueue_new_element_delta expects.
             return widget_value if widget_value is not None else NoValue
 
-        result = loc._enqueue_new_element_delta(
+        # We currently only support writing to st._main, but this will change
+        # when we settle on an improved API in a post-layout world.
+        result = streamlit._main._enqueue_new_element_delta(
             marshall_element=marshall_component, delta_type="component"
         )
 

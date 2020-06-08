@@ -7,10 +7,8 @@ import streamlit as st
 _radio_button = st.declare_component(url="http://localhost:3001")
 
 
-def custom_radio_button(label, options, default, loc=None, key=None):
-    return _radio_button(
-        label=label, options=options, default=default, loc=loc, key=key
-    )
+def custom_radio_button(label, options, default, key=None):
+    return _radio_button(label=label, options=options, default=default, key=key)
 
 
 result = custom_radio_button(
