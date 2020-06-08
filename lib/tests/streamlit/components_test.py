@@ -155,8 +155,8 @@ class ComponentRegistryTest(unittest.TestCase):
 class InvokeComponentTest(DeltaGeneratorTestCase):
     """Test invocation of a custom component object."""
 
-    def setUp(self, override_root=True):
-        super().setUp(override_root=override_root)
+    def setUp(self):
+        super().setUp()
         self.test_component = declare_component(url=URL)
 
     def test_only_json_args(self):
@@ -218,6 +218,16 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         self.test_component(key="two", loc=st.sidebar)
         msg = self.get_message_from_queue()
         self.assertEqual(BlockPath.SIDEBAR, msg.metadata.parent_block.container)
+
+    def test_key(self):
+        """Test the 'key' param"""
+        # TODO!
+        pass
+
+    def test_default(self):
+        """Test the 'default' param"""
+        # TODO!
+        pass
 
 
 class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
