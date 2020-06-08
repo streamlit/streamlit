@@ -14,88 +14,163 @@
 # limitations under the License.
 
 import json
+import os
 import unittest
-import pytest
-import pandas as pd
-from typing import Callable
 from unittest import mock
 
+import pandas as pd
+import pytest
 import tornado.testing
 import tornado.web
 
-import streamlit
-from streamlit.DeltaGenerator import DeltaGenerator
-from streamlit.components import MarshallComponentException
-from streamlit.components import ComponentRegistry
-from streamlit.components import ComponentRequestHandler
-from streamlit.components import CustomComponent
-from streamlit.components import register_component as register_component
+import streamlit as st
+from streamlit import StreamlitAPIException
+from streamlit.components import ComponentRegistry, CustomComponent
 from streamlit.components import declare_component as declare_component
+from streamlit.proto.BlockPath_pb2 import BlockPath
 from tests.testutil import DeltaGeneratorTestCase
-from streamlit.errors import StreamlitAPIException
-from streamlit.proto.ComponentInstance_pb2 import ArgsDataframe
-
 
 URL = "http://not.a.real.url:3001"
 PATH = "not/a/real/path"
 
 
-class DeclareComponentTest(DeltaGeneratorTestCase):
-    """Test declaration of custom component."""
+class DeclareComponentTest(unittest.TestCase):
+    """Test st.declare_component."""
+
+    def tearDown(self) -> None:
+        ComponentRegistry._instance = None
 
     def test_only_path(self):
-        """Test __init__ when only path is provided."""
-        instance = CustomComponent(PATH, None)
+        """Succeed when a path is provided."""
+
+        def isdir(path):
+            return path == PATH or path == os.path.abspath(PATH)
+
+        with mock.patch("streamlit.components.os.path.isdir", side_effect=isdir):
+            instance = declare_component(path=PATH)
+
+        self.assertEqual("components_test", instance.name)
         self.assertEqual(PATH, instance.path)
         self.assertIsNone(instance.url)
-        self.assertIsNone(instance._custom_wrapper)
+
+        self.assertEqual(
+            ComponentRegistry.instance().get_component_path("components_test"),
+            instance.abspath,
+        )
 
     def test_only_url(self):
-        """Test __init__ when only url is provided."""
-        instance = CustomComponent(None, URL)
+        """Succeed when a URL is provided."""
+        instance = declare_component(url=URL)
+        self.assertEqual("components_test", instance.name)
         self.assertEqual(URL, instance.url)
         self.assertIsNone(instance.path)
-        self.assertIsNone(instance._custom_wrapper)
+
+        self.assertEqual(
+            ComponentRegistry.instance().get_component_path("components_test"),
+            instance.abspath,
+        )
 
     def test_path_and_url(self):
-        """Test __init__ when both path and url are provided."""
+        """Fail if path AND url are provided."""
         with pytest.raises(StreamlitAPIException) as exception_message:
-            CustomComponent(PATH, URL)
+            declare_component(path=PATH, url=URL)
         self.assertEqual(
             "Either 'path' or 'url' must be set, but not both.",
             str(exception_message.value),
         )
 
     def test_no_path_and_no_url(self):
-        """Test __init__ when neither path nor url are provided."""
+        """Fail if neither path nor url is provided."""
         with pytest.raises(StreamlitAPIException) as exception_message:
-            CustomComponent(None, None)
+            declare_component(path=None, url=None)
         self.assertEqual(
             "Either 'path' or 'url' must be set, but not both.",
             str(exception_message.value),
         )
 
+    def test_declared_in_main_module(self):
+        """If st.declare_component is called in the main module, then
+        the component name should be the filename of that module."""
+        # TODO!
+        pass
 
-class RegisterComponentTest(DeltaGeneratorTestCase):
-    """Test registration of custom component."""
+
+class ComponentRegistryTest(unittest.TestCase):
+    def tearDown(self) -> None:
+        ComponentRegistry._instance = None
+
+    def test_register_component_with_path(self):
+        """Registering a component should associate it with its path."""
+        test_path = "/a/test/component/directory"
+
+        def isdir(path):
+            return path == test_path
+
+        registry = ComponentRegistry.instance()
+        with mock.patch("streamlit.components.os.path.isdir", side_effect=isdir):
+            registry.register_component(
+                CustomComponent("test_component", path=test_path)
+            )
+
+        self.assertEqual(test_path, registry.get_component_path("test_component"))
+
+    def test_register_component_no_path(self):
+        """It's not an error to register a component without a path."""
+        registry = ComponentRegistry.instance()
+
+        # Return None when the component hasn't been registered
+        self.assertIsNone(registry.get_component_path("test_component"))
+
+        # And also return None when the component doesn't have a path
+        registry.register_component(
+            CustomComponent("test_component", url="http://not.a.url")
+        )
+        self.assertIsNone(registry.get_component_path("test_component"))
+
+    def test_register_invalid_path(self):
+        """We raise an exception if a component is registered with a
+        non-existent path.
+        """
+        test_path = "/a/test/component/directory"
+
+        registry = ComponentRegistry.instance()
+        with self.assertRaises(StreamlitAPIException) as ctx:
+            registry.register_component(CustomComponent("test_component", test_path))
+            self.assertIn("No such component directory", ctx.exception)
+
+    def test_register_duplicate_path(self):
+        """It's not an error to re-register a component.
+        (This can happen during development).
+        """
+        test_path_1 = "/a/test/component/directory"
+        test_path_2 = "/another/test/component/directory"
+
+        def isdir(path):
+            return path in (test_path_1, test_path_2)
+
+        registry = ComponentRegistry.instance()
+        with mock.patch("streamlit.components.os.path.isdir", side_effect=isdir):
+            registry.register_component(CustomComponent("test_component", test_path_1))
+            registry.register_component(CustomComponent("test_component", test_path_1))
+            self.assertEqual(test_path_1, registry.get_component_path("test_component"))
+
+            registry.register_component(CustomComponent("test_component", test_path_2))
+            self.assertEqual(test_path_2, registry.get_component_path("test_component"))
+
+
+class InvokeComponentTest(DeltaGeneratorTestCase):
+    """Test invocation of a custom component object."""
 
     def setUp(self):
         super().setUp()
-        TestComponent = declare_component(url=URL)
-        register_component("test_component", TestComponent)
-
-    def test_st_binding(self):
-        """Test that component has been attached to st namespace"""
-        self.assertTrue(hasattr(streamlit.components.st, "test_component"))
-
-    def test_dg_binding(self):
-        """Test that component has been attached to DeltaGenerator"""
-        self.assertTrue(hasattr(streamlit.components.DeltaGenerator, "test_component"))
+        self.test_component = declare_component(url=URL)
 
     def test_only_json_args(self):
         """Test that component with only json args is marshalled correctly."""
-        streamlit.test_component(foo="bar")
+        self.test_component(foo="bar")
         proto = self.get_delta_from_queue().new_element.component_instance
+
+        self.assertEqual(self.test_component.name, proto.component_name)
         self.assertEqual(json.dumps({"foo": "bar"}), proto.args_json)
         self.assertEqual("[]", str(proto.args_dataframe))
 
@@ -107,16 +182,20 @@ class RegisterComponentTest(DeltaGeneratorTestCase):
             "Age": [42, 52],
         }
         df = pd.DataFrame(raw_data, columns=["First Name", "Last Name", "Age"])
-        streamlit.test_component(df=df)
+        self.test_component(df=df)
         proto = self.get_delta_from_queue().new_element.component_instance
+
+        self.assertEqual(self.test_component.name, proto.component_name)
         self.assertEqual("{}", proto.args_json)
         # (HK) TODO: Add assertEqual check for Apache Arrow pybytes.
         self.assertIsNotNone(proto.args_dataframe)
 
     def test_no_args(self):
         """Test that component with no args is marshalled correctly."""
-        streamlit.test_component()
+        self.test_component()
         proto = self.get_delta_from_queue().new_element.component_instance
+
+        self.assertEqual(self.test_component.name, proto.component_name)
         self.assertEqual("{}", proto.args_json)
         self.assertEqual("[]", str(proto.args_dataframe))
 
@@ -128,26 +207,33 @@ class RegisterComponentTest(DeltaGeneratorTestCase):
             "Age": [42, 52],
         }
         df = pd.DataFrame(raw_data, columns=["First Name", "Last Name", "Age"])
-        streamlit.test_component(foo="bar", df=df)
+        self.test_component(foo="bar", df=df)
         proto = self.get_delta_from_queue().new_element.component_instance
+
+        self.assertEqual(self.test_component.name, proto.component_name)
         self.assertEqual(json.dumps({"foo": "bar"}), proto.args_json)
         # (HK) TODO: Add assertEqual check for Apache Arrow pybytes.
         self.assertIsNotNone(proto.args_dataframe)
 
-    def test_decorator(self):
-        """Test component with decorator."""
-        TestComponent = declare_component(url=URL)
+    def test_loc(self):
+        """Test the 'loc' param."""
+        self.test_component(key="one")
+        msg = self.get_message_from_queue()
+        self.assertEqual(BlockPath.MAIN, msg.metadata.parent_block.container)
 
-        @TestComponent
-        def create_instance(f, name, key=None):
-            return f(name=name, key=key, default=0)
+        self.test_component(key="two", loc=st.sidebar)
+        msg = self.get_message_from_queue()
+        self.assertEqual(BlockPath.SIDEBAR, msg.metadata.parent_block.container)
 
-        register_component("test_component", TestComponent)
-        streamlit.test_component("foo")
-        proto = self.get_delta_from_queue().new_element.component_instance
-        self.assertEqual(
-            json.dumps({"name": "foo", "key": None, "default": 0}), proto.args_json
-        )
+    def test_key(self):
+        """Test the 'key' param"""
+        # TODO!
+        pass
+
+    def test_default(self):
+        """Test the 'default' param"""
+        # TODO!
+        pass
 
 
 class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
