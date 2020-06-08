@@ -215,16 +215,6 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         # (HK) TODO: Add assertEqual check for Apache Arrow pybytes.
         self.assertIsNotNone(proto.args_dataframe)
 
-    def test_loc(self):
-        """Test the 'loc' param."""
-        self.test_component(key="one")
-        msg = self.get_message_from_queue()
-        self.assertEqual(BlockPath.MAIN, msg.metadata.parent_block.container)
-
-        self.test_component(key="two", loc=st.sidebar)
-        msg = self.get_message_from_queue()
-        self.assertEqual(BlockPath.SIDEBAR, msg.metadata.parent_block.container)
-
     def test_key(self):
         """Test the 'key' param"""
         # TODO!

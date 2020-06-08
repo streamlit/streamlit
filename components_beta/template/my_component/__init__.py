@@ -15,8 +15,8 @@ _my_component = st.declare_component(url="http://localhost:3001")
 # Add a wrapper function to the component.
 # This is an optional step that lets you customize your component's
 # API, pre-process its input args, and post-process its output value.
-def my_component(name, loc=None, key=None):
-    component_value = _my_component(name=name, loc=loc, key=key, default=0)
+def my_component(name, key=None):
+    component_value = _my_component(name=name, key=key, default=0)
 
     # You can optionally modify the value returned from the component,
     # if it makes sense for your API. (There's no need to do that here,

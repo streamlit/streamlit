@@ -4,8 +4,8 @@ import pandas as pd
 _custom_dataframe = st.declare_component(url="http://localhost:3001")
 
 
-def custom_dataframe(data, key=None, loc=None):
-    return _custom_dataframe(data=data, key=key, loc=loc, default=[])
+def custom_dataframe(data, key=None):
+    return _custom_dataframe(data=data, key=key, default=[])
 
 
 raw_data = {
