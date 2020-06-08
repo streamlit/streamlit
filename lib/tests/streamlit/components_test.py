@@ -88,6 +88,12 @@ class DeclareComponentTest(unittest.TestCase):
             str(exception_message.value),
         )
 
+    def test_declared_in_main_module(self):
+        """If st.declare_component is called in the main module, then
+        the component name should be the filename of that module."""
+        # TODO!
+        pass
+
 
 class ComponentRegistryTest(unittest.TestCase):
     def tearDown(self) -> None:
