@@ -208,7 +208,7 @@ class CustomComponent:
         return not self == other
 
     def __str__(self):
-        return f"Component:'{self.name}'"
+        return f"'{self.name}': {self.path if self.path is not None else self.url}"
 
 
 def declare_component(
@@ -366,6 +366,8 @@ class ComponentRegistry:
             LOGGER.warning(
                 "%s overriding previously-registered %s", component, existing,
             )
+
+        LOGGER.info("Registered component %s", component)
 
     def get_component_path(self, name: str) -> Optional[str]:
         """Return the filesystem path for the component with the given name.
