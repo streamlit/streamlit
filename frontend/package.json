@@ -156,7 +156,8 @@
     "kind-of": "^6.0.3",
     "minimist": "^0.2.1",
     "serialize-javascript": "^2.1.1",
-    "static-eval": "^2.0.5"
+    "static-eval": "^2.0.5",
+    "websocket-extensions": "^0.1.4"
   },
   "browserslist": [
     ">0.2%",
