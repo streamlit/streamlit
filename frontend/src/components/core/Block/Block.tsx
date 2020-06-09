@@ -54,6 +54,7 @@ const DeckGlChart = React.lazy(() =>
 const DeckGlJsonChart = React.lazy(() =>
   import("components/elements/DeckGlJsonChart/")
 )
+const IFrame = React.lazy(() => import("components/elements/IFrame/"))
 const ImageList = React.lazy(() => import("components/elements/ImageList/"))
 const GraphVizChart = React.lazy(() =>
   import("components/elements/GraphVizChart/")
@@ -281,6 +282,7 @@ class Block extends PureComponent<Props> {
       graphvizChart: (el: SimpleElement) => (
         <GraphVizChart element={el} index={index} width={width} />
       ),
+      iframe: (el: SimpleElement) => <IFrame element={el} width={width} />,
       imgs: (el: SimpleElement) => <ImageList element={el} width={width} />,
       json: (el: SimpleElement) => <Json element={el} width={width} />,
       markdown: (el: SimpleElement) => <Markdown element={el} width={width} />,

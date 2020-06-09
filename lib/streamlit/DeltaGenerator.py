@@ -1558,6 +1558,76 @@ class DeltaGenerator(object):
         )
 
     @_with_element
+    def iframe(
+        self, element, src, width=None, height=None, scrolling=False, name=None,
+    ):
+        """Load a remote URL in an <iframe>.
+
+        Parameters
+        ----------
+        src : str
+            The URL of the page to embed.
+        width : int
+            The width of the frame in CSS pixels. Defaults to the report's
+            default element width.
+        height : int
+            The height of the frame in CSS pixels. Defaults to 150.
+        scrolling : bool
+            If True, show a scrollbar when the content is larger than the iframe.
+            Otherwise, do not show a scrollbar. Defaults to False.
+        name : str
+            A targetable name for the embedded browsing context. Defaults to None.
+
+        """
+        from .elements import iframe_proto
+
+        iframe_proto.marshall(
+            element.iframe,
+            src=src,
+            width=width,
+            height=height,
+            scrolling=scrolling,
+            name=name,
+        )
+
+    @_with_element
+    def html(
+        self, element, html, width=None, height=None, scrolling=False, name=None,
+    ):
+        """Display an HTML string in an <iframe>.
+
+        These parameters correspond directly to <iframe> attributes, which are
+        described in more detail at
+        https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe.
+
+        Parameters
+        ----------
+        html : str
+            The HTML string to embed in the iframe.
+        width : int
+            The width of the frame in CSS pixels. Defaults to the report's
+            default element width.
+        height : int
+            The height of the frame in CSS pixels. Defaults to 150.
+        scrolling : bool
+            If True, show a scrollbar when the content is larger than the iframe.
+            Otherwise, do not show a scrollbar. Defaults to False.
+        name : str
+            A targetable name for the embedded browsing context. Defaults to None.
+
+        """
+        from .elements import iframe_proto
+
+        iframe_proto.marshall(
+            element.iframe,
+            srcdoc=html,
+            width=width,
+            height=height,
+            scrolling=scrolling,
+            name=name,
+        )
+
+    @_with_element
     def audio(self, element, data, format="audio/wav", start_time=0):
         """Display an audio player.
 
