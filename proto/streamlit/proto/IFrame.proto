@@ -17,8 +17,13 @@
 syntax = "proto3";
 
 message IFrame {
-  string src = 1;
-  string srcdoc = 2;
+  oneof type {
+    // A URL to load
+    string src = 1;
+
+    // Inline HTML
+    string srcdoc = 2;
+  }
 
   float width = 3;
   bool has_width = 4;
