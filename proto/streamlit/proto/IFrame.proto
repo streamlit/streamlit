@@ -25,13 +25,5 @@ message IFrame {
   float height = 5;
 
   string name = 6;
-
-  // We are not currently allowing users to override our defaults for
-  // these iframe properties:
-//  string allow = 7;
-//  bool allow_fullscreen = 8;
-//  string referrer_policy = 9;
-//
-//  string sandbox = 10;
-//  bool has_sandbox = 11;
+  bool scrolling = 7;
 }

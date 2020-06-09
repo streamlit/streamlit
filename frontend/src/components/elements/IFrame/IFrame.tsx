@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { CSSProperties } from "react"
 import { Map as ImmutableMap } from "immutable"
 
 /**
@@ -82,14 +82,29 @@ class IFrame extends React.PureComponent<Props> {
       ? this.props.element.get("width")
       : this.props.width
 
+    // Handle scrollbar visibility. Chrome and other WebKit browsers still
+    // seem to use the deprecated "scrolling" attribute, whereas the standard
+    // says to use a CSS style.
+    let scrolling: string
+    let style: CSSProperties
+    if (this.props.element.get("scrolling")) {
+      scrolling = "auto"
+      style = {}
+    } else {
+      scrolling = "no"
+      style = { overflow: "hidden" }
+    }
+
     return (
       <iframe
+        style={style}
         src={getNonEmptyString(this.props.element, "src")}
         srcDoc={getNonEmptyString(this.props.element, "srcdoc")}
         width={width}
         height={this.props.element.get("height")}
         name={this.props.element.get("name")}
         allowFullScreen={false}
+        scrolling={scrolling}
         sandbox={SANDBOX_POLICY}
       />
     )

@@ -15,7 +15,7 @@
 
 
 def marshall(
-    proto, src=None, srcdoc=None, width=None, height=None, name=None,
+    proto, src=None, srcdoc=None, width=None, height=None, scrolling=False, name=None,
 ):
     """Marshalls data into an IFrame proto.
 
@@ -36,6 +36,9 @@ def marshall(
         default element width.
     height : int
         The height of the frame in CSS pixels. Defaults to 150.
+    scrolling : bool
+        If true, show a scrollbar when the content is larger than the iframe.
+        Otherwise, never show a scrollbar.
     name : str
         A targetable name for the embedded browsing context. Defaults to None.
 
@@ -54,6 +57,8 @@ def marshall(
         proto.height = height
     else:
         proto.height = 150
+
+    proto.scrolling = scrolling
 
     if name is not None:
         proto.name = name

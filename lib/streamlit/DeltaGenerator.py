@@ -1559,7 +1559,7 @@ class DeltaGenerator(object):
 
     @_with_element
     def iframe(
-        self, element, src, width=None, height=None, name=None,
+        self, element, src, width=None, height=None, scrolling=False, name=None,
     ):
         """Load a remote URL in an <iframe>.
 
@@ -1572,6 +1572,9 @@ class DeltaGenerator(object):
             default element width.
         height : int
             The height of the frame in CSS pixels. Defaults to 150.
+        scrolling : bool
+            If True, show a scrollbar when the content is larger than the iframe.
+            Otherwise, do not show a scrollbar. Defaults to False.
         name : str
             A targetable name for the embedded browsing context. Defaults to None.
 
@@ -1579,12 +1582,17 @@ class DeltaGenerator(object):
         from .elements import iframe_proto
 
         iframe_proto.marshall(
-            element.iframe, src=src, width=width, height=height, name=name,
+            element.iframe,
+            src=src,
+            width=width,
+            height=height,
+            scrolling=scrolling,
+            name=name,
         )
 
     @_with_element
     def html(
-        self, element, html, width=None, height=None, name=None,
+        self, element, html, width=None, height=None, scrolling=False, name=None,
     ):
         """Display an HTML string in an <iframe>.
 
@@ -1601,6 +1609,9 @@ class DeltaGenerator(object):
             default element width.
         height : int
             The height of the frame in CSS pixels. Defaults to 150.
+        scrolling : bool
+            If True, show a scrollbar when the content is larger than the iframe.
+            Otherwise, do not show a scrollbar. Defaults to False.
         name : str
             A targetable name for the embedded browsing context. Defaults to None.
 
@@ -1608,7 +1619,12 @@ class DeltaGenerator(object):
         from .elements import iframe_proto
 
         iframe_proto.marshall(
-            element.iframe, srcdoc=html, width=width, height=height, name=name,
+            element.iframe,
+            srcdoc=html,
+            width=width,
+            height=height,
+            scrolling=scrolling,
+            name=name,
         )
 
     @_with_element
