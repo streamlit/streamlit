@@ -1,16 +1,19 @@
 import os
 import streamlit as st
 
-# Declare a Streamlit component. It will be served by the local dev server
-# that you run via `npm run start`.
-_my_component = st.declare_component(url="http://localhost:3001")
+# Declare a Streamlit component. Give it a simple, descriptive name
+# (something more meaningful than "my_component" :).
+# Pass `url` here to tell Streamlit that the component will be served by the
+# local dev server that you run via `npm run start`. (This is useful while your
+# component is in development.)
+_my_component = st.declare_component("my_component", url="http://localhost:3001")
 
 # When you're ready to distribute a production version of the component,
 # replace the `url` param with `path`, and point it to to the component's
 # build directory:
 # parent_dir = os.path.dirname(os.path.abspath(__file__))
 # build_dir = os.path.join(parent_dir, "frontend/build")
-# _my_component = st.declare_component(path=build_dir)
+# _my_component = st.declare_component("my_component", path=build_dir)
 
 # Add a wrapper function to the component.
 # This is an optional step that lets you customize your component's

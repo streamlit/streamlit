@@ -1,7 +1,10 @@
 import streamlit as st
 import pandas as pd
 
-_selectable_datatable = st.declare_component(url="http://localhost:3001")
+_selectable_datatable = st.declare_component(
+    "selectable_datatable",
+    url="http://localhost:3001",
+)
 
 
 def selectable_datatable(data, key=None):
