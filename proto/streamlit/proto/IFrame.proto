@@ -29,6 +29,5 @@ message IFrame {
   bool has_width = 4;
   float height = 5;
 
-  string name = 6;
   bool scrolling = 7;
 }

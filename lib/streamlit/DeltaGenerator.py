@@ -1559,9 +1559,9 @@ class DeltaGenerator(object):
 
     @_with_element
     def iframe(
-        self, element, src, width=None, height=None, scrolling=False, name=None,
+        self, element, src, width=None, height=None, scrolling=False,
     ):
-        """Load a remote URL in an <iframe>.
+        """Load a remote URL in an iframe.
 
         Parameters
         ----------
@@ -1575,8 +1575,6 @@ class DeltaGenerator(object):
         scrolling : bool
             If True, show a scrollbar when the content is larger than the iframe.
             Otherwise, do not show a scrollbar. Defaults to False.
-        name : str
-            A targetable name for the embedded browsing context. Defaults to None.
 
         """
         from .elements import iframe_proto
@@ -1587,18 +1585,13 @@ class DeltaGenerator(object):
             width=width,
             height=height,
             scrolling=scrolling,
-            name=name,
         )
 
     @_with_element
     def html(
-        self, element, html, width=None, height=None, scrolling=False, name=None,
+        self, element, html, width=None, height=None, scrolling=False,
     ):
-        """Display an HTML string in an <iframe>.
-
-        These parameters correspond directly to <iframe> attributes, which are
-        described in more detail at
-        https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe.
+        """Display an HTML string in an iframe.
 
         Parameters
         ----------
@@ -1612,8 +1605,6 @@ class DeltaGenerator(object):
         scrolling : bool
             If True, show a scrollbar when the content is larger than the iframe.
             Otherwise, do not show a scrollbar. Defaults to False.
-        name : str
-            A targetable name for the embedded browsing context. Defaults to None.
 
         """
         from .elements import iframe_proto
@@ -1624,7 +1615,6 @@ class DeltaGenerator(object):
             width=width,
             height=height,
             scrolling=scrolling,
-            name=name,
         )
 
     @_with_element

@@ -102,7 +102,6 @@ class IFrame extends React.PureComponent<Props> {
         srcDoc={getNonEmptyString(this.props.element, "srcdoc")}
         width={width}
         height={this.props.element.get("height")}
-        name={this.props.element.get("name")}
         allowFullScreen={false}
         scrolling={scrolling}
         sandbox={SANDBOX_POLICY}

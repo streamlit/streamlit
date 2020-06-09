@@ -309,7 +309,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_iframe(self):
         """Test st.iframe"""
-        st.iframe("http://not.a.url", width=200, name="iframe test", scrolling=True)
+        st.iframe("http://not.a.url", width=200, scrolling=True)
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.iframe.src, "http://not.a.url")
@@ -317,12 +317,11 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.iframe.width, 200)
         self.assertTrue(el.iframe.has_width)
         self.assertTrue(el.iframe.scrolling)
-        self.assertEqual("iframe test", el.iframe.name)
 
     def test_st_html(self):
         """Test st.html"""
         html = r"<html><body>An HTML string!</body></html>"
-        st.html(html, width=200, name="html test", scrolling=True)
+        st.html(html, width=200, scrolling=True)
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.iframe.src, "")
@@ -330,7 +329,6 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.iframe.width, 200)
         self.assertTrue(el.iframe.has_width)
         self.assertTrue(el.iframe.scrolling)
-        self.assertEqual("html test", el.iframe.name)
 
     def test_st_image_PIL_image(self):
         """Test st.image with PIL image."""
