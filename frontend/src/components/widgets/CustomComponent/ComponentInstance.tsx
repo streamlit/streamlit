@@ -359,7 +359,6 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
         width={this.props.width}
         height={this.state.frameHeight}
         allowFullScreen={false}
-        seamless={true}
         scrolling="no"
         sandbox={SANDBOX_POLICY}
       />
