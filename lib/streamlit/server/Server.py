@@ -121,13 +121,17 @@ def start_listening(app):
     """
 
     call_count = 0
+    http_server = tornado.httpserver.HTTPServer(
+        app,
+        max_buffer_size=config.get_option("server.maxUploadSize") * 1024 * 1024
+    )
 
     while call_count < MAX_PORT_SEARCH_RETRIES:
         address = config.get_option("server.address")
         port = config.get_option("server.port")
 
         try:
-            app.listen(port, address)
+            http_server.listen(port, address)
             break  # It worked! So let's break out of the loop.
 
         except (OSError, socket.error) as e:
