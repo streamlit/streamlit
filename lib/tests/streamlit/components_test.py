@@ -23,11 +23,9 @@ import pytest
 import tornado.testing
 import tornado.web
 
-import streamlit as st
 from streamlit import StreamlitAPIException
 from streamlit.components import ComponentRegistry, CustomComponent
 from streamlit.components import declare_component as declare_component
-from streamlit.proto.BlockPath_pb2 import BlockPath
 from tests.testutil import DeltaGeneratorTestCase
 
 URL = "http://not.a.real.url:3001"
@@ -40,6 +38,35 @@ class DeclareComponentTest(unittest.TestCase):
     def tearDown(self) -> None:
         ComponentRegistry._instance = None
 
+    def test_name(self):
+        """Test component name generation"""
+        # Test a component defined in a module with no package
+        component = declare_component("foo", url=URL)
+        self.assertEqual("components_test.foo", component.name)
+
+        # Test a component defined in __init__.py
+        from component_test_data import component as init_component
+
+        self.assertEqual(
+            "component_test_data.foo", init_component.name,
+        )
+
+        # Test a component defined in a module within a package
+        from component_test_data.outer_module import component as outer_module_component
+
+        self.assertEqual(
+            "component_test_data.outer_module.foo", outer_module_component.name,
+        )
+
+        # Test a component defined in module within a nested package
+        from component_test_data.nested.inner_module import (
+            component as inner_module_component,
+        )
+
+        self.assertEqual(
+            "component_test_data.nested.inner_module.foo", inner_module_component.name,
+        )
+
     def test_only_path(self):
         """Succeed when a path is provided."""
 
@@ -47,33 +74,31 @@ class DeclareComponentTest(unittest.TestCase):
             return path == PATH or path == os.path.abspath(PATH)
 
         with mock.patch("streamlit.components.os.path.isdir", side_effect=isdir):
-            instance = declare_component(path=PATH)
+            component = declare_component("test", path=PATH)
 
-        self.assertEqual("components_test", instance.name)
-        self.assertEqual(PATH, instance.path)
-        self.assertIsNone(instance.url)
+        self.assertEqual(PATH, component.path)
+        self.assertIsNone(component.url)
 
         self.assertEqual(
-            ComponentRegistry.instance().get_component_path("components_test"),
-            instance.abspath,
+            ComponentRegistry.instance().get_component_path(component.name),
+            component.abspath,
         )
 
     def test_only_url(self):
         """Succeed when a URL is provided."""
-        instance = declare_component(url=URL)
-        self.assertEqual("components_test", instance.name)
-        self.assertEqual(URL, instance.url)
-        self.assertIsNone(instance.path)
+        component = declare_component("test", url=URL)
+        self.assertEqual(URL, component.url)
+        self.assertIsNone(component.path)
 
         self.assertEqual(
             ComponentRegistry.instance().get_component_path("components_test"),
-            instance.abspath,
+            component.abspath,
         )
 
     def test_path_and_url(self):
         """Fail if path AND url are provided."""
         with pytest.raises(StreamlitAPIException) as exception_message:
-            declare_component(path=PATH, url=URL)
+            declare_component("test", path=PATH, url=URL)
         self.assertEqual(
             "Either 'path' or 'url' must be set, but not both.",
             str(exception_message.value),
@@ -82,7 +107,7 @@ class DeclareComponentTest(unittest.TestCase):
     def test_no_path_and_no_url(self):
         """Fail if neither path nor url is provided."""
         with pytest.raises(StreamlitAPIException) as exception_message:
-            declare_component(path=None, url=None)
+            declare_component("test", path=None, url=None)
         self.assertEqual(
             "Either 'path' or 'url' must be set, but not both.",
             str(exception_message.value),
@@ -163,7 +188,7 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
 
     def setUp(self):
         super().setUp()
-        self.test_component = declare_component(url=URL)
+        self.test_component = declare_component("test", url=URL)
 
     def test_only_json_args(self):
         """Test that component with only json args is marshalled correctly."""

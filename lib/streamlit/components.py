@@ -196,31 +196,35 @@ class CustomComponent:
 
 
 def declare_component(
-    path: Optional[str] = None, url: Optional[str] = None,
+    name: str, path: Optional[str] = None, url: Optional[str] = None,
 ) -> CustomComponent:
     """Declare a new custom component."""
 
-    # 1. Get our stack frame.
+    # Get our stack frame.
     current_frame = inspect.currentframe()
     assert current_frame is not None
 
-    # 2. Get the stack frame of our calling function.
+    # Get the stack frame of our calling function.
     caller_frame = current_frame.f_back
     assert caller_frame is not None
 
-    # 3. Get the caller's module name.
+    # Get the caller's module name. `__name__` gives us the module's
+    # fully-qualified name, which includes its package.
     module = inspect.getmodule(caller_frame)
     assert module is not None
-    component_name = module.__name__
+    module_name = module.__name__
 
-    # 4. If the caller was the main module that was executed (that is,
-    # if the user executed `python my_component.py`), then this name will be
+    # If the caller was the main module that was executed (that is, if the
+    # user executed `python my_component.py`), then this name will be
     # "__main__" instead of the actual package name. In this case, we use
     # the main module's filename, minus its extension, as the component name.
-    if component_name == "__main__":
+    if module_name == "__main__":
         file_path = inspect.getfile(caller_frame)
         filename = os.path.basename(file_path)
-        component_name, _ = os.path.splitext(filename)
+        module_name, _ = os.path.splitext(filename)
+
+    # Build the component name.
+    component_name = f"{module_name}.{name}"
 
     # Create our component object, and register it.
     component = CustomComponent(name=component_name, path=path, url=url)

@@ -4,7 +4,10 @@ Re-implements the Streamlit radio button as a custom component.
 
 import streamlit as st
 
-_radio_button = st.declare_component(url="http://localhost:3001")
+_radio_button = st.declare_component(
+    "radio_button",
+    url="http://localhost:3001",
+)
 
 
 def custom_radio_button(label, options, default, key=None):
