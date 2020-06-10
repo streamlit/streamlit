@@ -19,7 +19,12 @@
 
 describe("st.file_uploader", () => {
   beforeEach(() => {
+    Cypress.Cookies.defaults({
+      whitelist: ["_xsrf"]
+    });
+
     cy.visit("http://localhost:3000/");
+
     cy.getCookie("_xsrf").should("exist");
 
     // Make the ribbon decoration line disappear

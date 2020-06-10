@@ -89,7 +89,6 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         # Convert bytes to string
         return arg[0].decode("utf-8")
 
-
     def post(self):
         args = {}  # type: Dict[str, str]
         files = {}  # type: Dict[str, List[Any]]

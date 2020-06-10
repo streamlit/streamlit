@@ -33,6 +33,7 @@ os.environ["STREAMLIT_COOKIE_SECRET"] = "chocolatechip"
 SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
 CONFIG_OPTIONS = copy.deepcopy(config._config_options)
 
+
 class ConfigTest(unittest.TestCase):
     """Test the config system."""
 
@@ -42,7 +43,6 @@ class ConfigTest(unittest.TestCase):
                 config, "_section_descriptions", new=copy.deepcopy(SECTION_DESCRIPTIONS)
             ),
             patch.object(config, "_config_options", new=copy.deepcopy(CONFIG_OPTIONS)),
-            patch.dict(os.environ, { "STREAMLIT_COOKIE_SECRET" : "chocolatechip" })
         ]
 
         for p in self.patches:
@@ -479,8 +479,6 @@ class ConfigTest(unittest.TestCase):
 
     def test_server_cookie_secret(self):
         self.assertEqual("chocolatechip", config.get_option("server.cookieSecret"))
-
-        del os.environ["STREAMLIT_COOKIE_SECRET"]
 
     def test_server_headless_via_liveSave(self):
         config.set_option("server.liveSave", True)
