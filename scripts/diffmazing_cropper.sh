@@ -38,8 +38,8 @@ mkdir -p "$tmp_dir"
 rm -f "$tmp_dir"/*
 
 
-# Crop diff files so we get non-diff files.
-# This puts all non-diff files in $tmp_dir
+# Crop diff files and put the resulting snapshot files in $tmp_dir.
+# NOTE: We're using this style of "if" statement to account for filenames that have spaces in them!
 for (( i=0; i<${len}; i++ ))
 do
   diff_file="${diff_files[$i]}"
