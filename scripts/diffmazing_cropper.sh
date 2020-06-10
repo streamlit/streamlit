@@ -5,6 +5,7 @@
 
 if [ $# -eq 0 ]
 then
+  echo ""
   echo "Usage"
   echo "  $0 <diff files to convert>"
   echo ""
@@ -13,6 +14,18 @@ then
   echo ""
   exit -1
 fi
+
+
+has_convert=$(command -v convert)
+if ! [ "$has_convert" ]
+then
+  echo ""
+  echo "Missing dependency."
+  echo "Please install ImageMagick first."
+  echo ""
+  exit -1
+fi
+
 
 
 tmp_dir=/tmp/streamlit_cropped_diffs
