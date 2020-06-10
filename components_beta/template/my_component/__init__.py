@@ -79,23 +79,26 @@ def my_component(name, key=None):
 
 # Add some test code to play with the component while it's in development.
 # During development, we can run this just as we would any other Streamlit
-# app: `streamlit my_component/__init__.py`
+# app: `$ streamlit run my_component/__init__.py`
 if not _RELEASE:
-    # Create an instance of the component with a constant `name` arg.
-    num_clicks = my_component("World")
+    st.subheader("Component with constant args")
 
-    # Print its output value.
+    # Create an instance of our component with a constant `name` arg, and
+    # print its output value.
+    num_clicks = my_component("World")
     st.markdown("You've clicked %s times!" % int(num_clicks))
 
-    # Create a second instance of the component whose `name` arg will
-    # vary based on a text_input widget.
-    name_input = st.text_input("Enter a name", value="Streamlit")
+    st.markdown("---")
+    st.subheader("Component with variable args")
 
-    # Use the special "key" argument to assign a fixed identity to this
+    # Create a second instance of our component whose `name` arg will vary
+    # based on a text_input widget.
+    #
+    # We use the special "key" argument to assign a fixed identity to this
     # component instance. By default, when a component's arguments change,
     # it is considered a new instance and will be re-mounted on the frontend
     # and lose its current state. In this case, we want to vary the component's
-    # "name" argument without lose its identity.
+    # "name" argument without having it get recreated.
+    name_input = st.text_input("Enter a name", value="Streamlit")
     num_clicks = my_component(name_input, key="foo")
-
     st.markdown("You've clicked %s times!" % int(num_clicks))
