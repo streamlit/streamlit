@@ -234,8 +234,9 @@ def _marshall_index(pandas_index, proto_index):
             proto_index.multi_index.labels.add().data.extend(label)
     elif type(pandas_index) == pd.DatetimeIndex:
         if pandas_index.tz is None:
-            current_zone = tzlocal.get_localzone()
-            pandas_index = pandas_index.tz_localize(current_zone)
+            pandas_index = pandas_index.tz_localize('UTC')
+        else:
+            pandas_index = pandas_index.tz_convert('UTC')
         proto_index.datetime_index.data.data.extend(pandas_index.astype(np.int64))
     elif type(pandas_index) == pd.TimedeltaIndex:
         proto_index.timedelta_index.data.data.extend(pandas_index.astype(np.int64))
@@ -291,10 +292,10 @@ def _marshall_any_array(pandas_array, proto_array):
     # to
     #   datetime64[ns, UTC], <class 'pandas._libs.tslibs.timestamps.Timestamp'>
     elif pandas_array.dtype.name.startswith("datetime64"):
-        # TODO(armando): Convert eveything to UTC not local timezone.
         if pandas_array.dt.tz is None:
-            current_zone = tzlocal.get_localzone()
-            pandas_array = pandas_array.dt.tz_localize(current_zone)
+            pandas_array = pandas_array.dt.tz_localize('UTC')
+        else:
+            pandas_array = pandas_array.dt.tz_convert('UTC')
         proto_array.datetimes.data.extend(pandas_array.astype(np.int64))
     else:
         raise NotImplementedError("Dtype %s not understood." % pandas_array.dtype)

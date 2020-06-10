@@ -128,16 +128,14 @@ class DataFrameProtoTest(unittest.TestCase):
         self.assertEqual([0, 1], proto.multi_index.labels[0].data)
 
         # datetimeindex
-        truth = [int(x * 1e9) for x in (1554138000, 1554141600, 1554145200)]
+        truth = [int(x * 1e9) for x in (1554127200, 1554130800, 1554134400)]
         df_dt = pd.date_range(
-            start="2019/04/01 10:00", end="2019/04/01 12:00", freq="H"
+            start="2019/04/01 14:00", end="2019/04/01 16:00", freq="H"
         )
         proto = Index()
-        obj_to_patch = "streamlit.elements.data_frame_proto.tzlocal.get_localzone"
-        with patch(obj_to_patch) as p:
-            p.return_value = "America/Los_Angeles"
-            data_frame_proto._marshall_index(df_dt, proto)
-            self.assertEqual(truth, proto.datetime_index.data.data)
+
+        data_frame_proto._marshall_index(df_dt, proto)
+        self.assertEqual(truth, proto.datetime_index.data.data)
 
         # timedeltaindex
         df_td = pd.to_timedelta(np.arange(1, 5), unit="ns")
@@ -230,20 +228,17 @@ class DataFrameProtoTest(unittest.TestCase):
         self.assertEqual(obj_proto.strings.data, truth)
 
         # No timezone
-        dt_data = pd.Series([np.datetime64("2019-04-09T12:34:56")])
+        dt_data = pd.Series([np.datetime64("2019-04-09T19:34:56")])
         dt_proto = AnyArray()
 
-        obj_to_patch = "streamlit.elements.data_frame_proto.tzlocal.get_localzone"
-        with patch(obj_to_patch) as p:
-            p.return_value = "America/Los_Angeles"
-            data_frame_proto._marshall_any_array(dt_data, dt_proto)
-            self.assertEqual(1554838496.0, dt_proto.datetimes.data[0] / 1000000000)
+        data_frame_proto._marshall_any_array(dt_data, dt_proto)
+        self.assertEqual(1554838496, dt_proto.datetimes.data[0] / 1000000000)
 
         # With timezone
         dt_data = pd.Series([np.datetime64("2019-04-09T12:34:56")])
-        dt_data = dt_data.dt.tz_localize("UTC")
+        dt_data = dt_data.dt.tz_localize("America/Los_Angeles")
         data_frame_proto._marshall_any_array(dt_data, dt_proto)
-        self.assertEqual(1554838496.0, dt_proto.datetimes.data[0] / 1000000000)
+        self.assertEqual(1554838496, dt_proto.datetimes.data[0] / 1000000000)
 
         # string
         str_data = np.array(["random", "string"])

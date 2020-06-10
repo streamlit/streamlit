@@ -20,6 +20,7 @@
  */
 
 import camelcase from "camelcase"
+import moment from "moment"
 import { dispatchOneOf, mapOneOf, updateOneOf } from "./immutableProto"
 import { fromJS } from "immutable"
 import { format } from "./format"
@@ -391,7 +392,7 @@ function anyArrayGet(anyArray: any, i: any): any {
     strings: getData,
     doubles: getData,
     int64s: getData,
-    datetimes: (obj: any) => format.nanosToDate(getData(obj)),
+    datetimes: (obj: any) => moment.utc(format.nanosToDate(getData(obj))),
     timedeltas: (obj: any) => format.nanosToDuration(getData(obj)),
   })
 }
