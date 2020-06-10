@@ -41,14 +41,30 @@ describe("Dataframes", () => {
   });
 
   it("have consistent st.dataframe visuals", () => {
+    const exceptions = [];
+
     cy.get(DF_SELECTOR).each((el, idx) => {
-      return cy.wrap(el).matchImageSnapshot("dataframe-visuals" + idx);
+      cy.wrap(el).matchImageSnapshot("dataframe-visuals" + idx, {
+        storeExceptionsInArray: exceptions
+      });
     });
+
+    if (exceptions.length >= 1) {
+      throw exceptions[1];
+    }
   });
 
   it("have consistent st.table visuals", () => {
+    const exceptions = [];
+
     cy.get(TABLE_SELECTOR).each((el, idx) => {
-      return cy.wrap(el).matchImageSnapshot("table-visuals" + idx);
+      cy.wrap(el).matchImageSnapshot("table-visuals" + idx, {
+        storeExceptionsInArray: exceptions
+      });
     });
+
+    if (exceptions.length >= 1) {
+      throw exceptions[1];
+    }
   });
 });
