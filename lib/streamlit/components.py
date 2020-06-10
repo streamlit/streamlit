@@ -41,11 +41,6 @@ class MarshallComponentException(StreamlitAPIException):
     pass
 
 
-# mypy doesn't support *args or **kwargs in Callable declarations, so this
-# is as close as we can get to a type for our _custom_wrapper type.
-ComponentCallable = Callable[..., Any]
-
-
 class CustomComponent:
     """A Custom Component declaration."""
 
@@ -69,14 +64,14 @@ class CustomComponent:
         return os.path.abspath(self.path)
 
     def __call__(
-        self, *args, default: Optional[Any] = None, key: Optional[str] = None, **kwargs,
-    ) -> Optional[Any]:
+        self, *args, default: Any = None, key: Optional[str] = None, **kwargs,
+    ) -> Any:
         """An alias for create_instance."""
         return self.create_instance(*args, default=default, key=key, **kwargs)
 
     def create_instance(
-        self, *args, default: Optional[Any] = None, key: Optional[str] = None, **kwargs,
-    ) -> Optional[Any]:
+        self, *args, default: Any = None, key: Optional[str] = None, **kwargs,
+    ) -> Any:
         """Create a new instance of the component.
 
         Parameters
@@ -198,7 +193,27 @@ class CustomComponent:
 def declare_component(
     name: str, path: Optional[str] = None, url: Optional[str] = None,
 ) -> CustomComponent:
-    """Declare a new custom component."""
+    """Create and register a custom component.
+
+    Parameters
+    ----------
+    name: str
+        A short, descriptive name for the component. Like, "slider".
+    path: str or None
+        The path to serve the component's frontend files from. Either
+        `path` or `url` must be specified, but not both.
+    url: str or None
+        The URL that the component is served from. Either `path` or `url`
+        must be specified, but not both.
+
+    Returns
+    -------
+    CustomComponent
+        A CustomComponent that can be called like a function.
+        Calling the component will create a new instance of the component
+        in the Streamlit report.
+
+    """
 
     # Get our stack frame.
     current_frame = inspect.currentframe()
@@ -217,7 +232,7 @@ def declare_component(
     # If the caller was the main module that was executed (that is, if the
     # user executed `python my_component.py`), then this name will be
     # "__main__" instead of the actual package name. In this case, we use
-    # the main module's filename, minus its extension, as the component name.
+    # the main module's filename, sans `.py` extension, as the component name.
     if module_name == "__main__":
         file_path = inspect.getfile(caller_frame)
         filename = os.path.basename(file_path)
