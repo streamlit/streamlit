@@ -54,15 +54,50 @@ describe("flattenElements", () => {
 })
 
 describe("getCookie", () => {
-  document.cookie = "flavor=chocolatechip"
+  afterEach(() => {
+    document.cookie.split(";").forEach(cookie => {
+      const eqPos = cookie.indexOf("=")
+      const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie
+      document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT"
+    })
+  })
 
   it("get existing cookie", () => {
+    document.cookie = "flavor=chocolatechip"
     const cookie = getCookie("flavor")
     expect(cookie).toEqual("chocolatechip")
   })
 
   it("get missing cookie", () => {
+    document.cookie = "sweetness=medium;"
+    document.cookie = "flavor=chocolatechip;"
+    document.cookie = "type=darkchocolate;"
     const cookie = getCookie("recipe")
     expect(cookie).toEqual(undefined)
+  })
+
+  it("find cookie in the front", () => {
+    document.cookie = "flavor=chocolatechip;"
+    document.cookie = "sweetness=medium;"
+    document.cookie = "type=darkchocolate;"
+    console.log(document.cookie)
+    const cookie = getCookie("flavor")
+    expect(cookie).toEqual("chocolatechip")
+  })
+
+  it("find cookie in the middle", () => {
+    document.cookie = "sweetness=medium;"
+    document.cookie = "flavor=chocolatechip;"
+    document.cookie = "type=darkchocolate;"
+    const cookie = getCookie("flavor")
+    expect(cookie).toEqual("chocolatechip")
+  })
+
+  it("find cookie in the end", () => {
+    document.cookie = "sweetness=medium;"
+    document.cookie = "type=darkchocolate;"
+    document.cookie = "flavor=chocolatechip;"
+    const cookie = getCookie("flavor")
+    expect(cookie).toEqual("chocolatechip")
   })
 })

@@ -54,7 +54,6 @@ class ConfigTest(unittest.TestCase):
 
         try:
             del os.environ["TEST_ENV_VAR"]
-            del os.environ["STREAMLIT_COOKIE_SECRET"]
         except Exception:
             pass
         config._delete_option("_test.tomlTest")
@@ -479,6 +478,8 @@ class ConfigTest(unittest.TestCase):
 
     def test_server_cookie_secret(self):
         self.assertEqual("chocolatechip", config.get_option("server.cookieSecret"))
+
+        del os.environ["STREAMLIT_COOKIE_SECRET"]
 
     def test_server_headless_via_liveSave(self):
         config.set_option("server.liveSave", True)
