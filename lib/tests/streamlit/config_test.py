@@ -299,9 +299,10 @@ class ConfigTest(unittest.TestCase):
                 "s3.region",
                 "s3.secretAccessKey",
                 "s3.url",
-                "server.enableCORS",
                 "server.baseUrlPath",
                 "server.cookieSecret",
+                "server.enableCORS",
+                "server.enableXSRF",
                 "server.folderWatchBlacklist",
                 "server.fileWatcherType",
                 "server.headless",
@@ -351,6 +352,13 @@ class ConfigTest(unittest.TestCase):
             str(e.value),
             "server.port does not work when global.developmentMode is true.",
         )
+
+    def test_check_conflicts_server_xsrf(self):
+        config._set_option("server.enableXSRF", True, "test")
+        config._set_option("server.enableCORS", True, "test")
+        with patch("streamlit.config.LOGGER") as patched_logger:
+            config._check_conflicts()
+            patched_logger.warning.assert_called_once()
 
     def test_check_conflicts_browser_serverport(self):
         config._set_option("global.developmentMode", True, "test")

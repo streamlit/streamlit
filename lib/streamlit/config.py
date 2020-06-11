@@ -408,6 +408,24 @@ def _server_cookie_secret():
     return cookie_secret
 
 
+@_create_option("server.enableCORS", type_=bool)
+def _server_enable_cors():
+    """Enables support for Cross-Origin Request Sharing, for added security.
+
+    Default: true
+    """
+    return True
+
+
+@_create_option("server.enableXSRF", type_=bool)
+def _server_enable_XSRF():
+    """Enables support for protection from Cross-site request forgery attacks. Requires CORS to be disabled.
+
+    Default: true
+    """
+    return True
+
+
 @_create_option("server.headless", type_=bool)
 @util.memoize
 def _server_headless():
@@ -476,15 +494,6 @@ _create_option(
     default_val="",
     type_=str,
 )
-
-
-@_create_option("server.enableCORS", type_=bool)
-def _server_enable_cors():
-    """Enables support for Cross-Origin Request Sharing, for added security.
-
-    Default: true
-    """
-    return True
 
 
 @_create_option("server.maxUploadSize", type_=int)
@@ -971,6 +980,14 @@ def _check_conflicts():
             "Streamlit itself, and is not supported for other use-cases. "
             "\n\nTo remove this warning, set the 'sharingMode' option to "
             "another value, or remove it from your Streamlit config."
+        )
+
+    # XSRF conflicts
+
+    if get_option("server.enableXSRF") and get_option("server.enableCORS"):
+        LOGGER.warning(
+            "Any POST, PUT, or DELETE requests are not supported across different origins. "
+            "If cross origin POST, PUT or DELETE requests are required, please disable 'enableXSRF'"
         )
 
 
