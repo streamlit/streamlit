@@ -37,9 +37,10 @@ function onRender(event: Event): void {
   let name = data.args["name"]
   textDiv.textContent = `Hello, ${name}!`
 
-  // This isn't strictly necessary for the example because our height stays
-  // fixed, but we can also have Streamlit update our frameHeight after each
-  // render event in case it should change.
+  // We tell Streamlit to update our frameHeight after each render event, in
+  // case it has changed. (This isn't strictly necessary for the example
+  // because our height stays fixed, but this is a low-cost function, so
+  // there's no harm in doing it redundantly.)
   Streamlit.setFrameHeight()
 }
 
