@@ -15,12 +15,10 @@ interface State {
 }
 
 /**
- * This is a React-based component template. It's an alternative to the
- * event-based component pattern. Rather than handling RENDER_EVENT events,
- * you write your rendering logic in the render() function, which is
- * called automatically when appropriate.
+ * This is a React-based component template. The `render()` function is called
+ * automatically when your component should be re-rendered.
  */
-class ReactTemplate extends StreamlitComponentBase<State> {
+class MyComponent extends StreamlitComponentBase<State> {
   public state = { numClicks: 0 }
 
   public render = (): ReactNode => {
@@ -33,12 +31,12 @@ class ReactTemplate extends StreamlitComponentBase<State> {
     // variable, and send its new value back to Streamlit, where it'll
     // be available to the Python program.
     return (
-      <>
-        <div>Hello, {name}!</div>
+      <span>
+        Hello, {name}! &nbsp;
         <button onClick={this.onClicked} disabled={this.props.disabled}>
           Click Me!
         </button>
-      </>
+      </span>
     )
   }
 
@@ -58,4 +56,4 @@ class ReactTemplate extends StreamlitComponentBase<State> {
 // passing arguments from Python -> Component.
 //
 // You don't need to edit withStreamlitConnection (but you're welcome to!).
-export default withStreamlitConnection(ReactTemplate)
+export default withStreamlitConnection(MyComponent)
