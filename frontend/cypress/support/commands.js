@@ -59,16 +59,6 @@ Cypress.Commands.overwrite(
   "matchImageSnapshot",
   (originalFn, subject, name, options) => {
     cy.wrap(subject).trigger("blur", _.pick(options, "force"))
-
-    // Hack to avoid stopping the test when there's a bad snapshot.
-    if (options && options.storeExceptionsInArray) {
-      try {
-        originalFn(subject, name, options)
-      } catch (e) {
-        options.storeExceptionsInArray.push(e)
-      }
-    } else {
-      return originalFn(subject, name, options)
-    }
+    return originalFn(subject, name, options)
   }
 )
