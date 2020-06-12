@@ -44,7 +44,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         self._file_mgr = file_mgr
 
     def set_default_headers(self):
-        if config.get_option("server.enableXSRF"):
+        if config.get_option("server.enableCSRF"):
             self.set_header("Access-Control-Allow-Headers", "X-Xsrftoken")
             self.set_header("Access-Control-Allow-Origin", Report.get_url(config.get_option("browser.serverAddress")))
             self.set_header("Vary", "Origin")

@@ -417,8 +417,8 @@ def _server_enable_cors():
     return True
 
 
-@_create_option("server.enableXSRF", type_=bool)
-def _server_enable_XSRF():
+@_create_option("server.enableCSRF", type_=bool)
+def _server_enable_CSRF():
     """Enables support for protection from Cross-site request forgery attacks. Requires CORS to be disabled.
 
     Default: true
@@ -982,13 +982,14 @@ def _check_conflicts():
             "another value, or remove it from your Streamlit config."
         )
 
-    # XSRF conflicts
+    # CSRF conflicts
 
-    if get_option("server.enableXSRF") and get_option("server.enableCORS"):
-        LOGGER.warning(
-            "Any POST, PUT, or DELETE requests are not supported across different origins. "
-            "If cross origin POST, PUT or DELETE requests are required, please disable 'enableXSRF'"
-        )
+    if get_option("server.enableCSRF"):
+        if not get_option("server.enableCORS") or get_option("global.useNode"):
+            LOGGER.warning(
+                "Any POST, PUT, or DELETE requests are not supported across different origins. "
+                "If cross origin POST, PUT or DELETE requests are required, please disable 'enableCSRF'"
+            )
 
 
 def _set_development_mode():

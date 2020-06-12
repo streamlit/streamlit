@@ -132,6 +132,11 @@ class HealthHandler(_SpecialRequestHandler):
         if self._callback():
             self.write("ok")
             self.set_status(200)
+
+            # Manually set the _xsrf token when rechecking health.
+            if config.get_option("server.enableCSRF"):
+                self.set_cookie("_xsrf", self.xsrf_token)
+
         else:
             # 503 = SERVICE_UNAVAILABLE
             self.set_status(503)
