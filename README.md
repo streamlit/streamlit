@@ -1,6 +1,8 @@
 # Welcome to Streamlit :wave:
 
-**The fastest way to build custom ML tools.**
+[![Documentation Status](https://readthedocs.com/projects/streamlit-streamlit/badge/?version=latest)](https://docs.streamlit.io/en/latest/?badge=latest)
+
+**The fastest way to build data apps.**
 
 Streamlit lets you create apps for your machine learning projects with deceptively simple Python scripts. It supports hot-reloading, so your app updates live as you edit and save your file. No need to mess with HTTP requests, HTML, JavaScript, etc. All you need is your favorite editor and a browser. Take a look at Streamlit in action:
 

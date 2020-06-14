@@ -145,6 +145,7 @@ With widgets, Streamlit allows you to bake interactivity directly into your apps
 .. autofunction:: streamlit.date_input
 .. autofunction:: streamlit.time_input
 .. autofunction:: streamlit.file_uploader
+.. autofunction:: streamlit.beta_color_picker
 ```
 
 ## Add widgets to sidebar
@@ -158,8 +159,8 @@ Here's an example of how you'd add a selectbox to your sidebar.
 import streamlit as st
 
 add_selectbox = st.sidebar.selectbox(
-    'How would you like to be contacted?',
-    ('Email', 'Home phone', 'Mobile phone'))
+    "How would you like to be contacted?",
+    ("Email", "Home phone", "Mobile phone")
 )
 ```
 

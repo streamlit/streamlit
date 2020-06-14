@@ -57,6 +57,7 @@ describe("withScreencast HOC", () => {
     wrapper
       .find(testComponent)
       .props()
+      // @ts-ignore
       .screenCast.startRecording("screencast-filename")
 
     it("should show a configuration dialog before start recording", () => {
@@ -106,7 +107,7 @@ describe("withScreencast HOC", () => {
     })
   })
 
-  it("should show an unsupported dialog", () => {
+  it("should show an unsupported dialog when it's an old browser", () => {
     const WithHoc = withScreencast(testComponent)
     const wrapper = shallow(<WithHoc />)
 
@@ -117,6 +118,26 @@ describe("withScreencast HOC", () => {
     wrapper
       .find(testComponent)
       .props()
+      // @ts-ignore
+      .screenCast.startRecording("screencast-filename")
+
+    expect(wrapper.find(UnsupportedBrowserDialog).length).toBe(1)
+  })
+
+  it("should show an unsupported dialog when it doesn't have a mediaDevices support", () => {
+    const WithHoc = withScreencast(testComponent)
+    const wrapper = shallow(<WithHoc />)
+
+    Object.defineProperty(window.navigator, "mediaDevices", {
+      value: undefined,
+      configurable: true,
+    })
+
+    // @ts-ignore
+    wrapper
+      .find(testComponent)
+      .props()
+      // @ts-ignore
       .screenCast.startRecording("screencast-filename")
 
     expect(wrapper.find(UnsupportedBrowserDialog).length).toBe(1)

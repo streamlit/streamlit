@@ -15,6 +15,7 @@
 """Manage the user's Streamlit credentials."""
 
 import os
+import platform
 import sys
 import textwrap
 from collections import namedtuple
@@ -23,47 +24,64 @@ from typing import Optional
 import click
 import toml
 
+from streamlit import env_util
 from streamlit import file_util
 from streamlit import config
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
-Activation = namedtuple(
-    "Activation",
+# WT_SESSION is a Windows Terminal specific environment variable. If it exists,
+# we are on the latest Windows Terminal that supports emojis
+_SHOW_EMOJIS = not env_util.IS_WINDOWS or os.environ.get("WT_SESSION")
+if env_util.IS_WINDOWS:
+    _CONFIG_FILE_PATH = r"%userprofile%/.streamlit/config.toml"
+else:
+    _CONFIG_FILE_PATH = "~/.streamlit/config.toml"
+
+_Activation = namedtuple(
+    "_Activation",
     [
         "email",  # str : the user's email.
         "is_valid",  # boolean : whether the email is valid.
     ],
 )
 
+# IMPORTANT: Break the text below at 80 chars.
+_EMAIL_PROMPT = """
+  {0}%(welcome)s
 
-EMAIL_PROMPT = """
-  👋 %(welcome)s
+  If you're one of our development partners or you're interested in getting
+  personal technical support or Streamlit updates, please enter your email
+  address below. Otherwise, you may leave the field blank.
 
-  If you are one of our development partners or are interested in
-  getting personal technical support, please enter your email address
-  below. Otherwise, you may leave the field blank.
-
-  %(email)s""" % {
+  %(email)s""".format(
+    "👋 " if _SHOW_EMOJIS else ""
+) % {
     "welcome": click.style("Welcome to Streamlit!", bold=True),
     "email": click.style("Email: ", fg="blue"),
 }
 
-TELEMETRY_TEXT = """
-  %(telemetry)s As an open source project, we collect usage statistics.
-  We cannot see and do not store information contained in Streamlit apps.
+# IMPORTANT: Break the text below at 80 chars.
+_TELEMETRY_TEXT = """
+  %(privacy)s
+  As an open source project, we collect usage statistics. We cannot see and do
+  not store information contained in Streamlit apps. You can find out more by
+  reading our privacy policy at: %(link)s
 
-  If you'd like to opt out, add the following to ~/.streamlit/config.toml,
-  creating that file if necessary:
+  If you'd like to opt out of usage statistics, add the following to
+  %(config)s, creating that file if necessary:
 
     [browser]
     gatherUsageStats = false
 """ % {
-    "telemetry": click.style("Telemetry:", fg="blue", bold=True)
+    "privacy": click.style("Privacy Policy:", bold=True),
+    "link": click.style("https://streamlit.io/privacy-policy", underline=True),
+    "config": click.style(_CONFIG_FILE_PATH),
 }
 
-INSTRUCTIONS_TEXT = """
+# IMPORTANT: Break the text below at 80 chars.
+_INSTRUCTIONS_TEXT = """
   %(start)s
   %(prompt)s %(hello)s
 """ % {
@@ -194,21 +212,21 @@ class Credentials(object):
 
             while not activated:
                 email = click.prompt(
-                    text=EMAIL_PROMPT, prompt_suffix="", default="", show_default=False
+                    text=_EMAIL_PROMPT, prompt_suffix="", default="", show_default=False
                 )
 
                 self.activation = _verify_email(email)
                 if self.activation.is_valid:
                     self.save()
-                    click.secho(TELEMETRY_TEXT)
+                    click.secho(_TELEMETRY_TEXT)
                     if show_instructions:
-                        click.secho(INSTRUCTIONS_TEXT)
+                        click.secho(_INSTRUCTIONS_TEXT)
                     activated = True
                 else:  # pragma: nocover
                     LOGGER.error("Please try again.")
 
 
-def _verify_email(email: str) -> Activation:
+def _verify_email(email: str) -> _Activation:
     """Verify the user's email address.
 
     The email can either be an empty string (if the user chooses not to enter
@@ -220,8 +238,8 @@ def _verify_email(email: str) -> Activation:
 
     Returns
     -------
-    Activation
-        An Activation object. Its 'is_valid' property will be True only if
+    _Activation
+        An _Activation object. Its 'is_valid' property will be True only if
         the email was validated.
 
     """
@@ -229,9 +247,9 @@ def _verify_email(email: str) -> Activation:
 
     if len(email) > 0 and email.count("@") != 1:
         LOGGER.error("That doesn't look like an email :(")
-        return Activation(None, False)
+        return _Activation(None, False)
 
-    return Activation(email, True)
+    return _Activation(email, True)
 
 
 def _exit(message):  # pragma: nocover

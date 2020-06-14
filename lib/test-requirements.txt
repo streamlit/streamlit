@@ -1,0 +1,20 @@
+# Packages used to test things users may do with Streamlit.
+bokeh
+cffi
+chart-studio
+cx_oracle
+graphviz
+keras
+matplotlib
+mysqlclient
+opencv-python
+plotly
+prometheus-client
+psycopg2-binary
+pydot
+pyodbc
+seaborn
+sqlalchemy
+tensorflow>=2.0.0rc3
+torch
+torchvision

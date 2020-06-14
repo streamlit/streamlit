@@ -6,8 +6,8 @@ SHELL=/bin/bash
 PYTHON_MODULES := $(foreach initpy, $(foreach dir, $(wildcard lib/*), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
 PY_VERSION := $(shell python -c 'import platform; print(platform.python_version())')
 
-# Configure Black to not depend on syntax only supported by Python >= 3.6.
-BLACK=black --target-version=py35
+# Configure Black to support only syntax supported by the minimum supported Python version in setup.py.
+BLACK=black --target-version=py36
 
 
 .PHONY: help
@@ -30,9 +30,17 @@ all-devel: init develop
 	@echo "    make frontend"
 	@echo ""
 
+.PHONY: mini-devel
+# Get minimal dependencies and install Streamlit into Python environment -- but do not build the frontend.
+mini-devel: mini-init develop
+
 .PHONY: init
-# Install Python and JS dependencies.
-init: setup pipenv-install react-init scssvars protobuf # react-build release
+# Install all Python and JS dependencies.
+init: setup pipenv-install react-init scssvars protobuf
+
+.PHONY: mini-init
+# Install minimal Python and JS dependencies for development.
+mini-init: setup pipenv-dev-install react-init scssvars protobuf
 
 .PHONY: frontend
 # Build frontend into static files.
@@ -41,14 +49,27 @@ frontend: react-build
 .PHONY: setup
 setup:
 	pip install pip-tools pipenv ; \
-	if [[ $(PY_VERSION) == "3.6.0" || $(PY_VERSION) > "3.6.0" ]] ; then \
-		pip install black ; \
+	if [[ $(PY_VERSION) == "3.6.0" || $(PY_VERSION) > "3.6.0" ]]; then \
+		pip install black; \
 	fi
 
 .PHONY: pipenv-install
-pipenv-install: lib/Pipfile
-	@# Runs pipenv install; doesn't update the Pipfile.lock.
-	cd lib; pipenv install --dev --skip-lock
+pipenv-install: pipenv-dev-install pipenv-test-install
+
+.PHONY: pipenv-dev-install
+pipenv-dev-install: lib/Pipfile
+	# Run pipenv install; don't update the Pipfile.lock.
+	# We use `--sequential` here to ensure our results are...
+	# "more deterministic", per pipenv's documentation.
+	# (Omitting this flag is causing incorrect dependency version
+	# resolution on CircleCI.)
+	cd lib; \
+		pipenv install --dev --skip-lock --sequential
+
+.PHONY: pipenv-test-install
+pipenv-test-install: lib/test-requirements.txt
+	cd lib; \
+		pip install -r test-requirements.txt
 
 .PHONY: pylint
 # Run "black", our Python formatter, to verify that our source files
@@ -139,6 +160,7 @@ clean: clean-docs
 	find . -name '*.pyc' -type f -delete || true
 	find . -name __pycache__ -type d -delete || true
 	find . -name .pytest_cache -exec rm -rfv {} \; || true
+	rm -rf .mypy_cache
 	rm -f lib/streamlit/proto/*_pb2.py*
 	rm -rf lib/streamlit/static
 	rm -f lib/Pipfile.lock

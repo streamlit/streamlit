@@ -12,7 +12,7 @@ spin up and your app will open in a new tab your default web browser. The app
 is your canvas, where you'll draw charts, text, widgets, tables, and more.
 
 What gets drawn in the app is up to you. For example
-[`st.text`](apid.html#streamlit.text) writes raw text to your app, and
+[`st.text`](api.html#streamlit.text) writes raw text to your app, and
 [`st.line_chart`](api.html#streamlit.line_chart) draws — you guessed it — a
 line chart. Refer to our [API documentation](api.md) to see all commands that
 are available to you.

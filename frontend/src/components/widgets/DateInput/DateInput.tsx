@@ -31,15 +31,23 @@ export interface Props {
 
 interface State {
   /**
-   * The value specified by the user via the UI. If the user didn't touch this
-   * widget's UI, the default value is used.
+   * An array with start and end date specified by the user via the UI. If the user
+   * didn't touch this widget's UI, the default value is used. End date is optional.
    */
-  value: string
+  values: Date[]
+  /**
+   * Boolean to toggle between single-date picker and range date picker.
+   */
+  isRange: boolean
 }
 
 class DateInput extends React.PureComponent<Props, State> {
   public state: State = {
-    value: this.props.element.get("default"),
+    values: this.props.element
+      .get("default")
+      .toJS()
+      .map((val: string) => new Date(val)),
+    isRange: this.props.element.get("isRange") || false,
   }
 
   public componentDidMount(): void {
@@ -48,39 +56,54 @@ class DateInput extends React.PureComponent<Props, State> {
 
   private setWidgetValue = (source: Source): void => {
     const widgetId: string = this.props.element.get("id")
-    this.props.widgetMgr.setStringValue(widgetId, this.state.value, source)
+
+    this.props.widgetMgr.setStringArrayValue(
+      widgetId,
+      this.state.values.map((value: Date) =>
+        moment(value as Date).format("YYYY/MM/DD")
+      ),
+      source
+    )
   }
 
   private handleChange = ({ date }: { date: Date | Date[] }): void => {
-    const value = dateToString(date as Date)
-    this.setState({ value }, () => this.setWidgetValue({ fromUi: true }))
+    this.setState({ values: Array.isArray(date) ? date : [date] }, () =>
+      this.setWidgetValue({ fromUi: true })
+    )
+  }
+
+  private getMaxDate = (): Date | undefined => {
+    const { element } = this.props
+    const maxDate = element.get("max")
+
+    return maxDate && maxDate.length > 0 ? new Date(maxDate) : undefined
   }
 
   public render = (): React.ReactNode => {
-    const style = { width: this.props.width }
-    const label = this.props.element.get("label")
+    const { width, element, disabled } = this.props
+    const { values, isRange } = this.state
+
+    const style = { width }
+    const label = element.get("label")
+    const minDate = new Date(element.get("min"))
+    const maxDate = this.getMaxDate()
 
     return (
       <div className="Widget stDateInput" style={style}>
         <label>{label}</label>
         <UIDatePicker
           formatString="yyyy/MM/dd"
-          disabled={this.props.disabled}
+          disabled={disabled}
           onChange={this.handleChange}
           overrides={datePickerOverrides}
-          value={stringToDate(this.state.value)}
+          value={values}
+          minDate={minDate}
+          maxDate={maxDate}
+          range={isRange}
         />
       </div>
     )
   }
-}
-
-function dateToString(date: Date): string {
-  return moment(date).format("YYYY/MM/DD")
-}
-
-function stringToDate(value: string): Date {
-  return moment(value, "YYYY/MM/DD").toDate()
 }
 
 export default DateInput

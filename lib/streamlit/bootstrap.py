@@ -181,16 +181,22 @@ def _print_url():
         ]
 
     elif config.get_option("server.headless"):
-        named_urls = [
-            ("Network URL", Report.get_url(net_util.get_internal_ip())),
-            ("External URL", Report.get_url(net_util.get_external_ip())),
-        ]
+        internal_ip = net_util.get_internal_ip()
+        if internal_ip:
+            named_urls.append(("Network URL", Report.get_url(internal_ip)))
+
+        external_ip = net_util.get_external_ip()
+        if external_ip:
+            named_urls.append(("External URL", Report.get_url(external_ip)))
 
     else:
         named_urls = [
             ("Local URL", Report.get_url("localhost")),
-            ("Network URL", Report.get_url(net_util.get_internal_ip())),
         ]
+
+        internal_ip = net_util.get_internal_ip()
+        if internal_ip:
+            named_urls.append(("Network URL", Report.get_url(internal_ip)))
 
     click.secho("")
     click.secho("  %s" % title_message, fg="blue", bold=True)

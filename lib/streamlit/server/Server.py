@@ -64,6 +64,7 @@ TORNADO_SETTINGS = {
     "websocket_ping_interval": 20,  # Ping every 20s to keep WS alive.
     "websocket_ping_timeout": 30,  # Pings should be responded to within 30s.
     "websocket_max_message_size": MESSAGE_SIZE_LIMIT,  # Up the WS size limit.
+    "xsrf_cookies": True,
 }
 
 
@@ -113,7 +114,7 @@ def server_port_is_manually_set():
 
 
 def start_listening(app):
-    """Takes the server start listening at the configured port.
+    """Makes the server start listening at the configured port.
 
     In case the port is already taken it tries listening to the next available
     port.  It will error after MAX_PORT_SEARCH_RETRIES attempts.
@@ -121,13 +122,17 @@ def start_listening(app):
     """
 
     call_count = 0
+    http_server = tornado.httpserver.HTTPServer(
+        app,
+        max_buffer_size=config.get_option("server.maxUploadSize") * 1024 * 1024
+    )
 
     while call_count < MAX_PORT_SEARCH_RETRIES:
         address = config.get_option("server.address")
         port = config.get_option("server.port")
 
         try:
-            app.listen(port, address)
+            http_server.listen(port, address)
             break  # It worked! So let's break out of the loop.
 
         except (OSError, socket.error) as e:
@@ -329,7 +334,11 @@ class Server(object):
                 ]
             )
 
-        return tornado.web.Application(routes, **TORNADO_SETTINGS)  # type: ignore[arg-type]
+        return tornado.web.Application(
+            routes,
+            cookie_secret=config.get_option("server.cookieSecret"),
+            **TORNADO_SETTINGS
+        )  # type: ignore[arg-type]
 
     def _set_state(self, new_state):
         LOGGER.debug("Server state: %s -> %s" % (self._state, new_state))
@@ -397,8 +406,10 @@ class Server(object):
             self._set_state(State.STOPPED)
 
         except Exception as e:
-            print("EXCEPTION!", e)
-            traceback.print_stack(file=sys.stdout)
+            # Can't just re-raise here because co-routines use Tornado
+            # exceptions for control flow, which appears to swallow the reraised
+            # exception.
+            traceback.print_exc()
             LOGGER.info(
                 """
 Please report this bug at https://github.com/streamlit/streamlit/issues.
@@ -569,6 +580,12 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
     def initialize(self, server):
         self._server = server
         self._session = None
+        # The XSRF cookie is normally set when xsrf_form_html is used, but in a pure-Javascript application
+        # that does not use any regular forms we just  need to read the self.xsrf_token manually to set the
+        # cookie as a side effect).
+        # See https://www.tornadoweb.org/en/stable/guide/security.html#cross-site-request-forgery-protection
+        # for more details.
+        self.xsrf_token
 
     def check_origin(self, origin):
         """Set up CORS."""
@@ -582,6 +599,16 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
             return
         self._server._close_report_session(self._session.id)
         self._session = None
+
+    def get_compression_options(self):
+        """Enable WebSocket compression.
+
+        By default, this method returns None, which means compression
+        is disabled. Returning an empty dict enables it.
+
+        (See the docstring in the parent class.)
+        """
+        return {}
 
     @tornado.gen.coroutine
     def on_message(self, payload):

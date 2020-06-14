@@ -20,4 +20,6 @@ message TextArea {
   string id = 1;
   string label = 2;
   string default = 3;
+  uint32 height = 4;
+  uint32 max_chars = 5;
 }

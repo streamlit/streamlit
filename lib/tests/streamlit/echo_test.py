@@ -18,25 +18,31 @@ import streamlit as st
 
 class EchoTest(testutil.DeltaGeneratorTestCase):
     def test_echo(self):
-        # The empty lines below are part of the test. Do not remove them.
-        with st.echo():
-            st.write("Hello")
+        for echo, echo_index, output_index in [
+            (lambda: st.echo(), 0, 1),
+            (lambda: st.echo("above"), 0, 1),
+            (lambda: st.echo("below"), 1, 0),
+        ]:
 
-            "hi"
+            # The empty lines below are part of the test. Do not remove them.
+            with echo():
+                st.write("Hello")
 
-            def foo(x):
-                y = x + 10
+                "hi"
 
-                print(y)
+                def foo(x):
+                    y = x + 10
 
-            class MyClass(object):
-                def do_x(self):
-                    pass
+                    print(y)
 
-                def do_y(self):
-                    pass
+                class MyClass(object):
+                    def do_x(self):
+                        pass
 
-        expected = """```python
+                    def do_y(self):
+                        pass
+
+            echo_str = """```python
 st.write("Hello")
 
 "hi"
@@ -56,20 +62,22 @@ class MyClass(object):
 
 ```"""
 
-        element = self.get_delta_from_queue(0).new_element
-        self.assertEqual(expected, element.markdown.body)
+            element = self.get_delta_from_queue(echo_index).new_element
+            self.assertEqual(echo_str, element.markdown.body)
 
-        element = self.get_delta_from_queue(1).new_element
-        self.assertEqual("Hello", element.markdown.body)
+            element = self.get_delta_from_queue(output_index).new_element
+            self.assertEqual("Hello", element.markdown.body)
+
+            self.clear_queue()
 
     def test_root_level_echo(self):
         import tests.streamlit.echo_test_data.root_level_echo
 
-        expected = """```python
+        echo_str = """```python
 a = 123
 
 
 ```"""
 
         element = self.get_delta_from_queue(0).new_element
-        self.assertEqual(expected, element.markdown.body)
+        self.assertEqual(echo_str, element.markdown.body)

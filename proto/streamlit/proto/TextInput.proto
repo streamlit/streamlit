@@ -29,4 +29,5 @@ message TextInput {
   string label = 2;
   string default = 3;
   Type type = 4;
+  uint32 max_chars = 5;
 }

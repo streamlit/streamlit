@@ -69,8 +69,6 @@ Streamlit's officially-supported environment manager for macOS and Linux is [Pip
    sudo apt-get install python3-pip
    ```
 
-   (Or `python-pip` if you're still on Python 2)
-
    For other Linux distributions, see [How to install PIP for Python](https://www.makeuseof.com/tag/install-pip-for-python/).
 
 2. Install `pipenv`.
@@ -87,10 +85,10 @@ Streamlit's officially-supported environment manager for macOS and Linux is [Pip
    cd myproject
    ```
 
-2. Create a new Pipenv environment in that folder:
+2. Create a new Pipenv environment in that folder and activate that environment:
 
    ```sh
-   pipenv
+   pipenv shell
    ```
 
    When you run the command above, a file called `Pipfile` will appear in `myprojects/`. This file is where your Pipenv environment and its dependencies are declared.
@@ -128,3 +126,5 @@ Streamlit's officially-supported environment manager for macOS and Linux is [Pip
    ```sh
    streamlit run myfile.py
    ```
+   
+3. When you're done using this environment, just type `exit` or press `ctrl-D` to return to your normall shell.

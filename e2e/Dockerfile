@@ -78,4 +78,9 @@ RUN mkdir $HOME/.streamlit \
     && echo '[general]' >  $HOME/.streamlit/credentials.toml \
     && echo 'email = "test@streamlit.io"' >> $HOME/.streamlit/credentials.toml
 
+# register mapbox token
+RUN MAPBOX_TOKEN=$(curl -sS https://data.streamlit.io/tokens.json | jq -r '.["mapbox-localhost"]') \
+    && echo '[mapbox]' >  ~/.streamlit/config.toml \
+    && echo 'token = "'$MAPBOX_TOKEN'"' >> ~/.streamlit/config.toml
+
 CMD /bin/bash

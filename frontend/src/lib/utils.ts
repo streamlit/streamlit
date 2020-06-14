@@ -118,3 +118,18 @@ export function flattenElements(
 export function timeout(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
+
+/**
+ * Tests if the app is running from a Mac
+ */
+export function isFromMac(): boolean {
+  return /Mac/i.test(navigator.platform)
+}
+
+/**
+ * Returns cookie value
+ */
+export function getCookie(name: string): string | undefined {
+  const r = document.cookie.match("\\b" + name + "=([^;]*)\\b")
+  return r ? r[1] : undefined
+}

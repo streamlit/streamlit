@@ -19,5 +19,8 @@ syntax = "proto3";
 message DateInput {
   string id = 1;
   string label = 2;
-  string default = 3;
+  repeated string default = 3;
+  string min = 4;
+  string max = 5;
+  bool is_range = 6;
 }

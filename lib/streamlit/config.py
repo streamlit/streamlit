@@ -17,6 +17,7 @@
 import os
 import toml
 import collections
+import secrets
 import urllib
 from typing import Dict
 
@@ -394,6 +395,19 @@ _create_option(
 )
 
 
+@_create_option("server.cookieSecret")
+@util.memoize
+def _server_cookie_secret():
+    """Symmetric key used to produce signed cookies. If deploying on multiple
+    replicas, this should be set to ensure all replicas share the same secret.
+
+    Default: Randomly generated secret key.
+    """
+    cookie_secret = os.getenv("STREAMLIT_COOKIE_SECRET")
+    cookie_secret = cookie_secret if cookie_secret else secrets.token_hex()
+    return cookie_secret
+
+
 @_create_option("server.headless", type_=bool)
 @util.memoize
 def _server_headless():
@@ -537,11 +551,9 @@ _create_section("mapbox", "Mapbox configuration that is being used by DeckGL.")
 _create_option(
     "mapbox.token",
     description="""Configure Streamlit to use a custom Mapbox
-                token for elements like st.deck_gl_chart and st.map. If you
-                don't do this you'll be using Streamlit's own token,
-                which has limitations and is not guaranteed to always work.
+                token for elements like st.deck_gl_chart and st.map.
                 To get a token for yourself, create an account at
-                https://mapbox.com. It's free! (for moderate usage levels)""",
+                https://mapbox.com. It's free (for moderate usage levels)!""",
     default_val="",
 )
 
@@ -966,18 +978,18 @@ def _set_development_mode():
     development.is_development_mode = get_option("global.developmentMode")
 
 
-def on_config_parsed(func):
+def on_config_parsed(func, force_connect=False):
     """Wait for the config file to be parsed then call func.
 
     If the config file has already been parsed, just calls fun immediately.
 
     """
-    if _config_file_has_been_parsed:
-        func()
-    else:
+    if force_connect or not _config_file_has_been_parsed:
         # weak=False, because we're using an anonymous lambda that
         # goes out of scope immediately.
         _on_config_parsed.connect(lambda _: func(), weak=False)
+    else:
+        func()
 
 
 # Run _check_conflicts only once the config file is parsed in order to avoid

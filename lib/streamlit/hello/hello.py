@@ -55,7 +55,7 @@ Streamlit. We're generating a bunch of random numbers in a loop for around
                 demos.mapping_demo,
                 """
 This demo shows how to use
-[`st.deck_gl_chart`](https://docs.streamlit.io/api.html#streamlit.deck_gl_chart)
+[`st.deck_gl_chart`](https://docs.streamlit.io/en/latest/api.html#streamlit.deck_gl_chart)
 to display geospatial data.
 """,
             ),
@@ -67,7 +67,7 @@ to display geospatial data.
                 """
 This demo shows how to use `st.write` to visualize Pandas DataFrames.
 
-(Data courtesy of the [UN Data Exlorer](http://data.un.org/Explorer.aspx).)
+(Data courtesy of the [UN Data Explorer](http://data.un.org/Explorer.aspx).)
 """,
             ),
         ),

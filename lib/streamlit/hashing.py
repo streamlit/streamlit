@@ -490,11 +490,31 @@ class _CodeHasher:
         elif type_util.is_type(obj, "socket.socket"):
             return self.to_bytes(id(obj))
 
+        elif any(
+            type_util.get_fqn(x) == "torch.nn.modules.module.Module"
+            for x in type(obj).__bases__
+        ):
+            return self.to_bytes(id(obj))
+
         elif type_util.is_type(obj, "tensorflow.python.client.session.Session"):
             return self.to_bytes(id(obj))
 
-        elif type_util.is_type(obj, "torch.Tensor"):
+        elif type_util.is_type(obj, "torch.Tensor") or type_util.is_type(
+            obj, "torch._C._TensorBase"
+        ):
             return self.to_bytes([obj.detach().numpy(), obj.grad])
+
+        elif type_util.is_type(obj, "keras.engine.training.Model"):
+            return self.to_bytes(id(obj))
+
+        elif type_util.is_type(obj, "tensorflow.python.keras.engine.training.Model"):
+            return self.to_bytes(id(obj))
+
+        elif type_util.is_type(
+            obj,
+            "tensorflow.python.saved_model.load.Loader._recreate_base_user_object.<locals>._UserObject",
+        ):
+            return self.to_bytes(id(obj))
 
         elif inspect.isroutine(obj):
             if hasattr(obj, "__wrapped__"):
