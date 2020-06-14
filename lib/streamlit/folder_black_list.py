@@ -30,7 +30,6 @@ DEFAULT_FOLDER_BLACKLIST = [
     "**/site-packages",
     "**/venv",
     "**/virtualenv",
-    "**/node_modules",
 ]
 
 
