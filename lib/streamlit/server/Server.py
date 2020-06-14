@@ -335,10 +335,10 @@ class Server(object):
             )
 
         return tornado.web.Application(
-            routes,
+            routes,  # type: ignore[arg-type]
             cookie_secret=config.get_option("server.cookieSecret"),
-            **TORNADO_SETTINGS
-        )  # type: ignore[arg-type]
+            **TORNADO_SETTINGS  # type: ignore[arg-type]
+        )
 
     def _set_state(self, new_state):
         LOGGER.debug("Server state: %s -> %s" % (self._state, new_state))
