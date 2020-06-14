@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+import { EventTarget } from "event-target-shim"
 import { ArrowDataframeProto, ArrowTable } from "./ArrowTable"
 
 /** Data sent in the custom Streamlit render event. */
