@@ -117,7 +117,7 @@ class DeclareComponentTest(unittest.TestCase):
 
 
 class ComponentRegistryTest(unittest.TestCase):
-  """Test component registration."""
+    """Test component registration."""
 
     def tearDown(self) -> None:
         ComponentRegistry._instance = None
