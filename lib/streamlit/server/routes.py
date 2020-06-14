@@ -54,6 +54,12 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
             self.set_header("Cache-Control", "public")
 
 
+class AssetsFileHandler(tornado.web.StaticFileHandler):
+    def set_default_headers(self):
+        if allow_cross_origin_requests():
+            self.set_header("Access-Control-Allow-Origin", "*")
+
+
 class AddSlashHandler(tornado.web.RequestHandler):
     @tornado.web.addslash
     def get(self):

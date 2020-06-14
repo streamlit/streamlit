@@ -8,7 +8,6 @@ import {
 // We import bootstrap.css and streamlit.css to get some simple default
 // styling for our text and button. You can remove or replace these!
 import "bootstrap/dist/css/bootstrap.min.css"
-import "./streamlit.css"
 
 interface State {
   numClicks: number

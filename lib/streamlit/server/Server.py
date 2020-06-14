@@ -43,6 +43,7 @@ from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.server.UploadFileRequestHandler import UploadFileRequestHandler
 from streamlit.server.routes import AddSlashHandler
+from streamlit.server.routes import AssetsFileHandler
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
 from streamlit.server.routes import MediaFileHandler
@@ -314,6 +315,11 @@ class Server(object):
                 make_url_path_regex(base, "component/(.*)"),
                 ComponentRequestHandler,
                 dict(registry=ComponentRegistry.instance()),
+            ),
+            (
+                make_url_path_regex(base, "assets/(.*)"),
+                AssetsFileHandler,
+                {"path": "%s/" % file_util.get_assets_dir()},
             ),
         ]
 
