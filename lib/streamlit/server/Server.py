@@ -329,7 +329,7 @@ class Server(object):
                 ]
             )
 
-        return tornado.web.Application(routes, **TORNADO_SETTINGS)
+        return tornado.web.Application(routes, **TORNADO_SETTINGS)  # type: ignore[arg-type]
 
     def _set_state(self, new_state):
         LOGGER.debug("Server state: %s -> %s" % (self._state, new_state))
