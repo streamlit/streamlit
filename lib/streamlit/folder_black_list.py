@@ -25,11 +25,11 @@ DEFAULT_FOLDER_BLACKLIST = [
     "**/miniconda",
     "**/miniconda2",
     "**/miniconda3",
+    "**/node_modules",
     "**/pyenv",
     "**/site-packages",
     "**/venv",
     "**/virtualenv",
-    "**/node_modules",
 ]
 
 
