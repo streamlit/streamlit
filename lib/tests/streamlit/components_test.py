@@ -24,7 +24,9 @@ import tornado.testing
 import tornado.web
 
 from streamlit import StreamlitAPIException
-from streamlit.components import ComponentRegistry, CustomComponent
+from streamlit.components import ComponentRegistry
+from streamlit.components import ComponentRequestHandler
+from streamlit.components import CustomComponent
 from streamlit.components import declare_component as declare_component
 from tests.testutil import DeltaGeneratorTestCase
 
@@ -33,7 +35,7 @@ PATH = "not/a/real/path"
 
 
 class DeclareComponentTest(unittest.TestCase):
-    """Test st.declare_component."""
+    """Test component declaration."""
 
     def tearDown(self) -> None:
         ComponentRegistry._instance = None
@@ -113,14 +115,10 @@ class DeclareComponentTest(unittest.TestCase):
             str(exception_message.value),
         )
 
-    def test_declared_in_main_module(self):
-        """If st.declare_component is called in the main module, then
-        the component name should be the filename of that module."""
-        # TODO!
-        pass
-
 
 class ComponentRegistryTest(unittest.TestCase):
+  """Test component registration."""
+
     def tearDown(self) -> None:
         ComponentRegistry._instance = None
 
@@ -215,6 +213,13 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         # (HK) TODO: Add assertEqual check for Apache Arrow pybytes.
         self.assertIsNotNone(proto.args_dataframe)
 
+    def test_only_list_args(self):
+        """Test that component with only list args is marshalled correctly."""
+        self.test_component(data=["foo", "bar", "baz"])
+        proto = self.get_delta_from_queue().new_element.component_instance
+        self.assertEqual(json.dumps({"data": ["foo", "bar", "baz"]}), proto.args_json)
+        self.assertEqual("[]", str(proto.args_dataframe))
+
     def test_no_args(self):
         """Test that component with no args is marshalled correctly."""
         self.test_component()
@@ -241,17 +246,70 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         self.assertIsNotNone(proto.args_dataframe)
 
     def test_key(self):
-        """Test the 'key' param"""
-        # TODO!
-        pass
+        """Test the 'key' param."""
+        self.test_component(foo="bar", key="baz")
+        proto = self.get_delta_from_queue().new_element.component_instance
+        self.assertEqual("baz", proto.id.split("-")[0])
 
     def test_default(self):
-        """Test the 'default' param"""
-        # TODO!
-        pass
+        """Test the 'default' param."""
+        component = self.test_component(foo="bar", default="baz")
+        self.assertEqual("baz", component)
 
 
 class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
-    """TODO!"""
+    """Test /component endpoint."""
 
-    pass
+    def tearDown(self) -> None:
+        ComponentRegistry._instance = None
+
+    def get_app(self):
+        self.registry = ComponentRegistry()
+        return tornado.web.Application(
+            [
+                (
+                    "/component/(.*)",
+                    ComponentRequestHandler,
+                    dict(registry=self.registry.instance()),
+                )
+            ]
+        )
+
+    def _request_component(self, path):
+        return self.fetch("/component/%s" % path, method="GET")
+
+    def test_success_request(self):
+        """Test request success when valid parameters are provided."""
+
+        with mock.patch("streamlit.components.os.path.isdir"):
+            instance = declare_component("test", path=PATH)
+
+        with mock.patch(
+            "streamlit.components.open", mock.mock_open(read_data="Test Content")
+        ):
+            response = self._request_component("components_test.test")
+
+        self.assertEqual(200, response.code)
+        self.assertEqual(b"Test Content", response.body)
+
+    def test_invalid_component_request(self):
+        """Test request failure when invalid component name is provided."""
+
+        response = self._request_component("invalid_component")
+        self.assertEqual(404, response.code)
+        self.assertEqual(b"invalid_component not found", response.body)
+
+    def test_invalid_content_request(self):
+        """Test request failure when invalid content (file) is provided."""
+
+        with mock.patch("streamlit.components.os.path.isdir"):
+            declare_component("test", path=PATH)
+
+        with mock.patch("streamlit.components.open") as m:
+            m.side_effect = OSError("Invalid content")
+            response = self._request_component("components_test.test")
+
+        self.assertEqual(404, response.code)
+        self.assertEqual(
+            b"components_test.test read error: Invalid content", response.body,
+        )
