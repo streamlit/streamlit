@@ -2,6 +2,24 @@
 #
 # Converts diff images from Cypress into snapshots we can commit to Git.
 
+# https://medium.com/factualopinions/consider-starting-all-your-bash-scripts-with-these-options-74fbec0cbb83
+set -o errexit
+set -o nounset
+set -o pipefail
+
+
+if [ $# -eq 0 ]
+then
+  echo ""
+  echo "Usage"
+  echo "  $0 <diff files to convert>"
+  echo ""
+  echo "Example"
+  echo "  $0 ~/downloads/*.diff.png"
+  echo ""
+  exit -1
+fi
+
 
 if [ $# -eq 0 ]
 then
@@ -28,14 +46,10 @@ fi
 
 
 
-tmp_dir="$(mktemp -d -t streamlit_cropped_diffs)"
-### snapshots_folder=frontend/cypress/snapshots/linux/2x/
+tmp_dir="$(mktemp -d -t streamlit_cropped_diffs-XXXXX)"
 
 diff_files=("$@")
 len=${#diff_files[@]}
-
-mkdir -p "$tmp_dir"
-rm -f "$tmp_dir"/*
 
 
 # Crop diff files and put the resulting snapshot files in $tmp_dir.
@@ -43,9 +57,7 @@ rm -f "$tmp_dir"/*
 for (( i=0; i<${len}; i++ ))
 do
   diff_file="${diff_files[$i]}"
-  filename=$(basename -- "$diff_file")  # filename=foo.diff.png
-  filename="${filename%.*}"  # Remove .png
-  filename="${filename%.*}"  # Remove .diff
+  filename=$(basename -- "$diff_file" .diff.png)  # foo.diff.png -> foo
 
   output_pattern=${filename}-%02d.png
 
@@ -62,7 +74,7 @@ done
 # Put cropped images in the right place in the Git tree.
 for snapshot_file in $tmp_dir/*
 do
-  filename=$(basename -- "$snapshot_file")  # filename=foo.snap.png
+  filename=$(basename -- "$snapshot_file")
 
   # Get location of file in Git tree.
   file_in_git=$(git ls-files '**/'"$filename")
@@ -72,6 +84,10 @@ do
 
   echo "Updated $file_in_git"
 done
+
+
+rm -rf ${tmp_dir}
+echo "Removed ${tmp_dir}"
 
 
 echo ""
