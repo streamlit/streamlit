@@ -125,3 +125,11 @@ export function timeout(ms: number): Promise<void> {
 export function isFromMac(): boolean {
   return /Mac/i.test(navigator.platform)
 }
+
+/**
+ * Returns cookie value
+ */
+export function getCookie(name: string): string | undefined {
+  const r = document.cookie.match("\\b" + name + "=([^;]*)\\b")
+  return r ? r[1] : undefined
+}
