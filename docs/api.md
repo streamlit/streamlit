@@ -126,6 +126,9 @@ It's easy to embed images, videos, and audio files directly into your Streamlit 
 .. autofunction:: streamlit.image
 .. autofunction:: streamlit.audio
 .. autofunction:: streamlit.video
+
+.. note:: Some videos from OpenCV may not display if they are encoded using MP4V, as this codec is not widely supported
+   by browsers. Converting your video to H.264 will allow the video to be displayed in Streamlit. See this `StackOverflow post <https://stackoverflow.com/a/49535220/2394542>`_ or this `Streamlit forum post <https://discuss.streamlit.io/t/st-video-doesnt-show-opencv-generated-mp4/3193/2>`_ for more information.
 ```
 
 ## Display interactive widgets
