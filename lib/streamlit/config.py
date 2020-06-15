@@ -410,7 +410,7 @@ def _server_cookie_secret():
 
 @_create_option("server.enableCORS", type_=bool)
 def _server_enable_cors():
-    """Enables support for Cross-Origin Request Sharing, for added security.
+    """Enables protection against Cross-Origin Request Sharing, for added security.
 
     Default: true
     """
