@@ -61,7 +61,7 @@ out the [Troubleshooting page](../troubleshooting/index.md).
 
 ## Run your own code remotely
 
-Now that you know streamlig is working, let's try your actual code. First,
+Now that you know Streamlit is working, let's try your actual code. First,
 press `Ctrl+C` to close the Hello program, and then type:
 
 ```bash
