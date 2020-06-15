@@ -18,6 +18,7 @@
 import axios, { CancelToken } from "axios"
 import { SessionInfo } from "lib/SessionInfo"
 import { BaseUriParts, buildHttpUri } from "lib/UriUtil"
+import { getCookie } from "lib/utils"
 
 /**
  * Handles uploading files to the server.
@@ -61,6 +62,10 @@ export class FileUploadClient {
       method: "POST",
       data: form,
       onUploadProgress,
+      withCredentials: true,
+      headers: {
+        "X-Xsrftoken": getCookie("_xsrf"),
+      },
     })
   }
 }

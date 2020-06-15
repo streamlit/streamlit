@@ -450,22 +450,26 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
 class PortRotateAHundredTest(unittest.TestCase):
     """Tests port rotation handles a MAX_PORT_SEARCH_RETRIES attempts then sys exits"""
 
-    def get_app(self):
-        app = mock.MagicMock()
+    def get_httpserver(self):
+        httpserver = mock.MagicMock()
 
-        app.listen = mock.Mock()
-        app.listen.side_effect = OSError(errno.EADDRINUSE, "test", "asd")
+        httpserver.listen = mock.Mock()
+        httpserver.listen.side_effect = OSError(errno.EADDRINUSE, "test", "asd")
 
-        return app
+        return httpserver
 
     def test_rotates_a_hundred_ports(self):
-        app = self.get_app()
+        app = mock.MagicMock()
+
         RetriesExceeded = streamlit.server.Server.RetriesExceeded
         with pytest.raises(RetriesExceeded) as pytest_wrapped_e:
-            start_listening(app)
-            self.assertEqual(pytest_wrapped_e.type, SystemExit)
-            self.assertEqual(pytest_wrapped_e.value.code, errno.EADDRINUSE)
-            self.assertEqual(app.listen.call_count, MAX_PORT_SEARCH_RETRIES)
+            with patch.object(
+                tornado.httpserver, "HTTPServer", return_value=self.get_httpserver()
+            ) as mock_server:
+                start_listening(app)
+                self.assertEqual(pytest_wrapped_e.type, SystemExit)
+                self.assertEqual(pytest_wrapped_e.value.code, errno.EADDRINUSE)
+                self.assertEqual(mock_server.listen.call_count, MAX_PORT_SEARCH_RETRIES)
 
 
 class PortRotateOneTest(unittest.TestCase):
@@ -473,30 +477,33 @@ class PortRotateOneTest(unittest.TestCase):
 
     which_port = mock.Mock()
 
-    def get_app(self):
-        app = mock.MagicMock()
+    def get_httpserver(self):
+        httpserver = mock.MagicMock()
 
-        app.listen = mock.Mock()
-        app.listen.side_effect = OSError(errno.EADDRINUSE, "test", "asd")
+        httpserver.listen = mock.Mock()
+        httpserver.listen.side_effect = OSError(errno.EADDRINUSE, "test", "asd")
 
-        return app
+        return httpserver
 
     @mock.patch("streamlit.server.Server.config._set_option")
     @mock.patch("streamlit.server.Server.server_port_is_manually_set")
     def test_rotates_one_port(
         self, patched_server_port_is_manually_set, patched__set_option
     ):
-        app = self.get_app()
+        app = mock.MagicMock()
 
         patched_server_port_is_manually_set.return_value = False
         with pytest.raises(RetriesExceeded) as pytest_wrapped_e:
-            start_listening(app)
+            with patch.object(
+                tornado.httpserver, "HTTPServer", return_value=self.get_httpserver()
+            ) as mock_server:
+                start_listening(app)
 
-            PortRotateOneTest.which_port.assert_called_with(8502)
+                PortRotateOneTest.which_port.assert_called_with(8502)
 
-            patched__set_option.assert_called_with(
-                "server.port", 8501, config.ConfigOption.STREAMLIT_DEFINITION
-            )
+                patched__set_option.assert_called_with(
+                    "server.port", 8501, config.ConfigOption.STREAMLIT_DEFINITION
+                )
 
 
 class MetricsHandlerTest(tornado.testing.AsyncHTTPTestCase):

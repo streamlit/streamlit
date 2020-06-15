@@ -114,10 +114,11 @@ def to_deckgl_json(data, zoom):
             longitude_distance = range_lat
         zoom = _get_zoom_level(longitude_distance)
 
-    lon_col_index = data.columns.get_loc(lon)
-    lat_col_index = data.columns.get_loc(lat)
+    # "+1" because itertuples includes the row index.
+    lon_col_index = data.columns.get_loc(lon) + 1
+    lat_col_index = data.columns.get_loc(lat) + 1
     final_data = []
-    for _, row in data.iterrows():
+    for row in data.itertuples():
         final_data.append(
             {"lon": float(row[lon_col_index]), "lat": float(row[lat_col_index])}
         )
