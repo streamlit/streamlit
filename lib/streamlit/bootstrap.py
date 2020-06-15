@@ -230,10 +230,6 @@ def run(script_path, command_line, args):
     args : [str]
 
     """
-    print("== script_path", script_path)
-    print("== commnad", command_line)
-    print("== args", ' '.join(args))
-    print("== env vars", ' '.join(os.environ.keys()))
     _fix_sys_path(script_path)
     _fix_matplotlib_crash()
     _fix_tornado_crash()
