@@ -28,7 +28,7 @@ fi
 
 
 
-tmp_dir=/tmp/streamlit_cropped_diffs
+tmp_dir="$(mktemp -d -t streamlit_cropped_diffs)"
 ### snapshots_folder=frontend/cypress/snapshots/linux/2x/
 
 diff_files=("$@")
