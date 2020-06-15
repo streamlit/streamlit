@@ -23,6 +23,7 @@ import "./FullScreenWrapper.scss"
 export type Size = {
   height?: number
   width: number
+  expanded: boolean
 }
 
 /*
@@ -131,8 +132,8 @@ class FullScreenWrapper extends PureComponent<Props, State> {
           <Icon type={buttonImage} />
         </button>
         {expanded
-          ? children({ width: fullwidth, height: fullheight })
-          : children({ width, height })}
+          ? children({ width: fullwidth, height: fullheight, expanded })
+          : children({ width, height, expanded })}
       </div>
     )
   }

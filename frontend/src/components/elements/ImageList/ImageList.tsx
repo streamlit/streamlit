@@ -26,6 +26,8 @@ import "./ImageList.scss"
 
 export interface Props {
   width: number
+  height?: number
+  isFullScreen: boolean
   element: ImmutableMap<string, any>
 }
 
@@ -42,22 +44,32 @@ function getImageURI(imgProto: ImmutableMap<string, any>): string {
  */
 export class ImageList extends PureComponent<Props> {
   public render(): ReactNode {
-    const { element, width } = this.props
+    const { element, width, height, isFullScreen } = this.props
     // The width field in the proto sets the image width, but has special
     // cases for -1 and -2.
-    let imgWidth: number | undefined
+    let containerWidth: number | undefined
     const protoWidth = element.get("width")
+
     if (protoWidth === -1) {
       // Use the original image width.
-      imgWidth = undefined
+      containerWidth = undefined
     } else if (protoWidth === -2) {
       // Use the column width
-      imgWidth = width
+      containerWidth = width
     } else if (protoWidth > 0) {
       // Set the image width explicitly.
-      imgWidth = element.get("width")
+      containerWidth = element.get("width")
     } else {
       throw Error(`Invalid image width: ${protoWidth}`)
+    }
+
+    const imgStyle: any = {}
+
+    if (height && isFullScreen) {
+      imgStyle["height"] = height
+      imgStyle["object-fit"] = "contain"
+    } else {
+      imgStyle["width"] = containerWidth
     }
 
     return (
@@ -68,14 +80,12 @@ export class ImageList extends PureComponent<Props> {
             <div
               className="image-container stImage"
               key={idx}
-              style={{ width: imgWidth }}
+              style={{ width: containerWidth }}
             >
-              <img
-                style={{ width: imgWidth }}
-                src={getImageURI(img)}
-                alt={idx}
-              />
-              <div className="caption"> {img.get("caption")} </div>
+              <img style={imgStyle} src={getImageURI(img)} alt={idx} />
+              {!isFullScreen && (
+                <div className="caption"> {img.get("caption")} </div>
+              )}
             </div>
           ))}
       </div>
