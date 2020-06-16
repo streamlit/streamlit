@@ -133,7 +133,11 @@ class HealthHandler(_SpecialRequestHandler):
             self.write("ok")
             self.set_status(200)
 
-            # Manually set the _xsrf token when rechecking health.
+            # Tornado will set the _xsrf cookie automatically for the page on
+            # request for the document. However, if the server is reset and
+            # server.enableCSRF is updated, the browser does not reload the document.
+            # Manually setting the cooking on /healthz since it is pinged when the
+            # browser is disconnected from the server.
             if config.get_option("server.enableCSRF"):
                 self.set_cookie("_xsrf", self.xsrf_token)
 
