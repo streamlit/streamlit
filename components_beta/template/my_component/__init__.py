@@ -9,8 +9,8 @@ _RELEASE = False
 
 # Declare a Streamlit component. `st.declare_component` returns a function
 # that is used to create instances of the component. We're naming this
-# function "_component", with an underscore prefix, because we don't want to
-# expose it directly to users. Instead, we will create a custom wrapper
+# function "_component_func", with an underscore prefix, because we don't want
+# to expose it directly to users. Instead, we will create a custom wrapper
 # function, below, that will serve as our component's public API.
 
 # It's worth noting that this call to `st.declare_component` is the
