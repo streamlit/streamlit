@@ -109,7 +109,7 @@ const SANDBOX_POLICY = [
   // "allow-presentation",
 
   // If this token is not used, the resource is treated as being from a special origin that always fails the same-origin policy.
-  // "allow-same-origin",
+  "allow-same-origin",
 
   // Lets the resource run scripts (but not create popup windows).
   "allow-scripts",
