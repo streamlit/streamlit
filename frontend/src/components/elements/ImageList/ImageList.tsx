@@ -31,6 +31,11 @@ export interface Props {
   height?: number
 }
 
+enum WidthBehavior {
+  OriginalWidth = 1,
+  ColumnWidth = 2,
+}
+
 function getImageURI(imgProto: ImmutableMap<string, any>): string {
   if (imgProto.get("url").startsWith("/media")) {
     return buildHttpUri(get_base_uri_parts(), imgProto.get("url"))
@@ -50,10 +55,10 @@ export class ImageList extends PureComponent<Props> {
     let containerWidth: number | undefined
     const protoWidth = element.get("width")
 
-    if (protoWidth === -1) {
+    if (protoWidth === WidthBehavior.OriginalWidth) {
       // Use the original image width.
       containerWidth = undefined
-    } else if (protoWidth === -2) {
+    } else if (protoWidth === WidthBehavior.ColumnWidth) {
       // Use the column width
       containerWidth = width
     } else if (protoWidth > 0) {
