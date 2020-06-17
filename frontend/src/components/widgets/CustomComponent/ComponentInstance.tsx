@@ -388,10 +388,11 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     let renderArgs: any
     let renderDfs: any
     let src: string
+    let componentName: string
     try {
       // Determine the component iframe's src. If a URL is specified, we just
       // use that. Otherwise, we derive the URL from the component's ID.
-      const componentName = this.props.element.get("componentName")
+      componentName = this.props.element.get("componentName")
       const url = this.props.element.get("url")
       if (url != null && url !== "") {
         src = url
@@ -447,6 +448,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
         allowFullScreen={false}
         scrolling="no"
         sandbox={SANDBOX_POLICY}
+        title={componentName}
       />
     )
   }
