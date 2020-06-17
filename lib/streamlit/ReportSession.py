@@ -353,6 +353,8 @@ class ReportSession(object):
 
         imsg.config.mapbox_token = config.get_option("mapbox.token")
 
+        imsg.config.wide_mode = config.get_option("browser.wideMode")
+
         LOGGER.debug(
             "New browser connection: "
             "gather_usage_stats=%s, "

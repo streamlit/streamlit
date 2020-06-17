@@ -275,6 +275,7 @@ class ConfigTest(unittest.TestCase):
                 "browser.gatherUsageStats",
                 "browser.serverAddress",
                 "browser.serverPort",
+                "browser.wideMode",
                 "client.caching",
                 "client.displayEnabled",
                 "global.developmentMode",

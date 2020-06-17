@@ -544,6 +544,15 @@ def _browser_server_port():
     return get_option("server.port")
 
 
+@_create_option("browser.wideMode", type_=bool)
+def _browser_wide_mode():
+    """Make wide mode sticky.
+
+    Default: False
+    """
+    return False
+
+
 # Config Section: Mapbox #
 
 _create_section("mapbox", "Mapbox configuration that is being used by DeckGL.")

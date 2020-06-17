@@ -334,9 +334,13 @@ export class App extends PureComponent<Props, State> {
       pythonVersion: SessionInfo.current.pythonVersion,
     })
 
-    this.setState({
+    this.setState((prevState: State) => ({
       sharingEnabled: Boolean(config.sharingEnabled),
-    })
+      userSettings: {
+        ...prevState.userSettings,
+        wideMode: config.wideMode || false,
+      },
+    }))
 
     this.handleSessionStateChanged(sessionState)
   }

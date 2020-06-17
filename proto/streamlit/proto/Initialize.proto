@@ -50,6 +50,9 @@ message Config {
 
   // See config option "mapbox.token".
   string mapbox_token = 4;
+
+  // See config option "browser.wideMode"
+  bool wide_mode = 5;
 }
 
 message UserInfo {
