@@ -334,10 +334,10 @@ class Server(object):
             )
 
         return tornado.web.Application(
-            routes,
+            routes,  # type: ignore[arg-type]
             cookie_secret=config.get_option("server.cookieSecret"),
             csrf_cookies=config.get_option("server.enableCSRF"),
-            **TORNADO_SETTINGS
+            **TORNADO_SETTINGS # type: ignore[arg-type]
         )
 
     def _set_state(self, new_state):
