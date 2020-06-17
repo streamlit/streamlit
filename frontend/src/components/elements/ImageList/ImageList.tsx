@@ -32,8 +32,8 @@ export interface Props {
 }
 
 enum WidthBehavior {
-  OriginalWidth = 1,
-  ColumnWidth = 2,
+  OriginalWidth = -1,
+  ColumnWidth = -2,
 }
 
 function getImageURI(imgProto: ImmutableMap<string, any>): string {
