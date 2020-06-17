@@ -21,9 +21,9 @@ import { SCSS_VARS } from "autogen/scssVariables"
 import "./FullScreenWrapper.scss"
 
 export type Size = {
-  height?: number
   width: number
   expanded: boolean
+  height?: number
 }
 
 /*
@@ -39,8 +39,8 @@ interface Props {
 
 interface State {
   expanded: boolean
-  fullwidth: number
-  fullheight: number
+  fullWidth: number
+  fullHeight: number
 }
 
 /*
@@ -51,7 +51,7 @@ interface State {
 class FullScreenWrapper extends PureComponent<Props, State> {
   static isFullScreen = false
 
-  public state: State = { expanded: false, fullwidth: 0, fullheight: 0 }
+  public state: State = { expanded: false, fullWidth: 0, fullHeight: 0 }
 
   componentDidMount(): void {
     this.updateWindowDimensions()
@@ -101,13 +101,13 @@ class FullScreenWrapper extends PureComponent<Props, State> {
       SCSS_VARS["$fullscreen-padding-top"]
     )
     this.setState({
-      fullwidth: window.innerWidth - padding * 2, // Left and right
-      fullheight: window.innerHeight - (padding + paddingTop), // Bottom and Top
+      fullWidth: window.innerWidth - padding * 2, // Left and right
+      fullHeight: window.innerHeight - (padding + paddingTop), // Bottom and Top
     })
   }
 
   public render(): JSX.Element {
-    const { expanded, fullwidth, fullheight } = this.state
+    const { expanded, fullWidth, fullHeight } = this.state
     const { children, width, height } = this.props
 
     let buttonClassName = "overlayBtn stButton-enter"
@@ -132,7 +132,7 @@ class FullScreenWrapper extends PureComponent<Props, State> {
           <Icon type={buttonImage} />
         </button>
         {expanded
-          ? children({ width: fullwidth, height: fullheight, expanded })
+          ? children({ width: fullWidth, height: fullHeight, expanded })
           : children({ width, height, expanded })}
       </div>
     )

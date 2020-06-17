@@ -26,9 +26,9 @@ import "./ImageList.scss"
 
 export interface Props {
   width: number
-  height?: number
   isFullScreen: boolean
   element: ImmutableMap<string, any>
+  height?: number
 }
 
 function getImageURI(imgProto: ImmutableMap<string, any>): string {
