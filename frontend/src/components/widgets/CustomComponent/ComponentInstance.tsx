@@ -217,11 +217,11 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
   private componentReady = false
   private lastRenderArgs = {}
   private lastRenderDataframes = []
+  private frameHeight = 0
 
   public constructor(props: Props) {
     super(props)
-
-    this.state = { }
+    this.state = {}
   }
 
   public componentDidMount = (): void => {
@@ -240,12 +240,6 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       )
       return
     }
-
-    // Default to a height of 0. If this is undefined, browsers
-    // default to something > 100 pixels, which can look strange.
-    // In the future, we may want to allow component creators to specify
-    // the initial height.
-    this.iframeRef.current.height = "0"
 
     this.props.registry.registerListener(
       this.iframeRef.current.contentWindow,
@@ -337,7 +331,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     this.props.widgetMgr.setJsonValue(widgetId, value, source)
   }
 
-  /** The component has a new height. We'll resize the iframe. */
+  /** The component has a new height. Resize its iframe. */
   private handleSetFrameHeight = (data: any): void => {
     const height: number | undefined = tryGetValue(data, "height")
     if (height === undefined) {
@@ -345,13 +339,24 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       return
     }
 
-    if (this.iframeRef.current == null) {
-      // This should not be possible.
-      logWarning(`handleSetFrameHeight: ComponentInstance does not have an iframeRef`)
+    if (height === this.frameHeight) {
+      // Nothing to do!
       return
     }
 
-    this.iframeRef.current.height = height.toString()
+    if (this.iframeRef.current == null) {
+      // This should not be possible.
+      logWarning(`handleSetFrameHeight: missing our iframeRef!`)
+      return
+    }
+
+    // We shove our new frameHeight directly into our iframe, to avoid
+    // triggering a re-render. Otherwise, components will receive the RENDER
+    // event several times during startup (because they will generally
+    // immediately change their frameHeight after mounting). This is wasteful,
+    // and it also breaks certain components.
+    this.frameHeight = height
+    this.iframeRef.current.height = this.frameHeight.toString()
   }
 
   private sendForwardMsg = (type: StreamlitMessageType, data: any): void => {
@@ -452,6 +457,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
         ref={this.iframeRef}
         src={src}
         width={this.props.width}
+        height={this.frameHeight}
         allowFullScreen={false}
         scrolling="no"
         sandbox={SANDBOX_POLICY}
