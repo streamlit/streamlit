@@ -107,6 +107,7 @@ class BootstrapPrintTest(unittest.TestCase):
             bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
+        self.assertTrue("You can now view your Streamlit app in your browser." in out)
         self.assertTrue("URL: http://the-address" in out)
 
     @patch("streamlit.net_util.get_external_ip")
