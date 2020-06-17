@@ -1593,6 +1593,13 @@ class DeltaGenerator(object):
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=Wba9sZELKfKwXH4nDCCbMv
            height: 600px
 
+        .. note::
+           Some videos may not display if they are encoded using MP4V (which is an export option in OpenCV), as this codec is
+           not widely supported by browsers. Converting your video to H.264 will allow the video to be displayed in Streamlit.
+           See this `StackOverflow post <https://stackoverflow.com/a/49535220/2394542>`_ or this
+           `Streamlit forum post <https://discuss.streamlit.io/t/st-video-doesnt-show-opencv-generated-mp4/3193/2>`_
+           for more information.
+
         """
         from .elements import media_proto
 
