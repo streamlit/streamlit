@@ -2664,8 +2664,10 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        value : int
-            The percentage complete: 0 <= value <= 100
+        value : int or float
+            0 <= value <= 100 for int
+
+            0.0 <= value <= 1.0 for float
 
         Example
         -------
