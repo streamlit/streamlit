@@ -128,13 +128,13 @@ const FEATURE_POLICY = [
   "accelerometer",
 
   // Controls whether the current document is allowed to gather information about the amount of light in the environment around the device through the AmbientLightSensor interface.
-  //"ambient-light-sensor",
+  "ambient-light-sensor",
 
   // Controls whether the current document is allowed to autoplay media requested through the HTMLMediaElement interface. When this policy is disabled and there were no user gestures, the Promise returned by HTMLMediaElement.play() will reject with a DOMException. The autoplay attribute on <audio> and <video> elements will be ignored.
-  // "autoplay",
+  "autoplay",
 
   // Controls whether the use of the Battery Status API is allowed. When this policy is disabled, the Promise returned by Navigator.getBattery() will reject with a NotAllowedError DOMException.
-  //"battery",
+  "battery",
 
   // Controls whether the current document is allowed to use video input devices. When this policy is disabled, the Promise returned by getUserMedia() will reject with a NotAllowedError DOMException.
   "camera",
@@ -164,10 +164,10 @@ const FEATURE_POLICY = [
   "gyroscope",
 
   // Controls whether the current document is allowed to show layout animations.
-  //"layout-animations",
+  "layout-animations",
 
   // Controls whether the current document is allowed to display images in legacy formats.
-  //"legacy-image-formats",
+  "legacy-image-formats",
 
   // Controls whether the current document is allowed to gather information about the orientation of the device through the Magnetometer interface.
   "magnetometer",
@@ -182,7 +182,7 @@ const FEATURE_POLICY = [
   // "navigation-override",
 
   // Controls whether the current document is allowed to download and display large images.
-  //"oversized-images",
+  "oversized-images",
 
   // Controls whether the current document is allowed to use the Payment Request API. When this policy is enabled, the PaymentRequest() constructor will throw a SecurityError DOMException.
   "payment",
@@ -191,7 +191,7 @@ const FEATURE_POLICY = [
   "picture-in-picture",
 
   // Controls whether the current document is allowed to use the Web Authentication API to retreive already stored public-key credentials, i.e. via navigator.credentials.get({publicKey: ..., ...}).
-  //"publickey-credentials-get",
+  "publickey-credentials-get",
 
   // Controls whether the current document is allowed to make synchronous XMLHttpRequest requests.
   "sync-xhr",
@@ -200,10 +200,10 @@ const FEATURE_POLICY = [
   "usb",
 
   // Controls whether the current document is allowed to use the WebVR API. When this policy is disabled, the Promise returned by Navigator.getVRDisplays() will reject with a DOMException. Keep in mind that the WebVR standard is in the process of being replaced with WebXR.
-  //"vr ",
+  "vr ",
 
   // Controls whether the current document is allowed to use Wake Lock API to indicate that device should not enter power-saving mode.
-  //"wake-lock",
+  "wake-lock",
 
   // Controls whether or not the current document is allowed to use the WebXR Device API to interact with a WebXR session.
   "xr-spatial-tracking",
