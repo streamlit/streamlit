@@ -62,6 +62,12 @@ describe("FileUploadClient", () => {
           } else if (data.get("sessionId") == null) {
             return [400]
           }
+
+          if (!("X-Xsrftoken" in config.headers)) {
+            return [403]
+          } else if (!("withCredentials" in config)) {
+            return [403]
+          }
         }
 
         return [status]

@@ -50,7 +50,7 @@ magicEnabled = false
 ```
 
 ```eval_rst
-.. important:: Right now, Magic only works on Python 3.
+.. important:: Right now, Magic only works in the main Python app file, not in imported files. See `GitHub issue #288 <https://github.com/streamlit/streamlit/issues/288>`_ for a discussion of the issues.
 ```
 
 ## Display text

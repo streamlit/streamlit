@@ -17,6 +17,7 @@
 import os
 import toml
 import collections
+import secrets
 import urllib
 from typing import Dict
 
@@ -392,6 +393,19 @@ _create_option(
     default_val="auto",
     type_=str,
 )
+
+
+@_create_option("server.cookieSecret")
+@util.memoize
+def _server_cookie_secret():
+    """Symmetric key used to produce signed cookies. If deploying on multiple
+    replicas, this should be set to ensure all replicas share the same secret.
+
+    Default: Randomly generated secret key.
+    """
+    cookie_secret = os.getenv("STREAMLIT_COOKIE_SECRET")
+    cookie_secret = cookie_secret if cookie_secret else secrets.token_hex()
+    return cookie_secret
 
 
 @_create_option("server.headless", type_=bool)

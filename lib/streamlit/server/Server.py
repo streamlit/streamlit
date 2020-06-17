@@ -64,6 +64,7 @@ TORNADO_SETTINGS = {
     "websocket_ping_interval": 20,  # Ping every 20s to keep WS alive.
     "websocket_ping_timeout": 30,  # Pings should be responded to within 30s.
     "websocket_max_message_size": MESSAGE_SIZE_LIMIT,  # Up the WS size limit.
+    "xsrf_cookies": True,
 }
 
 
@@ -121,13 +122,17 @@ def start_listening(app):
     """
 
     call_count = 0
+    http_server = tornado.httpserver.HTTPServer(
+        app,
+        max_buffer_size=config.get_option("server.maxUploadSize") * 1024 * 1024
+    )
 
     while call_count < MAX_PORT_SEARCH_RETRIES:
         address = config.get_option("server.address")
         port = config.get_option("server.port")
 
         try:
-            app.listen(port, address)
+            http_server.listen(port, address)
             break  # It worked! So let's break out of the loop.
 
         except (OSError, socket.error) as e:
@@ -329,7 +334,11 @@ class Server(object):
                 ]
             )
 
-        return tornado.web.Application(routes, **TORNADO_SETTINGS)
+        return tornado.web.Application(
+            routes,  # type: ignore[arg-type]
+            cookie_secret=config.get_option("server.cookieSecret"),
+            **TORNADO_SETTINGS  # type: ignore[arg-type]
+        )
 
     def _set_state(self, new_state):
         LOGGER.debug("Server state: %s -> %s" % (self._state, new_state))
@@ -571,6 +580,12 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
     def initialize(self, server):
         self._server = server
         self._session = None
+        # The XSRF cookie is normally set when xsrf_form_html is used, but in a pure-Javascript application
+        # that does not use any regular forms we just  need to read the self.xsrf_token manually to set the
+        # cookie as a side effect).
+        # See https://www.tornadoweb.org/en/stable/guide/security.html#cross-site-request-forgery-protection
+        # for more details.
+        self.xsrf_token
 
     def check_origin(self, origin):
         """Set up CORS."""
