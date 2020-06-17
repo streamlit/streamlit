@@ -125,7 +125,7 @@ def _create_option(
                 default_val = 12345)
 
         (2) More complex, programmable config options use decorator syntax to
-        resolve thier values at runtime:
+        resolve their values at runtime:
 
             @_create_option('section.optionName')
             def _section_option_name():
