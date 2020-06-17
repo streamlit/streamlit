@@ -76,11 +76,6 @@ interface State {
  * strongly discouraged to use both allow-scripts and allow-same-origin, as
  * that lets the embedded document remove the sandbox attribute — making it no
  * more secure than not using the sandbox attribute at all."
- *
- * TODO: we need both allow-scripts (for obvious reasons) *and*
- * allow-same-origin (or else we'll fails CORS checks for loading static
- * resources). Do we need to therefore serve component content from a
- * different origin, somehow?
  */
 const SANDBOX_POLICY = [
   // Allows for downloads to occur without a gesture from the user.
