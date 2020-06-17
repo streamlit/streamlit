@@ -354,7 +354,8 @@ class Server(object):
 
     @property
     def is_running_hello(self):
-        return self._command_line.split(' ')[1].lower() == 'hello'
+        from streamlit.hello import hello
+        return self._script_path == hello.__file__
 
     @tornado.gen.coroutine
     def _loop_coroutine(self, on_started=None):
