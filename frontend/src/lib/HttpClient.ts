@@ -34,6 +34,10 @@ export default class HttpClient {
     this.csrfEnabled = csrfEnabled
   }
 
+  /**
+   * Wrapper around axios.request to update the request config with
+   * CSRF headers if client has CSRF protection enabled.
+   */
   public request(params: AxiosRequestConfig): Promise {
     if (this.csrfEnabled) {
       const xsrf_cookie = getCookie("_xsrf")
