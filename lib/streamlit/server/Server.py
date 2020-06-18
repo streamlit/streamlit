@@ -352,6 +352,11 @@ class Server(object):
     def browser_is_connected(self):
         return self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED
 
+    @property
+    def is_running_hello(self):
+        from streamlit.hello import hello
+        return self._script_path == hello.__file__
+
     @tornado.gen.coroutine
     def _loop_coroutine(self, on_started=None):
         try:
