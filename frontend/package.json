@@ -27,7 +27,7 @@
   },
   "husky": {
     "hooks": {
-      "pre-commit": "../scripts/format.sh"
+      "pre-commit": "sh ../scripts/format.sh"
     }
   },
   "dependencies": {
