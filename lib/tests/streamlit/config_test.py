@@ -300,6 +300,7 @@ class ConfigTest(unittest.TestCase):
                 "s3.secretAccessKey",
                 "s3.url",
                 "server.enableCORS",
+                "server.enableWebsocketCompression",
                 "server.baseUrlPath",
                 "server.cookieSecret",
                 "server.folderWatchBlacklist",
