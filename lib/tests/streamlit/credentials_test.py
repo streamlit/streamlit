@@ -26,7 +26,7 @@ from mock import patch
 
 from streamlit import file_util
 from streamlit import config
-from streamlit.credentials import Activation
+from streamlit.credentials import _Activation
 from streamlit.credentials import Credentials
 from streamlit.credentials import _verify_email
 
@@ -104,7 +104,7 @@ class CredentialsClassTest(unittest.TestCase):
     def test_Credentials_load_twice(self):
         """Test Credentials.load() called twice."""
         c = Credentials.get_current()
-        c.activation = Activation("some_email", True)
+        c.activation = _Activation("some_email", True)
         with patch("streamlit.credentials.LOGGER") as p:
             c.load()
             p.error.assert_called_once_with(
@@ -146,7 +146,7 @@ class CredentialsClassTest(unittest.TestCase):
     def test_Credentials_check_activated_already_loaded(self):
         """Test Credentials.check_activated() already loaded."""
         c = Credentials.get_current()
-        c.activation = Activation("some_email", True)
+        c.activation = _Activation("some_email", True)
         with patch("streamlit.credentials._exit") as p:
             c._check_activated(auto_resolve=False)
             p.assert_not_called()
@@ -155,7 +155,7 @@ class CredentialsClassTest(unittest.TestCase):
     def test_Credentials_check_activated_false(self):
         """Test Credentials.check_activated() not activated."""
         c = Credentials.get_current()
-        c.activation = Activation("some_email", False)
+        c.activation = _Activation("some_email", False)
         with patch("streamlit.credentials._exit") as p:
             c._check_activated(auto_resolve=False)
             p.assert_called_once_with("Activation email not valid.")
@@ -164,7 +164,7 @@ class CredentialsClassTest(unittest.TestCase):
     def test_Credentials_check_activated_error(self):
         """Test Credentials.check_activated() has an error."""
         c = Credentials.get_current()
-        c.activation = Activation("some_email", True)
+        c.activation = _Activation("some_email", True)
         with patch.object(c, "load", side_effect=Exception("Some error")), patch(
             "streamlit.credentials._exit"
         ) as p:
@@ -175,7 +175,7 @@ class CredentialsClassTest(unittest.TestCase):
     def test_Credentials_save(self):
         """Test Credentials.save()."""
         c = Credentials.get_current()
-        c.activation = Activation("some_email", True)
+        c.activation = _Activation("some_email", True)
         truth = textwrap.dedent(
             """
             [general]
@@ -201,7 +201,7 @@ class CredentialsClassTest(unittest.TestCase):
     def test_Credentials_activate_already_activated(self):
         """Test Credentials.activate() already activated."""
         c = Credentials.get_current()
-        c.activation = Activation("some_email", True)
+        c.activation = _Activation("some_email", True)
         with patch("streamlit.credentials.LOGGER") as p:
             with pytest.raises(SystemExit):
                 c.activate()
@@ -212,7 +212,7 @@ class CredentialsClassTest(unittest.TestCase):
     def test_Credentials_activate_already_activated_not_valid(self):
         """Test Credentials.activate() already activated but not valid."""
         c = Credentials.get_current()
-        c.activation = Activation("some_email", False)
+        c.activation = _Activation("some_email", False)
         with patch("streamlit.credentials.LOGGER") as p:
             with pytest.raises(SystemExit):
                 c.activate()

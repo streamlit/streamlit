@@ -19,8 +19,10 @@ import textwrap
 import unittest
 
 import pytest
+from mock import MagicMock
 from mock import mock_open
 from mock import patch
+from parameterized import parameterized
 
 from streamlit import config
 from streamlit import env_util
@@ -296,7 +298,9 @@ class ConfigTest(unittest.TestCase):
                 "s3.secretAccessKey",
                 "s3.url",
                 "server.enableCORS",
+                "server.enableWebsocketCompression",
                 "server.baseUrlPath",
+                "server.cookieSecret",
                 "server.folderWatchBlacklist",
                 "server.fileWatcherType",
                 "server.headless",
@@ -509,6 +513,28 @@ class ConfigTest(unittest.TestCase):
     def test_global_log_level(self):
         config.set_option("global.developmentMode", False)
         self.assertEqual("info", config.get_option("global.logLevel"))
+
+    @parameterized.expand([(True, True), (True, False), (False, False), (False, True)])
+    def test_on_config_parsed(self, config_parsed, connect_signal):
+        """Tests to make sure callback is handled properly based upon
+        _config_file_has_been_parsed and connect_signal."""
+
+        mock_callback = MagicMock(return_value=None)
+
+        with patch.object(config, "_config_file_has_been_parsed", new=config_parsed):
+            with patch.object(config._on_config_parsed, "connect") as patched_connect:
+                mock_callback.reset_mock()
+                config.on_config_parsed(mock_callback, connect_signal)
+
+                if connect_signal:
+                    patched_connect.assert_called_once()
+                    mock_callback.assert_not_called()
+                elif config_parsed:
+                    patched_connect.assert_not_called()
+                    mock_callback.assert_called_once()
+                else:
+                    patched_connect.assert_called_once()
+                    mock_callback.assert_not_called()
 
 
 class ConfigLoadingTest(unittest.TestCase):

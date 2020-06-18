@@ -16,11 +16,12 @@
  */
 
 import React, { ComponentType, PureComponent } from "react"
+import { makeElementWithInfoText } from "lib/utils"
 import hoistNonReactStatics from "hoist-non-react-statics"
 import { MapboxToken } from "hocs/withMapboxToken/MapboxToken"
-import ErrorElement from "components/shared/ErrorElement"
+
+import MapboxTokenError from "./MapboxTokenError"
 import Alert from "components/elements/Alert"
-import { makeElementWithInfoText } from "lib/utils"
 
 interface Props {
   width: number
@@ -29,16 +30,20 @@ interface Props {
 interface State {
   mapboxToken?: string
   mapboxTokenError?: Error
+  isFetching: boolean
 }
 
 /**
  * A higher-order component that fetches our mapbox token and passes
  * it through to the wrapped component. If the token fetch fails, an error
  * will be rendered in place of the wrapped component.
+ *
+ * @param {string} deltaType In case of an exception we show an error with this
  */
-function withMapboxToken(
+
+const withMapboxToken = (deltaType: string) => (
   WrappedComponent: ComponentType<any>
-): ComponentType<any> {
+): ComponentType<any> => {
   class WithMapboxToken extends PureComponent<Props, State> {
     public static readonly displayName = `withMapboxToken(${WrappedComponent.displayName ||
       WrappedComponent.name})`
@@ -47,50 +52,60 @@ function withMapboxToken(
       super(props)
 
       this.state = {
+        isFetching: true,
         mapboxToken: undefined,
         mapboxTokenError: undefined,
       }
+
       this.initMapboxToken()
     }
 
     /**
      * Fetch our MapboxToken.
      */
-    private initMapboxToken = (): void => {
-      MapboxToken.get()
-        .then(token => this.setState({ mapboxToken: token }))
-        .catch(error => this.setState({ mapboxTokenError: error }))
+    private initMapboxToken = async (): Promise<void> => {
+      try {
+        const mapboxToken = await MapboxToken.get()
+
+        this.setState({
+          mapboxToken,
+          isFetching: false,
+        })
+      } catch (error) {
+        this.setState({
+          mapboxTokenError: error,
+          isFetching: false,
+        })
+      }
     }
 
     public render = (): JSX.Element => {
+      const { mapboxToken, mapboxTokenError, isFetching } = this.state
+      const { width } = this.props
+
       // We got an error when fetching our mapbox token: show the error.
-      if (this.state.mapboxTokenError != null) {
+      if (mapboxTokenError) {
         return (
-          <ErrorElement
-            width={this.props.width}
-            name="Error fetching Mapbox token"
-            message={this.state.mapboxTokenError.message}
+          <MapboxTokenError
+            width={width}
+            error={mapboxTokenError}
+            deltaType={deltaType}
           />
         )
       }
 
       // If our mapboxToken hasn't been retrieved yet, show a loading alert.
-      if (this.state.mapboxToken === undefined) {
+      if (isFetching) {
         return (
           <Alert
             element={makeElementWithInfoText("Loading...").get("alert")}
-            width={this.props.width}
+            width={width}
           />
         )
       }
 
       // We have the mapbox token. Pass it through to our component.
-      return (
-        <WrappedComponent
-          mapboxToken={this.state.mapboxToken}
-          {...this.props}
-        />
-      )
+      return <WrappedComponent mapboxToken={mapboxToken} {...this.props} />
     }
   }
 

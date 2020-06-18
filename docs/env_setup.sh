@@ -16,10 +16,5 @@ unzip protoc-3.11.4-linux-x86_64.zip
     ../proto/streamlit/proto/*.proto
 
 #re-run setup.py build process to make protobuf available
-#this is tremendously fragile, as ../lib is hardcoded in here, and testing presence of environment directories
-if [ -d "/home/docs/checkouts/readthedocs.org/user_builds/streamlit-streamlit/envs/latest" ]
-then
-  /home/docs/checkouts/readthedocs.org/user_builds/streamlit-streamlit/envs/latest/bin/python -m pip install --upgrade --upgrade-strategy eager --no-cache-dir ../lib
-else
-  /home/docs/checkouts/readthedocs.org/user_builds/streamlit-streamlit/envs/stable/bin/python -m pip install --upgrade --upgrade-strategy eager --no-cache-dir ../lib
-fi
+#this is tremendously fragile, as ../lib is hardcoded in here
+/home/docs/checkouts/readthedocs.org/user_builds/streamlit-streamlit/envs/${READTHEDOCS_VERSION}/bin/python -m pip install --upgrade --upgrade-strategy eager --no-cache-dir ../lib
