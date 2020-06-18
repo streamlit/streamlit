@@ -55,7 +55,7 @@
     "numbro": "^2.1.2",
     "plotly.js": "^1.52.2",
     "prismjs": "^1.15.0",
-    "protobufjs": "^6.8.8",
+    "protobufjs": "^6.9.0",
     "react": "^16.8.6",
     "react-color": "^2.18.1",
     "react-copy-to-clipboard": "^5.0.2",
