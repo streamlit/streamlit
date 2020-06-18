@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import axios, { AxiosRequestConfig } from "axios"
+import axios, { AxiosRequestConfig, AxiosResponse } from "axios"
 import { BaseUriParts } from "lib/UriUtil"
 import { getCookie } from "lib/utils"
 
@@ -38,7 +38,7 @@ export default class HttpClient {
    * Wrapper around axios.request to update the request config with
    * CSRF headers if client has CSRF protection enabled.
    */
-  public request(params: AxiosRequestConfig): Promise {
+  public request(params: AxiosRequestConfig): Promise<AxiosResponse> {
     if (this.csrfEnabled) {
       const xsrf_cookie = getCookie("_xsrf")
       if (xsrf_cookie != null) {
