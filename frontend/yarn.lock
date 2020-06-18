@@ -7542,9 +7542,29 @@ har-validator@~5.1.0:
     ajv "^6.5.5"
     har-schema "^2.0.0"
 
+hard-source-webpack-plugin-fixed-hashbug@^0.13.1:
+  version "0.13.2"
+  resolved "https://registry.yarnpkg.com/hard-source-webpack-plugin-fixed-hashbug/-/hard-source-webpack-plugin-fixed-hashbug-0.13.2.tgz#e676c230f8152dc58ba1782fb88f5a2a823b8771"
+  integrity sha512-eekXF0ah76AsffXH+2Z069ArK6EIX66BXGS4WyEBToe9/PgtScUV7z4TX79wlCDbkKxlTJ9wvc0/aKJ1CGK5BQ==
+  dependencies:
+    chalk "^2.4.1"
+    find-cache-dir "^2.0.0"
+    graceful-fs "^4.1.11"
+    lodash "^4.15.0"
+    mkdirp "^0.5.1"
+    node-object-hash "^1.2.0"
+    parse-json "^4.0.0"
+    pkg-dir "^3.0.0"
+    rimraf "^2.6.2"
+    semver "^5.6.0"
+    tapable "^1.0.0-beta.5"
+    webpack-sources "^1.0.1"
+    write-json-file "^2.3.0"
+
 hard-source-webpack-plugin@^0.13.1:
   version "0.13.1"
   resolved "https://registry.yarnpkg.com/hard-source-webpack-plugin/-/hard-source-webpack-plugin-0.13.1.tgz#a99071e25b232f1438a5bc3c99f10a3869e4428e"
+  integrity sha512-r9zf5Wq7IqJHdVAQsZ4OP+dcUSvoHqDMxJlIzaE2J0TZWn3UjMMrHqwDHR8Jr/pzPfG7XxSe36E7Y8QGNdtuAw==
   dependencies:
     chalk "^2.4.1"
     find-cache-dir "^2.0.0"
