@@ -50,7 +50,7 @@ export class FileUploadClient extends HttpClient {
       form.append(file.name, file)
     }
 
-    await this.axiosInstance.request({
+    await this.request({
       cancelToken: cancelToken,
       url: buildHttpUri(serverURI, "upload_file"),
       method: "POST",

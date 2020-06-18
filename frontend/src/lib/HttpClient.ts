@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import axiosLib, { AxiosInstance } from "axios"
+import axios, { AxiosRequestConfig } from "axios"
 import { BaseUriParts } from "lib/UriUtil"
 import { getCookie } from "lib/utils"
 
@@ -24,33 +24,27 @@ import { getCookie } from "lib/utils"
  */
 export default class HttpClient {
   protected readonly getServerUri: () => BaseUriParts | undefined
-  protected axiosInstance: AxiosInstance
   protected readonly csrfEnabled: boolean
 
-  public constructor(getServerUri: () => BaseUriParts | undefined) {
-    const xsrf_cookie = getCookie("_xsrf")
+  public constructor(
+    getServerUri: () => BaseUriParts | undefined,
+    csrfEnabled: boolean
+  ) {
     this.getServerUri = getServerUri
-    this.csrfEnabled = !!xsrf_cookie
-    this.axiosInstance = axiosLib.create(
-      this.csrfEnabled
-        ? {
-            withCredentials: true,
-            headers: {
-              "X-Xsrftoken": xsrf_cookie,
-            },
-          }
-        : {}
-    )
+    this.csrfEnabled = csrfEnabled
   }
 
-  public updateCsrfToken(): void {
-    const csrfCookie = getCookie("_xsrf")
-    if (csrfCookie) {
-      this.axiosInstance.defaults.headers["X-Xsrftoken"] = csrfCookie
-      this.axiosInstance.defaults.withCredentials = true
-    } else {
-      delete this.axiosInstance.defaults.headers["X-Xsrftoken"]
-      this.axiosInstance.defaults.withCredentials = false
+  public request(params: AxiosRequestConfig) {
+    if (this.csrfEnabled) {
+      const xsrf_cookie = getCookie("_xsrf")
+      if (xsrf_cookie != null) {
+        params.headers = Object.assign(
+          { "X-Xsrftoken": xsrf_cookie },
+          params.headers || {}
+        )
+        params.withCredentials = true
+      }
     }
+    return axios.request(params)
   }
 }

@@ -143,7 +143,7 @@ export class App extends PureComponent<Props, State> {
       return this.connectionManager
         ? this.connectionManager.getBaseUriParts()
         : undefined
-    })
+    }, true)
     this.elementListBufferTimerIsSet = false
     this.elementListBuffer = null
 
@@ -317,8 +317,6 @@ export class App extends PureComponent<Props, State> {
 
       return
     }
-
-    this.uploadClient.updateCsrfToken()
 
     SessionInfo.current = new SessionInfo({
       sessionId: sessionId,
