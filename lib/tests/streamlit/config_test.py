@@ -303,6 +303,7 @@ class ConfigTest(unittest.TestCase):
                 "server.cookieSecret",
                 "server.enableCORS",
                 "server.enableCSRF",
+                "server.enableWebsocketCompression",
                 "server.folderWatchBlacklist",
                 "server.fileWatcherType",
                 "server.headless",

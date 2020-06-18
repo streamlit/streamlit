@@ -352,6 +352,11 @@ class Server(object):
     def browser_is_connected(self):
         return self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED
 
+    @property
+    def is_running_hello(self):
+        from streamlit.hello import hello
+        return self._script_path == hello.__file__
+
     @tornado.gen.coroutine
     def _loop_coroutine(self, on_started=None):
         try:
@@ -604,12 +609,14 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
     def get_compression_options(self):
         """Enable WebSocket compression.
 
-        By default, this method returns None, which means compression
-        is disabled. Returning an empty dict enables it.
+        Returning an empty dict enables websocket compression. Returning
+        None disables it.
 
         (See the docstring in the parent class.)
         """
-        return {}
+        if config.get_option("server.enableWebsocketCompression"):
+            return {}
+        return None
 
     @tornado.gen.coroutine
     def on_message(self, payload):

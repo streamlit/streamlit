@@ -125,7 +125,7 @@ def _create_option(
                 default_val = 12345)
 
         (2) More complex, programmable config options use decorator syntax to
-        resolve thier values at runtime:
+        resolve their values at runtime:
 
             @_create_option('section.optionName')
             def _section_option_name():
@@ -505,6 +505,15 @@ def _server_max_upload_size():
     # If this default is changed, please also update the docstring
     # for `DeltaGenerator.file_uploader`.
     return 200
+
+
+@_create_option("server.enableWebsocketCompression", type_=bool)
+def _server_enable_websocket_compression():
+    """Enables support for websocket compression.
+
+    Default: true
+    """
+    return True
 
 
 # Config Section: Browser #

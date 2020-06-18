@@ -1719,6 +1719,13 @@ class DeltaGenerator(object):
         >>>
         >>> st.write('You selected:', options)
 
+        .. note::
+           User experience can be degraded for large lists of `options` (100+), as this widget
+           is not designed to handle arbitrary text search efficiently. See this
+           `thread <https://discuss.streamlit.io/t/streamlit-loading-column-data-takes-too-much-time/1791>`_
+           on the Streamlit community forum for more information and
+           `GitHub issue #1059 <https://github.com/streamlit/streamlit/issues/1059>`_ for updates on the issue.
+
         """
 
         # Perform validation checks and return indices base on the default values.
@@ -2671,8 +2678,10 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        value : int
-            The percentage complete: 0 <= value <= 100
+        value : int or float
+            0 <= value <= 100 for int
+
+            0.0 <= value <= 1.0 for float
 
         Example
         -------

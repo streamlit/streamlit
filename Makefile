@@ -4,7 +4,6 @@ SHELL=/bin/bash
 
 # Black magic to get module directories
 PYTHON_MODULES := $(foreach initpy, $(foreach dir, $(wildcard lib/*), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
-PY_VERSION := $(shell python -c 'import platform; print(platform.python_version())')
 
 # Configure Black to support only syntax supported by the minimum supported Python version in setup.py.
 BLACK=black --target-version=py36
@@ -48,10 +47,7 @@ frontend: react-build
 
 .PHONY: setup
 setup:
-	pip install pip-tools pipenv ; \
-	if [[ $(PY_VERSION) == "3.6.0" || $(PY_VERSION) > "3.6.0" ]]; then \
-		pip install black; \
-	fi
+	pip install pip-tools pipenv black ;
 
 .PHONY: pipenv-install
 pipenv-install: pipenv-dev-install pipenv-test-install
@@ -77,8 +73,6 @@ pipenv-test-install: lib/test-requirements.txt
 # status if anything is not properly formatted. (This isn't really
 # "linting"; we're not checking anything but code style.)
 pylint:
-	@# Black requires Python 3.6+ to run (but you can reformat
-	@# Python 2 code with it, too).
 	if command -v "black" > /dev/null; then \
 		$(BLACK) --check docs/ ; \
 		$(BLACK) --check examples/ ; \
@@ -91,8 +85,6 @@ pylint:
 # Run "black", our Python formatter, to fix any source files that are not
 # properly formatted.
 pyformat:
-	@# Black requires Python 3.6+ to run (but you can reformat
-	@# Python 2 code with it, too).
 	if command -v "black" > /dev/null; then \
 		$(BLACK) docs/ ; \
 		$(BLACK) examples/ ; \
@@ -141,7 +133,7 @@ install:
 	cd lib ; python setup.py install
 
 .PHONY: develop
-# Install Streamlit as links in your Python environemnt, pointing to local workspace.
+# Install Streamlit as links in your Python environment, pointing to local workspace.
 develop:
 	cd lib ; python setup.py develop
 
@@ -189,7 +181,7 @@ docs: clean-docs
 # Build docs and start a test server at port 8000.
 devel-docs: docs
 	cd docs/_build/html; \
-		python -m SimpleHTTPServer 8000 || python -m http.server 8000
+		python -m http.server 8000
 
 .PHONY: publish-docs
 # Build docs and push to prod.
