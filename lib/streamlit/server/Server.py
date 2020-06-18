@@ -123,8 +123,7 @@ def start_listening(app):
 
     call_count = 0
     http_server = tornado.httpserver.HTTPServer(
-        app,
-        max_buffer_size=config.get_option("server.maxUploadSize") * 1024 * 1024
+        app, max_buffer_size=config.get_option("server.maxUploadSize") * 1024 * 1024
     )
 
     while call_count < MAX_PORT_SEARCH_RETRIES:
@@ -355,6 +354,7 @@ class Server(object):
     @property
     def is_running_hello(self):
         from streamlit.hello import hello
+
         return self._script_path == hello.__file__
 
     @tornado.gen.coroutine

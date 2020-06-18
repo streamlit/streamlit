@@ -85,12 +85,14 @@ class BootstrapPrintTest(unittest.TestCase):
         )
 
         with patch.object(config, "get_option", new=mock_get_option), patch.object(
-                config, "is_manually_set", new=mock_is_manually_set
+            config, "is_manually_set", new=mock_is_manually_set
         ):
             bootstrap._print_url(True)
 
         out = sys.stdout.getvalue()
-        self.assertTrue("Welcome to Streamlit. Check out our demo in your browser." in out)
+        self.assertTrue(
+            "Welcome to Streamlit. Check out our demo in your browser." in out
+        )
         self.assertTrue("URL: http://the-address" in out)
 
     def test_print_urls_configured(self):
