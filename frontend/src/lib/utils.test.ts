@@ -103,6 +103,12 @@ describe("getCookie", () => {
 
 describe("setCookie", () => {
   afterEach(() => {
+    /*
+      Setting a cookie with document.cookie = "key=value" will append or modify "key"
+      with "value". It does not overwrite the existing list of cookies in document.cookie.
+      In order to delete the cookie, give the cookie an expiration date that has passed.
+      This cleanup ensures that we delete all cookies after each test.
+    */
     document.cookie.split(";").forEach(cookie => {
       const eqPos = cookie.indexOf("=")
       const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie
