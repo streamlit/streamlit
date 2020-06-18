@@ -34,7 +34,7 @@ export default class HttpClient {
     this.csrfEnabled = csrfEnabled
   }
 
-  public request(params: AxiosRequestConfig) {
+  public request(params: AxiosRequestConfig): Promise {
     if (this.csrfEnabled) {
       const xsrf_cookie = getCookie("_xsrf")
       if (xsrf_cookie != null) {

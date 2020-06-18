@@ -105,40 +105,6 @@ describe("App", () => {
     expect(window.location.reload).toHaveBeenCalled()
   })
 
-  it("should update request config for csrf", () => {
-    const wrapper = getWrapper()
-
-    const spyUpdateCsrf = jest.spyOn(
-      wrapper.instance().uploadClient,
-      "updateCsrfToken"
-    )
-
-    const fwMessage = new ForwardMsg()
-
-    fwMessage.initialize = {
-      environmentInfo: {
-        streamlitVersion: "sv",
-        pythonVersion: "",
-      },
-      sessionId: "sessionId",
-      userInfo: {
-        installationId: "",
-        email: "",
-      },
-      config: {
-        mapboxToken: "",
-        maxCachedMessageAge: "",
-      },
-      sessionState: {},
-      commandLine: "",
-    }
-
-    // @ts-ignore
-    wrapper.instance().handleMessage(fwMessage)
-
-    expect(spyUpdateCsrf).toHaveBeenCalled()
-  })
-
   it("should start screencast recording when the MainMenu is clicked", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)

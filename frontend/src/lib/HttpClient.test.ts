@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import axios from "axios"
 import HttpClient from "lib/HttpClient"
 import { SessionInfo } from "lib/SessionInfo"
 
@@ -24,6 +25,8 @@ const MOCK_SERVER_URI = {
 }
 
 describe("HttpClient", () => {
+  const spyRequest = jest.spyOn(axios, "request")
+
   beforeEach(() => {
     SessionInfo.current = new SessionInfo({
       sessionId: "sessionId",
@@ -47,21 +50,22 @@ describe("HttpClient", () => {
 
   test("has xsrf enabled", () => {
     document.cookie = "_xsrf=cookie;"
-    const client = new HttpClient(() => MOCK_SERVER_URI)
-    client.updateCsrfToken()
+    const client = new HttpClient(() => MOCK_SERVER_URI, true)
 
-    expect(client.axiosInstance.defaults.headers["X-Xsrftoken"]).toBe("cookie")
-    expect(client.axiosInstance.defaults.withCredentials).toBe(true)
+    client.request({})
+
+    expect(client.csrfEnabled).toBe(true)
+    expect(spyRequest).toHaveBeenCalledWith({
+      headers: { "X-Xsrftoken": "cookie" },
+      withCredentials: true,
+    })
   })
 
   test("has xsrf disabled", () => {
-    const client = new HttpClient(() => MOCK_SERVER_URI)
+    const client = new HttpClient(() => MOCK_SERVER_URI, false)
 
-    client.updateCsrfToken()
-
-    expect(client.axiosInstance.defaults.headers["X-Xsrftoken"]).toBe(
-      undefined
-    )
-    expect(client.axiosInstance.defaults.withCredentials).toBe(false)
+    client.request({})
+    expect(client.csrfEnabled).toBe(false)
+    expect(spyRequest).toHaveBeenCalledWith({})
   })
 })
