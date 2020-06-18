@@ -475,4 +475,6 @@ function parseGetters(type: any, spec: any): void {
   })
 }
 
-export default withMapboxToken(withFullScreenWrapper(DeckGlChart))
+export default withMapboxToken("st.deck_gl_chart")(
+  withFullScreenWrapper(DeckGlChart)
+)

@@ -22,8 +22,8 @@ import isEqual from "lodash/isEqual"
 import { StaticMap } from "react-map-gl"
 import * as layers from "@deck.gl/layers"
 import { JSONConverter } from "@deck.gl/json"
-import * as aggregationLayers from "@deck.gl/aggregation-layers"
 import * as geoLayers from "@deck.gl/geo-layers"
+import * as aggregationLayers from "@deck.gl/aggregation-layers"
 
 import { CSVLoader } from "@loaders.gl/csv"
 import { registerLoaders } from "@loaders.gl/core"
@@ -230,4 +230,6 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
   }
 }
 
-export default withMapboxToken(withFullScreenWrapper(DeckGlJsonChart))
+export default withMapboxToken("st.pydeck_chart")(
+  withFullScreenWrapper(DeckGlJsonChart)
+)

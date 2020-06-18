@@ -17,6 +17,7 @@
 import os
 import toml
 import collections
+import secrets
 import urllib
 from typing import Dict
 
@@ -394,6 +395,19 @@ _create_option(
 )
 
 
+@_create_option("server.cookieSecret")
+@util.memoize
+def _server_cookie_secret():
+    """Symmetric key used to produce signed cookies. If deploying on multiple
+    replicas, this should be set to ensure all replicas share the same secret.
+
+    Default: Randomly generated secret key.
+    """
+    cookie_secret = os.getenv("STREAMLIT_COOKIE_SECRET")
+    cookie_secret = cookie_secret if cookie_secret else secrets.token_hex()
+    return cookie_secret
+
+
 @_create_option("server.headless", type_=bool)
 @util.memoize
 def _server_headless():
@@ -537,11 +551,9 @@ _create_section("mapbox", "Mapbox configuration that is being used by DeckGL.")
 _create_option(
     "mapbox.token",
     description="""Configure Streamlit to use a custom Mapbox
-                token for elements like st.deck_gl_chart and st.map. If you
-                don't do this you'll be using Streamlit's own token,
-                which has limitations and is not guaranteed to always work.
+                token for elements like st.deck_gl_chart and st.map.
                 To get a token for yourself, create an account at
-                https://mapbox.com. It's free! (for moderate usage levels)""",
+                https://mapbox.com. It's free (for moderate usage levels)!""",
     default_val="",
 )
 
