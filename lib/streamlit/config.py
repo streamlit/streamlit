@@ -395,7 +395,7 @@ _create_option(
 )
 
 
-@_create_option("server.cookieSecret")
+@_create_option("server.cookieSecret", type_=str)
 @util.memoize
 def _server_cookie_secret():
     """Symmetric key used to produce signed cookies. If deploying on multiple
@@ -403,9 +403,7 @@ def _server_cookie_secret():
 
     Default: Randomly generated secret key.
     """
-    cookie_secret = os.getenv("STREAMLIT_COOKIE_SECRET")
-    cookie_secret = cookie_secret if cookie_secret else secrets.token_hex()
-    return cookie_secret
+    return secrets.token_hex()
 
 
 @_create_option("server.headless", type_=bool)
