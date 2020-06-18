@@ -1,14 +1,13 @@
 import streamlit as st
 import pandas as pd
 
-_selectable_datatable = st.declare_component(
-    "selectable_datatable",
-    url="http://localhost:3001",
+_selectable_data_table = st.declare_component(
+    "selectable_data_table", url="http://localhost:3001",
 )
 
 
-def selectable_datatable(data, key=None):
-    return _selectable_datatable(data=data, default=[], key=key)
+def selectable_data_table(data, key=None):
+    return _selectable_data_table(data=data, default=[], key=key)
 
 
 raw_data = {
@@ -18,6 +17,6 @@ raw_data = {
 }
 df = pd.DataFrame(raw_data, columns=["First Name", "Last Name", "Age"])
 
-rows = selectable_datatable(df)
+rows = selectable_data_table(df)
 if rows:
     st.write("You have selected", rows)

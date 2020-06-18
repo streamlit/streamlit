@@ -5,21 +5,22 @@ import {
   Streamlit,
 } from "./streamlit"
 
+<<<<<<< HEAD:components_beta/template/my_component/frontend/src/ReactTemplate.tsx
 // We import bootstrap.css and streamlit.css to get some simple default
 // styling for our text and button. You can remove or replace these!
 import "bootstrap/dist/css/bootstrap.min.css"
 
+=======
+>>>>>>> 7bc17993272482e87673b7904ec7d1040a06b816:components_beta/template/my_component/frontend/src/MyComponent.tsx
 interface State {
   numClicks: number
 }
 
 /**
- * This is a React-based component template. It's an alternative to the
- * event-based component pattern. Rather than handling RENDER_EVENT events,
- * you write your rendering logic in the render() function, which is
- * called automatically when appropriate.
+ * This is a React-based component template. The `render()` function is called
+ * automatically when your component should be re-rendered.
  */
-class ReactTemplate extends StreamlitComponentBase<State> {
+class MyComponent extends StreamlitComponentBase<State> {
   public state = { numClicks: 0 }
 
   public render = (): ReactNode => {
@@ -32,12 +33,12 @@ class ReactTemplate extends StreamlitComponentBase<State> {
     // variable, and send its new value back to Streamlit, where it'll
     // be available to the Python program.
     return (
-      <>
-        <div>Hello, {name}!</div>
+      <span>
+        Hello, {name}! &nbsp;
         <button onClick={this.onClicked} disabled={this.props.disabled}>
           Click Me!
         </button>
-      </>
+      </span>
     )
   }
 
@@ -57,4 +58,4 @@ class ReactTemplate extends StreamlitComponentBase<State> {
 // passing arguments from Python -> Component.
 //
 // You don't need to edit withStreamlitConnection (but you're welcome to!).
-export default withStreamlitConnection(ReactTemplate)
+export default withStreamlitConnection(MyComponent)

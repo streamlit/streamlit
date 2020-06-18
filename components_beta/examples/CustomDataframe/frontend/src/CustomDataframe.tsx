@@ -1,4 +1,3 @@
-import "bootstrap/dist/css/bootstrap.min.css"
 import { range } from "lodash"
 import React, {
   Fragment,

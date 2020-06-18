@@ -370,7 +370,7 @@ class ComponentRegistry:
                 "%s overriding previously-registered %s", component, existing,
             )
 
-        LOGGER.info("Registered component %s", component)
+        LOGGER.debug("Registered component %s", component)
 
     def get_component_path(self, name: str) -> Optional[str]:
         """Return the filesystem path for the component with the given name.

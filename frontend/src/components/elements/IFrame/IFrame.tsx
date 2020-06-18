@@ -105,6 +105,7 @@ class IFrame extends React.PureComponent<Props> {
         allowFullScreen={false}
         scrolling={scrolling}
         sandbox={SANDBOX_POLICY}
+        title="st.iframe"
       />
     )
   }

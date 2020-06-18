@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { Streamlit, RenderData } from "./streamlit"
 
 // We import bootstrap.css and streamlit.css to get some simple default
@@ -77,3 +78,15 @@ Streamlit.setFrameHeight()
 //   </React.StrictMode>,
 //   document.getElementById("root")
 // )
+=======
+import React from "react"
+import ReactDOM from "react-dom"
+import MyComponent from "./MyComponent"
+
+ReactDOM.render(
+  <React.StrictMode>
+    <MyComponent />
+  </React.StrictMode>,
+  document.getElementById("root")
+)
+>>>>>>> 7bc17993272482e87673b7904ec7d1040a06b816
