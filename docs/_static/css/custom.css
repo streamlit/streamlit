@@ -1,22 +1,8 @@
 @font-face {
   font-family: "Graphik";
-  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c897429c1a1359f8705e_Graphik-Black.otf")
-    format("opentype");
-  font-weight: 900;
-  font-style: normal;
-}
-@font-face {
-  font-family: "Graphik";
   src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c89751595b2217a8a5ca_Graphik-ExtralightItalic.otf")
     format("opentype");
   font-weight: 200;
-  font-style: italic;
-}
-@font-face {
-  font-family: "Graphik";
-  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c89751595b80f3a8a5c9_Graphik-BlackItalic.otf")
-    format("opentype");
-  font-weight: 900;
   font-style: italic;
 }
 @font-face {
@@ -123,7 +109,7 @@
 :root {
   --main-bg-color: #ffffff;
 
-  --sidebar-bg: #f3f6f6; /* light-gray: if you change this, change "style_nav_header_background" in conf.py to match */
+  --sidebar-bg: #ffffff; /* light-gray: if you change this, change "style_nav_header_background" in conf.py to match */
   --overflow-color: #e5e5e5; /* darker gray */
   --sidefont-color: #808495; /* darkest gray */
 
@@ -279,4 +265,8 @@ div[role="search"] {
 }
 .rst-content .tip .admonition-title {
   color: var(--tip-title);
+}
+
+.wy-menu-vertical {
+  border-right: 1px solid var(--sidefont-color);
 }
