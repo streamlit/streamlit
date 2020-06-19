@@ -23,6 +23,11 @@ hr {
   border-top: 0px;
 }
 
+/* align document top 'Welcome to Streamlit' to 'Documentation' in sidebar  */
+.document {
+  padding-top: 25px;
+}
+
 /* background of content */
 .wy-nav-content {
   background: var(--main-bg-color);
@@ -48,6 +53,8 @@ div[role="search"] {
 /*make logo smaller*/
 .wy-side-nav-search > a img.logo {
   height: 40px;
+  position: absolute;
+  left: 15px;
 }
 
 /* sidebar headings */
