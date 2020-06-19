@@ -1,3 +1,124 @@
+@font-face {
+  font-family: "Graphik";
+  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c897429c1a1359f8705e_Graphik-Black.otf")
+    format("opentype");
+  font-weight: 900;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Graphik";
+  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c89751595b2217a8a5ca_Graphik-ExtralightItalic.otf")
+    format("opentype");
+  font-weight: 200;
+  font-style: italic;
+}
+@font-face {
+  font-family: "Graphik";
+  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c89751595b80f3a8a5c9_Graphik-BlackItalic.otf")
+    format("opentype");
+  font-weight: 900;
+  font-style: italic;
+}
+@font-face {
+  font-family: "Graphik";
+  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c89778cf53849582d272_Graphik-Bold.otf")
+    format("opentype");
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Graphik";
+  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c8986a906d17093257cb_Graphik-Extralight.otf")
+    format("opentype");
+  font-weight: 200;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Graphik";
+  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c897429c1a5134f8705f_Graphik-LightItalic.otf")
+    format("opentype");
+  font-weight: 300;
+  font-style: italic;
+}
+@font-face {
+  font-family: "Graphik";
+  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c8986a906d2ddc3257cc_Graphik-Light.otf")
+    format("opentype");
+  font-weight: 300;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Graphik";
+  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c898dc6c0c107af7c2ad_Graphik-Regular.otf")
+    format("opentype");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Graphik";
+  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c8986a906d68f93257ca_Graphik-BoldItalic.otf")
+    format("opentype");
+  font-weight: 700;
+  font-style: italic;
+}
+@font-face {
+  font-family: "Graphik";
+  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c898429c1a00eef87060_Graphik-Medium.otf")
+    format("opentype");
+  font-weight: 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Graphik";
+  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c8986a906d7ed13257cd_Graphik-MediumItalic.otf")
+    format("opentype");
+  font-weight: 500;
+  font-style: italic;
+}
+@font-face {
+  font-family: "Graphik super";
+  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c89878cf530ecd82d273_Graphik-Super.otf")
+    format("opentype");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Graphik";
+  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c898dc6c0c0f07f7c2ae_Graphik-SemiboldItalic.otf")
+    format("opentype");
+  font-weight: 600;
+  font-style: italic;
+}
+@font-face {
+  font-family: "Graphik";
+  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c898429c1aa41cf87061_Graphik-Semibold.otf")
+    format("opentype");
+  font-weight: 600;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Graphik";
+  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c89878cf536aa782d274_Graphik-Thin.otf")
+    format("opentype");
+  font-weight: 100;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Graphik";
+  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c898429c1aed84f87063_Graphik-RegularItalic.otf")
+      format("opentype"),
+    url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c898429c1a44ccf87062_Graphik-SuperItalic.otf")
+      format("opentype");
+  font-weight: 400;
+  font-style: italic;
+}
+@font-face {
+  font-family: "Graphik";
+  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c8986a906d79de3257d2_Graphik-ThinItalic.otf")
+    format("opentype");
+  font-weight: 100;
+  font-style: italic;
+}
 :root {
   --main-bg-color: #ffffff;
 
