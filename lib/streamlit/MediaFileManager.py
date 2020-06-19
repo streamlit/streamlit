@@ -14,7 +14,7 @@
 
 """Provides global MediaFileManager object as `media_file_manager`."""
 
-from typing import Dict, DefaultDict
+from typing import Dict, DefaultDict, Set
 from weakref import WeakValueDictionary
 import collections
 import datetime as dt
@@ -127,7 +127,7 @@ class MediaFileManager(object):
         LOGGER.debug("Deleting expired files...")
 
         # Get a flat set of every file ID in the session ID map.
-        active_file_ids = set()
+        active_file_ids = set()   # type: Set[MediaFile]
 
         for files_by_coord in self._files_by_session_and_coord.values():
             active_file_ids = active_file_ids.union(files_by_coord.values())
