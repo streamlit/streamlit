@@ -131,7 +131,6 @@ class Slider extends React.PureComponent<Props, State> {
     $thumbIndex: number
     $value: any
   }): JSX.Element => {
-    const format = this.props.element.get("format")
     const thumbValueStyle = sliderOverrides.ThumbValue.style({
       $disabled: this.props.disabled,
     }) as React.CSSProperties
@@ -144,7 +143,6 @@ class Slider extends React.PureComponent<Props, State> {
   }
 
   private renderTickBar = (): JSX.Element => {
-    const format = this.props.element.get("format")
     const max = this.props.element.get("max")
     const min = this.props.element.get("min")
     const tickBarItemStyle = sliderOverrides.TickBarItem
