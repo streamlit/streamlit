@@ -144,8 +144,11 @@ h2,
 h3,
 h4,
 h5,
-h6 {
+h6,
+input[type="text"],
+li {
   font-family: Graphik, sans-serif;
+  color: var(--st-black);
 }
 
 h1,
@@ -154,7 +157,6 @@ h3,
 h4,
 h5,
 h6 {
-  color: var(--st-black);
   font-weight: 600;
 }
 
