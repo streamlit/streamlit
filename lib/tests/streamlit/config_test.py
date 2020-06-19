@@ -28,8 +28,6 @@ from streamlit import config
 from streamlit import env_util
 from streamlit.ConfigOption import ConfigOption
 
-os.environ["STREAMLIT_COOKIE_SECRET"] = "chocolatechip"
-
 SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
 CONFIG_OPTIONS = copy.deepcopy(config._config_options)
 
@@ -300,6 +298,7 @@ class ConfigTest(unittest.TestCase):
                 "s3.secretAccessKey",
                 "s3.url",
                 "server.enableCORS",
+                "server.enableWebsocketCompression",
                 "server.baseUrlPath",
                 "server.cookieSecret",
                 "server.folderWatchBlacklist",
@@ -475,11 +474,6 @@ class ConfigTest(unittest.TestCase):
         config.set_option("global.developmentMode", False)
         config.set_option("server.port", 1234)
         self.assertEqual(1234, config.get_option("browser.serverPort"))
-
-    def test_server_cookie_secret(self):
-        self.assertEqual("chocolatechip", config.get_option("server.cookieSecret"))
-
-        del os.environ["STREAMLIT_COOKIE_SECRET"]
 
     def test_server_headless_via_liveSave(self):
         config.set_option("server.liveSave", True)
