@@ -1985,6 +1985,39 @@ class DeltaGenerator(object):
                 "Slider tuple/list components must be of the same type."
             )
 
+        if int_value:
+            data_type = Slider.INT
+        elif float_value:
+            data_type = Slider.FLOAT
+        elif datetime_value:
+            data_type = Slider.DATETIME
+
+        DEFAULTS = {
+            Slider.INT: {"min_value": 0, "max_value": 100, "step": 1, "format": "%d"},
+            Slider.FLOAT: {
+                "min_value": 0.0,
+                "max_value": 1.0,
+                "step": 0.01,
+                "format": "%0.2f",
+            },
+            Slider.DATETIME: {
+                # Only perform datetime arithmetic if value is a datetime.
+                "min_value": value - timedelta(days=7) if datetime_value else 0,
+                "max_value": value + timedelta(days=7) if datetime_value else 0,
+                "step": timedelta(days=1),
+                "format": "YYYY-MM-DD",
+            },
+        }
+
+        if min_value is None:
+            min_value = DEFAULTS[data_type]["min_value"]
+        if max_value is None:
+            max_value = DEFAULTS[data_type]["max_value"]
+        if step is None:
+            step = DEFAULTS[data_type]["step"]
+        if format is None:
+            format = DEFAULTS[data_type]["format"]
+
         # Set corresponding defaults.
         # TODO: Set defaults for datetime
         if min_value is None:
@@ -2076,9 +2109,6 @@ class DeltaGenerator(object):
                 + delta.days * DAYS_TO_MICROS
             )
 
-        def microsToDelta(micros):
-            return timedelta(microseconds=micros)
-
         UTC_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
         def datetimeToMicros(dt):
@@ -2088,7 +2118,7 @@ class DeltaGenerator(object):
             return deltaToMicros(delta)
 
         def microsToDatetime(micros):
-            utc_dt = UTC_EPOCH + microsToDelta(micros)
+            utc_dt = UTC_EPOCH + timedelta(microseconds=micros)
             return utc_dt.astimezone()
 
         # Now, convert to microseconds (so we can serialize datetime to a long)
@@ -2102,23 +2132,6 @@ class DeltaGenerator(object):
             max_value = datetimeToMicros(max_value)
             step = deltaToMicros(step)
 
-        # Set format default.
-        if format is None:
-            if all_ints:
-                format = "%d"
-            elif all_floats:
-                format = "%0.2f"
-            elif all_datetimes:
-                # TODO: Actually format times using ISO 8601 notation.
-                format = "%d [TIME]"
-
-        if all_ints:
-            element.slider.data_type = Slider.INT
-        elif all_floats:
-            element.slider.data_type = Slider.FLOAT
-        elif all_datetimes:
-            element.slider.data_type = Slider.DATETIME
-
         # It would be great if we could guess the number of decimal places from
         # the `step` argument, but this would only be meaningful if step were a
         # decimal. As a possible improvement we could make this function accept
@@ -2130,6 +2143,7 @@ class DeltaGenerator(object):
         element.slider.min = min_value
         element.slider.max = max_value
         element.slider.step = step
+        element.slider.data_type = data_type
 
         ui_value = _get_widget_ui_value("slider", element, user_key=key)
         # Convert the current value to the appropriate type.
