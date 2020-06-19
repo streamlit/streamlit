@@ -999,7 +999,7 @@ def _check_conflicts():
                 "server.enableCSRF is not compatible with server.enableCORS. "
                 "We will prioritize server.enableCSRF over server.enableCORS "
                 "where CSRF has been enabled. If cross origin POST, PUT or "
-                "DELETE requests are required, please disable 'enableCSRF'"
+                "DELETE requests are required, please disable 'server.enableCSRF'"
             )
 
 
