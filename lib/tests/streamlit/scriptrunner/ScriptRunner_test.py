@@ -13,15 +13,17 @@
 # limitations under the License.
 
 """Tests ScriptRunner functionality"""
+from typing import List
+import os
 import sys
 import time
 import unittest
-from typing import List
 
-import os
 from parameterized import parameterized
+from tornado.testing import AsyncTestCase
 
 from streamlit.Report import Report
+from streamlit.MediaFileManager import media_file_manager
 from streamlit.ReportQueue import ReportQueue
 from streamlit.ScriptRequestQueue import RerunData
 from streamlit.ScriptRequestQueue import ScriptRequest
@@ -46,7 +48,15 @@ def _create_widget(id, states):
     return states.widgets[-1]
 
 
-class ScriptRunnerTest(unittest.TestCase):
+class ScriptRunnerTest(AsyncTestCase):
+    def setUp(self):
+        super(ScriptRunnerTest, self).setUp()
+        media_file_manager.set_ioloop(self.io_loop)
+
+    def tearDown(self):
+        super(ScriptRunnerTest, self).tearDown()
+        media_file_manager.set_ioloop(None)
+
     def test_startup_shutdown(self):
         """Test that we can create and shut down a ScriptRunner."""
         scriptrunner = TestScriptRunner("good_script.py")
