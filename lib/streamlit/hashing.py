@@ -259,12 +259,10 @@ class _CodeHasher:
 
     def to_bytes(self, obj, context=None):
         """Add memoization to _to_bytes and protect against cycles in data structures."""
-        key = _key(obj)
-        tname = type(obj).__qualname__
+        tname = type(obj).__qualname__.encode()
+        key = (tname, _key(obj))
 
-        if key is not NoResult:
-            key = "%s:%s" % (tname, key)
-
+        if key[1] is not NoResult:
             if key in self._hashes:
                 return self._hashes[key]
 
@@ -281,14 +279,14 @@ class _CodeHasher:
         try:
             # Turn these on for debugging.
             # _LOGGER.debug("About to hash: %s", obj)
-            b = b"%s:%s" % (tname.encode(), self._to_bytes(obj, context))
+            b = b"%s:%s" % (tname, self._to_bytes(obj, context))
             # _LOGGER.debug("Done hashing: %s", obj)
 
             # Hmmm... It's psosible that the size calculation is wrong. When we
             # call to_bytes inside _to_bytes things get double-counted.
             self.size += sys.getsizeof(b)
 
-            if key is not NoResult:
+            if key[1] is not NoResult:
                 self._hashes[key] = b
 
         except (UnhashableTypeError, UserHashError, InternalHashError):
