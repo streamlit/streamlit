@@ -2066,31 +2066,41 @@ class DeltaGenerator(object):
         except JSNumberBoundsException as e:
             raise StreamlitAPIException(str(e))
 
-        def toMicros(delta):
-            SECONDS_TO_MICROS = 1000 * 1000
-            DAYS_TO_MICROS = 24 * 60 * 60 * SECONDS_TO_MICROS
+        SECONDS_TO_MICROS = 1000 * 1000
+        DAYS_TO_MICROS = 24 * 60 * 60 * SECONDS_TO_MICROS
+
+        def deltaToMicros(delta):
             return (
                 delta.microseconds
                 + delta.seconds * SECONDS_TO_MICROS
                 + delta.days * DAYS_TO_MICROS
             )
 
-        def microsSinceEpoch(dt):
+        def microsToDelta(micros):
+            return timedelta(microseconds=micros)
+
+        UTC_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+        def datetimeToMicros(dt):
             # All unaware times are processed using the local timezone
             aware_dt = dt.astimezone()
-            delta = aware_dt - datetime(1970, 1, 1, tzinfo=timezone.utc)
-            return toMicros(delta)
+            delta = aware_dt - UTC_EPOCH
+            return deltaToMicros(delta)
+
+        def microsToDatetime(micros):
+            utc_dt = UTC_EPOCH + microsToDelta(micros)
+            return utc_dt.astimezone()
 
         # Now, convert to microseconds (so we can serialize datetime to a long)
         if all_datetimes:
             value = (
-                microsSinceEpoch(value)
+                datetimeToMicros(value)
                 if single_value
-                else list(map(microsSinceEpoch, value))
+                else list(map(datetimeToMicros, value))
             )
-            min_value = microsSinceEpoch(min_value)
-            max_value = microsSinceEpoch(max_value)
-            step = toMicros(step)
+            min_value = datetimeToMicros(min_value)
+            max_value = datetimeToMicros(max_value)
+            step = deltaToMicros(step)
 
         # Set format default.
         if format is None:
@@ -2128,8 +2138,11 @@ class DeltaGenerator(object):
         if ui_value is not None:
             current_value = getattr(ui_value, "value")
             # The widget always returns a float array, so cast to int if necessary
-            if all_ints or all_datetimes:
+            if all_ints:
                 current_value = list(map(int, current_value))
+            if all_datetimes:
+                # TODO: We also need to fix when ui_value IS None
+                current_value = [microsToDatetime(int(v)) for v in current_value]
             # If there is only one value in the array destructure it into a
             # single variable
             current_value = current_value[0] if single_value else current_value
