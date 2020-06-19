@@ -463,14 +463,14 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(503, response.code)
 
     def test_healthz_without_csrf(self):
-        config._set_option("server.enableCSRF", False, "test")
+        config._set_option("server.enableCSRFProtection", False, "test")
         response = self.fetch("/healthz")
         self.assertEqual(200, response.code)
         self.assertEqual(b"ok", response.body)
         self.assertNotIn("Set-Cookie", response.headers)
 
     def test_healthz_with_csrf(self):
-        config._set_option("server.enableCSRF", True, "test")
+        config._set_option("server.enableCSRFProtection", True, "test")
         response = self.fetch("/healthz")
         self.assertEqual(200, response.code)
         self.assertEqual(b"ok", response.body)

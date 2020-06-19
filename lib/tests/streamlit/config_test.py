@@ -302,7 +302,7 @@ class ConfigTest(unittest.TestCase):
                 "server.baseUrlPath",
                 "server.cookieSecret",
                 "server.enableCORS",
-                "server.enableCSRF",
+                "server.enableCSRFProtection",
                 "server.enableWebsocketCompression",
                 "server.folderWatchBlacklist",
                 "server.fileWatcherType",
@@ -355,7 +355,7 @@ class ConfigTest(unittest.TestCase):
         )
 
     def test_check_conflicts_server_csrf(self):
-        config._set_option("server.enableCSRF", True, "test")
+        config._set_option("server.enableCSRFProtection", True, "test")
         config._set_option("server.enableCORS", True, "test")
         with patch("streamlit.config.LOGGER") as patched_logger:
             config._check_conflicts()

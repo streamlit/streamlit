@@ -487,7 +487,7 @@ def _server_enable_cors():
     return True
 
 
-@_create_option("server.enableCSRF", type_=bool)
+@_create_option("server.enableCSRFProtection", type_=bool)
 def _server_enable_CSRF():
     """Enables support for protection from Cross-site request forgery attacks. Requires CORS to be disabled.
 
@@ -993,13 +993,13 @@ def _check_conflicts():
 
     # CSRF conflicts
 
-    if get_option("server.enableCSRF"):
+    if get_option("server.enableCSRFProtection"):
         if not get_option("server.enableCORS") or get_option("global.useNode"):
             LOGGER.warning(
-                "server.enableCSRF is not compatible with server.enableCORS. "
-                "We will prioritize server.enableCSRF over server.enableCORS "
+                "server.enableCSRFProtection is not compatible with server.enableCORS. "
+                "We will prioritize server.enableCSRFProtection over server.enableCORS "
                 "where CSRF has been enabled. If cross origin POST, PUT or "
-                "DELETE requests are required, please disable 'server.enableCSRF'"
+                "DELETE requests are required, please disable 'server.enableCSRFProtection'"
             )
 
 
