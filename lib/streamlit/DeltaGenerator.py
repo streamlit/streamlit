@@ -2141,20 +2141,20 @@ class DeltaGenerator(object):
         element.slider.data_type = data_type
 
         ui_value = _get_widget_ui_value("slider", element, user_key=key)
-        # Convert the current value to the appropriate type.
-        current_value = ui_value if ui_value is not None else value
-        # Cast ui_value to the same type as the input arguments
-        if ui_value is not None:
+        if ui_value:
             current_value = getattr(ui_value, "value")
-            # The widget always returns a float array, so cast to int if necessary
-            if all_ints:
-                current_value = list(map(int, current_value))
-            if all_datetimes:
-                # TODO: We also need to fix when ui_value IS None
-                current_value = [microsToDatetime(int(v)) for v in current_value]
-            # If there is only one value in the array destructure it into a
-            # single variable
-            current_value = current_value[0] if single_value else current_value
+        else:
+            # Widget has not been used; fallback to the original value,
+            # but ensure it's an array
+            current_value = [value] if single_value else value
+        # The widget always returns a float array, so fix the return type if necessary
+        if all_ints:
+            current_value = list(map(int, current_value))
+        if all_datetimes:
+            current_value = [microsToDatetime(int(v)) for v in current_value]
+        # If there is only one value in the array destructure it into a
+        # single variable
+        current_value = current_value[0] if single_value else current_value
         return current_value if single_value else tuple(current_value)
 
     @_with_element
