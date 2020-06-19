@@ -42,6 +42,7 @@ from streamlit.proto import Balloons_pb2
 from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto.NumberInput_pb2 import NumberInput
+from streamlit.proto.Slider_pb2 import Slider
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.logger import get_logger
 from streamlit.type_util import is_type
@@ -2075,7 +2076,9 @@ class DeltaGenerator(object):
             )
 
         def microsSinceEpoch(dt):
-            delta = dt - datetime(1970, 1, 1, tzinfo=dt.tzinfo)
+            # All unaware times are processed using the local timezone
+            aware_dt = dt.astimezone()
+            delta = aware_dt - datetime(1970, 1, 1, tzinfo=timezone.utc)
             return toMicros(delta)
 
         # Now, convert to microseconds (so we can serialize datetime to a long)
@@ -2083,7 +2086,7 @@ class DeltaGenerator(object):
             value = (
                 microsSinceEpoch(value)
                 if single_value
-                else [microsSinceEpoch(v) for v in value]
+                else list(map(microsSinceEpoch, value))
             )
             min_value = microsSinceEpoch(min_value)
             max_value = microsSinceEpoch(max_value)
@@ -2098,6 +2101,13 @@ class DeltaGenerator(object):
             elif all_datetimes:
                 # TODO: Actually format times using ISO 8601 notation.
                 format = "%d [TIME]"
+
+        if all_ints:
+            element.slider.data_type = Slider.INT
+        elif all_floats:
+            element.slider.data_type = Slider.FLOAT
+        elif all_datetimes:
+            element.slider.data_type = Slider.DATETIME
 
         # It would be great if we could guess the number of decimal places from
         # the `step` argument, but this would only be meaningful if step were a
