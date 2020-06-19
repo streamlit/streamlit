@@ -109,10 +109,6 @@
 :root {
   --main-bg-color: #ffffff;
 
-  --sidebar-bg: #ffffff; /* light-gray: if you change this, change "style_nav_header_background" in conf.py to match */
-  --overflow-color: #e5e5e5; /* darker gray */
-  --sidefont-color: #808495; /* darkest gray */
-
   --note-color: #e4f5ff; /* pale blue */
   --note-title: #1c83e1; /* vivid blue */
 
@@ -193,7 +189,7 @@ hr {
 
 /* overflow color */
 .wy-body-for-nav {
-  background: var(--overflow-color);
+  background: var(--main-bg-color);
 }
 
 /*float search box to right of navbar*/
@@ -269,4 +265,25 @@ div[role="search"] {
 
 .wy-menu-vertical {
   border-right: 1px solid var(--sidefont-color);
+}
+
+/* site centering code */
+.wy-body-for-nav {
+  text-align: left;
+  width: 1100px;
+  margin: 0 auto;
+}
+
+.wy-nav-side {
+  position: inherit;
+}
+
+.wy-grid-for-nav {
+  position: absolute;
+  width: 100%;
+  height: inherit;
+}
+
+.wy-nav-content-wrap {
+  background: var(--main-bg-color);
 }
