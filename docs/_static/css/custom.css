@@ -18,6 +18,11 @@ body {
   font-family: Graphik, sans-serif;
 }
 
+/* make hr 0 width until it can be removed from template */
+hr {
+  border-top: 0px;
+}
+
 /* background of content */
 .wy-nav-content {
   background: var(--main-bg-color);
