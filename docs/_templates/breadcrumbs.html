@@ -30,7 +30,7 @@
 
   <ul class="wy-breadcrumbs">
     {% block breadcrumbs %}
-    <li><a href="{{ pathto(master_doc) }}" class="icon icon-home"></a> &raquo;</li>
+    <li><a href="{{ pathto(master_doc) }}">Docs</a> &raquo;</li>
     {% for doc in parents %}
     <li><a href="{{ doc.link|e }}">{{ doc.title }}</a> &raquo;</li>
     {% endfor %}
