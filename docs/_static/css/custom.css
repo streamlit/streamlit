@@ -25,7 +25,11 @@ hr {
 
 /* align text from Documentation with H1 of document */
 .wy-side-nav-search {
-  padding-bottom: 25px;
+  padding-bottom: 27px;
+}
+
+.wy-breadcrumbs li#firsttier a {
+  color: var(--sidefont-color);
 }
 
 /* background of content */
@@ -74,6 +78,7 @@ div[role="search"] {
 .wy-menu-vertical a,
 .wy-side-nav-search > div.version {
   color: var(--sidefont-color);
+  font-size: 14px;
 }
 
 /*borders for hover*/
