@@ -23,9 +23,9 @@ hr {
   border-top: 0px;
 }
 
-/* align document top 'Welcome to Streamlit' to 'Documentation' in sidebar  */
-.document {
-  padding-top: 25px;
+/* align text from Documentation with H1 of document */
+.wy-side-nav-search {
+  padding-bottom: 25px;
 }
 
 /* background of content */
