@@ -23,6 +23,8 @@ import re
 from datetime import datetime
 from datetime import date
 from datetime import time
+from datetime import timedelta
+from datetime import timezone
 
 from streamlit import caching
 from streamlit import config
@@ -1959,28 +1961,31 @@ class DeltaGenerator(object):
             value = min_value if min_value is not None else 0
 
         # Ensure that the value is either a single value or a range of values.
-        single_value = isinstance(value, (int, float))
+        single_value = isinstance(value, (int, float, datetime))
         range_value = isinstance(value, (list, tuple)) and len(value) in (0, 1, 2)
         if not single_value and not range_value:
             raise StreamlitAPIException(
-                "Slider value should either be an int/float or a list/tuple of "
-                "0 to 2 ints/floats"
+                "Slider value should either be an int/float/datetime or a list/tuple of "
+                "0 to 2 ints/floats/datetimes"
             )
 
         # Ensure that the value is either an int/float or a list/tuple of ints/floats.
         if single_value:
             int_value = isinstance(value, int)
             float_value = isinstance(value, float)
+            datetime_value = isinstance(value, datetime)
         else:
             int_value = all(map(lambda v: isinstance(v, int), value))
             float_value = all(map(lambda v: isinstance(v, float), value))
+            datetime_value = all(map(lambda v: isinstance(v, datetime), value))
 
-        if not int_value and not float_value:
+        if not int_value and not float_value and not datetime_value:
             raise StreamlitAPIException(
                 "Slider tuple/list components must be of the same type."
             )
 
         # Set corresponding defaults.
+        # TODO: Set defaults for datetime
         if min_value is None:
             min_value = 0 if int_value else 0.0
         if max_value is None:
@@ -1992,7 +1997,10 @@ class DeltaGenerator(object):
         args = [min_value, max_value, step]
         int_args = all(map(lambda a: isinstance(a, int), args))
         float_args = all(map(lambda a: isinstance(a, float), args))
-        if not int_args and not float_args:
+        # TODO: When min and max_value are datetimes, step should be a timedelta
+        datetime_args = all(map(lambda a: isinstance(a, (datetime, timedelta)), args))
+
+        if not int_args and not float_args and not datetime_args:
             raise StreamlitAPIException(
                 "Slider value arguments must be of the same type."
                 "\n`min_value` has %(min_type)s type."
@@ -2008,7 +2016,8 @@ class DeltaGenerator(object):
         # Ensure that the value matches arguments' types.
         all_ints = int_value and int_args
         all_floats = float_value and float_args
-        if not all_ints and not all_floats:
+        all_datetimes = datetime_value and datetime_args
+        if not all_ints and not all_floats and not all_datetimes:
             raise StreamlitAPIException(
                 "Both value and arguments must be of the same type."
                 "\n`value` has %(value_type)s type."
@@ -2047,18 +2056,48 @@ class DeltaGenerator(object):
             if all_ints:
                 JSNumber.validate_int_bounds(min_value, "`min_value`")
                 JSNumber.validate_int_bounds(max_value, "`max_value`")
-            else:
+            elif all_floats:
                 JSNumber.validate_float_bounds(min_value, "`min_value`")
                 JSNumber.validate_float_bounds(max_value, "`max_value`")
+            elif all_datetimes:
+                # No validation yet. TODO: check between 0001-01-01 to 9999-12-31
+                pass
         except JSNumberBoundsException as e:
             raise StreamlitAPIException(str(e))
+
+        def toMicros(delta):
+            SECONDS_TO_MICROS = 1000 * 1000
+            DAYS_TO_MICROS = 24 * 60 * 60 * SECONDS_TO_MICROS
+            return (
+                delta.microseconds
+                + delta.seconds * SECONDS_TO_MICROS
+                + delta.days * DAYS_TO_MICROS
+            )
+
+        def microsSinceEpoch(dt):
+            delta = dt - datetime(1970, 1, 1, tzinfo=dt.tzinfo)
+            return toMicros(delta)
+
+        # Now, convert to microseconds (so we can serialize datetime to a long)
+        if all_datetimes:
+            value = (
+                microsSinceEpoch(value)
+                if single_value
+                else [microsSinceEpoch(v) for v in value]
+            )
+            min_value = microsSinceEpoch(min_value)
+            max_value = microsSinceEpoch(max_value)
+            step = toMicros(step)
 
         # Set format default.
         if format is None:
             if all_ints:
                 format = "%d"
-            else:
+            elif all_floats:
                 format = "%0.2f"
+            elif all_datetimes:
+                # TODO: Actually format times using ISO 8601 notation.
+                format = "%d [TIME]"
 
         # It would be great if we could guess the number of decimal places from
         # the `step` argument, but this would only be meaningful if step were a
@@ -2078,9 +2117,8 @@ class DeltaGenerator(object):
         # Cast ui_value to the same type as the input arguments
         if ui_value is not None:
             current_value = getattr(ui_value, "value")
-            # Convert float array into int array if the rest of the arguments
-            # are ints
-            if all_ints:
+            # The widget always returns a float array, so cast to int if necessary
+            if all_ints or all_datetimes:
                 current_value = list(map(int, current_value))
             # If there is only one value in the array destructure it into a
             # single variable
