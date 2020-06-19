@@ -260,7 +260,7 @@ class _CodeHasher:
     def to_bytes(self, obj, context=None):
         """Add memoization to _to_bytes and protect against cycles in data structures."""
         key = _key(obj)
-        tname = type(obj).__qualname__.encode()
+        tname = type(obj).__qualname__
 
         if key is not NoResult:
             key = "%s:%s" % (tname, key)
@@ -281,7 +281,7 @@ class _CodeHasher:
         try:
             # Turn these on for debugging.
             # _LOGGER.debug("About to hash: %s", obj)
-            b = b"%s:%s" % (tname, self._to_bytes(obj, context))
+            b = b"%s:%s" % (tname.encode(), self._to_bytes(obj, context))
             # _LOGGER.debug("Done hashing: %s", obj)
 
             # Hmmm... It's psosible that the size calculation is wrong. When we
