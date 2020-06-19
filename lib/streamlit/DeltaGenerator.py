@@ -2018,21 +2018,16 @@ class DeltaGenerator(object):
         if format is None:
             format = DEFAULTS[data_type]["format"]
 
-        # Set corresponding defaults.
-        # TODO: Set defaults for datetime
-        if min_value is None:
-            min_value = 0 if int_value else 0.0
-        if max_value is None:
-            max_value = 100 if int_value else 1.0
-        if step is None:
-            step = 1 if int_value else 0.01
-
         # Ensure that all arguments are of the same type.
         args = [min_value, max_value, step]
         int_args = all(map(lambda a: isinstance(a, int), args))
         float_args = all(map(lambda a: isinstance(a, float), args))
-        # TODO: When min and max_value are datetimes, step should be a timedelta
-        datetime_args = all(map(lambda a: isinstance(a, (datetime, timedelta)), args))
+        # When min and max_value are datetimes, step should be a timedelta
+        datetime_args = (
+            isinstance(min_value, datetime)
+            and isinstance(max_value, datetime)
+            and isinstance(step, timedelta)
+        )
 
         if not int_args and not float_args and not datetime_args:
             raise StreamlitAPIException(
