@@ -119,6 +119,7 @@
   font-weight: 100;
   font-style: italic;
 }
+
 :root {
   --main-bg-color: #ffffff;
 
@@ -133,10 +134,52 @@
   --tip-title: #21c354; /* vivid green */
 
   --heading-color: #ff4b4b; /* salmon */
+
+  --st-black: #262730;
 }
 
-body {
+body,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: Graphik, sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--st-black);
+  font-weight: 600;
+}
+
+h1 {
+  font-size: 44px;
+}
+
+h2 {
+  font-size: 28px;
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-size: 20px;
+  font-weight: 500;
+}
+
+/* Taken directly from streamlit.io */
+p {
+  line-height: 26px;
+  font-size: 17px;
+  margin-bottom: 10px;
+  font-weight: 400;
 }
 
 /* make hr 0 width until it can be removed from template */
@@ -149,6 +192,7 @@ hr {
   padding-bottom: 27px;
 }
 
+/* First breadcrumb color */
 .wy-breadcrumbs li#firsttier a {
   color: var(--sidefont-color);
 }
@@ -185,6 +229,7 @@ div[role="search"] {
 /* sidebar headings */
 .wy-menu-vertical p.caption {
   color: var(--heading-color);
+  font-weight: 500;
 }
 
 /*sidebar background color*/
@@ -213,6 +258,7 @@ div[role="search"] {
 .wy-menu-vertical li.current a:hover,
 .wy-menu.wy-menu-vertical > ul.current > li.toctree-l1.current > a {
   background: var(--sidebar-bg);
+  font-weight: 500;
 }
 
 /* style notes */
