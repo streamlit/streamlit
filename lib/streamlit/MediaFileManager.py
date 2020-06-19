@@ -139,10 +139,9 @@ class MediaFileManager(object):
                 del self._files_by_id[file_id]
 
     def clear_session_files(self, session_id=None):
-        """Removes ReportSession-coordinate mapping, deleting expired MediaFile objects.
+        """Removes ReportSession-coordinate mapping immediately, and id-file mapping later.
 
-        Should be called whenever ScriptRunner completes and when
-        a session ends.
+        Should be called whenever ScriptRunner completes and when a session ends.
         """
         if session_id is None:
             session_id = _get_session_id()
