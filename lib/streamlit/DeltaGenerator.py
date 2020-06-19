@@ -1912,25 +1912,30 @@ class DeltaGenerator(object):
         ----------
         label : str or None
             A short label explaining to the user what this slider is for.
-        min_value : int/float or None
+        min_value : int/float/datetime or None
             The minimum permitted value.
-            Defaults to 0 if the value is an int, 0.0 otherwise.
-        max_value : int/float or None
+            Defaults: 0 if the value is an int, 0.0 if a float,
+            value - timedelta(day=7) if a datetime
+        max_value : int/float/datetime or None
             The maximum permitted value.
-            Defaults 100 if the value is an int, 1.0 otherwise.
-        value : int/float or a tuple/list of int/float or None
+            Defaults 100 if the value is an int, 1.0 if a float,
+            value + timedelta(day=7) if a datetime
+        value : int/float/datetime or a tuple/list of int/float/datetime or None
             The value of the slider when it first renders. If a tuple/list
             of two values is passed here, then a range slider with those lower
             and upper bounds is rendered. For example, if set to `(1, 10)` the
             slider will have a selectable range between 1 and 10.
             Defaults to min_value.
-        step : int/float or None
+        step : int/float/timedelta or None
             The stepping interval.
-            Defaults to 1 if the value is an int, 0.01 otherwise.
+            Defaults to 1 if the value is an int, 0.01 if a float,
+            timedelta(day=1) if a datetime.
         format : str or None
             A printf-style format string controlling how the interface should
             display numbers. This does not impact the return value.
-            Valid formatters: %d %e %f %g %i
+            Valid formatters for int/float: %d %e %f %g %i
+            datetime formatter uses Moment.js notation:
+            https://momentjs.com/docs/#/displaying/format/
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
