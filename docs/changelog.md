@@ -16,6 +16,25 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.62.0
+
+_Release date: June 20, 2020_
+
+**Highlights:**
+
+- 📨 Ability to turn websocket compression on/off via the config option
+  `server.enableWebsocketCompression`.
+- 🗝️ Out-of-the-box support for CSRF protection using the
+  [Cookie-to-header token](https://en.wikipedia.org/wiki/Cross-site_request_forgery#Cookie-to-header_token)
+  technique. This means that if you're serving your Streamlit app from multiple replicas you'll need
+  to configure them to to use the same cookie secret, with the `server.cookieSecret` config option.
+  To turn XSRF protection off, set `server.enableWebsocketCompression=false`.
+
+**Notable bug fixes:**
+
+- 🖼️ Added a grace period to the image cache expiration logic in order to fix multiple related bugs
+  where images sent with `st.image` or `st.pyplot` were sometimes missing.
+
 ## Version 0.61.0
 
 _Release date: June 2, 2020_
