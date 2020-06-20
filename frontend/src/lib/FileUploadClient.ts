@@ -64,7 +64,9 @@ export class FileUploadClient {
       onUploadProgress,
       withCredentials: true,
       headers: {
-        "X-Xsrftoken": getCookie("_xsrf"),
+        // This works whether XSRF protection is on or off in the server. If off, this is set to
+        // undefined.
+        "X-XSRFToken": getCookie("_xsrf"),
       },
     })
   }

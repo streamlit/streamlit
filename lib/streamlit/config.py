@@ -398,10 +398,10 @@ _create_option(
 @_create_option("server.cookieSecret", type_=str)
 @util.memoize
 def _server_cookie_secret():
-    """Symmetric key used to produce signed cookies. If deploying on multiple
-    replicas, this should be set to ensure all replicas share the same secret.
+    """Symmetric key used to produce signed cookies. If deploying on multiple replicas, this should
+    be set to the same value across all replicas to ensure they all share the same secret.
 
-    Default: Randomly generated secret key.
+    Default: randomly generated secret key.
     """
     return secrets.token_hex()
 
@@ -476,9 +476,19 @@ _create_option(
 )
 
 
+# TODO: Rename to server.enableCorsProtection.
 @_create_option("server.enableCORS", type_=bool)
 def _server_enable_cors():
-    """Enables support for Cross-Origin Request Sharing, for added security.
+    """Enables support for Cross-Origin Request Sharing (CORS) protection, for added security.
+
+    Default: true
+    """
+    return True
+
+
+@_create_option("server.enableXsrfProtection", type_=bool)
+def _server_enable_xsrf_protection():
+    """Enables support for Cross-Site Request Forgery (XSRF) protection, for added security.
 
     Default: true
     """
@@ -516,7 +526,7 @@ def _browser_server_address():
     connect to the app. Can be IP address or DNS name and path.
 
     This is used to:
-    - Set the correct URL for CORS purposes.
+    - Set the correct URL for CORS and XSRF protection purposes.
     - Show the URL on the terminal
     - Open the browser
     - Tell the browser where to connect to the server when in liveSave mode.
@@ -541,7 +551,7 @@ def _browser_server_port():
     app.
 
     This is used to:
-    - Set the correct URL for CORS purposes.
+    - Set the correct URL for CORS and XSRF protection purposes.
     - Show the URL on the terminal
     - Open the browser
     - Tell the browser where to connect to the server when in liveSave mode.

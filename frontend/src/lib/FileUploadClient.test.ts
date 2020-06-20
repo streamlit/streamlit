@@ -63,7 +63,7 @@ describe("FileUploadClient", () => {
             return [400]
           }
 
-          if (!("X-Xsrftoken" in config.headers)) {
+          if (!("X-XSRFToken" in config.headers)) {
             return [403]
           } else if (!("withCredentials" in config)) {
             return [403]
