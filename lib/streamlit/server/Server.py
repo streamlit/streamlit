@@ -204,7 +204,7 @@ class Server(object):
         self._script_path = script_path
         self._command_line = command_line
 
-        media_file_manager.set_ioloop(ioloop = self._ioloop)
+        media_file_manager.set_ioloop(ioloop=self._ioloop)
 
         # Mapping of ReportSession.id -> SessionInfo.
         self._session_info_by_id = {}
