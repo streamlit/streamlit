@@ -182,7 +182,7 @@ visible in the Streamlit app:
 import streamlit as st
 
 def get_user_name():
-    return 'John'
+    return 'John Doe'
 
 # ------------------------------------------------
 # Want people to see this part of the code...
