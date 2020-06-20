@@ -41,6 +41,7 @@ import {
   ReportElement,
   SimpleElement,
 } from "lib/DeltaParser"
+import { setCookie } from "lib/utils"
 import {
   BackMsg,
   Delta,
@@ -142,7 +143,7 @@ export class App extends PureComponent<Props, State> {
       return this.connectionManager
         ? this.connectionManager.getBaseUriParts()
         : undefined
-    })
+    }, true)
     this.elementListBufferTimerIsSet = false
     this.elementListBuffer = null
 
@@ -225,6 +226,8 @@ export class App extends PureComponent<Props, State> {
       )
       this.widgetMgr.sendUpdateWidgetsMessage()
       this.setState({ dialog: null })
+    } else {
+      setCookie("_xsrf", "")
     }
   }
 

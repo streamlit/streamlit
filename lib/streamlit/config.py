@@ -478,7 +478,16 @@ _create_option(
 
 @_create_option("server.enableCORS", type_=bool)
 def _server_enable_cors():
-    """Enables support for Cross-Origin Request Sharing, for added security.
+    """Enables protection against Cross-Origin Request Sharing, for added security.
+
+    Default: true
+    """
+    return True
+
+
+@_create_option("server.enableCSRFProtection", type_=bool)
+def _server_enable_CSRF():
+    """Enables support for protection from Cross-site request forgery attacks. Requires CORS to be disabled.
 
     Default: true
     """
@@ -979,6 +988,17 @@ def _check_conflicts():
             "\n\nTo remove this warning, set the 'sharingMode' option to "
             "another value, or remove it from your Streamlit config."
         )
+
+    # CSRF conflicts
+
+    if get_option("server.enableCSRFProtection"):
+        if not get_option("server.enableCORS") or get_option("global.useNode"):
+            LOGGER.warning(
+                "server.enableCSRFProtection is not compatible with server.enableCORS. "
+                "We will prioritize server.enableCSRFProtection over server.enableCORS "
+                "where CSRF has been enabled. If cross origin POST, PUT or "
+                "DELETE requests are required, please disable 'server.enableCSRFProtection'"
+            )
 
 
 def _set_development_mode():
