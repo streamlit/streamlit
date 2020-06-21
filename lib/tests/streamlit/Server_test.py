@@ -462,6 +462,20 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
         response = self.fetch("/healthz")
         self.assertEqual(503, response.code)
 
+    def test_healthz_without_csrf(self):
+        config._set_option("server.enableXsrfProtection", False, "test")
+        response = self.fetch("/healthz")
+        self.assertEqual(200, response.code)
+        self.assertEqual(b"ok", response.body)
+        self.assertNotIn("Set-Cookie", response.headers)
+
+    def test_healthz_with_csrf(self):
+        config._set_option("server.enableXsrfProtection", True, "test")
+        response = self.fetch("/healthz")
+        self.assertEqual(200, response.code)
+        self.assertEqual(b"ok", response.body)
+        self.assertIn("Set-Cookie", response.headers)
+
 
 class PortRotateAHundredTest(unittest.TestCase):
     """Tests port rotation handles a MAX_PORT_SEARCH_RETRIES attempts then sys exits"""

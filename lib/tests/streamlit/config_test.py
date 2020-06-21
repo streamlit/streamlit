@@ -300,10 +300,10 @@ class ConfigTest(unittest.TestCase):
                 "server.baseUrlPath",
                 "server.enableCORS",
                 "server.cookieSecret",
-                "server.folderWatchBlacklist",
-                "server.enableXsrfProtection",
                 "server.enableWebsocketCompression",
+                "server.enableXsrfProtection",
                 "server.fileWatcherType",
+                "server.folderWatchBlacklist",
                 "server.headless",
                 "server.liveSave",
                 "server.address",
@@ -351,6 +351,13 @@ class ConfigTest(unittest.TestCase):
             str(e.value),
             "server.port does not work when global.developmentMode is true.",
         )
+
+    def test_check_conflicts_server_csrf(self):
+        config._set_option("server.enableXsrfProtection", True, "test")
+        config._set_option("server.enableCORS", True, "test")
+        with patch("streamlit.config.LOGGER") as patched_logger:
+            config._check_conflicts()
+            patched_logger.warning.assert_called_once()
 
     def test_check_conflicts_browser_serverport(self):
         config._set_option("global.developmentMode", True, "test")

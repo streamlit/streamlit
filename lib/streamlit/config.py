@@ -481,6 +481,9 @@ _create_option(
 def _server_enable_cors():
     """Enables support for Cross-Origin Request Sharing (CORS) protection, for added security.
 
+    Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is on and
+    `server.enableCORS` is off at the same time, we will prioritize `server.enableXsrfProtection`.
+
     Default: true
     """
     return True
@@ -489,6 +492,9 @@ def _server_enable_cors():
 @_create_option("server.enableXsrfProtection", type_=bool)
 def _server_enable_xsrf_protection():
     """Enables support for Cross-Site Request Forgery (XSRF) protection, for added security.
+
+    Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is on and
+    `server.enableCORS` is off at the same time, we will prioritize `server.enableXsrfProtection`.
 
     Default: true
     """
@@ -989,6 +995,16 @@ def _check_conflicts():
             "\n\nTo remove this warning, set the 'sharingMode' option to "
             "another value, or remove it from your Streamlit config."
         )
+
+    # XSRF conflicts
+
+    if get_option("server.enableXsrfProtection"):
+        if not get_option("server.enableCORS") or get_option("global.useNode"):
+            LOGGER.warning(
+                "The config option 'server.enableXsrfProtection is not compatible with "
+                "'server.enableCORS'. If 'server.enableXsrfProtection' is on and 'server.enableCORS' "
+                "is off at the same time, we will prioritize 'server.enableXsrfProtection'."
+            )
 
 
 def _set_development_mode():
