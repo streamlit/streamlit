@@ -20,6 +20,7 @@ import MockAdapter from "axios-mock-adapter"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { SessionInfo } from "lib/SessionInfo"
 import { buildHttpUri } from "lib/UriUtil"
+import { getCookie } from "lib/utils"
 
 const MOCK_SERVER_URI = {
   host: "streamlit.mock",
@@ -61,6 +62,14 @@ describe("FileUploadClient", () => {
             return [400]
           } else if (data.get("sessionId") == null) {
             return [400]
+          }
+
+          if (getCookie("_xsrf")) {
+            if (!("X-Xsrftoken" in config.headers)) {
+              return [403]
+            } else if (!("withCredentials" in config)) {
+              return [403]
+            }
           }
         }
 

@@ -42,10 +42,11 @@ function withFullScreenWrapper(
 
       return (
         <FullScreenWrapper width={width} height={height}>
-          {({ width, height }) => (
+          {({ width, height, expanded }) => (
             <WrappedComponent
               width={width}
               height={height}
+              isFullScreen={expanded}
               {...passThroughProps}
             />
           )}

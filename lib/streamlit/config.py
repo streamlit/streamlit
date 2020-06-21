@@ -17,6 +17,7 @@
 import os
 import toml
 import collections
+import secrets
 import urllib
 from typing import Dict
 
@@ -124,7 +125,7 @@ def _create_option(
                 default_val = 12345)
 
         (2) More complex, programmable config options use decorator syntax to
-        resolve thier values at runtime:
+        resolve their values at runtime:
 
             @_create_option('section.optionName')
             def _section_option_name():
@@ -394,6 +395,17 @@ _create_option(
 )
 
 
+@_create_option("server.cookieSecret", type_=str)
+@util.memoize
+def _server_cookie_secret():
+    """Symmetric key used to produce signed cookies. If deploying on multiple
+    replicas, this should be set to ensure all replicas share the same secret.
+
+    Default: Randomly generated secret key.
+    """
+    return secrets.token_hex()
+
+
 @_create_option("server.headless", type_=bool)
 @util.memoize
 def _server_headless():
@@ -466,7 +478,16 @@ _create_option(
 
 @_create_option("server.enableCORS", type_=bool)
 def _server_enable_cors():
-    """Enables support for Cross-Origin Request Sharing, for added security.
+    """Enables protection against Cross-Origin Request Sharing, for added security.
+
+    Default: true
+    """
+    return True
+
+
+@_create_option("server.enableCSRFProtection", type_=bool)
+def _server_enable_CSRF():
+    """Enables support for protection from Cross-site request forgery attacks. Requires CORS to be disabled.
 
     Default: true
     """
@@ -482,6 +503,15 @@ def _server_max_upload_size():
     # If this default is changed, please also update the docstring
     # for `DeltaGenerator.file_uploader`.
     return 200
+
+
+@_create_option("server.enableWebsocketCompression", type_=bool)
+def _server_enable_websocket_compression():
+    """Enables support for websocket compression.
+
+    Default: true
+    """
+    return True
 
 
 # Config Section: Browser #
@@ -958,6 +988,17 @@ def _check_conflicts():
             "\n\nTo remove this warning, set the 'sharingMode' option to "
             "another value, or remove it from your Streamlit config."
         )
+
+    # CSRF conflicts
+
+    if get_option("server.enableCSRFProtection"):
+        if not get_option("server.enableCORS") or get_option("global.useNode"):
+            LOGGER.warning(
+                "server.enableCSRFProtection is not compatible with server.enableCORS. "
+                "We will prioritize server.enableCSRFProtection over server.enableCORS "
+                "where CSRF has been enabled. If cross origin POST, PUT or "
+                "DELETE requests are required, please disable 'server.enableCSRFProtection'"
+            )
 
 
 def _set_development_mode():

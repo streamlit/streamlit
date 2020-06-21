@@ -34,6 +34,7 @@ from streamlit.ConfigOption import ConfigOption
 from streamlit.ForwardMsgCache import ForwardMsgCache
 from streamlit.ForwardMsgCache import create_reference_msg
 from streamlit.ForwardMsgCache import populate_hash_if_needed
+from streamlit.MediaFileManager import media_file_manager
 from streamlit.ReportSession import ReportSession
 from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.logger import get_logger
@@ -121,13 +122,17 @@ def start_listening(app):
     """
 
     call_count = 0
+    http_server = tornado.httpserver.HTTPServer(
+        app,
+        max_buffer_size=config.get_option("server.maxUploadSize") * 1024 * 1024
+    )
 
     while call_count < MAX_PORT_SEARCH_RETRIES:
         address = config.get_option("server.address")
         port = config.get_option("server.port")
 
         try:
-            app.listen(port, address)
+            http_server.listen(port, address)
             break  # It worked! So let's break out of the loop.
 
         except (OSError, socket.error) as e:
@@ -198,6 +203,8 @@ class Server(object):
         self._ioloop = ioloop
         self._script_path = script_path
         self._command_line = command_line
+
+        media_file_manager.set_ioloop(ioloop = self._ioloop)
 
         # Mapping of ReportSession.id -> SessionInfo.
         self._session_info_by_id = {}
@@ -329,7 +336,12 @@ class Server(object):
                 ]
             )
 
-        return tornado.web.Application(routes, **TORNADO_SETTINGS)
+        return tornado.web.Application(
+            routes,  # type: ignore[arg-type]
+            cookie_secret=config.get_option("server.cookieSecret"),
+            csrf_cookies=config.get_option("server.enableCSRFProtection"),
+            **TORNADO_SETTINGS # type: ignore[arg-type]
+        )
 
     def _set_state(self, new_state):
         LOGGER.debug("Server state: %s -> %s" % (self._state, new_state))
@@ -342,6 +354,11 @@ class Server(object):
     @property
     def browser_is_connected(self):
         return self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED
+
+    @property
+    def is_running_hello(self):
+        from streamlit.hello import hello
+        return self._script_path == hello.__file__
 
     @tornado.gen.coroutine
     def _loop_coroutine(self, on_started=None):
@@ -571,6 +588,13 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
     def initialize(self, server):
         self._server = server
         self._session = None
+        # The XSRF cookie is normally set when xsrf_form_html is used, but in a pure-Javascript application
+        # that does not use any regular forms we just need to read the self.xsrf_token manually to set the
+        # cookie as a side effect.
+        # See https://www.tornadoweb.org/en/stable/guide/security.html#cross-site-request-forgery-protection
+        # for more details.
+        if config.get_option("server.enableCSRFProtection"):
+            self.xsrf_token
 
     def check_origin(self, origin):
         """Set up CORS."""
@@ -588,12 +612,14 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
     def get_compression_options(self):
         """Enable WebSocket compression.
 
-        By default, this method returns None, which means compression
-        is disabled. Returning an empty dict enables it.
+        Returning an empty dict enables websocket compression. Returning
+        None disables it.
 
         (See the docstring in the parent class.)
         """
-        return {}
+        if config.get_option("server.enableWebsocketCompression"):
+            return {}
+        return None
 
     @tornado.gen.coroutine
     def on_message(self, payload):

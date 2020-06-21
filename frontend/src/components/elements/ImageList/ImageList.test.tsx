@@ -39,6 +39,7 @@ const getProps = (elementProps: object = {}): Props => ({
     ...elementProps,
   }),
   width: 0,
+  isFullScreen: false,
 })
 
 describe("ImageList Element", () => {
@@ -116,6 +117,23 @@ describe("ImageList Element", () => {
     wrapper.find(".stImage img").forEach((imgWrapper, id) => {
       // @ts-ignore
       expect(imgWrapper.prop("src")).toBe(imgs[id].url)
+    })
+  })
+
+  describe("fullScreen", () => {
+    const props = { ...getProps(), isFullScreen: true, height: 100 }
+    const wrapper = shallow(<ImageList {...props} />)
+
+    it("should not have a caption", () => {
+      expect(wrapper.find(".stImage .caption").length).toBe(0)
+    })
+
+    it("should have the proper style", () => {
+      const fullScreenAppearance = { height: 100, "object-fit": "contain" }
+
+      wrapper.find(".stImage img").forEach(imgWrapper => {
+        expect(imgWrapper.prop("style")).toStrictEqual(fullScreenAppearance)
+      })
     })
   })
 })

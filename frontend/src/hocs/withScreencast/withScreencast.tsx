@@ -108,7 +108,15 @@ function withScreencast(
       const { recordAudio } = this.state
 
       this.recorder = new ScreenCastRecorder({ recordAudio })
-      await this.recorder.initialize()
+
+      try {
+        await this.recorder.initialize()
+      } catch (e) {
+        // Just in case if there's something wrong when initializing the recorder
+        this.setState({
+          currentState: "UNSUPPORTED",
+        })
+      }
 
       this.setState({
         currentState: "COUNTDOWN",
@@ -174,6 +182,15 @@ function withScreencast(
     }
 
     checkSupportedBrowser = (): boolean => {
+      if (
+        !navigator.mediaDevices ||
+        !navigator.mediaDevices.getUserMedia ||
+        // @ts-ignore reason: https://github.com/microsoft/TypeScript/issues/33232
+        !navigator.mediaDevices.getDisplayMedia
+      ) {
+        return false
+      }
+
       const whichBrowser = new WhichBrowser(navigator.userAgent)
 
       const result = Object.keys(SUPPORTED_BROWSERS).map(browser => {

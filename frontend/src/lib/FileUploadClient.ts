@@ -15,20 +15,15 @@
  * limitations under the License.
  */
 
-import axios, { CancelToken } from "axios"
+import { CancelToken } from "axios"
+import HttpClient from "lib/HttpClient"
 import { SessionInfo } from "lib/SessionInfo"
-import { BaseUriParts, buildHttpUri } from "lib/UriUtil"
+import { buildHttpUri } from "lib/UriUtil"
 
 /**
  * Handles uploading files to the server.
  */
-export class FileUploadClient {
-  private readonly getServerUri: () => BaseUriParts | undefined
-
-  public constructor(getServerUri: () => BaseUriParts | undefined) {
-    this.getServerUri = getServerUri
-  }
-
+export class FileUploadClient extends HttpClient {
   /**
    * Upload a file to the server. It will be associated with this browser's sessionID.
    *
@@ -55,7 +50,7 @@ export class FileUploadClient {
       form.append(file.name, file)
     }
 
-    await axios.request({
+    await this.request({
       cancelToken: cancelToken,
       url: buildHttpUri(serverURI, "upload_file"),
       method: "POST",

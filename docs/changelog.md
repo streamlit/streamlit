@@ -16,6 +16,21 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.61.0
+
+_Release date: June 2, 2020_
+
+**Highlights:**
+
+- 📅 Support for date ranges in `st.date_picker`. See
+  [docs](https://docs.streamlit.io/en/latest/api.html#streamlit.date_picker)
+  for more info, but the TLDR is: just pass a list/tuple as the default date and it will be
+  interpreted as a range.
+- 🗣️ You can now choose whether `st.echo` prints the code above or below the output of the echoed
+  block. To learn more, refer to the `code_location` argument in the
+  [docs](https://docs.streamlit.io/en/latest/api.html#streamlit.echo).
+- 📦 Improved `@st.cache` support for Keras models and Tensorflow `saved_models`.
+
 ## Version 0.60.0
 
 _Release date: May 18, 2020_
