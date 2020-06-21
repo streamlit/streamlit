@@ -18,7 +18,7 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
 
 ## Version 0.62.0
 
-_Release date: June 20, 2020_
+_Release date: June 21, 2020_
 
 **Highlights:**
 
