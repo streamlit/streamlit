@@ -182,6 +182,11 @@ h6 {
   border-radius: 50px;
 }
 
+/* For small screens, make nav-top black */
+.wy-nav-top {
+  background: var(--st-black);
+}
+
 /* 960 is where the RTD mobile/responsive theme kicks in to move nav to header */
 @media (min-width: 960px) {
   h1 {
