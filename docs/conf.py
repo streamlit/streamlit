@@ -121,6 +121,8 @@ html_css_files = [
 
 html_logo = "_static/img/logomark_website.png"
 
+html_show_sphinx = False
+
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
 #
