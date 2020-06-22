@@ -34,6 +34,7 @@ from streamlit.ConfigOption import ConfigOption
 from streamlit.ForwardMsgCache import ForwardMsgCache
 from streamlit.ForwardMsgCache import create_reference_msg
 from streamlit.ForwardMsgCache import populate_hash_if_needed
+from streamlit.MediaFileManager import media_file_manager
 from streamlit.ReportSession import ReportSession
 from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.logger import get_logger
@@ -64,7 +65,6 @@ TORNADO_SETTINGS = {
     "websocket_ping_interval": 20,  # Ping every 20s to keep WS alive.
     "websocket_ping_timeout": 30,  # Pings should be responded to within 30s.
     "websocket_max_message_size": MESSAGE_SIZE_LIMIT,  # Up the WS size limit.
-    "xsrf_cookies": True,
 }
 
 
@@ -204,6 +204,8 @@ class Server(object):
         self._script_path = script_path
         self._command_line = command_line
 
+        media_file_manager.set_ioloop(ioloop = self._ioloop)
+
         # Mapping of ReportSession.id -> SessionInfo.
         self._session_info_by_id = {}
 
@@ -337,7 +339,8 @@ class Server(object):
         return tornado.web.Application(
             routes,  # type: ignore[arg-type]
             cookie_secret=config.get_option("server.cookieSecret"),
-            **TORNADO_SETTINGS  # type: ignore[arg-type]
+            csrf_cookies=config.get_option("server.enableCSRFProtection"),
+            **TORNADO_SETTINGS # type: ignore[arg-type]
         )
 
     def _set_state(self, new_state):
@@ -586,11 +589,12 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
         self._server = server
         self._session = None
         # The XSRF cookie is normally set when xsrf_form_html is used, but in a pure-Javascript application
-        # that does not use any regular forms we just  need to read the self.xsrf_token manually to set the
-        # cookie as a side effect).
+        # that does not use any regular forms we just need to read the self.xsrf_token manually to set the
+        # cookie as a side effect.
         # See https://www.tornadoweb.org/en/stable/guide/security.html#cross-site-request-forgery-protection
         # for more details.
-        self.xsrf_token
+        if config.get_option("server.enableCSRFProtection"):
+            self.xsrf_token
 
     def check_origin(self, origin):
         """Set up CORS."""
