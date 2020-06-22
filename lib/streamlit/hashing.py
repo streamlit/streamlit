@@ -266,10 +266,9 @@ class _CodeHasher:
             if key in self._hashes:
                 return self._hashes[key]
 
-            # TODO need a test case to justify keeping this
-            # # Add a tombstone hash to break recursive calls.
-            # self._counter += 1
-            # self._hashes[key] = b"tombstone:%s" % _int_to_bytes(self._counter)
+            # Add a tombstone hash to break recursive calls.
+            #self._counter += 1
+            #self._hashes[key] = b"tombstone:%s" % _int_to_bytes(self._counter)
 
         if obj in hash_stacks.current:
             return _CYCLE_PLACEHOLDER
