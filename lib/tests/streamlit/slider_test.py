@@ -36,8 +36,8 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.label, "the label")
         self.assertEqual(c.default, [0])
 
-    DT_START = datetime.fromisoformat("2020-01-01")
-    DT_END = datetime.fromisoformat("2020-01-05")
+    DT_START = datetime(2020, 1, 1)
+    DT_END = datetime(2020, 1, 5)
     # datetimes are serialized in proto as micros since epoch
     DT_START_MICROS = 1577865600000000
     DT_END_MICROS = 1578211200000000
