@@ -144,6 +144,44 @@ h6 {
   font-weight: 600;
 }
 
+/*make logo smaller*/
+.wy-side-nav-search > a img.logo {
+  height: 40px;
+  position: absolute;
+  left: 15px;
+}
+
+/* sidebar headings */
+.wy-menu-vertical p.caption {
+  color: var(--heading-color);
+  font-weight: 500;
+}
+
+/*sidebar background color*/
+.wy-nav-side,
+.wy-menu-vertical li.current,
+.wy-menu-vertical li.toctree-l2.current > a,
+.wy-menu-vertical li.toctree-l2.current li.toctree-l3 > a {
+  background: var(--sidebar-bg);
+}
+
+/*top-level font color*/
+.wy-menu-vertical a,
+.wy-side-nav-search > div.version {
+  color: var(--sidefont-color);
+  font-size: 14px;
+}
+
+.wy-menu-vertical {
+  border-right: 1px solid var(--sidefont-color);
+}
+
+/*style search bar*/
+#rtd-search-form > input[type="text"] {
+  width: 220px;
+  border-radius: 50px;
+}
+
 /* 960 is where the RTD mobile/responsive theme kicks in to move nav to header */
 @media (min-width: 960px) {
   h1 {
@@ -201,40 +239,6 @@ h6 {
     float: right;
   }
 
-  /*style search bar*/
-  #rtd-search-form > input[type="text"] {
-    width: 250px;
-    border-radius: 50px;
-  }
-
-  /*make logo smaller*/
-  .wy-side-nav-search > a img.logo {
-    height: 40px;
-    position: absolute;
-    left: 15px;
-  }
-
-  /* sidebar headings */
-  .wy-menu-vertical p.caption {
-    color: var(--heading-color);
-    font-weight: 500;
-  }
-
-  /*sidebar background color*/
-  .wy-nav-side,
-  .wy-menu-vertical li.current,
-  .wy-menu-vertical li.toctree-l2.current > a,
-  .wy-menu-vertical li.toctree-l2.current li.toctree-l3 > a {
-    background: var(--sidebar-bg);
-  }
-
-  /*top-level font color*/
-  .wy-menu-vertical a,
-  .wy-side-nav-search > div.version {
-    color: var(--sidefont-color);
-    font-size: 14px;
-  }
-
   /*borders for hover*/
   .wy-menu-vertical li.toctree-l1.current > a,
   .wy-menu-vertical li.current a {
@@ -265,10 +269,6 @@ h6 {
   }
   .rst-content .tip .admonition-title {
     color: var(--tip-title);
-  }
-
-  .wy-menu-vertical {
-    border-right: 1px solid var(--sidefont-color);
   }
 
   /* site centering code */
