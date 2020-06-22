@@ -1,1 +1,1 @@
-include package/frontend/build/*
+recursive-include package/frontend/build *
