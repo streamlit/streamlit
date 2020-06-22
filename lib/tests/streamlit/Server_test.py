@@ -163,6 +163,21 @@ class ServerTest(ServerTestCase):
             self.assertIn("permessage-deflate", extensions)
 
     @tornado.testing.gen_test
+    def test_websocket_compression_disabled(self):
+        with self._patch_report_session():
+            config._set_option("server.enableWebsocketCompression", False, "test")
+            yield self.start_server_loop()
+
+            # Connect to the server, and explicitly request compression.
+            ws_client = yield tornado.websocket.websocket_connect(
+                self.get_ws_url("/stream"), compression_options={}
+            )
+
+            # Ensure that the "Sec-Websocket-Extensions" header is not
+            # present in the response from the server.
+            self.assertIsNone(ws_client.headers.get("Sec-Websocket-Extensions"))
+
+    @tornado.testing.gen_test
     def test_forwardmsg_hashing(self):
         """Test that outgoing ForwardMsgs contain hashes."""
         with self._patch_report_session():
@@ -445,6 +460,20 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self._is_healthy = False
         response = self.fetch("/healthz")
         self.assertEqual(503, response.code)
+
+    def test_healthz_without_csrf(self):
+        config._set_option("server.enableCSRFProtection", False, "test")
+        response = self.fetch("/healthz")
+        self.assertEqual(200, response.code)
+        self.assertEqual(b"ok", response.body)
+        self.assertNotIn("Set-Cookie", response.headers)
+
+    def test_healthz_with_csrf(self):
+        config._set_option("server.enableCSRFProtection", True, "test")
+        response = self.fetch("/healthz")
+        self.assertEqual(200, response.code)
+        self.assertEqual(b"ok", response.body)
+        self.assertIn("Set-Cookie", response.headers)
 
 
 class PortRotateAHundredTest(unittest.TestCase):

@@ -1032,7 +1032,7 @@ class DeltaGenerator(object):
         spec=None,
         width=0,
         use_container_width=False,
-        **kwargs
+        **kwargs,
     ):
         """Display a chart using the Vega-Lite library.
 
@@ -1272,7 +1272,7 @@ class DeltaGenerator(object):
         height=0,
         use_container_width=False,
         sharing="streamlit",
-        **kwargs
+        **kwargs,
     ):
         """Display an interactive Plotly chart.
 
@@ -1580,11 +1580,7 @@ class DeltaGenerator(object):
         from .elements import iframe_proto
 
         iframe_proto.marshall(
-            element.iframe,
-            src=src,
-            width=width,
-            height=height,
-            scrolling=scrolling,
+            element.iframe, src=src, width=width, height=height, scrolling=scrolling,
         )
 
     @_with_element

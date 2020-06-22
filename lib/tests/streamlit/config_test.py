@@ -28,8 +28,6 @@ from streamlit import config
 from streamlit import env_util
 from streamlit.ConfigOption import ConfigOption
 
-os.environ["STREAMLIT_COOKIE_SECRET"] = "chocolatechip"
-
 SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
 CONFIG_OPTIONS = copy.deepcopy(config._config_options)
 
@@ -299,9 +297,11 @@ class ConfigTest(unittest.TestCase):
                 "s3.region",
                 "s3.secretAccessKey",
                 "s3.url",
-                "server.enableCORS",
                 "server.baseUrlPath",
                 "server.cookieSecret",
+                "server.enableCORS",
+                "server.enableCSRFProtection",
+                "server.enableWebsocketCompression",
                 "server.folderWatchBlacklist",
                 "server.fileWatcherType",
                 "server.headless",
@@ -351,6 +351,13 @@ class ConfigTest(unittest.TestCase):
             str(e.value),
             "server.port does not work when global.developmentMode is true.",
         )
+
+    def test_check_conflicts_server_csrf(self):
+        config._set_option("server.enableCSRFProtection", True, "test")
+        config._set_option("server.enableCORS", True, "test")
+        with patch("streamlit.config.LOGGER") as patched_logger:
+            config._check_conflicts()
+            patched_logger.warning.assert_called_once()
 
     def test_check_conflicts_browser_serverport(self):
         config._set_option("global.developmentMode", True, "test")
@@ -475,11 +482,6 @@ class ConfigTest(unittest.TestCase):
         config.set_option("global.developmentMode", False)
         config.set_option("server.port", 1234)
         self.assertEqual(1234, config.get_option("browser.serverPort"))
-
-    def test_server_cookie_secret(self):
-        self.assertEqual("chocolatechip", config.get_option("server.cookieSecret"))
-
-        del os.environ["STREAMLIT_COOKIE_SECRET"]
 
     def test_server_headless_via_liveSave(self):
         config.set_option("server.liveSave", True)

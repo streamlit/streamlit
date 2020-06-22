@@ -25,8 +25,6 @@ describe("st.file_uploader", () => {
 
     cy.visit("http://localhost:3000/");
 
-    cy.getCookie("_xsrf").should("exist");
-
     // Make the ribbon decoration line disappear
     cy.get(".decoration").invoke("css", "display", "none");
   });
