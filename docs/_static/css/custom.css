@@ -187,6 +187,14 @@ h6 {
   background: var(--st-black);
 }
 
+/*hover/selection color*/
+.wy-menu-vertical a:hover,
+.wy-menu-vertical li.current a:hover,
+.wy-menu.wy-menu-vertical > ul.current > li.toctree-l1.current > a {
+  background: var(--sidebar-bg);
+  font-weight: 500;
+}
+
 /* 960 is where the RTD mobile/responsive theme kicks in to move nav to header */
 @media (min-width: 960px) {
   h1 {
@@ -248,14 +256,6 @@ h6 {
   .wy-menu-vertical li.toctree-l1.current > a,
   .wy-menu-vertical li.current a {
     border: none;
-  }
-
-  /*hover/selection color*/
-  .wy-menu-vertical a:hover,
-  .wy-menu-vertical li.current a:hover,
-  .wy-menu.wy-menu-vertical > ul.current > li.toctree-l1.current > a {
-    background: var(--sidebar-bg);
-    font-weight: 500;
   }
 
   /* style notes */
