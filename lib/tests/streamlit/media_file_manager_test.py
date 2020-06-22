@@ -257,7 +257,9 @@ class MediaFileManagerTest(AsyncTestCase):
         self.mfm.clear_session_files()
 
         self.assertEqual(len(self.mfm), len(VIDEO_FIXTURES))  # Clears later
-        self.assertEqual(len(self.mfm._files_by_session_and_coord), 0)  # Clears immediately
+        self.assertEqual(
+            len(self.mfm._files_by_session_and_coord), 0
+        )  # Clears immediately
 
         _time.return_value = KEEP_DELAY_SEC + 1
         pretend_time_passed[0]()
