@@ -22,6 +22,8 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber
 from tests import testutil
 
+from datetime import datetime
+
 
 class SliderTest(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall slider protos."""
@@ -34,6 +36,12 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.label, "the label")
         self.assertEqual(c.default, [0])
 
+    DT_START = datetime.fromisoformat("2020-01-01")
+    DT_END = datetime.fromisoformat("2020-01-05")
+    # datetimes are serialized in proto as micros since epoch
+    DT_START_MICROS = 1577865600000000
+    DT_END_MICROS = 1578211200000000
+
     @parameterized.expand(
         [
             (1, [1], 1),  # int
@@ -42,6 +50,10 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
             (0.5, [0.5], 0.5),  # float
             ((0.2, 0.5), [0.2, 0.5], (0.2, 0.5)),  # float tuple
             ([0.2, 0.5], [0.2, 0.5], (0.2, 0.5)),  # float list
+            # datetime values: single, tuple, and list
+            (DT_START, [DT_START_MICROS], DT_START),
+            ((DT_START, DT_END), [DT_START_MICROS, DT_END_MICROS], (DT_START, DT_END)),
+            ([DT_START, DT_END], [DT_START_MICROS, DT_END_MICROS], (DT_START, DT_END)),
         ]
     )
     def test_value_types(self, value, proto_value, return_value):
