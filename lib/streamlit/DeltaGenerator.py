@@ -1996,6 +1996,7 @@ class DeltaGenerator(object):
             data_type = Slider.FLOAT
         elif datetime_value:
             data_type = Slider.DATETIME
+            single_datetime_value = value if single_value else value[0]
 
         DEFAULTS = {
             Slider.INT: {"min_value": 0, "max_value": 100, "step": 1, "format": "%d"},
@@ -2007,8 +2008,12 @@ class DeltaGenerator(object):
             },
             Slider.DATETIME: {
                 # Only perform datetime arithmetic if value is a datetime.
-                "min_value": value - timedelta(days=7) if datetime_value else 0,
-                "max_value": value + timedelta(days=7) if datetime_value else 0,
+                "min_value": single_datetime_value - timedelta(days=7)
+                if datetime_value
+                else 0,
+                "max_value": single_datetime_value + timedelta(days=7)
+                if datetime_value
+                else 0,
                 "step": timedelta(days=1),
                 "format": "YYYY-MM-DD",
             },
@@ -2077,7 +2082,9 @@ class DeltaGenerator(object):
             start, end = value
             if not min_value <= start <= end <= max_value:
                 raise StreamlitAPIException(
-                    "The value and/or arguments are out of range."
+                    "The value and/or arguments are out of range.\n"
+                    "Expected: min_value <= start <= end <= max_value\n"
+                    f"But was: {min_value} <= {start} <= {end} <= {max_value}"
                 )
         else:
             value = [min_value, max_value]
@@ -2099,30 +2106,32 @@ class DeltaGenerator(object):
         except JSNumberBoundsException as e:
             raise StreamlitAPIException(str(e))
 
-        SECONDS_TO_MICROS = 1000 * 1000
-        DAYS_TO_MICROS = 24 * 60 * 60 * SECONDS_TO_MICROS
-
-        def deltaToMicros(delta):
-            return (
-                delta.microseconds
-                + delta.seconds * SECONDS_TO_MICROS
-                + delta.days * DAYS_TO_MICROS
-            )
-
-        UTC_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
-
-        def datetimeToMicros(dt):
-            # All unaware times are processed using the local timezone
-            aware_dt = dt.astimezone()
-            delta = aware_dt - UTC_EPOCH
-            return deltaToMicros(delta)
-
-        def microsToDatetime(micros):
-            utc_dt = UTC_EPOCH + timedelta(microseconds=micros)
-            return utc_dt.astimezone()
-
         # Now, convert to microseconds (so we can serialize datetime to a long)
         if all_datetimes:
+            SECONDS_TO_MICROS = 1000 * 1000
+            DAYS_TO_MICROS = 24 * 60 * 60 * SECONDS_TO_MICROS
+
+            def deltaToMicros(delta):
+                return (
+                    delta.microseconds
+                    + delta.seconds * SECONDS_TO_MICROS
+                    + delta.days * DAYS_TO_MICROS
+                )
+
+            UTC_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+            def datetimeToMicros(dt):
+                # If dt is naive, Python converts from local time
+                utc_dt = dt.astimezone(timezone.utc)
+                return deltaToMicros(utc_dt - UTC_EPOCH)
+
+            def microsToDatetime(micros):
+                utc_dt = UTC_EPOCH + timedelta(microseconds=micros)
+                # Convert from utc back to original time (local time if naive)
+                # NOTE: Treats single_datetime_value as source of truth
+                orig_tz = single_datetime_value.tzinfo
+                return utc_dt.astimezone(orig_tz).replace(tzinfo=orig_tz)
+
             value = (
                 datetimeToMicros(value)
                 if single_value
