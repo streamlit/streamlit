@@ -180,6 +180,7 @@ h6 {
 #rtd-search-form > input[type="text"] {
   width: 220px;
   border-radius: 50px;
+  float: right;
 }
 
 /* For small screens, make nav-top black */
