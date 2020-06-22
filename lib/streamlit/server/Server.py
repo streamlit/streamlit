@@ -123,8 +123,7 @@ def start_listening(app):
 
     call_count = 0
     http_server = tornado.httpserver.HTTPServer(
-        app,
-        max_buffer_size=config.get_option("server.maxUploadSize") * 1024 * 1024
+        app, max_buffer_size=config.get_option("server.maxUploadSize") * 1024 * 1024
     )
 
     while call_count < MAX_PORT_SEARCH_RETRIES:
@@ -204,7 +203,7 @@ class Server(object):
         self._script_path = script_path
         self._command_line = command_line
 
-        media_file_manager.set_ioloop(ioloop = self._ioloop)
+        media_file_manager.set_ioloop(ioloop=self._ioloop)
 
         # Mapping of ReportSession.id -> SessionInfo.
         self._session_info_by_id = {}
@@ -340,7 +339,7 @@ class Server(object):
             routes,  # type: ignore[arg-type]
             cookie_secret=config.get_option("server.cookieSecret"),
             csrf_cookies=config.get_option("server.enableCSRFProtection"),
-            **TORNADO_SETTINGS # type: ignore[arg-type]
+            **TORNADO_SETTINGS,  # type: ignore[arg-type]
         )
 
     def _set_state(self, new_state):
@@ -358,6 +357,7 @@ class Server(object):
     @property
     def is_running_hello(self):
         from streamlit.hello import hello
+
         return self._script_path == hello.__file__
 
     @tornado.gen.coroutine

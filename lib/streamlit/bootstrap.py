@@ -212,7 +212,9 @@ def _print_url(is_running_hello):
     click.secho("")
 
     if is_running_hello:
-        click.secho("  Ready to create your own Python apps super quickly? Just head over to:")
+        click.secho(
+            "  Ready to create your own Python apps super quickly? Just head over to:"
+        )
         click.secho("  https://docs.streamlit.io")
         click.secho("  May you create awesome apps!")
         click.secho("")
