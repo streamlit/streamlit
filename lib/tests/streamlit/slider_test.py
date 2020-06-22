@@ -23,6 +23,8 @@ from streamlit.js_number import JSNumber
 from tests import testutil
 
 from datetime import datetime
+from datetime import timezone
+from datetime import timedelta
 
 
 class SliderTest(testutil.DeltaGeneratorTestCase):
@@ -36,11 +38,12 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.label, "the label")
         self.assertEqual(c.default, [0])
 
-    DT_START = datetime(2020, 1, 1)
-    DT_END = datetime(2020, 1, 5)
+    PST = timezone(timedelta(hours=-8), "PST")
+    AWARE_START = datetime(2020, 1, 1, tzinfo=PST)
+    AWARE_END = datetime(2020, 1, 5, tzinfo=PST)
     # datetimes are serialized in proto as micros since epoch
-    DT_START_MICROS = 1577865600000000
-    DT_END_MICROS = 1578211200000000
+    AWARE_START_MICROS = 1577865600000000
+    AWARE_END_MICROS = 1578211200000000
 
     @parameterized.expand(
         [
@@ -50,10 +53,17 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
             (0.5, [0.5], 0.5),  # float
             ((0.2, 0.5), [0.2, 0.5], (0.2, 0.5)),  # float tuple
             ([0.2, 0.5], [0.2, 0.5], (0.2, 0.5)),  # float list
-            # datetime values: single, tuple, and list
-            (DT_START, [DT_START_MICROS], DT_START),
-            ((DT_START, DT_END), [DT_START_MICROS, DT_END_MICROS], (DT_START, DT_END)),
-            ([DT_START, DT_END], [DT_START_MICROS, DT_END_MICROS], (DT_START, DT_END)),
+            (AWARE_START, [AWARE_START_MICROS], AWARE_START),  # datetime
+            (
+                (AWARE_START, AWARE_END),  # datetime tuple
+                [AWARE_START_MICROS, AWARE_END_MICROS],
+                (AWARE_START, AWARE_END),
+            ),
+            (
+                [AWARE_START, AWARE_END],  # datetime list
+                [AWARE_START_MICROS, AWARE_END_MICROS],
+                (AWARE_START, AWARE_END),
+            ),
         ]
     )
     def test_value_types(self, value, proto_value, return_value):
@@ -65,6 +75,25 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.slider
         self.assertEqual(c.label, "the label")
         self.assertEqual(c.default, proto_value)
+
+    NAIVE_START = datetime(2020, 2, 1)
+    NAIVE_END = datetime(2020, 2, 4)
+
+    @parameterized.expand(
+        [
+            (NAIVE_START, NAIVE_START),  # naive datetime
+            ((NAIVE_START, NAIVE_END), (NAIVE_START, NAIVE_END),),  # naive tuple
+            ([NAIVE_START, NAIVE_END], (NAIVE_START, NAIVE_END),),  # naive list
+        ]
+    )
+    def test_naive_datetime(self, value, return_value):
+        """Ignore proto values (they change based on testing machine's timezone)"""
+        ret = st.slider("the label", value=value)
+
+        self.assertEqual(ret, return_value)
+
+        c = self.get_delta_from_queue().new_element.slider
+        self.assertEqual(c.label, "the label")
 
     def test_value_greater_than_min(self):
         with pytest.raises(StreamlitAPIException) as exc_slider:
