@@ -15,61 +15,12 @@
  * limitations under the License.
  */
 
-import React, { CSSProperties } from "react"
 import { Map as ImmutableMap } from "immutable"
-
-/**
- * Our iframe sandbox options.
- * See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe#Attributes
- *
- * From that page:
- * "When the embedded document has the same origin as the embedding page, it is
- * strongly discouraged to use both allow-scripts and allow-same-origin, as
- * that lets the embedded document remove the sandbox attribute — making it no
- * more secure than not using the sandbox attribute at all."
- */
-const SANDBOX_POLICY = [
-  // Allows for downloads to occur without a gesture from the user.
-  // Experimental; limited browser support.
-  // "allow-downloads-without-user-activation",
-
-  // Allows the resource to submit forms. If this keyword is not used, form submission is blocked.
-  "allow-forms",
-
-  // Lets the resource open modal windows.
-  "allow-modals",
-
-  // Lets the resource lock the screen orientation.
-  // "allow-orientation-lock",
-
-  // Lets the resource use the Pointer Lock API.
-  // "allow-pointer-lock",
-
-  // Allows popups (such as window.open(), target="_blank", or showModalDialog()). If this keyword is not used, the popup will silently fail to open.
-  "allow-popups",
-
-  // Lets the sandboxed document open new windows without those windows inheriting the sandboxing. For example, this can safely sandbox an advertisement without forcing the same restrictions upon the page the ad links to.
-  "allow-popups-to-escape-sandbox",
-
-  // Lets the resource start a presentation session.
-  // "allow-presentation",
-
-  // If this token is not used, the resource is treated as being from a special origin that always fails the same-origin policy.
-  "allow-same-origin",
-
-  // Lets the resource run scripts (but not create popup windows).
-  "allow-scripts",
-
-  // Lets the resource request access to the parent's storage capabilities with the Storage Access API.
-  // Experimental; limited browser support.
-  // "allow-storage-access-by-user-activation",
-
-  // Lets the resource navigate the top-level browsing context (the one named _top).
-  // "allow-top-navigation",
-
-  // Lets the resource navigate the top-level browsing context, but only if initiated by a user gesture.
-  // "allow-top-navigation-by-user-activation",
-].join(" ")
+import {
+  DEFAULT_IFRAME_FEATURE_POLICY,
+  DEFAULT_IFRAME_SANDBOX_POLICY,
+} from "lib/IFrameUtil"
+import React, { CSSProperties } from "react"
 
 export interface Props {
   element: ImmutableMap<string, any>
@@ -97,14 +48,14 @@ class IFrame extends React.PureComponent<Props> {
 
     return (
       <iframe
+        allow={DEFAULT_IFRAME_FEATURE_POLICY}
         style={style}
         src={getNonEmptyString(this.props.element, "src")}
         srcDoc={getNonEmptyString(this.props.element, "srcdoc")}
         width={width}
         height={this.props.element.get("height")}
-        allowFullScreen={false}
         scrolling={scrolling}
-        sandbox={SANDBOX_POLICY}
+        sandbox={DEFAULT_IFRAME_SANDBOX_POLICY}
         title="st.iframe"
       />
     )
