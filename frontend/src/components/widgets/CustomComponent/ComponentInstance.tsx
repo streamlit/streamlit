@@ -234,7 +234,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     if (this.iframeRef.current.contentWindow == null) {
       // Nor should this.
       logError(
-        `ComponentInstance iframe does not have an iframeRef, and will not receive messages!`
+        `ComponentInstance iframe does not have a contentWindow, and will not receive messages!`
       )
       return
     }
