@@ -339,7 +339,7 @@ class Server(object):
             routes,  # type: ignore[arg-type]
             cookie_secret=config.get_option("server.cookieSecret"),
             xsrf_cookies=config.get_option("server.enableXsrfProtection"),
-            **TORNADO_SETTINGS,  # type: ignore[arg-type],
+            **TORNADO_SETTINGS,  # type: ignore[arg-type]
         )
 
     def _set_state(self, new_state):
