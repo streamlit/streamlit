@@ -18,7 +18,7 @@
 import { Map as ImmutableMap } from "immutable"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
-  DEFAULT_IFRAME_SANDBOX_POLICY,
+  getIFrameSandboxPolicy,
 } from "lib/IFrameUtil"
 import React, { CSSProperties } from "react"
 
@@ -46,16 +46,34 @@ class IFrame extends React.PureComponent<Props> {
       style = { overflow: "hidden" }
     }
 
+    // Either 'src' or 'srcDoc' will be set in our element. If 'src'
+    // is set, we're loading a remote URL in the iframe, and we can
+    // safely use the `allow-same-origin` sandbox parameter. But if
+    // 'srcDoc' is set instead, we're displaying a literal string as HTML,
+    // and our iframe will have the same origin as we do, and therefore
+    // we cannot safely use `allow-same-origin` because doing so would
+    // let the iframe'd content escape its sandbox.
+    const src = getNonEmptyString(this.props.element, "src")
+    let srcDoc: string | undefined
+    let allowSameOrigin: boolean
+    if (src != null) {
+      srcDoc = undefined
+      allowSameOrigin = true
+    } else {
+      srcDoc = getNonEmptyString(this.props.element, "srcDoc")
+      allowSameOrigin = false
+    }
+
     return (
       <iframe
         allow={DEFAULT_IFRAME_FEATURE_POLICY}
         style={style}
-        src={getNonEmptyString(this.props.element, "src")}
-        srcDoc={getNonEmptyString(this.props.element, "srcdoc")}
+        src={src}
+        srcDoc={srcDoc}
         width={width}
         height={this.props.element.get("height")}
         scrolling={scrolling}
-        sandbox={DEFAULT_IFRAME_SANDBOX_POLICY}
+        sandbox={getIFrameSandboxPolicy(allowSameOrigin)}
         title="st.iframe"
       />
     )

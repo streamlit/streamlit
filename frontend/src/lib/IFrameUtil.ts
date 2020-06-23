@@ -52,6 +52,7 @@ export const DEFAULT_IFRAME_SANDBOX_POLICY = [
   // "allow-presentation",
 
   // If this token is not used, the resource is treated as being from a special origin that always fails the same-origin policy.
+  // (This token is conditionally set - the element must opt into it.)
   // "allow-same-origin",
 
   // Lets the resource run scripts (but not create popup windows).
@@ -157,3 +158,15 @@ export const DEFAULT_IFRAME_FEATURE_POLICY = [
   // Controls whether or not the current document is allowed to use the WebXR Device API to interact with a WebXR session.
   "xr-spatial-tracking",
 ].join("; ")
+
+/**
+ * Return an iFrame sandbox policy with the `allow-same-origin` token
+ * optionally set.
+ */
+export function getIFrameSandboxPolicy(allowSameOrigin: boolean) {
+  let sandboxPolicy = DEFAULT_IFRAME_SANDBOX_POLICY
+  if (allowSameOrigin) {
+    sandboxPolicy += " allow-same-origin"
+  }
+  return sandboxPolicy
+}
