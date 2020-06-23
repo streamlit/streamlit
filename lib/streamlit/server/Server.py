@@ -345,7 +345,7 @@ class Server(object):
         return tornado.web.Application(
             routes,  # type: ignore[arg-type]
             cookie_secret=config.get_option("server.cookieSecret"),
-            csrf_cookies=config.get_option("server.enableCSRFProtection"),
+            xsrf_cookies=config.get_option("server.enableXsrfProtection"),
             **TORNADO_SETTINGS,  # type: ignore[arg-type]
         )
 
@@ -600,7 +600,7 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
         # cookie as a side effect.
         # See https://www.tornadoweb.org/en/stable/guide/security.html#cross-site-request-forgery-protection
         # for more details.
-        if config.get_option("server.enableCSRFProtection"):
+        if config.get_option("server.enableXsrfProtection"):
             self.xsrf_token
 
     def check_origin(self, origin):
