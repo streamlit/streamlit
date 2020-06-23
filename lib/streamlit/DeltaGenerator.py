@@ -1004,7 +1004,7 @@ class DeltaGenerator(object):
         spec=None,
         width=0,
         use_container_width=False,
-        **kwargs
+        **kwargs,
     ):
         """Display a chart using the Vega-Lite library.
 
@@ -1244,7 +1244,7 @@ class DeltaGenerator(object):
         height=0,
         use_container_width=False,
         sharing="streamlit",
-        **kwargs
+        **kwargs,
     ):
         """Display an interactive Plotly chart.
 
@@ -1593,6 +1593,13 @@ class DeltaGenerator(object):
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=Wba9sZELKfKwXH4nDCCbMv
            height: 600px
 
+        .. note::
+           Some videos may not display if they are encoded using MP4V (which is an export option in OpenCV), as this codec is
+           not widely supported by browsers. Converting your video to H.264 will allow the video to be displayed in Streamlit.
+           See this `StackOverflow post <https://stackoverflow.com/a/49535220/2394542>`_ or this
+           `Streamlit forum post <https://discuss.streamlit.io/t/st-video-doesnt-show-opencv-generated-mp4/3193/2>`_
+           for more information.
+
         """
         from .elements import media_proto
 
@@ -1711,6 +1718,13 @@ class DeltaGenerator(object):
         ...     ['Yellow', 'Red'])
         >>>
         >>> st.write('You selected:', options)
+
+        .. note::
+           User experience can be degraded for large lists of `options` (100+), as this widget
+           is not designed to handle arbitrary text search efficiently. See this
+           `thread <https://discuss.streamlit.io/t/streamlit-loading-column-data-takes-too-much-time/1791>`_
+           on the Streamlit community forum for more information and
+           `GitHub issue #1059 <https://github.com/streamlit/streamlit/issues/1059>`_ for updates on the issue.
 
         """
 
@@ -2664,8 +2678,10 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        value : int
-            The percentage complete: 0 <= value <= 100
+        value : int or float
+            0 <= value <= 100 for int
+
+            0.0 <= value <= 1.0 for float
 
         Example
         -------

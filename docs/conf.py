@@ -18,12 +18,13 @@ sys.path.append(os.path.abspath("./_ext"))
 
 # -- RTD setup --------------------------------------------------------------
 
-#RZ, 20200508: If protobufs don't exist, build them
-#Catching ImportError on Alert_pb2 assumes Alert continues to be part of st lib
+# RZ, 20200508: If protobufs don't exist, build them
+# Catching ImportError on Alert_pb2 assumes Alert continues to be part of st lib
 try:
     from streamlit.proto import Alert_pb2
 except ImportError:
     import subprocess
+
     subprocess.run(["bash", "env_setup.sh"])
 
 # -- Project information -----------------------------------------------------
