@@ -60,6 +60,14 @@ if TYPE_CHECKING:
 LOGGER = get_logger(__name__)
 
 
+TORNADO_SETTINGS = {
+    "compress_response": True,  # Gzip HTTP responses.
+    "websocket_ping_interval": 20,  # Ping every 20s to keep WS alive.
+    "websocket_ping_timeout": 30,  # Pings should be responded to within 30s.
+    "websocket_max_message_size": MESSAGE_SIZE_LIMIT,  # Up the WS size limit.
+}
+
+
 # When server.port is not available it will look for the next available port
 # up to MAX_PORT_SEARCH_RETRIES.
 MAX_PORT_SEARCH_RETRIES = 100

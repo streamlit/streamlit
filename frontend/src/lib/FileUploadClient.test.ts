@@ -65,7 +65,7 @@ describe("FileUploadClient", () => {
           }
 
           if (getCookie("_xsrf")) {
-            if (!("X-XSRFToken" in config.headers)) {
+            if (!("X-Xsrftoken" in config.headers)) {
               return [403]
             } else if (!("withCredentials" in config)) {
               return [403]

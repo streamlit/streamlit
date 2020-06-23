@@ -56,12 +56,6 @@ export class FileUploadClient extends HttpClient {
       method: "POST",
       data: form,
       onUploadProgress,
-      withCredentials: true,
-      headers: {
-        // This works whether XSRF protection is on or off in the server. If off, this is set to
-        // undefined.
-        "X-XSRFToken": getCookie("_xsrf"),
-      },
     })
   }
 }
