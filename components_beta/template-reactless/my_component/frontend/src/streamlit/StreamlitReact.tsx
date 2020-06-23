@@ -71,6 +71,11 @@ export function withStreamlitConnection(
       }
     }
 
+    /**
+     * Error boundary function. This will be called if our wrapped
+     * component throws an error. We store the caught error in our state,
+     * and display it in the next render().
+     */
     public static getDerivedStateFromError = (
       error: Error
     ): Partial<WrapperState> => {
@@ -85,6 +90,16 @@ export function withStreamlitConnection(
         this.onRenderEvent
       )
       Streamlit.setComponentReady()
+    }
+
+    public componentDidUpdate = (): void => {
+      // If our child threw an error, we display it in render(). In this
+      // case, the child won't be mounted and therefore won't call
+      // `setFrameHeight` on its own. We do it here so that the rendered
+      // error will be visible.
+      if (this.state.componentError != null) {
+        Streamlit.setFrameHeight()
+      }
     }
 
     public componentWillUnmount = (): void => {
