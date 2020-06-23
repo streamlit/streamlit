@@ -2120,7 +2120,7 @@ class DeltaGenerator(object):
             SECONDS_TO_MICROS = 1000 * 1000
             DAYS_TO_MICROS = 24 * 60 * 60 * SECONDS_TO_MICROS
 
-            def deltaToMicros(delta):
+            def _delta_to_micros(delta):
                 return (
                     delta.microseconds
                     + delta.seconds * SECONDS_TO_MICROS
@@ -2129,12 +2129,12 @@ class DeltaGenerator(object):
 
             UTC_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
-            def datetimeToMicros(dt):
+            def _datetime_to_micros(dt):
                 # If dt is naive, Python converts from local time
                 utc_dt = dt.astimezone(timezone.utc)
-                return deltaToMicros(utc_dt - UTC_EPOCH)
+                return _delta_to_micros(utc_dt - UTC_EPOCH)
 
-            def microsToDatetime(micros):
+            def _micros_to_datetime(micros):
                 utc_dt = UTC_EPOCH + timedelta(microseconds=micros)
                 # Convert from utc back to original time (local time if naive)
                 # NOTE: Treats single_datetime_value as source of truth
@@ -2142,13 +2142,13 @@ class DeltaGenerator(object):
                 return utc_dt.astimezone(orig_tz).replace(tzinfo=orig_tz)
 
             value = (
-                datetimeToMicros(value)
+                _datetime_to_micros(value)
                 if single_value
-                else list(map(datetimeToMicros, value))
+                else list(map(_datetime_to_micros, value))
             )
-            min_value = datetimeToMicros(min_value)
-            max_value = datetimeToMicros(max_value)
-            step = deltaToMicros(step)
+            min_value = _datetime_to_micros(min_value)
+            max_value = _datetime_to_micros(max_value)
+            step = _delta_to_micros(step)
 
         # It would be great if we could guess the number of decimal places from
         # the `step` argument, but this would only be meaningful if step were a
@@ -2174,7 +2174,7 @@ class DeltaGenerator(object):
         if all_ints:
             current_value = list(map(int, current_value))
         if all_datetimes:
-            current_value = [microsToDatetime(int(v)) for v in current_value]
+            current_value = [_micros_to_datetime(int(v)) for v in current_value]
         # If there is only one value in the array destructure it into a
         # single variable
         current_value = current_value[0] if single_value else current_value
