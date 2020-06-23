@@ -209,8 +209,6 @@ const FEATURE_POLICY = [
   "xr-spatial-tracking",
 ].join("; ")
 
-// TODO: catch errors and display them in render()
-
 export class ComponentInstance extends React.PureComponent<Props, State> {
   private iframeRef = createRef<HTMLIFrameElement>()
   // True when we've received the COMPONENT_READY message
@@ -236,7 +234,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     if (this.iframeRef.current.contentWindow == null) {
       // Nor should this.
       logError(
-        `ComponentInstance iframe does not have an iframeRef, and will not receive messages!`
+        `ComponentInstance iframe does not have a contentWindow, and will not receive messages!`
       )
       return
     }
@@ -324,10 +322,6 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     }
 
     const widgetId: string = this.props.element.get("id")
-
-    // TODO: handle debouncing, or expose some debouncing primitives?
-    // TODO: ints, arrays, "button triggers", ... dataframes?
-
     this.props.widgetMgr.setJsonValue(widgetId, value, source)
   }
 
