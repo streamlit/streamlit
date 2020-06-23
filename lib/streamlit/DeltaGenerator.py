@@ -1944,7 +1944,7 @@ class DeltaGenerator(object):
 
         Returns
         -------
-        int/float or tuple of int/float
+        int/float/datetime or tuple of int/float/datetime
             The current value of the slider widget. The return type will match
             the data type of the value parameter.
 
@@ -1959,6 +1959,15 @@ class DeltaGenerator(object):
         ...     'Select a range of values',
         ...     0.0, 100.0, (25.0, 75.0))
         >>> st.write('Values:', values)
+
+        Finally, a datetime slider:
+
+        >>> from datetime import datetime
+        >>> start_time = st.slider(
+        ...     "When do you start?",
+        ...     value=datetime(2020, 1, 1, 9, 30),
+        ...     format="MM/DD/YY - hh:mm")
+        >>> st.write("Start time:", start_time)
 
         """
 
