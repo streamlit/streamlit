@@ -177,7 +177,6 @@ class ServerTest(ServerTestCase):
             # present in the response from the server.
             self.assertIsNone(ws_client.headers.get("Sec-Websocket-Extensions"))
 
-
     @tornado.testing.gen_test
     def test_forwardmsg_hashing(self):
         """Test that outgoing ForwardMsgs contain hashes."""

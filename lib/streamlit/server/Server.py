@@ -330,11 +330,8 @@ class Server(object):
         return tornado.web.Application(
             routes,  # type: ignore[arg-type]
             cookie_secret=config.get_option("server.cookieSecret"),
-            compress_response=True,  # Gzip HTTP responses.
-            websocket_ping_interval=20,  # Ping every 20s to keep WS alive.
-            websocket_ping_timeout=30,  # Pings should be responded to within 30s.
-            websocket_max_message_size=MESSAGE_SIZE_LIMIT,  # Up the WS size limit.
             xsrf_cookies=config.get_option("server.enableXsrfProtection"),
+            **TORNADO_SETTINGS,  # type: ignore[arg-type],
         )
 
     def _set_state(self, new_state):

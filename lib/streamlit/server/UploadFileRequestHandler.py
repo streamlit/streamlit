@@ -45,8 +45,11 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
 
     def set_default_headers(self):
         if config.get_option("server.enableXsrfProtection"):
-            self.set_header("Access-Control-Allow-Headers", "X-XSRFToken")
-            self.set_header("Access-Control-Allow-Origin", Report.get_url(config.get_option("browser.serverAddress")))
+            self.set_header("Access-Control-Allow-Headers", "X-Xsrftoken")
+            self.set_header(
+                "Access-Control-Allow-Origin",
+                Report.get_url(config.get_option("browser.serverAddress")),
+            )
             self.set_header("Vary", "Origin")
             self.set_header("Access-Control-Allow-Credentials", "true")
         elif routes.allow_cross_origin_requests():
