@@ -142,6 +142,55 @@ def _clip_image(image, clamp):
     return data
 
 
+def image_to_url(image, width, clamp, channels, format, image_id):
+    # PIL Images
+    if isinstance(image, ImageFile.ImageFile) or isinstance(image, Image.Image):
+        data = _PIL_to_bytes(image, format)
+
+    # BytesIO
+    elif type(image) is io.BytesIO:
+        data = _BytesIO_to_bytes(image)
+
+    # Numpy Arrays (ie opencv)
+    elif type(image) is np.ndarray:
+        data = _verify_np_shape(image)
+        data = _clip_image(data, clamp)
+
+        if channels == "BGR":
+            if len(data.shape) == 3:
+                data = data[:, :, [2, 1, 0]]
+            else:
+                raise StreamlitAPIException(
+                    'When using `channels="BGR"`, the input image should '
+                    "have exactly 3 color channels"
+                )
+
+        data = _np_array_to_bytes(data, format=format)
+
+    # Strings
+    elif isinstance(image, str):
+        # If it's a url, then set the protobuf and continue
+        try:
+            p = urlparse(image)
+            if p.scheme:
+                return image
+        except UnicodeDecodeError:
+            pass
+
+        # If not, see if it's a file. Allow OS filesystem errors to raise.
+        with open(image, "rb") as f:
+            data = f.read()
+
+    # Assume input in bytes.
+    else:
+        data = image
+
+    (data, mimetype) = _normalize_to_bytes(data, width, format)
+
+    this_file = media_file_manager.add(data, mimetype, image_id)
+    return this_file.url
+
+
 def marshall_images(
     coordinates,
     image,
@@ -191,54 +240,7 @@ def marshall_images(
         if caption is not None:
             proto_img.caption = str(caption)
 
-        # PIL Images
-        if isinstance(image, ImageFile.ImageFile) or isinstance(image, Image.Image):
-            data = _PIL_to_bytes(image, format)
-
-        # BytesIO
-        elif type(image) is io.BytesIO:
-            data = _BytesIO_to_bytes(image)
-
-        # Numpy Arrays (ie opencv)
-        elif type(image) is np.ndarray:
-            data = _verify_np_shape(image)
-            data = _clip_image(data, clamp)
-
-            if channels == "BGR":
-                if len(data.shape) == 3:
-                    data = data[:, :, [2, 1, 0]]
-                else:
-                    raise StreamlitAPIException(
-                        'When using `channels="BGR"`, the input image should '
-                        "have exactly 3 color channels"
-                    )
-
-            data = _np_array_to_bytes(data, format=format)
-
-        # Strings
-        elif isinstance(image, str):
-            # If it's a url, then set the protobuf and continue
-            try:
-                p = urlparse(image)
-                if p.scheme:
-                    proto_img.url = image
-                    continue
-            except UnicodeDecodeError:
-                pass
-
-            # If not, see if it's a file. Allow OS filesystem errors to raise.
-            with open(image, "rb") as f:
-                data = f.read()
-
-        # Assume input in bytes.
-        else:
-            data = image
-
-        (data, mimetype) = _normalize_to_bytes(data, width, format)
-
         # We use the index of the image in the input image list to identify this image inside
         # MediaFileManager. For this, we just add the index to the image's "coordinates".
-        this_file = media_file_manager.add(
-            data, mimetype, "%s-%i" % (coordinates, coord_suffix)
-        )
-        proto_img.url = this_file.url
+        image_id = "%s-%i" % (coordinates, coord_suffix)
+        proto_img.url = image_to_url(image, width, clamp, channels, format, image_id)

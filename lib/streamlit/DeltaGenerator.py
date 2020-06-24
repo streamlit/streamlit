@@ -1530,6 +1530,55 @@ class DeltaGenerator(object):
         )
 
     @_with_element
+    def favicon(
+        self, element, image, clamp=False, channels="RGB", format="JPEG",
+    ):
+        """Set the page favicon to the specified image.
+
+        This supports the same parameters as `st.image`.
+
+        Note: This is a beta feature. See
+        https://docs.streamlit.io/en/latest/pre_release_features.html for more
+        information.
+
+        Parameters
+        ----------
+        image : numpy.ndarray, [numpy.ndarray], BytesIO, str, or [str]
+            Monochrome image of shape (w,h) or (w,h,1)
+            OR a color image of shape (w,h,3)
+            OR an RGBA image of shape (w,h,4)
+            OR a URL to fetch the image from
+        clamp : bool
+            Clamp image pixel values to a valid range ([0-255] per channel).
+            This is only meaningful for byte array images; the parameter is
+            ignored for image URLs. If this is not set, and an image has an
+            out-of-range value, an error will be thrown.
+        channels : 'RGB' or 'BGR'
+            If image is an nd.array, this parameter denotes the format used to
+            represent color information. Defaults to 'RGB', meaning
+            `image[:, :, 0]` is the red channel, `image[:, :, 1]` is green, and
+            `image[:, :, 2]` is blue. For images coming from libraries like
+            OpenCV you should set this to 'BGR', instead.
+        format : 'JPEG' or 'PNG'
+            This parameter specifies the image format to use when transferring
+            the image data. Defaults to 'JPEG'.
+
+        Example
+        -------
+        >>> from PIL import Image
+        >>> image = Image.open('sunrise.jpg')
+        >>>
+        >>> st.beta_set_favicon(image)
+
+        """
+        from .elements import image_proto
+
+        width = -1  # Always use full width for favicons
+        element.favicon.url = image_proto.image_to_url(
+            image, width, clamp, channels, format, image_id="favicon"
+        )
+
+    @_with_element
     def audio(self, element, data, format="audio/wav", start_time=0):
         """Display an audio player.
 

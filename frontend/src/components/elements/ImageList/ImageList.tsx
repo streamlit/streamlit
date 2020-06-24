@@ -36,7 +36,7 @@ enum WidthBehavior {
   ColumnWidth = -2,
 }
 
-function getImageURI(imgProto: ImmutableMap<string, any>): string {
+export function getImageURI(imgProto: ImmutableMap<string, any>): string {
   if (imgProto.get("url").startsWith("/media")) {
     return buildHttpUri(get_base_uri_parts(), imgProto.get("url"))
   } else {

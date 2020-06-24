@@ -50,10 +50,11 @@ const DeckGlChart = React.lazy(() =>
 const DeckGlJsonChart = React.lazy(() =>
   import("components/elements/DeckGlJsonChart/")
 )
-const ImageList = React.lazy(() => import("components/elements/ImageList/"))
+const Favicon = React.lazy(() => import("components/elements/Favicon/"))
 const GraphVizChart = React.lazy(() =>
   import("components/elements/GraphVizChart/")
 )
+const ImageList = React.lazy(() => import("components/elements/ImageList/"))
 const PlotlyChart = React.lazy(() =>
   import("components/elements/PlotlyChart/")
 )
@@ -185,7 +186,7 @@ class Block extends PureComponent<Props> {
     )
 
     const elementType = element.get("type")
-    const isEmpty = elementType === "empty"
+    const isEmpty = elementType === "empty" || elementType == "favicon"
     const enable = this.shouldComponentBeEnabled(isEmpty)
     const isStale = this.isComponentStale(enable, reportElement)
     const className = Block.getClassNames(isStale, isEmpty)
@@ -272,6 +273,7 @@ class Block extends PureComponent<Props> {
       exception: (el: SimpleElement) => (
         <ExceptionElement element={el} width={width} />
       ),
+      favicon: (el: SimpleElement) => <Favicon element={el} />,
       graphvizChart: (el: SimpleElement) => (
         <GraphVizChart element={el} index={index} width={width} />
       ),
