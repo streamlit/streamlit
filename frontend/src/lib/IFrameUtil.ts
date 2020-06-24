@@ -163,7 +163,7 @@ export const DEFAULT_IFRAME_FEATURE_POLICY = [
  * Return an iFrame sandbox policy with the `allow-same-origin` token
  * optionally set.
  */
-export function getIFrameSandboxPolicy(allowSameOrigin: boolean) {
+export function getIFrameSandboxPolicy(allowSameOrigin: boolean): string {
   let sandboxPolicy = DEFAULT_IFRAME_SANDBOX_POLICY
   if (allowSameOrigin) {
     sandboxPolicy += " allow-same-origin"
