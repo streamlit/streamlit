@@ -1575,7 +1575,7 @@ class DeltaGenerator(object):
 
         width = -1  # Always use full width for favicons
         element.favicon.url = image_proto.image_to_url(
-            image, width, clamp, channels, format, image_id="favicon"
+            image, width, clamp, channels, format, image_id="favicon", allow_emoji=True
         )
 
     @_with_element

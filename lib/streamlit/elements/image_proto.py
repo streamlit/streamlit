@@ -142,7 +142,7 @@ def _clip_image(image, clamp):
     return data
 
 
-def image_to_url(image, width, clamp, channels, format, image_id):
+def image_to_url(image, width, clamp, channels, format, image_id, allow_emoji=False):
     # PIL Images
     if isinstance(image, ImageFile.ImageFile) or isinstance(image, Image.Image):
         data = _PIL_to_bytes(image, format)
@@ -177,9 +177,17 @@ def image_to_url(image, width, clamp, channels, format, image_id):
         except UnicodeDecodeError:
             pass
 
-        # If not, see if it's a file. Allow OS filesystem errors to raise.
-        with open(image, "rb") as f:
-            data = f.read()
+        # If not, see if it's a file.
+        try:
+            with open(image, "rb") as f:
+                data = f.read()
+        except FileNotFoundError:
+            if allow_emoji:
+                # This might be an emoji string, so just pass it to the frontend
+                return image
+            else:
+                # Allow OS filesystem errors to raise
+                raise
 
     # Assume input in bytes.
     else:
