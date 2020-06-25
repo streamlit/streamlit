@@ -15,9 +15,11 @@
  * limitations under the License.
  */
 
-import { PureComponent, ReactNode } from "react"
+import React, { Component, ReactNode } from "react"
+import ReactDOM from "react-dom"
 import { Map as ImmutableMap } from "immutable"
 import { getImageURI } from "../ImageList/ImageList"
+import nodeEmoji from "node-emoji"
 
 export interface Props {
   element: ImmutableMap<string, any>
@@ -26,20 +28,71 @@ export interface Props {
 /**
  * Hidden element that overwrites the page's favicon with the provided image
  */
-export class Favicon extends PureComponent<Props> {
+export class Favicon extends Component<Props> {
+  emoji = ""
+  shouldRender = true
+
   public render(): ReactNode {
     const { element } = this.props
 
+    const maybeEmoji = element.get("url")
+    if (nodeEmoji.hasEmoji(nodeEmoji.get(maybeEmoji))) {
+      // Format: :pizza:
+      this.emoji = nodeEmoji.get(maybeEmoji)
+    } else if (nodeEmoji.hasEmoji(maybeEmoji)) {
+      // Format: 🍕
+      this.emoji = maybeEmoji
+    } else {
+      // Format: http://streamlit.io/favicon.ico or /media/blah.jpeg
+      // No need to render SVG
+      this.setFavicon(getImageURI(element))
+      this.shouldRender = false
+    }
+
+    return this.shouldRender ? (
+      <svg
+        version="1.2"
+        viewBox="0 0 100 100"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <text>{this.emoji}</text>
+      </svg>
+    ) : null
+  }
+
+  setFavicon(imageUrl: string) {
     const faviconElement: HTMLLinkElement | null = document.querySelector(
       "link[rel='shortcut icon']"
     )
-
     if (faviconElement) {
-      faviconElement.href = getImageURI(element)
-      console.log("Fav: ", faviconElement.href)
+      faviconElement.href = imageUrl
     }
+  }
 
-    return null
+  // An SVG for an full-sized emoji, encoded as a data URI
+  svgURI(emoji: string, scale: number) {
+    return `data:image/svg+xml,
+    <svg version="1.2" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" >
+      <text
+        style="transform: translate(50%, 50%) scale(${scale})"
+        dominant-baseline="central"
+        text-anchor="middle">
+        ${emoji}
+      </text>
+    </svg>`
+  }
+
+  public componentDidMount() {
+    const svgElement = ReactDOM.findDOMNode(this) as Element
+    if (svgElement) {
+      // Measure the scaling factor with the React node, then hide the node.
+      const textNode = svgElement.firstChild as SVGGraphicsElement
+      const boundingBox = textNode.getBBox()
+      const scale = Math.min(100 / boundingBox.width, 100 / boundingBox.height)
+
+      this.setFavicon(this.svgURI(this.emoji, scale))
+      this.shouldRender = false
+    }
   }
 }
 

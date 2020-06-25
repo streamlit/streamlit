@@ -186,7 +186,7 @@ class Block extends PureComponent<Props> {
     )
 
     const elementType = element.get("type")
-    const isEmpty = elementType === "empty" || elementType == "favicon"
+    const isEmpty = elementType === "empty" || elementType === "favicon"
     const enable = this.shouldComponentBeEnabled(isEmpty)
     const isStale = this.isComponentStale(enable, reportElement)
     const className = Block.getClassNames(isStale, isEmpty)
