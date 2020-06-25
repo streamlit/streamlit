@@ -1,14 +1,14 @@
 {
   "name": "streamlit-browser",
-  "version": "0.61.0",
+  "version": "0.62.0",
   "private": true,
   "homepage": ".",
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
-    "start": "export NODE_OPTIONS=--max_old_space_size=4096 && craco start",
-    "build": "export NODE_OPTIONS=--max_old_space_size=4096 && craco build",
-    "test": "export NODE_OPTIONS=--max_old_space_size=4096 && craco test --env=jsdom",
-    "test:coverage": "export NODE_OPTIONS=--max_old_space_size=4096 && craco test --env=jsdom --coverage --watchAll false --watch false ./",
+    "start": "env NODE_OPTIONS=--max_old_space_size=4096 && craco start",
+    "build": "env NODE_OPTIONS=--max_old_space_size=4096 && craco build",
+    "test": "env NODE_OPTIONS=--max_old_space_size=4096 && craco test --env=jsdom",
+    "test:coverage": "env NODE_OPTIONS=--max_old_space_size=4096 && craco test --env=jsdom --coverage --watchAll false --watch false ./",
     "cy:open": "unset NODE_OPTIONS && cypress open --env devicePixelRatio=1",
     "cy:run": "unset NODE_OPTIONS && cypress run",
     "cy:run-flaky": "yarn cy:run --config integrationFolder=../e2e_flaky/specs",
@@ -27,7 +27,7 @@
   },
   "husky": {
     "hooks": {
-      "pre-commit": "../scripts/format.sh"
+      "pre-commit": "sh ../scripts/format.sh"
     }
   },
   "dependencies": {
@@ -55,7 +55,7 @@
     "numbro": "^2.1.2",
     "plotly.js": "^1.52.2",
     "prismjs": "^1.15.0",
-    "protobufjs": "^6.8.8",
+    "protobufjs": "^6.9.0",
     "react": "^16.8.6",
     "react-color": "^2.18.1",
     "react-copy-to-clipboard": "^5.0.2",
@@ -134,6 +134,7 @@
     "eslint-plugin-react": "^7.14.3",
     "fetch-mock": "^7.3.9",
     "hard-source-webpack-plugin": "^0.13.1",
+    "hard-source-webpack-plugin-fixed-hashbug": "^0.13.1",
     "husky": "^3.0.5",
     "jest-canvas-mock": "^2.2.0",
     "mocha": "5.2.0",

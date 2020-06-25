@@ -298,12 +298,12 @@ class ConfigTest(unittest.TestCase):
                 "s3.secretAccessKey",
                 "s3.url",
                 "server.baseUrlPath",
-                "server.cookieSecret",
                 "server.enableCORS",
-                "server.enableCSRFProtection",
+                "server.cookieSecret",
                 "server.enableWebsocketCompression",
-                "server.folderWatchBlacklist",
+                "server.enableXsrfProtection",
                 "server.fileWatcherType",
+                "server.folderWatchBlacklist",
                 "server.headless",
                 "server.liveSave",
                 "server.address",
@@ -353,7 +353,7 @@ class ConfigTest(unittest.TestCase):
         )
 
     def test_check_conflicts_server_csrf(self):
-        config._set_option("server.enableCSRFProtection", True, "test")
+        config._set_option("server.enableXsrfProtection", True, "test")
         config._set_option("server.enableCORS", True, "test")
         with patch("streamlit.config.LOGGER") as patched_logger:
             config._check_conflicts()

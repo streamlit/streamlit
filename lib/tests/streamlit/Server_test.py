@@ -177,7 +177,6 @@ class ServerTest(ServerTestCase):
             # present in the response from the server.
             self.assertIsNone(ws_client.headers.get("Sec-Websocket-Extensions"))
 
-
     @tornado.testing.gen_test
     def test_forwardmsg_hashing(self):
         """Test that outgoing ForwardMsgs contain hashes."""
@@ -463,14 +462,14 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(503, response.code)
 
     def test_healthz_without_csrf(self):
-        config._set_option("server.enableCSRFProtection", False, "test")
+        config._set_option("server.enableXsrfProtection", False, "test")
         response = self.fetch("/healthz")
         self.assertEqual(200, response.code)
         self.assertEqual(b"ok", response.body)
         self.assertNotIn("Set-Cookie", response.headers)
 
     def test_healthz_with_csrf(self):
-        config._set_option("server.enableCSRFProtection", True, "test")
+        config._set_option("server.enableXsrfProtection", True, "test")
         response = self.fetch("/healthz")
         self.assertEqual(200, response.code)
         self.assertEqual(b"ok", response.body)
