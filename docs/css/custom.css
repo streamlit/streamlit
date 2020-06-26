@@ -152,9 +152,7 @@
   --normal-padding: 1.618rem;
 }
 
-body,
-/* body.wy-body-for-nav */
- {
+body.wy-body-for-nav {
   background: var(--main-bg-color);
 }
 
