@@ -1906,21 +1906,23 @@ class DeltaGenerator(object):
     ):
         """Display a slider widget.
 
+        This supports int, float, date, time, and datetime types.
+
         This also allows you to render a range slider by passing a two-element tuple or list as the `value`.
 
         Parameters
         ----------
         label : str or None
             A short label explaining to the user what this slider is for.
-        min_value : int/float/datetime or None
+        min_value : a supported type or None
             The minimum permitted value.
-            Defaults: 0 if the value is an int, 0.0 if a float,
-            value - timedelta(day=7) if a datetime
-        max_value : int/float/datetime or None
+            Defaults to 0 if the value is an int, 0.0 if a float,
+            value - timedelta(days=14) if a date/datetime, time.min if a time
+        max_value : a supported type or None
             The maximum permitted value.
             Defaults 100 if the value is an int, 1.0 if a float,
-            value + timedelta(day=7) if a datetime
-        value : int/float/datetime or a tuple/list of int/float/datetime or None
+            value + timedelta(days=14) if a date/datetime, time.max if a time
+        value : a supported type or a tuple/list of supported types or None
             The value of the slider when it first renders. If a tuple/list
             of two values is passed here, then a range slider with those lower
             and upper bounds is rendered. For example, if set to `(1, 10)` the
@@ -1929,12 +1931,13 @@ class DeltaGenerator(object):
         step : int/float/timedelta or None
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 if a float,
-            timedelta(day=1) if a datetime.
+            timedelta(days=1) if a date/datetime, timedelta(minutes=15) if a time
+            (or if max_value - min_value < 1 day)
         format : str or None
             A printf-style format string controlling how the interface should
             display numbers. This does not impact the return value.
-            Valid formatters for int/float: %d %e %f %g %i
-            datetime formatter uses Moment.js notation:
+            Formatter for int/float supports: %d %e %f %g %i
+            Formatter for date/time/datetime uses Moment.js notation:
             https://momentjs.com/docs/#/displaying/format/
         key : str
             An optional string to use as the unique key for the widget.
@@ -1944,7 +1947,7 @@ class DeltaGenerator(object):
 
         Returns
         -------
-        int/float/datetime or tuple of int/float/datetime
+        int/float/date/time/datetime or tuple of int/float/date/time/datetime
             The current value of the slider widget. The return type will match
             the data type of the value parameter.
 
@@ -1959,6 +1962,14 @@ class DeltaGenerator(object):
         ...     'Select a range of values',
         ...     0.0, 100.0, (25.0, 75.0))
         >>> st.write('Values:', values)
+
+        This is a range time slider:
+
+        >>> from datetime import time
+        >>> appointment = st.slider(
+        ...     "Schedule your appointment:",
+        ...     value=(time(11, 30), time(12, 45)))
+        >>> st.write("You're scheduled for:", appointment)
 
         Finally, a datetime slider:
 
@@ -2014,8 +2025,8 @@ class DeltaGenerator(object):
         datetime_min = time.min
         datetime_max = time.max
         if data_type in (Slider.DATETIME, Slider.DATE):
-            datetime_min = value[0] - timedelta(days=7)
-            datetime_max = value[0] + timedelta(days=7)
+            datetime_min = value[0] - timedelta(days=14)
+            datetime_max = value[0] + timedelta(days=14)
 
         DEFAULTS = {
             Slider.INT: {"min_value": 0, "max_value": 100, "step": 1, "format": "%d"},
@@ -2040,7 +2051,7 @@ class DeltaGenerator(object):
             Slider.TIME: {
                 "min_value": datetime_min,
                 "max_value": datetime_max,
-                "step": timedelta(hours=1),
+                "step": timedelta(minutes=15),
                 "format": "HH:mm",
             },
         }
@@ -2051,10 +2062,11 @@ class DeltaGenerator(object):
             max_value = DEFAULTS[data_type]["max_value"]
         if step is None:
             step = DEFAULTS[data_type]["step"]
-            if data_type in TIMELIKE_TYPES and max_value - min_value < timedelta(
-                days=1
-            ):
-                step = timedelta(hours=1)
+            if data_type in (
+                Slider.DATETIME,
+                Slider.DATE,
+            ) and max_value - min_value < timedelta(days=1):
+                step = timedelta(minutes=15)
         if format is None:
             format = DEFAULTS[data_type]["format"]
 
@@ -2113,9 +2125,9 @@ class DeltaGenerator(object):
             start, end = value
             if not min_value <= start <= end <= max_value:
                 raise StreamlitAPIException(
-                    "The value and/or arguments are out of range.\n"
-                    "Expected: min_value <= start <= end <= max_value\n"
-                    f"But was: {min_value} <= {start} <= {end} <= {max_value}"
+                    "The value and/or arguments are out of range. "
+                    "Expected: min_value <= start <= end <= max_value, "
+                    f"but was: {min_value} <= {start} <= {end} <= {max_value}"
                 )
         else:
             value = [min_value, max_value]
