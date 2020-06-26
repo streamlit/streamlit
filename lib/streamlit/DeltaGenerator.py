@@ -1982,6 +1982,7 @@ class DeltaGenerator(object):
             date: Slider.DATE,
             time: Slider.TIME,
         }
+        TIMELIKE_TYPES = (Slider.DATETIME, Slider.TIME, Slider.DATE)
 
         # Ensure that the value is either a single value or a range of values.
         single_value = isinstance(value, tuple(SUPPORTED_TYPES.keys()))
@@ -2050,6 +2051,10 @@ class DeltaGenerator(object):
             max_value = DEFAULTS[data_type]["max_value"]
         if step is None:
             step = DEFAULTS[data_type]["step"]
+            if data_type in TIMELIKE_TYPES and max_value - min_value < timedelta(
+                days=1
+            ):
+                step = timedelta(hours=1)
         if format is None:
             format = DEFAULTS[data_type]["format"]
 
@@ -2058,10 +2063,10 @@ class DeltaGenerator(object):
         int_args = all(map(lambda a: isinstance(a, int), args))
         float_args = all(map(lambda a: isinstance(a, float), args))
         # When min and max_value are the same timelike, step should be a timedelta
-        timelike_args = isinstance(step, timedelta) and (
-            (isinstance(min_value, datetime) and isinstance(max_value, datetime))
-            or (isinstance(min_value, date) and isinstance(max_value, date))
-            or (isinstance(min_value, time) and isinstance(max_value, time))
+        timelike_args = (
+            data_type in TIMELIKE_TYPES
+            and isinstance(step, timedelta)
+            and type(min_value) == type(max_value)
         )
 
         if not int_args and not float_args and not timelike_args:
@@ -2080,9 +2085,8 @@ class DeltaGenerator(object):
         # Ensure that the value matches arguments' types.
         all_ints = data_type == Slider.INT and int_args
         all_floats = data_type == Slider.FLOAT and float_args
-        all_timelikes = (
-            data_type in (Slider.DATETIME, Slider.DATE, Slider.TIME) and timelike_args
-        )
+        all_timelikes = data_type in TIMELIKE_TYPES and timelike_args
+
         if not all_ints and not all_floats and not all_timelikes:
             raise StreamlitAPIException(
                 "Both value and arguments must be of the same type."
@@ -2156,7 +2160,7 @@ class DeltaGenerator(object):
             max_value = _date_to_datetime(max_value)
 
         # Now, convert to microseconds (so we can serialize datetime to a long)
-        if data_type in (Slider.DATETIME, Slider.TIME, Slider.DATE):
+        if data_type in TIMELIKE_TYPES:
             SECONDS_TO_MICROS = 1000 * 1000
             DAYS_TO_MICROS = 24 * 60 * 60 * SECONDS_TO_MICROS
 
