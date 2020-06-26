@@ -1,55 +1,74 @@
 /**
  * TODO
- * - Improve version
- * - Funny focus outline
  * - Look at all pages in all media queries and make sure nothing is weird
  * - On mobile
- *   - Youtube Video on index page breaks width - HAPPENS TODAY
- *   - Menu expands by moving content instead of going over - HAPPENS TODAY
- *   - Two logos! One in menu, one outside.
  *   - Search bar is ugly
  *   - Breakcrumbs needs spacing
  */
 
-@font-face {
-  font-family: "Graphik";
-  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c89751595b2217a8a5ca_Graphik-ExtralightItalic.otf")
-    format("opentype");
-  font-weight: 200;
-  font-style: italic;
-}
+/* @font-face { */
+/*   font-family: "Graphik"; */
+/*   src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c89751595b2217a8a5ca_Graphik-ExtralightItalic.otf") */
+/*     format("opentype"); */
+/*   font-weight: 200; */
+/*   font-style: italic; */
+/* } */
 
-@font-face {
-  font-family: "Graphik";
-  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c89778cf53849582d272_Graphik-Bold.otf")
-    format("opentype");
-  font-weight: 700;
-  font-style: normal;
-}
+/* @font-face { */
+/*   font-family: "Graphik"; */
+/*   src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c89778cf53849582d272_Graphik-Bold.otf") */
+/*     format("opentype"); */
+/*   font-weight: 700; */
+/*   font-style: normal; */
+/* } */
 
-@font-face {
-  font-family: "Graphik";
-  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c8986a906d17093257cb_Graphik-Extralight.otf")
-    format("opentype");
-  font-weight: 200;
-  font-style: normal;
-}
+/* @font-face { */
+/*   font-family: "Graphik"; */
+/*   src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c8986a906d17093257cb_Graphik-Extralight.otf") */
+/*     format("opentype"); */
+/*   font-weight: 200; */
+/*   font-style: normal; */
+/* } */
 
-@font-face {
-  font-family: "Graphik";
-  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c897429c1a5134f8705f_Graphik-LightItalic.otf")
-    format("opentype");
-  font-weight: 300;
-  font-style: italic;
-}
+/* @font-face { */
+/*   font-family: "Graphik"; */
+/*   src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c897429c1a5134f8705f_Graphik-LightItalic.otf") */
+/*     format("opentype"); */
+/*   font-weight: 300; */
+/*   font-style: italic; */
+/* } */
 
-@font-face {
-  font-family: "Graphik";
-  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c8986a906d2ddc3257cc_Graphik-Light.otf")
-    format("opentype");
-  font-weight: 300;
-  font-style: normal;
-}
+/* @font-face { */
+/*   font-family: "Graphik"; */
+/*   src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c8986a906d2ddc3257cc_Graphik-Light.otf") */
+/*     format("opentype"); */
+/*   font-weight: 300; */
+/*   font-style: normal; */
+/* } */
+
+/* @font-face { */
+/*   font-family: "Graphik"; */
+/*   src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c89878cf536aa782d274_Graphik-Thin.otf") */
+/*     format("opentype"); */
+/*   font-weight: 100; */
+/*   font-style: normal; */
+/* } */
+
+/* @font-face { */
+/*   font-family: "Graphik"; */
+/*   src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c8986a906d79de3257d2_Graphik-ThinItalic.otf") */
+/*     format("opentype"); */
+/*   font-weight: 100; */
+/*   font-style: italic; */
+/* } */
+
+/* @font-face { */
+/*   font-family: "Graphik"; */
+/*   src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c8986a906d68f93257ca_Graphik-BoldItalic.otf") */
+/*     format("opentype"); */
+/*   font-weight: 700; */
+/*   font-style: italic; */
+/* } */
 
 @font-face {
   font-family: "Graphik";
@@ -57,14 +76,6 @@
     format("opentype");
   font-weight: 400;
   font-style: normal;
-}
-
-@font-face {
-  font-family: "Graphik";
-  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c8986a906d68f93257ca_Graphik-BoldItalic.otf")
-    format("opentype");
-  font-weight: 700;
-  font-style: italic;
 }
 
 @font-face {
@@ -109,27 +120,11 @@
 
 @font-face {
   font-family: "Graphik";
-  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c89878cf536aa782d274_Graphik-Thin.otf")
-    format("opentype");
-  font-weight: 100;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: "Graphik";
   src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c898429c1aed84f87063_Graphik-RegularItalic.otf")
       format("opentype"),
     url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c898429c1a44ccf87062_Graphik-SuperItalic.otf")
       format("opentype");
   font-weight: 400;
-  font-style: italic;
-}
-
-@font-face {
-  font-family: "Graphik";
-  src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c8986a906d79de3257d2_Graphik-ThinItalic.otf")
-    format("opentype");
-  font-weight: 100;
   font-style: italic;
 }
 
@@ -159,6 +154,7 @@
   --st-blue-60: #3d9df3;
 
   --small-font: 14px;
+  --normal-padding: 1.618rem;
 }
 
 body,
@@ -188,7 +184,7 @@ h5,
 h6 {
   padding-top: 1em;
   font-weight: 600;
-  line-height: 1;
+  line-height: 1.1;
 }
 
 a,
@@ -216,16 +212,7 @@ strong {
   background: none;
   border-radius: 0;
   padding: 0;
-}
-
-.wy-side-nav-search > a img.logo {
-  display: block;
-}
-
-@media screen and (max-width: 768px) {
-  .wy-side-nav-search > a img.logo {
-    display: none;
-  }
+  margin: 0;
 }
 
 /* Sidebar headings */
@@ -326,18 +313,13 @@ strong {
 }
 
 /* Top-level font color */
-.wy-menu-vertical a,
-.wy-side-nav-search > div.version {
+.wy-menu-vertical a {
   color: var(--st-gray-70);
   font-size: var(--small-font);
 }
 
 .wy-side-nav-search {
   text-align: left;
-}
-
-.wy-side-nav-search > div.version::before {
-  content: "Streamlit";
 }
 
 /* Style search bar */
@@ -374,8 +356,8 @@ strong {
 .rst-content .admonition-todo,
 .rst-content .admonition {
   border-radius: 5px;
-  padding: 1.5rem;
-  margin: 1.5rem 0;
+  padding: var(--normal-padding);
+  margin: var(--normal-padding) 0;
   overflow-x: auto;
 }
 
@@ -387,7 +369,7 @@ strong {
 }
 
 .rst-content div[class^="highlight"] pre {
-  padding: 1.5rem;
+  padding: var(--normal-padding);
 }
 
 .rst-content .admonition p {
@@ -457,6 +439,32 @@ footer p {
   color: var(--st-gray-70);
 }
 
+/* Make hr 0 width until it can be removed from template */
+hr {
+  border: none;
+  margin: var(--normal-padding);
+}
+
+/* Make Youtube embeds responsive (requires wrapping with .embed-container div) */
+.embed-container {
+  position: relative;
+  padding-bottom: 56.25%;
+  height: 0;
+  overflow: hidden;
+  max-width: 100%;
+  margin: var(--normal-padding) 0;
+}
+
+.embed-container iframe,
+.embed-container object,
+.embed-container embed {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
 /* 960 is where the RTD mobile/responsive theme kicks in to move nav to header */
 @media (min-width: 960px) {
   h1 {
@@ -497,65 +505,44 @@ footer p {
     font-size: var(--small-font);
   }
 
-  /* make hr 0 width until it can be removed from template */
-  hr {
-    border-top: 0px;
-  }
-
-  /* align text from Documentation with H1 of document */
+  /* Align text from Documentation with H1 of document */
   .wy-side-nav-search {
-    padding-bottom: 27px;
+    padding-top: var(--normal-padding);
+    padding-bottom: var(--normal-padding);
   }
 
-  /* background of content */
   .wy-nav-content {
     min-height: 100vh;
   }
 
-  /* float search box to right of navbar */
+  /* Float search box to right of navbar */
   div[role="search"] {
     float: right;
   }
 
-  /* borders for hover */
+  /* Borders for hover */
   .wy-menu-vertical li.toctree-l1.current > a,
   .wy-menu-vertical li.current a {
     border: none;
   }
 
-  /* /1* site centering code *1/ */
-  /* .wy-body-for-nav { */
-  /*   text-align: left; */
-  /*   width: 1100px; */
-  /*   margin: 0 auto; */
-  /* } */
+  /* Site centering code */
 
-  /* .wy-nav-side { */
-  /*   position: inherit; */
-  /* } */
-
-  /* .wy-grid-for-nav { */
-  /*   position: absolute; */
-  /*   width: 100%; */
-  /*   height: inherit; */
-  /* } */
-
-  /* site centering code */
   .wy-grid-for-nav {
     position: relative;
     max-width: 1100px;
+    width: 100%;
     margin: 0 auto;
-    display: flex;
-    flex-direction: row;
   }
 
+  /**
+   * TODO: Make the nav have position: relative
+   *
+   * But first need to make the template we use not call scrollIntoView() for the selected nav item
+   * as that would put the user in the wrong scroll position.
+   * */
   .wy-nav-side {
-    margin: 0;
-    position: relative;
-  }
-
-  .wy-nav-content-wrap {
-    margin: 0;
-    position: relative;
+    position: fixed;
+    left: auto;
   }
 }

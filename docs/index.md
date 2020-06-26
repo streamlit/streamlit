@@ -53,14 +53,15 @@ behind Streamlit, then go over how to install and create apps with it.
 ```eval_rst
 .. raw:: html
 
-  <iframe
+  <div class='embed-container'><iframe
     width="560"
     height="315"
     src="https://www.youtube.com/embed/sxLNCDnqyFc"
     style="margin: 0 0 2rem 0;"
     frameborder="0"
     allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
-    allowfullscreen></iframe>
+    allowfullscreen>
+  </iframe></div>
 ```
 
 Follow these steps and to get a sample app running in less than 5 minutes.
@@ -88,14 +89,15 @@ of building a Streamlit app.
 ```eval_rst
 .. raw:: html
 
-  <iframe
+  <div class='embed-container'><iframe
     width="560"
     height="315"
     src="https://www.youtube.com/embed/VtrFjkSGgKM"
     style="margin: 0 0 2rem 0;"
     frameborder="0"
     allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
-    allowfullscreen></iframe>
+    allowfullscreen>
+  </iframe></div>
 ```
 
 [Create an app](tutorial/create_a_data_explorer_app.md) to explore a dataset of

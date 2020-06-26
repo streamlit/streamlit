@@ -30,9 +30,9 @@ except ImportError:
 # -- Project information -----------------------------------------------------
 
 project = "Streamlit"
-copyright = "2019, Streamlit Inc."
+copyright = "2020, Streamlit Inc."
 author = "Streamlit Inc."
-display_version = True
+display_version = False  # RTD shows this at the bottom anyway!
 
 # The full version, including alpha/beta/rc tags
 import streamlit as st
