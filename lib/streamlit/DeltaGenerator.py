@@ -2190,8 +2190,9 @@ class DeltaGenerator(object):
                 utc_dt = dt.astimezone(timezone.utc)
                 return _delta_to_micros(utc_dt - UTC_EPOCH)
 
+            # Restore times/datetimes to original timezone (dates are always naive)
             orig_tz = (
-                value[0].tzinfo if data_type in (Slider.TIME, Slider.DATE) else None
+                value[0].tzinfo if data_type in (Slider.TIME, Slider.DATETIME) else None
             )
 
             def _micros_to_datetime(micros):
