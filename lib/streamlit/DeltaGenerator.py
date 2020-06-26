@@ -2233,7 +2233,7 @@ class DeltaGenerator(object):
         if data_type == Slider.TIME:
             current_value = [_micros_to_datetime(int(v)).time() for v in current_value]
         # If the original value was a list/tuple, so will be the output (and vice versa)
-        return current_value[0] if single_value else current_value
+        return current_value[0] if single_value else tuple(current_value)
 
     @_with_element
     def file_uploader(
