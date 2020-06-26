@@ -2057,17 +2057,16 @@ class DeltaGenerator(object):
         args = [min_value, max_value, step]
         int_args = all(map(lambda a: isinstance(a, int), args))
         float_args = all(map(lambda a: isinstance(a, float), args))
-        # When min and max_value are datetimes, step should be a timedelta
-        datetime_args = (
-            isinstance(min_value, (datetime, date, time))
-            and isinstance(max_value, (datetime, date, time))
-            and isinstance(step, timedelta)
+        # When min and max_value are the same timelike, step should be a timedelta
+        timelike_args = isinstance(step, timedelta) and (
+            (isinstance(min_value, datetime) and isinstance(max_value, datetime))
+            or (isinstance(min_value, date) and isinstance(max_value, date))
+            or (isinstance(min_value, time) and isinstance(max_value, time))
         )
-        # TODO: Don't allow e.g. min to be date and max to be time.
 
-        if not int_args and not float_args and not datetime_args:
+        if not int_args and not float_args and not timelike_args:
             raise StreamlitAPIException(
-                "Slider value arguments must be of the same type."
+                "Slider value arguments must be of matching types."
                 "\n`min_value` has %(min_type)s type."
                 "\n`max_value` has %(max_type)s type."
                 "\n`step` has %(step)s type."
@@ -2082,7 +2081,7 @@ class DeltaGenerator(object):
         all_ints = data_type == Slider.INT and int_args
         all_floats = data_type == Slider.FLOAT and float_args
         all_timelikes = (
-            data_type in (Slider.DATETIME, Slider.DATE, Slider.TIME) and datetime_args
+            data_type in (Slider.DATETIME, Slider.DATE, Slider.TIME) and timelike_args
         )
         if not all_ints and not all_floats and not all_timelikes:
             raise StreamlitAPIException(
