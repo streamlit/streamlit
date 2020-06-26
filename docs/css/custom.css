@@ -123,6 +123,9 @@
 :root {
   --main-bg-color: #ffffff;
 
+  --warning-color: #fffae8; /* pale orange */
+  --warning-title: #ffa421; /* vivid blue */
+
   --note-color: #e4f5ff; /* pale blue */
   --note-title: #1c83e1; /* vivid blue */
 
@@ -375,6 +378,15 @@ strong {
   font-weight: 500;
   font-size: var(--small-font);
   text-transform: uppercase;
+}
+
+/* style warnings */
+.rst-content .warning,
+.rst-content .warning .admonition-title {
+  background: var(--warning-color);
+}
+.rst-content .warning .admonition-title {
+  color: var(--warning-title);
 }
 
 /* style notes */
