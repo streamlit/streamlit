@@ -119,8 +119,13 @@ class Slider extends React.PureComponent<Props, State> {
 
   private formatValue(value: number): string {
     const format = this.props.element.get("format")
-    if (this.props.element.get("dataType") === SliderProto.DataType.DATETIME) {
-      // Python DateTime uses microseconds, but JS & Moment uses milliseconds
+    const dataType = this.props.element.get("dataType")
+    if (
+      dataType === SliderProto.DataType.DATETIME ||
+      dataType === SliderProto.DataType.DATE ||
+      dataType === SliderProto.DataType.TIME
+    ) {
+      // Python datetime uses microseconds, but JS & Moment uses milliseconds
       return moment(value / 1000).format(format)
     } else {
       return sprintf(format, value)

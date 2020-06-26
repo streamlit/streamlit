@@ -2202,11 +2202,6 @@ class DeltaGenerator(object):
         element.slider.step = step
         element.slider.data_type = data_type
 
-        # For now, cast TIME and DATE into DATETIME for the proto
-        # TODO: Remove TIME and DATE proto types so our wire format is cleaner
-        if data_type in (Slider.DATE, Slider.TIME):
-            element.slider.data_type = Slider.DATETIME
-
         ui_value = _get_widget_ui_value("slider", element, user_key=key)
         if ui_value:
             current_value = getattr(ui_value, "value")
@@ -2219,9 +2214,9 @@ class DeltaGenerator(object):
         if data_type == Slider.DATETIME:
             current_value = [_micros_to_datetime(int(v)) for v in current_value]
         if data_type == Slider.DATE:
-            current_value = [_micros_to_datetime(int(v)).date for v in current_value]
+            current_value = [_micros_to_datetime(int(v)).date() for v in current_value]
         if data_type == Slider.TIME:
-            current_value = [_micros_to_datetime(int(v)).time for v in current_value]
+            current_value = [_micros_to_datetime(int(v)).time() for v in current_value]
         # If the original value was a list/tuple, so will be the output (and vice versa)
         return current_value[0] if single_value else current_value
 
