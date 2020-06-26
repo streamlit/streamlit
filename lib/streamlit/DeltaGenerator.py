@@ -1975,8 +1975,16 @@ class DeltaGenerator(object):
         if value is None:
             value = min_value if min_value is not None else 0
 
+        SUPPORTED_TYPES = {
+            int: Slider.INT,
+            float: Slider.FLOAT,
+            datetime: Slider.DATETIME,
+            date: Slider.DATE,
+            time: Slider.TIME,
+        }
+
         # Ensure that the value is either a single value or a range of values.
-        single_value = isinstance(value, (int, float, datetime))
+        single_value = isinstance(value, tuple(SUPPORTED_TYPES.keys()))
         range_value = isinstance(value, (list, tuple)) and len(value) in (0, 1, 2)
         if not single_value and not range_value:
             raise StreamlitAPIException(
@@ -1984,28 +1992,29 @@ class DeltaGenerator(object):
                 "0 to 2 ints/floats/datetimes"
             )
 
-        # Ensure that the value is either an int/float or a list/tuple of ints/floats.
+        # Simplify future logic by always making value a list
         if single_value:
-            int_value = isinstance(value, int)
-            float_value = isinstance(value, float)
-            datetime_value = isinstance(value, datetime)
-        else:
-            int_value = all(map(lambda v: isinstance(v, int), value))
-            float_value = all(map(lambda v: isinstance(v, float), value))
-            datetime_value = all(map(lambda v: isinstance(v, datetime), value))
+            value = [value]
 
-        if not int_value and not float_value and not datetime_value:
+        def all_same_type(items):
+            return len(set(map(type, items))) < 2
+
+        if not all_same_type(value):
             raise StreamlitAPIException(
-                "Slider tuple/list components must be of the same type."
+                "Slider tuple/list components must be of the same type.\n"
+                f"But were: {list(map(type, value))}"
             )
 
-        if int_value:
+        if len(value) == 0:
             data_type = Slider.INT
-        elif float_value:
-            data_type = Slider.FLOAT
-        elif datetime_value:
-            data_type = Slider.DATETIME
-            single_datetime_value = value if single_value else value[0]
+        else:
+            data_type = SUPPORTED_TYPES[type(value[0])]
+
+        datetime_min = time.min
+        datetime_max = time.max
+        if data_type in (Slider.DATETIME, Slider.DATE):
+            datetime_min = value[0] - timedelta(days=7)
+            datetime_max = value[0] + timedelta(days=7)
 
         DEFAULTS = {
             Slider.INT: {"min_value": 0, "max_value": 100, "step": 1, "format": "%d"},
@@ -2016,15 +2025,22 @@ class DeltaGenerator(object):
                 "format": "%0.2f",
             },
             Slider.DATETIME: {
-                # Only perform datetime arithmetic if value is a datetime.
-                "min_value": single_datetime_value - timedelta(days=7)
-                if datetime_value
-                else 0,
-                "max_value": single_datetime_value + timedelta(days=7)
-                if datetime_value
-                else 0,
+                "min_value": datetime_min,
+                "max_value": datetime_max,
                 "step": timedelta(days=1),
                 "format": "YYYY-MM-DD",
+            },
+            Slider.DATE: {
+                "min_value": datetime_min,
+                "max_value": datetime_max,
+                "step": timedelta(days=1),
+                "format": "YYYY-MM-DD",
+            },
+            Slider.TIME: {
+                "min_value": datetime_min,
+                "max_value": datetime_max,
+                "step": timedelta(hours=1),
+                "format": "HH:mm",
             },
         }
 
@@ -2043,10 +2059,11 @@ class DeltaGenerator(object):
         float_args = all(map(lambda a: isinstance(a, float), args))
         # When min and max_value are datetimes, step should be a timedelta
         datetime_args = (
-            isinstance(min_value, datetime)
-            and isinstance(max_value, datetime)
+            isinstance(min_value, (datetime, date, time))
+            and isinstance(max_value, (datetime, date, time))
             and isinstance(step, timedelta)
         )
+        # TODO: Don't allow e.g. min to be date and max to be time.
 
         if not int_args and not float_args and not datetime_args:
             raise StreamlitAPIException(
@@ -2062,10 +2079,12 @@ class DeltaGenerator(object):
             )
 
         # Ensure that the value matches arguments' types.
-        all_ints = int_value and int_args
-        all_floats = float_value and float_args
-        all_datetimes = datetime_value and datetime_args
-        if not all_ints and not all_floats and not all_datetimes:
+        all_ints = data_type == Slider.INT and int_args
+        all_floats = data_type == Slider.FLOAT and float_args
+        all_timelikes = (
+            data_type in (Slider.DATETIME, Slider.DATE, Slider.TIME) and datetime_args
+        )
+        if not all_ints and not all_floats and not all_timelikes:
             raise StreamlitAPIException(
                 "Both value and arguments must be of the same type."
                 "\n`value` has %(value_type)s type."
@@ -2079,13 +2098,13 @@ class DeltaGenerator(object):
             )
 
         # Ensure that min <= value <= max.
-        if single_value:
-            if not min_value <= value <= max_value:
+        if len(value) == 1:
+            if not min_value <= value[0] <= max_value:
                 raise StreamlitAPIException(
                     "The default `value` of %(value)s "
                     "must lie between the `min_value` of %(min)s "
                     "and the `max_value` of %(max)s, inclusively."
-                    % {"value": value, "min": min_value, "max": max_value}
+                    % {"value": value[0], "min": min_value, "max": max_value}
                 )
         elif len(value) == 2:
             start, end = value
@@ -2109,14 +2128,36 @@ class DeltaGenerator(object):
             elif all_floats:
                 JSNumber.validate_float_bounds(min_value, "`min_value`")
                 JSNumber.validate_float_bounds(max_value, "`max_value`")
-            elif all_datetimes:
+            elif all_timelikes:
                 # No validation yet. TODO: check between 0001-01-01 to 9999-12-31
                 pass
         except JSNumberBoundsException as e:
             raise StreamlitAPIException(str(e))
 
+        # Convert dates or times into datetimes
+        if data_type == Slider.TIME:
+
+            def _time_to_datetime(time):
+                # Note, here we pick an arbitrary date well after Unix epoch.
+                # This prevents pre-epoch timezone issues (https://bugs.python.org/issue36759)
+                # We're dropping the date from datetime laters, anyways.
+                return datetime.combine(date(2000, 1, 1), time)
+
+            value = list(map(_time_to_datetime, value))
+            min_value = _time_to_datetime(min_value)
+            max_value = _time_to_datetime(max_value)
+
+        if data_type == Slider.DATE:
+
+            def _date_to_datetime(date):
+                return datetime.combine(date, time())
+
+            value = list(map(_date_to_datetime, value))
+            min_value = _date_to_datetime(min_value)
+            max_value = _date_to_datetime(max_value)
+
         # Now, convert to microseconds (so we can serialize datetime to a long)
-        if all_datetimes:
+        if data_type in (Slider.DATETIME, Slider.TIME, Slider.DATE):
             SECONDS_TO_MICROS = 1000 * 1000
             DAYS_TO_MICROS = 24 * 60 * 60 * SECONDS_TO_MICROS
 
@@ -2134,18 +2175,16 @@ class DeltaGenerator(object):
                 utc_dt = dt.astimezone(timezone.utc)
                 return _delta_to_micros(utc_dt - UTC_EPOCH)
 
+            orig_tz = (
+                value[0].tzinfo if data_type in (Slider.TIME, Slider.DATE) else None
+            )
+
             def _micros_to_datetime(micros):
                 utc_dt = UTC_EPOCH + timedelta(microseconds=micros)
                 # Convert from utc back to original time (local time if naive)
-                # NOTE: Treats single_datetime_value as source of truth
-                orig_tz = single_datetime_value.tzinfo
                 return utc_dt.astimezone(orig_tz).replace(tzinfo=orig_tz)
 
-            value = (
-                _datetime_to_micros(value)
-                if single_value
-                else list(map(_datetime_to_micros, value))
-            )
+            value = list(map(_datetime_to_micros, value))
             min_value = _datetime_to_micros(min_value)
             max_value = _datetime_to_micros(max_value)
             step = _delta_to_micros(step)
@@ -2157,28 +2196,34 @@ class DeltaGenerator(object):
 
         element.slider.label = label
         element.slider.format = format
-        element.slider.default[:] = [value] if single_value else value
+        element.slider.default[:] = value
         element.slider.min = min_value
         element.slider.max = max_value
         element.slider.step = step
         element.slider.data_type = data_type
+
+        # For now, cast TIME and DATE into DATETIME for the proto
+        # TODO: Remove TIME and DATE proto types so our wire format is cleaner
+        if data_type in (Slider.DATE, Slider.TIME):
+            element.slider.data_type = Slider.DATETIME
 
         ui_value = _get_widget_ui_value("slider", element, user_key=key)
         if ui_value:
             current_value = getattr(ui_value, "value")
         else:
             # Widget has not been used; fallback to the original value,
-            # but ensure it's an array
-            current_value = [value] if single_value else value
+            current_value = value
         # The widget always returns a float array, so fix the return type if necessary
-        if all_ints:
+        if data_type == Slider.INT:
             current_value = list(map(int, current_value))
-        if all_datetimes:
+        if data_type == Slider.DATETIME:
             current_value = [_micros_to_datetime(int(v)) for v in current_value]
-        # If there is only one value in the array destructure it into a
-        # single variable
-        current_value = current_value[0] if single_value else current_value
-        return current_value if single_value else tuple(current_value)
+        if data_type == Slider.DATE:
+            current_value = [_micros_to_datetime(int(v)).date for v in current_value]
+        if data_type == Slider.TIME:
+            current_value = [_micros_to_datetime(int(v)).time for v in current_value]
+        # If the original value was a list/tuple, so will be the output (and vice versa)
+        return current_value[0] if single_value else current_value
 
     @_with_element
     def file_uploader(

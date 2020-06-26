@@ -24,6 +24,8 @@ message Slider {
     FLOAT = 1;
     // Note: Represented as microseconds since epoch
     DATETIME = 2;
+    DATE = 3;
+    TIME = 4;
   }
 
   string id = 1;
