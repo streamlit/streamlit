@@ -398,10 +398,10 @@ _create_option(
 @_create_option("server.cookieSecret", type_=str)
 @util.memoize
 def _server_cookie_secret():
-    """Symmetric key used to produce signed cookies. If deploying on multiple
-    replicas, this should be set to ensure all replicas share the same secret.
+    """Symmetric key used to produce signed cookies. If deploying on multiple replicas, this should
+    be set to the same value across all replicas to ensure they all share the same secret.
 
-    Default: Randomly generated secret key.
+    Default: randomly generated secret key.
     """
     return secrets.token_hex()
 
@@ -476,18 +476,25 @@ _create_option(
 )
 
 
+# TODO: Rename to server.enableCorsProtection.
 @_create_option("server.enableCORS", type_=bool)
 def _server_enable_cors():
-    """Enables protection against Cross-Origin Request Sharing, for added security.
+    """Enables support for Cross-Origin Request Sharing (CORS) protection, for added security.
+
+    Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is on and
+    `server.enableCORS` is off at the same time, we will prioritize `server.enableXsrfProtection`.
 
     Default: true
     """
     return True
 
 
-@_create_option("server.enableCSRFProtection", type_=bool)
-def _server_enable_CSRF():
-    """Enables support for protection from Cross-site request forgery attacks. Requires CORS to be disabled.
+@_create_option("server.enableXsrfProtection", type_=bool)
+def _server_enable_xsrf_protection():
+    """Enables support for Cross-Site Request Forgery (XSRF) protection, for added security.
+
+    Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is on and
+    `server.enableCORS` is off at the same time, we will prioritize `server.enableXsrfProtection`.
 
     Default: true
     """
@@ -525,7 +532,7 @@ def _browser_server_address():
     connect to the app. Can be IP address or DNS name and path.
 
     This is used to:
-    - Set the correct URL for CORS purposes.
+    - Set the correct URL for CORS and XSRF protection purposes.
     - Show the URL on the terminal
     - Open the browser
     - Tell the browser where to connect to the server when in liveSave mode.
@@ -550,7 +557,7 @@ def _browser_server_port():
     app.
 
     This is used to:
-    - Set the correct URL for CORS purposes.
+    - Set the correct URL for CORS and XSRF protection purposes.
     - Show the URL on the terminal
     - Open the browser
     - Tell the browser where to connect to the server when in liveSave mode.
@@ -989,15 +996,14 @@ def _check_conflicts():
             "another value, or remove it from your Streamlit config."
         )
 
-    # CSRF conflicts
+    # XSRF conflicts
 
-    if get_option("server.enableCSRFProtection"):
+    if get_option("server.enableXsrfProtection"):
         if not get_option("server.enableCORS") or get_option("global.useNode"):
             LOGGER.warning(
-                "server.enableCSRFProtection is not compatible with server.enableCORS. "
-                "We will prioritize server.enableCSRFProtection over server.enableCORS "
-                "where CSRF has been enabled. If cross origin POST, PUT or "
-                "DELETE requests are required, please disable 'server.enableCSRFProtection'"
+                "The config option 'server.enableXsrfProtection is not compatible with "
+                "'server.enableCORS'. If 'server.enableXsrfProtection' is on and 'server.enableCORS' "
+                "is off at the same time, we will prioritize 'server.enableXsrfProtection'."
             )
 
 

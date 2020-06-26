@@ -39,7 +39,10 @@ class DateInputTest(testutil.DeltaGeneratorTestCase):
             (date(1970, 1, 1), ["1970/01/01"]),
             (datetime(2019, 7, 6, 21, 15), ["2019/07/06"]),
             ([datetime(2019, 7, 6, 21, 15)], ["2019/07/06"]),
-            ([datetime(2019, 7, 6, 21, 15), datetime(2019, 7, 6, 21, 15)], ["2019/07/06", "2019/07/06"])
+            (
+                [datetime(2019, 7, 6, 21, 15), datetime(2019, 7, 6, 21, 15)],
+                ["2019/07/06", "2019/07/06"],
+            ),
         ]
     )
     def test_value_types(self, arg_value, proto_value):

@@ -1004,7 +1004,7 @@ class DeltaGenerator(object):
         spec=None,
         width=0,
         use_container_width=False,
-        **kwargs
+        **kwargs,
     ):
         """Display a chart using the Vega-Lite library.
 
@@ -1244,7 +1244,7 @@ class DeltaGenerator(object):
         height=0,
         use_container_width=False,
         sharing="streamlit",
-        **kwargs
+        **kwargs,
     ):
         """Display an interactive Plotly chart.
 
