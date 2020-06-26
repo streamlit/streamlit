@@ -538,31 +538,6 @@ hr {
   bottom: 0.5rem !important;
 }
 
-/* Scrollbars */
-
-::-webkit-scrollbar {
-  background-color: transparent;
-  border-radius: 100px;
-  height: 6px;
-  width: 6px;
-}
-
-::-webkit-scrollbar:hover {
-  background-color: rgba(0, 0, 0, 0.09);
-}
-
-::-webkit-scrollbar-thumb:vertical,
-::-webkit-scrollbar-thumb:horizontal {
-  background: rgba(0, 0, 0, 0.5);
-  border-radius: 100px;
-}
-
-::-webkit-scrollbar-thumb:vertical:active,
-::-webkit-scrollbar-thumb:horizontal:active {
-  background: rgba(0, 0, 0, 0.61);
-  border-radius: 100px;
-}
-
 /* 960 is where the RTD mobile/responsive theme kicks in to move nav to header */
 @media (min-width: 960px) {
   h1 {
