@@ -217,29 +217,29 @@
             <div class="rst-content style-external-links">
           {% else %}
             <div class="rst-content">
-          {% endif %}
-          {% include "breadcrumbs.html" %}
-            <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
-            {%- block document %}
-              <div itemprop="articleBody">
-                {% block body %}{% endblock %}
-              </div>
-              {% if self.comments()|trim %}
-                <div class="articleComments">
-                  {% block comments %}{% endblock %}
-                </div>
               {% endif %}
-            </div>
-            {%- endblock %}
-            {% include "footer.html" %}
+              {% include "breadcrumbs.html" %}
+                <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+                {%- block document %}
+                  <div itemprop="articleBody">
+                    {% block body %}{% endblock %}
+                  </div>
+                  {% if self.comments()|trim %}
+                    <div class="articleComments">
+                      {% block comments %}{% endblock %}
+                    </div>
+                  {% endif %}
+                </div>
+              {%- endblock %}
+              {% include "footer.html" %}
             </div>
           {%- endblock %}
+
+          {% include "versions.html" %}
         </div>
 
     </section>
   </div>
-
-  {% include "versions.html" %}
 
   <script type="text/javascript">
     jQuery(function () {

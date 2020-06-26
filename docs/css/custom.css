@@ -1,11 +1,3 @@
-/**
- * TODO
- * - Look at all pages in all media queries and make sure nothing is weird
- * - On mobile
- *   - Search bar is ugly
- *   - Breakcrumbs needs spacing
- */
-
 /* @font-face { */
 /*   font-family: "Graphik"; */
 /*   src: url("https://assets.website-files.com/5dc3b47ddc6c0c2a1af74ad0/5dc3c89751595b2217a8a5ca_Graphik-ExtralightItalic.otf") */
@@ -326,7 +318,7 @@ strong {
 #rtd-search-form > input[type="text"] {
   width: 220px;
   border-radius: 50px;
-  border: 1px solid var(--st-gray-40);
+  border: 1px solid var(--st-gray-50);
   box-shadow: none;
   padding: 0.5em 0.5em 0.3em 0.5em;
   margin: 0;
@@ -334,7 +326,7 @@ strong {
 }
 
 #search-results .search li {
-  border-bottom: 1px solid var(--st-gray-40);
+  border-bottom: 1px solid var(--st-gray-50);
 }
 
 #search-results .search li a {
@@ -365,7 +357,7 @@ strong {
 .rst-content div[class^="highlight"] {
   border-radius: 5px;
   background-color: var(--st-gray-15);
-  border: 0;
+  border: none;
 }
 
 .rst-content div[class^="highlight"] pre {
@@ -439,13 +431,13 @@ footer p {
   color: var(--st-gray-70);
 }
 
-/* Make hr 0 width until it can be removed from template */
 hr {
   border: none;
   margin: var(--normal-padding);
 }
 
 /* Make Youtube embeds responsive (requires wrapping with .embed-container div) */
+
 .embed-container {
   position: relative;
   padding-bottom: 56.25%;
@@ -463,6 +455,100 @@ hr {
   left: 0;
   width: 100%;
   height: 100%;
+}
+
+/* Injected Read-the-docs version box */
+
+.rst-versions {
+  position: absolute !important;
+  background: var(--main-bg-color) !important;
+  border: 1px solid transparent !important;
+  border-radius: 5px !important;
+}
+
+.rst-versions .rst-current-version {
+  background: transparent !important;
+  line-height: 1 !important;
+}
+
+.rst-versions .rst-current-version .fa,
+.rst-versions .rst-current-version .wy-menu-vertical li span.toctree-expand,
+.wy-menu-vertical li .rst-versions .rst-current-version span.toctree-expand,
+.rst-versions .rst-current-version .rst-content .admonition-title,
+.rst-content .rst-versions .rst-current-version .admonition-title,
+.rst-versions .rst-current-version .rst-content h1 .headerlink,
+.rst-content h1 .rst-versions .rst-current-version .headerlink,
+.rst-versions .rst-current-version .rst-content h2 .headerlink,
+.rst-content h2 .rst-versions .rst-current-version .headerlink,
+.rst-versions .rst-current-version .rst-content h3 .headerlink,
+.rst-content h3 .rst-versions .rst-current-version .headerlink,
+.rst-versions .rst-current-version .rst-content h4 .headerlink,
+.rst-content h4 .rst-versions .rst-current-version .headerlink,
+.rst-versions .rst-current-version .rst-content h5 .headerlink,
+.rst-content h5 .rst-versions .rst-current-version .headerlink,
+.rst-versions .rst-current-version .rst-content h6 .headerlink,
+.rst-content h6 .rst-versions .rst-current-version .headerlink,
+.rst-versions .rst-current-version .rst-content dl dt .headerlink,
+.rst-content dl dt .rst-versions .rst-current-version .headerlink,
+.rst-versions .rst-current-version .rst-content p.caption .headerlink,
+.rst-content p.caption .rst-versions .rst-current-version .headerlink,
+.rst-versions .rst-current-version .rst-content table > caption .headerlink,
+.rst-content table > caption .rst-versions .rst-current-version .headerlink,
+.rst-versions
+  .rst-current-version
+  .rst-content
+  .code-block-caption
+  .headerlink,
+.rst-content
+  .code-block-caption
+  .rst-versions
+  .rst-current-version
+  .headerlink,
+.rst-versions .rst-current-version .rst-content tt.download span:first-child,
+.rst-content tt.download .rst-versions .rst-current-version span:first-child,
+.rst-versions .rst-current-version .rst-content code.download span:first-child,
+.rst-content code.download .rst-versions .rst-current-version span:first-child,
+.rst-versions .rst-current-version .icon {
+  color: var(--st-gray-70) !important;
+}
+
+.rst-versions .rst-other-versions dd a {
+  color: var(--st-gray-60) !important;
+}
+
+.rst-versions .rst-other-versions hr {
+  border: none !important;
+  margin: 0.5rem 0 0 0 !important;
+}
+
+.rst-versions.shift-up {
+  border-color: var(--st-gray-50) !important;
+  bottom: 0.5rem !important;
+}
+
+/* Scrollbars */
+
+::-webkit-scrollbar {
+  background-color: transparent;
+  border-radius: 100px;
+  height: 6px;
+  width: 6px;
+}
+
+::-webkit-scrollbar:hover {
+  background-color: rgba(0, 0, 0, 0.09);
+}
+
+::-webkit-scrollbar-thumb:vertical,
+::-webkit-scrollbar-thumb:horizontal {
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 100px;
+}
+
+::-webkit-scrollbar-thumb:vertical:active,
+::-webkit-scrollbar-thumb:horizontal:active {
+  background: rgba(0, 0, 0, 0.61);
+  border-radius: 100px;
 }
 
 /* 960 is where the RTD mobile/responsive theme kicks in to move nav to header */

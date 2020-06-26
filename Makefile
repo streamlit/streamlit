@@ -175,7 +175,8 @@ clean-docs:
 # Generate HTML documentation at /docs/_build.
 docs: clean-docs
 	cd docs; \
-		make html
+		make html; \
+		python replace_vars.py css/custom.css _static/css/custom.css
 
 .PHONY: devel-docs
 # Build docs and start a test server at port 8000.
