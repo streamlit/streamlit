@@ -174,6 +174,7 @@ clean-docs:
 .PHONY: docs
 # Generate HTML documentation at /docs/_build.
 docs: clean-docs
+	mkdir -p docs/_static/css
 	cd docs; \
 		make html; \
 		python replace_vars.py css/custom.css _static/css/custom.css
