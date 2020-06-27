@@ -112,7 +112,7 @@ chart = st.line_chart(np.random.randn(10, 2))
 
 for i in range(100):
     # Update progress bar.
-    progress_bar.progress(i)
+    progress_bar.progress(i + 1)
 
     new_rows = np.random.randn(10, 2)
 

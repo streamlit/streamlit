@@ -16,6 +16,41 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.62.0
+
+_Release date: June 21, 2020_
+
+**Highlights:**
+
+- 📨 Ability to turn websocket compression on/off via the config option
+  `server.enableWebsocketCompression`. This is useful if your server strips HTTP headers and you do
+  not have access to change that behavior.
+- 🗝️ Out-of-the-box support for CSRF protection using the
+  [Cookie-to-header token](https://en.wikipedia.org/wiki/Cross-site_request_forgery#Cookie-to-header_token)
+  technique. This means that if you're serving your Streamlit app from multiple replicas you'll need
+  to configure them to to use the same cookie secret with the `server.cookieSecret` config option.
+  To turn XSRF protection off, set `server.enableXsrfProtection=false`.
+
+**Notable bug fixes:**
+
+- 🖼️ Added a grace period to the image cache expiration logic in order to fix multiple related bugs
+  where images sent with `st.image` or `st.pyplot` were sometimes missing.
+
+## Version 0.61.0
+
+_Release date: June 2, 2020_
+
+**Highlights:**
+
+- 📅 Support for date ranges in `st.date_picker`. See
+  [docs](https://docs.streamlit.io/en/latest/api.html#streamlit.date_picker)
+  for more info, but the TLDR is: just pass a list/tuple as the default date and it will be
+  interpreted as a range.
+- 🗣️ You can now choose whether `st.echo` prints the code above or below the output of the echoed
+  block. To learn more, refer to the `code_location` argument in the
+  [docs](https://docs.streamlit.io/en/latest/api.html#streamlit.echo).
+- 📦 Improved `@st.cache` support for Keras models and Tensorflow `saved_models`.
+
 ## Version 0.60.0
 
 _Release date: May 18, 2020_

@@ -1,14 +1,21 @@
 import streamlit as st
 import pandas as pd
 
-CustomDataframe = st.declare_component(url="http://localhost:3001")
-st.register_component("custom_dataframe", CustomDataframe)
+_custom_dataframe = st.declare_component(
+    "custom_dataframe",
+    url="http://localhost:3001",
+)
+
+
+def custom_dataframe(data, key=None):
+    return _custom_dataframe(data=data, key=key, default=[])
+
 
 raw_data = {
     "First Name": ["Jason", "Molly", "Tina", "Jake", "Amy"],
-    "Last Name": ["Miller", "Jacobson", "Ali", "Milner", "Cooze"],
+    "Last Name": ["Miller", "Jacobson", "Ali", "Milner", "Smith"],
     "Age": [42, 52, 36, 24, 73],
 }
 
 df = pd.DataFrame(raw_data, columns=["First Name", "Last Name", "Age"])
-st.custom_dataframe(data=df, default=[])
+custom_dataframe(df)

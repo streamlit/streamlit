@@ -109,7 +109,6 @@ from streamlit.util import functools_wraps as _functools_wraps
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
 from streamlit.caching import cache as cache  # noqa: F401
-from streamlit.components import register_component as register_component
 from streamlit.components import declare_component as declare_component
 
 # This is set to True inside cli._main_run(), and is False otherwise.
@@ -154,6 +153,8 @@ file_uploader = _main.file_uploader  # noqa: E221
 graphviz_chart = _main.graphviz_chart  # noqa: E221
 header = _main.header  # noqa: E221
 help = _main.help  # noqa: E221
+html = _main.html  # noqa: E221
+iframe = _main.iframe  # noqa: E221
 image = _main.image  # noqa: E221
 info = _main.info  # noqa: E221
 json = _main.json  # noqa: E221

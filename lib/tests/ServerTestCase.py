@@ -60,7 +60,7 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
             'tornado.testing.gen_test' coroutine.
 
         """
-        server_started = Future()
+        server_started = Future()  # type: ignore[var-annotated]
         self.io_loop.spawn_callback(
             self.server._loop_coroutine, lambda _: server_started.set_result(None)
         )

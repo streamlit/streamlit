@@ -17,6 +17,7 @@
 import os
 import toml
 import collections
+import secrets
 import urllib
 from typing import Dict
 
@@ -124,7 +125,7 @@ def _create_option(
                 default_val = 12345)
 
         (2) More complex, programmable config options use decorator syntax to
-        resolve thier values at runtime:
+        resolve their values at runtime:
 
             @_create_option('section.optionName')
             def _section_option_name():
@@ -394,6 +395,17 @@ _create_option(
 )
 
 
+@_create_option("server.cookieSecret", type_=str)
+@util.memoize
+def _server_cookie_secret():
+    """Symmetric key used to produce signed cookies. If deploying on multiple replicas, this should
+    be set to the same value across all replicas to ensure they all share the same secret.
+
+    Default: randomly generated secret key.
+    """
+    return secrets.token_hex()
+
+
 @_create_option("server.headless", type_=bool)
 @util.memoize
 def _server_headless():
@@ -464,9 +476,25 @@ _create_option(
 )
 
 
+# TODO: Rename to server.enableCorsProtection.
 @_create_option("server.enableCORS", type_=bool)
 def _server_enable_cors():
-    """Enables support for Cross-Origin Request Sharing, for added security.
+    """Enables support for Cross-Origin Request Sharing (CORS) protection, for added security.
+
+    Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is on and
+    `server.enableCORS` is off at the same time, we will prioritize `server.enableXsrfProtection`.
+
+    Default: true
+    """
+    return True
+
+
+@_create_option("server.enableXsrfProtection", type_=bool)
+def _server_enable_xsrf_protection():
+    """Enables support for Cross-Site Request Forgery (XSRF) protection, for added security.
+
+    Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is on and
+    `server.enableCORS` is off at the same time, we will prioritize `server.enableXsrfProtection`.
 
     Default: true
     """
@@ -484,6 +512,15 @@ def _server_max_upload_size():
     return 200
 
 
+@_create_option("server.enableWebsocketCompression", type_=bool)
+def _server_enable_websocket_compression():
+    """Enables support for websocket compression.
+
+    Default: true
+    """
+    return True
+
+
 # Config Section: Browser #
 
 _create_section("browser", "Configuration of browser front-end.")
@@ -495,7 +532,7 @@ def _browser_server_address():
     connect to the app. Can be IP address or DNS name and path.
 
     This is used to:
-    - Set the correct URL for CORS purposes.
+    - Set the correct URL for CORS and XSRF protection purposes.
     - Show the URL on the terminal
     - Open the browser
     - Tell the browser where to connect to the server when in liveSave mode.
@@ -520,7 +557,7 @@ def _browser_server_port():
     app.
 
     This is used to:
-    - Set the correct URL for CORS purposes.
+    - Set the correct URL for CORS and XSRF protection purposes.
     - Show the URL on the terminal
     - Open the browser
     - Tell the browser where to connect to the server when in liveSave mode.
@@ -958,6 +995,16 @@ def _check_conflicts():
             "\n\nTo remove this warning, set the 'sharingMode' option to "
             "another value, or remove it from your Streamlit config."
         )
+
+    # XSRF conflicts
+
+    if get_option("server.enableXsrfProtection"):
+        if not get_option("server.enableCORS") or get_option("global.useNode"):
+            LOGGER.warning(
+                "The config option 'server.enableXsrfProtection is not compatible with "
+                "'server.enableCORS'. If 'server.enableXsrfProtection' is on and 'server.enableCORS' "
+                "is off at the same time, we will prioritize 'server.enableXsrfProtection'."
+            )
 
 
 def _set_development_mode():
