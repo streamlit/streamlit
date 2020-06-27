@@ -119,6 +119,7 @@ a,
 a:visited {
   color: #f63366;
 }
+
 a:hover,
 a:active,
 a:visited:hover,
@@ -146,6 +147,7 @@ input[type="submit"] {
   font-size: 1rem;
   border-radius: 0.25rem;
 }
+
 button:hover,
 button:focus,
 input[type="button"]:hover,
@@ -157,6 +159,7 @@ input[type="submit"]:focus {
   border-color: #f63366;
   color: #f63366;
 }
+
 button:focus,
 input[type="button"]:focus,
 input[type="reset"]:focus,
@@ -164,6 +167,7 @@ input[type="submit"]:focus {
   box-shadow: 0 0 0 0.2rem rgba(246, 51, 102, 0.5);
   outline: none;
 }
+
 button:active,
 input[type="button"]:active,
 input[type="reset"]:active,
@@ -171,6 +175,7 @@ input[type="submit"]:active {
   color: #ffffff;
   background-color: #f63366;
 }
+
 button:disabled,
 button[disabled],
 button:disabled:hover,
@@ -216,6 +221,7 @@ select {
   box-shadow: none;
   box-sizing: inherit;
 }
+
 input[type="date"],
 input[type="datetime"],
 input[type="datetime-local"],
@@ -240,6 +246,7 @@ select {
   font-size: 1rem;
   line-height: 1.6;
 }
+
 input[type="date"]:focus,
 input[type="datetime"]:focus,
 input[type="datetime-local"]:focus,
@@ -258,21 +265,25 @@ select:focus {
   border-color: #f63366;
   outline: none;
 }
+
 input[type="color"] {
   border: 1px solid #d5dae5;
   border-radius: 0.25rem;
   height: 30px;
   width: 30px;
 }
+
 input[type="color"]:hover,
 input[type="color"]:focus {
   border-color: #f63366;
   color: #f63366;
 }
+
 input[type="color"]:focus {
   box-shadow: 0 0 0 0.2rem rgba(246, 51, 102, 0.5);
   outline: none;
 }
+
 input[type="color"]:active {
   color: #ffffff;
   background-color: #e6eaf1;
@@ -284,12 +295,14 @@ input[type="color"]:active {
     padding: 5px;
   }
 }
+
 select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 8' width='30'%3E%3Cpath fill='%23555' d='M0,0l6,8l6-8'/%3E%3C/svg%3E");
   background-position: center right;
   background-repeat: no-repeat;
   padding-right: 2.8rem;
 }
+
 select[multiple] {
   background-image: none;
   padding: calc(0.8rem - 2px);
@@ -309,17 +322,20 @@ input[type="radio"] {
   /* Set here so that Windows' High-Contrast Mode can override */
   color: green;
 }
+
 input[type="checkbox"]:focus,
 input[type="radio"]:focus {
   border-color: #262730;
   outline: none;
 }
+
 input[type="checkbox"]:disabled,
 input[type="radio"]:disabled {
   border-color: black;
   background: #ddd;
   color: gray;
 }
+
 input[type="checkbox"]:checked,
 input[type="radio"]:checked {
   background-color: #f63366;
@@ -329,6 +345,7 @@ input[type="radio"]:checked {
   color: #ffffff;
   border-color: #f63366;
 }
+
 input[type="checkbox"]:checked:focus,
 input[type="radio"]:checked:focus {
   box-shadow: 0 0 0 0.2rem rgba(246, 51, 102, 0.5);
@@ -338,6 +355,7 @@ input[type="radio"]:checked:focus {
 input[type="radio"] {
   border-radius: 50%;
 }
+
 input[type="radio"]:checked {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14' width='14'%3E%3Ccircle fill='white' cx='7' cy='7' r='3'/%3E%3C/svg%3E");
   background-position: center center;

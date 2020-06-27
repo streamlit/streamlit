@@ -56,8 +56,7 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
 
 class AssetsFileHandler(tornado.web.StaticFileHandler):
     def set_default_headers(self):
-        if allow_cross_origin_requests():
-            self.set_header("Access-Control-Allow-Origin", "*")
+        self.set_header("Access-Control-Allow-Origin", "*")
 
 
 class AddSlashHandler(tornado.web.RequestHandler):
