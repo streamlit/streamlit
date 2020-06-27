@@ -56,6 +56,7 @@
     "plotly.js": "^1.52.2",
     "prismjs": "^1.15.0",
     "protobufjs": "^6.9.0",
+    "query-string": "^6.13.1",
     "react": "^16.8.6",
     "react-color": "^2.18.1",
     "react-copy-to-clipboard": "^5.0.2",
