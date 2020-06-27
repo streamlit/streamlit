@@ -438,6 +438,7 @@ export class App extends PureComponent<Props, State> {
 
     document.title = `${reportName} · Streamlit`
 
+    MetricsManager.current.setReportHash(newReportHash)
     MetricsManager.current.clearDeltaCounter()
 
     MetricsManager.current.enqueue("updateReport", {
