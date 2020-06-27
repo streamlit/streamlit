@@ -103,6 +103,8 @@
   border-radius: 100px;
 }
 
+/* Basics */
+
 body {
   background: #ffffff;
   font-family: "IBM Plex Sans", sans-serif;
@@ -135,6 +137,7 @@ hr {
   padding: 0;
 }
 
+/* Making HTML widgets match Streamlit widgets more or less. */
 button,
 input[type="button"],
 input[type="reset"],
@@ -219,6 +222,7 @@ select {
   appearance: none;
   background-color: transparent;
   box-shadow: none;
+  /* Forced to replace inherit values of the normalize.css */
   box-sizing: inherit;
 }
 
@@ -361,6 +365,8 @@ input[type="radio"]:checked {
   background-position: center center;
   background-repeat: no-repeat;
 }
+
+/* Some utility classes, so components can use our theme. */
 
 .primary {
   color: #f63366;
