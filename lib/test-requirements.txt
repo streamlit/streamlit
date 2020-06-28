@@ -2,7 +2,8 @@
 bokeh
 cffi
 chart-studio
-cx_oracle
+# 8.0.0 causes test_sqlalchemy_engine_2_oracle to fail.
+cx-Oracle<8.0.0
 graphviz
 keras
 matplotlib
