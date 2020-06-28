@@ -132,6 +132,9 @@ export class Streamlit {
     }
   }
 
+  /**
+   * Load Streamlit stylesheet and fonts.
+   */
   private static loadStreamlitCSS = (): void => {
     const params = new URLSearchParams(window.location.search)
     const streamlitUrl = params.get("streamlitUrl")
