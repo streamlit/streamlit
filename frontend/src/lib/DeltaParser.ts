@@ -101,10 +101,16 @@ function handleNewElementMessage(
 ): ReportElement {
   MetricsManager.current.incrementDeltaCounter(container)
   MetricsManager.current.incrementDeltaCounter(element.get("type"))
+
+  // Track component instance name.
+  if (element.get("type") === "componentInstance") {
+    const componentName = element.getIn(["componentInstance", "componentName"])
+    MetricsManager.current.incrementDeltaCounter(componentName)
+  }
+
   // Set reportId on elements so we can clear old elements
   // when the report script is re-executed.
   // Set metadata on elements so that we can use them downstream.
-
   if (reportElement && reportElement.get("element").equals(element)) {
     return reportElement.set("reportId", reportId).set("metadata", metadata)
   }
