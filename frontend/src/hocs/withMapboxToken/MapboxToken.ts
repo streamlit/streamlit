@@ -75,7 +75,10 @@ export class MapboxToken {
   ): Promise<string> {
     try {
       const response = await axios.get(url)
+      // New token. Only works on localhost and with "streamlit hello".
       //const { "mapbox-localhost": token } = response.data
+
+      // Old token. Works everyhere:
       const { mapbox: token } = response.data
 
       if (token == null || token === "") {
