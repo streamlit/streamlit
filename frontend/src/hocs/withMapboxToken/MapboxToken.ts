@@ -57,7 +57,7 @@ export class MapboxToken {
         // TODO: Replace this with the block below after October 1st 2020.
         MapboxToken.token = await this.fetchToken(TOKENS_URL, "mapbox")
         // if (this.isRunningLocal() && SessionInfo.isHello) {
-        //   MapboxToken.token = await this.fetchToken(TOKENS_URL, "mapbox")
+        //   MapboxToken.token = await this.fetchToken(TOKENS_URL, "mapbox-localhost")
         // } else {
         //   throw new MapboxTokenNotProvidedError("No Mapbox token provided")
         // }
@@ -75,11 +75,7 @@ export class MapboxToken {
   ): Promise<string> {
     try {
       const response = await axios.get(url)
-      // New token. Only works on localhost and with "streamlit hello".
-      //const { "mapbox-localhost": token } = response.data
-
-      // Old token. Works everyhere:
-      const { mapbox: token } = response.data
+      const { [tokenName]: token } = response.data
 
       if (token == null || token === "") {
         throw new Error(`Missing token "${tokenName}"`)
