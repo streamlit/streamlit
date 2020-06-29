@@ -25,6 +25,7 @@ import { logError, logWarning } from "lib/log"
 import { Source, WidgetStateManager } from "lib/WidgetStateManager"
 import React, { createRef, ReactNode } from "react"
 import { ComponentRegistry } from "./ComponentRegistry"
+import queryString from "query-string"
 
 /**
  * The current custom component API version. If our API changes,
@@ -267,6 +268,12 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       } else {
         src = this.props.registry.getComponentURL(componentName, "index.html")
       }
+
+      // Add streamlitUrl query parameter to src.
+      src = queryString.stringifyUrl({
+        url: src,
+        query: { streamlitUrl: window.location.href },
+      })
 
       // Parse arguments
       renderArgs = JSON.parse(this.props.element.get("argsJson"))

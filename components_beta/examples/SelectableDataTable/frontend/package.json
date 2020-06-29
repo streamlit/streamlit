@@ -17,6 +17,7 @@
     "apache-arrow": "^0.17.0",
     "baseui": "^9.73.2",
     "bootstrap": "^4.4.1",
+    "event-target-shim": "^5.0.1",
     "hoist-non-react-statics": "^3.3.2",
     "lodash": "^4.17.15",
     "react": "^16.13.1",

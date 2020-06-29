@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+// Safari doesn't support the EventTarget class, so we use a shim.
+import { EventTarget } from "event-target-shim"
 import { ArrowDataframeProto, ArrowTable } from "./ArrowTable"
 
 /** Data sent in the custom Streamlit render event. */
@@ -67,6 +69,7 @@ export class Streamlit {
    * COMPONENT_READY message.
    */
   public static setComponentReady = (): void => {
+    Streamlit.loadStreamlitCSS()
     if (!Streamlit.registeredMessageListener) {
       // Register for message events if we haven't already
       window.addEventListener("message", Streamlit.onMessageEvent)
@@ -127,6 +130,18 @@ export class Streamlit {
         Streamlit.onRenderMessage(event.data)
         break
     }
+  }
+
+  /**
+   * Load Streamlit stylesheet and fonts.
+   */
+  private static loadStreamlitCSS = (): void => {
+    const params = new URLSearchParams(window.location.search)
+    const streamlitUrl = params.get("streamlitUrl")
+    const link = document.createElement("link")
+    link.rel = "stylesheet"
+    link.href = streamlitUrl + "assets/streamlit.css"
+    document.head.appendChild(link)
   }
 
   /**
