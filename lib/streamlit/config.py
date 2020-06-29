@@ -262,15 +262,6 @@ def _global_unit_test():
 
 
 _create_option(
-    "global.useNode",
-    description="""Whether to serve static content from node. Only applies when
-        developmentMode is True.""",
-    visibility="hidden",
-    default_val=True,
-    type_=bool,
-)
-
-_create_option(
     "global.metrics",
     description="Whether to serve prometheus metrics from /metrics.",
     visibility="hidden",
@@ -997,13 +988,14 @@ def _check_conflicts():
         )
 
     # XSRF conflicts
-
     if get_option("server.enableXsrfProtection"):
-        if not get_option("server.enableCORS") or get_option("global.useNode"):
+        if not get_option("server.enableCORS") or get_option("global.developmentMode"):
             LOGGER.warning(
-                "The config option 'server.enableXsrfProtection is not compatible with "
-                "'server.enableCORS'. If 'server.enableXsrfProtection' is on and 'server.enableCORS' "
-                "is off at the same time, we will prioritize 'server.enableXsrfProtection'."
+                "In order to protect against CSRF attacks, we send a cookie with each request. "
+                "To do so, we must specify allowable origins which places a restriction on "
+                "cross origin resource sharing. We will prioritize 'server.enableXsrfProtection' "
+                "over 'server.enableCORS'. If cross origin resource sharing is required, please "
+                "disable 'server.enableXsrfProtection'."
             )
 
 
