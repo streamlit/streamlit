@@ -2024,6 +2024,9 @@ class DeltaGenerator(object):
 
         datetime_min = time.min
         datetime_max = time.max
+        if data_type == Slider.TIME:
+            datetime_min = time.min.replace(tzinfo=value[0].tzinfo)
+            datetime_max = time.max.replace(tzinfo=value[0].tzinfo)
         if data_type in (Slider.DATETIME, Slider.DATE):
             datetime_min = value[0] - timedelta(days=14)
             datetime_max = value[0] + timedelta(days=14)
@@ -2230,7 +2233,10 @@ class DeltaGenerator(object):
         if data_type == Slider.DATE:
             current_value = [_micros_to_datetime(int(v)).date() for v in current_value]
         if data_type == Slider.TIME:
-            current_value = [_micros_to_datetime(int(v)).time() for v in current_value]
+            current_value = [
+                _micros_to_datetime(int(v)).time().replace(tzinfo=orig_tz)
+                for v in current_value
+            ]
         # If the original value was a list/tuple, so will be the output (and vice versa)
         return current_value[0] if single_value else tuple(current_value)
 
