@@ -29,8 +29,8 @@ export interface Props {
  * Hidden element that overwrites the page's favicon with the provided image
  */
 export class Favicon extends Component<Props> {
-  emoji = ""
-  shouldRender = true
+  private emoji = ""
+  private shouldRender = true
 
   public render(): ReactNode {
     const { element } = this.props
@@ -60,7 +60,7 @@ export class Favicon extends Component<Props> {
     ) : null
   }
 
-  setFavicon(imageUrl: string) {
+  private setFavicon(imageUrl: string) {
     const faviconElement: HTMLLinkElement | null = document.querySelector(
       "link[rel='shortcut icon']"
     )
@@ -70,7 +70,7 @@ export class Favicon extends Component<Props> {
   }
 
   // An SVG for an full-sized emoji, encoded as a data URI
-  svgURI(emoji: string, scale: number) {
+  private svgURI(emoji: string, scale: number) {
     return `data:image/svg+xml,
     <svg version="1.2" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" >
       <text
