@@ -990,13 +990,17 @@ def _check_conflicts():
     # XSRF conflicts
     if get_option("server.enableXsrfProtection"):
         if not get_option("server.enableCORS") or get_option("global.developmentMode"):
-            LOGGER.warning(
-                "In order to protect against CSRF attacks, we send a cookie with each request. "
-                "To do so, we must specify allowable origins which places a restriction on "
-                "cross origin resource sharing. We will prioritize 'server.enableXsrfProtection' "
-                "over 'server.enableCORS'. If cross origin resource sharing is required, please "
-                "disable 'server.enableXsrfProtection'."
-            )
+            LOGGER.warning("""
+Warning: the config option 'server.enableCORS=false' is not compatible with 'server.enableXsrfProtection=true'.
+As a result, 'server.enableCORS' is being overridden to 'true'.
+
+More information:
+In order to protect against CSRF attacks, we send a cookie with each request.
+To do so, we must specify allowable origins, which places a restriction on
+cross-origin resource sharing.
+
+If cross origin resource sharing is required, please disable server.enableXsrfProtection.
+            """)
 
 
 def _set_development_mode():
