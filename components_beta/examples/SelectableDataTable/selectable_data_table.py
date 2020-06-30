@@ -1,7 +1,9 @@
-import streamlit as st
 import pandas as pd
 
-_selectable_data_table = st.declare_component(
+import streamlit as st
+from streamlit.components.v1 import declare_component
+
+_selectable_data_table = declare_component(
     "selectable_data_table", url="http://localhost:3001",
 )
 

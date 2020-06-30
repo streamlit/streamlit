@@ -1,10 +1,8 @@
-import streamlit as st
 import pandas as pd
 
-_custom_dataframe = st.declare_component(
-    "custom_dataframe",
-    url="http://localhost:3001",
-)
+from streamlit.components.v1 import declare_component
+
+_custom_dataframe = declare_component("custom_dataframe", url="http://localhost:3001",)
 
 
 def custom_dataframe(data, key=None):
