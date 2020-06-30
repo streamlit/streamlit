@@ -2112,24 +2112,22 @@ class DeltaGenerator(object):
                 }
             )
 
-        # Ensure that min <= value <= max.
+        # Ensure that min <= value(s) <= max, adjusting the bounds as necessary.
+        min_value = min(min_value, max_value)
+        max_value = max(min_value, max_value)
         if len(value) == 1:
-            if not min_value <= value[0] <= max_value:
-                raise StreamlitAPIException(
-                    "The default `value` of %(value)s "
-                    "must lie between the `min_value` of %(min)s "
-                    "and the `max_value` of %(max)s, inclusively."
-                    % {"value": value[0], "min": min_value, "max": max_value}
-                )
+            min_value = min(value[0], min_value)
+            max_value = max(value[0], max_value)
         elif len(value) == 2:
             start, end = value
-            if not min_value <= start <= end <= max_value:
-                raise StreamlitAPIException(
-                    "The value and/or arguments are out of range. "
-                    "Expected: min_value <= start <= end <= max_value, "
-                    f"but was: {min_value} <= {start} <= {end} <= {max_value}"
-                )
+            if start > end:
+                # Swap start and end, since they seem reversed
+                start, end = end, start
+                value = start, end
+            min_value = min(start, min_value)
+            max_value = max(end, max_value)
         else:
+            # Empty list, so let's just use the outer bounds
             value = [min_value, max_value]
 
         # Bounds checks. JSNumber produces human-readable exceptions that

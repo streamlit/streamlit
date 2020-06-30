@@ -89,38 +89,32 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
     def test_naive_datetime(self, value, return_value):
         """Ignore proto values (they change based on testing machine's timezone)"""
         ret = st.slider("the label", value=value)
+        c = self.get_delta_from_queue().new_element.slider
 
         self.assertEqual(ret, return_value)
-
-        c = self.get_delta_from_queue().new_element.slider
         self.assertEqual(c.label, "the label")
 
     def test_value_greater_than_min(self):
-        with pytest.raises(StreamlitAPIException) as exc_slider:
-            st.slider("Slider label", 10, 100, 0)
-        self.assertEqual(
-            "The default `value` of 0 must lie between the `min_value` of 10 "
-            "and the `max_value` of 100, inclusively.",
-            str(exc_slider.value),
-        )
+        ret = st.slider("Slider label", 10, 100, 0)
+        c = self.get_delta_from_queue().new_element.slider
+
+        self.assertEqual(ret, 0)
+        self.assertEqual(c.min, 0)
 
     def test_value_smaller_than_max(self):
-        with pytest.raises(StreamlitAPIException) as exc_slider:
-            st.slider("Slider label", 10, 100, 101)
-        self.assertEqual(
-            "The default `value` of 101 must lie between the `min_value` of "
-            "10 and the `max_value` of 100, inclusively.",
-            str(exc_slider.value),
-        )
+        ret = st.slider("Slider label", 10, 100, 101)
+        c = self.get_delta_from_queue().new_element.slider
+
+        self.assertEqual(ret, 101)
+        self.assertEqual(c.max, 101)
 
     def test_max_min(self):
-        with pytest.raises(StreamlitAPIException) as exc_slider:
-            st.slider("Slider label", 101, 100, 101)
-        self.assertEqual(
-            "The default `value` of 101 must lie between the `min_value` of "
-            "101 and the `max_value` of 100, inclusively.",
-            str(exc_slider.value),
-        )
+        ret = st.slider("Slider label", 101, 100, 101)
+        c = self.get_delta_from_queue().new_element.slider
+
+        self.assertEqual(ret, 101),
+        self.assertEqual(c.min, 100)
+        self.assertEqual(c.max, 101)
 
     def test_value_out_of_bounds(self):
         # Max int
