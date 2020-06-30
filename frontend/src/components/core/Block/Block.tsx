@@ -146,19 +146,19 @@ class Block extends PureComponent<Props> {
     )
   }
 
-  private static getClassNames(isStale: boolean, isEmpty: boolean): string {
+  private static getClassNames(isStale: boolean, isHidden: boolean): string {
     const classNames = ["element-container"]
     if (isStale && !FullScreenWrapper.isFullScreen) {
       classNames.push("stale-element")
     }
-    if (isEmpty) {
-      classNames.push("stEmpty")
+    if (isHidden) {
+      classNames.push("stHidden")
     }
     return classNames.join(" ")
   }
 
-  private shouldComponentBeEnabled(isEmpty: boolean): boolean {
-    return !isEmpty || this.props.reportRunState !== ReportRunState.RUNNING
+  private shouldComponentBeEnabled(isHidden: boolean): boolean {
+    return !isHidden || this.props.reportRunState !== ReportRunState.RUNNING
   }
 
   private isComponentStale(
@@ -186,10 +186,10 @@ class Block extends PureComponent<Props> {
     )
 
     const elementType = element.get("type")
-    const isEmpty = elementType === "empty" || elementType === "favicon"
-    const enable = this.shouldComponentBeEnabled(isEmpty)
+    const isHidden = elementType === "empty" || elementType === "favicon"
+    const enable = this.shouldComponentBeEnabled(isHidden)
     const isStale = this.isComponentStale(enable, reportElement)
-    const className = Block.getClassNames(isStale, isEmpty)
+    const className = Block.getClassNames(isStale, isHidden)
     const simpleElement = element.get(elementType)
     const key = simpleElement.get("id") || index
 
@@ -269,7 +269,7 @@ class Block extends PureComponent<Props> {
       docString: (el: SimpleElement) => (
         <DocString element={el} width={width} />
       ),
-      empty: () => <div className="stEmpty" key={index} />,
+      empty: () => <div className="stHidden" key={index} />,
       exception: (el: SimpleElement) => (
         <ExceptionElement element={el} width={width} />
       ),
