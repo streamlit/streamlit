@@ -2,7 +2,8 @@
 bokeh
 cffi
 chart-studio
-cx_oracle
+# 8.0.0 causes test_sqlalchemy_engine_2_oracle to fail.
+cx-Oracle<8.0.0
 graphviz
 keras
 matplotlib
@@ -13,8 +14,12 @@ prometheus-client
 psycopg2-binary
 pydot
 pyodbc
+# Tensorflow 2.x requires scipy==1.4.1.
+# Feel free to remove this dependency if the requirement is gone.
+scipy==1.4.1
 seaborn
 sqlalchemy
-tensorflow>=2.0.0rc3
+# The > sign will skip rc versions.
+tensorflow>2.0.0rc3
 torch
 torchvision
