@@ -1920,7 +1920,7 @@ class DeltaGenerator(object):
             value - timedelta(days=14) if a date/datetime, time.min if a time
         max_value : a supported type or None
             The maximum permitted value.
-            Defaults 100 if the value is an int, 1.0 if a float,
+            Defaults to 100 if the value is an int, 1.0 if a float,
             value + timedelta(days=14) if a date/datetime, time.max if a time
         value : a supported type or a tuple/list of supported types or None
             The value of the slider when it first renders. If a tuple/list
