@@ -18,8 +18,8 @@
 import React, { Component, ReactNode } from "react"
 import ReactDOM from "react-dom"
 import { Map as ImmutableMap } from "immutable"
-import { getImageURI } from "../ImageList/ImageList"
 import nodeEmoji from "node-emoji"
+import { buildMediaUri } from "lib/UriUtil"
 
 export interface Props {
   element: ImmutableMap<string, any>
@@ -45,7 +45,7 @@ export class Favicon extends Component<Props> {
     } else {
       // Format: http://streamlit.io/favicon.ico or /media/blah.jpeg
       // No need to render SVG
-      this.setFavicon(getImageURI(element))
+      this.setFavicon(buildMediaUri(element.get("url")))
       this.shouldRender = false
     }
 
