@@ -60,7 +60,7 @@ export class MetricsManager {
    * possibly-sensitive info like the scriptPath outside of our metrics
    * services.
    */
-  private reportHash: string = ""
+  private reportHash = "Not initialized"
 
   /**
    * Singleton MetricsManager object. The reason we're using a singleton here
