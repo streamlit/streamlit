@@ -121,6 +121,10 @@ export class MetricsManager {
     return deltaCounter
   }
 
+  // Report hash gets set when update report happens.
+  // This means that it will be attached to most, but not all, metrics events.
+  // The viewReport and createReport events are sent before updateReport happens,
+  // so they will not include the reportHash.
   public setReportHash = (reportHash: string): void => {
     this.reportHash = reportHash
   }
