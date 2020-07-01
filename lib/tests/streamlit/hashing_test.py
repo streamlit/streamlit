@@ -111,8 +111,9 @@ class HashTest(unittest.TestCase):
             return x
 
         self.assertEqual(foo(1), foo(1))
-        # TODO We're able to break the recursive cycle caused by the identity
+        # Note: We're able to break the recursive cycle caused by the identity
         # hash func but it causes all cycles to hash to the same thing.
+        # https://github.com/streamlit/streamlit/issues/1659
         # self.assertNotEqual(foo(2), foo(1))
 
     def test_tuple(self):
