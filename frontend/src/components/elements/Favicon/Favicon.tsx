@@ -65,7 +65,7 @@ export interface Props {
  * This has a complex lifecycle for emoji favicons, since it must first render
  * the emoji on the page to measure its dimensions, then hide it afterwards.
  */
-function Favicon(props: Props) {
+export function Favicon(props: Props) {
   const [render, setRender] = useState(true)
   const [emoji, setEmoji] = useState("")
   const [finalUrl, setFinalUrl] = useState("")
