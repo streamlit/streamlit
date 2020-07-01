@@ -105,7 +105,7 @@ function handleNewElementMessage(
   // Track component instance name.
   if (element.get("type") === "componentInstance") {
     const componentName = element.getIn(["componentInstance", "componentName"])
-    MetricsManager.current.incrementDeltaCounter(componentName)
+    MetricsManager.current.incrementCustomComponentCounter(componentName)
   }
 
   // Set reportId on elements so we can clear old elements
