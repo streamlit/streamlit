@@ -254,32 +254,25 @@ class _CodeHasher:
         # The number of the bytes in the hash.
         self.size = 0
 
-        # An ever increasing counter.
-        self._counter = 0
-
     def to_bytes(self, obj, context=None):
         """Add memoization to _to_bytes and protect against cycles in data structures."""
         tname = type(obj).__qualname__.encode()
         key = (tname, _key(obj))
 
+        # Memoize if possible.
         if key[1] is not NoResult:
             if key in self._hashes:
                 return self._hashes[key]
 
-            # Add a tombstone hash to break recursive calls.
-            #self._counter += 1
-            #self._hashes[key] = b"tombstone:%s" % _int_to_bytes(self._counter)
-
+        # Break recursive cycles.
         if obj in hash_stacks.current:
             return _CYCLE_PLACEHOLDER
 
         hash_stacks.current.push(obj)
 
         try:
-            # Turn these on for debugging.
-            # _LOGGER.debug("About to hash: %s", obj)
+            # Hash the input
             b = b"%s:%s" % (tname, self._to_bytes(obj, context))
-            # _LOGGER.debug("Done hashing: %s", obj)
 
             # Hmmm... It's psosible that the size calculation is wrong. When we
             # call to_bytes inside _to_bytes things get double-counted.
