@@ -3,6 +3,7 @@
 
 import recommonmark
 from recommonmark.transform import AutoStructify
+import sphinx_rtd_theme
 
 # -- Path setup --------------------------------------------------------------
 
@@ -60,6 +61,7 @@ extensions = [
     "recommonmark",
     "stoutput",
     "sphinx_markdown_tables",
+    "sphinx_rtd_theme",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
