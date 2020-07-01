@@ -28,6 +28,22 @@ const getProps = (elementProps: object = {}): Props => ({
   }),
 })
 
+// Overwrite bounding box code for testing (https://stackoverflow.com/a/52146902)
+const mockedRect = {
+  x: 0,
+  y: 0,
+  bottom: 0,
+  left: 0,
+  right: 0,
+  top: 0,
+  width: 10,
+  height: 10,
+  toJSON: () => "",
+}
+const originalGetBBox = SVGElement.prototype.getBBox
+beforeEach(() => (SVGElement.prototype.getBBox = () => mockedRect))
+afterEach(() => (SVGElement.prototype.getBBox = originalGetBBox))
+
 function getFaviconHref() {
   const faviconElement: HTMLLinkElement | null = document.querySelector(
     "link[rel='shortcut icon']"
@@ -61,5 +77,29 @@ describe("Favicon element", () => {
     mount(<Favicon {...props} />)
 
     expect(getFaviconHref()).toBe("http://localhost/media/1234567890.png")
+  })
+
+  const PIZZA_EMOJI_SVG = `data:image/svg+xml,
+  <svg version="1.2" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <text
+      style="transform: translate(50%, 50%) scale(10)"
+      dominant-baseline="central"
+      text-anchor="middle">
+      %F0%9F%8D%95
+    </text>
+  </svg>`.replace(/\n/g, "")
+
+  it("should accept emojis directly", () => {
+    const props = getProps({ url: "🍕" })
+    mount(<Favicon {...props} />)
+
+    expect(getFaviconHref()).toBe(PIZZA_EMOJI_SVG)
+  })
+
+  it("should accept emoji shortcodes", () => {
+    const props = getProps({ url: ":pizza:" })
+    mount(<Favicon {...props} />)
+
+    expect(getFaviconHref()).toBe(PIZZA_EMOJI_SVG)
   })
 })
