@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, ReactText } from "react"
+import { range, zipObject } from "lodash"
 import { SelectionState, IntegratedSelection } from "@devexpress/dx-react-grid"
 import {
   Grid,
@@ -6,8 +7,6 @@ import {
   TableHeaderRow,
   TableSelection,
 } from "@devexpress/dx-react-grid-material-ui"
-import Paper from "@material-ui/core/Paper"
-import { range } from "lodash"
 import {
   ArrowTable,
   ComponentProps,
@@ -15,18 +14,17 @@ import {
   withStreamlitConnection,
 } from "./streamlit"
 
+interface TableRowsProps {
+  isHeader: boolean
+  table: ArrowTable
+}
+
 /**
  * Function returning a list of rows.
  *
  * isHeader     - Whether to display the header.
  * table        - The table to display.
  */
-
-interface TableRowsProps {
-  isHeader: boolean
-  table: ArrowTable
-}
-
 const tableRows = (props: TableRowsProps): string[][] => {
   const { isHeader, table } = props
   const { headerRows, rows } = table
@@ -40,18 +38,17 @@ const tableRows = (props: TableRowsProps): string[][] => {
   return tableRows
 }
 
+interface TableRowProps {
+  rowIndex: number
+  table: ArrowTable
+}
+
 /**
  * Function returning a list entries for a row.
  *
  * rowIndex - The row index.
  * table    - The table to display.
  */
-
-interface TableRowProps {
-  rowIndex: number
-  table: ArrowTable
-}
-
 const tableRow = (props: TableRowProps): string[] => {
   const { rowIndex, table } = props
   const { columns } = table
@@ -64,52 +61,37 @@ const tableRow = (props: TableRowProps): string[] => {
   return cells
 }
 
-// (HK) TODO: Cleanup
-const generateReactGridDataRows = (rows: string[][], columns: string[][]) =>
-  rows.map((row: string[]) =>
-    columns[0].reduce((obj: any = {}, key: string, i: number) => {
-      obj[key] = row[i]
-      return obj
-    }, {})
-  )
+const formatRows = (rows: string[][], columns: string[][]) =>
+  rows.map(row => zipObject(columns[0], row))
 
-// (HK) TODO: Cleanup & handle multiheader grids
-const generateReactGridDataColumns = (columns: string[][]) =>
-  columns[0].map((column: string) => ({
-    name: column,
-  }))
+const formatColumns = (columns: string[][]) =>
+  columns[0].map(column => ({ name: column }))
 
-const SelectableDataTable = (props: ComponentProps) => {
+const SelectableDataTable: React.FC<ComponentProps> = props => {
   useEffect(() => {
     Streamlit.setFrameHeight(350)
   })
 
-  const handleSelectionChange = (value: any): void => {
+  const handleSelectionChange = (value: ReactText[]): void => {
     setSelection(value)
     Streamlit.setComponentValue(value)
   }
 
-  const [selection, setSelection] = useState<Array<number | string>>([])
-  const table = props.args.data
-  const columns = tableRows({ isHeader: true, table })
-  const rows = tableRows({ isHeader: false, table })
+  const [selection, setSelection] = useState<ReactText[]>([])
+  const columns = tableRows({ isHeader: true, table: props.args.data })
+  const rows = tableRows({ isHeader: false, table: props.args.data })
 
   return (
-    <Paper>
-      <Grid
-        rows={generateReactGridDataRows(rows, columns)}
-        columns={generateReactGridDataColumns(columns)}
-      >
-        <SelectionState
-          selection={selection}
-          onSelectionChange={handleSelectionChange}
-        />
-        <IntegratedSelection />
-        <VirtualTable />
-        <TableHeaderRow />
-        <TableSelection showSelectAll />
-      </Grid>
-    </Paper>
+    <Grid rows={formatRows(rows, columns)} columns={formatColumns(columns)}>
+      <SelectionState
+        selection={selection}
+        onSelectionChange={handleSelectionChange}
+      />
+      <IntegratedSelection />
+      <VirtualTable />
+      <TableHeaderRow />
+      <TableSelection showSelectAll />
+    </Grid>
   )
 }
 

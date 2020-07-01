@@ -24,10 +24,10 @@ import tornado.testing
 import tornado.web
 
 from streamlit import StreamlitAPIException
-from streamlit.components import ComponentRegistry
-from streamlit.components import ComponentRequestHandler
-from streamlit.components import CustomComponent
-from streamlit.components import declare_component
+from streamlit.components.v1.components import ComponentRegistry
+from streamlit.components.v1.components import ComponentRequestHandler
+from streamlit.components.v1.components import CustomComponent
+from streamlit.components.v1.components import declare_component
 from streamlit.errors import DuplicateWidgetID
 from tests.testutil import DeltaGeneratorTestCase
 
@@ -76,7 +76,9 @@ class DeclareComponentTest(unittest.TestCase):
         def isdir(path):
             return path == PATH or path == os.path.abspath(PATH)
 
-        with mock.patch("streamlit.components.os.path.isdir", side_effect=isdir):
+        with mock.patch(
+            "streamlit.components.v1.components.os.path.isdir", side_effect=isdir
+        ):
             component = declare_component("test", path=PATH)
 
         self.assertEqual(PATH, component.path)
@@ -131,7 +133,9 @@ class ComponentRegistryTest(unittest.TestCase):
             return path == test_path
 
         registry = ComponentRegistry.instance()
-        with mock.patch("streamlit.components.os.path.isdir", side_effect=isdir):
+        with mock.patch(
+            "streamlit.components.v1.components.os.path.isdir", side_effect=isdir
+        ):
             registry.register_component(
                 CustomComponent("test_component", path=test_path)
             )
@@ -173,7 +177,9 @@ class ComponentRegistryTest(unittest.TestCase):
             return path in (test_path_1, test_path_2)
 
         registry = ComponentRegistry.instance()
-        with mock.patch("streamlit.components.os.path.isdir", side_effect=isdir):
+        with mock.patch(
+            "streamlit.components.v1.components.os.path.isdir", side_effect=isdir
+        ):
             registry.register_component(CustomComponent("test_component", test_path_1))
             registry.register_component(CustomComponent("test_component", test_path_1))
             self.assertEqual(test_path_1, registry.get_component_path("test_component"))
@@ -290,12 +296,12 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def test_success_request(self):
         """Test request success when valid parameters are provided."""
 
-        with mock.patch("streamlit.components.os.path.isdir"):
+        with mock.patch("streamlit.components.v1.components.os.path.isdir"):
             # We don't need the return value in this case.
             declare_component("test", path=PATH)
 
         with mock.patch(
-            "streamlit.components.open", mock.mock_open(read_data="Test Content")
+            "streamlit.components.v1.components.open", mock.mock_open(read_data="Test Content")
         ):
             response = self._request_component("components_test.test")
 
@@ -312,10 +318,10 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def test_invalid_content_request(self):
         """Test request failure when invalid content (file) is provided."""
 
-        with mock.patch("streamlit.components.os.path.isdir"):
+        with mock.patch("streamlit.components.v1.components.os.path.isdir"):
             declare_component("test", path=PATH)
 
-        with mock.patch("streamlit.components.open") as m:
+        with mock.patch("streamlit.components.v1.components.open") as m:
             m.side_effect = OSError("Invalid content")
             response = self._request_component("components_test.test")
 

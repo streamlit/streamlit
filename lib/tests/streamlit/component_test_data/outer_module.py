@@ -1,3 +1,3 @@
-import streamlit as st
+from streamlit.components.v1 import declare_component
 
-component = st.declare_component("foo", url="http://not.a.url")
+component = declare_component("foo", url="http://not.a.url")

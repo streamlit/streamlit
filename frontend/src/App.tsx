@@ -41,6 +41,7 @@ import {
   ReportElement,
   SimpleElement,
 } from "lib/DeltaParser"
+import { setCookie } from "lib/utils"
 import {
   BackMsg,
   Delta,
@@ -144,7 +145,7 @@ export class App extends PureComponent<Props, State> {
       return this.connectionManager
         ? this.connectionManager.getBaseUriParts()
         : undefined
-    })
+    }, true)
     this.componentRegistry = new ComponentRegistry(() => {
       return this.connectionManager
         ? this.connectionManager.getBaseUriParts()
@@ -232,6 +233,8 @@ export class App extends PureComponent<Props, State> {
       )
       this.widgetMgr.sendUpdateWidgetsMessage()
       this.setState({ dialog: null })
+    } else {
+      setCookie("_xsrf", "")
     }
   }
 
@@ -442,15 +445,10 @@ export class App extends PureComponent<Props, State> {
 
     document.title = `${reportName} · Streamlit`
 
+    MetricsManager.current.setReportHash(newReportHash)
     MetricsManager.current.clearDeltaCounter()
 
-    MetricsManager.current.enqueue("updateReport", {
-      // Create a hash that uniquely identifies this "project" so we can tell
-      // how many projects are being created with Streamlit while still keeping
-      // possibly-sensitive info like the scriptPath outside of our metrics
-      // services.
-      reportHash: newReportHash,
-    })
+    MetricsManager.current.enqueue("updateReport")
 
     if (reportHash === newReportHash) {
       this.setState({

@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 @import "variables";
 @import "fonts";
 @import "scrollbars";
@@ -35,12 +34,212 @@ pre {
 a,
 a:visited {
   color: $primary;
+
+  &:hover,
+  &:active {
+    color: $primary;
+    text-decoration: underline;
+  }
 }
 
-a:hover,
-a:active {
-  color: $primary;
-  text-decoration: underline;
+hr {
+  border: none;
+  border-bottom: 1px solid $gray-light;
+  margin: 2em 0;
+  padding: 0;
+}
+
+// Making HTML widgets match Streamlit widgets more or less.
+
+button,
+input[type="button"],
+input[type="reset"],
+input[type="submit"] {
+  padding: 0 $font-size-sm;
+  line-height: $line-height-base;
+  background: $white;
+  border: 1px solid $gray-lighter;
+  color: $black;
+  font-size: $font-size-base;
+  border-radius: $border-radius;
+
+  &:hover,
+  &:focus {
+    border-color: $primary;
+    color: $primary;
+  }
+
+  &:focus {
+    box-shadow: 0 0 0 0.2rem $primary-a50;
+    outline: none;
+  }
+
+  &:active {
+    color: $white;
+    background-color: $primary;
+  }
+
+  &:disabled,
+  &[disabled],
+  &:disabled:hover,
+  &[disabled]:hover {
+    background-color: $gray-lighter;
+    border-color: transparent;
+    color: $gray;
+  }
+}
+
+input[type="checkbox"],
+input[type="color"],
+input[type="date"],
+input[type="datetime"],
+input[type="datetime-local"],
+input[type="email"],
+input[type="month"],
+input[type="number"],
+input[type="password"],
+input[type="radio"],
+input[type="search"],
+input[type="tel"],
+input[type="text"],
+input[type="url"],
+input[type="week"],
+input:not([type]),
+textarea,
+select {
+  -webkit-appearance: none; // sass-lint:disable-line no-vendor-prefixes
+  appearance: none;
+  background-color: transparent;
+  box-shadow: none;
+  box-sizing: inherit; // Forced to replace inherit values of the normalize.css
+
+  &:focus {
+  }
+}
+
+input[type="date"],
+input[type="datetime"],
+input[type="datetime-local"],
+input[type="email"],
+input[type="month"],
+input[type="number"],
+input[type="password"],
+input[type="search"],
+input[type="tel"],
+input[type="text"],
+input[type="url"],
+input[type="week"],
+input:not([type]),
+textarea,
+select {
+  background: $gray-lightest;
+  border-radius: $border-radius;
+  color: $black;
+  border: 2px solid transparent;
+  padding: calc(0.8rem - 2px);
+  font-family: $font-family-sans-serif;
+  font-size: $font-size-base;
+  line-height: $line-height-base;
+
+  &:focus {
+    border-color: $primary;
+    outline: none;
+  }
+
+  &:disabled {
+  }
+}
+
+input[type="color"] {
+  border: 1px solid $gray-light;
+  border-radius: $border-radius;
+  height: 30px;
+  width: 30px;
+
+  &:hover,
+  &:focus {
+    border-color: $primary;
+    color: $primary;
+  }
+
+  &:focus {
+    box-shadow: 0 0 0 0.2rem $primary-a50;
+    outline: none;
+  }
+
+  &:active {
+    color: $white;
+    background-color: $gray-lighter;
+  }
+}
+
+@supports (-moz-appearance: meterbar) {
+  /* Make Firefox match Chrome. */
+  input[type="color"] {
+    padding: 5px;
+  }
+}
+
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 8' width='30'%3E%3Cpath fill='%23555' d='M0,0l6,8l6-8'/%3E%3C/svg%3E");
+  background-position: center right;
+  background-repeat: no-repeat;
+  padding-right: 2.8rem;
+
+  &[multiple] {
+    background-image: none;
+    padding: calc(0.8rem - 2px);
+  }
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  position: relative;
+  width: 19px;
+  height: 19px;
+  border: 2px solid $gray;
+  margin: 0 8px 0 0;
+  border-radius: $border-radius-sm;
+  box-sizing: border-box;
+  /* Adjusts the position of the checkboxes on the text baseline */
+  vertical-align: -2px;
+  /* Set here so that Windows' High-Contrast Mode can override */
+  color: green;
+
+  &:focus {
+    border-color: $black;
+    outline: none;
+  }
+
+  &:disabled {
+    border-color: black;
+    background: #ddd;
+    color: gray;
+  }
+
+  &:checked {
+    background-color: $primary;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14' width='14'%3E%3Cpath fill='none' stroke='white' stroke-width='3' d='M2,7L6,11L12,3' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-position: center center;
+    background-repeat: no-repeat;
+    color: $white;
+    border-color: $primary;
+
+    &:focus {
+      box-shadow: 0 0 0 0.2rem $primary-a50;
+      outline: none;
+    }
+  }
+}
+
+input[type="radio"] {
+  border-radius: 50%;
+
+  &:checked {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14' width='14'%3E%3Ccircle fill='white' cx='7' cy='7' r='3'/%3E%3C/svg%3E");
+    background-position: center center;
+    background-repeat: no-repeat;
+  }
 }
 
 // Some utility classes, so components can use our theme.

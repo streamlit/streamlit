@@ -132,7 +132,7 @@ def _fix_sys_argv(script_path, args):
 
 
 def _on_server_start(server):
-    _print_url()
+    _print_url(server.is_running_hello)
 
     def maybe_open_browser():
         if config.get_option("server.headless"):
@@ -166,8 +166,12 @@ def _fix_pydeck_mapbox_api_warning():
     os.environ["MAPBOX_API_KEY"] = config.get_option("mapbox.token")
 
 
-def _print_url():
-    title_message = "You can now view your Streamlit app in your browser."
+def _print_url(is_running_hello):
+    if is_running_hello:
+        title_message = "Welcome to Streamlit. Check out our demo in your browser."
+    else:
+        title_message = "You can now view your Streamlit app in your browser."
+
     named_urls = []
 
     if config.is_manually_set("browser.serverAddress"):
@@ -206,6 +210,14 @@ def _print_url():
         url_util.print_url(url_name, url)
 
     click.secho("")
+
+    if is_running_hello:
+        click.secho("  Ready to create your own Python apps super quickly?")
+        click.secho("  Just head over to ", nl=False)
+        click.secho("https://docs.streamlit.io", bold=True)
+        click.secho("")
+        click.secho("  May you create awesome apps!")
+        click.secho("")
 
 
 def run(script_path, command_line, args):

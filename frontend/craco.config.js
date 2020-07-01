@@ -2,6 +2,19 @@ const webpack = require("webpack")
 const HardSourceWebpackPlugin = require("hard-source-webpack-plugin")
 
 module.exports = {
+  devServer: {
+    headers: {
+      // This allows static files request other static files in development mode.
+      "Access-Control-Allow-Origin": "*",
+    },
+  },
+  jest: {
+    configure: jestConfig => {
+      jestConfig.setupFiles = ["jest-canvas-mock"]
+
+      return jestConfig
+    },
+  },
   webpack: {
     configure: (webpackConfig, { env, paths }) => {
       webpackConfig.resolve.mainFields = ["main", "module"]
@@ -25,12 +38,5 @@ module.exports = {
         return data
       }),
     ],
-  },
-  jest: {
-    configure: jestConfig => {
-      jestConfig.setupFiles = ["jest-canvas-mock"]
-
-      return jestConfig
-    },
   },
 }

@@ -18,10 +18,7 @@
 import React from "react"
 import { Balloons as BalloonsProto } from "autogen/proto"
 import { Map as ImmutableMap } from "immutable"
-import BalloonEmoji from "assets/img/emoji/emoji_u1f388.png"
-import HappyFaceEmoji from "assets/img/emoji/emoji_u1f604.png"
-import StarFaceEmoji from "assets/img/emoji/emoji_u1f929.png"
-import CoolFaceEmoji from "assets/img/emoji/emoji_u1f60e.png"
+
 import "./Balloons.scss"
 
 export const NUM_BALLOONS = 15
@@ -37,10 +34,14 @@ const BALLOONS_INDICES = Array.from({ length: NUM_BALLOONS })
 
 const BALLOON_IMAGES: string[] = []
 BALLOON_IMAGES[0] = "" // 0 means random
-BALLOON_IMAGES[BalloonsProto.Type.BALLOON] = BalloonEmoji
-BALLOON_IMAGES[BalloonsProto.Type.HAPPY_FACE] = HappyFaceEmoji
-BALLOON_IMAGES[BalloonsProto.Type.STAR_FACE] = StarFaceEmoji
-BALLOON_IMAGES[BalloonsProto.Type.COOL_FACE] = CoolFaceEmoji
+BALLOON_IMAGES[BalloonsProto.Type.BALLOON] =
+  "/assets/img/emoji/emoji_u1f388.png"
+BALLOON_IMAGES[BalloonsProto.Type.HAPPY_FACE] =
+  "/assets/img/emoji/emoji_u1f604.png"
+BALLOON_IMAGES[BalloonsProto.Type.STAR_FACE] =
+  "/assets/img/emoji/emoji_u1f929.png"
+BALLOON_IMAGES[BalloonsProto.Type.COOL_FACE] =
+  "/assets/img/emoji/emoji_u1f60e.png"
 
 export interface Props {
   width: number

@@ -17,10 +17,15 @@
 
 import ErrorElement from "components/shared/ErrorElement"
 import { Map as ImmutableMap } from "immutable"
+import {
+  DEFAULT_IFRAME_FEATURE_POLICY,
+  DEFAULT_IFRAME_SANDBOX_POLICY,
+} from "lib/IFrameUtil"
 import { logError, logWarning } from "lib/log"
 import { Source, WidgetStateManager } from "lib/WidgetStateManager"
 import React, { createRef, ReactNode } from "react"
 import { ComponentRegistry } from "./ComponentRegistry"
+import queryString from "query-string"
 
 /**
  * The current custom component API version. If our API changes,
@@ -63,69 +68,8 @@ interface Props {
 }
 
 interface State {
-  frameHeight?: number
   componentError?: Error
 }
-
-/**
- * Our iframe sandbox options.
- * See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe#Attributes
- *
- * From that page:
- * "When the embedded document has the same origin as the embedding page, it is
- * strongly discouraged to use both allow-scripts and allow-same-origin, as
- * that lets the embedded document remove the sandbox attribute — making it no
- * more secure than not using the sandbox attribute at all."
- *
- * TODO: we need both allow-scripts (for obvious reasons) *and*
- * allow-same-origin (or else we'll fails CORS checks for loading static
- * resources). Do we need to therefore serve component content from a
- * different origin, somehow?
- */
-const SANDBOX_POLICY = [
-  // Allows for downloads to occur without a gesture from the user.
-  // Experimental; limited browser support.
-  // "allow-downloads-without-user-activation",
-
-  // Allows the resource to submit forms. If this keyword is not used, form submission is blocked.
-  "allow-forms",
-
-  // Lets the resource open modal windows.
-  "allow-modals",
-
-  // Lets the resource lock the screen orientation.
-  // "allow-orientation-lock",
-
-  // Lets the resource use the Pointer Lock API.
-  // "allow-pointer-lock",
-
-  // Allows popups (such as window.open(), target="_blank", or showModalDialog()). If this keyword is not used, the popup will silently fail to open.
-  "allow-popups",
-
-  // Lets the sandboxed document open new windows without those windows inheriting the sandboxing. For example, this can safely sandbox an advertisement without forcing the same restrictions upon the page the ad links to.
-  "allow-popups-to-escape-sandbox",
-
-  // Lets the resource start a presentation session.
-  // "allow-presentation",
-
-  // If this token is not used, the resource is treated as being from a special origin that always fails the same-origin policy.
-  "allow-same-origin",
-
-  // Lets the resource run scripts (but not create popup windows).
-  "allow-scripts",
-
-  // Lets the resource request access to the parent's storage capabilities with the Storage Access API.
-  // Experimental; limited browser support.
-  // "allow-storage-access-by-user-activation",
-
-  // Lets the resource navigate the top-level browsing context (the one named _top).
-  // "allow-top-navigation",
-
-  // Lets the resource navigate the top-level browsing context, but only if initiated by a user gesture.
-  // "allow-top-navigation-by-user-activation",
-].join(" ")
-
-// TODO: catch errors and display them in render()
 
 export class ComponentInstance extends React.PureComponent<Props, State> {
   private iframeRef = createRef<HTMLIFrameElement>()
@@ -133,14 +77,11 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
   private componentReady = false
   private lastRenderArgs = {}
   private lastRenderDataframes = []
+  private frameHeight = 0
 
   public constructor(props: Props) {
     super(props)
-    // Default to a frameHeight of 0. If this is undefined, browsers
-    // default to something > 100 pixels, which can look strange.
-    // In the future, we may want to allow component creators to specify
-    // the initial frameHeight.
-    this.state = { frameHeight: 0 }
+    this.state = {}
   }
 
   public componentDidMount = (): void => {
@@ -155,7 +96,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     if (this.iframeRef.current.contentWindow == null) {
       // Nor should this.
       logError(
-        `ComponentInstance iframe does not have an iframeRef, and will not receive messages!`
+        `ComponentInstance iframe does not have a contentWindow, and will not receive messages!`
       )
       return
     }
@@ -243,14 +184,10 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     }
 
     const widgetId: string = this.props.element.get("id")
-
-    // TODO: handle debouncing, or expose some debouncing primitives?
-    // TODO: ints, arrays, "button triggers", ... dataframes?
-
     this.props.widgetMgr.setJsonValue(widgetId, value, source)
   }
 
-  /** The component has a new height. We'll resize the iframe. */
+  /** The component has a new height. Resize its iframe. */
   private handleSetFrameHeight = (data: any): void => {
     const height: number | undefined = tryGetValue(data, "height")
     if (height === undefined) {
@@ -258,7 +195,24 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       return
     }
 
-    this.setState({ frameHeight: height })
+    if (height === this.frameHeight) {
+      // Nothing to do!
+      return
+    }
+
+    if (this.iframeRef.current == null) {
+      // This should not be possible.
+      logWarning(`handleSetFrameHeight: missing our iframeRef!`)
+      return
+    }
+
+    // We shove our new frameHeight directly into our iframe, to avoid
+    // triggering a re-render. Otherwise, components will receive the RENDER
+    // event several times during startup (because they will generally
+    // immediately change their frameHeight after mounting). This is wasteful,
+    // and it also breaks certain components.
+    this.frameHeight = height
+    this.iframeRef.current.height = this.frameHeight.toString()
   }
 
   private sendForwardMsg = (type: StreamlitMessageType, data: any): void => {
@@ -303,16 +257,23 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     let renderArgs: any
     let renderDfs: any
     let src: string
+    let componentName: string
     try {
       // Determine the component iframe's src. If a URL is specified, we just
       // use that. Otherwise, we derive the URL from the component's ID.
-      const componentName = this.props.element.get("componentName")
+      componentName = this.props.element.get("componentName")
       const url = this.props.element.get("url")
       if (url != null && url !== "") {
         src = url
       } else {
         src = this.props.registry.getComponentURL(componentName, "index.html")
       }
+
+      // Add streamlitUrl query parameter to src.
+      src = queryString.stringifyUrl({
+        url: src,
+        query: { streamlitUrl: window.location.href },
+      })
 
       // Parse arguments
       renderArgs = JSON.parse(this.props.element.get("argsJson"))
@@ -354,13 +315,14 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     // TODO: make sure horizontal scrolling still works!
     return (
       <iframe
+        allow={DEFAULT_IFRAME_FEATURE_POLICY}
         ref={this.iframeRef}
         src={src}
         width={this.props.width}
-        height={this.state.frameHeight}
-        allowFullScreen={false}
+        height={this.frameHeight}
         scrolling="no"
-        sandbox={SANDBOX_POLICY}
+        sandbox={DEFAULT_IFRAME_SANDBOX_POLICY}
+        title={componentName}
       />
     )
   }
