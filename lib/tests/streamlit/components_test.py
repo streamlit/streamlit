@@ -24,8 +24,11 @@ import tornado.testing
 import tornado.web
 
 from streamlit import StreamlitAPIException
-from streamlit.components import ComponentRegistry, CustomComponent
-from streamlit.components import declare_component as declare_component
+from streamlit.components.v1.components import (
+    ComponentRegistry,
+    CustomComponent,
+    declare_component,
+)
 from tests.testutil import DeltaGeneratorTestCase
 
 URL = "http://not.a.real.url:3001"
@@ -33,7 +36,7 @@ PATH = "not/a/real/path"
 
 
 class DeclareComponentTest(unittest.TestCase):
-    """Test st.declare_component."""
+    """Test declare_component."""
 
     def tearDown(self) -> None:
         ComponentRegistry._instance = None
@@ -73,7 +76,9 @@ class DeclareComponentTest(unittest.TestCase):
         def isdir(path):
             return path == PATH or path == os.path.abspath(PATH)
 
-        with mock.patch("streamlit.components.os.path.isdir", side_effect=isdir):
+        with mock.patch(
+            "streamlit.components.v1.components.os.path.isdir", side_effect=isdir
+        ):
             component = declare_component("test", path=PATH)
 
         self.assertEqual(PATH, component.path)
@@ -114,7 +119,7 @@ class DeclareComponentTest(unittest.TestCase):
         )
 
     def test_declared_in_main_module(self):
-        """If st.declare_component is called in the main module, then
+        """If declare_component is called in the main module, then
         the component name should be the filename of that module."""
         # TODO!
         pass
@@ -132,7 +137,9 @@ class ComponentRegistryTest(unittest.TestCase):
             return path == test_path
 
         registry = ComponentRegistry.instance()
-        with mock.patch("streamlit.components.os.path.isdir", side_effect=isdir):
+        with mock.patch(
+            "streamlit.components.v1.components.os.path.isdir", side_effect=isdir
+        ):
             registry.register_component(
                 CustomComponent("test_component", path=test_path)
             )
@@ -174,7 +181,9 @@ class ComponentRegistryTest(unittest.TestCase):
             return path in (test_path_1, test_path_2)
 
         registry = ComponentRegistry.instance()
-        with mock.patch("streamlit.components.os.path.isdir", side_effect=isdir):
+        with mock.patch(
+            "streamlit.components.v1.components.os.path.isdir", side_effect=isdir
+        ):
             registry.register_component(CustomComponent("test_component", test_path_1))
             registry.register_component(CustomComponent("test_component", test_path_1))
             self.assertEqual(test_path_1, registry.get_component_path("test_component"))

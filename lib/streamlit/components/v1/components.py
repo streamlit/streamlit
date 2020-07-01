@@ -16,7 +16,7 @@
 import json
 import mimetypes
 import os
-from typing import Any, Dict, Optional, Type, Union, Callable
+from typing import Any, Dict, Optional, Type, Union
 import threading
 import inspect
 

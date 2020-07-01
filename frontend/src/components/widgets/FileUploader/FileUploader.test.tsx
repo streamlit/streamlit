@@ -102,4 +102,12 @@ describe("FileUploader widget", () => {
     )
     expect(wrapper.find("div.uploadError").length).toBe(1)
   })
+
+  it("should reset on disconnect", () => {
+    const props = getProps()
+    const wrapper = shallow(<FileUploader {...props} />)
+    const resetSpy = jest.spyOn(wrapper.instance(), "reset")
+    wrapper.setProps({ disabled: true })
+    expect(resetSpy).toBeCalled()
+  })
 })

@@ -69,6 +69,14 @@ export class MetricsManager {
   private pendingCustomComponentCounter: CustomComponentCounter = {}
 
   /**
+   * Report hash uniquely identifies "projects" so we can tell
+   * how many projects are being created with Streamlit while still keeping
+   * possibly-sensitive info like the scriptPath outside of our metrics
+   * services.
+   */
+  private reportHash = "Not initialized"
+
+  /**
    * Singleton MetricsManager object. The reason we're using a singleton here
    * instead of just exporting a module-level instance is so we can easily
    * override it in tests.
@@ -145,9 +153,18 @@ export class MetricsManager {
     return customComponentCounter
   }
 
+  // Report hash gets set when update report happens.
+  // This means that it will be attached to most, but not all, metrics events.
+  // The viewReport and createReport events are sent before updateReport happens,
+  // so they will not include the reportHash.
+  public setReportHash = (reportHash: string): void => {
+    this.reportHash = reportHash
+  }
+
   private send(evName: string, evData: object = {}): void {
     const data = {
       ...evData,
+      reportHash: this.reportHash,
       dev: IS_DEV_ENV,
       source: "browser",
       streamlitVersion: SessionInfo.current.streamlitVersion,

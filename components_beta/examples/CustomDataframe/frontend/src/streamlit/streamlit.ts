@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+// Safari doesn't support the EventTarget class, so we use a shim.
+import { EventTarget } from "event-target-shim"
 import { ArrowDataframeProto, ArrowTable } from "./ArrowTable"
 
 /** Data sent in the custom Streamlit render event. */
@@ -62,6 +64,20 @@ export class Streamlit {
   private static lastFrameHeight?: number
 
   /**
+   * Load Streamlit stylesheet and fonts. This is optional! Call this
+   * function near the top of your component if you'd like a default
+   * Streamlit look and feel.
+   */
+  public static loadStreamlitCSS = (): void => {
+    const params = new URLSearchParams(window.location.search)
+    const streamlitUrl = params.get("streamlitUrl")
+    const link = document.createElement("link")
+    link.rel = "stylesheet"
+    link.href = streamlitUrl + "assets/streamlit.css"
+    document.head.appendChild(link)
+  }
+
+  /**
    * Tell Streamlit that the component is ready to start receiving data.
    * Streamlit will defer emitting RENDER events until it receives the
    * COMPONENT_READY message.
@@ -101,8 +117,19 @@ export class Streamlit {
   }
 
   /**
-   * Send the component's value to Streamlit.
-   * This value will be returned to the Python script.
+   * Set the component's value. This value will be returned to the Python
+   * script, and the script will be re-run.
+   *
+   * For example:
+   *
+   * JavaScript:
+   * Streamlit.setComponentValue("ahoy!")
+   *
+   * Python:
+   * value = st.my_component(...)
+   * st.write(value) # -> "ahoy!"
+   *
+   * The value must be serializable into JSON.
    */
   public static setComponentValue = (value: any): void => {
     Streamlit.sendBackMsg(ComponentMessageType.SET_COMPONENT_VALUE, { value })
