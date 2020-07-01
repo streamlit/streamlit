@@ -15,11 +15,45 @@
  * limitations under the License.
  */
 
-import React, { Component, ReactNode } from "react"
-import ReactDOM from "react-dom"
+import React, { useState, useEffect, useRef } from "react"
 import { Map as ImmutableMap } from "immutable"
 import nodeEmoji from "node-emoji"
 import { buildMediaUri } from "lib/UriUtil"
+
+// Update the favicon in the DOM with the specified image.
+function overwriteFavicon(imageUrl: string) {
+  const faviconElement: HTMLLinkElement | null = document.querySelector(
+    "link[rel='shortcut icon']"
+  )
+  if (faviconElement) {
+    faviconElement.href = imageUrl
+  }
+}
+
+// An SVG for a full-sized emoji, encoded as a data URI
+function svgURI(emoji: string | null, scale: number) {
+  return `data:image/svg+xml,
+  <svg version="1.2" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <text
+      style="transform: translate(50%, 50%) scale(${scale})"
+      dominant-baseline="central"
+      text-anchor="middle">
+      ${emoji}
+    </text>
+  </svg>`
+}
+
+// Return the emoji if it exists, or null otherwise
+function extractEmoji(maybeEmoji: string) {
+  if (nodeEmoji.hasEmoji(nodeEmoji.get(maybeEmoji))) {
+    // Format: pizza or :pizza:
+    return nodeEmoji.get(maybeEmoji)
+  } else if (nodeEmoji.hasEmoji(maybeEmoji)) {
+    // Format: 🍕
+    return maybeEmoji
+  }
+  return null
+}
 
 export interface Props {
   element: ImmutableMap<string, any>
@@ -27,73 +61,58 @@ export interface Props {
 
 /**
  * Hidden element that overwrites the page's favicon with the provided image
+ *
+ * This has a complex lifecycle for emoji favicons, since it must first render
+ * the emoji on the page to measure its dimensions, then hide it afterwards.
  */
-export class Favicon extends Component<Props> {
-  private emoji = ""
-  private shouldRender = true
+function Favicon(props: Props) {
+  const [render, setRender] = useState(true)
+  const [emoji, setEmoji] = useState("")
+  const [finalUrl, setFinalUrl] = useState("")
+  const textNode = useRef<SVGTextElement>(null)
 
-  public render(): ReactNode {
-    const { element } = this.props
-
-    const maybeEmoji = element.get("url")
-    if (nodeEmoji.hasEmoji(nodeEmoji.get(maybeEmoji))) {
-      // Format: :pizza:
-      this.emoji = nodeEmoji.get(maybeEmoji)
-    } else if (nodeEmoji.hasEmoji(maybeEmoji)) {
-      // Format: 🍕
-      this.emoji = maybeEmoji
+  // Re-render the entire component whenever the props are changed
+  // (aka user changed the favicon with st.beta_set_favicon)
+  useEffect(() => {
+    const url = props.element.get("url")
+    const emoji = extractEmoji(url)
+    if (emoji) {
+      setEmoji(emoji)
+      setRender(true)
     } else {
       // Format: http://streamlit.io/favicon.ico or /media/blah.jpeg
       // No need to render SVG
-      this.setFavicon(buildMediaUri(element.get("url")))
-      this.shouldRender = false
+      setFinalUrl(buildMediaUri(url))
+      setRender(false)
     }
+  }, [props.element])
 
-    return this.shouldRender ? (
-      <svg
-        version="1.2"
-        viewBox="0 0 100 100"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <text>{this.emoji}</text>
-      </svg>
-    ) : null
-  }
-
-  private setFavicon(imageUrl: string) {
-    const faviconElement: HTMLLinkElement | null = document.querySelector(
-      "link[rel='shortcut icon']"
-    )
-    if (faviconElement) {
-      faviconElement.href = imageUrl
-    }
-  }
-
-  // An SVG for an full-sized emoji, encoded as a data URI
-  private svgURI(emoji: string, scale: number) {
-    return `data:image/svg+xml,
-    <svg version="1.2" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" >
-      <text
-        style="transform: translate(50%, 50%) scale(${scale})"
-        dominant-baseline="central"
-        text-anchor="middle">
-        ${emoji}
-      </text>
-    </svg>`
-  }
-
-  public componentDidMount() {
-    const svgElement = ReactDOM.findDOMNode(this) as Element
-    if (svgElement) {
-      // Measure the scaling factor with the React node, then hide the node.
-      const textNode = svgElement.firstChild as SVGGraphicsElement
-      const boundingBox = textNode.getBBox()
+  // After a new emoji is rendered, measure its dimensions to generate the
+  // correctly scaled favicon, then hide the original emoji.
+  useEffect(() => {
+    if (emoji && textNode.current) {
+      const boundingBox = textNode.current.getBBox()
       const scale = Math.min(100 / boundingBox.width, 100 / boundingBox.height)
-
-      this.setFavicon(this.svgURI(this.emoji, scale))
-      this.shouldRender = false
+      setFinalUrl(svgURI(emoji, scale))
+      setRender(false)
     }
-  }
+  }, [emoji])
+
+  // The above two are effects to prevent infinite re-rendering loops.
+  // This is an effect because it's a manual DOM manipulation.
+  useEffect(() => {
+    overwriteFavicon(finalUrl)
+  }, [finalUrl])
+
+  return render ? (
+    <svg
+      version="1.2"
+      viewBox="0 0 100 100"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <text ref={textNode}>{emoji}</text>
+    </svg>
+  ) : null
 }
 
 export default Favicon
