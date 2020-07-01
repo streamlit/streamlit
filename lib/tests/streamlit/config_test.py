@@ -285,7 +285,6 @@ class ConfigTest(unittest.TestCase):
                 "global.showWarningOnDirectExecution",
                 "global.suppressDeprecationWarnings",
                 "global.unitTest",
-                "global.useNode",
                 "runner.magicEnabled",
                 "runner.installTracer",
                 "runner.fixMatplotlib",

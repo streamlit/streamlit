@@ -329,9 +329,7 @@ class Server(object):
             ),
         ]
 
-        if config.get_option("global.developmentMode") and config.get_option(
-            "global.useNode"
-        ):
+        if config.get_option("global.developmentMode"):
             LOGGER.debug("Serving static content from the Node dev server")
         else:
             static_path = file_util.get_static_dir()
