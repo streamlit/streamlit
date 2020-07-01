@@ -1,5 +1,8 @@
 import { Streamlit, RenderData } from "./streamlit"
 
+// Load the default Streamlit CSS
+Streamlit.loadStreamlitCSS()
+
 // Add text and a button to the DOM. (You could also add these directly
 // to index.html.)
 const textDiv = document.body.appendChild(document.createElement("div"))
