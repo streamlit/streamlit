@@ -181,7 +181,7 @@ def image_to_url(image, width, clamp, channels, format, image_id, allow_emoji=Fa
         try:
             with open(image, "rb") as f:
                 data = f.read()
-        except FileNotFoundError:
+        except:
             if allow_emoji:
                 # This might be an emoji string, so just pass it to the frontend
                 return image
