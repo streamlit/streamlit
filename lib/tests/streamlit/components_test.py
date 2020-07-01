@@ -27,7 +27,8 @@ from streamlit import StreamlitAPIException
 from streamlit.components import ComponentRegistry
 from streamlit.components import ComponentRequestHandler
 from streamlit.components import CustomComponent
-from streamlit.components import declare_component as declare_component
+from streamlit.components import declare_component
+from streamlit.errors import DuplicateWidgetID
 from tests.testutil import DeltaGeneratorTestCase
 
 URL = "http://not.a.real.url:3001"
@@ -246,15 +247,23 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         self.assertIsNotNone(proto.args_dataframe)
 
     def test_key(self):
-        """Test the 'key' param."""
+        """Two components with different arguments but the same `key` should have the same ID"""
         self.test_component(foo="bar", key="baz")
-        proto = self.get_delta_from_queue().new_element.component_instance
-        self.assertEqual("baz", proto.id.split("-")[0])
+        proto1 = self.get_delta_from_queue().new_element.component_instance
+
+        # Ignore the raised exception to see if the IDs are the same.
+        try:
+            self.test_component(key="baz")
+        except DuplicateWidgetID:
+            pass
+
+        proto2 = self.get_delta_from_queue().new_element.component_instance
+        self.assertEqual(proto1.id, proto2.id)
 
     def test_default(self):
         """Test the 'default' param."""
-        component = self.test_component(foo="bar", default="baz")
-        self.assertEqual("baz", component)
+        return_value = self.test_component(foo="bar", default="baz")
+        self.assertEqual("baz", return_value)
 
 
 class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
@@ -282,7 +291,8 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         """Test request success when valid parameters are provided."""
 
         with mock.patch("streamlit.components.os.path.isdir"):
-            instance = declare_component("test", path=PATH)
+            # We don't need the return value in this case.
+            declare_component("test", path=PATH)
 
         with mock.patch(
             "streamlit.components.open", mock.mock_open(read_data="Test Content")
