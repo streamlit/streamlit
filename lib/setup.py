@@ -8,15 +8,23 @@ from pipenv.project import Project
 from pipenv.utils import convert_deps_to_pip
 from setuptools.command.install import install
 
-VERSION = "0.61.0"  # PEP-440
+VERSION = "0.62.1"  # PEP-440
 
 NAME = "streamlit"
+
+DESCRIPTION = "The fastest way to build data apps in Python"
+
+LONG_DESCRIPTION = (
+    "Streamlit's open-source app framework is the easiest way "
+    "for data scientists and machine learning engineers to "
+    "create beautiful, performant apps in only a few hours! "
+    "All in pure Python. All for free."
+)
 
 pipfile = Project(chdir=False).parsed_pipfile
 
 packages = pipfile["packages"].copy()
 requirements = convert_deps_to_pip(packages, r=False)
-
 
 # Check whether xcode tools are available before making watchdog a
 # dependency (only if the current system is a Mac).
@@ -29,11 +37,6 @@ if platform.system() == "Darwin":
             requirements.remove("watchdog")
         except ValueError:
             pass
-
-
-def readme():
-    with open("README.md") as f:
-        return f.read()
 
 
 class VerifyVersionCommand(install):
@@ -54,8 +57,8 @@ class VerifyVersionCommand(install):
 setuptools.setup(
     name=NAME,
     version=VERSION,
-    description="Frontend library for machine learning engineers",
-    long_description=readme(),
+    description=DESCRIPTION,
+    long_description=LONG_DESCRIPTION,
     url="https://streamlit.io",
     author="Streamlit Inc",
     author_email="hello@streamlit.io",

@@ -28,7 +28,6 @@ import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
 import { ReportRunState } from "lib/ReportRunState"
 import { Timer } from "lib/Timer"
 import Icon from "components/shared/Icon"
-import iconRunning from "assets/img/icon_running.gif"
 import "./StatusWidget.scss"
 
 /** Component props */
@@ -290,7 +289,7 @@ export class StatusWidget extends PureComponent<Props, State> {
       >
         <img
           className="ReportRunningIcon"
-          src={iconRunning}
+          src="/assets/img/icon_running.gif"
           alt="Running..."
         />
         <label>Running...</label>

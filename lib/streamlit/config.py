@@ -262,15 +262,6 @@ def _global_unit_test():
 
 
 _create_option(
-    "global.useNode",
-    description="""Whether to serve static content from node. Only applies when
-        developmentMode is True.""",
-    visibility="hidden",
-    default_val=True,
-    type_=bool,
-)
-
-_create_option(
     "global.metrics",
     description="Whether to serve prometheus metrics from /metrics.",
     visibility="hidden",
@@ -398,10 +389,10 @@ _create_option(
 @_create_option("server.cookieSecret", type_=str)
 @util.memoize
 def _server_cookie_secret():
-    """Symmetric key used to produce signed cookies. If deploying on multiple
-    replicas, this should be set to ensure all replicas share the same secret.
+    """Symmetric key used to produce signed cookies. If deploying on multiple replicas, this should
+    be set to the same value across all replicas to ensure they all share the same secret.
 
-    Default: Randomly generated secret key.
+    Default: randomly generated secret key.
     """
     return secrets.token_hex()
 
@@ -476,9 +467,25 @@ _create_option(
 )
 
 
+# TODO: Rename to server.enableCorsProtection.
 @_create_option("server.enableCORS", type_=bool)
 def _server_enable_cors():
-    """Enables support for Cross-Origin Request Sharing, for added security.
+    """Enables support for Cross-Origin Request Sharing (CORS) protection, for added security.
+
+    Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is on and
+    `server.enableCORS` is off at the same time, we will prioritize `server.enableXsrfProtection`.
+
+    Default: true
+    """
+    return True
+
+
+@_create_option("server.enableXsrfProtection", type_=bool)
+def _server_enable_xsrf_protection():
+    """Enables support for Cross-Site Request Forgery (XSRF) protection, for added security.
+
+    Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is on and
+    `server.enableCORS` is off at the same time, we will prioritize `server.enableXsrfProtection`.
 
     Default: true
     """
@@ -516,7 +523,7 @@ def _browser_server_address():
     connect to the app. Can be IP address or DNS name and path.
 
     This is used to:
-    - Set the correct URL for CORS purposes.
+    - Set the correct URL for CORS and XSRF protection purposes.
     - Show the URL on the terminal
     - Open the browser
     - Tell the browser where to connect to the server when in liveSave mode.
@@ -541,7 +548,7 @@ def _browser_server_port():
     app.
 
     This is used to:
-    - Set the correct URL for CORS purposes.
+    - Set the correct URL for CORS and XSRF protection purposes.
     - Show the URL on the terminal
     - Open the browser
     - Tell the browser where to connect to the server when in liveSave mode.
@@ -979,6 +986,21 @@ def _check_conflicts():
             "\n\nTo remove this warning, set the 'sharingMode' option to "
             "another value, or remove it from your Streamlit config."
         )
+
+    # XSRF conflicts
+    if get_option("server.enableXsrfProtection"):
+        if not get_option("server.enableCORS") or get_option("global.developmentMode"):
+            LOGGER.warning("""
+Warning: the config option 'server.enableCORS=false' is not compatible with 'server.enableXsrfProtection=true'.
+As a result, 'server.enableCORS' is being overridden to 'true'.
+
+More information:
+In order to protect against CSRF attacks, we send a cookie with each request.
+To do so, we must specify allowable origins, which places a restriction on
+cross-origin resource sharing.
+
+If cross origin resource sharing is required, please disable server.enableXsrfProtection.
+            """)
 
 
 def _set_development_mode():

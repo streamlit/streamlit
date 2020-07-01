@@ -55,16 +55,53 @@ How to start a simple HTTP server:
 ### Symptom #2: The app says "Please wait..." forever
 
 If when you try to load your app in a browser you see a blue box in the center
-of the page with the text "Please wait...", the underlying cause is most likely
-[CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS).
+of the page with the text "Please wait...", the underlying cause is likely one
+of the following:
 
-To diagnose the issue, try temporarily disabling CORS by running Streamlit with
-the `--server.enableCORS` flag set to false:
+- Misconfigured [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS)
+  protection.
+- Server is stripping headers from the Websocket connection, thereby breaking
+  compression.
+
+To diagnose the issue, try temporarily disabling CORS protection by running
+Streamlit with the `--server.enableCORS` flag set to `false`:
 
 ```bash
 $ streamlit run my_app.py --server.enableCORS=false
 ```
 
-If this fixes your issue, **you should re-enable CORS** and then set
+If this fixes your issue, **you should re-enable CORS protection** and then set
 `browser.serverPort` and `browser.serverAddress` to the URL and port of your
 Streamlit app.
+
+If the issue persists, try disabling websocket compression by running Streamlit with the
+`--server.enableWebsocketCompression` flag set to `false`
+
+```bash
+$ streamlit run my_app.py --server.enableWebsocketCompression=false
+```
+
+If this fixes your issue, your server setup is likely stripping the
+`Sec-WebSocket-Extensions` HTTP header that is used to negotiate Websocket compression.
+
+Compression is not required for Streamlit to work, but it's strongly recommended as it
+improves performance. If you'd like to turn it back on, you'll need to find which part
+of your infrastructure is stripping the `Sec-WebSocket-Extensions` HTTP header and
+change that behavior.
+
+### Symptom #3: Unable to upload files when running in multiple replicas
+
+If the file uploader widget returns an error with status code 403, this is probably
+due to a misconfiguration in your app's
+[XSRF](https://en.wikipedia.org/wiki/Cross-site_request_forgery) protection logic.
+
+To diagnose the issue, try temporarily disabling XSRF protection by running Streamlit
+with the `--server.enableXsrfProtection` flag set to `false`:
+
+```bash
+$ streamlit run my_app.py --server.enableXsrfProtection=false
+```
+
+If this fixes your issue, **you should re-enable XSRF protection** and then
+configure your app to use the same secret across every replica by setting the
+`server.cookieSecret` config option to the same hard-to-guess string everywhere.

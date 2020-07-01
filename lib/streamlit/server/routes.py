@@ -29,13 +29,13 @@ LOGGER = get_logger(__name__)
 def allow_cross_origin_requests():
     """True if cross-origin requests are allowed.
 
-    We only allow cross-origin requests when using the Node server. This is
-    only needed when using the Node server anyway, since in that case we
-    have a dev port and the prod port, which count as two origins.
+    We only allow cross-origin requests when CORS protection has been disabled
+    with server.enableCORS=False or if using the Node server. When using the
+    Node server, we have a dev and prod port, which count as two origins.
 
     """
     return not config.get_option("server.enableCORS") or config.get_option(
-        "global.useNode"
+        "global.developmentMode"
     )
 
 
@@ -52,6 +52,13 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
             self.set_header("Cache-Control", "no-cache")
         else:
             self.set_header("Cache-Control", "public")
+
+
+class AssetsFileHandler(tornado.web.StaticFileHandler):
+    # CORS protection should be disabled as we need access
+    # to this endpoint from the inner iframe.
+    def set_default_headers(self):
+        self.set_header("Access-Control-Allow-Origin", "*")
 
 
 class AddSlashHandler(tornado.web.RequestHandler):
@@ -132,6 +139,15 @@ class HealthHandler(_SpecialRequestHandler):
         if self._callback():
             self.write("ok")
             self.set_status(200)
+
+            # Tornado will set the _xsrf cookie automatically for the page on
+            # request for the document. However, if the server is reset and
+            # server.enableXsrfProtection is updated, the browser does not reload the document.
+            # Manually setting the cookie on /healthz since it is pinged when the
+            # browser is disconnected from the server.
+            if config.get_option("server.enableXsrfProtection"):
+                self.set_cookie("_xsrf", self.xsrf_token)
+
         else:
             # 503 = SERVICE_UNAVAILABLE
             self.set_status(503)

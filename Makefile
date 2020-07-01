@@ -174,8 +174,10 @@ clean-docs:
 .PHONY: docs
 # Generate HTML documentation at /docs/_build.
 docs: clean-docs
+	mkdir -p docs/_static/css
 	cd docs; \
-		make html
+		make html; \
+		python replace_vars.py css/custom.css _static/css/custom.css
 
 .PHONY: devel-docs
 # Build docs and start a test server at port 8000.
@@ -333,10 +335,10 @@ notices:
 	# NOTE: This file may need to be manually edited. Look at the Git diff and
 	# the parts that should be edited will be obvious.
 
-	./scripts/append_license.sh frontend/src/assets/font/IBM_Plex_Fonts.LICENSE
-	./scripts/append_license.sh frontend/src/assets/img/Material-Icons.LICENSE
-	./scripts/append_license.sh frontend/src/assets/img/Noto-Emoji-Font.LICENSE
-	./scripts/append_license.sh frontend/src/assets/img/Open-Iconic.LICENSE
+	./scripts/append_license.sh frontend/public/assets/font/IBM_Plex_Fonts.LICENSE
+	./scripts/append_license.sh frontend/public/assets/img/Material-Icons.LICENSE
+	./scripts/append_license.sh frontend/public/assets/img/Noto-Emoji-Font.LICENSE
+	./scripts/append_license.sh frontend/public/assets/img/Open-Iconic.LICENSE
 
 .PHONY: headers
 # Update the license header on all source files.

@@ -34,6 +34,7 @@ from streamlit.ConfigOption import ConfigOption
 from streamlit.ForwardMsgCache import ForwardMsgCache
 from streamlit.ForwardMsgCache import create_reference_msg
 from streamlit.ForwardMsgCache import populate_hash_if_needed
+from streamlit.MediaFileManager import media_file_manager
 from streamlit.ReportSession import ReportSession
 from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.logger import get_logger
@@ -41,6 +42,7 @@ from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.server.UploadFileRequestHandler import UploadFileRequestHandler
 from streamlit.server.routes import AddSlashHandler
+from streamlit.server.routes import AssetsFileHandler
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
 from streamlit.server.routes import MediaFileHandler
@@ -64,7 +66,6 @@ TORNADO_SETTINGS = {
     "websocket_ping_interval": 20,  # Ping every 20s to keep WS alive.
     "websocket_ping_timeout": 30,  # Pings should be responded to within 30s.
     "websocket_max_message_size": MESSAGE_SIZE_LIMIT,  # Up the WS size limit.
-    "xsrf_cookies": True,
 }
 
 
@@ -123,8 +124,7 @@ def start_listening(app):
 
     call_count = 0
     http_server = tornado.httpserver.HTTPServer(
-        app,
-        max_buffer_size=config.get_option("server.maxUploadSize") * 1024 * 1024
+        app, max_buffer_size=config.get_option("server.maxUploadSize") * 1024 * 1024
     )
 
     while call_count < MAX_PORT_SEARCH_RETRIES:
@@ -203,6 +203,8 @@ class Server(object):
         self._ioloop = ioloop
         self._script_path = script_path
         self._command_line = command_line
+
+        media_file_manager.set_ioloop(ioloop=self._ioloop)
 
         # Mapping of ReportSession.id -> SessionInfo.
         self._session_info_by_id = {}
@@ -312,12 +314,15 @@ class Server(object):
                 UploadFileRequestHandler,
                 dict(file_mgr=self._uploaded_file_mgr),
             ),
+            (
+                make_url_path_regex(base, "assets/(.*)"),
+                AssetsFileHandler,
+                {"path": "%s/" % file_util.get_assets_dir()},
+            ),
             (make_url_path_regex(base, "media/(.*)"), MediaFileHandler),
         ]
 
-        if config.get_option("global.developmentMode") and config.get_option(
-            "global.useNode"
-        ):
+        if config.get_option("global.developmentMode"):
             LOGGER.debug("Serving static content from the Node dev server")
         else:
             static_path = file_util.get_static_dir()
@@ -337,7 +342,8 @@ class Server(object):
         return tornado.web.Application(
             routes,  # type: ignore[arg-type]
             cookie_secret=config.get_option("server.cookieSecret"),
-            **TORNADO_SETTINGS  # type: ignore[arg-type]
+            xsrf_cookies=config.get_option("server.enableXsrfProtection"),
+            **TORNADO_SETTINGS,  # type: ignore[arg-type]
         )
 
     def _set_state(self, new_state):
@@ -355,6 +361,7 @@ class Server(object):
     @property
     def is_running_hello(self):
         from streamlit.hello import hello
+
         return self._script_path == hello.__file__
 
     @tornado.gen.coroutine
@@ -586,11 +593,12 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
         self._server = server
         self._session = None
         # The XSRF cookie is normally set when xsrf_form_html is used, but in a pure-Javascript application
-        # that does not use any regular forms we just  need to read the self.xsrf_token manually to set the
-        # cookie as a side effect).
+        # that does not use any regular forms we just need to read the self.xsrf_token manually to set the
+        # cookie as a side effect.
         # See https://www.tornadoweb.org/en/stable/guide/security.html#cross-site-request-forgery-protection
         # for more details.
-        self.xsrf_token
+        if config.get_option("server.enableXsrfProtection"):
+            self.xsrf_token
 
     def check_origin(self, origin):
         """Set up CORS."""

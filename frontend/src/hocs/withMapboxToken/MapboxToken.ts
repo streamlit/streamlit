@@ -30,7 +30,7 @@ export class MapboxToken {
   private static token?: string
   private static commandLine?: string
 
-  private static isItRunningLocal = (): boolean => {
+  private static isRunningLocal = (): boolean => {
     const { hostname } = window.location
 
     return hostname === "localhost" || hostname === "127.0.0.1"
@@ -54,11 +54,13 @@ export class MapboxToken {
       if (userMapboxToken !== "") {
         MapboxToken.token = userMapboxToken
       } else {
-        if (this.isItRunningLocal() && SessionInfo.isHello) {
-          MapboxToken.token = await this.fetchToken(TOKENS_URL, "mapbox")
-        } else {
-          throw new MapboxTokenNotProvidedError("No Mapbox token provided")
-        }
+        // TODO: Replace this with the block below after October 1st 2020.
+        MapboxToken.token = await this.fetchToken(TOKENS_URL, "mapbox")
+        // if (this.isRunningLocal() && SessionInfo.isHello) {
+        //   MapboxToken.token = await this.fetchToken(TOKENS_URL, "mapbox-localhost")
+        // } else {
+        //   throw new MapboxTokenNotProvidedError("No Mapbox token provided")
+        // }
       }
 
       MapboxToken.commandLine = commandLine.toLowerCase()
@@ -73,7 +75,7 @@ export class MapboxToken {
   ): Promise<string> {
     try {
       const response = await axios.get(url)
-      const { "mapbox-localhost": token } = response.data
+      const { [tokenName]: token } = response.data
 
       if (token == null || token === "") {
         throw new Error(`Missing token "${tokenName}"`)
