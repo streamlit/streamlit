@@ -16,12 +16,9 @@
 # syntax pass mypy checking with implicit_reexport disabled.
 from .components import declare_component as declare_component
 
-# `st.html` and `st.iframe` are considered part of Custom Components,
-# so they appear in this `streamlit.components.v1` namespace.
-# If you're distributing a Custom Component that uses one of these methods,
-# you should write `streamlit.components.v1.html()` instead of `st.html()`
-# in order to future-proof your Custom Component against API changes.
+# `html` and `iframe` are part of Custom Components, so they appear in this
+# `streamlit.components.v1` namespace.
 import streamlit
 
-html = streamlit.html
-iframe = streamlit.iframe
+html = streamlit._main._html
+iframe = streamlit._main._iframe

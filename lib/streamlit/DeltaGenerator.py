@@ -1558,7 +1558,7 @@ class DeltaGenerator(object):
         )
 
     @_with_element
-    def iframe(
+    def _iframe(
         self, element, src, width=None, height=None, scrolling=False,
     ):
         """Load a remote URL in an iframe.
@@ -1584,7 +1584,7 @@ class DeltaGenerator(object):
         )
 
     @_with_element
-    def html(
+    def _html(
         self, element, html, width=None, height=None, scrolling=False,
     ):
         """Display an HTML string in an iframe.

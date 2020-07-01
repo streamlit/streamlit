@@ -1,7 +1,9 @@
 import streamlit as st
-from streamlit.components.v1 import declare_component
+import streamlit.components.v1 as components
 
-_radio_button = declare_component("radio_button", url="http://localhost:3001",)
+_radio_button = components.declare_component(
+    "radio_button", url="http://localhost:3001",
+)
 
 
 def custom_radio_button(label, options, default, key=None):
