@@ -470,7 +470,7 @@ hr {
 
 /* Injected Read-the-docs version box */
 
-/* .rst-versions {
+.rst-versions {
   position: absolute !important;
   background: var(--main-bg-color) !important;
   border: 1px solid transparent !important;
@@ -535,7 +535,7 @@ hr {
 .rst-versions.shift-up {
   border-color: var(--st-gray-50) !important;
   bottom: 0.5rem !important;
-} */
+}
 
 /* 960 is where the RTD mobile/responsive theme kicks in to move nav to header */
 @media (min-width: 960px) {
