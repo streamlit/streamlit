@@ -65,7 +65,7 @@ describe("Favicon element", () => {
     expect(wrapper.find(".stHidden")).toBeTruthy()
   })
 
-  it("should update the favicon", () => {
+  it("should set the favicon in the DOM", () => {
     const props = getProps()
     mount(<Favicon {...props} />)
 
@@ -99,6 +99,14 @@ describe("Favicon element", () => {
   it("should accept emoji shortcodes", () => {
     const props = getProps({ url: ":pizza:" })
     mount(<Favicon {...props} />)
+
+    expect(getFaviconHref()).toBe(PIZZA_EMOJI_SVG)
+  })
+
+  it("should change the favicon when the props change", () => {
+    const props = getProps()
+    const wrapper = mount(<Favicon {...props} />)
+    wrapper.setProps(getProps({ url: "🍕" }))
 
     expect(getFaviconHref()).toBe(PIZZA_EMOJI_SVG)
   })
