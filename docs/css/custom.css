@@ -154,7 +154,7 @@
 
 body.wy-body-for-nav {
   background: var(--main-bg-color);
-  overflow: hidden;
+  height: 100%;
 }
 
 body,
