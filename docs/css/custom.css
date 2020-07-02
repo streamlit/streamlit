@@ -471,7 +471,7 @@ hr {
 /* Injected Read-the-docs version box */
 
 .rst-versions {
-  position: absolute !important;
+  /* position: absolute !important; */
   background: var(--main-bg-color) !important;
   border: 1px solid transparent !important;
   border-radius: 5px !important;
