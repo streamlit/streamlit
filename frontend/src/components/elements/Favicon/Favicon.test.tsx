@@ -44,7 +44,7 @@ const originalGetBBox = SVGElement.prototype.getBBox
 beforeEach(() => (SVGElement.prototype.getBBox = () => mockedRect))
 afterEach(() => (SVGElement.prototype.getBBox = originalGetBBox))
 
-function getFaviconHref() {
+function getFaviconHref(): string {
   const faviconElement: HTMLLinkElement | null = document.querySelector(
     "link[rel='shortcut icon']"
   )

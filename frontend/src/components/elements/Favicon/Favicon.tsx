@@ -21,7 +21,7 @@ import nodeEmoji from "node-emoji"
 import { buildMediaUri } from "lib/UriUtil"
 
 // Update the favicon in the DOM with the specified image.
-function overwriteFavicon(imageUrl: string) {
+function overwriteFavicon(imageUrl: string): void {
   const faviconElement: HTMLLinkElement | null = document.querySelector(
     "link[rel='shortcut icon']"
   )
@@ -31,7 +31,7 @@ function overwriteFavicon(imageUrl: string) {
 }
 
 // An SVG for a full-sized emoji, encoded as a data URI
-function svgURI(emoji: string | null, scale: number) {
+function svgURI(emoji: string | null, scale: number): string {
   return `data:image/svg+xml,
   <svg version="1.2" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
     <text
@@ -43,8 +43,8 @@ function svgURI(emoji: string | null, scale: number) {
   </svg>`
 }
 
-// Return the emoji if it exists, or null otherwise
-function extractEmoji(maybeEmoji: string) {
+// Return the emoji if it exists, or empty string otherwise
+function extractEmoji(maybeEmoji: string): string {
   if (nodeEmoji.hasEmoji(nodeEmoji.get(maybeEmoji))) {
     // Format: pizza or :pizza:
     return nodeEmoji.get(maybeEmoji)
@@ -52,7 +52,7 @@ function extractEmoji(maybeEmoji: string) {
     // Format: 🍕
     return maybeEmoji
   }
-  return null
+  return ""
 }
 
 export interface Props {
@@ -65,7 +65,7 @@ export interface Props {
  * This has a complex lifecycle for emoji favicons, since it must first render
  * the emoji on the page to measure its dimensions, then hide it afterwards.
  */
-export function Favicon(props: Props) {
+export const Favicon: React.FC<Props> = (props: Props) => {
   const [render, setRender] = useState(true)
   const [emoji, setEmoji] = useState("")
   const [finalUrl, setFinalUrl] = useState("")
