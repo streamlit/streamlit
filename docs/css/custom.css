@@ -154,6 +154,7 @@
 
 body.wy-body-for-nav {
   background: var(--main-bg-color);
+  overflow: hidden;
 }
 
 body,
@@ -167,7 +168,6 @@ input[type="text"],
 li {
   font-family: Graphik, sans-serif;
   color: var(--st-black);
-  overflow: hidden;
 }
 
 h1,
