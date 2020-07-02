@@ -14,10 +14,11 @@
 
 import urllib.error
 
-import streamlit as st
 
 
 def intro():
+    import streamlit as st
+
     st.sidebar.success("Select a demo above.")
 
     st.markdown(
@@ -49,6 +50,7 @@ def intro():
 # compact code.
 # fmt: off
 def mapping_demo():
+    import streamlit as st
     import pandas as pd
     import pydeck as pdk
 
@@ -127,6 +129,7 @@ def mapping_demo():
 # compact code.
 # fmt: off
 def fractal_demo():
+    import streamlit as st
     import numpy as np
 
     # Interactive Streamlit elements, like these sliders, return their value.
@@ -183,6 +186,7 @@ def fractal_demo():
 # compact code.
 # fmt: off
 def plotting_demo():
+    import streamlit as st
     import time
     import numpy as np
 
@@ -213,6 +217,7 @@ def plotting_demo():
 # compact code.
 # fmt: off
 def data_frame_demo():
+    import streamlit as st
     import pandas as pd
     import altair as alt
 
