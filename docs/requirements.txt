@@ -1,4 +1,5 @@
-pipenv
-mypy-protobuf
-sphinx_markdown_tables
-sphinx-rtd-theme
+mypy-protobuf==1.20
+pipenv==2018.11.26
+recommonmark==0.6.0
+Sphinx==3.0.3
+sphinx-rtd-theme==0.4.3
