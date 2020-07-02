@@ -167,6 +167,7 @@ input[type="text"],
 li {
   font-family: Graphik, sans-serif;
   color: var(--st-black);
+  overflow: hidden;
 }
 
 h1,
@@ -351,7 +352,7 @@ strong {
   border-radius: 5px;
   padding: var(--normal-padding);
   margin: var(--normal-padding) 0;
-  /* overflow-x: auto; RZ 20200702: specifying only x causes vertical scrollbar */
+  overflow-x: auto;
 }
 
 .rst-content pre.literal-block,
