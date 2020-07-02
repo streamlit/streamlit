@@ -35,7 +35,7 @@ def allow_cross_origin_requests():
 
     """
     return not config.get_option("server.enableCORS") or config.get_option(
-        "global.useNode"
+        "global.developmentMode"
     )
 
 
