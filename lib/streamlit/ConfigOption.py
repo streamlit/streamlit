@@ -138,7 +138,7 @@ class ConfigOption(object):
         """
         # Parse out the section and name.
         self.key = key
-        key_format = r"(?P<section>\_?[a-z][a-z0-9]*)\.(?P<name>[a-z][a-zA-Z0-9]*)$"
+        key_format = r"(?P<section>\_?[a-z][a-z0-9]*)\.(?P<name>[v_0-9]*[a-z][a-zA-Z0-9]*)$"
         match = re.match(key_format, self.key)
         assert match, 'Key "%s" has invalid format.' % self.key
         self.section, self.name = match.group("section"), match.group("name")

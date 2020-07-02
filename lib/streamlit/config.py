@@ -572,6 +572,17 @@ _create_option(
 )
 
 
+# Config Section: deprecations
+
+_create_section("deprecation", 'Configuration to show or hide deprecation warnings.')
+
+_create_option(
+    "deprecation.v00_063_showfileUploaderEncoding",
+    description="Disable the warning for the deprecation of file uploader encoding.",
+    default_val="True",
+    scriptable="True"
+)
+
 # Config Section: S3 #
 
 _create_section("s3", 'Configuration for when global.sharingMode is set to "s3".')
