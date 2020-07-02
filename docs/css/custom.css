@@ -351,8 +351,8 @@ strong {
   border-radius: 5px;
   padding: var(--normal-padding);
   margin: var(--normal-padding) 0;
-  /* overflow-x: auto;  */ /*RZ 20200702: this causes vertical scrollbar, disabling for now */
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden; /*RZ 20200702: specifying only x causes vertical scrollbar */
 }
 
 .rst-content pre.literal-block,
