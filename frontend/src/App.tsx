@@ -389,8 +389,16 @@ export class App extends PureComponent<Props, State> {
 
         MetricsManager.current.enqueue(
           "deltaStats",
-          MetricsManager.current.getDeltaCounter()
+          MetricsManager.current.getAndResetDeltaCounter()
         )
+
+        const customComponentCounter = MetricsManager.current.getAndResetCustomComponentCounter()
+        Object.entries(customComponentCounter).forEach(([name, count]) => {
+          MetricsManager.current.enqueue("customComponentStats", {
+            name,
+            count,
+          })
+        })
       }
 
       return {

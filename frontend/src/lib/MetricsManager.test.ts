@@ -95,7 +95,7 @@ test("increments deltas", () => {
   mm.incrementDeltaCounter("foo")
   mm.incrementDeltaCounter("bar")
 
-  const counter = mm.getDeltaCounter()
+  const counter = mm.getAndResetDeltaCounter()
 
   expect(counter.foo).toBe(3)
   expect(counter.bar).toBe(2)
@@ -112,7 +112,7 @@ test("clears deltas", () => {
   mm.incrementDeltaCounter("bar")
 
   mm.clearDeltaCounter()
-  const counter = mm.getDeltaCounter()
+  const counter = mm.getAndResetDeltaCounter()
 
   expect(Object.keys(counter).length).toBe(0)
 })
@@ -126,8 +126,8 @@ test("clears deltas automatically on read", () => {
   mm.incrementDeltaCounter("foo")
   mm.incrementDeltaCounter("bar")
 
-  const counter1 = mm.getDeltaCounter()
-  const counter2 = mm.getDeltaCounter()
+  const counter1 = mm.getAndResetDeltaCounter()
+  const counter2 = mm.getAndResetDeltaCounter()
 
   expect(Object.keys(counter1).length).toBe(2)
   expect(Object.keys(counter2).length).toBe(0)

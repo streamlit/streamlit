@@ -32,6 +32,14 @@ interface DeltaCounter {
   [name: string]: number
 }
 
+/**
+ * A mapping of [component instance name] -> [count] which is used to upload
+ * custom component stats when the app is idle.
+ */
+interface CustomComponentCounter {
+  [name: string]: number
+}
+
 type Event = [string, object]
 
 export class MetricsManager {
@@ -53,6 +61,12 @@ export class MetricsManager {
    * Maps type of delta (string) to count (number).
    */
   private pendingDeltaCounter: DeltaCounter = {}
+
+  /**
+   * Object used to count the number of custom instance names seen in a given report.
+   * Maps type of custom instance name (string) to count (number).
+   */
+  private pendingCustomComponentCounter: CustomComponentCounter = {}
 
   /**
    * Report hash uniquely identifies "projects" so we can tell
@@ -115,10 +129,28 @@ export class MetricsManager {
     }
   }
 
-  public getDeltaCounter(): DeltaCounter {
+  public getAndResetDeltaCounter(): DeltaCounter {
     const deltaCounter = this.pendingDeltaCounter
-    this.pendingDeltaCounter = {}
+    this.clearDeltaCounter()
     return deltaCounter
+  }
+
+  public clearCustomComponentCounter(): void {
+    this.pendingCustomComponentCounter = {}
+  }
+
+  public incrementCustomComponentCounter(customInstanceName: string): void {
+    if (this.pendingCustomComponentCounter[customInstanceName] == null) {
+      this.pendingCustomComponentCounter[customInstanceName] = 1
+    } else {
+      this.pendingCustomComponentCounter[customInstanceName]++
+    }
+  }
+
+  public getAndResetCustomComponentCounter(): CustomComponentCounter {
+    const customComponentCounter = this.pendingCustomComponentCounter
+    this.clearCustomComponentCounter()
+    return customComponentCounter
   }
 
   // Report hash gets set when update report happens.
