@@ -150,6 +150,7 @@
     "scss-to-json": "^2.0.0",
     "source-map-explorer": "^2.1.0",
     "start-server-and-test": "^1.9.1",
+    "timezone-mock": "^1.1.0",
     "typescript": "3.6.3"
   },
   "resolutions": {
