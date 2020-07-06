@@ -211,7 +211,7 @@ def declare_component(
     CustomComponent
         A CustomComponent that can be called like a function.
         Calling the component will create a new instance of the component
-        in the Streamlit report.
+        in the Streamlit app.
 
     """
 
