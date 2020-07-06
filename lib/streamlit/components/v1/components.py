@@ -173,7 +173,7 @@ class CustomComponent:
 
         return result
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         """Equality operator."""
         return (
             isinstance(other, CustomComponent)
@@ -182,11 +182,11 @@ class CustomComponent:
             and self.url == other.url
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other) -> bool:
         """Inequality operator."""
         return not self == other
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"'{self.name}': {self.path if self.path is not None else self.url}"
 
 
@@ -279,7 +279,7 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
 
         self.set_extra_headers(path)
 
-    def set_extra_headers(self, path):
+    def set_extra_headers(self, path) -> None:
         """Disable cache for HTML files.
 
         Other assets like JS and CSS are suffixed with their hash, so they can
@@ -302,7 +302,7 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
         self.finish()
 
     @staticmethod
-    def get_content_type(abspath):
+    def get_content_type(abspath) -> str:
         """Returns the ``Content-Type`` header to be used for this request.
         From tornado.web.StaticFileHandler.
         """

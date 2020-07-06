@@ -12,11 +12,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Optional
 
 
 def marshall(
-    proto, src=None, srcdoc=None, width=None, height=None, scrolling=False,
-):
+    proto,
+    src: Optional[str] = None,
+    srcdoc: Optional[str] = None,
+    width: Optional[int] = None,
+    height: Optional[int] = None,
+    scrolling: bool = False,
+) -> None:
     """Marshalls data into an IFrame proto.
 
     These parameters correspond directly to <iframe> attributes, which are

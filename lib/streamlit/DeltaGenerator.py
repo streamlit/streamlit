@@ -23,7 +23,7 @@ import re
 from datetime import datetime
 from datetime import date
 from datetime import time
-from typing import Optional
+from typing import Optional, Any
 from datetime import timedelta
 from datetime import timezone
 
@@ -131,7 +131,7 @@ def _with_element(method):
 
 def _build_duplicate_widget_message(
     widget_func_name: str, user_key: Optional[str] = None
-):
+) -> str:
     if user_key is not None:
         message = textwrap.dedent(
             """
@@ -165,7 +165,7 @@ def _set_widget_id(
     element: Element,
     user_key: Optional[str] = None,
     widget_func_name: Optional[str] = None,
-):
+) -> None:
     """Set the widget id.
 
     Parameters
@@ -210,7 +210,7 @@ def _get_widget_ui_value(
     element: Element,
     user_key: Optional[str] = None,
     widget_func_name: Optional[str] = None,
-):
+) -> Any:
     """Get the widget ui_value from the report context.
     NOTE: This function should be called after the proto has been filled.
 
