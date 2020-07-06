@@ -74,7 +74,7 @@ describe("st.iframe", () => {
 
     beforeAll(() => {
       const props = getProps({
-        srcDoc: "bar",
+        srcdoc: "bar",
       })
       wrapper = shallow(<IFrame {...props} />)
     })
