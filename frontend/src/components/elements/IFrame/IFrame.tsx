@@ -60,7 +60,7 @@ class IFrame extends React.PureComponent<Props> {
       srcDoc = undefined
       allowSameOrigin = true
     } else {
-      srcDoc = getNonEmptyString(this.props.element, "srcDoc")
+      srcDoc = getNonEmptyString(this.props.element, "srcdoc")
       allowSameOrigin = false
     }
 
