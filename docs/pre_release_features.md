@@ -83,10 +83,4 @@ Features in the experimental namespace are things that we're still working on or
 2. The feature is potentially tweaked over time, with possible API/behavior breakages.
 3. At some point, we either move the feature into `st.beta` or remove it from `st.experimental`. Either way, we leave a stub in `st.experimental` that shows an error with instructions.
 
-**Keeping up-to-date with experimental features**
-
-- Experimental features will be announced in the changelog.
-- Experimental features will show up in a separate section of the API page in the docs, called experimental features.
-- We'll announce big feature releases in the Discuss forum.
-
 Let us know if you have any [questions or feedback](https://discuss.streamlit.io/) about the new namespaces!
