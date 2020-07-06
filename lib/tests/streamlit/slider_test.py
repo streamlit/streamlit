@@ -22,6 +22,12 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber
 from tests import testutil
 
+from datetime import date
+from datetime import datetime
+from datetime import time
+from datetime import timedelta
+from datetime import timezone
+
 
 class SliderTest(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall slider protos."""
@@ -34,6 +40,17 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.label, "the label")
         self.assertEqual(c.default, [0])
 
+    PST = timezone(timedelta(hours=-8), "PST")
+    AWARE_DT = datetime(2020, 1, 1, tzinfo=PST)
+    AWARE_DT_END = datetime(2020, 1, 5, tzinfo=PST)
+    AWARE_TIME = time(12, 00, tzinfo=PST)
+    AWARE_TIME_END = time(21, 00, tzinfo=PST)
+    # datetimes are serialized in proto as micros since epoch
+    AWARE_DT_MICROS = 1577865600000000
+    AWARE_DT_END_MICROS = 1578211200000000
+    AWARE_TIME_MICROS = 946756800000000
+    AWARE_TIME_END_MICROS = 946789200000000
+
     @parameterized.expand(
         [
             (1, [1], 1),  # int
@@ -42,6 +59,28 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
             (0.5, [0.5], 0.5),  # float
             ((0.2, 0.5), [0.2, 0.5], (0.2, 0.5)),  # float tuple
             ([0.2, 0.5], [0.2, 0.5], (0.2, 0.5)),  # float list
+            (AWARE_DT, [AWARE_DT_MICROS], AWARE_DT),  # datetime
+            (
+                (AWARE_DT, AWARE_DT_END),  # datetime tuple
+                [AWARE_DT_MICROS, AWARE_DT_END_MICROS],
+                (AWARE_DT, AWARE_DT_END),
+            ),
+            (
+                [AWARE_DT, AWARE_DT_END],  # datetime list
+                [AWARE_DT_MICROS, AWARE_DT_END_MICROS],
+                (AWARE_DT, AWARE_DT_END),
+            ),
+            (AWARE_TIME, [AWARE_TIME_MICROS], AWARE_TIME),  # datetime
+            (
+                (AWARE_TIME, AWARE_TIME_END),  # datetime tuple
+                [AWARE_TIME_MICROS, AWARE_TIME_END_MICROS],
+                (AWARE_TIME, AWARE_TIME_END),
+            ),
+            (
+                [AWARE_TIME, AWARE_TIME_END],  # datetime list
+                [AWARE_TIME_MICROS, AWARE_TIME_END_MICROS],
+                (AWARE_TIME, AWARE_TIME_END),
+            ),
         ]
     )
     def test_value_types(self, value, proto_value, return_value):
@@ -54,32 +93,55 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.label, "the label")
         self.assertEqual(c.default, proto_value)
 
+    NAIVE_DT = datetime(2020, 2, 1)
+    NAIVE_DT_END = datetime(2020, 2, 4)
+    NAIVE_TIME = time(6, 20, 34)
+    NAIVE_TIME_END = time(20, 6, 43)
+    DATE_START = date(2020, 4, 5)
+    DATE_END = date(2020, 6, 6)
+
+    @parameterized.expand(
+        [
+            (NAIVE_DT, NAIVE_DT),  # naive datetime
+            ((NAIVE_DT, NAIVE_DT_END), (NAIVE_DT, NAIVE_DT_END)),
+            ([NAIVE_DT, NAIVE_DT_END], (NAIVE_DT, NAIVE_DT_END)),
+            (NAIVE_TIME, NAIVE_TIME),  # naive time
+            ((NAIVE_TIME, NAIVE_TIME_END), (NAIVE_TIME, NAIVE_TIME_END)),
+            ([NAIVE_TIME, NAIVE_TIME_END], (NAIVE_TIME, NAIVE_TIME_END)),
+            (DATE_START, DATE_START),  # date (always naive)
+            ((DATE_START, DATE_END), (DATE_START, DATE_END)),
+            ([DATE_START, DATE_END], (DATE_START, DATE_END)),
+        ]
+    )
+    def test_naive_timelikes(self, value, return_value):
+        """Ignore proto values (they change based on testing machine's timezone)"""
+        ret = st.slider("the label", value=value)
+        c = self.get_delta_from_queue().new_element.slider
+
+        self.assertEqual(ret, return_value)
+        self.assertEqual(c.label, "the label")
+
     def test_value_greater_than_min(self):
-        with pytest.raises(StreamlitAPIException) as exc_slider:
-            st.slider("Slider label", 10, 100, 0)
-        self.assertEqual(
-            "The default `value` of 0 must lie between the `min_value` of 10 "
-            "and the `max_value` of 100, inclusively.",
-            str(exc_slider.value),
-        )
+        ret = st.slider("Slider label", 10, 100, 0)
+        c = self.get_delta_from_queue().new_element.slider
+
+        self.assertEqual(ret, 0)
+        self.assertEqual(c.min, 0)
 
     def test_value_smaller_than_max(self):
-        with pytest.raises(StreamlitAPIException) as exc_slider:
-            st.slider("Slider label", 10, 100, 101)
-        self.assertEqual(
-            "The default `value` of 101 must lie between the `min_value` of "
-            "10 and the `max_value` of 100, inclusively.",
-            str(exc_slider.value),
-        )
+        ret = st.slider("Slider label", 10, 100, 101)
+        c = self.get_delta_from_queue().new_element.slider
+
+        self.assertEqual(ret, 101)
+        self.assertEqual(c.max, 101)
 
     def test_max_min(self):
-        with pytest.raises(StreamlitAPIException) as exc_slider:
-            st.slider("Slider label", 101, 100, 101)
-        self.assertEqual(
-            "The default `value` of 101 must lie between the `min_value` of "
-            "101 and the `max_value` of 100, inclusively.",
-            str(exc_slider.value),
-        )
+        ret = st.slider("Slider label", 101, 100, 101)
+        c = self.get_delta_from_queue().new_element.slider
+
+        self.assertEqual(ret, 101),
+        self.assertEqual(c.min, 100)
+        self.assertEqual(c.max, 101)
 
     def test_value_out_of_bounds(self):
         # Max int

@@ -18,10 +18,7 @@
 import React, { PureComponent, ReactNode } from "react"
 import { Map as ImmutableMap } from "immutable"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
-import {
-  getWindowBaseUriParts as get_base_uri_parts,
-  buildHttpUri,
-} from "lib/UriUtil"
+import { buildMediaUri } from "lib/UriUtil"
 import "./ImageList.scss"
 
 export interface Props {
@@ -34,14 +31,6 @@ export interface Props {
 enum WidthBehavior {
   OriginalWidth = -1,
   ColumnWidth = -2,
-}
-
-function getImageURI(imgProto: ImmutableMap<string, any>): string {
-  if (imgProto.get("url").startsWith("/media")) {
-    return buildHttpUri(get_base_uri_parts(), imgProto.get("url"))
-  } else {
-    return imgProto.get("url")
-  }
 }
 
 /**
@@ -87,7 +76,11 @@ export class ImageList extends PureComponent<Props> {
               key={idx}
               style={{ width: containerWidth }}
             >
-              <img style={imgStyle} src={getImageURI(img)} alt={idx} />
+              <img
+                style={imgStyle}
+                src={buildMediaUri(img.get("url"))}
+                alt={idx}
+              />
               {!isFullScreen && (
                 <div className="caption"> {img.get("caption")} </div>
               )}

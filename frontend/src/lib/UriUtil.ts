@@ -95,3 +95,13 @@ function makePath(basePath: string, subPath: string): string {
 function isHttps(): boolean {
   return window.location.href.startsWith("https://")
 }
+
+/**
+ * If this is a relative URI, assume it's being served from streamlit and
+ * construct it appropriately.  Otherwise leave it alone.
+ */
+export function buildMediaUri(uri: string): string {
+  return uri.startsWith("/media")
+    ? buildHttpUri(getWindowBaseUriParts(), uri)
+    : uri
+}

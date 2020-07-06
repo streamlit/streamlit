@@ -64,8 +64,12 @@ pipenv-dev-install: lib/Pipfile
 
 .PHONY: pipenv-test-install
 pipenv-test-install: lib/test-requirements.txt
-	cd lib; \
-		pip install -r test-requirements.txt
+	# Installing from a requirements file copies the packages into
+	# the Pipfile so we revert these changes after the install.
+	cd lib ; \
+		cp Pipfile Pipfile.bkp ; \
+		pipenv install --dev --skip-lock --sequential -r test-requirements.txt ; \
+		mv Pipfile.bkp Pipfile
 
 .PHONY: pylint
 # Run "black", our Python formatter, to verify that our source files

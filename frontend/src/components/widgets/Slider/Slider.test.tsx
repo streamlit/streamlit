@@ -19,7 +19,9 @@ import React from "react"
 import { shallow } from "enzyme"
 import { fromJS } from "immutable"
 import { sliderOverrides } from "lib/widgetTheme"
+import { Slider as SliderProto } from "autogen/proto"
 import { Slider as UISlider } from "baseui/slider"
+import TimezoneMock from "timezone-mock"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import Slider, { Props } from "./Slider"
@@ -256,6 +258,55 @@ describe("Slider widget", () => {
         { fromUi: true }
       )
       expect(wrapper.find(UISlider).prop("value")).toStrictEqual([1, 10])
+    })
+  })
+
+  describe("Datetime slider", () => {
+    TimezoneMock.register("UTC")
+
+    it("should be in UTC", () => {
+      // We use a less idiomiatic Jest call, since getTimezoneOffset can return
+      // -0, and Object.is(-0, 0) is false: https://stackoverflow.com/a/59343755
+      expect(new Date().getTimezoneOffset() === 0).toBeTruthy()
+    })
+
+    const WEEK_IN_MICROS = 7 * 24 * 60 * 60 * 1000 * 1000
+    const props = getProps({
+      min: 0,
+      max: 4 * WEEK_IN_MICROS,
+      format: "YYYY-MM-DD",
+      dataType: SliderProto.DataType.DATETIME,
+    })
+    const wrapper = shallow(<Slider {...props} />)
+
+    it("should format the value as a date", () => {
+      // @ts-ignore
+      const thumbValue = wrapper
+        .find(UISlider)
+        .prop("overrides")
+        // @ts-ignore
+        .ThumbValue({
+          $thumbIndex: 0,
+          $value: [2 * WEEK_IN_MICROS],
+        })
+
+      const thumbValueWrapper = shallow(thumbValue)
+
+      expect(thumbValueWrapper.text()).toBe("1970-01-15")
+    })
+
+    it("should format min and max as dates", () => {
+      // @ts-ignore
+      const thumbValue = wrapper
+        .find(UISlider)
+        .prop("overrides")
+        // @ts-ignore
+        .TickBar()
+
+      const thumbValueWrapper = shallow(thumbValue)
+
+      expect(thumbValueWrapper.find(".tickBarMin").text()).toBe("1970-01-01")
+      expect(thumbValueWrapper.find(".tickBarMax").text()).toBe("1970-01-29")
     })
   })
 })
