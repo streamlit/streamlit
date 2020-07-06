@@ -126,5 +126,5 @@ Streamlit's officially-supported environment manager for macOS and Linux is [Pip
    ```sh
    streamlit run myfile.py
    ```
-
+   
 3. When you're done using this environment, just type `exit` or press `ctrl-D` to return to your normall shell.
