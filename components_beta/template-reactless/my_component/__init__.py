@@ -1,5 +1,5 @@
 import os
-from streamlit.components.v1 import declare_component
+import streamlit.components.v1 as components
 
 # Create a _RELEASE constant. We'll set this to False while we're developing
 # the component, and True when we're ready to package and distribute it.
@@ -19,7 +19,7 @@ _RELEASE = False
 # best practice.
 
 if not _RELEASE:
-    _component_func = declare_component(
+    _component_func = components.declare_component(
         # We give the component a simple, descriptive name ("my_component"
         # does not fit this bill, so please choose something better for your
         # own component :)
@@ -35,7 +35,7 @@ else:
     # build directory:
     parent_dir = os.path.dirname(os.path.abspath(__file__))
     build_dir = os.path.join(parent_dir, "frontend/build")
-    _component_func = declare_component("my_component", path=build_dir)
+    _component_func = components.declare_component("my_component", path=build_dir)
 
 
 # Create a wrapper function for the component. This is an optional

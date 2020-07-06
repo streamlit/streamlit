@@ -28,7 +28,9 @@ from streamlit.components.v1.components import ComponentRegistry
 from streamlit.components.v1.components import ComponentRequestHandler
 from streamlit.components.v1.components import CustomComponent
 from streamlit.components.v1.components import declare_component
+import streamlit.components.v1 as components
 from streamlit.errors import DuplicateWidgetID
+from tests import testutil
 from tests.testutil import DeltaGeneratorTestCase
 
 URL = "http://not.a.real.url:3001"
@@ -44,7 +46,7 @@ class DeclareComponentTest(unittest.TestCase):
     def test_name(self):
         """Test component name generation"""
         # Test a component defined in a module with no package
-        component = declare_component("foo", url=URL)
+        component = components.declare_component("foo", url=URL)
         self.assertEqual("components_test.foo", component.name)
 
         # Test a component defined in __init__.py
@@ -79,7 +81,7 @@ class DeclareComponentTest(unittest.TestCase):
         with mock.patch(
             "streamlit.components.v1.components.os.path.isdir", side_effect=isdir
         ):
-            component = declare_component("test", path=PATH)
+            component = components.declare_component("test", path=PATH)
 
         self.assertEqual(PATH, component.path)
         self.assertIsNone(component.url)
@@ -91,7 +93,7 @@ class DeclareComponentTest(unittest.TestCase):
 
     def test_only_url(self):
         """Succeed when a URL is provided."""
-        component = declare_component("test", url=URL)
+        component = components.declare_component("test", url=URL)
         self.assertEqual(URL, component.url)
         self.assertIsNone(component.path)
 
@@ -103,7 +105,7 @@ class DeclareComponentTest(unittest.TestCase):
     def test_path_and_url(self):
         """Fail if path AND url are provided."""
         with pytest.raises(StreamlitAPIException) as exception_message:
-            declare_component("test", path=PATH, url=URL)
+            components.declare_component("test", path=PATH, url=URL)
         self.assertEqual(
             "Either 'path' or 'url' must be set, but not both.",
             str(exception_message.value),
@@ -112,7 +114,7 @@ class DeclareComponentTest(unittest.TestCase):
     def test_no_path_and_no_url(self):
         """Fail if neither path nor url is provided."""
         with pytest.raises(StreamlitAPIException) as exception_message:
-            declare_component("test", path=None, url=None)
+            components.declare_component("test", path=None, url=None)
         self.assertEqual(
             "Either 'path' or 'url' must be set, but not both.",
             str(exception_message.value),
@@ -193,7 +195,7 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
 
     def setUp(self):
         super().setUp()
-        self.test_component = declare_component("test", url=URL)
+        self.test_component = components.declare_component("test", url=URL)
 
     def test_only_json_args(self):
         """Test that component with only json args is marshalled correctly."""
@@ -329,3 +331,28 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(
             b"components_test.test read error: Invalid content", response.body,
         )
+
+
+class IFrameTest(testutil.DeltaGeneratorTestCase):
+    def test_iframe(self):
+        """Test components.iframe"""
+        components.iframe("http://not.a.url", width=200, scrolling=True)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.iframe.src, "http://not.a.url")
+        self.assertEqual(el.iframe.srcdoc, "")
+        self.assertEqual(el.iframe.width, 200)
+        self.assertTrue(el.iframe.has_width)
+        self.assertTrue(el.iframe.scrolling)
+
+    def test_html(self):
+        """Test components.html"""
+        html = r"<html><body>An HTML string!</body></html>"
+        components.html(html, width=200, scrolling=True)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.iframe.src, "")
+        self.assertEqual(el.iframe.srcdoc, html)
+        self.assertEqual(el.iframe.width, 200)
+        self.assertTrue(el.iframe.has_width)
+        self.assertTrue(el.iframe.scrolling)

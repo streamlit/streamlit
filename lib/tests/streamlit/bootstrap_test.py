@@ -211,7 +211,7 @@ class BootstrapPrintTest(unittest.TestCase):
             {"browser.serverAddress": False}
         )
         mock_get_option = testutil.build_mock_config_get_option(
-            {"server.headless": False, "server.port": 9988, "global.useNode": False}
+            {"server.headless": False, "server.port": 9988, "global.developmentMode": False}
         )
 
         mock_get_internal_ip.return_value = "internal-ip"
@@ -235,7 +235,7 @@ class BootstrapPrintTest(unittest.TestCase):
                 "server.headless": False,
                 "server.baseUrlPath": "foo",
                 "server.port": 8501,
-                "global.useNode": False,
+                "global.developmentMode": False,
             }
         )
 
@@ -260,7 +260,7 @@ class BootstrapPrintTest(unittest.TestCase):
                 "server.headless": False,
                 "server.baseUrlPath": "foo",
                 "server.port": 8501,
-                "global.useNode": False,
+                "global.developmentMode": False,
             }
         )
 
