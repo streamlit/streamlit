@@ -255,18 +255,11 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         self.assertIsNotNone(proto.args_dataframe)
 
     def test_key(self):
-        """Two components with different arguments but the same `key` should have the same ID"""
+        """Two components with the same `key` should throw DuplicateWidgetID exception"""
         self.test_component(foo="bar", key="baz")
-        proto1 = self.get_delta_from_queue().new_element.component_instance
 
-        # Ignore the raised exception to see if the IDs are the same.
-        try:
+        with self.assertRaises(DuplicateWidgetID):
             self.test_component(key="baz")
-        except DuplicateWidgetID:
-            pass
-
-        proto2 = self.get_delta_from_queue().new_element.component_instance
-        self.assertEqual(proto1.id, proto2.id)
 
     def test_default(self):
         """Test the 'default' param."""
