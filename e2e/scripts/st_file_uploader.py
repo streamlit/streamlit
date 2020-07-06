@@ -14,7 +14,7 @@
 
 import streamlit as st
 
-st.set_option('deprecation.v00_063_showfileUploaderEncoding', True)
+st.set_option("deprecation.v00_063_showfileUploaderEncoding", True)
 result = st.file_uploader("Drop a file:", type=["txt"])
 # result = st.file_uploader("Drop a file:", type=["txt"], accept_multiple_files=False)
 if result is not None:
@@ -22,7 +22,7 @@ if result is not None:
 else:
     st.text("No upload")
 
-st.set_option('deprecation.v00_063_showfileUploaderEncoding', False)
+st.set_option("deprecation.v00_063_showfileUploaderEncoding", False)
 st.file_uploader("Disable deprecation", type=["txt"], disable_deprecation_warning=True)
 
 # result = st.file_uploader(
