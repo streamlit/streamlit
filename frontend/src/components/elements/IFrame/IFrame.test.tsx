@@ -16,9 +16,9 @@
  */
 
 import React from "react"
-import IFrame, { Props } from "./IFrame"
 import { fromJS } from "immutable"
 import { shallow, ShallowWrapper } from "enzyme"
+import IFrame, { Props } from "./IFrame"
 import { getIFrameSandboxPolicy } from "lib/IFrameUtil"
 
 const getProps = (elementProps: object = {}): Props => ({
@@ -35,7 +35,7 @@ describe("st.iframe", () => {
     expect(wrapper.find("iframe").length).toBe(1)
   })
 
-  it("should set height", () => {
+  it("should set iframe height", () => {
     const props = getProps({
       height: 400,
     })
@@ -54,7 +54,7 @@ describe("st.iframe", () => {
       wrapper = shallow(<IFrame {...props} />)
     })
 
-    it("should set `srcDoc` undefined", () => {
+    it("should set `srcDoc` to undefined", () => {
       expect(wrapper.find("iframe").prop("srcDoc")).toBe(undefined)
     })
 
@@ -83,7 +83,7 @@ describe("st.iframe", () => {
       expect(wrapper.find("iframe").prop("srcDoc")).toBe("bar")
     })
 
-    it("should not add `allow-same-origin` parameter to iframe sandbox ", () => {
+    it("should not add `allow-same-origin` parameter to iframe sandbox", () => {
       expect(wrapper.find("iframe").prop("sandbox")).toBe(
         getIFrameSandboxPolicy(false)
       )
@@ -116,7 +116,7 @@ describe("st.iframe", () => {
       expect(wrapper.find("iframe").prop("style")).toEqual({})
     })
 
-    it("should set `overflow` hidden", () => {
+    it("should set `overflow` to hidden", () => {
       const props = getProps({})
       const wrapper = shallow(<IFrame {...props} />)
       expect(wrapper.find("iframe").prop("style")).toEqual({
