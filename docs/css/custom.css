@@ -618,3 +618,13 @@ hr {
     left: auto;
   }
 }
+
+/* Definition from original RTD theme, add here to extend to sidebar links */
+.wy-menu-vertical li.toctree-l1 a.reference.external:after {
+  font-family: FontAwesome;
+  content: "";
+  color: #b3b3b3;
+  vertical-align: super;
+  font-size: 60%;
+  margin: 0 0.2em;
+}

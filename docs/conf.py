@@ -108,6 +108,7 @@ html_theme_options = {
     "analytics_id": "UA-122023594-3",
     "logo_only": True,
     "style_nav_header_background": "#ffffff",
+    "style_external_links": True,
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
