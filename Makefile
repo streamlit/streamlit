@@ -4,7 +4,6 @@ SHELL=/bin/bash
 
 # Black magic to get module directories
 PYTHON_MODULES := $(foreach initpy, $(foreach dir, $(wildcard lib/*), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
-PY_VERSION := $(shell python -c 'import platform; print(platform.python_version())')
 
 # Configure Black to support only syntax supported by the minimum supported Python version in setup.py.
 BLACK=black --target-version=py36
@@ -48,24 +47,29 @@ frontend: react-build
 
 .PHONY: setup
 setup:
-	pip install pip-tools pipenv ; \
-	if [[ $(PY_VERSION) == "3.6.0" || $(PY_VERSION) > "3.6.0" ]]; then \
-		pip install black; \
-	fi
+	pip install pip-tools pipenv black ;
 
 .PHONY: pipenv-install
 pipenv-install: pipenv-dev-install pipenv-test-install
 
 .PHONY: pipenv-dev-install
 pipenv-dev-install: lib/Pipfile
-	@# Runs pipenv install; doesn't update the Pipfile.lock.
+	# Run pipenv install; don't update the Pipfile.lock.
+	# We use `--sequential` here to ensure our results are...
+	# "more deterministic", per pipenv's documentation.
+	# (Omitting this flag is causing incorrect dependency version
+	# resolution on CircleCI.)
 	cd lib; \
-		pipenv install --dev --skip-lock
+		pipenv install --dev --skip-lock --sequential
 
 .PHONY: pipenv-test-install
 pipenv-test-install: lib/test-requirements.txt
-	cd lib; \
-		pip install -r test-requirements.txt
+	# Installing from a requirements file copies the packages into
+	# the Pipfile so we revert these changes after the install.
+	cd lib ; \
+		cp Pipfile Pipfile.bkp ; \
+		pipenv install --dev --skip-lock --sequential -r test-requirements.txt ; \
+		mv Pipfile.bkp Pipfile
 
 .PHONY: pylint
 # Run "black", our Python formatter, to verify that our source files
@@ -73,8 +77,6 @@ pipenv-test-install: lib/test-requirements.txt
 # status if anything is not properly formatted. (This isn't really
 # "linting"; we're not checking anything but code style.)
 pylint:
-	@# Black requires Python 3.6+ to run (but you can reformat
-	@# Python 2 code with it, too).
 	if command -v "black" > /dev/null; then \
 		$(BLACK) --check docs/ ; \
 		$(BLACK) --check examples/ ; \
@@ -87,8 +89,6 @@ pylint:
 # Run "black", our Python formatter, to fix any source files that are not
 # properly formatted.
 pyformat:
-	@# Black requires Python 3.6+ to run (but you can reformat
-	@# Python 2 code with it, too).
 	if command -v "black" > /dev/null; then \
 		$(BLACK) docs/ ; \
 		$(BLACK) examples/ ; \
@@ -137,7 +137,7 @@ install:
 	cd lib ; python setup.py install
 
 .PHONY: develop
-# Install Streamlit as links in your Python environemnt, pointing to local workspace.
+# Install Streamlit as links in your Python environment, pointing to local workspace.
 develop:
 	cd lib ; python setup.py develop
 
@@ -156,6 +156,7 @@ clean: clean-docs
 	find . -name '*.pyc' -type f -delete || true
 	find . -name __pycache__ -type d -delete || true
 	find . -name .pytest_cache -exec rm -rfv {} \; || true
+	rm -rf .mypy_cache
 	rm -f lib/streamlit/proto/*_pb2.py*
 	rm -rf lib/streamlit/static
 	rm -f lib/Pipfile.lock
@@ -177,36 +178,16 @@ clean-docs:
 .PHONY: docs
 # Generate HTML documentation at /docs/_build.
 docs: clean-docs
+	mkdir -p docs/_static/css
 	cd docs; \
-		make html
+		make html; \
+		python replace_vars.py css/custom.css _static/css/custom.css
 
 .PHONY: devel-docs
 # Build docs and start a test server at port 8000.
 devel-docs: docs
 	cd docs/_build/html; \
-		python -m SimpleHTTPServer 8000 || python -m http.server 8000
-
-.PHONY: publish-docs
-# Build docs and push to prod.
-publish-docs: docs
-	cd docs/_build; \
-		aws s3 sync \
-				--acl public-read html s3://docs.streamlit.io \
-				--profile streamlit
-
-	# The line below uses the distribution ID obtained with
-	# $ aws cloudfront list-distributions | \
-	#     jq '.DistributionList.Items[] | \
-	#     select(.Aliases.Items[0] | \
-	#     contains("docs.streamlit.io")) | \
-	#     .Id'
-
-	aws cloudfront create-invalidation \
-		--distribution-id=E16K3UXOWYZ8U7 \
-		--paths \
-			'/*' \
-			'/tutorial/*' \
-		--profile streamlit
+		python -m http.server 8000
 
 .PHONY: protobuf
 # Recompile Protobufs for Python and Javascript.
@@ -336,10 +317,10 @@ notices:
 	# NOTE: This file may need to be manually edited. Look at the Git diff and
 	# the parts that should be edited will be obvious.
 
-	./scripts/append_license.sh frontend/src/assets/font/IBM_Plex_Fonts.LICENSE
-	./scripts/append_license.sh frontend/src/assets/img/Material-Icons.LICENSE
-	./scripts/append_license.sh frontend/src/assets/img/Noto-Emoji-Font.LICENSE
-	./scripts/append_license.sh frontend/src/assets/img/Open-Iconic.LICENSE
+	./scripts/append_license.sh frontend/public/assets/font/IBM_Plex_Fonts.LICENSE
+	./scripts/append_license.sh frontend/public/assets/img/Material-Icons.LICENSE
+	./scripts/append_license.sh frontend/public/assets/img/Noto-Emoji-Font.LICENSE
+	./scripts/append_license.sh frontend/public/assets/img/Open-Iconic.LICENSE
 
 .PHONY: headers
 # Update the license header on all source files.

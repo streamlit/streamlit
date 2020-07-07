@@ -94,6 +94,13 @@ def _open_browser_with_command(command, url):
         subprocess.Popen(cmd_line, stdout=devnull, stderr=subprocess.STDOUT)
 
 
+def _maybe_tuple_to_list(item):
+    """Convert a tuple to a list. Leave as is if it's not a tuple."""
+    if isinstance(item, tuple):
+        return list(item)
+    return item
+
+
 # TODO: Move this into errors.py? Replace with StreamlitAPIException?
 class Error(Exception):
     pass

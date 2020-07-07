@@ -76,6 +76,25 @@ class BootstrapPrintTest(unittest.TestCase):
         sys.stdout.close()  # sys.stdout is a StringIO at this point.
         sys.stdout = self.orig_stdout
 
+    def test_print_hello_message(self):
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": True}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {"browser.serverAddress": "the-address"}
+        )
+
+        with patch.object(config, "get_option", new=mock_get_option), patch.object(
+            config, "is_manually_set", new=mock_is_manually_set
+        ):
+            bootstrap._print_url(True)
+
+        out = sys.stdout.getvalue()
+        self.assertTrue(
+            "Welcome to Streamlit. Check out our demo in your browser." in out
+        )
+        self.assertTrue("URL: http://the-address" in out)
+
     def test_print_urls_configured(self):
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(
             {"browser.serverAddress": True}
@@ -87,9 +106,10 @@ class BootstrapPrintTest(unittest.TestCase):
         with patch.object(config, "get_option", new=mock_get_option), patch.object(
             config, "is_manually_set", new=mock_is_manually_set
         ):
-            bootstrap._print_url()
+            bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
+        self.assertTrue("You can now view your Streamlit app in your browser." in out)
         self.assertTrue("URL: http://the-address" in out)
 
     @patch("streamlit.net_util.get_external_ip")
@@ -109,7 +129,7 @@ class BootstrapPrintTest(unittest.TestCase):
         with patch.object(config, "get_option", new=mock_get_option), patch.object(
             config, "is_manually_set", new=mock_is_manually_set
         ):
-            bootstrap._print_url()
+            bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
         self.assertTrue("Network URL: http://internal-ip" in out)
@@ -134,7 +154,7 @@ class BootstrapPrintTest(unittest.TestCase):
         with patch.object(config, "get_option", new=mock_get_option), patch.object(
             config, "is_manually_set", new=mock_is_manually_set
         ):
-            bootstrap._print_url()
+            bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
         self.assertTrue("Network URL: http://internal-ip" in out)
@@ -159,7 +179,7 @@ class BootstrapPrintTest(unittest.TestCase):
         with patch.object(config, "get_option", new=mock_get_option), patch.object(
             config, "is_manually_set", new=mock_is_manually_set
         ):
-            bootstrap._print_url()
+            bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
         self.assertTrue("Network URL: http://internal-ip" not in out)
@@ -179,7 +199,7 @@ class BootstrapPrintTest(unittest.TestCase):
         with patch.object(config, "get_option", new=mock_get_option), patch.object(
             config, "is_manually_set", new=mock_is_manually_set
         ):
-            bootstrap._print_url()
+            bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
         self.assertTrue("Local URL: http://localhost" in out)
@@ -191,7 +211,7 @@ class BootstrapPrintTest(unittest.TestCase):
             {"browser.serverAddress": False}
         )
         mock_get_option = testutil.build_mock_config_get_option(
-            {"server.headless": False, "server.port": 9988, "global.useNode": False}
+            {"server.headless": False, "server.port": 9988, "global.developmentMode": False}
         )
 
         mock_get_internal_ip.return_value = "internal-ip"
@@ -199,7 +219,7 @@ class BootstrapPrintTest(unittest.TestCase):
         with patch.object(config, "get_option", new=mock_get_option), patch.object(
             config, "is_manually_set", new=mock_is_manually_set
         ):
-            bootstrap._print_url()
+            bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
         self.assertTrue("Local URL: http://localhost:9988" in out)
@@ -215,7 +235,7 @@ class BootstrapPrintTest(unittest.TestCase):
                 "server.headless": False,
                 "server.baseUrlPath": "foo",
                 "server.port": 8501,
-                "global.useNode": False,
+                "global.developmentMode": False,
             }
         )
 
@@ -224,7 +244,7 @@ class BootstrapPrintTest(unittest.TestCase):
         with patch.object(config, "get_option", new=mock_get_option), patch.object(
             config, "is_manually_set", new=mock_is_manually_set
         ):
-            bootstrap._print_url()
+            bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
         self.assertTrue("Local URL: http://localhost:8501/foo" in out)
@@ -240,7 +260,7 @@ class BootstrapPrintTest(unittest.TestCase):
                 "server.headless": False,
                 "server.baseUrlPath": "foo",
                 "server.port": 8501,
-                "global.useNode": False,
+                "global.developmentMode": False,
             }
         )
 
@@ -249,7 +269,7 @@ class BootstrapPrintTest(unittest.TestCase):
         with patch.object(config, "get_option", new=mock_get_option), patch.object(
             config, "is_manually_set", new=mock_is_manually_set
         ):
-            bootstrap._print_url()
+            bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
         self.assertTrue("Local URL: http://localhost:8501/foo" in out)

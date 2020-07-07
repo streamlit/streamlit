@@ -1,14 +1,14 @@
 {
   "name": "streamlit-browser",
-  "version": "0.60.0",
+  "version": "0.62.1",
   "private": true,
   "homepage": ".",
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
-    "start": "export NODE_OPTIONS=--max_old_space_size=4096 && craco start",
-    "build": "export NODE_OPTIONS=--max_old_space_size=4096 && craco build",
-    "test": "export NODE_OPTIONS=--max_old_space_size=4096 && craco test --env=jsdom",
-    "test:coverage": "export NODE_OPTIONS=--max_old_space_size=4096 && craco test --env=jsdom --coverage --watchAll false --watch false ./",
+    "start": "env NODE_OPTIONS=--max_old_space_size=4096 && craco start",
+    "build": "env NODE_OPTIONS=--max_old_space_size=4096 && craco build",
+    "test": "env NODE_OPTIONS=--max_old_space_size=4096 && craco test --env=jsdom",
+    "test:coverage": "env NODE_OPTIONS=--max_old_space_size=4096 && craco test --env=jsdom --coverage --watchAll false --watch false ./",
     "cy:open": "unset NODE_OPTIONS && cypress open --env devicePixelRatio=1",
     "cy:run": "unset NODE_OPTIONS && cypress run",
     "cy:run-flaky": "yarn cy:run --config integrationFolder=../e2e_flaky/specs",
@@ -27,7 +27,7 @@
   },
   "husky": {
     "hooks": {
-      "pre-commit": "../scripts/format.sh"
+      "pre-commit": "sh ../scripts/format.sh"
     }
   },
   "dependencies": {
@@ -51,11 +51,13 @@
     "mapbox-gl": "^1.7.0",
     "moment": "^2.22.2",
     "moment-duration-format": "^2.3.2",
+    "node-emoji": "^1.10.0",
     "node-sass": "^4.12.0",
     "numbro": "^2.1.2",
     "plotly.js": "^1.52.2",
     "prismjs": "^1.15.0",
-    "protobufjs": "^6.8.8",
+    "protobufjs": "^6.9.0",
+    "query-string": "^6.13.1",
     "react": "^16.8.6",
     "react-color": "^2.18.1",
     "react-copy-to-clipboard": "^5.0.2",
@@ -103,6 +105,7 @@
     "@types/moment": "^2.13.0",
     "@types/moment-duration-format": "^2.2.2",
     "@types/node": "^12.7.4",
+    "@types/node-emoji": "^1.8.1",
     "@types/numeral": "^0.0.26",
     "@types/plotly.js": "^1.44.8",
     "@types/prismjs": "^1.16.0",
@@ -134,6 +137,7 @@
     "eslint-plugin-react": "^7.14.3",
     "fetch-mock": "^7.3.9",
     "hard-source-webpack-plugin": "^0.13.1",
+    "hard-source-webpack-plugin-fixed-hashbug": "^0.13.1",
     "husky": "^3.0.5",
     "jest-canvas-mock": "^2.2.0",
     "mocha": "5.2.0",
@@ -147,6 +151,7 @@
     "scss-to-json": "^2.0.0",
     "source-map-explorer": "^2.1.0",
     "start-server-and-test": "^1.9.1",
+    "timezone-mock": "^1.1.0",
     "typescript": "3.6.3"
   },
   "resolutions": {
@@ -156,7 +161,8 @@
     "kind-of": "^6.0.3",
     "minimist": "^0.2.1",
     "serialize-javascript": "^2.1.1",
-    "static-eval": "^2.0.5"
+    "static-eval": "^2.0.5",
+    "websocket-extensions": "^0.1.4"
   },
   "browserslist": [
     ">0.2%",

@@ -18,6 +18,7 @@ eggs/
 .coverage
 .coverage\.*
 .pytest_cache/
+.mypy_cache/
 test-reports
 
 # Test fixtures
@@ -58,17 +59,22 @@ node_modules/
 coverage/
 
 ########################################################################
-# streamlit
+# Streamlit
 ########################################################################
 .streamlit/
 lib/streamlit/static
 streamlit-storage
-docs/_build
 
 # Data Files
 **/uber-raw-data-sep14.csv
 
 lib/Pipfile.lock
+
+########################################################################
+# Streamlit docs
+########################################################################
+docs/_build
+docs/_static/css/custom.css
 
 ########################################################################
 # JetBrains

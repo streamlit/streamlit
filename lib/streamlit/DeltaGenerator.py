@@ -23,6 +23,9 @@ import re
 from datetime import datetime
 from datetime import date
 from datetime import time
+from typing import Optional, Any
+from datetime import timedelta
+from datetime import timezone
 
 from streamlit import caching
 from streamlit import config
@@ -39,7 +42,9 @@ from streamlit.proto import Alert_pb2
 from streamlit.proto import Balloons_pb2
 from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
+from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.NumberInput_pb2 import NumberInput
+from streamlit.proto.Slider_pb2 import Slider
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.logger import get_logger
 from streamlit.type_util import is_type
@@ -124,7 +129,9 @@ def _with_element(method):
     return wrapped_method
 
 
-def _build_duplicate_widget_message(widget_type, user_key=None):
+def _build_duplicate_widget_message(
+    widget_func_name: str, user_key: Optional[str] = None
+) -> str:
     if user_key is not None:
         message = textwrap.dedent(
             """
@@ -150,23 +157,37 @@ def _build_duplicate_widget_message(widget_type, user_key=None):
             """
         )
 
-    return message.strip("\n").format(widget_type=widget_type, user_key=user_key)
+    return message.strip("\n").format(widget_type=widget_func_name, user_key=user_key)
 
 
-def _set_widget_id(widget_type, element, user_key=None):
+def _set_widget_id(
+    element_type: str,
+    element: Element,
+    user_key: Optional[str] = None,
+    widget_func_name: Optional[str] = None,
+) -> None:
     """Set the widget id.
 
     Parameters
     ----------
-    widget_type : str
+    element_type : str
         The type of the widget as stored in proto.
     element : proto
         The proto of the element
-    user_key : str
+    user_key : str or None
         Optional user-specified key to use for the widget ID.
         If this is None, we'll generate an ID by hashing the element.
+    widget_func_name : str or None
+        The widget's DeltaGenerator function name, if it's different from
+        its element_type. Custom components are a special case: they all have
+        the element_type "component_instance", but are instantiated with
+        dynamically-named functions.
 
     """
+
+    if widget_func_name is None:
+        widget_func_name = element_type
+
     element_hash = hash(element.SerializeToString())
     if user_key is not None:
         widget_id = "%s-%s" % (user_key, element_hash)
@@ -178,25 +199,35 @@ def _set_widget_id(widget_type, element, user_key=None):
         added = ctx.widget_ids_this_run.add(widget_id)
         if not added:
             raise DuplicateWidgetID(
-                _build_duplicate_widget_message(widget_type, user_key)
+                _build_duplicate_widget_message(widget_func_name, user_key)
             )
-    el = getattr(element, widget_type)
+    el = getattr(element, element_type)
     el.id = widget_id
 
 
-def _get_widget_ui_value(widget_type, element, user_key=None):
+def _get_widget_ui_value(
+    element_type: str,
+    element: Element,
+    user_key: Optional[str] = None,
+    widget_func_name: Optional[str] = None,
+) -> Any:
     """Get the widget ui_value from the report context.
     NOTE: This function should be called after the proto has been filled.
 
     Parameters
     ----------
-    widget_type : str
+    element_type : str
         The type of the widget as stored in proto.
     element : proto
         The proto of the element
     user_key : str
         Optional user-specified string to use as the widget ID.
         If this is None, we'll generate an ID by hashing the element.
+    widget_func_name : str or None
+        The widget's DeltaGenerator function name, if it's different from
+        its element_type. Custom components are a special case: they all have
+        the element_type "component_instance", but are instantiated with
+        dynamically-named functions.
 
     Returns
     -------
@@ -206,8 +237,8 @@ def _get_widget_ui_value(widget_type, element, user_key=None):
         doesn't exist, None will be returned.
 
     """
-    _set_widget_id(widget_type, element, user_key)
-    el = getattr(element, widget_type)
+    _set_widget_id(element_type, element, user_key, widget_func_name)
+    el = getattr(element, element_type)
     ctx = get_report_ctx()
     ui_value = ctx.widgets.get_widget_value(el.id) if ctx else None
     return ui_value
@@ -1004,7 +1035,7 @@ class DeltaGenerator(object):
         spec=None,
         width=0,
         use_container_width=False,
-        **kwargs
+        **kwargs,
     ):
         """Display a chart using the Vega-Lite library.
 
@@ -1244,7 +1275,7 @@ class DeltaGenerator(object):
         height=0,
         use_container_width=False,
         sharing="streamlit",
-        **kwargs
+        **kwargs,
     ):
         """Display an interactive Plotly chart.
 
@@ -1530,6 +1561,110 @@ class DeltaGenerator(object):
         )
 
     @_with_element
+    def _iframe(
+        self, element, src, width=None, height=None, scrolling=False,
+    ):
+        """Load a remote URL in an iframe.
+
+        Parameters
+        ----------
+        src : str
+            The URL of the page to embed.
+        width : int
+            The width of the frame in CSS pixels. Defaults to the report's
+            default element width.
+        height : int
+            The height of the frame in CSS pixels. Defaults to 150.
+        scrolling : bool
+            If True, show a scrollbar when the content is larger than the iframe.
+            Otherwise, do not show a scrollbar. Defaults to False.
+
+        """
+        from .elements import iframe_proto
+
+        iframe_proto.marshall(
+            element.iframe, src=src, width=width, height=height, scrolling=scrolling,
+        )
+
+    @_with_element
+    def _html(
+        self, element, html, width=None, height=None, scrolling=False,
+    ):
+        """Display an HTML string in an iframe.
+
+        Parameters
+        ----------
+        html : str
+            The HTML string to embed in the iframe.
+        width : int
+            The width of the frame in CSS pixels. Defaults to the report's
+            default element width.
+        height : int
+            The height of the frame in CSS pixels. Defaults to 150.
+        scrolling : bool
+            If True, show a scrollbar when the content is larger than the iframe.
+            Otherwise, do not show a scrollbar. Defaults to False.
+
+        """
+        from .elements import iframe_proto
+
+        iframe_proto.marshall(
+            element.iframe,
+            srcdoc=html,
+            width=width,
+            height=height,
+            scrolling=scrolling,
+        )
+
+    def favicon(
+        self, element, image, clamp=False, channels="RGB", format="JPEG",
+    ):
+        """Set the page favicon to the specified image.
+
+        This supports the same parameters as `st.image`.
+
+        Note: This is a beta feature. See
+        https://docs.streamlit.io/en/latest/pre_release_features.html for more
+        information.
+
+        Parameters
+        ----------
+        image : numpy.ndarray, [numpy.ndarray], BytesIO, str, or [str]
+            Monochrome image of shape (w,h) or (w,h,1)
+            OR a color image of shape (w,h,3)
+            OR an RGBA image of shape (w,h,4)
+            OR a URL to fetch the image from
+        clamp : bool
+            Clamp image pixel values to a valid range ([0-255] per channel).
+            This is only meaningful for byte array images; the parameter is
+            ignored for image URLs. If this is not set, and an image has an
+            out-of-range value, an error will be thrown.
+        channels : 'RGB' or 'BGR'
+            If image is an nd.array, this parameter denotes the format used to
+            represent color information. Defaults to 'RGB', meaning
+            `image[:, :, 0]` is the red channel, `image[:, :, 1]` is green, and
+            `image[:, :, 2]` is blue. For images coming from libraries like
+            OpenCV you should set this to 'BGR', instead.
+        format : 'JPEG' or 'PNG'
+            This parameter specifies the image format to use when transferring
+            the image data. Defaults to 'JPEG'.
+
+        Example
+        -------
+        >>> from PIL import Image
+        >>> image = Image.open('sunrise.jpg')
+        >>>
+        >>> st.beta_set_favicon(image)
+
+        """
+        from .elements import image_proto
+
+        width = -1  # Always use full width for favicons
+        element.favicon.url = image_proto.image_to_url(
+            image, width, clamp, channels, format, image_id="favicon", allow_emoji=True
+        )
+
+    @_with_element
     def audio(self, element, data, format="audio/wav", start_time=0):
         """Display an audio player.
 
@@ -1592,6 +1727,13 @@ class DeltaGenerator(object):
         .. output::
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=Wba9sZELKfKwXH4nDCCbMv
            height: 600px
+
+        .. note::
+           Some videos may not display if they are encoded using MP4V (which is an export option in OpenCV), as this codec is
+           not widely supported by browsers. Converting your video to H.264 will allow the video to be displayed in Streamlit.
+           See this `StackOverflow post <https://stackoverflow.com/a/49535220/2394542>`_ or this
+           `Streamlit forum post <https://discuss.streamlit.io/t/st-video-doesnt-show-opencv-generated-mp4/3193/2>`_
+           for more information.
 
         """
         from .elements import media_proto
@@ -1711,6 +1853,13 @@ class DeltaGenerator(object):
         ...     ['Yellow', 'Red'])
         >>>
         >>> st.write('You selected:', options)
+
+        .. note::
+           User experience can be degraded for large lists of `options` (100+), as this widget
+           is not designed to handle arbitrary text search efficiently. See this
+           `thread <https://discuss.streamlit.io/t/streamlit-loading-column-data-takes-too-much-time/1791>`_
+           on the Streamlit community forum for more information and
+           `GitHub issue #1059 <https://github.com/streamlit/streamlit/issues/1059>`_ for updates on the issue.
 
         """
 
@@ -1889,31 +2038,39 @@ class DeltaGenerator(object):
     ):
         """Display a slider widget.
 
+        This supports int, float, date, time, and datetime types.
+
         This also allows you to render a range slider by passing a two-element tuple or list as the `value`.
 
         Parameters
         ----------
         label : str or None
             A short label explaining to the user what this slider is for.
-        min_value : int/float or None
+        min_value : a supported type or None
             The minimum permitted value.
-            Defaults to 0 if the value is an int, 0.0 otherwise.
-        max_value : int/float or None
+            Defaults to 0 if the value is an int, 0.0 if a float,
+            value - timedelta(days=14) if a date/datetime, time.min if a time
+        max_value : a supported type or None
             The maximum permitted value.
-            Defaults 100 if the value is an int, 1.0 otherwise.
-        value : int/float or a tuple/list of int/float or None
+            Defaults to 100 if the value is an int, 1.0 if a float,
+            value + timedelta(days=14) if a date/datetime, time.max if a time
+        value : a supported type or a tuple/list of supported types or None
             The value of the slider when it first renders. If a tuple/list
             of two values is passed here, then a range slider with those lower
             and upper bounds is rendered. For example, if set to `(1, 10)` the
             slider will have a selectable range between 1 and 10.
             Defaults to min_value.
-        step : int/float or None
+        step : int/float/timedelta or None
             The stepping interval.
-            Defaults to 1 if the value is an int, 0.01 otherwise.
+            Defaults to 1 if the value is an int, 0.01 if a float,
+            timedelta(days=1) if a date/datetime, timedelta(minutes=15) if a time
+            (or if max_value - min_value < 1 day)
         format : str or None
             A printf-style format string controlling how the interface should
             display numbers. This does not impact the return value.
-            Valid formatters: %d %e %f %g %i
+            Formatter for int/float supports: %d %e %f %g %i
+            Formatter for date/time/datetime uses Moment.js notation:
+            https://momentjs.com/docs/#/displaying/format/
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -1922,7 +2079,7 @@ class DeltaGenerator(object):
 
         Returns
         -------
-        int/float or tuple of int/float
+        int/float/date/time/datetime or tuple of int/float/date/time/datetime
             The current value of the slider widget. The return type will match
             the data type of the value parameter.
 
@@ -1938,63 +2095,146 @@ class DeltaGenerator(object):
         ...     0.0, 100.0, (25.0, 75.0))
         >>> st.write('Values:', values)
 
+        This is a range time slider:
+
+        >>> from datetime import time
+        >>> appointment = st.slider(
+        ...     "Schedule your appointment:",
+        ...     value=(time(11, 30), time(12, 45)))
+        >>> st.write("You're scheduled for:", appointment)
+
+        Finally, a datetime slider:
+
+        >>> from datetime import datetime
+        >>> start_time = st.slider(
+        ...     "When do you start?",
+        ...     value=datetime(2020, 1, 1, 9, 30),
+        ...     format="MM/DD/YY - hh:mm")
+        >>> st.write("Start time:", start_time)
+
         """
 
         # Set value default.
         if value is None:
             value = min_value if min_value is not None else 0
 
+        SUPPORTED_TYPES = {
+            int: Slider.INT,
+            float: Slider.FLOAT,
+            datetime: Slider.DATETIME,
+            date: Slider.DATE,
+            time: Slider.TIME,
+        }
+        TIMELIKE_TYPES = (Slider.DATETIME, Slider.TIME, Slider.DATE)
+
         # Ensure that the value is either a single value or a range of values.
-        single_value = isinstance(value, (int, float))
+        single_value = isinstance(value, tuple(SUPPORTED_TYPES.keys()))
         range_value = isinstance(value, (list, tuple)) and len(value) in (0, 1, 2)
         if not single_value and not range_value:
             raise StreamlitAPIException(
-                "Slider value should either be an int/float or a list/tuple of "
-                "0 to 2 ints/floats"
+                "Slider value should either be an int/float/datetime or a list/tuple of "
+                "0 to 2 ints/floats/datetimes"
             )
 
-        # Ensure that the value is either an int/float or a list/tuple of ints/floats.
+        # Simplify future logic by always making value a list
         if single_value:
-            int_value = isinstance(value, int)
-            float_value = isinstance(value, float)
-        else:
-            int_value = all(map(lambda v: isinstance(v, int), value))
-            float_value = all(map(lambda v: isinstance(v, float), value))
+            value = [value]
 
-        if not int_value and not float_value:
+        def all_same_type(items):
+            return len(set(map(type, items))) < 2
+
+        if not all_same_type(value):
             raise StreamlitAPIException(
-                "Slider tuple/list components must be of the same type."
+                "Slider tuple/list components must be of the same type.\n"
+                f"But were: {list(map(type, value))}"
             )
 
-        # Set corresponding defaults.
+        if len(value) == 0:
+            data_type = Slider.INT
+        else:
+            data_type = SUPPORTED_TYPES[type(value[0])]
+
+        datetime_min = time.min
+        datetime_max = time.max
+        if data_type == Slider.TIME:
+            datetime_min = time.min.replace(tzinfo=value[0].tzinfo)
+            datetime_max = time.max.replace(tzinfo=value[0].tzinfo)
+        if data_type in (Slider.DATETIME, Slider.DATE):
+            datetime_min = value[0] - timedelta(days=14)
+            datetime_max = value[0] + timedelta(days=14)
+
+        DEFAULTS = {
+            Slider.INT: {"min_value": 0, "max_value": 100, "step": 1, "format": "%d"},
+            Slider.FLOAT: {
+                "min_value": 0.0,
+                "max_value": 1.0,
+                "step": 0.01,
+                "format": "%0.2f",
+            },
+            Slider.DATETIME: {
+                "min_value": datetime_min,
+                "max_value": datetime_max,
+                "step": timedelta(days=1),
+                "format": "YYYY-MM-DD",
+            },
+            Slider.DATE: {
+                "min_value": datetime_min,
+                "max_value": datetime_max,
+                "step": timedelta(days=1),
+                "format": "YYYY-MM-DD",
+            },
+            Slider.TIME: {
+                "min_value": datetime_min,
+                "max_value": datetime_max,
+                "step": timedelta(minutes=15),
+                "format": "HH:mm",
+            },
+        }
+
         if min_value is None:
-            min_value = 0 if int_value else 0.0
+            min_value = DEFAULTS[data_type]["min_value"]
         if max_value is None:
-            max_value = 100 if int_value else 1.0
+            max_value = DEFAULTS[data_type]["max_value"]
         if step is None:
-            step = 1 if int_value else 0.01
+            step = DEFAULTS[data_type]["step"]
+            if data_type in (
+                Slider.DATETIME,
+                Slider.DATE,
+            ) and max_value - min_value < timedelta(days=1):
+                step = timedelta(minutes=15)
+        if format is None:
+            format = DEFAULTS[data_type]["format"]
 
         # Ensure that all arguments are of the same type.
         args = [min_value, max_value, step]
         int_args = all(map(lambda a: isinstance(a, int), args))
         float_args = all(map(lambda a: isinstance(a, float), args))
-        if not int_args and not float_args:
+        # When min and max_value are the same timelike, step should be a timedelta
+        timelike_args = (
+            data_type in TIMELIKE_TYPES
+            and isinstance(step, timedelta)
+            and type(min_value) == type(max_value)
+        )
+
+        if not int_args and not float_args and not timelike_args:
             raise StreamlitAPIException(
-                "Slider value arguments must be of the same type."
-                "\n`value` has %(value_type)s type."
+                "Slider value arguments must be of matching types."
                 "\n`min_value` has %(min_type)s type."
                 "\n`max_value` has %(max_type)s type."
+                "\n`step` has %(step)s type."
                 % {
-                    "value_type": type(value).__name__,
                     "min_type": type(min_value).__name__,
                     "max_type": type(max_value).__name__,
+                    "step": type(step).__name__,
                 }
             )
 
         # Ensure that the value matches arguments' types.
-        all_ints = int_value and int_args
-        all_floats = float_value and float_args
-        if not all_ints and not all_floats:
+        all_ints = data_type == Slider.INT and int_args
+        all_floats = data_type == Slider.FLOAT and float_args
+        all_timelikes = data_type in TIMELIKE_TYPES and timelike_args
+
+        if not all_ints and not all_floats and not all_timelikes:
             raise StreamlitAPIException(
                 "Both value and arguments must be of the same type."
                 "\n`value` has %(value_type)s type."
@@ -2007,22 +2247,22 @@ class DeltaGenerator(object):
                 }
             )
 
-        # Ensure that min <= value <= max.
-        if single_value:
-            if not min_value <= value <= max_value:
-                raise StreamlitAPIException(
-                    "The default `value` of %(value)s "
-                    "must lie between the `min_value` of %(min)s "
-                    "and the `max_value` of %(max)s, inclusively."
-                    % {"value": value, "min": min_value, "max": max_value}
-                )
+        # Ensure that min <= value(s) <= max, adjusting the bounds as necessary.
+        min_value = min(min_value, max_value)
+        max_value = max(min_value, max_value)
+        if len(value) == 1:
+            min_value = min(value[0], min_value)
+            max_value = max(value[0], max_value)
         elif len(value) == 2:
             start, end = value
-            if not min_value <= start <= end <= max_value:
-                raise StreamlitAPIException(
-                    "The value and/or arguments are out of range."
-                )
+            if start > end:
+                # Swap start and end, since they seem reversed
+                start, end = end, start
+                value = start, end
+            min_value = min(start, min_value)
+            max_value = max(end, max_value)
         else:
+            # Empty list, so let's just use the outer bounds
             value = [min_value, max_value]
 
         # Bounds checks. JSNumber produces human-readable exceptions that
@@ -2033,18 +2273,70 @@ class DeltaGenerator(object):
             if all_ints:
                 JSNumber.validate_int_bounds(min_value, "`min_value`")
                 JSNumber.validate_int_bounds(max_value, "`max_value`")
-            else:
+            elif all_floats:
                 JSNumber.validate_float_bounds(min_value, "`min_value`")
                 JSNumber.validate_float_bounds(max_value, "`max_value`")
+            elif all_timelikes:
+                # No validation yet. TODO: check between 0001-01-01 to 9999-12-31
+                pass
         except JSNumberBoundsException as e:
             raise StreamlitAPIException(str(e))
 
-        # Set format default.
-        if format is None:
-            if all_ints:
-                format = "%d"
-            else:
-                format = "%0.2f"
+        # Convert dates or times into datetimes
+        if data_type == Slider.TIME:
+
+            def _time_to_datetime(time):
+                # Note, here we pick an arbitrary date well after Unix epoch.
+                # This prevents pre-epoch timezone issues (https://bugs.python.org/issue36759)
+                # We're dropping the date from datetime laters, anyways.
+                return datetime.combine(date(2000, 1, 1), time)
+
+            value = list(map(_time_to_datetime, value))
+            min_value = _time_to_datetime(min_value)
+            max_value = _time_to_datetime(max_value)
+
+        if data_type == Slider.DATE:
+
+            def _date_to_datetime(date):
+                return datetime.combine(date, time())
+
+            value = list(map(_date_to_datetime, value))
+            min_value = _date_to_datetime(min_value)
+            max_value = _date_to_datetime(max_value)
+
+        # Now, convert to microseconds (so we can serialize datetime to a long)
+        if data_type in TIMELIKE_TYPES:
+            SECONDS_TO_MICROS = 1000 * 1000
+            DAYS_TO_MICROS = 24 * 60 * 60 * SECONDS_TO_MICROS
+
+            def _delta_to_micros(delta):
+                return (
+                    delta.microseconds
+                    + delta.seconds * SECONDS_TO_MICROS
+                    + delta.days * DAYS_TO_MICROS
+                )
+
+            UTC_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+            def _datetime_to_micros(dt):
+                # If dt is naive, Python converts from local time
+                utc_dt = dt.astimezone(timezone.utc)
+                return _delta_to_micros(utc_dt - UTC_EPOCH)
+
+            # Restore times/datetimes to original timezone (dates are always naive)
+            orig_tz = (
+                value[0].tzinfo if data_type in (Slider.TIME, Slider.DATETIME) else None
+            )
+
+            def _micros_to_datetime(micros):
+                utc_dt = UTC_EPOCH + timedelta(microseconds=micros)
+                # Convert from utc back to original time (local time if naive)
+                return utc_dt.astimezone(orig_tz).replace(tzinfo=orig_tz)
+
+            value = list(map(_datetime_to_micros, value))
+            min_value = _datetime_to_micros(min_value)
+            max_value = _datetime_to_micros(max_value)
+            step = _delta_to_micros(step)
 
         # It would be great if we could guess the number of decimal places from
         # the `step` argument, but this would only be meaningful if step were a
@@ -2053,25 +2345,32 @@ class DeltaGenerator(object):
 
         element.slider.label = label
         element.slider.format = format
-        element.slider.default[:] = [value] if single_value else value
+        element.slider.default[:] = value
         element.slider.min = min_value
         element.slider.max = max_value
         element.slider.step = step
+        element.slider.data_type = data_type
 
         ui_value = _get_widget_ui_value("slider", element, user_key=key)
-        # Convert the current value to the appropriate type.
-        current_value = ui_value if ui_value is not None else value
-        # Cast ui_value to the same type as the input arguments
-        if ui_value is not None:
+        if ui_value:
             current_value = getattr(ui_value, "value")
-            # Convert float array into int array if the rest of the arguments
-            # are ints
-            if all_ints:
-                current_value = list(map(int, current_value))
-            # If there is only one value in the array destructure it into a
-            # single variable
-            current_value = current_value[0] if single_value else current_value
-        return current_value if single_value else tuple(current_value)
+        else:
+            # Widget has not been used; fallback to the original value,
+            current_value = value
+        # The widget always returns a float array, so fix the return type if necessary
+        if data_type == Slider.INT:
+            current_value = list(map(int, current_value))
+        if data_type == Slider.DATETIME:
+            current_value = [_micros_to_datetime(int(v)) for v in current_value]
+        if data_type == Slider.DATE:
+            current_value = [_micros_to_datetime(int(v)).date() for v in current_value]
+        if data_type == Slider.TIME:
+            current_value = [
+                _micros_to_datetime(int(v)).time().replace(tzinfo=orig_tz)
+                for v in current_value
+            ]
+        # If the original value was a list/tuple, so will be the output (and vice versa)
+        return current_value[0] if single_value else tuple(current_value)
 
     @_with_element
     def file_uploader(
@@ -2153,7 +2452,7 @@ class DeltaGenerator(object):
         """Display a color picker widget.
 
         Note: This is a beta feature. See
-        https://docs.streamlit.io/pre_release_features.html for more
+        https://docs.streamlit.io/en/latest/pre_release_features.html for more
         information.
 
         Parameters
@@ -2664,8 +2963,10 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        value : int
-            The percentage complete: 0 <= value <= 100
+        value : int or float
+            0 <= value <= 100 for int
+
+            0.0 <= value <= 1.0 for float
 
         Example
         -------
@@ -2737,7 +3038,7 @@ class DeltaGenerator(object):
 
         To get a token for yourself, create an account at
         https://mapbox.com. It's free! (for moderate usage levels) See
-        https://docs.streamlit.io/cli.html#view-all-config-options for more
+        https://docs.streamlit.io/en/latest/cli.html#view-all-config-options for more
         info on how to set config options.
 
         Parameters
@@ -2785,7 +3086,7 @@ class DeltaGenerator(object):
 
         To get a token for yourself, create an account at
         https://mapbox.com. It's free! (for moderate usage levels) See
-        https://docs.streamlit.io/cli.html#view-all-config-options for more
+        https://docs.streamlit.io/en/latest/cli.html#view-all-config-options for more
         info on how to set config options.
 
         Parameters
@@ -2909,7 +3210,7 @@ class DeltaGenerator(object):
 
         To get a token for yourself, create an account at
         https://mapbox.com. It's free! (for moderate usage levels) See
-        https://docs.streamlit.io/cli.html#view-all-config-options for more
+        https://docs.streamlit.io/en/latest/cli.html#view-all-config-options for more
         info on how to set config options.
 
         Parameters

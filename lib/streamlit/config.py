@@ -17,6 +17,7 @@
 import os
 import toml
 import collections
+import secrets
 import urllib
 from typing import Dict
 
@@ -124,7 +125,7 @@ def _create_option(
                 default_val = 12345)
 
         (2) More complex, programmable config options use decorator syntax to
-        resolve thier values at runtime:
+        resolve their values at runtime:
 
             @_create_option('section.optionName')
             def _section_option_name():
@@ -261,15 +262,6 @@ def _global_unit_test():
 
 
 _create_option(
-    "global.useNode",
-    description="""Whether to serve static content from node. Only applies when
-        developmentMode is True.""",
-    visibility="hidden",
-    default_val=True,
-    type_=bool,
-)
-
-_create_option(
     "global.metrics",
     description="Whether to serve prometheus metrics from /metrics.",
     visibility="hidden",
@@ -394,6 +386,17 @@ _create_option(
 )
 
 
+@_create_option("server.cookieSecret", type_=str)
+@util.memoize
+def _server_cookie_secret():
+    """Symmetric key used to produce signed cookies. If deploying on multiple replicas, this should
+    be set to the same value across all replicas to ensure they all share the same secret.
+
+    Default: randomly generated secret key.
+    """
+    return secrets.token_hex()
+
+
 @_create_option("server.headless", type_=bool)
 @util.memoize
 def _server_headless():
@@ -464,9 +467,25 @@ _create_option(
 )
 
 
+# TODO: Rename to server.enableCorsProtection.
 @_create_option("server.enableCORS", type_=bool)
 def _server_enable_cors():
-    """Enables support for Cross-Origin Request Sharing, for added security.
+    """Enables support for Cross-Origin Request Sharing (CORS) protection, for added security.
+
+    Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is on and
+    `server.enableCORS` is off at the same time, we will prioritize `server.enableXsrfProtection`.
+
+    Default: true
+    """
+    return True
+
+
+@_create_option("server.enableXsrfProtection", type_=bool)
+def _server_enable_xsrf_protection():
+    """Enables support for Cross-Site Request Forgery (XSRF) protection, for added security.
+
+    Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is on and
+    `server.enableCORS` is off at the same time, we will prioritize `server.enableXsrfProtection`.
 
     Default: true
     """
@@ -484,6 +503,15 @@ def _server_max_upload_size():
     return 200
 
 
+@_create_option("server.enableWebsocketCompression", type_=bool)
+def _server_enable_websocket_compression():
+    """Enables support for websocket compression.
+
+    Default: true
+    """
+    return True
+
+
 # Config Section: Browser #
 
 _create_section("browser", "Configuration of browser front-end.")
@@ -495,7 +523,7 @@ def _browser_server_address():
     connect to the app. Can be IP address or DNS name and path.
 
     This is used to:
-    - Set the correct URL for CORS purposes.
+    - Set the correct URL for CORS and XSRF protection purposes.
     - Show the URL on the terminal
     - Open the browser
     - Tell the browser where to connect to the server when in liveSave mode.
@@ -520,7 +548,7 @@ def _browser_server_port():
     app.
 
     This is used to:
-    - Set the correct URL for CORS purposes.
+    - Set the correct URL for CORS and XSRF protection purposes.
     - Show the URL on the terminal
     - Open the browser
     - Tell the browser where to connect to the server when in liveSave mode.
@@ -537,11 +565,9 @@ _create_section("mapbox", "Mapbox configuration that is being used by DeckGL.")
 _create_option(
     "mapbox.token",
     description="""Configure Streamlit to use a custom Mapbox
-                token for elements like st.deck_gl_chart and st.map. If you
-                don't do this you'll be using Streamlit's own token,
-                which has limitations and is not guaranteed to always work.
+                token for elements like st.deck_gl_chart and st.map.
                 To get a token for yourself, create an account at
-                https://mapbox.com. It's free! (for moderate usage levels)""",
+                https://mapbox.com. It's free (for moderate usage levels)!""",
     default_val="",
 )
 
@@ -961,23 +987,38 @@ def _check_conflicts():
             "another value, or remove it from your Streamlit config."
         )
 
+    # XSRF conflicts
+    if get_option("server.enableXsrfProtection"):
+        if not get_option("server.enableCORS") or get_option("global.developmentMode"):
+            LOGGER.warning("""
+Warning: the config option 'server.enableCORS=false' is not compatible with 'server.enableXsrfProtection=true'.
+As a result, 'server.enableCORS' is being overridden to 'true'.
+
+More information:
+In order to protect against CSRF attacks, we send a cookie with each request.
+To do so, we must specify allowable origins, which places a restriction on
+cross-origin resource sharing.
+
+If cross origin resource sharing is required, please disable server.enableXsrfProtection.
+            """)
+
 
 def _set_development_mode():
     development.is_development_mode = get_option("global.developmentMode")
 
 
-def on_config_parsed(func):
+def on_config_parsed(func, force_connect=False):
     """Wait for the config file to be parsed then call func.
 
     If the config file has already been parsed, just calls fun immediately.
 
     """
-    if _config_file_has_been_parsed:
-        func()
-    else:
+    if force_connect or not _config_file_has_been_parsed:
         # weak=False, because we're using an anonymous lambda that
         # goes out of scope immediately.
         _on_config_parsed.connect(lambda _: func(), weak=False)
+    else:
+        func()
 
 
 # Run _check_conflicts only once the config file is parsed in order to avoid

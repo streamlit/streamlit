@@ -124,7 +124,7 @@ def _set_log_level():
 # Make this file only depend on config option in an asynchronous manner. This
 # avoids a race condition when another file (such as a test file) tries to pass
 # in an alternative config.
-_config.on_config_parsed(_set_log_level)
+_config.on_config_parsed(_set_log_level, True)
 
 
 _main = _DeltaGenerator(container=_BlockPath_pb2.BlockPath.MAIN)
@@ -148,6 +148,7 @@ pydeck_chart = _main.pydeck_chart  # noqa: E221
 empty = _main.empty  # noqa: E221
 error = _main.error  # noqa: E221
 exception = _main.exception  # noqa: E221
+beta_set_favicon = _main.favicon  # noqa: E221
 file_uploader = _main.file_uploader  # noqa: E221
 graphviz_chart = _main.graphviz_chart  # noqa: E221
 header = _main.header  # noqa: E221
@@ -420,7 +421,7 @@ def experimental_show(*args):
         2. It returns None, so it's "slot" in the app cannot be reused.
 
     Note: This is an experimental feature. See
-    https://docs.streamlit.io/pre_release_features.html for more information.
+    https://docs.streamlit.io/en/latest/pre_release_features.html for more information.
 
     Parameters
     ----------

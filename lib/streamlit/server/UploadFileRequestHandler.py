@@ -19,7 +19,9 @@ import tornado.web
 import tornado.httputil
 
 from streamlit.UploadedFileManager import UploadedFile
+from streamlit import config
 from streamlit.logger import get_logger
+from streamlit.Report import Report
 from streamlit.server import routes
 
 LOGGER = get_logger(__name__)
@@ -42,7 +44,15 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         self._file_mgr = file_mgr
 
     def set_default_headers(self):
-        if routes.allow_cross_origin_requests():
+        if config.get_option("server.enableXsrfProtection"):
+            self.set_header("Access-Control-Allow-Headers", "X-Xsrftoken")
+            self.set_header(
+                "Access-Control-Allow-Origin",
+                Report.get_url(config.get_option("browser.serverAddress")),
+            )
+            self.set_header("Vary", "Origin")
+            self.set_header("Access-Control-Allow-Credentials", "true")
+        elif routes.allow_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
 
     def options(self):
@@ -85,7 +95,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         return arg[0].decode("utf-8")
 
     def post(self):
-        args = {}  # type: Dict[str, str]
+        args = {}  # type: Dict[str, List[bytes]]
         files = {}  # type: Dict[str, List[Any]]
 
         tornado.httputil.parse_body_arguments(

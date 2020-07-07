@@ -36,6 +36,10 @@ import Json from "components/elements/Json/"
 import Markdown from "components/elements/Markdown/"
 import Table from "components/elements/Table/"
 import Text from "components/elements/Text/"
+import {
+  ComponentInstance,
+  ComponentRegistry,
+} from "components/widgets/CustomComponent/"
 
 import Maybe from "components/core/Maybe/"
 
@@ -50,10 +54,12 @@ const DeckGlChart = React.lazy(() =>
 const DeckGlJsonChart = React.lazy(() =>
   import("components/elements/DeckGlJsonChart/")
 )
-const ImageList = React.lazy(() => import("components/elements/ImageList/"))
+const Favicon = React.lazy(() => import("components/elements/Favicon/"))
 const GraphVizChart = React.lazy(() =>
   import("components/elements/GraphVizChart/")
 )
+const IFrame = React.lazy(() => import("components/elements/IFrame/"))
+const ImageList = React.lazy(() => import("components/elements/ImageList/"))
 const PlotlyChart = React.lazy(() =>
   import("components/elements/PlotlyChart/")
 )
@@ -88,6 +94,7 @@ interface Props {
   widgetMgr: WidgetStateManager
   uploadClient: FileUploadClient
   widgetsDisabled: boolean
+  componentRegistry: ComponentRegistry
 }
 
 class Block extends PureComponent<Props> {
@@ -140,24 +147,25 @@ class Block extends PureComponent<Props> {
           widgetMgr={this.props.widgetMgr}
           uploadClient={this.props.uploadClient}
           widgetsDisabled={this.props.widgetsDisabled}
+          componentRegistry={this.props.componentRegistry}
         />
       </div>
     )
   }
 
-  private static getClassNames(isStale: boolean, isEmpty: boolean): string {
+  private static getClassNames(isStale: boolean, isHidden: boolean): string {
     const classNames = ["element-container"]
     if (isStale && !FullScreenWrapper.isFullScreen) {
       classNames.push("stale-element")
     }
-    if (isEmpty) {
-      classNames.push("stEmpty")
+    if (isHidden) {
+      classNames.push("stHidden")
     }
     return classNames.join(" ")
   }
 
-  private shouldComponentBeEnabled(isEmpty: boolean): boolean {
-    return !isEmpty || this.props.reportRunState !== ReportRunState.RUNNING
+  private shouldComponentBeEnabled(isHidden: boolean): boolean {
+    return !isHidden || this.props.reportRunState !== ReportRunState.RUNNING
   }
 
   private isComponentStale(
@@ -185,10 +193,10 @@ class Block extends PureComponent<Props> {
     )
 
     const elementType = element.get("type")
-    const isEmpty = elementType === "empty"
-    const enable = this.shouldComponentBeEnabled(isEmpty)
+    const isHidden = elementType === "empty" || elementType === "favicon"
+    const enable = this.shouldComponentBeEnabled(isHidden)
     const isStale = this.isComponentStale(enable, reportElement)
-    const className = Block.getClassNames(isStale, isEmpty)
+    const className = Block.getClassNames(isStale, isHidden)
     const simpleElement = element.get(elementType)
     const key = simpleElement.get("id") || index
 
@@ -268,13 +276,15 @@ class Block extends PureComponent<Props> {
       docString: (el: SimpleElement) => (
         <DocString element={el} width={width} />
       ),
-      empty: () => <div className="stEmpty" key={index} />,
+      empty: () => <div className="stHidden" key={index} />,
       exception: (el: SimpleElement) => (
         <ExceptionElement element={el} width={width} />
       ),
+      favicon: (el: SimpleElement) => <Favicon element={el} />,
       graphvizChart: (el: SimpleElement) => (
         <GraphVizChart element={el} index={index} width={width} />
       ),
+      iframe: (el: SimpleElement) => <IFrame element={el} width={width} />,
       imgs: (el: SimpleElement) => <ImageList element={el} width={width} />,
       json: (el: SimpleElement) => <Json element={el} width={width} />,
       markdown: (el: SimpleElement) => <Markdown element={el} width={width} />,
@@ -385,6 +395,14 @@ class Block extends PureComponent<Props> {
       numberInput: (el: SimpleElement) => (
         <NumberInput
           key={el.get("id")}
+          element={el}
+          width={width}
+          {...widgetProps}
+        />
+      ),
+      componentInstance: (el: SimpleElement) => (
+        <ComponentInstance
+          registry={this.props.componentRegistry}
           element={el}
           width={width}
           {...widgetProps}
