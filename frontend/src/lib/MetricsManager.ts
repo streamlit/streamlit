@@ -40,7 +40,7 @@ interface CustomComponentCounter {
   [name: string]: number
 }
 
-type Event = [string, object]
+type Event = [string, Record<string, unknown>]
 
 export class MetricsManager {
   private initialized = false
@@ -104,7 +104,7 @@ export class MetricsManager {
     logAlways("Gather usage stats: ", this.actuallySendMetrics)
   }
 
-  public enqueue(evName: string, evData: object = {}): void {
+  public enqueue(evName: string, evData: Record<string, unknown> = {}): void {
     if (!this.initialized) {
       this.pendingEvents.push([evName, evData])
       return
@@ -161,7 +161,7 @@ export class MetricsManager {
     this.reportHash = reportHash
   }
 
-  private send(evName: string, evData: object = {}): void {
+  private send(evName: string, evData: Record<string, unknown> = {}): void {
     const data = {
       ...evData,
       reportHash: this.reportHash,
@@ -189,11 +189,11 @@ export class MetricsManager {
 
   // Wrap analytics methods for mocking:
 
-  private identify(id: string, data: object): void {
+  private identify(id: string, data: Record<string, unknown>): void {
     analytics.identify(id, data)
   }
 
-  private track(evName: string, data: object): void {
+  private track(evName: string, data: Record<string, unknown>): void {
     analytics.track(evName, data)
   }
 }

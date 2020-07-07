@@ -23,7 +23,7 @@ import { timeout } from "lib/utils"
 import Progress, { Props, FAST_UPDATE_MS } from "./Progress"
 import { Progress as UIProgress } from "reactstrap"
 
-const getProps = (elementProps: object = {}): Props => ({
+const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
   element: fromJS({
     value: 50,
     ...elementProps,

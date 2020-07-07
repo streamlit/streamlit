@@ -25,9 +25,12 @@ import Plot from "react-plotly.js"
 import mock from "./mock"
 import { PropsWithHeight, DEFAULT_HEIGHT } from "./PlotlyChart"
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const PlotlyChart = require("./PlotlyChart").PlotlyChart
 
-const getProps = (elementProps: object = {}): PropsWithHeight => ({
+const getProps = (
+  elementProps: Record<string, unknown> = {}
+): PropsWithHeight => ({
   element: fromJS({
     ...mock,
     ...elementProps,

@@ -21,7 +21,7 @@ import { shallow, ShallowWrapper } from "enzyme"
 import IFrame, { Props } from "./IFrame"
 import { getIFrameSandboxPolicy } from "lib/IFrameUtil"
 
-const getProps = (elementProps: object = {}): Props => ({
+const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
   element: fromJS({
     ...elementProps,
   }),

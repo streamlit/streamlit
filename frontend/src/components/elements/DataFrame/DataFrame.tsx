@@ -84,7 +84,7 @@ interface Dimensions {
 
 interface CellContents {
   classes: string
-  styles: object
+  styles: Record<string, unknown>
   contents: string
 }
 
@@ -102,7 +102,7 @@ interface CellRendererInput {
   columnIndex: number
   key: string
   rowIndex: number
-  style: object
+  style: React.CSSProperties
 }
 
 interface CellRenderer {

@@ -163,10 +163,10 @@ export class App extends PureComponent<Props, State> {
    */
   keyHandlers = {
     // The r key reruns the script.
-    r: () => this.rerunScript(),
+    r: (): void => this.rerunScript(),
 
     // The c key clears the cache.
-    c: () => this.openClearCacheDialog(),
+    c: (): void => this.openClearCacheDialog(),
 
     esc: this.props.screenCast.stopRecording,
   }
