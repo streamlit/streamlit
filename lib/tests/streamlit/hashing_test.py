@@ -102,6 +102,20 @@ class HashTest(unittest.TestCase):
         b.append(b)
         self.assertEqual(get_hash(a), get_hash(b))
 
+    def test_recursive_hash_func(self):
+        def hash_int(x):
+            return x
+
+        @st.cache(hash_funcs={int: hash_int})
+        def foo(x):
+            return x
+
+        self.assertEqual(foo(1), foo(1))
+        # Note: We're able to break the recursive cycle caused by the identity
+        # hash func but it causes all cycles to hash to the same thing.
+        # https://github.com/streamlit/streamlit/issues/1659
+        # self.assertNotEqual(foo(2), foo(1))
+
     def test_tuple(self):
         self.assertEqual(get_hash((1, 2)), get_hash((1, 2)))
         self.assertNotEqual(get_hash((1, 2)), get_hash((2, 2)))
