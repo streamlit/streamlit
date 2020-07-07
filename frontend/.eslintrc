@@ -28,6 +28,8 @@
     // Allows for the use of imports
     "sourceType": "module"
   },
+  // Ignore our auto-generated code
+  "ignorePatterns": ["src/autogen/*"],
   // Place to specify ESLint rules.
   // Can be used to overwrite rules specified from the extended configs
   "rules": {
@@ -63,7 +65,8 @@
     ],
     // It's OK to use ts-ignore when we're missing type definitions
     // for a JS library.
-    "@typescript-eslint/ban-ts-ignore": "off"
+    "@typescript-eslint/ban-ts-ignore": "off",
+    "@typescript-eslint/ban-ts-comment": "off"
   },
   "settings": {
     "react": {
