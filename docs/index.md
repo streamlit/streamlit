@@ -15,13 +15,13 @@
    api
    cli
    pre_release_features
-   changelog
 
 .. toctree::
   :caption: Support
   :maxdepth: 2
   :hidden:
 
+  changelog
   troubleshooting/index
   Frequently Asked Questions < https://github.com/streamlit/streamlit/wiki/FAQ>
   Community forum < https://discuss.streamlit.io/>
