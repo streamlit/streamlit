@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+import "streamlit/proto/ArrowDataframe.proto";
+
+message ComponentInstance {
+  // Widget ID (meaningful only for bi-directional components)
+  string id = 1;
+
+  // Dictionary with args for the plugin.
+  string args_json = 2;
+
+  // We'll probably want to transmit dataframe data separately (not in JSON).
+  repeated ArgsDataframe args_dataframe = 3;
+
+  // The component's unique name.
+  string component_name = 4;
+
+  // Optional URL to load the component from. By default this is not set,
+  // but while testing, a user can e.g. point this to a local node server
+  // that they're developing their component in.
+  string url = 5;
+}
+
+message ArgsDataframe {
+  // Dataframe key
+  string key = 1;
+
+  // Dataframe value
+  ArrowDataframe value = 2;
+}

@@ -38,6 +38,8 @@ from streamlit.MediaFileManager import media_file_manager
 from streamlit.ReportSession import ReportSession
 from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.logger import get_logger
+from streamlit.components.v1.components import ComponentRegistry
+from streamlit.components.v1.components import ComponentRequestHandler
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.server.UploadFileRequestHandler import UploadFileRequestHandler
@@ -320,6 +322,11 @@ class Server(object):
                 {"path": "%s/" % file_util.get_assets_dir()},
             ),
             (make_url_path_regex(base, "media/(.*)"), MediaFileHandler),
+            (
+                make_url_path_regex(base, "component/(.*)"),
+                ComponentRequestHandler,
+                dict(registry=ComponentRegistry.instance()),
+            ),
         ]
 
         if config.get_option("global.developmentMode"):

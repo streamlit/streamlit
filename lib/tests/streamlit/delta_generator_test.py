@@ -251,7 +251,7 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
                 create_widget()
                 self.assertIn(
                     _build_duplicate_widget_message(
-                        widget_type=widget_type, user_key=None
+                        widget_func_name=widget_type, user_key=None
                     ),
                     ctx.exception,
                 )
@@ -262,7 +262,7 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
                 create_widget("key")
                 self.assertIn(
                     _build_duplicate_widget_message(
-                        widget_type=widget_type, user_key="key"
+                        widget_func_name=widget_type, user_key="key"
                     ),
                     ctx.exception,
                 )
