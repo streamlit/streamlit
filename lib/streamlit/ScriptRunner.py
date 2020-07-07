@@ -252,12 +252,7 @@ class ScriptRunner(object):
         # to the user via a modal dialog in the frontend, and won't result
         # in their previous report disappearing.
 
-        # XXX
         try:
-            # Python 3 got rid of the native execfile() command, so we read
-            # the file, compile it, and exec() it. This implementation is
-            # compatible with both 2 and 3.
-
             with source_util.open_python_file(self._report.script_path) as f:
                 filebody = f.read()
 
