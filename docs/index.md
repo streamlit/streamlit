@@ -1,6 +1,6 @@
 ```eval_rst
 .. toctree::
-   :caption: Documentation
+   :caption: Package Documentation
    :maxdepth: 2
    :hidden:
 
@@ -15,6 +15,13 @@
    api
    cli
    pre_release_features
+
+.. toctree::
+  :caption: Streamlit Components
+  :maxdepth: 2
+  :hidden:
+
+  components_main
 
 .. toctree::
   :caption: Support
