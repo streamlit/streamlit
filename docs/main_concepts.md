@@ -12,8 +12,8 @@ spin up and your app will open in a new tab your default web browser. The app
 is your canvas, where you'll draw charts, text, widgets, tables, and more.
 
 What gets drawn in the app is up to you. For example
-[`st.text`](api.html#streamlit.text) writes raw text to your app, and
-[`st.line_chart`](api.html#streamlit.line_chart) draws — you guessed it — a
+<a href="api.html#streamlit.text" class="reference internal">`st.text`</a> writes raw text to your app, and
+<a href="api.html#streamlit.line_chart" class="reference internal">`st.line_chart`</a> draws — you guessed it — a
 line chart. Refer to our [API documentation](api.md) to see all commands that
 are available to you.
 
@@ -67,7 +67,7 @@ This can happen in two situations:
 
 And to make all of this fast and seamless, Streamlit does some heavy lifting
 for you behind the scenes. A big player in this story is the
-[`@st.cache`](#caching) decorator, which allows developers to skip certain
+<a href="#caching" class="reference internal">`@st.cache`</a> decorator, which allows developers to skip certain
 costly computations when their apps rerun. We'll cover caching later in this
 page.
 
@@ -81,15 +81,15 @@ x = 4
 st.write(x, 'squared is', x * x)
 ```
 
-In the example above we used the [`st.write()`](api.html#streamlit.write)
+In the example above we used the <a href="api.html#streamlit.write" class="reference internal">`st.write`</a>
 command. Whenever you want to draw something to the screen
-[`st.write()`](api.html#streamlit.write) is always a good first start! It tries
+<a href="api.html#streamlit.write" class="reference internal">`st.write`</a> is always a good first start! It tries
 to guess the best visual representation for its arguments based on their data
 types, so things like dataframes are drawn as beautiful tables, Matplotlib
 figures are drawn as charts, and so on.
 
-And you can even use [Streamlit magic](api.html#magic) to skip the
-[`st.write()`](api.html#streamlit.write) command altogether:
+And you can even use <a href="api.html#magic" class="reference internal">Streamlit magic</a> to skip the
+<a href="api.html#streamlit.write" class="reference internal">`st.write`</a> command altogether:
 
 ```python
 import streamlit as st
@@ -105,9 +105,9 @@ Concepts](advanced_concepts.md) pages.
 ## Widgets
 
 When you've got the data or model into the state that you want to explore, you
-can add in widgets like [`st.slider()`](api.html#streamlit.slider),
-[`st.button()`](api.html#streamlit.button) or
-[`st.selectbox()`](api.html#streamlit.selectbox). It's really straightforward
+can add in widgets like <a href="api.html#streamlit.slider" class="reference internal">`st.slider()`</a>,
+<a href="api.html#streamlit.button" class="reference internal">`st.button()`</a> or
+<a href="api.html#streamlit.selectbox" class="reference internal">`st.selectbox()`</a>. It's really straightforward
 — just treat widgets as variables:
 
 ```python
@@ -128,8 +128,8 @@ text "10 squared is 100".
 ## Sidebar
 
 Streamlit makes it easy to organize your widgets in a left panel sidebar with
-[`st.sidebar`](api.html#add-widgets-to-sidebar). Each element that's passed to
-[`st.sidebar`](api.html#add-widgets-to-sidebar) is pinned to the left, allowing
+<a href="api.html#add-widgets-to-sidebar" class="reference internal">`st.sidebar`</a>. Each element that's passed to
+<a href="api.html#add-widgets-to-sidebar" class="reference internal">`st.sidebar`</a> is pinned to the left, allowing
 users to focus on the content in your app while still having access to UI
 controls.
 
@@ -167,7 +167,7 @@ from the web, manipulating large datasets, or performing expensive
 computations.
 
 To use the cache, just wrap functions in the
-[`@st.cache`](api.html#streamlit.cache) decorator:
+<a href="api.html#streamlit.cache" class="reference internal">`@st.cache`</a> decorator:
 
 ```python
 @st.cache  # 👈 This function will be cached
@@ -176,7 +176,7 @@ def my_slow_function(arg1, arg2):
     return the_output
 ```
 
-When you mark a function with the [`@st.cache`](api.html#streamlit.cache)
+When you mark a function with the <a href="api.html#streamlit.cache" class="reference internal">`@st.cache`</a>
 decorator, it tells Streamlit that whenever the function is called it needs to
 check a few things:
 
