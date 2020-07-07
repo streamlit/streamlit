@@ -23,7 +23,7 @@ import mock from "./mock"
 import { Table, Props } from "./Table"
 import { Table as ReactTable } from "reactstrap"
 
-const getProps = (elementProps: object = {}): Props => ({
+const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
   element: fromJS({
     ...mock,
     ...elementProps,

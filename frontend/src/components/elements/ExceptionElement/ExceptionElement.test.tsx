@@ -22,7 +22,7 @@ import { fromJS } from "immutable"
 import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
 import ExceptionElement, { Props } from "./ExceptionElement"
 
-const getProps = (elementProps: object = {}): Props => ({
+const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
   element: fromJS({
     stackTrace: ["step 1", "step 2", "step 3"],
     type: "RuntimeError",
