@@ -50,7 +50,9 @@
     "@typescript-eslint/no-empty-function": "off",
     // We prefer not using `any`, but don't disallow it
     "@typescript-eslint/no-explicit-any": "off",
-    // We prefer not using `any`, but don't disallow it
+    // We prefer not using `any`, but don't disallow it (this rule
+    // differs from the previous one in that it requires explicit types
+    // for public module APIs)
     "@typescript-eslint/explicit-module-boundary-types": "off",
     // Don't warn about unused function params
     "@typescript-eslint/no-unused-vars": ["warn", { "args": "none" }],
