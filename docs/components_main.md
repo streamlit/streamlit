@@ -8,5 +8,14 @@ Example Streamlit components:
 
 - Custom versions of existing Streamlit elements and widgets, such as `st.slider` or `st.file_uploader`
 - Completely new Streamlit elements and widgets by wrapping existing React.js, Vue.js, or other JavaScript widget toolkits
-- Rendering Python objects supporting `__repr_html__`
+- Rendering Python objects having methods that output HTML, such as IPython [`__repr_html__`](https://ipython.readthedocs.io/en/stable/config/integrating.html#rich-display)
 - Convenience functions for commonly-used web features like [GitHub gists and Pastebin](https://github.com/randyzwitch/streamlit-embedcode)
+
+```eval_rst
+.. note::
+   The remainder of the documentation in this section is for users
+   that want to **develop Streamlit Components** or are generally interested in the
+   Streamlit project from a developer/contributor perspective.
+
+   If you are only interested in **using Streamlit Components**, then you can skip these sections and/or refer to the documentation of the component you would like to use for example usage.
+```

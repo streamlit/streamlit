@@ -22,6 +22,7 @@
   :hidden:
 
   components_main
+  components_getstarted
 
 .. toctree::
   :caption: Support
