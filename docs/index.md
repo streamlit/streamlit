@@ -18,10 +18,14 @@
 
 .. toctree::
   :caption: Streamlit Components
+  :titlesonly:
+
+  Overview <streamlit_components>
+
+.. toctree::
   :maxdepth: 2
   :hidden:
 
-  streamlit_components
   components_getstarted
 
 .. toctree::

@@ -4,7 +4,7 @@ Starting with version [0.63.0](http://localhost:8000/changelog.html#version-0-63
 
 Streamlit Components let you expand the functionality provided in the base Streamlit package. Use Streamlit components to create the needed functionality for your use case, then wrap it up in a Python package and share with the broader Streamlit community!
 
-Example Streamlit components:
+**Types of Streamlit Components you could create include:**
 
 - Custom versions of existing Streamlit elements and widgets, such as `st.slider` or `st.file_uploader`
 - Completely new Streamlit elements and widgets by wrapping existing React.js, Vue.js, or other JavaScript widget toolkits
