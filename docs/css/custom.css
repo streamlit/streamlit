@@ -537,6 +537,14 @@ hr {
   bottom: 0.5rem !important;
 }
 
+/* Add small amount of padding to separate bullet points */
+.wy-plain-list-disc li,
+.rst-content .section ul li,
+.rst-content .toctree-wrapper ul li,
+article ul li {
+  padding: 2px;
+}
+
 /* 960 is where the RTD mobile/responsive theme kicks in to move nav to header */
 @media (min-width: 960px) {
   h1 {
