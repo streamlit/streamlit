@@ -131,4 +131,6 @@ def _unwrap_decorated_func(f):
         except AttributeError:
             pass
 
+    # Fall back to original function, though it's unlikely we'll reach 
+    # this part of the code.
     return f
