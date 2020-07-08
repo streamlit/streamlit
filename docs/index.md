@@ -26,7 +26,7 @@
   :maxdepth: 2
   :hidden:
 
-  components_getstarted
+  develop_streamlit_components
 
 .. toctree::
   :caption: Support
