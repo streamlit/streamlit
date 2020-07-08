@@ -20,11 +20,11 @@ import { shallow } from "enzyme"
 
 import CodeBlock, { Props } from "./CodeBlock"
 
-const getProps = (props: object = {}): Props => ({
+const getProps = (props: Record<string, unknown> = {}): Props => ({
   width: 0,
   value: `
     import streamlit as st
-    
+
     st.write("Hello")
   `,
   ...props,

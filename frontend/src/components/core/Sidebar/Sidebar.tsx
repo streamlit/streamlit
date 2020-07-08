@@ -24,7 +24,7 @@ import "./Sidebar.scss"
 
 interface Props {
   children?: ReactElement
-  onChange: Function
+  onChange: (collapsedSidebar: boolean) => void
 }
 
 interface State {

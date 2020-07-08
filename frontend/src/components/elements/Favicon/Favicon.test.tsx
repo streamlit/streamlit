@@ -21,7 +21,7 @@ import { fromJS } from "immutable"
 
 import { Favicon, Props } from "./Favicon"
 
-const getProps = (elementProps: object = {}): Props => ({
+const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
   element: fromJS({
     url: "https://streamlit.io/path/to/favicon.png",
     ...elementProps,

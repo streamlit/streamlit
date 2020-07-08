@@ -24,7 +24,9 @@ import { StaticMap } from "react-map-gl"
 import mockDeckGl from "./mock"
 import { DeckGlChart, PropsWithHeight } from "./DeckGlChart"
 
-const getProps = (elementProps: object = {}): PropsWithHeight => ({
+const getProps = (
+  elementProps: Record<string, unknown> = {}
+): PropsWithHeight => ({
   element: fromJS({
     ...mockDeckGl,
     ...elementProps,
