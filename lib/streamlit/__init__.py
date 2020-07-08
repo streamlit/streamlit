@@ -407,9 +407,8 @@ def write(*args, **kwargs):
 
         flush_buffer()
 
-    except Exception:
-        _, exc, exc_tb = _sys.exc_info()
-        exception(exc, exc_tb)  # noqa: F821
+    except Exception as exc:
+        exception(exc)
 
 
 def experimental_show(*args):
