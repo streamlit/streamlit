@@ -21,7 +21,7 @@
   :maxdepth: 2
   :hidden:
 
-  components_main
+  streamlit_components
   components_getstarted
 
 .. toctree::
