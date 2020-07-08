@@ -39,7 +39,7 @@ jest.mock("lib/UriUtil")
 const mockedBuildHttpUri = buildHttpUri as jest.Mock
 mockedBuildHttpUri.mockImplementation(() => "registry/url")
 
-const getProps = (elementProps: object = {}): Props => ({
+const getProps = (elementProps = {}): Props => ({
   element: fromJS({
     argsDataframe: [],
     argsJson: '{"foo": "bar"}',
