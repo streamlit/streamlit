@@ -24,7 +24,7 @@ import Alert, { getAlertCSSClass } from "./Alert"
 import { Props as AlertProps } from "./Alert"
 import { Alert as AlertProto } from "autogen/proto"
 
-const getProps = (elementProps: object = {}): AlertProps => ({
+const getProps = (elementProps: Record<string, unknown> = {}): AlertProps => ({
   element: ImmutableMap({
     body: "Something happened!",
     ...elementProps,

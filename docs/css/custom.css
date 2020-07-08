@@ -154,6 +154,7 @@
 
 body.wy-body-for-nav {
   background: var(--main-bg-color);
+  height: 100%;
 }
 
 body,
@@ -470,7 +471,7 @@ hr {
 /* Injected Read-the-docs version box */
 
 .rst-versions {
-  position: absolute !important;
+  /* position: absolute !important; */
   background: var(--main-bg-color) !important;
   border: 1px solid transparent !important;
   border-radius: 5px !important;
@@ -534,6 +535,18 @@ hr {
 .rst-versions.shift-up {
   border-color: var(--st-gray-50) !important;
   bottom: 0.5rem !important;
+}
+
+/* Add small amount of padding to separate bullet points */
+.wy-plain-list-disc li,
+.rst-content .section ul li,
+.rst-content .toctree-wrapper ul li,
+.wy-plain-list-decimal li,
+.rst-content .section ol li,
+.rst-content ol.arabic li,
+article ol li,
+article ul li {
+  padding: 2px;
 }
 
 /* 960 is where the RTD mobile/responsive theme kicks in to move nav to header */
@@ -616,4 +629,10 @@ hr {
     position: fixed;
     left: auto;
   }
+}
+
+.rst-versions {
+  margin: 0 auto !important;
+  margin-left: max(-550px, -50vw) !important;
+  left: 50vw !important;
 }

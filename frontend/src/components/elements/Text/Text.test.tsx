@@ -20,7 +20,7 @@ import { shallow } from "enzyme"
 import { Map as ImmutableMap } from "immutable"
 import Text, { Props } from "./Text"
 
-const getProps = (elementProps: object = {}): Props => ({
+const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
   element: ImmutableMap({
     body: "some plain text",
     ...elementProps,

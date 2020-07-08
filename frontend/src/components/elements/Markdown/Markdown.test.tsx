@@ -21,7 +21,9 @@ import { Map as ImmutableMap } from "immutable"
 import Markdown from "./Markdown"
 import { Props as MarkdownProps } from "./Markdown"
 
-const getProps = (elementProps: object = {}): MarkdownProps => ({
+const getProps = (
+  elementProps: Record<string, unknown> = {}
+): MarkdownProps => ({
   element: ImmutableMap({
     body:
       "Emphasis, aka italics, with *asterisks* or _underscores_." +

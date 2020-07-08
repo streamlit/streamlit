@@ -15,7 +15,12 @@
  * limitations under the License.
  */
 
-import { buildHttpUri, buildWsUri, getWindowBaseUriParts } from "./UriUtil"
+import {
+  buildHttpUri,
+  buildWsUri,
+  getWindowBaseUriParts,
+  buildMediaUri,
+} from "./UriUtil"
 
 const location = {}
 
@@ -150,4 +155,16 @@ test("builds WS URI with no base path", () => {
     "baz"
   )
   expect(uri).toBe("ws://the_host:9988/baz")
+})
+
+test("builds uri correctly for streamlit-served media", () => {
+  const uri = buildMediaUri("/media/1234567890.png")
+
+  expect(uri).toBe("http://the_host:9988/foo/bar/media/1234567890.png")
+})
+
+test("passes through other media uris", () => {
+  const uri = buildMediaUri("http://example/blah.png")
+
+  expect(uri).toBe("http://example/blah.png")
 })

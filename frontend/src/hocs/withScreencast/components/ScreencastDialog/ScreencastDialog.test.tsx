@@ -21,7 +21,7 @@ import { ModalHeader, ModalFooter, Button } from "reactstrap"
 
 import ScreencastDialog, { Props } from "./ScreencastDialog"
 
-const getProps = (props: object = {}): Props => ({
+const getProps = (props: Record<string, unknown> = {}): Props => ({
   onClose: jest.fn(),
   startRecording: jest.fn(),
   toggleRecordAudio: jest.fn(),

@@ -104,7 +104,6 @@ from streamlit.ReportThread import add_report_ctx as _add_report_ctx
 from streamlit.ReportThread import get_report_ctx as _get_report_ctx
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import BlockPath_pb2 as _BlockPath_pb2
-from streamlit.util import functools_wraps as _functools_wraps
 
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
@@ -148,6 +147,7 @@ pydeck_chart = _main.pydeck_chart  # noqa: E221
 empty = _main.empty  # noqa: E221
 error = _main.error  # noqa: E221
 exception = _main.exception  # noqa: E221
+beta_set_favicon = _main.favicon  # noqa: E221
 file_uploader = _main.file_uploader  # noqa: E221
 graphviz_chart = _main.graphviz_chart  # noqa: E221
 header = _main.header  # noqa: E221
@@ -406,9 +406,8 @@ def write(*args, **kwargs):
 
         flush_buffer()
 
-    except Exception:
-        _, exc, exc_tb = _sys.exc_info()
-        exception(exc, exc_tb)  # noqa: F821
+    except Exception as exc:
+        exception(exc)
 
 
 def experimental_show(*args):
