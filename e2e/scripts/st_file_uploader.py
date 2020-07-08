@@ -23,7 +23,7 @@ else:
     st.text("No upload")
 
 st.set_option("deprecation.v00_063_showfileUploaderEncoding", False)
-st.file_uploader("Disable deprecation", type=["txt"], disable_deprecation_warning=True)
+st.file_uploader("Disable deprecation", type=["txt"])
 
 # result = st.file_uploader(
 #     "Drop multiple files:", type=["txt"], accept_multiple_files=True
