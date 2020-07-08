@@ -27,6 +27,7 @@
   :hidden:
 
   develop_streamlit_components
+  Components FAQ <streamlit_components_faq>
 
 .. toctree::
   :caption: Support
