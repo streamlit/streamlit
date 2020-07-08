@@ -58,7 +58,7 @@ export enum StreamlitMessageType {
   RENDER = "streamlit:render",
 }
 
-interface Props {
+export interface Props {
   registry: ComponentRegistry
   widgetMgr: WidgetStateManager
 
@@ -67,7 +67,7 @@ interface Props {
   width: number
 }
 
-interface State {
+export interface State {
   componentError?: Error
 }
 

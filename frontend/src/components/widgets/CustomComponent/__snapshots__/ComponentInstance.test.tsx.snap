@@ -1,0 +1,25 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`ComponentInstance Render iframe should render iframe and set \`src\` to element url 1`] = `
+Object {
+  "allow": "accelerometer; ambient-light-sensor; autoplay; battery; camera; document-domain; encrypted-media; geolocation; gyroscope; layout-animations; legacy-image-formats; magnetometer; microphone; midi; oversized-images; payment; picture-in-picture; publickey-credentials-get; sync-xhr; usb; vr ; wake-lock; xr-spatial-tracking",
+  "height": 0,
+  "sandbox": "allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-scripts",
+  "scrolling": "no",
+  "src": "some/url?streamlitUrl=http%3A%2F%2Flocalhost%2F",
+  "title": "some.component",
+  "width": 100,
+}
+`;
+
+exports[`ComponentInstance Render iframe should render iframe and set \`src\` to registry/url 1`] = `
+Object {
+  "allow": "accelerometer; ambient-light-sensor; autoplay; battery; camera; document-domain; encrypted-media; geolocation; gyroscope; layout-animations; legacy-image-formats; magnetometer; microphone; midi; oversized-images; payment; picture-in-picture; publickey-credentials-get; sync-xhr; usb; vr ; wake-lock; xr-spatial-tracking",
+  "height": 0,
+  "sandbox": "allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-scripts",
+  "scrolling": "no",
+  "src": "registry/url?streamlitUrl=http%3A%2F%2Flocalhost%2F",
+  "title": "some.component",
+  "width": 100,
+}
+`;
