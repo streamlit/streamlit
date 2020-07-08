@@ -51,4 +51,13 @@ components.iframe("https://docs.streamlit.io/en/latest")
 
 ## Create a bi-directional component
 
-This section will be much longer, a lot of copy-paste from Notion
+A bi-directional Streamlit Component has two parts:
+
+1. A **frontend**, which is built out of HTML and any other web tech you like (JavaScript, React, Vue, etc.), which gets rendered in Streamlit apps via an iframe tag
+2. A **Python API**, which Streamlit apps use to instantiate and talk to that frontend
+
+To make the process of creating bi-directional Streamlit Components easier, we've created a React template and a TypeScript-only template in the [Streamlit component-template GitHub repo](https://github.com/streamlit/component-template). We also provide some [example Components](https://github.com/streamlit/component-template/tree/master/examples) in the same repo.
+
+### Development Environment Setup
+
+Tim write?
