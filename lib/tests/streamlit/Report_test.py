@@ -121,7 +121,7 @@ class ReportTest(unittest.TestCase):
         ]
     )
     def test_get_url(self, baseUrl, port, expected_url):
-        options = {"global.useNode": False, "server.headless": False}
+        options = {"server.headless": False, "global.developmentMode": False}
 
         if baseUrl:
             options["server.baseUrlPath"] = baseUrl

@@ -45,7 +45,7 @@ interface DeckObject {
     height: number
     width: number
   }
-  layers: Array<object>
+  layers: Record<string, unknown>[]
   mapStyle?: string | Array<string>
 }
 
@@ -68,9 +68,9 @@ export interface PropsWithHeight extends Props {
 }
 
 interface State {
-  viewState: object
+  viewState: Record<string, unknown>
   initialized: boolean
-  initialViewState: object
+  initialViewState: Record<string, unknown>
 }
 
 export const DEFAULT_DECK_GL_HEIGHT = 500
@@ -153,7 +153,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     return jsonConverter.convert(json)
   }
 
-  createTooltip = (info: PickingInfo): object | boolean => {
+  createTooltip = (info: PickingInfo): Record<string, unknown> | boolean => {
     const { element } = this.props
     let tooltip = element.get("tooltip")
 

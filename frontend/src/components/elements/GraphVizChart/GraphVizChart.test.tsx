@@ -44,9 +44,12 @@ import { shallow } from "enzyme"
 import { fromJS } from "immutable"
 
 import { PropsWithHeight } from "./GraphVizChart"
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const GraphVizChart = require("./GraphVizChart").GraphVizChart
 
-const getProps = (elementProps: object = {}): PropsWithHeight => ({
+const getProps = (
+  elementProps: Record<string, unknown> = {}
+): PropsWithHeight => ({
   element: fromJS({
     spec: `digraph "Hello World" {Hello -> World}`,
     ...elementProps,

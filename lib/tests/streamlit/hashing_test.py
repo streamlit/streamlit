@@ -56,7 +56,6 @@ from streamlit.hashing import _CodeHasher
 from streamlit.hashing import _NP_SIZE_LARGE
 from streamlit.hashing import _PANDAS_ROWS_LARGE
 from streamlit.type_util import is_type
-from streamlit.util import functools_wraps
 import streamlit as st
 
 from tests import testutil
@@ -101,6 +100,20 @@ class HashTest(unittest.TestCase):
         b = [1, 2, 3]
         b.append(b)
         self.assertEqual(get_hash(a), get_hash(b))
+
+    def test_recursive_hash_func(self):
+        def hash_int(x):
+            return x
+
+        @st.cache(hash_funcs={int: hash_int})
+        def foo(x):
+            return x
+
+        self.assertEqual(foo(1), foo(1))
+        # Note: We're able to break the recursive cycle caused by the identity
+        # hash func but it causes all cycles to hash to the same thing.
+        # https://github.com/streamlit/streamlit/issues/1659
+        # self.assertNotEqual(foo(2), foo(1))
 
     def test_tuple(self):
         self.assertEqual(get_hash((1, 2)), get_hash((1, 2)))
@@ -974,7 +987,7 @@ class CodeHashTest(unittest.TestCase):
         """Test decorated functions."""
 
         def do(func):
-            @functools_wraps(func)
+            @functools.wraps(func)
             def wrapper_do(*args, **kwargs):
                 return func(*args, **kwargs)
 

@@ -131,8 +131,6 @@ def _unwrap_decorated_func(f):
         except AttributeError:
             pass
 
-    # Falling back to original function. Which is fine in Python 3 for
-    # functions, even if they were decorated with functools.wrap.  No such luck
-    # for Python 2, but it's unlikely we'll get to this part of the code
-    # anyway.
+    # Fall back to original function, though it's unlikely we'll reach 
+    # this part of the code.
     return f
