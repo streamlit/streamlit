@@ -56,7 +56,6 @@ from streamlit.hashing import _CodeHasher
 from streamlit.hashing import _NP_SIZE_LARGE
 from streamlit.hashing import _PANDAS_ROWS_LARGE
 from streamlit.type_util import is_type
-from streamlit.util import functools_wraps
 import streamlit as st
 
 from tests import testutil
@@ -988,7 +987,7 @@ class CodeHashTest(unittest.TestCase):
         """Test decorated functions."""
 
         def do(func):
-            @functools_wraps(func)
+            @functools.wraps(func)
             def wrapper_do(*args, **kwargs):
                 return func(*args, **kwargs)
 
