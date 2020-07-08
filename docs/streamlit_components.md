@@ -17,5 +17,5 @@ Streamlit Components let you expand the functionality provided in the base Strea
    that want to **develop Streamlit Components** or are generally interested in the
    Streamlit project from a developer/contributor perspective.
 
-   If you are only interested in **using Streamlit Components**, then you can skip these sections and/or refer to the documentation of the component you would like to use for example usage.
+   If you are only interested in **using Streamlit Components**, then you can skip these sections and head over to the `Streamlit Components Gallery <https://streamlit.io/components>`_ to see examples created by the community!
 ```
