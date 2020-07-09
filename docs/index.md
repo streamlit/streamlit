@@ -19,6 +19,7 @@
 .. toctree::
   :caption: Streamlit Components
   :titlesonly:
+  :hidden:
 
   Overview <streamlit_components>
 
