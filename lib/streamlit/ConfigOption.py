@@ -108,6 +108,7 @@ class ConfigOption(object):
         ----------
         key : str
             Should be of the form "section.optionName"
+            Examples: server.name, deprecation.v1_0_featureName
         description : str
             Like a comment for the config option.
         default_val : anything

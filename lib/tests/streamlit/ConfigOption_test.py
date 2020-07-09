@@ -15,16 +15,32 @@
 import unittest
 
 import pytest
+from parameterized import parameterized
 
 from streamlit.ConfigOption import ConfigOption, DeprecationError
 
 
 class ConfigOptionTest(unittest.TestCase):
-    def test_invalid_key(self):
-        key = "broken"
+    @parameterized.expand(
+        [("missingKey",), (".missingSection",), ("has spaces",), ("_.key")]
+    )
+    def test_invalid_key(self, key):
         with pytest.raises(AssertionError) as e:
             ConfigOption(key)
         self.assertEqual('Key "%s" has invalid format.' % key, str(e.value))
+
+    @parameterized.expand(
+        [
+            ("section.name", "section", "name"),
+            ("section.v_1_name", "section", "v_1_name"),
+            ("section.numbered12", "section", "numbered12"),
+            ("numbered1.allowCaps", "numbered1", "allowCaps"),
+        ]
+    )
+    def test_valid_keys(self, key, section, name):
+        c = ConfigOption(key)
+        self.assertEqual(section, c.section)
+        self.assertEqual(name, c.name)
 
     def test_constructor_default_values(self):
         key = "mysection.myName"
