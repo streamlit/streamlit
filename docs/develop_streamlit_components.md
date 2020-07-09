@@ -10,7 +10,7 @@ If you are unsure whether you need bi-directional communication, **start here fi
 
 ### Render an HTML string
 
-While [`st.text`](http://localhost:8000/api.html#streamlit.text), [`st.markdown`](http://localhost:8000/api.html#streamlit.text) and [`st.write`](http://localhost:8000/api.html#streamlit.text) make it easy to write text to a Streamlit app, sometimes it would be easier to implement a custom piece of HTML or you need to implement a specific HTML/JavaScript template for a charting library. `components.html` gives you the ability to embed an iframe inside of a Streamlit app containing your output.
+While [`st.text`](api.html#streamlit.text), [`st.markdown`](api.html#streamlit.text) and [`st.write`](api.html#streamlit.text) make it easy to write text to a Streamlit app, sometimes you'd rather implement a custom piece of HTML. Similarly, while Streamlit natively supports [many charting libraries](api.html#display-charts), you may want to implement a specific HTML/JavaScript template for a new charting library. components.html works by giving you the ability to embed an iframe inside of a Streamlit app that contains your desired output.
 
 ```eval_rst
 .. autofunction:: streamlit.components.v1.html
@@ -31,7 +31,7 @@ components.html("""
                 )
 ```
 
-### Render an iframe url
+### Render an iframe URL
 
 `components.iframe` is similar in features to `components.html`, with the difference being that `components.iframe` takes a URL as its input. This is used for situations where you want to include an entire page within a Streamlit app.
 
@@ -53,11 +53,11 @@ components.iframe("https://docs.streamlit.io/en/latest")
 
 A bi-directional Streamlit Component has two parts:
 
-1. A **frontend**, which is built out of HTML and any other web tech you like (JavaScript, React, Vue, etc.), which gets rendered in Streamlit apps via an iframe tag
+1. A **frontend**, which is built out of HTML and any other web tech you like (JavaScript, React, Vue, etc.), and gets rendered in Streamlit apps via an iframe tag.
 2. A **Python API**, which Streamlit apps use to instantiate and talk to that frontend
 
-To make the process of creating bi-directional Streamlit Components easier, we've created a React template and a TypeScript-only template in the [Streamlit component-template GitHub repo](https://github.com/streamlit/component-template). We also provide some [example Components](https://github.com/streamlit/component-template/tree/master/examples) in the same repo.
+To make the process of creating bi-directional Streamlit Components easier, we've created a React template and a TypeScript-only template in the [Streamlit Component-template GitHub repo](https://github.com/streamlit/component-template). We also provide some [example Components](https://github.com/streamlit/component-template/tree/master/examples) in the same repo.
 
 ### Development Environment Setup
 
-Tim write?
+TODO: Tim write?
