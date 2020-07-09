@@ -6,11 +6,11 @@
 
 2. **What types of things _*aren't possible*_ with Streamlit Components?**
 
-   Because each Streamlit Component gets mounted into its own sandboxed iframe, this implies a few limitations on what is possible to do with Components:
+   Because each Streamlit Component gets mounted into its own sandboxed iframe, this implies a few limitations on what is possible with Components:
 
-   - `grid_layout`: Components can't "contain" (or otherwise communicate with) other components, so Components cannot be used to build a grid layout
-   - `dark_mode`: A Component can't modify the CSS that the rest of the Streamlit app uses
-   - `remove_streamlit_hamburger_menu`: A component can't add or remove other elements of a Streamlit app
+   - **Can't communicate with other Components**: Components can’t contain (or otherwise communicate with) other components, so Components cannot be used to build something like `grid_layout`
+   - **Can't modify CSS**: A Component can’t modify the CSS that the rest of the Streamlit app uses, so you can't create something like `dark_mode`
+   - **Can't add/remove elements**: A Component can’t add or remove other elements of a Streamlit app, so you couldn't make something like `remove_streamlit_hamburger_menu`
 
 3. **How do I build a Component that can be displayed in the sidebar?**
 
