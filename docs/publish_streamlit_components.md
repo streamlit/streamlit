@@ -1,21 +1,21 @@
 # Publish Streamlit Component to PyPI
 
-Publishing your Streamlit Component to [PyPI](https://pypi.org/) makes it easily accessible to Python users around the world. This step is optional, of course...if you won't be releasing your component publicly, you can skip this section!
+Publishing your Streamlit Component to [PyPI](https://pypi.org/) makes it easily accessible to Python users around the world. This step is completely optional, so if you won’t be releasing your component publicly, you can skip this section!
 
 ```eval_rst
 .. note::
-   For **Static Streamlit Components**, publishing a Python package to PyPI follows the same steps as the `core PyPI packaging instructions <https://packaging.python.org/tutorials/packaging-projects/>`_. A static Component likely contains only Python code, so once you have your `setup.py <https://packaging.python.org/tutorials/packaging-projects/#creating-setup-py>`_ file correct and `generate your distribution files <https://packaging.python.org/tutorials/packaging-projects/#generating-distribution-archives>`_, you're ready to `upload to PyPI <https://packaging.python.org/tutorials/packaging-projects/#uploading-the-distribution-archives>`_.
+   For `static Streamlit Components </develop_streamlit_components.html#create-a-static-component>`_, publishing a Python package to PyPI follows the same steps as the `core PyPI packaging instructions <https://packaging.python.org/tutorials/packaging-projects/>`_. A static Component likely contains only Python code, so once you have your `setup.py <https://packaging.python.org/tutorials/packaging-projects/#creating-setup-py>`_ file correct and `generate your distribution files <https://packaging.python.org/tutorials/packaging-projects/#generating-distribution-archives>`_, you're ready to `upload to PyPI <https://packaging.python.org/tutorials/packaging-projects/#uploading-the-distribution-archives>`_.
 
-   **Bi-directional Streamlit Components** at minimum include both Python and JavaScript code, and as such, need a bit more preparation before they can be published on PyPI. The remainder of this page focuses on the bi-directional Component preparation process.
+   `Bi-directional Streamlit Components </develop_streamlit_components.html#create-a-bi-directional-component>`_ at minimum include both Python and JavaScript code, and as such, need a bit more preparation before they can be published on PyPI. The remainder of this page focuses on the bi-directional Component preparation process.
 ```
 
-## Prepare Your Component
+## Prepare your Component
 
 A bi-directional Streamlit Component varies slightly from a pure Python library in that it must contain pre-compiled frontend code. This is how base Streamlit works as well; when you `pip install streamlit`, you are getting a Python library where the HTML and frontend code contained within it have been compiled into static assets.
 
 The [component-template](https://github.com/streamlit/component-template) GitHub repo provides the folder structure necessary for PyPI publishing. But before you can publish, you'll need to do a bit of housekeeping:
 
-1. Give your component a name, if you haven't already.
+1. Give your component a name, if you haven't already
    - Rename the `template/my_component/` folder to `template/<component name>/`
    - Pass your component's name as the the first argument to `declare_component()`
 2. Edit `setup.py`, adding your component's name and other relevant info
@@ -26,7 +26,7 @@ The [component-template](https://github.com/streamlit/component-template) GitHub
    $ npm run build
    ```
 
-4. Pass the build folder's path as the `path` parameter to `declare_component`. (If you're using the template Python file, you can set `_RELEASE = True` at the top of the file.):
+4. Pass the build folder's path as the `path` parameter to `declare_component`. (If you're using the template Python file, you can set `_RELEASE = True` at the top of the file):
 
    ```python
       import streamlit.components.v1 as components
@@ -62,7 +62,7 @@ With your wheel created, the final step is to upload to PyPI. The instructions h
 
    - Visit [https://test.pypi.org/account/register/](https://test.pypi.org/account/register/) and complete the steps
 
-   - Visit [https://test.pypi.org/manage/account/#api-tokens](https://test.pypi.org/manage/account/#api-tokens) and create a new API token. Don’t limit the token scope to a particular project, since you are creating a new project. Copy your token before closing the page; you won't be able to retrieve it again otherwise.
+   - Visit [https://test.pypi.org/manage/account/#api-tokens](https://test.pypi.org/manage/account/#api-tokens) and create a new API token. Don’t limit the token scope to a particular project, since you are creating a new project. Copy your token before closing the page, as you won’t be able to retrieve it again.
 
 2. Upload your wheel to Test PyPI. `twine` will prompt you for a username and password. For the username, use **token**. For the password, use your token value from the previous step, including the `pypi-` prefix:
 
@@ -80,4 +80,6 @@ If all goes well, you're ready to upload your library to PyPI. Follow the instru
 
 ## Promote your Component!
 
-TODO: Statement about sharing on forum and how to submit to gallery.
+We'd love to help you share your Component with the Streamlit Community! To share it, please post on the [Streamlit 'Show the Community!' Forum](https://discuss.streamlit.io/c/streamlit-examples/9) with the title similar to "New Component: `<your component name>`, a new way to do X".
+
+You can also Tweet at us [@streamlit](https://twitter.com/streamlit) so that we can retweet your announcement for you.
