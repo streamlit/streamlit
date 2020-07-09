@@ -636,3 +636,7 @@ article ul li {
   margin-left: max(-550px, -50vw) !important;
   left: 50vw !important;
 }
+
+footer {
+  padding-top: 10px;
+}
