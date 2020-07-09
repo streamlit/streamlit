@@ -23,17 +23,18 @@ describe("components.declare_component", () => {
   });
 
   it("sets `src` correctly", () => {
-    cy.get("iframe")
-      .its("src")
-      .should(
-        "eq",
-        "http://not.a.real.url?streamlitUrl=http%3A%2F%2Flocalhost%3A3000%2F"
-      );
+    cy.get("iframe").should(
+      "have.attr",
+      "src",
+      "http://not.a.real.url?streamlitUrl=http%3A%2F%2Flocalhost%3A3000%2F"
+    );
   });
 
   it("sets `title` correctly", () => {
-    cy.get("iframe")
-      .its("title")
-      .should("eq", "st_declare_component.test_component");
+    cy.get("iframe").should(
+      "have.attr",
+      "title",
+      "components_declare_component.test_component"
+    );
   });
 });

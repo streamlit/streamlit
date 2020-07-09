@@ -23,26 +23,18 @@ describe("components.iframe", () => {
   });
 
   it("sets src correctly", () => {
-    cy.get("iframe")
-      .its("src")
-      .should("eq", "http://not.a.real.url");
+    cy.get("iframe").should("have.attr", "src", "http://not.a.real.url");
   });
 
   it("sets width correctly", () => {
-    cy.get("iframe")
-      .its("width")
-      .should("eq", "200");
+    cy.get("iframe").should("have.attr", "width", "200");
   });
 
   it("sets height correctly", () => {
-    cy.get("iframe")
-      .its("height")
-      .should("eq", "500");
+    cy.get("iframe").should("have.attr", "height", "500");
   });
 
   it("sets scrolling correctly", () => {
-    cy.get("iframe")
-      .its("scrolling")
-      .should("eq", "auto");
+    cy.get("iframe").should("have.attr", "scrolling", "auto");
   });
 });
