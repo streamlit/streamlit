@@ -17,14 +17,12 @@
 
 /// <reference types="cypress" />
 
-describe("st.set_favicon", () => {
+describe("st.set_page_title", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
   });
 
-  it("sets the page favicon", () => {
-    cy.get("link[rel='shortcut icon']")
-      .invoke("attr", "href")
-      .should("eq", "https://twemoji.maxcdn.com/2/72x72/1f988.png");
+  it("set the page title", () => {
+    cy.title().should("eq", "Heya, world? · Streamlit");
   });
 });
