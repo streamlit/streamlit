@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,32 +13,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
-syntax = "proto3";
-
-message Slider {
-  enum DataType {
-    // What numeric type are we working with? This doesn't change how the
-    // data is stored, but the frontend needs to know for input parsing.
-    INT = 0;
-    FLOAT = 1;
-    // Note: Represented as microseconds since epoch
-    DATETIME = 2;
-    DATE = 3;
-    TIME = 4;
-  }
-
-  string id = 1;
-  string label = 2;
-  string format = 7;
-  DataType data_type = 12;
-
-  repeated double default = 8;
-  double min = 9;
-  double max = 10;
-  double step = 11;
-
-  reserved 3, 4, 5, 6;
-  // NEXT ID: 13
-}
+export { default } from "./Favicon"

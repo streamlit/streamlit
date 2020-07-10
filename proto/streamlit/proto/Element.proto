@@ -30,6 +30,7 @@ import "streamlit/proto/DeckGlJsonChart.proto";
 import "streamlit/proto/DocString.proto";
 import "streamlit/proto/Empty.proto";
 import "streamlit/proto/Exception.proto";
+import "streamlit/proto/Favicon.proto";
 import "streamlit/proto/FileUploader.proto";
 import "streamlit/proto/GraphVizChart.proto";
 import "streamlit/proto/Image.proto";
@@ -69,6 +70,7 @@ message Element {
     DocString doc_string = 7;
     Empty empty = 2;
     Exception exception = 8;
+    Favicon favicon = 36;
     FileUploader file_uploader = 33;
     GraphVizChart graphviz_chart = 18;
     ImageList imgs = 6;
@@ -88,7 +90,7 @@ message Element {
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
 
-    // Next ID: 36
+    // Next ID: 37
   }
 
   reserved 9;

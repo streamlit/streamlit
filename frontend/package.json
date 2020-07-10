@@ -51,6 +51,7 @@
     "mapbox-gl": "^1.7.0",
     "moment": "^2.22.2",
     "moment-duration-format": "^2.3.2",
+    "node-emoji": "^1.10.0",
     "node-sass": "^4.12.0",
     "numbro": "^2.1.2",
     "plotly.js": "^1.52.2",
@@ -103,6 +104,7 @@
     "@types/moment": "^2.13.0",
     "@types/moment-duration-format": "^2.2.2",
     "@types/node": "^12.7.4",
+    "@types/node-emoji": "^1.8.1",
     "@types/numeral": "^0.0.26",
     "@types/plotly.js": "^1.44.8",
     "@types/prismjs": "^1.16.0",
@@ -148,6 +150,7 @@
     "scss-to-json": "^2.0.0",
     "source-map-explorer": "^2.1.0",
     "start-server-and-test": "^1.9.1",
+    "timezone-mock": "^1.1.0",
     "typescript": "3.6.3"
   },
   "resolutions": {
