@@ -22,7 +22,7 @@ describe("st.set_page_title", () => {
     cy.visit("http://localhost:3000/");
   });
 
-  it("set the page title", () => {
+  it("sets the page title", () => {
     cy.title().should("eq", "Heya, world? · Streamlit");
   });
 });

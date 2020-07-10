@@ -37,7 +37,5 @@ def set_page_title(title):
 
     """
     msg = ForwardMsg_pb2.ForwardMsg()
-
     msg.update_report_properties.title = title
-
     _enqueue_message(msg)

@@ -640,6 +640,6 @@ def _maybe_print_repl_warning():
             )
 
 
-# Other st commands
+# Other Streamlit commands:
 beta_set_favicon = _set_favicon
 beta_set_page_title = _set_page_title

@@ -26,7 +26,7 @@ import { buildMediaUri } from "lib/UriUtil"
 export function handleFavicon(favicon: string): void {
   const emoji = extractEmoji(favicon)
   if (emoji) {
-    // Set the
+    // Find the corresponding Twitter emoji on the CDN.
     const codepoint = toCodePoint(emoji)
     const emojiUrl = `https://twemoji.maxcdn.com/2/72x72/${codepoint}.png`
     overwriteFavicon(emojiUrl)
