@@ -652,6 +652,9 @@ export class App extends PureComponent<Props, State> {
   }
 
   handleReportProperties(propertiesMsg: ReportProperties): void {
+    if (propertiesMsg.title) {
+      document.title = `${propertiesMsg.title} · Streamlit`
+    }
     if (propertiesMsg.favicon) {
       handleFavicon(propertiesMsg.favicon)
     }

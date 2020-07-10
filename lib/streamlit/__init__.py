@@ -103,6 +103,7 @@ from streamlit.DeltaGenerator import DeltaGenerator as _DeltaGenerator
 from streamlit.ReportThread import add_report_ctx as _add_report_ctx
 from streamlit.ReportThread import get_report_ctx as _get_report_ctx
 from streamlit.commands.favicon import set_favicon as _set_favicon
+from streamlit.commands.page_title import set_page_title as _set_page_title
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import BlockPath_pb2 as _BlockPath_pb2
 
@@ -641,3 +642,4 @@ def _maybe_print_repl_warning():
 
 # Other st commands
 beta_set_favicon = _set_favicon
+beta_set_page_title = _set_page_title
