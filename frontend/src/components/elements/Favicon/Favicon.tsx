@@ -61,10 +61,10 @@ function extractEmoji(maybeEmoji: string): string {
 // so we copy it instead of importing the whole library.
 // https://github.com/twitter/twemoji/blob/42f8843cb3aa1f9403d5479d7e3f7e01176ad08e/scripts/build.js#L571
 function toCodePoint(unicodeSurrogates: string, sep?: string): string {
-  var r = [],
-    c = 0,
-    p = 0,
-    i = 0
+  const r = []
+  let c = 0
+  let p = 0
+  let i = 0
   while (i < unicodeSurrogates.length) {
     c = unicodeSurrogates.charCodeAt(i++)
     if (p) {
