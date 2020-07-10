@@ -51,6 +51,7 @@ import {
   Initialize,
   ISessionState,
   NewReport,
+  ReportProperties,
   SessionEvent,
 } from "autogen/proto"
 
@@ -71,6 +72,8 @@ import "./App.scss"
 import "assets/css/header.scss"
 import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
 import { ComponentRegistry } from "./components/widgets/CustomComponent"
+
+import { handleFavicon } from "components/elements/Favicon"
 
 import withScreencast, {
   ScreenCastHOC,
@@ -265,6 +268,8 @@ export class App extends PureComponent<Props, State> {
           this.handleNewReport(newReportMsg),
         delta: (deltaMsg: Delta) =>
           this.handleDeltaMsg(deltaMsg, msgProto.metadata),
+        updateReportProperties: (propertiesMsg: ReportProperties) =>
+          this.handleReportProperties(propertiesMsg),
         reportFinished: (status: ForwardMsg.ReportFinishedStatus) =>
           this.handleReportFinished(status),
         uploadReportProgress: (progress: string | number) =>
@@ -643,6 +648,12 @@ export class App extends PureComponent<Props, State> {
           }
         }
       }, ELEMENT_LIST_BUFFER_TIMEOUT_MS)
+    }
+  }
+
+  handleReportProperties(propertiesMsg: ReportProperties): void {
+    if (propertiesMsg.favicon) {
+      handleFavicon(propertiesMsg.favicon)
     }
   }
 

@@ -102,6 +102,7 @@ from streamlit import type_util as _type_util
 from streamlit.DeltaGenerator import DeltaGenerator as _DeltaGenerator
 from streamlit.ReportThread import add_report_ctx as _add_report_ctx
 from streamlit.ReportThread import get_report_ctx as _get_report_ctx
+from streamlit.commands.favicon import set_favicon as _set_favicon
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import BlockPath_pb2 as _BlockPath_pb2
 
@@ -147,7 +148,6 @@ pydeck_chart = _main.pydeck_chart  # noqa: E221
 empty = _main.empty  # noqa: E221
 error = _main.error  # noqa: E221
 exception = _main.exception  # noqa: E221
-beta_set_favicon = _main.favicon  # noqa: E221
 file_uploader = _main.file_uploader  # noqa: E221
 graphviz_chart = _main.graphviz_chart  # noqa: E221
 header = _main.header  # noqa: E221
@@ -637,3 +637,7 @@ def _maybe_print_repl_warning():
                 ),
                 script_name,
             )
+
+
+# Other st commands
+beta_set_favicon = _set_favicon
