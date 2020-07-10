@@ -24,6 +24,7 @@ from PIL import Image, ImageFile
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
+from urllib.parse import quote
 from urllib.parse import urlparse
 
 from streamlit.MediaFileManager import media_file_manager
@@ -176,6 +177,13 @@ def image_to_url(image, width, clamp, channels, format, image_id, allow_emoji=Fa
                 return image
         except UnicodeDecodeError:
             pass
+
+        # If it's an SVG string, then format and return an SVG data url
+        if image.startswith("<svg"):
+            # Note: As an optimization, we could unencode some safe characters
+            # See https://codepen.io/tigt/post/optimizing-svgs-in-data-uris
+            url_encoded = quote(image)
+            return f"data:image/svg+xml;utf8,{url_encoded}"
 
         # If not, see if it's a file.
         try:
