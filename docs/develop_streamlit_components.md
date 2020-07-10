@@ -105,4 +105,30 @@ After running the steps above, you should see a Streamlit app in your browser th
 
 ![Streamlit Component Example App](_static/img/component_demo_example.png)
 
-The example app from the template shows how bi-directional communication is implemented. The Streamlit Component displays a button (`Python -> JavaScript`), and the end-user can click the button. Each time the button is clicked, the JavaScript front-end increments the counter value and passes it back to Python (`JavaScript -> Python`), which is then displayed by Streamlit (`Python -> JavaScript`).
+The example app from the template shows how bi-directional communication is implemented. The Streamlit Component displays a button (`Python → JavaScript`), and the end-user can click the button. Each time the button is clicked, the JavaScript front-end increments the counter value and passes it back to Python (`JavaScript → Python`), which is then displayed by Streamlit (`Python → JavaScript`).
+
+### React-based frontend
+
+### Typescript-only frontend
+
+### Python API
+
+### Data serialization
+
+#### Python → Frontend
+
+You send data from Python to the frontend by passing keyword args to your component's invoke function (that is, the function returned from `declare_component`). You can send the following types of data from Python to the frontend:
+
+- Any JSON-serializable data
+- `numpy.array`
+- `pandas.DataFrame`
+
+Any JSON-serializable data gets serialized to a JSON string, and deserialized to its JavaScript equivalent. `numpy.array` and `pandas.DataFrame` get serialized using [Apache Arrow](https://arrow.apache.org/) and are deserialized as instances of `ArrowTable`, which is a custom type that wraps Arrow structures and provides a convenient API on top of them.
+
+Check out the [CustomDataframe](https://github.com/streamlit/component-template/tree/master/examples/CustomDataframe) and [SelectableDataTable](https://github.com/streamlit/component-template/tree/master/examples/SelectableDataTable) Component example code for more context on how to use `ArrowTable`.
+
+#### Frontend → Python
+
+You send data from the frontend to Python via the `Streamlit.setComponentValue()` API (which is part of the template code). Unlike arg-passing from Python → frontend, **this API takes a single value**. If you want to return multiple values, you'll need to wrap them in an `Array` or `Object`.
+
+Custom Components can currently _only_ send JSON-serializable data from the frontend to Python. We'll be adding support for returning `ArrowTable` from the frontend in the near future!
