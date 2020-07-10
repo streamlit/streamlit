@@ -113,6 +113,30 @@ The example app from the template shows how bi-directional communication is impl
 
 ### Python API
 
+`components.declare_component()` is all that's required to create your Component's Python API:
+
+```python
+  import streamlit.components.v1 as components
+  my_component = components.declare_component(
+    "my_component",
+    url="http://localhost:3001"
+  )
+```
+
+You can then use the returned `my_component` function to send and receive data with your frontend code:
+
+```python
+# Send data to the frontend using named arguments.
+return_value = my_component(name="Blackbeard", ship="Queen Anne's Revenge")
+
+# `my_component`'s return value is the data returned from the frontend.
+st.write("Value = ", return_value)
+```
+
+While the above is all you need to define from the Python side to have a working Component, we recommend creating a "wrapper" function with named arguments and default values, input validation and so on. This will make it easier for end-users to understand what data values your function accepts and allows for defining helpful docstrings.
+
+Please see [this example](https://github.com/streamlit/component-template/blob/master/template/my_component/__init__.py#L41-L77) from the Components-template for an example of creating a wrapper function.
+
 ### Data serialization
 
 #### Python → Frontend
