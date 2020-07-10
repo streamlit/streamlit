@@ -107,9 +107,56 @@ After running the steps above, you should see a Streamlit app in your browser th
 
 The example app from the template shows how bi-directional communication is implemented. The Streamlit Component displays a button (`Python → JavaScript`), and the end-user can click the button. Each time the button is clicked, the JavaScript front-end increments the counter value and passes it back to Python (`JavaScript → Python`), which is then displayed by Streamlit (`Python → JavaScript`).
 
-### React-based frontend
+### Frontend
 
-### Typescript-only frontend
+Because a Streamlit Component is just a little webpage that gets rendered into an `iframe`, you can use just about any web tech you'd like to create one. We're provide two templates to get started with in the Streamlit [Components-template GitHub repo](https://github.com/streamlit/component-template/); one of those templates uses [React](https://reactjs.org/) and the other does not.
+
+```eval_rst
+.. note::
+  Even if you're not already familiar with React, you may still want to check out the React-based template. It handles most of the boilerplate required to send and receive data from Streamlit, and you can learn the bits of React you need as you go.
+
+  If you'd rather not use React, please read this section anyway! It explains the fundamentals of Streamlit ←→ Component communication.
+```
+
+#### React
+
+The React-based template is in `frontend/src/MyComponent.tsx`.
+
+- `MyComponent.render()` is called automatically when the component needs to be re-rendered (just like in any React app)
+- Arguments passed from the Python script are available via the `this.props.args` dictionary:
+
+```python
+# Send arguments in Python:
+result = my_component(greeting="Hello", name="Streamlit")
+```
+
+```javascript
+// Receive arguments in frontend:
+let greeting = this.props.args["greeting"]; // name = "Hello"
+let name = this.props.args["name"]; // greeting = "Streamlit"
+```
+
+- Use `Streamlit.setComponentValue()` to return data from the component to the Python script:
+
+```javascript
+// Set value in frontend:
+Streamlit.setComponentValue(3.14);
+```
+
+```python
+# Access value in Python:
+result = my_component(greeting="Hello", name="Streamlit")
+st.write("result = ", result) # result = 3.14
+```
+
+When you call `Streamlit.setComponentValue(new_value)`, that new value is sent to Streamlit, which then _re-executes the Python script from top to bottom_. When the script is re-executed, the call to `my_component(...)` will return the new value.
+
+From a _code flow_ perspective, it appears that you're transmitting data synchronously with the frontend: Python sends the arguments to JavaScript, and JavaScript returns a value to Python, all in a single function call! But in reality this is all happening _asynchronously_, and it's the re-execution of the Python script that achieves the sleight of hand.
+
+- Use `Streamlit.setFrameHeight()` to control the height of your component. By default, the React template calls this automatically (see `StreamlitComponentBase.componentDidUpdate()`). You can override this behavior if you need more control.
+- There's a tiny bit of magic in the last line of the file: `export default withStreamlitConnection(MyComponent)` - this does some handshaking with Streamlit, and sets up the mechanisms for bi-directional data communication.
+
+#### Typescript-only
 
 ### Python API
 
