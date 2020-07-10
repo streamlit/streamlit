@@ -120,7 +120,7 @@ Because a Streamlit Component is just a little webpage that gets rendered into a
 
 #### React
 
-The React-based template is in `frontend/src/MyComponent.tsx`.
+The React-based template is in `template/my_component/frontend/src/MyComponent.tsx`.
 
 - `MyComponent.render()` is called automatically when the component needs to be re-rendered (just like in any React app)
 - Arguments passed from the Python script are available via the `this.props.args` dictionary:
@@ -157,6 +157,27 @@ From a _code flow_ perspective, it appears that you're transmitting data synchro
 - There's a tiny bit of magic in the last line of the file: `export default withStreamlitConnection(MyComponent)` - this does some handshaking with Streamlit, and sets up the mechanisms for bi-directional data communication.
 
 #### Typescript-only
+
+The Typescript-only template is in `template-reactless/my_component/frontend/src/MyComponent.tsx`.
+
+This template has much more code than its React sibling, in that all the mechanics of handshaking, setting up event listeners, and updating the component's frame height are done manually. The React version of the template handles most of these details automatically.
+
+- Towards the bottom of the source file, the template calls `Streamlit.setComponentReady()` to tell Streamlit it's ready to start receiving data. (You'll generally want to do this after creating and loading everything that the component relies on.)
+- It subscribes to `Streamlit.RENDER_EVENT` to be notified of when to redraw. (This event won't be fired until `setComponentReady` is called)
+- Within its `onRender` event handler, it accesses the arguments passed in the Python script via `event.details.args`
+- It sends data back to the Python script in the same way that the React template does - clicking on the "Click Me!" button calls `Streamlit.setComponentValue()`
+- It informs Streamlit when its height may have changed via `Streamlit.setFrameHeight()`
+
+#### Other frontend details
+
+- Because you're hosting your component from a dev server (via `npm run start`), any changes you make should be automatically reflected in the Streamlit app when you save.
+- If you want to add more packages to your component, just `npm add` them from within your component's `frontend/` directory.
+
+```shell
+$ npm add baseui
+```
+
+- To build a static version of your component, run `npm run build`. See [Prepare your Component](http://localhost:8000/publish_streamlit_components.html) for more information
 
 ### Python API
 

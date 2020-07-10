@@ -76,7 +76,9 @@ With your wheel created, the final step is to upload to PyPI. The instructions h
     python -m pip install --index-url https://test.pypi.org/simple/ --no-deps example-pkg-YOUR-USERNAME-HERE
    ```
 
-If all goes well, you're ready to upload your library to PyPI. Follow the instructions at [https://packaging.python.org/tutorials/packaging-projects/#next-steps](https://packaging.python.org/tutorials/packaging-projects/#next-steps) and...Congratulations, you've created a publicly-available Streamlit Component!
+If all goes well, you're ready to upload your library to PyPI by following the instructions at [https://packaging.python.org/tutorials/packaging-projects/#next-steps](https://packaging.python.org/tutorials/packaging-projects/#next-steps).
+
+Congratulations, you've created a publicly-available Streamlit Component!
 
 ## Promote your Component!
 
