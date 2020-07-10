@@ -637,10 +637,12 @@ article ul li {
   left: 50vw !important;
 }
 
+/* Add spacing between bottom of content and previous/next buttons */
 footer {
   padding-top: 10px;
 }
 
+/* Tighten spacing for lists, so that top and bottom spacing around p looks even */
 .rst-content .section ol p,
 .rst-content .section ul p {
   margin-bottom: 5px;

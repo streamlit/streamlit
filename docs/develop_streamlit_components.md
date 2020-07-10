@@ -60,4 +60,49 @@ To make the process of creating bi-directional Streamlit Components easier, we'v
 
 ### Development Environment Setup
 
-TODO: Tim write?
+To build a Streamlit Component, you need the following installed in your development environment:
+
+- Python 3.6+
+- Streamlit 0.63+
+- [nodejs](https://nodejs.org/en/)
+- [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
+
+Clone the [component-template GitHub repo](https://github.com/streamlit/component-template), then decide whether you want to use the React.js (["template"](https://github.com/streamlit/component-template/tree/master/template-reactless)) or plain TypeScript (["template-reactless"](https://github.com/streamlit/component-template/tree/master/template-reactless)) template.
+
+1. Initialize and build the component template frontend from the terminal:
+
+   ```shell
+   # React template
+   $ template/my_component/frontend
+   $ npm install    # Initialize the project and install npm dependencies
+   $ npm run start  # Start the Webpack dev server
+
+   # or
+
+   # TypeScript-only template
+   $ template-reactless/my_component/frontend
+   $ npm install    # Initialize the project and install npm dependencies
+   $ npm run start  # Start the Webpack dev server
+   ```
+
+2. _From a separate terminal_, run the Streamlit app (Python) that declares and uses the component:
+
+   ```shell
+   # React template
+   $ cd template
+   $ . venv/bin/activate # or similar to activate the venv/conda environment where Streamlit is installed
+   $ streamlit run my_component/__init__.py # run the example
+
+   # or
+
+   # TypeScript-only template
+   $ cd template-reactless
+   $ . venv/bin/activate # or similar to activate the venv/conda environment where Streamlit is installed
+   $ streamlit run my_component/__init__.py # run the example
+   ```
+
+After running the steps above, you should see a Streamlit app in your browser that looks like this:
+
+![Streamlit Component Example App](_static/img/component_demo_example.png)
+
+The example app from the template shows how bi-directional communication is implemented. The Streamlit Component displays a button (`Python -> JavaScript`), and the end-user can click the button. Each time the button is clicked, the JavaScript front-end increments the counter value and passes it back to Python (`JavaScript -> Python`), which is then displayed by Streamlit (`Python -> JavaScript`).
