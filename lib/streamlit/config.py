@@ -577,10 +577,11 @@ _create_option(
 _create_section("deprecation", "Configuration to show or hide deprecation warnings.")
 
 _create_option(
-    "deprecation.v00_064_showfileUploaderEncoding",
-    description="Disable the warning for the deprecation of file uploader encoding.",
+    "deprecation.v0_64_showfileUploaderEncoding",
+    description="Set to false to disable the deprecation warning for the file uploader encoding.",
     default_val="True",
     scriptable="True",
+    type_=bool,
 )
 
 # Config Section: S3 #

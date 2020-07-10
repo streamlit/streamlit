@@ -229,27 +229,27 @@ class NoValue(object):
 class FileUploaderEncodingWarning(StreamlitDeprecationWarning):
     def __init__(self):
         msg = self._get_message()
-        config_option = "deprecation.v00_064_showfileUploaderEncoding"
+        config_option = "deprecation.v0_64_showfileUploaderEncoding"
         super(FileUploaderEncodingWarning, self).__init__(
             msg=msg, config_option=config_option
         )
 
     def _get_message(self):
         return """
-In the beginning of Q4, we will be deprecating the decoding of uploaded files.
-This means that all files will be returned as binary buffers.
+The behavior of `st.file_uploader` will soon change to no longer autodetect
+the file's encoding. This means that _all files_ will be returned as binary buffers.
 
-If you are expecting a text buffer in your file processing, we recommend wrapping
-your returned buffer in a `TextIOWrapper`. To learn more about `TextIOWrapper` check
-out the python documentation:
-https://docs.python.org/3/library/io.html#io.TextIOWrapper
+This change will go in effect after October 31, 2020.
+
+If you are expecting a text buffer, you can future-proof your code now by
+wrapping the returned buffer in a [`TextIOWrapper`](https://docs.python.org/3/library/io.html#io.TextIOWrapper),
+as shown below:
 
 ```
 import io
-import streamlit as st
 
-uploaded_file = st.file_uploader(...)
-text_io = io.TextIOWrapper(uploaded_file)
+file_buffer = st.file_uploader(...)
+text_io = io.TextIOWrapper(file_buffer)
 ```
             """
 
@@ -2170,7 +2170,7 @@ class DeltaGenerator(object):
         encoding = kwargs.get("encoding")
         has_encoding = "encoding" in kwargs
         show_deprecation_warning = config.get_option(
-            "deprecation.v00_064_showfileUploaderEncoding"
+            "deprecation.v0_64_showfileUploaderEncoding"
         )
 
         if show_deprecation_warning and (

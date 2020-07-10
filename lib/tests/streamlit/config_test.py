@@ -276,7 +276,7 @@ class ConfigTest(unittest.TestCase):
                 "browser.serverPort",
                 "client.caching",
                 "client.displayEnabled",
-                "deprecation.v00_064_showfileUploaderEncoding",
+                "deprecation.v0_64_showfileUploaderEncoding",
                 "global.developmentMode",
                 "global.disableWatchdogWarning",
                 "global.logLevel",

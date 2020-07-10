@@ -15,8 +15,10 @@
 """This is a script which is run when the Streamlit package is executed."""
 
 from streamlit import config as _config
+from streamlit.ConfigOption import _config_key_format
 
 import os
+import re
 from typing import Optional
 
 import click
@@ -99,8 +101,14 @@ def _apply_config_options_from_cli(kwargs):
 
     for config_option in kwargs:
         if kwargs[config_option] is not None:
-            config_option_def_key = config_option.replace("_", ".")
-
+            config_match = re.match(_config_key_format, config_option)
+            if config_match:
+                # Options come in as converted click options with the format
+                # `section_name (`see _convert_config_option_to_click_option()`).
+                # Applying our config regex to replace the seperator only from `_` to `.`
+                config_option_def_key = "{0}.{1}".format(config_match.group("section"), config_match.group("name"))
+            else:
+                config_option_def_key = config_option.replace("_", ".")
             _config._set_option(
                 config_option_def_key,
                 kwargs[config_option],
@@ -206,7 +214,6 @@ def main_run(target, args=None, **kwargs):
 
     """
     from validators import url
-
     _apply_config_options_from_cli(kwargs)
 
     _, extension = os.path.splitext(target)
