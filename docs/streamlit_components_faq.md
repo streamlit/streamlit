@@ -2,7 +2,9 @@
 
 1. **How do Streamlit Components differ from functionality provided in the base Streamlit package?**
 
-   Tim or Henrik
+   - Streamlit Components are wrapped up in an iframe, which gives you the ability to do whatever you want (within the iframe) using any web technology you like.
+
+   - There is a strict message protocol between components and Streamlit, which makes possible for components to act as widgets. As Streamlit components are wrapped in iframe, they cannot modify their parent’s DOM (a.k.a the Streamlit report), which ensures that Streamlit is always secure even with user-written components.
 
 2. **What types of things _*aren't possible*_ with Streamlit Components?**
 
@@ -14,7 +16,7 @@
 
 3. **How do I build a Component that can be displayed in the sidebar?**
 
-   Tim or Henrik
+   Currently, it is not possible to create a component in the sidebar, but we’re hoping to release that functionality in a future release.
 
 4. **My Component seems to be blinking/stuttering...how do I fix that?**
 
