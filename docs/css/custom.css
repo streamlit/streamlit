@@ -640,3 +640,8 @@ article ul li {
 footer {
   padding-top: 10px;
 }
+
+ol p,
+ul p {
+  margin-bottom: 5px;
+}
