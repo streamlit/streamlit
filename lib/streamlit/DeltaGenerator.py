@@ -665,8 +665,8 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        body : str
-            The text to display.
+        title : str
+            The text to render as a title.
 
         Example
         -------

@@ -22,11 +22,9 @@ def set_favicon(
 ):
     """Set the page favicon to the specified image or emoji.
 
-    This supports all the same parameters as `st.image` such as numpy arrays
-    or URLs.
-
+    You can use the same image parameters as `st.image`, like URLs or numpy arrays.
     You can also use an emoji as a favicon, either directly or with a shortcode [1].
-    Emojis are rendered courtesy of Twemoji [2].
+    Favicon emojis are loaded from a CDN, courtesy of Twitter and MaxCDN [2].
 
     [1] https://www.webfx.com/tools/emoji-cheat-sheet/
     [2] https://twemoji.twitter.com/
