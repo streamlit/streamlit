@@ -40,7 +40,6 @@ class ConfigOptionTest(unittest.TestCase):
             ("section.name", "section", "name"),
             ("section.numbered12", "section", "numbered12"),
             ("numbered1.allowCaps", "numbered1", "allowCaps"),
-            ("section_configName", "section", "configName"),
         ]
     )
     def test_valid_keys(self, key, section, name):
