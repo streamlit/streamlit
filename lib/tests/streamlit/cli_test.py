@@ -192,7 +192,6 @@ class CliTest(unittest.TestCase):
             "browser_serverAddress": "localhost",
             "global_minCachedMessageSize": None,
             "global_logLevel": "error",
-            "deprecation_v0_64_showfileUploaderEncoding": False,
         }
 
         _apply_config_options_from_cli(kwargs)
@@ -215,11 +214,6 @@ class CliTest(unittest.TestCase):
                 mock.call(
                     "global.logLevel",
                     "error",
-                    "command-line argument or environment variable",
-                ),
-                mock.call(
-                    "deprecation.v0_64_showfileUploaderEncoding",
-                    False,
                     "command-line argument or environment variable",
                 ),
             ],

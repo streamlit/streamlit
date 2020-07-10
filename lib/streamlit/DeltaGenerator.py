@@ -229,7 +229,7 @@ class NoValue(object):
 class FileUploaderEncodingWarning(StreamlitDeprecationWarning):
     def __init__(self):
         msg = self._get_message()
-        config_option = "deprecation.v0_64_showfileUploaderEncoding"
+        config_option = "deprecation.showfileUploaderEncoding"
         super(FileUploaderEncodingWarning, self).__init__(
             msg=msg, config_option=config_option
         )
@@ -2170,7 +2170,7 @@ class DeltaGenerator(object):
         encoding = kwargs.get("encoding")
         has_encoding = "encoding" in kwargs
         show_deprecation_warning = config.get_option(
-            "deprecation.v0_64_showfileUploaderEncoding"
+            "deprecation.showfileUploaderEncoding"
         )
 
         if show_deprecation_warning and (

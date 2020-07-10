@@ -22,7 +22,13 @@ from streamlit.ConfigOption import ConfigOption, DeprecationError
 
 class ConfigOptionTest(unittest.TestCase):
     @parameterized.expand(
-        [("missingKey",), (".missingSection",), ("has spaces",), ("_.key")]
+        [
+            ("missingKey",),
+            (".missingSection",),
+            ("has spaces",),
+            ("_.key"),
+            ("section.v_1_name"),
+        ]
     )
     def test_invalid_key(self, key):
         with pytest.raises(AssertionError) as e:
@@ -32,10 +38,9 @@ class ConfigOptionTest(unittest.TestCase):
     @parameterized.expand(
         [
             ("section.name", "section", "name"),
-            ("section.v_1_name", "section", "v_1_name"),
             ("section.numbered12", "section", "numbered12"),
             ("numbered1.allowCaps", "numbered1", "allowCaps"),
-            ("section_configName", "section", "configName")
+            ("section_configName", "section", "configName"),
         ]
     )
     def test_valid_keys(self, key, section, name):

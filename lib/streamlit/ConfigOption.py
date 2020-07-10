@@ -22,29 +22,6 @@ from typing import Any, Callable, Optional
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
-_config_key_format = (
-    # Capture a group called "section"
-    r"(?P<section>"
-        # Matching text comprised of letters and numbers that begins
-        # with a lowercase letter with an optional "_" preceeding it.
-        # Examples: "_section", "section1"
-        "\_?[a-z][a-z0-9]*"
-    ")"
-    # Capture a group called "name"
-    "(?P<seperator>"
-        # Allows for . or _ to accomodate for config to envvar conversions
-        "(\.|_)"
-    ")"
-    # Capture a group called "name"
-    "(?P<name>"
-        # Optional version number
-        "[v_0-9]*"
-        # Match text comprised of letters and numbers beginning with a
-        # lowercase letter.
-        # Examples: "name", "nameOfConfig", "config1"
-        "[a-z][a-zA-Z0-9]*"
-    ")$"
-)
 
 
 class ConfigOption(object):
@@ -162,8 +139,25 @@ class ConfigOption(object):
         """
         # Parse out the section and name.
         self.key = key
-
-        match = re.match(_config_key_format, self.key)
+        key_format = (
+            # Capture a group called "section"
+            r"(?P<section>"
+            # Matching text comprised of letters and numbers that begins
+            # with a lowercase letter with an optional "_" preceeding it.
+            # Examples: "_section", "section1"
+            "\_?[a-z][a-z0-9]*"
+            ")"
+            # Seperator between groups
+            "\."
+            # Capture a group called "name"
+            "(?P<name>"
+            # Match text comprised of letters and numbers beginning with a
+            # lowercase letter.
+            # Examples: "name", "nameOfConfig", "config1"
+            "[a-z][a-zA-Z0-9]*"
+            ")$"
+        )
+        match = re.match(key_format, self.key)
         assert match, 'Key "%s" has invalid format.' % self.key
         self.section, self.name = match.group("section"), match.group("name")
 
