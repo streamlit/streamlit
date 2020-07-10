@@ -20,9 +20,16 @@ from streamlit.elements import image_proto
 def set_favicon(
     image, clamp=False, channels="RGB", format="JPEG",
 ):
-    """Set the page favicon to the specified image.
+    """Set the page favicon to the specified image or emoji.
 
-    This supports the same parameters as `st.image`.
+    This supports all the same parameters as `st.image` such as numpy arrays
+    or URLs.
+
+    You can also use an emoji as a favicon, either directly or with a shortcode [1].
+    Emojis are rendered courtesy of Twemoji [2].
+
+    [1] https://www.webfx.com/tools/emoji-cheat-sheet/
+    [2] https://twemoji.twitter.com/
 
     Note: This is a beta feature. See
     https://docs.streamlit.io/en/latest/pre_release_features.html for more
@@ -35,6 +42,8 @@ def set_favicon(
         OR a color image of shape (w,h,3)
         OR an RGBA image of shape (w,h,4)
         OR a URL to fetch the image from
+        OR an emoji like '🦈'
+        OR an emoji shortcode like ':shark:'
     clamp : bool
         Clamp image pixel values to a valid range ([0-255] per channel).
         This is only meaningful for byte array images; the parameter is
@@ -52,10 +61,7 @@ def set_favicon(
 
     Example
     -------
-    >>> from PIL import Image
-    >>> image = Image.open('sunrise.jpg')
-    >>>
-    >>> st.beta_set_favicon(image)
+    >>> st.beta_set_favicon('https://docs.streamlit.io/en/latest/_static/logomark_website.png')
 
     """
 
