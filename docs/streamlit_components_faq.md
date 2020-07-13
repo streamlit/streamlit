@@ -1,5 +1,7 @@
 # Streamlit Components Frequently Asked Questions
 
+Below are some selected questions we've received about Streamlit Components. If you don't find your question here, take a look on the Streamlit community forum via the [Components tag](https://discuss.streamlit.io/tag/custom-components).
+
 1. **How do Streamlit Components differ from functionality provided in the base Streamlit package?**
 
    - Streamlit Components are wrapped up in an iframe, which gives you the ability to do whatever you want (within the iframe) using any web technology you like.

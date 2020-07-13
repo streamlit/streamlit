@@ -82,6 +82,6 @@ Congratulations, you've created a publicly-available Streamlit Component!
 
 ## Promote your Component!
 
-We'd love to help you share your Component with the Streamlit Community! To share it, please post on the [Streamlit 'Show the Community!' Forum](https://discuss.streamlit.io/c/streamlit-examples/9) with the title similar to "New Component: `<your component name>`, a new way to do X".
+We'd love to help you share your Component with the Streamlit Community! To share it, please post on the [Streamlit 'Show the Community!' Forum category](https://discuss.streamlit.io/c/streamlit-examples/9) with the title similar to "New Component: `<your component name>`, a new way to do X".
 
 You can also Tweet at us [@streamlit](https://twitter.com/streamlit) so that we can retweet your announcement for you.
