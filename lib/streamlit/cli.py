@@ -17,6 +17,7 @@
 from streamlit import config as _config
 
 import os
+import re
 from typing import Optional
 
 import click
@@ -100,7 +101,6 @@ def _apply_config_options_from_cli(kwargs):
     for config_option in kwargs:
         if kwargs[config_option] is not None:
             config_option_def_key = config_option.replace("_", ".")
-
             _config._set_option(
                 config_option_def_key,
                 kwargs[config_option],
