@@ -27,22 +27,50 @@ class PollingFileWatcherTest(unittest.TestCase):
 
     def setUp(self):
         super(PollingFileWatcherTest, self).setUp()
-        self.util_patcher = mock.patch("streamlit.watcher.PollingFileWatcher.util")
-        self.os_patcher = mock.patch("streamlit.watcher.PollingFileWatcher.os")
-        self.mock_util = self.util_patcher.start()
-        self.mock_os = self.os_patcher.start()
+        self.util_patch = mock.patch("streamlit.watcher.PollingFileWatcher.util")
+        self.util_mock = self.util_patch.start()
+
+        self.os_patch = mock.patch("streamlit.watcher.PollingFileWatcher.os")
+        self.os_mock = self.os_patch.start()
+
+        # Patch PollingFileWatcher's thread pool executor. We want to do
+        # all of our test polling on the test thread, so we accumulate
+        # tasks here and run them manually via `_run_executor_tasks`.
+        self._executor_tasks = []
+        self.executor_patch = mock.patch(
+            "streamlit.watcher.PollingFileWatcher._executor.submit",
+            new_callable=self._submit_executor_task,
+        )
+        self.executor_patch.start()
+
+        # Patch PollingFileWatcher's `time.sleep` to no-op, so that the tasks
+        # submitted to our mock executor don't block.
+        self.sleep_patch = mock.patch("streamlit.watcher.PollingFileWatcher.time.sleep")
+        self.sleep_patch.start()
 
     def tearDown(self):
         super(PollingFileWatcherTest, self).tearDown()
-        self.util_patcher.stop()
-        self.os_patcher.stop()
+        self.util_patch.stop()
+        self.os_patch.stop()
+        self.executor_patch.stop()
+        self.sleep_patch.stop()
+
+    def _submit_executor_task(self, task):
+        self._executor_tasks.append(task)
+
+    def _run_executor_tasks(self):
+        """Run all tasks that have been submitted to our mock executor."""
+        tasks = self._executor_tasks
+        self._executor_tasks = []
+        for task in tasks:
+            task()
 
     def test_file_watch_and_callback(self):
         """Test that when a file is modified, the callback is called."""
         callback = mock.Mock()
 
-        self.mock_os.stat = lambda x: FakeStat(101)
-        self.mock_util.calc_md5_with_blocking_retries = lambda x: "1"
+        self.os_mock.stat = lambda x: FakeStat(101)
+        self.util_mock.calc_md5_with_blocking_retries = lambda x: "1"
 
         watcher = PollingFileWatcher.PollingFileWatcher("/this/is/my/file.py", callback)
 
@@ -52,8 +80,8 @@ class PollingFileWatcherTest(unittest.TestCase):
             pass
         callback.assert_not_called()
 
-        self.mock_os.stat = lambda x: FakeStat(102)
-        self.mock_util.calc_md5_with_blocking_retries = lambda x: "2"
+        self.os_mock.stat = lambda x: FakeStat(102)
+        self.util_mock.calc_md5_with_blocking_retries = lambda x: "2"
 
         time.sleep(4 * PollingFileWatcher._POLLING_PERIOD_SECS)
         callback.assert_called_once()
@@ -64,8 +92,8 @@ class PollingFileWatcherTest(unittest.TestCase):
         """Test that we ignore files with same mtime."""
         callback = mock.Mock()
 
-        self.mock_os.stat = lambda x: FakeStat(101)
-        self.mock_util.calc_md5_with_blocking_retries = lambda x: "1"
+        self.os_mock.stat = lambda x: FakeStat(101)
+        self.util_mock.calc_md5_with_blocking_retries = lambda x: "1"
 
         watcher = PollingFileWatcher.PollingFileWatcher("/this/is/my/file.py", callback)
 
@@ -76,7 +104,7 @@ class PollingFileWatcherTest(unittest.TestCase):
         callback.assert_not_called()
 
         # self.os.stat = lambda x: FakeStat(102)  # Same mtime!
-        self.mock_util.calc_md5_with_blocking_retries = lambda x: "2"
+        self.util_mock.calc_md5_with_blocking_retries = lambda x: "2"
 
         # This is the test:
         try:
@@ -91,8 +119,8 @@ class PollingFileWatcherTest(unittest.TestCase):
         """Test that we ignore files with same md5."""
         callback = mock.Mock()
 
-        self.mock_os.stat = lambda x: FakeStat(101)
-        self.mock_util.calc_md5_with_blocking_retries = lambda x: "1"
+        self.os_mock.stat = lambda x: FakeStat(101)
+        self.util_mock.calc_md5_with_blocking_retries = lambda x: "1"
 
         watcher = PollingFileWatcher.PollingFileWatcher("/this/is/my/file.py", callback)
 
@@ -102,7 +130,7 @@ class PollingFileWatcherTest(unittest.TestCase):
             pass
         callback.assert_not_called()
 
-        self.mock_os.stat = lambda x: FakeStat(102)
+        self.os_mock.stat = lambda x: FakeStat(102)
         # Same MD5:
         # self.mock_util.calc_md5_with_blocking_retries = lambda x: '2'
 
@@ -122,8 +150,8 @@ class PollingFileWatcherTest(unittest.TestCase):
         mod_count = [0]
 
         def modify_mock_file():
-            self.mock_os.stat = lambda x: FakeStat(mod_count[0])
-            self.mock_util.calc_md5_with_blocking_retries = (
+            self.os_mock.stat = lambda x: FakeStat(mod_count[0])
+            self.util_mock.calc_md5_with_blocking_retries = (
                 lambda x: "%d" % mod_count[0]
             )
 
