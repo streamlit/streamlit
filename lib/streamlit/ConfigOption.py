@@ -108,6 +108,7 @@ class ConfigOption(object):
         ----------
         key : str
             Should be of the form "section.optionName"
+            Examples: server.name, deprecation.v1_0_featureName
         description : str
             Like a comment for the config option.
         default_val : anything
@@ -138,7 +139,24 @@ class ConfigOption(object):
         """
         # Parse out the section and name.
         self.key = key
-        key_format = r"(?P<section>\_?[a-z][a-z0-9]*)\.(?P<name>[a-z][a-zA-Z0-9]*)$"
+        key_format = (
+            # Capture a group called "section"
+            r"(?P<section>"
+            # Matching text comprised of letters and numbers that begins
+            # with a lowercase letter with an optional "_" preceeding it.
+            # Examples: "_section", "section1"
+            "\_?[a-z][a-z0-9]*"
+            ")"
+            # Seperator between groups
+            "\."
+            # Capture a group called "name"
+            "(?P<name>"
+            # Match text comprised of letters and numbers beginning with a
+            # lowercase letter.
+            # Examples: "name", "nameOfConfig", "config1"
+            "[a-z][a-zA-Z0-9]*"
+            ")$"
+        )
         match = re.match(key_format, self.key)
         assert match, 'Key "%s" has invalid format.' % self.key
         self.section, self.name = match.group("section"), match.group("name")
