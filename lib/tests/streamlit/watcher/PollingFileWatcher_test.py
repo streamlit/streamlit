@@ -19,9 +19,6 @@ import unittest
 from streamlit.watcher import PollingFileWatcher
 
 
-PollingFileWatcher._POLLING_PERIOD_SECS = 0.001
-
-
 class PollingFileWatcherTest(unittest.TestCase):
     """Test PollingFileWatcher."""
 
@@ -38,10 +35,10 @@ class PollingFileWatcherTest(unittest.TestCase):
         # tasks here and run them manually via `_run_executor_tasks`.
         self._executor_tasks = []
         self.executor_patch = mock.patch(
-            "streamlit.watcher.PollingFileWatcher._executor.submit",
-            new_callable=self._submit_executor_task,
+            "streamlit.watcher.PollingFileWatcher.PollingFileWatcher._executor",
         )
-        self.executor_patch.start()
+        executor_mock = self.executor_patch.start()
+        executor_mock.submit = self._submit_executor_task
 
         # Patch PollingFileWatcher's `time.sleep` to no-op, so that the tasks
         # submitted to our mock executor don't block.
@@ -56,6 +53,7 @@ class PollingFileWatcherTest(unittest.TestCase):
         self.sleep_patch.stop()
 
     def _submit_executor_task(self, task):
+        """Submit a new task to our mock executor."""
         self._executor_tasks.append(task)
 
     def _run_executor_tasks(self):
@@ -74,16 +72,13 @@ class PollingFileWatcherTest(unittest.TestCase):
 
         watcher = PollingFileWatcher.PollingFileWatcher("/this/is/my/file.py", callback)
 
-        try:
-            time.sleep(2 * PollingFileWatcher._POLLING_PERIOD_SECS)
-        except AssertionError:
-            pass
+        self._run_executor_tasks()
         callback.assert_not_called()
 
         self.os_mock.stat = lambda x: FakeStat(102)
         self.util_mock.calc_md5_with_blocking_retries = lambda x: "2"
 
-        time.sleep(4 * PollingFileWatcher._POLLING_PERIOD_SECS)
+        self._run_executor_tasks()
         callback.assert_called_once()
 
         watcher.close()
@@ -97,20 +92,14 @@ class PollingFileWatcherTest(unittest.TestCase):
 
         watcher = PollingFileWatcher.PollingFileWatcher("/this/is/my/file.py", callback)
 
-        try:
-            time.sleep(2 * PollingFileWatcher._POLLING_PERIOD_SECS)
-        except AssertionError:
-            pass
+        self._run_executor_tasks()
         callback.assert_not_called()
 
         # self.os.stat = lambda x: FakeStat(102)  # Same mtime!
         self.util_mock.calc_md5_with_blocking_retries = lambda x: "2"
 
         # This is the test:
-        try:
-            time.sleep(2 * PollingFileWatcher._POLLING_PERIOD_SECS)
-        except AssertionError:
-            pass
+        self._run_executor_tasks()
         callback.assert_not_called()
 
         watcher.close()
@@ -124,10 +113,7 @@ class PollingFileWatcherTest(unittest.TestCase):
 
         watcher = PollingFileWatcher.PollingFileWatcher("/this/is/my/file.py", callback)
 
-        try:
-            time.sleep(2 * PollingFileWatcher._POLLING_PERIOD_SECS)
-        except AssertionError:
-            pass
+        self._run_executor_tasks()
         callback.assert_not_called()
 
         self.os_mock.stat = lambda x: FakeStat(102)
@@ -135,10 +121,7 @@ class PollingFileWatcherTest(unittest.TestCase):
         # self.mock_util.calc_md5_with_blocking_retries = lambda x: '2'
 
         # This is the test:
-        try:
-            time.sleep(2 * PollingFileWatcher._POLLING_PERIOD_SECS)
-        except AssertionError:
-            pass
+        self._run_executor_tasks()
         callback.assert_not_called()
 
         watcher.close()
@@ -157,13 +140,6 @@ class PollingFileWatcherTest(unittest.TestCase):
 
             mod_count[0] += 1
 
-        def sleep():
-            try:
-                # TODO: Remove dependency on time.sleep!
-                time.sleep(5 * PollingFileWatcher._POLLING_PERIOD_SECS)
-            except AssertionError:
-                pass
-
         modify_mock_file()
 
         callback1 = mock.Mock()
@@ -172,14 +148,14 @@ class PollingFileWatcherTest(unittest.TestCase):
         watcher1 = PollingFileWatcher.PollingFileWatcher(filename, callback1)
         watcher2 = PollingFileWatcher.PollingFileWatcher(filename, callback2)
 
-        sleep()
+        self._run_executor_tasks()
 
         callback1.assert_not_called()
         callback2.assert_not_called()
 
         # "Modify" our file
         modify_mock_file()
-        sleep()
+        self._run_executor_tasks()
 
         self.assertEqual(callback1.call_count, 1)
         self.assertEqual(callback2.call_count, 1)
@@ -189,7 +165,7 @@ class PollingFileWatcherTest(unittest.TestCase):
 
         # Modify our file again
         modify_mock_file()
-        sleep()
+        self._run_executor_tasks()
 
         self.assertEqual(callback1.call_count, 1)
         self.assertEqual(callback2.call_count, 2)
