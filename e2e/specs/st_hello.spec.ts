@@ -25,7 +25,7 @@ describe("hello", () => {
   it("displays the welcome message", () => {
     cy.get(".element-container .stMarkdown h1").should(
       "contain",
-      "Welcome to Streamlit!"
+      "Welcome to Buglit!"
     );
 
     cy.get(".streamlit-dialog").should("not.exist");

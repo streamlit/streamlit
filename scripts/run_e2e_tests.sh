@@ -171,11 +171,11 @@ fi
 
 # Test core streamlit elements
 
-for file in ../$specs_parent_folder/scripts/*.py
-do
-  snapshots_flag_for_this_run=$snapshots_flag
-  run_test run $file
-done
+# for file in ../$specs_parent_folder/scripts/*.py
+# do
+#   snapshots_flag_for_this_run=$snapshots_flag
+#   run_test run $file
+# done
 
 if [ "$any_failed" = "true" ]
 then
