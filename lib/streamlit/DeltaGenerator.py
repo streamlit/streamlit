@@ -33,7 +33,7 @@ from streamlit import cursor
 from streamlit import type_util
 from streamlit.ReportThread import get_report_ctx
 from streamlit.errors import DuplicateWidgetID
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitDeprecationWarning
 from streamlit.errors import NoSessionContext
 from streamlit.file_util import get_encoded_file_data
 from streamlit.js_number import JSNumber
@@ -255,6 +255,34 @@ class NoValue(object):
     """
 
     pass
+
+
+class FileUploaderEncodingWarning(StreamlitDeprecationWarning):
+    def __init__(self):
+        msg = self._get_message()
+        config_option = "deprecation.showfileUploaderEncoding"
+        super(FileUploaderEncodingWarning, self).__init__(
+            msg=msg, config_option=config_option
+        )
+
+    def _get_message(self):
+        return """
+The behavior of `st.file_uploader` will soon change to no longer autodetect
+the file's encoding. This means that _all files_ will be returned as binary buffers.
+
+This change will go in effect after October 31, 2020.
+
+If you are expecting a text buffer, you can future-proof your code now by
+wrapping the returned buffer in a [`TextIOWrapper`](https://docs.python.org/3/library/io.html#io.TextIOWrapper),
+as shown below:
+
+```
+import io
+
+file_buffer = st.file_uploader(...)
+text_io = io.TextIOWrapper(file_buffer)
+```
+            """
 
 
 class DeltaGenerator(object):
@@ -2373,9 +2401,7 @@ class DeltaGenerator(object):
         return current_value[0] if single_value else tuple(current_value)
 
     @_with_element
-    def file_uploader(
-        self, element, label, type=None, encoding="auto", key=None,
-    ):
+    def file_uploader(self, element, label, type=None, key=None, **kwargs):
         """Display a file uploader widget.
 
         By default, uploaded files are limited to 200MB. You can configure
@@ -2425,6 +2451,20 @@ class DeltaGenerator(object):
 
         if isinstance(type, str):
             type = [type]
+
+        encoding = kwargs.get("encoding")
+        has_encoding = "encoding" in kwargs
+        show_deprecation_warning = config.get_option(
+            "deprecation.showfileUploaderEncoding"
+        )
+
+        if show_deprecation_warning and (
+            (has_encoding and encoding is not None) or not has_encoding
+        ):
+            self.exception(FileUploaderEncodingWarning())
+
+        if not has_encoding:
+            encoding = "auto"
 
         element.file_uploader.label = label
         element.file_uploader.type[:] = type if type is not None else []

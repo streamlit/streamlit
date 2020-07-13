@@ -188,9 +188,10 @@ get_option = _config.get_option
 def set_option(key, value):
     """Set config option.
 
-    Currently, only two config options can be set within the script itself:
+    Currently, only the following config options can be set within the script itself:
         * client.caching
         * client.displayEnabled
+        * deprecation.*
 
     Calling with any other options will raise StreamlitAPIException.
 
