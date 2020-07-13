@@ -16,6 +16,7 @@ import threading
 from collections import deque
 from collections import namedtuple
 from enum import Enum
+from typing import Any, Tuple, Deque
 
 from streamlit.widgets import coalesce_widget_states
 
@@ -49,8 +50,7 @@ class ScriptRequestQueue(object):
 
     def __init__(self):
         self._lock = threading.Lock()
-        # TODO(nate): Switch to Deque[Tuple[ScriptRequest, Any]] when 3.6 is required.
-        self._queue = deque()  # type: ignore[var-annotated]
+        self._queue = deque()  # type: Deque[Tuple[ScriptRequest, Any]]
 
     @property
     def has_request(self):
