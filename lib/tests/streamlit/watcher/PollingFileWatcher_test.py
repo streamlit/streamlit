@@ -30,7 +30,7 @@ class PollingFileWatcherTest(unittest.TestCase):
         self.util_patcher = mock.patch("streamlit.watcher.PollingFileWatcher.util")
         self.os_patcher = mock.patch("streamlit.watcher.PollingFileWatcher.os")
         self.mock_util = self.util_patcher.start()
-        self.os = self.os_patcher.start()
+        self.mock_os = self.os_patcher.start()
 
     def tearDown(self):
         super(PollingFileWatcherTest, self).tearDown()
@@ -44,7 +44,7 @@ class PollingFileWatcherTest(unittest.TestCase):
         def cb(x):
             cb_marker()
 
-        self.os.stat = lambda x: FakeStat(101)
+        self.mock_os.stat = lambda x: FakeStat(101)
         self.mock_util.calc_md5_with_blocking_retries = lambda x: "1"
 
         ro = PollingFileWatcher.PollingFileWatcher("/this/is/my/file.py", cb)
@@ -55,7 +55,7 @@ class PollingFileWatcherTest(unittest.TestCase):
             pass
         cb_marker.assert_not_called()
 
-        self.os.stat = lambda x: FakeStat(102)
+        self.mock_os.stat = lambda x: FakeStat(102)
         self.mock_util.calc_md5_with_blocking_retries = lambda x: "2"
 
         time.sleep(4 * PollingFileWatcher._POLLING_PERIOD_SECS)
@@ -70,7 +70,7 @@ class PollingFileWatcherTest(unittest.TestCase):
         def cb(x):
             cb_marker()
 
-        self.os.stat = lambda x: FakeStat(101)
+        self.mock_os.stat = lambda x: FakeStat(101)
         self.mock_util.calc_md5_with_blocking_retries = lambda x: "1"
 
         ro = PollingFileWatcher.PollingFileWatcher("/this/is/my/file.py", cb)
@@ -100,7 +100,7 @@ class PollingFileWatcherTest(unittest.TestCase):
         def cb(x):
             cb_marker()
 
-        self.os.stat = lambda x: FakeStat(101)
+        self.mock_os.stat = lambda x: FakeStat(101)
         self.mock_util.calc_md5_with_blocking_retries = lambda x: "1"
 
         ro = PollingFileWatcher.PollingFileWatcher("/this/is/my/file.py", cb)
@@ -111,7 +111,7 @@ class PollingFileWatcherTest(unittest.TestCase):
             pass
         cb_marker.assert_not_called()
 
-        self.os.stat = lambda x: FakeStat(102)
+        self.mock_os.stat = lambda x: FakeStat(102)
         # Same MD5:
         # self.mock_util.calc_md5_with_blocking_retries = lambda x: '2'
 
@@ -131,7 +131,7 @@ class PollingFileWatcherTest(unittest.TestCase):
         mod_count = [0]
 
         def modify_mock_file():
-            self.os.stat = lambda x: FakeStat(mod_count[0])
+            self.mock_os.stat = lambda x: FakeStat(mod_count[0])
             self.mock_util.calc_md5_with_blocking_retries = (
                 lambda x: "%d" % mod_count[0]
             )
