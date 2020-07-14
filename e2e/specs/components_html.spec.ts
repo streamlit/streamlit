@@ -19,8 +19,6 @@
 
 describe("components.html", () => {
   before(() => {
-    // Increasing timeout since we're requesting an external audio file
-    Cypress.config("defaultCommandTimeout", 10000);
     cy.visit("http://localhost:3000/");
   });
 
