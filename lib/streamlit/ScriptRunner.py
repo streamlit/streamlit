@@ -269,8 +269,8 @@ class ScriptRunner(object):
                 # Don't inherit any flags or "future" statements.
                 flags=0,
                 dont_inherit=1,
-                # Parameter not supported in Python2:
-                # optimize=-1,
+                # Use the default optimization options.
+                optimize=-1,
             )
 
         except BaseException as e:
