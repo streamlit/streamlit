@@ -177,7 +177,7 @@ This template has much more code than its React sibling, in that all the mechani
 $ npm add baseui
 ```
 
-- To build a static version of your component, run `npm run build`. See [Prepare your Component](http://localhost:8000/publish_streamlit_components.html) for more information
+- To build a static version of your component, run `npm run build`. See [Prepare your Component](publish_streamlit_components.html) for more information
 
 ### Python API
 
