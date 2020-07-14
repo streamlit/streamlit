@@ -294,7 +294,6 @@ class ConfigTest(unittest.TestCase):
                 "s3.accessKeyId",
                 "s3.bucket",
                 "s3.keyPrefix",
-                "s3.profile",
                 "s3.region",
                 "s3.secretAccessKey",
                 "s3.url",
