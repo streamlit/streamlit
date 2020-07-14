@@ -6,7 +6,7 @@ Below are some selected questions we've received about Streamlit Components. If 
 
    - Streamlit Components are wrapped up in an iframe, which gives you the ability to do whatever you want (within the iframe) using any web technology you like.
 
-   - There is a strict message protocol between components and Streamlit, which makes possible for components to act as widgets. As Streamlit components are wrapped in iframe, they cannot modify their parent’s DOM (a.k.a the Streamlit report), which ensures that Streamlit is always secure even with user-written components.
+   - There is a strict message protocol between components and Streamlit, which makes possible for components to act as widgets. As Streamlit Components are wrapped in iframe, they cannot modify their parent’s DOM (a.k.a the Streamlit report), which ensures that Streamlit is always secure even with user-written components.
 
 2. **What types of things _*aren't possible*_ with Streamlit Components?**
 
