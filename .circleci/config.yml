@@ -334,14 +334,13 @@ jobs:
             - ~/.nvm
             - ~/.cache
 
-      - slack/status:
-          fail_only: true
-          failure_message: ":blobonfire: Nightly job failed to release"
-          filters:
-            tags:
-              only: /^([0-9]+\.){3}dev[0-9]+/
-            branches:
-              ignore: /.*/
+      - when:
+          condition:
+            - equal: [/^([0-9]+\.){3}dev[0-9]+/, <<pipeline.git.tag>>]
+          steps:
+            - slack/status:
+                fail_only: true
+                failure_message: ":blobonfire: Nightly job failed to release"
 
   # The following inherits from python-3-8. In a few cases, steps are skipped
   # based on the name of the current job (see, e.g., "Run frontend tests").
