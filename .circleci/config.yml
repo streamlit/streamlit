@@ -3,7 +3,8 @@
 # Check https://circleci.com/docs/2.0/language-python/ for more details
 #
 version: 2.1
-
+orbs:
+  slack: circleci/slack@3.4.2
 commands:
   pre-cache:
     steps:
@@ -332,6 +333,9 @@ jobs:
           paths:
             - ~/.nvm
             - ~/.cache
+
+      - slack/status:
+          fail_only: true
 
   # The following inherits from python-3-8. In a few cases, steps are skipped
   # based on the name of the current job (see, e.g., "Run frontend tests").
