@@ -196,9 +196,6 @@ workflows:
           flaky: true
           requires:
             - cypress-flaky-approval
-      - slack/status:
-          fail_only: true
-          failure_message: ":blobonfire: Nightly job has failed!"
 
   create-nightly-tag:
     triggers:
@@ -337,6 +334,15 @@ jobs:
             - ~/.nvm
             - ~/.cache
 
+      - slack/status:
+          fail_only: true
+          failure_message: ":blobonfire: Nightly job failed to release"
+          filters:
+            tags:
+              only: /^([0-9]+\.){3}dev[0-9]+/
+            branches:
+              ignore: /.*/
+
   # The following inherits from python-3-8. In a few cases, steps are skipped
   # based on the name of the current job (see, e.g., "Run frontend tests").
   python-3-6:
@@ -390,6 +396,10 @@ jobs:
             git tag -a $TAG -m "Streamlit nightly $TAG"
             git push origin $TAG
 
+      - slack/status:
+          fail_only: true
+          failure_message: ":blobonfire: Nightly job failed to create a tag"
+
   nightly-release:
     docker:
       - image: circleci/python:3.8.1
@@ -439,6 +449,10 @@ jobs:
           name: upload to pypi
           command: |
             make distribute
+
+      - slack/status:
+          fail_only: true
+          failure_message: ":blobonfire: Nightly job failed to release"
 
   cypress:
     docker:
