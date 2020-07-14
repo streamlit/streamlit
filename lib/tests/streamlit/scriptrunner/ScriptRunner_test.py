@@ -229,7 +229,14 @@ class ScriptRunnerTest(AsyncTestCase):
         w4_id = scriptrunner.get_widget_id("button", "button")
         _create_widget(w4_id, states).trigger_value = True
 
+        # Explicitly clear deltas before re-running, to prevent a race
+        # condition. (The ScriptRunner will clear the deltas when it
+        # starts the re-run, but if that doesn't happen before
+        # require_widgets_deltas() starts polling the ScriptRunner's deltas,
+        # it will see stale deltas from the last run.)
+        scriptrunner.clear_deltas()
         scriptrunner.enqueue_rerun(widget_state=states)
+
         require_widgets_deltas([scriptrunner])
         self._assert_text_deltas(
             scriptrunner, ["True", "matey!", "2", "True", "loop_forever"]
@@ -237,7 +244,9 @@ class ScriptRunnerTest(AsyncTestCase):
 
         # Rerun with previous values. Our button should be reset;
         # everything else should be the same.
+        scriptrunner.clear_deltas()
         scriptrunner.enqueue_rerun()
+
         require_widgets_deltas([scriptrunner])
         self._assert_text_deltas(
             scriptrunner, ["True", "matey!", "2", "False", "loop_forever"]
@@ -473,8 +482,12 @@ class TestScriptRunner(ScriptRunner):
         if self._script_thread is not None:
             self._script_thread.join()
 
+    def clear_deltas(self):
+        """Clear all delta messages from our ReportQueue"""
+        self.report_queue.clear()
+
     def deltas(self):
-        """Returns the delta messages in our ReportQueue"""
+        """Return the delta messages in our ReportQueue"""
         return [msg.delta for msg in self.report_queue._queue if msg.HasField("delta")]
 
     def text_deltas(self) -> List[str]:
