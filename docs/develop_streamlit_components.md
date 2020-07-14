@@ -10,7 +10,7 @@ If you are unsure whether you need bi-directional communication, **start here fi
 
 ### Render an HTML string
 
-While [`st.text`](api.html#streamlit.text), [`st.markdown`](api.html#streamlit.text) and [`st.write`](api.html#streamlit.text) make it easy to write text to a Streamlit app, sometimes you'd rather implement a custom piece of HTML. Similarly, while Streamlit natively supports [many charting libraries](api.html#display-charts), you may want to implement a specific HTML/JavaScript template for a new charting library. components.html works by giving you the ability to embed an iframe inside of a Streamlit app that contains your desired output.
+While [`st.text`](api.html#streamlit.text), [`st.markdown`](api.html#streamlit.text) and [`st.write`](api.html#streamlit.text) make it easy to write text to a Streamlit app, sometimes you'd rather implement a custom piece of HTML. Similarly, while Streamlit natively supports [many charting libraries](api.html#display-charts), you may want to implement a specific HTML/JavaScript template for a new charting library. `components.html` works by giving you the ability to embed an iframe inside of a Streamlit app that contains your desired output.
 
 ```eval_rst
 .. autofunction:: streamlit.components.v1.html
@@ -109,7 +109,7 @@ The example app from the template shows how bi-directional communication is impl
 
 ### Frontend
 
-Because a Streamlit Component is just a little webpage that gets rendered into an `iframe`, you can use just about any web tech you'd like to create one. We're provide two templates to get started with in the Streamlit [Components-template GitHub repo](https://github.com/streamlit/component-template/); one of those templates uses [React](https://reactjs.org/) and the other does not.
+Because each Streamlit Component is its own webpage that gets rendered into an `iframe`, you can use just about any web tech you'd like to create that web page. Weprovide two templates to get started with in the Streamlit [Components-template GitHub repo](https://github.com/streamlit/component-template/); one of those templates uses [React](https://reactjs.org/) and the other does not.
 
 ```eval_rst
 .. note::
@@ -162,7 +162,7 @@ The Typescript-only template is in `template-reactless/my_component/frontend/src
 
 This template has much more code than its React sibling, in that all the mechanics of handshaking, setting up event listeners, and updating the component's frame height are done manually. The React version of the template handles most of these details automatically.
 
-- Towards the bottom of the source file, the template calls `Streamlit.setComponentReady()` to tell Streamlit it's ready to start receiving data. (You'll generally want to do this after creating and loading everything that the component relies on.)
+- Towards the bottom of the source file, the template calls `Streamlit.setComponentReady()` to tell Streamlit it's ready to start receiving data. (You'll generally want to do this after creating and loading everything that the Component relies on.)
 - It subscribes to `Streamlit.RENDER_EVENT` to be notified of when to redraw. (This event won't be fired until `setComponentReady` is called)
 - Within its `onRender` event handler, it accesses the arguments passed in the Python script via `event.details.args`
 - It sends data back to the Python script in the same way that the React template does - clicking on the "Click Me!" button calls `Streamlit.setComponentValue()`
@@ -177,7 +177,7 @@ This template has much more code than its React sibling, in that all the mechani
 $ npm add baseui
 ```
 
-- To build a static version of your component, run `npm run build`. See [Prepare your Component](publish_streamlit_components.html) for more information
+- To build a static version of your component, run `npm run build`. See [Prepare your Component](publish_streamlit_components.md) for more information
 
 ### Python API
 
@@ -209,7 +209,7 @@ Please see [this example](https://github.com/streamlit/component-template/blob/m
 
 #### Python → Frontend
 
-You send data from Python to the frontend by passing keyword args to your component's invoke function (that is, the function returned from `declare_component`). You can send the following types of data from Python to the frontend:
+You send data from Python to the frontend by passing keyword args to your Component's invoke function (that is, the function returned from `declare_component`). You can send the following types of data from Python to the frontend:
 
 - Any JSON-serializable data
 - `numpy.array`
