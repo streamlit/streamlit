@@ -335,8 +335,7 @@ jobs:
             - ~/.cache
 
       - when:
-          condition:
-            - equal: [/^([0-9]+\.){3}dev[0-9]+/, <<pipeline.git.tag>>]
+          condition: <<pipeline.git.tag>>
           steps:
             - slack/status:
                 fail_only: true
