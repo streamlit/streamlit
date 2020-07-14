@@ -180,10 +180,7 @@ def image_to_url(image, width, clamp, channels, format, image_id, allow_emoji=Fa
 
         # If it's an SVG string, then format and return an SVG data url
         if image.startswith("<svg"):
-            # Note: As an optimization, we could unencode some safe characters
-            # See https://codepen.io/tigt/post/optimizing-svgs-in-data-uris
-            url_encoded = quote(image)
-            return f"data:image/svg+xml;utf8,{url_encoded}"
+            return f"data:image/svg+xml;utf8,{image}"
 
         # If not, see if it's a file.
         try:
