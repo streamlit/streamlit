@@ -336,6 +336,7 @@ jobs:
 
       - slack/status:
           fail_only: true
+          failure_message: ":blobonfire: Nightly job has failed!"
 
   # The following inherits from python-3-8. In a few cases, steps are skipped
   # based on the name of the current job (see, e.g., "Run frontend tests").
