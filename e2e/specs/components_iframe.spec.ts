@@ -37,4 +37,10 @@ describe("components.iframe", () => {
   it("sets scrolling correctly", () => {
     cy.get("iframe").should("have.attr", "scrolling", "auto");
   });
+
+  it("allows fullscreen content", () => {
+    cy.get("iframe")
+      .invoke("attr", "allow")
+      .should("contain", "fullscreen");
+  });
 });

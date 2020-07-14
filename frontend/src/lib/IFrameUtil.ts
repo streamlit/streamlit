@@ -105,7 +105,7 @@ export const DEFAULT_IFRAME_FEATURE_POLICY = [
   //"execution-while-out-of-viewport",
 
   // Controls whether the current document is allowed to use Element.requestFullScreen(). When this policy is disabled, the returned Promise rejects with a TypeError DOMException.
-  // "fullscreen",
+  "fullscreen",
 
   // Controls whether the current document is allowed to use the Geolocation Interface. When this policy is disabled, calls to getCurrentPosition() and watchPosition() will cause those functions' callbacks to be invoked with a PositionError code of PERMISSION_DENIED.
   "geolocation",

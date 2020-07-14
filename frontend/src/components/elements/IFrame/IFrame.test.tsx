@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { fromJS } from "immutable"
 import { shallow, ShallowWrapper } from "enzyme"
-import IFrame, { Props } from "./IFrame"
+import { fromJS } from "immutable"
 import { getIFrameSandboxPolicy } from "lib/IFrameUtil"
+import React from "react"
+import IFrame, { Props } from "./IFrame"
 
 const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
   element: fromJS({
@@ -62,6 +62,10 @@ describe("st.iframe", () => {
       expect(wrapper.find("iframe").prop("src")).toBe("foo")
     })
 
+    it("should allow fullscreen", () => {
+      expect(wrapper.find("iframe").prop("allow")).toContain("fullscreen")
+    })
+
     it("should add `allow-same-origin` parameter to iframe sandbox", () => {
       expect(wrapper.find("iframe").prop("sandbox")).toBe(
         getIFrameSandboxPolicy(true)
@@ -81,6 +85,10 @@ describe("st.iframe", () => {
 
     it("should set `srcDoc`", () => {
       expect(wrapper.find("iframe").prop("srcDoc")).toBe("bar")
+    })
+
+    it("should allow fullscreen", () => {
+      expect(wrapper.find("iframe").prop("allow")).toContain("fullscreen")
     })
 
     it("should not add `allow-same-origin` parameter to iframe sandbox", () => {
