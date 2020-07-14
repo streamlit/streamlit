@@ -149,6 +149,8 @@ def image_to_url(image, width, clamp, channels, format, image_id, allow_emoji=Fa
         data = _PIL_to_bytes(image, format)
 
     # BytesIO
+    # Note: This doesn't support SVG. We could convert to png (cairosvg.svg2png)
+    # or just decode BytesIO to string and handle that way.
     elif type(image) is io.BytesIO:
         data = _BytesIO_to_bytes(image)
 
@@ -178,11 +180,15 @@ def image_to_url(image, width, clamp, channels, format, image_id, allow_emoji=Fa
         except UnicodeDecodeError:
             pass
 
+        # Unpack local SVG image file to an SVG string
+        if image.endswith(".svg"):
+            with open(image) as f:
+                image = f.read()
         # If it's an SVG string, then format and return an SVG data url
         if image.startswith("<svg"):
             return f"data:image/svg+xml;utf8,{image}"
 
-        # If not, see if it's a file.
+        # Finally, see if it's a file.
         try:
             with open(image, "rb") as f:
                 data = f.read()
