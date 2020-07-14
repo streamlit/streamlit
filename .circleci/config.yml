@@ -171,10 +171,6 @@ workflows:
           filters:
             tags:
               only: /^([0-9]+\.){3}dev[0-9]+/
-          jobs:
-            - slack/status:
-                fail_only: true
-                failure_message: ":blobonfire: Nightly job has failed!"
       - cypress: # Non flaky Cypress tests
           requires:
             - python-3-8
@@ -200,6 +196,9 @@ workflows:
           flaky: true
           requires:
             - cypress-flaky-approval
+      - slack/status:
+          fail_only: true
+          failure_message: ":blobonfire: Nightly job has failed!"
 
   create-nightly-tag:
     triggers:
