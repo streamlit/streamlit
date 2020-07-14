@@ -14,16 +14,10 @@
 
 import sys
 import unittest
+from io import StringIO
 
 import matplotlib
 from mock import patch
-
-try:
-    # Python 2
-    from StringIO import StringIO
-except ImportError:
-    # Python 3
-    from io import StringIO
 
 from streamlit import bootstrap
 from streamlit import config
@@ -211,7 +205,11 @@ class BootstrapPrintTest(unittest.TestCase):
             {"browser.serverAddress": False}
         )
         mock_get_option = testutil.build_mock_config_get_option(
-            {"server.headless": False, "server.port": 9988, "global.developmentMode": False}
+            {
+                "server.headless": False,
+                "server.port": 9988,
+                "global.developmentMode": False,
+            }
         )
 
         mock_get_internal_ip.return_value = "internal-ip"
