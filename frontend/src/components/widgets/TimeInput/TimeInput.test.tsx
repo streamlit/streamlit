@@ -53,7 +53,9 @@ describe("TextInput widget", () => {
   })
 
   it("should set widget value on did mount", () => {
-    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+    expect(
+      props.widgetMgr.setStringValue
+    ).toHaveBeenCalledWith(
       props.element.get("id"),
       props.element.get("default"),
       { fromUi: false }
@@ -102,10 +104,8 @@ describe("TextInput widget", () => {
     wrapper.find(UITimePicker).prop("onChange")(date)
 
     expect(wrapper.state("value")).toBe("12:08")
-    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element.get("id"),
-      "12:08",
-      { fromUi: true }
-    )
+    expect(
+      props.widgetMgr.setStringValue
+    ).toHaveBeenCalledWith(props.element.get("id"), "12:08", { fromUi: true })
   })
 })

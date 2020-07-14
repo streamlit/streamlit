@@ -48,7 +48,9 @@ describe("Checkbox widget", () => {
   })
 
   it("should set widget value on did mount", () => {
-    expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
+    expect(
+      props.widgetMgr.setBoolValue
+    ).toHaveBeenCalledWith(
       props.element.get("id"),
       props.element.get("default"),
       { fromUi: false }
@@ -94,11 +96,9 @@ describe("Checkbox widget", () => {
       },
     } as EventTarget)
 
-    expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
-      props.element.get("id"),
-      true,
-      { fromUi: true }
-    )
+    expect(
+      props.widgetMgr.setBoolValue
+    ).toHaveBeenCalledWith(props.element.get("id"), true, { fromUi: true })
     expect(wrapper.state("value")).toBeTruthy()
   })
 })

@@ -49,7 +49,9 @@ describe("TextArea widget", () => {
   })
 
   it("should set widget value on did mount", () => {
-    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+    expect(
+      props.widgetMgr.setStringValue
+    ).toHaveBeenCalledWith(
       props.element.get("id"),
       props.element.get("default"),
       { fromUi: false }
@@ -101,7 +103,9 @@ describe("TextArea widget", () => {
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element.get("id"),
       "testing",
-      { fromUi: true }
+      {
+        fromUi: true,
+      }
     )
   })
 
@@ -126,7 +130,9 @@ describe("TextArea widget", () => {
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element.get("id"),
       "testing",
-      { fromUi: true }
+      {
+        fromUi: true,
+      }
     )
   })
 
@@ -197,7 +203,9 @@ describe("TextArea widget", () => {
       expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
         props.element.get("id"),
         "testing",
-        { fromUi: true }
+        {
+          fromUi: true,
+        }
       )
     })
   })
