@@ -339,7 +339,7 @@ jobs:
           steps:
             - slack/status:
                 fail_only: true
-                failure_message: ":blobonfire: Nightly job failed to release"
+                failure_message: ":blobonfire: Nightly job failed on unit tests"
 
   # The following inherits from python-3-8. In a few cases, steps are skipped
   # based on the name of the current job (see, e.g., "Run frontend tests").
@@ -530,3 +530,10 @@ jobs:
 
       - store_artifacts: &store_snapshots
           path: frontend/cypress/snapshots
+
+      - when:
+          condition: <<pipeline.git.tag>>
+          steps:
+            - slack/status:
+                fail_only: true
+                failure_message: ":blobonfire: Nightly job failed on E2E tests"
