@@ -1,5 +1,4 @@
 const webpack = require("webpack")
-const os = require("os")
 const HardSourceWebpackPlugin = require("hard-source-webpack-plugin")
 
 module.exports = {
@@ -29,11 +28,10 @@ module.exports = {
         item => item.options.terserOptions
       )
 
-      // Default is set to os.cpus().length - 1.
       // ⚠️ If you use Circle CI or any other environment that doesn't
       // provide real available count of CPUs then you need to setup
       // explicitly number of CPUs to avoid Error: Call retries were exceeded
-      // Job runs on 3 CPUs on CircleCI
+      // Disabling parallel when running in CircleCI
       const cpuCount = process.env.CIRCLECI ? false : true
       webpackConfig.optimization.minimizer[
         minimizerIndex
