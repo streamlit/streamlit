@@ -177,10 +177,10 @@ workflows:
             tags:
               only: /^([0-9]+\.){3}dev[0-9]+/
       - nightly-release:
-          requires:
-            - python-3-6
-            - python-3-8
-            - cypress
+          # requires:
+          # - python-3-6
+          # - python-3-8
+          # - cypress
           filters:
             tags:
               only: /^([0-9]+\.){3}dev[0-9]+/
