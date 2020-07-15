@@ -431,10 +431,10 @@ jobs:
             make install
             make wheel
 
-      - run:
-          name: upload to pypi
-          command: |
-            make distribute
+      # - run:
+      #     name: upload to pypi
+      #     command: |
+      #       make distribute
 
   cypress:
     docker:
