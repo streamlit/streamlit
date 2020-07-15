@@ -1,4 +1,5 @@
 const webpack = require("webpack")
+const os = require("os")
 const HardSourceWebpackPlugin = require("hard-source-webpack-plugin")
 
 module.exports = {
@@ -24,6 +25,19 @@ module.exports = {
       // https://github.com/mzgoddard/hard-source-webpack-plugin
       webpackConfig.plugins.unshift(new HardSourceWebpackPlugin())
 
+      const minimizerIndex = webpackConfig.optimization.minimizer.findIndex(
+        item => item.options.terserOptions
+      )
+
+      // Default is set to os.cpus().length - 1.
+      // ⚠️ If you use Circle CI or any other environment that doesn't
+      // provide real available count of CPUs then you need to setup
+      // explicitly number of CPUs to avoid Error: Call retries were exceeded
+      // Job runs on 3 CPUs on CircleCI
+      webpackConfig.optimization.minimizer[
+        minimizerIndex
+      ].options.parallel = Math.max(os.cpus().length - 1, 2)
+
       return webpackConfig
     },
     plugins: [
@@ -32,7 +46,7 @@ module.exports = {
       // Remove after updating bokehjs to 2.0.0
       // https://github.com/bokeh/bokeh/issues/9594#issuecomment-577227353
       new webpack.ContextReplacementPlugin(/\/bokehjs\//, data => {
-        for (var i in data.dependencies) {
+        for (let i in data.dependencies) {
           delete data.dependencies[i].critical
         }
         return data
