@@ -182,8 +182,8 @@ def image_to_url(image, width, clamp, channels, format, image_id, allow_emoji=Fa
 
         # Unpack local SVG image file to an SVG string
         if image.endswith(".svg"):
-            with open(image) as f:
-                image = f.read()
+            with open(image) as textfile:
+                image = textfile.read()
         # If it's an SVG string, then format and return an SVG data url
         if image.startswith("<svg"):
             return f"data:image/svg+xml;utf8,{image}"
