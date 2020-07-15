@@ -34,8 +34,7 @@ module.exports = {
       // provide real available count of CPUs then you need to setup
       // explicitly number of CPUs to avoid Error: Call retries were exceeded
       // Job runs on 3 CPUs on CircleCI
-      const cpuCount = process.env.CIRCLECI ? 2 : os.cpus().length - 1
-      console.log(`Using ${cpuCount} CPUs`, os.cpus())
+      const cpuCount = process.env.CIRCLECI ? false : true
       webpackConfig.optimization.minimizer[
         minimizerIndex
       ].options.parallel = cpuCount
