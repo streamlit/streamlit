@@ -31,7 +31,8 @@ module.exports = {
       // ⚠️ If you use Circle CI or any other environment that doesn't
       // provide real available count of CPUs then you need to setup
       // explicitly number of CPUs to avoid Error: Call retries were exceeded
-      // Disabling parallel when running in CircleCI
+      // Ran into issues setting number of CPUs so disabling parallel in the
+      // meantime. Issue #1720 created to optimize this.
       const runParallel = process.env.CIRCLECI ? false : true
       webpackConfig.optimization.minimizer[
         minimizerIndex
