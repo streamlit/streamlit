@@ -17,7 +17,10 @@
 
 import { shallow, ShallowWrapper } from "enzyme"
 import { fromJS } from "immutable"
-import { getIFrameSandboxPolicy } from "lib/IFrameUtil"
+import {
+  DEFAULT_IFRAME_FEATURE_POLICY,
+  getIFrameSandboxPolicy,
+} from "lib/IFrameUtil"
 import React from "react"
 import IFrame, { Props } from "./IFrame"
 
@@ -62,8 +65,10 @@ describe("st.iframe", () => {
       expect(wrapper.find("iframe").prop("src")).toBe("foo")
     })
 
-    it("should allow fullscreen", () => {
-      expect(wrapper.find("iframe").prop("allow")).toContain("fullscreen")
+    it("should use our default feature policy", () => {
+      expect(wrapper.find("iframe").prop("allow")).toBe(
+        DEFAULT_IFRAME_FEATURE_POLICY
+      )
     })
 
     it("should add `allow-same-origin` parameter to iframe sandbox", () => {
@@ -87,8 +92,10 @@ describe("st.iframe", () => {
       expect(wrapper.find("iframe").prop("srcDoc")).toBe("bar")
     })
 
-    it("should allow fullscreen", () => {
-      expect(wrapper.find("iframe").prop("allow")).toContain("fullscreen")
+    it("should use our default feature policy", () => {
+      expect(wrapper.find("iframe").prop("allow")).toBe(
+        DEFAULT_IFRAME_FEATURE_POLICY
+      )
     })
 
     it("should not add `allow-same-origin` parameter to iframe sandbox", () => {
