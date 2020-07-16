@@ -50,7 +50,7 @@ export const segmentLauncher = (): void => {
         n.src =
           "https://cdn.segment.com/analytics.js/v1/" + t + "/analytics.min.js"
         const a = document.getElementsByTagName("script")[0]
-        if (a.parentNode != null) a.parentNode.insertBefore(n, a)
+        if (a != null && a.parentNode != null) a.parentNode.insertBefore(n, a)
         analytics._loadOptions = e
       }
       analytics.SNIPPET_VERSION = "4.1.0"
