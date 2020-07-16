@@ -4,7 +4,7 @@ declare global {
   }
 }
 
-export const segmentLauncher = () => {
+export const segmentLauncher = (): void => {
   const analytics = (window.analytics = window.analytics || [])
   if (!analytics.initialize)
     if (analytics.invoked)
@@ -32,24 +32,24 @@ export const segmentLauncher = () => {
         "on",
       ]
       analytics.factory = function(t: any) {
-        return function() {
-          var e = Array.prototype.slice.call(arguments)
+        return function(...args: any[]) {
+          const e = Array.prototype.slice.call(args)
           e.unshift(t)
           analytics.push(e)
           return analytics
         }
       }
-      for (var t = 0; t < analytics.methods.length; t++) {
-        var e = analytics.methods[t]
+      for (let t = 0; t < analytics.methods.length; t++) {
+        const e = analytics.methods[t]
         analytics[e] = analytics.factory(e)
       }
       analytics.load = function(t: string, e: any) {
-        var n = document.createElement("script")
+        const n = document.createElement("script")
         n.type = "text/javascript"
         n.async = !0
         n.src =
           "https://cdn.segment.com/analytics.js/v1/" + t + "/analytics.min.js"
-        var a = document.getElementsByTagName("script")[0]
+        const a = document.getElementsByTagName("script")[0]
         if (a.parentNode != null) a.parentNode.insertBefore(n, a)
         analytics._loadOptions = e
       }
