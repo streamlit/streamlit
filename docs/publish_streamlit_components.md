@@ -15,7 +15,7 @@ A bi-directional Streamlit Component varies slightly from a pure Python library 
 
 The [component-template](https://github.com/streamlit/component-template) GitHub repo provides the folder structure necessary for PyPI publishing. But before you can publish, you'll need to do a bit of housekeeping:
 
-1. Give your component a name, if you haven't already
+1. Give your Component a name, if you haven't already
    - Rename the `template/my_component/` folder to `template/<component name>/`
    - Pass your component's name as the the first argument to `declare_component()`
 2. Edit `setup.py`, adding your component's name and other relevant info
