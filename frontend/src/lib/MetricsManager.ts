@@ -18,7 +18,7 @@
 import { IS_DEV_ENV, IS_SHARED_REPORT } from "./baseconsts"
 import { SessionInfo } from "lib/SessionInfo"
 import { logAlways } from "./log"
-
+import { segmentLauncher } from "./Segment"
 /**
  * The analytics is the Segment.io object. It comes from index.html.
  */
@@ -93,6 +93,7 @@ export class MetricsManager {
 
     if (this.actuallySendMetrics || IS_SHARED_REPORT) {
       // Only record the user's email if they entered a non-empty one.
+      segmentLauncher()
       const userTraits: any = {}
       if (SessionInfo.current.authorEmail !== "") {
         userTraits["authoremail"] = SessionInfo.current.authorEmail
@@ -102,6 +103,15 @@ export class MetricsManager {
     }
 
     logAlways("Gather usage stats: ", this.actuallySendMetrics)
+  }
+
+  private initialiseSegmentIO() {
+    const scriptSrc = "./segment/segment.js"
+    const script = document.createElement("script")
+    script.async = false
+    script.src = scriptSrc
+    const head = document.getElementsByTagName("head")[0]
+    head.appendChild(script)
   }
 
   public enqueue(evName: string, evData: Record<string, unknown> = {}): void {
