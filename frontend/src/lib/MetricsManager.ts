@@ -105,15 +105,6 @@ export class MetricsManager {
     logAlways("Gather usage stats: ", this.actuallySendMetrics)
   }
 
-  private initialiseSegmentIO() {
-    const scriptSrc = "./segment/segment.js"
-    const script = document.createElement("script")
-    script.async = false
-    script.src = scriptSrc
-    const head = document.getElementsByTagName("head")[0]
-    head.appendChild(script)
-  }
-
   public enqueue(evName: string, evData: Record<string, unknown> = {}): void {
     if (!this.initialized) {
       this.pendingEvents.push([evName, evData])
