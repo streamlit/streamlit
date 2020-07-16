@@ -40,8 +40,7 @@
   troubleshooting/index
   Frequently Asked Questions < https://github.com/streamlit/streamlit/wiki/FAQ>
   Community forum < https://discuss.streamlit.io/>
-  Bug tracker <https://github.com/streamlit/streamlit/issues>
-  GitHub <https://github.com/streamlit/streamlit>
+  Source code & Issue tracker <https://github.com/streamlit/streamlit/>
 
 ```
 
