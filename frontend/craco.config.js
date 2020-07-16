@@ -32,10 +32,10 @@ module.exports = {
       // provide real available count of CPUs then you need to setup
       // explicitly number of CPUs to avoid Error: Call retries were exceeded
       // Disabling parallel when running in CircleCI
-      const cpuCount = process.env.CIRCLECI ? false : true
+      const runParallel = process.env.CIRCLECI ? false : true
       webpackConfig.optimization.minimizer[
         minimizerIndex
-      ].options.parallel = cpuCount
+      ].options.parallel = runParallel
 
       return webpackConfig
     },
