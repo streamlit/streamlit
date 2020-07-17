@@ -1314,13 +1314,9 @@ class DeltaGenerator(object):
         Parameters
         ----------
         figure_or_data : plotly.graph_objs.Figure, plotly.graph_objs.Data,
-            dict/list of plotly.graph_objs.Figure/Data, or
-            matplotlib.figure.Figure
+            dict/list of plotly.graph_objs.Figure/Data
 
             See https://plot.ly/python/ for examples of graph descriptions.
-
-            If a Matplotlib Figure, converts it to a Plotly figure and displays
-            it.
 
         width : int
             Deprecated. If != 0 (default), will show an alert.
