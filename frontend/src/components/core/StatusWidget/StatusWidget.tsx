@@ -289,7 +289,7 @@ export class StatusWidget extends PureComponent<Props, State> {
       >
         <img
           className="ReportRunningIcon"
-          src="/assets/img/icon_running.gif"
+          src="assets/img/icon_running.gif"
           alt="Running..."
         />
         <label>Running...</label>

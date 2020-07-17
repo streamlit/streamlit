@@ -1,5 +1,6 @@
 const webpack = require("webpack")
 const HardSourceWebpackPlugin = require("hard-source-webpack-plugin")
+const CracoAlias = require("craco-alias")
 
 module.exports = {
   devServer: {
@@ -23,6 +24,13 @@ module.exports = {
       // to speed up our slow builds.
       // https://github.com/mzgoddard/hard-source-webpack-plugin
       webpackConfig.plugins.unshift(new HardSourceWebpackPlugin())
+
+      const scopePluginIndex = webpackConfig.resolve.plugins.findIndex(
+        ({ constructor }) =>
+          constructor && constructor.name === "ModuleScopePlugin"
+      )
+
+      webpackConfig.resolve.plugins.splice(scopePluginIndex, 1)
 
       const minimizerIndex = webpackConfig.optimization.minimizer.findIndex(
         item => item.options.terserOptions
@@ -53,4 +61,15 @@ module.exports = {
       }),
     ],
   },
+  plugins: [
+    {
+      plugin: CracoAlias,
+      options: {
+        source: "options",
+        aliases: {
+          fonts: "./public/assets/fonts",
+        },
+      },
+    },
+  ],
 }

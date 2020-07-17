@@ -35,13 +35,13 @@ const BALLOONS_INDICES = Array.from({ length: NUM_BALLOONS })
 const BALLOON_IMAGES: string[] = []
 BALLOON_IMAGES[0] = "" // 0 means random
 BALLOON_IMAGES[BalloonsProto.Type.BALLOON] =
-  "/assets/img/emoji/emoji_u1f388.png"
+  "assets/img/emoji/emoji_u1f388.png"
 BALLOON_IMAGES[BalloonsProto.Type.HAPPY_FACE] =
-  "/assets/img/emoji/emoji_u1f604.png"
+  "assets/img/emoji/emoji_u1f604.png"
 BALLOON_IMAGES[BalloonsProto.Type.STAR_FACE] =
-  "/assets/img/emoji/emoji_u1f929.png"
+  "assets/img/emoji/emoji_u1f929.png"
 BALLOON_IMAGES[BalloonsProto.Type.COOL_FACE] =
-  "/assets/img/emoji/emoji_u1f60e.png"
+  "assets/img/emoji/emoji_u1f60e.png"
 
 export interface Props {
   width: number
