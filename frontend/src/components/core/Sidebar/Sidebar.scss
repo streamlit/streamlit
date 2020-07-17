@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-@import "src/assets/css/variables";
+@import "src/assets/css/core";
 
 .sidebar {
   @include media-breakpoint-down(md) {
