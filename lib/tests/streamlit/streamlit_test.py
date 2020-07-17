@@ -558,24 +558,6 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertNotEqual(el.plotly_chart.figure.config, "")
         self.assertEqual(el.plotly_chart.use_container_width, True)
 
-    def test_st_plotly_chart_mpl(self):
-        """Test st.plotly_chart can handle Matplotlib figures."""
-        import matplotlib
-        import matplotlib.pyplot as plt
-
-        if matplotlib.get_backend().lower() != "agg":
-            plt.switch_backend("agg")
-
-        fig = plt.figure()
-        plt.plot([10, 20, 30])
-        st.plotly_chart(fig)
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.plotly_chart.HasField("url"), False)
-        self.assertNotEqual(el.plotly_chart.figure.spec, "")
-        self.assertNotEqual(el.plotly_chart.figure.config, "")
-        self.assertEqual(el.plotly_chart.use_container_width, False)
-
     def test_st_plotly_chart_sharing(self):
         """Test st.plotly_chart when sending data to Plotly's service."""
         import plotly.graph_objs as go
