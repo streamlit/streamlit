@@ -2,7 +2,7 @@
   "name": "streamlit-browser",
   "version": "0.63.0",
   "private": true,
-  "homepage": ".",
+  "homepage": "./",
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
     "start": "env NODE_OPTIONS=--max_old_space_size=4096 craco start",
