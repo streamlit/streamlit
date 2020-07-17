@@ -18,10 +18,13 @@
 import { IS_DEV_ENV, IS_SHARED_REPORT } from "./baseconsts"
 import { SessionInfo } from "lib/SessionInfo"
 import { logAlways } from "./log"
-import { segmentLauncher } from "./Segment"
+import { initializeSegment } from "./Segment"
+
 /**
- * The analytics is the Segment.io object. It comes from index.html.
- */
+ * The analytics is the Segment.io object. It is initialised in Segment.ts
+ * It is loaded with global scope (window.analytics) to integrate with the segment.io api
+ * @global
+ * */
 declare const analytics: any
 
 /**
@@ -92,8 +95,9 @@ export class MetricsManager {
     this.actuallySendMetrics = gatherUsageStats
 
     if (this.actuallySendMetrics || IS_SHARED_REPORT) {
+      //Initialize the segment.io analytics service
+      if (window !== undefined) initializeSegment()
       // Only record the user's email if they entered a non-empty one.
-      segmentLauncher()
       const userTraits: any = {}
       if (SessionInfo.current.authorEmail !== "") {
         userTraits["authoremail"] = SessionInfo.current.authorEmail
