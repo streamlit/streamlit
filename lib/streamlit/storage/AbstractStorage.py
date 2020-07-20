@@ -178,6 +178,6 @@ def _get_static_files(static_dir):
         static_files.append(index_tuple)
 
     if not static_files:
-        raise errors.NoStaticFiles('Cannot find static files. Run "make build".')
+        raise errors.NoStaticFiles('Cannot find static files. Run "make react-build".')
 
     return static_files, md5
