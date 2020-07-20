@@ -52,16 +52,14 @@ class Context:
         return join(ROOT_DIR, self.tests_dir_name)
 
     @property
-    def record_results_flag(self) -> str:
+    def cypress_flags(self) -> List[str]:
+        """Flags to pass to Cypress"""
+        flags = ["--config", f"integrationFolder={self.tests_dir}/specs"]
         if self.record_results:
-            return "--record"
-        return ""
-
-    @property
-    def snapshots_flags(self) -> List[str]:
+            flags.append("--record")
         if self.update_snapshots:
-            return ["--env", "updateSnapshots=true"]
-        return []
+            flags.extend(["--env", "updateSnapshots=true"])
+        return flags
 
 
 def remove_if_exists(path):
@@ -87,7 +85,7 @@ def move_aside_file(path):
             os.rename(f"{path}.bak", path)
 
 
-def create_credentials(contents):
+def create_credentials_toml(contents):
     """Writes ~/.streamlit/credentials.toml"""
     # Ensure our parent directory exists
     os.makedirs(dirname(CREDENTIALS_FILE), exist_ok=True)
@@ -128,64 +126,80 @@ def generate_mochawesome_report():
     )
 
 
-def run_test(ctx: Context, *args: str):
-    # Convert our args from tuple to list, because we may mutate it.
-    args = list(args)
+def run_test(
+    ctx: Context,
+    specpath: str,
+    streamlit_command: List[str],
+    no_credentials: bool = False,
+) -> None:
+    """Run a single e2e test.
 
-    if args[0] == "run":
-        file = args[1]
-        filename, _ = splitext(basename(file))
-        specpath = join(ctx.tests_dir, "specs", f"{filename}.spec.ts")
-    else:
-        specpath = join(ROOT_DIR, "e2e/specs/st_hello.spec.ts")
+     An e2e test consists of a Streamlit script that produces a result, and
+     a Cypress test file that asserts that result is as expected.
 
-    # Infinite loop to support retries
-    while True:
-        # Run the next Streamlit test script
-        streamlit_proc = subprocess.Popen(
-            ["streamlit"] + args, universal_newlines=True, cwd=FRONTEND_DIR,
-        )
+    Parameters
+    ----------
+    ctx : Context
+        The Context object that contains our global testing parameters.
+    specpath : str
+        The path of the Cypress spec file to run.
+    streamlit_command : list of str
+        The Streamlit command to run (passed directly to subprocess.Popen()).
+    no_credentials : bool
+        Any existing ~/.streamlit/credentials.toml file will be moved aside
+        for the test, and by default a bare-bones placeholder credentials file
+        will be created in its place. But if `no_credentials` is True, the test
+        will be run without a credentials file.
 
-        # Run the Cypress spec
-        cypress_command = [
-            "yarn",
-            "cy:run",
-            "--spec",
-            specpath,
-            "--config",
-            f"integrationFolder={ctx.tests_dir}/specs",
-            ctx.record_results_flag,
-        ] + ctx.snapshots_flags
+    """
+    # Move existing credentials file aside, and create a new one if the
+    # tests call for it.
+    with move_aside_file(CREDENTIALS_FILE):
+        if not no_credentials:
+            create_credentials_toml('[general]\nemail="test@streamlit.io"')
 
-        cypress_result = subprocess.run(
-            cypress_command, universal_newlines=True, cwd=FRONTEND_DIR,
-        )
+        # Infinite loop to support retries
+        while True:
+            try:
+                # Run the next Streamlit test script
+                streamlit_proc = subprocess.Popen(streamlit_command, cwd=FRONTEND_DIR)
 
-        # Kill the Streamlit script
-        streamlit_proc.terminate()
+                # Run the Cypress spec
+                cypress_command = [
+                    "yarn",
+                    "cy:run",
+                    "--spec",
+                    specpath,
+                ] + ctx.cypress_flags
+                cypress_result = subprocess.run(cypress_command, cwd=FRONTEND_DIR)
+            finally:
+                # Kill the Streamlit script
+                streamlit_proc.terminate()
 
-        # If exit code is non-zero, prompt user to continue;
-        # else continue without prompting
-        if cypress_result.returncode != 0 and not ctx.always_continue:
-            key = input("[R]etry, [U]pdate snapshots, [S]kip, or [Q]uit?")[0].lower()
-            if key == "s":
-                break
-            elif key == "q":
+            # If exit code is non-zero, prompt user to continue;
+            # else continue without prompting
+            if cypress_result.returncode != 0 and not ctx.always_continue:
+                key = input("[R]etry, [U]pdate snapshots, [S]kip, or [Q]uit?")[
+                    0
+                ].lower()
+                if key == "s":
+                    break
+                elif key == "q":
+                    ctx.any_failed = True
+                    raise RuntimeError("Terminating early")
+                elif key == "r":
+                    continue
+                elif key == "u":
+                    ctx.update_snapshots = True
+                    continue
+                else:
+                    # Retry if key not recognized
+                    continue
+            elif cypress_result.returncode != 0 and ctx.always_continue:
                 ctx.any_failed = True
-                raise RuntimeError("Terminating early")
-            elif key == "r":
-                continue
-            elif key == "u":
-                ctx.update_snapshots = True
-                continue
-            else:
-                # Retry if key not recognized
-                continue
-        elif cypress_result.returncode != 0 and ctx.always_continue:
-            ctx.any_failed = True
 
-        # If we got to this point, break out of the infinite loop.
-        break
+            # If we got to this point, break out of the infinite loop.
+            break
 
 
 @click.command()
@@ -196,7 +210,8 @@ def run_test(ctx: Context, *args: str):
     "-r",
     "--record-results",
     is_flag=True,
-    help="Record video results in the Cypress dashboard.",
+    help="Upload video results to the Cypress dashboard. "
+    "See https://docs.cypress.io/guides/dashboard/introduction.html for more details.",
 )
 @click.option(
     "-u",
@@ -205,49 +220,56 @@ def run_test(ctx: Context, *args: str):
     help="Automatically update snapshots for failing tests.",
 )
 @click.option(
-    "-f", "--tests-folder", default="e2e", help="Parent folder of specs and scripts."
+    "-f",
+    "--flaky-tests",
+    is_flag=True,
+    help="Run tests in 'e2e_flaky' instead of 'e2e'.",
 )
 def run_e2e_tests(
     always_continue: bool,
     record_results: bool,
     update_snapshots: bool,
-    tests_folder: str,
+    flaky_tests: bool,
 ):
     """Run e2e tests. If any fail, exit with non-zero status."""
     kill_streamlits()
 
     # Clear reports from previous runs
     remove_if_exists("frontend/cypress/mochawesome")
+    remove_if_exists("frontend/mochawesome-report")
     remove_if_exists("frontend/mochawesome.json")
 
     ctx = Context()
     ctx.always_continue = always_continue
     ctx.record_results = record_results
     ctx.update_snapshots = update_snapshots
-    ctx.tests_dir_name = tests_folder
+    ctx.tests_dir_name = "e2e_flaky" if flaky_tests else "e2e"
 
-    # Move existing credentials file aside for these tests; we'll be
-    # manipulating it.
-    with move_aside_file(CREDENTIALS_FILE):
-        try:
-            # First, test "streamlit hello" in different combinations. We skip
-            # the credential-less '--server.headless=false' because it'll
-            # give a credentials prompt.
+    try:
+        # First, test "streamlit hello" in different combinations. We skip
+        # `no_credentials=True` for the `--server.headless=false` test, because
+        # it'll give a credentials prompt.
+        if not flaky_tests:
+            hello_spec = join(ROOT_DIR, "e2e/specs/st_hello.spec.ts")
+            run_test(
+                ctx,
+                hello_spec,
+                ["streamlit", "hello", "--server.headless=true"],
+                no_credentials=False,
+            )
 
-            # run_test(ctx, "hello", "--server.headless=false")
-            run_test(ctx, "hello", "--server.headless=true")
+            run_test(ctx, hello_spec, ["streamlit", "hello", "--server.headless=false"])
+            run_test(ctx, hello_spec, ["streamlit", "hello", "--server.headless=true"])
 
-            create_credentials('[general]\nemail="test@streamlit.io"')
-
-            run_test(ctx, "hello", "--server.headless=false")
-            run_test(ctx, "hello", "--server.headless=true")
-
-            # Test core streamlit elements
-            p = pathlib.Path(join(ROOT_DIR, ctx.tests_dir_name, "scripts")).resolve()
-            for file in p.glob("*.py"):
-                run_test(ctx, "run", str(file))
-        finally:
-            generate_mochawesome_report()
+        # Test core streamlit elements
+        p = pathlib.Path(join(ROOT_DIR, ctx.tests_dir_name, "scripts")).resolve()
+        for test_path in p.glob("*.py"):
+            test_path = str(test_path)
+            test_name, _ = splitext(basename(test_path))
+            specpath = join(ctx.tests_dir, "specs", f"{test_name}.spec.ts")
+            run_test(ctx, specpath, ["streamlit", "run", test_path])
+    finally:
+        generate_mochawesome_report()
 
     if ctx.any_failed:
         sys.exit(1)
