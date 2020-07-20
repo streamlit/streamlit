@@ -63,7 +63,7 @@ class Context:
 
 
 def remove_if_exists(path):
-    """Removes the given folder or file if it exists"""
+    """Remove the given folder or file if it exists"""
     if os.path.isfile(path):
         os.remove(path)
     elif os.path.isdir(path):
