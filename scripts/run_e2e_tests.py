@@ -36,7 +36,7 @@ class Context:
     def __init__(self):
         # Whether to prompt to continue on failure or run all
         self.always_continue = False
-        # True if we record results.
+        # True if Cypress will record videos of our results.
         self.record_results = False
         # True if we're automatically updating snapshots.
         self.update_snapshots = False
@@ -97,7 +97,7 @@ def create_credentials(contents):
 
 
 def kill_streamlits():
-    """Kill any running streamlit processes"""
+    """Kill any active `streamlit run` processes"""
     result = subprocess.run(
         "pgrep -f 'streamlit run'",
         shell=True,
@@ -154,6 +154,7 @@ def run_test(ctx: Context, *args: str):
             specpath,
             "--config",
             f"integrationFolder={ctx.tests_dir}/specs",
+            ctx.record_results_flag,
         ] + ctx.snapshots_flags
 
         cypress_result = subprocess.run(
@@ -195,7 +196,7 @@ def run_test(ctx: Context, *args: str):
     "-r",
     "--record-results",
     is_flag=True,
-    help="Record results in the cypress dashboard.",
+    help="Record video results in the Cypress dashboard.",
 )
 @click.option(
     "-u",
