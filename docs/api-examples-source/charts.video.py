@@ -1,27 +1,20 @@
 import streamlit as st
-import requests
 
+VIDEO_URL = "https://vod-progressive.akamaized.net/exp=1595241944~acl=%2A%2F664785003.mp4%2A~hmac=2a26d355839498b80bbb2c43e6808bd12bc0d2e7920616a8226a1e017c270217/vimeo-prod-skyfire-std-us/01/4526/7/197634410/664785003.mp4?filename=Star+-+6962.mp4"
 
-@st.cache
-def read_file_from_url(url):
-    return requests.get(url).content
-
-
-file_bytes = read_file_from_url("https://streamlit.io/media/Star%20-%206962.mp4")
-
-st.video(file_bytes)
+st.video(VIDEO_URL)
 
 st.write(
     """
     #### Video credit:
 
-    Creator: User _Neil Iris (@neil_ingham)_ from _Unsplash_
+    Creator: User _fxxu_ from _Pixabay_.
 
-    License: Do whatever you want.
-    https://unsplash.com/license
+    License: Free for commercial use. No attribution required.
+    https://pixabay.com/en/service/license/
 
     URL:
-    https://unsplash.com/photos/I2UR7wEftf4
+    https://pixabay.com/en/videos/star-long-exposure-starry-sky-sky-6962/
 
 """
 )

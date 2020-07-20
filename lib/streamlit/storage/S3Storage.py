@@ -153,7 +153,8 @@ class S3Storage(AbstractStorage):
         key = os.path.join(self._release_hash, relative_path)
         if add_prefix:
             key = os.path.join(self._key_prefix, key)
-        return os.path.normpath(key)
+        # Replace any backslashes generated on Windows with forward slashes
+        return os.path.normpath(key).replace("\\", "/")
 
     @gen.coroutine
     def _save_report_files(
