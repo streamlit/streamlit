@@ -21,29 +21,13 @@ then
 fi
 
 
-if [ $# -eq 0 ]
-then
-  echo ""
-  echo "Usage"
-  echo "  $0 <diff files to convert>"
-  echo ""
-  echo "Example"
-  echo "  $0 ~/downloads/*.diff.png"
-  echo ""
-  exit -1
-fi
-
-
-has_convert=$(command -v convert)
-if ! [ "$has_convert" ]
-then
+has_convert=$(command -v convert) || {
   echo ""
   echo "Missing dependency."
   echo "Please install ImageMagick first."
   echo ""
   exit -1
-fi
-
+}
 
 
 tmp_dir="$(mktemp -d -t streamlit_cropped_diffs-XXXXX)"
