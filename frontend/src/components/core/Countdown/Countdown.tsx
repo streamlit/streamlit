@@ -21,7 +21,7 @@ import "./Countdown.scss"
 
 interface Props {
   countdown: number
-  endCallback: Function
+  endCallback: () => void
 }
 
 interface State {

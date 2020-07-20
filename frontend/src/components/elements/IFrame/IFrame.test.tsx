@@ -15,13 +15,16 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { fromJS } from "immutable"
 import { shallow, ShallowWrapper } from "enzyme"
+import { fromJS } from "immutable"
+import {
+  DEFAULT_IFRAME_FEATURE_POLICY,
+  getIFrameSandboxPolicy,
+} from "lib/IFrameUtil"
+import React from "react"
 import IFrame, { Props } from "./IFrame"
-import { getIFrameSandboxPolicy } from "lib/IFrameUtil"
 
-const getProps = (elementProps: object = {}): Props => ({
+const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
   element: fromJS({
     ...elementProps,
   }),
@@ -62,6 +65,12 @@ describe("st.iframe", () => {
       expect(wrapper.find("iframe").prop("src")).toBe("foo")
     })
 
+    it("should use our default feature policy", () => {
+      expect(wrapper.find("iframe").prop("allow")).toBe(
+        DEFAULT_IFRAME_FEATURE_POLICY
+      )
+    })
+
     it("should add `allow-same-origin` parameter to iframe sandbox", () => {
       expect(wrapper.find("iframe").prop("sandbox")).toBe(
         getIFrameSandboxPolicy(true)
@@ -81,6 +90,12 @@ describe("st.iframe", () => {
 
     it("should set `srcDoc`", () => {
       expect(wrapper.find("iframe").prop("srcDoc")).toBe("bar")
+    })
+
+    it("should use our default feature policy", () => {
+      expect(wrapper.find("iframe").prop("allow")).toBe(
+        DEFAULT_IFRAME_FEATURE_POLICY
+      )
     })
 
     it("should not add `allow-same-origin` parameter to iframe sandbox", () => {

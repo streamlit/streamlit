@@ -251,11 +251,8 @@ class ScriptRunner(object):
         # Compile the script. Any errors thrown here will be surfaced
         # to the user via a modal dialog in the frontend, and won't result
         # in their previous report disappearing.
-        try:
-            # Python 3 got rid of the native execfile() command, so we read
-            # the file, compile it, and exec() it. This implementation is
-            # compatible with both 2 and 3.
 
+        try:
             with source_util.open_python_file(self._report.script_path) as f:
                 filebody = f.read()
 
@@ -272,8 +269,8 @@ class ScriptRunner(object):
                 # Don't inherit any flags or "future" statements.
                 flags=0,
                 dont_inherit=1,
-                # Parameter not supported in Python2:
-                # optimize=-1,
+                # Use the default optimization options.
+                optimize=-1,
             )
 
         except BaseException as e:

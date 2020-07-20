@@ -20,6 +20,7 @@ from streamlit.error_util import get_nonstreamlit_traceback
 from streamlit.errors import MarkdownFormattedException
 from streamlit.errors import StreamlitAPIException
 from streamlit.errors import StreamlitAPIWarning
+from streamlit.errors import StreamlitDeprecationWarning
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
@@ -39,10 +40,15 @@ def marshall(exception_proto, exception):
     # If this is a StreamlitAPIException, we prune all Streamlit entries
     # from the exception's stack trace.
     is_api_exception = isinstance(exception, StreamlitAPIException)
+    is_deprecation_exception = isinstance(exception, StreamlitDeprecationWarning)
     is_markdown_exception = isinstance(exception, MarkdownFormattedException)
 
-    stack_trace = _get_stack_trace_str_list(
-        exception, strip_streamlit_stack_entries=is_api_exception
+    stack_trace = (
+        []
+        if is_deprecation_exception
+        else _get_stack_trace_str_list(
+            exception, strip_streamlit_stack_entries=is_api_exception
+        )
     )
 
     # Some exceptions (like UserHashError) have an alternate_name attribute so

@@ -104,7 +104,6 @@ from streamlit.ReportThread import add_report_ctx as _add_report_ctx
 from streamlit.ReportThread import get_report_ctx as _get_report_ctx
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import BlockPath_pb2 as _BlockPath_pb2
-from streamlit.util import functools_wraps as _functools_wraps
 
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
@@ -189,9 +188,10 @@ get_option = _config.get_option
 def set_option(key, value):
     """Set config option.
 
-    Currently, only two config options can be set within the script itself:
+    Currently, only the following config options can be set within the script itself:
         * client.caching
         * client.displayEnabled
+        * deprecation.*
 
     Calling with any other options will raise StreamlitAPIException.
 
@@ -407,9 +407,8 @@ def write(*args, **kwargs):
 
         flush_buffer()
 
-    except Exception:
-        _, exc, exc_tb = _sys.exc_info()
-        exception(exc, exc_tb)  # noqa: F821
+    except Exception as exc:
+        exception(exc)
 
 
 def experimental_show(*args):

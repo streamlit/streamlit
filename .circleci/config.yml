@@ -3,7 +3,8 @@
 # Check https://circleci.com/docs/2.0/language-python/ for more details
 #
 version: 2.1
-
+orbs:
+  slack: circleci/slack@3.4.2
 commands:
   pre-cache:
     steps:
@@ -333,6 +334,13 @@ jobs:
             - ~/.nvm
             - ~/.cache
 
+      - when:
+          condition: <<pipeline.git.tag>>
+          steps:
+            - slack/status:
+                fail_only: true
+                failure_message: ":blobonfire: Nightly job failed on unit tests"
+
   # The following inherits from python-3-8. In a few cases, steps are skipped
   # based on the name of the current job (see, e.g., "Run frontend tests").
   python-3-6:
@@ -386,6 +394,10 @@ jobs:
             git tag -a $TAG -m "Streamlit nightly $TAG"
             git push origin $TAG
 
+      - slack/status:
+          fail_only: true
+          failure_message: ":blobonfire: Nightly job failed to create a tag"
+
   nightly-release:
     docker:
       - image: circleci/python:3.8.1
@@ -435,6 +447,10 @@ jobs:
           name: upload to pypi
           command: |
             make distribute
+
+      - slack/status:
+          fail_only: true
+          failure_message: ":blobonfire: Nightly job failed to release"
 
   cypress:
     docker:
@@ -514,3 +530,10 @@ jobs:
 
       - store_artifacts: &store_snapshots
           path: frontend/cypress/snapshots
+
+      - when:
+          condition: <<pipeline.git.tag>>
+          steps:
+            - slack/status:
+                fail_only: true
+                failure_message: ":blobonfire: Nightly job failed on E2E tests"

@@ -28,7 +28,7 @@ jest.mock("lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
 const preventDefault = jest.fn()
-const getProps = (elementProps: object = {}): Props => ({
+const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
   element: fromJS({
     label: "Label",
     has_min: false,
@@ -40,7 +40,7 @@ const getProps = (elementProps: object = {}): Props => ({
   widgetMgr: new WidgetStateManager(sendBackMsg),
 })
 
-const getIntProps = (elementProps: object = {}): Props => {
+const getIntProps = (elementProps: Record<string, unknown> = {}): Props => {
   return getProps({
     dataType: NumberInputProto.DataType.INT,
     default: 10,
@@ -50,7 +50,7 @@ const getIntProps = (elementProps: object = {}): Props => {
   })
 }
 
-const getFloatProps = (elementProps: object = {}): Props => {
+const getFloatProps = (elementProps: Record<string, unknown> = {}): Props => {
   return getProps({
     dataType: NumberInputProto.DataType.FLOAT,
     default: 10.0,

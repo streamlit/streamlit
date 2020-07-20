@@ -572,6 +572,18 @@ _create_option(
 )
 
 
+# Config Section: deprecations
+
+_create_section("deprecation", "Configuration to show or hide deprecation warnings.")
+
+_create_option(
+    "deprecation.showfileUploaderEncoding",
+    description="Set to false to disable the deprecation warning for the file uploader encoding.",
+    default_val="True",
+    scriptable="True",
+    type_=bool,
+)
+
 # Config Section: S3 #
 
 _create_section("s3", 'Configuration for when global.sharingMode is set to "s3".')
@@ -990,7 +1002,8 @@ def _check_conflicts():
     # XSRF conflicts
     if get_option("server.enableXsrfProtection"):
         if not get_option("server.enableCORS") or get_option("global.developmentMode"):
-            LOGGER.warning("""
+            LOGGER.warning(
+                """
 Warning: the config option 'server.enableCORS=false' is not compatible with 'server.enableXsrfProtection=true'.
 As a result, 'server.enableCORS' is being overridden to 'true'.
 
@@ -1000,7 +1013,8 @@ To do so, we must specify allowable origins, which places a restriction on
 cross-origin resource sharing.
 
 If cross origin resource sharing is required, please disable server.enableXsrfProtection.
-            """)
+            """
+            )
 
 
 def _set_development_mode():

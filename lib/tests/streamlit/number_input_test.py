@@ -113,17 +113,13 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
     def test_accept_valid_formats(self):
         # note: We decided to accept %u even though it is slightly problematic.
         #       See https://github.com/streamlit/streamlit/pull/943
-        SUPPORTED = "difFeEgGu"
+        SUPPORTED = "adifFeEgGuXxo"
         for char in SUPPORTED:
             st.number_input("any label", format="%" + char)
             c = self.get_delta_from_queue().new_element.number_input
             self.assertEqual(c.format, "%" + char)
 
     def test_error_on_unsupported_formatters(self):
-        # note: The slightly-problematic %a, %X, %x, and %o have different effects in
-        #       Python3 and Python2, so we're not testing for/against them until
-        #       we finally sunset Python2.
-        # See https://github.com/streamlit/streamlit/pull/943#issuecomment-572268370
         UNSUPPORTED = "pAn"
         for char in UNSUPPORTED:
             with pytest.raises(StreamlitAPIException) as exc_message:

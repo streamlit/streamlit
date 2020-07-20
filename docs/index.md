@@ -1,6 +1,6 @@
 ```eval_rst
 .. toctree::
-   :caption: Documentation
+   :caption: Package Documentation
    :maxdepth: 2
    :hidden:
 
@@ -15,18 +15,32 @@
    api
    cli
    pre_release_features
-   changelog
+
+.. toctree::
+  :caption: Streamlit Components
+  :titlesonly:
+  :hidden:
+
+  Overview <streamlit_components>
+
+.. toctree::
+  :maxdepth: 2
+  :hidden:
+
+  develop_streamlit_components
+  Publish Component to PyPI <publish_streamlit_components>
+  Components FAQ <streamlit_components_faq>
 
 .. toctree::
   :caption: Support
   :maxdepth: 2
   :hidden:
 
+  changelog
   troubleshooting/index
   Frequently Asked Questions < https://github.com/streamlit/streamlit/wiki/FAQ>
   Community forum < https://discuss.streamlit.io/>
-  Bug tracker <https://github.com/streamlit/streamlit/issues>
-  GitHub <https://github.com/streamlit/streamlit>
+  Source code & issue tracker <https://github.com/streamlit/streamlit/>
 
 ```
 

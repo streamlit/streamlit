@@ -39,7 +39,7 @@ describe("withMapboxToken", () => {
   const token = "mockToken"
   const commandLine = "streamlit run test.py"
 
-  function getProps(): object {
+  function getProps(): Record<string, unknown> {
     return { label: "label" }
   }
 
