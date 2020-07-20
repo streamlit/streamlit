@@ -175,30 +175,33 @@ def run_test(
             finally:
                 # Kill the Streamlit script
                 streamlit_proc.terminate()
+                streamlit_proc.wait()
 
-            # If exit code is non-zero, prompt user to continue;
-            # else continue without prompting
-            if cypress_result.returncode != 0 and not ctx.always_continue:
-                key = input("[R]etry, [U]pdate snapshots, [S]kip, or [Q]uit?")[
-                    0
-                ].lower()
-                if key == "s":
-                    break
-                elif key == "q":
-                    ctx.any_failed = True
-                    raise RuntimeError("Terminating early")
-                elif key == "r":
-                    continue
-                elif key == "u":
-                    ctx.update_snapshots = True
-                    continue
+            if cypress_result.returncode != 0:
+                # The test failed!
+                if not ctx.always_continue:
+                    # Prompt the user for what to do next.
+                    user_input = click.prompt(
+                        "[R]etry, [U]pdate snapshots, [S]kip, or [Q]uit?"
+                    )
+                    key = user_input[0].lower()
+                    if key == "s":
+                        break
+                    elif key == "q":
+                        ctx.any_failed = True
+                        raise RuntimeError("Terminating early")
+                    elif key == "r":
+                        continue
+                    elif key == "u":
+                        ctx.update_snapshots = True
+                        continue
+                    else:
+                        # Retry if key not recognized
+                        continue
                 else:
-                    # Retry if key not recognized
-                    continue
-            elif cypress_result.returncode != 0 and ctx.always_continue:
-                ctx.any_failed = True
+                    ctx.any_failed = True
 
-            # If we got to this point, break out of the infinite loop.
+            # The test succeeded! Break out of the loop.
             break
 
 
