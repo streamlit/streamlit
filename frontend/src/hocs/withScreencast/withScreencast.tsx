@@ -92,15 +92,13 @@ function withScreencast(
         this.setState({
           currentState: "UNSUPPORTED",
         })
+      } else if (currentState === "OFF") {
+        this.setState({
+          fileName,
+          currentState: "SETUP",
+        })
       } else {
-        if (currentState === "OFF") {
-          this.setState({
-            fileName,
-            currentState: "SETUP",
-          })
-        } else {
-          this.stopRecording()
-        }
+        this.stopRecording()
       }
     }
 

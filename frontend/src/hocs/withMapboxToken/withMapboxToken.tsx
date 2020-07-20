@@ -20,8 +20,8 @@ import { makeElementWithInfoText } from "lib/utils"
 import hoistNonReactStatics from "hoist-non-react-statics"
 import { MapboxToken } from "hocs/withMapboxToken/MapboxToken"
 
-import MapboxTokenError from "./MapboxTokenError"
 import Alert from "components/elements/Alert"
+import MapboxTokenError from "./MapboxTokenError"
 
 interface Props {
   width: number

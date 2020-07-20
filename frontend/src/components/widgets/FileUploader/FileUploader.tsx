@@ -77,7 +77,7 @@ class FileUploader extends React.PureComponent<Props, State> {
       const errorMessage = `${rejectedFiles[0].type} files are not allowed`
       this.setState({
         status: "ERROR",
-        errorMessage: errorMessage,
+        errorMessage,
       })
 
       return
@@ -90,7 +90,7 @@ class FileUploader extends React.PureComponent<Props, State> {
         const errorMessage = `The max file size allowed is ${maxSizeMb}MB`
         this.setState({
           status: "ERROR",
-          errorMessage: errorMessage,
+          errorMessage,
         })
 
         return
@@ -175,7 +175,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     const accept: string[] = element
       .get("type")
       .toArray()
-      .map((value: string) => "." + value)
+      .map((value: string) => `.${value}`)
 
     const multipleFiles: boolean = element.get("multipleFiles")
 

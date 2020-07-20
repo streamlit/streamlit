@@ -47,7 +47,7 @@ describe("FileUploadClient", () => {
 
   afterEach(() => {
     axiosMock.restore()
-    SessionInfo["singleton"] = undefined
+    SessionInfo.singleton = undefined
   })
 
   function mockUploadResponseStatus(status: number): void {
@@ -60,14 +60,16 @@ describe("FileUploadClient", () => {
           const data = config.data as FormData
           if (data.get("widgetId") == null) {
             return [400]
-          } else if (data.get("sessionId") == null) {
+          }
+          if (data.get("sessionId") == null) {
             return [400]
           }
 
           if (getCookie("_xsrf")) {
             if (!("X-Xsrftoken" in config.headers)) {
               return [403]
-            } else if (!("withCredentials" in config)) {
+            }
+            if (!("withCredentials" in config)) {
               return [403]
             }
           }

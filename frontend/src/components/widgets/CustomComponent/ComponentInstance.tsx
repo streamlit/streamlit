@@ -24,8 +24,8 @@ import {
 import { logError, logWarning } from "lib/log"
 import { Source, WidgetStateManager } from "lib/WidgetStateManager"
 import React, { createRef, ReactNode } from "react"
-import { ComponentRegistry } from "./ComponentRegistry"
 import queryString from "query-string"
+import { ComponentRegistry } from "./ComponentRegistry"
 
 /**
  * The current custom component API version. If our API changes,
@@ -73,10 +73,14 @@ interface State {
 
 export class ComponentInstance extends React.PureComponent<Props, State> {
   private iframeRef = createRef<HTMLIFrameElement>()
+
   // True when we've received the COMPONENT_READY message
   private componentReady = false
+
   private lastRenderArgs = {}
+
   private lastRenderDataframes = []
+
   private frameHeight = 0
 
   public constructor(props: Props) {
@@ -132,7 +136,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
         // served from the webpack dev server, and gets reloaded. We
         // always respond to this message with the most recent render
         // arguments.
-        const apiVersion = data["apiVersion"]
+        const { apiVersion } = data
         if (apiVersion !== CUSTOM_COMPONENT_API_VERSION) {
           // In the future, we may end up with multiple API versions we
           // need to support. For now, we just have the one.
@@ -230,7 +234,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
 
     this.iframeRef.current.contentWindow.postMessage(
       {
-        type: type,
+        type,
         ...data,
       },
       "*"

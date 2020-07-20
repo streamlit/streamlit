@@ -19,10 +19,9 @@ import React, { ReactElement } from "react"
 import { shallow } from "enzyme"
 import { Map as ImmutableMap } from "immutable"
 
-import { StreamlitMarkdown } from "../../shared/StreamlitMarkdown"
-import Alert, { getAlertCSSClass } from "./Alert"
-import { Props as AlertProps } from "./Alert"
 import { Alert as AlertProto } from "autogen/proto"
+import { StreamlitMarkdown } from "../../shared/StreamlitMarkdown"
+import Alert, { getAlertCSSClass, Props as AlertProps } from "./Alert"
 
 const getProps = (elementProps: Record<string, unknown> = {}): AlertProps => ({
   element: ImmutableMap({
@@ -43,7 +42,7 @@ describe("Alert element", () => {
   it("renders an ERROR box as expected", () => {
     const format = AlertProto.Format.ERROR
     const props = getProps({
-      format: format,
+      format,
       body: "#what in the world?",
     })
     const wrap = shallow(<Alert {...props} />)
@@ -58,7 +57,7 @@ describe("Alert element", () => {
   it("renders a WARNING box as expected", () => {
     const format = AlertProto.Format.WARNING
     const props = getProps({
-      format: format,
+      format,
       body: "Are you *sure*?",
     })
     const wrap = shallow(<Alert {...props} />)
@@ -71,7 +70,7 @@ describe("Alert element", () => {
   it("renders a SUCCESS box as expected", () => {
     const format = AlertProto.Format.SUCCESS
     const props = getProps({
-      format: format,
+      format,
       body: "But our princess was in another castle!",
     })
     const wrap = shallow(<Alert {...props} />)
@@ -86,7 +85,7 @@ describe("Alert element", () => {
   it("renders an INFO box as expected", () => {
     const format = AlertProto.Format.INFO
     const props = getProps({
-      format: format,
+      format,
       body: "It's dangerous to go alone.",
     })
     const wrap = shallow(<Alert {...props} />)

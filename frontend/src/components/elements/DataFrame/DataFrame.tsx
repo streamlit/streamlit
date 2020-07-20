@@ -18,8 +18,6 @@
 import React from "react"
 import { Map as ImmutableMap } from "immutable"
 import { MultiGrid } from "react-virtualized"
-import DataFrameCell from "./DataFrameCell"
-import { SortDirection } from "./SortDirection"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import {
   dataFrameGet,
@@ -27,6 +25,8 @@ import {
   getSortedDataRowIndices,
 } from "lib/dataFrameProto"
 import { toFormattedString } from "lib/format"
+import { SortDirection } from "./SortDirection"
+import DataFrameCell from "./DataFrameCell"
 import "./DataFrame.scss"
 
 /**
@@ -481,7 +481,7 @@ function getWidths(
         // Otherwise, just measure every row.
         rowIndex = i
       }
-      const contents = cellContentsGetter(colIndex, rowIndex).contents
+      const { contents } = cellContentsGetter(colIndex, rowIndex)
       const nChars = contents ? contents.length : 0
       const cellWidth = nChars * charWidth + padding
 

@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-import { IS_DEV_ENV, IS_SHARED_REPORT } from "./baseconsts"
 import { SessionInfo } from "lib/SessionInfo"
+import { IS_DEV_ENV, IS_SHARED_REPORT } from "./baseconsts"
 import { logAlways } from "./log"
 
 /**
@@ -95,7 +95,7 @@ export class MetricsManager {
       // Only record the user's email if they entered a non-empty one.
       const userTraits: any = {}
       if (SessionInfo.current.authorEmail !== "") {
-        userTraits["authoremail"] = SessionInfo.current.authorEmail
+        userTraits.authoremail = SessionInfo.current.authorEmail
       }
       this.identify(SessionInfo.current.installationId, userTraits)
       this.sendPendingEvents()

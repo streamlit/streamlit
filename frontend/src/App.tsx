@@ -41,7 +41,13 @@ import {
   ReportElement,
   SimpleElement,
 } from "lib/DeltaParser"
-import { setCookie } from "lib/utils"
+import {
+  setCookie,
+  flattenElements,
+  hashString,
+  isEmbeddedInIFrame,
+  makeElementWithInfoText,
+} from "lib/utils"
 import {
   BackMsg,
   Delta,
@@ -58,12 +64,7 @@ import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
 import { SessionInfo } from "lib/SessionInfo"
 import { MetricsManager } from "lib/MetricsManager"
 import { FileUploadClient } from "lib/FileUploadClient"
-import {
-  flattenElements,
-  hashString,
-  isEmbeddedInIFrame,
-  makeElementWithInfoText,
-} from "lib/utils"
+
 import { logError, logMessage } from "lib/log"
 // WARNING: order matters
 import "assets/css/theme.scss"
@@ -102,12 +103,19 @@ declare global {
 
 export class App extends PureComponent<Props, State> {
   private readonly sessionEventDispatcher: SessionEventDispatcher
+
   private readonly statusWidgetRef: React.RefObject<StatusWidget>
+
   private connectionManager: ConnectionManager | null
+
   private readonly widgetMgr: WidgetStateManager
+
   private readonly uploadClient: FileUploadClient
+
   private elementListBuffer: Elements | null
+
   private elementListBufferTimerIsSet: boolean
+
   private readonly componentRegistry: ComponentRegistry
 
   constructor(props: Props) {
@@ -191,7 +199,7 @@ export class App extends PureComponent<Props, State> {
     logError(errorNode)
     const newDialog: DialogProps = {
       type: DialogType.WARNING,
-      title: title,
+      title,
       msg: errorNode,
       onClose: () => {},
     }
@@ -248,9 +256,8 @@ export class App extends PureComponent<Props, State> {
       const whichOne = obj[name]
       if (whichOne in funcs) {
         return funcs[whichOne](obj[whichOne])
-      } else {
-        throw new Error(`Cannot handle ${name} "${whichOne}".`)
       }
+      throw new Error(`Cannot handle ${name} "${whichOne}".`)
     }
 
     try {
@@ -280,7 +287,7 @@ export class App extends PureComponent<Props, State> {
   handleUploadReportProgress = (progress: string | number): void => {
     const newDialog: DialogProps = {
       type: DialogType.UPLOAD_PROGRESS,
-      progress: progress,
+      progress,
       onClose: () => {},
     }
     this.openDialog(newDialog)
@@ -289,7 +296,7 @@ export class App extends PureComponent<Props, State> {
   handleReportUploaded = (url: string): void => {
     const newDialog: DialogProps = {
       type: DialogType.UPLOADED,
-      url: url,
+      url,
       onClose: () => {},
     }
     this.openDialog(newDialog)
@@ -326,7 +333,7 @@ export class App extends PureComponent<Props, State> {
     }
 
     SessionInfo.current = new SessionInfo({
-      sessionId: sessionId,
+      sessionId,
       streamlitVersion: environmentInfo.streamlitVersion,
       pythonVersion: environmentInfo.pythonVersion,
       installationId: userInfo.installationId,
@@ -358,8 +365,8 @@ export class App extends PureComponent<Props, State> {
   handleSessionStateChanged = (stateChangeProto: ISessionState): void => {
     this.setState((prevState: State) => {
       // Determine our new ReportRunState
-      let reportRunState = prevState.reportRunState
-      let dialog = prevState.dialog
+      let { reportRunState } = prevState
+      let { dialog } = prevState
 
       if (
         stateChangeProto.reportIsRunning &&
@@ -589,7 +596,7 @@ export class App extends PureComponent<Props, State> {
    */
   saveSettings = (newSettings: UserSettings): void => {
     const prevRunOnSave = this.state.userSettings.runOnSave
-    const runOnSave = newSettings.runOnSave
+    const { runOnSave } = newSettings
 
     this.setState({ userSettings: newSettings })
 
@@ -639,7 +646,7 @@ export class App extends PureComponent<Props, State> {
             const elements: Elements = {
               ...this.elementListBuffer,
             }
-            this.setState({ elements: elements })
+            this.setState({ elements })
           }
         }
       }, ELEMENT_LIST_BUFFER_TIMEOUT_MS)

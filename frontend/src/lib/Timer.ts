@@ -21,8 +21,11 @@
  */
 export class Timer {
   private timerHandle?: number
+
   private duration = 0
+
   private startTime = 0
+
   private _isRunning = false
 
   /** True if the timer is currently running */

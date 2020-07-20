@@ -35,7 +35,7 @@ function createCache(): MockCache {
   const cache = new ForwardMsgCache(() => MOCK_SERVER_URI)
 
   const getCachedMessage = (hash: string): ForwardMsg | undefined =>
-    cache["getCachedMessage"](hash, false)
+    cache.getCachedMessage(hash, false)
 
   return { cache, getCachedMessage }
 }
@@ -45,8 +45,8 @@ function createCache(): MockCache {
  */
 function createForwardMsg(hash: string, cacheable = true): ForwardMsg {
   return ForwardMsg.fromObject({
-    hash: hash,
-    metadata: { cacheable: cacheable, deltaId: 0 },
+    hash,
+    metadata: { cacheable, deltaId: 0 },
     reportUploaded: hash,
   })
 }
@@ -157,7 +157,7 @@ test("removes expired messages", () => {
   const msg = createForwardMsg("Cacheable", true)
 
   // Add the message to the cache
-  cache["maybeCacheMessage"](msg)
+  cache.maybeCacheMessage(msg)
   expect(getCachedMessage(msg.hash)).toEqual(msg)
 
   // Increment our age. Our message should still exist.

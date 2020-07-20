@@ -52,11 +52,11 @@ export function dispatchOneOf(
   const whichOne = obj.get(name)
   if (whichOne in funcs) {
     return funcs[whichOne](obj.get(whichOne))
-  } else if (funcs._else) {
-    return funcs._else()
-  } else {
-    throw new Error(`Cannot handle ${name} "${whichOne}".`)
   }
+  if (funcs._else) {
+    return funcs._else()
+  }
+  throw new Error(`Cannot handle ${name} "${whichOne}".`)
 }
 
 /**
@@ -74,9 +74,8 @@ export function updateOneOf(
   const whichOne = obj.get(name)
   if (whichOne in funcs) {
     return obj.update(whichOne, funcs[whichOne])
-  } else {
-    throw new Error(`Cannot handle ${name} "${whichOne}".`)
   }
+  throw new Error(`Cannot handle ${name} "${whichOne}".`)
 }
 
 /**

@@ -65,13 +65,14 @@ const format = new Format()
 function toFormattedString(x: any): string {
   if (isFloat(x)) {
     return numbro(x).format("0,0.0000")
-  } else if (x instanceof Date) {
-    return format.dateToString(x)
-  } else if (x instanceof Duration) {
-    return format.durationToString(x)
-  } else {
-    return x.toString()
   }
+  if (x instanceof Date) {
+    return format.dateToString(x)
+  }
+  if (x instanceof Duration) {
+    return format.durationToString(x)
+  }
+  return x.toString()
 }
 
 /**

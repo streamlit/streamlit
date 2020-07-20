@@ -17,12 +17,12 @@
 
 import React from "react"
 import ReactDOM from "react-dom"
-import App from "./App"
 
 import { Client as Styletron } from "styletron-engine-atomic"
 import { LightTheme, BaseProvider } from "baseui"
 import { Provider as StyletronProvider } from "styletron-react"
 import { SCSS_VARS } from "autogen/scssVariables"
+import App from "./App"
 
 const engine = new Styletron({ prefix: "st-" })
 const popupZIndex = Number(SCSS_VARS["$z-index-popup-menu"])

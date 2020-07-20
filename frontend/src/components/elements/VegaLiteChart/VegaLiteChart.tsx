@@ -116,7 +116,7 @@ export class VegaLiteChart extends PureComponent<PropsWithHeight, State> {
 
   public async componentDidUpdate(prevProps: PropsWithHeight): Promise<void> {
     const prevElement = prevProps.element
-    const element = this.props.element
+    const { element } = this.props
 
     const prevSpec = prevElement.get("spec")
     const spec = element.get("spec")
@@ -147,7 +147,7 @@ export class VegaLiteChart extends PureComponent<PropsWithHeight, State> {
     const dataSets = getDataSets(element) || {}
 
     for (const [name, dataset] of Object.entries(dataSets)) {
-      const datasetName = name ? name : this.defaultDataName
+      const datasetName = name || this.defaultDataName
       const prevDataset = prevDataSets[datasetName]
       this.updateData(datasetName, prevDataset, dataset)
     }
@@ -168,13 +168,11 @@ export class VegaLiteChart extends PureComponent<PropsWithHeight, State> {
     const useContainerWidth = JSON.parse(el.get("useContainerWidth"))
 
     if (this.props.height) {
-      //fullscreen
+      // fullscreen
       spec.width = this.props.width - EMBED_PADDING
       spec.height = this.props.height
-    } else {
-      if (useContainerWidth) {
-        spec.width = this.props.width - EMBED_PADDING
-      }
+    } else if (useContainerWidth) {
+      spec.width = this.props.width - EMBED_PADDING
     }
 
     if (!spec.padding) {

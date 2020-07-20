@@ -24,6 +24,7 @@ import { getCookie } from "lib/utils"
  */
 export default class HttpClient {
   protected readonly getServerUri: () => BaseUriParts | undefined
+
   protected readonly csrfEnabled: boolean
 
   public constructor(
@@ -42,10 +43,10 @@ export default class HttpClient {
     if (this.csrfEnabled) {
       const xsrf_cookie = getCookie("_xsrf")
       if (xsrf_cookie != null) {
-        params.headers = Object.assign(
-          { "X-Xsrftoken": xsrf_cookie },
-          params.headers || {}
-        )
+        params.headers = {
+          "X-Xsrftoken": xsrf_cookie,
+          ...(params.headers || {}),
+        }
         params.withCredentials = true
       }
     }

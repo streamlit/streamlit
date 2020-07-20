@@ -74,7 +74,7 @@ class TimeInput extends PureComponent<Props, State> {
       .toString()
       .padStart(2, "0")
 
-    return hours + ":" + minutes
+    return `${hours}:${minutes}`
   }
 
   public render = (): ReactNode => {

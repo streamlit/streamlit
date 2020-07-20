@@ -20,8 +20,8 @@ import { shallow } from "enzyme"
 import { fromJS } from "immutable"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
-import Selectbox, { Props } from "./Selectbox"
 import { Select as UISelect } from "baseui/select"
+import Selectbox, { Props } from "./Selectbox"
 
 jest.mock("lib/WidgetStateManager")
 

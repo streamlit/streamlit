@@ -108,13 +108,11 @@ class NumberInput extends React.PureComponent<Props, State> {
 
     if (step) {
       return step
-    } else {
-      if (this.isIntData()) {
-        return 1
-      } else {
-        return 0.01
-      }
     }
+    if (this.isIntData()) {
+      return 1
+    }
+    return 0.01
   }
 
   private setWidgetValue = (source: Source): void => {
