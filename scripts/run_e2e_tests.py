@@ -161,19 +161,16 @@ def run_test(
         # Infinite loop to support retries
         while True:
             try:
-                # Run the next Streamlit test script
+                # Start the Streamlit script. It will continue running until
+                # we terminate it below.
                 streamlit_proc = subprocess.Popen(streamlit_command, cwd=FRONTEND_DIR)
 
-                # Run the Cypress spec
-                cypress_command = [
-                    "yarn",
-                    "cy:run",
-                    "--spec",
-                    specpath,
-                ] + ctx.cypress_flags
+                # Run the Cypress spec.
+                cypress_command = ["yarn", "cy:run", "--spec", specpath]
+                cypress_command.extend(ctx.cypress_flags)
                 cypress_result = subprocess.run(cypress_command, cwd=FRONTEND_DIR)
             finally:
-                # Kill the Streamlit script
+                # Kill the Streamlit script.
                 streamlit_proc.terminate()
                 streamlit_proc.wait()
 
