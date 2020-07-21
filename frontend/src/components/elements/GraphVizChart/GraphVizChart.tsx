@@ -41,8 +41,8 @@ interface Dimensions {
 
 // Use d3Graphviz in a dummy expression so the library actually gets loaded.
 // This way it registers itself in d3 as a plugin at this point.
-const _dummy_graphviz = graphviz
-_dummy_graphviz // eslint-disable-line @typescript-eslint/no-unused-expressions
+const dummyGraphviz = graphviz
+dummyGraphviz // eslint-disable-line @typescript-eslint/no-unused-expressions
 
 export class GraphVizChart extends PureComponent<PropsWithHeight> {
   private chartId = `graphviz-chart-${this.props.index}`

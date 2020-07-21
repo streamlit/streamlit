@@ -41,10 +41,10 @@ export default class HttpClient {
    */
   public request(params: AxiosRequestConfig): Promise<AxiosResponse> {
     if (this.csrfEnabled) {
-      const xsrf_cookie = getCookie("_xsrf")
-      if (xsrf_cookie != null) {
+      const xsrfCookie = getCookie("_xsrf")
+      if (xsrfCookie != null) {
         params.headers = {
-          "X-Xsrftoken": xsrf_cookie,
+          "X-Xsrftoken": xsrfCookie,
           ...(params.headers || {}),
         }
         params.withCredentials = true

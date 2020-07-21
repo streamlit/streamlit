@@ -278,7 +278,8 @@ export class VegaLiteChart extends PureComponent<PropsWithHeight, State> {
     // Heuristic to determine the default dataset name.
     const datasetNames = datasets ? Object.keys(datasets) : []
     if (datasetNames.length === 1) {
-      this.defaultDataName = datasetNames[0]
+      const [datasetName] = datasetNames
+      this.defaultDataName = datasetName
     } else if (datasetNames.length === 0 && vgSpec.data) {
       this.defaultDataName = DEFAULT_DATA_NAME
     }
@@ -302,12 +303,18 @@ export class VegaLiteChart extends PureComponent<PropsWithHeight, State> {
 
   public render(): JSX.Element {
     if (this.state.error) {
+      // eslint-disable-next-line @typescript-eslint/no-throw-literal
       throw this.state.error
     }
 
     return (
       // Create the container Vega draws inside.
-      <div className="stVegaLiteChart" ref={c => (this.element = c)} />
+      <div
+        className="stVegaLiteChart"
+        ref={c => {
+          this.element = c
+        }}
+      />
     )
   }
 }

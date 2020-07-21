@@ -126,7 +126,9 @@ class NumberInput extends React.PureComponent<Props, State> {
 
     if (min > value || value > max) {
       const node = this.inputRef.current
-      node && node.reportValidity()
+      if (node) {
+        node.reportValidity()
+      }
     } else {
       const valueToBeSaved = value || value === 0 ? value : data.get("default")
 
@@ -182,6 +184,7 @@ class NumberInput extends React.PureComponent<Props, State> {
 
         this.modifyValueUsingStep("decrement")()
         break
+      default: // Do nothing
     }
   }
 
@@ -226,6 +229,7 @@ class NumberInput extends React.PureComponent<Props, State> {
           )
         }
         break
+      default: // Do nothing
     }
   }
 

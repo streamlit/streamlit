@@ -95,7 +95,9 @@ function mockMissingMessageResponse(msg: ForwardMsg): void {
   fetchMock.mock(buildHttpUri(MOCK_SERVER_URI, "message"), response, options)
 }
 
-beforeEach(() => (fetchMock.config.sendAsJson = false))
+beforeEach(() => {
+  fetchMock.config.sendAsJson = false
+})
 afterEach(() => fetchMock.restore())
 
 test("caches messages correctly", async () => {

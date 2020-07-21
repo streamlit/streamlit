@@ -36,7 +36,7 @@ import { BlockElement, ReportElement, SimpleElement } from "./DeltaParser"
 export function debounce(delay: number, fn: any): any {
   let timerId: any
 
-  return function(...args: any[]) {
+  return (...args: any[]) => {
     if (timerId) {
       clearTimeout(timerId)
     }

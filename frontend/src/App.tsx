@@ -498,14 +498,14 @@ export class App extends PureComponent<Props, State> {
       // This step removes from the WidgetManager the state of those widgets
       // that are not shown on the page.
       if (this.elementListBuffer) {
-        const active_widget_ids = flattenElements(this.elementListBuffer.main)
+        const activeWidgetIds = flattenElements(this.elementListBuffer.main)
           .union(flattenElements(this.elementListBuffer.sidebar))
           .map((e: SimpleElement) => {
             const type = e.get("type")
             return e.get(type).get("id") as string
           })
           .filter(id => id != null)
-        this.widgetMgr.clean(active_widget_ids)
+        this.widgetMgr.clean(activeWidgetIds)
       }
 
       // Tell the ConnectionManager to increment the message cache run

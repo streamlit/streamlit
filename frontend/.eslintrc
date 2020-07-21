@@ -72,7 +72,30 @@
     // It's OK to use ts-ignore when we're missing type definitions
     // for a JS library.
     "@typescript-eslint/ban-ts-ignore": "off",
-    "@typescript-eslint/ban-ts-comment": "off"
+    "@typescript-eslint/ban-ts-comment": "off",
+    // Permit for-of loops (https://stackoverflow.com/a/42237667)
+    "no-restricted-syntax": [
+      "error",
+      "ForInStatement",
+      "LabeledStatement",
+      "WithStatement"
+    ],
+    // It's okay to use parseInt() with the default radix of 10
+    "radix": "off",
+    // Disable a bunch of AirBNB rules we're currently in violation of.
+    // TODO: For each one, either fix and reenable, or provide a justification.
+    "import/extensions": "off",
+    "import/prefer-default-export": "off",
+    "import/no-extraneous-dependencies": "off",
+    "class-methods-use-this": "off",
+    "max-classes-per-file": "off",
+    "no-shadow": "off",
+    "no-underscore-dangle": "off",
+    "no-param-reassign": "off",
+    "no-plusplus": "off",
+    "no-console": "off",
+    "no-nested-ternary": "off",
+    "no-prototype-builtins": "off"
   },
   "settings": {
     "react": {

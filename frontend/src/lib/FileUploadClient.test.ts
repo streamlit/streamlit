@@ -54,7 +54,7 @@ describe("FileUploadClient", () => {
     axiosMock
       .onPost(buildHttpUri(MOCK_SERVER_URI, "upload_file"))
       .reply((config: AxiosRequestConfig): any[] => {
-        if (status == 200) {
+        if (status === 200) {
           // Validate that widgetId and sessionId are present on
           // outgoing requests.
           const data = config.data as FormData

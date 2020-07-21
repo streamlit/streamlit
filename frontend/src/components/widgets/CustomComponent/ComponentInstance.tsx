@@ -129,7 +129,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
    */
   private onBackMsg = (type: string, data: any): void => {
     switch (type) {
-      case ComponentMessageType.COMPONENT_READY:
+      case ComponentMessageType.COMPONENT_READY: {
         // Our component is ready to begin receiving messages. Send off its
         // first render message! It is *not* an error to get multiple
         // COMPONENT_READY messages. This can happen if a component is being
@@ -153,6 +153,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
           })
         }
         break
+      }
 
       case ComponentMessageType.SET_COMPONENT_VALUE:
         if (!this.componentReady) {

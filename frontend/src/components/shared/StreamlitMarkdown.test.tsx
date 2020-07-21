@@ -79,6 +79,7 @@ describe("linkReference", () => {
     const instance = component.root
     // should be no link object
     expect(() => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       instance.findByType(linkWithTargetBlank).props.href
     }).toThrow()
   })

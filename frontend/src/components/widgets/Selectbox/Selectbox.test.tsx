@@ -125,7 +125,6 @@ describe("Selectbox widget", () => {
     const filterOptionsFn = wrapper.find(UISelect).prop("filterOptions")
     if (filterOptionsFn === undefined || options === undefined) {
       fail("Unexepcted undefined value")
-      return 0
     }
     const filteredOptions = filterOptionsFn(options, "1")
     expect(filteredOptions).toEqual([])
@@ -136,7 +135,6 @@ describe("Selectbox widget", () => {
     const filterOptionsFn = wrapper.find(UISelect).prop("filterOptions")
     if (filterOptionsFn === undefined || options === undefined) {
       fail("Unexepcted undefined value")
-      return 0
     }
     expect(filterOptionsFn(options, "b")).toEqual([
       {
