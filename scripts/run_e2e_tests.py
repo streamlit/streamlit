@@ -28,6 +28,10 @@ import click
 
 ROOT_DIR = dirname(dirname(abspath(__file__)))  # streamlit root directory
 FRONTEND_DIR = join(ROOT_DIR, "frontend")
+COMPONENT_TEMPLATE_DIRS = [
+    join(ROOT_DIR, "component-template/template/my_component"),
+    join(ROOT_DIR, "component-template/template-reactless/my_component"),
+]
 
 CREDENTIALS_FILE = os.path.expanduser("~/.streamlit/credentials.toml")
 
@@ -202,6 +206,27 @@ def run_test(
             break
 
 
+def run_component_template_e2e_test(ctx: Context, template_dir: str):
+    """Build a component template and run its e2e tests."""
+    frontend_dir = join(template_dir, "frontend")
+
+    # Install the template's npm dependencies into its node_modules.
+    subprocess.run(["yarn", "install"], cwd=frontend_dir, check=True)
+
+    # Start the template's dev server.
+    webpack_proc = subprocess.Popen(["yarn", "start"], cwd=frontend_dir)
+
+    try:
+        # Run the test!
+        script_path = join(template_dir, "__init__.py")
+        spec_path = join(ROOT_DIR, "e2e/specs/component_template.spec.ts")
+        run_test(ctx, spec_path, ["streamlit", "run", script_path])
+    finally:
+        # Kill the webpack server.
+        webpack_proc.terminate()
+        webpack_proc.wait()
+
+
 @click.command()
 @click.option(
     "-a", "--always-continue", is_flag=True, help="Continue running on test failure."
@@ -246,27 +271,31 @@ def run_e2e_tests(
     ctx.tests_dir_name = "e2e_flaky" if flaky_tests else "e2e"
 
     try:
-        # First, test "streamlit hello" in different combinations. We skip
-        # `no_credentials=True` for the `--server.headless=false` test, because
-        # it'll give a credentials prompt.
         if not flaky_tests:
-            hello_spec = join(ROOT_DIR, "e2e/specs/st_hello.spec.ts")
-            run_test(
-                ctx,
-                hello_spec,
-                ["streamlit", "hello", "--server.headless=true"],
-                no_credentials=False,
-            )
+            # # First, test "streamlit hello" in different combinations. We skip
+            # # `no_credentials=True` for the `--server.headless=false` test,
+            # # because it'll give a credentials prompt.
+            # hello_spec = join(ROOT_DIR, "e2e/specs/st_hello.spec.ts")
+            # run_test(
+            #     ctx,
+            #     hello_spec,
+            #     ["streamlit", "hello", "--server.headless=true"],
+            #     no_credentials=False,
+            # )
+            # run_test(ctx, hello_spec, ["streamlit", "hello", "--server.headless=false"])
+            # run_test(ctx, hello_spec, ["streamlit", "hello", "--server.headless=true"])
 
-            run_test(ctx, hello_spec, ["streamlit", "hello", "--server.headless=false"])
-            run_test(ctx, hello_spec, ["streamlit", "hello", "--server.headless=true"])
+            # Next, run our component_template tests.
+            for template_dir in COMPONENT_TEMPLATE_DIRS:
+                run_component_template_e2e_test(ctx, template_dir)
+                break
 
-        # Test core streamlit elements
-        p = pathlib.Path(join(ROOT_DIR, ctx.tests_dir_name, "scripts")).resolve()
-        for test_path in p.glob("*.py"):
-            test_name, _ = splitext(basename(test_path.as_posix()))
-            specpath = join(ctx.tests_dir, "specs", f"{test_name}.spec.ts")
-            run_test(ctx, specpath, ["streamlit", "run", test_path.as_posix()])
+        # # Test core streamlit elements
+        # p = pathlib.Path(join(ROOT_DIR, ctx.tests_dir_name, "scripts")).resolve()
+        # for test_path in p.glob("*.py"):
+        #     test_name, _ = splitext(basename(test_path.as_posix()))
+        #     specpath = join(ctx.tests_dir, "specs", f"{test_name}.spec.ts")
+        #     run_test(ctx, specpath, ["streamlit", "run", test_path.as_posix()])
     finally:
         generate_mochawesome_report()
 
