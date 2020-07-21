@@ -223,6 +223,8 @@ def run_component_template_e2e_test(ctx: Context, template_dir: str):
         run_test(ctx, spec_path, ["streamlit", "run", script_path])
     finally:
         # Kill the webpack server.
+        # TODO: I think we want to ensure the server is not run in "watch" mode.
+        # It's not being shut down properly.
         webpack_proc.terminate()
         webpack_proc.wait()
 
@@ -272,30 +274,29 @@ def run_e2e_tests(
 
     try:
         if not flaky_tests:
-            # # First, test "streamlit hello" in different combinations. We skip
-            # # `no_credentials=True` for the `--server.headless=false` test,
-            # # because it'll give a credentials prompt.
-            # hello_spec = join(ROOT_DIR, "e2e/specs/st_hello.spec.ts")
-            # run_test(
-            #     ctx,
-            #     hello_spec,
-            #     ["streamlit", "hello", "--server.headless=true"],
-            #     no_credentials=False,
-            # )
-            # run_test(ctx, hello_spec, ["streamlit", "hello", "--server.headless=false"])
-            # run_test(ctx, hello_spec, ["streamlit", "hello", "--server.headless=true"])
+            # First, test "streamlit hello" in different combinations. We skip
+            # `no_credentials=True` for the `--server.headless=false` test,
+            # because it'll give a credentials prompt.
+            hello_spec = join(ROOT_DIR, "e2e/specs/st_hello.spec.ts")
+            run_test(
+                ctx,
+                hello_spec,
+                ["streamlit", "hello", "--server.headless=true"],
+                no_credentials=False,
+            )
+            run_test(ctx, hello_spec, ["streamlit", "hello", "--server.headless=false"])
+            run_test(ctx, hello_spec, ["streamlit", "hello", "--server.headless=true"])
 
             # Next, run our component_template tests.
             for template_dir in COMPONENT_TEMPLATE_DIRS:
                 run_component_template_e2e_test(ctx, template_dir)
-                break
 
-        # # Test core streamlit elements
-        # p = pathlib.Path(join(ROOT_DIR, ctx.tests_dir_name, "scripts")).resolve()
-        # for test_path in p.glob("*.py"):
-        #     test_name, _ = splitext(basename(test_path.as_posix()))
-        #     specpath = join(ctx.tests_dir, "specs", f"{test_name}.spec.ts")
-        #     run_test(ctx, specpath, ["streamlit", "run", test_path.as_posix()])
+        # Test core streamlit elements
+        p = pathlib.Path(join(ROOT_DIR, ctx.tests_dir_name, "scripts")).resolve()
+        for test_path in p.glob("*.py"):
+            test_name, _ = splitext(basename(test_path.as_posix()))
+            specpath = join(ctx.tests_dir, "specs", f"{test_name}.spec.ts")
+            run_test(ctx, specpath, ["streamlit", "run", test_path.as_posix()])
     finally:
         generate_mochawesome_report()
 
