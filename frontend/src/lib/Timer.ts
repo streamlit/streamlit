@@ -26,16 +26,16 @@ export class Timer {
 
   private startTime = 0
 
-  private _isRunning = false
+  private running = false
 
   /** True if the timer is currently running */
   public get isRunning(): boolean {
-    return this._isRunning
+    return this.running
   }
 
   /** Remaining time before timeout, or 0 if the timer is not running */
   public get remainingTime(): number {
-    if (!this._isRunning) {
+    if (!this.running) {
       return 0
     }
     const elapsed = Date.now() - this.startTime
@@ -50,9 +50,9 @@ export class Timer {
     this.cancel()
     this.startTime = Date.now()
     this.duration = time
-    this._isRunning = true
+    this.running = true
     this.timerHandle = window.setTimeout(() => {
-      this._isRunning = false
+      this.running = false
       handler()
     }, time)
   }
@@ -62,7 +62,7 @@ export class Timer {
     if (this.timerHandle !== undefined) {
       window.clearTimeout(this.timerHandle)
       this.timerHandle = undefined
-      this._isRunning = false
+      this.running = false
     }
   }
 }

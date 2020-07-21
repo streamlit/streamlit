@@ -208,8 +208,9 @@ export class VegaLiteChart extends PureComponent<PropsWithHeight, State> {
     }
 
     if (!data || !data.get("data")) {
-      const viewHasDataWithName = (this
-        .vegaView as any)._runtime.data.hasOwnProperty(name)
+      const view = this.vegaView as any
+      // eslint-disable-next-line no-underscore-dangle
+      const viewHasDataWithName = view._runtime.data.hasOwnProperty(name)
       if (viewHasDataWithName) {
         this.vegaView.remove(name, vega.truthy)
       }

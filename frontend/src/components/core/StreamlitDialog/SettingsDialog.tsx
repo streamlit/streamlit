@@ -31,7 +31,7 @@ export interface Props {
  * Implements a dialog that is used to configure user settings.
  */
 export class SettingsDialog extends PureComponent<Props, UserSettings> {
-  private _settings: UserSettings
+  private activeSettings: UserSettings
 
   constructor(props: Props) {
     super(props)
@@ -40,7 +40,7 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
     this.state = { ...this.props.settings }
 
     // Holds the actual settings that Streamlit is using.
-    this._settings = { ...this.props.settings }
+    this.activeSettings = { ...this.props.settings }
   }
 
   public render = (): ReactNode => {
@@ -94,7 +94,7 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
   }
 
   private handleDialogOpen = (): void => {
-    this.setState({ ...this._settings })
+    this.setState({ ...this.activeSettings })
   }
 
   private changeSingleSetting = (name: string, value: boolean): void => {
@@ -115,8 +115,8 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
   }
 
   private handleSaveButtonClick = (): void => {
-    this._settings = { ...this.state }
-    this.props.onSave(this._settings)
+    this.activeSettings = { ...this.state }
+    this.props.onSave(this.activeSettings)
     this.props.onClose()
   }
 }

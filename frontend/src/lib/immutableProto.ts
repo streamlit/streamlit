@@ -39,7 +39,7 @@ export function toImmutableProto(messageType: any, message: any): any {
  * obj   - The immutable protobuf object we're applying this to.
  * name  - The name of the oneof field.
  * funcs - Dictionary of functions, one for each oneof field. Optionally, you
- * may pass a key-value pair {'_else': errorFunc} to hanle the case where there
+ * may pass a key-value pair {'_else': errorFunc} to handle the case where there
  * is no match. If such a function is not passed, we throw an error if there's
  * no match.
  */
@@ -53,7 +53,9 @@ export function dispatchOneOf(
   if (whichOne in funcs) {
     return funcs[whichOne](obj.get(whichOne))
   }
+  // eslint-disable-next-line no-underscore-dangle
   if (funcs._else) {
+    // eslint-disable-next-line no-underscore-dangle
     return funcs._else()
   }
   throw new Error(`Cannot handle ${name} "${whichOne}".`)
