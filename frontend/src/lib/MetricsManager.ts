@@ -21,7 +21,7 @@ import { logAlways } from "./log"
 import { initializeSegment } from "./Segment"
 
 /**
- * The analytics is the Segment.io object. It is initialised in Segment.ts
+ * The analytics is the Segment.io object. It is initialized in Segment.ts
  * It is loaded with global scope (window.analytics) to integrate with the segment.io api
  * @global
  * */

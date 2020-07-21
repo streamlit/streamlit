@@ -59,14 +59,14 @@ test("does not track when initialized with gatherUsageStats=false", () => {
   expect(mm["identify"].mock.calls.length).toBe(0)
 })
 
-test("does not intialise segment analytics when gatherUsageStats=false", () => {
+test("does not initialize Segment analytics when gatherUsageStats=false", () => {
   const mm = getMetricsManagerForTest()
   expect(window.analytics).toBeUndefined()
   mm.initialize({ gatherUsageStats: false })
   expect(window.analytics).toBeUndefined()
 })
 
-test("intialises segment analytics when gatherUsageStats=true", () => {
+test("initializes Segment analytics when gatherUsageStats=true", () => {
   const mm = getMetricsManagerForTest()
   expect(window.analytics).toBeUndefined()
   mm.initialize({ gatherUsageStats: true })
