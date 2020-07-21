@@ -1560,7 +1560,7 @@ class DeltaGenerator(object):
         ...          use_column_width=True)
 
         .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=YCFaqPgmgpEz7jwE4tHAzY
+           https://share.streamlit.io/0.61.0-yRE1/index.html?id=Sn228UQxBfKoE5C7A7Y2Qk
            height: 630px
 
         """
@@ -1749,7 +1749,7 @@ class DeltaGenerator(object):
         >>> st.video(video_bytes)
 
         .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=Wba9sZELKfKwXH4nDCCbMv
+           https://share.streamlit.io/0.61.0-yRE1/index.html?id=LZLtVFFTf1s41yfPExzRu8
            height: 600px
 
         .. note::
