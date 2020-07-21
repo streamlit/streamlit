@@ -264,10 +264,9 @@ def run_e2e_tests(
         # Test core streamlit elements
         p = pathlib.Path(join(ROOT_DIR, ctx.tests_dir_name, "scripts")).resolve()
         for test_path in p.glob("*.py"):
-            test_path = str(test_path)
-            test_name, _ = splitext(basename(test_path))
+            test_name, _ = splitext(basename(test_path.as_posix()))
             specpath = join(ctx.tests_dir, "specs", f"{test_name}.spec.ts")
-            run_test(ctx, specpath, ["streamlit", "run", test_path])
+            run_test(ctx, specpath, ["streamlit", "run", test_path.as_posix()])
     finally:
         generate_mochawesome_report()
 
