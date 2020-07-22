@@ -22,7 +22,7 @@
 import camelcase from "camelcase"
 import { fromJS } from "immutable"
 import { dispatchOneOf, mapOneOf, updateOneOf } from "./immutableProto"
-import { format } from "./format"
+import { Format } from "./format"
 
 // Must match dict_builder.py
 export const INDEX_COLUMN_DESIGNATOR = "(index)"
@@ -349,9 +349,9 @@ export function indexGet(index: any, level: any, i: any): any {
     int_64Index: (idx: any) => idx.getIn(["data", "data", i]),
     float_64Index: (idx: any) => idx.getIn(["data", "data", i]),
     datetimeIndex: (idx: any) =>
-      format.nanosToDate(idx.getIn(["data", "data", i])),
+      Format.nanosToDate(idx.getIn(["data", "data", i])),
     timedeltaIndex: (idx: any) =>
-      format.nanosToDuration(idx.getIn(["data", "data", i])),
+      Format.nanosToDuration(idx.getIn(["data", "data", i])),
   })
 }
 
@@ -385,8 +385,8 @@ function anyArrayGet(anyArray: any, i: any): any {
     strings: getData,
     doubles: getData,
     int64s: getData,
-    datetimes: (obj: any) => format.nanosToDate(getData(obj)),
-    timedeltas: (obj: any) => format.nanosToDuration(getData(obj)),
+    datetimes: (obj: any) => Format.nanosToDate(getData(obj)),
+    timedeltas: (obj: any) => Format.nanosToDuration(getData(obj)),
   })
 }
 

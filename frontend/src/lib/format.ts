@@ -35,15 +35,15 @@ class Duration {
 }
 
 class Format {
-  nanosToDate(nanos: number): Date {
+  static nanosToDate(nanos: number): Date {
     return new Date(nanos / 1e6)
   }
 
-  nanosToDuration(nanos: number): Duration {
+  static nanosToDuration(nanos: number): Duration {
     return new Duration(nanos / 1e6)
   }
 
-  dateToString(date: Date): string {
+  static dateToString(date: Date): string {
     const m = moment(date)
     let format = "lll"
     if (m.hour() === 0 && m.minute() === 0 && m.second() === 0) {
@@ -52,12 +52,10 @@ class Format {
     return m.format(format)
   }
 
-  durationToString(duration: Duration): string {
+  static durationToString(duration: Duration): string {
     return moment.duration(duration.getTime()).format()
   }
 }
-
-const format = new Format()
 
 /**
  * Formats the string nicely if it's a floating point, number, date or duration.
@@ -67,10 +65,10 @@ function toFormattedString(x: any): string {
     return numbro(x).format("0,0.0000")
   }
   if (x instanceof Date) {
-    return format.dateToString(x)
+    return Format.dateToString(x)
   }
   if (x instanceof Duration) {
-    return format.durationToString(x)
+    return Format.durationToString(x)
   }
   return x.toString()
 }
@@ -82,4 +80,4 @@ function isFloat(n: any): boolean {
   return Number(n) === n && n % 1 !== 0
 }
 
-export { Duration, format, toFormattedString }
+export { Duration, Format, toFormattedString }

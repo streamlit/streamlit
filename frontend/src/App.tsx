@@ -209,7 +209,7 @@ export class App extends PureComponent<Props, State> {
   /**
    * Checks if the code version from the backend is different than the frontend
    */
-  hasStreamlitVersionChanged(initializeMsg: Initialize): boolean {
+  static hasStreamlitVersionChanged(initializeMsg: Initialize): boolean {
     if (SessionInfo.isSet()) {
       const { streamlitVersion: currentStreamlitVersion } = SessionInfo.current
       const { environmentInfo } = initializeMsg
@@ -326,7 +326,7 @@ export class App extends PureComponent<Props, State> {
       throw new Error("InitializeMsg is missing a required field")
     }
 
-    if (this.hasStreamlitVersionChanged(initializeMsg)) {
+    if (App.hasStreamlitVersionChanged(initializeMsg)) {
       window.location.reload()
 
       return

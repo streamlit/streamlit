@@ -87,7 +87,6 @@
     "import/extensions": "off",
     "import/prefer-default-export": "off",
     "import/no-extraneous-dependencies": "off",
-    "class-methods-use-this": "off",
     "max-classes-per-file": "off",
     "no-shadow": "off",
     "no-param-reassign": "off",
