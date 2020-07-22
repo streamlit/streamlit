@@ -41,6 +41,7 @@ interface State {
   isRange: boolean
 }
 
+// Date format for communication (protobuf) support
 const DATE_FORMAT = "YYYY/MM/DD"
 
 class DateInput extends React.PureComponent<Props, State> {
