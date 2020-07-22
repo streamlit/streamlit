@@ -82,6 +82,8 @@
     ],
     // It's okay to use parseInt() with the default radix of 10
     "radix": "off",
+    // Allow foo.hasOwnProperty("bar")
+    "no-prototype-builtins": "off",
     // Disable a bunch of AirBNB rules we're currently in violation of.
     // TODO: For each one, either fix and reenable, or provide a justification.
     "import/extensions": "off",
@@ -91,9 +93,7 @@
     "no-shadow": "off",
     "no-param-reassign": "off",
     "no-plusplus": "off",
-    "no-console": "off",
-    "no-nested-ternary": "off",
-    "no-prototype-builtins": "off"
+    "no-console": "off"
   },
   "settings": {
     "react": {

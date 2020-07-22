@@ -216,11 +216,10 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
             height={deck.initialViewState.height}
             width={deck.initialViewState.width}
             mapStyle={
-              deck.mapStyle
-                ? typeof deck.mapStyle === "string"
-                  ? deck.mapStyle
-                  : deck.mapStyle[0]
-                : undefined
+              deck.mapStyle &&
+              (typeof deck.mapStyle === "string"
+                ? deck.mapStyle
+                : deck.mapStyle[0])
             }
             mapboxApiAccessToken={this.props.mapboxToken}
           />

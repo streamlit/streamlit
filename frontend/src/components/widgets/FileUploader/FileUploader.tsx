@@ -227,17 +227,22 @@ class FileUploader extends React.PureComponent<Props, State> {
     const { element } = this.props
     const label: string = element.get("label")
 
+    let renderFunction
+    if (status === "ERROR") {
+      renderFunction = this.renderErrorMessage
+    } else if (status === "UPLOADING") {
+      renderFunction = this.renderUploadingMessage
+    } else {
+      renderFunction = this.renderFileUploader
+    }
+
     // The BaseWeb file uploader is not particularly configurable, so we hack it here by replacing
     // the uploader with our own UI where appropriate.
     return (
       <div className="Widget stFileUploader">
         <label>{label}</label>
 
-        {status === "ERROR"
-          ? this.renderErrorMessage()
-          : status === "UPLOADING"
-          ? this.renderUploadingMessage()
-          : this.renderFileUploader()}
+        {renderFunction()}
       </div>
     )
   }

@@ -38,14 +38,14 @@ export function getWindowBaseUriParts(): BaseUriParts {
   // If changed, also change config.py
   const host = window.location.hostname
 
-  // prettier-ignore
-  const port = IS_DEV_ENV
-    ? WEBSOCKET_PORT_DEV
-    : window.location.port
-      ? Number(window.location.port)
-      : isHttps()
-        ? 443
-        : 80
+  let port
+  if (IS_DEV_ENV) {
+    port = WEBSOCKET_PORT_DEV
+  } else if (window.location.port) {
+    port = Number(window.location.port)
+  } else {
+    port = isHttps() ? 443 : 80
+  }
 
   const basePath = window.location.pathname
     .replace(FINAL_SLASH_RE, "")
