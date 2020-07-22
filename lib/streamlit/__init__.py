@@ -498,7 +498,7 @@ def experimental_get_query_string():
     """
     ctx = _get_report_ctx()
     if ctx is None:
-        return ''
+        return ""
     return _parse.parse_qs(ctx.query_string)
 
 

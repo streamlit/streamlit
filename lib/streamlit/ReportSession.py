@@ -210,7 +210,9 @@ class ReportSession(object):
 
         """
         if client_state:
-            rerun_data = RerunData(client_state.query_string, client_state.widget_states)
+            rerun_data = RerunData(
+                client_state.query_string, client_state.widget_states
+            )
         else:
             rerun_data = RerunData()
 
@@ -410,9 +412,7 @@ class ReportSession(object):
         msg.report_finished = status
         self.enqueue(msg)
 
-    def handle_rerun_script_request(
-        self, client_state=None, is_preheat=False
-    ):
+    def handle_rerun_script_request(self, client_state=None, is_preheat=False):
         """Tell the ScriptRunner to re-run its report.
 
         Parameters
@@ -433,7 +433,6 @@ class ReportSession(object):
             # If this is a "preheated" ReportSession, reuse the previous run if
             # the widget state matches. But only do this one time ever.
             self._maybe_reuse_previous_run = False
-
 
             has_client_state = False
 
