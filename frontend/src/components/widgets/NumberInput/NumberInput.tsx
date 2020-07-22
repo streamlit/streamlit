@@ -158,7 +158,7 @@ class NumberInput extends React.PureComponent<Props, State> {
     let numValue = null
 
     if (this.isIntData()) {
-      numValue = parseInt(value)
+      numValue = parseInt(value, 10)
     } else {
       numValue = parseFloat(value)
     }
