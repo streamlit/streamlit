@@ -95,14 +95,14 @@ st.title('My first app')
 ```
 
 That's it! Your app has a title. You can use specific text functions to add
-content to your app, or you can use [`st.write()`](api.html#streamlit.write)
+content to your app, or you can use <a href="api.html#streamlit.write" class="reference internal">`st.write()`</a>
 and add your own markdown.
 
 ### Write a data frame
 
-Along with [magic commands](api.html#magic-commands),
-[`st.write()`](api.html#streamlit.write) is Streamlit's "Swiss Army knife". You
-can pass almost anything to [`st.write()`](api.html#streamlit.write):
+Along with <a href="api.html#magic-commands" class="reference internal">magic commands</a>,
+<a href="api.html#streamlit.write" class="reference internal">`st.write()`</a> is Streamlit's "Swiss Army knife". You
+can pass almost anything to <a href="api.html#streamlit.write" class="reference internal">`st.write()`</a>:
 text, data, Matplotlib figures, Altair charts, and more. Don't worry, Streamlit
 will figure it out and render things the right way.
 
@@ -115,8 +115,8 @@ st.write(pd.DataFrame({
 ```
 
 There are other data specific functions like
-[`st.dataframe()`](api.html#streamlit.dataframe) and
-[`st.table()`](api.html#streamlit.table) that you can also use for displaying
+<a href="api.html#streamlit.dataframe" class="reference internal">`st.dataframe()`</a> and
+<a href="api.html#streamlit.table" class="reference internal">`st.table()`</a> that you can also use for displaying
 data. Check our advanced guides on displaying data to understand when to use
 these features and how to add colors and styling to your data frames.
 
@@ -132,9 +132,8 @@ these features and how to add colors and styling to your data frames.
 ## Use magic
 
 If you're using Python 3, you can also write to your app without calling any
-Streamlit methods. Streamlit supports "[magic
-commands](api.html#magic-commands)," which means you don't have to use
-[`st.write()`](api.html#streamlit.write) at all! Try replacing the code above
+Streamlit methods. Streamlit supports "<a href="api.html#magic-commands" class="reference internal">`st.table()`</a> ," which means you don't have to use
+<a href="api.html#streamlit.write" class="reference internal">`st.write()`</a> at all! Try replacing the code above
 with this snippet:
 
 ```Python
