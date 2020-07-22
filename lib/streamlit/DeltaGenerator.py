@@ -270,7 +270,7 @@ class FileUploaderEncodingWarning(StreamlitDeprecationWarning):
 The behavior of `st.file_uploader` will soon change to no longer autodetect
 the file's encoding. This means that _all files_ will be returned as binary buffers.
 
-This change will go in effect after October 31, 2020.
+This change will go in effect after August 15, 2020.
 
 If you are expecting a text buffer, you can future-proof your code now by
 wrapping the returned buffer in a [`TextIOWrapper`](https://docs.python.org/3/library/io.html#io.TextIOWrapper),
