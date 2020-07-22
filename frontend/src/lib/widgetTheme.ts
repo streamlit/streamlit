@@ -512,26 +512,62 @@ const themeOverrides = {
 
 export const mainWidgetTheme = createTheme(mainThemePrimitives, themeOverrides)
 
-export const sidebarWidgetTheme = createTheme(
-  {
-    ...mainThemePrimitives,
-
+export const sidebarWidgetTheme = createTheme(mainThemePrimitives, {
+  ...themeOverrides,
+  colors: {
+    ...themeOverrides.colors,
     // Override gray values based on what is actually used in BaseWeb, and the
     // way we want it to match our Bootstrap theme.
-    mono100: white, // Popup menu
-    mono200: white, // Text input, text area, selectbox
-    mono300: white, // Disabled widget background
-    mono400: grayLight, // Slider track
+    // mono100 overrides
+    datepickerBackground: white,
+    calendarBackground: white,
+    tickFill: white,
+    tickMarkFillDisabled: white,
+    menuFill: white,
+    tagNeutralSolidFont: white,
+    tableHeadBackgroundColor: white,
+    tableBackground: white,
+    tableFilterBackground: white,
+    tooltipText: white,
+
+    // mono200 overrides
+    buttonDisabledFill: white,
+    fileUploaderBackgroundColor: white,
+    listBodyFill: white,
+    tickFillHover: white,
+    inputFillDisabled: white,
+    inputFillActive: white,
+    menuFillHover: white,
+    tabBarFill: white,
+    tagNeutralSolidDisabled: white,
+    tagNeutralLightDisabled: white,
+    tagNeutralOutlinedDisabled: white,
+    tagNeutralOutlinedFontHover: white,
+    tableStripedBackground: white,
+    tableFilterFooterBackground: white,
+
+    // mono300 overrides
+    toggleTrackFillDisabled: white,
+    tickFillActive: white,
+    sliderTrackFillDisabled: white,
+    inputBorder: white,
+    inputFill: white,
+    inputEnhanceFill: white,
+    inputEnhancerFillDisabled: white,
+    tagNeutralSolidHover: white,
+    tagNeutralLightBackground: white,
+    tagNeutralLightHover: white,
+
+    // mono400 overrides
+    buttonDisabledSpinnerBackground: grayLight,
+    toggleTrackFill: grayLight,
+    sliderTrackFill: grayLight,
+    sliderHandleInnerFill: grayLight,
+    sliderHandleInnerFillDisabled: grayLight,
+    tagNeutralSolidActive: grayLight,
+    tagNeutralLightActive: grayLight,
   },
-  {
-    ...themeOverrides,
-    colors: {
-      ...themeOverrides.colors,
-      inputFill: white,
-      inputFillActive: white,
-    },
-  }
-)
+})
 
 // Log the widget theme just for debug purposes.
 logMessage("mainWidgetTheme", mainWidgetTheme)
