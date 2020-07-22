@@ -25,6 +25,7 @@ import {
   getSortedDataRowIndices,
 } from "lib/dataFrameProto"
 import { toFormattedString } from "lib/format"
+import { logWarning } from "lib/log"
 import { SortDirection } from "./SortDirection"
 import DataFrameCell from "./DataFrameCell"
 import "./DataFrame.scss"
@@ -412,7 +413,7 @@ function getCellContentsGetter(
         rowIndex = sortedDataRowIndices[sortIdx]
         rowIndex += headerRows
       } else {
-        console.warn(
+        logWarning(
           `Bad sortedDataRowIndices (` +
             `rowIndex=${rowIndex}, ` +
             `headerRows=${headerRows}, ` +

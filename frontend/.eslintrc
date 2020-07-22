@@ -90,8 +90,7 @@
     "max-classes-per-file": "off",
     "no-shadow": "off",
     "no-param-reassign": "off",
-    "no-plusplus": "off",
-    "no-console": "off"
+    "no-plusplus": "off"
   },
   "settings": {
     "react": {
