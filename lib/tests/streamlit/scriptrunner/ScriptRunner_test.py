@@ -22,15 +22,16 @@ import unittest
 from parameterized import parameterized
 from tornado.testing import AsyncTestCase
 
-from streamlit.Report import Report
 from streamlit.MediaFileManager import media_file_manager
+from streamlit.Report import Report
 from streamlit.ReportQueue import ReportQueue
 from streamlit.ScriptRequestQueue import RerunData
 from streamlit.ScriptRequestQueue import ScriptRequest
 from streamlit.ScriptRequestQueue import ScriptRequestQueue
 from streamlit.ScriptRunner import ScriptRunner
 from streamlit.ScriptRunner import ScriptRunnerEvent
-from streamlit.proto.Widget_pb2 import WidgetStates
+from streamlit.proto.ClientState_pb2 import ClientState
+from streamlit.proto.WidgetStates_pb2 import WidgetStates
 
 text_utf = "complete! 👨‍🎤"
 text_no_encoding = text_utf
@@ -41,7 +42,7 @@ def _create_widget(id, states):
     """
     Returns
     -------
-    streamlit.proto.Widget_pb2.WidgetState
+    streamlit.proto.WidgetStates_pb2.WidgetState
 
     """
     states.widgets.add().id = id
@@ -235,7 +236,7 @@ class ScriptRunnerTest(AsyncTestCase):
         # require_widgets_deltas() starts polling the ScriptRunner's deltas,
         # it will see stale deltas from the last run.)
         scriptrunner.clear_deltas()
-        scriptrunner.enqueue_rerun(widget_state=states)
+        scriptrunner.enqueue_rerun(widget_states=states)
 
         require_widgets_deltas([scriptrunner])
         self._assert_text_deltas(
@@ -430,7 +431,7 @@ class TestScriptRunner(ScriptRunner):
             session_id="test session id",
             report=Report(script_path, "test command line"),
             enqueue_forward_msg=enqueue_fn,
-            widget_states=WidgetStates(),
+            client_state=ClientState(),
             request_queue=self.script_request_queue,
         )
 
@@ -445,20 +446,9 @@ class TestScriptRunner(ScriptRunner):
 
         self.on_event.connect(record_event, weak=False)
 
-    @property
-    def widget_states(self):
-        """
-        Returns
-        -------
-        WidgetStates
-            A WidgetStates protobuf object
-
-        """
-        return self._widgets.get_state()
-
-    def enqueue_rerun(self, argv=None, widget_state=None):
+    def enqueue_rerun(self, argv=None, widget_states=None):
         self.script_request_queue.enqueue(
-            ScriptRequest.RERUN, RerunData(widget_state=widget_state)
+            ScriptRequest.RERUN, RerunData(widget_states=widget_states)
         )
 
     def enqueue_stop(self):

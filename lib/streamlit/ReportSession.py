@@ -35,7 +35,7 @@ from streamlit.UploadedFileManager import UploadedFileManager
 from streamlit.credentials import Credentials
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.Widget_pb2 import WidgetStates
+from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.server.server_util import serialize_forward_msg
 from streamlit.storage.FileStorage import FileStorage
 from streamlit.storage.S3Storage import S3Storage
@@ -89,7 +89,10 @@ class ReportSession(object):
 
         self._state = ReportSessionState.REPORT_NOT_RUNNING
 
-        self._widget_states = WidgetStates()
+        # Need to remember the client state here because when a script reruns
+        # due to the source code changing we need to pass in the previous client state.
+        self._client_state = ClientState()
+
         self._local_sources_watcher = LocalSourcesWatcher(
             self._report, self._on_source_file_changed
         )
@@ -193,7 +196,7 @@ class ReportSession(object):
 
         self.enqueue(msg)
 
-    def request_rerun(self, widget_state=None):
+    def request_rerun(self, client_state=None):
         """Signal that we're interested in running the script.
 
         If the script is not already running, it will be started immediately.
@@ -201,12 +204,17 @@ class ReportSession(object):
 
         Parameters
         ----------
-        widget_state : dict | None
-            The widget state dictionary to run the script with, or None
-            to use the widget state from the previous run of the script.
+        client_state : streamlit.proto.ClientState_pb2.ClientState | None
+            The ClientState protobuf to run the script with, or None
+            to use previous client state.
 
         """
-        self._enqueue_script_request(ScriptRequest.RERUN, RerunData(widget_state))
+        if client_state:
+            rerun_data = RerunData(client_state.query_string, client_state.widget_states)
+        else:
+            rerun_data = RerunData()
+
+        self._enqueue_script_request(ScriptRequest.RERUN, rerun_data)
 
     def _on_source_file_changed(self):
         """One of our source files changed. Schedule a rerun if appropriate."""
@@ -218,7 +226,7 @@ class ReportSession(object):
     def _clear_queue(self):
         self._report.clear()
 
-    def _on_scriptrunner_event(self, event, exception=None, widget_states=None):
+    def _on_scriptrunner_event(self, event, exception=None, client_state=None):
         """Called when our ScriptRunner emits an event.
 
         This is *not* called on the main thread.
@@ -231,8 +239,8 @@ class ReportSession(object):
             An exception thrown during compilation. Set only for the
             SCRIPT_STOPPED_WITH_COMPILE_ERROR event.
 
-        widget_states : streamlit.proto.Widget_pb2.WidgetStates | None
-            The ScriptRunner's final WidgetStates. Set only for the
+        client_state : streamlit.proto.ClientState_pb2.ClientState | None
+            The ScriptRunner's final ClientState. Set only for the
             SHUTDOWN event.
 
         """
@@ -304,7 +312,7 @@ class ReportSession(object):
                 media_file_manager.clear_session_files(self.id)
 
             def on_shutdown():
-                self._widget_states = widget_states
+                self._client_state = client_state
                 self._scriptrunner = None
                 # Because a new ScriptEvent could have been enqueued while the
                 # scriptrunner was shutting down, we check to see if we should
@@ -403,18 +411,15 @@ class ReportSession(object):
         self.enqueue(msg)
 
     def handle_rerun_script_request(
-        self, command_line=None, widget_state=None, is_preheat=False
+        self, client_state=None, is_preheat=False
     ):
         """Tell the ScriptRunner to re-run its report.
 
         Parameters
         ----------
-        command_line : str | None
-            The new command line arguments to run the script with, or None
-            to use its previous command line value.
-        widget_state : WidgetStates | None
-            The WidgetStates protobuf to run the script with, or None
-            to use its previous widget states.
+        client_state : streamlit.proto.ClientState_pb2.ClientState | None
+            The ClientState protobuf to run the script with, or None
+            to use previous client state.
         is_preheat: boolean
             True if this ReportSession should run the script immediately, and
             then ignore the next rerun request if it matches the already-ran
@@ -429,15 +434,22 @@ class ReportSession(object):
             # the widget state matches. But only do this one time ever.
             self._maybe_reuse_previous_run = False
 
-            has_widget_state = (
-                widget_state is not None and len(widget_state.widgets) > 0
-            )
 
-            if not has_widget_state:
+            has_client_state = False
+
+            if client_state is not None:
+                has_query_string = client_state.query_string != ""
+                has_widget_states = (
+                    client_state.widget_states is not None
+                    and len(client_state.widget_states.widgets) > 0
+                )
+                has_client_state = has_query_string or has_widget_states
+
+            if not has_client_state:
                 LOGGER.debug("Skipping rerun since the preheated run is the same")
                 return
 
-        self.request_rerun(widget_state)
+        self.request_rerun(client_state)
 
     def handle_stop_script_request(self):
         """Tell the ScriptRunner to stop running its report."""
@@ -513,7 +525,7 @@ class ReportSession(object):
             session_id=self.id,
             report=self._report,
             enqueue_forward_msg=self.enqueue,
-            widget_states=self._widget_states,
+            client_state=self._client_state,
             request_queue=self._script_request_queue,
             uploaded_file_mgr=self._uploaded_file_mgr,
         )

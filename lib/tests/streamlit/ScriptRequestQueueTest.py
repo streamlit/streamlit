@@ -21,7 +21,7 @@ from threading import Thread, Lock
 from streamlit.ScriptRequestQueue import RerunData
 from streamlit.ScriptRequestQueue import ScriptRequestQueue
 from streamlit.ScriptRunner import ScriptRequest
-from streamlit.proto.Widget_pb2 import WidgetStates
+from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.widgets import Widgets
 
 

@@ -82,6 +82,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
                 ReportContext(
                     session_id="test session id",
                     enqueue=self.report_queue.enqueue,
+                    query_string='',
                     widgets=Widgets(),
                     widget_ids_this_run=_WidgetIDSet(),
                     uploaded_file_mgr=UploadedFileManager(),

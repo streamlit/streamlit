@@ -648,17 +648,13 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
             if msg_type == "cloud_upload":
                 yield self._session.handle_save_request(self)
             elif msg_type == "rerun_script":
-                self._session.handle_rerun_script_request()
+                self._session.handle_rerun_script_request(msg.rerun_script)
             elif msg_type == "clear_cache":
                 self._session.handle_clear_cache_request()
             elif msg_type == "set_run_on_save":
                 self._session.handle_set_run_on_save_request(msg.set_run_on_save)
             elif msg_type == "stop_report":
                 self._session.handle_stop_script_request()
-            elif msg_type == "update_widgets":
-                self._session.handle_rerun_script_request(
-                    widget_state=msg.update_widgets
-                )
             elif msg_type == "close_connection":
                 if config.get_option("global.developmentMode"):
                     Server.get_current().stop()
