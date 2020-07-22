@@ -33,6 +33,7 @@ beforeEach(() => {
 
 afterEach(() => {
   SessionInfo.singleton = undefined
+  window.analytics = undefined
 })
 
 test("does not track while uninitialized", () => {
@@ -56,6 +57,23 @@ test("does not track when initialized with gatherUsageStats=false", () => {
 
   expect(mm.track.mock.calls.length).toBe(0)
   expect(mm.identify.mock.calls.length).toBe(0)
+})
+
+test("does not initialize Segment analytics when gatherUsageStats=false", () => {
+  const mm = getMetricsManagerForTest()
+  expect(window.analytics).toBeUndefined()
+  mm.initialize({ gatherUsageStats: false })
+  expect(window.analytics).toBeUndefined()
+})
+
+test("initializes Segment analytics when gatherUsageStats=true", () => {
+  const mm = getMetricsManagerForTest()
+  expect(window.analytics).toBeUndefined()
+  mm.initialize({ gatherUsageStats: true })
+  expect(window.analytics).toBeDefined()
+  expect(window.analytics.invoked).toBe(true)
+  expect(window.analytics.methods).toHaveLength(20)
+  expect(window.analytics.load).toBeDefined()
 })
 
 test("enqueues events before initialization", () => {

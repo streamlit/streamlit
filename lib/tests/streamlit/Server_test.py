@@ -436,6 +436,22 @@ class ServerUtilsTest(unittest.TestCase):
         config._set_option("global.minCachedMessageSize", 1000, "test")
         self.assertFalse(is_cacheable_msg(_create_dataframe_msg([1, 2, 3])))
 
+    def test_should_limit_msg_size(self):
+        # Set up a 60MB ForwardMsg string
+        large_msg = _create_dataframe_msg([1, 2, 3])
+        large_msg.delta.new_element.markdown.body = "X" * 60 * 1000 * 1000
+        # Create a copy, since serialize_forward_msg modifies the original proto
+        large_msg_copy = ForwardMsg()
+        large_msg_copy.CopyFrom(large_msg)
+        deserialized_msg = ForwardMsg()
+        deserialized_msg.ParseFromString(serialize_forward_msg(large_msg_copy))
+
+        # The metadata should be the same, but contents should be replaced
+        self.assertEqual(deserialized_msg.metadata, large_msg.metadata)
+        self.assertNotEqual(deserialized_msg, large_msg)
+        expected = "Data of size 60.0MB exceeds write limit of 50.0MB"
+        self.assertEqual(deserialized_msg.delta.new_element.exception.message, expected)
+
 
 class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
     """Tests the /healthz endpoint"""
