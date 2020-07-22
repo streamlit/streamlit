@@ -482,19 +482,25 @@ def experimental_show(*args):
         exception(exc, exc_tb)  # noqa: F821
 
 
-def experimental_get_query_string():
-    """Return the query strings that is currently showing in the browser URL bar.
+def experimental_get_query_params():
+    """Return the query parameters that is currently showing in the browser's URL bar.
 
     Returns
     -------
     dict
-      The current query strings as a dict of strings to strings.
+      The current query parameters as a dict. "Query parameters" are the part of the URL that comes
+      after the first "?".
 
     Example
     -------
 
-    >>> st.experimental_get_query_string()
-    { "checkbox1" = "true" }
+    Let's say the user's web browser is at
+    `http://localhost:8501/?show_map=true&number_of_countries=2`. Then, you can get the query
+    parameters using the following:
+
+    >>> st.experimental_get_query_params()
+    {"show_map": ["true"], "number_of_countries": ["2"]}
+
     """
     ctx = _get_report_ctx()
     if ctx is None:
@@ -502,20 +508,29 @@ def experimental_get_query_string():
     return _parse.parse_qs(ctx.query_string)
 
 
-def experimental_set_query_string(query_string_dict):
-    """Set the query string in currently browser URL bar and update the query string value in current ReportSession.
+def experimental_set_query_params(query_params):
+    """Set the query parameters that are shown in the browser's URL bar.
+
+    Parameters
+    ----------
+    query_params : dict
+        The query parameters to set, as key-value pairs.
 
     Example
     -------
-    >>> st.experimental_set_query_string({"checkbox1":"true", "multi-select1":"2"}})
+
+    To point the user's web browser to something like
+    `http://localhost:8501/?show_map=true&number_of_countries=2`, you would do the following:
+
+    >>> st.experimental_set_query_params({"show_map": "true", "number_of_countries": 2})
 
     """
     ctx = _get_report_ctx()
     if ctx is None:
         return
-    ctx.query_string = _parse.urlencode(query_string_dict)
+    ctx.query_string = _parse.urlencode(query_params)
     msg = _ForwardMsg_pb2.ForwardMsg()
-    msg.page_info_changed.query_string = ctx.query_string
+    msg.page_info_changed.query_params = ctx.query_string
     ctx.enqueue(msg)
 
 
