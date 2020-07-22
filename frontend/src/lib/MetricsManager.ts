@@ -102,7 +102,7 @@ export class MetricsManager {
       if (SessionInfo.current.authorEmail !== "") {
         userTraits.authoremail = SessionInfo.current.authorEmail
       }
-      MetricsManager.identify(SessionInfo.current.installationId, userTraits)
+      this.identify(SessionInfo.current.installationId, userTraits)
       this.sendPendingEvents()
     }
 
@@ -181,7 +181,7 @@ export class MetricsManager {
     if (IS_DEV_ENV) {
       logAlways("[Dev mode] Not tracking stat datapoint: ", evName, data)
     } else {
-      MetricsManager.track(evName, data)
+      this.track(evName, data)
     }
   }
 
@@ -193,12 +193,13 @@ export class MetricsManager {
   }
 
   // Wrap analytics methods for mocking:
-
-  private static identify(id: string, data: Record<string, unknown>): void {
+  // eslint-disable-next-line class-methods-use-this
+  private identify(id: string, data: Record<string, unknown>): void {
     analytics.identify(id, data)
   }
 
-  private static track(evName: string, data: Record<string, unknown>): void {
+  // eslint-disable-next-line class-methods-use-this
+  private track(evName: string, data: Record<string, unknown>): void {
     analytics.track(evName, data)
   }
 }
