@@ -95,8 +95,8 @@ export class MetricsManager {
     this.actuallySendMetrics = gatherUsageStats
 
     if (this.actuallySendMetrics || IS_SHARED_REPORT) {
-      //Initialize the segment.io analytics service
-      if (window !== undefined) initializeSegment()
+      // Segment will not initialize if this is rendered with SSR
+      initializeSegment()
       // Only record the user's email if they entered a non-empty one.
       const userTraits: any = {}
       if (SessionInfo.current.authorEmail !== "") {
