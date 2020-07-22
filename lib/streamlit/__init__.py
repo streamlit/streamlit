@@ -530,7 +530,7 @@ def experimental_set_query_params(query_params):
         return
     ctx.query_string = _parse.urlencode(query_params)
     msg = _ForwardMsg_pb2.ForwardMsg()
-    msg.page_info_changed.query_params = ctx.query_string
+    msg.page_info_changed.query_string = ctx.query_string
     ctx.enqueue(msg)
 
 
