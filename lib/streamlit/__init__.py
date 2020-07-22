@@ -138,6 +138,7 @@ balloons = _main.balloons  # noqa: E221
 bar_chart = _main.bar_chart  # noqa: E221
 bokeh_chart = _main.bokeh_chart  # noqa: E221
 button = _main.button  # noqa: E221
+hotkey = _main.hotkey  # noqa: E221
 checkbox = _main.checkbox  # noqa: E221
 code = _main.code  # noqa: E221
 dataframe = _main.dataframe  # noqa: E221

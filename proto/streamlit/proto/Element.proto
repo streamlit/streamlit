@@ -33,6 +33,7 @@ import "streamlit/proto/Exception.proto";
 import "streamlit/proto/Favicon.proto";
 import "streamlit/proto/FileUploader.proto";
 import "streamlit/proto/GraphVizChart.proto";
+import "streamlit/proto/Hotkey.proto";
 import "streamlit/proto/IFrame.proto";
 import "streamlit/proto/Image.proto";
 import "streamlit/proto/Json.proto";
@@ -76,6 +77,7 @@ message Element {
     Favicon favicon = 36;
     FileUploader file_uploader = 33;
     GraphVizChart graphviz_chart = 18;
+    Hotkey hot_key = 39;
     IFrame iframe = 38;
     ImageList imgs = 6;
     Json json = 31;
@@ -94,7 +96,7 @@ message Element {
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
 
-    // Next ID: 39
+    // Next ID: 40
   }
 
   reserved 9;

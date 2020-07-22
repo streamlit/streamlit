@@ -518,6 +518,7 @@ class DeltaGenerator(object):
 
         element.text.body = _clean_text(body)
 
+
     @_with_element
     def markdown(self, element, body, unsafe_allow_html=False):
         """Display string formatted as Markdown.
@@ -1797,6 +1798,53 @@ class DeltaGenerator(object):
         element.button.default = False
 
         ui_value = _get_widget_ui_value("button", element, user_key=key)
+        current_value = ui_value if ui_value is not None else False
+        return current_value
+
+    @_with_element
+    def hotkey(self, element, keys, key=None):
+        """
+        HotKey understands the following modifiers: ⇧, shift, option, ⌥, alt, ctrl, control, command, and ⌘.
+
+        The following special keys can be used for shortcuts: backspace, tab, clear, enter, return, esc, escape, space, up, down, left, right, home, end, pageup, pagedown, del, delete and f1 through f19.
+
+        ⌘ Command()
+        ⌃ Control
+        ⌥ Option(alt)
+        ⇧ Shift
+        ⇪ Caps Lock(Capital)
+        ↩︎ return/Enter space
+
+        The following single keys are not supported but you could use a conjunction of them:
+        'r', 'c', 'esc', 'enter'
+
+        Parameters
+        ----------
+        keys : str
+
+        Returns
+        -------
+        bool
+            If the hotkey was triggered on the last run of the app.
+
+        Example
+        -------
+        >>> if st.hotkey('ctrl+k'):
+        ...     st.write('Why hello there')
+        ... else:
+        ...     st.write('Goodbye')
+
+        """
+
+        reserved_keys = ['r', 'c', 'esc', 'enter']
+
+        if keys.lower() in reserved_keys:
+            raise StreamlitAPIException(
+                "You can\'t use the following reserved keys: {0}".format(", ".join(reserved_keys)))
+
+        element.hot_key.keys = keys
+
+        ui_value = _get_widget_ui_value("hot_key", element, user_key=key)
         current_value = ui_value if ui_value is not None else False
         return current_value
 

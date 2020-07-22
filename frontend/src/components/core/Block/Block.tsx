@@ -81,6 +81,7 @@ const Slider = React.lazy(() => import("components/widgets/Slider/"))
 const FileUploader = React.lazy(() =>
   import("components/widgets/FileUploader/")
 )
+const HotKey = React.lazy(() => import("components/widgets/HotKey"))
 const TextArea = React.lazy(() => import("components/widgets/TextArea/"))
 const TextInput = React.lazy(() => import("components/widgets/TextInput/"))
 const TimeInput = React.lazy(() => import("components/widgets/TimeInput/"))
@@ -368,6 +369,7 @@ class Block extends PureComponent<Props> {
           disabled={widgetProps.disabled}
         />
       ),
+      hotKey: (el: SimpleElement) => <HotKey element={el} {...widgetProps} />,
       textArea: (el: SimpleElement) => (
         <TextArea
           key={el.get("id")}

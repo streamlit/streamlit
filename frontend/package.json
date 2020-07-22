@@ -65,6 +65,7 @@
     "react-feather": "^2.0.8",
     "react-google-login": "^5.0.4",
     "react-hotkeys": "^1.1.4",
+    "react-hotkeys-hook": "^2.1.4",
     "react-json-view": "^1.19.1",
     "react-katex": "^2.0.2",
     "react-map-gl": "^5.2.5",
