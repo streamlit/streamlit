@@ -54,7 +54,7 @@ export class WidgetStateManager {
   }
 
   /**
-   * Sets the trigger value for the given widget ID to true, sends an rerunScript message
+   * Sets the trigger value for the given widget ID to true, sends a rerunScript message
    * to the server, and then immediately unsets the trigger value.
    */
   public setTriggerValue(widgetId: string, source: Source): void {
@@ -211,7 +211,7 @@ export class WidgetStateManager {
   }
 
   public sendUpdateWidgetsMessage(): void {
-    this.sendRerunBackMsg(this.createWigetStatesMsg())
+    this.sendRerunBackMsg(this.createWidgetStatesMsg())
   }
 
   /**
@@ -225,7 +225,7 @@ export class WidgetStateManager {
     })
   }
 
-  private createWigetStatesMsg(): WidgetStates {
+  private createWidgetStatesMsg(): WidgetStates {
     const msg = new WidgetStates()
     this.widgetStates.forEach(value => msg.widgets.push(value))
     return msg
