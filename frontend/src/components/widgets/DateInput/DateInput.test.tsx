@@ -122,4 +122,26 @@ describe("DateInput widget", () => {
       new Date("2030/02/06")
     )
   })
+
+  it("should handle min dates with years less than 100", () => {
+    const props = getProps({
+      min: "0001/01/01",
+    })
+    const wrapper = shallow(<DateInput {...props} />)
+
+    expect(wrapper.find(UIDatePicker).prop("minDate")).toStrictEqual(
+      new Date("0001-01-01T00:00:00")
+    )
+  })
+
+  it("should handle max dates with years less than 100", () => {
+    const props = getProps({
+      max: "0001/01/01",
+    })
+    const wrapper = shallow(<DateInput {...props} />)
+
+    expect(wrapper.find(UIDatePicker).prop("maxDate")).toStrictEqual(
+      new Date("0001-01-01T00:00:00")
+    )
+  })
 })
