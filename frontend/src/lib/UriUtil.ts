@@ -101,7 +101,7 @@ function isHttps(): boolean {
  * Run SVG strings through DOMPurify to prevent Javascript execution
  */
 function sanitizeSvg(uri: string): string {
-  const SVG_PREFIX = "data:image/svg+xml;utf8,"
+  const SVG_PREFIX = "data:image/svg+xml,"
   if (uri.startsWith(SVG_PREFIX)) {
     const unsafe = uri.substring(SVG_PREFIX.length)
     return SVG_PREFIX + encodeURIComponent(DOMPurify.sanitize(unsafe))

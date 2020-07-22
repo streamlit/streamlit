@@ -186,7 +186,7 @@ def image_to_url(image, width, clamp, channels, format, image_id, allow_emoji=Fa
                 image = textfile.read()
         # If it's an SVG string, then format and return an SVG data url
         if image.startswith("<svg"):
-            return f"data:image/svg+xml;utf8,{image}"
+            return f"data:image/svg+xml,{image}"
 
         # Finally, see if it's a file.
         try:
