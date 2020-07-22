@@ -21,13 +21,13 @@ from tornado import gen
 from tornado.concurrent import Future
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.server.Server import Server
+from streamlit.server.server import Server
 
 
 class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
-    """Base class for async streamlit.Server testing.
+    """Base class for async streamlit.server testing.
 
-    Subclasses should patch 'streamlit.server.Server.ReportSession',
+    Subclasses should patch 'streamlit.server.server.ReportSession',
     to prevent ReportSessions from being created, and scripts from
     being run. (Script running involves creating new threads, which
     interfere with other tests if not properly terminated.)

@@ -30,19 +30,19 @@ import tornado.websocket
 
 from streamlit import config
 from streamlit import file_util
-from streamlit.ConfigOption import ConfigOption
-from streamlit.ForwardMsgCache import ForwardMsgCache
-from streamlit.ForwardMsgCache import create_reference_msg
-from streamlit.ForwardMsgCache import populate_hash_if_needed
-from streamlit.MediaFileManager import media_file_manager
-from streamlit.ReportSession import ReportSession
-from streamlit.UploadedFileManager import UploadedFileManager
+from streamlit.config_option import ConfigOption
+from streamlit.forward_msg_cache import ForwardMsgCache
+from streamlit.forward_msg_cache import create_reference_msg
+from streamlit.forward_msg_cache import populate_hash_if_needed
+from streamlit.media_file_manager import media_file_manager
+from streamlit.report_session import ReportSession
+from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.logger import get_logger
 from streamlit.components.v1.components import ComponentRegistry
 from streamlit.components.v1.components import ComponentRequestHandler
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.server.UploadFileRequestHandler import UploadFileRequestHandler
+from streamlit.server.upload_file_request_handler import UploadFileRequestHandler
 from streamlit.server.routes import AddSlashHandler
 from streamlit.server.routes import AssetsFileHandler
 from streamlit.server.routes import DebugHandler
@@ -58,7 +58,7 @@ from streamlit.server.server_util import make_url_path_regex
 from streamlit.server.server_util import serialize_forward_msg
 
 if TYPE_CHECKING:
-    from streamlit.Report import Report
+    from streamlit.report import Report
 
 LOGGER = get_logger(__name__)
 

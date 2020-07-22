@@ -31,7 +31,7 @@ from streamlit import caching
 from streamlit import config
 from streamlit import cursor
 from streamlit import type_util
-from streamlit.ReportThread import get_report_ctx
+from streamlit.report_thread import get_report_ctx
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException, StreamlitDeprecationWarning
 from streamlit.errors import NoSessionContext

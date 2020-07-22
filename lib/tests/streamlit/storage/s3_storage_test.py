@@ -21,7 +21,7 @@ import unittest
 
 from mock import patch
 
-from streamlit.storage.S3Storage import S3Storage
+from streamlit.storage.s3_storage import S3Storage
 from streamlit.config import set_option
 
 
@@ -29,7 +29,7 @@ class S3StorageTest(unittest.TestCase):
     def tearDown(self):
         set_option("global.sharingMode", "off")
 
-    @patch("streamlit.storage.AbstractStorage._get_static_files")
+    @patch("streamlit.storage.abstract_storage._get_static_files")
     def test_private_url(self, static_files):
         static_files.return_value = [("index.html", "some data")], hashlib.md5()
 

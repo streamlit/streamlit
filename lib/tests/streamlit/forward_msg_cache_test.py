@@ -18,11 +18,11 @@ import unittest
 
 from mock import MagicMock
 
-from streamlit import ReportSession
+from streamlit import report_session
 from streamlit import config
-from streamlit.ForwardMsgCache import ForwardMsgCache
-from streamlit.ForwardMsgCache import create_reference_msg
-from streamlit.ForwardMsgCache import populate_hash_if_needed
+from streamlit.forward_msg_cache import ForwardMsgCache
+from streamlit.forward_msg_cache import create_reference_msg
+from streamlit.forward_msg_cache import populate_hash_if_needed
 from streamlit.elements import data_frame_proto
 from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -37,7 +37,7 @@ def _create_dataframe_msg(df, id=1):
 
 
 def _create_mock_session():
-    return MagicMock(ReportSession)
+    return MagicMock(report_session)
 
 
 class ForwardMsgCacheTest(unittest.TestCase):

@@ -17,13 +17,13 @@ import hashlib
 import tornado.gen
 import mock
 
-from streamlit.storage.AbstractStorage import AbstractStorage
+from streamlit.storage.abstract_storage import AbstractStorage
 
 
 class MockStorage(AbstractStorage):
     """A mock AbstractStorage implementation, for testing."""
 
-    @mock.patch("streamlit.storage.AbstractStorage._get_static_files")
+    @mock.patch("streamlit.storage.abstract_storage._get_static_files")
     def __init__(self, static_files_patch):
         static_files_patch.return_value = [("index.html", "some data")], hashlib.md5()
         super(MockStorage, self).__init__()

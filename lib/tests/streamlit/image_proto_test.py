@@ -113,7 +113,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         * Path
         * Bytes
         """
-        from streamlit.MediaFileManager import _calculate_file_id
+        from streamlit.media_file_manager import _calculate_file_id
         from streamlit.elements.image_proto import _np_array_to_bytes
 
         file_id = _calculate_file_id(

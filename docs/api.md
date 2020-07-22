@@ -275,7 +275,7 @@ With Streamlit you can modify the data within an existing element (chart,
 table, dataframe).
 
 ```eval_rst
-.. automethod:: streamlit.DeltaGenerator.DeltaGenerator.add_rows
+.. automethod:: streamlit.delta_generator.DeltaGenerator.add_rows
 ```
 
 ## Optimize performance
