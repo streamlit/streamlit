@@ -58,7 +58,7 @@ class ReportContext(object):
         self.widget_ids_this_run = widget_ids_this_run
         self.uploaded_file_mgr = uploaded_file_mgr
 
-    def reset(self, query_string):
+    def reset(self, query_string=""):
         self.cursors = {}
         self.widget_ids_this_run.clear()
         self.query_string = query_string
