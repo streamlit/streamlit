@@ -41,6 +41,8 @@ interface State {
   isRange: boolean
 }
 
+const DATE_FORMAT = "YYYY/MM/DD"
+
 class DateInput extends React.PureComponent<Props, State> {
   public state: State = {
     values: this.props.element
@@ -60,7 +62,7 @@ class DateInput extends React.PureComponent<Props, State> {
     this.props.widgetMgr.setStringArrayValue(
       widgetId,
       this.state.values.map((value: Date) =>
-        moment(value as Date).format("YYYY/MM/DD")
+        moment(value as Date).format(DATE_FORMAT)
       ),
       source
     )
@@ -76,7 +78,9 @@ class DateInput extends React.PureComponent<Props, State> {
     const { element } = this.props
     const maxDate = element.get("max")
 
-    return maxDate && maxDate.length > 0 ? new Date(maxDate) : undefined
+    return maxDate && maxDate.length > 0
+      ? moment(maxDate, DATE_FORMAT).toDate()
+      : undefined
   }
 
   public render = (): React.ReactNode => {
@@ -85,7 +89,7 @@ class DateInput extends React.PureComponent<Props, State> {
 
     const style = { width }
     const label = element.get("label")
-    const minDate = moment(element.get("min"), "YYYY/MM/DD").toDate()
+    const minDate = moment(element.get("min"), DATE_FORMAT).toDate()
     const maxDate = this.getMaxDate()
 
     return (
