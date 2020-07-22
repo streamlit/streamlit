@@ -32,7 +32,15 @@ interface DeltaCounter {
   [name: string]: number
 }
 
-type Event = [string, object]
+/**
+ * A mapping of [component instance name] -> [count] which is used to upload
+ * custom component stats when the app is idle.
+ */
+interface CustomComponentCounter {
+  [name: string]: number
+}
+
+type Event = [string, Record<string, unknown>]
 
 export class MetricsManager {
   private initialized = false
@@ -53,6 +61,12 @@ export class MetricsManager {
    * Maps type of delta (string) to count (number).
    */
   private pendingDeltaCounter: DeltaCounter = {}
+
+  /**
+   * Object used to count the number of custom instance names seen in a given report.
+   * Maps type of custom instance name (string) to count (number).
+   */
+  private pendingCustomComponentCounter: CustomComponentCounter = {}
 
   /**
    * Report hash uniquely identifies "projects" so we can tell
@@ -90,7 +104,7 @@ export class MetricsManager {
     logAlways("Gather usage stats: ", this.actuallySendMetrics)
   }
 
-  public enqueue(evName: string, evData: object = {}): void {
+  public enqueue(evName: string, evData: Record<string, unknown> = {}): void {
     if (!this.initialized) {
       this.pendingEvents.push([evName, evData])
       return
@@ -115,10 +129,28 @@ export class MetricsManager {
     }
   }
 
-  public getDeltaCounter(): DeltaCounter {
+  public getAndResetDeltaCounter(): DeltaCounter {
     const deltaCounter = this.pendingDeltaCounter
-    this.pendingDeltaCounter = {}
+    this.clearDeltaCounter()
     return deltaCounter
+  }
+
+  public clearCustomComponentCounter(): void {
+    this.pendingCustomComponentCounter = {}
+  }
+
+  public incrementCustomComponentCounter(customInstanceName: string): void {
+    if (this.pendingCustomComponentCounter[customInstanceName] == null) {
+      this.pendingCustomComponentCounter[customInstanceName] = 1
+    } else {
+      this.pendingCustomComponentCounter[customInstanceName]++
+    }
+  }
+
+  public getAndResetCustomComponentCounter(): CustomComponentCounter {
+    const customComponentCounter = this.pendingCustomComponentCounter
+    this.clearCustomComponentCounter()
+    return customComponentCounter
   }
 
   // Report hash gets set when update report happens.
@@ -129,7 +161,7 @@ export class MetricsManager {
     this.reportHash = reportHash
   }
 
-  private send(evName: string, evData: object = {}): void {
+  private send(evName: string, evData: Record<string, unknown> = {}): void {
     const data = {
       ...evData,
       reportHash: this.reportHash,
@@ -157,11 +189,11 @@ export class MetricsManager {
 
   // Wrap analytics methods for mocking:
 
-  private identify(id: string, data: object): void {
+  private identify(id: string, data: Record<string, unknown>): void {
     analytics.identify(id, data)
   }
 
-  private track(evName: string, data: object): void {
+  private track(evName: string, data: Record<string, unknown>): void {
     analytics.track(evName, data)
   }
 }

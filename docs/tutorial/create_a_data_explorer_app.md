@@ -61,7 +61,7 @@ dataset for pickups and drop-offs in New York City.
    ```
 
    You'll notice that `load_data` is a plain old function that downloads some
-   date, puts it in a Pandas dataframe, and converts the date column from text
+   data, puts it in a Pandas dataframe, and converts the date column from text
    to datetime. The function accepts a single parameter (`nrows`), which
    specifies the number of rows that you want to load into the dataframe.
 

@@ -442,6 +442,11 @@ footer p {
   color: var(--st-gray-70);
 }
 
+/* Add spacing between bottom of content and previous/next buttons */
+footer {
+  padding-top: var(--normal-padding);
+}
+
 hr {
   border: none;
   margin: var(--normal-padding);
@@ -471,10 +476,12 @@ hr {
 /* Injected Read-the-docs version box */
 
 .rst-versions {
-  /* position: absolute !important; */
   background: var(--main-bg-color) !important;
   border: 1px solid transparent !important;
   border-radius: 5px !important;
+  margin: 0 auto !important;
+  margin-left: max(-550px, -50vw) !important;
+  left: 50vw !important;
 }
 
 .rst-versions .rst-current-version {
@@ -535,6 +542,24 @@ hr {
 .rst-versions.shift-up {
   border-color: var(--st-gray-50) !important;
   bottom: 0.5rem !important;
+}
+
+/* Add small amount of padding to separate bullet points */
+.wy-plain-list-disc li,
+.rst-content .section ul li,
+.rst-content .toctree-wrapper ul li,
+.wy-plain-list-decimal li,
+.rst-content .section ol li,
+.rst-content ol.arabic li,
+article ol li,
+article ul li {
+  padding: 2px;
+}
+
+/* Tighten spacing for lists, so that top and bottom spacing around p looks even */
+.rst-content .section ol p,
+.rst-content .section ul p {
+  margin-bottom: 5px;
 }
 
 /* 960 is where the RTD mobile/responsive theme kicks in to move nav to header */

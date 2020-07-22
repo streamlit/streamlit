@@ -23,7 +23,7 @@ import { MultiGrid } from "react-virtualized"
 import mockDataFrame from "./mock"
 import { DataFrame, Props, MIN_CELL_WIDTH_PX } from "./DataFrame"
 
-const getProps = (elementProps: object = {}): Props => ({
+const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
   element: fromJS({
     ...mockDataFrame,
     ...elementProps,

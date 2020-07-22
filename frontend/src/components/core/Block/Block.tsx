@@ -36,6 +36,10 @@ import Json from "components/elements/Json/"
 import Markdown from "components/elements/Markdown/"
 import Table from "components/elements/Table/"
 import Text from "components/elements/Text/"
+import {
+  ComponentInstance,
+  ComponentRegistry,
+} from "components/widgets/CustomComponent/"
 
 import Maybe from "components/core/Maybe/"
 
@@ -54,6 +58,7 @@ const Favicon = React.lazy(() => import("components/elements/Favicon/"))
 const GraphVizChart = React.lazy(() =>
   import("components/elements/GraphVizChart/")
 )
+const IFrame = React.lazy(() => import("components/elements/IFrame/"))
 const ImageList = React.lazy(() => import("components/elements/ImageList/"))
 const PlotlyChart = React.lazy(() =>
   import("components/elements/PlotlyChart/")
@@ -89,6 +94,7 @@ interface Props {
   widgetMgr: WidgetStateManager
   uploadClient: FileUploadClient
   widgetsDisabled: boolean
+  componentRegistry: ComponentRegistry
 }
 
 class Block extends PureComponent<Props> {
@@ -141,6 +147,7 @@ class Block extends PureComponent<Props> {
           widgetMgr={this.props.widgetMgr}
           uploadClient={this.props.uploadClient}
           widgetsDisabled={this.props.widgetsDisabled}
+          componentRegistry={this.props.componentRegistry}
         />
       </div>
     )
@@ -277,6 +284,7 @@ class Block extends PureComponent<Props> {
       graphvizChart: (el: SimpleElement) => (
         <GraphVizChart element={el} index={index} width={width} />
       ),
+      iframe: (el: SimpleElement) => <IFrame element={el} width={width} />,
       imgs: (el: SimpleElement) => <ImageList element={el} width={width} />,
       json: (el: SimpleElement) => <Json element={el} width={width} />,
       markdown: (el: SimpleElement) => <Markdown element={el} width={width} />,
@@ -387,6 +395,14 @@ class Block extends PureComponent<Props> {
       numberInput: (el: SimpleElement) => (
         <NumberInput
           key={el.get("id")}
+          element={el}
+          width={width}
+          {...widgetProps}
+        />
+      ),
+      componentInstance: (el: SimpleElement) => (
+        <ComponentInstance
+          registry={this.props.componentRegistry}
           element={el}
           width={width}
           {...widgetProps}

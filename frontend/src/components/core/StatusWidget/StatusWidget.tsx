@@ -28,6 +28,13 @@ import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
 import { ReportRunState } from "lib/ReportRunState"
 import { Timer } from "lib/Timer"
 import Icon from "components/shared/Icon"
+
+/*
+ * IMPORTANT: If you change the asset import below, make sure it still works if Streamlit is served
+ * from a subpath.
+ */
+import iconRunning from "assets/img/icon_running.gif"
+
 import "./StatusWidget.scss"
 
 /** Component props */
@@ -289,7 +296,7 @@ export class StatusWidget extends PureComponent<Props, State> {
       >
         <img
           className="ReportRunningIcon"
-          src="/assets/img/icon_running.gif"
+          src={iconRunning}
           alt="Running..."
         />
         <label>Running...</label>

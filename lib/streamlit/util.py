@@ -25,31 +25,12 @@ from streamlit import env_util
 # URL of Streamlit's help page.
 HELP_DOC = "https://docs.streamlit.io/"
 
-# Make functools.wraps() in Python 2 set the __wrapped__ attribute, as
-# is done in Python 3. This is required in st.cache.
-# See https://stackoverflow.com/questions/43506378/how-to-get-source-code-of-function-that-is-wrapped-by-a-decorator
-if sys.version_info[0:2] >= (3, 4):  # Python v3.4+?
-    functools_wraps = functools.wraps  # built-in has __wrapped__ attribute
-else:
-
-    def functools_wraps(
-        wrapped,
-        assigned=functools.WRAPPER_ASSIGNMENTS,
-        updated=functools.WRAPPER_UPDATES,
-    ):
-        def wrapper(f):
-            f = functools.wraps(wrapped, assigned, updated)(f)
-            f.__wrapped__ = wrapped  # set attribute missing in earlier versions
-            return f
-
-        return wrapper
-
 
 def memoize(func):
     """Decorator to memoize the result of a no-args func."""
     result = []  # type: List[Any]
 
-    @functools_wraps(func)
+    @functools.wraps(func)
     def wrapped_func():
         if not result:
             result.append(func())
@@ -111,6 +92,13 @@ def _open_browser_with_command(command, url):
     cmd_line = [command, url]
     with open(os.devnull, "w") as devnull:
         subprocess.Popen(cmd_line, stdout=devnull, stderr=subprocess.STDOUT)
+
+
+def _maybe_tuple_to_list(item):
+    """Convert a tuple to a list. Leave as is if it's not a tuple."""
+    if isinstance(item, tuple):
+        return list(item)
+    return item
 
 
 # TODO: Move this into errors.py? Replace with StreamlitAPIException?

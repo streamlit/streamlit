@@ -21,7 +21,7 @@ import { fromJS } from "immutable"
 
 import DocString, { Props } from "./DocString"
 
-const getProps = (elementProps: object = {}): Props => ({
+const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
   element: fromJS({
     name: "balloons",
     module: "streamlit",

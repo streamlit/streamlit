@@ -21,7 +21,7 @@ import { fromJS } from "immutable"
 
 import { ImageList, Props } from "./ImageList"
 
-const getProps = (elementProps: object = {}): Props => ({
+const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
   element: fromJS({
     imgs: [
       {

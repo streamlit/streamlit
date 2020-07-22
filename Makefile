@@ -189,28 +189,6 @@ devel-docs: docs
 	cd docs/_build/html; \
 		python -m http.server 8000
 
-.PHONY: publish-docs
-# Build docs and push to prod.
-publish-docs: docs
-	cd docs/_build; \
-		aws s3 sync \
-				--acl public-read html s3://docs.streamlit.io \
-				--profile streamlit
-
-	# The line below uses the distribution ID obtained with
-	# $ aws cloudfront list-distributions | \
-	#     jq '.DistributionList.Items[] | \
-	#     select(.Aliases.Items[0] | \
-	#     contains("docs.streamlit.io")) | \
-	#     .Id'
-
-	aws cloudfront create-invalidation \
-		--distribution-id=E16K3UXOWYZ8U7 \
-		--paths \
-			'/*' \
-			'/tutorial/*' \
-		--profile streamlit
-
 .PHONY: protobuf
 # Recompile Protobufs for Python and Javascript.
 protobuf:
@@ -339,10 +317,10 @@ notices:
 	# NOTE: This file may need to be manually edited. Look at the Git diff and
 	# the parts that should be edited will be obvious.
 
-	./scripts/append_license.sh frontend/public/assets/font/IBM_Plex_Fonts.LICENSE
-	./scripts/append_license.sh frontend/public/assets/img/Material-Icons.LICENSE
-	./scripts/append_license.sh frontend/public/assets/img/Noto-Emoji-Font.LICENSE
-	./scripts/append_license.sh frontend/public/assets/img/Open-Iconic.LICENSE
+	./scripts/append_license.sh frontend/src/assets/font/IBM_Plex_Fonts.LICENSE
+	./scripts/append_license.sh frontend/src/assets/img/Material-Icons.LICENSE
+	./scripts/append_license.sh frontend/src/assets/img/Noto-Emoji-Font.LICENSE
+	./scripts/append_license.sh frontend/src/assets/img/Open-Iconic.LICENSE
 
 .PHONY: headers
 # Update the license header on all source files.

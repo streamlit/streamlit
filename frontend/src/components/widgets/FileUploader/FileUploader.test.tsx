@@ -27,7 +27,7 @@ const blobFile = new File(["Text in a file!"], "filename.txt", {
   lastModified: 0,
 })
 
-const getProps = (elementProps: object = {}): Props => ({
+const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
   element: fromJS({
     type: [],
     progress: 0,

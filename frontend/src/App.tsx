@@ -70,6 +70,7 @@ import "assets/css/theme.scss"
 import "./App.scss"
 import "assets/css/header.scss"
 import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
+import { ComponentRegistry } from "./components/widgets/CustomComponent"
 
 import withScreencast, {
   ScreenCastHOC,
@@ -104,9 +105,10 @@ export class App extends PureComponent<Props, State> {
   private readonly statusWidgetRef: React.RefObject<StatusWidget>
   private connectionManager: ConnectionManager | null
   private readonly widgetMgr: WidgetStateManager
-  private uploadClient: FileUploadClient
+  private readonly uploadClient: FileUploadClient
   private elementListBuffer: Elements | null
   private elementListBufferTimerIsSet: boolean
+  private readonly componentRegistry: ComponentRegistry
 
   constructor(props: Props) {
     super(props)
@@ -144,6 +146,11 @@ export class App extends PureComponent<Props, State> {
         ? this.connectionManager.getBaseUriParts()
         : undefined
     }, true)
+    this.componentRegistry = new ComponentRegistry(() => {
+      return this.connectionManager
+        ? this.connectionManager.getBaseUriParts()
+        : undefined
+    })
     this.elementListBufferTimerIsSet = false
     this.elementListBuffer = null
 
@@ -156,10 +163,10 @@ export class App extends PureComponent<Props, State> {
    */
   keyHandlers = {
     // The r key reruns the script.
-    r: () => this.rerunScript(),
+    r: (): void => this.rerunScript(),
 
     // The c key clears the cache.
-    c: () => this.openClearCacheDialog(),
+    c: (): void => this.openClearCacheDialog(),
 
     esc: this.props.screenCast.stopRecording,
   }
@@ -382,8 +389,16 @@ export class App extends PureComponent<Props, State> {
 
         MetricsManager.current.enqueue(
           "deltaStats",
-          MetricsManager.current.getDeltaCounter()
+          MetricsManager.current.getAndResetDeltaCounter()
         )
+
+        const customComponentCounter = MetricsManager.current.getAndResetCustomComponentCounter()
+        Object.entries(customComponentCounter).forEach(([name, count]) => {
+          MetricsManager.current.enqueue("customComponentStats", {
+            name,
+            count,
+          })
+        })
       }
 
       return {
@@ -886,6 +901,7 @@ export class App extends PureComponent<Props, State> {
               this.state.connectionState !== ConnectionState.CONNECTED
             }
             uploadClient={this.uploadClient}
+            componentRegistry={this.componentRegistry}
           />
 
           {dialog}

@@ -30,7 +30,7 @@ export interface Props {
   className: string
 
   /** Additional css styling for the cell */
-  style: object
+  style: Record<string, unknown>
 
   /**
    * The HTML contents of the cell. Added to the DOM as a child of this

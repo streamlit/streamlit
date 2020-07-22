@@ -14,16 +14,10 @@
 
 import sys
 import unittest
+from io import StringIO
 
 import matplotlib
 from mock import patch
-
-try:
-    # Python 2
-    from StringIO import StringIO
-except ImportError:
-    # Python 3
-    from io import StringIO
 
 from streamlit import bootstrap
 from streamlit import config

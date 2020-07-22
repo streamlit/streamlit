@@ -82,7 +82,7 @@ class MainMenu extends PureComponent<Props, State> {
     }))
   }
 
-  getOpenInWindowCallback = (url: string) => () => {
+  getOpenInWindowCallback = (url: string) => (): void => {
     window.open(url, "_blank")
   }
 
