@@ -730,7 +730,7 @@ export class App extends PureComponent<Props, State> {
       this.saveSettings({ ...this.state.userSettings, runOnSave: true })
     }
 
-    this.sendRerunBackMsg()
+    this.widgetMgr.sendUpdateWidgetsMessage()
   }
 
   sendRerunBackMsg = (widgetStates?: WidgetStates): void => {
