@@ -17,7 +17,7 @@
 import copy
 import unittest
 
-from streamlit.ReportQueue import ReportQueue
+from streamlit.report_queue import ReportQueue
 from streamlit.elements import data_frame_proto
 from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg

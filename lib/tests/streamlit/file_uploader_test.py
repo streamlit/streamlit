@@ -18,7 +18,7 @@ from mock import patch
 
 import streamlit as st
 from streamlit import config
-from streamlit.UploadedFileManager import UploadedFile
+from streamlit.uploaded_file_manager import UploadedFile
 from streamlit.file_util import get_encoded_file_data
 from tests import testutil
 

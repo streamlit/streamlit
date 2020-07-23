@@ -26,7 +26,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from urllib.parse import urlparse
 
-from streamlit.MediaFileManager import media_file_manager
+from streamlit.media_file_manager import media_file_manager
 
 LOGGER = get_logger(__name__)
 

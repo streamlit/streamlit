@@ -105,7 +105,6 @@ html_theme = "sphinx_rtd_theme"
 # documentation.
 
 html_theme_options = {
-    "analytics_id": "UA-122023594-3",
     "logo_only": True,
     "style_nav_header_background": "#ffffff",
 }

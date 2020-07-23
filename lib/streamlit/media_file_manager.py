@@ -21,7 +21,7 @@ import datetime as dt
 import hashlib
 import time
 
-from streamlit.ReportThread import get_report_ctx
+from streamlit.report_thread import get_report_ctx
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
