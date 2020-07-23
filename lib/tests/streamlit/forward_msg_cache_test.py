@@ -14,12 +14,11 @@
 
 """Unit tests for MessageCache"""
 
+from unittest.mock import MagicMock
 import unittest
 
-from mock import MagicMock
-
-from streamlit import report_session
 from streamlit import config
+from streamlit import report_session
 from streamlit.forward_msg_cache import ForwardMsgCache
 from streamlit.forward_msg_cache import create_reference_msg
 from streamlit.forward_msg_cache import populate_hash_if_needed

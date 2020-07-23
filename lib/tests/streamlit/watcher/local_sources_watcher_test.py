@@ -14,11 +14,10 @@
 
 """streamlit.LocalSourcesWatcher unit test."""
 
+from unittest.mock import patch
 import os
 import sys
 import unittest
-
-from mock import patch
 
 from streamlit import config
 from streamlit.report import Report

@@ -29,6 +29,7 @@ import unittest
 import urllib
 from io import BytesIO
 from io import StringIO
+from unittest.mock import patch, MagicMock
 
 import altair.vegalite.v3
 import numpy as np
@@ -36,7 +37,6 @@ import pandas as pd
 import pytest
 import sqlalchemy as db
 import torch
-from mock import patch, MagicMock
 from parameterized import parameterized
 
 try:

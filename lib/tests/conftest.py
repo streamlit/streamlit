@@ -17,9 +17,8 @@ Global pytest fixtures. This file is automatically run by pytest before tests
 are executed.
 """
 
+from unittest.mock import patch, mock_open
 import os
-
-from mock import patch, mock_open
 
 # Do not import any Streamlit modules here! See below for details.
 

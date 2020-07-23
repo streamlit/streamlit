@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest.mock import MagicMock, patch
 import unittest
 
 import tornado.gen
 import tornado.testing
-from mock import MagicMock, patch
 
 from streamlit.report_session import ReportSession
 from streamlit.report_session import ReportSessionState

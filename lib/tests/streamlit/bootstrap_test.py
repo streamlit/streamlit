@@ -15,9 +15,9 @@
 import sys
 import unittest
 from io import StringIO
+from unittest.mock import patch
 
 import matplotlib
-from mock import patch
 
 from streamlit import bootstrap
 from streamlit import config

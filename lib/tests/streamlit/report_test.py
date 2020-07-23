@@ -14,10 +14,10 @@
 
 """Unit tests for Report.py."""
 
+from unittest.mock import patch
 import copy
 import unittest
 
-from mock import patch
 from parameterized import parameterized
 
 from streamlit import config

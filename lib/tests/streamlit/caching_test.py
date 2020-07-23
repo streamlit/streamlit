@@ -13,12 +13,11 @@
 # limitations under the License.
 
 """st.caching unit tests."""
+from unittest.mock import patch
 import threading
 import unittest
 import pytest
 import types
-
-from mock import patch
 
 from streamlit import caching
 from streamlit import hashing
