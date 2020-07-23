@@ -959,6 +959,7 @@ def parse_config_file(force=False):
     # $CWD/.streamlit/config.toml if it exists.
     config_filenames = [
         file_util.get_streamlit_file_path("config.toml"),
+        file_util.get_streamlit_home_file_path("config.toml"),
         file_util.get_project_streamlit_file_path("config.toml"),
     ]
 

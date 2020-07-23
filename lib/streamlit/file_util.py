@@ -14,10 +14,11 @@
 
 import contextlib
 import errno
+import fnmatch
 import io
 import os
 
-import fnmatch
+import appdirs
 
 from streamlit import env_util
 from streamlit import util
@@ -128,6 +129,17 @@ def get_assets_dir():
 
 
 def get_streamlit_file_path(*filepath):
+    """Return the full path to a file in the appropriate platform-specific dir.
+
+    This doesn't guarantee that the file (or its directory) exists.
+    """
+    return os.path.join(
+        appdirs.user_config_dir(CONFIG_FOLDER_NAME),
+        *filepath,
+    )
+
+
+def get_streamlit_home_file_path(*filepath):
     """Return the full path to a file in ~/.streamlit.
 
     This doesn't guarantee that the file (or its directory) exists.
