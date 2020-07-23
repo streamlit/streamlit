@@ -29,7 +29,6 @@
 
   develop_streamlit_components
   Publish Component to PyPI <publish_streamlit_components>
-  Components FAQ <streamlit_components_faq>
 
 .. toctree::
   :caption: Support
@@ -38,8 +37,8 @@
 
   changelog
   troubleshooting/index
-  Frequently Asked Questions < https://github.com/streamlit/streamlit/wiki/FAQ>
-  Community forum < https://discuss.streamlit.io/>
+  Frequently Asked Questions <streamlit_faq>
+  Community forum <https://discuss.streamlit.io/>
   Source code & issue tracker <https://github.com/streamlit/streamlit/>
 
 ```
