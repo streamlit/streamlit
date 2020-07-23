@@ -21,8 +21,8 @@ import pandas as pd
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.DeltaGenerator import DeltaGenerator
-from streamlit.ReportQueue import ReportQueue
+from streamlit.delta_generator import DeltaGenerator
+from streamlit.report_queue import ReportQueue
 from streamlit.proto.DataFrame_pb2 import CellStyle
 from streamlit.proto.DataFrame_pb2 import CSSStyle
 from tests import testutil

@@ -26,7 +26,7 @@ from tornado.concurrent import run_on_executor, futures
 
 from streamlit import errors
 from streamlit import config
-from streamlit.storage.AbstractStorage import AbstractStorage
+from streamlit.storage.abstract_storage import AbstractStorage
 
 from streamlit.logger import get_logger
 

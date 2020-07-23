@@ -29,7 +29,7 @@ LOGGER = get_logger(__name__)
 
 try:
     # If the watchdog module is installed.
-    from streamlit.watcher.EventBasedFileWatcher import EventBasedFileWatcher
+    from streamlit.watcher.event_based_file_watcher import EventBasedFileWatcher
 
     watchdog_available = True
 except ImportError:
@@ -55,13 +55,13 @@ def get_file_watcher_class():
         if watchdog_available:
             return EventBasedFileWatcher
         else:
-            from streamlit.watcher.PollingFileWatcher import PollingFileWatcher
+            from streamlit.watcher.polling_file_watcher import PollingFileWatcher
 
             return PollingFileWatcher
     elif watcher_type == "watchdog" and watchdog_available:
         return EventBasedFileWatcher
     elif watcher_type == "poll":
-        from streamlit.watcher.PollingFileWatcher import PollingFileWatcher
+        from streamlit.watcher.polling_file_watcher import PollingFileWatcher
 
         return PollingFileWatcher
     else:

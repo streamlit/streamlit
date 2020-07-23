@@ -21,7 +21,7 @@ from mock import patch
 
 from streamlit import bootstrap
 from streamlit import config
-from streamlit.Report import Report
+from streamlit.report import Report
 from tests import testutil
 
 report = Report("the/path", "test command line")

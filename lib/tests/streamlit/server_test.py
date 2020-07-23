@@ -26,19 +26,19 @@ from mock import MagicMock
 from mock import patch
 from tornado import gen
 
-import streamlit.server.Server
+import streamlit.server.server
 from streamlit import config
-from streamlit.ReportSession import ReportSession
-from streamlit.UploadedFileManager import UploadedFile
-from streamlit.server.Server import MAX_PORT_SEARCH_RETRIES
-from streamlit.ForwardMsgCache import ForwardMsgCache
-from streamlit.ForwardMsgCache import populate_hash_if_needed
+from streamlit.report_session import ReportSession
+from streamlit.uploaded_file_manager import UploadedFile
+from streamlit.server.server import MAX_PORT_SEARCH_RETRIES
+from streamlit.forward_msg_cache import ForwardMsgCache
+from streamlit.forward_msg_cache import populate_hash_if_needed
 from streamlit.elements import data_frame_proto
 from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.server.Server import State
-from streamlit.server.Server import start_listening
-from streamlit.server.Server import RetriesExceeded
+from streamlit.server.server import State
+from streamlit.server.server import start_listening
+from streamlit.server.server import RetriesExceeded
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
 from streamlit.server.routes import MessageCacheHandler
@@ -46,7 +46,7 @@ from streamlit.server.routes import MetricsHandler
 from streamlit.server.server_util import is_cacheable_msg
 from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import serialize_forward_msg
-from tests.ServerTestCase import ServerTestCase
+from tests.server_test_case import ServerTestCase
 
 from streamlit.logger import get_logger
 
@@ -385,7 +385,7 @@ class ServerTest(ServerTestCase):
         """
 
         return mock.patch(
-            "streamlit.server.Server.ReportSession",
+            "streamlit.server.server.ReportSession",
             # new_callable must return a function, not an object, or else
             # there will only be a single ReportSession mock. Hence the lambda.
             new_callable=lambda: self._create_mock_report_session,
@@ -506,7 +506,7 @@ class PortRotateAHundredTest(unittest.TestCase):
     def test_rotates_a_hundred_ports(self):
         app = mock.MagicMock()
 
-        RetriesExceeded = streamlit.server.Server.RetriesExceeded
+        RetriesExceeded = streamlit.server.server.RetriesExceeded
         with pytest.raises(RetriesExceeded) as pytest_wrapped_e:
             with patch.object(
                 tornado.httpserver, "HTTPServer", return_value=self.get_httpserver()
@@ -530,8 +530,8 @@ class PortRotateOneTest(unittest.TestCase):
 
         return httpserver
 
-    @mock.patch("streamlit.server.Server.config._set_option")
-    @mock.patch("streamlit.server.Server.server_port_is_manually_set")
+    @mock.patch("streamlit.server.server.config._set_option")
+    @mock.patch("streamlit.server.server.server_port_is_manually_set")
     def test_rotates_one_port(
         self, patched_server_port_is_manually_set, patched__set_option
     ):

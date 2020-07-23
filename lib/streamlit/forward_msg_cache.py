@@ -21,7 +21,7 @@ from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 if TYPE_CHECKING:
-    from streamlit.ReportSession import ReportSession
+    from streamlit.report_session import ReportSession
 
 LOGGER = get_logger(__name__)
 
