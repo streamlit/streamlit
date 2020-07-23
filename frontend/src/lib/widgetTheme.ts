@@ -531,7 +531,6 @@ export const sidebarWidgetTheme = createTheme(mainThemePrimitives, {
     tickFillHover: white,
     inputFillDisabled: white,
     inputFillActive: white,
-    menuFillHover: white,
 
     // mono300 overrides
     toggleTrackFillDisabled: white,
