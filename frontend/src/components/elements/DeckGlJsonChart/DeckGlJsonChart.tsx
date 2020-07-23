@@ -20,10 +20,13 @@ import DeckGL from "deck.gl"
 import Immutable from "immutable"
 import isEqual from "lodash/isEqual"
 import { StaticMap } from "react-map-gl"
+// We don't have Typescript defs for these imports, which makes ESLint unhappy
+/* eslint-disable import/no-extraneous-dependencies */
 import * as layers from "@deck.gl/layers"
 import { JSONConverter } from "@deck.gl/json"
 import * as geoLayers from "@deck.gl/geo-layers"
 import * as aggregationLayers from "@deck.gl/aggregation-layers"
+/* eslint-enable */
 
 import { CSVLoader } from "@loaders.gl/csv"
 import { registerLoaders } from "@loaders.gl/core"

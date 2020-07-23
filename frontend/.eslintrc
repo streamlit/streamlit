@@ -98,7 +98,6 @@
     // Disable a bunch of AirBNB rules we're currently in violation of.
     // TODO: For each one, either fix and reenable, or provide a justification.
     "import/prefer-default-export": "off",
-    "import/no-extraneous-dependencies": "off",
     "max-classes-per-file": "off",
     "no-shadow": "off",
     "no-param-reassign": "off",

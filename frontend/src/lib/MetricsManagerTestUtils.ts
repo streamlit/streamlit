@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+// This file is only used in tests, so these imports can be in devDependencies
+/* eslint-disable import/no-extraneous-dependencies */
 import jest from "jest-mock"
 import { MetricsManager } from "./MetricsManager"
 
