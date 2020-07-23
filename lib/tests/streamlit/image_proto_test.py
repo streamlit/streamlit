@@ -126,6 +126,29 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         self.assertTrue(imglist.imgs[0].url.startswith("/media"))
         self.assertTrue(file_id in imglist.imgs[0].url)
 
+    @parameterized.expand(
+        [
+            (IMAGES["img_32_32_3_rgb"]["np"], "/media/",),
+            ("https://streamlit.io/test.png", "https://streamlit.io/test.png",),
+            ("<svg fake></svg>", "data:image/svg+xml,<svg fake></svg>",),
+            ("🦈", "🦈",),
+            (":shark:", ":shark:",),
+        ]
+    )
+    def test_image_to_url(self, image, expected_prefix):
+        from streamlit.elements.image_proto import image_to_url
+
+        url = image_to_url(
+            image,
+            width=-1,
+            clamp=False,
+            channels="RGB",
+            format="JPEG",
+            image_id="blah",
+            allow_emoji=True,
+        )
+        self.assertTrue(url.startswith(expected_prefix))
+
     def test_BytesIO_to_bytes(self):
         """Test streamlit.image_proto.BytesIO_to_bytes."""
         pass

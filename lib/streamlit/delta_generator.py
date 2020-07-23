@@ -1527,12 +1527,14 @@ class DeltaGenerator(object):
             OR a color image of shape (w,h,3)
             OR an RGBA image of shape (w,h,4)
             OR a URL to fetch the image from
+            OR an SVG XML string like `<svg xmlns=...</svg>`
             OR a list of one of the above, to display multiple images.
         caption : str or list of str
             Image caption. If displaying multiple images, caption should be a
             list of captions (one for each image).
         width : int or None
             Image width. None means use the image width.
+            Should be set for SVG images, as they have no default image width.
         use_column_width : bool
             If True, set the image width to the column width. This takes
             precedence over the `width` parameter.

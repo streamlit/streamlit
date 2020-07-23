@@ -24,6 +24,7 @@ from PIL import Image, ImageFile
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
+from urllib.parse import quote
 from urllib.parse import urlparse
 
 from streamlit.media_file_manager import media_file_manager
@@ -148,6 +149,8 @@ def image_to_url(image, width, clamp, channels, format, image_id, allow_emoji=Fa
         data = _PIL_to_bytes(image, format)
 
     # BytesIO
+    # Note: This doesn't support SVG. We could convert to png (cairosvg.svg2png)
+    # or just decode BytesIO to string and handle that way.
     elif type(image) is io.BytesIO:
         data = _BytesIO_to_bytes(image)
 
@@ -177,7 +180,15 @@ def image_to_url(image, width, clamp, channels, format, image_id, allow_emoji=Fa
         except UnicodeDecodeError:
             pass
 
-        # If not, see if it's a file.
+        # Unpack local SVG image file to an SVG string
+        if image.endswith(".svg"):
+            with open(image) as textfile:
+                image = textfile.read()
+        # If it's an SVG string, then format and return an SVG data url
+        if image.startswith("<svg"):
+            return f"data:image/svg+xml,{image}"
+
+        # Finally, see if it's a file.
         try:
             with open(image, "rb") as f:
                 data = f.read()
