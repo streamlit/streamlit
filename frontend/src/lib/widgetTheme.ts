@@ -524,27 +524,14 @@ export const sidebarWidgetTheme = createTheme(mainThemePrimitives, {
     tickFill: white,
     tickMarkFillDisabled: white,
     menuFill: white,
-    tagNeutralSolidFont: white,
-    tableHeadBackgroundColor: white,
-    tableBackground: white,
-    tableFilterBackground: white,
-    tooltipText: white,
 
     // mono200 overrides
     buttonDisabledFill: white,
     fileUploaderBackgroundColor: white,
-    listBodyFill: white,
     tickFillHover: white,
     inputFillDisabled: white,
     inputFillActive: white,
     menuFillHover: white,
-    tabBarFill: white,
-    tagNeutralSolidDisabled: white,
-    tagNeutralLightDisabled: white,
-    tagNeutralOutlinedDisabled: white,
-    tagNeutralOutlinedFontHover: white,
-    tableStripedBackground: white,
-    tableFilterFooterBackground: white,
 
     // mono300 overrides
     toggleTrackFillDisabled: white,
@@ -554,9 +541,6 @@ export const sidebarWidgetTheme = createTheme(mainThemePrimitives, {
     inputFill: white,
     inputEnhanceFill: white,
     inputEnhancerFillDisabled: white,
-    tagNeutralSolidHover: white,
-    tagNeutralLightBackground: white,
-    tagNeutralLightHover: white,
 
     // mono400 overrides
     buttonDisabledSpinnerBackground: grayLight,
@@ -564,8 +548,6 @@ export const sidebarWidgetTheme = createTheme(mainThemePrimitives, {
     sliderTrackFill: grayLight,
     sliderHandleInnerFill: grayLight,
     sliderHandleInnerFillDisabled: grayLight,
-    tagNeutralSolidActive: grayLight,
-    tagNeutralLightActive: grayLight,
   },
 })
 
