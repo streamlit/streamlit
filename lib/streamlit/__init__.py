@@ -99,9 +99,9 @@ from streamlit import env_util as _env_util
 from streamlit import source_util as _source_util
 from streamlit import string_util as _string_util
 from streamlit import type_util as _type_util
-from streamlit.DeltaGenerator import DeltaGenerator as _DeltaGenerator
-from streamlit.ReportThread import add_report_ctx as _add_report_ctx
-from streamlit.ReportThread import get_report_ctx as _get_report_ctx
+from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
+from streamlit.report_thread import add_report_ctx as _add_report_ctx
+from streamlit.report_thread import get_report_ctx as _get_report_ctx
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import BlockPath_pb2 as _BlockPath_pb2
 
@@ -188,9 +188,10 @@ get_option = _config.get_option
 def set_option(key, value):
     """Set config option.
 
-    Currently, only two config options can be set within the script itself:
+    Currently, only the following config options can be set within the script itself:
         * client.caching
         * client.displayEnabled
+        * deprecation.*
 
     Calling with any other options will raise StreamlitAPIException.
 

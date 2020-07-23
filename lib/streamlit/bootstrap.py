@@ -24,9 +24,9 @@ from streamlit import net_util
 from streamlit import url_util
 from streamlit import env_util
 from streamlit import util
-from streamlit.Report import Report
+from streamlit.report import Report
 from streamlit.logger import get_logger
-from streamlit.server.Server import Server
+from streamlit.server.server import Server
 
 LOGGER = get_logger(__name__)
 

@@ -26,7 +26,7 @@ from parameterized import parameterized
 
 from streamlit import config
 from streamlit import env_util
-from streamlit.ConfigOption import ConfigOption
+from streamlit.config_option import ConfigOption
 
 SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
 CONFIG_OPTIONS = copy.deepcopy(config._config_options)
@@ -257,6 +257,7 @@ class ConfigTest(unittest.TestCase):
                 "_test",
                 "browser",
                 "client",
+                "deprecation",
                 "global",
                 "mapbox",
                 "runner",
@@ -275,6 +276,7 @@ class ConfigTest(unittest.TestCase):
                 "browser.serverPort",
                 "client.caching",
                 "client.displayEnabled",
+                "deprecation.showfileUploaderEncoding",
                 "global.developmentMode",
                 "global.disableWatchdogWarning",
                 "global.logLevel",

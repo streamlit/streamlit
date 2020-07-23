@@ -14,13 +14,16 @@
 
 import streamlit as st
 
-
+st.set_option("deprecation.showfileUploaderEncoding", True)
 result = st.file_uploader("Drop a file:", type=["txt"])
 # result = st.file_uploader("Drop a file:", type=["txt"], accept_multiple_files=False)
 if result is not None:
     st.text(result.getvalue())
 else:
     st.text("No upload")
+
+st.set_option("deprecation.showfileUploaderEncoding", False)
+st.file_uploader("Disable deprecation", type=["txt"])
 
 # result = st.file_uploader(
 #     "Drop multiple files:", type=["txt"], accept_multiple_files=True

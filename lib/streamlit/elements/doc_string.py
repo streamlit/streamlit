@@ -21,7 +21,7 @@ from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 
-CONFUSING_STREAMLIT_MODULES = ("streamlit.DeltaGenerator", "streamlit.caching")
+CONFUSING_STREAMLIT_MODULES = ("streamlit.delta_generator", "streamlit.caching")
 
 CONFUSING_STREAMLIT_SIG_PREFIXES = ("(element, ",)
 
@@ -76,7 +76,7 @@ def marshall(proto, obj):
 def _get_signature(f):
     is_delta_gen = False
     try:
-        is_delta_gen = f.__module__ == "streamlit.DeltaGenerator"
+        is_delta_gen = f.__module__ == "streamlit.delta_generator"
 
         if is_delta_gen:
             # DeltaGenerator functions are doubly wrapped, and their function
@@ -107,21 +107,8 @@ def _get_signature(f):
 
 
 def _unwrap_decorated_func(f):
-    if hasattr(f, "func_closure"):
-        try:
-            # Python 2 way.
-            while getattr(f, "func_closure"):
-                contents = f.func_closure[0].cell_contents
-                if not callable(contents):
-                    break
-                f = contents
-            return f
-        except AttributeError:
-            pass
-
     if hasattr(f, "__wrapped__"):
         try:
-            # Python 3 way.
             while getattr(f, "__wrapped__"):
                 contents = f.__wrapped__
                 if not callable(contents):
@@ -131,6 +118,6 @@ def _unwrap_decorated_func(f):
         except AttributeError:
             pass
 
-    # Fall back to original function, though it's unlikely we'll reach 
+    # Fall back to original function, though it's unlikely we'll reach
     # this part of the code.
     return f
