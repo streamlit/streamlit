@@ -82,9 +82,21 @@
     ],
     // Allow foo.hasOwnProperty("bar")
     "no-prototype-builtins": "off",
+    // Imports should be `import "./FooModule"`, not `import "./FooModule.js"`
+    // We need to configure this to check our .tsx files, see:
+    // https://github.com/benmosher/eslint-plugin-import/issues/1615#issuecomment-577500405
+    "import/extensions": [
+      "error",
+      "ignorePackages",
+      {
+        "js": "never",
+        "jsx": "never",
+        "ts": "never",
+        "tsx": "never"
+      }
+    ],
     // Disable a bunch of AirBNB rules we're currently in violation of.
     // TODO: For each one, either fix and reenable, or provide a justification.
-    "import/extensions": "off",
     "import/prefer-default-export": "off",
     "import/no-extraneous-dependencies": "off",
     "max-classes-per-file": "off",
@@ -97,6 +109,12 @@
       // Tells eslint-plugin-react to automatically detect
       // the version of React to use
       "version": "detect"
+    },
+    // Check for import violation in all JS-like files
+    "import/resolver": {
+      "node": {
+        "extensions": [".js", ".jsx", ".ts", ".tsx", ".json"]
+      }
     }
   }
 }

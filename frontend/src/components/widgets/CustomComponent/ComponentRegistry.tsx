@@ -17,7 +17,7 @@
 
 import { logWarning } from "lib/log"
 import { BaseUriParts, buildHttpUri } from "lib/UriUtil"
-import { ComponentMessageType } from "./ComponentInstance"
+import { ComponentMessageType } from "./enums"
 
 export type ComponentMessageListener = (
   type: ComponentMessageType,

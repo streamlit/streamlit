@@ -22,7 +22,7 @@ import { Client as Styletron } from "styletron-engine-atomic"
 import { LightTheme, BaseProvider } from "baseui"
 import { Provider as StyletronProvider } from "styletron-react"
 import { SCSS_VARS } from "autogen/scssVariables"
-import App from "./App"
+import AppWithScreencast from "./App"
 
 const engine = new Styletron({ prefix: "st-" })
 const popupZIndex = Number(SCSS_VARS["$z-index-popup-menu"])
@@ -34,7 +34,7 @@ ReactDOM.render(
       actually does. See: https://baseweb.design/components/base-provider/
       // @ts-ignore */}
     <BaseProvider theme={LightTheme} zIndex={popupZIndex}>
-      <App />
+      <AppWithScreencast />
     </BaseProvider>
   </StyletronProvider>,
   document.getElementById("root")
