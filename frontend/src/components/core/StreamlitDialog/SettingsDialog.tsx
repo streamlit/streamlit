@@ -15,8 +15,7 @@
  * limitations under the License.
  */
 
-import * as React from "react"
-import { ChangeEvent, PureComponent, ReactNode } from "react"
+import React, { ChangeEvent, PureComponent, ReactNode } from "react"
 import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap"
 import { UserSettings } from "./UserSettings"
 
