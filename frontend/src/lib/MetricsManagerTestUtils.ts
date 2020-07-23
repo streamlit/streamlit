@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+// Disable Typescript checking, since mm.track and identify have private scope
+// @ts-nocheck
 // This file is only used in tests, so these imports can be in devDependencies
 /* eslint-disable import/no-extraneous-dependencies */
 import jest from "jest-mock"

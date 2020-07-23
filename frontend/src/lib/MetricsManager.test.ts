@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+// Disable Typescript checking, since mm.track and identify have private scope
+// @ts-nocheck
 import { SessionInfo } from "lib/SessionInfo"
 import { getMetricsManagerForTest } from "lib/MetricsManagerTestUtils"
 
