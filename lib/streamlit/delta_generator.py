@@ -47,8 +47,11 @@ from streamlit.logger import get_logger
 from streamlit.type_util import is_type
 
 from streamlit.elements.utils import _get_widget_ui_value, _set_widget_id
+from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.button import ButtonMixin
+from streamlit.elements.latex import LatexMixin
 from streamlit.elements.markdown import MarkdownMixin
+from streamlit.elements.text import TextMixin
 
 LOGGER = get_logger(__name__)
 
@@ -171,7 +174,7 @@ text_io = io.TextIOWrapper(file_buffer)
             """
 
 
-class DeltaGenerator(ButtonMixin, MarkdownMixin):
+class DeltaGenerator(BalloonsMixin, ButtonMixin, LatexMixin, MarkdownMixin, TextMixin):
     """Creator of Delta protobuf messages.
 
     Parameters
@@ -372,78 +375,6 @@ class DeltaGenerator(ButtonMixin, MarkdownMixin):
         _enqueue_message(msg)
 
         return block_dg
-
-    @_with_element
-    def balloons(self, element):
-        """Draw celebratory balloons.
-
-        Example
-        -------
-        >>> st.balloons()
-
-        ...then watch your app and get ready for a celebration!
-
-        """
-        element.balloons.type = Balloons_pb2.Balloons.DEFAULT
-        element.balloons.execution_id = random.randrange(0xFFFFFFFF)
-
-    @_with_element
-    def text(self, element, body):
-        """Write fixed-width and preformatted text.
-
-        Parameters
-        ----------
-        body : str
-            The string to display.
-
-        Example
-        -------
-        >>> st.text('This is some text.')
-
-        .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=PYxU1kee5ubuhGR11NsnT1
-           height: 50px
-
-        """
-
-        element.text.body = _clean_text(body)
-
-    @_with_element
-    def latex(self, element, body):
-        # This docstring needs to be "raw" because of the backslashes in the
-        # example below.
-        r"""Display mathematical expressions formatted as LaTeX.
-
-        Supported LaTeX functions are listed at
-        https://katex.org/docs/supported.html.
-
-        Parameters
-        ----------
-        body : str or SymPy expression
-            The string or SymPy expression to display as LaTeX. If str, it's
-            a good idea to use raw Python strings since LaTeX uses backslashes
-            a lot.
-
-
-        Example
-        -------
-        >>> st.latex(r'''
-        ...     a + ar + a r^2 + a r^3 + \cdots + a r^{n-1} =
-        ...     \sum_{k=0}^{n-1} ar^k =
-        ...     a \left(\frac{1-r^{n}}{1-r}\right)
-        ...     ''')
-
-        .. output::
-           https://share.streamlit.io/0.50.0-td2L/index.html?id=NJFsy6NbGTsH2RF9W6ioQ4
-           height: 75px
-
-        """
-        if type_util.is_sympy_expession(body):
-            import sympy
-
-            body = sympy.latex(body)
-
-        element.markdown.body = "$$\n%s\n$$" % _clean_text(body)
 
     @_with_element
     def code(self, element, body, language="python"):
