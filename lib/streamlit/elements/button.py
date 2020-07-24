@@ -1,5 +1,5 @@
 from streamlit.proto import Button_pb2
-from streamlit.delta_generator import _get_widget_ui_value
+from .utils import _get_widget_ui_value
 
 
 class ButtonMixin:
