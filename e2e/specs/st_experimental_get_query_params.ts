@@ -19,7 +19,10 @@
 
 describe("st.experimental_get_query_string", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/?checkbox1=True");
+    cy.visit(
+      "http://localhost:3000/?" +
+        "show_map=True&number_of_countries=2&selected=asia&selected=america"
+    );
     // Make the ribbon decoration line disappear
     cy.get(".decoration").invoke("css", "display", "none");
   });
@@ -29,6 +32,12 @@ describe("st.experimental_get_query_string", () => {
       "have.length",
       1
     );
-    cy.contains("Current query string is: {'checkbox1': ['True']}");
+    cy.contains(
+      "Current query string is: {" +
+        "'show_map': ['True'], " +
+        "'number_of_countries': ['2'], " +
+        "'selected': ['asia', 'america']" +
+        "}"
+    );
   });
 });

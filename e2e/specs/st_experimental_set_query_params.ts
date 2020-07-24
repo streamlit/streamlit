@@ -32,6 +32,12 @@ describe("st.experimental_query_string", () => {
   it("sets query string correctly when user clicks", () => {
     cy.get(".stButton button").click();
 
-    cy.url().should("include", "http://localhost:3000/?checkbox=True"); // => true
+    cy.url().should(
+      "include",
+      "http://localhost:3000/?" +
+        "show_map=True&" +
+        "number_of_countries=2&" +
+        "selected=asia&selected=america"
+    );
   });
 });

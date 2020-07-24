@@ -495,11 +495,16 @@ def experimental_get_query_params():
     -------
 
     Let's say the user's web browser is at
-    `http://localhost:8501/?show_map=true&number_of_countries=2`. Then, you can get the query
-    parameters using the following:
+    `http://localhost:8501/?show_map=True&&selected=asia&selected=america`.
+    Then, you can get the query parameters using the following:
 
     >>> st.experimental_get_query_params()
-    {"show_map": ["true"], "number_of_countries": ["2"]}
+    {"show_map": ["True"], "selected": ["asia", "america"]}
+
+    Note that the values in the returned dict are *always* lists. This is
+    because we internally use Python's urllib.parse.parse_qs(), which behaves
+    this way. And this behavior makes sense when you consider that every item
+    in a query string is potentially a 1-element array.
 
     """
     ctx = _get_report_ctx()
@@ -508,27 +513,31 @@ def experimental_get_query_params():
     return _parse.parse_qs(ctx.query_string)
 
 
-def experimental_set_query_params(query_params):
+def experimental_set_query_params(**query_params):
     """Set the query parameters that are shown in the browser's URL bar.
 
     Parameters
     ----------
-    query_params : dict
+    **query_params : dict
         The query parameters to set, as key-value pairs.
 
     Example
     -------
 
     To point the user's web browser to something like
-    `http://localhost:8501/?show_map=true&number_of_countries=2`, you would do the following:
+    "http://localhost:8501/?show_map=True&selected=asia&selected=america",
+    you would do the following:
 
-    >>> st.experimental_set_query_params({"show_map": "true", "number_of_countries": 2})
+    >>> st.experimental_set_query_params(
+    ...     show_map=True,
+    ...     selected=["asia", "america"],
+    ... )
 
     """
     ctx = _get_report_ctx()
     if ctx is None:
         return
-    ctx.query_string = _parse.urlencode(query_params)
+    ctx.query_string = _parse.urlencode(query_params, doseq=True)
     msg = _ForwardMsg_pb2.ForwardMsg()
     msg.page_info_changed.query_string = ctx.query_string
     ctx.enqueue(msg)

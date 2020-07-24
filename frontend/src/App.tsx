@@ -297,7 +297,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   handlePageInfoChanged = (pageInfo: PageInfo): void => {
-    const queryString = pageInfo.queryString
+    const { queryString } = pageInfo
     window.history.pushState({}, "", queryString ? `?${queryString}` : "/")
   }
 

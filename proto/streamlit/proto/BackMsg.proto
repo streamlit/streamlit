@@ -54,4 +54,6 @@ message BackMsg {
 
     ClientState rerun_script = 11;
   }
+
+  reserved 1, 3, 4, 8, 9;
 }
