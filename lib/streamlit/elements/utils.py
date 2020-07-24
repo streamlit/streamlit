@@ -5,7 +5,7 @@ from streamlit.errors import DuplicateWidgetID
 from typing import Optional, Any
 
 
-def clean_text(text):
+def _clean_text(text):
     return textwrap.dedent(str(text)).strip()
 
 

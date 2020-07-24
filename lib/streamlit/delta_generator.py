@@ -50,8 +50,16 @@ from streamlit.elements.utils import _get_widget_ui_value, _set_widget_id
 from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.button import ButtonMixin
 from streamlit.elements.latex import LatexMixin
-from streamlit.elements.markdown import MarkdownMixin
-from streamlit.elements.text import TextMixin
+from streamlit.elements.markdown import (
+    MarkdownMixin,
+    LatexMixin,
+    HeaderMixin,
+    SubheaderMixin,
+    CodeMixin,
+    TitleMixin,
+    TextMixin,
+    JsonMixin
+)
 
 LOGGER = get_logger(__name__)
 
@@ -174,7 +182,18 @@ text_io = io.TextIOWrapper(file_buffer)
             """
 
 
-class DeltaGenerator(BalloonsMixin, ButtonMixin, LatexMixin, MarkdownMixin, TextMixin):
+class DeltaGenerator(
+    BalloonsMixin,
+    ButtonMixin,
+    MarkdownMixin,
+    LatexMixin,
+    HeaderMixin,
+    SubheaderMixin,
+    CodeMixin,
+    TitleMixin,
+    TextMixin,
+    JsonMixin,
+):
     """Creator of Delta protobuf messages.
 
     Parameters
@@ -375,144 +394,6 @@ class DeltaGenerator(BalloonsMixin, ButtonMixin, LatexMixin, MarkdownMixin, Text
         _enqueue_message(msg)
 
         return block_dg
-
-    @_with_element
-    def code(self, element, body, language="python"):
-        """Display a code block with optional syntax highlighting.
-
-        (This is a convenience wrapper around `st.markdown()`)
-
-        Parameters
-        ----------
-        body : str
-            The string to display as code.
-
-        language : str
-            The language that the code is written in, for syntax highlighting.
-            If omitted, the code will be unstyled.
-
-        Example
-        -------
-        >>> code = '''def hello():
-        ...     print("Hello, Streamlit!")'''
-        >>> st.code(code, language='python')
-
-        .. output::
-           https://share.streamlit.io/0.27.0-kBtt/index.html?id=VDRnaCEZWSBCNUd5gNQZv2
-           height: 100px
-
-        """
-        markdown = "```%(language)s\n%(body)s\n```" % {
-            "language": language or "",
-            "body": body,
-        }
-        element.markdown.body = _clean_text(markdown)
-
-    @_with_element
-    def json(self, element, body):
-        """Display object or string as a pretty-printed JSON string.
-
-        Parameters
-        ----------
-        body : Object or str
-            The object to print as JSON. All referenced objects should be
-            serializable to JSON as well. If object is a string, we assume it
-            contains serialized JSON.
-
-        Example
-        -------
-        >>> st.json({
-        ...     'foo': 'bar',
-        ...     'baz': 'boz',
-        ...     'stuff': [
-        ...         'stuff 1',
-        ...         'stuff 2',
-        ...         'stuff 3',
-        ...         'stuff 5',
-        ...     ],
-        ... })
-
-        .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=CTFkMQd89hw3yZbZ4AUymS
-           height: 280px
-
-        """
-        import streamlit as st
-
-        if not isinstance(body, str):
-            try:
-                body = json.dumps(body, default=lambda o: str(type(o)))
-            except TypeError as err:
-                st.warning(
-                    "Warning: this data structure was not fully serializable as "
-                    "JSON due to one or more unexpected keys.  (Error was: %s)" % err
-                )
-                body = json.dumps(body, skipkeys=True, default=lambda o: str(type(o)))
-
-        element.json.body = body
-
-    @_with_element
-    def title(self, element, body):
-        """Display text in title formatting.
-
-        Each document should have a single `st.title()`, although this is not
-        enforced.
-
-        Parameters
-        ----------
-        body : str
-            The text to display.
-
-        Example
-        -------
-        >>> st.title('This is a title')
-
-        .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=SFcBGANWd8kWXF28XnaEZj
-           height: 100px
-
-        """
-        element.markdown.body = "# %s" % _clean_text(body)
-
-    @_with_element
-    def header(self, element, body):
-        """Display text in header formatting.
-
-        Parameters
-        ----------
-        body : str
-            The text to display.
-
-        Example
-        -------
-        >>> st.header('This is a header')
-
-        .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=AnfQVFgSCQtGv6yMUMUYjj
-           height: 100px
-
-        """
-        element.markdown.body = "## %s" % _clean_text(body)
-
-    @_with_element
-    def subheader(self, element, body):
-        """Display text in subheader formatting.
-
-        Parameters
-        ----------
-        body : str
-            The text to display.
-
-        Example
-        -------
-        >>> st.subheader('This is a subheader')
-
-        .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=LBKJTfFUwudrbWENSHV6cJ
-           height: 100px
-
-        """
-        element.markdown.body = "### %s" % _clean_text(body)
 
     @_with_element
     def error(self, element, body):
