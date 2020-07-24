@@ -24,16 +24,11 @@ describe("st.experimental_get_query_string", () => {
     cy.get(".decoration").invoke("css", "display", "none");
   });
 
-  it("shows button correctly", () => {
-    cy.get(".stButton").should("have.length", 1);
-  });
-
-  it("shows query string correctly after click button", () => {
-    cy.get(".stButton button").click();
-    cy.get(".element-container .stAlert .markdown-text-container").should(
+  it("shows query string correctly", () => {
+    cy.get(".element-container .markdown-text-container").should(
       "have.length",
       1
     );
-    cy.contains("Current query string is: {'checkbox1': 'True'}");
+    cy.contains("Current query string is: {'checkbox1': ['True']}");
   });
 });
