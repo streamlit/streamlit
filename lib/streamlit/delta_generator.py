@@ -54,6 +54,7 @@ from streamlit.elements.text import TextMixin
 from streamlit.elements.alert import AlertMixin
 from streamlit.elements.json import JsonMixin
 from streamlit.elements.doc_string import HelpMixin
+from streamlit.elements.exception_proto import ExceptionMixin
 
 LOGGER = get_logger(__name__)
 
@@ -180,6 +181,7 @@ class DeltaGenerator(
     AlertMixin,
     BalloonsMixin,
     ButtonMixin,
+    ExceptionMixin,
     HelpMixin,
     MarkdownMixin,
     JsonMixin,
@@ -385,25 +387,6 @@ class DeltaGenerator(
         _enqueue_message(msg)
 
         return block_dg
-
-    @_with_element
-    def exception(self, element, exception):
-        """Display an exception.
-
-        Parameters
-        ----------
-        exception : Exception
-            The exception to display.
-
-        Example
-        -------
-        >>> e = RuntimeError('This is an exception of type RuntimeError')
-        >>> st.exception(e)
-
-        """
-        import streamlit.elements.exception_proto as exception_proto
-
-        exception_proto.marshall(element.exception, exception)
 
     def dataframe(self, data=None, width=None, height=None):
         """Display a dataframe as an interactive table.
