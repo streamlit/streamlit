@@ -61,8 +61,6 @@ class MarkdownMixin:
 
         return dg._enqueue("markdown", markdown_proto)
 
-
-class HeaderMixin:
     def header(dg, body):
         """Display text in header formatting.
 
@@ -84,8 +82,6 @@ class HeaderMixin:
         header_proto.body = "## %s" % _clean_text(body)
         dg._enqueue("markdown", header_proto)
 
-
-class SubheaderMixin:
     def subheader(dg, body):
         """Display text in subheader formatting.
 
@@ -107,8 +103,6 @@ class SubheaderMixin:
         subheader_proto.body = "### %s" % _clean_text(body)
         dg._enqueue("markdown", subheader_proto)
 
-
-class CodeMixin:
     def code(dg, body, language="python"):
         """Display a code block with optional syntax highlighting.
 
@@ -142,8 +136,6 @@ class CodeMixin:
         code_proto.body = _clean_text(markdown)
         dg._enqueue("markdown", code_proto)
 
-
-class TitleMixin:
     def title(dg, body):
         """Display text in title formatting.
 
@@ -168,8 +160,6 @@ class TitleMixin:
         title_proto.body = "# %s" % _clean_text(body)
         dg._enqueue("markdown", title_proto)
 
-
-class LatexMixin:
     def latex(dg, body):
         # This docstring needs to be "raw" because of the backslashes in the
         # example below.
@@ -207,4 +197,3 @@ class LatexMixin:
         latex_proto = Markdown_pb2.Markdown()
         latex_proto.body = "$$\n%s\n$$" % _clean_text(body)
         dg._enqueue("markdown", latex_proto)
-

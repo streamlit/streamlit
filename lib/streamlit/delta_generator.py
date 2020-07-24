@@ -50,15 +50,9 @@ from streamlit.type_util import is_type
 from streamlit.elements.utils import _get_widget_ui_value, _set_widget_id
 from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.button import ButtonMixin
-from streamlit.elements.markdown import (
-    MarkdownMixin,
-    LatexMixin,
-    HeaderMixin,
-    SubheaderMixin,
-    CodeMixin,
-    TitleMixin,
-    TextMixin,
-)
+from streamlit.elements.markdown import MarkdownMixin
+from streamlit.elements.text import TextMixin
+from streamlit.elements.alert import AlertMixin
 from streamlit.elements.json import JsonMixin
 
 LOGGER = get_logger(__name__)
@@ -183,14 +177,10 @@ text_io = io.TextIOWrapper(file_buffer)
 
 
 class DeltaGenerator(
+    AlertMixin,
     BalloonsMixin,
     ButtonMixin,
     MarkdownMixin,
-    LatexMixin,
-    HeaderMixin,
-    SubheaderMixin,
-    CodeMixin,
-    TitleMixin,
     TextMixin,
     JsonMixin,
 ):
@@ -394,74 +384,6 @@ class DeltaGenerator(
         _enqueue_message(msg)
 
         return block_dg
-
-    @_with_element
-    def error(self, element, body):
-        """Display error message.
-
-        Parameters
-        ----------
-        body : str
-            The error text to display.
-
-        Example
-        -------
-        >>> st.error('This is an error')
-
-        """
-        element.alert.body = _clean_text(body)
-        element.alert.format = Alert_pb2.Alert.ERROR
-
-    @_with_element
-    def warning(self, element, body):
-        """Display warning message.
-
-        Parameters
-        ----------
-        body : str
-            The warning text to display.
-
-        Example
-        -------
-        >>> st.warning('This is a warning')
-
-        """
-        element.alert.body = _clean_text(body)
-        element.alert.format = Alert_pb2.Alert.WARNING
-
-    @_with_element
-    def info(self, element, body):
-        """Display an informational message.
-
-        Parameters
-        ----------
-        body : str
-            The info text to display.
-
-        Example
-        -------
-        >>> st.info('This is a purely informational message')
-
-        """
-        element.alert.body = _clean_text(body)
-        element.alert.format = Alert_pb2.Alert.INFO
-
-    @_with_element
-    def success(self, element, body):
-        """Display a success message.
-
-        Parameters
-        ----------
-        body : str
-            The success text to display.
-
-        Example
-        -------
-        >>> st.success('This is a success message!')
-
-        """
-        element.alert.body = _clean_text(body)
-        element.alert.format = Alert_pb2.Alert.SUCCESS
 
     @_with_element
     def help(self, element, obj):
