@@ -16,7 +16,6 @@
 
 import functools
 import json
-import random
 import textwrap
 import numbers
 import re

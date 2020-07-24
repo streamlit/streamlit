@@ -1,3 +1,5 @@
+import random
+
 from streamlit.proto import Balloons_pb2
 
 
