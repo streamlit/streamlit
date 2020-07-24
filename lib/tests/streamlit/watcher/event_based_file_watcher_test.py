@@ -16,7 +16,7 @@ import unittest
 import mock
 from watchdog import events
 
-from streamlit.watcher import EventBasedFileWatcher
+from streamlit.watcher import event_based_file_watcher
 
 
 class EventBasedFileWatcherTest(unittest.TestCase):
@@ -24,16 +24,18 @@ class EventBasedFileWatcherTest(unittest.TestCase):
 
     def setUp(self):
         self.observer_class_patcher = mock.patch(
-            "streamlit.watcher.EventBasedFileWatcher.Observer"
+            "streamlit.watcher.event_based_file_watcher.Observer"
         )
-        self.util_patcher = mock.patch("streamlit.watcher.EventBasedFileWatcher.util")
-        self.os_patcher = mock.patch("streamlit.watcher.EventBasedFileWatcher.os")
+        self.util_patcher = mock.patch(
+            "streamlit.watcher.event_based_file_watcher.util"
+        )
+        self.os_patcher = mock.patch("streamlit.watcher.event_based_file_watcher.os")
         self.MockObserverClass = self.observer_class_patcher.start()
         self.mock_util = self.util_patcher.start()
         self.os = self.os_patcher.start()
 
     def tearDown(self):
-        fo = EventBasedFileWatcher._MultiFileWatcher.get_singleton()
+        fo = event_based_file_watcher._MultiFileWatcher.get_singleton()
         fo._observer.start.reset_mock()
         fo._observer.schedule.reset_mock()
 
@@ -48,9 +50,9 @@ class EventBasedFileWatcherTest(unittest.TestCase):
         self.os.stat = lambda x: FakeStat(101)
         self.mock_util.calc_md5_with_blocking_retries = lambda x: "1"
 
-        ro = EventBasedFileWatcher.EventBasedFileWatcher("/this/is/my/file.py", cb)
+        ro = event_based_file_watcher.EventBasedFileWatcher("/this/is/my/file.py", cb)
 
-        fo = EventBasedFileWatcher._MultiFileWatcher.get_singleton()
+        fo = event_based_file_watcher._MultiFileWatcher.get_singleton()
         fo._observer.schedule.assert_called_once()
 
         folder_handler = fo._observer.schedule.call_args[0][0]
@@ -75,9 +77,9 @@ class EventBasedFileWatcherTest(unittest.TestCase):
         self.os.stat = lambda x: FakeStat(101)
         self.mock_util.calc_md5_with_blocking_retries = lambda x: "1"
 
-        ro = EventBasedFileWatcher.EventBasedFileWatcher("/this/is/my/file.py", cb)
+        ro = event_based_file_watcher.EventBasedFileWatcher("/this/is/my/file.py", cb)
 
-        fo = EventBasedFileWatcher._MultiFileWatcher.get_singleton()
+        fo = event_based_file_watcher._MultiFileWatcher.get_singleton()
         fo._observer.schedule.assert_called_once()
 
         folder_handler = fo._observer.schedule.call_args[0][0]
@@ -103,9 +105,9 @@ class EventBasedFileWatcherTest(unittest.TestCase):
         self.os.stat = lambda x: FakeStat(101)
         self.mock_util.calc_md5_with_blocking_retries = lambda x: "1"
 
-        ro = EventBasedFileWatcher.EventBasedFileWatcher("/this/is/my/file.py", cb)
+        ro = event_based_file_watcher.EventBasedFileWatcher("/this/is/my/file.py", cb)
 
-        fo = EventBasedFileWatcher._MultiFileWatcher.get_singleton()
+        fo = event_based_file_watcher._MultiFileWatcher.get_singleton()
         fo._observer.schedule.assert_called_once()
 
         folder_handler = fo._observer.schedule.call_args[0][0]
@@ -132,9 +134,9 @@ class EventBasedFileWatcherTest(unittest.TestCase):
         self.os.stat = lambda x: FakeStat(101)
         self.mock_util.calc_md5_with_blocking_retries = lambda x: "1"
 
-        ro = EventBasedFileWatcher.EventBasedFileWatcher("/this/is/my/file.py", cb)
+        ro = event_based_file_watcher.EventBasedFileWatcher("/this/is/my/file.py", cb)
 
-        fo = EventBasedFileWatcher._MultiFileWatcher.get_singleton()
+        fo = event_based_file_watcher._MultiFileWatcher.get_singleton()
         fo._observer.schedule.assert_called_once()
 
         folder_handler = fo._observer.schedule.call_args[0][0]
@@ -175,10 +177,10 @@ class EventBasedFileWatcherTest(unittest.TestCase):
         cb1 = mock.Mock()
         cb2 = mock.Mock()
 
-        watcher1 = EventBasedFileWatcher.EventBasedFileWatcher(filename, cb1)
-        watcher2 = EventBasedFileWatcher.EventBasedFileWatcher(filename, cb2)
+        watcher1 = event_based_file_watcher.EventBasedFileWatcher(filename, cb1)
+        watcher2 = event_based_file_watcher.EventBasedFileWatcher(filename, cb2)
 
-        fo = EventBasedFileWatcher._MultiFileWatcher.get_singleton()
+        fo = event_based_file_watcher._MultiFileWatcher.get_singleton()
         fo._observer.schedule.assert_called_once()
 
         folder_handler = fo._observer.schedule.call_args[0][0]

@@ -18,10 +18,10 @@ from typing import List
 import tornado.web
 import tornado.httputil
 
-from streamlit.UploadedFileManager import UploadedFile
+from streamlit.uploaded_file_manager import UploadedFile
 from streamlit import config
 from streamlit.logger import get_logger
-from streamlit.Report import Report
+from streamlit.report import Report
 from streamlit.server import routes
 
 LOGGER = get_logger(__name__)

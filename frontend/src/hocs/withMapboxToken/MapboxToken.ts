@@ -28,6 +28,7 @@ export const TOKENS_URL = "https://data.streamlit.io/tokens.json"
 
 export class MapboxToken {
   private static token?: string
+
   private static commandLine?: string
 
   private static isRunningLocal = (): boolean => {

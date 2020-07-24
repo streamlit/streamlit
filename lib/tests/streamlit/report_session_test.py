@@ -18,23 +18,23 @@ import tornado.gen
 import tornado.testing
 from mock import MagicMock, patch
 
-from streamlit.ReportSession import ReportSession
-from streamlit.ReportSession import ReportSessionState
-from streamlit.ReportThread import ReportContext
-from streamlit.ReportThread import add_report_ctx
-from streamlit.ReportThread import get_report_ctx
-from streamlit.ScriptRunner import ScriptRunner
-from streamlit.UploadedFileManager import UploadedFileManager
+from streamlit.report_session import ReportSession
+from streamlit.report_session import ReportSessionState
+from streamlit.report_thread import ReportContext
+from streamlit.report_thread import add_report_ctx
+from streamlit.report_thread import get_report_ctx
+from streamlit.script_runner import ScriptRunner
+from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
-from tests.MockStorage import MockStorage
+from tests.mock_storage import MockStorage
 import streamlit as st
 
 
 class ReportSessionTest(unittest.TestCase):
-    @patch("streamlit.ReportSession.config")
-    @patch("streamlit.ReportSession.Report")
-    @patch("streamlit.ReportSession.LocalSourcesWatcher")
+    @patch("streamlit.report_session.config")
+    @patch("streamlit.report_session.Report")
+    @patch("streamlit.report_session.LocalSourcesWatcher")
     def test_enqueue_without_tracer(self, _1, _2, patched_config):
         """Make sure we try to handle execution control requests.
         """
@@ -63,9 +63,9 @@ class ReportSessionTest(unittest.TestCase):
         # Expect func to be called only once, inside enqueue().
         func.assert_called_once()
 
-    @patch("streamlit.ReportSession.config")
-    @patch("streamlit.ReportSession.Report")
-    @patch("streamlit.ReportSession.LocalSourcesWatcher")
+    @patch("streamlit.report_session.config")
+    @patch("streamlit.report_session.Report")
+    @patch("streamlit.report_session.LocalSourcesWatcher")
     def test_enqueue_with_tracer(self, _1, _2, patched_config):
         """Make sure there is no lock contention when tracer is on.
 
@@ -103,7 +103,7 @@ class ReportSessionTest(unittest.TestCase):
         # skip func when installTracer is on).
         func.assert_not_called()
 
-    @patch("streamlit.ReportSession.LocalSourcesWatcher")
+    @patch("streamlit.report_session.LocalSourcesWatcher")
     def test_shutdown(self, _1):
         """Test that ReportSession.shutdown behaves sanely."""
         file_mgr = MagicMock(spec=UploadedFileManager)
@@ -118,7 +118,7 @@ class ReportSessionTest(unittest.TestCase):
         self.assertEqual(ReportSessionState.SHUTDOWN_REQUESTED, rs._state)
         file_mgr.remove_session_files.assert_called_once_with(rs.id)
 
-    @patch("streamlit.ReportSession.LocalSourcesWatcher")
+    @patch("streamlit.report_session.LocalSourcesWatcher")
     def test_unique_id(self, _1):
         """Each ReportSession should have a unique ID"""
         file_mgr = MagicMock(spec=UploadedFileManager)
@@ -138,7 +138,7 @@ def _create_mock_websocket():
 
 
 class ReportSessionSerializationTest(tornado.testing.AsyncTestCase):
-    @patch("streamlit.ReportSession.LocalSourcesWatcher")
+    @patch("streamlit.report_session.LocalSourcesWatcher")
     @tornado.testing.gen_test
     def test_handle_save_request(self, _1):
         """Test that handle_save_request serializes files correctly."""

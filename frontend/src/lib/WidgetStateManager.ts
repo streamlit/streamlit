@@ -34,8 +34,8 @@ export interface Source {
  * Manages widget values, and sends widget update messages back to the server.
  */
 export class WidgetStateManager {
-  // Called to deliver a message to the server
   private readonly sendRerunBackMsg: (widgetStates: WidgetStates) => void
+
   private readonly widgetStates: Map<string, WidgetState> = new Map<
     string,
     WidgetState

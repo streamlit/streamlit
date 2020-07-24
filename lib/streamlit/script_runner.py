@@ -22,10 +22,10 @@ from blinker import Signal
 from streamlit import config
 from streamlit import magic
 from streamlit import source_util
-from streamlit.MediaFileManager import media_file_manager
-from streamlit.ReportThread import ReportThread
-from streamlit.ReportThread import get_report_ctx
-from streamlit.ScriptRequestQueue import ScriptRequest
+from streamlit.media_file_manager import media_file_manager
+from streamlit.report_thread import ReportThread
+from streamlit.report_thread import get_report_ctx
+from streamlit.script_request_queue import ScriptRequest
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.widgets import Widgets

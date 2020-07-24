@@ -41,7 +41,7 @@ $ ssh -o logLevel=ERROR -L 8501:$IP_ADDRESS:8501 $USERNAME@$IP_ADDRESS
 ## Install Streamlit on the instance
 
 Now that you're SSHed into the instance, make sure to
-install Streamlit on it. Using PIP, you can juse do:
+install Streamlit on it. Using PIP, you can run:
 
 ```bash
 $ pip install streamlit

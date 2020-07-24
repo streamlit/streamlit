@@ -17,8 +17,12 @@
 
 import React from "react"
 import { shallow } from "enzyme"
-
+import { logWarning } from "lib/log"
 import CodeBlock, { Props } from "./CodeBlock"
+
+jest.mock("lib/log", () => ({
+  logWarning: jest.fn(),
+}))
 
 const getProps = (props: Record<string, unknown> = {}): Props => ({
   width: 0,
@@ -57,7 +61,7 @@ describe("CodeBlock Element", () => {
     })
     const wrapper = shallow(<CodeBlock {...props} />)
 
-    expect(console.warn).toHaveBeenCalledWith(
+    expect(logWarning).toHaveBeenCalledWith(
       "No syntax highlighting for CoffeeScript; defaulting to Python"
     )
     expect(wrapper.find("code").prop("className")).toBe("language-python")

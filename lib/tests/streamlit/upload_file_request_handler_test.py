@@ -20,10 +20,10 @@ import tornado.testing
 import tornado.web
 import tornado.websocket
 
-from streamlit.UploadedFileManager import UploadedFile
-from streamlit.UploadedFileManager import UploadedFileManager
+from streamlit.uploaded_file_manager import UploadedFile
+from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.logger import get_logger
-from streamlit.server.UploadFileRequestHandler import UploadFileRequestHandler
+from streamlit.server.upload_file_request_handler import UploadFileRequestHandler
 
 LOGGER = get_logger(__name__)
 

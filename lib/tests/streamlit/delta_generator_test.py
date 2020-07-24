@@ -27,8 +27,8 @@ from parameterized import parameterized
 
 import pandas as pd
 
-from streamlit.DeltaGenerator import DeltaGenerator
-from streamlit.DeltaGenerator import _build_duplicate_widget_message
+from streamlit.delta_generator import DeltaGenerator
+from streamlit.delta_generator import _build_duplicate_widget_message
 from streamlit.cursor import LockedCursor
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException
@@ -37,7 +37,7 @@ from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.TextInput_pb2 import TextInput
-from streamlit.DeltaGenerator import (
+from streamlit.delta_generator import (
     _wraps_with_cleaned_sig,
     _with_element,
     _set_widget_id,
@@ -128,7 +128,7 @@ class MockQueue(object):
 
 
 class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
-    """Test streamlit.DeltaGenerator methods."""
+    """Test streamlit.delta_generator methods."""
 
     def test_nonexistent_method(self):
         with self.assertRaises(Exception) as ctx:
@@ -150,29 +150,29 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (st.empty().empty, "streamlit.DeltaGenerator", "empty", "()"),
-            (st.empty().text, "streamlit.DeltaGenerator", "text", "(body)"),
+            (st.empty().empty, "streamlit.delta_generator", "empty", "()"),
+            (st.empty().text, "streamlit.delta_generator", "text", "(body)"),
             (
                 st.empty().markdown,
-                "streamlit.DeltaGenerator",
+                "streamlit.delta_generator",
                 "markdown",
                 "(body, unsafe_allow_html=False)",
             ),
             (
                 st.empty().checkbox,
-                "streamlit.DeltaGenerator",
+                "streamlit.delta_generator",
                 "checkbox",
                 "(label, value=False, key=None)",
             ),
             (
                 st.empty().dataframe,
-                "streamlit.DeltaGenerator",
+                "streamlit.delta_generator",
                 "dataframe",
                 "(data=None, width=None, height=None)",
             ),
             (
                 st.empty().add_rows,
-                "streamlit.DeltaGenerator",
+                "streamlit.delta_generator",
                 "add_rows",
                 "(data=None, **kwargs)",
             ),

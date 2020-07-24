@@ -28,7 +28,7 @@ from streamlit import development
 from streamlit import env_util
 from streamlit import file_util
 from streamlit import util
-from streamlit.ConfigOption import ConfigOption
+from streamlit.config_option import ConfigOption
 
 from streamlit.logger import get_logger
 

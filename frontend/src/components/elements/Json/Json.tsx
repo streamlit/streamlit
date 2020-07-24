@@ -36,7 +36,7 @@ class Json extends React.PureComponent<Props> {
     const body = element.get("body")
     const styleProp = { width }
 
-    let bodyObject = undefined
+    let bodyObject
     try {
       bodyObject = JSON.parse(body)
     } catch (e) {

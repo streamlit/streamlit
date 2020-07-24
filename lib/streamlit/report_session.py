@@ -24,22 +24,22 @@ from streamlit import __version__
 from streamlit import caching
 from streamlit import config
 from streamlit import url_util
-from streamlit.MediaFileManager import media_file_manager
-from streamlit.Report import Report
-from streamlit.ScriptRequestQueue import RerunData
-from streamlit.ScriptRequestQueue import ScriptRequest
-from streamlit.ScriptRequestQueue import ScriptRequestQueue
-from streamlit.ScriptRunner import ScriptRunner
-from streamlit.ScriptRunner import ScriptRunnerEvent
-from streamlit.UploadedFileManager import UploadedFileManager
+from streamlit.media_file_manager import media_file_manager
+from streamlit.report import Report
+from streamlit.script_request_queue import RerunData
+from streamlit.script_request_queue import ScriptRequest
+from streamlit.script_request_queue import ScriptRequestQueue
+from streamlit.script_runner import ScriptRunner
+from streamlit.script_runner import ScriptRunnerEvent
+from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.credentials import Credentials
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.server.server_util import serialize_forward_msg
-from streamlit.storage.FileStorage import FileStorage
-from streamlit.storage.S3Storage import S3Storage
-from streamlit.watcher.LocalSourcesWatcher import LocalSourcesWatcher
+from streamlit.storage.file_storage import FileStorage
+from streamlit.storage.s3_storage import S3Storage
+from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 import streamlit.elements.exception_proto as exception_proto
 
 LOGGER = get_logger(__name__)

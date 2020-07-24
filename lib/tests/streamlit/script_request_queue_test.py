@@ -18,9 +18,9 @@ import time
 import unittest
 from threading import Thread, Lock
 
-from streamlit.ScriptRequestQueue import RerunData
-from streamlit.ScriptRequestQueue import ScriptRequestQueue
-from streamlit.ScriptRunner import ScriptRequest
+from streamlit.script_request_queue import RerunData
+from streamlit.script_request_queue import ScriptRequestQueue
+from streamlit.script_runner import ScriptRequest
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.widgets import Widgets
 
@@ -83,13 +83,13 @@ class ScriptRequestQueueTest(unittest.TestCase):
         _create_widget("trigger", states).trigger_value = True
         _create_widget("int", states).int_value = 123
 
-        queue.enqueue(ScriptRequest.RERUN, RerunData(argv=None, widget_state=states))
+        queue.enqueue(ScriptRequest.RERUN, RerunData(widget_state=states))
 
         states = WidgetStates()
         _create_widget("trigger", states).trigger_value = False
         _create_widget("int", states).int_value = 456
 
-        queue.enqueue(ScriptRequest.RERUN, RerunData(argv=None, widget_state=states))
+        queue.enqueue(ScriptRequest.RERUN, RerunData(widget_state=states))
 
         event, data = queue.dequeue()
         self.assertEqual(event, ScriptRequest.RERUN)
@@ -108,13 +108,13 @@ class ScriptRequestQueueTest(unittest.TestCase):
         self.assertEqual((None, None), queue.dequeue(), "Expected empty event queue")
 
         # Test that we can coalesce if previous widget state is None
-        queue.enqueue(ScriptRequest.RERUN, RerunData(argv=None, widget_state=None))
-        queue.enqueue(ScriptRequest.RERUN, RerunData(argv=None, widget_state=None))
+        queue.enqueue(ScriptRequest.RERUN, RerunData(widget_state=None))
+        queue.enqueue(ScriptRequest.RERUN, RerunData(widget_state=None))
 
         states = WidgetStates()
         _create_widget("int", states).int_value = 789
 
-        queue.enqueue(ScriptRequest.RERUN, RerunData(argv=None, widget_state=states))
+        queue.enqueue(ScriptRequest.RERUN, RerunData(widget_state=states))
 
         event, data = queue.dequeue()
         widgets = Widgets()
@@ -130,9 +130,9 @@ class ScriptRequestQueueTest(unittest.TestCase):
         states = WidgetStates()
         _create_widget("int", states).int_value = 101112
 
-        queue.enqueue(ScriptRequest.RERUN, RerunData(argv=None, widget_state=states))
+        queue.enqueue(ScriptRequest.RERUN, RerunData(widget_state=states))
 
-        queue.enqueue(ScriptRequest.RERUN, RerunData(argv=None, widget_state=None))
+        queue.enqueue(ScriptRequest.RERUN, RerunData(widget_state=None))
 
         event, data = queue.dequeue()
         widgets = Widgets()

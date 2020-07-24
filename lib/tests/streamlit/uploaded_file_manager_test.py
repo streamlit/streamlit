@@ -16,9 +16,9 @@
 
 import unittest
 
-from streamlit.UploadedFileManager import UploadedFile
-from streamlit.UploadedFileManager import UploadedFileList
-from streamlit.UploadedFileManager import UploadedFileManager
+from streamlit.uploaded_file_manager import UploadedFile
+from streamlit.uploaded_file_manager import UploadedFileList
+from streamlit.uploaded_file_manager import UploadedFileManager
 
 file1 = UploadedFile(name="file1", data=b"file1")
 file2 = UploadedFile(name="file2", data=b"file2")

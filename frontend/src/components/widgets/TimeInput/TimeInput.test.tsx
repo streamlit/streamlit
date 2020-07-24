@@ -22,8 +22,8 @@ import { fromJS } from "immutable"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { TimeInput as TimeInputProto } from "autogen/proto"
 
-import TimeInput, { Props } from "./TimeInput"
 import { TimePicker as UITimePicker } from "baseui/timepicker"
+import TimeInput, { Props } from "./TimeInput"
 
 jest.mock("lib/WidgetStateManager")
 

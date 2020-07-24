@@ -116,7 +116,7 @@ export class VegaLiteChart extends PureComponent<PropsWithHeight, State> {
 
   public async componentDidUpdate(prevProps: PropsWithHeight): Promise<void> {
     const prevElement = prevProps.element
-    const element = this.props.element
+    const { element } = this.props
 
     const prevSpec = prevElement.get("spec")
     const spec = element.get("spec")
@@ -147,7 +147,7 @@ export class VegaLiteChart extends PureComponent<PropsWithHeight, State> {
     const dataSets = getDataSets(element) || {}
 
     for (const [name, dataset] of Object.entries(dataSets)) {
-      const datasetName = name ? name : this.defaultDataName
+      const datasetName = name || this.defaultDataName
       const prevDataset = prevDataSets[datasetName]
       this.updateData(datasetName, prevDataset, dataset)
     }
@@ -168,13 +168,11 @@ export class VegaLiteChart extends PureComponent<PropsWithHeight, State> {
     const useContainerWidth = JSON.parse(el.get("useContainerWidth"))
 
     if (this.props.height) {
-      //fullscreen
+      // fullscreen
       spec.width = this.props.width - EMBED_PADDING
       spec.height = this.props.height
-    } else {
-      if (useContainerWidth) {
-        spec.width = this.props.width - EMBED_PADDING
-      }
+    } else if (useContainerWidth) {
+      spec.width = this.props.width - EMBED_PADDING
     }
 
     if (!spec.padding) {
@@ -210,8 +208,9 @@ export class VegaLiteChart extends PureComponent<PropsWithHeight, State> {
     }
 
     if (!data || !data.get("data")) {
-      const viewHasDataWithName = (this
-        .vegaView as any)._runtime.data.hasOwnProperty(name)
+      const view = this.vegaView as any
+      // eslint-disable-next-line no-underscore-dangle
+      const viewHasDataWithName = view._runtime.data.hasOwnProperty(name)
       if (viewHasDataWithName) {
         this.vegaView.remove(name, vega.truthy)
       }
@@ -280,7 +279,8 @@ export class VegaLiteChart extends PureComponent<PropsWithHeight, State> {
     // Heuristic to determine the default dataset name.
     const datasetNames = datasets ? Object.keys(datasets) : []
     if (datasetNames.length === 1) {
-      this.defaultDataName = datasetNames[0]
+      const [datasetName] = datasetNames
+      this.defaultDataName = datasetName
     } else if (datasetNames.length === 0 && vgSpec.data) {
       this.defaultDataName = DEFAULT_DATA_NAME
     }
@@ -304,12 +304,18 @@ export class VegaLiteChart extends PureComponent<PropsWithHeight, State> {
 
   public render(): JSX.Element {
     if (this.state.error) {
+      // eslint-disable-next-line @typescript-eslint/no-throw-literal
       throw this.state.error
     }
 
     return (
       // Create the container Vega draws inside.
-      <div className="stVegaLiteChart" ref={c => (this.element = c)} />
+      <div
+        className="stVegaLiteChart"
+        ref={c => {
+          this.element = c
+        }}
+      />
     )
   }
 }

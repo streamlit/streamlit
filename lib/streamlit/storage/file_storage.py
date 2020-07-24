@@ -20,7 +20,7 @@ import os
 
 from tornado import gen
 
-from streamlit.storage.AbstractStorage import AbstractStorage
+from streamlit.storage.abstract_storage import AbstractStorage
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)

@@ -19,9 +19,9 @@ import React from "react"
 import { mount } from "enzyme"
 import { fromJS } from "immutable"
 
+import { Table as ReactTable } from "reactstrap"
 import mock from "./mock"
 import { Table, Props } from "./Table"
-import { Table as ReactTable } from "reactstrap"
 
 const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
   element: fromJS({
