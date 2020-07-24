@@ -495,7 +495,7 @@ def experimental_get_query_params():
     -------
 
     Let's say the user's web browser is at
-    `http://localhost:8501/?show_map=True&&selected=asia&selected=america`.
+    `http://localhost:8501/?show_map=True&selected=asia&selected=america`.
     Then, you can get the query parameters using the following:
 
     >>> st.experimental_get_query_params()
