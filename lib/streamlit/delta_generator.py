@@ -177,12 +177,7 @@ text_io = io.TextIOWrapper(file_buffer)
 
 
 class DeltaGenerator(
-    AlertMixin,
-    BalloonsMixin,
-    ButtonMixin,
-    MarkdownMixin,
-    TextMixin,
-    JsonMixin,
+    AlertMixin, BalloonsMixin, ButtonMixin, MarkdownMixin, TextMixin, JsonMixin,
 ):
     """Creator of Delta protobuf messages.
 

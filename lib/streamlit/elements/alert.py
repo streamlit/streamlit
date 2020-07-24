@@ -74,4 +74,3 @@ class AlertMixin:
         alert_proto.body = _clean_text(body)
         alert_proto.format = Alert_pb2.Alert.SUCCESS
         dg._enqueue("alert", alert_proto)
-
