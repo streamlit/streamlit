@@ -49,6 +49,9 @@ from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.logger import get_logger
 from streamlit.type_util import is_type
 
+from streamlit.elements.button import ButtonMixin
+from streamlit.elements.markdown import MarkdownMixin
+
 LOGGER = get_logger(__name__)
 
 # Save the type built-in for when we override the name "type".
@@ -284,7 +287,7 @@ text_io = io.TextIOWrapper(file_buffer)
             """
 
 
-class DeltaGenerator(object):
+class DeltaGenerator(ButtonMixin, MarkdownMixin):
     """Creator of Delta protobuf messages.
 
     Parameters
@@ -520,60 +523,6 @@ class DeltaGenerator(object):
         """
 
         element.text.body = _clean_text(body)
-
-    @_with_element
-    def markdown(self, element, body, unsafe_allow_html=False):
-        """Display string formatted as Markdown.
-
-        Parameters
-        ----------
-        body : str
-            The string to display as Github-flavored Markdown. Syntax
-            information can be found at: https://github.github.com/gfm.
-
-            This also supports:
-
-            * Emoji shortcodes, such as `:+1:`  and `:sunglasses:`.
-              For a list of all supported codes,
-              see https://raw.githubusercontent.com/omnidan/node-emoji/master/lib/emoji.json.
-
-            * LaTeX expressions, by just wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
-
-        unsafe_allow_html : bool
-            By default, any HTML tags found in the body will be escaped and
-            therefore treated as pure text. This behavior may be turned off by
-            setting this argument to True.
-
-            That said, we *strongly advise against it*. It is hard to write
-            secure HTML, so by using this argument you may be compromising your
-            users' security. For more information, see:
-
-            https://github.com/streamlit/streamlit/issues/152
-
-            *Also note that `unsafe_allow_html` is a temporary measure and may
-            be removed from Streamlit at any time.*
-
-            If you decide to turn on HTML anyway, we ask you to please tell us
-            your exact use case here:
-
-            https://discuss.streamlit.io/t/96
-
-            This will help us come up with safe APIs that allow you to do what
-            you want.
-
-        Example
-        -------
-        >>> st.markdown('Streamlit is **_really_ cool**.')
-
-        .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=PXz9xgY8aB88eziDVEZLyS
-           height: 50px
-
-        """
-        element.markdown.body = _clean_text(body)
-        element.markdown.allow_html = unsafe_allow_html
 
     @_with_element
     def latex(self, element, body):
@@ -1770,40 +1719,6 @@ class DeltaGenerator(object):
         media_proto.marshall_video(
             self._get_coordinates(), element.video, data, format, start_time
         )
-
-    @_with_element
-    def button(self, element, label, key=None):
-        """Display a button widget.
-
-        Parameters
-        ----------
-        label : str
-            A short label explaining to the user what this button is for.
-        key : str
-            An optional string to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
-
-        Returns
-        -------
-        bool
-            If the button was clicked on the last run of the app.
-
-        Example
-        -------
-        >>> if st.button('Say hello'):
-        ...     st.write('Why hello there')
-        ... else:
-        ...     st.write('Goodbye')
-
-        """
-        element.button.label = label
-        element.button.default = False
-
-        ui_value = _get_widget_ui_value("button", element, user_key=key)
-        current_value = ui_value if ui_value is not None else False
-        return current_value
 
     @_with_element
     def checkbox(self, element, label, value=False, key=None):
