@@ -43,11 +43,11 @@ class ExceptionMixin:
 
         """
         exception_proto = Exception_pb2.Exception()
-        _marshall(exception_proto, exception)
+        marshall(exception_proto, exception)
         dg._enqueue("exception", exception_proto)
 
 
-def _marshall(exception_proto, exception):
+def marshall(exception_proto, exception):
     """Marshalls an Exception.proto message.
 
     Parameters

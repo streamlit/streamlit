@@ -149,7 +149,7 @@ class CustomComponent:
 
             widget_value = _get_widget_ui_value(
                 element_type="component_instance",
-                element=element,
+                element_proto=element.component_instance,
                 user_key=key,
                 widget_func_name=self.name,
             )

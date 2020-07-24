@@ -320,12 +320,10 @@ class DeltaGenerator(
             element.
 
         """
-        # TODO: fill in last_index, element_width, element_height, from _with_element
-
         # Warn if we're called from within an @st.cache function
         caching.maybe_show_cached_st_function_warning(self, delta_type)
 
-        # TODO: DELTAS_TYPES_THAT_MELT_DATAFRAMES mixins should run wrapped_method check
+        # TODO: DELTAS_TYPES_THAT_MELT_DATAFRAMES mixins should fill last_index
 
         # Copy the marshalled proto into the overall msg proto
         msg = ForwardMsg_pb2.ForwardMsg()
@@ -2027,7 +2025,7 @@ class DeltaGenerator(
             "server.maxUploadSize"
         )
         element.file_uploader.multiple_files = accept_multiple_files
-        _set_widget_id("file_uploader", element, user_key=key)
+        _set_widget_id("file_uploader", element.file_uploader, user_key=key)
 
         files = None
         ctx = get_report_ctx()
