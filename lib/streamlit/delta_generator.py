@@ -162,7 +162,7 @@ def _build_duplicate_widget_message(
 
 def _set_widget_id(
     element_type: str,
-    element: Element,
+    element_proto: Any,
     user_key: Optional[str] = None,
     widget_func_name: Optional[str] = None,
 ) -> None:
@@ -171,9 +171,10 @@ def _set_widget_id(
     Parameters
     ----------
     element_type : str
-        The type of the widget as stored in proto.
-    element : proto
-        The proto of the element
+        The type of the element as stored in proto.
+        TODO: Can we replace with element_proto.__class__.__name__ ?
+    element_proto : proto
+        The proto of the specified type (e.g. Button/Multiselect/Slider proto)
     user_key : str or None
         Optional user-specified key to use for the widget ID.
         If this is None, we'll generate an ID by hashing the element.
@@ -188,7 +189,7 @@ def _set_widget_id(
     if widget_func_name is None:
         widget_func_name = element_type
 
-    element_hash = hash(element.SerializeToString())
+    element_hash = hash(element_proto.SerializeToString())
     if user_key is not None:
         widget_id = "%s-%s" % (user_key, element_hash)
     else:
@@ -201,13 +202,12 @@ def _set_widget_id(
             raise DuplicateWidgetID(
                 _build_duplicate_widget_message(widget_func_name, user_key)
             )
-    el = getattr(element, element_type)
-    el.id = widget_id
+    element_proto.id = widget_id
 
 
 def _get_widget_ui_value(
     element_type: str,
-    element: Element,
+    element_proto: Any,
     user_key: Optional[str] = None,
     widget_func_name: Optional[str] = None,
 ) -> Any:
@@ -217,9 +217,9 @@ def _get_widget_ui_value(
     Parameters
     ----------
     element_type : str
-        The type of the widget as stored in proto.
+        The type of the element as stored in proto.
     element : proto
-        The proto of the element
+        The proto of the specified type (e.g. Button/Multiselect/Slider proto)
     user_key : str
         Optional user-specified string to use as the widget ID.
         If this is None, we'll generate an ID by hashing the element.
@@ -237,10 +237,9 @@ def _get_widget_ui_value(
         doesn't exist, None will be returned.
 
     """
-    _set_widget_id(element_type, element, user_key, widget_func_name)
-    el = getattr(element, element_type)
+    _set_widget_id(element_type, element_proto, user_key, widget_func_name)
     ctx = get_report_ctx()
-    ui_value = ctx.widgets.get_widget_value(el.id) if ctx else None
+    ui_value = ctx.widgets.get_widget_value(element_proto.id) if ctx else None
     return ui_value
 
 
@@ -392,10 +391,11 @@ class DeltaGenerator(object):
 
         return "{}.{}.{}".format(container, path, index)
 
-    def _enqueue_new_element_delta(
+    def _enqueue(
         self,
-        marshall_element,
         delta_type,
+        element_proto,
+        return_value=None,
         last_index=None,
         element_width=None,
         element_height=None,
@@ -418,17 +418,20 @@ class DeltaGenerator(object):
             element.
 
         """
-        rv = None
+        # TODO: fill in last_index, element_width, element_height, from _with_element
 
-        # Always call marshall_element() so users can run their script without
-        # Streamlit.
+        # Warn if we're called from within an @st.cache function
+        caching.maybe_show_cached_st_function_warning(self, delta_type)
+
+        # TODO: DELTAS_TYPES_THAT_MELT_DATAFRAMES mixins should run wrapped_method check
+
+        # Copy the marshalled proto into the overall msg proto
         msg = ForwardMsg_pb2.ForwardMsg()
-        rv = marshall_element(msg.delta.new_element)
+        msg_el_proto = getattr(msg.delta.new_element, delta_type)
+        msg_el_proto.CopyFrom(element_proto)
 
+        # Only enqueue message and fill in metadata if there's a container.
         msg_was_enqueued = False
-
-        # Only enqueue message if there's a container.
-
         if self._container and self._cursor:
             msg.metadata.parent_block.container = self._container
             msg.metadata.parent_block.path[:] = self._cursor.path
@@ -456,7 +459,7 @@ class DeltaGenerator(object):
             # no-op from the point of view of the app.
             output_dg = self
 
-        return _value_or_dg(rv, output_dg)
+        return _value_or_dg(return_value, output_dg)
 
     def _block(self):
         if self._container is None or self._cursor is None:
