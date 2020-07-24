@@ -44,6 +44,7 @@ class Slider extends React.PureComponent<Props, State> {
   public state: State
 
   private sliderRef = React.createRef<HTMLDivElement>()
+
   private readonly setWidgetValue: (source: Source) => void
 
   public constructor(props: Props) {
@@ -95,7 +96,7 @@ class Slider extends React.PureComponent<Props, State> {
   private get value(): number[] {
     const min = this.props.element.get("min")
     const max = this.props.element.get("max")
-    const value = this.state.value
+    const { value } = this.state
     let start = value[0]
     let end = value.length > 1 ? value[1] : value[0]
     // Adjust the value if it's out of bounds.
@@ -127,9 +128,8 @@ class Slider extends React.PureComponent<Props, State> {
     ) {
       // Python datetime uses microseconds, but JS & Moment uses milliseconds
       return moment(value / 1000).format(format)
-    } else {
-      return sprintf(format, value)
     }
+    return sprintf(format, value)
   }
 
   private renderThumbValue = (data: {

@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-import { FETCH_PARAMS } from "./baseconsts"
 import url from "url"
+import { FETCH_PARAMS } from "./baseconsts"
 
 /**
  * Returns the local path for a static report resource.

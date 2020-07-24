@@ -78,9 +78,9 @@ class Balloons extends React.PureComponent<Props, State> {
             src={getBalloonUrl(this.props.element)}
             alt=""
             style={{
-              left:
-                Math.random() * (POS_MAX_VW - POS_MIN_VW) + POS_MIN_VW + "vw",
-              animationDelay: Math.random() * DELAY_MAX_MS + "ms",
+              left: `${Math.random() * (POS_MAX_VW - POS_MIN_VW) +
+                POS_MIN_VW}vw`,
+              animationDelay: `${Math.random() * DELAY_MAX_MS}ms`,
             }}
           />
         ))}
@@ -107,9 +107,8 @@ function getBalloonUrl(balloonsProto: ImmutableMap<string, any>): string {
     if (Math.random() > BALLOON_PROB) {
       const rand = Math.ceil(Math.random() * (BALLOON_IMAGES.length - 1))
       return BALLOON_IMAGES[rand]
-    } else {
-      return BALLOON_IMAGES[BalloonsProto.Type.BALLOON]
     }
+    return BALLOON_IMAGES[BalloonsProto.Type.BALLOON]
   }
 
   return BALLOON_IMAGES[type]

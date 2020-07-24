@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-import { IS_DEV_ENV, IS_SHARED_REPORT } from "./baseconsts"
 import { SessionInfo } from "lib/SessionInfo"
+import { IS_DEV_ENV, IS_SHARED_REPORT } from "./baseconsts"
 import { logAlways } from "./log"
 import { initializeSegment } from "./Segment"
 
@@ -100,7 +100,7 @@ export class MetricsManager {
       // Only record the user's email if they entered a non-empty one.
       const userTraits: any = {}
       if (SessionInfo.current.authorEmail !== "") {
-        userTraits["authoremail"] = SessionInfo.current.authorEmail
+        userTraits.authoremail = SessionInfo.current.authorEmail
       }
       this.identify(SessionInfo.current.installationId, userTraits)
       this.sendPendingEvents()
@@ -193,11 +193,12 @@ export class MetricsManager {
   }
 
   // Wrap analytics methods for mocking:
-
+  // eslint-disable-next-line class-methods-use-this
   private identify(id: string, data: Record<string, unknown>): void {
     analytics.identify(id, data)
   }
 
+  // eslint-disable-next-line class-methods-use-this
   private track(evName: string, data: Record<string, unknown>): void {
     analytics.track(evName, data)
   }

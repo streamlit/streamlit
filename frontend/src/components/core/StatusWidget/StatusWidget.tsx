@@ -108,9 +108,11 @@ const PROMPT_DISPLAY_HOVER_TIMEOUT_MS = 1.0 * 1000
 export class StatusWidget extends PureComponent<Props, State> {
   /** onSessionEvent signal connection */
   private sessionEventConn?: SignalConnection
+
   private curView?: ReactNode
 
   private readonly minimizePromptTimer = new Timer()
+
   private readonly keyHandlers: {
     [key: string]: (keyEvent?: KeyboardEvent) => void
   }
@@ -243,10 +245,8 @@ export class StatusWidget extends PureComponent<Props, State> {
         // re-running the report in a second or two, but we can appear
         // more responsive by claiming it's started immemdiately.
         return this.renderReportIsRunning()
-      } else if (
-        !RERUN_PROMPT_MODAL_DIALOG &&
-        this.state.reportChangedOnDisk
-      ) {
+      }
+      if (!RERUN_PROMPT_MODAL_DIALOG && this.state.reportChangedOnDisk) {
         return this.renderRerunReportPrompt()
       }
     }
