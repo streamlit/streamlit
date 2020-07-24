@@ -1,6 +1,5 @@
-import json
-
 from streamlit.proto import Markdown_pb2
+from streamlit.proto import Text_pb2
 from streamlit import type_util
 from .utils import _clean_text
 
@@ -58,14 +57,14 @@ class MarkdownMixin:
         """
         markdown_proto = Markdown_pb2.Markdown()
 
-        markdown_proto.body = clean_text(body)
+        markdown_proto.body = _clean_text(body)
         markdown_proto.allow_html = unsafe_allow_html
 
         return dg._enqueue("markdown", markdown_proto)
 
 
 class HeaderMixin:
-    def header(dg, element, body):
+    def header(dg, body):
         """Display text in header formatting.
 
         Parameters
@@ -82,13 +81,13 @@ class HeaderMixin:
            height: 100px
 
         """
-        header_proto = Markdown_pb2()
+        header_proto = Markdown_pb2.Markdown()
         header_proto.body = "## %s" % _clean_text(body)
-        dg._enqueue("header", header_proto)
+        dg._enqueue("markdown", header_proto)
 
 
 class SubheaderMixin:
-    def subheader(dg, element, body):
+    def subheader(dg, body):
         """Display text in subheader formatting.
 
         Parameters
@@ -105,13 +104,13 @@ class SubheaderMixin:
            height: 100px
 
         """
-        subheader_proto = Markdown_pb2()
+        subheader_proto = Markdown_pb2.Markdown()
         subheader_proto.body = "### %s" % _clean_text(body)
-        dg._enqueue("subheader", subheader_proto)
+        dg._enqueue("markdown", subheader_proto)
 
 
 class CodeMixin:
-    def code(dg, element, body, language="python"):
+    def code(dg, body, language="python"):
         """Display a code block with optional syntax highlighting.
 
         (This is a convenience wrapper around `st.markdown()`)
@@ -136,17 +135,17 @@ class CodeMixin:
            height: 100px
 
         """
-        code_proto = Markdown_pb2()
+        code_proto = Markdown_pb2.Markdown()
         markdown = "```%(language)s\n%(body)s\n```" % {
             "language": language or "",
             "body": body,
         }
         code_proto.body = _clean_text(markdown)
-        dg._enqueue("code", code_proto)
+        dg._enqueue("markdown", code_proto)
 
 
 class TitleMixin:
-    def title(dg, element, body):
+    def title(dg, body):
         """Display text in title formatting.
 
         Each document should have a single `st.title()`, although this is not
@@ -166,13 +165,13 @@ class TitleMixin:
            height: 100px
 
         """
-        title_proto = Markdown_pb2()
+        title_proto = Markdown_pb2.Markdown()
         title_proto.body = "# %s" % _clean_text(body)
-        dg._enqueue("title", title_proto)
+        dg._enqueue("markdown", title_proto)
 
 
 class LatexMixin:
-    def latex(dg, element, body):
+    def latex(dg, body):
         # This docstring needs to be "raw" because of the backslashes in the
         # example below.
         r"""Display mathematical expressions formatted as LaTeX.
@@ -206,13 +205,14 @@ class LatexMixin:
 
             body = sympy.latex(body)
 
-        latex_proto = Markdown_pb2()
+        latex_proto = Markdown_pb2.Markdown()
         latex_proto.body = "$$\n%s\n$$" % _clean_text(body)
-        dg._enqueue("latex", latex_proto)
+        dg._enqueue("markdown", latex_proto)
 
 
+# TODO: This doesn't belong here
 class TextMixin:
-    def text(dg, element, body):
+    def text(dg, body):
         """Write fixed-width and preformatted text.
 
         Parameters
@@ -229,52 +229,7 @@ class TextMixin:
            height: 50px
 
         """
-        text_proto = Text_pb2()
+        text_proto = Text_pb2.Text()
         text_proto.body = _clean_text(body)
         dg._enqueue("text", text_proto)
 
-
-class JsonMixin:
-    def json(dg, element, body):
-        """Display object or string as a pretty-printed JSON string.
-
-        Parameters
-        ----------
-        body : Object or str
-            The object to print as JSON. All referenced objects should be
-            serializable to JSON as well. If object is a string, we assume it
-            contains serialized JSON.
-
-        Example
-        -------
-        >>> st.json({
-        ...     'foo': 'bar',
-        ...     'baz': 'boz',
-        ...     'stuff': [
-        ...         'stuff 1',
-        ...         'stuff 2',
-        ...         'stuff 3',
-        ...         'stuff 5',
-        ...     ],
-        ... })
-
-        .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=CTFkMQd89hw3yZbZ4AUymS
-           height: 280px
-
-        """
-        import streamlit as st
-
-        if not isinstance(body, str):
-            try:
-                body = json.dumps(body, default=lambda o: str(type(o)))
-            except TypeError as err:
-                st.warning(
-                    "Warning: this data structure was not fully serializable as "
-                    "JSON due to one or more unexpected keys.  (Error was: %s)" % err
-                )
-                body = json.dumps(body, skipkeys=True, default=lambda o: str(type(o)))
-
-        json_proto = Markdown_pb2()
-        json_proto.body = body
-        dg._enqueue("json", json_proto)

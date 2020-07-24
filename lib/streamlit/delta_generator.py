@@ -30,6 +30,7 @@ from streamlit import caching
 from streamlit import config
 from streamlit import cursor
 from streamlit import type_util
+from streamlit.report_thread import get_report_ctx
 from streamlit.errors import StreamlitAPIException, StreamlitDeprecationWarning
 from streamlit.errors import NoSessionContext
 from streamlit.file_util import get_encoded_file_data
@@ -49,7 +50,6 @@ from streamlit.type_util import is_type
 from streamlit.elements.utils import _get_widget_ui_value, _set_widget_id
 from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.button import ButtonMixin
-from streamlit.elements.latex import LatexMixin
 from streamlit.elements.markdown import (
     MarkdownMixin,
     LatexMixin,
@@ -58,8 +58,8 @@ from streamlit.elements.markdown import (
     CodeMixin,
     TitleMixin,
     TextMixin,
-    JsonMixin
 )
+from streamlit.elements.json import JsonMixin
 
 LOGGER = get_logger(__name__)
 

@@ -2,7 +2,7 @@ from streamlit.proto import Balloons_pb2
 
 
 class BalloonsMixin:
-    def balloons(dg, element):
+    def balloons(dg):
         """Draw celebratory balloons.
 
         Example
