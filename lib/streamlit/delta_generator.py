@@ -53,6 +53,7 @@ from streamlit.elements.markdown import MarkdownMixin
 from streamlit.elements.text import TextMixin
 from streamlit.elements.alert import AlertMixin
 from streamlit.elements.json import JsonMixin
+from streamlit.elements.doc_string import HelpMixin
 
 LOGGER = get_logger(__name__)
 
@@ -176,7 +177,13 @@ text_io = io.TextIOWrapper(file_buffer)
 
 
 class DeltaGenerator(
-    AlertMixin, BalloonsMixin, ButtonMixin, MarkdownMixin, TextMixin, JsonMixin,
+    AlertMixin,
+    BalloonsMixin,
+    ButtonMixin,
+    HelpMixin,
+    MarkdownMixin,
+    JsonMixin,
+    TextMixin,
 ):
     """Creator of Delta protobuf messages.
 
@@ -378,35 +385,6 @@ class DeltaGenerator(
         _enqueue_message(msg)
 
         return block_dg
-
-    @_with_element
-    def help(self, element, obj):
-        """Display object's doc string, nicely formatted.
-
-        Displays the doc string for this object.
-
-        Parameters
-        ----------
-        obj : Object
-            The object whose docstring should be displayed.
-
-        Example
-        -------
-
-        Don't remember how to initialize a dataframe? Try this:
-
-        >>> st.help(pandas.DataFrame)
-
-        Want to quickly check what datatype is output by a certain function?
-        Try:
-
-        >>> x = my_poorly_documented_function()
-        >>> st.help(x)
-
-        """
-        import streamlit.elements.doc_string as doc_string
-
-        doc_string.marshall(element, obj)
 
     @_with_element
     def exception(self, element, exception):
