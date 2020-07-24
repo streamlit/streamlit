@@ -363,6 +363,70 @@ class DeltaGenerator(
 
         return _value_or_dg(return_value, output_dg)
 
+    # NOTE: DEPRECATED. Will soon be replaced by _enqueue
+    def _enqueue_new_element_delta(
+        self,
+        marshall_element,
+        delta_type,
+        last_index=None,
+        element_width=None,
+        element_height=None,
+    ):
+        """Create NewElement delta, fill it, and enqueue it.
+        Parameters
+        ----------
+        marshall_element : callable
+            Function which sets the fields for a NewElement protobuf.
+        element_width : int or None
+            Desired width for the element
+        element_height : int or None
+            Desired height for the element
+        Returns
+        -------
+        DeltaGenerator
+            A DeltaGenerator that can be used to modify the newly-created
+            element.
+        """
+        rv = None
+
+        # Always call marshall_element() so users can run their script without
+        # Streamlit.
+        msg = ForwardMsg_pb2.ForwardMsg()
+        rv = marshall_element(msg.delta.new_element)
+
+        msg_was_enqueued = False
+
+        # Only enqueue message if there's a container.
+
+        if self._container and self._cursor:
+            msg.metadata.parent_block.container = self._container
+            msg.metadata.parent_block.path[:] = self._cursor.path
+            msg.metadata.delta_id = self._cursor.index
+
+            if element_width is not None:
+                msg.metadata.element_dimension_spec.width = element_width
+            if element_height is not None:
+                msg.metadata.element_dimension_spec.height = element_height
+
+            _enqueue_message(msg)
+            msg_was_enqueued = True
+
+        if msg_was_enqueued:
+            # Get a DeltaGenerator that is locked to the current element
+            # position.
+            output_dg = DeltaGenerator(
+                container=self._container,
+                cursor=self._cursor.get_locked_cursor(
+                    delta_type=delta_type, last_index=last_index
+                ),
+            )
+        else:
+            # If the message was not enqueued, just return self since it's a
+            # no-op from the point of view of the app.
+            output_dg = self
+
+        return _value_or_dg(rv, output_dg)
+
     def _block(self):
         if self._container is None or self._cursor is None:
             return self
@@ -1326,7 +1390,7 @@ class DeltaGenerator(
         element.checkbox.label = label
         element.checkbox.default = bool(value)
 
-        ui_value = _get_widget_ui_value("checkbox", element, user_key=key)
+        ui_value = _get_widget_ui_value("checkbox", element.checkbox, user_key=key)
         current_value = ui_value if ui_value is not None else value
         return bool(current_value)
 
@@ -1414,7 +1478,9 @@ class DeltaGenerator(
             str(format_func(option)) for option in options
         ]
 
-        ui_value = _get_widget_ui_value("multiselect", element, user_key=key)
+        ui_value = _get_widget_ui_value(
+            "multiselect", element.multiselect, user_key=key
+        )
         current_value = ui_value.value if ui_value is not None else default_value
         return [options[i] for i in current_value]
 
@@ -1473,7 +1539,7 @@ class DeltaGenerator(
         element.radio.default = index
         element.radio.options[:] = [str(format_func(option)) for option in options]
 
-        ui_value = _get_widget_ui_value("radio", element, user_key=key)
+        ui_value = _get_widget_ui_value("radio", element.radio, user_key=key)
         current_value = ui_value if ui_value is not None else index
 
         return (
@@ -1532,7 +1598,7 @@ class DeltaGenerator(
         element.selectbox.default = index
         element.selectbox.options[:] = [str(format_func(option)) for option in options]
 
-        ui_value = _get_widget_ui_value("selectbox", element, user_key=key)
+        ui_value = _get_widget_ui_value("selectbox", element.selectbox, user_key=key)
         current_value = ui_value if ui_value is not None else index
 
         return (
@@ -1868,7 +1934,7 @@ class DeltaGenerator(
         element.slider.step = step
         element.slider.data_type = data_type
 
-        ui_value = _get_widget_ui_value("slider", element, user_key=key)
+        ui_value = _get_widget_ui_value("slider", element.slider, user_key=key)
         if ui_value:
             current_value = getattr(ui_value, "value")
         else:
@@ -2037,7 +2103,9 @@ class DeltaGenerator(
         element.color_picker.label = label
         element.color_picker.default = str(value)
 
-        ui_value = _get_widget_ui_value("color_picker", element, user_key=key)
+        ui_value = _get_widget_ui_value(
+            "color_picker", element.color_picker, user_key=key
+        )
         current_value = ui_value if ui_value is not None else value
 
         return str(current_value)
@@ -2094,7 +2162,7 @@ class DeltaGenerator(
                 % type
             )
 
-        ui_value = _get_widget_ui_value("text_input", element, user_key=key)
+        ui_value = _get_widget_ui_value("text_input", element.text_input, user_key=key)
         current_value = ui_value if ui_value is not None else value
         return str(current_value)
 
@@ -2148,7 +2216,7 @@ class DeltaGenerator(
         if max_chars is not None:
             element.text_area.max_chars = max_chars
 
-        ui_value = _get_widget_ui_value("text_area", element, user_key=key)
+        ui_value = _get_widget_ui_value("text_area", element.text_area, user_key=key)
         current_value = ui_value if ui_value is not None else value
         return str(current_value)
 
@@ -2197,7 +2265,7 @@ class DeltaGenerator(
         element.time_input.label = label
         element.time_input.default = time.strftime(value, "%H:%M")
 
-        ui_value = _get_widget_ui_value("time_input", element, user_key=key)
+        ui_value = _get_widget_ui_value("time_input", element.time_input, user_key=key)
         current_value = (
             datetime.strptime(ui_value, "%H:%M").time()
             if ui_value is not None
@@ -2284,7 +2352,7 @@ class DeltaGenerator(
 
         element.date_input.max = date.strftime(max_value, "%Y/%m/%d")
 
-        ui_value = _get_widget_ui_value("date_input", element, user_key=key)
+        ui_value = _get_widget_ui_value("date_input", element.date_input, user_key=key)
 
         if ui_value is not None:
             value = getattr(ui_value, "data")
@@ -2482,7 +2550,9 @@ class DeltaGenerator(
         if format is not None:
             number_input.format = format
 
-        ui_value = _get_widget_ui_value("number_input", element, user_key=key)
+        ui_value = _get_widget_ui_value(
+            "number_input", element.number_input, user_key=key
+        )
 
         return ui_value if ui_value is not None else value
 
