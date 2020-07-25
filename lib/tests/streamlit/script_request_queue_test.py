@@ -83,19 +83,19 @@ class ScriptRequestQueueTest(unittest.TestCase):
         _create_widget("trigger", states).trigger_value = True
         _create_widget("int", states).int_value = 123
 
-        queue.enqueue(ScriptRequest.RERUN, RerunData(widget_state=states))
+        queue.enqueue(ScriptRequest.RERUN, RerunData(widget_states=states))
 
         states = WidgetStates()
         _create_widget("trigger", states).trigger_value = False
         _create_widget("int", states).int_value = 456
 
-        queue.enqueue(ScriptRequest.RERUN, RerunData(widget_state=states))
+        queue.enqueue(ScriptRequest.RERUN, RerunData(widget_states=states))
 
         event, data = queue.dequeue()
         self.assertEqual(event, ScriptRequest.RERUN)
 
         widgets = Widgets()
-        widgets.set_state(data.widget_state)
+        widgets.set_state(data.widget_states)
 
         # Coalesced triggers should be True if either the old or
         # new value was True
@@ -108,17 +108,17 @@ class ScriptRequestQueueTest(unittest.TestCase):
         self.assertEqual((None, None), queue.dequeue(), "Expected empty event queue")
 
         # Test that we can coalesce if previous widget state is None
-        queue.enqueue(ScriptRequest.RERUN, RerunData(widget_state=None))
-        queue.enqueue(ScriptRequest.RERUN, RerunData(widget_state=None))
+        queue.enqueue(ScriptRequest.RERUN, RerunData(widget_states=None))
+        queue.enqueue(ScriptRequest.RERUN, RerunData(widget_states=None))
 
         states = WidgetStates()
         _create_widget("int", states).int_value = 789
 
-        queue.enqueue(ScriptRequest.RERUN, RerunData(widget_state=states))
+        queue.enqueue(ScriptRequest.RERUN, RerunData(widget_states=states))
 
         event, data = queue.dequeue()
         widgets = Widgets()
-        widgets.set_state(data.widget_state)
+        widgets.set_state(data.widget_states)
 
         self.assertEqual(event, ScriptRequest.RERUN)
         self.assertEqual(789, widgets.get_widget_value("int"))
@@ -130,13 +130,13 @@ class ScriptRequestQueueTest(unittest.TestCase):
         states = WidgetStates()
         _create_widget("int", states).int_value = 101112
 
-        queue.enqueue(ScriptRequest.RERUN, RerunData(widget_state=states))
+        queue.enqueue(ScriptRequest.RERUN, RerunData(widget_states=states))
 
-        queue.enqueue(ScriptRequest.RERUN, RerunData(widget_state=None))
+        queue.enqueue(ScriptRequest.RERUN, RerunData(widget_states=None))
 
         event, data = queue.dequeue()
         widgets = Widgets()
-        widgets.set_state(data.widget_state)
+        widgets.set_state(data.widget_states)
 
         self.assertEqual(event, ScriptRequest.RERUN)
         self.assertEqual(101112, widgets.get_widget_value("int"))

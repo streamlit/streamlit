@@ -289,7 +289,7 @@ class ScriptRunner(object):
         # is to run it. Errors thrown during execution will be shown to the
         # user as ExceptionElements.
 
-        # Update the Widget object with the new widget_state.
+        # Update the Widget object with the new widget_states.
         # (The ReportContext has a reference to this object, so we just update it in-place)
         if rerun_data.widget_states is not None:
             self._widgets.set_state(rerun_data.widget_states)

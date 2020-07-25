@@ -22,15 +22,16 @@ import unittest
 from parameterized import parameterized
 from tornado.testing import AsyncTestCase
 
-from streamlit.report import Report
 from streamlit.media_file_manager import media_file_manager
+from streamlit.proto.ClientState_pb2 import ClientState
+from streamlit.proto.WidgetStates_pb2 import WidgetStates
+from streamlit.report import Report
 from streamlit.report_queue import ReportQueue
 from streamlit.script_request_queue import RerunData
 from streamlit.script_request_queue import ScriptRequest
 from streamlit.script_request_queue import ScriptRequestQueue
 from streamlit.script_runner import ScriptRunner
 from streamlit.script_runner import ScriptRunnerEvent
-from streamlit.proto.WidgetStates_pb2 import WidgetStates
 
 text_utf = "complete! 👨‍🎤"
 text_no_encoding = text_utf
