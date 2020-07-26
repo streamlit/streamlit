@@ -14,10 +14,10 @@
 
 import threading
 from collections import deque
-from collections import namedtuple
 from enum import Enum
 from typing import Any, Tuple, Deque
 
+from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.widgets import coalesce_widget_states
 
 
@@ -30,15 +30,12 @@ class ScriptRequest(Enum):
     SHUTDOWN = "SHUTDOWN"
 
 
-# Data attached to RERUN requests
-RerunData = namedtuple(
-    "RerunData",
-    [
-        # WidgetStates protobuf to run the script with. If this is None, the
-        # widget_state from the most recent run of the script will be used instead.
-        "widget_state"
-    ],
-)
+class RerunData(object):
+    """Data attached to RERUN requests."""
+
+    def __init__(self, query_string="", widget_states=None):
+        self.query_string = query_string
+        self.widget_states = widget_states
 
 
 class ScriptRequestQueue(object):
@@ -72,7 +69,7 @@ class ScriptRequestQueue(object):
             The type of request
 
         data : Any
-            Data associated with the request, if any
+            Data associated with the request, if any. For example, could be of type RerunData.
         """
         with self._lock:
             if request == ScriptRequest.SHUTDOWN:
@@ -84,30 +81,38 @@ class ScriptRequestQueue(object):
                 if index >= 0:
                     _, old_data = self._queue[index]
 
-                    if old_data.widget_state is None:
-                        # The existing request's widget_state is None, which
+                    if old_data.widget_states is None:
+                        # The existing request's widget_states is None, which
                         # means it wants to rerun with whatever the most
                         # recent script execution's widget state was.
                         # We have no meaningful state to merge with, and
                         # so we simply overwrite the existing request.
                         self._queue[index] = (
                             request,
-                            RerunData(widget_state=data.widget_state),
+                            RerunData(
+                                query_string=data.query_string,
+                                widget_states=data.widget_states,
+                            ),
                         )
-                    elif data.widget_state is None:
-                        # If this request's widget_state is None, and the
-                        # existing request's widget_state was not, this
+                    elif data.widget_states is None:
+                        # If this request's widget_states is None, and the
+                        # existing request's widget_states was not, this
                         # new request is entirely redundant and can be dropped.
+                        # TODO: Figure out if this should even happen. This sounds like it should
+                        # raise an exception...
                         pass
                     else:
                         # Both the existing and the new request have
                         # non-null widget_states. Merge them together.
-                        coalesced_state = coalesce_widget_states(
-                            old_data.widget_state, data.widget_state
+                        coalesced_states = coalesce_widget_states(
+                            old_data.widget_states, data.widget_states
                         )
                         self._queue[index] = (
                             request,
-                            RerunData(widget_state=coalesced_state),
+                            RerunData(
+                                query_string=data.query_string,
+                                widget_states=coalesced_states,
+                            ),
                         )
                 else:
                     self._queue.append((request, data))

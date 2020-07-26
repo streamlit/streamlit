@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -296,7 +295,8 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             declare_component("test", path=PATH)
 
         with mock.patch(
-            "streamlit.components.v1.components.open", mock.mock_open(read_data="Test Content")
+            "streamlit.components.v1.components.open",
+            mock.mock_open(read_data="Test Content"),
         ):
             response = self._request_component("components_test.test")
 
