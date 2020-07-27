@@ -103,6 +103,7 @@ from streamlit import type_util as _type_util
 from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
 from streamlit.report_thread import add_report_ctx as _add_report_ctx
 from streamlit.report_thread import get_report_ctx as _get_report_ctx
+from streamlit.script_runner import StopException
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import BlockPath_pb2 as _BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
@@ -701,3 +702,18 @@ def _maybe_print_repl_warning():
                 ),
                 script_name,
             )
+
+def stop():
+    """Stops excecution immediately. Streamlit will not run any statements
+    after `st.stop()`. We recommend rendering a message prior to calling this
+    to indicate the execution has stopped and why.
+
+    Example
+    -------
+
+    >>> st.write('This string will be written')
+    >>> st.stop()
+    >>> st.write('This string will NOT be written')
+
+    """
+    raise StopException()
