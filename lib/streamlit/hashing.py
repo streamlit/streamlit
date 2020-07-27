@@ -24,7 +24,6 @@ import inspect
 import io
 import os
 import pickle
-import re
 import sys
 import tempfile
 import textwrap
@@ -59,6 +58,13 @@ _CYCLE_PLACEHOLDER = b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-CY
 
 
 _FOLDER_BLACK_LIST = FolderBlackList(config.get_option("server.folderWatchBlacklist"))
+
+
+# FFI objects (objects that interface with C libraries) can be any of these types:
+_FFI_TYPE_NAMES = [
+    "_cffi_backend.FFI",
+    "builtins.CompiledFFI",
+]
 
 
 Context = collections.namedtuple("Context", ["globals", "cells", "varnames"])
@@ -395,7 +401,7 @@ class _CodeHasher:
         elif inspect.isbuiltin(obj):
             return obj.__name__.encode()
 
-        elif type_util.is_type(obj, "builtins.CompiledFFI"):
+        elif any(type_util.is_type(obj, typename) for typename in _FFI_TYPE_NAMES):
             return self.to_bytes(None)
 
         elif type_util.is_type(obj, "builtins.mappingproxy") or type_util.is_type(
