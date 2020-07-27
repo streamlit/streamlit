@@ -164,22 +164,51 @@ def run_test(
 
         # Infinite loop to support retries
         while True:
+            cypress_command = ["yarn", "cy:run", "--spec", specpath]
+            cypress_command.extend(ctx.cypress_flags)
+
+            click.echo(
+                f"{click.style('Running e2e test:', fg='yellow', bold=True)}"
+                f"\n{click.style(' '.join(streamlit_command), fg='yellow')}"
+                f"\n{click.style(' '.join(cypress_command), fg='yellow')}"
+                f"\n"
+            )
             try:
                 # Start the Streamlit script. It will continue running until
-                # we terminate it below.
-                streamlit_proc = subprocess.Popen(streamlit_command, cwd=FRONTEND_DIR)
+                # we terminate it below. We capture its output, and we'll only
+                # output it if there's an issue.
+                streamlit_proc = subprocess.Popen(
+                    streamlit_command,
+                    cwd=FRONTEND_DIR,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                )
 
                 # Run the Cypress spec.
-                cypress_command = ["yarn", "cy:run", "--spec", specpath]
-                cypress_command.extend(ctx.cypress_flags)
-                cypress_result = subprocess.run(cypress_command, cwd=FRONTEND_DIR)
+                cypress_result = subprocess.run(
+                    cypress_command, cwd=FRONTEND_DIR, capture_output=True, text=True,
+                )
             finally:
                 # Kill the Streamlit script.
                 streamlit_proc.terminate()
                 streamlit_proc.wait()
 
-            if cypress_result.returncode != 0:
-                # The test failed!
+            if cypress_result.returncode == 0:
+                click.echo(click.style("Success!", fg="green", bold=True))
+                break
+            else:
+                # The test failed. Print the output of the Streamlit command
+                # and the Cypress command.
+                click.echo(
+                    f"{click.style('Failure!', fg='red', bold=True)}"
+                    f"\n\n{click.style('Streamlit output:', fg='yellow', bold=True)}"
+                    f"\n{streamlit_proc.stdout.read()}"
+                    f"\n\n{click.style('Cypress output:', fg='yellow', bold=True)}"
+                    f"\n{cypress_result.stdout}"
+                    f"\n"
+                )
+
                 if not ctx.always_continue:
                     # Prompt the user for what to do next.
                     user_input = click.prompt(
@@ -201,9 +230,6 @@ def run_test(
                         continue
                 else:
                     ctx.any_failed = True
-
-            # The test succeeded! Break out of the loop.
-            break
 
 
 def run_component_template_e2e_test(ctx: Context, template_dir: str):
