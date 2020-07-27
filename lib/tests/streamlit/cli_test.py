@@ -31,7 +31,7 @@ from streamlit import cli
 from streamlit import config
 from streamlit.cli import _convert_config_option_to_click_option
 from streamlit.cli import _apply_config_options_from_cli
-from streamlit.ConfigOption import ConfigOption
+from streamlit.config_option import ConfigOption
 
 
 class CliTest(unittest.TestCase):

@@ -19,7 +19,7 @@ import uuid
 from typing import Any, Dict
 
 from streamlit import config
-from streamlit.ReportQueue import ReportQueue
+from streamlit.report_queue import ReportQueue
 from streamlit import net_util
 
 from streamlit.logger import get_logger

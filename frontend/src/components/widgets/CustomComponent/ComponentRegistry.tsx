@@ -17,7 +17,7 @@
 
 import { logWarning } from "lib/log"
 import { BaseUriParts, buildHttpUri } from "lib/UriUtil"
-import { ComponentMessageType } from "./ComponentInstance"
+import { ComponentMessageType } from "./enums"
 
 export type ComponentMessageListener = (
   type: ComponentMessageType,
@@ -29,10 +29,12 @@ export type ComponentMessageListener = (
  */
 export class ComponentRegistry {
   private readonly getServerUri: () => BaseUriParts | undefined
+
   private readonly msgListeners = new Map<
     MessageEventSource,
     ComponentMessageListener
   >()
+
   private cachedServerUri?: BaseUriParts
 
   public constructor(getServerUri: () => BaseUriParts | undefined) {
@@ -102,7 +104,7 @@ export class ComponentRegistry {
       return
     }
 
-    const type = event.data["type"]
+    const { type } = event.data
     if (type == null) {
       logWarning(`Received Streamlit message with no type!`, event.data)
       return

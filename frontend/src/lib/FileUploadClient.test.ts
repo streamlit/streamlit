@@ -47,27 +47,29 @@ describe("FileUploadClient", () => {
 
   afterEach(() => {
     axiosMock.restore()
-    SessionInfo["singleton"] = undefined
+    SessionInfo.singleton = undefined
   })
 
   function mockUploadResponseStatus(status: number): void {
     axiosMock
       .onPost(buildHttpUri(MOCK_SERVER_URI, "upload_file"))
       .reply((config: AxiosRequestConfig): any[] => {
-        if (status == 200) {
+        if (status === 200) {
           // Validate that widgetId and sessionId are present on
           // outgoing requests.
           const data = config.data as FormData
           if (data.get("widgetId") == null) {
             return [400]
-          } else if (data.get("sessionId") == null) {
+          }
+          if (data.get("sessionId") == null) {
             return [400]
           }
 
           if (getCookie("_xsrf")) {
             if (!("X-Xsrftoken" in config.headers)) {
               return [403]
-            } else if (!("withCredentials" in config)) {
+            }
+            if (!("withCredentials" in config)) {
               return [403]
             }
           }

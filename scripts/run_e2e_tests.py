@@ -273,10 +273,10 @@ def run_e2e_tests(
     ctx.tests_dir_name = "e2e_flaky" if flaky_tests else "e2e"
 
     try:
+        # First, test "streamlit hello" in different combinations. We skip
+        # `no_credentials=True` for the `--server.headless=false` test, because
+        # it'll give a credentials prompt.
         if not flaky_tests:
-            # First, test "streamlit hello" in different combinations. We skip
-            # `no_credentials=True` for the `--server.headless=false` test,
-            # because it'll give a credentials prompt.
             hello_spec = join(ROOT_DIR, "e2e/specs/st_hello.spec.ts")
             run_test(
                 ctx,

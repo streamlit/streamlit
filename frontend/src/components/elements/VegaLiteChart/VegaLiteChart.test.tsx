@@ -24,7 +24,7 @@ import mock from "./mock"
 import { PropsWithHeight } from "./VegaLiteChart"
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const VegaLiteChart = require("./VegaLiteChart").VegaLiteChart
+const { VegaLiteChart } = require("./VegaLiteChart")
 
 const getProps = (
   elementProps: Partial<VegaLiteChartProto> = {}

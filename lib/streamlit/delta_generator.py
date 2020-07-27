@@ -31,7 +31,7 @@ from streamlit import caching
 from streamlit import config
 from streamlit import cursor
 from streamlit import type_util
-from streamlit.ReportThread import get_report_ctx
+from streamlit.report_thread import get_report_ctx
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException, StreamlitDeprecationWarning
 from streamlit.errors import NoSessionContext
@@ -270,7 +270,7 @@ class FileUploaderEncodingWarning(StreamlitDeprecationWarning):
 The behavior of `st.file_uploader` will soon change to no longer autodetect
 the file's encoding. This means that _all files_ will be returned as binary buffers.
 
-This change will go in effect after October 31, 2020.
+This change will go in effect after August 15, 2020.
 
 If you are expecting a text buffer, you can future-proof your code now by
 wrapping the returned buffer in a [`TextIOWrapper`](https://docs.python.org/3/library/io.html#io.TextIOWrapper),
@@ -1527,12 +1527,14 @@ class DeltaGenerator(object):
             OR a color image of shape (w,h,3)
             OR an RGBA image of shape (w,h,4)
             OR a URL to fetch the image from
+            OR an SVG XML string like `<svg xmlns=...</svg>`
             OR a list of one of the above, to display multiple images.
         caption : str or list of str
             Image caption. If displaying multiple images, caption should be a
             list of captions (one for each image).
         width : int or None
             Image width. None means use the image width.
+            Should be set for SVG images, as they have no default image width.
         use_column_width : bool
             If True, set the image width to the column width. This takes
             precedence over the `width` parameter.

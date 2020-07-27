@@ -20,9 +20,9 @@
  */
 
 import camelcase from "camelcase"
-import { dispatchOneOf, mapOneOf, updateOneOf } from "./immutableProto"
 import { fromJS } from "immutable"
-import { format } from "./format"
+import { dispatchOneOf, mapOneOf, updateOneOf } from "./immutableProto"
+import { Format } from "./format"
 
 // Must match dict_builder.py
 export const INDEX_COLUMN_DESIGNATOR = "(index)"
@@ -35,7 +35,8 @@ const STRING_COLLATOR = new Intl.Collator("en", {
 function compareValues(a: any, b: any): number {
   if (a < b) {
     return -1
-  } else if (a > b) {
+  }
+  if (a > b) {
     return 1
   }
   return 0
@@ -199,45 +200,39 @@ export function dataFrameGet(df: any, col: any, row: any): any {
         styles: {},
         type: "corner",
       }
-    } else {
-      return {
-        contents: indexGet(df.get("index"), col, row - headerRows),
-        styles: {},
-        type: "col-header",
-      }
     }
-  } else {
-    if (row < headerRows) {
-      return {
-        contents: indexGet(df.get("columns"), row, col - headerCols),
-        styles: {},
-        type: "row-header",
-      }
-    } else {
-      // If we have a formatted display value for the cell, return that.
-      // Else return the data itself.
-      const customDisplayValue = tableStyleGetDisplayValue(
-        df.get("style"),
-        col - headerCols,
-        row - headerRows
-      )
-
-      const contents =
-        customDisplayValue != null
-          ? customDisplayValue
-          : tableGet(df.get("data"), col - headerCols, row - headerRows)
-
-      return {
-        contents: contents,
-        styles:
-          tableStyleGetCSS(
-            df.get("style"),
-            col - headerCols,
-            row - headerRows
-          ) || {},
-        type: "data",
-      }
+    return {
+      contents: indexGet(df.get("index"), col, row - headerRows),
+      styles: {},
+      type: "col-header",
     }
+  }
+  if (row < headerRows) {
+    return {
+      contents: indexGet(df.get("columns"), row, col - headerCols),
+      styles: {},
+      type: "row-header",
+    }
+  }
+  // If we have a formatted display value for the cell, return that.
+  // Else return the data itself.
+  const customDisplayValue = tableStyleGetDisplayValue(
+    df.get("style"),
+    col - headerCols,
+    row - headerRows
+  )
+
+  const contents =
+    customDisplayValue != null
+      ? customDisplayValue
+      : tableGet(df.get("data"), col - headerCols, row - headerRows)
+
+  return {
+    contents,
+    styles:
+      tableStyleGetCSS(df.get("style"), col - headerCols, row - headerRows) ||
+      {},
+    type: "data",
   }
 }
 
@@ -348,16 +343,15 @@ export function indexGet(index: any, level: any, i: any): any {
       const label = labels.getIn(["data", i])
       if (label < 0) {
         return "NaN"
-      } else {
-        return indexGet(levels, 0, label)
       }
+      return indexGet(levels, 0, label)
     },
     int_64Index: (idx: any) => idx.getIn(["data", "data", i]),
     float_64Index: (idx: any) => idx.getIn(["data", "data", i]),
     datetimeIndex: (idx: any) =>
-      format.nanosToDate(idx.getIn(["data", "data", i])),
+      Format.nanosToDate(idx.getIn(["data", "data", i])),
     timedeltaIndex: (idx: any) =>
-      format.nanosToDuration(idx.getIn(["data", "data", i])),
+      Format.nanosToDuration(idx.getIn(["data", "data", i])),
   })
 }
 
@@ -391,8 +385,8 @@ function anyArrayGet(anyArray: any, i: any): any {
     strings: getData,
     doubles: getData,
     int64s: getData,
-    datetimes: (obj: any) => format.nanosToDate(getData(obj)),
-    timedeltas: (obj: any) => format.nanosToDuration(getData(obj)),
+    datetimes: (obj: any) => Format.nanosToDate(getData(obj)),
+    timedeltas: (obj: any) => Format.nanosToDuration(getData(obj)),
   })
 }
 
@@ -488,9 +482,8 @@ export function addRows(element: any, namedDataSet: any): any {
       existingDatasetIndex,
       newDataFrame
     )
-  } else {
-    return setDataFrame(element, newDataFrame)
   }
+  return setDataFrame(element, newDataFrame)
 }
 
 /**

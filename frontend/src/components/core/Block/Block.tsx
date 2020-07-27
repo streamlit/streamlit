@@ -109,13 +109,8 @@ class Block extends PureComponent<Props> {
 
         if (element instanceof List) {
           return this.renderBlock(element as BlockElement, index, width)
-        } else {
-          return this.renderElementWithErrorBoundary(
-            reportElement,
-            index,
-            width
-          )
         }
+        return this.renderElementWithErrorBoundary(reportElement, index, width)
       })
       .filter((node: ReactNode | null): ReactNode => node != null)
   }
@@ -125,11 +120,11 @@ class Block extends PureComponent<Props> {
       // If a rerun was just requested, all of our current elements
       // are about to become stale.
       return true
-    } else if (this.props.reportRunState === ReportRunState.RUNNING) {
-      return reportElement.get("reportId") !== this.props.reportId
-    } else {
-      return false
     }
+    if (this.props.reportRunState === ReportRunState.RUNNING) {
+      return reportElement.get("reportId") !== this.props.reportId
+    }
+    return false
   }
 
   private renderBlock(

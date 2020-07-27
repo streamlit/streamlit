@@ -59,7 +59,7 @@ class Radio extends React.PureComponent<Props, State> {
     const style = { width: this.props.width }
     const label = this.props.element.get("label")
     let options = this.props.element.get("options")
-    let disabled = this.props.disabled
+    let { disabled } = this.props
 
     if (options.size === 0) {
       options = ["No options to select."]

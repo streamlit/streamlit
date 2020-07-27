@@ -18,11 +18,11 @@
 import React, { ReactElement } from "react"
 import ReactMarkdown from "react-markdown"
 
+import { create } from "react-test-renderer"
 import {
   linkWithTargetBlank,
   linkReferenceHasParens,
 } from "./StreamlitMarkdown"
-import { create } from "react-test-renderer"
 
 // Fixture Generator
 const getMarkdownElement = (body): ReactElement => {
@@ -79,6 +79,7 @@ describe("linkReference", () => {
     const instance = component.root
     // should be no link object
     expect(() => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       instance.findByType(linkWithTargetBlank).props.href
     }).toThrow()
   })

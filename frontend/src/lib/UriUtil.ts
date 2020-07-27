@@ -16,6 +16,7 @@
  */
 
 import { IS_DEV_ENV, WEBSOCKET_PORT_DEV } from "lib/baseconsts"
+import DOMPurify from "dompurify"
 
 /**
  * host:port tuple
@@ -38,14 +39,14 @@ export function getWindowBaseUriParts(): BaseUriParts {
   // If changed, also change config.py
   const host = window.location.hostname
 
-  // prettier-ignore
-  const port = IS_DEV_ENV
-    ? WEBSOCKET_PORT_DEV
-    : window.location.port
-      ? Number(window.location.port)
-      : isHttps()
-        ? 443
-        : 80
+  let port
+  if (IS_DEV_ENV) {
+    port = WEBSOCKET_PORT_DEV
+  } else if (window.location.port) {
+    port = Number(window.location.port)
+  } else {
+    port = isHttps() ? 443 : 80
+  }
 
   const basePath = window.location.pathname
     .replace(FINAL_SLASH_RE, "")
@@ -97,10 +98,23 @@ function isHttps(): boolean {
 }
 
 /**
+ * Run SVG strings through DOMPurify to prevent Javascript execution
+ */
+function sanitizeSvg(uri: string): string {
+  const SVG_PREFIX = "data:image/svg+xml,"
+  if (uri.startsWith(SVG_PREFIX)) {
+    const unsafe = uri.substring(SVG_PREFIX.length)
+    return SVG_PREFIX + encodeURIComponent(DOMPurify.sanitize(unsafe))
+  }
+  return uri
+}
+
+/**
  * If this is a relative URI, assume it's being served from streamlit and
  * construct it appropriately.  Otherwise leave it alone.
  */
 export function buildMediaUri(uri: string): string {
+  uri = sanitizeSvg(uri)
   return uri.startsWith("/media")
     ? buildHttpUri(getWindowBaseUriParts(), uri)
     : uri

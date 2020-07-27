@@ -23,8 +23,11 @@ interface ScreenCastRecorderOptions {
 
 class ScreenCastRecorder {
   recordAudio: boolean
+
   inputStream: MediaStream | null
+
   recordedChunks: Blob[]
+
   mediaRecorder: MediaRecorder | null
 
   constructor({ recordAudio }: ScreenCastRecorderOptions) {

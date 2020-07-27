@@ -36,7 +36,7 @@ import { BlockElement, ReportElement, SimpleElement } from "./DeltaParser"
 export function debounce(delay: number, fn: any): any {
   let timerId: any
 
-  return function(...args: any[]) {
+  return (...args: any[]) => {
     if (timerId) {
       clearTimeout(timerId)
     }
@@ -130,7 +130,7 @@ export function isFromMac(): boolean {
  * Returns cookie value
  */
 export function getCookie(name: string): string | undefined {
-  const r = document.cookie.match("\\b" + name + "=([^;]*)\\b")
+  const r = document.cookie.match(`\\b${name}=([^;]*)\\b`)
   return r ? r[1] : undefined
 }
 

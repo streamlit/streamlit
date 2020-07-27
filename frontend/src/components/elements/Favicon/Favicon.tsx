@@ -48,7 +48,8 @@ function extractEmoji(maybeEmoji: string): string {
   if (nodeEmoji.hasEmoji(nodeEmoji.get(maybeEmoji))) {
     // Format: pizza or :pizza:
     return nodeEmoji.get(maybeEmoji)
-  } else if (nodeEmoji.hasEmoji(maybeEmoji)) {
+  }
+  if (nodeEmoji.hasEmoji(maybeEmoji)) {
     // Format: 🍕
     return maybeEmoji
   }
