@@ -1,5 +1,6 @@
 import textwrap
 
+from streamlit.proto import Element_pb2
 from streamlit.report_thread import get_report_ctx
 from streamlit.errors import DuplicateWidgetID
 from typing import Optional, Any
@@ -52,7 +53,6 @@ def _set_widget_id(
     ----------
     element_type : str
         The type of the element as stored in proto.
-        TODO: Can we replace with element_proto.__class__.__name__ ?
     element_proto : proto
         The proto of the specified type (e.g. Button/Multiselect/Slider proto)
     user_key : str or None
@@ -69,7 +69,8 @@ def _set_widget_id(
     if widget_func_name is None:
         widget_func_name = element_type
 
-    element_hash = hash(element_proto.SerializeToString())
+    # Identify the widget with a hash of type + contents
+    element_hash = hash((element_type, element_proto.SerializeToString()))
     if user_key is not None:
         widget_id = "%s-%s" % (user_key, element_hash)
     else:
@@ -80,7 +81,7 @@ def _set_widget_id(
         added = ctx.widget_ids_this_run.add(widget_id)
         if not added:
             raise DuplicateWidgetID(
-                _build_duplicate_widget_message(widget_func_name, user_key)
+                _build_duplicate_widget_message(widget_id, user_key)
             )
     element_proto.id = widget_id
 
