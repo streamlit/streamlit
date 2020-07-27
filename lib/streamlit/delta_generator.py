@@ -55,6 +55,7 @@ from streamlit.elements.alert import AlertMixin
 from streamlit.elements.json import JsonMixin
 from streamlit.elements.doc_string import HelpMixin
 from streamlit.elements.exception_proto import ExceptionMixin
+from streamlit.elements.data_frame_proto import DataFrameMixin
 
 LOGGER = get_logger(__name__)
 
@@ -201,6 +202,7 @@ class DeltaGenerator(
     AlertMixin,
     BalloonsMixin,
     ButtonMixin,
+    DataFrameMixin,
     ExceptionMixin,
     HelpMixin,
     MarkdownMixin,
@@ -476,64 +478,6 @@ class DeltaGenerator(
         _enqueue_message(msg)
 
         return block_dg
-
-    def dataframe(self, data=None, width=None, height=None):
-        """Display a dataframe as an interactive table.
-
-        Parameters
-        ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
-            or None
-            The data to display.
-
-            If 'data' is a pandas.Styler, it will be used to style its
-            underyling DataFrame. Streamlit supports custom cell
-            values and colors. (It does not support some of the more exotic
-            pandas styling features, like bar charts, hovering, and captions.)
-            Styler support is experimental!
-        width : int or None
-            Desired width of the UI element expressed in pixels. If None, a
-            default width based on the page width is used.
-        height : int or None
-            Desired height of the UI element expressed in pixels. If None, a
-            default height is used.
-
-        Examples
-        --------
-        >>> df = pd.DataFrame(
-        ...    np.random.randn(50, 20),
-        ...    columns=('col %d' % i for i in range(20)))
-        ...
-        >>> st.dataframe(df)  # Same as st.write(df)
-
-        .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=165mJbzWdAC8Duf8a4tjyQ
-           height: 330px
-
-        >>> st.dataframe(df, 200, 100)
-
-        You can also pass a Pandas Styler object to change the style of
-        the rendered DataFrame:
-
-        >>> df = pd.DataFrame(
-        ...    np.random.randn(10, 20),
-        ...    columns=('col %d' % i for i in range(20)))
-        ...
-        >>> st.dataframe(df.style.highlight_max(axis=0))
-
-        .. output::
-           https://share.streamlit.io/0.29.0-dV1Y/index.html?id=Hb6UymSNuZDzojUNybzPby
-           height: 285px
-
-        """
-        import streamlit.elements.data_frame_proto as data_frame_proto
-
-        def set_data_frame(delta):
-            data_frame_proto.marshall_data_frame(data, delta.data_frame)
-
-        return self._enqueue_new_element_delta(
-            set_data_frame, "dataframe", element_width=width, element_height=height
-        )
 
     @_with_element
     def line_chart(
