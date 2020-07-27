@@ -233,6 +233,13 @@ class DeltaGenerator(
         #
         self._provided_cursor = cursor
 
+        # Change the module of all mixin'ed functions to be st.delta_generator,
+        # instead of the original module (e.g. st.elements.markdown)
+        for mixin in self.__class__.__bases__:
+            for (name, func) in mixin.__dict__.items():
+                if callable(func):
+                    func.__module__ = self.__module__
+
     def __getattr__(self, name):
         import streamlit as st
 
