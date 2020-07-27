@@ -49,7 +49,7 @@ try:
 except ImportError:
     pass
 
-from streamlit.hashing import InternalHashError
+from streamlit.hashing import InternalHashError, _FFI_TYPE_NAMES
 from streamlit.hashing import UnhashableTypeError
 from streamlit.hashing import UserHashError
 from streamlit.hashing import _CodeHasher
@@ -517,7 +517,7 @@ class HashTest(unittest.TestCase):
 
         # Note: We've verified that all properties on CompiledFFI objects
         # are global, except have not verified `error` either way.
-        self.assertEqual("builtins.CompiledFFI", get_fqn_type(foo))
+        self.assertIn(get_fqn_type(foo), _FFI_TYPE_NAMES)
         self.assertEqual(get_hash(foo), get_hash(bar))
 
     def test_sqlite_sqlalchemy_engine(self):
