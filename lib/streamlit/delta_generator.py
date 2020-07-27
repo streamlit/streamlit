@@ -56,6 +56,7 @@ from streamlit.elements.json import JsonMixin
 from streamlit.elements.doc_string import HelpMixin
 from streamlit.elements.exception_proto import ExceptionMixin
 from streamlit.elements.data_frame_proto import DataFrameMixin
+from streamlit.elements.altair import AltairMixin
 
 LOGGER = get_logger(__name__)
 
@@ -200,6 +201,7 @@ for more information.
 
 class DeltaGenerator(
     AlertMixin,
+    AltairMixin,
     BalloonsMixin,
     ButtonMixin,
     DataFrameMixin,
@@ -478,140 +480,6 @@ class DeltaGenerator(
         _enqueue_message(msg)
 
         return block_dg
-
-    @_with_element
-    def line_chart(
-        self, element, data=None, width=0, height=0, use_container_width=True
-    ):
-        """Display a line chart.
-
-        This is just syntax-sugar around st.altair_chart. The main difference
-        is this command uses the data's own column and indices to figure out
-        the chart's spec. As a result this is easier to use for many "just plot
-        this" scenarios, while being less customizable.
-
-        Parameters
-        ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict
-            or None
-            Data to be plotted.
-
-        width : int
-            The chart width in pixels. If 0, selects the width automatically.
-
-        height : int
-            The chart width in pixels. If 0, selects the height automatically.
-
-        use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over the width argument.
-
-        Example
-        -------
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 3),
-        ...     columns=['a', 'b', 'c'])
-        ...
-        >>> st.line_chart(chart_data)
-
-        .. output::
-           https://share.streamlit.io/0.50.0-td2L/index.html?id=BdxXG3MmrVBfJyqS2R2ki8
-           height: 220px
-
-        """
-
-        import streamlit.elements.altair as altair
-
-        chart = altair.generate_chart("line", data, width, height)
-        altair.marshall(element.vega_lite_chart, chart, use_container_width)
-
-    @_with_element
-    def area_chart(
-        self, element, data=None, width=0, height=0, use_container_width=True
-    ):
-        """Display a area chart.
-
-        This is just syntax-sugar around st.altair_chart. The main difference
-        is this command uses the data's own column and indices to figure out
-        the chart's spec. As a result this is easier to use for many "just plot
-        this" scenarios, while being less customizable.
-
-        Parameters
-        ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, or dict
-            Data to be plotted.
-
-        width : int
-            The chart width in pixels. If 0, selects the width automatically.
-
-        height : int
-            The chart width in pixels. If 0, selects the height automatically.
-
-        use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over the width argument.
-
-        Example
-        -------
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 3),
-        ...     columns=['a', 'b', 'c'])
-        ...
-        >>> st.area_chart(chart_data)
-
-        .. output::
-           https://share.streamlit.io/0.50.0-td2L/index.html?id=Pp65STuFj65cJRDfhGh4Jt
-           height: 220px
-
-        """
-        import streamlit.elements.altair as altair
-
-        chart = altair.generate_chart("area", data, width, height)
-        altair.marshall(element.vega_lite_chart, chart, use_container_width)
-
-    @_with_element
-    def bar_chart(
-        self, element, data=None, width=0, height=0, use_container_width=True
-    ):
-        """Display a bar chart.
-
-        This is just syntax-sugar around st.altair_chart. The main difference
-        is this command uses the data's own column and indices to figure out
-        the chart's spec. As a result this is easier to use for many "just plot
-        this" scenarios, while being less customizable.
-
-        Parameters
-        ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, or dict
-            Data to be plotted.
-
-        width : int
-            The chart width in pixels. If 0, selects the width automatically.
-
-        height : int
-            The chart width in pixels. If 0, selects the height automatically.
-
-        use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over the width argument.
-
-        Example
-        -------
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(50, 3),
-        ...     columns=["a", "b", "c"])
-        ...
-        >>> st.bar_chart(chart_data)
-
-        .. output::
-           https://share.streamlit.io/0.50.0-td2L/index.html?id=5U5bjR2b3jFwnJdDfSvuRk
-           height: 220px
-
-        """
-        import streamlit.elements.altair as altair
-
-        chart = altair.generate_chart("bar", data, width, height)
-        altair.marshall(element.vega_lite_chart, chart, use_container_width)
 
     @_with_element
     def vega_lite_chart(

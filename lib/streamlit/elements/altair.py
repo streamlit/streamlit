@@ -17,9 +17,147 @@
 from datetime import date
 
 from streamlit import type_util
+from streamlit.proto import VegaLiteChart_pb2
 import streamlit.elements.vega_lite as vega_lite
 import altair as alt
 import pandas as pd
+
+from .utils import last_index_for_melted_dataframes
+
+
+class AltairMixin:
+    def line_chart(dg, data=None, width=0, height=0, use_container_width=True):
+        """Display a line chart.
+
+        This is just syntax-sugar around st.altair_chart. The main difference
+        is this command uses the data's own column and indices to figure out
+        the chart's spec. As a result this is easier to use for many "just plot
+        this" scenarios, while being less customizable.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict
+            or None
+            Data to be plotted.
+
+        width : int
+            The chart width in pixels. If 0, selects the width automatically.
+
+        height : int
+            The chart width in pixels. If 0, selects the height automatically.
+
+        use_container_width : bool
+            If True, set the chart width to the column width. This takes
+            precedence over the width argument.
+
+        Example
+        -------
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 3),
+        ...     columns=['a', 'b', 'c'])
+        ...
+        >>> st.line_chart(chart_data)
+
+        .. output::
+           https://share.streamlit.io/0.50.0-td2L/index.html?id=BdxXG3MmrVBfJyqS2R2ki8
+           height: 220px
+
+        """
+        vega_lite_chart_proto = VegaLiteChart_pb2.VegaLiteChart()
+
+        chart = generate_chart("line", data, width, height)
+        marshall(vega_lite_chart_proto, chart, use_container_width)
+        last_index = last_index_for_melted_dataframes(data)
+
+        dg._enqueue("vega_lite_chart", vega_lite_chart_proto, last_index=last_index)
+
+    def area_chart(dg, data=None, width=0, height=0, use_container_width=True):
+        """Display a area chart.
+
+        This is just syntax-sugar around st.altair_chart. The main difference
+        is this command uses the data's own column and indices to figure out
+        the chart's spec. As a result this is easier to use for many "just plot
+        this" scenarios, while being less customizable.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, or dict
+            Data to be plotted.
+
+        width : int
+            The chart width in pixels. If 0, selects the width automatically.
+
+        height : int
+            The chart width in pixels. If 0, selects the height automatically.
+
+        use_container_width : bool
+            If True, set the chart width to the column width. This takes
+            precedence over the width argument.
+
+        Example
+        -------
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 3),
+        ...     columns=['a', 'b', 'c'])
+        ...
+        >>> st.area_chart(chart_data)
+
+        .. output::
+           https://share.streamlit.io/0.50.0-td2L/index.html?id=Pp65STuFj65cJRDfhGh4Jt
+           height: 220px
+
+        """
+        vega_lite_chart_proto = VegaLiteChart_pb2.VegaLiteChart()
+
+        chart = generate_chart("area", data, width, height)
+        marshall(vega_lite_chart_proto, chart, use_container_width)
+        last_index = last_index_for_melted_dataframes(data)
+
+        dg._enqueue("vega_lite_chart", vega_lite_chart_proto, last_index=last_index)
+
+    def bar_chart(dg, data=None, width=0, height=0, use_container_width=True):
+        """Display a bar chart.
+
+        This is just syntax-sugar around st.altair_chart. The main difference
+        is this command uses the data's own column and indices to figure out
+        the chart's spec. As a result this is easier to use for many "just plot
+        this" scenarios, while being less customizable.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, or dict
+            Data to be plotted.
+
+        width : int
+            The chart width in pixels. If 0, selects the width automatically.
+
+        height : int
+            The chart width in pixels. If 0, selects the height automatically.
+
+        use_container_width : bool
+            If True, set the chart width to the column width. This takes
+            precedence over the width argument.
+
+        Example
+        -------
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(50, 3),
+        ...     columns=["a", "b", "c"])
+        ...
+        >>> st.bar_chart(chart_data)
+
+        .. output::
+           https://share.streamlit.io/0.50.0-td2L/index.html?id=5U5bjR2b3jFwnJdDfSvuRk
+           height: 220px
+
+        """
+        vega_lite_chart_proto = VegaLiteChart_pb2.VegaLiteChart()
+
+        chart = generate_chart("bar", data, width, height)
+        marshall(vega_lite_chart_proto, chart, use_container_width)
+        last_index = last_index_for_melted_dataframes(data)
+
+        dg._enqueue("vega_lite_chart", vega_lite_chart_proto, last_index=last_index)
 
 
 def _is_date_column(df, name):
