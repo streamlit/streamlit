@@ -37,4 +37,4 @@ class ButtonMixin:
         ui_value = _get_widget_ui_value("button", button_proto, user_key=key)
         current_value = ui_value if ui_value is not None else False
 
-        return dg._enqueue("button", button_proto, current_value)
+        return dg._enqueue("button", button_proto, current_value)  # type: ignore

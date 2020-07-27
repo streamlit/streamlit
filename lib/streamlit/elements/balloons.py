@@ -19,4 +19,4 @@ class BalloonsMixin:
         balloons_proto.type = Balloons_pb2.Balloons.DEFAULT
         balloons_proto.execution_id = random.randrange(0xFFFFFFFF)
 
-        dg._enqueue("balloons", balloons_proto)
+        dg._enqueue("balloons", balloons_proto)  # type: ignore

@@ -22,4 +22,4 @@ class TextMixin:
         """
         text_proto = Text_pb2.Text()
         text_proto.body = _clean_text(body)
-        dg._enqueue("text", text_proto)
+        dg._enqueue("text", text_proto)  # type: ignore

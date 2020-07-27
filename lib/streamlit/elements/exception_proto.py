@@ -44,7 +44,7 @@ class ExceptionMixin:
         """
         exception_proto = Exception_pb2.Exception()
         marshall(exception_proto, exception)
-        dg._enqueue("exception", exception_proto)
+        dg._enqueue("exception", exception_proto)  # type: ignore
 
 
 def marshall(exception_proto, exception):

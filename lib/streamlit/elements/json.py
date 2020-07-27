@@ -46,4 +46,4 @@ class JsonMixin:
 
         json_proto = Json_pb2.Json()
         json_proto.body = body
-        dg._enqueue("json", json_proto)
+        dg._enqueue("json", json_proto)  # type: ignore
