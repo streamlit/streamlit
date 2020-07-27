@@ -33,7 +33,7 @@ describe("ComponentRegistry", () => {
 
   test("Caches server URI", () => {
     // If we never connect to a server, getComponentURL will fail:
-    let serverURI: BaseUriParts | undefined = undefined
+    let serverURI: BaseUriParts | undefined
     const registry = new ComponentRegistry(() => serverURI)
     expect(() => registry.getComponentURL("foo", "index.html")).toThrow()
 
@@ -56,7 +56,7 @@ describe("ComponentRegistry", () => {
 
   test("Dispatches messages to listeners", () => {
     const registry = new ComponentRegistry(() => MOCK_SERVER_URI)
-    const onMessageEvent = registry["onMessageEvent"]
+    const { onMessageEvent } = registry
 
     // Create some mocks
     const msgSource1: any = {}

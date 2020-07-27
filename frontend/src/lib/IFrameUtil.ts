@@ -99,10 +99,10 @@ export const DEFAULT_IFRAME_FEATURE_POLICY = [
   "encrypted-media",
 
   // Controls whether tasks should execute in frames while they're not being rendered (e.g. if an iframe is hidden or display: none).
-  //"execution-while-not-rendered",
+  // "execution-while-not-rendered",
 
   // Controls whether tasks should execute in frames while they're outside of the visible viewport.
-  //"execution-while-out-of-viewport",
+  // "execution-while-out-of-viewport",
 
   // Controls whether the current document is allowed to use Element.requestFullScreen(). When this policy is disabled, the returned Promise rejects with a TypeError DOMException.
   "fullscreen",

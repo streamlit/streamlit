@@ -17,6 +17,7 @@
 
 import Prism from "prismjs"
 import React, { PureComponent, ReactNode } from "react"
+import { logWarning } from "lib/log"
 
 // Prism language definition files.
 // These must come after the prismjs import because they modify Prism.languages
@@ -59,7 +60,7 @@ class CodeBlock extends PureComponent<Props> {
     let languageClassName = `language-${this.props.language}`
 
     if (lang === undefined) {
-      console.warn(
+      logWarning(
         `No syntax highlighting for ${this.props.language}; defaulting to Python`
       )
       lang = Prism.languages.python

@@ -256,7 +256,8 @@ export class WebsocketConnection {
         if (event === "CONNECTION_SUCCEEDED") {
           this.setFsmState(ConnectionState.CONNECTED)
           return
-        } else if (
+        }
+        if (
           event === "CONNECTION_TIMED_OUT" ||
           event === "CONNECTION_ERROR" ||
           event === "CONNECTION_CLOSED"
@@ -586,23 +587,23 @@ function doHealthPing(
 
           if (status === /* NO RESPONSE */ 0) {
             return retryWhenTheresNoResponse()
-          } else if (status === 403) {
-            return retryWhenIsForbidden()
-          } else {
-            return retry(
-              `Connection failed with status ${status}, ` +
-                `and response "${data}".`
-            )
           }
-        } else if (error.request) {
+          if (status === 403) {
+            return retryWhenIsForbidden()
+          }
+          return retry(
+            `Connection failed with status ${status}, ` +
+              `and response "${data}".`
+          )
+        }
+        if (error.request) {
           // The request was made but no response was received
           // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
           // http.ClientRequest in node.js
           return retryWhenTheresNoResponse()
-        } else {
-          // Something happened in setting up the request that triggered an Error
-          return retry(error.message)
         }
+        // Something happened in setting up the request that triggered an Error
+        return retry(error.message)
       })
   }
 

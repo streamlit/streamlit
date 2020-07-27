@@ -60,10 +60,10 @@ export class ImageList extends PureComponent<Props> {
     const imgStyle: any = {}
 
     if (height && isFullScreen) {
-      imgStyle["height"] = height
+      imgStyle.height = height
       imgStyle["object-fit"] = "contain"
     } else {
-      imgStyle["width"] = containerWidth
+      imgStyle.width = containerWidth
     }
 
     return (

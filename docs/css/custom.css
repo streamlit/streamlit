@@ -452,6 +452,10 @@ hr {
   margin: var(--normal-padding);
 }
 
+hr.docutils {
+  background-color: var(--st-gray-50);
+}
+
 /* Make Youtube embeds responsive (requires wrapping with .embed-container div) */
 
 .embed-container {

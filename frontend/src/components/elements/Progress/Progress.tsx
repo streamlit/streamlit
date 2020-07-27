@@ -30,6 +30,7 @@ export const FAST_UPDATE_MS = 50
 
 class Progress extends PureComponent<Props> {
   lastValue = -1
+
   lastAnimatedTime = -1
 
   isMovingBackwards = (): boolean => {
@@ -72,7 +73,7 @@ class Progress extends PureComponent<Props> {
     return (
       <UIProgress
         value={value}
-        className={"stProgress " + className}
+        className={`stProgress ${className}`}
         style={{ width }}
       />
     )

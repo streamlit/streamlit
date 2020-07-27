@@ -294,7 +294,7 @@ jscoverage:
 .PHONY: e2etest
 # Run E2E tests.
 e2etest:
-	./scripts/run_e2e_tests.sh
+	./scripts/run_e2e_tests.py
 
 .PHONY: loc
 # Counts the number of lines of code in the project

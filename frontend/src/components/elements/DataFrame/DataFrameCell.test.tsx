@@ -17,9 +17,9 @@
 
 import React from "react"
 import { shallow } from "enzyme"
+import Icon from "components/shared/Icon"
 import { SortDirection } from "./SortDirection"
 
-import Icon from "components/shared/Icon"
 import DataFrameCell, { Props } from "./DataFrameCell"
 
 const getProps = (props: Partial<Props> = {}): Props => ({

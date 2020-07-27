@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+// Disable Typescript checking, since mm.track and identify have private scope
+// @ts-nocheck
 import { SessionInfo } from "lib/SessionInfo"
 import { getMetricsManagerForTest } from "lib/MetricsManagerTestUtils"
 
@@ -32,7 +34,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  SessionInfo["singleton"] = undefined
+  SessionInfo.singleton = undefined
   window.analytics = undefined
 })
 
@@ -43,8 +45,8 @@ test("does not track while uninitialized", () => {
   mm.enqueue("ev2", { data2: 12 })
   mm.enqueue("ev3", { data3: 13 })
 
-  expect(mm["track"].mock.calls.length).toBe(0)
-  expect(mm["identify"].mock.calls.length).toBe(0)
+  expect(mm.track.mock.calls.length).toBe(0)
+  expect(mm.identify.mock.calls.length).toBe(0)
 })
 
 test("does not track when initialized with gatherUsageStats=false", () => {
@@ -55,8 +57,8 @@ test("does not track when initialized with gatherUsageStats=false", () => {
   mm.enqueue("ev2", { data2: 12 })
   mm.enqueue("ev3", { data3: 13 })
 
-  expect(mm["track"].mock.calls.length).toBe(0)
-  expect(mm["identify"].mock.calls.length).toBe(0)
+  expect(mm.track.mock.calls.length).toBe(0)
+  expect(mm.identify.mock.calls.length).toBe(0)
 })
 
 test("does not initialize Segment analytics when gatherUsageStats=false", () => {
@@ -83,25 +85,25 @@ test("enqueues events before initialization", () => {
   mm.enqueue("ev2", { data2: 12 })
   mm.enqueue("ev3", { data3: 13 })
 
-  expect(mm["track"].mock.calls.length).toBe(0)
+  expect(mm.track.mock.calls.length).toBe(0)
 
   mm.initialize({ gatherUsageStats: true })
 
-  expect(mm["track"].mock.calls.length).toBe(3)
-  expect(mm["identify"].mock.calls.length).toBe(1)
+  expect(mm.track.mock.calls.length).toBe(3)
+  expect(mm.identify.mock.calls.length).toBe(1)
 })
 
 test("tracks events immediately after initialized", () => {
   const mm = getMetricsManagerForTest()
   mm.initialize({ gatherUsageStats: true })
 
-  expect(mm["track"].mock.calls.length).toBe(0)
+  expect(mm.track.mock.calls.length).toBe(0)
   mm.enqueue("ev1", { data1: 11 })
-  expect(mm["track"].mock.calls.length).toBe(1)
+  expect(mm.track.mock.calls.length).toBe(1)
   mm.enqueue("ev2", { data2: 12 })
-  expect(mm["track"].mock.calls.length).toBe(2)
+  expect(mm.track.mock.calls.length).toBe(2)
   mm.enqueue("ev3", { data3: 13 })
-  expect(mm["track"].mock.calls.length).toBe(3)
+  expect(mm.track.mock.calls.length).toBe(3)
 })
 
 test("increments deltas", () => {

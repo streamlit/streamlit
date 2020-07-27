@@ -16,8 +16,8 @@
  */
 
 import React, { PureComponent } from "react"
-import { SortDirection } from "./SortDirection"
 import Icon from "components/shared/Icon"
+import { SortDirection } from "./SortDirection"
 
 export interface Props {
   /** The cell's column index in the DataFrame */

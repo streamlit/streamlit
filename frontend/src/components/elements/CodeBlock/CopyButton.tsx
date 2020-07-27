@@ -25,6 +25,7 @@ interface Props {
 
 class CopyButton extends PureComponent<Props> {
   private button = createRef<HTMLButtonElement>()
+
   private clipboard: ClipboardJS | null = null
 
   public componentDidMount = (): void => {

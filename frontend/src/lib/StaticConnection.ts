@@ -52,7 +52,9 @@ export class StaticConnection {
 
     for (let msgIdx = 0; msgIdx < numMessages; msgIdx++) {
       try {
+        // eslint-disable-next-line no-await-in-loop
         const response = await getReportObject(props.reportId, `${msgIdx}.pb`)
+        // eslint-disable-next-line no-await-in-loop
         const arrayBuffer = await response.arrayBuffer()
         props.onMessage(ForwardMsg.decode(new Uint8Array(arrayBuffer)))
       } catch (error) {

@@ -41,8 +41,12 @@ const mockedRect = {
   toJSON: () => "",
 }
 const originalGetBBox = SVGElement.prototype.getBBox
-beforeEach(() => (SVGElement.prototype.getBBox = () => mockedRect))
-afterEach(() => (SVGElement.prototype.getBBox = originalGetBBox))
+beforeEach(() => {
+  SVGElement.prototype.getBBox = () => mockedRect
+})
+afterEach(() => {
+  SVGElement.prototype.getBBox = originalGetBBox
+})
 
 function getFaviconHref(): string {
   const faviconElement: HTMLLinkElement | null = document.querySelector(

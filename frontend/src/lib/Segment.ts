@@ -3,6 +3,9 @@ declare global {
     analytics: any
   }
 }
+
+/* eslint-disable */
+
 /** @function initializeSegment
  * Loads the global analytics service provided segment.io
  *  @see {@link https://segment.com/docs/connections/sources/catalog/libraries/website/javascript/quickstart/#}
@@ -94,3 +97,5 @@ export const initializeSegment = (): void => {
 
   analytics.load("iCkMy7ymtJ9qYzQRXkQpnAJEq7D4NyMU")
 }
+
+/* eslint-enable */

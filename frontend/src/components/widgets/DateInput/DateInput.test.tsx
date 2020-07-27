@@ -21,8 +21,8 @@ import { fromJS } from "immutable"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { DateInput as DateInputProto } from "autogen/proto"
 
-import DateInput, { Props } from "./DateInput"
 import { Datepicker as UIDatePicker } from "baseui/datepicker"
+import DateInput, { Props } from "./DateInput"
 
 jest.mock("lib/WidgetStateManager")
 

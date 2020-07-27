@@ -16,8 +16,8 @@
  */
 
 import React, { PureComponent } from "react"
-import Icon from "../Icon"
 import { SCSS_VARS } from "autogen/scssVariables"
+import Icon from "../Icon"
 import "./FullScreenWrapper.scss"
 
 export type Size = {
