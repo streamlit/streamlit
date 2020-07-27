@@ -16,21 +16,21 @@
 
 syntax = "proto3";
 
-import "streamlit/proto/Widget.proto";
+import "streamlit/proto/ClientState.proto";
 
 // A message from the browser to the server.
 message BackMsg {
   oneof type {
-    // Set to true to ask the server to display the inline help.
-    // bool help = 1;  DEPRECATED
+    // DEPRECATED. Set to true to ask the server to display the inline help.
+    // bool help = 1;
 
     // Set to true to ask the server to upload the report.
     bool cloud_upload = 2;
 
-    // Asks the server to run the script.
-    bool rerun_script = 3;
+    // DEPRECATED. Asks the server to run the script.
+    //bool rerun_script = 3;
 
-    // DEPRECATED - Asks the server to run the script with this object
+    // DEPRECATED. Asks the server to run the script with this object
     // ReRun rerun = 4;
 
     // Requests that the report's @st_cache be cleared
@@ -43,11 +43,17 @@ message BackMsg {
     // Requests that the report's execution be stopped
     bool stop_report = 7;
 
+    // DEPRECATED.
     // string widget_json = 8;
 
-    WidgetStates update_widgets = 9;
+    // DEPRECATED. This is now inside ClientState.
+    // WidgetStates update_widgets = 9;
 
     // Set to true to ask the server to close the connection
     bool close_connection = 10;
+
+    ClientState rerun_script = 11;
   }
+
+  reserved 1, 3, 4, 8, 9;
 }

@@ -21,7 +21,13 @@ LOGGER = get_logger(__name__)
 
 class ReportContext(object):
     def __init__(
-        self, session_id, enqueue, widgets, widget_ids_this_run, uploaded_file_mgr,
+        self,
+        session_id,
+        enqueue,
+        query_string,
+        widgets,
+        widget_ids_this_run,
+        uploaded_file_mgr,
     ):
         """Construct a ReportContext.
 
@@ -31,6 +37,8 @@ class ReportContext(object):
             The ReportSession's id.
         enqueue : callable
             Function that enqueues ForwardMsg protos in the websocket.
+        query_string : str
+            The URL query string for this run.
         widgets : Widgets
             The Widgets state object for the report.
         widget_ids_this_run : _WidgetIDSet
@@ -38,19 +46,22 @@ class ReportContext(object):
             current report run. This set is cleared at the start of each run.
         uploaded_file_mgr : UploadedFileManager
             The manager for files uploaded by all users.
+
         """
         # (dict) Mapping of container (type str or BlockPath) to top-level
         # cursor (type AbstractCursor).
         self.cursors = {}
         self.session_id = session_id
         self.enqueue = enqueue
+        self.query_string = query_string
         self.widgets = widgets
         self.widget_ids_this_run = widget_ids_this_run
         self.uploaded_file_mgr = uploaded_file_mgr
 
-    def reset(self):
+    def reset(self, query_string=""):
         self.cursors = {}
         self.widget_ids_this_run.clear()
+        self.query_string = query_string
 
 
 class _WidgetIDSet(object):
@@ -97,6 +108,7 @@ class ReportThread(threading.Thread):
         self,
         session_id,
         enqueue,
+        query_string,
         widgets,
         uploaded_file_mgr=None,
         target=None,
@@ -110,6 +122,8 @@ class ReportThread(threading.Thread):
             The ReportSession's id.
         enqueue : callable
             Function that enqueues ForwardMsg protos in the websocket.
+        query_string : str
+            The URL query string for this run.
         widgets : Widgets
             The Widgets state object for the report.
         uploaded_file_mgr : UploadedFileManager
@@ -126,6 +140,7 @@ class ReportThread(threading.Thread):
         self.streamlit_report_ctx = ReportContext(
             session_id=session_id,
             enqueue=enqueue,
+            query_string=query_string,
             widgets=widgets,
             uploaded_file_mgr=uploaded_file_mgr,
             widget_ids_this_run=_WidgetIDSet(),

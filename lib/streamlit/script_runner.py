@@ -27,6 +27,7 @@ from streamlit.report_thread import ReportThread
 from streamlit.report_thread import get_report_ctx
 from streamlit.script_request_queue import ScriptRequest
 from streamlit.logger import get_logger
+from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.widgets import Widgets
 
 LOGGER = get_logger(__name__)
@@ -54,7 +55,7 @@ class ScriptRunner(object):
         session_id,
         report,
         enqueue_forward_msg,
-        widget_states,
+        client_state,
         request_queue,
         uploaded_file_mgr=None,
     ):
@@ -70,8 +71,8 @@ class ScriptRunner(object):
         report : Report
             The ReportSession's report.
 
-        widget_states : streamlit.proto.Widget_pb2.WidgetStates
-            The ReportSession's current widget states
+        client_state : streamlit.proto.ClientState_pb2.ClientState
+            The current state from the client (widgets and query params).
 
         request_queue : ScriptRequestQueue
             The queue that the ReportSession is publishing ScriptRequests to.
@@ -88,8 +89,9 @@ class ScriptRunner(object):
         self._request_queue = request_queue
         self._uploaded_file_mgr = uploaded_file_mgr
 
+        self._client_state = client_state
         self._widgets = Widgets()
-        self._widgets.set_state(widget_states)
+        self._widgets.set_state(client_state.widget_states)
 
         self.on_event = Signal(
             doc="""Emitted when a ScriptRunnerEvent occurs.
@@ -105,7 +107,7 @@ class ScriptRunner(object):
                 Our compile error. Set only for the
                 SCRIPT_STOPPED_WITH_COMPILE_ERROR event.
 
-            widget_states : streamlit.proto.Widget_pb2.WidgetStates | None
+            widget_states : streamlit.proto.WidgetStates_pb2.WidgetStates | None
                 The ScriptRunner's final WidgetStates. Set only for the
                 SHUTDOWN event.
             """
@@ -133,6 +135,7 @@ class ScriptRunner(object):
         self._script_thread = ReportThread(
             session_id=self._session_id,
             enqueue=self._enqueue_forward_msg,
+            query_string=self._client_state.query_string,
             widgets=self._widgets,
             uploaded_file_mgr=self._uploaded_file_mgr,
             target=self._process_request_queue,
@@ -164,9 +167,10 @@ class ScriptRunner(object):
         # as they existed after our last successful script run, which the
         # ReportSession will pass on to the next ScriptRunner that gets
         # created.
-        self.on_event.send(
-            ScriptRunnerEvent.SHUTDOWN, widget_states=self._widgets.get_state()
-        )
+        client_state = ClientState()
+        client_state.query_string = self._client_state.query_string
+        self._widgets.marshall(client_state)
+        self.on_event.send(ScriptRunnerEvent.SHUTDOWN, client_state=client_state)
 
     def _is_in_script_thread(self):
         """True if the calling function is running in the script thread"""
@@ -244,7 +248,7 @@ class ScriptRunner(object):
 
         # Reset DeltaGenerators, widgets, media files.
         media_file_manager.clear_session_files()
-        get_report_ctx().reset()
+        get_report_ctx().reset(query_string=rerun_data.query_string)
 
         self.on_event.send(ScriptRunnerEvent.SCRIPT_STARTED)
 
@@ -285,9 +289,10 @@ class ScriptRunner(object):
         # is to run it. Errors thrown during execution will be shown to the
         # user as ExceptionElements.
 
-        # Update the Widget singleton with the new widget_state
-        if rerun_data.widget_state is not None:
-            self._widgets.set_state(rerun_data.widget_state)
+        # Update the Widget object with the new widget_states.
+        # (The ReportContext has a reference to this object, so we just update it in-place)
+        if rerun_data.widget_states is not None:
+            self._widgets.set_state(rerun_data.widget_states)
 
         if config.get_option("runner.installTracer"):
             self._install_tracer()
