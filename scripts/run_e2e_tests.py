@@ -37,6 +37,10 @@ COMPONENT_TEMPLATE_DIRS = [
 CREDENTIALS_FILE = os.path.expanduser("~/.streamlit/credentials.toml")
 
 
+class QuitException(BaseException):
+    pass
+
+
 class AsyncSubprocess(AbstractContextManager):
     """Wraps subprocess.Popen to capture output safely."""
 
@@ -208,7 +212,12 @@ def run_test(
         True if the test succeeded.
 
     """
-    success = False
+    SUCCESS = "SUCCESS"
+    RETRY = "RETRY"
+    SKIP = "SKIP"
+    QUIT = "QUIT"
+
+    result = None
 
     # Move existing credentials file aside, and create a new one if the
     # tests call for it.
@@ -216,8 +225,8 @@ def run_test(
         if not no_credentials:
             create_credentials_toml('[general]\nemail="test@streamlit.io"')
 
-        # Infinite loop to support retries
-        while True:
+        # Loop until the test succeeds or is skipped.
+        while result not in (SUCCESS, SKIP, QUIT):
             cypress_command = ["yarn", "cy:run", "--spec", specpath]
             cypress_command.extend(ctx.cypress_flags)
 
@@ -238,9 +247,8 @@ def run_test(
                 streamlit_stdout = streamlit_proc.terminate()
 
             if cypress_result.returncode == 0:
-                success = True
+                result = SUCCESS
                 click.echo(click.style("Success!\n", fg="green", bold=True))
-                break
             else:
                 # The test failed. Print the output of the Streamlit command
                 # and the Cypress command.
@@ -253,28 +261,34 @@ def run_test(
                     f"\n"
                 )
 
-                if not ctx.always_continue:
+                if ctx.always_continue:
+                    result = SKIP
+                else:
                     # Prompt the user for what to do next.
                     user_input = click.prompt(
-                        "[R]etry, [U]pdate snapshots, [S]kip, or [Q]uit?"
+                        "[R]etry, [U]pdate snapshots, [S]kip, or [Q]uit?", default="r",
                     )
                     key = user_input[0].lower()
                     if key == "s":
-                        break
+                        result = SKIP
                     elif key == "q":
-                        raise RuntimeError("Terminating early")
+                        result = QUIT
                     elif key == "r":
-                        continue
+                        result = RETRY
                     elif key == "u":
                         ctx.update_snapshots = True
-                        continue
+                        result = RETRY
                     else:
                         # Retry if key not recognized
-                        continue
+                        result = RETRY
 
-    if not success:
+    if result != SUCCESS:
         ctx.any_failed = True
-    return success
+
+    if result == QUIT:
+        raise QuitException()
+
+    return result == SUCCESS
 
 
 def run_component_template_e2e_test(ctx: Context, template_dir: str) -> bool:
@@ -377,6 +391,9 @@ def run_e2e_tests(
             test_name, _ = splitext(basename(test_path.as_posix()))
             specpath = join(ctx.tests_dir, "specs", f"{test_name}.spec.ts")
             run_test(ctx, specpath, ["streamlit", "run", test_path.as_posix()])
+    except QuitException:
+        # Swallow the exception we raise if the user chooses to exit early.
+        pass
     finally:
         generate_mochawesome_report()
 
