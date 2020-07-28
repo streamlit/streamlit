@@ -30,10 +30,6 @@ from streamlit import file_util
 from streamlit import util
 from streamlit.config_option import ConfigOption
 
-from streamlit.logger import get_logger
-
-LOGGER = get_logger(__name__)
-
 # Config System Global State #
 
 # Descriptions of each of the possible config sections.
@@ -240,16 +236,17 @@ def _global_development_mode():
     )
 
 
-@_create_option("global.logLevel")
-def _global_log_level():
-    """Level of logging: 'error', 'warning', 'info', or 'debug'.
+_create_option(
+    "global.logLevel",
+    description="""Level of logging: 'error', 'warning', 'info', or 'debug'.
 
     Default: 'info'
-    """
-    if get_option("global.developmentMode"):
-        return "debug"
-    else:
-        return "info"
+    """,
+    deprecated=True,
+    deprecation_text="global.logLevel has been replaced with logger.logLevel",
+    expiration_date="2020-10-31",
+    replaced_by="logger.logLevel",
+)
 
 
 @_create_option("global.unitTest", visibility="hidden", type_=bool)
@@ -295,6 +292,51 @@ _create_option(
     default_val=2,
     type_=int,
 )
+
+
+# Config Section: Logger #
+_create_section("logger", "Settings to customize Streamlit log messages.")
+
+
+@_create_option("logger.datetimeFormat", type_=str)
+def _logger_datetime_format():
+    """Datetime format for date in logger message. Providing a datetime format
+    will automatically add a timestamp to all logger messages.
+
+    Default: None
+    """
+    if get_option("global.developmentMode"):
+        return "%Y-%m-%dT%H:%M:%SZ"
+    else:
+        return None
+
+
+@_create_option("logger.logLevel", type_=str)
+def _logger_log_level():
+    """Level of logging: 'error', 'warning', 'info', or 'debug'.
+
+    Default: 'info'
+    """
+    if get_option("global.developmentMode"):
+        return "debug"
+    else:
+        return "info"
+
+
+@_create_option("logger.messageFormat", type_=str)
+def _logger_message_format():
+    """String format for logging messages. If logger.datetimeFormat is set,
+    logger messages will default to `%(asctime)s.%(msecs)03d %(message)s`
+
+    Default: None
+    """
+    if get_option("global.developmentMode"):
+        return "%(asctime)s.%(msecs)03d %(levelname) -7s " "%(name)s: %(message)s"
+    elif get_option("logger.datetimeFormat"):
+        return "%(asctime)s.%(msecs)03d %(message)s"
+    else:
+        return None
+
 
 # Config Section: Client #
 
@@ -822,7 +864,7 @@ def _set_option(key, value, where_defined):
     Parameters
     ----------
     key : str
-        The key of the option, like "global.logLevel".
+        The key of the option, like "logger.logLevel".
     value
         The value of the option.
     where_defined : str
@@ -873,11 +915,17 @@ def _maybe_read_env_variable(value):
         variable.
 
     """
+
     if isinstance(value, str) and value.startswith("env:"):
         var_name = value[len("env:") :]
         env_var = os.environ.get(var_name)
 
         if env_var is None:
+            # Import logger locally to prevent circular references
+            from streamlit.logger import get_logger
+
+            LOGGER = get_logger(__name__)
+
             LOGGER.error("No environment variable called %s" % var_name)
         else:
             return _maybe_convert_to_number(env_var)
@@ -948,6 +996,11 @@ def _check_conflicts():
     #   1. window.location.port, which in dev is going to be (3000)
     #   2. the serverPort value in manifest.json, which would work, but only
     #   exists with server.liveSave.
+
+    # Import logger locally to prevent circular references
+    from streamlit.logger import get_logger
+
+    LOGGER = get_logger(__name__)
 
     if get_option("global.developmentMode"):
         assert _is_unset(

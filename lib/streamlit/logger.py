@@ -20,7 +20,9 @@ import sys
 import time
 from typing import Dict
 
+from streamlit.config import get_option as get_config_option
 from streamlit import development
+
 
 # Loggers for each name are saved here.
 LOGGERS = {}  # type: Dict[str, logging.Logger]
@@ -65,11 +67,11 @@ def setup_formatter(logger):
 
     logger.streamlit_console_handler = logging.StreamHandler()
 
-    logging.Formatter.converter = time.gmtime
-    formatter = logging.Formatter(
-        fmt=("%(asctime)s.%(msecs)03d %(levelname) -7s " "%(name)s: %(message)s"),
-        datefmt="%Y-%m-%dT%H:%M:%SZ",
-    )
+    message_format = get_config_option("logger.messageFormat")
+    datetime_format = get_config_option("logger.datetimeFormat")
+    if datetime_format:
+        logging.Formatter.converter = time.gmtime
+    formatter = logging.Formatter(fmt=message_format, datefmt=datetime_format,)
     logger.streamlit_console_handler.setFormatter(formatter)
 
     # Register the new console logger.

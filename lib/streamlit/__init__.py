@@ -117,15 +117,16 @@ from streamlit.caching import cache as cache  # noqa: F401
 _is_running_with_streamlit = False
 
 
-def _set_log_level():
-    _logger.set_log_level(_config.get_option("global.logLevel").upper())
+def _update_logger():
+    _logger.set_log_level(_config.get_option("logger.logLevel").upper())
+    _logger.setup_formatter(_LOGGER)
     _logger.init_tornado_logs()
 
 
 # Make this file only depend on config option in an asynchronous manner. This
 # avoids a race condition when another file (such as a test file) tries to pass
 # in an alternative config.
-_config.on_config_parsed(_set_log_level, True)
+_config.on_config_parsed(_update_logger, True)
 
 
 _main = _DeltaGenerator(container=_BlockPath_pb2.BlockPath.MAIN)

@@ -13,6 +13,14 @@
 # limitations under the License.
 
 
+class Error(Exception):
+    pass
+
+
+class DeprecationError(Error):
+    pass
+
+
 class NoStaticFiles(Exception):
     pass
 

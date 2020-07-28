@@ -259,6 +259,7 @@ class ConfigTest(unittest.TestCase):
                 "client",
                 "deprecation",
                 "global",
+                "logger",
                 "mapbox",
                 "runner",
                 "s3",
@@ -287,6 +288,9 @@ class ConfigTest(unittest.TestCase):
                 "global.showWarningOnDirectExecution",
                 "global.suppressDeprecationWarnings",
                 "global.unitTest",
+                "logger.datetimeFormat",
+                "logger.logLevel",
+                "logger.messageFormat",
                 "runner.magicEnabled",
                 "runner.installTracer",
                 "runner.fixMatplotlib",
@@ -353,12 +357,13 @@ class ConfigTest(unittest.TestCase):
             "server.port does not work when global.developmentMode is true.",
         )
 
-    def test_check_conflicts_server_csrf(self):
+    @patch("streamlit.logger.get_logger")
+    def test_check_conflicts_server_csrf(self, get_logger):
         config._set_option("server.enableXsrfProtection", True, "test")
         config._set_option("server.enableCORS", True, "test")
-        with patch("streamlit.config.LOGGER") as patched_logger:
-            config._check_conflicts()
-            patched_logger.warning.assert_called_once()
+        mock_logger = get_logger()
+        config._check_conflicts()
+        mock_logger.warning.assert_called_once()
 
     def test_check_conflicts_browser_serverport(self):
         config._set_option("global.developmentMode", True, "test")
@@ -517,11 +522,11 @@ class ConfigTest(unittest.TestCase):
 
     def test_global_log_level_debug(self):
         config.set_option("global.developmentMode", True)
-        self.assertEqual("debug", config.get_option("global.logLevel"))
+        self.assertEqual("debug", config.get_option("logger.logLevel"))
 
     def test_global_log_level(self):
         config.set_option("global.developmentMode", False)
-        self.assertEqual("info", config.get_option("global.logLevel"))
+        self.assertEqual("info", config.get_option("logger.logLevel"))
 
     @parameterized.expand([(True, True), (True, False), (False, False), (False, True)])
     def test_on_config_parsed(self, config_parsed, connect_signal):
