@@ -100,7 +100,7 @@ class VegaLiteMixin:
             use_container_width=use_container_width,
             **kwargs,
         )
-        return dg._enqueue("vega_lite_chart", vega_lite_chart_proto)
+        return dg._enqueue("vega_lite_chart", vega_lite_chart_proto)  # type: ignore
 
 
 def marshall(proto, data=None, spec=None, use_container_width=False, **kwargs):
