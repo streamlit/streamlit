@@ -63,7 +63,7 @@ class BokehMixin:
         """
         bokeh_chart_proto = BokehChart_pb2.BokehChart()
         bokeh_chart.marshall(bokeh_chart_proto, figure, use_container_width)
-        dg._enqueue("bokeh_chart", bokeh_chart_proto)
+        return dg._enqueue("bokeh_chart", bokeh_chart_proto)
 
 
 def marshall(proto, figure, use_container_width):
