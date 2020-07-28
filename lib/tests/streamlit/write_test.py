@@ -14,8 +14,8 @@
 
 """Streamlit Unit test."""
 
-from mock import call, patch, Mock
 from collections import namedtuple
+from unittest.mock import call, patch, Mock
 
 import time
 import unittest

@@ -13,7 +13,8 @@
 # limitations under the License.
 
 import unittest
-import mock
+from unittest import mock
+
 from watchdog import events
 
 from streamlit.watcher import event_based_file_watcher

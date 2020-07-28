@@ -14,8 +14,8 @@
 
 """Keras unit test."""
 
+from unittest.mock import patch
 import unittest
-from mock import patch
 
 try:
     from tensorflow.python.keras.utils import vis_utils
