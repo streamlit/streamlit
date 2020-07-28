@@ -20,7 +20,7 @@ import shutil
 import signal
 import subprocess
 import sys
-from contextlib import contextmanager
+from contextlib import contextmanager, AbstractContextManager
 from os.path import dirname, abspath, basename, splitext, join
 from tempfile import TemporaryFile
 from typing import List
@@ -35,6 +35,54 @@ COMPONENT_TEMPLATE_DIRS = [
 ]
 
 CREDENTIALS_FILE = os.path.expanduser("~/.streamlit/credentials.toml")
+
+
+class AsyncSubprocess(AbstractContextManager):
+    """Wraps subprocess.Popen to capture output safely."""
+
+    def __init__(self, args: List[str], cwd: str = None):
+        self.args = args
+        self.cwd = cwd
+        self._proc = None
+        self._stdout_file = None
+
+    def terminate(self) -> str:
+        """Terminate the process and return its stdout/stderr in a string."""
+        # Terminate the proess
+        self._proc.terminate()
+        self._proc.wait()
+        self._proc = None
+
+        # Read the stdout file and close it
+        self._stdout_file.seek(0)
+        stdout = self._stdout_file.read()
+        self._stdout_file.close()
+        self._stdout_file = None
+
+        return stdout
+
+    def __enter__(self):
+        # Start the process and capture its stdout/stderr output to a temp
+        # file. We do this instead of using subprocess.PIPE (which causes the
+        # Popen object to capture the output to its own internal buffer),
+        # because large amounts of output can cause it to deadlock.
+        self._stdout_file = TemporaryFile("w+")
+        self._proc = subprocess.Popen(
+            self.args,
+            cwd=self.cwd,
+            stdout=self._stdout_file,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self._proc is not None:
+            self._proc.terminate()
+            self._proc = None
+        if self._stdout_file is not None:
+            self._stdout_file.close()
+            self._stdout_file = None
 
 
 class Context:
@@ -92,9 +140,7 @@ def move_aside_file(path):
 
 def create_credentials_toml(contents):
     """Writes ~/.streamlit/credentials.toml"""
-    # Ensure our parent directory exists
     os.makedirs(dirname(CREDENTIALS_FILE), exist_ok=True)
-
     with open(CREDENTIALS_FILE, "w") as f:
         f.write(contents)
 
@@ -176,44 +222,20 @@ def run_test(
             cypress_command.extend(ctx.cypress_flags)
 
             click.echo(
-                f"{click.style('Running e2e test:', fg='yellow', bold=True)}"
+                f"{click.style('Running test:', fg='yellow', bold=True)}"
                 f"\n{click.style(' '.join(streamlit_command), fg='yellow')}"
                 f"\n{click.style(' '.join(cypress_command), fg='yellow')}"
             )
 
-            with TemporaryFile("w+") as stdout_buffer:
-                try:
-                    # Start the Streamlit script. It will continue running
-                    # until we terminate it below. We capture its output into a
-                    # temporary file, and we'll only output it if there's an
-                    # issue. (We write its stdout/stderr to a file, rather than
-                    # using subprocess.PIPE, because it produces enough output
-                    # that subprocess can deadlock :/)
-                    streamlit_proc = subprocess.Popen(
-                        streamlit_command,
-                        cwd=FRONTEND_DIR,
-                        stdout=stdout_buffer,
-                        stderr=subprocess.STDOUT,
-                        text=True,
-                    )
+            # Start the streamlit command
+            with AsyncSubprocess(streamlit_command, cwd=FRONTEND_DIR) as streamlit_proc:
+                # Run the Cypress spec to completion.
+                cypress_result = subprocess.run(
+                    cypress_command, cwd=FRONTEND_DIR, capture_output=True, text=True,
+                )
 
-                    # Run the Cypress spec to completion.
-                    cypress_result = subprocess.run(
-                        cypress_command,
-                        cwd=FRONTEND_DIR,
-                        capture_output=True,
-                        text=True,
-                    )
-                finally:
-                    # End the Streamlit process.
-                    streamlit_proc.terminate()
-
-                # Wait for the Streamlit process to complete. Then, read
-                # its output from our temporary file so we can display it
-                # if there was an error.
-                streamlit_proc.wait()
-                stdout_buffer.seek(0)
-                streamlit_stdout = stdout_buffer.read()
+                # Terminate the streamlit command and get its output
+                streamlit_stdout = streamlit_proc.terminate()
 
             if cypress_result.returncode == 0:
                 success = True
@@ -269,36 +291,20 @@ def run_component_template_e2e_test(ctx: Context, template_dir: str) -> bool:
     )
 
     # Start the template's dev server.
-    with TemporaryFile("w+") as stdout_buffer:
-        webpack_proc = subprocess.Popen(
-            ["yarn", "start"],
-            cwd=frontend_dir,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
+    with AsyncSubprocess(["yarn", "start"], cwd=frontend_dir) as webpack_proc:
+        # Run the test!
+        script_path = join(template_dir, "__init__.py")
+        spec_path = join(ROOT_DIR, "e2e/specs/component_template.spec.ts")
+        success = run_test(ctx, spec_path, ["streamlit", "run", script_path])
+
+        webpack_stdout = webpack_proc.terminate()
+
+    if not success:
+        click.echo(
+            f"{click.style('webpack output:', fg='yellow', bold=True)}"
+            f"\n{webpack_stdout}"
+            f"\n"
         )
-
-        try:
-            # Run the test!
-            script_path = join(template_dir, "__init__.py")
-            spec_path = join(ROOT_DIR, "e2e/specs/component_template.spec.ts")
-            success = run_test(ctx, spec_path, ["streamlit", "run", script_path])
-        finally:
-            # Kill the webpack server.
-            # TODO: I think we want to ensure the server is not run in "watch" mode.
-            # It's not being shut down properly.
-            webpack_proc.terminate()
-
-        webpack_proc.wait()
-        stdout_buffer.seek(0)
-        webpack_stdout = stdout_buffer.read()
-
-        if not success:
-            click.echo(
-                f"{click.style('webpack output:', fg='yellow', bold=True)}"
-                f"\n{webpack_stdout}"
-                f"\n"
-            )
 
     return success
 
@@ -367,7 +373,7 @@ def run_e2e_tests(
 
         # Test core streamlit elements
         p = pathlib.Path(join(ROOT_DIR, ctx.tests_dir_name, "scripts")).resolve()
-        for test_path in p.glob("*.py"):
+        for test_path in sorted(p.glob("*.py")):
             test_name, _ = splitext(basename(test_path.as_posix()))
             specpath = join(ctx.tests_dir, "specs", f"{test_name}.spec.ts")
             run_test(ctx, specpath, ["streamlit", "run", test_path.as_posix()])
