@@ -65,13 +65,12 @@ def setup_formatter(logger):
 
     logger.streamlit_console_handler = logging.StreamHandler()
 
-    if development.is_development_mode:
-        logging.Formatter.converter = time.gmtime
-        formatter = logging.Formatter(
-            fmt=("%(asctime)s.%(msecs)03d %(levelname) -7s " "%(name)s: %(message)s"),
-            datefmt="%Y-%m-%dT%H:%M:%SZ",
-        )
-        logger.streamlit_console_handler.setFormatter(formatter)
+    logging.Formatter.converter = time.gmtime
+    formatter = logging.Formatter(
+        fmt=("%(asctime)s.%(msecs)03d %(levelname) -7s " "%(name)s: %(message)s"),
+        datefmt="%Y-%m-%dT%H:%M:%SZ",
+    )
+    logger.streamlit_console_handler.setFormatter(formatter)
 
     # Register the new console logger.
     logger.addHandler(logger.streamlit_console_handler)
