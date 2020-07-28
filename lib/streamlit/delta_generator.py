@@ -362,11 +362,17 @@ class DeltaGenerator(
         # Warn if we're called from within an @st.cache function
         caching.maybe_show_cached_st_function_warning(self, delta_type)
 
-        # TODO: DELTAS_TYPES_THAT_MELT_DATAFRAMES mixins should fill last_index
+        # Some elements have a method.__name__ != delta_type in proto.
+        # This really matters for line_chart, bar_chart & area_chart,
+        # since add_rows() relies on method.__name__ == delta_type
+        # TODO: Fix for all elements (or the cache warning above will be wrong)
+        proto_type = delta_type
+        if proto_type in DELTAS_TYPES_THAT_MELT_DATAFRAMES:
+            proto_type = "vega_lite_chart"
 
         # Copy the marshalled proto into the overall msg proto
         msg = ForwardMsg_pb2.ForwardMsg()
-        msg_el_proto = getattr(msg.delta.new_element, delta_type)
+        msg_el_proto = getattr(msg.delta.new_element, proto_type)
         msg_el_proto.CopyFrom(element_proto)
 
         # Only enqueue message and fill in metadata if there's a container.

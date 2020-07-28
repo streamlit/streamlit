@@ -69,9 +69,7 @@ class AltairMixin:
         marshall(vega_lite_chart_proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        return dg._enqueue(
-            "vega_lite_chart", vega_lite_chart_proto, last_index=last_index
-        )
+        return dg._enqueue("line_chart", vega_lite_chart_proto, last_index=last_index)
 
     def area_chart(dg, data=None, width=0, height=0, use_container_width=True):
         """Display a area chart.
@@ -115,9 +113,7 @@ class AltairMixin:
         marshall(vega_lite_chart_proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        return dg._enqueue(
-            "vega_lite_chart", vega_lite_chart_proto, last_index=last_index
-        )
+        return dg._enqueue("area_chart", vega_lite_chart_proto, last_index=last_index)
 
     def bar_chart(dg, data=None, width=0, height=0, use_container_width=True):
         """Display a bar chart.
@@ -161,9 +157,7 @@ class AltairMixin:
         marshall(vega_lite_chart_proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        return dg._enqueue(
-            "vega_lite_chart", vega_lite_chart_proto, last_index=last_index
-        )
+        return dg._enqueue("bar_chart", vega_lite_chart_proto, last_index=last_index)
 
     def altair_chart(dg, altair_chart, width=0, use_container_width=False):
         """Display a chart using the Altair library.
