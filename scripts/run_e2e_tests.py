@@ -22,6 +22,7 @@ import subprocess
 import sys
 from contextlib import contextmanager
 from os.path import dirname, abspath, basename, splitext, join
+from tempfile import TemporaryFile
 from typing import List
 
 import click
@@ -135,7 +136,7 @@ def run_test(
     specpath: str,
     streamlit_command: List[str],
     no_credentials: bool = False,
-) -> None:
+) -> bool:
     """Run a single e2e test.
 
      An e2e test consists of a Streamlit script that produces a result, and
@@ -155,7 +156,14 @@ def run_test(
         will be created in its place. But if `no_credentials` is True, the test
         will be run without a credentials file.
 
+    Returns
+    -------
+    bool
+        True if the test succeeded.
+
     """
+    success = False
+
     # Move existing credentials file aside, and create a new one if the
     # tests call for it.
     with move_aside_file(CREDENTIALS_FILE):
@@ -171,31 +179,45 @@ def run_test(
                 f"{click.style('Running e2e test:', fg='yellow', bold=True)}"
                 f"\n{click.style(' '.join(streamlit_command), fg='yellow')}"
                 f"\n{click.style(' '.join(cypress_command), fg='yellow')}"
-                f"\n"
             )
-            try:
-                # Start the Streamlit script. It will continue running until
-                # we terminate it below. We capture its output, and we'll only
-                # output it if there's an issue.
-                streamlit_proc = subprocess.Popen(
-                    streamlit_command,
-                    cwd=FRONTEND_DIR,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                )
 
-                # Run the Cypress spec.
-                cypress_result = subprocess.run(
-                    cypress_command, cwd=FRONTEND_DIR, capture_output=True, text=True,
-                )
-            finally:
-                # Kill the Streamlit script.
-                streamlit_proc.terminate()
+            with TemporaryFile("w+") as stdout_buffer:
+                try:
+                    # Start the Streamlit script. It will continue running
+                    # until we terminate it below. We capture its output into a
+                    # temporary file, and we'll only output it if there's an
+                    # issue. (We write its stdout/stderr to a file, rather than
+                    # using subprocess.PIPE, because it produces enough output
+                    # that subprocess can deadlock :/)
+                    streamlit_proc = subprocess.Popen(
+                        streamlit_command,
+                        cwd=FRONTEND_DIR,
+                        stdout=stdout_buffer,
+                        stderr=subprocess.STDOUT,
+                        text=True,
+                    )
+
+                    # Run the Cypress spec to completion.
+                    cypress_result = subprocess.run(
+                        cypress_command,
+                        cwd=FRONTEND_DIR,
+                        capture_output=True,
+                        text=True,
+                    )
+                finally:
+                    # End the Streamlit process.
+                    streamlit_proc.terminate()
+
+                # Wait for the Streamlit process to complete. Then, read
+                # its output from our temporary file so we can display it
+                # if there was an error.
                 streamlit_proc.wait()
+                stdout_buffer.seek(0)
+                streamlit_stdout = stdout_buffer.read()
 
             if cypress_result.returncode == 0:
-                click.echo(click.style("Success!", fg="green", bold=True))
+                success = True
+                click.echo(click.style("Success!\n", fg="green", bold=True))
                 break
             else:
                 # The test failed. Print the output of the Streamlit command
@@ -203,7 +225,7 @@ def run_test(
                 click.echo(
                     f"{click.style('Failure!', fg='red', bold=True)}"
                     f"\n\n{click.style('Streamlit output:', fg='yellow', bold=True)}"
-                    f"\n{streamlit_proc.stdout.read()}"
+                    f"\n{streamlit_stdout}"
                     f"\n\n{click.style('Cypress output:', fg='yellow', bold=True)}"
                     f"\n{cypress_result.stdout}"
                     f"\n"
@@ -218,7 +240,6 @@ def run_test(
                     if key == "s":
                         break
                     elif key == "q":
-                        ctx.any_failed = True
                         raise RuntimeError("Terminating early")
                     elif key == "r":
                         continue
@@ -228,31 +249,58 @@ def run_test(
                     else:
                         # Retry if key not recognized
                         continue
-                else:
-                    ctx.any_failed = True
+
+    if not success:
+        ctx.any_failed = True
+    return success
 
 
-def run_component_template_e2e_test(ctx: Context, template_dir: str):
+def run_component_template_e2e_test(ctx: Context, template_dir: str) -> bool:
     """Build a component template and run its e2e tests."""
     frontend_dir = join(template_dir, "frontend")
 
     # Install the template's npm dependencies into its node_modules.
-    subprocess.run(["yarn", "install"], cwd=frontend_dir, check=True)
+    subprocess.run(
+        ["yarn", "install"],
+        cwd=frontend_dir,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
 
     # Start the template's dev server.
-    webpack_proc = subprocess.Popen(["yarn", "start"], cwd=frontend_dir)
+    with TemporaryFile("w+") as stdout_buffer:
+        webpack_proc = subprocess.Popen(
+            ["yarn", "start"],
+            cwd=frontend_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
 
-    try:
-        # Run the test!
-        script_path = join(template_dir, "__init__.py")
-        spec_path = join(ROOT_DIR, "e2e/specs/component_template.spec.ts")
-        run_test(ctx, spec_path, ["streamlit", "run", script_path])
-    finally:
-        # Kill the webpack server.
-        # TODO: I think we want to ensure the server is not run in "watch" mode.
-        # It's not being shut down properly.
-        webpack_proc.terminate()
+        try:
+            # Run the test!
+            script_path = join(template_dir, "__init__.py")
+            spec_path = join(ROOT_DIR, "e2e/specs/component_template.spec.ts")
+            success = run_test(ctx, spec_path, ["streamlit", "run", script_path])
+        finally:
+            # Kill the webpack server.
+            # TODO: I think we want to ensure the server is not run in "watch" mode.
+            # It's not being shut down properly.
+            webpack_proc.terminate()
+
         webpack_proc.wait()
+        stdout_buffer.seek(0)
+        webpack_stdout = stdout_buffer.read()
+
+        if not success:
+            click.echo(
+                f"{click.style('webpack output:', fg='yellow', bold=True)}"
+                f"\n{webpack_stdout}"
+                f"\n"
+            )
+
+    return success
 
 
 @click.command()
