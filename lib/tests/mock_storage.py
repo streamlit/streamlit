@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest import mock
 import hashlib
 
 import tornado.gen
-import mock
 
 from streamlit.storage.abstract_storage import AbstractStorage
 

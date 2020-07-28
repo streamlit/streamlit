@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from mock import patch, mock_open, MagicMock
+from unittest.mock import patch, mock_open, MagicMock
 import errno
 import os
 import pytest

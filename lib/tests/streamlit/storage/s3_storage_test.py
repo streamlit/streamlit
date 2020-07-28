@@ -16,10 +16,9 @@
 
 Copyright 2019 Streamlit Inc. All rights reserved.
 """
+from unittest.mock import patch
 import hashlib
 import unittest
-
-from mock import patch
 
 from streamlit.storage.s3_storage import S3Storage
 from streamlit.config import set_option

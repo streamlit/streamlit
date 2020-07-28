@@ -15,7 +15,7 @@
 """Streamlit Unit test."""
 from io import BytesIO
 
-from mock import patch
+from unittest.mock import patch
 import json
 import os
 import io

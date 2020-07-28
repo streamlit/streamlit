@@ -14,9 +14,9 @@
 
 """version unit test."""
 
+from unittest import mock
 import unittest
 
-import mock
 import requests_mock
 from packaging.version import Version as PkgVersion
 
