@@ -14,8 +14,8 @@
 
 """Unit tests for MediaFileManager"""
 
+from unittest import mock
 import unittest
-import mock
 import random
 import time
 

@@ -13,15 +13,13 @@
 # limitations under the License.
 
 """Config System Unittest."""
+from unittest.mock import MagicMock, mock_open, patch
 import copy
 import os
 import textwrap
 import unittest
 
 import pytest
-from mock import MagicMock
-from mock import mock_open
-from mock import patch
 from parameterized import parameterized
 
 from streamlit import config
