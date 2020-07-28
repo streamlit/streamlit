@@ -14,8 +14,56 @@
 
 """A Python wrapper around Bokeh."""
 
+from streamlit.proto import BokehChart_pb2
 from bokeh.embed import json_item
 import json
+
+
+class BokehMixin:
+    def bokeh_chart(dg, figure, use_container_width=False):
+        """Display an interactive Bokeh chart.
+
+        Bokeh is a charting library for Python. The arguments to this function
+        closely follow the ones for Bokeh's `show` function. You can find
+        more about Bokeh at https://bokeh.pydata.org.
+
+        Parameters
+        ----------
+        figure : bokeh.plotting.figure.Figure
+            A Bokeh figure to plot.
+
+        use_container_width : bool
+            If True, set the chart width to the column width. This takes
+            precedence over Bokeh's native `width` value.
+
+        To show Bokeh charts in Streamlit, just call `st.bokeh_chart`
+        wherever you would call Bokeh's `show`.
+
+        Example
+        -------
+        >>> import streamlit as st
+        >>> from bokeh.plotting import figure
+        >>>
+        >>> x = [1, 2, 3, 4, 5]
+        >>> y = [6, 7, 2, 4, 5]
+        >>>
+        >>> p = figure(
+        ...     title='simple line example',
+        ...     x_axis_label='x',
+        ...     y_axis_label='y')
+        ...
+        >>> p.line(x, y, legend='Trend', line_width=2)
+        >>>
+        >>> st.bokeh_chart(p, use_container_width=True)
+
+        .. output::
+           https://share.streamlit.io/0.56.0-xTAd/index.html?id=Fdhg51uMbGMLRRxXV6ubzp
+           height: 600px
+
+        """
+        bokeh_chart_proto = BokehChart_pb2.BokehChart()
+        bokeh_chart.marshall(bokeh_chart_proto, figure, use_container_width)
+        dg._enqueue("bokeh_chart", bokeh_chart_proto)
 
 
 def marshall(proto, figure, use_container_width):

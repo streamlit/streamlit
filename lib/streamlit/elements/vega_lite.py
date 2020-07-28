@@ -19,9 +19,88 @@ import json
 import streamlit.elements.lib.dicttools as dicttools
 import streamlit.elements.data_frame_proto as data_frame_proto
 
+from streamlit.proto import VegaLiteChart_pb2
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
+
+
+class VegaLiteMixin:
+    def vega_lite_chart(
+        dg, data=None, spec=None, width=0, use_container_width=False, **kwargs,
+    ):
+        """Display a chart using the Vega-Lite library.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
+            or None
+            Either the data to be plotted or a Vega-Lite spec containing the
+            data (which more closely follows the Vega-Lite API).
+
+        spec : dict or None
+            The Vega-Lite spec for the chart. If the spec was already passed in
+            the previous argument, this must be set to None. See
+            https://vega.github.io/vega-lite/docs/ for more info.
+
+        width : number
+            Deprecated. If != 0 (default), will show an alert.
+            From now on you should set the width directly in the Vega-Lite
+            spec. Please refer to the Vega-Lite documentation for details.
+
+        use_container_width : bool
+            If True, set the chart width to the column width. This takes
+            precedence over Vega-Lite's native `width` value.
+
+        **kwargs : any
+            Same as spec, but as keywords.
+
+        Example
+        -------
+
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
+        >>> df = pd.DataFrame(
+        ...     np.random.randn(200, 3),
+        ...     columns=['a', 'b', 'c'])
+        >>>
+        >>> st.vega_lite_chart(df, {
+        ...     'mark': {'type': 'circle', 'tooltip': True},
+        ...     'encoding': {
+        ...         'x': {'field': 'a', 'type': 'quantitative'},
+        ...         'y': {'field': 'b', 'type': 'quantitative'},
+        ...         'size': {'field': 'c', 'type': 'quantitative'},
+        ...         'color': {'field': 'c', 'type': 'quantitative'},
+        ...     },
+        ... })
+
+        .. output::
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
+           height: 200px
+
+        Examples of Vega-Lite usage without Streamlit can be found at
+        https://vega.github.io/vega-lite/examples/. Most of those can be easily
+        translated to the syntax shown above.
+
+        """
+        vega_lite_chart_proto = VegaLiteChart_pb2.VegaLiteChart()
+
+        if width != 0:
+            import streamlit as st
+
+            st.warning(
+                "The `width` argument in `st.vega_lite_chart` is deprecated and will be removed on 2020-03-04. To set the width, you should instead use Vega-Lite's native `width` argument as described at https://vega.github.io/vega-lite/docs/size.html"
+            )
+
+        marshall(
+            vega_lite_chart_proto,
+            data,
+            spec,
+            use_container_width=use_container_width,
+            **kwargs,
+        )
+        dg._enqueue("vega_lite_chart", vega_lite_chart_proto)
 
 
 def marshall(proto, data=None, spec=None, use_container_width=False, **kwargs):

@@ -21,6 +21,7 @@ from streamlit import caching
 from streamlit import type_util
 
 from streamlit.logger import get_logger
+from streamlit.proto import PlotlyChart_pb2
 
 LOGGER = get_logger(__name__)
 
@@ -36,6 +37,122 @@ SHARING_MODES = set(
         "secret",
     ]
 )
+
+
+class PlotlyMixin:
+    def plotly_chart(
+        dg,
+        figure_or_data,
+        width=0,
+        height=0,
+        use_container_width=False,
+        sharing="streamlit",
+        **kwargs,
+    ):
+        """Display an interactive Plotly chart.
+
+        Plotly is a charting library for Python. The arguments to this function
+        closely follow the ones for Plotly's `plot()` function. You can find
+        more about Plotly at https://plot.ly/python.
+
+        Parameters
+        ----------
+        figure_or_data : plotly.graph_objs.Figure, plotly.graph_objs.Data,
+            dict/list of plotly.graph_objs.Figure/Data
+
+            See https://plot.ly/python/ for examples of graph descriptions.
+
+        width : int
+            Deprecated. If != 0 (default), will show an alert.
+            From now on you should set the width directly in the figure.
+            Please refer to the Plotly documentation for details.
+
+        height : int
+            Deprecated. If != 0 (default), will show an alert.
+            From now on you should set the height directly in the figure.
+            Please refer to the Plotly documentation for details.
+
+        use_container_width : bool
+            If True, set the chart width to the column width. This takes
+            precedence over the figure's native `width` value.
+
+        sharing : {'streamlit', 'private', 'secret', 'public'}
+            Use 'streamlit' to insert the plot and all its dependencies
+            directly in the Streamlit app, which means it works offline too.
+            This is the default.
+            Use any other sharing mode to send the app to Plotly's servers,
+            and embed the result into the Streamlit app. See
+            https://plot.ly/python/privacy/ for more. Note that these sharing
+            modes require a Plotly account.
+
+        **kwargs
+            Any argument accepted by Plotly's `plot()` function.
+
+
+        To show Plotly charts in Streamlit, just call `st.plotly_chart`
+        wherever you would call Plotly's `py.plot` or `py.iplot`.
+
+        Example
+        -------
+
+        The example below comes straight from the examples at
+        https://plot.ly/python:
+
+        >>> import streamlit as st
+        >>> import plotly.figure_factory as ff
+        >>> import numpy as np
+        >>>
+        >>> # Add histogram data
+        >>> x1 = np.random.randn(200) - 2
+        >>> x2 = np.random.randn(200)
+        >>> x3 = np.random.randn(200) + 2
+        >>>
+        >>> # Group data together
+        >>> hist_data = [x1, x2, x3]
+        >>>
+        >>> group_labels = ['Group 1', 'Group 2', 'Group 3']
+        >>>
+        >>> # Create distplot with custom bin_size
+        >>> fig = ff.create_distplot(
+        ...         hist_data, group_labels, bin_size=[.1, .25, .5])
+        >>>
+        >>> # Plot!
+        >>> st.plotly_chart(fig, use_container_width=True)
+
+        .. output::
+           https://share.streamlit.io/0.56.0-xTAd/index.html?id=TuP96xX8JnsoQeUGAPjkGQ
+           height: 400px
+
+        """
+        # NOTE: "figure_or_data" is the name used in Plotly's .plot() method
+        # for their main parameter. I don't like the name, but it's best to
+        # keep it in sync with what Plotly calls it.
+        import streamlit.elements.plotly_chart as plotly_chart
+
+        if width != 0 and height != 0:
+            import streamlit as st
+
+            st.warning(
+                "The `width` and `height` arguments in `st.plotly_chart` are deprecated and will be removed on 2020-03-04. To set these values, you should instead use Plotly's native arguments as described at https://plot.ly/python/setting-graph-size/"
+            )
+        elif width != 0:
+            import streamlit as st
+
+            st.warning(
+                "The `width` argument in `st.plotly_chart` is deprecated and will be removed on 2020-03-04. To set the width, you should instead use Plotly's native `width` argument as described at https://plot.ly/python/setting-graph-size/"
+            )
+        elif height != 0:
+            import streamlit as st
+
+            st.warning(
+                "The `height` argument in `st.plotly_chart` is deprecated and will be removed on 2020-03-04. To set the height, you should instead use Plotly's native `height` argument as described at https://plot.ly/python/setting-graph-size/"
+            )
+
+        plotly_chart_proto = PlotlyChart_pb2.PlotlyChart()
+        marshall(
+            plotly_chart_proto, figure_or_data, use_container_width, sharing, **kwargs
+        )
+        dg._enqueue("plotly_chart", plotly_chart_proto)
 
 
 def marshall(proto, figure_or_data, use_container_width, sharing, **kwargs):
