@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-import * as format from "./format"
+import * as DateTime from "./DateTime"
 
-test("class toFormattedString function with exponential notation", () => {
-  expect(format.toFormattedString(4.2e-9)).toBe("0.0000")
-  expect(format.toFormattedString(4.2657457627118644e-9)).toBe("0.0000")
+test("class Duration constructor", () => {
+  const duration = new format.Duration(1234)
+  expect(duration.getTime()).toBe(1234)
 })

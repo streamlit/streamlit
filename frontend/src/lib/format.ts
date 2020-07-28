@@ -18,42 +18,26 @@
 /**
  * Text formatting utilities
  */
-import moment from "moment"
+import moment from "moment-timezone"
+import momentDuration from "moment"
 import "moment-duration-format"
 import numbro from "numbro"
-
-class Duration {
-  private readonly millis: number
-
-  constructor(millis: number) {
-    this.millis = millis
-  }
-
-  getTime(): number {
-    return this.millis
-  }
-}
+import { DateTimeHandler, Duration } from "lib/DateTime"
 
 class Format {
-  static nanosToDate(nanos: number): Date {
-    return new Date(nanos / 1e6)
-  }
-
-  static nanosToDuration(nanos: number): Duration {
-    return new Duration(nanos / 1e6)
-  }
-
-  static dateToString(date: Date): string {
-    const m = moment(date)
-    let format = "lll"
+  static dateToString(date: Date | moment.Moment): string {
+    const m: moment.Moment =
+      date instanceof Date ? DateTimeHandler.moment(date) : date
+    let format = "lll z"
     if (m.hour() === 0 && m.minute() === 0 && m.second() === 0) {
-      format = "ll"
+      format = "ll z"
     }
+
     return m.format(format)
   }
 
   static durationToString(duration: Duration): string {
-    return moment.duration(duration.getTime()).format()
+    return momentDuration.duration(duration.getTime()).format()
   }
 }
 
@@ -64,7 +48,7 @@ function toFormattedString(x: any): string {
   if (isFloat(x)) {
     return numbro(x).format("0,0.0000")
   }
-  if (x instanceof Date) {
+  if (x instanceof Date || moment.isMoment(x)) {
     return Format.dateToString(x)
   }
   if (x instanceof Duration) {

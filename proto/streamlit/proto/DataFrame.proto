@@ -83,10 +83,8 @@ message MultiIndex {
   // bool verify_integrity = 6;
 }
 
-// A date represented internally as nano second epoch int64. See:
-// https://pandas.pydata.org/pandas-docs/stable/generated/pandas.DatetimeIndex.html
 message DatetimeIndex {
-  Int64Array data = 1;
+  StringArray data = 1;
 }
 
 // A time interval represented internally as nano second epoch int64. See:
@@ -107,8 +105,17 @@ message Float64Index {
   DoubleArray data = 1;
 }
 
+message Datetime {
+  int64 datetime = 1;
+  string timezone = 2;
+}
+
 message StringArray {
   repeated string data = 1;
+}
+
+message DatetimeArray {
+  repeated Datetime data = 1;
 }
 
 message DoubleArray {
@@ -151,7 +158,7 @@ message AnyArray {
     StringArray strings = 1;
     DoubleArray doubles = 2;
     Int64Array int64s = 3;
-    Int64Array datetimes = 4;
+    DatetimeArray datetimes = 4;
     Int64Array timedeltas = 5;
   }
 }

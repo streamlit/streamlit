@@ -133,7 +133,7 @@ class DataFrameProtoTest(unittest.TestCase):
             start="2019/04/01 10:00", end="2019/04/01 12:00", freq="H"
         )
         proto = Index()
-        obj_to_patch = "streamlit.elements.data_frame_proto.tzlocal.get_localzone"
+        # TODO UPDATE TEST
         with patch(obj_to_patch) as p:
             p.return_value = "America/Los_Angeles"
             data_frame_proto._marshall_index(df_dt, proto)
@@ -233,7 +233,7 @@ class DataFrameProtoTest(unittest.TestCase):
         dt_data = pd.Series([np.datetime64("2019-04-09T12:34:56")])
         dt_proto = AnyArray()
 
-        obj_to_patch = "streamlit.elements.data_frame_proto.tzlocal.get_localzone"
+        # TODO UPDATE TEST
         with patch(obj_to_patch) as p:
             p.return_value = "America/Los_Angeles"
             data_frame_proto._marshall_any_array(dt_data, dt_proto)

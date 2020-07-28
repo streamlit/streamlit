@@ -59,6 +59,7 @@ import subprocess
 import platform
 import os
 from typing import Any, List, Tuple, Type
+from datetime import datetime
 
 # This used to be pkg_resources.require('streamlit') but it would cause
 # pex files to fail. See #394 for more details.
@@ -101,6 +102,7 @@ from streamlit import source_util as _source_util
 from streamlit import string_util as _string_util
 from streamlit import type_util as _type_util
 from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
+from streamlit.elements.datetime import make_datetime_proto
 from streamlit.report_thread import add_report_ctx as _add_report_ctx
 from streamlit.report_thread import get_report_ctx as _get_report_ctx
 from streamlit.errors import StreamlitAPIException
@@ -404,6 +406,8 @@ def write(*args, **kwargs):
             elif _type_util.is_pydeck(arg):
                 flush_buffer()
                 pydeck_chart(arg)
+            elif isinstance(arg, datetime):
+                make_datetime_proto(arg)
             else:
                 string_buffer.append("`%s`" % str(arg).replace("`", "\\`"))
 

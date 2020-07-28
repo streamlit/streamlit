@@ -20,7 +20,9 @@ import tzlocal
 from collections import namedtuple
 
 from streamlit import type_util
+from streamlit import config
 from streamlit.logger import get_logger
+from streamlit.elements.datetime import make_datetime_proto
 
 LOGGER = get_logger(__name__)
 
@@ -233,10 +235,9 @@ def _marshall_index(pandas_index, proto_index):
         for label in index_codes:
             proto_index.multi_index.labels.add().data.extend(label)
     elif type(pandas_index) == pd.DatetimeIndex:
-        if pandas_index.tz is None:
-            current_zone = tzlocal.get_localzone()
-            pandas_index = pandas_index.tz_localize(current_zone)
-        proto_index.datetime_index.data.data.extend(pandas_index.astype(np.int64))
+        proto_index.datetime_index.data.data.extend(
+            pandas_index.apply(lambda x: x.isoformat())
+        )
     elif type(pandas_index) == pd.TimedeltaIndex:
         proto_index.timedelta_index.data.data.extend(pandas_index.astype(np.int64))
     elif type(pandas_index) == pd.Int64Index:
@@ -286,19 +287,11 @@ def _marshall_any_array(pandas_array, proto_array):
         proto_array.int64s.data.extend(pandas_array)
     elif pandas_array.dtype == np.object:
         proto_array.strings.data.extend(map(str, pandas_array))
-    # Setting a timezone changes (dtype, dtype.type) from
-    #   'datetime64[ns]', <class 'numpy.datetime64'>
-    # to
-    #   datetime64[ns, UTC], <class 'pandas._libs.tslibs.timestamps.Timestamp'>
     elif pandas_array.dtype.name.startswith("datetime64"):
-        # TODO(armando): Convert eveything to UTC not local timezone.
-        if pandas_array.dt.tz is None:
-            current_zone = tzlocal.get_localzone()
-            pandas_array = pandas_array.dt.tz_localize(current_zone)
-        proto_array.datetimes.data.extend(pandas_array.astype(np.int64))
+        d = [make_datetime_proto(x) for x in pandas_array]
+        proto_array.datetimes.data.extend(d)
     else:
         raise NotImplementedError("Dtype %s not understood." % pandas_array.dtype)
-
 
 def add_rows(delta1, delta2, name=None):
     """Concat the DataFrame in delta2 to the DataFrame in delta1.
