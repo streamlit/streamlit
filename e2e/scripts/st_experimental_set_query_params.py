@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.components.v1 import declare_component
+import streamlit as st
 
-component = declare_component("foo", url="http://not.a.url")
+set_query_params = st.button("Set current query params")
+
+if set_query_params:
+    st.experimental_set_query_params(
+        show_map=True, number_of_countries=2, selected=["asia", "america"],
+    )

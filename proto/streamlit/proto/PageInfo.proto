@@ -16,16 +16,8 @@
 
 syntax = "proto3";
 
-message ArrowTable {
-  bytes data = 1;
-  bytes index = 2;
-  bytes columns = 3;
-  Styler styler = 5;
-}
-
-message Styler {
-  string uuid = 1;
-  string caption = 2;
-  string styles = 3;
-  bytes display_values = 4;
+// Message used to update page metadata.
+message PageInfo {
+  // The page's query string, if the user decided to set it.
+  string query_string = 1;
 }
