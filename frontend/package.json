@@ -52,6 +52,7 @@
     "mapbox-gl": "^1.7.0",
     "moment": "^2.22.2",
     "moment-duration-format": "^2.3.2",
+    "moment-timezone": "^0.5.31",
     "node-emoji": "^1.10.0",
     "node-sass": "^4.12.0",
     "numbro": "^2.1.2",
