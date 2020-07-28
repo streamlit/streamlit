@@ -20,7 +20,57 @@ from typing import Any, Dict
 
 import pandas as pd
 
+from streamlit.proto import DeckGlJsonChart_pb2
 import streamlit.elements.deck_gl_json_chart as deck_gl_json_chart
+
+
+class MapMixin:
+    def map(dg, data=None, zoom=None, use_container_width=True):
+        """Display a map with points on it.
+
+        This is a wrapper around st.pydeck_chart to quickly create scatterplot
+        charts on top of a map, with auto-centering and auto-zoom.
+
+        When using this command, we advise all users to use a personal Mapbox
+        token. This ensures the map tiles used in this chart are more
+        robust. You can do this with the mapbox.token config option.
+
+        To get a token for yourself, create an account at
+        https://mapbox.com. It's free! (for moderate usage levels) See
+        https://docs.streamlit.io/en/latest/cli.html#view-all-config-options for more
+        info on how to set config options.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
+            or None
+            The data to be plotted. Must have columns called 'lat', 'lon',
+            'latitude', or 'longitude'.
+        zoom : int
+            Zoom level as specified in
+            https://wiki.openstreetmap.org/wiki/Zoom_levels
+
+        Example
+        -------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
+        >>> df = pd.DataFrame(
+        ...     np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
+        ...     columns=['lat', 'lon'])
+        >>>
+        >>> st.map(df)
+
+        .. output::
+           https://share.streamlit.io/0.53.0-SULT/index.html?id=9gTiomqPEbvHY2huTLoQtH
+           height: 600px
+
+        """
+        map_proto = DeckGlJsonChart_pb2.DeckGlJsonChart()
+        map_proto.json = to_deckgl_json(data, zoom)
+        map_proto.use_container_width = use_container_width
+        return dg._enqueue("deck_gl_json_chart", map_proto)  # type: ignore
+
 
 # Map used as the basis for st.map.
 _DEFAULT_MAP = dict(deck_gl_json_chart.EMPTY_MAP)  # type: Dict[str, Any]

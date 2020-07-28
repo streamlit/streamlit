@@ -61,6 +61,9 @@ from streamlit.elements.bokeh_chart import BokehMixin
 from streamlit.elements.graphviz_chart import GraphvizMixin
 from streamlit.elements.plotly_chart import PlotlyMixin
 from streamlit.elements.vega_lite import VegaLiteMixin
+from streamlit.elements.deck_gl import DeckGlMixin
+from streamlit.elements.deck_gl_json_chart import PydeckMixin
+from streamlit.elements.map import MapMixin
 
 LOGGER = get_logger(__name__)
 
@@ -210,11 +213,14 @@ class DeltaGenerator(
     BokehMixin,
     ButtonMixin,
     DataFrameMixin,
+    DeckGlMixin,
     ExceptionMixin,
     GraphvizMixin,
     HelpMixin,
     MarkdownMixin,
+    MapMixin,
     PlotlyMixin,
+    PydeckMixin,
     JsonMixin,
     TextMixin,
     VegaLiteMixin,
@@ -2092,276 +2098,6 @@ class DeltaGenerator(
         """
         # The protobuf needs something to be set
         element.empty.unused = True
-
-    @_with_element
-    def map(self, element, data=None, zoom=None, use_container_width=True):
-        """Display a map with points on it.
-
-        This is a wrapper around st.pydeck_chart to quickly create scatterplot
-        charts on top of a map, with auto-centering and auto-zoom.
-
-        When using this command, we advise all users to use a personal Mapbox
-        token. This ensures the map tiles used in this chart are more
-        robust. You can do this with the mapbox.token config option.
-
-        To get a token for yourself, create an account at
-        https://mapbox.com. It's free! (for moderate usage levels) See
-        https://docs.streamlit.io/en/latest/cli.html#view-all-config-options for more
-        info on how to set config options.
-
-        Parameters
-        ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
-            or None
-            The data to be plotted. Must have columns called 'lat', 'lon',
-            'latitude', or 'longitude'.
-        zoom : int
-            Zoom level as specified in
-            https://wiki.openstreetmap.org/wiki/Zoom_levels
-
-        Example
-        -------
-        >>> import pandas as pd
-        >>> import numpy as np
-        >>>
-        >>> df = pd.DataFrame(
-        ...     np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
-        ...     columns=['lat', 'lon'])
-        >>>
-        >>> st.map(df)
-
-        .. output::
-           https://share.streamlit.io/0.53.0-SULT/index.html?id=9gTiomqPEbvHY2huTLoQtH
-           height: 600px
-
-        """
-        import streamlit.elements.map as streamlit_map
-
-        element.deck_gl_json_chart.json = streamlit_map.to_deckgl_json(data, zoom)
-        element.deck_gl_json_chart.use_container_width = use_container_width
-
-    @_with_element
-    def deck_gl_chart(self, element, spec=None, use_container_width=False, **kwargs):
-        """Draw a map chart using the Deck.GL library.
-
-        This API closely follows Deck.GL's JavaScript API
-        (https://deck.gl/#/documentation), with a few small adaptations and
-        some syntax sugar.
-
-        When using this command, we advise all users to use a personal Mapbox
-        token. This ensures the map tiles used in this chart are more
-        robust. You can do this with the mapbox.token config option.
-
-        To get a token for yourself, create an account at
-        https://mapbox.com. It's free! (for moderate usage levels) See
-        https://docs.streamlit.io/en/latest/cli.html#view-all-config-options for more
-        info on how to set config options.
-
-        Parameters
-        ----------
-
-        spec : dict
-            Keys in this dict can be:
-
-            - Anything accepted by Deck.GL's top level element, such as
-              "viewport", "height", "width".
-
-            - "layers": a list of dicts containing information to build a new
-              Deck.GL layer in the map. Each layer accepts the following keys:
-
-                - "data" : DataFrame
-                  The data for the current layer.
-
-                - "type" : str
-                  One of the Deck.GL layer types that are currently supported
-                  by Streamlit: ArcLayer, GridLayer, HexagonLayer, LineLayer,
-                  PointCloudLayer, ScatterplotLayer, ScreenGridLayer,
-                  TextLayer.
-
-                - Plus anything accepted by that layer type. The exact keys that
-                  are accepted depend on the "type" field, above. For example, for
-                  ScatterplotLayer you can set fields like "opacity", "filled",
-                  "stroked", and so on.
-
-                  In addition, Deck.GL"s documentation for ScatterplotLayer
-                  shows you can use a "getRadius" field to individually set
-                  the radius of each circle in the plot. So here you would
-                  set "getRadius": "my_column" where "my_column" is the name
-                  of the column containing the radius data.
-
-                  For things like "getPosition", which expect an array rather
-                  than a scalar value, we provide alternates that make the
-                  API simpler to use with dataframes:
-
-                  - Instead of "getPosition" : use "getLatitude" and
-                    "getLongitude".
-                  - Instead of "getSourcePosition" : use "getLatitude" and
-                    "getLongitude".
-                  - Instead of "getTargetPosition" : use "getTargetLatitude"
-                    and "getTargetLongitude".
-                  - Instead of "getColor" : use "getColorR", "getColorG",
-                    "getColorB", and (optionally) "getColorA", for red,
-                    green, blue and alpha.
-                  - Instead of "getSourceColor" : use the same as above.
-                  - Instead of "getTargetColor" : use "getTargetColorR", etc.
-
-        use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over the figure's native `width` value.
-
-        **kwargs : any
-            Same as spec, but as keywords. Keys are "unflattened" at the
-            underscore characters. For example, foo_bar_baz=123 becomes
-            foo={'bar': {'bar': 123}}.
-
-        Example
-        -------
-        >>> st.deck_gl_chart(
-        ...     viewport={
-        ...         'latitude': 37.76,
-        ...         'longitude': -122.4,
-        ...         'zoom': 11,
-        ...         'pitch': 50,
-        ...     },
-        ...     layers=[{
-        ...         'type': 'HexagonLayer',
-        ...         'data': df,
-        ...         'radius': 200,
-        ...         'elevationScale': 4,
-        ...         'elevationRange': [0, 1000],
-        ...         'pickable': True,
-        ...         'extruded': True,
-        ...     }, {
-        ...         'type': 'ScatterplotLayer',
-        ...         'data': df,
-        ...     }])
-        ...
-
-        .. output::
-           https://share.streamlit.io/0.50.0-td2L/index.html?id=3GfRygWqxuqB5UitZLjz9i
-           height: 530px
-
-        """
-
-        suppress_deprecation_warning = config.get_option(
-            "global.suppressDeprecationWarnings"
-        )
-        if not suppress_deprecation_warning:
-            import streamlit as st
-
-            st.warning(
-                """
-                The `deck_gl_chart` widget is deprecated and will be removed on
-                2020-05-01. To render a map, you should use `st.pydeck_chart` widget.
-            """
-            )
-
-        import streamlit.elements.deck_gl as deck_gl
-
-        deck_gl.marshall(element.deck_gl_chart, spec, use_container_width, **kwargs)
-
-    @_with_element
-    def pydeck_chart(self, element, pydeck_obj=None, use_container_width=False):
-        """Draw a chart using the PyDeck library.
-
-        This supports 3D maps, point clouds, and more! More info about PyDeck
-        at https://deckgl.readthedocs.io/en/latest/.
-
-        These docs are also quite useful:
-
-        - DeckGL docs: https://github.com/uber/deck.gl/tree/master/docs
-        - DeckGL JSON docs: https://github.com/uber/deck.gl/tree/master/modules/json
-
-        When using this command, we advise all users to use a personal Mapbox
-        token. This ensures the map tiles used in this chart are more
-        robust. You can do this with the mapbox.token config option.
-
-        To get a token for yourself, create an account at
-        https://mapbox.com. It's free! (for moderate usage levels) See
-        https://docs.streamlit.io/en/latest/cli.html#view-all-config-options for more
-        info on how to set config options.
-
-        Parameters
-        ----------
-        spec: pydeck.Deck or None
-            Object specifying the PyDeck chart to draw.
-
-        Example
-        -------
-        Here's a chart using a HexagonLayer and a ScatterplotLayer on top of
-        the light map style:
-
-        >>> df = pd.DataFrame(
-        ...    np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
-        ...    columns=['lat', 'lon'])
-        >>>
-        >>> st.pydeck_chart(pdk.Deck(
-        ...     map_style='mapbox://styles/mapbox/light-v9',
-        ...     initial_view_state=pdk.ViewState(
-        ...         latitude=37.76,
-        ...         longitude=-122.4,
-        ...         zoom=11,
-        ...         pitch=50,
-        ...     ),
-        ...     layers=[
-        ...         pdk.Layer(
-        ...            'HexagonLayer',
-        ...            data=df,
-        ...            get_position='[lon, lat]',
-        ...            radius=200,
-        ...            elevation_scale=4,
-        ...            elevation_range=[0, 1000],
-        ...            pickable=True,
-        ...            extruded=True,
-        ...         ),
-        ...         pdk.Layer(
-        ...             'ScatterplotLayer',
-        ...             data=df,
-        ...             get_position='[lon, lat]',
-        ...             get_color='[200, 30, 0, 160]',
-        ...             get_radius=200,
-        ...         ),
-        ...     ],
-        ... ))
-
-        .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=ASTdExBpJ1WxbGceneKN1i
-           height: 530px
-
-        """
-        import streamlit.elements.deck_gl_json_chart as deck_gl_json_chart
-
-        deck_gl_json_chart.marshall(element, pydeck_obj, use_container_width)
-
-    @_with_element
-    def table(self, element, data=None):
-        """Display a static table.
-
-        This differs from `st.dataframe` in that the table in this case is
-        static: its entire contents are just laid out directly on the page.
-
-        Parameters
-        ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
-            or None
-            The table data.
-
-        Example
-        -------
-        >>> df = pd.DataFrame(
-        ...    np.random.randn(10, 5),
-        ...    columns=('col %d' % i for i in range(5)))
-        ...
-        >>> st.table(df)
-
-        .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=KfZvDMprL4JFKXbpjD3fpq
-           height: 480px
-
-        """
-        import streamlit.elements.data_frame_proto as data_frame_proto
-
-        data_frame_proto.marshall_data_frame(data, element.table)
 
     def add_rows(self, data=None, **kwargs):
         """Concatenate a dataframe to the bottom of the current one.

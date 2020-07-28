@@ -81,9 +81,38 @@ class DataFrameMixin:
         data_frame_proto = DataFrame_pb2.DataFrame()
         marshall_data_frame(data, data_frame_proto)
 
-        return dg._enqueue(
+        return dg._enqueue(  # type: ignore
             "data_frame", data_frame_proto, element_width=width, element_height=height,
         )
+
+    def table(dg, data=None):
+        """Display a static table.
+
+        This differs from `st.dataframe` in that the table in this case is
+        static: its entire contents are just laid out directly on the page.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
+            or None
+            The table data.
+
+        Example
+        -------
+        >>> df = pd.DataFrame(
+        ...    np.random.randn(10, 5),
+        ...    columns=('col %d' % i for i in range(5)))
+        ...
+        >>> st.table(df)
+
+        .. output::
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=KfZvDMprL4JFKXbpjD3fpq
+           height: 480px
+
+        """
+        table_proto = DataFrame_pb2.DataFrame()
+        marshall_data_frame(data, table_proto)
+        return dg._enqueue("table", table_proto)  # type: ignore
 
 
 def marshall_data_frame(data, proto_df):
