@@ -66,6 +66,13 @@ _FFI_TYPE_NAMES = [
     "builtins.CompiledFFI",
 ]
 
+# KERAS objects can be any of these types:
+_KERAS_TYPE_NAMES = [
+    "keras.engine.training.Model",
+    "tensorflow.python.keras.engine.training.Model",
+    "tensorflow.python.keras.engine.functional.Functional",
+]
+
 
 Context = collections.namedtuple("Context", ["globals", "cells", "varnames"])
 
@@ -503,10 +510,7 @@ class _CodeHasher:
         ):
             return self.to_bytes([obj.detach().numpy(), obj.grad])
 
-        elif type_util.is_type(obj, "keras.engine.training.Model"):
-            return self.to_bytes(id(obj))
-
-        elif type_util.is_type(obj, "tensorflow.python.keras.engine.training.Model"):
+        elif any(type_util.is_type(obj, typename) for typename in _KERAS_TYPE_NAMES):
             return self.to_bytes(id(obj))
 
         elif type_util.is_type(
