@@ -20,7 +20,7 @@ import shutil
 import signal
 import subprocess
 import sys
-from contextlib import contextmanager, AbstractContextManager
+from contextlib import contextmanager
 from os.path import dirname, abspath, basename, splitext, join
 from tempfile import TemporaryFile
 from typing import List
@@ -41,27 +41,30 @@ class QuitException(BaseException):
     pass
 
 
-class AsyncSubprocess(AbstractContextManager):
-    """Wraps subprocess.Popen to capture output safely."""
+class AsyncSubprocess:
+    """A context manager. Wraps subprocess.Popen to capture output safely."""
 
-    def __init__(self, args: List[str], cwd: str = None):
+    def __init__(self, args, cwd=None):
         self.args = args
         self.cwd = cwd
         self._proc = None
         self._stdout_file = None
 
-    def terminate(self) -> str:
+    def terminate(self):
         """Terminate the process and return its stdout/stderr in a string."""
         # Terminate the proess
-        self._proc.terminate()
-        self._proc.wait()
-        self._proc = None
+        if self._proc is not None:
+            self._proc.terminate()
+            self._proc.wait()
+            self._proc = None
 
         # Read the stdout file and close it
-        self._stdout_file.seek(0)
-        stdout = self._stdout_file.read()
-        self._stdout_file.close()
-        self._stdout_file = None
+        stdout = None
+        if self._stdout_file is not None:
+            self._stdout_file.seek(0)
+            stdout = self._stdout_file.read()
+            self._stdout_file.close()
+            self._stdout_file = None
 
         return stdout
 
