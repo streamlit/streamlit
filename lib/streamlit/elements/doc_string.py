@@ -54,7 +54,7 @@ class HelpMixin:
         """
         doc_string_proto = DocString_pb2.DocString()
         _marshall(doc_string_proto, obj)
-        dg._enqueue("doc_string", doc_string_proto)  # type: ignore
+        return dg._enqueue("doc_string", doc_string_proto)  # type: ignore
 
 
 def _marshall(doc_string_proto, obj):
