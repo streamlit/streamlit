@@ -14,8 +14,8 @@
 
 """DeltaGenerator Unittest."""
 
+from unittest import mock
 import json
-import mock
 import unittest
 
 try:

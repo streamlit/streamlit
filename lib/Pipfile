@@ -5,7 +5,6 @@ verify_ssl = true
 
 [dev-packages]
 flake8 = "*"
-mock = "*"
 mypy = "==0.761"
 mypy-protobuf = ">=1.17"
 parameterized = "*"
