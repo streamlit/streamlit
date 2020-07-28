@@ -14,16 +14,15 @@
 
 """Server.py unit tests"""
 
+from unittest import mock
+from unittest.mock import MagicMock, patch
 import unittest
 
-import mock
 import pytest
 import tornado.testing
 import tornado.web
 import tornado.websocket
 import errno
-from mock import MagicMock
-from mock import patch
 from tornado import gen
 
 import streamlit.server.server
