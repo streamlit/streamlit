@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.components.v1 import declare_component
+import streamlit as st
 
-component = declare_component("foo", url="http://not.a.url")
+query_params = st.experimental_get_query_params()
+st.write("Current query string is:", str(query_params))

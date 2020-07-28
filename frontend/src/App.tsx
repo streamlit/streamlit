@@ -52,12 +52,13 @@ import {
   BackMsg,
   Delta,
   ForwardMsg,
-  IBackMsg,
   IForwardMsgMetadata,
-  Initialize,
   ISessionState,
+  Initialize,
   NewReport,
+  PageInfo,
   SessionEvent,
+  WidgetStates,
 } from "autogen/proto"
 
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
@@ -146,9 +147,7 @@ export class App extends PureComponent<Props, State> {
     this.sessionEventDispatcher = new SessionEventDispatcher()
     this.statusWidgetRef = React.createRef<StatusWidget>()
     this.connectionManager = null
-    this.widgetMgr = new WidgetStateManager((msg: IBackMsg) => {
-      this.sendBackMsg(new BackMsg(msg))
-    })
+    this.widgetMgr = new WidgetStateManager(this.sendRerunBackMsg)
     this.uploadClient = new FileUploadClient(() => {
       return this.connectionManager
         ? this.connectionManager.getBaseUriParts()
@@ -272,6 +271,8 @@ export class App extends PureComponent<Props, State> {
           this.handleNewReport(newReportMsg),
         delta: (deltaMsg: Delta) =>
           this.handleDeltaMsg(deltaMsg, msgProto.metadata),
+        pageInfoChanged: (pageInfo: PageInfo) =>
+          this.handlePageInfoChanged(pageInfo),
         reportFinished: (status: ForwardMsg.ReportFinishedStatus) =>
           this.handleReportFinished(status),
         uploadReportProgress: (progress: string | number) =>
@@ -302,11 +303,15 @@ export class App extends PureComponent<Props, State> {
     this.openDialog(newDialog)
   }
 
+  handlePageInfoChanged = (pageInfo: PageInfo): void => {
+    const { queryString } = pageInfo
+    window.history.pushState({}, "", queryString ? `?${queryString}` : "/")
+  }
+
   /**
    * Handler for ForwardMsg.initialize messages
    * @param initializeMsg an Initialize protobuf
    */
-
   handleInitialize = (initializeMsg: Initialize): void => {
     const {
       sessionId,
@@ -328,7 +333,6 @@ export class App extends PureComponent<Props, State> {
 
     if (App.hasStreamlitVersionChanged(initializeMsg)) {
       window.location.reload()
-
       return
     }
 
@@ -733,8 +737,19 @@ export class App extends PureComponent<Props, State> {
       this.saveSettings({ ...this.state.userSettings, runOnSave: true })
     }
 
-    const backMsg = new BackMsg({ rerunScript: true })
-    backMsg.type = "rerunScript"
+    this.widgetMgr.sendUpdateWidgetsMessage()
+  }
+
+  sendRerunBackMsg = (widgetStates?: WidgetStates): void => {
+    let queryString = document.location.search
+
+    if (queryString.startsWith("?")) {
+      queryString = queryString.substring(1)
+    }
+
+    const backMsg = new BackMsg({
+      rerunScript: { queryString, widgetStates },
+    })
     this.sendBackMsg(backMsg)
   }
 
