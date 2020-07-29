@@ -14,15 +14,15 @@
 
 """Unit tests for the Streamlit CLI."""
 
+from unittest import mock
+from unittest.mock import MagicMock, patch
 import unittest
 
 import os
 
 import requests
 import requests_mock
-import mock
 from click.testing import CliRunner
-from mock import patch, MagicMock
 from parameterized import parameterized
 from testfixtures import tempdir
 
