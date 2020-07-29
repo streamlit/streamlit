@@ -52,7 +52,7 @@ class AsyncSubprocess:
 
     def terminate(self):
         """Terminate the process and return its stdout/stderr in a string."""
-        # Terminate the proess
+        # Terminate the process
         if self._proc is not None:
             self._proc.terminate()
             self._proc.wait()
