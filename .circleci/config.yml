@@ -6,14 +6,6 @@ version: 2.1
 orbs:
   slack: circleci/slack@3.4.2
 commands:
-  update-submodules:
-    steps:
-      - run:
-          name: Update submodules
-          command: |
-            git submodule init
-            git submodule update
-
   pre-cache:
     steps:
       - run: &get_make_checksum
@@ -228,7 +220,11 @@ jobs:
       - checkout:
           name: Checkout Streamlit code
 
-      - update-submodules
+      - run:
+          name: Update submodules
+          command: |
+            git submodule init
+            git submodule update
 
       #################################################################
       # Pre Cache Steps
@@ -368,7 +364,11 @@ jobs:
       - checkout:
           name: Checkout Streamlit code
 
-      - update-submodules
+      - run:
+          name: Update submodules
+          command: |
+            git submodule init
+            git submodule update
 
       - pre-cache
       - restore-from-cache
@@ -422,7 +422,11 @@ jobs:
       - checkout:
           name: Checkout Streamlit code
 
-      - update-submodules
+      - run:
+          name: Update submodules
+          command: |
+            git submodule init
+            git submodule update
 
       - pre-cache
       - restore-from-cache
