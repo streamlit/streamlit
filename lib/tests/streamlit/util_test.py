@@ -14,9 +14,9 @@
 
 import random
 import unittest
-from mock import patch
-from parameterized import parameterized
+from unittest.mock import patch
 
+from parameterized import parameterized
 
 from streamlit import util
 

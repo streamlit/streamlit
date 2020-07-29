@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,8 +23,8 @@ import tornado.web
 
 import streamlit.server.routes
 from streamlit import type_util
-from streamlit.DeltaGenerator import NoValue
-from streamlit.DeltaGenerator import _get_widget_ui_value
+from streamlit.delta_generator import NoValue
+from streamlit.delta_generator import _get_widget_ui_value
 from streamlit.elements import arrow_table
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger

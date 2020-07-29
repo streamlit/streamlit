@@ -17,6 +17,8 @@
 
 import { IS_DEV_ENV } from "./baseconsts"
 
+/* eslint-disable no-console */
+
 /**
  * Log a message to the console, but only if in dev mode.
  */

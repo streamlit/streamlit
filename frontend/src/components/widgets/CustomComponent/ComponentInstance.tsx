@@ -24,8 +24,9 @@ import {
 import { logError, logWarning } from "lib/log"
 import { Source, WidgetStateManager } from "lib/WidgetStateManager"
 import React, { createRef, ReactNode } from "react"
-import { ComponentRegistry } from "./ComponentRegistry"
 import queryString from "query-string"
+import { ComponentRegistry } from "./ComponentRegistry"
+import { ComponentMessageType, StreamlitMessageType } from "./enums"
 
 /**
  * The current custom component API version. If our API changes,
@@ -33,30 +34,6 @@ import queryString from "query-string"
  * version in the COMPONENT_READY call.
  */
 export const CUSTOM_COMPONENT_API_VERSION = 1
-
-/** Messages from Component -> Streamlit */
-export enum ComponentMessageType {
-  // A component sends this message when it's ready to receive messages
-  // from Streamlit. Streamlit won't send any messages until it gets this.
-  // Data: { apiVersion: number }
-  COMPONENT_READY = "streamlit:componentReady",
-
-  // The component has a new value. Send it back to Streamlit, which
-  // will then re-run the app.
-  // Data: { value: any }
-  SET_COMPONENT_VALUE = "streamlit:setComponentValue",
-
-  // The component has a new height for its iframe.
-  // Data: { height: number }
-  SET_FRAME_HEIGHT = "streamlit:setFrameHeight",
-}
-
-/** Messages from Streamlit -> Component */
-export enum StreamlitMessageType {
-  // Sent by Streamlit when the component should re-render.
-  // Data: { args: any, disabled: boolean }
-  RENDER = "streamlit:render",
-}
 
 interface Props {
   registry: ComponentRegistry
@@ -73,10 +50,14 @@ interface State {
 
 export class ComponentInstance extends React.PureComponent<Props, State> {
   private iframeRef = createRef<HTMLIFrameElement>()
+
   // True when we've received the COMPONENT_READY message
   private componentReady = false
+
   private lastRenderArgs = {}
+
   private lastRenderDataframes = []
+
   private frameHeight = 0
 
   public constructor(props: Props) {
@@ -125,14 +106,14 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
    */
   private onBackMsg = (type: string, data: any): void => {
     switch (type) {
-      case ComponentMessageType.COMPONENT_READY:
+      case ComponentMessageType.COMPONENT_READY: {
         // Our component is ready to begin receiving messages. Send off its
         // first render message! It is *not* an error to get multiple
         // COMPONENT_READY messages. This can happen if a component is being
         // served from the webpack dev server, and gets reloaded. We
         // always respond to this message with the most recent render
         // arguments.
-        const apiVersion = data["apiVersion"]
+        const { apiVersion } = data
         if (apiVersion !== CUSTOM_COMPONENT_API_VERSION) {
           // In the future, we may end up with multiple API versions we
           // need to support. For now, we just have the one.
@@ -149,6 +130,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
           })
         }
         break
+      }
 
       case ComponentMessageType.SET_COMPONENT_VALUE:
         if (!this.componentReady) {
@@ -230,7 +212,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
 
     this.iframeRef.current.contentWindow.postMessage(
       {
-        type: type,
+        type,
         ...data,
       },
       "*"

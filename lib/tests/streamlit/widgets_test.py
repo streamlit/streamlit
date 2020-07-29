@@ -16,7 +16,7 @@
 
 import unittest
 
-from streamlit.proto.Widget_pb2 import WidgetStates
+from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.widgets import Widgets
 from streamlit.widgets import coalesce_widget_states
 

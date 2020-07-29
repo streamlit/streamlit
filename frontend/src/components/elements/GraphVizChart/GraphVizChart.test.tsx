@@ -15,6 +15,12 @@
  * limitations under the License.
  */
 
+import React from "react"
+import { shallow } from "enzyme"
+import { fromJS } from "immutable"
+
+import { PropsWithHeight } from "./GraphVizChart"
+
 const mockLogError = {
   logError: jest.fn(),
 }
@@ -38,14 +44,8 @@ jest.mock("d3", () => ({
 }))
 jest.mock("d3-graphviz")
 jest.mock("lib/log", () => mockLogError)
-
-import React from "react"
-import { shallow } from "enzyme"
-import { fromJS } from "immutable"
-
-import { PropsWithHeight } from "./GraphVizChart"
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const GraphVizChart = require("./GraphVizChart").GraphVizChart
+const { GraphVizChart } = require("./GraphVizChart")
 
 const getProps = (
   elementProps: Record<string, unknown> = {}

@@ -21,8 +21,8 @@ import { fromJS } from "immutable"
 import { TextArea as TextAreaProto } from "autogen/proto"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
-import TextArea, { Props } from "./TextArea"
 import { Textarea as UITextArea } from "baseui/textarea"
+import TextArea, { Props } from "./TextArea"
 
 jest.mock("lib/WidgetStateManager")
 

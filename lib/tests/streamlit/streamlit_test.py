@@ -15,7 +15,7 @@
 """Streamlit Unit test."""
 from io import BytesIO
 
-from mock import patch
+from unittest.mock import patch
 import json
 import os
 import io
@@ -35,9 +35,9 @@ from streamlit.proto.Balloons_pb2 import Balloons
 
 from streamlit.proto.Alert_pb2 import Alert
 
-from streamlit.MediaFileManager import media_file_manager
-from streamlit.MediaFileManager import _calculate_file_id
-from streamlit.MediaFileManager import STATIC_MEDIA_ENDPOINT
+from streamlit.media_file_manager import media_file_manager
+from streamlit.media_file_manager import _calculate_file_id
+from streamlit.media_file_manager import STATIC_MEDIA_ENDPOINT
 
 from tests import testutil
 import streamlit as st
@@ -193,7 +193,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_audio_options(self):
         """Test st.audio with options."""
-        from streamlit.MediaFileManager import _calculate_file_id
+        from streamlit.media_file_manager import _calculate_file_id
 
         fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
         st.audio(fake_audio_data, format="audio/mp3", start_time=10)
@@ -558,24 +558,6 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertNotEqual(el.plotly_chart.figure.config, "")
         self.assertEqual(el.plotly_chart.use_container_width, True)
 
-    def test_st_plotly_chart_mpl(self):
-        """Test st.plotly_chart can handle Matplotlib figures."""
-        import matplotlib
-        import matplotlib.pyplot as plt
-
-        if matplotlib.get_backend().lower() != "agg":
-            plt.switch_backend("agg")
-
-        fig = plt.figure()
-        plt.plot([10, 20, 30])
-        st.plotly_chart(fig)
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.plotly_chart.HasField("url"), False)
-        self.assertNotEqual(el.plotly_chart.figure.spec, "")
-        self.assertNotEqual(el.plotly_chart.figure.config, "")
-        self.assertEqual(el.plotly_chart.use_container_width, False)
-
     def test_st_plotly_chart_sharing(self):
         """Test st.plotly_chart when sending data to Plotly's service."""
         import plotly.graph_objs as go
@@ -702,7 +684,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
     def test_st_video_options(self):
         """Test st.video with options."""
 
-        from streamlit.MediaFileManager import _calculate_file_id
+        from streamlit.media_file_manager import _calculate_file_id
 
         fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
         st.video(fake_video_data, format="video/mp4", start_time=10)

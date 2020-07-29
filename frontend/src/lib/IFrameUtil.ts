@@ -99,13 +99,13 @@ export const DEFAULT_IFRAME_FEATURE_POLICY = [
   "encrypted-media",
 
   // Controls whether tasks should execute in frames while they're not being rendered (e.g. if an iframe is hidden or display: none).
-  //"execution-while-not-rendered",
+  // "execution-while-not-rendered",
 
   // Controls whether tasks should execute in frames while they're outside of the visible viewport.
-  //"execution-while-out-of-viewport",
+  // "execution-while-out-of-viewport",
 
   // Controls whether the current document is allowed to use Element.requestFullScreen(). When this policy is disabled, the returned Promise rejects with a TypeError DOMException.
-  // "fullscreen",
+  "fullscreen",
 
   // Controls whether the current document is allowed to use the Geolocation Interface. When this policy is disabled, calls to getCurrentPosition() and watchPosition() will cause those functions' callbacks to be invoked with a PositionError code of PERMISSION_DENIED.
   "geolocation",

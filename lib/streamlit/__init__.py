@@ -93,17 +93,19 @@ import traceback as _traceback
 import types as _types
 import json as _json
 import numpy as _np
+import urllib.parse as _parse
 
 from streamlit import code_util as _code_util
 from streamlit import env_util as _env_util
 from streamlit import source_util as _source_util
 from streamlit import string_util as _string_util
 from streamlit import type_util as _type_util
-from streamlit.DeltaGenerator import DeltaGenerator as _DeltaGenerator
-from streamlit.ReportThread import add_report_ctx as _add_report_ctx
-from streamlit.ReportThread import get_report_ctx as _get_report_ctx
+from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
+from streamlit.report_thread import add_report_ctx as _add_report_ctx
+from streamlit.report_thread import get_report_ctx as _get_report_ctx
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import BlockPath_pb2 as _BlockPath_pb2
+from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
 
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
@@ -478,6 +480,67 @@ def experimental_show(*args):
     except Exception:
         _, exc, exc_tb = _sys.exc_info()
         exception(exc, exc_tb)  # noqa: F821
+
+
+def experimental_get_query_params():
+    """Return the query parameters that is currently showing in the browser's URL bar.
+
+    Returns
+    -------
+    dict
+      The current query parameters as a dict. "Query parameters" are the part of the URL that comes
+      after the first "?".
+
+    Example
+    -------
+
+    Let's say the user's web browser is at
+    `http://localhost:8501/?show_map=True&selected=asia&selected=america`.
+    Then, you can get the query parameters using the following:
+
+    >>> st.experimental_get_query_params()
+    {"show_map": ["True"], "selected": ["asia", "america"]}
+
+    Note that the values in the returned dict are *always* lists. This is
+    because we internally use Python's urllib.parse.parse_qs(), which behaves
+    this way. And this behavior makes sense when you consider that every item
+    in a query string is potentially a 1-element array.
+
+    """
+    ctx = _get_report_ctx()
+    if ctx is None:
+        return ""
+    return _parse.parse_qs(ctx.query_string)
+
+
+def experimental_set_query_params(**query_params):
+    """Set the query parameters that are shown in the browser's URL bar.
+
+    Parameters
+    ----------
+    **query_params : dict
+        The query parameters to set, as key-value pairs.
+
+    Example
+    -------
+
+    To point the user's web browser to something like
+    "http://localhost:8501/?show_map=True&selected=asia&selected=america",
+    you would do the following:
+
+    >>> st.experimental_set_query_params(
+    ...     show_map=True,
+    ...     selected=["asia", "america"],
+    ... )
+
+    """
+    ctx = _get_report_ctx()
+    if ctx is None:
+        return
+    ctx.query_string = _parse.urlencode(query_params, doseq=True)
+    msg = _ForwardMsg_pb2.ForwardMsg()
+    msg.page_info_changed.query_string = ctx.query_string
+    ctx.enqueue(msg)
 
 
 @_contextlib.contextmanager
