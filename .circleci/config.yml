@@ -9,10 +9,14 @@ commands:
   update-submodules:
     steps:
       - run:
+          # `git submodule update --remote` checks out the submodule repo's
+          # HEAD (as opposed to whatever commit is specified in the
+          # submodule). We want to ensure we're always testing against
+          # the most recent commit in our component-template repo.
           name: Update submodules
           command: |
             git submodule init
-            git submodule update
+            git submodule update --remote
 
   pre-cache:
     steps:
