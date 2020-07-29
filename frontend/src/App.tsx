@@ -315,7 +315,15 @@ export class App extends PureComponent<Props, State> {
     if (favicon) {
       handleFavicon(favicon)
     }
-    // TODO: Handle layout and initialSidebarState
+    if (layout === PageConfig.Layout.WIDE) {
+      this.setState((prevState: State) => ({
+        userSettings: {
+          ...prevState.userSettings,
+          wideMode: true,
+        },
+      }))
+    }
+    // TODO: Handle initialSidebarState
   }
 
   handlePageInfoChanged = (pageInfo: PageInfo): void => {
