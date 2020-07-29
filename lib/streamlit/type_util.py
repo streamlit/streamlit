@@ -80,6 +80,10 @@ _DATAFRAME_COMPATIBLE_TYPES = (
 )  # type: Tuple[type, ...]
 
 
+def is_dataframe(obj):
+    return is_type(obj, _PANDAS_DF_TYPE_STR)
+
+
 def is_dataframe_like(obj):
     return any(is_type(obj, t) for t in _DATAFRAME_LIKE_TYPES)
 
@@ -238,3 +242,23 @@ Offending object:
 ```"""
             % {"type": type(df), "object": df,}
         )
+
+
+def ensure_iterable(obj):
+    """Try to convert different formats to something iterable. In reality,
+    most inputs should be iterable, but if we have a DataFrame, we can just
+    select the first column to iterate over.
+
+    Parameters
+    ----------
+    obj : list, tuple, numpy.ndarray, pandas.Series, or pandas.DataFrame
+
+    Returns
+    -------
+    iterable
+
+    """
+    if is_dataframe(obj):
+        return obj.iloc[:, 0]
+
+    return obj

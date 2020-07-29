@@ -47,7 +47,7 @@ from streamlit.proto.NumberInput_pb2 import NumberInput
 from streamlit.proto.Slider_pb2 import Slider
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.logger import get_logger
-from streamlit.type_util import is_type
+from streamlit.type_util import is_type, ensure_iterable
 
 LOGGER = get_logger(__name__)
 
@@ -1888,6 +1888,7 @@ class DeltaGenerator(object):
            `GitHub issue #1059 <https://github.com/streamlit/streamlit/issues/1059>`_ for updates on the issue.
 
         """
+        options = ensure_iterable(options)
 
         # Perform validation checks and return indices base on the default values.
         def _check_and_convert_to_indices(options, default_values):
@@ -1968,6 +1969,8 @@ class DeltaGenerator(object):
         ...     st.write("You didn\'t select comedy.")
 
         """
+        options = ensure_iterable(options)
+
         if not isinstance(index, int):
             raise StreamlitAPIException(
                 "Radio Value has invalid type: %s" % type(index).__name__
@@ -2027,6 +2030,8 @@ class DeltaGenerator(object):
         >>> st.write('You selected:', option)
 
         """
+        options = ensure_iterable(options)
+
         if not isinstance(index, int):
             raise StreamlitAPIException(
                 "Selectbox Value has invalid type: %s" % type(index).__name__
