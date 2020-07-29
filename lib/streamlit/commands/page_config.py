@@ -14,7 +14,9 @@
 
 from streamlit.delta_generator import _enqueue_message
 from streamlit.proto import ForwardMsg_pb2
+from streamlit.proto import PageConfig_pb2
 from streamlit.elements import image_proto
+from streamlit.errors import StreamlitAPIException
 
 
 def set_page_config(
@@ -62,10 +64,28 @@ def set_page_config(
             allow_emoji=True,
         )
 
-    if layout:
-        msg.page_config_changed.layout = layout
+    if layout == "centered":
+        layout = PageConfig_pb2.PageConfig.CENTERED
+    elif layout == "wide":
+        layout = PageConfig_pb2.PageConfig.WIDE
+    else:
+        raise StreamlitAPIException(
+            f'`layout` must be "centered" or "wide" (got "{layout}")'
+        )
+    msg.page_config_changed.layout = layout
 
-    if initial_sidebar_state:
-        msg.page_config_changed.initial_sidebar_state = initial_sidebar_state
+    if initial_sidebar_state == "auto":
+        initial_sidebar_state = PageConfig_pb2.PageConfig.AUTO
+    elif initial_sidebar_state == "expanded":
+        initial_sidebar_state = PageConfig_pb2.PageConfig.EXPANDED
+    elif initial_sidebar_state == "collapsed":
+        initial_sidebar_state = PageConfig_pb2.PageConfig.COLLAPSED
+    else:
+        raise StreamlitAPIException(
+            '`initial_sidebar_state` must be "auto" or "expanded" or "collapsed" '
+            + f'(got "{initial_sidebar_state}")'
+        )
+
+    msg.page_config_changed.initial_sidebar_state = initial_sidebar_state
 
     _enqueue_message(msg)
