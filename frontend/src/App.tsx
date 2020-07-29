@@ -56,6 +56,7 @@ import {
   ISessionState,
   Initialize,
   NewReport,
+  PageConfig,
   PageInfo,
   SessionEvent,
   WidgetStates,
@@ -73,6 +74,7 @@ import "./App.scss"
 import "assets/css/header.scss"
 import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
 import { ComponentRegistry } from "./components/widgets/CustomComponent"
+import { handleFavicon } from "./components/elements/Favicon"
 
 import withScreencast, {
   ScreenCastHOC,
@@ -271,6 +273,8 @@ export class App extends PureComponent<Props, State> {
           this.handleNewReport(newReportMsg),
         delta: (deltaMsg: Delta) =>
           this.handleDeltaMsg(deltaMsg, msgProto.metadata),
+        pageConfigChanged: (pageConfig: PageConfig) =>
+          this.handlePageConfigChanged(pageConfig),
         pageInfoChanged: (pageInfo: PageInfo) =>
           this.handlePageInfoChanged(pageInfo),
         reportFinished: (status: ForwardMsg.ReportFinishedStatus) =>
@@ -301,6 +305,17 @@ export class App extends PureComponent<Props, State> {
       onClose: () => {},
     }
     this.openDialog(newDialog)
+  }
+
+  handlePageConfigChanged = (pageConfig: PageConfig): void => {
+    const { title, favicon, layout, initialSidebarState } = pageConfig
+    if (title) {
+      document.title = `${title} · Streamlit`
+    }
+    if (favicon) {
+      handleFavicon(favicon)
+    }
+    // TODO: Handle layout and initialSidebarState
   }
 
   handlePageInfoChanged = (pageInfo: PageInfo): void => {
