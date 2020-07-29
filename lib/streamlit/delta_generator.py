@@ -285,6 +285,26 @@ text_io = io.TextIOWrapper(file_buffer)
             """
 
 
+class ImageFormatWarning(StreamlitDeprecationWarning):
+    def __init__(self, format):
+        self.format = format
+
+        super(ImageFormatWarning, self).__init__(
+            msg=self._get_message(), config_option="deprecation.showImageFormat"
+        )
+
+    def _get_message(self):
+        return f"""
+The `format` parameter for `st.image` has been deprecated and will be removed
+or repurposed in the future. We recommend changing to the new `output_format`
+parameter to future-proof your code. For the parameter,
+`format="{self.format}"`, please use `output_format="{self.format}"` instead.
+
+See [https://github.com/streamlit/streamlit/issues/1137](https://github.com/streamlit/streamlit/issues/1137)
+for more information.
+            """
+
+
 class DeltaGenerator(object):
     """Creator of Delta protobuf messages.
 
@@ -1516,7 +1536,8 @@ class DeltaGenerator(object):
         use_column_width=False,
         clamp=False,
         channels="RGB",
-        format="JPEG",
+        output_format="auto",
+        **kwargs,
     ):
         """Display an image or list of images.
 
@@ -1549,9 +1570,12 @@ class DeltaGenerator(object):
             `image[:, :, 0]` is the red channel, `image[:, :, 1]` is green, and
             `image[:, :, 2]` is blue. For images coming from libraries like
             OpenCV you should set this to 'BGR', instead.
-        format : 'JPEG' or 'PNG'
-            This parameter specifies the image format to use when transferring
-            the image data. Defaults to 'JPEG'.
+        output_format : 'JPEG', 'PNG', or 'auto'
+            This parameter specifies the format to use when transferring the
+            image data. Photos should use the JPEG format for lossy compression
+            while diagrams should use the PNG format for lossless compression.
+            Defaults to 'auto' which identifies the compression type based
+            on the type and format of the image argument.
 
         Example
         -------
@@ -1568,6 +1592,14 @@ class DeltaGenerator(object):
         """
         from .elements import image_proto
 
+        format = kwargs.get("format")
+        if format != None:
+            # override output compression type if specified
+            output_format = format
+
+            if config.get_option("deprecation.showImageFormat"):
+                self.exception(ImageFormatWarning(format))
+
         if use_column_width:
             width = -2
         elif width is None:
@@ -1583,7 +1615,7 @@ class DeltaGenerator(object):
             element.imgs,
             clamp,
             channels,
-            format,
+            output_format,
         )
 
     @_with_element
