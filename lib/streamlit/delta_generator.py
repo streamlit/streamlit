@@ -62,6 +62,7 @@ from streamlit.elements.vega_lite import VegaLiteMixin
 from streamlit.elements.deck_gl import DeckGlMixin
 from streamlit.elements.deck_gl_json_chart import PydeckMixin
 from streamlit.elements.map import MapMixin
+from streamlit.elements.iframe_proto import IframeMixin
 
 LOGGER = get_logger(__name__)
 
@@ -215,6 +216,7 @@ class DeltaGenerator(
     ExceptionMixin,
     GraphvizMixin,
     HelpMixin,
+    IframeMixin,
     MarkdownMixin,
     MapMixin,
     PlotlyMixin,
@@ -641,62 +643,6 @@ class DeltaGenerator(
             clamp,
             channels,
             output_format,
-        )
-
-    @_with_element
-    def _iframe(
-        self, element, src, width=None, height=None, scrolling=False,
-    ):
-        """Load a remote URL in an iframe.
-
-        Parameters
-        ----------
-        src : str
-            The URL of the page to embed.
-        width : int
-            The width of the frame in CSS pixels. Defaults to the report's
-            default element width.
-        height : int
-            The height of the frame in CSS pixels. Defaults to 150.
-        scrolling : bool
-            If True, show a scrollbar when the content is larger than the iframe.
-            Otherwise, do not show a scrollbar. Defaults to False.
-
-        """
-        from .elements import iframe_proto
-
-        iframe_proto.marshall(
-            element.iframe, src=src, width=width, height=height, scrolling=scrolling,
-        )
-
-    @_with_element
-    def _html(
-        self, element, html, width=None, height=None, scrolling=False,
-    ):
-        """Display an HTML string in an iframe.
-
-        Parameters
-        ----------
-        html : str
-            The HTML string to embed in the iframe.
-        width : int
-            The width of the frame in CSS pixels. Defaults to the report's
-            default element width.
-        height : int
-            The height of the frame in CSS pixels. Defaults to 150.
-        scrolling : bool
-            If True, show a scrollbar when the content is larger than the iframe.
-            Otherwise, do not show a scrollbar. Defaults to False.
-
-        """
-        from .elements import iframe_proto
-
-        iframe_proto.marshall(
-            element.iframe,
-            srcdoc=html,
-            width=width,
-            height=height,
-            scrolling=scrolling,
         )
 
     def favicon(

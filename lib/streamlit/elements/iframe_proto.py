@@ -12,7 +12,60 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from streamlit.proto import IFrame_pb2
 from typing import Optional
+
+
+class IframeMixin:
+    def _iframe(
+        dg, src, width=None, height=None, scrolling=False,
+    ):
+        """Load a remote URL in an iframe.
+
+        Parameters
+        ----------
+        src : str
+            The URL of the page to embed.
+        width : int
+            The width of the frame in CSS pixels. Defaults to the report's
+            default element width.
+        height : int
+            The height of the frame in CSS pixels. Defaults to 150.
+        scrolling : bool
+            If True, show a scrollbar when the content is larger than the iframe.
+            Otherwise, do not show a scrollbar. Defaults to False.
+
+        """
+        iframe_proto = IFrame_pb2.IFrame()
+        marshall(
+            iframe_proto, src=src, width=width, height=height, scrolling=scrolling,
+        )
+        return dg._enqueue("iframe", iframe_proto)  # type: ignore
+
+    def _html(
+        dg, html, width=None, height=None, scrolling=False,
+    ):
+        """Display an HTML string in an iframe.
+
+        Parameters
+        ----------
+        html : str
+            The HTML string to embed in the iframe.
+        width : int
+            The width of the frame in CSS pixels. Defaults to the report's
+            default element width.
+        height : int
+            The height of the frame in CSS pixels. Defaults to 150.
+        scrolling : bool
+            If True, show a scrollbar when the content is larger than the iframe.
+            Otherwise, do not show a scrollbar. Defaults to False.
+
+        """
+        iframe_proto = IFrame_pb2.IFrame()
+        marshall(
+            iframe_proto, srcdoc=html, width=width, height=height, scrolling=scrolling,
+        )
+        return dg._enqueue("iframe", iframe_proto)  # type: ignore
 
 
 def marshall(
