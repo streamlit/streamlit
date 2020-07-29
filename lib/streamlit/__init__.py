@@ -703,10 +703,12 @@ def _maybe_print_repl_warning():
                 script_name,
             )
 
+
 def stop():
     """Stops excecution immediately. Streamlit will not run any statements
     after `st.stop()`. We recommend rendering a message prior to calling this
-    to indicate the execution has stopped and why.
+    to indicate the execution has stopped and why. When run outside of
+    Streamlit, it will raise an Exception
 
     Example
     -------
