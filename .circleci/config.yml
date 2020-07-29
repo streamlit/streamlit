@@ -484,6 +484,8 @@ jobs:
       - checkout:
           name: Checkout Streamlit code
 
+      - update-submodules
+
       - pre-cache
       - restore-from-cache
       - pre-make
