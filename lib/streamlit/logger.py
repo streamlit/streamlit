@@ -78,6 +78,11 @@ def setup_formatter(logger):
     logger.addHandler(logger.streamlit_console_handler)
 
 
+def update_formatter():
+    for log in LOGGERS.values():
+        setup_formatter(log)
+
+
 def init_tornado_logs():
     """Initialize tornado logs."""
     global LOGGER

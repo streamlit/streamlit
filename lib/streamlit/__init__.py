@@ -119,7 +119,7 @@ _is_running_with_streamlit = False
 
 def _update_logger():
     _logger.set_log_level(_config.get_option("logger.logLevel").upper())
-    _logger.setup_formatter(_LOGGER)
+    _logger.update_formatter()
     _logger.init_tornado_logs()
 
 

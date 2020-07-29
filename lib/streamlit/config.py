@@ -317,7 +317,10 @@ def _logger_log_level():
 
     Default: 'info'
     """
-    if get_option("global.developmentMode"):
+
+    if get_option("global.logLevel"):
+        return get_option("global.logLevel")
+    elif get_option("global.developmentMode"):
         return "debug"
     else:
         return "info"
@@ -326,7 +329,9 @@ def _logger_log_level():
 @_create_option("logger.messageFormat", type_=str)
 def _logger_message_format():
     """String format for logging messages. If logger.datetimeFormat is set,
-    logger messages will default to `%(asctime)s.%(msecs)03d %(message)s`
+    logger messages will default to `%(asctime)s.%(msecs)03d %(message)s`. See
+    [Python's documentation](https://docs.python.org/2.6/library/logging.html#formatter-objects)
+    for available attributes.
 
     Default: None
     """

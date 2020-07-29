@@ -18,7 +18,10 @@ import logging
 import unittest
 
 import pytest
-import streamlit.logger
+from parameterized import parameterized
+
+from streamlit import logger
+from streamlit import config
 
 
 class LoggerTest(unittest.TestCase):
@@ -49,13 +52,13 @@ class LoggerTest(unittest.TestCase):
             logging.DEBUG,
         ]
         for k in data:
-            streamlit.logger.set_log_level(k)
+            logger.set_log_level(k)
             self.assertEqual(k, logging.getLogger().getEffectiveLevel())
 
     def test_set_log_level_error(self):
         """Test streamlit.logger.set_log_level."""
         with pytest.raises(SystemExit) as e:
-            streamlit.logger.set_log_level(90)
+            logger.set_log_level(90)
         self.assertEqual(e.type, SystemExit)
         self.assertEqual(e.value.code, 1)
 
@@ -74,10 +77,33 @@ class LoggerTest(unittest.TestCase):
     #     test2 = streamlit.logger.get_logger('test2')
     #     self.assertEqual(logging.CRITICAL, test2.getEffectiveLevel())
 
+    @parameterized.expand(
+        [
+            ("%(asctime)s.%(msecs)03d %(levelname) -7s " "%(name)s: %(message)s", None),
+            (None, "%Y-%m-%d %H:%M:%S"),
+            ("%(asctime)s.%(msecs)03d %(name)s: %(message)s", "%Y-%m-%d %H:%M:%S"),
+        ]
+    )
+    def test_setup_log_formatter(self, messageFormat, dateFormat):
+        """Test streamlit.logger.setup_log_formatter."""
+
+        LOGGER = logger.get_logger("test")
+
+        config._set_option("logger.messageFormat", messageFormat, "test")
+        config._set_option("logger.datetimeFormat", dateFormat, "test")
+        config._set_option("logger.logLevel", logging.DEBUG, "test")
+
+        logger.setup_formatter(LOGGER)
+        self.assertEqual(len(LOGGER.handlers), 1)
+        self.assertEqual(
+            LOGGER.handlers[0].formatter._fmt, messageFormat or "%(message)s"
+        )
+        self.assertEqual(LOGGER.handlers[0].formatter.datefmt, dateFormat)
+
     def test_init_tornado_logs(self):
         """Test streamlit.logger.init_tornado_logs."""
-        streamlit.logger.init_tornado_logs()
-        loggers = [x for x in streamlit.logger.LOGGERS.keys() if "tornado." in x]
+        logger.init_tornado_logs()
+        loggers = [x for x in logger.LOGGERS.keys() if "tornado." in x]
         truth = ["tornado.access", "tornado.application", "tornado.general"]
         self.assertEqual(sorted(truth), sorted(loggers))
 
