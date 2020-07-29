@@ -34,6 +34,8 @@ function getIframeBody(index) {
     });
 }
 
+// These tests are run against both of our templates. One uses React, and
+// the other is pure Typescript, but both should produce identical results.
 describe("Component template", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");
@@ -42,7 +44,7 @@ describe("Component template", () => {
     cy.get(".decoration").invoke("css", "display", "none");
   });
 
-  it("Is rendered correctly", () => {
+  it("is rendered correctly", () => {
     cy.get(".element-container > iframe").should("have.length", 2);
 
     getIframeBody(0)
@@ -52,16 +54,16 @@ describe("Component template", () => {
       .find("button")
       .should("have.text", "Click Me!");
 
-    // cy.get(".element-container > iframe").each((el, idx) => {
-    //   return cy.wrap(el).matchImageSnapshot("iframe" + idx);
-    // });
+    cy.get(".element-container > iframe").each((el, idx) => {
+      return cy.wrap(el).matchImageSnapshot("iframe" + idx);
+    });
 
     cy.get(".element-container > .stMarkdown > p").each(el => {
       expect(el.text()).to.eq("You've clicked 0 times!");
     });
   });
 
-  it("Sends data back to Streamlit", () => {
+  it("sends data back to Streamlit", () => {
     getIframeBody(0)
       .find("button")
       .click();
