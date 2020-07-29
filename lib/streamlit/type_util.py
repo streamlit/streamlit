@@ -261,4 +261,8 @@ def ensure_iterable(obj):
     if is_dataframe(obj):
         return obj.iloc[:, 0]
 
-    return obj
+    try:
+        iter(obj)
+        return obj
+    except:
+        raise

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """selectbox unit tests."""
-
+import pytest
 import numpy as np
 import pandas as pd
 from parameterized import parameterized
@@ -65,6 +65,11 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.label, "the label")
         self.assertEqual(c.default, 0)
         self.assertEqual(c.options, proto_options)
+
+    def test_not_iterable_option_types(self):
+        """Test that it supports different types of options."""
+        with pytest.raises(TypeError):
+            st.selectbox("the label", 123)
 
     def test_cast_options_to_string(self):
         """Test that it casts options to string."""
