@@ -94,6 +94,7 @@ interface State {
   userSettings: UserSettings
   dialog?: DialogProps | null
   sharingEnabled?: boolean
+  initialSidebarState: PageConfig.SidebarState
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -144,6 +145,7 @@ export class App extends PureComponent<Props, State> {
         wideMode: false,
         runOnSave: false,
       },
+      initialSidebarState: PageConfig.SidebarState.AUTO,
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -323,7 +325,9 @@ export class App extends PureComponent<Props, State> {
         },
       }))
     }
-    // TODO: Handle initialSidebarState
+    this.setState(() => ({
+      initialSidebarState,
+    }))
   }
 
   handlePageInfoChanged = (pageInfo: PageInfo): void => {
@@ -935,6 +939,7 @@ export class App extends PureComponent<Props, State> {
 
           <ReportView
             wide={this.state.userSettings.wideMode}
+            initialSidebarState={this.state.initialSidebarState}
             elements={this.state.elements}
             reportId={this.state.reportId}
             reportRunState={this.state.reportRunState}

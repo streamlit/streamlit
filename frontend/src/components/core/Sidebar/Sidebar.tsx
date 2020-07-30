@@ -19,11 +19,13 @@ import React, { PureComponent, ReactElement } from "react"
 import classNames from "classnames"
 import Icon from "components/shared/Icon"
 import { Button } from "reactstrap"
+import { PageConfig } from "autogen/proto"
 
 import "./Sidebar.scss"
 
 interface Props {
   children?: ReactElement
+  initialSidebarState?: PageConfig.SidebarState
   onChange: (collapsedSidebar: boolean) => void
 }
 
@@ -45,12 +47,31 @@ class Sidebar extends PureComponent<Props, State> {
   constructor(props: Props) {
     super(props)
 
+    // By default, expand sidebar only if browser width > MEDIUM_BREAKPOINT_PX
     const { innerWidth } = window || {}
 
     this.state = {
       collapsedSidebar: innerWidth
         ? innerWidth <= MEDIUM_BREAKPOINT_PX
         : false,
+    }
+  }
+
+  componentDidUpdate(prevProps: any): void {
+    // When initialSidebarState is set to "expanded" or "collapsed",
+    // immediately apply that change.
+    if (this.props.initialSidebarState !== prevProps.initialSidebarState) {
+      switch (this.props.initialSidebarState) {
+        case PageConfig.SidebarState.EXPANDED:
+          this.setState({ collapsedSidebar: false })
+          break
+        case PageConfig.SidebarState.COLLAPSED:
+          this.setState({ collapsedSidebar: true })
+          break
+        case PageConfig.SidebarState.AUTO:
+        default:
+        // Do nothing
+      }
     }
   }
 
