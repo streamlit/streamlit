@@ -47,7 +47,7 @@ from streamlit.proto.NumberInput_pb2 import NumberInput
 from streamlit.proto.Slider_pb2 import Slider
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.logger import get_logger
-from streamlit.type_util import is_type
+from streamlit.type_util import is_type, ensure_iterable
 
 LOGGER = get_logger(__name__)
 
@@ -1850,9 +1850,9 @@ class DeltaGenerator(object):
         ----------
         label : str
             A short label explaining to the user what this select widget is for.
-        options : list, tuple, numpy.ndarray, or pandas.Series
-            Labels for the select options. This will be cast to str internally
-            by default.
+        options : list, tuple, numpy.ndarray, pandas.Series, or pandas.DataFrame
+            Labels for the radio options. This will be cast to str internally
+            by default. For pandas.DataFrame, the first column is selected.
         default: [str] or None
             List of default values.
         format_func : function
@@ -1888,6 +1888,7 @@ class DeltaGenerator(object):
            `GitHub issue #1059 <https://github.com/streamlit/streamlit/issues/1059>`_ for updates on the issue.
 
         """
+        options = ensure_iterable(options)
 
         # Perform validation checks and return indices base on the default values.
         def _check_and_convert_to_indices(options, default_values):
@@ -1935,9 +1936,9 @@ class DeltaGenerator(object):
         ----------
         label : str
             A short label explaining to the user what this radio group is for.
-        options : list, tuple, numpy.ndarray, or pandas.Series
+        options : list, tuple, numpy.ndarray, pandas.Series, or pandas.DataFrame
             Labels for the radio options. This will be cast to str internally
-            by default.
+            by default. For pandas.DataFrame, the first column is selected.
         index : int
             The index of the preselected option on first render.
         format_func : function
@@ -1968,6 +1969,8 @@ class DeltaGenerator(object):
         ...     st.write("You didn\'t select comedy.")
 
         """
+        options = ensure_iterable(options)
+
         if not isinstance(index, int):
             raise StreamlitAPIException(
                 "Radio Value has invalid type: %s" % type(index).__name__
@@ -1999,9 +2002,9 @@ class DeltaGenerator(object):
         ----------
         label : str
             A short label explaining to the user what this select widget is for.
-        options : list, tuple, numpy.ndarray, or pandas.Series
-            Labels for the select options. This will be cast to str internally
-            by default.
+        options : list, tuple, numpy.ndarray, pandas.Series, or pandas.DataFrame
+            Labels for the radio options. This will be cast to str internally
+            by default. For pandas.DataFrame, the first column is selected.
         index : int
             The index of the preselected option on first render.
         format_func : function
@@ -2027,6 +2030,8 @@ class DeltaGenerator(object):
         >>> st.write('You selected:', option)
 
         """
+        options = ensure_iterable(options)
+
         if not isinstance(index, int):
             raise StreamlitAPIException(
                 "Selectbox Value has invalid type: %s" % type(index).__name__
