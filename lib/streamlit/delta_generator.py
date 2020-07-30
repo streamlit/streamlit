@@ -1850,9 +1850,9 @@ class DeltaGenerator(object):
         ----------
         label : str
             A short label explaining to the user what this select widget is for.
-        options : list, tuple, numpy.ndarray, or pandas.Series
-            Labels for the select options. This will be cast to str internally
-            by default.
+        options : list, tuple, numpy.ndarray, pandas.Series, or pandas.DataFrame
+            Labels for the radio options. This will be cast to str internally
+            by default. For pandas.DataFrame, the first column is selected.
         default: [str] or None
             List of default values.
         format_func : function
@@ -1936,9 +1936,9 @@ class DeltaGenerator(object):
         ----------
         label : str
             A short label explaining to the user what this radio group is for.
-        options : list, tuple, numpy.ndarray, or pandas.Series
+        options : list, tuple, numpy.ndarray, pandas.Series, or pandas.DataFrame
             Labels for the radio options. This will be cast to str internally
-            by default.
+            by default. For pandas.DataFrame, the first column is selected.
         index : int
             The index of the preselected option on first render.
         format_func : function
@@ -2002,9 +2002,9 @@ class DeltaGenerator(object):
         ----------
         label : str
             A short label explaining to the user what this select widget is for.
-        options : list, tuple, numpy.ndarray, or pandas.Series
-            Labels for the select options. This will be cast to str internally
-            by default.
+        options : list, tuple, numpy.ndarray, pandas.Series, or pandas.DataFrame
+            Labels for the radio options. This will be cast to str internally
+            by default. For pandas.DataFrame, the first column is selected.
         index : int
             The index of the preselected option on first render.
         format_func : function

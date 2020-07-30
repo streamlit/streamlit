@@ -245,9 +245,10 @@ Offending object:
 
 
 def ensure_iterable(obj):
-    """Try to convert different formats to something iterable. In reality,
-    most inputs should be iterable, but if we have a DataFrame, we can just
-    select the first column to iterate over.
+    """Try to convert different formats to something iterable. Most inputs
+    are assumed to be iterable, but if we have a DataFrame, we can just
+    select the first column to iterate over. If the input is not iterable,
+    a TypeError is raised.
 
     Parameters
     ----------
