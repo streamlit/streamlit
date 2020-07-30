@@ -320,7 +320,7 @@ class _CodeHasher:
         if file_is_blacklisted:
             return False
         return file_util.file_is_in_folder_glob(
-            filepath, self._get_main_script_directory()
+            filepath, os.path.abspath(self._get_main_script_directory())
         ) or file_util.file_in_pythonpath(filepath)
 
     def _to_bytes(self, obj, context):
