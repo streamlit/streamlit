@@ -3375,8 +3375,7 @@ class DeltaGenerator(object):
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
-        or None
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
             Table to concat. Optional.
 
         **kwargs : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
