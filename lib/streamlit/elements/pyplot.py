@@ -46,7 +46,7 @@ def marshall(coordinates, new_element_proto, fig=None, clear_figure=True, **kwar
     # Normally, dpi is set to 'figure', and the figure's dpi is set to 100.
     # So here we pick double of that to make things look good in a high
     # DPI display.
-    options = {"dpi": 200, "format": "png"}
+    options = {"bbox_inches": "tight", "dpi": 200, "format": "png"}
 
     # If some of the options are passed in from kwargs then replace
     # the values in options with the ones from kwargs
@@ -64,7 +64,7 @@ def marshall(coordinates, new_element_proto, fig=None, clear_figure=True, **kwar
         new_element_proto.imgs,
         False,
         channels="RGB",
-        format="PNG",
+        output_format="PNG",
     )
 
     # Clear the figure after rendering it. This means that subsequent

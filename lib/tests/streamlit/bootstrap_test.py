@@ -14,20 +14,14 @@
 
 import sys
 import unittest
+from io import StringIO
+from unittest.mock import patch
 
 import matplotlib
-from mock import patch
-
-try:
-    # Python 2
-    from StringIO import StringIO
-except ImportError:
-    # Python 3
-    from io import StringIO
 
 from streamlit import bootstrap
 from streamlit import config
-from streamlit.Report import Report
+from streamlit.report import Report
 from tests import testutil
 
 report = Report("the/path", "test command line")
@@ -211,7 +205,11 @@ class BootstrapPrintTest(unittest.TestCase):
             {"browser.serverAddress": False}
         )
         mock_get_option = testutil.build_mock_config_get_option(
-            {"server.headless": False, "server.port": 9988, "global.useNode": False}
+            {
+                "server.headless": False,
+                "server.port": 9988,
+                "global.developmentMode": False,
+            }
         )
 
         mock_get_internal_ip.return_value = "internal-ip"
@@ -235,7 +233,7 @@ class BootstrapPrintTest(unittest.TestCase):
                 "server.headless": False,
                 "server.baseUrlPath": "foo",
                 "server.port": 8501,
-                "global.useNode": False,
+                "global.developmentMode": False,
             }
         )
 
@@ -260,7 +258,7 @@ class BootstrapPrintTest(unittest.TestCase):
                 "server.headless": False,
                 "server.baseUrlPath": "foo",
                 "server.port": 8501,
-                "global.useNode": False,
+                "global.developmentMode": False,
             }
         )
 

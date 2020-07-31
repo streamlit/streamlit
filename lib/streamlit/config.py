@@ -28,7 +28,7 @@ from streamlit import development
 from streamlit import env_util
 from streamlit import file_util
 from streamlit import util
-from streamlit.ConfigOption import ConfigOption
+from streamlit.config_option import ConfigOption
 
 from streamlit.logger import get_logger
 
@@ -260,15 +260,6 @@ def _global_unit_test():
     """
     return False
 
-
-_create_option(
-    "global.useNode",
-    description="""Whether to serve static content from node. Only applies when
-        developmentMode is True.""",
-    visibility="hidden",
-    default_val=True,
-    type_=bool,
-)
 
 _create_option(
     "global.metrics",
@@ -580,6 +571,26 @@ _create_option(
     default_val="",
 )
 
+
+# Config Section: deprecations
+
+_create_section("deprecation", "Configuration to show or hide deprecation warnings.")
+
+_create_option(
+    "deprecation.showfileUploaderEncoding",
+    description="Set to false to disable the deprecation warning for the file uploader encoding.",
+    default_val="True",
+    scriptable="True",
+    type_=bool,
+)
+
+_create_option(
+    "deprecation.showImageFormat",
+    description="Set to false to disable the deprecation warning for the image format parameter.",
+    default_val="True",
+    scriptable="True",
+    type_=bool,
+)
 
 # Config Section: S3 #
 
@@ -997,13 +1008,20 @@ def _check_conflicts():
         )
 
     # XSRF conflicts
-
     if get_option("server.enableXsrfProtection"):
-        if not get_option("server.enableCORS") or get_option("global.useNode"):
+        if not get_option("server.enableCORS") or get_option("global.developmentMode"):
             LOGGER.warning(
-                "The config option 'server.enableXsrfProtection is not compatible with "
-                "'server.enableCORS'. If 'server.enableXsrfProtection' is on and 'server.enableCORS' "
-                "is off at the same time, we will prioritize 'server.enableXsrfProtection'."
+                """
+Warning: the config option 'server.enableCORS=false' is not compatible with 'server.enableXsrfProtection=true'.
+As a result, 'server.enableCORS' is being overridden to 'true'.
+
+More information:
+In order to protect against CSRF attacks, we send a cookie with each request.
+To do so, we must specify allowable origins, which places a restriction on
+cross-origin resource sharing.
+
+If cross origin resource sharing is required, please disable server.enableXsrfProtection.
+            """
             )
 
 

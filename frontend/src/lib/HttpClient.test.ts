@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 import axios from "axios"
 import HttpClient from "lib/HttpClient"
 import { SessionInfo } from "lib/SessionInfo"
@@ -44,7 +45,7 @@ describe("HttpClient", () => {
     document.cookie.split(";").forEach(cookie => {
       const eqPos = cookie.indexOf("=")
       const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie
-      document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT"
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT`
     })
   })
 

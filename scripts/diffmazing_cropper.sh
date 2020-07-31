@@ -1,6 +1,17 @@
 #!/bin/bash
+# Copyright 2018-2020 Streamlit Inc.
 #
-# Converts diff images from Cypress into snapshots we can commit to Git.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 # https://medium.com/factualopinions/consider-starting-all-your-bash-scripts-with-these-options-74fbec0cbb83
 set -o errexit
@@ -21,29 +32,13 @@ then
 fi
 
 
-if [ $# -eq 0 ]
-then
-  echo ""
-  echo "Usage"
-  echo "  $0 <diff files to convert>"
-  echo ""
-  echo "Example"
-  echo "  $0 ~/downloads/*.diff.png"
-  echo ""
-  exit -1
-fi
-
-
-has_convert=$(command -v convert)
-if ! [ "$has_convert" ]
-then
+has_convert=$(command -v convert) || {
   echo ""
   echo "Missing dependency."
   echo "Please install ImageMagick first."
   echo ""
   exit -1
-fi
-
+}
 
 
 tmp_dir="$(mktemp -d -t streamlit_cropped_diffs-XXXXX)"

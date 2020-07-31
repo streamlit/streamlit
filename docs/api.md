@@ -148,6 +148,14 @@ With widgets, Streamlit allows you to bake interactivity directly into your apps
 .. autofunction:: streamlit.beta_color_picker
 ```
 
+## Control Flow
+
+By default, Streamlit apps execute the script entirely, but we allow some functionality to handle control flow in your applications.
+
+```eval_rst
+.. autofunction:: streamlit.stop
+```
+
 ## Add widgets to sidebar
 
 Not only can you add interactivity to your report with widgets, you can organize them into a sidebar with `st.sidebar.[element_name]`. Each element that's passed to `st.sidebar` is pinned to the left, allowing users to focus on the content in your app. The only elements that aren't supported are: `st.write` (you
@@ -275,7 +283,7 @@ With Streamlit you can modify the data within an existing element (chart,
 table, dataframe).
 
 ```eval_rst
-.. automethod:: streamlit.DeltaGenerator.DeltaGenerator.add_rows
+.. automethod:: streamlit.delta_generator.DeltaGenerator.add_rows
 ```
 
 ## Optimize performance

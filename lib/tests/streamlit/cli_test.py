@@ -14,15 +14,15 @@
 
 """Unit tests for the Streamlit CLI."""
 
+from unittest import mock
+from unittest.mock import MagicMock, patch
 import unittest
 
 import os
 
 import requests
 import requests_mock
-import mock
 from click.testing import CliRunner
-from mock import patch, MagicMock
 from parameterized import parameterized
 from testfixtures import tempdir
 
@@ -31,7 +31,7 @@ from streamlit import cli
 from streamlit import config
 from streamlit.cli import _convert_config_option_to_click_option
 from streamlit.cli import _apply_config_options_from_cli
-from streamlit.ConfigOption import ConfigOption
+from streamlit.config_option import ConfigOption
 
 
 class CliTest(unittest.TestCase):

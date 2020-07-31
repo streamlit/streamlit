@@ -20,10 +20,13 @@ import DeckGL from "deck.gl"
 import Immutable from "immutable"
 import isEqual from "lodash/isEqual"
 import { StaticMap } from "react-map-gl"
+// We don't have Typescript defs for these imports, which makes ESLint unhappy
+/* eslint-disable import/no-extraneous-dependencies */
 import * as layers from "@deck.gl/layers"
 import { JSONConverter } from "@deck.gl/json"
 import * as geoLayers from "@deck.gl/geo-layers"
 import * as aggregationLayers from "@deck.gl/aggregation-layers"
+/* eslint-enable */
 
 import { CSVLoader } from "@loaders.gl/csv"
 import { registerLoaders } from "@loaders.gl/core"
@@ -45,7 +48,7 @@ interface DeckObject {
     height: number
     width: number
   }
-  layers: Array<object>
+  layers: Record<string, unknown>[]
   mapStyle?: string | Array<string>
 }
 
@@ -68,9 +71,9 @@ export interface PropsWithHeight extends Props {
 }
 
 interface State {
-  viewState: object
+  viewState: Record<string, unknown>
   initialized: boolean
-  initialViewState: object
+  initialViewState: Record<string, unknown>
 }
 
 export const DEFAULT_DECK_GL_HEIGHT = 500
@@ -153,7 +156,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     return jsonConverter.convert(json)
   }
 
-  createTooltip = (info: PickingInfo): object | boolean => {
+  createTooltip = (info: PickingInfo): Record<string, unknown> | boolean => {
     const { element } = this.props
     let tooltip = element.get("tooltip")
 
@@ -216,11 +219,10 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
             height={deck.initialViewState.height}
             width={deck.initialViewState.width}
             mapStyle={
-              deck.mapStyle
-                ? typeof deck.mapStyle === "string"
-                  ? deck.mapStyle
-                  : deck.mapStyle[0]
-                : undefined
+              deck.mapStyle &&
+              (typeof deck.mapStyle === "string"
+                ? deck.mapStyle
+                : deck.mapStyle[0])
             }
             mapboxApiAccessToken={this.props.mapboxToken}
           />

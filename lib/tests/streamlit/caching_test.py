@@ -13,12 +13,11 @@
 # limitations under the License.
 
 """st.caching unit tests."""
+from unittest.mock import patch
 import threading
 import unittest
 import pytest
 import types
-
-from mock import patch
 
 from streamlit import caching
 from streamlit import hashing
@@ -43,6 +42,14 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
 
         self.assertEqual(foo(), 42)
         self.assertEqual(foo(), 42)
+
+    def test_multiple_int_like_floats(self):
+        @st.cache
+        def foo(x):
+            return x
+
+        self.assertEqual(foo(1.0), 1.0)
+        self.assertEqual(foo(3.0), 3.0)
 
     @patch.object(st, "exception")
     def test_args(self, exception):

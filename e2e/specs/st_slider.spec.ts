@@ -66,4 +66,21 @@ describe("st.slider", () => {
       .first()
       .should("have.text", "Value 1: 24");
   });
+
+  it("maintains its state on rerun", () => {
+    cy.get('.stSlider [role="slider"]')
+      .first()
+      .click()
+      .type("{leftarrow}", { force: true });
+
+    // Rerun the script.
+    cy.get(".stApp .decoration").trigger("keypress", {
+      keyCode: 82, // "r"
+      which: 82 // "r"
+    });
+
+    cy.get(".stMarkdown")
+      .first()
+      .should("have.text", "Value 1: 24");
+  });
 });

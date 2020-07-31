@@ -16,12 +16,13 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/BlockPath.proto";
 import "streamlit/proto/Delta.proto";
 import "streamlit/proto/Initialize.proto";
 import "streamlit/proto/NewReport.proto";
+import "streamlit/proto/PageInfo.proto";
 import "streamlit/proto/SessionEvent.proto";
 import "streamlit/proto/SessionState.proto";
-import "streamlit/proto/BlockPath.proto";
 
 // A message sent from Proxy to the browser
 message ForwardMsg {
@@ -47,6 +48,7 @@ message ForwardMsg {
     Initialize initialize = 3;
     NewReport new_report = 4;
     Delta delta = 5;
+    PageInfo page_info_changed = 12;
     ReportFinishedStatus report_finished = 6;
 
     // Upload progress messages.
@@ -73,6 +75,8 @@ message ForwardMsg {
     // in its cache, it can retrieve it from the server.
     string ref_hash = 11;
   }
+
+  // Next: 13
 }
 
 message ForwardMsgMetadata {
