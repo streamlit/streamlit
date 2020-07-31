@@ -47,14 +47,29 @@ def _image_has_alpha_channel(image):
         return False
 
 
-def _PIL_to_bytes(image, format="JPEG", quality=100):
-    format = format.upper()
-    tmp = io.BytesIO()
+def _format_from_image_type(image, output_format):
+    output_format = output_format.upper()
+    if output_format == "JPEG" or output_format == "PNG":
+        return output_format
+
+    # We are forgiving on the spelling of JPEG
+    if output_format == "JPG":
+        return "JPEG"
 
     if _image_has_alpha_channel(image):
-        image.save(tmp, format="PNG", quality=quality)
-    else:
-        image.save(tmp, format=format, quality=quality)
+        return "PNG"
+
+    return "JPEG"
+
+
+def _PIL_to_bytes(image, format="JPEG", quality=100):
+    tmp = io.BytesIO()
+
+    # User must have specified JPEG, so we must convert it
+    if format == "JPEG" and _image_has_alpha_channel(image):
+        image = image.convert("RGB")
+
+    image.save(tmp, format=format, quality=quality)
 
     return tmp.getvalue()
 
@@ -64,16 +79,11 @@ def _BytesIO_to_bytes(data):
     return data.getvalue()
 
 
-def _np_array_to_bytes(array, format="JPEG"):
-    tmp = io.BytesIO()
+def _np_array_to_bytes(array, output_format="JPEG"):
     img = Image.fromarray(array.astype(np.uint8))
+    format = _format_from_image_type(img, output_format)
 
-    if _image_has_alpha_channel(img):
-        img.save(tmp, format="PNG")
-    else:
-        img.save(tmp, format=format)
-
-    return tmp.getvalue()
+    return _PIL_to_bytes(img, format)
 
 
 def _4d_to_list_3d(array):
@@ -96,31 +106,24 @@ def _verify_np_shape(array):
     return array
 
 
-def _normalize_to_bytes(data, width, format):
-    format = format.lower()
-    ext = imghdr.what(None, data)
-
-    if format is None:
-        mimetype = mimetypes.guess_type("image.%s" % ext)[0]
-    else:
-        mimetype = "image/" + format
-
+def _normalize_to_bytes(data, width, output_format):
     image = Image.open(io.BytesIO(data))
     actual_width, actual_height = image.size
+    format = _format_from_image_type(image, output_format)
+    if output_format.lower() == "auto":
+        ext = imghdr.what(None, data)
+        mimetype = mimetypes.guess_type("image.%s" % ext)[0]
+    else:
+        mimetype = "image/" + format.lower()
 
     if width < 0 and actual_width > MAXIMUM_CONTENT_WIDTH:
         width = MAXIMUM_CONTENT_WIDTH
 
-    if width > 0:
-        if actual_width > width:
-            new_height = int(1.0 * actual_height * width / actual_width)
-            image = image.resize((width, new_height))
-            data = _PIL_to_bytes(image, format=format, quality=90)
-
-            if format is None:
-                mimetype = "image/png"
-            else:
-                mimetype = "image/" + format
+    if width > 0 and actual_width > width:
+        new_height = int(1.0 * actual_height * width / actual_width)
+        image = image.resize((width, new_height))
+        data = _PIL_to_bytes(image, format=format, quality=90)
+        mimetype = "image/" + format.lower()
 
     return data, mimetype
 
@@ -143,9 +146,12 @@ def _clip_image(image, clamp):
     return data
 
 
-def image_to_url(image, width, clamp, channels, format, image_id, allow_emoji=False):
+def image_to_url(
+    image, width, clamp, channels, output_format, image_id, allow_emoji=False
+):
     # PIL Images
     if isinstance(image, ImageFile.ImageFile) or isinstance(image, Image.Image):
+        format = _format_from_image_type(image, output_format)
         data = _PIL_to_bytes(image, format)
 
     # BytesIO
@@ -168,7 +174,7 @@ def image_to_url(image, width, clamp, channels, format, image_id, allow_emoji=Fa
                     "have exactly 3 color channels"
                 )
 
-        data = _np_array_to_bytes(data, format=format)
+        data = _np_array_to_bytes(data, output_format=output_format)
 
     # Strings
     elif isinstance(image, str):
@@ -204,8 +210,8 @@ def image_to_url(image, width, clamp, channels, format, image_id, allow_emoji=Fa
     else:
         data = image
 
-    (data, mimetype) = _normalize_to_bytes(data, width, format)
-
+    (data, mimetype) = _normalize_to_bytes(data, width, output_format)
+    print(mimetype)
     this_file = media_file_manager.add(data, mimetype, image_id)
     return this_file.url
 
@@ -218,7 +224,7 @@ def marshall_images(
     proto_imgs,
     clamp,
     channels="RGB",
-    format="JPEG",
+    output_format="auto",
 ):
     channels = channels.upper()
 
@@ -262,4 +268,6 @@ def marshall_images(
         # We use the index of the image in the input image list to identify this image inside
         # MediaFileManager. For this, we just add the index to the image's "coordinates".
         image_id = "%s-%i" % (coordinates, coord_suffix)
-        proto_img.url = image_to_url(image, width, clamp, channels, format, image_id)
+        proto_img.url = image_to_url(
+            image, width, clamp, channels, output_format, image_id
+        )
