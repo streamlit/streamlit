@@ -44,7 +44,7 @@ from streamlit.proto.NumberInput_pb2 import NumberInput
 from streamlit.proto.Slider_pb2 import Slider
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.logger import get_logger
-from streamlit.type_util import is_type
+from streamlit.type_util import is_type, ensure_iterable
 
 from streamlit.elements.utils import _get_widget_ui_value, _set_widget_id
 from streamlit.elements.balloons import BalloonsMixin
@@ -174,6 +174,26 @@ import io
 file_buffer = st.file_uploader(...)
 text_io = io.TextIOWrapper(file_buffer)
 ```
+            """
+
+
+class ImageFormatWarning(StreamlitDeprecationWarning):
+    def __init__(self, format):
+        self.format = format
+
+        super(ImageFormatWarning, self).__init__(
+            msg=self._get_message(), config_option="deprecation.showImageFormat"
+        )
+
+    def _get_message(self):
+        return f"""
+The `format` parameter for `st.image` has been deprecated and will be removed
+or repurposed in the future. We recommend changing to the new `output_format`
+parameter to future-proof your code. For the parameter,
+`format="{self.format}"`, please use `output_format="{self.format}"` instead.
+
+See [https://github.com/streamlit/streamlit/issues/1137](https://github.com/streamlit/streamlit/issues/1137)
+for more information.
             """
 
 
@@ -1110,7 +1130,8 @@ class DeltaGenerator(
         use_column_width=False,
         clamp=False,
         channels="RGB",
-        format="JPEG",
+        output_format="auto",
+        **kwargs,
     ):
         """Display an image or list of images.
 
@@ -1143,9 +1164,12 @@ class DeltaGenerator(
             `image[:, :, 0]` is the red channel, `image[:, :, 1]` is green, and
             `image[:, :, 2]` is blue. For images coming from libraries like
             OpenCV you should set this to 'BGR', instead.
-        format : 'JPEG' or 'PNG'
-            This parameter specifies the image format to use when transferring
-            the image data. Defaults to 'JPEG'.
+        output_format : 'JPEG', 'PNG', or 'auto'
+            This parameter specifies the format to use when transferring the
+            image data. Photos should use the JPEG format for lossy compression
+            while diagrams should use the PNG format for lossless compression.
+            Defaults to 'auto' which identifies the compression type based
+            on the type and format of the image argument.
 
         Example
         -------
@@ -1162,6 +1186,14 @@ class DeltaGenerator(
         """
         from .elements import image_proto
 
+        format = kwargs.get("format")
+        if format != None:
+            # override output compression type if specified
+            output_format = format
+
+            if config.get_option("deprecation.showImageFormat"):
+                self.exception(ImageFormatWarning(format))
+
         if use_column_width:
             width = -2
         elif width is None:
@@ -1177,7 +1209,7 @@ class DeltaGenerator(
             element.imgs,
             clamp,
             channels,
-            format,
+            output_format,
         )
 
     @_with_element
@@ -1410,9 +1442,9 @@ class DeltaGenerator(
         ----------
         label : str
             A short label explaining to the user what this select widget is for.
-        options : list, tuple, numpy.ndarray, or pandas.Series
+        options : list, tuple, numpy.ndarray, pandas.Series, or pandas.DataFrame
             Labels for the select options. This will be cast to str internally
-            by default.
+            by default. For pandas.DataFrame, the first column is selected.
         default: [str] or None
             List of default values.
         format_func : function
@@ -1448,6 +1480,7 @@ class DeltaGenerator(
            `GitHub issue #1059 <https://github.com/streamlit/streamlit/issues/1059>`_ for updates on the issue.
 
         """
+        options = ensure_iterable(options)
 
         # Perform validation checks and return indices base on the default values.
         def _check_and_convert_to_indices(options, default_values):
@@ -1497,9 +1530,9 @@ class DeltaGenerator(
         ----------
         label : str
             A short label explaining to the user what this radio group is for.
-        options : list, tuple, numpy.ndarray, or pandas.Series
+        options : list, tuple, numpy.ndarray, pandas.Series, or pandas.DataFrame
             Labels for the radio options. This will be cast to str internally
-            by default.
+            by default. For pandas.DataFrame, the first column is selected.
         index : int
             The index of the preselected option on first render.
         format_func : function
@@ -1530,6 +1563,8 @@ class DeltaGenerator(
         ...     st.write("You didn\'t select comedy.")
 
         """
+        options = ensure_iterable(options)
+
         if not isinstance(index, int):
             raise StreamlitAPIException(
                 "Radio Value has invalid type: %s" % type(index).__name__
@@ -1561,9 +1596,9 @@ class DeltaGenerator(
         ----------
         label : str
             A short label explaining to the user what this select widget is for.
-        options : list, tuple, numpy.ndarray, or pandas.Series
+        options : list, tuple, numpy.ndarray, pandas.Series, or pandas.DataFrame
             Labels for the select options. This will be cast to str internally
-            by default.
+            by default. For pandas.DataFrame, the first column is selected.
         index : int
             The index of the preselected option on first render.
         format_func : function
@@ -1589,6 +1624,8 @@ class DeltaGenerator(
         >>> st.write('You selected:', option)
 
         """
+        options = ensure_iterable(options)
+
         if not isinstance(index, int):
             raise StreamlitAPIException(
                 "Selectbox Value has invalid type: %s" % type(index).__name__

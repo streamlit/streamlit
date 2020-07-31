@@ -64,7 +64,7 @@ def marshall(coordinates, new_element_proto, fig=None, clear_figure=True, **kwar
         new_element_proto.imgs,
         False,
         channels="RGB",
-        format="PNG",
+        output_format="PNG",
     )
 
     # Clear the figure after rendering it. This means that subsequent

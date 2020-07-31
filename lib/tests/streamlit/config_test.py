@@ -275,6 +275,7 @@ class ConfigTest(unittest.TestCase):
                 "client.caching",
                 "client.displayEnabled",
                 "deprecation.showfileUploaderEncoding",
+                "deprecation.showImageFormat",
                 "global.developmentMode",
                 "global.disableWatchdogWarning",
                 "global.logLevel",
