@@ -50,8 +50,10 @@ function overwriteFavicon(imageUrl: string): void {
 function extractEmoji(maybeEmoji: string): string {
   if (nodeEmoji.hasEmoji(nodeEmoji.get(maybeEmoji))) {
     // Format: pizza or :pizza:
+    // Since hasEmoji(':pizza:') == true, we must do this check first
     return nodeEmoji.get(maybeEmoji)
-  } else if (nodeEmoji.hasEmoji(maybeEmoji)) {
+  }
+  if (nodeEmoji.hasEmoji(maybeEmoji)) {
     // Format: 🍕
     return maybeEmoji
   }

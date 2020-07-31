@@ -1,3 +1,4 @@
+/* eslint-disable */
 // We only need this one function of Twemoji to locate the CDN emoji image,
 // so we copy it instead of importing the whole library.
 // https://github.com/twitter/twemoji/blob/42f8843cb3aa1f9403d5479d7e3f7e01176ad08e/scripts/build.js#L571
