@@ -1,4 +1,4 @@
-from streamlit.proto import Text_pb2
+from streamlit.proto.Text_pb2 import Text as TextProto
 from .utils import _clean_text
 
 
@@ -20,6 +20,6 @@ class TextMixin:
            height: 50px
 
         """
-        text_proto = Text_pb2.Text()
+        text_proto = TextProto()
         text_proto.body = _clean_text(body)
         return dg._enqueue("text", text_proto)  # type: ignore

@@ -16,7 +16,7 @@
 
 import inspect
 
-from streamlit.proto import DocString_pb2
+from streamlit.proto.DocString_pb2 import DocString as DocStringProto
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
@@ -52,7 +52,7 @@ class HelpMixin:
         >>> st.help(x)
 
         """
-        doc_string_proto = DocString_pb2.DocString()
+        doc_string_proto = DocStringProto()
         _marshall(doc_string_proto, obj)
         return dg._enqueue("doc_string", doc_string_proto)  # type: ignore
 

@@ -1,4 +1,4 @@
-from streamlit.proto import Alert_pb2
+from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from .utils import _clean_text
 
 
@@ -16,9 +16,9 @@ class AlertMixin:
         >>> st.error('This is an error')
 
         """
-        alert_proto = Alert_pb2.Alert()
+        alert_proto = AlertProto()
         alert_proto.body = _clean_text(body)
-        alert_proto.format = Alert_pb2.Alert.ERROR
+        alert_proto.format = AlertProto.ERROR
         return dg._enqueue("alert", alert_proto)  # type: ignore
 
     def warning(dg, body):
@@ -34,9 +34,9 @@ class AlertMixin:
         >>> st.warning('This is a warning')
 
         """
-        alert_proto = Alert_pb2.Alert()
+        alert_proto = AlertProto()
         alert_proto.body = _clean_text(body)
-        alert_proto.format = Alert_pb2.Alert.WARNING
+        alert_proto.format = AlertProto.WARNING
         return dg._enqueue("alert", alert_proto)  # type: ignore
 
     def info(dg, body):
@@ -52,9 +52,9 @@ class AlertMixin:
         >>> st.info('This is a purely informational message')
 
         """
-        alert_proto = Alert_pb2.Alert()
+        alert_proto = AlertProto()
         alert_proto.body = _clean_text(body)
-        alert_proto.format = Alert_pb2.Alert.INFO
+        alert_proto.format = AlertProto.INFO
         return dg._enqueue("alert", alert_proto)  # type: ignore
 
     def success(dg, body):
@@ -70,7 +70,7 @@ class AlertMixin:
         >>> st.success('This is a success message!')
 
         """
-        alert_proto = Alert_pb2.Alert()
+        alert_proto = AlertProto()
         alert_proto.body = _clean_text(body)
-        alert_proto.format = Alert_pb2.Alert.SUCCESS
+        alert_proto.format = AlertProto.SUCCESS
         return dg._enqueue("alert", alert_proto)  # type: ignore

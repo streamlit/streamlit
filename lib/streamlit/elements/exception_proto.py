@@ -16,7 +16,7 @@ import sys
 import traceback
 from typing import Optional
 
-from streamlit.proto import Exception_pb2
+from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 from streamlit.error_util import get_nonstreamlit_traceback
 from streamlit.errors import MarkdownFormattedException
 from streamlit.errors import StreamlitAPIException
@@ -42,7 +42,7 @@ class ExceptionMixin:
         >>> st.exception(e)
 
         """
-        exception_proto = Exception_pb2.Exception()
+        exception_proto = ExceptionProto()
         marshall(exception_proto, exception)
         return dg._enqueue("exception", exception_proto)  # type: ignore
 

@@ -1,4 +1,4 @@
-from streamlit.proto import Button_pb2
+from streamlit.proto.Button_pb2 import Button as ButtonProto
 from .utils import _get_widget_ui_value
 
 
@@ -29,7 +29,7 @@ class ButtonMixin:
         ...     st.write('Goodbye')
 
         """
-        button_proto = Button_pb2.Button()
+        button_proto = ButtonProto()
 
         button_proto.label = label
         button_proto.default = False

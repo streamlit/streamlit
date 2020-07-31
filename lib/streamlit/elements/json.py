@@ -1,6 +1,6 @@
 import json
 
-from streamlit.proto import Json_pb2
+from streamlit.proto.Json_pb2 import Json as JsonProto
 
 
 class JsonMixin:
@@ -44,6 +44,6 @@ class JsonMixin:
                 )
                 body = json.dumps(body, skipkeys=True, default=lambda o: str(type(o)))
 
-        json_proto = Json_pb2.Json()
+        json_proto = JsonProto()
         json_proto.body = body
         return dg._enqueue("json", json_proto)  # type: ignore

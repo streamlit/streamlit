@@ -1,6 +1,6 @@
 import random
 
-from streamlit.proto import Balloons_pb2
+from streamlit.proto.Balloons_pb2 import Balloons as BalloonsProto
 
 
 class BalloonsMixin:
@@ -14,9 +14,9 @@ class BalloonsMixin:
         ...then watch your app and get ready for a celebration!
 
         """
-        balloons_proto = Balloons_pb2.Balloons()
+        balloons_proto = BalloonsProto()
 
-        balloons_proto.type = Balloons_pb2.Balloons.DEFAULT
+        balloons_proto.type = BalloonsProto.DEFAULT
         balloons_proto.execution_id = random.randrange(0xFFFFFFFF)
 
         return dg._enqueue("balloons", balloons_proto)  # type: ignore

@@ -1,4 +1,4 @@
-from streamlit.proto import Markdown_pb2
+from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit import type_util
 from .utils import _clean_text
 
@@ -54,7 +54,7 @@ class MarkdownMixin:
            height: 50px
 
         """
-        markdown_proto = Markdown_pb2.Markdown()
+        markdown_proto = MarkdownProto()
 
         markdown_proto.body = _clean_text(body)
         markdown_proto.allow_html = unsafe_allow_html
@@ -78,7 +78,7 @@ class MarkdownMixin:
            height: 100px
 
         """
-        header_proto = Markdown_pb2.Markdown()
+        header_proto = MarkdownProto()
         header_proto.body = "## %s" % _clean_text(body)
         return dg._enqueue("markdown", header_proto)  # type: ignore
 
@@ -99,7 +99,7 @@ class MarkdownMixin:
            height: 100px
 
         """
-        subheader_proto = Markdown_pb2.Markdown()
+        subheader_proto = MarkdownProto()
         subheader_proto.body = "### %s" % _clean_text(body)
         return dg._enqueue("markdown", subheader_proto)  # type: ignore
 
@@ -128,7 +128,7 @@ class MarkdownMixin:
            height: 100px
 
         """
-        code_proto = Markdown_pb2.Markdown()
+        code_proto = MarkdownProto()
         markdown = "```%(language)s\n%(body)s\n```" % {
             "language": language or "",
             "body": body,
@@ -156,7 +156,7 @@ class MarkdownMixin:
            height: 100px
 
         """
-        title_proto = Markdown_pb2.Markdown()
+        title_proto = MarkdownProto()
         title_proto.body = "# %s" % _clean_text(body)
         return dg._enqueue("markdown", title_proto)  # type: ignore
 
@@ -194,6 +194,6 @@ class MarkdownMixin:
 
             body = sympy.latex(body)
 
-        latex_proto = Markdown_pb2.Markdown()
+        latex_proto = MarkdownProto()
         latex_proto.body = "$$\n%s\n$$" % _clean_text(body)
         return dg._enqueue("markdown", latex_proto)  # type: ignore
