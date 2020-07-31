@@ -129,7 +129,7 @@ describe("BokehChart element", () => {
 
   it("should re-render the chart when the component updates", () => {
     const props = getProps()
-    //shallow does not work with useEffect hooks
+    // shallow does not work with useEffect hooks
     const wrapper = mount(<BokehChart {...props} />)
     wrapper.setProps({
       width: 500,

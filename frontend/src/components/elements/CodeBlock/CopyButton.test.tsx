@@ -56,16 +56,16 @@ describe("CopyButton Element", () => {
       expect(Clipboard).toHaveBeenCalled()
     })
 
-    it("should be called on unmount", done => {
+    it("should be called on unmount", () => {
       const wrapper = mount(<CopyButton text="test" />)
 
       wrapper.unmount()
 
-      const mockClipboard = Clipboard.mock.instances[0]
-      const mockDestroy = mockClipboard.destroy
+      // const mockClipboard = Clipboard.mock.instances[0]
+      // const mockDestroy = mockClipboard.destroy
 
       // does not work with useEffect. need to check better way
-      //expect(mockDestroy).toHaveBeenCalled()
+      // expect(mockDestroy).toHaveBeenCalled()
     })
   })
 })

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { useEffect } from "react"
+import React, { ReactNode, useEffect } from "react"
 import { Map as ImmutableMap } from "immutable"
 import { embed as BokehEmbed } from "@bokeh/bokehjs"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
@@ -37,7 +37,7 @@ export function BokehChart({
   element,
   index,
   height: h,
-}: BokehChartProps) {
+}: BokehChartProps): ReactNode {
   const chartId = `bokeh-chart-${index}`
 
   const getChartData = (): any => {
@@ -61,6 +61,12 @@ export function BokehChart({
     }
 
     return { width, height }
+  }
+
+  const removeAllChildNodes = (element: Node): void => {
+    while (element.lastChild) {
+      element.lastChild.remove()
+    }
   }
 
   const updateChart = (data: any): void => {
@@ -92,12 +98,6 @@ export function BokehChart({
     if (chart !== null) {
       removeAllChildNodes(chart)
       BokehEmbed.embed_item(data, chartId)
-    }
-  }
-
-  const removeAllChildNodes = (element: Node): void => {
-    while (element.lastChild) {
-      element.lastChild.remove()
     }
   }
 

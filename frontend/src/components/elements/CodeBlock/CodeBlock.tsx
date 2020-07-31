@@ -16,7 +16,7 @@
  */
 
 import Prism, { Grammar } from "prismjs"
-import React from "react"
+import React, { ReactNode } from "react"
 import { logWarning } from "lib/log"
 
 // Prism language definition files.
@@ -42,7 +42,11 @@ export interface CodeBlockProps {
 /**
  * Renders a code block with syntax highlighting, via Prismjs
  */
-export default function CodeBlock({ width, language, value }: CodeBlockProps) {
+export default function CodeBlock({
+  width,
+  language,
+  value,
+}: CodeBlockProps): ReactNode {
   if (language == null) {
     return (
       <div className="stCodeBlock">
@@ -56,7 +60,7 @@ export default function CodeBlock({ width, language, value }: CodeBlockProps) {
 
   // Language definition keys are lowercase
   let lang: Grammar = Prism.languages[language.toLowerCase()]
-  let languageClassName: string = `language-${language}`
+  let languageClassName = `language-${language}`
 
   if (lang === undefined) {
     logWarning(`No syntax highlighting for ${language}; defaulting to Python`)

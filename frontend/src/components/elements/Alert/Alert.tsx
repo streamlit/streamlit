@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { ReactNode } from "react"
 
 import classNames from "classnames"
 import { Map as ImmutableMap } from "immutable"
@@ -50,7 +50,7 @@ export interface AlertProps {
  * Functional element representing error/warning/info/success boxes
  * which may be formatted in Markdown.
  */
-export default function Alert({ element, width }: AlertProps) {
+export default function Alert({ element, width }: AlertProps): ReactNode {
   const body = element.get("body")
   const format = element.get("format")
 
