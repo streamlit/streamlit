@@ -480,7 +480,7 @@ def experimental_show(*args):
 
     except Exception:
         _, exc, exc_tb = _sys.exc_info()
-        exception(exc, exc_tb)  # noqa: F821
+        exception(exc)
 
 
 def experimental_get_query_params():
