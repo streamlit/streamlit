@@ -25,6 +25,7 @@ from typing import Any, Dict, Optional, TYPE_CHECKING
 import tornado.concurrent
 import tornado.gen
 import tornado.ioloop
+import tornado.netutil
 import tornado.web
 import tornado.websocket
 
@@ -124,13 +125,28 @@ def start_listening(app):
 
     """
 
-    call_count = 0
     http_server = tornado.httpserver.HTTPServer(
         app, max_buffer_size=config.get_option("server.maxUploadSize") * 1024 * 1024
     )
 
+    address = config.get_option("server.address")
+
+    if address.startswith("unix://"):
+        file_name = address[7:]
+        start_listening_unix_socket(http_server, file_name)
+    else:
+        start_listening_tcp_socket(http_server, address)
+
+
+def start_listening_unix_socket(http_server, file_name):
+    unix_socket = tornado.netutil.bind_unix_socket(file_name)
+    http_server.add_socket(unix_socket)
+
+
+def start_listening_tcp_socket(http_server, address):
+    call_count = 0
+
     while call_count < MAX_PORT_SEARCH_RETRIES:
-        address = config.get_option("server.address")
         port = config.get_option("server.port")
 
         try:
