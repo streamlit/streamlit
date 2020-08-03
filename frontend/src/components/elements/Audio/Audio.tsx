@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { useRef } from "react"
+import React, { ReactElement, useRef } from "react"
 import { Map as ImmutableMap } from "immutable"
 import { buildMediaUri } from "lib/UriUtil"
 
@@ -24,18 +24,17 @@ export interface AudioProps {
   element: ImmutableMap<string, any>
 }
 
-export default function Audio({ element, width }: AudioProps) {
+export default function Audio({ element, width }: AudioProps): ReactElement {
   const audioRef = useRef<HTMLAudioElement>(null)
-
-  React.useEffect(() => {
-    updateTime()
-  }, [])
-
-  const updateTime = () => {
+  const updateTime = (): void => {
     if (audioRef.current) {
       audioRef.current.currentTime = element.get("startTime")
     }
   }
+  React.useEffect(() => {
+    updateTime()
+  }, [])
+
   const uri = buildMediaUri(element.get("url"))
   return (
     <audio

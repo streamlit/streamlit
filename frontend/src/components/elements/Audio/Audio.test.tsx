@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { createRef } from "react"
+import React from "react"
 import { mount, shallow } from "enzyme"
 import { fromJS } from "immutable"
 
@@ -65,7 +65,7 @@ describe("Audio Element", () => {
     const props = getProps({
       url: "http://localhost:80/media/sound.wav",
     })
-    let useEffect = jest.spyOn(React, "useEffect")
+    const useEffect = jest.spyOn(React, "useEffect")
     const wrapper = mount(<Audio {...props} />)
 
     expect(useEffect).toHaveBeenCalledTimes(1)
