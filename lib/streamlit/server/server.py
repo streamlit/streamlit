@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import logging
+import os
 import threading
 import socket
 import sys
@@ -131,8 +132,8 @@ def start_listening(app):
 
     address = config.get_option("server.address")
 
-    if address.startswith("unix://"):
-        file_name = address[7:]
+    if address and address.startswith("unix://"):
+        file_name = os.path.expanduser(address[7:])
         start_listening_unix_socket(http_server, file_name)
     else:
         start_listening_tcp_socket(http_server, address)

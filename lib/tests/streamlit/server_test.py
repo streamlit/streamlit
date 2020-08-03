@@ -569,10 +569,12 @@ class UnixSocketTest(unittest.TestCase):
         config.set_option("server.address", "unix://~/fancy-test/testasd")
         some_socket = object()
 
+        mock_server = self.get_httpserver()
         with patch.object(
-            tornado.httpserver, "HTTPServer", return_value=self.get_httpserver()
-        ) as mock_server, patch.object(
-            tornado.netutil, "bind_unix_socket", return_value=some_socket) as bind_unix_socket:
+            tornado.httpserver, "HTTPServer", return_value=mock_server
+        ), patch.object(
+            tornado.netutil, "bind_unix_socket", return_value=some_socket
+        ) as bind_unix_socket:
             start_listening(app)
 
             bind_unix_socket.assert_called_with("/home/koen/fancy-test/testasd")
