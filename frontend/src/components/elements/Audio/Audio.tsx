@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { useEffect, useRef } from "react"
+import React, { useRef } from "react"
 import { Map as ImmutableMap } from "immutable"
 import { buildMediaUri } from "lib/UriUtil"
 
