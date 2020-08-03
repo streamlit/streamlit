@@ -1,4 +1,5 @@
 # Packages used to test things users may do with Streamlit.
+bokeh
 cffi
 chart-studio
 # 8.0.0 causes test_sqlalchemy_engine_2_oracle to fail.

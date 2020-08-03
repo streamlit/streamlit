@@ -15,7 +15,6 @@
 """A Python wrapper around Bokeh."""
 
 from streamlit.proto.BokehChart_pb2 import BokehChart as BokehChartProto
-from bokeh.embed import json_item
 import json
 
 
@@ -71,6 +70,8 @@ def marshall(proto, figure, use_container_width):
 
     See DeltaGenerator.bokeh_chart for docs.
     """
+    from bokeh.embed import json_item
+
     data = json_item(figure)
     proto.figure = json.dumps(data)
     proto.use_container_width = use_container_width
