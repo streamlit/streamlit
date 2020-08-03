@@ -16,14 +16,14 @@
  */
 
 import Clipboard from "clipboard"
-import React, { ReactNode, useEffect, useRef, useState } from "react"
+import React, { ReactElement, useEffect, useRef, useState } from "react"
 import { Copy as CopyIcon } from "react-feather"
 
 interface CopyButtonProps {
   text: string
 }
 
-export default function CopyButton({ text }: CopyButtonProps): ReactNode {
+export default function CopyButton({ text }: CopyButtonProps): ReactElement {
   const button = useRef<HTMLButtonElement>(null)
 
   const [clipboard, setClipBoard] = useState<ClipboardJS | null>(null)

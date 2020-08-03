@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { ReactNode, useEffect } from "react"
+import React, { ReactElement, useEffect } from "react"
 import { Map as ImmutableMap } from "immutable"
 import { embed as BokehEmbed } from "@bokeh/bokehjs"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
@@ -37,7 +37,7 @@ export function BokehChart({
   element,
   index,
   height: h,
-}: BokehChartProps): ReactNode {
+}: BokehChartProps): ReactElement {
   const chartId = `bokeh-chart-${index}`
 
   const getChartData = (): any => {

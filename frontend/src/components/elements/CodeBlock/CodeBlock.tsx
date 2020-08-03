@@ -16,7 +16,7 @@
  */
 
 import Prism, { Grammar } from "prismjs"
-import React, { ReactNode } from "react"
+import React, { ReactElement } from "react"
 import { logWarning } from "lib/log"
 
 // Prism language definition files.
@@ -46,7 +46,7 @@ export default function CodeBlock({
   width,
   language,
   value,
-}: CodeBlockProps): ReactNode {
+}: CodeBlockProps): ReactElement {
   if (language == null) {
     return (
       <div className="stCodeBlock">
