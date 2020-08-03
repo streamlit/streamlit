@@ -17,7 +17,7 @@
 from datetime import date
 
 from streamlit import type_util
-from streamlit.proto import VegaLiteChart_pb2
+from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
 import streamlit.elements.vega_lite as vega_lite
 import altair as alt
 import pandas as pd
@@ -63,7 +63,7 @@ class AltairMixin:
            height: 220px
 
         """
-        vega_lite_chart_proto = VegaLiteChart_pb2.VegaLiteChart()
+        vega_lite_chart_proto = VegaLiteChartProto()
 
         chart = generate_chart("line", data, width, height)
         marshall(vega_lite_chart_proto, chart, use_container_width)
@@ -107,7 +107,7 @@ class AltairMixin:
            height: 220px
 
         """
-        vega_lite_chart_proto = VegaLiteChart_pb2.VegaLiteChart()
+        vega_lite_chart_proto = VegaLiteChartProto()
 
         chart = generate_chart("area", data, width, height)
         marshall(vega_lite_chart_proto, chart, use_container_width)
@@ -151,7 +151,7 @@ class AltairMixin:
            height: 220px
 
         """
-        vega_lite_chart_proto = VegaLiteChart_pb2.VegaLiteChart()
+        vega_lite_chart_proto = VegaLiteChartProto()
 
         chart = generate_chart("bar", data, width, height)
         marshall(vega_lite_chart_proto, chart, use_container_width)
@@ -200,7 +200,7 @@ class AltairMixin:
         https://altair-viz.github.io/gallery/.
 
         """
-        vega_lite_chart_proto = VegaLiteChart_pb2.VegaLiteChart()
+        vega_lite_chart_proto = VegaLiteChartProto()
 
         if width != 0:
             import streamlit as st

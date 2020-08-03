@@ -21,7 +21,7 @@ from collections import namedtuple
 
 from streamlit import type_util
 from streamlit.logger import get_logger
-from streamlit.proto import DataFrame_pb2
+from streamlit.proto.DataFrame_pb2 import DataFrame as DataFrameProto
 
 LOGGER = get_logger(__name__)
 
@@ -78,7 +78,7 @@ class DataFrameMixin:
            height: 285px
 
         """
-        data_frame_proto = DataFrame_pb2.DataFrame()
+        data_frame_proto = DataFrameProto()
         marshall_data_frame(data, data_frame_proto)
 
         return dg._enqueue(  # type: ignore
@@ -110,7 +110,7 @@ class DataFrameMixin:
            height: 480px
 
         """
-        table_proto = DataFrame_pb2.DataFrame()
+        table_proto = DataFrameProto()
         marshall_data_frame(data, table_proto)
         return dg._enqueue("table", table_proto)  # type: ignore
 

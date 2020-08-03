@@ -21,7 +21,7 @@ from streamlit import caching
 from streamlit import type_util
 
 from streamlit.logger import get_logger
-from streamlit.proto import PlotlyChart_pb2
+from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 
 LOGGER = get_logger(__name__)
 
@@ -148,7 +148,7 @@ class PlotlyMixin:
                 "The `height` argument in `st.plotly_chart` is deprecated and will be removed on 2020-03-04. To set the height, you should instead use Plotly's native `height` argument as described at https://plot.ly/python/setting-graph-size/"
             )
 
-        plotly_chart_proto = PlotlyChart_pb2.PlotlyChart()
+        plotly_chart_proto = PlotlyChartProto()
         marshall(
             plotly_chart_proto, figure_or_data, use_container_width, sharing, **kwargs
         )

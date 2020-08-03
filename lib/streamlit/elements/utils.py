@@ -1,7 +1,6 @@
 import textwrap
 
 from streamlit import type_util
-from streamlit.proto import Element_pb2
 from streamlit.report_thread import get_report_ctx
 from streamlit.errors import DuplicateWidgetID
 from typing import Optional, Any

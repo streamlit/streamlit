@@ -14,7 +14,7 @@
 
 """A Python wrapper around Bokeh."""
 
-from streamlit.proto import BokehChart_pb2
+from streamlit.proto.BokehChart_pb2 import BokehChart as BokehChartProto
 from bokeh.embed import json_item
 import json
 
@@ -61,7 +61,7 @@ class BokehMixin:
            height: 600px
 
         """
-        bokeh_chart_proto = BokehChart_pb2.BokehChart()
+        bokeh_chart_proto = BokehChartProto()
         marshall(bokeh_chart_proto, figure, use_container_width)
         return dg._enqueue("bokeh_chart", bokeh_chart_proto)  # type: ignore
 

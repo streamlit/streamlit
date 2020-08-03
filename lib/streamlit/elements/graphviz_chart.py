@@ -16,7 +16,7 @@
 
 from streamlit import type_util
 from streamlit.logger import get_logger
-from streamlit.proto import GraphVizChart_pb2
+from streamlit.proto.GraphVizChart_pb2 import GraphVizChart as GraphVizChartProto
 
 LOGGER = get_logger(__name__)
 
@@ -113,7 +113,7 @@ class GraphvizMixin:
                 "The `height` argument in `st.graphviz` is deprecated and will be removed on 2020-03-04"
             )
 
-        graphviz_chart_proto = GraphVizChart_pb2.GraphVizChart()
+        graphviz_chart_proto = GraphVizChartProto()
         marshall(graphviz_chart_proto, figure_or_dot, use_container_width)
         return dg._enqueue("graphviz_chart", graphviz_chart_proto)  # type: ignore
 

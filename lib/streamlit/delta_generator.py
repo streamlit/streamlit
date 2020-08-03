@@ -35,8 +35,6 @@ from streamlit.errors import NoSessionContext
 from streamlit.file_util import get_encoded_file_data
 from streamlit.js_number import JSNumber
 from streamlit.js_number import JSNumberBoundsException
-from streamlit.proto import Alert_pb2
-from streamlit.proto import Balloons_pb2
 from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto.Element_pb2 import Element

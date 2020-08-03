@@ -19,7 +19,7 @@ from typing import Any, List
 
 from streamlit import case_converters
 from streamlit import config
-from streamlit.proto import DeckGlChart_pb2
+from streamlit.proto.DeckGlChart_pb2 import DeckGlChart as DeckGlChartProto
 import streamlit.elements.lib.dicttools as dicttools
 import streamlit.elements.data_frame_proto as data_frame_proto
 
@@ -144,7 +144,7 @@ class DeckGlMixin:
             """
             )
 
-        deck_gl_proto = DeckGlChart_pb2.DeckGlChart()
+        deck_gl_proto = DeckGlChartProto()
         marshall(deck_gl_proto, spec, use_container_width, **kwargs)
         return dg._enqueue("deck_gl_chart", deck_gl_proto)  # type: ignore
 

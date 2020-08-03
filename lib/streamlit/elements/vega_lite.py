@@ -19,7 +19,7 @@ import json
 import streamlit.elements.lib.dicttools as dicttools
 import streamlit.elements.data_frame_proto as data_frame_proto
 
-from streamlit.proto import VegaLiteChart_pb2
+from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
@@ -84,7 +84,7 @@ class VegaLiteMixin:
         translated to the syntax shown above.
 
         """
-        vega_lite_chart_proto = VegaLiteChart_pb2.VegaLiteChart()
+        vega_lite_chart_proto = VegaLiteChartProto()
 
         if width != 0:
             import streamlit as st
