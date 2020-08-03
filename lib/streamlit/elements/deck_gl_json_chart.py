@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import json
-from streamlit.proto.DeckGlChart_pb2 import DeckGlChart as DeckGlChartProto
+from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
 
 
 class PydeckMixin:
@@ -85,7 +85,7 @@ class PydeckMixin:
            height: 530px
 
         """
-        pydeck_proto = DeckGlChartProto()
+        pydeck_proto = PydeckProto()
         marshall(pydeck_proto, pydeck_obj, use_container_width)
         return dg._enqueue("deck_gl_json_chart", pydeck_proto)  # type: ignore
 
