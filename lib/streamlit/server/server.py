@@ -117,6 +117,9 @@ class RetriesExceeded(Exception):
 def server_port_is_manually_set():
     return config.is_manually_set("server.port")
 
+def server_address_is_unix_socket():
+    address = config.get_option("server.address")
+    return address and address.startswith("unix://")
 
 def start_listening(app):
     """Makes the server start listening at the configured port.
@@ -130,24 +133,25 @@ def start_listening(app):
         app, max_buffer_size=config.get_option("server.maxUploadSize") * 1024 * 1024
     )
 
-    address = config.get_option("server.address")
-
-    if address and address.startswith("unix://"):
-        file_name = os.path.expanduser(address[7:])
-        start_listening_unix_socket(http_server, file_name)
+    if server_address_is_unix_socket():
+        start_listening_unix_socket(http_server)
     else:
-        start_listening_tcp_socket(http_server, address)
+        start_listening_tcp_socket(http_server)
 
 
-def start_listening_unix_socket(http_server, file_name):
+def start_listening_unix_socket(http_server):
+    address = config.get_option("server.address")
+    file_name = os.path.expanduser(address[7:])
+
     unix_socket = tornado.netutil.bind_unix_socket(file_name)
     http_server.add_socket(unix_socket)
 
 
-def start_listening_tcp_socket(http_server, address):
+def start_listening_tcp_socket(http_server):
     call_count = 0
 
     while call_count < MAX_PORT_SEARCH_RETRIES:
+        address = config.get_option("server.address")
         port = config.get_option("server.port")
 
         try:
