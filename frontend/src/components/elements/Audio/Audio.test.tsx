@@ -15,13 +15,13 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { shallow } from "enzyme"
+import React, { createRef } from "react"
+import { mount, shallow } from "enzyme"
 import { fromJS } from "immutable"
 
-import Audio, { Props } from "./Audio"
+import Audio, { AudioProps } from "./Audio"
 
-const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
+const getProps = (elementProps: Record<string, unknown> = {}): AudioProps => ({
   element: fromJS({
     startTime: 0,
     url: "/media/08a569df5f3bd617f11b7d137861a3bef91379309ce95bdb9ff04a38.wav",
@@ -65,24 +65,15 @@ describe("Audio Element", () => {
     const props = getProps({
       url: "http://localhost:80/media/sound.wav",
     })
+    let useEffect = jest.spyOn(React, "useEffect")
+    const wrapper = mount(<Audio {...props} />)
 
-    const wrapper = shallow(<Audio {...props} />)
-    const instance = wrapper.instance()
-
-    // @ts-ignore
-    instance.audioRef = {
-      current: {
-        currentTime: 0,
-      },
-    }
-
+    expect(useEffect).toHaveBeenCalledTimes(1)
     wrapper.setProps(
       getProps({
         startTime: 10,
       })
     )
-
-    // @ts-ignore
-    expect(instance.audioRef.current.currentTime).toBe(10)
+    expect(useEffect).toHaveBeenCalledTimes(2)
   })
 })

@@ -28,15 +28,15 @@ export interface BokehChartProps {
 }
 
 interface Dimensions {
-  width: number
-  height: number
+  chartWidth: number
+  chartHeight: number
 }
 
 export function BokehChart({
-  width: w,
+  width,
   element,
   index,
-  height: h,
+  height,
 }: BokehChartProps): ReactElement {
   const chartId = `bokeh-chart-${index}`
 
@@ -48,19 +48,19 @@ export function BokehChart({
   const getChartDimensions = (plot: any): Dimensions => {
     const useContainerWidth = element.get("useContainerWidth")
     // Default values
-    let width: number = plot.attributes.plot_width
-    let height: number = plot.attributes.plot_height
+    let chartWidth: number = plot.attributes.plot_width
+    let chartHeight: number = plot.attributes.plot_height
 
     // if is not fullscreen and useContainerWidth==false, we should use default values
-    if (h) {
+    if (height) {
       // fullscreen
-      width = w
-      height = h
+      chartWidth = width
+      chartHeight = height
     } else if (useContainerWidth) {
-      width = w
+      chartWidth = width
     }
 
-    return { width, height }
+    return { chartWidth, chartHeight }
   }
 
   const removeAllChildNodes = (element: Node): void => {
@@ -85,13 +85,13 @@ export function BokehChart({
         : undefined
 
     if (plot) {
-      const { width, height } = getChartDimensions(plot)
+      const { chartWidth, chartHeight } = getChartDimensions(plot)
 
-      if (width > 0) {
-        plot.attributes.plot_width = width
+      if (chartWidth > 0) {
+        plot.attributes.plot_width = chartWidth
       }
-      if (height > 0) {
-        plot.attributes.plot_height = height
+      if (chartHeight > 0) {
+        plot.attributes.plot_height = chartHeight
       }
     }
 

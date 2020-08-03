@@ -33,13 +33,16 @@ export default function CopyButton({ text }: CopyButtonProps): ReactElement {
     if (node !== null) {
       setClipBoard(new Clipboard(node))
     }
-    return () => {
+  }, [text])
+  useEffect(
+    () => () => {
       if (clipboard !== null) {
         clipboard.destroy()
         setClipBoard(null)
       }
-    }
-  }, [text])
+    },
+    [clipboard]
+  )
 
   return (
     <button
