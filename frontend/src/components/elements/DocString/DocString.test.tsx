@@ -19,9 +19,11 @@ import React from "react"
 import { shallow } from "enzyme"
 import { fromJS } from "immutable"
 
-import DocString, { Props } from "./DocString"
+import DocString, { DocStringProps } from "./DocString"
 
-const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
+const getProps = (
+  elementProps: Record<string, unknown> = {}
+): DocStringProps => ({
   element: fromJS({
     name: "balloons",
     module: "streamlit",
