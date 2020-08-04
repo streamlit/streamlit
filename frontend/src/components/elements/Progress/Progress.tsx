@@ -15,69 +15,69 @@
  * limitations under the License.
  */
 
-import React, { PureComponent, ReactNode } from "react"
+import React, { ReactElement, useEffect, useState } from "react"
 import { Map as ImmutableMap } from "immutable"
 import { Progress as UIProgress } from "reactstrap"
 
 import "./Progress.scss"
 
-export interface Props {
+export interface ProgressProps {
   width: number
   element: ImmutableMap<string, any>
 }
 
 export const FAST_UPDATE_MS = 50
 
-class Progress extends PureComponent<Props> {
-  lastValue = -1
+export default function Progress({
+  width,
+  element,
+}: ProgressProps): ReactElement {
+  const [lastValue, setLastValue] = useState(-1)
 
-  lastAnimatedTime = -1
+  const [lastAnimatedTime, setLastAnimatedTime] = useState(-1)
 
-  isMovingBackwards = (): boolean => {
-    const { element } = this.props
+  const isMovingBackwards = (): boolean => {
     const value = element.get("value")
-
-    return value < this.lastValue
+    return value < lastValue
   }
 
-  isMovingSuperFast = (startTime: number, endTime: number): boolean => {
+  const isMovingSuperFast = (startTime: number, endTime: number): boolean => {
     return startTime - endTime < FAST_UPDATE_MS
   }
 
   // Checks if the browser tab is visible and active
-  isBrowserTabVisible = (): boolean => document.visibilityState === "hidden"
+  const isBrowserTabVisible = (): boolean =>
+    document.visibilityState === "hidden"
 
   // Make progress bar stop acting weird when moving backwards or quickly.
-  shouldUseTransition = (startTime: number, endTime: number): boolean => {
+  const shouldUseTransition = (
+    startTime: number,
+    endTime: number
+  ): boolean => {
     return (
-      this.isMovingBackwards() ||
-      this.isMovingSuperFast(startTime, endTime) ||
-      this.isBrowserTabVisible()
+      isMovingBackwards() ||
+      isMovingSuperFast(startTime, endTime) ||
+      isBrowserTabVisible()
     )
   }
 
-  public render(): ReactNode {
-    const { element, width } = this.props
-    const value = element.get("value")
-    const time = new Date().getTime()
-
-    const className = this.shouldUseTransition(time, this.lastAnimatedTime)
-      ? "without-transition"
-      : "with-transition"
-
+  const value = element.get("value")
+  const time = new Date().getTime()
+  const className = shouldUseTransition(time, lastAnimatedTime)
+    ? "without-transition"
+    : "with-transition"
+  useEffect(() => {
     if (className === "with-transition") {
-      this.lastAnimatedTime = time
+      setLastAnimatedTime(time)
     }
-    this.lastValue = value
+    setLastValue(value)
+  }, [time, className])
 
-    return (
-      <UIProgress
-        value={value}
-        className={`stProgress ${className}`}
-        style={{ width }}
-      />
-    )
-  }
+  return (
+    <UIProgress
+      value={value}
+      className={`stProgress ${className}`}
+      style={{ width }}
+    />
+  )
 }
-
-export default Progress

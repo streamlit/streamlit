@@ -16,14 +16,16 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { shallow, mount } from "enzyme"
 import { fromJS } from "immutable"
 import { timeout } from "lib/utils"
 
 import { Progress as UIProgress } from "reactstrap"
-import Progress, { Props, FAST_UPDATE_MS } from "./Progress"
+import Progress, { ProgressProps, FAST_UPDATE_MS } from "./Progress"
 
-const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
+const getProps = (
+  elementProps: Record<string, unknown> = {}
+): ProgressProps => ({
   element: fromJS({
     value: 50,
     ...elementProps,
@@ -41,9 +43,9 @@ describe("Progress Element", () => {
 
   it("moving backwards", () => {
     const props = getProps()
-    const wrapper = shallow(<Progress {...props} />)
-
-    expect(wrapper.instance().lastValue).toBe(50)
+    const wrapper = mount(<Progress {...props} />)
+    // To be checked for Functional component
+    // expect(wrapper.lastValue).toBe(50)
 
     wrapper.setProps({
       element: fromJS({
@@ -51,7 +53,7 @@ describe("Progress Element", () => {
       }),
     })
 
-    expect(wrapper.instance().lastValue).toBe(49)
+    //  expect(wrapper.instance().lastValue).toBe(49)
     expect(wrapper.find(UIProgress).prop("value")).toBe(49)
     expect(wrapper.find(UIProgress).prop("className")).toBe(
       "stProgress without-transition"
@@ -62,7 +64,7 @@ describe("Progress Element", () => {
     const props = getProps()
     const wrapper = shallow(<Progress {...props} />)
 
-    expect(wrapper.instance().lastValue).toBe(50)
+    // expect(wrapper.instance().lastValue).toBe(50)
 
     await timeout(FAST_UPDATE_MS)
 
@@ -72,7 +74,7 @@ describe("Progress Element", () => {
       }),
     })
 
-    expect(wrapper.instance().lastValue).toBe(51)
+    // expect(wrapper.instance().lastValue).toBe(51)
     expect(wrapper.find(UIProgress).prop("value")).toBe(51)
     expect(wrapper.find(UIProgress).prop("className")).toBe(
       "stProgress with-transition"
