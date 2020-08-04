@@ -106,9 +106,11 @@ class ReportSessionTest(unittest.TestCase):
         # skip func when installTracer is on).
         func.assert_not_called()
 
-    def test_set_page_config_immutable(self):
+    @patch("streamlit.report_session.LocalSourcesWatcher")
+    def test_set_page_config_immutable(self, _1):
         """st.set_page_config must be called at most once"""
-        rs = ReportSession(None, "", "", UploadedFileManager())
+        file_mgr = MagicMock(spec=UploadedFileManager)
+        rs = ReportSession(None, "", "", file_mgr)
 
         msg = ForwardMsg()
         msg.page_config_changed.title = "foo"
@@ -117,9 +119,11 @@ class ReportSessionTest(unittest.TestCase):
         with self.assertRaises(StreamlitAPIException):
             rs.enqueue(msg)
 
-    def test_set_page_config_first(self):
+    @patch("streamlit.report_session.LocalSourcesWatcher")
+    def test_set_page_config_first(self, _1):
         """st.set_page_config must be called before other st commands"""
-        rs = ReportSession(None, "", "", UploadedFileManager())
+        file_mgr = MagicMock(spec=UploadedFileManager)
+        rs = ReportSession(None, "", "", file_mgr)
 
         markdown_msg = ForwardMsg()
         markdown_msg.delta.new_element.markdown.body = "foo"
