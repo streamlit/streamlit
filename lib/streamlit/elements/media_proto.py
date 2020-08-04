@@ -20,8 +20,8 @@ import re
 from validators import url
 
 from streamlit import type_util
-from streamlit.proto import Audio_pb2
-from streamlit.proto import Video_pb2
+from streamlit.proto.Audio_pb2 import Audio as AudioProto
+from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.media_file_manager import media_file_manager
 
 
@@ -54,7 +54,7 @@ class MediaMixin:
            height: 400px
 
         """
-        audio_proto = Audio_pb2.Audio()
+        audio_proto = AudioProto()
         coordinates = dg._get_coordinates()  # type: ignore
         marshall_audio(coordinates, audio_proto, data, format, start_time)
         return dg._enqueue("audio", audio_proto)  # type: ignore
@@ -95,7 +95,7 @@ class MediaMixin:
            for more information.
 
         """
-        video_proto = Video_pb2.Video()
+        video_proto = VideoProto()
         coordinates = dg._get_coordinates()  # type: ignore
         marshall_audio(coordinates, video_proto, data, format, start_time)
         return dg._enqueue("video", video_proto)  # type: ignore
@@ -199,13 +199,13 @@ def marshall_video(coordinates, proto, data, mimetype="video/mp4", start_time=0)
     proto.start_time = start_time
 
     # "type" distinguishes between YouTube and non-YouTube links
-    proto.type = Video_pb2.Video.Type.NATIVE
+    proto.type = VideoProto.Type.NATIVE
 
     if isinstance(data, str) and url(data):
         youtube_url = _reshape_youtube_url(data)
         if youtube_url:
             proto.url = youtube_url
-            proto.type = Video_pb2.Video.Type.YOUTUBE_IFRAME
+            proto.type = VideoProto.Type.YOUTUBE_IFRAME
         else:
             proto.url = data
 

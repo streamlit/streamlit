@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.proto import IFrame_pb2
+from streamlit.proto.IFrame_pb2 import IFrame as IFrameProto
 from typing import Optional
 
 
@@ -36,7 +36,7 @@ class IframeMixin:
             Otherwise, do not show a scrollbar. Defaults to False.
 
         """
-        iframe_proto = IFrame_pb2.IFrame()
+        iframe_proto = IFrameProto()
         marshall(
             iframe_proto, src=src, width=width, height=height, scrolling=scrolling,
         )
@@ -61,7 +61,7 @@ class IframeMixin:
             Otherwise, do not show a scrollbar. Defaults to False.
 
         """
-        iframe_proto = IFrame_pb2.IFrame()
+        iframe_proto = IFrameProto()
         marshall(
             iframe_proto, srcdoc=html, width=width, height=height, scrolling=scrolling,
         )
