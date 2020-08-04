@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.delta_generator import _enqueue_message
+from streamlit.report_thread import get_report_ctx
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto import PageConfig_pb2
 from streamlit.elements import image_proto
@@ -102,4 +102,7 @@ def set_page_config(
 
     msg.page_config_changed.initial_sidebar_state = initial_sidebar_state
 
-    _enqueue_message(msg)
+    ctx = get_report_ctx()
+    if ctx is None:
+        return
+    ctx.enqueue(msg)
