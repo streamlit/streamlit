@@ -177,7 +177,7 @@ class ReportSession(object):
 
         if msg.HasField("page_config_changed") and not self._set_page_config_allowed:
             raise StreamlitAPIException(
-                "`streamlit.set_page_config` must be called only once, "
+                "`streamlit.set_page_config` can only be called once, "
                 "as the first Streamlit command in your script."
             )
 
