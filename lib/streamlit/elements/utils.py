@@ -1,6 +1,6 @@
 import textwrap
 
-from streamlit.proto import Element_pb2
+from streamlit import type_util
 from streamlit.report_thread import get_report_ctx
 from streamlit.errors import DuplicateWidgetID
 from typing import Optional, Any
@@ -122,3 +122,13 @@ def _get_widget_ui_value(
     ctx = get_report_ctx()
     ui_value = ctx.widgets.get_widget_value(element_proto.id) if ctx else None
     return ui_value
+
+
+def last_index_for_melted_dataframes(data):
+    if type_util.is_dataframe_compatible(data):
+        data = type_util.convert_anything_to_df(data)
+
+        if data.index.size > 0:
+            return data.index[-1]
+
+    return None
