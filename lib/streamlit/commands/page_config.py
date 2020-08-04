@@ -36,20 +36,20 @@ def set_page_config(
     Parameters
     ----------
     page_title: str or None
-        The page title, shown in the browser tab.
-        Strings get appended with "• Streamlit".
+        The page title, shown in the browser tab. If None, defaults to the
+        filename of the script ("app.py" would show "app • Streamlit").
     page_icon : Anything supported by st.image or str or None
         The page favicon.
         Besides the types supported by `st.image` (like URLs or numpy arrays),
         you can pass in an emoji as a string ("🦈") or a shortcode (":shark:").
         Emoji icons are courtesy of Twemoji and loaded from MaxCDN.
     layout: "centered" or "wide"
-        How the page content should be laid out.
-        "centered" constrains the elements into a centered column of fixed width;
+        How the page content should be laid out. Defaults to "centered",
+        which constrains the elements into a centered column of fixed width;
         "wide" uses the entire screen.
     initial_sidebar_state: "auto" or "expanded" or "collapsed"
-        How the sidebar should start out.
-        "auto" hides the sidebar on mobile-sized devices, and shows on desktop.
+        How the sidebar should start out. Defaults to "auto",
+        which hides the sidebar on mobile-sized devices, and shows it otherwise.
         "expanded" shows the sidebar initially; "collapsed" hides it.
 
     Example
