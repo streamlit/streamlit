@@ -17,7 +17,7 @@
 
 import nodeEmoji from "node-emoji"
 import { buildMediaUri } from "lib/UriUtil"
-import { toCodePoint } from "./twemoji"
+import { toCodePoint } from "vendor/twemoji"
 
 /**
  * Set the provided url/emoji as the page favicon.

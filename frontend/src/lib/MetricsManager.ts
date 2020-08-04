@@ -18,7 +18,7 @@
 import { SessionInfo } from "lib/SessionInfo"
 import { IS_DEV_ENV, IS_SHARED_REPORT } from "./baseconsts"
 import { logAlways } from "./log"
-import { initializeSegment } from "./Segment"
+import { initializeSegment } from "vendor/Segment"
 
 /**
  * The analytics is the Segment.io object. It is initialized in Segment.ts
