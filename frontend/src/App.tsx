@@ -94,6 +94,7 @@ interface State {
   userSettings: UserSettings
   dialog?: DialogProps | null
   sharingEnabled?: boolean
+  layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
 }
 
@@ -145,6 +146,7 @@ export class App extends PureComponent<Props, State> {
         wideMode: false,
         runOnSave: false,
       },
+      layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
     }
 
@@ -317,17 +319,22 @@ export class App extends PureComponent<Props, State> {
     if (favicon) {
       handleFavicon(favicon)
     }
-    if (layout === PageConfig.Layout.WIDE) {
+    // Only change layout/sidebar when the page config has changed.
+    // This preserves the user's previous choice, and prevents extra re-renders.
+    if (layout !== this.state.layout) {
       this.setState((prevState: State) => ({
+        layout,
         userSettings: {
           ...prevState.userSettings,
-          wideMode: true,
+          wideMode: layout === PageConfig.Layout.WIDE,
         },
       }))
     }
-    this.setState(() => ({
-      initialSidebarState,
-    }))
+    if (initialSidebarState !== this.state.initialSidebarState) {
+      this.setState(() => ({
+        initialSidebarState,
+      }))
+    }
   }
 
   handlePageInfoChanged = (pageInfo: PageInfo): void => {

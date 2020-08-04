@@ -46,35 +46,27 @@ class Sidebar extends PureComponent<Props, State> {
 
   constructor(props: Props) {
     super(props)
-
-    // By default, expand sidebar only if browser width > MEDIUM_BREAKPOINT_PX
-    const { innerWidth } = window || {}
-
-    this.state = {
-      collapsedSidebar: innerWidth
-        ? innerWidth <= MEDIUM_BREAKPOINT_PX
-        : false,
-    }
-
-    // But if the app creator specified a sidebar state, use that instead.
-    if (this.props.initialSidebarState === PageConfig.SidebarState.EXPANDED) {
-      this.state = { collapsedSidebar: false }
-    }
-    if (this.props.initialSidebarState === PageConfig.SidebarState.COLLAPSED) {
-      this.state = { collapsedSidebar: true }
-    }
+    this.state = { collapsedSidebar: Sidebar.shouldCollapse(props) }
   }
 
   componentDidUpdate(prevProps: any): void {
     // Immediately expand/collapse sidebar when initialSidebarState changes.
-    // (We can't consolidate with above, since setState() fails in constructor.)
-    const newSidebarState = this.props.initialSidebarState
-    if (newSidebarState !== prevProps.initialSidebarState) {
-      if (newSidebarState === PageConfig.SidebarState.EXPANDED) {
-        this.setState({ collapsedSidebar: false })
-      }
-      if (newSidebarState === PageConfig.SidebarState.COLLAPSED) {
-        this.setState({ collapsedSidebar: true })
+    if (this.props.initialSidebarState !== prevProps.initialSidebarState) {
+      this.setState({ collapsedSidebar: Sidebar.shouldCollapse(this.props) })
+    }
+  }
+
+  static shouldCollapse(props: Props): boolean {
+    switch (props.initialSidebarState) {
+      case PageConfig.SidebarState.EXPANDED:
+        return false
+      case PageConfig.SidebarState.COLLAPSED:
+        return true
+      case PageConfig.SidebarState.AUTO:
+      default: {
+        // Expand sidebar only if browser width > MEDIUM_BREAKPOINT_PX
+        const { innerWidth } = window || {}
+        return innerWidth ? innerWidth <= MEDIUM_BREAKPOINT_PX : false
       }
     }
   }
