@@ -42,9 +42,8 @@ from streamlit.proto.NumberInput_pb2 import NumberInput
 from streamlit.proto.Slider_pb2 import Slider
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.logger import get_logger
-from streamlit.type_util import is_type, ensure_iterable
 
-from streamlit.elements.utils import _get_widget_ui_value, _set_widget_id
+from streamlit.elements.utils import _get_widget_ui_value, _set_widget_id, NoValue
 from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.button import ButtonMixin
 from streamlit.elements.markdown import MarkdownMixin
@@ -64,6 +63,10 @@ from streamlit.elements.deck_gl_json_chart import PydeckMixin
 from streamlit.elements.map import MapMixin
 from streamlit.elements.iframe_proto import IframeMixin
 from streamlit.elements.media_proto import MediaMixin
+from streamlit.elements.checkbox import CheckboxMixin
+from streamlit.elements.multiselect import MultiSelectMixin
+from streamlit.elements.radio import RadioMixin
+from streamlit.elements.selectbox import SelectboxMixin
 
 LOGGER = get_logger(__name__)
 
@@ -149,15 +152,6 @@ def _get_pandas_index_attr(data, attr):
     return getattr(data.index, attr, None)
 
 
-class NoValue(object):
-    """Return this from DeltaGenerator.foo_widget() when you want the st.foo_widget()
-    call to return None. This is needed because `_enqueue_new_element_delta`
-    replaces `None` with a `DeltaGenerator` (for use in non-widget elements).
-    """
-
-    pass
-
-
 class FileUploaderEncodingWarning(StreamlitDeprecationWarning):
     def __init__(self):
         msg = self._get_message()
@@ -212,6 +206,7 @@ class DeltaGenerator(
     BalloonsMixin,
     BokehMixin,
     ButtonMixin,
+    CheckboxMixin,
     DataFrameMixin,
     DeckGlMixin,
     ExceptionMixin,
@@ -221,8 +216,11 @@ class DeltaGenerator(
     MarkdownMixin,
     MapMixin,
     MediaMixin,
+    MultiSelectMixin,
     PlotlyMixin,
     PydeckMixin,
+    RadioMixin,
+    SelectboxMixin,
     JsonMixin,
     TextMixin,
     VegaLiteMixin,
@@ -693,261 +691,6 @@ class DeltaGenerator(
         width = -1  # Always use full width for favicons
         element.favicon.url = image_proto.image_to_url(
             image, width, clamp, channels, format, image_id="favicon", allow_emoji=True
-        )
-
-    @_with_element
-    def checkbox(self, element, label, value=False, key=None):
-        """Display a checkbox widget.
-
-        Parameters
-        ----------
-        label : str
-            A short label explaining to the user what this checkbox is for.
-        value : bool
-            Preselect the checkbox when it first renders. This will be
-            cast to bool internally.
-        key : str
-            An optional string to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
-
-        Returns
-        -------
-        bool
-            Whether or not the checkbox is checked.
-
-        Example
-        -------
-        >>> agree = st.checkbox('I agree')
-        >>>
-        >>> if agree:
-        ...     st.write('Great!')
-
-        """
-        element.checkbox.label = label
-        element.checkbox.default = bool(value)
-
-        ui_value = _get_widget_ui_value("checkbox", element.checkbox, user_key=key)
-        current_value = ui_value if ui_value is not None else value
-        return bool(current_value)
-
-    @_with_element
-    def multiselect(
-        self, element, label, options, default=None, format_func=str, key=None
-    ):
-        """Display a multiselect widget.
-        The multiselect widget starts as empty.
-
-        Parameters
-        ----------
-        label : str
-            A short label explaining to the user what this select widget is for.
-        options : list, tuple, numpy.ndarray, pandas.Series, or pandas.DataFrame
-            Labels for the select options. This will be cast to str internally
-            by default. For pandas.DataFrame, the first column is selected.
-        default: [str] or None
-            List of default values.
-        format_func : function
-            Function to modify the display of selectbox options. It receives
-            the raw option as an argument and should output the label to be
-            shown for that option. This has no impact on the return value of
-            the selectbox.
-        key : str
-            An optional string to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
-
-        Returns
-        -------
-        [str]
-            A list with the selected options
-
-        Example
-        -------
-        >>> options = st.multiselect(
-        ...     'What are your favorite colors',
-        ...     ['Green', 'Yellow', 'Red', 'Blue'],
-        ...     ['Yellow', 'Red'])
-        >>>
-        >>> st.write('You selected:', options)
-
-        .. note::
-           User experience can be degraded for large lists of `options` (100+), as this widget
-           is not designed to handle arbitrary text search efficiently. See this
-           `thread <https://discuss.streamlit.io/t/streamlit-loading-column-data-takes-too-much-time/1791>`_
-           on the Streamlit community forum for more information and
-           `GitHub issue #1059 <https://github.com/streamlit/streamlit/issues/1059>`_ for updates on the issue.
-
-        """
-        options = ensure_iterable(options)
-
-        # Perform validation checks and return indices base on the default values.
-        def _check_and_convert_to_indices(options, default_values):
-            if default_values is None and None not in options:
-                return None
-
-            if not isinstance(default_values, list):
-                # This if is done before others because calling if not x (done
-                # right below) when x is of type pd.Series() or np.array() throws a
-                # ValueError exception.
-                if is_type(default_values, "numpy.ndarray") or is_type(
-                    default_values, "pandas.core.series.Series"
-                ):
-                    default_values = list(default_values)
-                elif not default_values:
-                    default_values = [default_values]
-                else:
-                    default_values = list(default_values)
-
-            for value in default_values:
-                if value not in options:
-                    raise StreamlitAPIException(
-                        "Every Multiselect default value must exist in options"
-                    )
-
-            return [options.index(value) for value in default_values]
-
-        indices = _check_and_convert_to_indices(options, default)
-        element.multiselect.label = label
-        default_value = [] if indices is None else indices
-        element.multiselect.default[:] = default_value
-        element.multiselect.options[:] = [
-            str(format_func(option)) for option in options
-        ]
-
-        ui_value = _get_widget_ui_value(
-            "multiselect", element.multiselect, user_key=key
-        )
-        current_value = ui_value.value if ui_value is not None else default_value
-        return [options[i] for i in current_value]
-
-    @_with_element
-    def radio(self, element, label, options, index=0, format_func=str, key=None):
-        """Display a radio button widget.
-
-        Parameters
-        ----------
-        label : str
-            A short label explaining to the user what this radio group is for.
-        options : list, tuple, numpy.ndarray, pandas.Series, or pandas.DataFrame
-            Labels for the radio options. This will be cast to str internally
-            by default. For pandas.DataFrame, the first column is selected.
-        index : int
-            The index of the preselected option on first render.
-        format_func : function
-            Function to modify the display of radio options. It receives
-            the raw option as an argument and should output the label to be
-            shown for that option. This has no impact on the return value of
-            the radio.
-        key : str
-            An optional string to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
-
-        Returns
-        -------
-        any
-            The selected option.
-
-        Example
-        -------
-        >>> genre = st.radio(
-        ...     "What\'s your favorite movie genre",
-        ...     ('Comedy', 'Drama', 'Documentary'))
-        >>>
-        >>> if genre == 'Comedy':
-        ...     st.write('You selected comedy.')
-        ... else:
-        ...     st.write("You didn\'t select comedy.")
-
-        """
-        options = ensure_iterable(options)
-
-        if not isinstance(index, int):
-            raise StreamlitAPIException(
-                "Radio Value has invalid type: %s" % type(index).__name__
-            )
-
-        if len(options) > 0 and not 0 <= index < len(options):
-            raise StreamlitAPIException(
-                "Radio index must be between 0 and length of options"
-            )
-
-        element.radio.label = label
-        element.radio.default = index
-        element.radio.options[:] = [str(format_func(option)) for option in options]
-
-        ui_value = _get_widget_ui_value("radio", element.radio, user_key=key)
-        current_value = ui_value if ui_value is not None else index
-
-        return (
-            options[current_value]
-            if len(options) > 0 and options[current_value] is not None
-            else NoValue
-        )
-
-    @_with_element
-    def selectbox(self, element, label, options, index=0, format_func=str, key=None):
-        """Display a select widget.
-
-        Parameters
-        ----------
-        label : str
-            A short label explaining to the user what this select widget is for.
-        options : list, tuple, numpy.ndarray, pandas.Series, or pandas.DataFrame
-            Labels for the select options. This will be cast to str internally
-            by default. For pandas.DataFrame, the first column is selected.
-        index : int
-            The index of the preselected option on first render.
-        format_func : function
-            Function to modify the display of the labels. It receives the option
-            as an argument and its output will be cast to str.
-        key : str
-            An optional string to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
-
-        Returns
-        -------
-        any
-            The selected option
-
-        Example
-        -------
-        >>> option = st.selectbox(
-        ...     'How would you like to be contacted?',
-        ...     ('Email', 'Home phone', 'Mobile phone'))
-        >>>
-        >>> st.write('You selected:', option)
-
-        """
-        options = ensure_iterable(options)
-
-        if not isinstance(index, int):
-            raise StreamlitAPIException(
-                "Selectbox Value has invalid type: %s" % type(index).__name__
-            )
-
-        if len(options) > 0 and not 0 <= index < len(options):
-            raise StreamlitAPIException(
-                "Selectbox index must be between 0 and length of options"
-            )
-
-        element.selectbox.label = label
-        element.selectbox.default = index
-        element.selectbox.options[:] = [str(format_func(option)) for option in options]
-
-        ui_value = _get_widget_ui_value("selectbox", element.selectbox, user_key=key)
-        current_value = ui_value if ui_value is not None else index
-
-        return (
-            options[current_value]
-            if len(options) > 0 and options[current_value] is not None
-            else NoValue
         )
 
     @_with_element
