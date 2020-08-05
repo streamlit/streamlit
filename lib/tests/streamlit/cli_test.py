@@ -355,7 +355,7 @@ class CliTest(unittest.TestCase):
         with patch("streamlit.cli._main_run"), patch(
             "streamlit.logger.set_log_level"
         ) as mock_set_log_level:
-            self.runner.invoke(cli, ["--log_level", "error", "hello"])
+            self.runner.invoke(cli, ["--global.logLevel", "error", "hello"])
             mock_set_log_level.assert_called_with("ERROR")
 
     def test_config_show_command(self):
