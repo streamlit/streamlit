@@ -40,7 +40,6 @@ from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.NumberInput_pb2 import NumberInput
 from streamlit.proto.Slider_pb2 import Slider
-from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.logger import get_logger
 
 from streamlit.elements.utils import _get_widget_ui_value, _set_widget_id, NoValue
@@ -67,6 +66,8 @@ from streamlit.elements.checkbox import CheckboxMixin
 from streamlit.elements.multiselect import MultiSelectMixin
 from streamlit.elements.radio import RadioMixin
 from streamlit.elements.selectbox import SelectboxMixin
+from streamlit.elements.text_widgets import TextWidgetsMixin
+from streamlit.elements.time_widgets import TimeWidgetsMixin
 
 LOGGER = get_logger(__name__)
 
@@ -223,6 +224,8 @@ class DeltaGenerator(
     SelectboxMixin,
     JsonMixin,
     TextMixin,
+    TextWidgetsMixin,
+    TimeWidgetsMixin,
     VegaLiteMixin,
 ):
     """Creator of Delta protobuf messages.
@@ -1197,259 +1200,6 @@ class DeltaGenerator(
         return str(current_value)
 
     @_with_element
-    def text_input(
-        self, element, label, value="", max_chars=None, key=None, type="default"
-    ):
-        """Display a single-line text input widget.
-
-        Parameters
-        ----------
-        label : str
-            A short label explaining to the user what this input is for.
-        value : any
-            The text value of this widget when it first renders. This will be
-            cast to str internally.
-        max_chars : int or None
-            Max number of characters allowed in text input.
-        key : str
-            An optional string to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
-        type : str
-            The type of the text input. This can be either "default" (for
-            a regular text input), or "password" (for a text input that
-            masks the user's typed value). Defaults to "default".
-
-        Returns
-        -------
-        str
-            The current value of the text input widget.
-
-        Example
-        -------
-        >>> title = st.text_input('Movie title', 'Life of Brian')
-        >>> st.write('The current movie title is', title)
-
-        """
-        element.text_input.label = label
-        element.text_input.default = str(value)
-
-        if max_chars is not None:
-            element.text_input.max_chars = max_chars
-
-        if type == "default":
-            element.text_input.type = TextInput.DEFAULT
-        elif type == "password":
-            element.text_input.type = TextInput.PASSWORD
-        else:
-            raise StreamlitAPIException(
-                "'%s' is not a valid text_input type. Valid types are 'default' and 'password'."
-                % type
-            )
-
-        ui_value = _get_widget_ui_value("text_input", element.text_input, user_key=key)
-        current_value = ui_value if ui_value is not None else value
-        return str(current_value)
-
-    @_with_element
-    def text_area(
-        self, element, label, value="", height=None, max_chars=None, key=None
-    ):
-        """Display a multi-line text input widget.
-
-        Parameters
-        ----------
-        label : str
-            A short label explaining to the user what this input is for.
-        value : any
-            The text value of this widget when it first renders. This will be
-            cast to str internally.
-        height : int or None
-            Desired height of the UI element expressed in pixels. If None, a
-            default height is used.
-        max_chars : int or None
-            Maximum number of characters allowed in text area.
-        key : str
-            An optional string to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
-
-        Returns
-        -------
-        str
-            The current value of the text input widget.
-
-        Example
-        -------
-        >>> txt = st.text_area('Text to analyze', '''
-        ...     It was the best of times, it was the worst of times, it was
-        ...     the age of wisdom, it was the age of foolishness, it was
-        ...     the epoch of belief, it was the epoch of incredulity, it
-        ...     was the season of Light, it was the season of Darkness, it
-        ...     was the spring of hope, it was the winter of despair, (...)
-        ...     ''')
-        >>> st.write('Sentiment:', run_sentiment_analysis(txt))
-
-        """
-        element.text_area.label = label
-        element.text_area.default = str(value)
-
-        if height is not None:
-            element.text_area.height = height
-
-        if max_chars is not None:
-            element.text_area.max_chars = max_chars
-
-        ui_value = _get_widget_ui_value("text_area", element.text_area, user_key=key)
-        current_value = ui_value if ui_value is not None else value
-        return str(current_value)
-
-    @_with_element
-    def time_input(self, element, label, value=None, key=None):
-        """Display a time input widget.
-
-        Parameters
-        ----------
-        label : str
-            A short label explaining to the user what this time input is for.
-        value : datetime.time/datetime.datetime
-            The value of this widget when it first renders. This will be
-            cast to str internally. Defaults to the current time.
-        key : str
-            An optional string to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
-
-        Returns
-        -------
-        datetime.time
-            The current value of the time input widget.
-
-        Example
-        -------
-        >>> t = st.time_input('Set an alarm for', datetime.time(8, 45))
-        >>> st.write('Alarm is set for', t)
-
-        """
-        # Set value default.
-        if value is None:
-            value = datetime.now().time()
-
-        # Ensure that the value is either datetime/time
-        if not isinstance(value, datetime) and not isinstance(value, time):
-            raise StreamlitAPIException(
-                "The type of the value should be either datetime or time."
-            )
-
-        # Convert datetime to time
-        if isinstance(value, datetime):
-            value = value.time()
-
-        element.time_input.label = label
-        element.time_input.default = time.strftime(value, "%H:%M")
-
-        ui_value = _get_widget_ui_value("time_input", element.time_input, user_key=key)
-        current_value = (
-            datetime.strptime(ui_value, "%H:%M").time()
-            if ui_value is not None
-            else value
-        )
-        return current_value
-
-    @_with_element
-    def date_input(
-        self,
-        element,
-        label,
-        value=None,
-        min_value=datetime.min,
-        max_value=None,
-        key=None,
-    ):
-        """Display a date input widget.
-
-        Parameters
-        ----------
-        label : str
-            A short label explaining to the user what this date input is for.
-        value : datetime.date or datetime.datetime or list/tuple of datetime.date or datetime.datetime or None
-            The value of this widget when it first renders. If a list/tuple with
-            0 to 2 date/datetime values is provided, the datepicker will allow
-            users to provide a range. Defaults to today as a single-date picker.
-        min_value : datetime.date or datetime.datetime
-            The minimum selectable date. Defaults to datetime.min.
-        max_value : datetime.date or datetime.datetime
-            The maximum selectable date. Defaults to today+10y.
-        key : str
-            An optional string to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
-
-        Returns
-        -------
-        datetime.date
-            The current value of the date input widget.
-
-        Example
-        -------
-        >>> d = st.date_input(
-        ...     "When\'s your birthday",
-        ...     datetime.date(2019, 7, 6))
-        >>> st.write('Your birthday is:', d)
-
-        """
-        # Set value default.
-        if value is None:
-            value = datetime.now().date()
-
-        single_value = isinstance(value, (date, datetime))
-        range_value = isinstance(value, (list, tuple)) and len(value) in (0, 1, 2)
-        if not single_value and not range_value:
-            raise StreamlitAPIException(
-                "DateInput value should either be an date/datetime or a list/tuple of "
-                "0 - 2 date/datetime values"
-            )
-
-        if single_value:
-            value = [value]
-
-        element.date_input.is_range = range_value
-
-        value = [v.date() if isinstance(v, datetime) else v for v in value]
-
-        element.date_input.label = label
-        element.date_input.default[:] = [date.strftime(v, "%Y/%m/%d") for v in value]
-
-        if isinstance(min_value, datetime):
-            min_value = min_value.date()
-
-        element.date_input.min = date.strftime(min_value, "%Y/%m/%d")
-
-        if max_value is None:
-            today = date.today()
-            max_value = date(today.year + 10, today.month, today.day)
-
-        if isinstance(max_value, datetime):
-            max_value = max_value.date()
-
-        element.date_input.max = date.strftime(max_value, "%Y/%m/%d")
-
-        ui_value = _get_widget_ui_value("date_input", element.date_input, user_key=key)
-
-        if ui_value is not None:
-            value = getattr(ui_value, "data")
-            value = [datetime.strptime(v, "%Y/%m/%d").date() for v in value]
-
-        if single_value:
-            return value[0]
-        else:
-            return tuple(value)
-
-    @_with_element
     def number_input(
         self,
         element,
@@ -1854,10 +1604,6 @@ def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
         data = pd.melt(data.reset_index(), id_vars=[index_name])
 
     return data, last_index
-
-
-def _clean_text(text):
-    return textwrap.dedent(str(text)).strip()
 
 
 def _value_or_dg(value, dg):
