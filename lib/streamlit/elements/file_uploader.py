@@ -2,6 +2,7 @@ from streamlit import config
 
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.report_thread import get_report_ctx
+from streamlit.file_util import get_encoded_file_data
 from streamlit.errors import StreamlitDeprecationWarning
 from .utils import NoValue, _set_widget_id
 
@@ -67,7 +68,7 @@ class FileUploaderMixin:
         if show_deprecation_warning and (
             (has_encoding and encoding is not None) or not has_encoding
         ):
-            dg.exception(FileUploaderEncodingWarning())
+            dg.exception(FileUploaderEncodingWarning())  # type: ignore
 
         if not has_encoding:
             encoding = "auto"

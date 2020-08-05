@@ -23,9 +23,8 @@ import tornado.web
 
 import streamlit.server.routes
 from streamlit import type_util
-from streamlit.delta_generator import NoValue
 from streamlit.elements import arrow_table
-from streamlit.elements.utils import _get_widget_ui_value
+from streamlit.elements.utils import _get_widget_ui_value, NoValue
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ComponentInstance_pb2 import ArgsDataframe
