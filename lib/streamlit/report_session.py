@@ -177,8 +177,10 @@ class ReportSession(object):
 
         if msg.HasField("page_config_changed") and not self._set_page_config_allowed:
             raise StreamlitAPIException(
-                "`streamlit.set_page_config` can only be called once, "
-                "as the first Streamlit command in your script."
+                "`beta_set_page_config()` can only be called once per app, "
+                + "and must be called as the first Streamlit command in your script.\n\n"
+                + "For more information refer to the [docs]"
+                + "(https://docs.streamlit.io/en/stable/api.html#streamlit.beta_set_page_config)."
             )
 
         if msg.HasField("delta") or msg.HasField("page_config_changed"):
