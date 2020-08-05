@@ -97,7 +97,7 @@ class MediaMixin:
         """
         video_proto = VideoProto()
         coordinates = dg._get_coordinates()  # type: ignore
-        marshall_audio(coordinates, video_proto, data, format, start_time)
+        marshall_video(coordinates, video_proto, data, format, start_time)
         return dg._enqueue("video", video_proto)  # type: ignore
 
 
