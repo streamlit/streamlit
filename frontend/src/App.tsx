@@ -496,7 +496,9 @@ export class App extends PureComponent<Props, State> {
       SessionInfo.current.installationId + scriptPath
     )
 
+    // Set the title and favicon to their default values
     document.title = `${reportName} · Streamlit`
+    handleFavicon(`${process.env.PUBLIC_URL}/favicon.png`)
 
     MetricsManager.current.setReportHash(newReportHash)
     MetricsManager.current.clearDeltaCounter()
