@@ -141,4 +141,3 @@ class TimeWidgetsMixin:
 
         return_value = value[0] if single_value else tuple(value)
         return dg._enqueue("date_input", date_input_proto, return_value)  # type: ignore
-
