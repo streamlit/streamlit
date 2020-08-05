@@ -74,78 +74,6 @@ MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
 DELTAS_TYPES_THAT_MELT_DATAFRAMES = ("line_chart", "area_chart", "bar_chart")
 
 
-def _wraps_with_cleaned_sig(wrapped, num_args_to_remove):
-    """Simplify the function signature by removing arguments from it.
-
-    Removes the first N arguments from function signature (where N is
-    num_args_to_remove). This is useful since function signatures are visible
-    in our user-facing docs, and many methods in DeltaGenerator have arguments
-    that users have no access to.
-
-    Note that "self" is ignored by default. So to remove both "self" and the
-    next argument you'd pass num_args_to_remove=1.
-    """
-    # By passing (None, ...), we're removing (arg1, ...) from *args
-    args_to_remove = (None,) * num_args_to_remove
-    fake_wrapped = functools.partial(wrapped, *args_to_remove)
-    fake_wrapped.__doc__ = wrapped.__doc__
-    fake_wrapped.__name__ = wrapped.__name__  # type: ignore[attr-defined]
-    fake_wrapped.__module__ = wrapped.__module__
-
-    return functools.wraps(fake_wrapped)
-
-
-def _with_element(method):
-    """Wrap function and pass a NewElement proto to be filled.
-
-    This is a function decorator.
-
-    Converts a method of the with arguments (self, element, ...) into a method
-    with arguments (self, ...). Thus, the instantiation of the element proto
-    object and creation of the element are handled automatically.
-
-    Parameters
-    ----------
-    method : callable
-        A DeltaGenerator method with arguments (self, element, ...)
-
-    Returns
-    -------
-    callable
-        A new DeltaGenerator method with arguments (self, ...)
-
-    """
-
-    @_wraps_with_cleaned_sig(method, 1)  # Remove self and element from sig.
-    def wrapped_method(dg, *args, **kwargs):
-        # Warn if we're called from within an @st.cache function
-        caching.maybe_show_cached_st_function_warning(dg, method.__name__)
-
-        delta_type = method.__name__
-        last_index = None
-
-        if delta_type in DELTAS_TYPES_THAT_MELT_DATAFRAMES and len(args) > 0:
-            data = args[0]
-            if type_util.is_dataframe_compatible(data):
-                data = type_util.convert_anything_to_df(data)
-
-                if data.index.size > 0:
-                    last_index = data.index[-1]
-                else:
-                    last_index = None
-
-        def marshall_element(element):
-            return method(dg, element, *args, **kwargs)
-
-        return dg._enqueue_new_element_delta(marshall_element, delta_type, last_index)
-
-    return wrapped_method
-
-
-def _get_pandas_index_attr(data, attr):
-    return getattr(data.index, attr, None)
-
-
 class DeltaGenerator(
     AlertMixin,
     AltairMixin,
@@ -307,8 +235,12 @@ class DeltaGenerator(
 
         Parameters
         ----------
-        marshall_element : callable
-            Function which sets the fields for a NewElement protobuf.
+        delta_type: string
+            The name of the streamlit method being called
+        element_proto: proto
+            The actual proto in the NewElement type e.g. Alert/Button/Slider
+        return_value: any or None
+            The value to return to the calling script (for widgets)
         element_width : int or None
             Desired width for the element
         element_height : int or None
@@ -367,70 +299,6 @@ class DeltaGenerator(
             output_dg = self
 
         return _value_or_dg(return_value, output_dg)
-
-    # NOTE: DEPRECATED. Will soon be replaced by _enqueue
-    def _enqueue_new_element_delta(
-        self,
-        marshall_element,
-        delta_type,
-        last_index=None,
-        element_width=None,
-        element_height=None,
-    ):
-        """Create NewElement delta, fill it, and enqueue it.
-        Parameters
-        ----------
-        marshall_element : callable
-            Function which sets the fields for a NewElement protobuf.
-        element_width : int or None
-            Desired width for the element
-        element_height : int or None
-            Desired height for the element
-        Returns
-        -------
-        DeltaGenerator
-            A DeltaGenerator that can be used to modify the newly-created
-            element.
-        """
-        rv = None
-
-        # Always call marshall_element() so users can run their script without
-        # Streamlit.
-        msg = ForwardMsg_pb2.ForwardMsg()
-        rv = marshall_element(msg.delta.new_element)
-
-        msg_was_enqueued = False
-
-        # Only enqueue message if there's a container.
-
-        if self._container and self._cursor:
-            msg.metadata.parent_block.container = self._container
-            msg.metadata.parent_block.path[:] = self._cursor.path
-            msg.metadata.delta_id = self._cursor.index
-
-            if element_width is not None:
-                msg.metadata.element_dimension_spec.width = element_width
-            if element_height is not None:
-                msg.metadata.element_dimension_spec.height = element_height
-
-            _enqueue_message(msg)
-            msg_was_enqueued = True
-
-        if msg_was_enqueued:
-            # Get a DeltaGenerator that is locked to the current element
-            # position.
-            output_dg = DeltaGenerator(
-                container=self._container,
-                cursor=self._cursor.get_locked_cursor(
-                    delta_type=delta_type, last_index=last_index
-                ),
-            )
-        else:
-            # If the message was not enqueued, just return self since it's a
-            # no-op from the point of view of the app.
-            output_dg = self
-
-        return _value_or_dg(rv, output_dg)
 
     def _block(self):
         if self._container is None or self._cursor is None:
@@ -649,6 +517,10 @@ def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
         data = pd.melt(data.reset_index(), id_vars=[index_name])
 
     return data, last_index
+
+
+def _get_pandas_index_attr(data, attr):
+    return getattr(data.index, attr, None)
 
 
 def _value_or_dg(value, dg):

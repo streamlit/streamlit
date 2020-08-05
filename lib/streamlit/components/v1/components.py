@@ -165,8 +165,10 @@ class CustomComponent:
 
         # We currently only support writing to st._main, but this will change
         # when we settle on an improved API in a post-layout world.
-        result = streamlit._main._enqueue_new_element_delta(
-            marshall_element=marshall_component, delta_type="component"
+        element = Element()
+        return_value = marshall_component(element)
+        result = streamlit._main._enqueue(
+            "component_instance", element.component_instance, return_value
         )
 
         return result
