@@ -17,7 +17,6 @@
 import functools
 
 from streamlit import caching
-from streamlit import config
 from streamlit import cursor
 from streamlit import type_util
 from streamlit.report_thread import get_report_ctx
@@ -60,6 +59,8 @@ from streamlit.elements.number_input import NumberInputMixin
 from streamlit.elements.color_picker import ColorPickerMixin
 from streamlit.elements.file_uploader import FileUploaderMixin
 from streamlit.elements.slider import SliderMixin
+from streamlit.elements.image_proto import ImageMixin
+from streamlit.elements.pyplot import PyplotMixin
 
 LOGGER = get_logger(__name__)
 
@@ -145,26 +146,6 @@ def _get_pandas_index_attr(data, attr):
     return getattr(data.index, attr, None)
 
 
-class ImageFormatWarning(StreamlitDeprecationWarning):
-    def __init__(self, format):
-        self.format = format
-
-        super(ImageFormatWarning, self).__init__(
-            msg=self._get_message(), config_option="deprecation.showImageFormat"
-        )
-
-    def _get_message(self):
-        return f"""
-The `format` parameter for `st.image` has been deprecated and will be removed
-or repurposed in the future. We recommend changing to the new `output_format`
-parameter to future-proof your code. For the parameter,
-`format="{self.format}"`, please use `output_format="{self.format}"` instead.
-
-See [https://github.com/streamlit/streamlit/issues/1137](https://github.com/streamlit/streamlit/issues/1137)
-for more information.
-            """
-
-
 class DeltaGenerator(
     AlertMixin,
     AltairMixin,
@@ -181,6 +162,7 @@ class DeltaGenerator(
     GraphvizMixin,
     HelpMixin,
     IframeMixin,
+    ImageMixin,
     MarkdownMixin,
     MapMixin,
     MediaMixin,
@@ -189,6 +171,7 @@ class DeltaGenerator(
     PlotlyMixin,
     ProgressMixin,
     PydeckMixin,
+    PyplotMixin,
     RadioMixin,
     SelectboxMixin,
     SliderMixin,
@@ -473,150 +456,6 @@ class DeltaGenerator(
         _enqueue_message(msg)
 
         return block_dg
-
-    @_with_element
-    def pyplot(self, element, fig=None, clear_figure=None, **kwargs):
-        """Display a matplotlib.pyplot figure.
-
-        Parameters
-        ----------
-        fig : Matplotlib Figure
-            The figure to plot. When this argument isn't specified, which is
-            the usual case, this function will render the global plot.
-
-        clear_figure : bool
-            If True, the figure will be cleared after being rendered.
-            If False, the figure will not be cleared after being rendered.
-            If left unspecified, we pick a default based on the value of `fig`.
-
-            * If `fig` is set, defaults to `False`.
-
-            * If `fig` is not set, defaults to `True`. This simulates Jupyter's
-              approach to matplotlib rendering.
-
-        **kwargs : any
-            Arguments to pass to Matplotlib's savefig function.
-
-        Example
-        -------
-        >>> import matplotlib.pyplot as plt
-        >>> import numpy as np
-        >>>
-        >>> arr = np.random.normal(1, 1, size=100)
-        >>> plt.hist(arr, bins=20)
-        >>>
-        >>> st.pyplot()
-
-        .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=PwzFN7oLZsvb6HDdwdjkRB
-           height: 530px
-
-        Notes
-        -----
-        Matplotlib support several different types of "backends". If you're
-        getting an error using Matplotlib with Streamlit, try setting your
-        backend to "TkAgg"::
-
-            echo "backend: TkAgg" >> ~/.matplotlib/matplotlibrc
-
-        For more information, see https://matplotlib.org/faq/usage_faq.html.
-
-        """
-        import streamlit.elements.pyplot as pyplot
-
-        pyplot.marshall(self._get_coordinates, element, fig, clear_figure, **kwargs)
-
-    @_with_element
-    def image(
-        self,
-        element,
-        image,
-        caption=None,
-        width=None,
-        use_column_width=False,
-        clamp=False,
-        channels="RGB",
-        output_format="auto",
-        **kwargs,
-    ):
-        """Display an image or list of images.
-
-        Parameters
-        ----------
-        image : numpy.ndarray, [numpy.ndarray], BytesIO, str, or [str]
-            Monochrome image of shape (w,h) or (w,h,1)
-            OR a color image of shape (w,h,3)
-            OR an RGBA image of shape (w,h,4)
-            OR a URL to fetch the image from
-            OR an SVG XML string like `<svg xmlns=...</svg>`
-            OR a list of one of the above, to display multiple images.
-        caption : str or list of str
-            Image caption. If displaying multiple images, caption should be a
-            list of captions (one for each image).
-        width : int or None
-            Image width. None means use the image width.
-            Should be set for SVG images, as they have no default image width.
-        use_column_width : bool
-            If True, set the image width to the column width. This takes
-            precedence over the `width` parameter.
-        clamp : bool
-            Clamp image pixel values to a valid range ([0-255] per channel).
-            This is only meaningful for byte array images; the parameter is
-            ignored for image URLs. If this is not set, and an image has an
-            out-of-range value, an error will be thrown.
-        channels : 'RGB' or 'BGR'
-            If image is an nd.array, this parameter denotes the format used to
-            represent color information. Defaults to 'RGB', meaning
-            `image[:, :, 0]` is the red channel, `image[:, :, 1]` is green, and
-            `image[:, :, 2]` is blue. For images coming from libraries like
-            OpenCV you should set this to 'BGR', instead.
-        output_format : 'JPEG', 'PNG', or 'auto'
-            This parameter specifies the format to use when transferring the
-            image data. Photos should use the JPEG format for lossy compression
-            while diagrams should use the PNG format for lossless compression.
-            Defaults to 'auto' which identifies the compression type based
-            on the type and format of the image argument.
-
-        Example
-        -------
-        >>> from PIL import Image
-        >>> image = Image.open('sunrise.jpg')
-        >>>
-        >>> st.image(image, caption='Sunrise by the mountains',
-        ...          use_column_width=True)
-
-        .. output::
-           https://share.streamlit.io/0.61.0-yRE1/index.html?id=Sn228UQxBfKoE5C7A7Y2Qk
-           height: 630px
-
-        """
-        from .elements import image_proto
-
-        format = kwargs.get("format")
-        if format != None:
-            # override output compression type if specified
-            output_format = format
-
-            if config.get_option("deprecation.showImageFormat"):
-                self.exception(ImageFormatWarning(format))
-
-        if use_column_width:
-            width = -2
-        elif width is None:
-            width = -1
-        elif width <= 0:
-            raise StreamlitAPIException("Image width must be positive.")
-
-        image_proto.marshall_images(
-            self._get_coordinates(),
-            image,
-            caption,
-            width,
-            element.imgs,
-            clamp,
-            channels,
-            output_format,
-        )
 
     def favicon(
         self, element, image, clamp=False, channels="RGB", format="JPEG",
