@@ -16,14 +16,6 @@
 
 import io
 
-try:
-    import matplotlib  # noqa: F401
-    import matplotlib.pyplot as plt
-
-    plt.ioff()
-except ImportError:
-    raise ImportError("pyplot() command requires matplotlib")
-
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.logger import get_logger
 
@@ -88,6 +80,14 @@ class PyplotMixin:
 
 
 def marshall(coordinates, image_list_proto, fig=None, clear_figure=True, **kwargs):
+    try:
+        import matplotlib  # noqa: F401
+        import matplotlib.pyplot as plt
+
+        plt.ioff()
+    except ImportError:
+        raise ImportError("pyplot() command requires matplotlib")
+
     # You can call .savefig() on a Figure object or directly on the pyplot
     # module, in which case you're doing it to the latest Figure.
     if not fig:
