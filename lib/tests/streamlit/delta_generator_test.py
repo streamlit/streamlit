@@ -40,8 +40,8 @@ from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.delta_generator import (
     _wraps_with_cleaned_sig,
     _with_element,
-    _set_widget_id,
 )
+from streamlit.elements.utils import _set_widget_id
 from tests import testutil
 import streamlit as st
 

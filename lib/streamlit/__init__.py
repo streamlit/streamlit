@@ -181,7 +181,7 @@ title = _main.title  # noqa: E221
 vega_lite_chart = _main.vega_lite_chart  # noqa: E221
 video = _main.video  # noqa: E221
 warning = _main.warning  # noqa: E221
-beta_color_picker = _main.beta_color_picker  # noqa: E221
+beta_color_picker = _main.color_picker  # noqa: E221
 
 # Config
 

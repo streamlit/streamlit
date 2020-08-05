@@ -15,10 +15,6 @@
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
 import functools
-import json
-import textwrap
-import numbers
-import re
 from datetime import datetime
 from datetime import date
 from datetime import time
@@ -42,7 +38,7 @@ from streamlit.proto.NumberInput_pb2 import NumberInput
 from streamlit.proto.Slider_pb2 import Slider
 from streamlit.logger import get_logger
 
-from streamlit.elements.utils import _get_widget_ui_value, _set_widget_id, NoValue
+from streamlit.elements.utils import _get_widget_ui_value, NoValue
 from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.button import ButtonMixin
 from streamlit.elements.markdown import MarkdownMixin
@@ -71,6 +67,8 @@ from streamlit.elements.time_widgets import TimeWidgetsMixin
 from streamlit.elements.progress import ProgressMixin
 from streamlit.elements.empty import EmptyMixin
 from streamlit.elements.number_input import NumberInputMixin
+from streamlit.elements.color_picker import ColorPickerMixin
+from streamlit.elements.file_uploader import FileUploaderMixin
 
 LOGGER = get_logger(__name__)
 
@@ -156,34 +154,6 @@ def _get_pandas_index_attr(data, attr):
     return getattr(data.index, attr, None)
 
 
-class FileUploaderEncodingWarning(StreamlitDeprecationWarning):
-    def __init__(self):
-        msg = self._get_message()
-        config_option = "deprecation.showfileUploaderEncoding"
-        super(FileUploaderEncodingWarning, self).__init__(
-            msg=msg, config_option=config_option
-        )
-
-    def _get_message(self):
-        return """
-The behavior of `st.file_uploader` will soon change to no longer autodetect
-the file's encoding. This means that _all files_ will be returned as binary buffers.
-
-This change will go in effect after August 15, 2020.
-
-If you are expecting a text buffer, you can future-proof your code now by
-wrapping the returned buffer in a [`TextIOWrapper`](https://docs.python.org/3/library/io.html#io.TextIOWrapper),
-as shown below:
-
-```
-import io
-
-file_buffer = st.file_uploader(...)
-text_io = io.TextIOWrapper(file_buffer)
-```
-            """
-
-
 class ImageFormatWarning(StreamlitDeprecationWarning):
     def __init__(self, format):
         self.format = format
@@ -211,10 +181,12 @@ class DeltaGenerator(
     BokehMixin,
     ButtonMixin,
     CheckboxMixin,
+    ColorPickerMixin,
     DataFrameMixin,
     DeckGlMixin,
     EmptyMixin,
     ExceptionMixin,
+    FileUploaderMixin,
     GraphvizMixin,
     HelpMixin,
     IframeMixin,
@@ -1049,161 +1021,6 @@ class DeltaGenerator(
             ]
         # If the original value was a list/tuple, so will be the output (and vice versa)
         return current_value[0] if single_value else tuple(current_value)
-
-    @_with_element
-    def file_uploader(self, element, label, type=None, key=None, **kwargs):
-        """Display a file uploader widget.
-
-        By default, uploaded files are limited to 200MB. You can configure
-        this using the `server.maxUploadSize` config option.
-
-        Parameters
-        ----------
-        label : str or None
-            A short label explaining to the user what this file uploader is for.
-        type : str or list of str or None
-            Array of allowed extensions. ['png', 'jpg']
-            By default, all extensions are allowed.
-        encoding : str or None
-            The encoding to use when opening textual files (i.e. non-binary).
-            For example: 'utf-8'. If set to 'auto', will try to guess the
-            encoding. If None, will assume the file is binary.
-        key : str
-            An optional string to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
-
-        Returns
-        -------
-        BytesIO or StringIO or or list of BytesIO/StringIO or None
-            If no file has been uploaded, returns None. Otherwise, returns
-            the data for the uploaded file(s):
-            - If the file is in a well-known textual format (or if the encoding
-            parameter is set), the file data is a StringIO.
-            - Otherwise the file data is BytesIO.
-            - If multiple_files is True, a list of file data will be returned.
-
-            Note that BytesIO/StringIO are "file-like", which means you can
-            pass them anywhere where a file is expected!
-
-        Examples
-        --------
-        >>> uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
-        >>> if uploaded_file is not None:
-        ...     data = pd.read_csv(uploaded_file)
-        ...     st.write(data)
-
-        """
-        # Don't release this just yet. (When ready to release, turn test back
-        # on at file_uploader_test.py)
-        accept_multiple_files = False
-
-        if isinstance(type, str):
-            type = [type]
-
-        encoding = kwargs.get("encoding")
-        has_encoding = "encoding" in kwargs
-        show_deprecation_warning = config.get_option(
-            "deprecation.showfileUploaderEncoding"
-        )
-
-        if show_deprecation_warning and (
-            (has_encoding and encoding is not None) or not has_encoding
-        ):
-            self.exception(FileUploaderEncodingWarning())
-
-        if not has_encoding:
-            encoding = "auto"
-
-        element.file_uploader.label = label
-        element.file_uploader.type[:] = type if type is not None else []
-        element.file_uploader.max_upload_size_mb = config.get_option(
-            "server.maxUploadSize"
-        )
-        element.file_uploader.multiple_files = accept_multiple_files
-        _set_widget_id("file_uploader", element.file_uploader, user_key=key)
-
-        files = None
-        ctx = get_report_ctx()
-        if ctx is not None:
-            files = ctx.uploaded_file_mgr.get_files(
-                session_id=ctx.session_id, widget_id=element.file_uploader.id
-            )
-
-        if files is None:
-            return NoValue
-
-        file_datas = [get_encoded_file_data(file.data, encoding) for file in files]
-        return file_datas if accept_multiple_files else file_datas[0]
-
-    @_with_element
-    def beta_color_picker(self, element, label, value=None, key=None):
-        """Display a color picker widget.
-
-        Note: This is a beta feature. See
-        https://docs.streamlit.io/en/latest/pre_release_features.html for more
-        information.
-
-        Parameters
-        ----------
-        label : str
-            A short label explaining to the user what this input is for.
-        value : str or None
-            The hex value of this widget when it first renders. If None,
-            defaults to black.
-        key : str
-            An optional string to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
-
-        Returns
-        -------
-        str
-            The selected color as a hex string.
-
-        Example
-        -------
-        >>> color = st.beta_color_picker('Pick A Color', '#00f900')
-        >>> st.write('The current color is', color)
-
-        """
-        # set value default
-        if value is None:
-            value = "#000000"
-
-        # make sure the value is a string
-        if not isinstance(value, str):
-            raise StreamlitAPIException(
-                """
-                Color Picker Value has invalid type: %s. Expects a hex string
-                like '#00FFAA' or '#000'.
-                """
-                % type(value).__name__
-            )
-
-        # validate the value and expects a hex string
-        match = re.match(r"^#(?:[0-9a-fA-F]{3}){1,2}$", value)
-
-        if not match:
-            raise StreamlitAPIException(
-                """
-                '%s' is not a valid hex code for colors. Valid ones are like
-                '#00FFAA' or '#000'.
-                """
-                % value
-            )
-
-        element.color_picker.label = label
-        element.color_picker.default = str(value)
-
-        ui_value = _get_widget_ui_value(
-            "color_picker", element.color_picker, user_key=key
-        )
-        current_value = ui_value if ui_value is not None else value
-
-        return str(current_value)
 
     def add_rows(self, data=None, **kwargs):
         """Concatenate a dataframe to the bottom of the current one.
