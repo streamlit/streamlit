@@ -16,6 +16,7 @@ import sys
 import traceback
 from typing import Optional
 
+from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 from streamlit.error_util import get_nonstreamlit_traceback
 from streamlit.errors import MarkdownFormattedException
 from streamlit.errors import StreamlitAPIException
@@ -24,6 +25,26 @@ from streamlit.errors import StreamlitDeprecationWarning
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
+
+
+class ExceptionMixin:
+    def exception(dg, exception):
+        """Display an exception.
+
+        Parameters
+        ----------
+        exception : Exception
+            The exception to display.
+
+        Example
+        -------
+        >>> e = RuntimeError('This is an exception of type RuntimeError')
+        >>> st.exception(e)
+
+        """
+        exception_proto = ExceptionProto()
+        marshall(exception_proto, exception)
+        return dg._enqueue("exception", exception_proto)  # type: ignore
 
 
 def marshall(exception_proto, exception):

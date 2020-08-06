@@ -16,14 +16,12 @@
 
 import functools
 import json
-import random
 import textwrap
 import numbers
 import re
 from datetime import datetime
 from datetime import date
 from datetime import time
-from typing import Optional, Any
 from datetime import timedelta
 from datetime import timezone
 
@@ -32,14 +30,11 @@ from streamlit import config
 from streamlit import cursor
 from streamlit import type_util
 from streamlit.report_thread import get_report_ctx
-from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException, StreamlitDeprecationWarning
 from streamlit.errors import NoSessionContext
 from streamlit.file_util import get_encoded_file_data
 from streamlit.js_number import JSNumber
 from streamlit.js_number import JSNumberBoundsException
-from streamlit.proto import Alert_pb2
-from streamlit.proto import Balloons_pb2
 from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto.Element_pb2 import Element
@@ -47,7 +42,26 @@ from streamlit.proto.NumberInput_pb2 import NumberInput
 from streamlit.proto.Slider_pb2 import Slider
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.logger import get_logger
-from streamlit.type_util import is_type
+from streamlit.type_util import is_type, ensure_iterable
+
+from streamlit.elements.utils import _get_widget_ui_value, _set_widget_id
+from streamlit.elements.balloons import BalloonsMixin
+from streamlit.elements.button import ButtonMixin
+from streamlit.elements.markdown import MarkdownMixin
+from streamlit.elements.text import TextMixin
+from streamlit.elements.alert import AlertMixin
+from streamlit.elements.json import JsonMixin
+from streamlit.elements.doc_string import HelpMixin
+from streamlit.elements.exception_proto import ExceptionMixin
+from streamlit.elements.data_frame_proto import DataFrameMixin
+from streamlit.elements.altair import AltairMixin
+from streamlit.elements.bokeh_chart import BokehMixin
+from streamlit.elements.graphviz_chart import GraphvizMixin
+from streamlit.elements.plotly_chart import PlotlyMixin
+from streamlit.elements.vega_lite import VegaLiteMixin
+from streamlit.elements.deck_gl import DeckGlMixin
+from streamlit.elements.deck_gl_json_chart import PydeckMixin
+from streamlit.elements.map import MapMixin
 
 LOGGER = get_logger(__name__)
 
@@ -129,121 +143,6 @@ def _with_element(method):
     return wrapped_method
 
 
-def _build_duplicate_widget_message(
-    widget_func_name: str, user_key: Optional[str] = None
-) -> str:
-    if user_key is not None:
-        message = textwrap.dedent(
-            """
-            There are multiple identical `st.{widget_type}` widgets with
-            `key='{user_key}'`.
-
-            To fix this, please make sure that the `key` argument is unique for
-            each `st.{widget_type}` you create.
-            """
-        )
-    else:
-        message = textwrap.dedent(
-            """
-            There are multiple identical `st.{widget_type}` widgets with the
-            same generated key.
-
-            (When a widget is created, it's assigned an internal key based on
-            its structure. Multiple widgets with an identical structure will
-            result in the same internal key, which causes this error.)
-
-            To fix this, please pass a unique `key` argument to
-            `st.{widget_type}`.
-            """
-        )
-
-    return message.strip("\n").format(widget_type=widget_func_name, user_key=user_key)
-
-
-def _set_widget_id(
-    element_type: str,
-    element: Element,
-    user_key: Optional[str] = None,
-    widget_func_name: Optional[str] = None,
-) -> None:
-    """Set the widget id.
-
-    Parameters
-    ----------
-    element_type : str
-        The type of the widget as stored in proto.
-    element : proto
-        The proto of the element
-    user_key : str or None
-        Optional user-specified key to use for the widget ID.
-        If this is None, we'll generate an ID by hashing the element.
-    widget_func_name : str or None
-        The widget's DeltaGenerator function name, if it's different from
-        its element_type. Custom components are a special case: they all have
-        the element_type "component_instance", but are instantiated with
-        dynamically-named functions.
-
-    """
-
-    if widget_func_name is None:
-        widget_func_name = element_type
-
-    element_hash = hash(element.SerializeToString())
-    if user_key is not None:
-        widget_id = "%s-%s" % (user_key, element_hash)
-    else:
-        widget_id = "%s" % element_hash
-
-    ctx = get_report_ctx()
-    if ctx is not None:
-        added = ctx.widget_ids_this_run.add(widget_id)
-        if not added:
-            raise DuplicateWidgetID(
-                _build_duplicate_widget_message(widget_func_name, user_key)
-            )
-    el = getattr(element, element_type)
-    el.id = widget_id
-
-
-def _get_widget_ui_value(
-    element_type: str,
-    element: Element,
-    user_key: Optional[str] = None,
-    widget_func_name: Optional[str] = None,
-) -> Any:
-    """Get the widget ui_value from the report context.
-    NOTE: This function should be called after the proto has been filled.
-
-    Parameters
-    ----------
-    element_type : str
-        The type of the widget as stored in proto.
-    element : proto
-        The proto of the element
-    user_key : str
-        Optional user-specified string to use as the widget ID.
-        If this is None, we'll generate an ID by hashing the element.
-    widget_func_name : str or None
-        The widget's DeltaGenerator function name, if it's different from
-        its element_type. Custom components are a special case: they all have
-        the element_type "component_instance", but are instantiated with
-        dynamically-named functions.
-
-    Returns
-    -------
-    ui_value : any
-        The value of the widget set by the client or
-        the default value passed. If the report context
-        doesn't exist, None will be returned.
-
-    """
-    _set_widget_id(element_type, element, user_key, widget_func_name)
-    el = getattr(element, element_type)
-    ctx = get_report_ctx()
-    ui_value = ctx.widgets.get_widget_value(el.id) if ctx else None
-    return ui_value
-
-
 def _get_pandas_index_attr(data, attr):
     return getattr(data.index, attr, None)
 
@@ -285,7 +184,45 @@ text_io = io.TextIOWrapper(file_buffer)
             """
 
 
-class DeltaGenerator(object):
+class ImageFormatWarning(StreamlitDeprecationWarning):
+    def __init__(self, format):
+        self.format = format
+
+        super(ImageFormatWarning, self).__init__(
+            msg=self._get_message(), config_option="deprecation.showImageFormat"
+        )
+
+    def _get_message(self):
+        return f"""
+The `format` parameter for `st.image` has been deprecated and will be removed
+or repurposed in the future. We recommend changing to the new `output_format`
+parameter to future-proof your code. For the parameter,
+`format="{self.format}"`, please use `output_format="{self.format}"` instead.
+
+See [https://github.com/streamlit/streamlit/issues/1137](https://github.com/streamlit/streamlit/issues/1137)
+for more information.
+            """
+
+
+class DeltaGenerator(
+    AlertMixin,
+    AltairMixin,
+    BalloonsMixin,
+    BokehMixin,
+    ButtonMixin,
+    DataFrameMixin,
+    DeckGlMixin,
+    ExceptionMixin,
+    GraphvizMixin,
+    HelpMixin,
+    MarkdownMixin,
+    MapMixin,
+    PlotlyMixin,
+    PydeckMixin,
+    JsonMixin,
+    TextMixin,
+    VegaLiteMixin,
+):
     """Creator of Delta protobuf messages.
 
     Parameters
@@ -331,6 +268,13 @@ class DeltaGenerator(object):
         # computed property that fetches the right cursor.
         #
         self._provided_cursor = cursor
+
+        # Change the module of all mixin'ed functions to be st.delta_generator,
+        # instead of the original module (e.g. st.elements.markdown)
+        for mixin in self.__class__.__bases__:
+            for (name, func) in mixin.__dict__.items():
+                if callable(func):
+                    func.__module__ = self.__module__
 
     def __getattr__(self, name):
         import streamlit as st
@@ -392,10 +336,11 @@ class DeltaGenerator(object):
 
         return "{}.{}.{}".format(container, path, index)
 
-    def _enqueue_new_element_delta(
+    def _enqueue(
         self,
-        marshall_element,
         delta_type,
+        element_proto,
+        return_value=None,
         last_index=None,
         element_width=None,
         element_height=None,
@@ -417,6 +362,77 @@ class DeltaGenerator(object):
             A DeltaGenerator that can be used to modify the newly-created
             element.
 
+        """
+        # Warn if we're called from within an @st.cache function
+        caching.maybe_show_cached_st_function_warning(self, delta_type)
+
+        # Some elements have a method.__name__ != delta_type in proto.
+        # This really matters for line_chart, bar_chart & area_chart,
+        # since add_rows() relies on method.__name__ == delta_type
+        # TODO: Fix for all elements (or the cache warning above will be wrong)
+        proto_type = delta_type
+        if proto_type in DELTAS_TYPES_THAT_MELT_DATAFRAMES:
+            proto_type = "vega_lite_chart"
+
+        # Copy the marshalled proto into the overall msg proto
+        msg = ForwardMsg_pb2.ForwardMsg()
+        msg_el_proto = getattr(msg.delta.new_element, proto_type)
+        msg_el_proto.CopyFrom(element_proto)
+
+        # Only enqueue message and fill in metadata if there's a container.
+        msg_was_enqueued = False
+        if self._container and self._cursor:
+            msg.metadata.parent_block.container = self._container
+            msg.metadata.parent_block.path[:] = self._cursor.path
+            msg.metadata.delta_id = self._cursor.index
+
+            if element_width is not None:
+                msg.metadata.element_dimension_spec.width = element_width
+            if element_height is not None:
+                msg.metadata.element_dimension_spec.height = element_height
+
+            _enqueue_message(msg)
+            msg_was_enqueued = True
+
+        if msg_was_enqueued:
+            # Get a DeltaGenerator that is locked to the current element
+            # position.
+            output_dg = DeltaGenerator(
+                container=self._container,
+                cursor=self._cursor.get_locked_cursor(
+                    delta_type=delta_type, last_index=last_index
+                ),
+            )
+        else:
+            # If the message was not enqueued, just return self since it's a
+            # no-op from the point of view of the app.
+            output_dg = self
+
+        return _value_or_dg(return_value, output_dg)
+
+    # NOTE: DEPRECATED. Will soon be replaced by _enqueue
+    def _enqueue_new_element_delta(
+        self,
+        marshall_element,
+        delta_type,
+        last_index=None,
+        element_width=None,
+        element_height=None,
+    ):
+        """Create NewElement delta, fill it, and enqueue it.
+        Parameters
+        ----------
+        marshall_element : callable
+            Function which sets the fields for a NewElement protobuf.
+        element_width : int or None
+            Desired width for the element
+        element_height : int or None
+            Desired height for the element
+        Returns
+        -------
+        DeltaGenerator
+            A DeltaGenerator that can be used to modify the newly-created
+            element.
         """
         rv = None
 
@@ -484,931 +500,6 @@ class DeltaGenerator(object):
         return block_dg
 
     @_with_element
-    def balloons(self, element):
-        """Draw celebratory balloons.
-
-        Example
-        -------
-        >>> st.balloons()
-
-        ...then watch your app and get ready for a celebration!
-
-        """
-        element.balloons.type = Balloons_pb2.Balloons.DEFAULT
-        element.balloons.execution_id = random.randrange(0xFFFFFFFF)
-
-    @_with_element
-    def text(self, element, body):
-        """Write fixed-width and preformatted text.
-
-        Parameters
-        ----------
-        body : str
-            The string to display.
-
-        Example
-        -------
-        >>> st.text('This is some text.')
-
-        .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=PYxU1kee5ubuhGR11NsnT1
-           height: 50px
-
-        """
-
-        element.text.body = _clean_text(body)
-
-    @_with_element
-    def markdown(self, element, body, unsafe_allow_html=False):
-        """Display string formatted as Markdown.
-
-        Parameters
-        ----------
-        body : str
-            The string to display as Github-flavored Markdown. Syntax
-            information can be found at: https://github.github.com/gfm.
-
-            This also supports:
-
-            * Emoji shortcodes, such as `:+1:`  and `:sunglasses:`.
-              For a list of all supported codes,
-              see https://raw.githubusercontent.com/omnidan/node-emoji/master/lib/emoji.json.
-
-            * LaTeX expressions, by just wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
-
-        unsafe_allow_html : bool
-            By default, any HTML tags found in the body will be escaped and
-            therefore treated as pure text. This behavior may be turned off by
-            setting this argument to True.
-
-            That said, we *strongly advise against it*. It is hard to write
-            secure HTML, so by using this argument you may be compromising your
-            users' security. For more information, see:
-
-            https://github.com/streamlit/streamlit/issues/152
-
-            *Also note that `unsafe_allow_html` is a temporary measure and may
-            be removed from Streamlit at any time.*
-
-            If you decide to turn on HTML anyway, we ask you to please tell us
-            your exact use case here:
-
-            https://discuss.streamlit.io/t/96
-
-            This will help us come up with safe APIs that allow you to do what
-            you want.
-
-        Example
-        -------
-        >>> st.markdown('Streamlit is **_really_ cool**.')
-
-        .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=PXz9xgY8aB88eziDVEZLyS
-           height: 50px
-
-        """
-        element.markdown.body = _clean_text(body)
-        element.markdown.allow_html = unsafe_allow_html
-
-    @_with_element
-    def latex(self, element, body):
-        # This docstring needs to be "raw" because of the backslashes in the
-        # example below.
-        r"""Display mathematical expressions formatted as LaTeX.
-
-        Supported LaTeX functions are listed at
-        https://katex.org/docs/supported.html.
-
-        Parameters
-        ----------
-        body : str or SymPy expression
-            The string or SymPy expression to display as LaTeX. If str, it's
-            a good idea to use raw Python strings since LaTeX uses backslashes
-            a lot.
-
-
-        Example
-        -------
-        >>> st.latex(r'''
-        ...     a + ar + a r^2 + a r^3 + \cdots + a r^{n-1} =
-        ...     \sum_{k=0}^{n-1} ar^k =
-        ...     a \left(\frac{1-r^{n}}{1-r}\right)
-        ...     ''')
-
-        .. output::
-           https://share.streamlit.io/0.50.0-td2L/index.html?id=NJFsy6NbGTsH2RF9W6ioQ4
-           height: 75px
-
-        """
-        if type_util.is_sympy_expession(body):
-            import sympy
-
-            body = sympy.latex(body)
-
-        element.markdown.body = "$$\n%s\n$$" % _clean_text(body)
-
-    @_with_element
-    def code(self, element, body, language="python"):
-        """Display a code block with optional syntax highlighting.
-
-        (This is a convenience wrapper around `st.markdown()`)
-
-        Parameters
-        ----------
-        body : str
-            The string to display as code.
-
-        language : str
-            The language that the code is written in, for syntax highlighting.
-            If omitted, the code will be unstyled.
-
-        Example
-        -------
-        >>> code = '''def hello():
-        ...     print("Hello, Streamlit!")'''
-        >>> st.code(code, language='python')
-
-        .. output::
-           https://share.streamlit.io/0.27.0-kBtt/index.html?id=VDRnaCEZWSBCNUd5gNQZv2
-           height: 100px
-
-        """
-        markdown = "```%(language)s\n%(body)s\n```" % {
-            "language": language or "",
-            "body": body,
-        }
-        element.markdown.body = _clean_text(markdown)
-
-    @_with_element
-    def json(self, element, body):
-        """Display object or string as a pretty-printed JSON string.
-
-        Parameters
-        ----------
-        body : Object or str
-            The object to print as JSON. All referenced objects should be
-            serializable to JSON as well. If object is a string, we assume it
-            contains serialized JSON.
-
-        Example
-        -------
-        >>> st.json({
-        ...     'foo': 'bar',
-        ...     'baz': 'boz',
-        ...     'stuff': [
-        ...         'stuff 1',
-        ...         'stuff 2',
-        ...         'stuff 3',
-        ...         'stuff 5',
-        ...     ],
-        ... })
-
-        .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=CTFkMQd89hw3yZbZ4AUymS
-           height: 280px
-
-        """
-        import streamlit as st
-
-        if not isinstance(body, str):
-            try:
-                body = json.dumps(body, default=lambda o: str(type(o)))
-            except TypeError as err:
-                st.warning(
-                    "Warning: this data structure was not fully serializable as "
-                    "JSON due to one or more unexpected keys.  (Error was: %s)" % err
-                )
-                body = json.dumps(body, skipkeys=True, default=lambda o: str(type(o)))
-
-        element.json.body = body
-
-    @_with_element
-    def title(self, element, body):
-        """Display text in title formatting.
-
-        Each document should have a single `st.title()`, although this is not
-        enforced.
-
-        Parameters
-        ----------
-        body : str
-            The text to display.
-
-        Example
-        -------
-        >>> st.title('This is a title')
-
-        .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=SFcBGANWd8kWXF28XnaEZj
-           height: 100px
-
-        """
-        element.markdown.body = "# %s" % _clean_text(body)
-
-    @_with_element
-    def header(self, element, body):
-        """Display text in header formatting.
-
-        Parameters
-        ----------
-        body : str
-            The text to display.
-
-        Example
-        -------
-        >>> st.header('This is a header')
-
-        .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=AnfQVFgSCQtGv6yMUMUYjj
-           height: 100px
-
-        """
-        element.markdown.body = "## %s" % _clean_text(body)
-
-    @_with_element
-    def subheader(self, element, body):
-        """Display text in subheader formatting.
-
-        Parameters
-        ----------
-        body : str
-            The text to display.
-
-        Example
-        -------
-        >>> st.subheader('This is a subheader')
-
-        .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=LBKJTfFUwudrbWENSHV6cJ
-           height: 100px
-
-        """
-        element.markdown.body = "### %s" % _clean_text(body)
-
-    @_with_element
-    def error(self, element, body):
-        """Display error message.
-
-        Parameters
-        ----------
-        body : str
-            The error text to display.
-
-        Example
-        -------
-        >>> st.error('This is an error')
-
-        """
-        element.alert.body = _clean_text(body)
-        element.alert.format = Alert_pb2.Alert.ERROR
-
-    @_with_element
-    def warning(self, element, body):
-        """Display warning message.
-
-        Parameters
-        ----------
-        body : str
-            The warning text to display.
-
-        Example
-        -------
-        >>> st.warning('This is a warning')
-
-        """
-        element.alert.body = _clean_text(body)
-        element.alert.format = Alert_pb2.Alert.WARNING
-
-    @_with_element
-    def info(self, element, body):
-        """Display an informational message.
-
-        Parameters
-        ----------
-        body : str
-            The info text to display.
-
-        Example
-        -------
-        >>> st.info('This is a purely informational message')
-
-        """
-        element.alert.body = _clean_text(body)
-        element.alert.format = Alert_pb2.Alert.INFO
-
-    @_with_element
-    def success(self, element, body):
-        """Display a success message.
-
-        Parameters
-        ----------
-        body : str
-            The success text to display.
-
-        Example
-        -------
-        >>> st.success('This is a success message!')
-
-        """
-        element.alert.body = _clean_text(body)
-        element.alert.format = Alert_pb2.Alert.SUCCESS
-
-    @_with_element
-    def help(self, element, obj):
-        """Display object's doc string, nicely formatted.
-
-        Displays the doc string for this object.
-
-        Parameters
-        ----------
-        obj : Object
-            The object whose docstring should be displayed.
-
-        Example
-        -------
-
-        Don't remember how to initialize a dataframe? Try this:
-
-        >>> st.help(pandas.DataFrame)
-
-        Want to quickly check what datatype is output by a certain function?
-        Try:
-
-        >>> x = my_poorly_documented_function()
-        >>> st.help(x)
-
-        """
-        import streamlit.elements.doc_string as doc_string
-
-        doc_string.marshall(element, obj)
-
-    @_with_element
-    def exception(self, element, exception):
-        """Display an exception.
-
-        Parameters
-        ----------
-        exception : Exception
-            The exception to display.
-
-        Example
-        -------
-        >>> e = RuntimeError('This is an exception of type RuntimeError')
-        >>> st.exception(e)
-
-        """
-        import streamlit.elements.exception_proto as exception_proto
-
-        exception_proto.marshall(element.exception, exception)
-
-    def dataframe(self, data=None, width=None, height=None):
-        """Display a dataframe as an interactive table.
-
-        Parameters
-        ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
-            or None
-            The data to display.
-
-            If 'data' is a pandas.Styler, it will be used to style its
-            underyling DataFrame. Streamlit supports custom cell
-            values and colors. (It does not support some of the more exotic
-            pandas styling features, like bar charts, hovering, and captions.)
-            Styler support is experimental!
-        width : int or None
-            Desired width of the UI element expressed in pixels. If None, a
-            default width based on the page width is used.
-        height : int or None
-            Desired height of the UI element expressed in pixels. If None, a
-            default height is used.
-
-        Examples
-        --------
-        >>> df = pd.DataFrame(
-        ...    np.random.randn(50, 20),
-        ...    columns=('col %d' % i for i in range(20)))
-        ...
-        >>> st.dataframe(df)  # Same as st.write(df)
-
-        .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=165mJbzWdAC8Duf8a4tjyQ
-           height: 330px
-
-        >>> st.dataframe(df, 200, 100)
-
-        You can also pass a Pandas Styler object to change the style of
-        the rendered DataFrame:
-
-        >>> df = pd.DataFrame(
-        ...    np.random.randn(10, 20),
-        ...    columns=('col %d' % i for i in range(20)))
-        ...
-        >>> st.dataframe(df.style.highlight_max(axis=0))
-
-        .. output::
-           https://share.streamlit.io/0.29.0-dV1Y/index.html?id=Hb6UymSNuZDzojUNybzPby
-           height: 285px
-
-        """
-        import streamlit.elements.data_frame_proto as data_frame_proto
-
-        def set_data_frame(delta):
-            data_frame_proto.marshall_data_frame(data, delta.data_frame)
-
-        return self._enqueue_new_element_delta(
-            set_data_frame, "dataframe", element_width=width, element_height=height
-        )
-
-    @_with_element
-    def line_chart(
-        self, element, data=None, width=0, height=0, use_container_width=True
-    ):
-        """Display a line chart.
-
-        This is just syntax-sugar around st.altair_chart. The main difference
-        is this command uses the data's own column and indices to figure out
-        the chart's spec. As a result this is easier to use for many "just plot
-        this" scenarios, while being less customizable.
-
-        Parameters
-        ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict
-            or None
-            Data to be plotted.
-
-        width : int
-            The chart width in pixels. If 0, selects the width automatically.
-
-        height : int
-            The chart width in pixels. If 0, selects the height automatically.
-
-        use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over the width argument.
-
-        Example
-        -------
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 3),
-        ...     columns=['a', 'b', 'c'])
-        ...
-        >>> st.line_chart(chart_data)
-
-        .. output::
-           https://share.streamlit.io/0.50.0-td2L/index.html?id=BdxXG3MmrVBfJyqS2R2ki8
-           height: 220px
-
-        """
-
-        import streamlit.elements.altair as altair
-
-        chart = altair.generate_chart("line", data, width, height)
-        altair.marshall(element.vega_lite_chart, chart, use_container_width)
-
-    @_with_element
-    def area_chart(
-        self, element, data=None, width=0, height=0, use_container_width=True
-    ):
-        """Display a area chart.
-
-        This is just syntax-sugar around st.altair_chart. The main difference
-        is this command uses the data's own column and indices to figure out
-        the chart's spec. As a result this is easier to use for many "just plot
-        this" scenarios, while being less customizable.
-
-        Parameters
-        ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, or dict
-            Data to be plotted.
-
-        width : int
-            The chart width in pixels. If 0, selects the width automatically.
-
-        height : int
-            The chart width in pixels. If 0, selects the height automatically.
-
-        use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over the width argument.
-
-        Example
-        -------
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 3),
-        ...     columns=['a', 'b', 'c'])
-        ...
-        >>> st.area_chart(chart_data)
-
-        .. output::
-           https://share.streamlit.io/0.50.0-td2L/index.html?id=Pp65STuFj65cJRDfhGh4Jt
-           height: 220px
-
-        """
-        import streamlit.elements.altair as altair
-
-        chart = altair.generate_chart("area", data, width, height)
-        altair.marshall(element.vega_lite_chart, chart, use_container_width)
-
-    @_with_element
-    def bar_chart(
-        self, element, data=None, width=0, height=0, use_container_width=True
-    ):
-        """Display a bar chart.
-
-        This is just syntax-sugar around st.altair_chart. The main difference
-        is this command uses the data's own column and indices to figure out
-        the chart's spec. As a result this is easier to use for many "just plot
-        this" scenarios, while being less customizable.
-
-        Parameters
-        ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, or dict
-            Data to be plotted.
-
-        width : int
-            The chart width in pixels. If 0, selects the width automatically.
-
-        height : int
-            The chart width in pixels. If 0, selects the height automatically.
-
-        use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over the width argument.
-
-        Example
-        -------
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(50, 3),
-        ...     columns=["a", "b", "c"])
-        ...
-        >>> st.bar_chart(chart_data)
-
-        .. output::
-           https://share.streamlit.io/0.50.0-td2L/index.html?id=5U5bjR2b3jFwnJdDfSvuRk
-           height: 220px
-
-        """
-        import streamlit.elements.altair as altair
-
-        chart = altair.generate_chart("bar", data, width, height)
-        altair.marshall(element.vega_lite_chart, chart, use_container_width)
-
-    @_with_element
-    def vega_lite_chart(
-        self,
-        element,
-        data=None,
-        spec=None,
-        width=0,
-        use_container_width=False,
-        **kwargs,
-    ):
-        """Display a chart using the Vega-Lite library.
-
-        Parameters
-        ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
-            or None
-            Either the data to be plotted or a Vega-Lite spec containing the
-            data (which more closely follows the Vega-Lite API).
-
-        spec : dict or None
-            The Vega-Lite spec for the chart. If the spec was already passed in
-            the previous argument, this must be set to None. See
-            https://vega.github.io/vega-lite/docs/ for more info.
-
-        width : number
-            Deprecated. If != 0 (default), will show an alert.
-            From now on you should set the width directly in the Vega-Lite
-            spec. Please refer to the Vega-Lite documentation for details.
-
-        use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over Vega-Lite's native `width` value.
-
-        **kwargs : any
-            Same as spec, but as keywords.
-
-        Example
-        -------
-
-        >>> import pandas as pd
-        >>> import numpy as np
-        >>>
-        >>> df = pd.DataFrame(
-        ...     np.random.randn(200, 3),
-        ...     columns=['a', 'b', 'c'])
-        >>>
-        >>> st.vega_lite_chart(df, {
-        ...     'mark': {'type': 'circle', 'tooltip': True},
-        ...     'encoding': {
-        ...         'x': {'field': 'a', 'type': 'quantitative'},
-        ...         'y': {'field': 'b', 'type': 'quantitative'},
-        ...         'size': {'field': 'c', 'type': 'quantitative'},
-        ...         'color': {'field': 'c', 'type': 'quantitative'},
-        ...     },
-        ... })
-
-        .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
-           height: 200px
-
-        Examples of Vega-Lite usage without Streamlit can be found at
-        https://vega.github.io/vega-lite/examples/. Most of those can be easily
-        translated to the syntax shown above.
-
-        """
-        import streamlit.elements.vega_lite as vega_lite
-
-        if width != 0:
-            import streamlit as st
-
-            st.warning(
-                "The `width` argument in `st.vega_lite_chart` is deprecated and will be removed on 2020-03-04. To set the width, you should instead use Vega-Lite's native `width` argument as described at https://vega.github.io/vega-lite/docs/size.html"
-            )
-
-        vega_lite.marshall(
-            element.vega_lite_chart,
-            data,
-            spec,
-            use_container_width=use_container_width,
-            **kwargs,
-        )
-
-    @_with_element
-    def altair_chart(self, element, altair_chart, width=0, use_container_width=False):
-        """Display a chart using the Altair library.
-
-        Parameters
-        ----------
-        altair_chart : altair.vegalite.v2.api.Chart
-            The Altair chart object to display.
-
-        width : number
-            Deprecated. If != 0 (default), will show an alert.
-            From now on you should set the width directly in the Altair
-            spec. Please refer to the Altair documentation for details.
-
-        use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over Altair's native `width` value.
-
-        Example
-        -------
-
-        >>> import pandas as pd
-        >>> import numpy as np
-        >>> import altair as alt
-        >>>
-        >>> df = pd.DataFrame(
-        ...     np.random.randn(200, 3),
-        ...     columns=['a', 'b', 'c'])
-        ...
-        >>> c = alt.Chart(df).mark_circle().encode(
-        ...     x='a', y='b', size='c', color='c', tooltip=['a', 'b', 'c'])
-        >>>
-        >>> st.altair_chart(c, use_container_width=True)
-
-        .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
-           height: 200px
-
-        Examples of Altair charts can be found at
-        https://altair-viz.github.io/gallery/.
-
-        """
-        import streamlit.elements.altair as altair
-
-        if width != 0:
-            import streamlit as st
-
-            st.warning(
-                "The `width` argument in `st.vega_lite_chart` is deprecated and will be removed on 2020-03-04. To set the width, you should instead use altair's native `width` argument as described at https://altair-viz.github.io/user_guide/generated/toplevel/altair.Chart.html"
-            )
-
-        altair.marshall(
-            element.vega_lite_chart,
-            altair_chart,
-            use_container_width=use_container_width,
-        )
-
-    @_with_element
-    def graphviz_chart(
-        self, element, figure_or_dot, width=0, height=0, use_container_width=False
-    ):
-        """Display a graph using the dagre-d3 library.
-
-        Parameters
-        ----------
-        figure_or_dot : graphviz.dot.Graph, graphviz.dot.Digraph, str
-            The Graphlib graph object or dot string to display
-
-        width : number
-            Deprecated. If != 0 (default), will show an alert.
-            From now on you should set the width directly in the Graphviz
-            spec. Please refer to the Graphviz documentation for details.
-
-        height : number
-            Deprecated. If != 0 (default), will show an alert.
-            From now on you should set the height directly in the Graphviz
-            spec. Please refer to the Graphviz documentation for details.
-
-        use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over the figure's native `width` value.
-
-        Example
-        -------
-
-        >>> import streamlit as st
-        >>> import graphviz as graphviz
-        >>>
-        >>> # Create a graphlib graph object
-        >>> graph = graphviz.Digraph()
-        >>> graph.edge('run', 'intr')
-        >>> graph.edge('intr', 'runbl')
-        >>> graph.edge('runbl', 'run')
-        >>> graph.edge('run', 'kernel')
-        >>> graph.edge('kernel', 'zombie')
-        >>> graph.edge('kernel', 'sleep')
-        >>> graph.edge('kernel', 'runmem')
-        >>> graph.edge('sleep', 'swap')
-        >>> graph.edge('swap', 'runswap')
-        >>> graph.edge('runswap', 'new')
-        >>> graph.edge('runswap', 'runmem')
-        >>> graph.edge('new', 'runmem')
-        >>> graph.edge('sleep', 'runmem')
-        >>>
-        >>> st.graphviz_chart(graph)
-
-        Or you can render the chart from the graph using GraphViz's Dot
-        language:
-
-        >>> st.graphviz_chart('''
-            digraph {
-                run -> intr
-                intr -> runbl
-                runbl -> run
-                run -> kernel
-                kernel -> zombie
-                kernel -> sleep
-                kernel -> runmem
-                sleep -> swap
-                swap -> runswap
-                runswap -> new
-                runswap -> runmem
-                new -> runmem
-                sleep -> runmem
-            }
-        ''')
-
-        .. output::
-           https://share.streamlit.io/0.56.0-xTAd/index.html?id=GBn3GXZie5K1kXuBKe4yQL
-           height: 400px
-
-        """
-        import streamlit.elements.graphviz_chart as graphviz_chart
-
-        if width != 0 and height != 0:
-            import streamlit as st
-
-            st.warning(
-                "The `width` and `height` arguments in `st.graphviz` are deprecated and will be removed on 2020-03-04"
-            )
-        elif width != 0:
-            import streamlit as st
-
-            st.warning(
-                "The `width` argument in `st.graphviz` is deprecated and will be removed on 2020-03-04"
-            )
-        elif height != 0:
-            import streamlit as st
-
-            st.warning(
-                "The `height` argument in `st.graphviz` is deprecated and will be removed on 2020-03-04"
-            )
-
-        graphviz_chart.marshall(
-            element.graphviz_chart, figure_or_dot, use_container_width
-        )
-
-    @_with_element
-    def plotly_chart(
-        self,
-        element,
-        figure_or_data,
-        width=0,
-        height=0,
-        use_container_width=False,
-        sharing="streamlit",
-        **kwargs,
-    ):
-        """Display an interactive Plotly chart.
-
-        Plotly is a charting library for Python. The arguments to this function
-        closely follow the ones for Plotly's `plot()` function. You can find
-        more about Plotly at https://plot.ly/python.
-
-        Parameters
-        ----------
-        figure_or_data : plotly.graph_objs.Figure, plotly.graph_objs.Data,
-            dict/list of plotly.graph_objs.Figure/Data
-
-            See https://plot.ly/python/ for examples of graph descriptions.
-
-        width : int
-            Deprecated. If != 0 (default), will show an alert.
-            From now on you should set the width directly in the figure.
-            Please refer to the Plotly documentation for details.
-
-        height : int
-            Deprecated. If != 0 (default), will show an alert.
-            From now on you should set the height directly in the figure.
-            Please refer to the Plotly documentation for details.
-
-        use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over the figure's native `width` value.
-
-        sharing : {'streamlit', 'private', 'secret', 'public'}
-            Use 'streamlit' to insert the plot and all its dependencies
-            directly in the Streamlit app, which means it works offline too.
-            This is the default.
-            Use any other sharing mode to send the app to Plotly's servers,
-            and embed the result into the Streamlit app. See
-            https://plot.ly/python/privacy/ for more. Note that these sharing
-            modes require a Plotly account.
-
-        **kwargs
-            Any argument accepted by Plotly's `plot()` function.
-
-
-        To show Plotly charts in Streamlit, just call `st.plotly_chart`
-        wherever you would call Plotly's `py.plot` or `py.iplot`.
-
-        Example
-        -------
-
-        The example below comes straight from the examples at
-        https://plot.ly/python:
-
-        >>> import streamlit as st
-        >>> import plotly.figure_factory as ff
-        >>> import numpy as np
-        >>>
-        >>> # Add histogram data
-        >>> x1 = np.random.randn(200) - 2
-        >>> x2 = np.random.randn(200)
-        >>> x3 = np.random.randn(200) + 2
-        >>>
-        >>> # Group data together
-        >>> hist_data = [x1, x2, x3]
-        >>>
-        >>> group_labels = ['Group 1', 'Group 2', 'Group 3']
-        >>>
-        >>> # Create distplot with custom bin_size
-        >>> fig = ff.create_distplot(
-        ...         hist_data, group_labels, bin_size=[.1, .25, .5])
-        >>>
-        >>> # Plot!
-        >>> st.plotly_chart(fig, use_container_width=True)
-
-        .. output::
-           https://share.streamlit.io/0.56.0-xTAd/index.html?id=TuP96xX8JnsoQeUGAPjkGQ
-           height: 400px
-
-        """
-        # NOTE: "figure_or_data" is the name used in Plotly's .plot() method
-        # for their main parameter. I don't like the name, but it's best to
-        # keep it in sync with what Plotly calls it.
-        import streamlit.elements.plotly_chart as plotly_chart
-
-        if width != 0 and height != 0:
-            import streamlit as st
-
-            st.warning(
-                "The `width` and `height` arguments in `st.plotly_chart` are deprecated and will be removed on 2020-03-04. To set these values, you should instead use Plotly's native arguments as described at https://plot.ly/python/setting-graph-size/"
-            )
-        elif width != 0:
-            import streamlit as st
-
-            st.warning(
-                "The `width` argument in `st.plotly_chart` is deprecated and will be removed on 2020-03-04. To set the width, you should instead use Plotly's native `width` argument as described at https://plot.ly/python/setting-graph-size/"
-            )
-        elif height != 0:
-            import streamlit as st
-
-            st.warning(
-                "The `height` argument in `st.plotly_chart` is deprecated and will be removed on 2020-03-04. To set the height, you should instead use Plotly's native `height` argument as described at https://plot.ly/python/setting-graph-size/"
-            )
-
-        plotly_chart.marshall(
-            element.plotly_chart, figure_or_data, use_container_width, sharing, **kwargs
-        )
-
-    @_with_element
     def pyplot(self, element, fig=None, clear_figure=None, **kwargs):
         """Display a matplotlib.pyplot figure.
 
@@ -1461,52 +552,6 @@ class DeltaGenerator(object):
         pyplot.marshall(self._get_coordinates, element, fig, clear_figure, **kwargs)
 
     @_with_element
-    def bokeh_chart(self, element, figure, use_container_width=False):
-        """Display an interactive Bokeh chart.
-
-        Bokeh is a charting library for Python. The arguments to this function
-        closely follow the ones for Bokeh's `show` function. You can find
-        more about Bokeh at https://bokeh.pydata.org.
-
-        Parameters
-        ----------
-        figure : bokeh.plotting.figure.Figure
-            A Bokeh figure to plot.
-
-        use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over Bokeh's native `width` value.
-
-        To show Bokeh charts in Streamlit, just call `st.bokeh_chart`
-        wherever you would call Bokeh's `show`.
-
-        Example
-        -------
-        >>> import streamlit as st
-        >>> from bokeh.plotting import figure
-        >>>
-        >>> x = [1, 2, 3, 4, 5]
-        >>> y = [6, 7, 2, 4, 5]
-        >>>
-        >>> p = figure(
-        ...     title='simple line example',
-        ...     x_axis_label='x',
-        ...     y_axis_label='y')
-        ...
-        >>> p.line(x, y, legend='Trend', line_width=2)
-        >>>
-        >>> st.bokeh_chart(p, use_container_width=True)
-
-        .. output::
-           https://share.streamlit.io/0.56.0-xTAd/index.html?id=Fdhg51uMbGMLRRxXV6ubzp
-           height: 600px
-
-        """
-        import streamlit.elements.bokeh_chart as bokeh_chart
-
-        bokeh_chart.marshall(element.bokeh_chart, figure, use_container_width)
-
-    @_with_element
     def image(
         self,
         element,
@@ -1516,7 +561,8 @@ class DeltaGenerator(object):
         use_column_width=False,
         clamp=False,
         channels="RGB",
-        format="JPEG",
+        output_format="auto",
+        **kwargs,
     ):
         """Display an image or list of images.
 
@@ -1549,9 +595,12 @@ class DeltaGenerator(object):
             `image[:, :, 0]` is the red channel, `image[:, :, 1]` is green, and
             `image[:, :, 2]` is blue. For images coming from libraries like
             OpenCV you should set this to 'BGR', instead.
-        format : 'JPEG' or 'PNG'
-            This parameter specifies the image format to use when transferring
-            the image data. Defaults to 'JPEG'.
+        output_format : 'JPEG', 'PNG', or 'auto'
+            This parameter specifies the format to use when transferring the
+            image data. Photos should use the JPEG format for lossy compression
+            while diagrams should use the PNG format for lossless compression.
+            Defaults to 'auto' which identifies the compression type based
+            on the type and format of the image argument.
 
         Example
         -------
@@ -1568,6 +617,14 @@ class DeltaGenerator(object):
         """
         from .elements import image_proto
 
+        format = kwargs.get("format")
+        if format != None:
+            # override output compression type if specified
+            output_format = format
+
+            if config.get_option("deprecation.showImageFormat"):
+                self.exception(ImageFormatWarning(format))
+
         if use_column_width:
             width = -2
         elif width is None:
@@ -1583,7 +640,7 @@ class DeltaGenerator(object):
             element.imgs,
             clamp,
             channels,
-            format,
+            output_format,
         )
 
     @_with_element
@@ -1769,40 +826,6 @@ class DeltaGenerator(object):
         )
 
     @_with_element
-    def button(self, element, label, key=None):
-        """Display a button widget.
-
-        Parameters
-        ----------
-        label : str
-            A short label explaining to the user what this button is for.
-        key : str
-            An optional string to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
-
-        Returns
-        -------
-        bool
-            If the button was clicked on the last run of the app.
-
-        Example
-        -------
-        >>> if st.button('Say hello'):
-        ...     st.write('Why hello there')
-        ... else:
-        ...     st.write('Goodbye')
-
-        """
-        element.button.label = label
-        element.button.default = False
-
-        ui_value = _get_widget_ui_value("button", element, user_key=key)
-        current_value = ui_value if ui_value is not None else False
-        return current_value
-
-    @_with_element
     def checkbox(self, element, label, value=False, key=None):
         """Display a checkbox widget.
 
@@ -1835,7 +858,7 @@ class DeltaGenerator(object):
         element.checkbox.label = label
         element.checkbox.default = bool(value)
 
-        ui_value = _get_widget_ui_value("checkbox", element, user_key=key)
+        ui_value = _get_widget_ui_value("checkbox", element.checkbox, user_key=key)
         current_value = ui_value if ui_value is not None else value
         return bool(current_value)
 
@@ -1850,9 +873,9 @@ class DeltaGenerator(object):
         ----------
         label : str
             A short label explaining to the user what this select widget is for.
-        options : list, tuple, numpy.ndarray, or pandas.Series
+        options : list, tuple, numpy.ndarray, pandas.Series, or pandas.DataFrame
             Labels for the select options. This will be cast to str internally
-            by default.
+            by default. For pandas.DataFrame, the first column is selected.
         default: [str] or None
             List of default values.
         format_func : function
@@ -1888,6 +911,7 @@ class DeltaGenerator(object):
            `GitHub issue #1059 <https://github.com/streamlit/streamlit/issues/1059>`_ for updates on the issue.
 
         """
+        options = ensure_iterable(options)
 
         # Perform validation checks and return indices base on the default values.
         def _check_and_convert_to_indices(options, default_values):
@@ -1923,7 +947,9 @@ class DeltaGenerator(object):
             str(format_func(option)) for option in options
         ]
 
-        ui_value = _get_widget_ui_value("multiselect", element, user_key=key)
+        ui_value = _get_widget_ui_value(
+            "multiselect", element.multiselect, user_key=key
+        )
         current_value = ui_value.value if ui_value is not None else default_value
         return [options[i] for i in current_value]
 
@@ -1935,9 +961,9 @@ class DeltaGenerator(object):
         ----------
         label : str
             A short label explaining to the user what this radio group is for.
-        options : list, tuple, numpy.ndarray, or pandas.Series
+        options : list, tuple, numpy.ndarray, pandas.Series, or pandas.DataFrame
             Labels for the radio options. This will be cast to str internally
-            by default.
+            by default. For pandas.DataFrame, the first column is selected.
         index : int
             The index of the preselected option on first render.
         format_func : function
@@ -1968,6 +994,8 @@ class DeltaGenerator(object):
         ...     st.write("You didn\'t select comedy.")
 
         """
+        options = ensure_iterable(options)
+
         if not isinstance(index, int):
             raise StreamlitAPIException(
                 "Radio Value has invalid type: %s" % type(index).__name__
@@ -1982,7 +1010,7 @@ class DeltaGenerator(object):
         element.radio.default = index
         element.radio.options[:] = [str(format_func(option)) for option in options]
 
-        ui_value = _get_widget_ui_value("radio", element, user_key=key)
+        ui_value = _get_widget_ui_value("radio", element.radio, user_key=key)
         current_value = ui_value if ui_value is not None else index
 
         return (
@@ -1999,9 +1027,9 @@ class DeltaGenerator(object):
         ----------
         label : str
             A short label explaining to the user what this select widget is for.
-        options : list, tuple, numpy.ndarray, or pandas.Series
+        options : list, tuple, numpy.ndarray, pandas.Series, or pandas.DataFrame
             Labels for the select options. This will be cast to str internally
-            by default.
+            by default. For pandas.DataFrame, the first column is selected.
         index : int
             The index of the preselected option on first render.
         format_func : function
@@ -2027,6 +1055,8 @@ class DeltaGenerator(object):
         >>> st.write('You selected:', option)
 
         """
+        options = ensure_iterable(options)
+
         if not isinstance(index, int):
             raise StreamlitAPIException(
                 "Selectbox Value has invalid type: %s" % type(index).__name__
@@ -2041,7 +1071,7 @@ class DeltaGenerator(object):
         element.selectbox.default = index
         element.selectbox.options[:] = [str(format_func(option)) for option in options]
 
-        ui_value = _get_widget_ui_value("selectbox", element, user_key=key)
+        ui_value = _get_widget_ui_value("selectbox", element.selectbox, user_key=key)
         current_value = ui_value if ui_value is not None else index
 
         return (
@@ -2377,7 +1407,7 @@ class DeltaGenerator(object):
         element.slider.step = step
         element.slider.data_type = data_type
 
-        ui_value = _get_widget_ui_value("slider", element, user_key=key)
+        ui_value = _get_widget_ui_value("slider", element.slider, user_key=key)
         if ui_value:
             current_value = getattr(ui_value, "value")
         else:
@@ -2470,7 +1500,7 @@ class DeltaGenerator(object):
             "server.maxUploadSize"
         )
         element.file_uploader.multiple_files = accept_multiple_files
-        _set_widget_id("file_uploader", element, user_key=key)
+        _set_widget_id("file_uploader", element.file_uploader, user_key=key)
 
         files = None
         ctx = get_report_ctx()
@@ -2546,7 +1576,9 @@ class DeltaGenerator(object):
         element.color_picker.label = label
         element.color_picker.default = str(value)
 
-        ui_value = _get_widget_ui_value("color_picker", element, user_key=key)
+        ui_value = _get_widget_ui_value(
+            "color_picker", element.color_picker, user_key=key
+        )
         current_value = ui_value if ui_value is not None else value
 
         return str(current_value)
@@ -2603,7 +1635,7 @@ class DeltaGenerator(object):
                 % type
             )
 
-        ui_value = _get_widget_ui_value("text_input", element, user_key=key)
+        ui_value = _get_widget_ui_value("text_input", element.text_input, user_key=key)
         current_value = ui_value if ui_value is not None else value
         return str(current_value)
 
@@ -2657,7 +1689,7 @@ class DeltaGenerator(object):
         if max_chars is not None:
             element.text_area.max_chars = max_chars
 
-        ui_value = _get_widget_ui_value("text_area", element, user_key=key)
+        ui_value = _get_widget_ui_value("text_area", element.text_area, user_key=key)
         current_value = ui_value if ui_value is not None else value
         return str(current_value)
 
@@ -2706,7 +1738,7 @@ class DeltaGenerator(object):
         element.time_input.label = label
         element.time_input.default = time.strftime(value, "%H:%M")
 
-        ui_value = _get_widget_ui_value("time_input", element, user_key=key)
+        ui_value = _get_widget_ui_value("time_input", element.time_input, user_key=key)
         current_value = (
             datetime.strptime(ui_value, "%H:%M").time()
             if ui_value is not None
@@ -2793,7 +1825,7 @@ class DeltaGenerator(object):
 
         element.date_input.max = date.strftime(max_value, "%Y/%m/%d")
 
-        ui_value = _get_widget_ui_value("date_input", element, user_key=key)
+        ui_value = _get_widget_ui_value("date_input", element.date_input, user_key=key)
 
         if ui_value is not None:
             value = getattr(ui_value, "data")
@@ -2991,7 +2023,9 @@ class DeltaGenerator(object):
         if format is not None:
             number_input.format = format
 
-        ui_value = _get_widget_ui_value("number_input", element, user_key=key)
+        ui_value = _get_widget_ui_value(
+            "number_input", element.number_input, user_key=key
+        )
 
         return ui_value if ui_value is not None else value
 
@@ -3062,276 +2096,6 @@ class DeltaGenerator(object):
         """
         # The protobuf needs something to be set
         element.empty.unused = True
-
-    @_with_element
-    def map(self, element, data=None, zoom=None, use_container_width=True):
-        """Display a map with points on it.
-
-        This is a wrapper around st.pydeck_chart to quickly create scatterplot
-        charts on top of a map, with auto-centering and auto-zoom.
-
-        When using this command, we advise all users to use a personal Mapbox
-        token. This ensures the map tiles used in this chart are more
-        robust. You can do this with the mapbox.token config option.
-
-        To get a token for yourself, create an account at
-        https://mapbox.com. It's free! (for moderate usage levels) See
-        https://docs.streamlit.io/en/latest/cli.html#view-all-config-options for more
-        info on how to set config options.
-
-        Parameters
-        ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
-            or None
-            The data to be plotted. Must have columns called 'lat', 'lon',
-            'latitude', or 'longitude'.
-        zoom : int
-            Zoom level as specified in
-            https://wiki.openstreetmap.org/wiki/Zoom_levels
-
-        Example
-        -------
-        >>> import pandas as pd
-        >>> import numpy as np
-        >>>
-        >>> df = pd.DataFrame(
-        ...     np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
-        ...     columns=['lat', 'lon'])
-        >>>
-        >>> st.map(df)
-
-        .. output::
-           https://share.streamlit.io/0.53.0-SULT/index.html?id=9gTiomqPEbvHY2huTLoQtH
-           height: 600px
-
-        """
-        import streamlit.elements.map as streamlit_map
-
-        element.deck_gl_json_chart.json = streamlit_map.to_deckgl_json(data, zoom)
-        element.deck_gl_json_chart.use_container_width = use_container_width
-
-    @_with_element
-    def deck_gl_chart(self, element, spec=None, use_container_width=False, **kwargs):
-        """Draw a map chart using the Deck.GL library.
-
-        This API closely follows Deck.GL's JavaScript API
-        (https://deck.gl/#/documentation), with a few small adaptations and
-        some syntax sugar.
-
-        When using this command, we advise all users to use a personal Mapbox
-        token. This ensures the map tiles used in this chart are more
-        robust. You can do this with the mapbox.token config option.
-
-        To get a token for yourself, create an account at
-        https://mapbox.com. It's free! (for moderate usage levels) See
-        https://docs.streamlit.io/en/latest/cli.html#view-all-config-options for more
-        info on how to set config options.
-
-        Parameters
-        ----------
-
-        spec : dict
-            Keys in this dict can be:
-
-            - Anything accepted by Deck.GL's top level element, such as
-              "viewport", "height", "width".
-
-            - "layers": a list of dicts containing information to build a new
-              Deck.GL layer in the map. Each layer accepts the following keys:
-
-                - "data" : DataFrame
-                  The data for the current layer.
-
-                - "type" : str
-                  One of the Deck.GL layer types that are currently supported
-                  by Streamlit: ArcLayer, GridLayer, HexagonLayer, LineLayer,
-                  PointCloudLayer, ScatterplotLayer, ScreenGridLayer,
-                  TextLayer.
-
-                - Plus anything accepted by that layer type. The exact keys that
-                  are accepted depend on the "type" field, above. For example, for
-                  ScatterplotLayer you can set fields like "opacity", "filled",
-                  "stroked", and so on.
-
-                  In addition, Deck.GL"s documentation for ScatterplotLayer
-                  shows you can use a "getRadius" field to individually set
-                  the radius of each circle in the plot. So here you would
-                  set "getRadius": "my_column" where "my_column" is the name
-                  of the column containing the radius data.
-
-                  For things like "getPosition", which expect an array rather
-                  than a scalar value, we provide alternates that make the
-                  API simpler to use with dataframes:
-
-                  - Instead of "getPosition" : use "getLatitude" and
-                    "getLongitude".
-                  - Instead of "getSourcePosition" : use "getLatitude" and
-                    "getLongitude".
-                  - Instead of "getTargetPosition" : use "getTargetLatitude"
-                    and "getTargetLongitude".
-                  - Instead of "getColor" : use "getColorR", "getColorG",
-                    "getColorB", and (optionally) "getColorA", for red,
-                    green, blue and alpha.
-                  - Instead of "getSourceColor" : use the same as above.
-                  - Instead of "getTargetColor" : use "getTargetColorR", etc.
-
-        use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over the figure's native `width` value.
-
-        **kwargs : any
-            Same as spec, but as keywords. Keys are "unflattened" at the
-            underscore characters. For example, foo_bar_baz=123 becomes
-            foo={'bar': {'bar': 123}}.
-
-        Example
-        -------
-        >>> st.deck_gl_chart(
-        ...     viewport={
-        ...         'latitude': 37.76,
-        ...         'longitude': -122.4,
-        ...         'zoom': 11,
-        ...         'pitch': 50,
-        ...     },
-        ...     layers=[{
-        ...         'type': 'HexagonLayer',
-        ...         'data': df,
-        ...         'radius': 200,
-        ...         'elevationScale': 4,
-        ...         'elevationRange': [0, 1000],
-        ...         'pickable': True,
-        ...         'extruded': True,
-        ...     }, {
-        ...         'type': 'ScatterplotLayer',
-        ...         'data': df,
-        ...     }])
-        ...
-
-        .. output::
-           https://share.streamlit.io/0.50.0-td2L/index.html?id=3GfRygWqxuqB5UitZLjz9i
-           height: 530px
-
-        """
-
-        suppress_deprecation_warning = config.get_option(
-            "global.suppressDeprecationWarnings"
-        )
-        if not suppress_deprecation_warning:
-            import streamlit as st
-
-            st.warning(
-                """
-                The `deck_gl_chart` widget is deprecated and will be removed on
-                2020-05-01. To render a map, you should use `st.pydeck_chart` widget.
-            """
-            )
-
-        import streamlit.elements.deck_gl as deck_gl
-
-        deck_gl.marshall(element.deck_gl_chart, spec, use_container_width, **kwargs)
-
-    @_with_element
-    def pydeck_chart(self, element, pydeck_obj=None, use_container_width=False):
-        """Draw a chart using the PyDeck library.
-
-        This supports 3D maps, point clouds, and more! More info about PyDeck
-        at https://deckgl.readthedocs.io/en/latest/.
-
-        These docs are also quite useful:
-
-        - DeckGL docs: https://github.com/uber/deck.gl/tree/master/docs
-        - DeckGL JSON docs: https://github.com/uber/deck.gl/tree/master/modules/json
-
-        When using this command, we advise all users to use a personal Mapbox
-        token. This ensures the map tiles used in this chart are more
-        robust. You can do this with the mapbox.token config option.
-
-        To get a token for yourself, create an account at
-        https://mapbox.com. It's free! (for moderate usage levels) See
-        https://docs.streamlit.io/en/latest/cli.html#view-all-config-options for more
-        info on how to set config options.
-
-        Parameters
-        ----------
-        spec: pydeck.Deck or None
-            Object specifying the PyDeck chart to draw.
-
-        Example
-        -------
-        Here's a chart using a HexagonLayer and a ScatterplotLayer on top of
-        the light map style:
-
-        >>> df = pd.DataFrame(
-        ...    np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
-        ...    columns=['lat', 'lon'])
-        >>>
-        >>> st.pydeck_chart(pdk.Deck(
-        ...     map_style='mapbox://styles/mapbox/light-v9',
-        ...     initial_view_state=pdk.ViewState(
-        ...         latitude=37.76,
-        ...         longitude=-122.4,
-        ...         zoom=11,
-        ...         pitch=50,
-        ...     ),
-        ...     layers=[
-        ...         pdk.Layer(
-        ...            'HexagonLayer',
-        ...            data=df,
-        ...            get_position='[lon, lat]',
-        ...            radius=200,
-        ...            elevation_scale=4,
-        ...            elevation_range=[0, 1000],
-        ...            pickable=True,
-        ...            extruded=True,
-        ...         ),
-        ...         pdk.Layer(
-        ...             'ScatterplotLayer',
-        ...             data=df,
-        ...             get_position='[lon, lat]',
-        ...             get_color='[200, 30, 0, 160]',
-        ...             get_radius=200,
-        ...         ),
-        ...     ],
-        ... ))
-
-        .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=ASTdExBpJ1WxbGceneKN1i
-           height: 530px
-
-        """
-        import streamlit.elements.deck_gl_json_chart as deck_gl_json_chart
-
-        deck_gl_json_chart.marshall(element, pydeck_obj, use_container_width)
-
-    @_with_element
-    def table(self, element, data=None):
-        """Display a static table.
-
-        This differs from `st.dataframe` in that the table in this case is
-        static: its entire contents are just laid out directly on the page.
-
-        Parameters
-        ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
-            or None
-            The table data.
-
-        Example
-        -------
-        >>> df = pd.DataFrame(
-        ...    np.random.randn(10, 5),
-        ...    columns=('col %d' % i for i in range(5)))
-        ...
-        >>> st.table(df)
-
-        .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=KfZvDMprL4JFKXbpjD3fpq
-           height: 480px
-
-        """
-        import streamlit.elements.data_frame_proto as data_frame_proto
-
-        data_frame_proto.marshall_data_frame(data, element.table)
 
     def add_rows(self, data=None, **kwargs):
         """Concatenate a dataframe to the bottom of the current one.

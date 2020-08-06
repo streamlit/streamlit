@@ -16,6 +16,18 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.64.0
+
+_Release date: July 23, 2020_
+
+**Highlights:**
+
+- 📊 Default matplotlib to display charts with a tight layout. To disable this,
+  set `bbox_inches` to `None`, inches as a string, or a `Bbox`
+- 🗃 Deprecation warning for automatic encoding on `st.file_uploader`
+- 🙈 If `gatherUserStats` is `False`, do not even load the Segment library.
+  Thanks [@tanmaylaud](https://github.com/tanmaylaud)!
+
 ## Version 0.63.0
 
 _Release date: July 13, 2020_
