@@ -18,7 +18,7 @@ import logging
 import unittest
 
 import pytest
-from mock import patch
+from unittest.mock import patch
 from parameterized import parameterized
 
 from streamlit import logger
