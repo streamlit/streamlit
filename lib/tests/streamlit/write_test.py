@@ -39,12 +39,12 @@ class StreamlitWriteTest(unittest.TestCase):
 
     def test_string(self):
         """Test st.write with a string."""
-        with patch("streamlit.markdown") as p:
+        with patch("streamlit.delta_generator.DeltaGenerator.markdown") as p:
             st.write("some string")
 
             p.assert_called_once()
 
-        with patch("streamlit.markdown") as p:
+        with patch("streamlit.delta_generator.DeltaGenerator.markdown") as p:
             st.write("more", "strings", "to", "pass")
 
             p.assert_called_once_with("more strings to pass", unsafe_allow_html=False)
@@ -67,14 +67,14 @@ class StreamlitWriteTest(unittest.TestCase):
         self.assertEqual(sorted(data.keys()), sorted(type_util._DATAFRAME_LIKE_TYPES))
 
         for df in data.values():
-            with patch("streamlit.dataframe") as p:
+            with patch("streamlit.delta_generator.DeltaGenerator.dataframe") as p:
                 st.write(df)
 
                 p.assert_called_once()
 
     def test_exception_type(self):
         """Test st.write with exception."""
-        with patch("streamlit.exception") as p:
+        with patch("streamlit.delta_generator.DeltaGenerator.exception") as p:
             st.write(Exception("some exception"))
 
             p.assert_called_once()
@@ -82,13 +82,13 @@ class StreamlitWriteTest(unittest.TestCase):
     def test_help(self):
         """Test st.write with help types."""
         # Test module
-        with patch("streamlit.help") as p:
+        with patch("streamlit.delta_generator.DeltaGenerator.help") as p:
             st.write(np)
 
             p.assert_called_once()
 
         # Test function
-        with patch("streamlit.help") as p:
+        with patch("streamlit.delta_generator.DeltaGenerator.help") as p:
             st.write(st.set_option)
 
             p.assert_called_once()
@@ -101,7 +101,7 @@ class StreamlitWriteTest(unittest.TestCase):
         class FakeChart(object):
             pass
 
-        with patch("streamlit.altair_chart") as p:
+        with patch("streamlit.delta_generator.DeltaGenerator.altair_chart") as p:
             st.write(FakeChart())
 
             p.assert_called_once()
@@ -114,7 +114,7 @@ class StreamlitWriteTest(unittest.TestCase):
         class FakePyplot(object):
             pass
 
-        with patch("streamlit.pyplot") as p:
+        with patch("streamlit.delta_generator.DeltaGenerator.pyplot") as p:
             st.write(FakePyplot())
 
             p.assert_called_once()
@@ -123,36 +123,36 @@ class StreamlitWriteTest(unittest.TestCase):
         import plotly.graph_objs as go
 
         """Test st.write with plotly object."""
-        with patch("streamlit.plotly_chart") as p:
+        with patch("streamlit.delta_generator.DeltaGenerator.plotly_chart") as p:
             st.write([go.Scatter(x=[1, 2], y=[10, 20])])
 
             p.assert_called_once()
 
     def test_dict(self):
         """Test st.write with dict."""
-        with patch("streamlit.json") as p:
+        with patch("streamlit.delta_generator.DeltaGenerator.json") as p:
             st.write({"a": 1, "b": 2})
 
             p.assert_called_once()
 
     def test_list(self):
         """Test st.write with list."""
-        with patch("streamlit.json") as p:
+        with patch("streamlit.delta_generator.DeltaGenerator.json") as p:
             st.write([1, 2, 3])
 
             p.assert_called_once()
 
     def test_namedtuple(self):
         """Test st.write with list."""
-        with patch("streamlit.json") as p:
+        with patch("streamlit.delta_generator.DeltaGenerator.json") as p:
             Boy = namedtuple("Boy", ("name", "age"))
             John = Boy("John", 29)
             st.write(John)
 
             p.assert_called_once()
 
-    @patch("streamlit.markdown")
-    @patch("streamlit.json")
+    @patch("streamlit.delta_generator.DeltaGenerator.markdown")
+    @patch("streamlit.delta_generator.DeltaGenerator.json")
     def test_dict_and_string(self, mock_json, mock_markdown):
         """Test st.write with dict."""
         manager = Mock()
@@ -175,7 +175,7 @@ class StreamlitWriteTest(unittest.TestCase):
             def __str__(self):
                 return "1 * 2 - 3 = 4 `ok` !"
 
-        with patch("streamlit.markdown") as p:
+        with patch("streamlit.delta_generator.DeltaGenerator.markdown") as p:
             st.write(SomeObject())
 
             p.assert_called_once_with(
@@ -187,8 +187,9 @@ class StreamlitWriteTest(unittest.TestCase):
         # We patch streamlit.exception to observe it, but we also make sure
         # it's still called (via side_effect). This ensures that it's called
         # with the proper arguments.
-        with patch("streamlit.markdown") as m, patch(
-            "streamlit.exception", side_effect=st.exception
+        with patch("streamlit.delta_generator.DeltaGenerator.markdown") as m, patch(
+            "streamlit.delta_generator.DeltaGenerator.exception",
+            side_effect=st.exception,
         ) as e:
             m.side_effect = Exception("some exception")
             st.write("some text")
@@ -199,7 +200,7 @@ class StreamlitWriteTest(unittest.TestCase):
         """Test st.spinner."""
         # TODO(armando): Test that the message is actually passed to
         # message.warning
-        with patch("streamlit.empty") as e:
+        with patch("streamlit.delta_generator.DeltaGenerator.empty") as e:
             with st.spinner("some message"):
                 time.sleep(0.15)
             e.assert_called_once_with()

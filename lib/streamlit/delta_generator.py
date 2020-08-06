@@ -61,6 +61,7 @@ from streamlit.elements.file_uploader import FileUploaderMixin
 from streamlit.elements.slider import SliderMixin
 from streamlit.elements.image_proto import ImageMixin
 from streamlit.elements.pyplot import PyplotMixin
+from streamlit.elements.write import WriteMixin
 
 LOGGER = get_logger(__name__)
 
@@ -108,6 +109,7 @@ class DeltaGenerator(
     TextWidgetsMixin,
     TimeWidgetsMixin,
     VegaLiteMixin,
+    WriteMixin,
 ):
     """Creator of Delta protobuf messages.
 
