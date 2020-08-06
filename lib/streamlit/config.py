@@ -243,9 +243,9 @@ _create_option(
     Default: 'info'
     """,
     deprecated=True,
-    deprecation_text="global.logLevel has been replaced with logger.logLevel",
-    expiration_date="2020-10-31",
-    replaced_by="logger.logLevel",
+    deprecation_text="global.logLevel has been replaced with logger.level",
+    expiration_date="2020-11-30",
+    replaced_by="logger.level",
 )
 
 
@@ -298,20 +298,7 @@ _create_option(
 _create_section("logger", "Settings to customize Streamlit log messages.")
 
 
-@_create_option("logger.datetimeFormat", type_=str)
-def _logger_datetime_format():
-    """Datetime format for date in logger message. Providing a datetime format
-    will automatically add a timestamp to all logger messages.
-
-    Default: None
-    """
-    if get_option("global.developmentMode"):
-        return "%Y-%m-%dT%H:%M:%SZ"
-    else:
-        return None
-
-
-@_create_option("logger.logLevel", type_=str)
+@_create_option("logger.level", type_=str)
 def _logger_log_level():
     """Level of logging: 'error', 'warning', 'info', or 'debug'.
 
@@ -336,11 +323,11 @@ def _logger_message_format():
     Default: None
     """
     if get_option("global.developmentMode"):
-        return "%(asctime)s.%(msecs)03d %(levelname) -7s " "%(name)s: %(message)s"
-    elif get_option("logger.datetimeFormat"):
-        return "%(asctime)s.%(msecs)03d %(message)s"
+        from streamlit.logger import DEFAULT_LOG_MESSAGE
+
+        return DEFAULT_LOG_MESSAGE
     else:
-        return None
+        return "%(asctime)s.%(msecs)03d %(message)s"
 
 
 # Config Section: Client #
@@ -869,7 +856,7 @@ def _set_option(key, value, where_defined):
     Parameters
     ----------
     key : str
-        The key of the option, like "logger.logLevel".
+        The key of the option, like "logger.level".
     value
         The value of the option.
     where_defined : str

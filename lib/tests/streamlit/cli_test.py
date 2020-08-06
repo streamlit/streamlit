@@ -191,7 +191,7 @@ class CliTest(unittest.TestCase):
             "server_headless": True,
             "browser_serverAddress": "localhost",
             "global_minCachedMessageSize": None,
-            "logger_logLevel": "error",
+            "logger_level": "error",
         }
 
         _apply_config_options_from_cli(kwargs)
@@ -212,7 +212,7 @@ class CliTest(unittest.TestCase):
                     "command-line argument or environment variable",
                 ),
                 mock.call(
-                    "logger.logLevel",
+                    "logger.level",
                     "error",
                     "command-line argument or environment variable",
                 ),

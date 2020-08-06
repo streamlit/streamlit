@@ -286,8 +286,7 @@ class ConfigTest(unittest.TestCase):
                 "global.showWarningOnDirectExecution",
                 "global.suppressDeprecationWarnings",
                 "global.unitTest",
-                "logger.datetimeFormat",
-                "logger.logLevel",
+                "logger.level",
                 "logger.messageFormat",
                 "runner.magicEnabled",
                 "runner.installTracer",
@@ -520,11 +519,11 @@ class ConfigTest(unittest.TestCase):
 
     def test_global_log_level_debug(self):
         config.set_option("global.developmentMode", True)
-        self.assertEqual("debug", config.get_option("logger.logLevel"))
+        self.assertEqual("debug", config.get_option("logger.level"))
 
     def test_global_log_level(self):
         config.set_option("global.developmentMode", False)
-        self.assertEqual("info", config.get_option("logger.logLevel"))
+        self.assertEqual("info", config.get_option("logger.level"))
 
     @parameterized.expand([(True, True), (True, False), (False, False), (False, True)])
     def test_on_config_parsed(self, config_parsed, connect_signal):

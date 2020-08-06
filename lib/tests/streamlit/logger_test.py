@@ -18,6 +18,7 @@ import logging
 import unittest
 
 import pytest
+from mock import patch
 from parameterized import parameterized
 
 from streamlit import logger
@@ -79,26 +80,31 @@ class LoggerTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            ("%(asctime)s.%(msecs)03d %(levelname) -7s " "%(name)s: %(message)s", None),
-            (None, "%Y-%m-%d %H:%M:%S"),
-            ("%(asctime)s.%(msecs)03d %(name)s: %(message)s", "%Y-%m-%d %H:%M:%S"),
+            ("%(asctime)s.%(msecs)03d %(name)s: %(message)s", False),
+            ("%(asctime)s.%(msecs)03d %(name)s: %(message)s", True),
+            (None, False),
+            (None, True),
         ]
     )
-    def test_setup_log_formatter(self, messageFormat, dateFormat):
+    def test_setup_log_formatter(self, messageFormat, config_parsed):
         """Test streamlit.logger.setup_log_formatter."""
 
         LOGGER = logger.get_logger("test")
 
         config._set_option("logger.messageFormat", messageFormat, "test")
-        config._set_option("logger.datetimeFormat", dateFormat, "test")
-        config._set_option("logger.logLevel", logging.DEBUG, "test")
+        config._set_option("logger.level", logging.DEBUG, "test")
 
-        logger.setup_formatter(LOGGER)
-        self.assertEqual(len(LOGGER.handlers), 1)
-        self.assertEqual(
-            LOGGER.handlers[0].formatter._fmt, messageFormat or "%(message)s"
-        )
-        self.assertEqual(LOGGER.handlers[0].formatter.datefmt, dateFormat)
+        with patch.object(config, "_config_file_has_been_parsed", new=config_parsed):
+            logger.setup_formatter(LOGGER)
+            self.assertEqual(len(LOGGER.handlers), 1)
+            if config_parsed:
+                self.assertEqual(
+                    LOGGER.handlers[0].formatter._fmt, messageFormat or "%(message)s"
+                )
+            else:
+                self.assertEqual(
+                    LOGGER.handlers[0].formatter._fmt, logger.DEFAULT_LOG_MESSAGE
+                )
 
     def test_init_tornado_logs(self):
         """Test streamlit.logger.init_tornado_logs."""
