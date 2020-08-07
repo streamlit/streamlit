@@ -17,7 +17,7 @@
 
 import React from "react"
 import DeckGL from "deck.gl"
-import { shallow } from "enzyme"
+import { mount } from "enzyme"
 import { fromJS } from "immutable"
 import { StaticMap } from "react-map-gl"
 
@@ -38,7 +38,7 @@ const getProps = (
 
 describe("DeckGlChart Element", () => {
   const props = getProps()
-  const wrapper = shallow(<DeckGlChart {...props} />)
+  const wrapper = mount(<DeckGlChart {...props} />)
 
   it("renders without crashing", () => {
     expect(wrapper).toBeDefined()
@@ -62,6 +62,7 @@ describe("DeckGlChart Element", () => {
     )
     expect(wrapper.find(DeckGL).props()).toHaveProperty("controller")
     expect(wrapper.find(DeckGL).prop("layers")).toMatchSnapshot()
+    console.log(wrapper.find(StaticMap).props())
     expect(wrapper.find(StaticMap).prop("mapboxApiAccessToken")).toBe(
       props.mapboxToken
     )
