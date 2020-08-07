@@ -240,7 +240,7 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         self.assertTrue(dg._cursor.is_locked)
         self.assertEqual(dg._cursor.index, 1234)
 
-    def test_enqueue_new_element_delta_null(self):
+    def test_enqueue_null(self):
         # Test "Null" Delta generators
         dg = DeltaGenerator(container=None)
         enqueue_fn = lambda x: None
@@ -248,7 +248,7 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(dg, new_dg)
 
     @parameterized.expand([(BlockPath.MAIN,), (BlockPath.SIDEBAR,)])
-    def test_enqueue_new_element_delta(self, container):
+    def test_enqueue(self, container):
         dg = DeltaGenerator(container=container)
         self.assertEqual(0, dg._cursor.index)
         self.assertEqual(container, dg._container)
@@ -265,7 +265,7 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         element = self.get_delta_from_queue().new_element
         self.assertEqual(element.text.body, test_data)
 
-    def test_enqueue_new_element_delta_same_id(self):
+    def test_enqueue_same_id(self):
         cursor = LockedCursor(index=123)
         dg = DeltaGenerator(cursor=cursor)
         self.assertEqual(123, dg._cursor.index)

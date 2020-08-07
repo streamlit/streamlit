@@ -160,7 +160,7 @@ class CustomComponent:
 
             # widget_value will be either None or whatever the component's most
             # recent setWidgetValue value is. We coerce None -> NoValue,
-            # because that's what _enqueue_new_element_delta expects.
+            # because that's what DeltaGenerator._enqueue expects.
             return widget_value if widget_value is not None else NoValue
 
         # We currently only support writing to st._main, but this will change
