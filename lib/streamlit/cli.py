@@ -55,7 +55,7 @@ def _convert_config_option_to_click_option(config_option):
     description = config_option.description
     if config_option.deprecated:
         description += "\n {} - {}".format(
-            config_option.deprecation_text, config_option.deprecation_date
+            config_option.deprecation_text, config_option.expiration_date
         )
     envvar = "STREAMLIT_{}".format(to_snake_case(param).upper())
 

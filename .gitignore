@@ -20,6 +20,7 @@ eggs/
 .pytest_cache/
 .mypy_cache/
 test-reports
+htmlcov
 
 # Test fixtures
 cffi_bin

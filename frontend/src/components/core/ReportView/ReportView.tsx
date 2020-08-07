@@ -28,6 +28,7 @@ import { ComponentRegistry } from "components/widgets/CustomComponent"
 import { ThemeProvider } from "baseui"
 import { BlockElement } from "lib/DeltaParser"
 import { mainWidgetTheme, sidebarWidgetTheme } from "lib/widgetTheme"
+import { PageConfig } from "autogen/proto"
 
 import "./ReportView.scss"
 import "./Widget.scss"
@@ -63,6 +64,9 @@ interface Props {
   // Wide mode
   wide: boolean
 
+  // Whether the sidebar should start expanded
+  initialSidebarState: PageConfig.SidebarState
+
   componentRegistry: ComponentRegistry
 }
 
@@ -83,7 +87,7 @@ class ReportView extends PureComponent<Props> {
     return (
       <div className={reportViewClassName}>
         {this.hasSidebar() && (
-          <Sidebar>
+          <Sidebar initialSidebarState={this.props.initialSidebarState}>
             <div className="block-container">
               <ThemeProvider theme={sidebarWidgetTheme}>
                 <Block

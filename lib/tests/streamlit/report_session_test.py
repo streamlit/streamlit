@@ -27,6 +27,7 @@ from streamlit.script_runner import ScriptRunner
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
+from streamlit.errors import StreamlitAPIException
 from tests.mock_storage import MockStorage
 import streamlit as st
 
@@ -56,7 +57,8 @@ class ReportSessionTest(unittest.TestCase):
         mock_script_runner._install_tracer = ScriptRunner._install_tracer
         rs._scriptrunner = mock_script_runner
 
-        rs.enqueue({"dontcare": 123})
+        mock_msg = MagicMock()
+        rs.enqueue(mock_msg)
 
         func = mock_script_runner.maybe_handle_execution_control_request
 
@@ -91,7 +93,8 @@ class ReportSessionTest(unittest.TestCase):
         mock_script_runner = MagicMock()
         rs._scriptrunner = mock_script_runner
 
-        rs.enqueue({"dontcare": 123})
+        mock_msg = MagicMock()
+        rs.enqueue(mock_msg)
 
         func = mock_script_runner.maybe_handle_execution_control_request
 
@@ -102,6 +105,35 @@ class ReportSessionTest(unittest.TestCase):
         # likely because there's a bug in the enqueue function (which should
         # skip func when installTracer is on).
         func.assert_not_called()
+
+    @patch("streamlit.report_session.LocalSourcesWatcher")
+    def test_set_page_config_immutable(self, _1):
+        """st.set_page_config must be called at most once"""
+        file_mgr = MagicMock(spec=UploadedFileManager)
+        rs = ReportSession(None, "", "", file_mgr)
+
+        msg = ForwardMsg()
+        msg.page_config_changed.title = "foo"
+
+        rs.enqueue(msg)
+        with self.assertRaises(StreamlitAPIException):
+            rs.enqueue(msg)
+
+    @patch("streamlit.report_session.LocalSourcesWatcher")
+    def test_set_page_config_first(self, _1):
+        """st.set_page_config must be called before other st commands"""
+        file_mgr = MagicMock(spec=UploadedFileManager)
+        rs = ReportSession(None, "", "", file_mgr)
+
+        markdown_msg = ForwardMsg()
+        markdown_msg.delta.new_element.markdown.body = "foo"
+
+        msg = ForwardMsg()
+        msg.page_config_changed.title = "foo"
+
+        rs.enqueue(markdown_msg)
+        with self.assertRaises(StreamlitAPIException):
+            rs.enqueue(msg)
 
     @patch("streamlit.report_session.LocalSourcesWatcher")
     def test_shutdown(self, _1):
