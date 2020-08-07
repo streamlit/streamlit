@@ -65,15 +65,11 @@ describe("Audio Element", () => {
     const props = getProps({
       url: "http://localhost:80/media/sound.wav",
     })
-    const useEffect = jest.spyOn(React, "useEffect")
     const wrapper = mount(<Audio {...props} />)
 
-    expect(useEffect).toHaveBeenCalledTimes(1)
-    wrapper.setProps(
-      getProps({
-        startTime: 10,
-      })
-    )
-    expect(useEffect).toHaveBeenCalledTimes(2)
+    const audioElement: HTMLAudioElement = wrapper.find("audio").getDOMNode()
+    expect(audioElement.currentTime).toBe(0)
+    wrapper.setProps(getProps({ startTime: 10 }))
+    expect(audioElement.currentTime).toBe(10)
   })
 })
