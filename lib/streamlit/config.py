@@ -327,7 +327,7 @@ def _logger_message_format():
 
         return DEFAULT_LOG_MESSAGE
     else:
-        return "%(asctime)s.%(msecs)03d %(message)s"
+        return "%(asctime)s %(message)s"
 
 
 # Config Section: Client #

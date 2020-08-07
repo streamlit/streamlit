@@ -29,9 +29,7 @@ LOGGERS = {}  # type: Dict[str, logging.Logger]
 # The global log level is set here across all names.
 LOG_LEVEL = logging.INFO
 
-DEFAULT_LOG_MESSAGE = (
-    "%(asctime)s.%(msecs)03d %(levelname) -7s " "%(name)s: %(message)s"
-)
+DEFAULT_LOG_MESSAGE = "%(asctime)s %(levelname) -7s " "%(name)s: %(message)s"
 
 
 def set_log_level(level):
@@ -79,6 +77,7 @@ def setup_formatter(logger):
     else:
         message_format = DEFAULT_LOG_MESSAGE
     formatter = logging.Formatter(fmt=message_format)
+    formatter.default_msec_format = "%s.%03d"
     logger.streamlit_console_handler.setFormatter(formatter)
 
     # Register the new console logger.
