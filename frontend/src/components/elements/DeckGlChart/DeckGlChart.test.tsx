@@ -22,11 +22,11 @@ import { fromJS } from "immutable"
 import { StaticMap } from "react-map-gl"
 
 import mockDeckGl from "./mock"
-import { DeckGlChart, PropsWithHeight } from "./DeckGlChart"
+import { DeckGlChart, DeckGlChartProps } from "./DeckGlChart"
 
 const getProps = (
   elementProps: Record<string, unknown> = {}
-): PropsWithHeight => ({
+): DeckGlChartProps => ({
   element: fromJS({
     ...mockDeckGl,
     ...elementProps,
@@ -57,10 +57,6 @@ describe("DeckGlChart Element", () => {
   })
 
   it("should have a DeckGL", () => {
-    wrapper.setState({
-      initialized: true,
-    })
-
     expect(wrapper.find(DeckGL).prop("initialViewState")).toMatchSnapshot(
       "initialViewState"
     )
