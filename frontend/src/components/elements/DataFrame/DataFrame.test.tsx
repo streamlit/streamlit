@@ -21,9 +21,12 @@ import { fromJS } from "immutable"
 import { MultiGrid } from "react-virtualized"
 
 import mockDataFrame from "./mock"
-import { DataFrame, Props, MIN_CELL_WIDTH_PX } from "./DataFrame"
+import { DataFrame, DataFrameProps } from "./DataFrame"
+import { MIN_CELL_WIDTH_PX } from "./DataFrameUtil"
 
-const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
+const getProps = (
+  elementProps: Record<string, unknown> = {}
+): DataFrameProps => ({
   element: fromJS({
     ...mockDataFrame,
     ...elementProps,

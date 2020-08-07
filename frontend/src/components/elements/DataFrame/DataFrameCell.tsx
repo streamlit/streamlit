@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-import React, { PureComponent } from "react"
+import React, { ReactElement } from "react"
 import Icon from "components/shared/Icon"
 import { SortDirection } from "./SortDirection"
 
-export interface Props {
+export interface DataFrameCellProps {
   /** The cell's column index in the DataFrame */
   columnIndex: number
 
@@ -62,58 +62,54 @@ export interface Props {
   headerClickedCallback?: (columnIndex: number) => void
 }
 
-class DataFrameCell extends PureComponent<Props> {
-  public render(): React.ReactNode {
-    const {
-      columnIndex,
-      rowIndex,
-      className,
-      style,
-      contents,
-      columnSortDirection,
-      headerClickedCallback,
-      sortedByUser,
-    } = this.props
+export default function DataFrameCell({
+  className,
+  columnIndex,
+  contents,
+  rowIndex,
+  sortedByUser,
+  style,
+  columnSortDirection,
+  headerClickedCallback,
+}: DataFrameCellProps): ReactElement {
+  let onClick
+  let role
+  let tabIndex
+  let title = contents
 
-    let onClick
-    let role
-    let tabIndex
-    let title = contents
+  const isDescending = columnSortDirection === SortDirection.DESCENDING
 
-    const isDescending = columnSortDirection === SortDirection.DESCENDING
-
-    if (headerClickedCallback != null && rowIndex === 0) {
-      onClick = () => headerClickedCallback(columnIndex)
-      role = "button"
-      tabIndex = 0
-      title =
-        columnSortDirection == null
-          ? `Sort by column "${contents}"`
-          : `Sorted by column "${contents}" (${
-              isDescending ? "descending" : "ascending"
-            })`
-    }
-
-    // The sort icon is only drawn in the top row
-    const sortIcon =
-      rowIndex === 0 ? drawSortIcon(columnSortDirection) : undefined
-
-    return (
-      // (ESLint erroneously believes we're not assigning a role to our clickable div)
-      // eslint-disable-next-line
-      <div
-        className={className}
-        style={style}
-        onClick={onClick}
-        role={role}
-        tabIndex={tabIndex}
-        title={title}
-      >
-        {sortedByUser ? sortIcon : ""}
-        {contents}
-      </div>
-    )
+  if (headerClickedCallback != null && rowIndex === 0) {
+    onClick = () => headerClickedCallback(columnIndex)
+    role = "button"
+    tabIndex = 0
+    title =
+      columnSortDirection == null
+        ? `Sort by column "${contents}"`
+        : `Sorted by column "${contents}" (${
+            isDescending ? "descending" : "ascending"
+          })`
   }
+
+  // The sort icon is only drawn in the top row
+  const sortIcon =
+    rowIndex === 0 ? drawSortIcon(columnSortDirection) : undefined
+
+  return (
+    // (ESLint erroneously believes we're not assigning a role to our clickable div)
+    // eslint-disable-next-line
+    <div
+      className={className}
+      style={style}
+      onClick={onClick}
+      role={role}
+      tabIndex={tabIndex}
+      title={title}
+    >
+      {sortedByUser ? sortIcon : ""}
+      {contents}
+    </div>
+  )
 }
 
 function drawSortIcon(sortDirection?: SortDirection): React.ReactNode {
@@ -131,5 +127,3 @@ function drawSortIcon(sortDirection?: SortDirection): React.ReactNode {
       return null
   }
 }
-
-export default DataFrameCell
