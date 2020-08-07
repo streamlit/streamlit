@@ -17,7 +17,7 @@
 
 import React from "react"
 import Clipboard from "clipboard"
-import { mount } from "enzyme"
+import { shallow, mount } from "enzyme"
 
 import CopyButton from "./CopyButton"
 
@@ -28,7 +28,7 @@ describe("CopyButton Element", () => {
     jest.clearAllMocks()
   })
 
-  const wrapper = mount(<CopyButton text="test" />)
+  const wrapper = shallow(<CopyButton text="test" />)
 
   it("renders without crashing", () => {
     expect(wrapper.find("button").length).toBe(1)
@@ -46,7 +46,8 @@ describe("CopyButton Element", () => {
 
   it("should unmount", () => {
     wrapper.unmount()
-    expect(wrapper.length).toBe(0)
+
+    expect(wrapper.html()).toBeNull()
   })
 
   describe("calling clipboard", () => {
@@ -56,7 +57,7 @@ describe("CopyButton Element", () => {
       expect(Clipboard).toHaveBeenCalled()
     })
 
-    it("clipboard destroy should be called on unmount", () => {
+    it("should be called on unmount", () => {
       const wrapper = mount(<CopyButton text="test" />)
 
       wrapper.unmount()

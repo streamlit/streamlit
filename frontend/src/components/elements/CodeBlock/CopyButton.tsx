@@ -16,42 +16,42 @@
  */
 
 import Clipboard from "clipboard"
-import React, { ReactElement, useEffect, useRef, useState } from "react"
+import React, { PureComponent, ReactNode, createRef } from "react"
 import { Copy as CopyIcon } from "react-feather"
 
-interface CopyButtonProps {
+interface Props {
   text: string
 }
 
-export default function CopyButton({ text }: CopyButtonProps): ReactElement {
-  const button = useRef<HTMLButtonElement>(null)
+class CopyButton extends PureComponent<Props> {
+  private button = createRef<HTMLButtonElement>()
 
-  const [clipboard, setClipBoard] = useState<ClipboardJS | null>(null)
+  private clipboard: ClipboardJS | null = null
 
-  useEffect(() => {
-    const node = button.current
+  public componentDidMount = (): void => {
+    const node = this.button.current
+
     if (node !== null) {
-      setClipBoard(new Clipboard(node))
+      this.clipboard = new Clipboard(node)
     }
-  }, [text])
-  useEffect(
-    () => () => {
-      if (clipboard !== null) {
-        clipboard.destroy()
-        setClipBoard(null)
-      }
-    },
-    [clipboard]
-  )
+  }
 
-  return (
+  public componentWillUnmount = (): void => {
+    if (this.clipboard !== null) {
+      this.clipboard.destroy()
+    }
+  }
+
+  public render = (): ReactNode => (
     <button
       className="overlayBtn"
       title="Copy to clipboard"
-      ref={button}
-      data-clipboard-text={text}
+      ref={this.button}
+      data-clipboard-text={this.props.text}
     >
       <CopyIcon size="16" />
     </button>
   )
 }
+
+export default CopyButton
