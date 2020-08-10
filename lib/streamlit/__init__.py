@@ -715,11 +715,11 @@ def stop():
     Example
     -------
 
-    >>> name = st.text_input(‘Name’)
+    >>> name = st.text_input('Name')
     >>> if not name:
-    >>>   st.warning(‘Please input a name.’)
+    >>>   st.warning('Please input a name.')
     >>>   st.stop()
-    >>> st.succcess(‘Thank you for inputting a name.’)
+    >>> st.succcess('Thank you for inputting a name.')
 
     """
     raise StopException()
