@@ -708,16 +708,18 @@ def _maybe_print_repl_warning():
 
 def stop():
     """Stops excecution immediately. Streamlit will not run any statements
-    after `st.stop()`. We recommend rendering a message prior to calling this
-    to indicate the execution has stopped and why. When run outside of
-    Streamlit, it will raise an Exception
+    after `st.stop()`. We recommend rendering an informational message that
+    would explain the stop in execution. When run outside of Streamlit, it
+    will raise an Exception
 
     Example
     -------
 
-    >>> st.write('This string will be written')
-    >>> st.stop()
-    >>> st.write('This string will NOT be written')
+    >>> name = st.text_input('Name')
+    >>> if not name:
+    >>>   st.warning('Please input a name.')
+    >>>   st.stop()
+    >>> st.succcess('Thank you for inputting a name.')
 
     """
     raise StopException()
