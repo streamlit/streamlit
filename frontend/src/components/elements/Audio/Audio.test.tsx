@@ -69,7 +69,9 @@ describe("Audio Element", () => {
 
     const audioElement: HTMLAudioElement = wrapper.find("audio").getDOMNode()
     expect(audioElement.currentTime).toBe(0)
+
     wrapper.setProps(getProps({ startTime: 10 }))
+
     expect(audioElement.currentTime).toBe(10)
   })
 })

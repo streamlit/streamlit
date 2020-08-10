@@ -26,6 +26,7 @@ export interface AudioProps {
 
 export default function Audio({ element, width }: AudioProps): ReactElement {
   const audioRef = useRef<HTMLAudioElement>(null)
+
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.currentTime = element.get("startTime")
