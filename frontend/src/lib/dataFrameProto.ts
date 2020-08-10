@@ -21,6 +21,7 @@
 
 import camelcase from "camelcase"
 import { fromJS } from "immutable"
+import { Datetime } from "autogen/proto"
 import { dispatchOneOf, mapOneOf, updateOneOf } from "./immutableProto"
 import { DateTimeHandler } from "./DateTime"
 
@@ -349,7 +350,7 @@ export function indexGet(index: any, level: any, i: any): any {
     int_64Index: (idx: any) => idx.getIn(["data", "data", i]),
     float_64Index: (idx: any) => idx.getIn(["data", "data", i]),
     datetimeIndex: (idx: any) =>
-      DateTimeHandler.protoToDate(idx.getIn(["data", "data", i])),
+      DateTimeHandler.dateToString(idx.getIn(["data", "data", i])),
     timedeltaIndex: (idx: any) =>
       DateTimeHandler.nanosToDuration(idx.getIn(["data", "data", i])),
   })
@@ -385,7 +386,7 @@ function anyArrayGet(anyArray: any, i: any): any {
     strings: getData,
     doubles: getData,
     int64s: getData,
-    datetimes: (obj: any) => DateTimeHandler.protoToDate(getData(obj)),
+    datetimes: (obj: any) => DateTimeHandler.dateToString(getData(obj)),
     timedeltas: (obj: any) => DateTimeHandler.nanosToDuration(getData(obj)),
   })
 }

@@ -15,10 +15,28 @@ from streamlit.proto.DataFrame_pb2 import Datetime as DatetimeProto
 from datetime import datetime
 from pandas import Timestamp
 
+
+class DatetimeMixin:
+    def datetime(dg, dt):
+        """Draw celebratory balloons.
+
+        Example
+        -------
+        >>> st.datetime()
+
+        ...then watch your app and get ready for a celebration!
+
+        """
+        datetime_proto = make_datetime_proto(dt)
+        return dg._enqueue("datetime", datetime_proto)  # type: ignore
+
+
 def make_datetime_proto(dt):
     datetime_proto = DatetimeProto()
-    # breakpoint()
-    datetime_proto.datetime = dt.value if isinstance(dt, Timestamp) else dt.time().time_ns()
-    print(datetime_proto.datetime)
-    datetime_proto.timezone = dt.tz.zone if dt.tz else ""
+    if isinstance(dt, Timestamp):
+        datetime_proto.datetime = dt.value
+        datetime_proto.timezone = dt.tz.zone if dt.tz else ""
+    else:
+        datetime_proto.datetime = int(dt.timestamp() * 1e9)
+        datetime_proto.timezone = dt.tzinfo or ""
     return datetime_proto

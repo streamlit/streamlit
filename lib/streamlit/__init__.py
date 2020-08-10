@@ -103,7 +103,6 @@ from streamlit import string_util as _string_util
 from streamlit import type_util as _type_util
 from streamlit.commands.page_config import set_page_config as _set_page_config
 from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
-from streamlit.elements.datetime import make_datetime_proto
 from streamlit.report_thread import add_report_ctx as _add_report_ctx
 from streamlit.report_thread import get_report_ctx as _get_report_ctx
 from streamlit.script_runner import StopException
@@ -410,7 +409,14 @@ def write(*args, **kwargs):
                 flush_buffer()
                 pydeck_chart(arg)
             elif isinstance(arg, datetime):
-                make_datetime_proto(arg)
+                from google.protobuf.json_format import MessageToJson
+                from streamlit.elements.datetime import make_datetime_proto
+
+                datetime_proto = make_datetime_proto(arg)
+                string_buffer.append(
+                    "{@datetime: %s}"
+                    % str(MessageToJson(datetime_proto).replace("\n", ""))
+                )
             else:
                 string_buffer.append("`%s`" % str(arg).replace("`", "\\`"))
 

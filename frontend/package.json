@@ -79,6 +79,7 @@
     "reactstrap": "^8.0.1",
     "remark-emoji": "^2.0.2",
     "remark-math": "^2.0.1",
+    "remark-parse": "^8.0.3",
     "sprintf-js": "^1.1.2",
     "styletron-engine-atomic": "^1.4.6",
     "styletron-react": "^5.2.6",

@@ -19,25 +19,32 @@ import moment from "moment-timezone"
 import { Datetime } from "autogen/proto"
 
 class DateTimeHandler {
-  static moment(
-    date: Date | string | number,
-    timezone?: string
-  ): moment.Moment {
-    const displayTimezone = timezone || moment.tz.guess()
-    return moment(date).tz(displayTimezone)
+  static moment(date: any, timezone?: string): moment.Moment {
+    const nanos = date.datetime || (date.get && date.get("datetime"))
+    let datetime = moment(nanos ? this.nanosToMilli(nanos) : date)
+    const datetimeTimezone =
+      timezone || date.timezone || (date.get && date.get("timezone"))
+    return datetimeTimezone
+      ? datetime.tz(datetimeTimezone)
+      : datetime.tz("UTC").tz(moment.tz.guess(), true)
   }
 
-  static protoToDate(dateProto: Datetime): moment.Moment {
-    const datejson = dateProto.toJSON()
-    return this.moment(this.nanosToDate(datejson.datetime), datejson.timezone)
-  }
-
-  static nanosToDate(nanos: any): Date {
-    return new Date(nanos / 1e6)
+  static nanosToMilli(nanos: number): number {
+    return nanos / 1e6
   }
 
   static nanosToDuration(nanos: number): Duration {
     return new Duration(nanos / 1e6)
+  }
+
+  static dateToString(date: any): string {
+    date = this.moment(date)
+    let format = "lll z"
+    if (date.hour() === 0 && date.minute() === 0 && date.second() === 0) {
+      format = "ll z"
+    }
+
+    return date.format(format)
   }
 }
 

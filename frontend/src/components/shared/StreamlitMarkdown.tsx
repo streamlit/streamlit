@@ -25,8 +25,9 @@ import { BlockMath, InlineMath } from "react-katex"
 import RemarkMathPlugin from "remark-math"
 // @ts-ignore
 import RemarkEmoji from "remark-emoji"
+import parser, { Parser, Eat, Tokenizer } from "remark-parse"
 import CodeBlock from "components/elements/CodeBlock/"
-
+import dateParser from "lib/dateParser"
 import "katex/dist/katex.min.css"
 
 export interface Props {
@@ -72,7 +73,7 @@ export class StreamlitMarkdown extends PureComponent<Props> {
       ),
     }
 
-    const plugins = [RemarkMathPlugin, RemarkEmoji]
+    const plugins = [RemarkMathPlugin, RemarkEmoji, dateParser]
     const astPlugins = allowHTML ? [htmlParser()] : []
 
     return (
