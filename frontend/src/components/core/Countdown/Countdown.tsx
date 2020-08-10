@@ -21,7 +21,7 @@ import "./Countdown.scss"
 
 interface Props {
   countdown: number
-  endCallback: Function
+  endCallback: () => void
 }
 
 interface State {
@@ -60,7 +60,7 @@ class Countdown extends PureComponent<Props, State> {
       <div
         className="countdown"
         onAnimationEnd={this.onAnimationEnd}
-        key={"frame" + countdown}
+        key={`frame${countdown}`}
       >
         {/* The key forces DOM mutations, for animation to restart. */}
         <span>{countdown}</span>

@@ -18,10 +18,7 @@
 import React, { createRef, PureComponent, ReactNode } from "react"
 import { Map as ImmutableMap } from "immutable"
 import { Video as VideoProto } from "autogen/proto"
-import {
-  buildHttpUri,
-  getWindowBaseUriParts as get_base_uri_parts,
-} from "lib/UriUtil"
+import { buildMediaUri } from "lib/UriUtil"
 
 export interface Props {
   width: number
@@ -59,17 +56,6 @@ class Video extends PureComponent<Props> {
     return url
   }
 
-  private getVideoURI = (): string => {
-    const { element } = this.props
-    const url = element.get("url")
-
-    if (url.startsWith("/media")) {
-      return buildHttpUri(get_base_uri_parts(), url)
-    }
-
-    return url
-  }
-
   public render(): ReactNode {
     /* Element may contain "url" or "data" property. */
 
@@ -100,7 +86,7 @@ class Video extends PureComponent<Props> {
       <video
         ref={this.videoRef}
         controls
-        src={this.getVideoURI()}
+        src={buildMediaUri(element.get("url"))}
         className="stVideo"
         style={{ width }}
       />

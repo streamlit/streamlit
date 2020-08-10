@@ -23,10 +23,12 @@ import Sidebar from "components/core/Sidebar"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { FileUploadClient } from "lib/FileUploadClient"
+import { ComponentRegistry } from "components/widgets/CustomComponent"
 
 import { ThemeProvider } from "baseui"
 import { BlockElement } from "lib/DeltaParser"
 import { mainWidgetTheme, sidebarWidgetTheme } from "lib/widgetTheme"
+import { PageConfig } from "autogen/proto"
 
 import "./ReportView.scss"
 import "./Widget.scss"
@@ -61,6 +63,11 @@ interface Props {
 
   // Wide mode
   wide: boolean
+
+  // Whether the sidebar should start expanded
+  initialSidebarState: PageConfig.SidebarState
+
+  componentRegistry: ComponentRegistry
 }
 
 /**
@@ -80,7 +87,7 @@ class ReportView extends PureComponent<Props> {
     return (
       <div className={reportViewClassName}>
         {this.hasSidebar() && (
-          <Sidebar>
+          <Sidebar initialSidebarState={this.props.initialSidebarState}>
             <div className="block-container">
               <ThemeProvider theme={sidebarWidgetTheme}>
                 <Block
@@ -93,6 +100,7 @@ class ReportView extends PureComponent<Props> {
                   widgetMgr={this.props.widgetMgr}
                   widgetsDisabled={this.props.widgetsDisabled}
                   uploadClient={this.props.uploadClient}
+                  componentRegistry={this.props.componentRegistry}
                 />
               </ThemeProvider>
             </div>
@@ -111,6 +119,7 @@ class ReportView extends PureComponent<Props> {
                 widgetMgr={this.props.widgetMgr}
                 widgetsDisabled={this.props.widgetsDisabled}
                 uploadClient={this.props.uploadClient}
+                componentRegistry={this.props.componentRegistry}
               />
             </ThemeProvider>
           </div>

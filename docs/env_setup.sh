@@ -15,6 +15,10 @@ unzip protoc-3.11.4-linux-x86_64.zip
     --mypy_out=../lib \
     ../proto/streamlit/proto/*.proto
 
+#duplicates make process for SASS-like variable substitution
+mkdir –p ./_static/css
+/home/docs/checkouts/readthedocs.org/user_builds/streamlit-streamlit/envs/${READTHEDOCS_VERSION}/bin/python replace_vars.py ./css/custom.css ./_static/css/custom.css
+
 #re-run setup.py build process to make protobuf available
 #this is tremendously fragile, as ../lib is hardcoded in here
 /home/docs/checkouts/readthedocs.org/user_builds/streamlit-streamlit/envs/${READTHEDOCS_VERSION}/bin/python -m pip install --upgrade --upgrade-strategy eager --no-cache-dir ../lib

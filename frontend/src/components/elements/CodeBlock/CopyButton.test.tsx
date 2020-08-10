@@ -15,13 +15,13 @@
  * limitations under the License.
  */
 
-jest.mock("clipboard")
-
 import React from "react"
 import Clipboard from "clipboard"
 import { shallow, mount } from "enzyme"
 
 import CopyButton from "./CopyButton"
+
+jest.mock("clipboard")
 
 describe("CopyButton Element", () => {
   beforeEach(() => {

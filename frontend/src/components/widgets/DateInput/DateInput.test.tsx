@@ -21,8 +21,8 @@ import { fromJS } from "immutable"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { DateInput as DateInputProto } from "autogen/proto"
 
-import DateInput, { Props } from "./DateInput"
 import { Datepicker as UIDatePicker } from "baseui/datepicker"
+import DateInput, { Props } from "./DateInput"
 
 jest.mock("lib/WidgetStateManager")
 
@@ -120,6 +120,28 @@ describe("DateInput widget", () => {
 
     expect(wrapper.find(UIDatePicker).prop("maxDate")).toStrictEqual(
       new Date("2030/02/06")
+    )
+  })
+
+  it("should handle min dates with years less than 100", () => {
+    const props = getProps({
+      min: "0001/01/01",
+    })
+    const wrapper = shallow(<DateInput {...props} />)
+
+    expect(wrapper.find(UIDatePicker).prop("minDate")).toStrictEqual(
+      new Date("0001-01-01T00:00:00")
+    )
+  })
+
+  it("should handle max dates with years less than 100", () => {
+    const props = getProps({
+      max: "0001/01/01",
+    })
+    const wrapper = shallow(<DateInput {...props} />)
+
+    expect(wrapper.find(UIDatePicker).prop("maxDate")).toStrictEqual(
+      new Date("0001-01-01T00:00:00")
     )
   })
 })

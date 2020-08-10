@@ -41,12 +41,14 @@ interface Dimensions {
 
 // Use d3Graphviz in a dummy expression so the library actually gets loaded.
 // This way it registers itself in d3 as a plugin at this point.
-const _dummy_graphviz = graphviz
-_dummy_graphviz // eslint-disable-line no-unused-expressions
+const dummyGraphviz = graphviz
+dummyGraphviz // eslint-disable-line @typescript-eslint/no-unused-expressions
 
 export class GraphVizChart extends PureComponent<PropsWithHeight> {
-  private chartId: string = "graphviz-chart-" + this.props.index
+  private chartId = `graphviz-chart-${this.props.index}`
+
   private originalHeight = 0
+
   private originalWidth = 0
 
   private getChartData = (): string => {
@@ -59,7 +61,7 @@ export class GraphVizChart extends PureComponent<PropsWithHeight> {
     const useContainerWidth = this.props.element.get("useContainerWidth")
 
     if (this.props.height) {
-      //fullscreen
+      // fullscreen
       width = this.props.width
       height = this.props.height
     } else if (useContainerWidth) {
@@ -71,7 +73,7 @@ export class GraphVizChart extends PureComponent<PropsWithHeight> {
   private updateChart = (): void => {
     try {
       // Layout and render the graph
-      const graph = select("#" + this.chartId)
+      const graph = select(`#${this.chartId}`)
         .graphviz()
         .zoom(false)
         .fit(true)

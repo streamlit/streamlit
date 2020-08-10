@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from mock import patch, mock_open
+from unittest.mock import patch, mock_open
 import unittest
 
 from streamlit.watcher import util

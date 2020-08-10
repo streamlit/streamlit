@@ -18,10 +18,11 @@
 import React from "react"
 import { shallow } from "enzyme"
 import { Map as ImmutableMap } from "immutable"
-import Markdown from "./Markdown"
-import { Props as MarkdownProps } from "./Markdown"
+import Markdown, { Props as MarkdownProps } from "./Markdown"
 
-const getProps = (elementProps: object = {}): MarkdownProps => ({
+const getProps = (
+  elementProps: Record<string, unknown> = {}
+): MarkdownProps => ({
   element: ImmutableMap({
     body:
       "Emphasis, aka italics, with *asterisks* or _underscores_." +
@@ -39,7 +40,7 @@ describe("Markdown element", () => {
     const wrap = shallow(<Markdown {...props} />)
     const elem = wrap.get(0)
     expect(elem.props.className.includes("stMarkdown")).toBeTruthy()
-    expect(elem.props.style["width"]).toBe(100)
+    expect(elem.props.style.width).toBe(100)
   })
   /* MAYBE ADD TESTS?
   a) unit tests with different Markdown formatted text

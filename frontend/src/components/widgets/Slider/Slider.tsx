@@ -20,8 +20,10 @@ import { Slider as UISlider } from "baseui/slider"
 import { Map as ImmutableMap } from "immutable"
 import { sprintf } from "sprintf-js"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
+import { Slider as SliderProto } from "autogen/proto"
 import { sliderOverrides } from "lib/widgetTheme"
 import { debounce } from "lib/utils"
+import moment from "moment"
 
 export interface Props {
   disabled: boolean
@@ -42,6 +44,7 @@ class Slider extends React.PureComponent<Props, State> {
   public state: State
 
   private sliderRef = React.createRef<HTMLDivElement>()
+
   private readonly setWidgetValue: (source: Source) => void
 
   public constructor(props: Props) {
@@ -93,7 +96,7 @@ class Slider extends React.PureComponent<Props, State> {
   private get value(): number[] {
     const min = this.props.element.get("min")
     const max = this.props.element.get("max")
-    const value = this.state.value
+    const { value } = this.state
     let start = value[0]
     let end = value.length > 1 ? value[1] : value[0]
     // Adjust the value if it's out of bounds.
@@ -115,24 +118,36 @@ class Slider extends React.PureComponent<Props, State> {
     return value.length > 1 ? [start, end] : [start]
   }
 
+  private formatValue(value: number): string {
+    const format = this.props.element.get("format")
+    const dataType = this.props.element.get("dataType")
+    if (
+      dataType === SliderProto.DataType.DATETIME ||
+      dataType === SliderProto.DataType.DATE ||
+      dataType === SliderProto.DataType.TIME
+    ) {
+      // Python datetime uses microseconds, but JS & Moment uses milliseconds
+      return moment(value / 1000).format(format)
+    }
+    return sprintf(format, value)
+  }
+
   private renderThumbValue = (data: {
     $thumbIndex: number
     $value: any
   }): JSX.Element => {
-    const format = this.props.element.get("format")
     const thumbValueStyle = sliderOverrides.ThumbValue.style({
       $disabled: this.props.disabled,
     }) as React.CSSProperties
 
     return (
       <div style={thumbValueStyle}>
-        {sprintf(format, data.$value[data.$thumbIndex])}
+        {this.formatValue(data.$value[data.$thumbIndex])}
       </div>
     )
   }
 
   private renderTickBar = (): JSX.Element => {
-    const format = this.props.element.get("format")
     const max = this.props.element.get("max")
     const min = this.props.element.get("min")
     const tickBarItemStyle = sliderOverrides.TickBarItem
@@ -141,10 +156,10 @@ class Slider extends React.PureComponent<Props, State> {
     return (
       <div className="sliderTickBar" style={sliderOverrides.TickBar.style}>
         <div className="tickBarMin" style={tickBarItemStyle}>
-          {sprintf(format, min)}
+          {this.formatValue(min)}
         </div>
         <div className="tickBarMax" style={tickBarItemStyle}>
-          {sprintf(format, max)}
+          {this.formatValue(max)}
         </div>
       </div>
     )

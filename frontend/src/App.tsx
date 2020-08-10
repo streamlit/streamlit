@@ -41,35 +41,40 @@ import {
   ReportElement,
   SimpleElement,
 } from "lib/DeltaParser"
-import { setCookie } from "lib/utils"
+import {
+  setCookie,
+  flattenElements,
+  hashString,
+  isEmbeddedInIFrame,
+  makeElementWithInfoText,
+} from "lib/utils"
 import {
   BackMsg,
   Delta,
   ForwardMsg,
-  IBackMsg,
   IForwardMsgMetadata,
-  Initialize,
   ISessionState,
+  Initialize,
   NewReport,
+  PageConfig,
+  PageInfo,
   SessionEvent,
+  WidgetStates,
 } from "autogen/proto"
 
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
 import { SessionInfo } from "lib/SessionInfo"
 import { MetricsManager } from "lib/MetricsManager"
 import { FileUploadClient } from "lib/FileUploadClient"
-import {
-  flattenElements,
-  hashString,
-  isEmbeddedInIFrame,
-  makeElementWithInfoText,
-} from "lib/utils"
+
 import { logError, logMessage } from "lib/log"
 // WARNING: order matters
 import "assets/css/theme.scss"
 import "./App.scss"
 import "assets/css/header.scss"
 import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
+import { ComponentRegistry } from "./components/widgets/CustomComponent"
+import { handleFavicon } from "./components/elements/Favicon"
 
 import withScreencast, {
   ScreenCastHOC,
@@ -89,6 +94,8 @@ interface State {
   userSettings: UserSettings
   dialog?: DialogProps | null
   sharingEnabled?: boolean
+  layout: PageConfig.Layout
+  initialSidebarState: PageConfig.SidebarState
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -101,12 +108,20 @@ declare global {
 
 export class App extends PureComponent<Props, State> {
   private readonly sessionEventDispatcher: SessionEventDispatcher
+
   private readonly statusWidgetRef: React.RefObject<StatusWidget>
+
   private connectionManager: ConnectionManager | null
+
   private readonly widgetMgr: WidgetStateManager
-  private uploadClient: FileUploadClient
+
+  private readonly uploadClient: FileUploadClient
+
   private elementListBuffer: Elements | null
+
   private elementListBufferTimerIsSet: boolean
+
+  private readonly componentRegistry: ComponentRegistry
 
   constructor(props: Props) {
     super(props)
@@ -131,19 +146,24 @@ export class App extends PureComponent<Props, State> {
         wideMode: false,
         runOnSave: false,
       },
+      layout: PageConfig.Layout.CENTERED,
+      initialSidebarState: PageConfig.SidebarState.AUTO,
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
     this.statusWidgetRef = React.createRef<StatusWidget>()
     this.connectionManager = null
-    this.widgetMgr = new WidgetStateManager((msg: IBackMsg) => {
-      this.sendBackMsg(new BackMsg(msg))
-    })
+    this.widgetMgr = new WidgetStateManager(this.sendRerunBackMsg)
     this.uploadClient = new FileUploadClient(() => {
       return this.connectionManager
         ? this.connectionManager.getBaseUriParts()
         : undefined
     }, true)
+    this.componentRegistry = new ComponentRegistry(() => {
+      return this.connectionManager
+        ? this.connectionManager.getBaseUriParts()
+        : undefined
+    })
     this.elementListBufferTimerIsSet = false
     this.elementListBuffer = null
 
@@ -156,10 +176,10 @@ export class App extends PureComponent<Props, State> {
    */
   keyHandlers = {
     // The r key reruns the script.
-    r: () => this.rerunScript(),
+    r: (): void => this.rerunScript(),
 
     // The c key clears the cache.
-    c: () => this.openClearCacheDialog(),
+    c: (): void => this.openClearCacheDialog(),
 
     esc: this.props.screenCast.stopRecording,
   }
@@ -184,7 +204,7 @@ export class App extends PureComponent<Props, State> {
     logError(errorNode)
     const newDialog: DialogProps = {
       type: DialogType.WARNING,
-      title: title,
+      title,
       msg: errorNode,
       onClose: () => {},
     }
@@ -194,7 +214,7 @@ export class App extends PureComponent<Props, State> {
   /**
    * Checks if the code version from the backend is different than the frontend
    */
-  hasStreamlitVersionChanged(initializeMsg: Initialize): boolean {
+  static hasStreamlitVersionChanged(initializeMsg: Initialize): boolean {
     if (SessionInfo.isSet()) {
       const { streamlitVersion: currentStreamlitVersion } = SessionInfo.current
       const { environmentInfo } = initializeMsg
@@ -241,9 +261,8 @@ export class App extends PureComponent<Props, State> {
       const whichOne = obj[name]
       if (whichOne in funcs) {
         return funcs[whichOne](obj[whichOne])
-      } else {
-        throw new Error(`Cannot handle ${name} "${whichOne}".`)
       }
+      throw new Error(`Cannot handle ${name} "${whichOne}".`)
     }
 
     try {
@@ -258,6 +277,10 @@ export class App extends PureComponent<Props, State> {
           this.handleNewReport(newReportMsg),
         delta: (deltaMsg: Delta) =>
           this.handleDeltaMsg(deltaMsg, msgProto.metadata),
+        pageConfigChanged: (pageConfig: PageConfig) =>
+          this.handlePageConfigChanged(pageConfig),
+        pageInfoChanged: (pageInfo: PageInfo) =>
+          this.handlePageInfoChanged(pageInfo),
         reportFinished: (status: ForwardMsg.ReportFinishedStatus) =>
           this.handleReportFinished(status),
         uploadReportProgress: (progress: string | number) =>
@@ -273,7 +296,7 @@ export class App extends PureComponent<Props, State> {
   handleUploadReportProgress = (progress: string | number): void => {
     const newDialog: DialogProps = {
       type: DialogType.UPLOAD_PROGRESS,
-      progress: progress,
+      progress,
       onClose: () => {},
     }
     this.openDialog(newDialog)
@@ -282,17 +305,47 @@ export class App extends PureComponent<Props, State> {
   handleReportUploaded = (url: string): void => {
     const newDialog: DialogProps = {
       type: DialogType.UPLOADED,
-      url: url,
+      url,
       onClose: () => {},
     }
     this.openDialog(newDialog)
+  }
+
+  handlePageConfigChanged = (pageConfig: PageConfig): void => {
+    const { title, favicon, layout, initialSidebarState } = pageConfig
+    if (title) {
+      document.title = `${title} · Streamlit`
+    }
+    if (favicon) {
+      handleFavicon(favicon)
+    }
+    // Only change layout/sidebar when the page config has changed.
+    // This preserves the user's previous choice, and prevents extra re-renders.
+    if (layout !== this.state.layout) {
+      this.setState((prevState: State) => ({
+        layout,
+        userSettings: {
+          ...prevState.userSettings,
+          wideMode: layout === PageConfig.Layout.WIDE,
+        },
+      }))
+    }
+    if (initialSidebarState !== this.state.initialSidebarState) {
+      this.setState(() => ({
+        initialSidebarState,
+      }))
+    }
+  }
+
+  handlePageInfoChanged = (pageInfo: PageInfo): void => {
+    const { queryString } = pageInfo
+    window.history.pushState({}, "", queryString ? `?${queryString}` : "/")
   }
 
   /**
    * Handler for ForwardMsg.initialize messages
    * @param initializeMsg an Initialize protobuf
    */
-
   handleInitialize = (initializeMsg: Initialize): void => {
     const {
       sessionId,
@@ -312,14 +365,13 @@ export class App extends PureComponent<Props, State> {
       throw new Error("InitializeMsg is missing a required field")
     }
 
-    if (this.hasStreamlitVersionChanged(initializeMsg)) {
+    if (App.hasStreamlitVersionChanged(initializeMsg)) {
       window.location.reload()
-
       return
     }
 
     SessionInfo.current = new SessionInfo({
-      sessionId: sessionId,
+      sessionId,
       streamlitVersion: environmentInfo.streamlitVersion,
       pythonVersion: environmentInfo.pythonVersion,
       installationId: userInfo.installationId,
@@ -351,8 +403,8 @@ export class App extends PureComponent<Props, State> {
   handleSessionStateChanged = (stateChangeProto: ISessionState): void => {
     this.setState((prevState: State) => {
       // Determine our new ReportRunState
-      let reportRunState = prevState.reportRunState
-      let dialog = prevState.dialog
+      let { reportRunState } = prevState
+      let { dialog } = prevState
 
       if (
         stateChangeProto.reportIsRunning &&
@@ -382,8 +434,16 @@ export class App extends PureComponent<Props, State> {
 
         MetricsManager.current.enqueue(
           "deltaStats",
-          MetricsManager.current.getDeltaCounter()
+          MetricsManager.current.getAndResetDeltaCounter()
         )
+
+        const customComponentCounter = MetricsManager.current.getAndResetCustomComponentCounter()
+        Object.entries(customComponentCounter).forEach(([name, count]) => {
+          MetricsManager.current.enqueue("customComponentStats", {
+            name,
+            count,
+          })
+        })
       }
 
       return {
@@ -436,17 +496,14 @@ export class App extends PureComponent<Props, State> {
       SessionInfo.current.installationId + scriptPath
     )
 
+    // Set the title and favicon to their default values
     document.title = `${reportName} · Streamlit`
+    handleFavicon(`${process.env.PUBLIC_URL}/favicon.png`)
 
+    MetricsManager.current.setReportHash(newReportHash)
     MetricsManager.current.clearDeltaCounter()
 
-    MetricsManager.current.enqueue("updateReport", {
-      // Create a hash that uniquely identifies this "project" so we can tell
-      // how many projects are being created with Streamlit while still keeping
-      // possibly-sensitive info like the scriptPath outside of our metrics
-      // services.
-      reportHash: newReportHash,
-    })
+    MetricsManager.current.enqueue("updateReport")
 
     if (reportHash === newReportHash) {
       this.setState({
@@ -481,14 +538,14 @@ export class App extends PureComponent<Props, State> {
       // This step removes from the WidgetManager the state of those widgets
       // that are not shown on the page.
       if (this.elementListBuffer) {
-        const active_widget_ids = flattenElements(this.elementListBuffer.main)
+        const activeWidgetIds = flattenElements(this.elementListBuffer.main)
           .union(flattenElements(this.elementListBuffer.sidebar))
           .map((e: SimpleElement) => {
             const type = e.get("type")
             return e.get(type).get("id") as string
           })
           .filter(id => id != null)
-        this.widgetMgr.clean(active_widget_ids)
+        this.widgetMgr.clean(activeWidgetIds)
       }
 
       // Tell the ConnectionManager to increment the message cache run
@@ -579,7 +636,7 @@ export class App extends PureComponent<Props, State> {
    */
   saveSettings = (newSettings: UserSettings): void => {
     const prevRunOnSave = this.state.userSettings.runOnSave
-    const runOnSave = newSettings.runOnSave
+    const { runOnSave } = newSettings
 
     this.setState({ userSettings: newSettings })
 
@@ -629,7 +686,7 @@ export class App extends PureComponent<Props, State> {
             const elements: Elements = {
               ...this.elementListBuffer,
             }
-            this.setState({ elements: elements })
+            this.setState({ elements })
           }
         }
       }, ELEMENT_LIST_BUFFER_TIMEOUT_MS)
@@ -716,8 +773,19 @@ export class App extends PureComponent<Props, State> {
       this.saveSettings({ ...this.state.userSettings, runOnSave: true })
     }
 
-    const backMsg = new BackMsg({ rerunScript: true })
-    backMsg.type = "rerunScript"
+    this.widgetMgr.sendUpdateWidgetsMessage()
+  }
+
+  sendRerunBackMsg = (widgetStates?: WidgetStates): void => {
+    let queryString = document.location.search
+
+    if (queryString.startsWith("?")) {
+      queryString = queryString.substring(1)
+    }
+
+    const backMsg = new BackMsg({
+      rerunScript: { queryString, widgetStates },
+    })
     this.sendBackMsg(backMsg)
   }
 
@@ -880,6 +948,7 @@ export class App extends PureComponent<Props, State> {
 
           <ReportView
             wide={this.state.userSettings.wideMode}
+            initialSidebarState={this.state.initialSidebarState}
             elements={this.state.elements}
             reportId={this.state.reportId}
             reportRunState={this.state.reportRunState}
@@ -891,6 +960,7 @@ export class App extends PureComponent<Props, State> {
               this.state.connectionState !== ConnectionState.CONNECTED
             }
             uploadClient={this.uploadClient}
+            componentRegistry={this.componentRegistry}
           />
 
           {dialog}

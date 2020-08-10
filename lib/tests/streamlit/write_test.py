@@ -14,8 +14,8 @@
 
 """Streamlit Unit test."""
 
-from mock import call, patch, Mock
 from collections import namedtuple
+from unittest.mock import call, patch, Mock
 
 import time
 import unittest
@@ -184,7 +184,12 @@ class StreamlitWriteTest(unittest.TestCase):
 
     def test_exception(self):
         """Test st.write that raises an exception."""
-        with patch("streamlit.markdown") as m, patch("streamlit.exception") as e:
+        # We patch streamlit.exception to observe it, but we also make sure
+        # it's still called (via side_effect). This ensures that it's called
+        # with the proper arguments.
+        with patch("streamlit.markdown") as m, patch(
+            "streamlit.exception", side_effect=st.exception
+        ) as e:
             m.side_effect = Exception("some exception")
             st.write("some text")
 

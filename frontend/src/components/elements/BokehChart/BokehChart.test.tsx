@@ -32,7 +32,8 @@ const mockBokehEmbed = {
 
 jest.mock("@bokeh/bokehjs", () => mockBokehEmbed)
 
-const BokehChart = require("./BokehChart").BokehChart
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { BokehChart } = require("./BokehChart")
 
 const getProps = (
   elementProps: Partial<BokehChartProto> = {}
