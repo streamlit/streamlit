@@ -24,8 +24,8 @@ import tornado.web
 import streamlit.server.routes
 from streamlit import type_util
 from streamlit.delta_generator import NoValue
-from streamlit.delta_generator import _get_widget_ui_value
 from streamlit.elements import arrow_table
+from streamlit.elements.utils import _get_widget_ui_value
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ComponentInstance_pb2 import ArgsDataframe
@@ -148,7 +148,7 @@ class CustomComponent:
 
             widget_value = _get_widget_ui_value(
                 element_type="component_instance",
-                element=element,
+                element_proto=element.component_instance,
                 user_key=key,
                 widget_func_name=self.name,
             )

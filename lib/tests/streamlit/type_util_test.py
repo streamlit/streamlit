@@ -14,8 +14,8 @@
 
 import unittest
 from collections import namedtuple
+from unittest.mock import patch
 
-from mock import patch
 import plotly.graph_objs as go
 
 from streamlit import type_util

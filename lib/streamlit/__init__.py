@@ -101,10 +101,12 @@ from streamlit import env_util as _env_util
 from streamlit import source_util as _source_util
 from streamlit import string_util as _string_util
 from streamlit import type_util as _type_util
+from streamlit.commands.page_config import set_page_config as _set_page_config
 from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
 from streamlit.elements.datetime import make_datetime_proto
 from streamlit.report_thread import add_report_ctx as _add_report_ctx
 from streamlit.report_thread import get_report_ctx as _get_report_ctx
+from streamlit.script_runner import StopException
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import BlockPath_pb2 as _BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
@@ -119,15 +121,16 @@ from streamlit.caching import cache as cache  # noqa: F401
 _is_running_with_streamlit = False
 
 
-def _set_log_level():
-    _logger.set_log_level(_config.get_option("global.logLevel").upper())
+def _update_logger():
+    _logger.set_log_level(_config.get_option("logger.level").upper())
+    _logger.update_formatter()
     _logger.init_tornado_logs()
 
 
 # Make this file only depend on config option in an asynchronous manner. This
 # avoids a race condition when another file (such as a test file) tries to pass
 # in an alternative config.
-_config.on_config_parsed(_set_log_level, True)
+_config.on_config_parsed(_update_logger, True)
 
 
 _main = _DeltaGenerator(container=_BlockPath_pb2.BlockPath.MAIN)
@@ -151,7 +154,6 @@ pydeck_chart = _main.pydeck_chart  # noqa: E221
 empty = _main.empty  # noqa: E221
 error = _main.error  # noqa: E221
 exception = _main.exception  # noqa: E221
-beta_set_favicon = _main.favicon  # noqa: E221
 file_uploader = _main.file_uploader  # noqa: E221
 graphviz_chart = _main.graphviz_chart  # noqa: E221
 header = _main.header  # noqa: E221
@@ -187,6 +189,7 @@ beta_color_picker = _main.beta_color_picker  # noqa: E221
 # Config
 
 get_option = _config.get_option
+beta_set_page_config = _set_page_config
 
 
 def set_option(key, value):
@@ -483,7 +486,7 @@ def experimental_show(*args):
 
     except Exception:
         _, exc, exc_tb = _sys.exc_info()
-        exception(exc, exc_tb)  # noqa: F821
+        exception(exc)
 
 
 def experimental_get_query_params():
@@ -705,3 +708,20 @@ def _maybe_print_repl_warning():
                 ),
                 script_name,
             )
+
+
+def stop():
+    """Stops excecution immediately. Streamlit will not run any statements
+    after `st.stop()`. We recommend rendering a message prior to calling this
+    to indicate the execution has stopped and why. When run outside of
+    Streamlit, it will raise an Exception
+
+    Example
+    -------
+
+    >>> st.write('This string will be written')
+    >>> st.stop()
+    >>> st.write('This string will NOT be written')
+
+    """
+    raise StopException()

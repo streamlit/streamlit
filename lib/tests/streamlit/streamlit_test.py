@@ -15,7 +15,7 @@
 """Streamlit Unit test."""
 from io import BytesIO
 
-from mock import patch
+from unittest.mock import patch
 import json
 import os
 import io
@@ -311,7 +311,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         """Test st.image with PIL image."""
         img = Image.new("RGB", (64, 64), color="red")
 
-        st.image(img, caption="some caption", width=100, format="PNG")
+        st.image(img, caption="some caption", width=100, output_format="PNG")
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.imgs.width, 100)
@@ -341,7 +341,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             width=200,
             use_column_width=True,
             clamp=True,
-            format="PNG",
+            output_format="PNG",
         )
 
         el = self.get_delta_from_queue().new_element

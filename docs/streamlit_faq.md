@@ -2,6 +2,12 @@
 
 Here are some frequently asked questions about Streamlit and Streamlit Components. If you feel something important is missing that everyone needs to know, please [open an issue](https://github.com/streamlit/streamlit/issues) or [submit a pull request](https://github.com/streamlit/streamlit/pulls) and we'll be happy to review it!
 
+## Using Streamlit
+
+1. **How can I make `st.pydeck_chart` use custom Mapbox styles?**
+
+   If you are supplying a Mapbox token, but the resulting `pydeck_chart` doesn't show your custom Mapbox styles, please check that you are adding the Mapbox token to the Streamlit `config.toml` configuration file. Streamlit DOES NOT read Mapbox tokens from inside of a PyDeck specification (i.e. from inside of the Streamlit app). Please see this [forum thread](https://discuss.streamlit.io/t/deprecation-warning-deckgl-pydeck-maps-to-require-mapbox-token-for-production-usage/2982/10) for more information.
+
 ## Deploying Streamlit
 
 1. **How do I deploy Streamlit on a domain so it appears to run on a regular port (i.e. port 80)?**
@@ -18,7 +24,7 @@ Here are some frequently asked questions about Streamlit and Streamlit Component
 
    - Configure your web server to route requests for each subdomain to the different ports that your Streamlit apps are running on
 
-   For example, let’s say you had two Streamlit apps called `Calvin` and `Hobbes`. App `Calvin` is running on port **8501**. You set up app `Hobbes` to run on port **8502**. Your webserver would then be set up to “listen” for requests on subdomains `calvin.somedomain.com` and `hobbes.subdomain.com`, and route requests to port **8501** and **8502**, respectively.
+   For example, let’s say you had two Streamlit apps called `Calvin` and `Hobbes`. App `Calvin` is running on port **8501**. You set up app `Hobbes` to run on port **8502**. Your webserver would then be set up to "listen" for requests on subdomains `calvin.somedomain.com` and `hobbes.subdomain.com`, and route requests to port **8501** and **8502**, respectively.
 
    Check out these two tutorials for Apache2 and Nginx that deal with setting up a webserver to redirect subdomains to different ports:
 

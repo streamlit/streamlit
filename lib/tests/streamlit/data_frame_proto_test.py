@@ -14,6 +14,7 @@
 
 """Unit test for data_frame_proto."""
 
+from unittest.mock import patch
 import json
 import unittest
 
@@ -23,7 +24,6 @@ import pytest
 import streamlit.elements.data_frame_proto as data_frame_proto
 
 from google.protobuf import json_format
-from mock import patch
 from streamlit.proto.DataFrame_pb2 import AnyArray
 from streamlit.proto.DataFrame_pb2 import CSSStyle
 from streamlit.proto.DataFrame_pb2 import CellStyle

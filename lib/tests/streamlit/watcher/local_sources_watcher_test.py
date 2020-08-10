@@ -14,11 +14,10 @@
 
 """streamlit.LocalSourcesWatcher unit test."""
 
+from unittest.mock import patch
 import os
 import sys
 import unittest
-
-from mock import patch
 
 from streamlit import config
 from streamlit.report import Report
@@ -72,7 +71,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         lso = local_sources_watcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
 
         fob.assert_called_once()
-        args = fob.call_args.args
+        args, _ = fob.call_args
         self.assertEqual(args[0], REPORT_PATH)
         method_type = type(self.setUp)
         self.assertEqual(type(args[1]), method_type)
@@ -108,12 +107,12 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         call_args_list = sort_args_list(fob.call_args_list)
 
-        args = call_args_list[0].args
+        args, _ = call_args_list[0]
         self.assertTrue("__init__.py" in args[0])
-        args = call_args_list[1].args
+        args, _ = call_args_list[1]
         self.assertEqual(args[0], DUMMY_MODULE_1_FILE)
         self.assertEqual(type(args[1]), method_type)
-        args = call_args_list[2].args
+        args, _ = call_args_list[2]
         self.assertEqual(args[0], DUMMY_MODULE_2_FILE)
         self.assertEqual(type(args[1]), method_type)
 
@@ -139,10 +138,10 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         call_args_list = sort_args_list(fob.call_args_list)
 
-        args = call_args_list[0].args
+        args, _ = call_args_list[0]
         self.assertTrue("__init__.py" in args[0])
 
-        args = call_args_list[1].args
+        args, _ = call_args_list[1]
         self.assertEqual(args[0], DUMMY_MODULE_1_FILE)
         self.assertEqual(type(args[1]), method_type)
 
@@ -150,7 +149,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         fob.reset_mock()
         lso.update_watched_modules()
 
-        args = fob.call_args.args
+        args, _ = fob.call_args
         self.assertEqual(args[0], DUMMY_MODULE_2_FILE)
         self.assertEqual(type(args[1]), method_type)
 
