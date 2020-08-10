@@ -23,9 +23,8 @@ import tornado.web
 
 import streamlit.server.routes
 from streamlit import type_util
-from streamlit.delta_generator import NoValue
 from streamlit.elements import arrow_table
-from streamlit.elements.utils import _get_widget_ui_value
+from streamlit.elements.utils import _get_widget_ui_value, NoValue
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ComponentInstance_pb2 import ArgsDataframe
@@ -161,13 +160,15 @@ class CustomComponent:
 
             # widget_value will be either None or whatever the component's most
             # recent setWidgetValue value is. We coerce None -> NoValue,
-            # because that's what _enqueue_new_element_delta expects.
+            # because that's what DeltaGenerator._enqueue expects.
             return widget_value if widget_value is not None else NoValue
 
         # We currently only support writing to st._main, but this will change
         # when we settle on an improved API in a post-layout world.
-        result = streamlit._main._enqueue_new_element_delta(
-            marshall_element=marshall_component, delta_type="component"
+        element = Element()
+        return_value = marshall_component(element)
+        result = streamlit._main._enqueue(
+            "component_instance", element.component_instance, return_value
         )
 
         return result

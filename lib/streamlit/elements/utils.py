@@ -6,6 +6,15 @@ from streamlit.errors import DuplicateWidgetID
 from typing import Optional, Any
 
 
+class NoValue(object):
+    """Return this from DeltaGenerator.foo_widget() when you want the st.foo_widget()
+    call to return None. This is needed because `DeltaGenerator._enqueue`
+    replaces `None` with a `DeltaGenerator` (for use in non-widget elements).
+    """
+
+    pass
+
+
 def _clean_text(text):
     return textwrap.dedent(str(text)).strip()
 
