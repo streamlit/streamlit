@@ -25,6 +25,8 @@ import { sliderOverrides } from "lib/widgetTheme"
 import { debounce } from "lib/utils"
 import moment from "moment"
 
+const DEBOUNCE_TIME_MS = 200
+
 export interface Props {
   disabled: boolean
   element: ImmutableMap<string, any>
@@ -45,11 +47,14 @@ class Slider extends React.PureComponent<Props, State> {
 
   private sliderRef = React.createRef<HTMLDivElement>()
 
-  private readonly setWidgetValue: (source: Source) => void
+  private readonly setWidgetValueDebounced: (source: Source) => void
 
   public constructor(props: Props) {
     super(props)
-    this.setWidgetValue = debounce(200, this.setWidgetValueRaw.bind(this))
+    this.setWidgetValueDebounced = debounce(
+      DEBOUNCE_TIME_MS,
+      this.setWidgetValueImmediately.bind(this)
+    )
     this.state = { value: this.props.element.get("default").toJS() }
   }
 
@@ -60,7 +65,7 @@ class Slider extends React.PureComponent<Props, State> {
       const knobs = this.sliderRef.current.querySelectorAll(knobSelector)
       knobs.forEach(knob => knob.addEventListener("click", this.handleClick))
     }
-    this.setWidgetValue({ fromUi: false })
+    this.setWidgetValueImmediately({ fromUi: false })
   }
 
   public componentWillUnmount = (): void => {
@@ -74,13 +79,21 @@ class Slider extends React.PureComponent<Props, State> {
     }
   }
 
-  private setWidgetValueRaw = (source: Source): void => {
+  private setWidgetValueImmediately = (source: Source): void => {
     const widgetId: string = this.props.element.get("id")
     this.props.widgetMgr.setFloatArrayValue(widgetId, this.state.value, source)
   }
 
   private handleChange = ({ value }: { value: number[] }): void => {
-    this.setState({ value }, () => this.setWidgetValue({ fromUi: true }))
+    this.setState({ value }, () =>
+      this.setWidgetValueDebounced({ fromUi: true })
+    )
+  }
+
+  private handleFinalChange = ({ value }: { value: number[] }): void => {
+    this.setState({ value }, () =>
+      this.setWidgetValueImmediately({ fromUi: true })
+    )
   }
 
   private handleClick = (e: Event): void => {
@@ -181,6 +194,7 @@ class Slider extends React.PureComponent<Props, State> {
           step={step}
           value={this.value}
           onChange={this.handleChange}
+          onFinalChange={this.handleFinalChange}
           disabled={this.props.disabled}
           overrides={{
             ...sliderOverrides,
