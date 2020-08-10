@@ -87,6 +87,7 @@ export function DataFrame({
   function getCellRenderer(
     cellContentsGetter: CellContentsGetter
   ): CellRenderer {
+    // eslint-disable-next-line react/display-name
     return ({
       columnIndex,
       key,
