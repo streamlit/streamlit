@@ -61,7 +61,7 @@ class MarkdownMixin:
 
         return dg._enqueue("markdown", markdown_proto)  # type: ignore
 
-    def header(dg, body):
+    def header(dg, body, anchor=None):
         """Display text in header formatting.
 
         Parameters
@@ -80,9 +80,15 @@ class MarkdownMixin:
         """
         header_proto = MarkdownProto()
         header_proto.body = "## %s" % _clean_text(body)
+
+        if anchor is None:
+            header_proto.anchor = _clean_text(body)
+        else:
+            header_proto.anchor = _clean_text(anchor)
+
         return dg._enqueue("markdown", header_proto)  # type: ignore
 
-    def subheader(dg, body):
+    def subheader(dg, body, anchor=None):
         """Display text in subheader formatting.
 
         Parameters
@@ -101,6 +107,12 @@ class MarkdownMixin:
         """
         subheader_proto = MarkdownProto()
         subheader_proto.body = "### %s" % _clean_text(body)
+
+        if anchor is None:
+            subheader_proto.anchor = _clean_text(body)
+        else:
+            subheader_proto.anchor = _clean_text(anchor)
+
         return dg._enqueue("markdown", subheader_proto)  # type: ignore
 
     def code(dg, body, language="python"):
@@ -136,7 +148,7 @@ class MarkdownMixin:
         code_proto.body = _clean_text(markdown)
         return dg._enqueue("markdown", code_proto)  # type: ignore
 
-    def title(dg, body):
+    def title(dg, body, anchor=None):
         """Display text in title formatting.
 
         Each document should have a single `st.title()`, although this is not
@@ -158,6 +170,12 @@ class MarkdownMixin:
         """
         title_proto = MarkdownProto()
         title_proto.body = "# %s" % _clean_text(body)
+
+        if anchor is None:
+            title_proto.anchor = _clean_text(body)
+        else:
+            title_proto.anchor = _clean_text(anchor)
+
         return dg._enqueue("markdown", title_proto)  # type: ignore
 
     def latex(dg, body):

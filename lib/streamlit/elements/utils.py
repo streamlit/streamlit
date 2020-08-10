@@ -9,7 +9,6 @@ from typing import Optional, Any
 def _clean_text(text):
     return textwrap.dedent(str(text)).strip()
 
-
 def _build_duplicate_widget_message(
     widget_func_name: str, user_key: Optional[str] = None
 ) -> str:

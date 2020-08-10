@@ -34,12 +34,17 @@ export interface Props {
    * The Markdown formatted text to render.
    */
   source: string
-
   /**
    * True if HTML is allowed in the source string. If this is false,
    * any HTML will be escaped in the output.
    */
   allowHTML: boolean
+  /**
+   * Element "id" attribute for title, header, and subheader elements.
+   * Default: set to "slugified" (a-b-c) heading text.
+   * Optional: set to anchor parameter (second argument).
+   */
+  anchor?: string
 }
 
 /**
@@ -58,12 +63,28 @@ export class StreamlitMarkdown extends PureComponent<Props> {
   }
 
   public render = (): ReactNode => {
-    const { source, allowHTML } = this.props
+    const { source, anchor, allowHTML } = this.props
+
+    // not sure of the best way to get these props into the renderer
+    // this was my quick fix to get things working
+    const headingWithAnchorTag = (props: HeadingProps): ReactElement => {
+      return (
+        <Fragment>
+          <a href={`#${anchor}`}>#</a>
+          {React.createElement(
+            `h${props.level}`,
+            { id: anchor },
+            props.children
+          )}
+        </Fragment>
+      )
+    }
 
     const renderers = {
       code: CodeBlock,
       link: linkWithTargetBlank,
       linkReference: linkReferenceHasParens,
+      heading: headingWithAnchorTag,
       inlineMath: (props: { value: string }): ReactElement => (
         <InlineMath>{props.value}</InlineMath>
       ),
@@ -97,6 +118,12 @@ interface LinkReferenceProps {
   href: string
 }
 
+interface HeadingProps {
+  children: [ReactElement]
+  level: number
+  anchor: string
+}
+
 // Using target="_blank" without rel="noopener noreferrer" is a security risk:
 // see https://mathiasbynens.github.io/rel-noopener
 export function linkWithTargetBlank(props: LinkProps): ReactElement {
@@ -126,3 +153,38 @@ export function linkReferenceHasParens(
     </a>
   )
 }
+
+// Heading renderer that adds "id" tag to title, header, and subheader elements
+// This allows for linking within a document. By default set to "slugified" (a-b-c)
+// value of the text, or the passed value as the second parameter of said elements
+// export function alt_headingWithAnchorTag(props: HeadingProps): ReactElement {
+//   // if heading is h4 or above: return heading element without anchor
+//   if (props.level > 3) {
+//     return React.createElement(`h${props.level}`, {}, props.children)
+//   }
+
+//   let anchor = props.children[0].props.children
+
+//   if (!anchor) {
+//     anchor = props.children[0].props.children
+//       .trim()
+//       .toLowerCase()
+//       .split(" ")
+//       .join("-")
+//   } else {
+//     anchor = anchor
+//       .trim()
+//       .toLowerCase()
+//       .split(" ")
+//       .join("-")
+//   }
+
+//   const headingElement = React.createElement(
+//     `h${props.level}`,
+//     { id: anchor },
+//     props.children
+//   )
+
+//   // return the heading element inside an <a> tag with added link
+//   return React.createElement("a", { href: `#${anchor}` }, headingElement)
+// }
