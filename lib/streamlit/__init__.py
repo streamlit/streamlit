@@ -118,15 +118,16 @@ from streamlit.caching import cache as cache  # noqa: F401
 _is_running_with_streamlit = False
 
 
-def _set_log_level():
-    _logger.set_log_level(_config.get_option("global.logLevel").upper())
+def _update_logger():
+    _logger.set_log_level(_config.get_option("logger.level").upper())
+    _logger.update_formatter()
     _logger.init_tornado_logs()
 
 
 # Make this file only depend on config option in an asynchronous manner. This
 # avoids a race condition when another file (such as a test file) tries to pass
 # in an alternative config.
-_config.on_config_parsed(_set_log_level, True)
+_config.on_config_parsed(_update_logger, True)
 
 
 _main = _DeltaGenerator(container=_BlockPath_pb2.BlockPath.MAIN)
@@ -150,7 +151,6 @@ pydeck_chart = _main.pydeck_chart  # noqa: E221
 empty = _main.empty  # noqa: E221
 error = _main.error  # noqa: E221
 exception = _main.exception  # noqa: E221
-beta_set_favicon = _main.favicon  # noqa: E221
 file_uploader = _main.file_uploader  # noqa: E221
 graphviz_chart = _main.graphviz_chart  # noqa: E221
 header = _main.header  # noqa: E221
@@ -186,6 +186,7 @@ beta_color_picker = _main.beta_color_picker  # noqa: E221
 # Config
 
 get_option = _config.get_option
+from streamlit.commands.page_config import beta_set_page_config
 
 
 def set_option(key, value):
@@ -706,16 +707,18 @@ def _maybe_print_repl_warning():
 
 def stop():
     """Stops excecution immediately. Streamlit will not run any statements
-    after `st.stop()`. We recommend rendering a message prior to calling this
-    to indicate the execution has stopped and why. When run outside of
-    Streamlit, it will raise an Exception
+    after `st.stop()`. We recommend rendering an informational message that
+    would explain the stop in execution. When run outside of Streamlit, it
+    will raise an Exception
 
     Example
     -------
 
-    >>> st.write('This string will be written')
-    >>> st.stop()
-    >>> st.write('This string will NOT be written')
+    >>> name = st.text_input('Name')
+    >>> if not name:
+    >>>   st.warning('Please input a name.')
+    >>>   st.stop()
+    >>> st.succcess('Thank you for inputting a name.')
 
     """
     raise StopException()

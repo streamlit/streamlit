@@ -19,9 +19,7 @@ import re
 import textwrap
 from typing import Any, Callable, Optional
 
-from streamlit.logger import get_logger
-
-LOGGER = get_logger(__name__)
+from streamlit.errors import DeprecationError
 
 
 class ConfigOption(object):
@@ -259,6 +257,9 @@ class ConfigOption(object):
                     % details
                 )
             else:
+                from streamlit.logger import get_logger
+
+                LOGGER = get_logger(__name__)
                 LOGGER.warning(
                     textwrap.dedent(
                         """
@@ -288,11 +289,3 @@ class ConfigOption(object):
 def _parse_yyyymmdd_str(date_str: str) -> datetime.datetime:
     year, month, day = [int(token) for token in date_str.split("-", 2)]
     return datetime.datetime(year, month, day)
-
-
-class Error(Exception):
-    pass
-
-
-class DeprecationError(Error):
-    pass

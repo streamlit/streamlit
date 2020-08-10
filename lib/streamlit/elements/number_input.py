@@ -1,0 +1,202 @@
+import numbers
+
+from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
+from streamlit.errors import StreamlitAPIException
+from streamlit.js_number import JSNumber, JSNumberBoundsException
+from .utils import _get_widget_ui_value, NoValue
+
+
+class NumberInputMixin:
+    def number_input(
+        dg,
+        label,
+        min_value=None,
+        max_value=None,
+        value=NoValue(),
+        step=None,
+        format=None,
+        key=None,
+    ):
+        """Display a numeric input widget.
+
+        Parameters
+        ----------
+        label : str or None
+            A short label explaining to the user what this input is for.
+        min_value : int or float or None
+            The minimum permitted value.
+            If None, there will be no minimum.
+        max_value : int or float or None
+            The maximum permitted value.
+            If None, there will be no maximum.
+        value : int or float or None
+            The value of this widget when it first renders.
+            Defaults to min_value, or 0.0 if min_value is None
+        step : int or float or None
+            The stepping interval.
+            Defaults to 1 if the value is an int, 0.01 otherwise.
+            If the value is not specified, the format parameter will be used.
+        format : str or None
+            A printf-style format string controlling how the interface should
+            display numbers. Output must be purely numeric. This does not impact
+            the return value. Valid formatters: %d %e %f %g %i
+        key : str
+            An optional string to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. Multiple widgets of the same type may
+            not share the same key.
+
+        Returns
+        -------
+        int or float
+            The current value of the numeric input widget. The return type
+            will match the data type of the value parameter.
+
+        Example
+        -------
+        >>> number = st.number_input('Insert a number')
+        >>> st.write('The current number is ', number)
+        """
+
+        if isinstance(value, NoValue):
+            if min_value:
+                value = min_value
+            else:
+                value = 0.0  # We set a float as default
+
+        int_value = isinstance(value, numbers.Integral)
+        float_value = isinstance(value, float)
+
+        if value is None:
+            raise StreamlitAPIException(
+                "Default value for number_input should be an int or a float."
+            )
+        else:
+            if format is None:
+                format = "%d" if int_value else "%0.2f"
+
+            if format in ["%d", "%u", "%i"] and float_value:
+                # Warn user to check if displaying float as int was really intended.
+                import streamlit as st
+
+                st.warning(
+                    "Warning: NumberInput value below is float, but format {} displays as integer.".format(
+                        format
+                    )
+                )
+
+            if step is None:
+                step = 1 if int_value else 0.01
+
+        try:
+            float(format % 2)
+        except (TypeError, ValueError):
+            raise StreamlitAPIException(
+                "Format string for st.number_input contains invalid characters: %s"
+                % format
+            )
+
+        # Ensure that all arguments are of the same type.
+        args = [min_value, max_value, step]
+
+        int_args = all(
+            map(
+                lambda a: (
+                    isinstance(a, numbers.Integral) or isinstance(a, type(None))
+                ),
+                args,
+            )
+        )
+        float_args = all(
+            map(lambda a: (isinstance(a, float) or isinstance(a, type(None))), args)
+        )
+
+        if not int_args and not float_args:
+            raise StreamlitAPIException(
+                "All arguments must be of the same type."
+                "\n`value` has %(value_type)s type."
+                "\n`min_value` has %(min_type)s type."
+                "\n`max_value` has %(max_type)s type."
+                % {
+                    "value_type": type(value).__name__,
+                    "min_type": type(min_value).__name__,
+                    "max_type": type(max_value).__name__,
+                }
+            )
+
+        # Ensure that the value matches arguments' types.
+        all_ints = int_value and int_args
+        all_floats = float_value and float_args
+
+        if not all_ints and not all_floats:
+            raise StreamlitAPIException(
+                "All numerical arguments must be of the same type."
+                "\n`value` has %(value_type)s type."
+                "\n`min_value` has %(min_type)s type."
+                "\n`max_value` has %(max_type)s type."
+                "\n`step` has %(step_type)s type."
+                % {
+                    "value_type": type(value).__name__,
+                    "min_type": type(min_value).__name__,
+                    "max_type": type(max_value).__name__,
+                    "step_type": type(step).__name__,
+                }
+            )
+
+        if (min_value and min_value > value) or (max_value and max_value < value):
+            raise StreamlitAPIException(
+                "The default `value` of %(value)s "
+                "must lie between the `min_value` of %(min)s "
+                "and the `max_value` of %(max)s, inclusively."
+                % {"value": value, "min": min_value, "max": max_value}
+            )
+
+        # Bounds checks. JSNumber produces human-readable exceptions that
+        # we simply re-package as StreamlitAPIExceptions.
+        try:
+            if all_ints:
+                if min_value is not None:
+                    JSNumber.validate_int_bounds(min_value, "`min_value`")
+                if max_value is not None:
+                    JSNumber.validate_int_bounds(max_value, "`max_value`")
+                if step is not None:
+                    JSNumber.validate_int_bounds(step, "`step`")
+                JSNumber.validate_int_bounds(value, "`value`")
+            else:
+                if min_value is not None:
+                    JSNumber.validate_float_bounds(min_value, "`min_value`")
+                if max_value is not None:
+                    JSNumber.validate_float_bounds(max_value, "`max_value`")
+                if step is not None:
+                    JSNumber.validate_float_bounds(step, "`step`")
+                JSNumber.validate_float_bounds(value, "`value`")
+        except JSNumberBoundsException as e:
+            raise StreamlitAPIException(str(e))
+
+        number_input_proto = NumberInputProto()
+        number_input_proto.data_type = (
+            NumberInputProto.INT if all_ints else NumberInputProto.FLOAT
+        )
+        number_input_proto.label = label
+        number_input_proto.default = value
+
+        if min_value is not None:
+            number_input_proto.min = min_value
+            number_input_proto.has_min = True
+
+        if max_value is not None:
+            number_input_proto.max = max_value
+            number_input_proto.has_max = True
+
+        if step is not None:
+            number_input_proto.step = step
+
+        if format is not None:
+            number_input_proto.format = format
+
+        ui_value = _get_widget_ui_value(
+            "number_input", number_input_proto, user_key=key
+        )
+
+        return_value = ui_value if ui_value is not None else value
+        return dg._enqueue("number_input", number_input_proto, return_value)  # type: ignore

@@ -56,6 +56,7 @@ import {
   ISessionState,
   Initialize,
   NewReport,
+  PageConfig,
   PageInfo,
   SessionEvent,
   WidgetStates,
@@ -73,6 +74,7 @@ import "./App.scss"
 import "assets/css/header.scss"
 import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
 import { ComponentRegistry } from "./components/widgets/CustomComponent"
+import { handleFavicon } from "./components/elements/Favicon"
 
 import withScreencast, {
   ScreenCastHOC,
@@ -92,6 +94,8 @@ interface State {
   userSettings: UserSettings
   dialog?: DialogProps | null
   sharingEnabled?: boolean
+  layout: PageConfig.Layout
+  initialSidebarState: PageConfig.SidebarState
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -142,6 +146,8 @@ export class App extends PureComponent<Props, State> {
         wideMode: false,
         runOnSave: false,
       },
+      layout: PageConfig.Layout.CENTERED,
+      initialSidebarState: PageConfig.SidebarState.AUTO,
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -271,6 +277,8 @@ export class App extends PureComponent<Props, State> {
           this.handleNewReport(newReportMsg),
         delta: (deltaMsg: Delta) =>
           this.handleDeltaMsg(deltaMsg, msgProto.metadata),
+        pageConfigChanged: (pageConfig: PageConfig) =>
+          this.handlePageConfigChanged(pageConfig),
         pageInfoChanged: (pageInfo: PageInfo) =>
           this.handlePageInfoChanged(pageInfo),
         reportFinished: (status: ForwardMsg.ReportFinishedStatus) =>
@@ -301,6 +309,32 @@ export class App extends PureComponent<Props, State> {
       onClose: () => {},
     }
     this.openDialog(newDialog)
+  }
+
+  handlePageConfigChanged = (pageConfig: PageConfig): void => {
+    const { title, favicon, layout, initialSidebarState } = pageConfig
+    if (title) {
+      document.title = `${title} · Streamlit`
+    }
+    if (favicon) {
+      handleFavicon(favicon)
+    }
+    // Only change layout/sidebar when the page config has changed.
+    // This preserves the user's previous choice, and prevents extra re-renders.
+    if (layout !== this.state.layout) {
+      this.setState((prevState: State) => ({
+        layout,
+        userSettings: {
+          ...prevState.userSettings,
+          wideMode: layout === PageConfig.Layout.WIDE,
+        },
+      }))
+    }
+    if (initialSidebarState !== this.state.initialSidebarState) {
+      this.setState(() => ({
+        initialSidebarState,
+      }))
+    }
   }
 
   handlePageInfoChanged = (pageInfo: PageInfo): void => {
@@ -462,7 +496,9 @@ export class App extends PureComponent<Props, State> {
       SessionInfo.current.installationId + scriptPath
     )
 
+    // Set the title and favicon to their default values
     document.title = `${reportName} · Streamlit`
+    handleFavicon(`${process.env.PUBLIC_URL}/favicon.png`)
 
     MetricsManager.current.setReportHash(newReportHash)
     MetricsManager.current.clearDeltaCounter()
@@ -912,6 +948,7 @@ export class App extends PureComponent<Props, State> {
 
           <ReportView
             wide={this.state.userSettings.wideMode}
+            initialSidebarState={this.state.initialSidebarState}
             elements={this.state.elements}
             reportId={this.state.reportId}
             reportRunState={this.state.reportRunState}

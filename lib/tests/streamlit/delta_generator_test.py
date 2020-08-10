@@ -37,11 +37,9 @@ from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.TextInput_pb2 import TextInput
-from streamlit.delta_generator import (
-    _wraps_with_cleaned_sig,
-    _with_element,
-    _set_widget_id,
-)
+from streamlit.proto.Empty_pb2 import Empty as EmptyProto
+from streamlit.proto.Text_pb2 import Text as TextProto
+from streamlit.elements.utils import _set_widget_id
 from tests import testutil
 import streamlit as st
 
@@ -107,15 +105,10 @@ class FakeDeltaGenerator(object):
         """
         self._exception_msg = str(e)
 
-    def _enqueue_new_element_delta(self, marshall_element, delta_type, last_index):
-        """Fake enqueue new element delta.
-
-        The real DeltaGenerator method actually enqueues the deltas but
-        to test _with_element we just need this method to exist.  The
-        real enqueue_new_element_delta will be tested later on.
-        """
+    def _enqueue(self, delta_type, element_proto):
         delta = Delta()
-        marshall_element(delta.new_element)
+        el_proto = getattr(delta.new_element, delta_type)
+        el_proto.CopyFrom(element_proto)
         return delta
 
 
@@ -185,43 +178,6 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
         actual_sig = signature(func)
         self.assertEqual(str(actual_sig), sig)
 
-    def test_wraps_with_cleaned_sig(self):
-        wrapped_function = _wraps_with_cleaned_sig(FakeDeltaGenerator.fake_text, 2)
-        wrapped = wrapped_function.keywords.get("wrapped")
-
-        # Check meta data.
-        self.assertEqual("delta_generator_test", wrapped.__module__)
-        self.assertEqual("fake_text", wrapped.__name__)
-        self.assertEqual("Fake text delta generator.", wrapped.__doc__)
-
-        # Verify original signature
-        sig = signature(FakeDeltaGenerator.fake_text)
-        self.assertEqual(str(sig), "(self, element, body)")
-
-        # Check clean signature
-        sig = signature(wrapped)
-        self.assertEqual(str(sig), "(body)")
-
-    def test_with_element(self):
-        wrapped = _with_element(FakeDeltaGenerator.fake_text)
-
-        dg = FakeDeltaGenerator()
-        data = "some_text"
-        # This would really look like st.text(data) but since we're
-        # testing the wrapper, it looks like this.
-        element = wrapped(dg, data)
-        self.assertEqual(element.new_element.text.body, data)
-
-    def test_with_element_exception(self):
-        wrapped = _with_element(FakeDeltaGenerator.fake_text_raise_exception)
-
-        dg = FakeDeltaGenerator()
-        data = "some_text"
-        with self.assertRaises(Exception) as ctx:
-            wrapped(dg, data)
-
-        self.assertTrue("Exception in fake_text_raise_exception" in str(ctx.exception))
-
     def set_widget_requires_args(self):
         st.text_input()
         c = self.get_delta_from_queue().new_element.exception
@@ -284,29 +240,24 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         self.assertTrue(dg._cursor.is_locked)
         self.assertEqual(dg._cursor.index, 1234)
 
-    def test_enqueue_new_element_delta_null(self):
+    def test_enqueue_null(self):
         # Test "Null" Delta generators
         dg = DeltaGenerator(container=None)
         enqueue_fn = lambda x: None
-        new_dg = dg._enqueue_new_element_delta(enqueue_fn, None)
+        new_dg = dg._enqueue("empty", EmptyProto())
         self.assertEqual(dg, new_dg)
 
     @parameterized.expand([(BlockPath.MAIN,), (BlockPath.SIDEBAR,)])
-    def test_enqueue_new_element_delta(self, container):
+    def test_enqueue(self, container):
         dg = DeltaGenerator(container=container)
         self.assertEqual(0, dg._cursor.index)
         self.assertEqual(container, dg._container)
 
         test_data = "some test data"
-        # Use FakeDeltaGenerator.fake_text cause if we use
-        # DeltaGenerator.text, it calls enqueue_new_element_delta
-        # automatically.  Ideally I should unwrap it.
-        fake_dg = FakeDeltaGenerator()
+        text_proto = TextProto()
+        text_proto.body = test_data
+        new_dg = dg._enqueue("text", text_proto)
 
-        def marshall_element(element):
-            fake_dg.fake_text(element, test_data)
-
-        new_dg = dg._enqueue_new_element_delta(marshall_element, None)
         self.assertNotEqual(dg, new_dg)
         self.assertEqual(1, dg._cursor.index)
         self.assertEqual(container, new_dg._container)
@@ -314,21 +265,16 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         element = self.get_delta_from_queue().new_element
         self.assertEqual(element.text.body, test_data)
 
-    def test_enqueue_new_element_delta_same_id(self):
+    def test_enqueue_same_id(self):
         cursor = LockedCursor(index=123)
         dg = DeltaGenerator(cursor=cursor)
         self.assertEqual(123, dg._cursor.index)
 
         test_data = "some test data"
-        # Use FakeDeltaGenerator.fake_text cause if we use
-        # DeltaGenerator.text, it calls enqueue_new_element_delta
-        # automatically.  Ideally I should unwrap it.
-        fake_dg = FakeDeltaGenerator()
+        text_proto = TextProto()
+        text_proto.body = test_data
+        new_dg = dg._enqueue("text", text_proto)
 
-        def marshall_element(element):
-            fake_dg.fake_text(element, test_data)
-
-        new_dg = dg._enqueue_new_element_delta(marshall_element, None)
         self.assertEqual(dg._cursor, new_dg._cursor)
 
         msg = self.get_message_from_queue()
