@@ -16,13 +16,10 @@
 import os
 import textwrap
 import unittest
-from parameterized import parameterized
+from unittest.mock import MagicMock, call, mock_open, patch
 
+from parameterized import parameterized
 import pytest
-from mock import MagicMock
-from mock import call
-from mock import mock_open
-from mock import patch
 
 from streamlit import file_util
 from streamlit import config

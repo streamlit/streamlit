@@ -64,8 +64,12 @@ pipenv-dev-install: lib/Pipfile
 
 .PHONY: pipenv-test-install
 pipenv-test-install: lib/test-requirements.txt
-	cd lib; \
-		pip install -r test-requirements.txt
+	# Installing from a requirements file copies the packages into
+	# the Pipfile so we revert these changes after the install.
+	cd lib ; \
+		cp Pipfile Pipfile.bkp ; \
+		pipenv install --dev --skip-lock --sequential -r test-requirements.txt ; \
+		mv Pipfile.bkp Pipfile
 
 .PHONY: pylint
 # Run "black", our Python formatter, to verify that our source files
@@ -114,6 +118,18 @@ pycoverage:
 			--junitxml=test-reports/pytest/junit.xml \
 			-l $(foreach dir,$(PYTHON_MODULES),--cov=$(dir)) \
 			--cov-report=term-missing tests/ \
+			$(PYTHON_MODULES)
+
+.PHONY: pycoverage_html
+# Generate HTML report of Python test coverage.
+pycoverage_html:
+	# testing + code coverage
+	cd lib; \
+		PYTHONPATH=. \
+		pytest -v \
+			--junitxml=test-reports/pytest/junit.xml \
+			-l $(foreach dir,$(PYTHON_MODULES),--cov=$(dir)) \
+			--cov-report=html tests/ \
 			$(PYTHON_MODULES)
 
 .PHONY: mypy
@@ -174,36 +190,16 @@ clean-docs:
 .PHONY: docs
 # Generate HTML documentation at /docs/_build.
 docs: clean-docs
+	mkdir -p docs/_static/css
 	cd docs; \
-		make html
+		make html; \
+		python replace_vars.py css/custom.css _static/css/custom.css
 
 .PHONY: devel-docs
 # Build docs and start a test server at port 8000.
 devel-docs: docs
 	cd docs/_build/html; \
 		python -m http.server 8000
-
-.PHONY: publish-docs
-# Build docs and push to prod.
-publish-docs: docs
-	cd docs/_build; \
-		aws s3 sync \
-				--acl public-read html s3://docs.streamlit.io \
-				--profile streamlit
-
-	# The line below uses the distribution ID obtained with
-	# $ aws cloudfront list-distributions | \
-	#     jq '.DistributionList.Items[] | \
-	#     select(.Aliases.Items[0] | \
-	#     contains("docs.streamlit.io")) | \
-	#     .Id'
-
-	aws cloudfront create-invalidation \
-		--distribution-id=E16K3UXOWYZ8U7 \
-		--paths \
-			'/*' \
-			'/tutorial/*' \
-		--profile streamlit
 
 .PHONY: protobuf
 # Recompile Protobufs for Python and Javascript.
@@ -310,7 +306,7 @@ jscoverage:
 .PHONY: e2etest
 # Run E2E tests.
 e2etest:
-	./scripts/run_e2e_tests.sh
+	./scripts/run_e2e_tests.py
 
 .PHONY: loc
 # Counts the number of lines of code in the project

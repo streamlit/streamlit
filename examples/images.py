@@ -207,7 +207,7 @@ si = StreamlitImages()
 st.header("individual image bytes")
 filename = "image.png"
 data = si.get_images().get(filename)
-st.image(data, caption=filename, format="png")
+st.image(data, caption=filename, output_format="PNG")
 
 # Display a list of images
 st.header("list images")
@@ -216,7 +216,7 @@ captions = []
 for filename, data in si.get_images().items():
     images.append(data)
     captions.append(filename)
-st.image(images, caption=captions, format="png")
+st.image(images, caption=captions, output_format="PNG")
 
 st.header("PIL Image")
 data = []
@@ -235,17 +235,17 @@ captions = []
 for i, c in data:
     images.append(i)
     captions.append(c)
-st.image(images, caption=captions, format="png")
+st.image(images, caption=captions, output_format="PNG")
 
 st.header("Bytes IO Image")
 image = io.BytesIO(si.get_images()["image.png"])
-st.image(image, caption=str(type(image)), format="png")
+st.image(image, caption=str(type(image)), output_format="PNG")
 
 st.header("From a file")
-st.image("/tmp/image.png", caption="/tmp/image.png", format="png")
+st.image("/tmp/image.png", caption="/tmp/image.png", output_format="PNG")
 
 st.header("From open")
-st.image(open("/tmp/image.png", "rb").read(), caption="from read", format="png")
+st.image(open("/tmp/image.png", "rb").read(), caption="from read", output_format="PNG")
 
 st.header("Numpy arrays")
 image = Image.open(io.BytesIO(si.get_images()["image.png"]))
@@ -268,7 +268,7 @@ captions = []
 for i, c in data:
     images.append(i)
     captions.append(c)
-st.image(images, caption=captions, format="png")
+st.image(images, caption=captions, output_format="PNG")
 
 try:
     st.header("opencv")
@@ -277,7 +277,7 @@ try:
     image = np.fromstring(si.get_images()["image.png"], np.uint8)
 
     img = cv2.imdecode(image, cv2.IMREAD_UNCHANGED)
-    st.image(img, format="png")
+    st.image(img, output_format="PNG")
 except Exception:
     pass
 
@@ -313,4 +313,4 @@ captions = []
 for i, c in data:
     images.append(i)
     captions.append(c)
-st.image(images, caption=captions, clamp=True, format="png")
+st.image(images, caption=captions, clamp=True, output_format="PNG")

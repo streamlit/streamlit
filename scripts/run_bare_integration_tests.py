@@ -27,6 +27,7 @@ import sys
 from typing import Set
 
 import click
+import matplotlib
 
 IS_PYTHON_3_6 = sys.version_info[:2] == (3, 6)
 
@@ -39,13 +40,6 @@ EXCLUDED_FILENAMES = set()  # type: Set[str]
 # and fixing Matplotlib in these tests), we set the MPL backend to something
 # that doesn't require a display.
 os.environ["MPLBACKEND"] = "Agg"
-
-# Scripts that rely on matplotlib can't be run in Python2. matplotlib
-# dropped Py2 support, and so we don't install it in our virtualenv.
-try:
-    import matplotlib
-except ImportError:
-    EXCLUDED_FILENAMES |= set(["empty_charts.py", "pyplot.py", "pyplot_kwargs.py"])
 
 # magic.py uses contextlib.asynccontextmanager, which is Python 3.7+
 if IS_PYTHON_3_6:

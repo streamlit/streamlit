@@ -16,7 +16,6 @@
  */
 
 import {
-  IBackMsg,
   IntArray,
   FloatArray,
   StringArray,
@@ -36,14 +35,15 @@ export interface Source {
  */
 export class WidgetStateManager {
   // Called to deliver a message to the server
-  private readonly sendBackMsg: (msg: IBackMsg) => void
+  private readonly sendRerunBackMsg: (widgetStates: WidgetStates) => void
+
   private readonly widgetStates: Map<string, WidgetState> = new Map<
     string,
     WidgetState
   >()
 
-  constructor(sendBackMsg: (msg: IBackMsg) => void) {
-    this.sendBackMsg = sendBackMsg
+  constructor(sendRerunBackMsg: (widgetStates: WidgetStates) => void) {
+    this.sendRerunBackMsg = sendRerunBackMsg
   }
 
   /**
@@ -55,7 +55,7 @@ export class WidgetStateManager {
   }
 
   /**
-   * Sets the trigger value for the given widget ID to true, sends an updateWidgets message
+   * Sets the trigger value for the given widget ID to true, sends a rerunScript message
    * to the server, and then immediately unsets the trigger value.
    */
   public setTriggerValue(widgetId: string, source: Source): void {
@@ -185,6 +185,26 @@ export class WidgetStateManager {
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
+  public getJsonValue(widgetId: string): string | undefined {
+    const state = this.getWidgetStateProto(widgetId)
+    if (state != null && state.value === "jsonValue") {
+      return state.jsonValue
+    }
+
+    return undefined
+  }
+
+  public setJsonValue(
+    widgetId: string,
+    value: number[],
+    source: Source
+  ): void {
+    this.getOrCreateWidgetStateProto(widgetId).jsonValue = JSON.stringify(
+      value
+    )
+    this.maybeSendUpdateWidgetsMessage(source)
+  }
+
   private maybeSendUpdateWidgetsMessage(source: Source): void {
     if (source.fromUi) {
       this.sendUpdateWidgetsMessage()
@@ -192,7 +212,7 @@ export class WidgetStateManager {
   }
 
   public sendUpdateWidgetsMessage(): void {
-    this.sendBackMsg({ updateWidgets: this.createWigetStatesMsg() })
+    this.sendRerunBackMsg(this.createWidgetStatesMsg())
   }
 
   /**
@@ -206,7 +226,7 @@ export class WidgetStateManager {
     })
   }
 
-  private createWigetStatesMsg(): WidgetStates {
+  private createWidgetStatesMsg(): WidgetStates {
     const msg = new WidgetStates()
     this.widgetStates.forEach(value => msg.widgets.push(value))
     return msg

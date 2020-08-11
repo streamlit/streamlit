@@ -17,10 +17,10 @@
 
 import React from "react"
 import { Map as ImmutableMap } from "immutable"
-import Json from "./Json"
 import { shallow } from "enzyme"
+import Json from "./Json"
 
-const getProps = (elementProps: object = {}): Props => ({
+const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
   element: ImmutableMap({
     body:
       '{ "proper": [1,2,3],' +

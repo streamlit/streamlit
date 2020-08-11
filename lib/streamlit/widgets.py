@@ -14,7 +14,8 @@
 
 from pprint import pprint
 
-from streamlit.proto.Widget_pb2 import WidgetStates
+from streamlit.proto.WidgetStates_pb2 import WidgetStates
+import json
 
 
 def coalesce_widget_states(old_states, new_states):
@@ -89,6 +90,8 @@ class Widgets(object):
         value_type = wstate.WhichOneof("value")
         if value_type is None:
             return None
+        elif value_type == "json_value":
+            return json.loads(getattr(wstate, value_type))
 
         return getattr(wstate, value_type)
 
@@ -105,18 +108,14 @@ class Widgets(object):
         for wstate in widget_states.widgets:
             self._state[wstate.id] = wstate
 
-    def get_state(self):
-        """
-        Returns
-        -------
-        WidgetStates
-            A new WidgetStates protobuf containing the contents of
-            our widget state dictionary.
+    def marshall(self, states_proto):
+        """Populates a WidgetStates proto with the widgets states from this object.
 
+        Parameters
+        ----------
+        states_proto : WidgetStates
         """
-        states = WidgetStates()
-        states.widgets.extend(self._state.values())
-        return states
+        states_proto.widget_states.widgets.extend(self._state.values())
 
     def reset_triggers(self):
         """Removes all trigger values in our state dictionary.

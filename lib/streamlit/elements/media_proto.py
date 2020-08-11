@@ -21,7 +21,7 @@ from validators import url
 
 from streamlit import type_util
 from streamlit.proto import Video_pb2
-from streamlit.MediaFileManager import media_file_manager
+from streamlit.media_file_manager import media_file_manager
 
 
 # Regular expression explained at https://regexr.com/4n2l2 Covers any youtube

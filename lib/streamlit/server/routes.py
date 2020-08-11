@@ -20,7 +20,7 @@ from streamlit import config
 from streamlit import metrics
 from streamlit.logger import get_logger
 from streamlit.server.server_util import serialize_forward_msg
-from streamlit.MediaFileManager import media_file_manager
+from streamlit.media_file_manager import media_file_manager
 
 
 LOGGER = get_logger(__name__)
@@ -35,7 +35,7 @@ def allow_cross_origin_requests():
 
     """
     return not config.get_option("server.enableCORS") or config.get_option(
-        "global.useNode"
+        "global.developmentMode"
     )
 
 
@@ -52,6 +52,13 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
             self.set_header("Cache-Control", "no-cache")
         else:
             self.set_header("Cache-Control", "public")
+
+
+class AssetsFileHandler(tornado.web.StaticFileHandler):
+    # CORS protection should be disabled as we need access
+    # to this endpoint from the inner iframe.
+    def set_default_headers(self):
+        self.set_header("Access-Control-Allow-Origin", "*")
 
 
 class AddSlashHandler(tornado.web.RequestHandler):

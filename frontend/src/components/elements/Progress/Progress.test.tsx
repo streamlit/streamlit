@@ -20,10 +20,10 @@ import { shallow } from "enzyme"
 import { fromJS } from "immutable"
 import { timeout } from "lib/utils"
 
-import Progress, { Props, FAST_UPDATE_MS } from "./Progress"
 import { Progress as UIProgress } from "reactstrap"
+import Progress, { Props, FAST_UPDATE_MS } from "./Progress"
 
-const getProps = (elementProps: object = {}): Props => ({
+const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
   element: fromJS({
     value: 50,
     ...elementProps,

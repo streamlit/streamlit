@@ -18,10 +18,16 @@
 import React from "react"
 import { Balloons as BalloonsProto } from "autogen/proto"
 import { Map as ImmutableMap } from "immutable"
+
+/*
+ * IMPORTANT: If you change the asset imports below, make sure they still work if Streamlit is
+ * served from a subpath.
+ */
 import BalloonEmoji from "assets/img/emoji/emoji_u1f388.png"
 import HappyFaceEmoji from "assets/img/emoji/emoji_u1f604.png"
 import StarFaceEmoji from "assets/img/emoji/emoji_u1f929.png"
 import CoolFaceEmoji from "assets/img/emoji/emoji_u1f60e.png"
+
 import "./Balloons.scss"
 
 export const NUM_BALLOONS = 15
@@ -72,9 +78,9 @@ class Balloons extends React.PureComponent<Props, State> {
             src={getBalloonUrl(this.props.element)}
             alt=""
             style={{
-              left:
-                Math.random() * (POS_MAX_VW - POS_MIN_VW) + POS_MIN_VW + "vw",
-              animationDelay: Math.random() * DELAY_MAX_MS + "ms",
+              left: `${Math.random() * (POS_MAX_VW - POS_MIN_VW) +
+                POS_MIN_VW}vw`,
+              animationDelay: `${Math.random() * DELAY_MAX_MS}ms`,
             }}
           />
         ))}
@@ -101,9 +107,8 @@ function getBalloonUrl(balloonsProto: ImmutableMap<string, any>): string {
     if (Math.random() > BALLOON_PROB) {
       const rand = Math.ceil(Math.random() * (BALLOON_IMAGES.length - 1))
       return BALLOON_IMAGES[rand]
-    } else {
-      return BALLOON_IMAGES[BalloonsProto.Type.BALLOON]
     }
+    return BALLOON_IMAGES[BalloonsProto.Type.BALLOON]
   }
 
   return BALLOON_IMAGES[type]

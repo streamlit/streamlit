@@ -14,8 +14,8 @@
 
 """DeltaGenerator Unittest."""
 
+from unittest import mock
 import json
-import mock
 import unittest
 
 try:
@@ -27,8 +27,8 @@ from parameterized import parameterized
 
 import pandas as pd
 
-from streamlit.DeltaGenerator import DeltaGenerator
-from streamlit.DeltaGenerator import _build_duplicate_widget_message
+from streamlit.delta_generator import DeltaGenerator
+from streamlit.elements.utils import _build_duplicate_widget_message
 from streamlit.cursor import LockedCursor
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException
@@ -37,7 +37,7 @@ from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.TextInput_pb2 import TextInput
-from streamlit.DeltaGenerator import (
+from streamlit.delta_generator import (
     _wraps_with_cleaned_sig,
     _with_element,
     _set_widget_id,
@@ -128,7 +128,7 @@ class MockQueue(object):
 
 
 class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
-    """Test streamlit.DeltaGenerator methods."""
+    """Test streamlit.delta_generator methods."""
 
     def test_nonexistent_method(self):
         with self.assertRaises(Exception) as ctx:
@@ -150,29 +150,29 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (st.empty().empty, "streamlit.DeltaGenerator", "empty", "()"),
-            (st.empty().text, "streamlit.DeltaGenerator", "text", "(body)"),
+            (st.empty().empty, "streamlit.delta_generator", "empty", "()"),
+            (st.empty().text, "streamlit.delta_generator", "text", "(body)"),
             (
                 st.empty().markdown,
-                "streamlit.DeltaGenerator",
+                "streamlit.delta_generator",
                 "markdown",
                 "(body, unsafe_allow_html=False)",
             ),
             (
                 st.empty().checkbox,
-                "streamlit.DeltaGenerator",
+                "streamlit.delta_generator",
                 "checkbox",
                 "(label, value=False, key=None)",
             ),
             (
                 st.empty().dataframe,
-                "streamlit.DeltaGenerator",
+                "streamlit.delta_generator",
                 "dataframe",
                 "(data=None, width=None, height=None)",
             ),
             (
                 st.empty().add_rows,
-                "streamlit.DeltaGenerator",
+                "streamlit.delta_generator",
                 "add_rows",
                 "(data=None, **kwargs)",
             ),
@@ -251,7 +251,7 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
                 create_widget()
                 self.assertIn(
                     _build_duplicate_widget_message(
-                        widget_type=widget_type, user_key=None
+                        widget_func_name=widget_type, user_key=None
                     ),
                     ctx.exception,
                 )
@@ -262,7 +262,7 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
                 create_widget("key")
                 self.assertIn(
                     _build_duplicate_widget_message(
-                        widget_type=widget_type, user_key="key"
+                        widget_func_name=widget_type, user_key="key"
                     ),
                     ctx.exception,
                 )
@@ -517,10 +517,10 @@ class WidgetIdText(testutil.DeltaGeneratorTestCase):
         element2 = Element()
         element2.text_input.CopyFrom(text_input2)
 
-        _set_widget_id("text_input", element1)
+        _set_widget_id("text_input", element1.text_input)
 
         with self.assertRaises(DuplicateWidgetID):
-            _set_widget_id("text_input", element2)
+            _set_widget_id("text_input", element2.text_input)
 
     def test_ids_are_diff_when_labels_are_diff(self):
         text_input1 = TextInput()
@@ -537,8 +537,8 @@ class WidgetIdText(testutil.DeltaGeneratorTestCase):
         element2 = Element()
         element2.text_input.CopyFrom(text_input2)
 
-        _set_widget_id("text_input", element1)
-        _set_widget_id("text_input", element2)
+        _set_widget_id("text_input", element1.text_input)
+        _set_widget_id("text_input", element2.text_input)
 
         self.assertNotEqual(element1.text_input.id, element2.text_input.id)
 
@@ -557,8 +557,8 @@ class WidgetIdText(testutil.DeltaGeneratorTestCase):
         element2 = Element()
         element2.text_area.CopyFrom(text_area2)
 
-        _set_widget_id("text_input", element1)
-        _set_widget_id("text_input", element2)
+        _set_widget_id("text_input", element1.text_input)
+        _set_widget_id("text_input", element2.text_input)
 
         self.assertNotEqual(element1.text_input.id, element2.text_area.id)
 
@@ -577,10 +577,10 @@ class WidgetIdText(testutil.DeltaGeneratorTestCase):
         element2 = Element()
         element2.text_input.CopyFrom(text_input2)
 
-        _set_widget_id("text_input", element1, user_key="some_key")
+        _set_widget_id("text_input", element1.text_input, user_key="some_key")
 
         with self.assertRaises(DuplicateWidgetID):
-            _set_widget_id("text_input", element2, user_key="some_key")
+            _set_widget_id("text_input", element2.text_input, user_key="some_key")
 
     def test_ids_are_diff_when_keys_are_diff(self):
         text_input1 = TextInput()
@@ -597,8 +597,8 @@ class WidgetIdText(testutil.DeltaGeneratorTestCase):
         element2 = Element()
         element2.text_input.CopyFrom(text_input2)
 
-        _set_widget_id("text_input", element1, user_key="some_key1")
-        _set_widget_id("text_input", element2, user_key="some_key2")
+        _set_widget_id("text_input", element1.text_input, user_key="some_key1")
+        _set_widget_id("text_input", element2.text_input, user_key="some_key2")
 
         self.assertNotEqual(element1.text_input.id, element2.text_input.id)
 
@@ -617,8 +617,8 @@ class WidgetIdText(testutil.DeltaGeneratorTestCase):
         element2 = Element()
         element2.text_input.CopyFrom(text_input2)
 
-        _set_widget_id("text_input", element1, user_key="some_key1")
-        _set_widget_id("text_input", element2, user_key="some_key1")
+        _set_widget_id("text_input", element1.text_input, user_key="some_key1")
+        _set_widget_id("text_input", element2.text_input, user_key="some_key1")
 
         self.assertNotEqual(element1.text_input.id, element2.text_input.id)
 

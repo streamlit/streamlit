@@ -1,0 +1,46 @@
+/**
+ * Copyright 2018-2020 Streamlit Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
+
+syntax = "proto3";
+
+import "streamlit/proto/ArrowDataframe.proto";
+
+message ComponentInstance {
+  // Widget ID (meaningful only for bi-directional components)
+  string id = 1;
+
+  // Dictionary with args for the plugin.
+  string args_json = 2;
+
+  // We'll probably want to transmit dataframe data separately (not in JSON).
+  repeated ArgsDataframe args_dataframe = 3;
+
+  // The component's unique name.
+  string component_name = 4;
+
+  // Optional URL to load the component from. By default this is not set,
+  // but while testing, a user can e.g. point this to a local node server
+  // that they're developing their component in.
+  string url = 5;
+}
+
+message ArgsDataframe {
+  // Dataframe key
+  string key = 1;
+
+  // Dataframe value
+  ArrowDataframe value = 2;
+}

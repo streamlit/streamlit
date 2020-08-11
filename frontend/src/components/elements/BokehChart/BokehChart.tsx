@@ -36,7 +36,7 @@ interface Dimensions {
 }
 
 export class BokehChart extends PureComponent<PropsWithHeight> {
-  private chartId = "bokeh-chart-" + this.props.index
+  private chartId = `bokeh-chart-${this.props.index}`
 
   private getChartData = (): any => {
     const figure = this.props.element.get("figure")
@@ -51,7 +51,7 @@ export class BokehChart extends PureComponent<PropsWithHeight> {
 
     // if is not fullscreen and useContainerWidth==false, we should use default values
     if (this.props.height) {
-      //fullscreen
+      // fullscreen
       width = this.props.width
       height = this.props.height
     } else if (useContainerWidth) {

@@ -21,12 +21,15 @@ import time
 from typing import Dict
 
 from streamlit import development
+from streamlit import config
 
 # Loggers for each name are saved here.
 LOGGERS = {}  # type: Dict[str, logging.Logger]
 
 # The global log level is set here across all names.
 LOG_LEVEL = logging.INFO
+
+DEFAULT_LOG_MESSAGE = "%(asctime)s %(levelname) -7s " "%(name)s: %(message)s"
 
 
 def set_log_level(level):
@@ -59,22 +62,31 @@ def set_log_level(level):
 
 def setup_formatter(logger):
     """Set up the console formatter for a given logger."""
+
     # Deregister any previous console loggers.
     if hasattr(logger, "streamlit_console_handler"):
         logger.removeHandler(logger.streamlit_console_handler)
 
     logger.streamlit_console_handler = logging.StreamHandler()
 
-    if development.is_development_mode:
-        logging.Formatter.converter = time.gmtime
-        formatter = logging.Formatter(
-            fmt=("%(asctime)s.%(msecs)03d %(levelname) -7s " "%(name)s: %(message)s"),
-            datefmt="%Y-%m-%dT%H:%M:%SZ",
-        )
-        logger.streamlit_console_handler.setFormatter(formatter)
+    if config._config_file_has_been_parsed:
+        # logger is required in ConfigOption.set_value
+        # Getting the config option before the config file has been parsed
+        # can create an infinite loop
+        message_format = config.get_option("logger.messageFormat")
+    else:
+        message_format = DEFAULT_LOG_MESSAGE
+    formatter = logging.Formatter(fmt=message_format)
+    formatter.default_msec_format = "%s.%03d"
+    logger.streamlit_console_handler.setFormatter(formatter)
 
     # Register the new console logger.
     logger.addHandler(logger.streamlit_console_handler)
+
+
+def update_formatter():
+    for log in LOGGERS.values():
+        setup_formatter(log)
 
 
 def init_tornado_logs():

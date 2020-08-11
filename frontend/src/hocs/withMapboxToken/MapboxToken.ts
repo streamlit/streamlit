@@ -28,6 +28,7 @@ export const TOKENS_URL = "https://data.streamlit.io/tokens.json"
 
 export class MapboxToken {
   private static token?: string
+
   private static commandLine?: string
 
   private static isRunningLocal = (): boolean => {
@@ -57,7 +58,7 @@ export class MapboxToken {
         // TODO: Replace this with the block below after October 1st 2020.
         MapboxToken.token = await this.fetchToken(TOKENS_URL, "mapbox")
         // if (this.isRunningLocal() && SessionInfo.isHello) {
-        //   MapboxToken.token = await this.fetchToken(TOKENS_URL, "mapbox")
+        //   MapboxToken.token = await this.fetchToken(TOKENS_URL, "mapbox-localhost")
         // } else {
         //   throw new MapboxTokenNotProvidedError("No Mapbox token provided")
         // }
@@ -75,7 +76,7 @@ export class MapboxToken {
   ): Promise<string> {
     try {
       const response = await axios.get(url)
-      const { "mapbox-localhost": token } = response.data
+      const { [tokenName]: token } = response.data
 
       if (token == null || token === "") {
         throw new Error(`Missing token "${tokenName}"`)

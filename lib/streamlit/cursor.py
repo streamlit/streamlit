@@ -14,7 +14,7 @@
 
 from typing import Optional, Tuple
 
-from streamlit.ReportThread import get_report_ctx
+from streamlit.report_thread import get_report_ctx
 
 
 def get_container_cursor(container):
