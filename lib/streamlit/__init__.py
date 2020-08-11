@@ -169,6 +169,7 @@ progress = _main.progress  # noqa: E221
 pyplot = _main.pyplot  # noqa: E221
 radio = _main.radio  # noqa: E221
 selectbox = _main.selectbox  # noqa: E221
+select_slider = _main.select_slider  # noqa: E221
 slider = _main.slider  # noqa: E221
 subheader = _main.subheader  # noqa: E221
 success = _main.success  # noqa: E221
