@@ -3,7 +3,7 @@
 At Streamlit, we like to move quick while keeping things stable. In our latest effort to move even faster without sacrificing stability, we're offering our bold and fearless users two ways to try out Streamlit's most bleeding edge features:
 
 1. [Nightly releases](#nightly-releases)
-2. [Beta and experimental namespaces](#beta-and-experimental-namespaces)
+2. [Beta and experimental features](#beta-and-experimental-features)
 
 ## Nightly releases
 
@@ -44,9 +44,9 @@ If you'd like to use a specific version, you can find the version number in our 
 
 If you'd like to review the changes for a nightly release, you can use the [comparison tool on GitHub](https://github.com/streamlit/streamlit/compare/0.57.3...0.57.4.dev20200412).
 
-## Beta and Experimental Namespaces
+## Beta and Experimental Features
 
-In addition to nightly releases, we're also introducing two new naming conventions for Streamlit features: `st.beta_` and `st.experimental_`. These distinctions are prefixes we attach to our function names to make sure their status is clear to everyone.
+In addition to nightly releases, we also have two naming conventions for less stable Streamlit features: `st.beta_` and `st.experimental_`. These distinctions are prefixes we attach to our function names to make sure their status is clear to everyone.
 
 Here's a quick rundown of what you get from each naming convention:
 
@@ -69,7 +69,7 @@ Features with the `beta_` naming convention are all scheduled to become part of 
 
 ### Experimental
 
-Features in the experimental namespace are things that we're still working on or trying to understand. If these features are successful, at some point they'll become part of Streamlit core, by moving to the `beta_` naming convention and then to Streamlit core. If unsuccessful, these features are removed without much notice.
+Features with the `experimental_` naming convention are things that we're still working on or trying to understand. If these features are successful, at some point they'll become part of Streamlit core, by moving to the `beta_` naming convention and then to Streamlit core. If unsuccessful, these features are removed without much notice.
 
 ```eval_rst
 .. warning::
