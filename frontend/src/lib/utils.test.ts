@@ -17,7 +17,7 @@
 
 import { BlockElement } from "lib/DeltaParser"
 import { List, Set as ImmutableSet, Map as ImmutableMap } from "immutable"
-import { getCookie, flattenElements, setCookie } from "./utils"
+import { getCookie, flattenElements, setCookie, slugify } from "./utils"
 
 describe("flattenElements", () => {
   const simpleElement1 = ImmutableMap({ key1: "value1", key2: "value2" })
@@ -131,5 +131,39 @@ describe("setCookie", () => {
     document.cookie = "flavor=chocolatechip"
     setCookie("flavor")
     expect(document.cookie).toEqual("")
+  })
+})
+
+describe("slugify", () => {
+  it("expects an existing string of length > 0", () => {
+    // TODO:
+    // Account for undefined params and return value -- waiting on clarification
+    expect(slugify("streamlit")).not.toEqual("")
+    expect(typeof slugify("42") === "string").toBeTruthy()
+  })
+
+  it("removes spaces and connects words with dashes", () => {
+    expect(slugify("s t r e a m l i t")).toEqual("s-t-r-e-a-m-l-i-t")
+    expect(slugify("   space  exploration  ")).toEqual("space-exploration")
+  })
+
+  it("lowercases all letters", () => {
+    expect(slugify("COOKING INSTRUCTIONS")).toEqual("cooking-instructions")
+    expect(slugify("StReAmLiT")).toEqual("streamlit")
+  })
+
+  it("removes non-acceptable characters from string", () => {
+    expect(slugify("The fastest way to build data apps.")).toEqual(
+      "the-fastest-way-to-build-data-apps"
+    )
+    expect(slugify("Real-time rendering")).toEqual("real-time-rendering")
+    expect(slugify("They're there now with their friends")).toEqual(
+      "theyre-there-now-with-their-friends"
+    )
+    expect(slugify("sl-----ug")).toEqual("sl-ug")
+    expect(slugify(".. stre@mlit .. ,, !! @@")).toEqual("stremlit")
+    expect(slugify("3 types: emdash (—), endash (–), and dash (-)")).toEqual(
+      "3-types-emdash-endash-and-dash"
+    )
   })
 })

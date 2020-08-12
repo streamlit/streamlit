@@ -27,6 +27,8 @@ import RemarkMathPlugin from "remark-math"
 import RemarkEmoji from "remark-emoji"
 import CodeBlock from "components/elements/CodeBlock/"
 
+import { slugify } from "../../../src/lib/utils"
+
 import "katex/dist/katex.min.css"
 
 export interface Props {
@@ -40,6 +42,14 @@ export interface Props {
    * any HTML will be escaped in the output.
    */
   allowHTML: boolean
+
+  /**
+   * Anchor tag and Element "id" attribute for
+   * title, header, and subheader elements.
+   * Default: set to "slugified" (a b c -> a-b-c) heading text.
+   * Optional: set to anchor parameter (second argument).
+   */
+  anchor?: string | undefined
 }
 
 /**
@@ -58,12 +68,33 @@ export class StreamlitMarkdown extends PureComponent<Props> {
   }
 
   public render = (): ReactNode => {
-    const { source, allowHTML } = this.props
+    const { source, allowHTML, anchor } = this.props
+
+    const headingWithAnchorTag = (props: HeadingProps): ReactElement => {
+      if (props.level > 3) {
+        return React.createElement(`h${props.level}`, {}, props.children)
+      }
+
+      const cleanedAnchor = slugify(anchor)
+
+      return (
+        <Fragment>
+          <a className="heading-anchor" href={`#${cleanedAnchor}`}>
+            {React.createElement(
+              `h${props.level}`,
+              { id: cleanedAnchor },
+              props.children
+            )}
+          </a>
+        </Fragment>
+      )
+    }
 
     const renderers = {
       code: CodeBlock,
       link: linkWithTargetBlank,
       linkReference: linkReferenceHasParens,
+      heading: headingWithAnchorTag,
       inlineMath: (props: { value: string }): ReactElement => (
         <InlineMath>{props.value}</InlineMath>
       ),
@@ -85,6 +116,12 @@ export class StreamlitMarkdown extends PureComponent<Props> {
       />
     )
   }
+}
+
+interface HeadingProps {
+  children: [ReactElement]
+  level: number
+  anchor: string
 }
 
 interface LinkProps {

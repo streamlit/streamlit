@@ -61,7 +61,7 @@ class MarkdownMixin:
 
         return dg._enqueue("markdown", markdown_proto)  # type: ignore
 
-    def header(dg, body):
+    def header(dg, body, anchor=None):
         """Display text in header formatting.
 
         Parameters
@@ -69,9 +69,14 @@ class MarkdownMixin:
         body : str
             The text to display.
 
+        anchor : str
+            Displayed as anchor tag next to header.
+            Set to body text by default or passed value.
+
         Example
         -------
         >>> st.header('This is a header')
+        ... st.header('This is a header', 'This is its custom anchor value')
 
         .. output::
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=AnfQVFgSCQtGv6yMUMUYjj
@@ -79,20 +84,31 @@ class MarkdownMixin:
 
         """
         header_proto = MarkdownProto()
+
+        if anchor is None:
+            header_proto.anchor = body
+        else:
+            header_proto.anchor = anchor
+
         header_proto.body = "## %s" % _clean_text(body)
         return dg._enqueue("markdown", header_proto)  # type: ignore
 
-    def subheader(dg, body):
+    def subheader(dg, body, anchor=None):
         """Display text in subheader formatting.
 
         Parameters
         ----------
         body : str
             The text to display.
+        
+        anchor : str
+            Displayed as anchor tag next to subheader.
+            Set to body text by default or passed value.
 
         Example
         -------
         >>> st.subheader('This is a subheader')
+        ... st.subheader('This is a subheader', 'This is its custom anchor value')
 
         .. output::
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=LBKJTfFUwudrbWENSHV6cJ
@@ -100,6 +116,12 @@ class MarkdownMixin:
 
         """
         subheader_proto = MarkdownProto()
+
+        if anchor is None:
+            subheader_proto.anchor = body
+        else:
+            subheader_proto.anchor = anchor
+
         subheader_proto.body = "### %s" % _clean_text(body)
         return dg._enqueue("markdown", subheader_proto)  # type: ignore
 
@@ -136,7 +158,7 @@ class MarkdownMixin:
         code_proto.body = _clean_text(markdown)
         return dg._enqueue("markdown", code_proto)  # type: ignore
 
-    def title(dg, body):
+    def title(dg, body, anchor=None):
         """Display text in title formatting.
 
         Each document should have a single `st.title()`, although this is not
@@ -147,9 +169,14 @@ class MarkdownMixin:
         body : str
             The text to display.
 
+        anchor : str
+            Displayed as anchor tag next to title.
+            Set to body text by default or passed value.
+
         Example
         -------
         >>> st.title('This is a title')
+        ... st.title('This is a title', 'This is its custom anchor value')
 
         .. output::
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=SFcBGANWd8kWXF28XnaEZj
@@ -157,6 +184,12 @@ class MarkdownMixin:
 
         """
         title_proto = MarkdownProto()
+
+        if anchor is None:
+            title_proto.anchor = body
+        else:
+            title_proto.anchor = anchor
+
         title_proto.body = "# %s" % _clean_text(body)
         return dg._enqueue("markdown", title_proto)  # type: ignore
 

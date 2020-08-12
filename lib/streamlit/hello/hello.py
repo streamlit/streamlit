@@ -81,6 +81,12 @@ def run():
 
     if demo_name == "—":
         show_code = False
+        st.title('Streamlit Title')
+        st.title('Streamlit Title With Passed Anchor', 'Here is the Title anchor tag')
+        st.header('Streamlit Header')
+        st.header('Streamlit Header With Passed Anchor', 'Here is the Header anchor tag')
+        st.subheader('Streamlit Subheader')
+        st.subheader('Streamlit Subheader With Passed Anchor', 'Here is the Subheader anchor tag')
         st.write("# Welcome to Streamlit! 👋")
     else:
         show_code = st.sidebar.checkbox("Show code", True)
