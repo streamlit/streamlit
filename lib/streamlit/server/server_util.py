@@ -20,7 +20,7 @@ from streamlit import config
 from streamlit import net_util
 from streamlit import type_util
 from streamlit import url_util
-from streamlit.ForwardMsgCache import populate_hash_if_needed
+from streamlit.forward_msg_cache import populate_hash_if_needed
 
 # Largest message that can be sent via the WebSocket connection.
 # (Limit was picked arbitrarily)
@@ -68,20 +68,17 @@ def serialize_forward_msg(msg):
     msg_str = msg.SerializeToString()
 
     if len(msg_str) > MESSAGE_SIZE_LIMIT:
-        _convert_msg_to_exception_msg(msg, RuntimeError("Data too large"))
+        import streamlit.elements.exception_proto as exception_proto
+
+        error = RuntimeError(
+            f"Data of size {len(msg_str)/1e6:.1f}MB exceeds write limit of {MESSAGE_SIZE_LIMIT/1e6}MB"
+        )
+        # Overwrite the offending ForwardMsg.delta with an error to display.
+        # This assumes that the size limit wasn't exceeded due to metadata.
+        exception_proto.marshall(msg.delta.new_element.exception, error)
         msg_str = msg.SerializeToString()
 
     return msg_str
-
-
-def _convert_msg_to_exception_msg(msg, e):
-    import streamlit.elements.exception_proto as exception_proto
-
-    delta_id = msg.metadata.delta_id
-    msg.Clear()
-    msg.metadata.delta_id = delta_id
-
-    exception_proto.marshall(msg.delta.new_element.exception, e)
 
 
 def is_url_from_allowed_origins(url):

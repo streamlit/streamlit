@@ -13,22 +13,18 @@
 # limitations under the License.
 
 """Config System Unittest."""
+from unittest.mock import MagicMock, mock_open, patch
 import copy
 import os
 import textwrap
 import unittest
 
 import pytest
-from mock import MagicMock
-from mock import mock_open
-from mock import patch
 from parameterized import parameterized
 
 from streamlit import config
 from streamlit import env_util
-from streamlit.ConfigOption import ConfigOption
-
-os.environ["STREAMLIT_COOKIE_SECRET"] = "chocolatechip"
+from streamlit.config_option import ConfigOption
 
 SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
 CONFIG_OPTIONS = copy.deepcopy(config._config_options)
@@ -259,7 +255,9 @@ class ConfigTest(unittest.TestCase):
                 "_test",
                 "browser",
                 "client",
+                "deprecation",
                 "global",
+                "logger",
                 "mapbox",
                 "runner",
                 "s3",
@@ -277,6 +275,8 @@ class ConfigTest(unittest.TestCase):
                 "browser.serverPort",
                 "client.caching",
                 "client.displayEnabled",
+                "deprecation.showfileUploaderEncoding",
+                "deprecation.showImageFormat",
                 "global.developmentMode",
                 "global.disableWatchdogWarning",
                 "global.logLevel",
@@ -287,7 +287,8 @@ class ConfigTest(unittest.TestCase):
                 "global.showWarningOnDirectExecution",
                 "global.suppressDeprecationWarnings",
                 "global.unitTest",
-                "global.useNode",
+                "logger.level",
+                "logger.messageFormat",
                 "runner.magicEnabled",
                 "runner.installTracer",
                 "runner.fixMatplotlib",
@@ -299,11 +300,13 @@ class ConfigTest(unittest.TestCase):
                 "s3.region",
                 "s3.secretAccessKey",
                 "s3.url",
-                "server.enableCORS",
                 "server.baseUrlPath",
+                "server.enableCORS",
                 "server.cookieSecret",
-                "server.folderWatchBlacklist",
+                "server.enableWebsocketCompression",
+                "server.enableXsrfProtection",
                 "server.fileWatcherType",
+                "server.folderWatchBlacklist",
                 "server.headless",
                 "server.liveSave",
                 "server.address",
@@ -351,6 +354,14 @@ class ConfigTest(unittest.TestCase):
             str(e.value),
             "server.port does not work when global.developmentMode is true.",
         )
+
+    @patch("streamlit.logger.get_logger")
+    def test_check_conflicts_server_csrf(self, get_logger):
+        config._set_option("server.enableXsrfProtection", True, "test")
+        config._set_option("server.enableCORS", True, "test")
+        mock_logger = get_logger()
+        config._check_conflicts()
+        mock_logger.warning.assert_called_once()
 
     def test_check_conflicts_browser_serverport(self):
         config._set_option("global.developmentMode", True, "test")
@@ -476,11 +487,6 @@ class ConfigTest(unittest.TestCase):
         config.set_option("server.port", 1234)
         self.assertEqual(1234, config.get_option("browser.serverPort"))
 
-    def test_server_cookie_secret(self):
-        self.assertEqual("chocolatechip", config.get_option("server.cookieSecret"))
-
-        del os.environ["STREAMLIT_COOKIE_SECRET"]
-
     def test_server_headless_via_liveSave(self):
         config.set_option("server.liveSave", True)
         self.assertEqual(True, config.get_option("server.headless"))
@@ -514,11 +520,11 @@ class ConfigTest(unittest.TestCase):
 
     def test_global_log_level_debug(self):
         config.set_option("global.developmentMode", True)
-        self.assertEqual("debug", config.get_option("global.logLevel"))
+        self.assertEqual("debug", config.get_option("logger.level"))
 
     def test_global_log_level(self):
         config.set_option("global.developmentMode", False)
-        self.assertEqual("info", config.get_option("global.logLevel"))
+        self.assertEqual("info", config.get_option("logger.level"))
 
     @parameterized.expand([(True, True), (True, False), (False, False), (False, True)])
     def test_on_config_parsed(self, config_parsed, connect_signal):

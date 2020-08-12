@@ -28,11 +28,7 @@ from streamlit import development
 from streamlit import env_util
 from streamlit import file_util
 from streamlit import util
-from streamlit.ConfigOption import ConfigOption
-
-from streamlit.logger import get_logger
-
-LOGGER = get_logger(__name__)
+from streamlit.config_option import ConfigOption
 
 # Config System Global State #
 
@@ -125,7 +121,7 @@ def _create_option(
                 default_val = 12345)
 
         (2) More complex, programmable config options use decorator syntax to
-        resolve thier values at runtime:
+        resolve their values at runtime:
 
             @_create_option('section.optionName')
             def _section_option_name():
@@ -240,16 +236,17 @@ def _global_development_mode():
     )
 
 
-@_create_option("global.logLevel")
-def _global_log_level():
-    """Level of logging: 'error', 'warning', 'info', or 'debug'.
+_create_option(
+    "global.logLevel",
+    description="""Level of logging: 'error', 'warning', 'info', or 'debug'.
 
     Default: 'info'
-    """
-    if get_option("global.developmentMode"):
-        return "debug"
-    else:
-        return "info"
+    """,
+    deprecated=True,
+    deprecation_text="global.logLevel has been replaced with logger.level",
+    expiration_date="2020-11-30",
+    replaced_by="logger.level",
+)
 
 
 @_create_option("global.unitTest", visibility="hidden", type_=bool)
@@ -260,15 +257,6 @@ def _global_unit_test():
     """
     return False
 
-
-_create_option(
-    "global.useNode",
-    description="""Whether to serve static content from node. Only applies when
-        developmentMode is True.""",
-    visibility="hidden",
-    default_val=True,
-    type_=bool,
-)
 
 _create_option(
     "global.metrics",
@@ -304,6 +292,43 @@ _create_option(
     default_val=2,
     type_=int,
 )
+
+
+# Config Section: Logger #
+_create_section("logger", "Settings to customize Streamlit log messages.")
+
+
+@_create_option("logger.level", type_=str)
+def _logger_log_level():
+    """Level of logging: 'error', 'warning', 'info', or 'debug'.
+
+    Default: 'info'
+    """
+
+    if get_option("global.logLevel"):
+        return get_option("global.logLevel")
+    elif get_option("global.developmentMode"):
+        return "debug"
+    else:
+        return "info"
+
+
+@_create_option("logger.messageFormat", type_=str)
+def _logger_message_format():
+    """String format for logging messages. If logger.datetimeFormat is set,
+    logger messages will default to `%(asctime)s.%(msecs)03d %(message)s`. See
+    [Python's documentation](https://docs.python.org/2.6/library/logging.html#formatter-objects)
+    for available attributes.
+
+    Default: None
+    """
+    if get_option("global.developmentMode"):
+        from streamlit.logger import DEFAULT_LOG_MESSAGE
+
+        return DEFAULT_LOG_MESSAGE
+    else:
+        return "%(asctime)s %(message)s"
+
 
 # Config Section: Client #
 
@@ -395,17 +420,15 @@ _create_option(
 )
 
 
-@_create_option("server.cookieSecret")
+@_create_option("server.cookieSecret", type_=str)
 @util.memoize
 def _server_cookie_secret():
-    """Symmetric key used to produce signed cookies. If deploying on multiple
-    replicas, this should be set to ensure all replicas share the same secret.
+    """Symmetric key used to produce signed cookies. If deploying on multiple replicas, this should
+    be set to the same value across all replicas to ensure they all share the same secret.
 
-    Default: Randomly generated secret key.
+    Default: randomly generated secret key.
     """
-    cookie_secret = os.getenv("STREAMLIT_COOKIE_SECRET")
-    cookie_secret = cookie_secret if cookie_secret else secrets.token_hex()
-    return cookie_secret
+    return secrets.token_hex()
 
 
 @_create_option("server.headless", type_=bool)
@@ -478,9 +501,25 @@ _create_option(
 )
 
 
+# TODO: Rename to server.enableCorsProtection.
 @_create_option("server.enableCORS", type_=bool)
 def _server_enable_cors():
-    """Enables support for Cross-Origin Request Sharing, for added security.
+    """Enables support for Cross-Origin Request Sharing (CORS) protection, for added security.
+
+    Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is on and
+    `server.enableCORS` is off at the same time, we will prioritize `server.enableXsrfProtection`.
+
+    Default: true
+    """
+    return True
+
+
+@_create_option("server.enableXsrfProtection", type_=bool)
+def _server_enable_xsrf_protection():
+    """Enables support for Cross-Site Request Forgery (XSRF) protection, for added security.
+
+    Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is on and
+    `server.enableCORS` is off at the same time, we will prioritize `server.enableXsrfProtection`.
 
     Default: true
     """
@@ -498,6 +537,15 @@ def _server_max_upload_size():
     return 200
 
 
+@_create_option("server.enableWebsocketCompression", type_=bool)
+def _server_enable_websocket_compression():
+    """Enables support for websocket compression.
+
+    Default: true
+    """
+    return True
+
+
 # Config Section: Browser #
 
 _create_section("browser", "Configuration of browser front-end.")
@@ -509,7 +557,7 @@ def _browser_server_address():
     connect to the app. Can be IP address or DNS name and path.
 
     This is used to:
-    - Set the correct URL for CORS purposes.
+    - Set the correct URL for CORS and XSRF protection purposes.
     - Show the URL on the terminal
     - Open the browser
     - Tell the browser where to connect to the server when in liveSave mode.
@@ -534,7 +582,7 @@ def _browser_server_port():
     app.
 
     This is used to:
-    - Set the correct URL for CORS purposes.
+    - Set the correct URL for CORS and XSRF protection purposes.
     - Show the URL on the terminal
     - Open the browser
     - Tell the browser where to connect to the server when in liveSave mode.
@@ -557,6 +605,26 @@ _create_option(
     default_val="",
 )
 
+
+# Config Section: deprecations
+
+_create_section("deprecation", "Configuration to show or hide deprecation warnings.")
+
+_create_option(
+    "deprecation.showfileUploaderEncoding",
+    description="Set to false to disable the deprecation warning for the file uploader encoding.",
+    default_val="True",
+    scriptable="True",
+    type_=bool,
+)
+
+_create_option(
+    "deprecation.showImageFormat",
+    description="Set to false to disable the deprecation warning for the image format parameter.",
+    default_val="True",
+    scriptable="True",
+    type_=bool,
+)
 
 # Config Section: S3 #
 
@@ -796,7 +864,7 @@ def _set_option(key, value, where_defined):
     Parameters
     ----------
     key : str
-        The key of the option, like "global.logLevel".
+        The key of the option, like "logger.level".
     value
         The value of the option.
     where_defined : str
@@ -847,11 +915,17 @@ def _maybe_read_env_variable(value):
         variable.
 
     """
+
     if isinstance(value, str) and value.startswith("env:"):
         var_name = value[len("env:") :]
         env_var = os.environ.get(var_name)
 
         if env_var is None:
+            # Import logger locally to prevent circular references
+            from streamlit.logger import get_logger
+
+            LOGGER = get_logger(__name__)
+
             LOGGER.error("No environment variable called %s" % var_name)
         else:
             return _maybe_convert_to_number(env_var)
@@ -923,6 +997,11 @@ def _check_conflicts():
     #   2. the serverPort value in manifest.json, which would work, but only
     #   exists with server.liveSave.
 
+    # Import logger locally to prevent circular references
+    from streamlit.logger import get_logger
+
+    LOGGER = get_logger(__name__)
+
     if get_option("global.developmentMode"):
         assert _is_unset(
             "server.port"
@@ -972,6 +1051,23 @@ def _check_conflicts():
             "\n\nTo remove this warning, set the 'sharingMode' option to "
             "another value, or remove it from your Streamlit config."
         )
+
+    # XSRF conflicts
+    if get_option("server.enableXsrfProtection"):
+        if not get_option("server.enableCORS") or get_option("global.developmentMode"):
+            LOGGER.warning(
+                """
+Warning: the config option 'server.enableCORS=false' is not compatible with 'server.enableXsrfProtection=true'.
+As a result, 'server.enableCORS' is being overridden to 'true'.
+
+More information:
+In order to protect against CSRF attacks, we send a cookie with each request.
+To do so, we must specify allowable origins, which places a restriction on
+cross-origin resource sharing.
+
+If cross origin resource sharing is required, please disable server.enableXsrfProtection.
+            """
+            )
 
 
 def _set_development_mode():

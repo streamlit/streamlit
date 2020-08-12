@@ -24,7 +24,6 @@ import inspect
 import io
 import os
 import pickle
-import re
 import sys
 import tempfile
 import textwrap
@@ -59,6 +58,20 @@ _CYCLE_PLACEHOLDER = b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-CY
 
 
 _FOLDER_BLACK_LIST = FolderBlackList(config.get_option("server.folderWatchBlacklist"))
+
+
+# FFI objects (objects that interface with C libraries) can be any of these types:
+_FFI_TYPE_NAMES = [
+    "_cffi_backend.FFI",
+    "builtins.CompiledFFI",
+]
+
+# KERAS objects can be any of these types:
+_KERAS_TYPE_NAMES = [
+    "keras.engine.training.Model",
+    "tensorflow.python.keras.engine.training.Model",
+    "tensorflow.python.keras.engine.functional.Functional",
+]
 
 
 Context = collections.namedtuple("Context", ["globals", "cells", "varnames"])
@@ -254,38 +267,31 @@ class _CodeHasher:
         # The number of the bytes in the hash.
         self.size = 0
 
-        # An ever increasing counter.
-        self._counter = 0
-
     def to_bytes(self, obj, context=None):
         """Add memoization to _to_bytes and protect against cycles in data structures."""
-        key = _key(obj)
+        tname = type(obj).__qualname__.encode()
+        key = (tname, _key(obj))
 
-        if key is not NoResult:
+        # Memoize if possible.
+        if key[1] is not NoResult:
             if key in self._hashes:
                 return self._hashes[key]
 
-            # Add a tombstone hash to break recursive calls.
-            self._counter += 1
-            self._hashes[key] = b"tombstone:%s" % _int_to_bytes(self._counter)
-
+        # Break recursive cycles.
         if obj in hash_stacks.current:
             return _CYCLE_PLACEHOLDER
 
         hash_stacks.current.push(obj)
 
         try:
-            # Turn these on for debugging.
-            # _LOGGER.debug("About to hash: %s", obj)
-            tname = type(obj).__qualname__.encode()
+            # Hash the input
             b = b"%s:%s" % (tname, self._to_bytes(obj, context))
-            # _LOGGER.debug("Done hashing: %s", obj)
 
             # Hmmm... It's psosible that the size calculation is wrong. When we
             # call to_bytes inside _to_bytes things get double-counted.
             self.size += sys.getsizeof(b)
 
-            if key is not None:
+            if key[1] is not NoResult:
                 self._hashes[key] = b
 
         except (UnhashableTypeError, UserHashError, InternalHashError):
@@ -402,7 +408,7 @@ class _CodeHasher:
         elif inspect.isbuiltin(obj):
             return obj.__name__.encode()
 
-        elif type_util.is_type(obj, "builtins.CompiledFFI"):
+        elif any(type_util.is_type(obj, typename) for typename in _FFI_TYPE_NAMES):
             return self.to_bytes(None)
 
         elif type_util.is_type(obj, "builtins.mappingproxy") or type_util.is_type(
@@ -504,10 +510,7 @@ class _CodeHasher:
         ):
             return self.to_bytes([obj.detach().numpy(), obj.grad])
 
-        elif type_util.is_type(obj, "keras.engine.training.Model"):
-            return self.to_bytes(id(obj))
-
-        elif type_util.is_type(obj, "tensorflow.python.keras.engine.training.Model"):
+        elif any(type_util.is_type(obj, typename) for typename in _KERAS_TYPE_NAMES):
             return self.to_bytes(id(obj))
 
         elif type_util.is_type(

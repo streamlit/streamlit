@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-import { getCookie, flattenElements } from "./utils"
 import { BlockElement } from "lib/DeltaParser"
 import { List, Set as ImmutableSet, Map as ImmutableMap } from "immutable"
+import { getCookie, flattenElements, setCookie } from "./utils"
 
 describe("flattenElements", () => {
   const simpleElement1 = ImmutableMap({ key1: "value1", key2: "value2" })
@@ -58,7 +58,7 @@ describe("getCookie", () => {
     document.cookie.split(";").forEach(cookie => {
       const eqPos = cookie.indexOf("=")
       const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie
-      document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT"
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT`
     })
   })
 
@@ -80,7 +80,6 @@ describe("getCookie", () => {
     document.cookie = "flavor=chocolatechip;"
     document.cookie = "sweetness=medium;"
     document.cookie = "type=darkchocolate;"
-    console.log(document.cookie)
     const cookie = getCookie("flavor")
     expect(cookie).toEqual("chocolatechip")
   })
@@ -99,5 +98,38 @@ describe("getCookie", () => {
     document.cookie = "flavor=chocolatechip;"
     const cookie = getCookie("flavor")
     expect(cookie).toEqual("chocolatechip")
+  })
+})
+
+describe("setCookie", () => {
+  afterEach(() => {
+    /*
+      Setting a cookie with document.cookie = "key=value" will append or modify "key"
+      with "value". It does not overwrite the existing list of cookies in document.cookie.
+      In order to delete the cookie, give the cookie an expiration date that has passed.
+      This cleanup ensures that we delete all cookies after each test.
+    */
+    document.cookie.split(";").forEach(cookie => {
+      const eqPos = cookie.indexOf("=")
+      const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT`
+    })
+  })
+
+  it("set new cookie", () => {
+    setCookie("flavor", "chocolatechip")
+    expect(document.cookie).toEqual("flavor=chocolatechip")
+  })
+
+  it("update existing cookie", () => {
+    document.cookie = "flavor=chocolatechip"
+    setCookie("flavor", "sugar")
+    expect(document.cookie).toEqual("flavor=sugar")
+  })
+
+  it("remove cookie", () => {
+    document.cookie = "flavor=chocolatechip"
+    setCookie("flavor")
+    expect(document.cookie).toEqual("")
   })
 })

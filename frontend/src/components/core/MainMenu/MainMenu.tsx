@@ -82,7 +82,7 @@ class MainMenu extends PureComponent<Props, State> {
     }))
   }
 
-  getOpenInWindowCallback = (url: string) => () => {
+  getOpenInWindowCallback = (url: string) => (): void => {
     window.open(url, "_blank")
   }
 
@@ -156,7 +156,7 @@ class MainMenu extends PureComponent<Props, State> {
           <DropdownItem divider />
 
           <DropdownItem onClick={this.getOpenInWindowCallback(TEAMS_URL)}>
-            Streamlit for teams
+            Streamlit for Teams
           </DropdownItem>
 
           <DropdownItem onClick={this.props.settingsCallback}>

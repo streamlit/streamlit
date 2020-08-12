@@ -16,26 +16,78 @@
 
 import io
 
-try:
-    import matplotlib  # noqa: F401
-    import matplotlib.pyplot as plt
-
-    plt.ioff()
-except ImportError:
-    raise ImportError("pyplot() command requires matplotlib")
+from streamlit.proto.Image_pb2 import ImageList as ImageListProto
+from streamlit.logger import get_logger
 
 import streamlit.elements.image_proto as image_proto
 
-from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
 
-def marshall(coordinates, new_element_proto, fig=None, clear_figure=True, **kwargs):
-    """Construct a matplotlib.pyplot figure.
+class PyplotMixin:
+    def pyplot(dg, fig=None, clear_figure=None, **kwargs):
+        """Display a matplotlib.pyplot figure.
 
-    See DeltaGenerator.vega_lite_chart for docs.
-    """
+        Parameters
+        ----------
+        fig : Matplotlib Figure
+            The figure to plot. When this argument isn't specified, which is
+            the usual case, this function will render the global plot.
+
+        clear_figure : bool
+            If True, the figure will be cleared after being rendered.
+            If False, the figure will not be cleared after being rendered.
+            If left unspecified, we pick a default based on the value of `fig`.
+
+            * If `fig` is set, defaults to `False`.
+
+            * If `fig` is not set, defaults to `True`. This simulates Jupyter's
+              approach to matplotlib rendering.
+
+        **kwargs : any
+            Arguments to pass to Matplotlib's savefig function.
+
+        Example
+        -------
+        >>> import matplotlib.pyplot as plt
+        >>> import numpy as np
+        >>>
+        >>> arr = np.random.normal(1, 1, size=100)
+        >>> plt.hist(arr, bins=20)
+        >>>
+        >>> st.pyplot()
+
+        .. output::
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=PwzFN7oLZsvb6HDdwdjkRB
+           height: 530px
+
+        Notes
+        -----
+        Matplotlib support several different types of "backends". If you're
+        getting an error using Matplotlib with Streamlit, try setting your
+        backend to "TkAgg"::
+
+            echo "backend: TkAgg" >> ~/.matplotlib/matplotlibrc
+
+        For more information, see https://matplotlib.org/faq/usage_faq.html.
+
+        """
+
+        image_list_proto = ImageListProto()
+        marshall(dg._get_coordinates, image_list_proto, fig, clear_figure, **kwargs)  # type: ignore
+        return dg._enqueue("imgs", image_list_proto)  # type: ignore
+
+
+def marshall(coordinates, image_list_proto, fig=None, clear_figure=True, **kwargs):
+    try:
+        import matplotlib  # noqa: F401
+        import matplotlib.pyplot as plt
+
+        plt.ioff()
+    except ImportError:
+        raise ImportError("pyplot() command requires matplotlib")
+
     # You can call .savefig() on a Figure object or directly on the pyplot
     # module, in which case you're doing it to the latest Figure.
     if not fig:
@@ -46,7 +98,7 @@ def marshall(coordinates, new_element_proto, fig=None, clear_figure=True, **kwar
     # Normally, dpi is set to 'figure', and the figure's dpi is set to 100.
     # So here we pick double of that to make things look good in a high
     # DPI display.
-    options = {"dpi": 200, "format": "png"}
+    options = {"bbox_inches": "tight", "dpi": 200, "format": "png"}
 
     # If some of the options are passed in from kwargs then replace
     # the values in options with the ones from kwargs
@@ -61,10 +113,10 @@ def marshall(coordinates, new_element_proto, fig=None, clear_figure=True, **kwar
         image,
         None,
         -2,
-        new_element_proto.imgs,
+        image_list_proto,
         False,
         channels="RGB",
-        format="PNG",
+        output_format="PNG",
     )
 
     # Clear the figure after rendering it. This means that subsequent

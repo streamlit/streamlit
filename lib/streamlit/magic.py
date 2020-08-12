@@ -78,7 +78,6 @@ def _modify_ast_subtree(tree, body_attr="body", is_root=False):
 
     if is_root:
         # Import Streamlit so we can use it in the new_value above.
-        # IMPORTANT: This breaks Python 2 due to line numbering issues.
         _insert_import_statement(tree)
 
     ast.fix_missing_locations(tree)

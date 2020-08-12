@@ -22,26 +22,26 @@ import { logMessage } from "lib/log"
 import { SCSS_VARS } from "autogen/scssVariables"
 import { FileUploaderOverrides, StyleProps } from "baseui/file-uploader"
 
-const black = SCSS_VARS["$black"]
+const black = SCSS_VARS.$black
 const borderRadius = SCSS_VARS["$border-radius"]
 const fontFamilyMono = SCSS_VARS["$font-family-monospace"]
 const fontFamilySans = SCSS_VARS["$font-family-sans-serif"]
 const fontSizeBase = SCSS_VARS["$font-size-base"]
 const fontSizeSm = SCSS_VARS["$font-size-sm"]
 const grayDark = SCSS_VARS["$gray-dark"]
-const gray = SCSS_VARS["$gray"]
+const gray = SCSS_VARS.$gray
 const grayLight = SCSS_VARS["$gray-light"]
 const grayLighter = SCSS_VARS["$gray-lighter"]
 const grayLightest = SCSS_VARS["$gray-lightest"]
 const labelFontSize = SCSS_VARS["$font-size-sm"]
 const lineHeightBase = SCSS_VARS["$line-height-base"]
 const lineHeightTight = SCSS_VARS["$line-height-tight"]
-const primary = SCSS_VARS["$primary"]
+const primary = SCSS_VARS.$primary
 const primaryA50 = SCSS_VARS["$primary-a50"]
 const smallTextMargin = SCSS_VARS["$m2-3-font-size-sm"]
 const textMargin = SCSS_VARS["$font-size-sm"]
 const tinyTextMargin = SCSS_VARS["$m1-2-font-size-sm"]
-const white = SCSS_VARS["$white"]
+const white = SCSS_VARS.$white
 
 const fontStyles = {
   fontFamily: fontFamilySans,
@@ -486,9 +486,9 @@ const themeOverrides = {
   },
 
   colors: {
-    white: white,
-    black: black,
-    primary: primary,
+    white,
+    black,
+    primary,
     primaryA: primary,
     accent: primaryA50,
     tagPrimarySolidBackground: primary,
@@ -512,26 +512,43 @@ const themeOverrides = {
 
 export const mainWidgetTheme = createTheme(mainThemePrimitives, themeOverrides)
 
-export const sidebarWidgetTheme = createTheme(
-  {
-    ...mainThemePrimitives,
-
+export const sidebarWidgetTheme = createTheme(mainThemePrimitives, {
+  ...themeOverrides,
+  colors: {
+    ...themeOverrides.colors,
     // Override gray values based on what is actually used in BaseWeb, and the
     // way we want it to match our Bootstrap theme.
-    mono100: white, // Popup menu
-    mono200: white, // Text input, text area, selectbox
-    mono300: white, // Disabled widget background
-    mono400: grayLight, // Slider track
+    // mono100 overrides
+    datepickerBackground: white,
+    calendarBackground: white,
+    tickFill: white,
+    tickMarkFillDisabled: white,
+    menuFill: white,
+
+    // mono200 overrides
+    buttonDisabledFill: white,
+    fileUploaderBackgroundColor: white,
+    tickFillHover: white,
+    inputFillDisabled: white,
+    inputFillActive: white,
+
+    // mono300 overrides
+    toggleTrackFillDisabled: white,
+    tickFillActive: white,
+    sliderTrackFillDisabled: white,
+    inputBorder: white,
+    inputFill: white,
+    inputEnhanceFill: white,
+    inputEnhancerFillDisabled: white,
+
+    // mono400 overrides
+    buttonDisabledSpinnerBackground: grayLight,
+    toggleTrackFill: grayLight,
+    sliderTrackFill: grayLight,
+    sliderHandleInnerFill: grayLight,
+    sliderHandleInnerFillDisabled: grayLight,
   },
-  {
-    ...themeOverrides,
-    colors: {
-      ...themeOverrides.colors,
-      inputFill: white,
-      inputFillActive: white,
-    },
-  }
-)
+})
 
 // Log the widget theme just for debug purposes.
 logMessage("mainWidgetTheme", mainWidgetTheme)

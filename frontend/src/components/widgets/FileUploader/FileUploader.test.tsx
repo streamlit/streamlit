@@ -27,7 +27,7 @@ const blobFile = new File(["Text in a file!"], "filename.txt", {
   lastModified: 0,
 })
 
-const getProps = (elementProps: object = {}): Props => ({
+const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
   element: fromJS({
     type: [],
     progress: 0,
@@ -101,5 +101,13 @@ describe("FileUploader widget", () => {
       "The max file size allowed is 0MB"
     )
     expect(wrapper.find("div.uploadError").length).toBe(1)
+  })
+
+  it("should reset on disconnect", () => {
+    const props = getProps()
+    const wrapper = shallow(<FileUploader {...props} />)
+    const resetSpy = jest.spyOn(wrapper.instance(), "reset")
+    wrapper.setProps({ disabled: true })
+    expect(resetSpy).toBeCalled()
   })
 })

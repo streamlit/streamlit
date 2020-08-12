@@ -34,4 +34,48 @@ describe("st.image", () => {
       "Black Square"
     );
   });
+
+  it("shows deprecation warning", () => {
+    cy.get(".stImage")
+      .first()
+      .closest(".element-container")
+      .prev()
+      .should("contain", "ImageFormatWarning");
+  });
+
+  it("hides deprecation warning", () => {
+    cy.get(".stImage")
+      .eq(1)
+      .closest(".element-container")
+      .prev()
+      .should("not.contain", "ImageFormatWarning");
+  });
+
+  it("displays a JPEG image when specified", () => {
+    cy.get(".element-container .stImage img")
+      .eq(2)
+      .should("have.attr", "src")
+      .should("match", /^.*\.jpeg$/);
+  });
+
+  it("displays a PNG image when specified", () => {
+    cy.get(".element-container .stImage img")
+      .eq(3)
+      .should("have.attr", "src")
+      .should("match", /^.*\.png$/);
+  });
+
+  it("displays a JPEG image when not specified with no alpha channel", () => {
+    cy.get(".element-container .stImage img")
+      .eq(4)
+      .should("have.attr", "src")
+      .should("match", /^.*\.jpeg$/);
+  });
+
+  it("displays a PNG image when not specified with alpha channel", () => {
+    cy.get(".element-container .stImage img")
+      .eq(5)
+      .should("have.attr", "src")
+      .should("match", /^.*\.png$/);
+  });
 });

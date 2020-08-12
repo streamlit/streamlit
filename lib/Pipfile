@@ -5,7 +5,6 @@ verify_ssl = true
 
 [dev-packages]
 flake8 = "*"
-mock = "*"
 mypy = "==0.761"
 mypy-protobuf = ">=1.17"
 parameterized = "*"
@@ -17,7 +16,7 @@ testfixtures = "*"
 twine = "*"
 wheel = "*"
 # Doc builder packages:
-Sphinx = "==1.8.5"
+Sphinx = "==3.0.3"
 recommonmark = "*"
 sphinx-markdown-tables = "*"
 sphinx-rtd-theme = "*"
@@ -41,12 +40,13 @@ packaging = "*"
 pandas = ">=0.21.0"
 pillow = ">=6.2.0"
 protobuf = ">=3.6.0"
+pyarrow = "*"
 pydeck = ">=0.1.dev5"
 python-dateutil = "*"
 requests = "*"
 toml = "*"
-# TODO: upgrade tornado to 6.x now that we don't have to support Python 2
-tornado = ">=5.0,<6.0"
+# 5.0 has a fix for etag header: https://github.com/tornadoweb/tornado/issues/2262
+tornado = ">=5.0"
 tzlocal = "*"
 validators = "*"
 watchdog = "*"

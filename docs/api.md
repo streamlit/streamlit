@@ -50,7 +50,7 @@ magicEnabled = false
 ```
 
 ```eval_rst
-.. important:: Right now, Magic only works on Python 3.
+.. important:: Right now, Magic only works in the main Python app file, not in imported files. See `GitHub issue #288 <https://github.com/streamlit/streamlit/issues/288>`_ for a discussion of the issues.
 ```
 
 ## Display text
@@ -146,6 +146,14 @@ With widgets, Streamlit allows you to bake interactivity directly into your apps
 .. autofunction:: streamlit.time_input
 .. autofunction:: streamlit.file_uploader
 .. autofunction:: streamlit.beta_color_picker
+```
+
+## Control flow
+
+By default, Streamlit apps execute the script entirely, but we allow some functionality to handle control flow in your applications.
+
+```eval_rst
+.. autofunction:: streamlit.stop
 ```
 
 ## Add widgets to sidebar
@@ -267,6 +275,7 @@ app, provide help using doc strings, and get and modify configuration options.
 .. autofunction:: streamlit.help
 .. autofunction:: streamlit.get_option
 .. autofunction:: streamlit.set_option
+.. autofunction:: streamlit.beta_set_page_config
 ```
 
 ## Mutate data
@@ -275,7 +284,7 @@ With Streamlit you can modify the data within an existing element (chart,
 table, dataframe).
 
 ```eval_rst
-.. automethod:: streamlit.DeltaGenerator.DeltaGenerator.add_rows
+.. automethod:: streamlit.delta_generator.DeltaGenerator.add_rows
 ```
 
 ## Optimize performance

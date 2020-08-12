@@ -25,8 +25,6 @@ describe("st.file_uploader", () => {
 
     cy.visit("http://localhost:3000/");
 
-    cy.getCookie("_xsrf").should("exist");
-
     // Make the ribbon decoration line disappear
     cy.get(".decoration").invoke("css", "display", "none");
   });
@@ -42,6 +40,22 @@ describe("st.file_uploader", () => {
     cy.get(".stFileUploader")
       .first()
       .matchImageSnapshot("file_uploader");
+  });
+
+  it("shows deprecation warning", () => {
+    cy.get(".stFileUploader")
+      .first()
+      .parent()
+      .prev()
+      .should("contain", "FileUploaderEncodingWarning");
+  });
+
+  it("hides deprecation warning", () => {
+    cy.get(".stFileUploader")
+      .last()
+      .parent()
+      .prev()
+      .should("not.contain", "FileUploaderEncodingWarning");
   });
 
   it("shows error message for not allowed files", () => {

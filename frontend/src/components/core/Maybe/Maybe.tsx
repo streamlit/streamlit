@@ -24,6 +24,7 @@ export interface Props {
 export interface State {}
 
 class Maybe extends React.Component<Props, State> {
+  // eslint-disable-next-line class-methods-use-this
   public shouldComponentUpdate(
     nextProps: Readonly<Props>,
     nextState: Readonly<State>,
