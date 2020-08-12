@@ -334,8 +334,8 @@ def arrow_proto_to_dataframe(proto):
 
     return pd.DataFrame(
         data.values,
-        index=_transform_header_values(index.values),
-        columns=_transform_header_values(columns.values),
+        index=index.values.T.tolist(),
+        columns=columns.values.T.tolist()
     )
 
 
@@ -350,20 +350,3 @@ def _pybytes_to_dataframe(source):
     """
     reader = pa.RecordBatchStreamReader(source)
     return reader.read_pandas()
-
-
-def _transform_header_values(values):
-    """Transform `index` and `columns` values.
-
-    Parameters
-    ----------
-    values : index or columns values
-
-    """
-    table = []
-    for i in range(len(values[0])):
-        rows = []
-        for j in range(len(values)):
-            rows.append(values[j][i])
-        table.append(rows)
-    return table

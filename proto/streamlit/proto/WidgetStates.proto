@@ -17,6 +17,7 @@
 syntax = "proto3";
 
 import "streamlit/proto/ArrowTable.proto";
+import "streamlit/proto/DataFrame.proto";
 
 // Contains updated state for each widget in a report
 message WidgetStates {
