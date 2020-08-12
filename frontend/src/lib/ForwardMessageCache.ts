@@ -21,6 +21,7 @@ import { BaseUriParts, buildHttpUri } from "lib/UriUtil"
 
 class CacheEntry {
   public readonly msg: ForwardMsg
+
   public reportRunCount = 0
 
   public getAge(curReportRunCount: number): number {

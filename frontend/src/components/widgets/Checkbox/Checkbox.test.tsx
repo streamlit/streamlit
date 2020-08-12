@@ -20,8 +20,8 @@ import { shallow } from "enzyme"
 import { fromJS } from "immutable"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
-import Checkbox, { Props } from "./Checkbox"
 import { Checkbox as UICheckbox } from "baseui/checkbox"
+import Checkbox, { Props } from "./Checkbox"
 
 jest.mock("lib/WidgetStateManager")
 

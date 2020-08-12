@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2018-2019 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -128,14 +127,16 @@ def _marshall_styles(proto, styler, styles):
         for style in table_styles:
             # NB: styles in "table_styles" have a space
             # between the UUID and the selector.
-            rule = _pandas_style_to_css(style, styler.uuid, separator=" ")
+            rule = _pandas_style_to_css(
+                "table_styles", style, styler.uuid, separator=" "
+            )
             css_rules.append(rule)
 
     if "cellstyle" in styles:
         cellstyle = styles["cellstyle"]
         cellstyle = _trim_pandas_styles(cellstyle)
         for style in cellstyle:
-            rule = _pandas_style_to_css(style, styler.uuid)
+            rule = _pandas_style_to_css("cell_style", style, styler.uuid)
             css_rules.append(rule)
 
     if len(css_rules) > 0:
@@ -156,7 +157,7 @@ def _trim_pandas_styles(styles):
     return [x for x in styles if any(any(y) for y in x["props"])]
 
 
-def _pandas_style_to_css(style, uuid, separator=""):
+def _pandas_style_to_css(style_type, style, uuid, separator=""):
     """Convert pandas.Styler translated styles entry to CSS.
 
     Parameters
@@ -177,8 +178,19 @@ def _pandas_style_to_css(style, uuid, separator=""):
         declarations.append(declaration)
 
     table_selector = "#T_" + str(uuid)
-    cell_selector = style["selector"]
-    selector = table_selector + separator + cell_selector
+
+    if style_type == "table_styles" or (
+        style_type == "cell_style" and type_util.is_old_pandas_version()
+    ):
+        cell_selectors = [style["selector"]]
+    else:
+        cell_selectors = style["selectors"]
+
+    selectors = []
+    for cell_selector in cell_selectors:
+        selectors.append(table_selector + separator + cell_selector)
+    selector = ", ".join(selectors)
+
     declaration_block = "; ".join(declarations)
     rule_set = selector + " { " + declaration_block + " }"
 

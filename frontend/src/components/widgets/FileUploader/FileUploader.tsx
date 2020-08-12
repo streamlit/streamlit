@@ -77,7 +77,7 @@ class FileUploader extends React.PureComponent<Props, State> {
       const errorMessage = `${rejectedFiles[0].type} files are not allowed`
       this.setState({
         status: "ERROR",
-        errorMessage: errorMessage,
+        errorMessage,
       })
 
       return
@@ -90,7 +90,7 @@ class FileUploader extends React.PureComponent<Props, State> {
         const errorMessage = `The max file size allowed is ${maxSizeMb}MB`
         this.setState({
           status: "ERROR",
-          errorMessage: errorMessage,
+          errorMessage,
         })
 
         return
@@ -175,7 +175,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     const accept: string[] = element
       .get("type")
       .toArray()
-      .map((value: string) => "." + value)
+      .map((value: string) => `.${value}`)
 
     const multipleFiles: boolean = element.get("multipleFiles")
 
@@ -227,17 +227,22 @@ class FileUploader extends React.PureComponent<Props, State> {
     const { element } = this.props
     const label: string = element.get("label")
 
+    let renderFunction
+    if (status === "ERROR") {
+      renderFunction = this.renderErrorMessage
+    } else if (status === "UPLOADING") {
+      renderFunction = this.renderUploadingMessage
+    } else {
+      renderFunction = this.renderFileUploader
+    }
+
     // The BaseWeb file uploader is not particularly configurable, so we hack it here by replacing
     // the uploader with our own UI where appropriate.
     return (
       <div className="Widget stFileUploader">
         <label>{label}</label>
 
-        {status === "ERROR"
-          ? this.renderErrorMessage()
-          : status === "UPLOADING"
-          ? this.renderUploadingMessage()
-          : this.renderFileUploader()}
+        {renderFunction()}
       </div>
     )
   }

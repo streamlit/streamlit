@@ -20,8 +20,8 @@ import { shallow } from "enzyme"
 import { fromJS } from "immutable"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
-import Selectbox, { Props } from "./Selectbox"
 import { Select as UISelect } from "baseui/select"
+import Selectbox, { Props } from "./Selectbox"
 
 jest.mock("lib/WidgetStateManager")
 
@@ -125,7 +125,6 @@ describe("Selectbox widget", () => {
     const filterOptionsFn = wrapper.find(UISelect).prop("filterOptions")
     if (filterOptionsFn === undefined || options === undefined) {
       fail("Unexepcted undefined value")
-      return 0
     }
     const filteredOptions = filterOptionsFn(options, "1")
     expect(filteredOptions).toEqual([])
@@ -136,7 +135,6 @@ describe("Selectbox widget", () => {
     const filterOptionsFn = wrapper.find(UISelect).prop("filterOptions")
     if (filterOptionsFn === undefined || options === undefined) {
       fail("Unexepcted undefined value")
-      return 0
     }
     expect(filterOptionsFn(options, "b")).toEqual([
       {

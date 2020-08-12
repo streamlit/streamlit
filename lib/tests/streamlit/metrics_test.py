@@ -13,14 +13,12 @@
 # limitations under the License.
 
 """Metrics Module Unittest."""
+from unittest.mock import call, patch
 import unittest
 
 import pytest
 
 import streamlit.metrics
-
-from mock import call, patch
-
 from streamlit import config
 
 

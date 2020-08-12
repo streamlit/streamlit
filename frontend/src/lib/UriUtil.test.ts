@@ -168,3 +168,11 @@ test("passes through other media uris", () => {
 
   expect(uri).toBe("http://example/blah.png")
 })
+
+test("sanitizes SVG uris", () => {
+  const uri = buildMediaUri(
+    `data:image/svg+xml,<svg><script>alert('evil')</script></svg>`
+  )
+
+  expect(uri).toBe(`data:image/svg+xml,%3Csvg%3E%3C%2Fsvg%3E`)
+})

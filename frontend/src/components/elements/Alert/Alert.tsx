@@ -37,9 +37,8 @@ export function getAlertCSSClass(format: number): string {
   const cname = ALERT_CSS_CLASS.get(format.toString())
   if (cname) {
     return cname
-  } else {
-    throw new Error(`Unexpected alert type: ${format}`)
   }
+  throw new Error(`Unexpected alert type: ${format}`)
 }
 
 export interface Props {

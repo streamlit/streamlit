@@ -26,7 +26,7 @@ import numpy as np
 import streamlit as st
 
 
-def create_image(size, format="RGB"):
+def create_image(size, format="RGB", add_alpha=True):
     step = 1
     half = size / 2
     # Create a new image
@@ -49,18 +49,19 @@ def create_image(size, format="RGB"):
         fill="blue",
         outline=None,
     )
-    # Creating a pie slice shaped 'mask' ie an alpha channel.
-    alpha = Image.new("L", image.size, "white")
-    d = ImageDraw.Draw(alpha)
-    d.pieslice(
-        [(step * 3, step * 3), (size - step, size - step)],
-        0,
-        90,
-        fill="black",
-        outline=None,
-        width=0,
-    )
-    image.putalpha(alpha)
+    if add_alpha:
+        # Creating a pie slice shaped 'mask' ie an alpha channel.
+        alpha = Image.new("L", image.size, "white")
+        d = ImageDraw.Draw(alpha)
+        d.pieslice(
+            [(step * 3, step * 3), (size - step, size - step)],
+            0,
+            90,
+            fill="black",
+            outline=None,
+            width=0,
+        )
+        image.putalpha(alpha)
 
     if format == "BGR":
         return cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
@@ -70,8 +71,8 @@ def create_image(size, format="RGB"):
 
 IMAGES = {
     "img_32_32_3_rgb": {
-        "pil": create_image(32, "RGB"),
-        "np": np.array(create_image(32, "RGB")),
+        "pil": create_image(32, "RGB", add_alpha=False),
+        "np": np.array(create_image(32, "RGB", add_alpha=False)),
     },
     "img_32_32_3_rgba": {
         "pil": create_image(32, "RGBA"),
@@ -113,18 +114,66 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         * Path
         * Bytes
         """
-        from streamlit.MediaFileManager import _calculate_file_id
+        from streamlit.media_file_manager import _calculate_file_id
         from streamlit.elements.image_proto import _np_array_to_bytes
 
         file_id = _calculate_file_id(
-            _np_array_to_bytes(data_in, format=format), mimetype="image/" + format
+            _np_array_to_bytes(data_in, output_format=format),
+            mimetype="image/" + format,
         )
 
-        st.image(data_in, format=format)
+        st.image(data_in, output_format=format)
         imglist = self.get_delta_from_queue().new_element.imgs
         self.assertEqual(len(imglist.imgs), 1)
         self.assertTrue(imglist.imgs[0].url.startswith("/media"))
+        self.assertTrue(imglist.imgs[0].url.endswith(f".{format}"))
         self.assertTrue(file_id in imglist.imgs[0].url)
+
+    @parameterized.expand(
+        [
+            (IMAGES["img_32_32_3_rgb"]["np"], "jpeg",),
+            (IMAGES["img_32_32_3_bgr"]["np"], "jpeg",),
+            (IMAGES["img_64_64_rgb"]["np"], "jpeg",),
+            (IMAGES["img_32_32_3_rgba"]["np"], "png",),
+            (IMAGES["img_32_32_3_rgb"]["pil"], "jpeg",),
+            (IMAGES["img_32_32_3_bgr"]["pil"], "jpeg",),
+            (IMAGES["img_64_64_rgb"]["pil"], "jpeg",),
+            (IMAGES["img_32_32_3_rgba"]["pil"], "png",),
+        ]
+    )
+    def test_marshall_images_with_auto_output_format(self, data_in, expected_format):
+        """Test streamlit.image_proto.marshall_images.
+        with auto output_format
+        """
+
+        st.image(data_in, output_format="auto")
+        imglist = self.get_delta_from_queue().new_element.imgs
+        self.assertEqual(len(imglist.imgs), 1)
+        self.assertTrue(imglist.imgs[0].url.endswith(f".{expected_format}"))
+
+    @parameterized.expand(
+        [
+            (IMAGES["img_32_32_3_rgb"]["np"], "/media/",),
+            ("https://streamlit.io/test.png", "https://streamlit.io/test.png",),
+            ("<svg fake></svg>", "data:image/svg+xml,<svg fake></svg>",),
+            ("\n<svg fake></svg>", "data:image/svg+xml,\n<svg fake></svg>",),
+            ("🦈", "🦈",),
+            (":shark:", ":shark:",),
+        ]
+    )
+    def test_image_to_url(self, image, expected_prefix):
+        from streamlit.elements.image_proto import image_to_url
+
+        url = image_to_url(
+            image,
+            width=-1,
+            clamp=False,
+            channels="RGB",
+            output_format="JPEG",
+            image_id="blah",
+            allow_emoji=True,
+        )
+        self.assertTrue(url.startswith(expected_prefix))
 
     def test_BytesIO_to_bytes(self):
         """Test streamlit.image_proto.BytesIO_to_bytes."""

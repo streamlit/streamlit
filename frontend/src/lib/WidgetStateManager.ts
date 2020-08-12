@@ -17,7 +17,6 @@
 
 import {
   ArrowTable,
-  IBackMsg,
   IntArray,
   FloatArray,
   StringArray,
@@ -37,14 +36,15 @@ export interface Source {
  */
 export class WidgetStateManager {
   // Called to deliver a message to the server
-  private readonly sendBackMsg: (msg: IBackMsg) => void
+  private readonly sendRerunBackMsg: (widgetStates: WidgetStates) => void
+
   private readonly widgetStates: Map<string, WidgetState> = new Map<
     string,
     WidgetState
   >()
 
-  constructor(sendBackMsg: (msg: IBackMsg) => void) {
-    this.sendBackMsg = sendBackMsg
+  constructor(sendRerunBackMsg: (widgetStates: WidgetStates) => void) {
+    this.sendRerunBackMsg = sendRerunBackMsg
   }
 
   /**
@@ -56,7 +56,7 @@ export class WidgetStateManager {
   }
 
   /**
-   * Sets the trigger value for the given widget ID to true, sends an updateWidgets message
+   * Sets the trigger value for the given widget ID to true, sends a rerunScript message
    * to the server, and then immediately unsets the trigger value.
    */
   public setTriggerValue(widgetId: string, source: Source): void {
@@ -222,7 +222,7 @@ export class WidgetStateManager {
   }
 
   public sendUpdateWidgetsMessage(): void {
-    this.sendBackMsg({ updateWidgets: this.createWigetStatesMsg() })
+    this.sendRerunBackMsg(this.createWidgetStatesMsg())
   }
 
   /**
@@ -236,7 +236,7 @@ export class WidgetStateManager {
     })
   }
 
-  private createWigetStatesMsg(): WidgetStates {
+  private createWidgetStatesMsg(): WidgetStates {
     const msg = new WidgetStates()
     this.widgetStates.forEach(value => msg.widgets.push(value))
     return msg

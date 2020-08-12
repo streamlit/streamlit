@@ -16,41 +16,72 @@
 
 import inspect
 
+from streamlit.proto.DocString_pb2 import DocString as DocStringProto
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
 
-CONFUSING_STREAMLIT_MODULES = ("streamlit.DeltaGenerator", "streamlit.caching")
+CONFUSING_STREAMLIT_MODULES = ("streamlit.delta_generator", "streamlit.caching")
 
 CONFUSING_STREAMLIT_SIG_PREFIXES = ("(element, ",)
 
 
-def marshall(proto, obj):
+class HelpMixin:
+    def help(dg, obj):
+        """Display object's doc string, nicely formatted.
+
+        Displays the doc string for this object.
+
+        Parameters
+        ----------
+        obj : Object
+            The object whose docstring should be displayed.
+
+        Example
+        -------
+
+        Don't remember how to initialize a dataframe? Try this:
+
+        >>> st.help(pandas.DataFrame)
+
+        Want to quickly check what datatype is output by a certain function?
+        Try:
+
+        >>> x = my_poorly_documented_function()
+        >>> st.help(x)
+
+        """
+        doc_string_proto = DocStringProto()
+        _marshall(doc_string_proto, obj)
+        return dg._enqueue("doc_string", doc_string_proto)  # type: ignore
+
+
+def _marshall(doc_string_proto, obj):
     """Construct a DocString object.
 
     See DeltaGenerator.help for docs.
     """
     try:
-        proto.doc_string.name = obj.__name__
+        doc_string_proto.name = obj.__name__
     except AttributeError:
         pass
 
     module_name = getattr(obj, "__module__", None)
 
     if module_name in CONFUSING_STREAMLIT_MODULES:
-        proto.doc_string.module = "streamlit"
+        doc_string_proto.module = "streamlit"
     elif module_name is not None:
-        proto.doc_string.module = module_name
+        doc_string_proto.module = module_name
     else:
-        # Leave proto.doc_string.module as an empty string (default value).
+        # Leave doc_string_proto.module as an empty string (default value).
         pass
 
     obj_type = type(obj)
-    proto.doc_string.type = str(obj_type)
+    doc_string_proto.type = str(obj_type)
 
     if callable(obj):
-        proto.doc_string.signature = _get_signature(obj)
+        doc_string_proto.signature = _get_signature(obj)
 
     doc_string = inspect.getdoc(obj)
 
@@ -70,13 +101,13 @@ def marshall(proto, obj):
     if doc_string is None:
         doc_string = "No docs available."
 
-    proto.doc_string.doc_string = doc_string
+    doc_string_proto.doc_string = doc_string
 
 
 def _get_signature(f):
     is_delta_gen = False
     try:
-        is_delta_gen = f.__module__ == "streamlit.DeltaGenerator"
+        is_delta_gen = f.__module__ == "streamlit.delta_generator"
 
         if is_delta_gen:
             # DeltaGenerator functions are doubly wrapped, and their function
@@ -107,21 +138,8 @@ def _get_signature(f):
 
 
 def _unwrap_decorated_func(f):
-    if hasattr(f, "func_closure"):
-        try:
-            # Python 2 way.
-            while getattr(f, "func_closure"):
-                contents = f.func_closure[0].cell_contents
-                if not callable(contents):
-                    break
-                f = contents
-            return f
-        except AttributeError:
-            pass
-
     if hasattr(f, "__wrapped__"):
         try:
-            # Python 3 way.
             while getattr(f, "__wrapped__"):
                 contents = f.__wrapped__
                 if not callable(contents):
@@ -131,6 +149,6 @@ def _unwrap_decorated_func(f):
         except AttributeError:
             pass
 
-    # Fall back to original function, though it's unlikely we'll reach 
+    # Fall back to original function, though it's unlikely we'll reach
     # this part of the code.
     return f

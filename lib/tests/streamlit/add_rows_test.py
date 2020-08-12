@@ -16,7 +16,7 @@
 
 import pandas as pd
 
-from streamlit.ReportThread import get_report_ctx
+from streamlit.report_thread import get_report_ctx
 import streamlit as st
 import streamlit.elements.data_frame_proto as data_frame_proto
 from tests import testutil

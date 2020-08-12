@@ -14,15 +14,16 @@
 
 """Unit tests for the Streamlit CLI."""
 
+from unittest import mock
+from unittest.mock import MagicMock, patch
 import unittest
 
 import os
+import sys
 
 import requests
 import requests_mock
-import mock
 from click.testing import CliRunner
-from mock import patch, MagicMock
 from parameterized import parameterized
 from testfixtures import tempdir
 
@@ -31,7 +32,8 @@ from streamlit import cli
 from streamlit import config
 from streamlit.cli import _convert_config_option_to_click_option
 from streamlit.cli import _apply_config_options_from_cli
-from streamlit.ConfigOption import ConfigOption
+from streamlit.cli import NEW_VERSION_TEXT
+from streamlit.config_option import ConfigOption
 
 
 class CliTest(unittest.TestCase):
@@ -146,6 +148,16 @@ class CliTest(unittest.TestCase):
                 result = cli._get_command_line_as_string()
                 self.assertEqual("mock_command os_arg1 os_arg2", result)
 
+    def test_get_command_line_without_parent_context(self):
+        """Test that _get_command_line_as_string correctly returns None when
+        there is no context parent
+        """
+        mock_context = MagicMock()
+        mock_context.parent = None
+        with patch("click.get_current_context", return_value=mock_context):
+            result = cli._get_command_line_as_string()
+            self.assertIsNone(result)
+
     def test_running_in_streamlit(self):
         """Test that streamlit._running_in_streamlit is True after
         calling `streamlit run...`, and false otherwise.
@@ -156,6 +168,22 @@ class CliTest(unittest.TestCase):
         ), patch("streamlit.cli._get_command_line_as_string"):
 
             cli._main_run("/not/a/file", None)
+            self.assertTrue(streamlit._is_running_with_streamlit)
+
+    def test_running_in_streamlit_new_version(self):
+        """Test that streamlit echos information about the new version
+        available if needed
+        """
+        self.assertFalse(streamlit._is_running_with_streamlit)
+        with patch("streamlit.cli.bootstrap.run"), mock.patch(
+            "streamlit.credentials.Credentials._check_activated"
+        ), patch("streamlit.cli._get_command_line_as_string"), patch(
+            "streamlit.version.should_show_new_version_notice", return_value=True
+        ), patch(
+            "click.echo"
+        ) as mock_echo:
+            cli._main_run("/not/a/file", None)
+            mock_echo.assert_called_once_with(NEW_VERSION_TEXT)
             self.assertTrue(streamlit._is_running_with_streamlit)
 
     def test_convert_config_option_to_click_option(self):
@@ -177,6 +205,25 @@ class CliTest(unittest.TestCase):
         self.assertEqual(result["description"], config_option.description)
         self.assertEqual(result["envvar"], "STREAMLIT_SERVER_CUSTOM_KEY")
 
+    def test_convert_depecated_config_option_to_click_option(self):
+        """Test that configurator_options adds extra deprecation information
+        to config option's description
+        """
+        config_option = ConfigOption(
+            "deprecated.customKey",
+            description="Custom description.\n\nLine one.",
+            deprecated=True,
+            deprecation_text="Foo",
+            expiration_date="Bar",
+            type_=int,
+        )
+
+        result = _convert_config_option_to_click_option(config_option)
+
+        self.assertEqual(
+            "Custom description.\n\nLine one.\n Foo - Bar", result["description"]
+        )
+
     @patch("streamlit.cli._config._on_config_parsed.send")
     @patch("streamlit.cli._config._set_option")
     def test_apply_config_options_from_cli(
@@ -191,7 +238,7 @@ class CliTest(unittest.TestCase):
             "server_headless": True,
             "browser_serverAddress": "localhost",
             "global_minCachedMessageSize": None,
-            "global_logLevel": "error",
+            "logger_level": "error",
         }
 
         _apply_config_options_from_cli(kwargs)
@@ -212,7 +259,7 @@ class CliTest(unittest.TestCase):
                     "command-line argument or environment variable",
                 ),
                 mock.call(
-                    "global.logLevel",
+                    "logger.level",
                     "error",
                     "command-line argument or environment variable",
                 ),
@@ -220,6 +267,20 @@ class CliTest(unittest.TestCase):
             any_order=True,
         )
         self.assertTrue(patched___send_on_config_parsed.called)
+
+    @patch("streamlit.cli._config._on_config_parsed.send")
+    @patch("streamlit.cli._config._config_file_has_been_parsed", False)
+    @patch("streamlit.cli._config.parse_config_file")
+    def test_apply_config_options_from_file(
+        self, patched_parse_config_file, patched_has_config_been_parsed
+    ):
+        """Test that _apply_config_options_from_cli will parse from file if it
+        is necessary
+        """
+
+        _apply_config_options_from_cli({})
+
+        patched_parse_config_file.assert_called_once()
 
     def test_credentials_headless_no_config(self):
         """If headless mode and no config is present,
@@ -260,3 +321,101 @@ class CliTest(unittest.TestCase):
             result = self.runner.invoke(cli, ["run", "some script.py"])
         self.assertTrue(mock_check.called)
         self.assertEqual(0, result.exit_code)
+
+    def test_help_command(self):
+        """Tests the help command redirects to using the --help flag"""
+        with patch.object(sys, "argv", ["streamlit", "help"]) as args:
+            self.runner.invoke(cli, ["help"])
+            self.assertEqual("--help", args[1])
+
+    def test_version_command(self):
+        """Tests the version command redirects to using the --version flag"""
+        with patch.object(sys, "argv", ["streamlit", "version"]) as args:
+            self.runner.invoke(cli, ["version"])
+            self.assertEqual("--version", args[1])
+
+    def test_docs_command(self):
+        """Tests the docs command opens the browser"""
+        with patch("streamlit.util.open_browser") as mock_open_browser:
+            self.runner.invoke(cli, ["docs"])
+            mock_open_browser.assert_called_once_with("https://docs.streamlit.io")
+
+    def test_hello_command(self):
+        """Tests the hello command runs the hello script in streamlit"""
+        from streamlit.hello import hello
+
+        with patch("streamlit.cli._main_run") as mock_main_run:
+            self.runner.invoke(cli, ["hello"])
+            mock_main_run.assert_called_once_with(hello.__file__)
+
+    def test_hello_command_with_logs(self):
+        """Tests the log level gets specified (using hello as an example"""
+        from streamlit.hello import hello
+
+        with patch("streamlit.cli._main_run"), patch(
+            "streamlit.logger.set_log_level"
+        ) as mock_set_log_level:
+            self.runner.invoke(cli, ["--log_level", "error", "hello"])
+            mock_set_log_level.assert_called_with("ERROR")
+
+    def test_config_show_command(self):
+        """Tests the config show command calls the corresponding method in
+        config
+        """
+        with patch("streamlit.config.show_config") as mock_config:
+            self.runner.invoke(cli, ["config", "show"])
+            mock_config.assert_called()
+
+    @patch("builtins.print")
+    def test_cache_clear_command_with_cache(self, mock_print):
+        """Tests clear cache announces that cache is cleared when completed"""
+        with patch(
+            "streamlit.caching.clear_cache", return_value=True
+        ) as mock_clear_cache:
+            self.runner.invoke(cli, ["cache", "clear"])
+            mock_clear_cache.assert_called()
+            first_call = mock_print.call_args[0]
+            first_arg = first_call[0]
+            self.assertTrue(first_arg.startswith("Cleared directory"))
+
+    @patch("builtins.print")
+    def test_cache_clear_command_without_cache(self, mock_print):
+        """Tests clear cache announces when there is nothing to clear"""
+        with patch(
+            "streamlit.caching.clear_cache", return_value=False
+        ) as mock_clear_cache:
+            self.runner.invoke(cli, ["cache", "clear"])
+            mock_clear_cache.assert_called()
+            first_call = mock_print.call_args[0]
+            first_arg = first_call[0]
+            self.assertTrue(first_arg.startswith("Nothing to clear"))
+
+    def test_activate_command(self):
+        """Tests activating a credential"""
+        mock_credential = MagicMock()
+        with mock.patch(
+            "streamlit.credentials.Credentials.get_current",
+            return_value=mock_credential,
+        ):
+            self.runner.invoke(cli, ["activate"])
+            mock_credential.activate.assert_called()
+
+    def test_activate_without_command(self):
+        """Tests that it doesn't activate the credential when not specified"""
+        mock_credential = MagicMock()
+        with mock.patch(
+            "streamlit.credentials.Credentials.get_current",
+            return_value=mock_credential,
+        ):
+            self.runner.invoke(cli)
+            mock_credential.activate.assert_not_called()
+
+    def test_reset_command(self):
+        """Tests resetting a credential"""
+        mock_credential = MagicMock()
+        with mock.patch(
+            "streamlit.credentials.Credentials.get_current",
+            return_value=mock_credential,
+        ):
+            self.runner.invoke(cli, ["activate", "reset"])
+            mock_credential.reset.assert_called()

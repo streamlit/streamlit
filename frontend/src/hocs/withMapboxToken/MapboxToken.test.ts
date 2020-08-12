@@ -47,14 +47,14 @@ describe("MapboxToken", () => {
 
   afterEach(() => {
     axiosMock.restore()
-    MapboxToken["token"] = undefined
-    MapboxToken["commandLine"] = undefined
-    SessionInfo["singleton"] = undefined
+    MapboxToken.token = undefined
+    MapboxToken.commandLine = undefined
+    SessionInfo.singleton = undefined
   })
 
   test("Returns cached token if defined", async () => {
-    MapboxToken["token"] = "cached"
-    MapboxToken["commandLine"] = "streamlit hello"
+    MapboxToken.token = "cached"
+    MapboxToken.commandLine = "streamlit hello"
 
     await expect(MapboxToken.get()).resolves.toEqual("cached")
   })
@@ -66,19 +66,19 @@ describe("MapboxToken", () => {
     await expect(MapboxToken.get()).resolves.toEqual(userToken)
 
     // The token should also be cached.
-    expect(MapboxToken["token"]).toEqual(userToken)
+    expect(MapboxToken.token).toEqual(userToken)
   })
 
   test("Fetches remote token if userMapboxToken is empty", async () => {
     const remoteToken = "remoteMapboxToken"
 
-    //axiosMock.onGet(TOKENS_URL).reply(200, { "mapbox-localhost": remoteToken })
+    // axiosMock.onGet(TOKENS_URL).reply(200, { "mapbox-localhost": remoteToken })
     axiosMock.onGet(TOKENS_URL).reply(200, { mapbox: remoteToken })
 
     await expect(MapboxToken.get()).resolves.toEqual(remoteToken)
 
     // The token should also be cached.
-    expect(MapboxToken["token"]).toEqual(remoteToken)
+    expect(MapboxToken.token).toEqual(remoteToken)
   })
 
   test("Errors if remote token is missing", async () => {
@@ -89,7 +89,7 @@ describe("MapboxToken", () => {
     )
 
     // No cached token after failure.
-    expect(MapboxToken["token"]).toBeUndefined()
+    expect(MapboxToken.token).toBeUndefined()
 
     axiosMock.onGet(TOKENS_URL).replyOnce(404, {})
     await expect(MapboxToken.get()).rejects.toEqual(
@@ -97,7 +97,7 @@ describe("MapboxToken", () => {
     )
 
     // No cached token after failure.
-    expect(MapboxToken["token"]).toBeUndefined()
+    expect(MapboxToken.token).toBeUndefined()
   })
 
   xit("Errors if not localhost and missing token", async () => {
@@ -119,7 +119,7 @@ describe("MapboxToken", () => {
 
     const remoteToken = "remoteMapboxToken"
 
-    //axiosMock.onGet(TOKENS_URL).reply(200, { "mapbox-localhost": remoteToken })
+    // axiosMock.onGet(TOKENS_URL).reply(200, { "mapbox-localhost": remoteToken })
     axiosMock.onGet(TOKENS_URL).reply(200, { mapbox: remoteToken })
 
     await expect(MapboxToken.get()).resolves.toEqual(remoteToken)

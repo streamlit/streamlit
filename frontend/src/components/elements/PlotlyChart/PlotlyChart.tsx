@@ -47,7 +47,7 @@ export class PlotlyChart extends PureComponent<PropsWithHeight> {
   }
 
   private renderIFrame = (url: string): React.ReactNode => {
-    const width = this.props.width
+    const { width } = this.props
     const height = this.props.height ? this.props.height : DEFAULT_HEIGHT
     return <iframe title="Plotly" src={url} style={{ width, height }} />
   }

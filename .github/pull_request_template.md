@@ -16,4 +16,4 @@ More information in our wiki: https://github.com/streamlit/streamlit/wiki/Contri
 
 **Contribution License Agreement**
 
-By submiting this pull request you agree that all contributions to this project are made under the Apache 2.0 license.
+By submitting this pull request you agree that all contributions to this project are made under the Apache 2.0 license.

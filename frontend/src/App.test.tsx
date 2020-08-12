@@ -72,7 +72,7 @@ describe("App", () => {
   })
 
   afterEach(() => {
-    SessionInfo["singleton"] = undefined
+    SessionInfo.singleton = undefined
   })
 
   it("renders without crashing", () => {

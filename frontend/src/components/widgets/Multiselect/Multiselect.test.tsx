@@ -21,8 +21,8 @@ import { fromJS } from "immutable"
 import { multiSelectOverrides } from "lib/widgetTheme"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
-import Multiselect, { Props } from "./Multiselect"
 import { Select as UISelect, TYPE } from "baseui/select"
+import Multiselect, { Props } from "./Multiselect"
 
 jest.mock("lib/WidgetStateManager")
 

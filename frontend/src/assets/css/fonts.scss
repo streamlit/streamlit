@@ -20,8 +20,8 @@
   font-family: "IBM Plex Mono";
   font-weight: 400;
   font-style: regular;
-  src: url("/assets/fonts/IBM_Plex_Mono/IBMPlexMono-Regular.ttf")
-    format("truetype");
+  /* IMPORTANT: Always use a relative path! */
+  src: url("../fonts/IBM_Plex_Mono/IBMPlexMono-Regular.ttf") format("truetype");
 }
 
 /* Sans, regular */
@@ -30,32 +30,32 @@
   font-family: "IBM Plex Sans";
   font-weight: 300;
   font-style: regular;
-  src: url("/assets/fonts/IBM_Plex_Sans/IBMPlexSans-Light.ttf")
-    format("truetype");
+  /* IMPORTANT: Always use a relative path! */
+  src: url("../fonts/IBM_Plex_Sans/IBMPlexSans-Light.ttf") format("truetype");
 }
 
 @font-face {
   font-family: "IBM Plex Sans";
   font-weight: 400;
   font-style: regular;
-  src: url("/assets/fonts/IBM_Plex_Sans/IBMPlexSans-Regular.ttf")
-    format("truetype");
+  /* IMPORTANT: Always use a relative path! */
+  src: url("../fonts/IBM_Plex_Sans/IBMPlexSans-Regular.ttf") format("truetype");
 }
 
 @font-face {
   font-family: "IBM Plex Sans";
   font-weight: 500;
   font-style: regular;
-  src: url("/assets/fonts/IBM_Plex_Sans/IBMPlexSans-Medium.ttf")
-    format("truetype");
+  /* IMPORTANT: Always use a relative path! */
+  src: url("../fonts/IBM_Plex_Sans/IBMPlexSans-Medium.ttf") format("truetype");
 }
 
 @font-face {
   font-family: "IBM Plex Sans";
   font-weight: 700;
   font-style: regular;
-  src: url("/assets/fonts/IBM_Plex_Sans/IBMPlexSans-Bold.ttf")
-    format("truetype");
+  /* IMPORTANT: Always use a relative path! */
+  src: url("../fonts/IBM_Plex_Sans/IBMPlexSans-Bold.ttf") format("truetype");
 }
 
 /* Sans, italic */
@@ -64,7 +64,8 @@
   font-family: "IBM Plex Sans";
   font-weight: 300;
   font-style: italic;
-  src: url("/assets/fonts/IBM_Plex_Sans/IBMPlexSans-LightItalic.ttf")
+  /* IMPORTANT: Always use a relative path! */
+  src: url("../fonts/IBM_Plex_Sans/IBMPlexSans-LightItalic.ttf")
     format("truetype");
 }
 
@@ -72,15 +73,16 @@
   font-family: "IBM Plex Sans";
   font-weight: 400;
   font-style: italic;
-  src: url("/assets/fonts/IBM_Plex_Sans/IBMPlexSans-Italic.ttf")
-    format("truetype");
+  /* IMPORTANT: Always use a relative path! */
+  src: url("../fonts/IBM_Plex_Sans/IBMPlexSans-Italic.ttf") format("truetype");
 }
 
 @font-face {
   font-family: "IBM Plex Sans";
   font-weight: 500;
   font-style: italic;
-  src: url("/assets/fonts/IBM_Plex_Sans/IBMPlexSans-MediumItalic.ttf")
+  /* IMPORTANT: Always use a relative path! */
+  src: url("../fonts/IBM_Plex_Sans/IBMPlexSans-MediumItalic.ttf")
     format("truetype");
 }
 
@@ -88,6 +90,7 @@
   font-family: "IBM Plex Sans";
   font-weight: 700;
   font-style: italic;
-  src: url("/assets/fonts/IBM_Plex_Sans/IBMPlexSans-BoldItalic.ttf")
+  /* IMPORTANT: Always use a relative path! */
+  src: url("../fonts/IBM_Plex_Sans/IBMPlexSans-BoldItalic.ttf")
     format("truetype");
 }

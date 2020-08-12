@@ -126,7 +126,7 @@ describe("NumberInput widget", () => {
       // @ts-ignore
       InputWrapper.props().onKeyDown({
         key: "ArrowDown",
-        preventDefault: preventDefault,
+        preventDefault,
       })
 
       expect(preventDefault).toHaveBeenCalled()
@@ -217,7 +217,7 @@ describe("NumberInput widget", () => {
       // @ts-ignore
       InputWrapper.props().onKeyDown({
         key: "ArrowUp",
-        preventDefault: preventDefault,
+        preventDefault,
       })
 
       expect(preventDefault).toHaveBeenCalled()
@@ -239,7 +239,7 @@ describe("NumberInput widget", () => {
       // @ts-ignore
       InputWrapper.props().onKeyDown({
         key: "ArrowDown",
-        preventDefault: preventDefault,
+        preventDefault,
       })
 
       expect(preventDefault).toHaveBeenCalled()
