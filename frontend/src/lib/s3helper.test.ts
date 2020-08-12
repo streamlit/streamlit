@@ -49,7 +49,7 @@ function mockWindowLocationHref(href: string): void {
   delete global.window.location
   global.window = Object.create(window)
   Object.defineProperty(window, "location", {
-    value: { href: href },
+    value: { href },
     writable: true,
   })
 }

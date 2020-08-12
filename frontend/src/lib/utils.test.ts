@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-import { getCookie, flattenElements, setCookie } from "./utils"
 import { BlockElement } from "lib/DeltaParser"
 import { List, Set as ImmutableSet, Map as ImmutableMap } from "immutable"
+import { getCookie, flattenElements, setCookie } from "./utils"
 
 describe("flattenElements", () => {
   const simpleElement1 = ImmutableMap({ key1: "value1", key2: "value2" })
@@ -58,7 +58,7 @@ describe("getCookie", () => {
     document.cookie.split(";").forEach(cookie => {
       const eqPos = cookie.indexOf("=")
       const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie
-      document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT"
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT`
     })
   })
 
@@ -112,7 +112,7 @@ describe("setCookie", () => {
     document.cookie.split(";").forEach(cookie => {
       const eqPos = cookie.indexOf("=")
       const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie
-      document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT"
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT`
     })
   })
 

@@ -3,8 +3,21 @@
 # Check https://circleci.com/docs/2.0/language-python/ for more details
 #
 version: 2.1
-
+orbs:
+  slack: circleci/slack@3.4.2
 commands:
+  update-submodules:
+    steps:
+      - run:
+          # `git submodule update --remote` checks out the submodule repo's
+          # HEAD (as opposed to whatever commit is specified in the
+          # submodule). We want to ensure we're always testing against
+          # the most recent commit in our component-template repo.
+          name: Update submodules
+          command: |
+            git submodule init
+            git submodule update --remote
+
   pre-cache:
     steps:
       - run: &get_make_checksum
@@ -219,6 +232,8 @@ jobs:
       - checkout:
           name: Checkout Streamlit code
 
+      - update-submodules
+
       #################################################################
       # Pre Cache Steps
       #################################################################
@@ -333,6 +348,13 @@ jobs:
             - ~/.nvm
             - ~/.cache
 
+      - when:
+          condition: <<pipeline.git.tag>>
+          steps:
+            - slack/status:
+                fail_only: true
+                failure_message: ":blobonfire: Nightly job failed on unit tests"
+
   # The following inherits from python-3-8. In a few cases, steps are skipped
   # based on the name of the current job (see, e.g., "Run frontend tests").
   python-3-6:
@@ -349,6 +371,8 @@ jobs:
     steps:
       - checkout:
           name: Checkout Streamlit code
+
+      - update-submodules
 
       - pre-cache
       - restore-from-cache
@@ -386,6 +410,10 @@ jobs:
             git tag -a $TAG -m "Streamlit nightly $TAG"
             git push origin $TAG
 
+      - slack/status:
+          fail_only: true
+          failure_message: ":blobonfire: Nightly job failed to create a tag"
+
   nightly-release:
     docker:
       - image: circleci/python:3.8.1
@@ -397,6 +425,8 @@ jobs:
     steps:
       - checkout:
           name: Checkout Streamlit code
+
+      - update-submodules
 
       - pre-cache
       - restore-from-cache
@@ -436,6 +466,10 @@ jobs:
           command: |
             make distribute
 
+      - slack/status:
+          fail_only: true
+          failure_message: ":blobonfire: Nightly job failed to release"
+
   cypress:
     docker:
       - image: circleci/python:3.7.4-stretch
@@ -453,6 +487,8 @@ jobs:
     steps:
       - checkout:
           name: Checkout Streamlit code
+
+      - update-submodules
 
       - pre-cache
       - restore-from-cache
@@ -514,3 +550,10 @@ jobs:
 
       - store_artifacts: &store_snapshots
           path: frontend/cypress/snapshots
+
+      - when:
+          condition: <<pipeline.git.tag>>
+          steps:
+            - slack/status:
+                fail_only: true
+                failure_message: ":blobonfire: Nightly job failed on E2E tests"

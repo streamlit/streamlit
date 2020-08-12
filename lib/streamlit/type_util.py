@@ -80,6 +80,10 @@ _DATAFRAME_COMPATIBLE_TYPES = (
 )  # type: Tuple[type, ...]
 
 
+def is_dataframe(obj):
+    return is_type(obj, _PANDAS_DF_TYPE_STR)
+
+
 def is_dataframe_like(obj):
     return any(is_type(obj, t) for t in _DATAFRAME_LIKE_TYPES)
 
@@ -238,3 +242,36 @@ Offending object:
 ```"""
             % {"type": type(df), "object": df,}
         )
+
+
+def ensure_iterable(obj):
+    """Try to convert different formats to something iterable. Most inputs
+    are assumed to be iterable, but if we have a DataFrame, we can just
+    select the first column to iterate over. If the input is not iterable,
+    a TypeError is raised.
+
+    Parameters
+    ----------
+    obj : list, tuple, numpy.ndarray, pandas.Series, or pandas.DataFrame
+
+    Returns
+    -------
+    iterable
+
+    """
+    if is_dataframe(obj):
+        return obj.iloc[:, 0]
+
+    try:
+        iter(obj)
+        return obj
+    except:
+        raise
+
+
+def is_old_pandas_version():
+    """Return True if `pandas` version is < `1.1.0`."""
+    import pandas as pd
+    from packaging import version
+
+    return version.parse(pd.__version__) < version.parse("1.1.0")

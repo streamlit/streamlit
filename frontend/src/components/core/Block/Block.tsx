@@ -54,7 +54,6 @@ const DeckGlChart = React.lazy(() =>
 const DeckGlJsonChart = React.lazy(() =>
   import("components/elements/DeckGlJsonChart/")
 )
-const Favicon = React.lazy(() => import("components/elements/Favicon/"))
 const GraphVizChart = React.lazy(() =>
   import("components/elements/GraphVizChart/")
 )
@@ -109,13 +108,8 @@ class Block extends PureComponent<Props> {
 
         if (element instanceof List) {
           return this.renderBlock(element as BlockElement, index, width)
-        } else {
-          return this.renderElementWithErrorBoundary(
-            reportElement,
-            index,
-            width
-          )
         }
+        return this.renderElementWithErrorBoundary(reportElement, index, width)
       })
       .filter((node: ReactNode | null): ReactNode => node != null)
   }
@@ -125,11 +119,11 @@ class Block extends PureComponent<Props> {
       // If a rerun was just requested, all of our current elements
       // are about to become stale.
       return true
-    } else if (this.props.reportRunState === ReportRunState.RUNNING) {
-      return reportElement.get("reportId") !== this.props.reportId
-    } else {
-      return false
     }
+    if (this.props.reportRunState === ReportRunState.RUNNING) {
+      return reportElement.get("reportId") !== this.props.reportId
+    }
+    return false
   }
 
   private renderBlock(
@@ -193,7 +187,7 @@ class Block extends PureComponent<Props> {
     )
 
     const elementType = element.get("type")
-    const isHidden = elementType === "empty" || elementType === "favicon"
+    const isHidden = elementType === "empty"
     const enable = this.shouldComponentBeEnabled(isHidden)
     const isStale = this.isComponentStale(enable, reportElement)
     const className = Block.getClassNames(isStale, isHidden)
@@ -280,7 +274,6 @@ class Block extends PureComponent<Props> {
       exception: (el: SimpleElement) => (
         <ExceptionElement element={el} width={width} />
       ),
-      favicon: (el: SimpleElement) => <Favicon element={el} />,
       graphvizChart: (el: SimpleElement) => (
         <GraphVizChart element={el} index={index} width={width} />
       ),

@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+// Disable Typescript checking, since mm.track and identify have private scope
+// @ts-nocheck
 import { SessionInfo } from "lib/SessionInfo"
 import { getMetricsManagerForTest } from "lib/MetricsManagerTestUtils"
 
@@ -32,7 +34,8 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  SessionInfo["singleton"] = undefined
+  SessionInfo.singleton = undefined
+  window.analytics = undefined
 })
 
 test("does not track while uninitialized", () => {
@@ -42,8 +45,8 @@ test("does not track while uninitialized", () => {
   mm.enqueue("ev2", { data2: 12 })
   mm.enqueue("ev3", { data3: 13 })
 
-  expect(mm["track"].mock.calls.length).toBe(0)
-  expect(mm["identify"].mock.calls.length).toBe(0)
+  expect(mm.track.mock.calls.length).toBe(0)
+  expect(mm.identify.mock.calls.length).toBe(0)
 })
 
 test("does not track when initialized with gatherUsageStats=false", () => {
@@ -54,8 +57,25 @@ test("does not track when initialized with gatherUsageStats=false", () => {
   mm.enqueue("ev2", { data2: 12 })
   mm.enqueue("ev3", { data3: 13 })
 
-  expect(mm["track"].mock.calls.length).toBe(0)
-  expect(mm["identify"].mock.calls.length).toBe(0)
+  expect(mm.track.mock.calls.length).toBe(0)
+  expect(mm.identify.mock.calls.length).toBe(0)
+})
+
+test("does not initialize Segment analytics when gatherUsageStats=false", () => {
+  const mm = getMetricsManagerForTest()
+  expect(window.analytics).toBeUndefined()
+  mm.initialize({ gatherUsageStats: false })
+  expect(window.analytics).toBeUndefined()
+})
+
+test("initializes Segment analytics when gatherUsageStats=true", () => {
+  const mm = getMetricsManagerForTest()
+  expect(window.analytics).toBeUndefined()
+  mm.initialize({ gatherUsageStats: true })
+  expect(window.analytics).toBeDefined()
+  expect(window.analytics.invoked).toBe(true)
+  expect(window.analytics.methods).toHaveLength(20)
+  expect(window.analytics.load).toBeDefined()
 })
 
 test("enqueues events before initialization", () => {
@@ -65,25 +85,25 @@ test("enqueues events before initialization", () => {
   mm.enqueue("ev2", { data2: 12 })
   mm.enqueue("ev3", { data3: 13 })
 
-  expect(mm["track"].mock.calls.length).toBe(0)
+  expect(mm.track.mock.calls.length).toBe(0)
 
   mm.initialize({ gatherUsageStats: true })
 
-  expect(mm["track"].mock.calls.length).toBe(3)
-  expect(mm["identify"].mock.calls.length).toBe(1)
+  expect(mm.track.mock.calls.length).toBe(3)
+  expect(mm.identify.mock.calls.length).toBe(1)
 })
 
 test("tracks events immediately after initialized", () => {
   const mm = getMetricsManagerForTest()
   mm.initialize({ gatherUsageStats: true })
 
-  expect(mm["track"].mock.calls.length).toBe(0)
+  expect(mm.track.mock.calls.length).toBe(0)
   mm.enqueue("ev1", { data1: 11 })
-  expect(mm["track"].mock.calls.length).toBe(1)
+  expect(mm.track.mock.calls.length).toBe(1)
   mm.enqueue("ev2", { data2: 12 })
-  expect(mm["track"].mock.calls.length).toBe(2)
+  expect(mm.track.mock.calls.length).toBe(2)
   mm.enqueue("ev3", { data3: 13 })
-  expect(mm["track"].mock.calls.length).toBe(3)
+  expect(mm.track.mock.calls.length).toBe(3)
 })
 
 test("increments deltas", () => {

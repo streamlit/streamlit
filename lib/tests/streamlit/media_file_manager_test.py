@@ -14,16 +14,16 @@
 
 """Unit tests for MediaFileManager"""
 
+from unittest import mock
 import unittest
-import mock
 import random
 import time
 
 from tornado.testing import AsyncTestCase
 
-from streamlit.MediaFileManager import MediaFileManager
-from streamlit.MediaFileManager import _calculate_file_id
-from streamlit.MediaFileManager import KEEP_DELAY_SEC
+from streamlit.media_file_manager import MediaFileManager
+from streamlit.media_file_manager import _calculate_file_id
+from streamlit.media_file_manager import KEEP_DELAY_SEC
 
 
 def random_coordinates():
@@ -103,7 +103,7 @@ class MediaFileManagerTest(AsyncTestCase):
             _calculate_file_id(fake_bytes, "video/mp4"),
         )
 
-    @mock.patch("streamlit.MediaFileManager._get_session_id")
+    @mock.patch("streamlit.media_file_manager._get_session_id")
     def test_add_files(self, _get_session_id):
         """Test that MediaFileManager.add works as expected."""
         _get_session_id.return_value = "SESSION1"
@@ -128,7 +128,7 @@ class MediaFileManagerTest(AsyncTestCase):
         # There should only be 1 session with registered files.
         self.assertEqual(len(self.mfm._files_by_session_and_coord), 1)
 
-    @mock.patch("streamlit.MediaFileManager._get_session_id")
+    @mock.patch("streamlit.media_file_manager._get_session_id")
     @mock.patch("time.time")
     def test_add_files_same_coord(self, _time, _get_session_id):
         """Test that MediaFileManager.add works as expected."""
@@ -162,7 +162,7 @@ class MediaFileManagerTest(AsyncTestCase):
         # There should only be 0 session with registered files.
         self.assertEqual(len(self.mfm._files_by_session_and_coord), 0)
 
-    @mock.patch("streamlit.MediaFileManager._get_session_id")
+    @mock.patch("streamlit.media_file_manager._get_session_id")
     def test_add_file_already_exists_same_coord(self, _get_session_id):
         _get_session_id.return_value = "SESSION1"
 
@@ -183,7 +183,7 @@ class MediaFileManagerTest(AsyncTestCase):
         # There should only be 1 session with registered files.
         self.assertEqual(len(self.mfm._files_by_session_and_coord), 1)
 
-    @mock.patch("streamlit.MediaFileManager._get_session_id")
+    @mock.patch("streamlit.media_file_manager._get_session_id")
     def test_add_file_already_exists_different_coord(self, _get_session_id):
         _get_session_id.return_value = "SESSION1"
 
@@ -205,7 +205,7 @@ class MediaFileManagerTest(AsyncTestCase):
         # There should only be 1 session with registered files.
         self.assertEqual(len(self.mfm._files_by_session_and_coord), 1)
 
-    @mock.patch("streamlit.MediaFileManager._get_session_id")
+    @mock.patch("streamlit.media_file_manager._get_session_id")
     def test_add_file_different_mimetypes(self, _get_session_id):
         """Test that we create a new file if new mimetype, even with same bytes for content."""
         _get_session_id.return_value = "SESSION1"
@@ -225,7 +225,7 @@ class MediaFileManagerTest(AsyncTestCase):
         # There should be only 1 session with registered files.
         self.assertEqual(len(self.mfm._files_by_session_and_coord), 1)
 
-    @mock.patch("streamlit.MediaFileManager._get_session_id")
+    @mock.patch("streamlit.media_file_manager._get_session_id")
     @mock.patch("time.time")
     def test_clear_session_files(self, _time, _get_session_id):
         """Test that MediaFileManager removes session maps when requested (even if empty)."""
@@ -267,7 +267,7 @@ class MediaFileManagerTest(AsyncTestCase):
         self.assertEqual(len(self.mfm), 0)  # Now this is cleared too!
         self.assertEqual(len(self.mfm._files_by_session_and_coord), 0)
 
-    @mock.patch("streamlit.MediaFileManager._get_session_id")
+    @mock.patch("streamlit.media_file_manager._get_session_id")
     def test_add_file_multiple_sessions_then_clear(self, _get_session_id):
         _get_session_id.return_value = "SESSION1"
 
