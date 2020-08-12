@@ -70,7 +70,7 @@ class SelectSliderMixin:
 
         # Convert element to index of the elements
         if is_range_value:
-            slider_value = list(map(lambda v: options.index(v), value))
+            slider_value = list(map(lambda v: options.index(v), value)) # type: ignore[no-any-return]
             start, end = slider_value
             if start > end:
                 slider_value = [end, start]
@@ -115,8 +115,8 @@ class SelectSliderMixin:
             # Widget has not been used; fallback to the original value,
             current_value = slider_value
 
-        # The widget always returns a float array, so convert to ints
-        current_value = list(map(lambda x: options[int(x)], current_value))
+        # The widget always returns floats, so convert to ints before indexing
+        current_value = list(map(lambda x: options[int(x)], current_value)) # type: ignore[no-any-return]
 
         # If the original value was a list/tuple, so will be the output (and vice versa)
         return_value = tuple(current_value) if is_range_value else current_value[0]

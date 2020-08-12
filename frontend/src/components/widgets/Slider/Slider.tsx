@@ -99,7 +99,7 @@ class Slider extends React.PureComponent<Props, State> {
   private setAriaValueText = (sliderRoleRef: Element, index: number): void => {
     const options = this.props.element.get("options")
     if (options.size > 0 || this.isDateTimeType()) {
-      const value = this.value
+      const { value } = this
       if (index < value.length) {
         sliderRoleRef.setAttribute(
           "aria-valuetext",
@@ -176,9 +176,9 @@ class Slider extends React.PureComponent<Props, State> {
 
     if (options.size > 0) {
       return sprintf(format, options.get(value))
-    } else {
-      return sprintf(format, value)
     }
+
+    return sprintf(format, value)
   }
 
   private renderThumbValue = (data: {
