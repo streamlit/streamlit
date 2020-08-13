@@ -121,9 +121,11 @@ class RetriesExceeded(Exception):
 def server_port_is_manually_set():
     return config.is_manually_set("server.port")
 
+
 def server_address_is_unix_socket():
     address = config.get_option("server.address")
     return address and address.startswith(UNIX_SOCKET_PREFIX)
+
 
 def start_listening(app):
     """Makes the server start listening at the configured port.
@@ -145,7 +147,7 @@ def start_listening(app):
 
 def start_listening_unix_socket(http_server):
     address = config.get_option("server.address")
-    file_name = os.path.expanduser(address[len(UNIX_SOCKET_PREFIX):])
+    file_name = os.path.expanduser(address[len(UNIX_SOCKET_PREFIX) :])
 
     unix_socket = tornado.netutil.bind_unix_socket(file_name)
     http_server.add_socket(unix_socket)

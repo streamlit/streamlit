@@ -182,7 +182,9 @@ def _print_url(is_running_hello):
             ("URL", Report.get_url(config.get_option("browser.serverAddress")))
         ]
 
-    elif config.is_manually_set("server.address") and not server_address_is_unix_socket():
+    elif (
+        config.is_manually_set("server.address") and not server_address_is_unix_socket()
+    ):
         named_urls = [
             ("URL", Report.get_url(config.get_option("server.address"))),
         ]

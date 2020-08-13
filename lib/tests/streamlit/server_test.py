@@ -564,8 +564,6 @@ class UnixSocketTest(unittest.TestCase):
     def test_unix_socket(self):
         app = mock.MagicMock()
 
-        os.environ["HOME"] = "/home/koen"
-
         config.set_option("server.address", "unix://~/fancy-test/testasd")
         some_socket = object()
 
@@ -574,10 +572,14 @@ class UnixSocketTest(unittest.TestCase):
             tornado.httpserver, "HTTPServer", return_value=mock_server
         ), patch.object(
             tornado.netutil, "bind_unix_socket", return_value=some_socket
-        ) as bind_unix_socket:
+        ) as bind_unix_socket, patch.dict(
+            os.environ, {"HOME": "/home/superfakehomedir"}
+        ):
             start_listening(app)
 
-            bind_unix_socket.assert_called_with("/home/koen/fancy-test/testasd")
+            bind_unix_socket.assert_called_with(
+                "/home/superfakehomedir/fancy-test/testasd"
+            )
             mock_server.add_socket.assert_called_with(some_socket)
 
 
