@@ -84,7 +84,7 @@ describe("Video Element", () => {
       expect(iframeWrapper.props()).toMatchSnapshot()
     })
 
-    it("should render a youtube iframe with an starting time", () => {
+    it("should render a youtube iframe with a starting time", () => {
       const props = getProps({
         type: VideoProto.Type.YOUTUBE_IFRAME,
         startTime: 10,
@@ -101,11 +101,11 @@ describe("Video Element", () => {
     const wrapper = mount(<Video {...props} />)
     const videoElement: HTMLVideoElement = wrapper.find("video").getDOMNode()
 
-    it("current time should be set to startTime on mount", () => {
+    it("should set the current time to startTime on mount", () => {
       expect(videoElement.currentTime).toBe(0)
     })
 
-    it("current time should update when startTime is changed", () => {
+    it("should update the current time when startTime is changed", () => {
       wrapper.setProps(getProps({ startTime: 10 }))
       expect(videoElement.currentTime).toBe(10)
     })
