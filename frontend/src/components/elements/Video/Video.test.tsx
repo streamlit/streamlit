@@ -84,7 +84,7 @@ describe("Video Element", () => {
       expect(iframeWrapper.props()).toMatchSnapshot()
     })
 
-    it("should render a youtube iframe with a starting time", () => {
+    it("should render a youtube iframe with an starting time", () => {
       const props = getProps({
         type: VideoProto.Type.YOUTUBE_IFRAME,
         startTime: 10,
