@@ -27,7 +27,7 @@ import RemarkMathPlugin from "remark-math"
 import RemarkEmoji from "remark-emoji"
 import CodeBlock from "components/elements/CodeBlock/"
 
-import { slugify } from "../../../src/lib/utils"
+import { slugify, findTheHeading } from "../../../src/lib/utils"
 
 import "katex/dist/katex.min.css"
 
@@ -52,6 +52,12 @@ export interface Props {
   anchor?: string
 }
 
+interface HeadingProps {
+  children: [ReactElement]
+  level: number
+  anchor: string
+}
+
 /**
  * Wraps the <ReactMarkdown> component to include our standard
  * renderers and AST plugins (for syntax highlighting, HTML support, etc).
@@ -69,13 +75,15 @@ export class StreamlitMarkdown extends PureComponent<Props> {
 
   public render = (): ReactNode => {
     const { source, allowHTML, anchor } = this.props
+    const usedHeadings: string[] = []
 
     const headingWithAnchorTag = (props: HeadingProps): ReactElement => {
       if (props.level > 3) {
         return React.createElement(`h${props.level}`, {}, props.children)
       }
-      // TODO: add functionality for st.write(markdown)
-      const cleanedAnchor = slugify(anchor) || slugify(source.split("\n")[0])
+      // TODO: add better/robust functionality for st.write(markdown)
+      const cleanedAnchor =
+        slugify(anchor) || slugify(findTheHeading(source, usedHeadings))
 
       return (
         <a className="heading-anchor" href={`#${cleanedAnchor}`}>
@@ -114,12 +122,6 @@ export class StreamlitMarkdown extends PureComponent<Props> {
       />
     )
   }
-}
-
-interface HeadingProps {
-  children: [ReactElement]
-  level: number
-  anchor: string
 }
 
 interface LinkProps {
