@@ -18,9 +18,9 @@
 import React from "react"
 import { shallow } from "enzyme"
 import { Map as ImmutableMap } from "immutable"
-import Text, { Props } from "./Text"
+import Text, { TextProps } from "./Text"
 
-const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
+const getProps = (elementProps: Record<string, unknown> = {}): TextProps => ({
   element: ImmutableMap({
     body: "some plain text",
     ...elementProps,

@@ -19,9 +19,11 @@ import React from "react"
 import { shallow } from "enzyme"
 import { fromJS } from "immutable"
 
-import { ImageList, Props } from "./ImageList"
+import { ImageList, ImageListProps } from "./ImageList"
 
-const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
+const getProps = (
+  elementProps: Record<string, unknown> = {}
+): ImageListProps => ({
   element: fromJS({
     imgs: [
       {
