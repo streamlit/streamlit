@@ -49,7 +49,7 @@ export interface Props {
    * Default: set to "slugified" (a b c -> a-b-c) heading text.
    * Optional: set to anchor parameter (second argument).
    */
-  anchor?: string | undefined
+  anchor?: string
 }
 
 /**
@@ -74,19 +74,17 @@ export class StreamlitMarkdown extends PureComponent<Props> {
       if (props.level > 3) {
         return React.createElement(`h${props.level}`, {}, props.children)
       }
-
-      const cleanedAnchor = slugify(anchor)
+      // TODO: add functionality for st.write(markdown)
+      const cleanedAnchor = slugify(anchor) || slugify(source.split("\n")[0])
 
       return (
-        <Fragment>
-          <a className="heading-anchor" href={`#${cleanedAnchor}`}>
-            {React.createElement(
-              `h${props.level}`,
-              { id: cleanedAnchor },
-              props.children
-            )}
-          </a>
-        </Fragment>
+        <a className="heading-anchor" href={`#${cleanedAnchor}`}>
+          {React.createElement(
+            `h${props.level}`,
+            { id: cleanedAnchor },
+            props.children
+          )}
+        </a>
       )
     }
 
