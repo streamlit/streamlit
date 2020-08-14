@@ -35,3 +35,19 @@ class ReportContextTest(unittest.TestCase):
         ctx.enqueue(markdown_msg)
         with self.assertRaises(StreamlitAPIException):
             ctx.enqueue(msg)
+
+    def test_set_page_config_reset(self):
+        """st.set_page_config should be allowed after a rerun"""
+
+        fake_enqueue = lambda msg: None
+        ctx = ReportContext("TestSessionID", fake_enqueue, "", None, MagicMock(), None)
+
+        msg = ForwardMsg()
+        msg.page_config_changed.title = "foo"
+
+        ctx.enqueue(msg)
+        ctx.reset()
+        try:
+            ctx.enqueue(msg)
+        except StreamlitAPIException:
+            self.fail("set_page_config should have succeeded after reset!")
