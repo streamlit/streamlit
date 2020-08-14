@@ -84,7 +84,7 @@ class Slider extends React.PureComponent<Props, State> {
     this.props.widgetMgr.setFloatArrayValue(widgetId, this.state.value, source)
   }
 
-  private getAriaValueText = (thumbIndex: number): String | undefined => {
+  private getAriaValueText = (thumbIndex: number): string | undefined => {
     // Setting `aria-valuetext` helps screen readers read options and dates
     const options = this.props.element.get("options")
     if (options.size > 0 || this.isDateTimeType()) {
@@ -208,7 +208,7 @@ class Slider extends React.PureComponent<Props, State> {
     const min = this.props.element.get("min")
     const max = this.props.element.get("max")
     const step = this.props.element.get("step")
-    const value = this.value
+    const { value } = this
 
     return (
       <div ref={this.sliderRef} className="Widget stSlider" style={style}>
