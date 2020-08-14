@@ -58,7 +58,6 @@ class ReportContext(object):
         self.widgets = widgets
         self.widget_ids_this_run = widget_ids_this_run
         self.uploaded_file_mgr = uploaded_file_mgr
-
         # set_page_config is allowed at most once, as the very first st.command
         self._set_page_config_allowed = True
 
@@ -66,6 +65,8 @@ class ReportContext(object):
         self.cursors = {}
         self.widget_ids_this_run.clear()
         self.query_string = query_string
+        # Permit set_page_config when the ReportContext is reused on a rerun
+        self._set_page_config_allowed = True
 
     def enqueue(self, msg):
         if msg.HasField("page_config_changed") and not self._set_page_config_allowed:
