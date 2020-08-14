@@ -27,7 +27,7 @@ import RemarkMathPlugin from "remark-math"
 import RemarkEmoji from "remark-emoji"
 import CodeBlock from "components/elements/CodeBlock/"
 
-import { slugify, findTheHeading } from "../../../src/lib/utils"
+import { slugify, findTheHeading } from "../../lib/utils"
 
 import "katex/dist/katex.min.css"
 

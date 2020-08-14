@@ -154,7 +154,7 @@ export function setCookie(
  * 'a b c' -> 'a-b-c'
  */
 export function slugify(text: string | undefined): string | undefined {
-  if (!text) return
+  if (!text) return ""
 
   return text
     .toString()
