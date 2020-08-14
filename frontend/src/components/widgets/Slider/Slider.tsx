@@ -60,24 +60,23 @@ class Slider extends React.PureComponent<Props, State> {
 
   public componentDidMount = (): void => {
     // Attach click event listener to slider knobs.
-    this.getAllSliderRoles().forEach((knob, index) => {
-      knob.addEventListener("click", this.handleClick)
-      this.setAriaValueText(knob, index)
-    })
+    if (this.sliderRef.current) {
+      const knobSelector = '[role="slider"]'
+      const knobs = this.sliderRef.current.querySelectorAll(knobSelector)
+      knobs.forEach(knob => knob.addEventListener("click", this.handleClick))
+    }
     this.setWidgetValueImmediately({ fromUi: false })
-  }
-
-  public componentDidUpdate = (): void => {
-    this.getAllSliderRoles().forEach((knob, index) => {
-      this.setAriaValueText(knob, index)
-    })
   }
 
   public componentWillUnmount = (): void => {
     // Remove click event listener from slider knobs.
-    this.getAllSliderRoles().forEach(knob => {
-      knob.removeEventListener("click", this.handleClick)
-    })
+    if (this.sliderRef.current) {
+      const knobSelector = '[role="slider"]'
+      const knobs = this.sliderRef.current.querySelectorAll(knobSelector)
+      knobs.forEach(knob =>
+        knob.removeEventListener("click", this.handleClick)
+      )
+    }
   }
 
   private setWidgetValueImmediately = (source: Source): void => {
@@ -85,29 +84,17 @@ class Slider extends React.PureComponent<Props, State> {
     this.props.widgetMgr.setFloatArrayValue(widgetId, this.state.value, source)
   }
 
-  private getAllSliderRoles = (): Element[] => {
-    if (!this.sliderRef.current) {
-      return []
-    }
-
-    const knobSelector = '[role="slider"]'
-    const knobs = this.sliderRef.current.querySelectorAll(knobSelector)
-
-    return Array.from(knobs)
-  }
-
-  private setAriaValueText = (sliderRoleRef: Element, index: number): void => {
+  private getAriaValueText = (thumbIndex: number): String | undefined => {
     // Setting `aria-valuetext` helps screen readers read options and dates
     const options = this.props.element.get("options")
     if (options.size > 0 || this.isDateTimeType()) {
       const { value } = this
-      if (index < value.length) {
-        sliderRoleRef.setAttribute(
-          "aria-valuetext",
-          this.formatValue(value[index])
-        )
+      if (thumbIndex < value.length) {
+        return this.formatValue(value[thumbIndex])
       }
     }
+
+    return undefined
   }
 
   private handleChange = ({ value }: { value: number[] }): void => {
@@ -221,6 +208,7 @@ class Slider extends React.PureComponent<Props, State> {
     const min = this.props.element.get("min")
     const max = this.props.element.get("max")
     const step = this.props.element.get("step")
+    const value = this.value
 
     return (
       <div ref={this.sliderRef} className="Widget stSlider" style={style}>
@@ -229,7 +217,7 @@ class Slider extends React.PureComponent<Props, State> {
           min={min}
           max={max}
           step={step}
-          value={this.value}
+          value={value}
           onChange={this.handleChange}
           onFinalChange={this.handleFinalChange}
           disabled={this.props.disabled}
@@ -237,6 +225,12 @@ class Slider extends React.PureComponent<Props, State> {
             ...sliderOverrides,
             ThumbValue: this.renderThumbValue,
             TickBar: this.renderTickBar,
+            Thumb: {
+              props: (props: { [key: string]: any }) => ({
+                ...props,
+                "aria-valuetext": this.getAriaValueText(props.$thumbIndex),
+              }),
+            },
           }}
         />
       </div>
