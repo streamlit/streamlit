@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,13 +15,6 @@
  * limitations under the License.
  */
 
-@import "src/assets/css/variables";
-
-.stAlert {
-  &.alert {
-    // Needed to get precedence.
-    margin: 0;
-  }
-
-  // See write.scss for more.
-}
+import { KindTypeT as AlertKindTypeT } from "./AlertContainer"
+export { default, KIND } from "./AlertContainer"
+export type KindTypeT = AlertKindTypeT
