@@ -226,6 +226,7 @@ class Slider extends React.PureComponent<Props, State> {
             ThumbValue: this.renderThumbValue,
             TickBar: this.renderTickBar,
             Thumb: {
+              ...sliderOverrides.Thumb,
               props: (props: { [key: string]: any }) => ({
                 ...props,
                 "aria-valuetext": this.getAriaValueText(props.$thumbIndex),
