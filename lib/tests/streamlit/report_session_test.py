@@ -107,35 +107,6 @@ class ReportSessionTest(unittest.TestCase):
         func.assert_not_called()
 
     @patch("streamlit.report_session.LocalSourcesWatcher")
-    def test_set_page_config_immutable(self, _1):
-        """st.set_page_config must be called at most once"""
-        file_mgr = MagicMock(spec=UploadedFileManager)
-        rs = ReportSession(None, "", "", file_mgr)
-
-        msg = ForwardMsg()
-        msg.page_config_changed.title = "foo"
-
-        rs.enqueue(msg)
-        with self.assertRaises(StreamlitAPIException):
-            rs.enqueue(msg)
-
-    @patch("streamlit.report_session.LocalSourcesWatcher")
-    def test_set_page_config_first(self, _1):
-        """st.set_page_config must be called before other st commands"""
-        file_mgr = MagicMock(spec=UploadedFileManager)
-        rs = ReportSession(None, "", "", file_mgr)
-
-        markdown_msg = ForwardMsg()
-        markdown_msg.delta.new_element.markdown.body = "foo"
-
-        msg = ForwardMsg()
-        msg.page_config_changed.title = "foo"
-
-        rs.enqueue(markdown_msg)
-        with self.assertRaises(StreamlitAPIException):
-            rs.enqueue(msg)
-
-    @patch("streamlit.report_session.LocalSourcesWatcher")
     def test_shutdown(self, _1):
         """Test that ReportSession.shutdown behaves sanely."""
         file_mgr = MagicMock(spec=UploadedFileManager)
