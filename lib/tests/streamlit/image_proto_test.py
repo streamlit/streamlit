@@ -156,6 +156,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
             (IMAGES["img_32_32_3_rgb"]["np"], "/media/",),
             ("https://streamlit.io/test.png", "https://streamlit.io/test.png",),
             ("<svg fake></svg>", "data:image/svg+xml,<svg fake></svg>",),
+            ("\n<svg fake></svg>", "data:image/svg+xml,\n<svg fake></svg>",),
             ("🦈", "🦈",),
             (":shark:", ":shark:",),
         ]

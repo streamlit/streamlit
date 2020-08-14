@@ -1,6 +1,6 @@
 {
   "name": "streamlit-browser",
-  "version": "0.64.0",
+  "version": "0.65.0",
   "private": true,
   "homepage": "./",
   "scripts": {
@@ -162,7 +162,7 @@
     "jquery": "^3.5.1",
     "kind-of": "^6.0.3",
     "minimist": "^0.2.1",
-    "serialize-javascript": "^2.1.1",
+    "serialize-javascript": "^3.1.0",
     "static-eval": "^2.0.5",
     "websocket-extensions": "^0.1.4"
   },

@@ -22,7 +22,7 @@ import { BokehChart as BokehChartProto } from "autogen/proto"
 
 import Figure from "./mock"
 
-import { PropsWithHeight } from "./BokehChart"
+import { BokehChartProps } from "./BokehChart"
 
 const mockBokehEmbed = {
   embed: {
@@ -37,7 +37,7 @@ const { BokehChart } = require("./BokehChart")
 
 const getProps = (
   elementProps: Partial<BokehChartProto> = {}
-): PropsWithHeight => ({
+): BokehChartProps => ({
   element: fromJS({
     figure: JSON.stringify(Figure),
     useContainerWidth: false,
@@ -129,15 +129,12 @@ describe("BokehChart element", () => {
 
   it("should re-render the chart when the component updates", () => {
     const props = getProps()
-    const wrapper = shallow(<BokehChart {...props} />, {
-      attachTo: window.domNode,
-    })
-
+    // shallow does not work with useEffect hooks
+    const wrapper = mount(<BokehChart {...props} />)
     wrapper.setProps({
       width: 500,
       height: 500,
     })
-
     expect(mockBokehEmbed.embed.embed_item).toHaveBeenCalledTimes(2)
   })
 })

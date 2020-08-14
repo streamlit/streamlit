@@ -719,7 +719,7 @@ def stop():
     >>> if not name:
     >>>   st.warning('Please input a name.')
     >>>   st.stop()
-    >>> st.succcess('Thank you for inputting a name.')
+    >>> st.success('Thank you for inputting a name.')
 
     """
     raise StopException()
