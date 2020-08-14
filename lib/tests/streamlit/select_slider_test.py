@@ -25,7 +25,7 @@ from tests import testutil
 class SliderTest(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall slider protos."""
 
-    def test_just_label(self):
+    def test_no_value(self):
         """Test that it can be called with no value."""
         st.select_slider("the label", options=["red", "orange", "yellow"])
 

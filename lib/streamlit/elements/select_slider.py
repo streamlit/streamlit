@@ -1,7 +1,5 @@
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.errors import StreamlitAPIException
-from streamlit.js_number import JSNumber
-from streamlit.js_number import JSNumberBoundsException
 from streamlit.type_util import ensure_iterable
 from .utils import _get_widget_ui_value
 
@@ -19,7 +17,7 @@ class SelectSliderMixin:
         label : str or None
             A short label explaining to the user what this slider is for.
         options : list, tuple, numpy.ndarray, pandas.Series, or pandas.DataFrame
-            Labels for the slider options. All options be cast to str
+            Labels for the slider options. All options will be cast to str
             internally by default. For pandas.DataFrame, the first column is
             selected.
         value : a supported type or a tuple/list of supported types or None
@@ -83,20 +81,6 @@ class SelectSliderMixin:
                     raise
 
                 slider_value = [0]
-
-        # Bounds checks. JSNumber produces human-readable exceptions that
-        # we simply re-package as StreamlitAPIExceptions.
-        # (We check `options` length here, but it's likely a MemoryError will
-        # be raised first
-        try:
-            JSNumber.validate_int_bounds(len(options) - 1, "`max_value`")
-        except JSNumberBoundsException as e:
-            raise StreamlitAPIException(str(e))
-
-        # It would be great if we could guess the number of decimal places from
-        # the `step` argument, but this would only be meaningful if step were a
-        # decimal. As a possible improvement we could make this function accept
-        # decimals and/or use some heuristics for floats.
 
         slider_proto = SliderProto()
         slider_proto.label = label
