@@ -97,6 +97,7 @@ class Slider extends React.PureComponent<Props, State> {
   }
 
   private setAriaValueText = (sliderRoleRef: Element, index: number): void => {
+    // Setting `aria-valuetext` helps screen readers read options and dates
     const options = this.props.element.get("options")
     if (options.size > 0 || this.isDateTimeType()) {
       const { value } = this
