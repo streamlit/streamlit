@@ -120,6 +120,18 @@ pycoverage:
 			--cov-report=term-missing tests/ \
 			$(PYTHON_MODULES)
 
+.PHONY: pycoverage_html
+# Generate HTML report of Python test coverage.
+pycoverage_html:
+	# testing + code coverage
+	cd lib; \
+		PYTHONPATH=. \
+		pytest -v \
+			--junitxml=test-reports/pytest/junit.xml \
+			-l $(foreach dir,$(PYTHON_MODULES),--cov=$(dir)) \
+			--cov-report=html tests/ \
+			$(PYTHON_MODULES)
+
 .PHONY: mypy
 # Run Mypy static type checker.
 mypy:
@@ -299,7 +311,7 @@ jscoverage:
 .PHONY: e2etest
 # Run E2E tests.
 e2etest:
-	./scripts/run_e2e_tests.sh
+	./scripts/run_e2e_tests.py
 
 .PHONY: loc
 # Counts the number of lines of code in the project
@@ -322,10 +334,10 @@ notices:
 	# NOTE: This file may need to be manually edited. Look at the Git diff and
 	# the parts that should be edited will be obvious.
 
-	./scripts/append_license.sh frontend/public/assets/font/IBM_Plex_Fonts.LICENSE
-	./scripts/append_license.sh frontend/public/assets/img/Material-Icons.LICENSE
-	./scripts/append_license.sh frontend/public/assets/img/Noto-Emoji-Font.LICENSE
-	./scripts/append_license.sh frontend/public/assets/img/Open-Iconic.LICENSE
+	./scripts/append_license.sh frontend/src/assets/font/IBM_Plex_Fonts.LICENSE
+	./scripts/append_license.sh frontend/src/assets/img/Material-Icons.LICENSE
+	./scripts/append_license.sh frontend/src/assets/img/Noto-Emoji-Font.LICENSE
+	./scripts/append_license.sh frontend/src/assets/img/Open-Iconic.LICENSE
 
 .PHONY: headers
 # Update the license header on all source files.

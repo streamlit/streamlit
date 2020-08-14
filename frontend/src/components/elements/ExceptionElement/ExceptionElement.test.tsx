@@ -16,13 +16,15 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { mount } from "enzyme"
 import { fromJS } from "immutable"
 
 import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
-import ExceptionElement, { Props } from "./ExceptionElement"
+import ExceptionElement, { ExceptionElementProps } from "./ExceptionElement"
 
-const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
+const getProps = (
+  elementProps: Record<string, unknown> = {}
+): ExceptionElementProps => ({
   element: fromJS({
     stackTrace: ["step 1", "step 2", "step 3"],
     type: "RuntimeError",
@@ -35,7 +37,7 @@ const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
 
 describe("ExceptionElement Element", () => {
   const props = getProps()
-  const wrapper = shallow(<ExceptionElement {...props} />)
+  const wrapper = mount(<ExceptionElement {...props} />)
 
   it("renders without crashing", () => {
     expect(wrapper.html()).toMatchSnapshot()
@@ -43,7 +45,6 @@ describe("ExceptionElement Element", () => {
 
   it("should render the complete stack", () => {
     expect(wrapper.find(".stack-trace-title").text()).toBe("Traceback:")
-
     const traceRows = wrapper.find("code .stack-trace-row")
     expect(traceRows.length).toBe(3)
 
@@ -56,7 +57,7 @@ describe("ExceptionElement Element", () => {
     const props = getProps({
       messageIsMarkdown: true,
     })
-    const wrapper = shallow(<ExceptionElement {...props} />)
+    const wrapper = mount(<ExceptionElement {...props} />)
 
     expect(wrapper.find(StreamlitMarkdown).length).toBe(1)
     expect(wrapper.find(StreamlitMarkdown).props()).toMatchSnapshot()
@@ -66,7 +67,7 @@ describe("ExceptionElement Element", () => {
     const props = getProps({
       message: null,
     })
-    const wrapper = shallow(<ExceptionElement {...props} />)
+    const wrapper = mount(<ExceptionElement {...props} />)
 
     expect(wrapper.find("div .message").text()).toBe("RuntimeError")
   })

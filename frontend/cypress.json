@@ -7,5 +7,6 @@
   "screenshotsFolder": "mochawesome-report/assets",
   "trashAssetsBeforeRuns": false,
   "viewportWidth": 1366,
-  "viewportHeight": 768
+  "viewportHeight": 768,
+  "chromeWebSecurity": false
 }

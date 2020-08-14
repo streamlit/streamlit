@@ -93,17 +93,20 @@ import traceback as _traceback
 import types as _types
 import json as _json
 import numpy as _np
+import urllib.parse as _parse
 
 from streamlit import code_util as _code_util
 from streamlit import env_util as _env_util
 from streamlit import source_util as _source_util
 from streamlit import string_util as _string_util
 from streamlit import type_util as _type_util
-from streamlit.DeltaGenerator import DeltaGenerator as _DeltaGenerator
-from streamlit.ReportThread import add_report_ctx as _add_report_ctx
-from streamlit.ReportThread import get_report_ctx as _get_report_ctx
+from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
+from streamlit.report_thread import add_report_ctx as _add_report_ctx
+from streamlit.report_thread import get_report_ctx as _get_report_ctx
+from streamlit.script_runner import StopException
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import BlockPath_pb2 as _BlockPath_pb2
+from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
 
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
@@ -115,15 +118,16 @@ from streamlit.caching import cache as cache  # noqa: F401
 _is_running_with_streamlit = False
 
 
-def _set_log_level():
-    _logger.set_log_level(_config.get_option("global.logLevel").upper())
+def _update_logger():
+    _logger.set_log_level(_config.get_option("logger.level").upper())
+    _logger.update_formatter()
     _logger.init_tornado_logs()
 
 
 # Make this file only depend on config option in an asynchronous manner. This
 # avoids a race condition when another file (such as a test file) tries to pass
 # in an alternative config.
-_config.on_config_parsed(_set_log_level, True)
+_config.on_config_parsed(_update_logger, True)
 
 
 _main = _DeltaGenerator(container=_BlockPath_pb2.BlockPath.MAIN)
@@ -147,7 +151,6 @@ pydeck_chart = _main.pydeck_chart  # noqa: E221
 empty = _main.empty  # noqa: E221
 error = _main.error  # noqa: E221
 exception = _main.exception  # noqa: E221
-beta_set_favicon = _main.favicon  # noqa: E221
 file_uploader = _main.file_uploader  # noqa: E221
 graphviz_chart = _main.graphviz_chart  # noqa: E221
 header = _main.header  # noqa: E221
@@ -183,6 +186,7 @@ beta_color_picker = _main.beta_color_picker  # noqa: E221
 # Config
 
 get_option = _config.get_option
+from streamlit.commands.page_config import beta_set_page_config
 
 
 def set_option(key, value):
@@ -477,7 +481,68 @@ def experimental_show(*args):
 
     except Exception:
         _, exc, exc_tb = _sys.exc_info()
-        exception(exc, exc_tb)  # noqa: F821
+        exception(exc)
+
+
+def experimental_get_query_params():
+    """Return the query parameters that is currently showing in the browser's URL bar.
+
+    Returns
+    -------
+    dict
+      The current query parameters as a dict. "Query parameters" are the part of the URL that comes
+      after the first "?".
+
+    Example
+    -------
+
+    Let's say the user's web browser is at
+    `http://localhost:8501/?show_map=True&selected=asia&selected=america`.
+    Then, you can get the query parameters using the following:
+
+    >>> st.experimental_get_query_params()
+    {"show_map": ["True"], "selected": ["asia", "america"]}
+
+    Note that the values in the returned dict are *always* lists. This is
+    because we internally use Python's urllib.parse.parse_qs(), which behaves
+    this way. And this behavior makes sense when you consider that every item
+    in a query string is potentially a 1-element array.
+
+    """
+    ctx = _get_report_ctx()
+    if ctx is None:
+        return ""
+    return _parse.parse_qs(ctx.query_string)
+
+
+def experimental_set_query_params(**query_params):
+    """Set the query parameters that are shown in the browser's URL bar.
+
+    Parameters
+    ----------
+    **query_params : dict
+        The query parameters to set, as key-value pairs.
+
+    Example
+    -------
+
+    To point the user's web browser to something like
+    "http://localhost:8501/?show_map=True&selected=asia&selected=america",
+    you would do the following:
+
+    >>> st.experimental_set_query_params(
+    ...     show_map=True,
+    ...     selected=["asia", "america"],
+    ... )
+
+    """
+    ctx = _get_report_ctx()
+    if ctx is None:
+        return
+    ctx.query_string = _parse.urlencode(query_params, doseq=True)
+    msg = _ForwardMsg_pb2.ForwardMsg()
+    msg.page_info_changed.query_string = ctx.query_string
+    ctx.enqueue(msg)
 
 
 @_contextlib.contextmanager
@@ -638,3 +703,22 @@ def _maybe_print_repl_warning():
                 ),
                 script_name,
             )
+
+
+def stop():
+    """Stops excecution immediately. Streamlit will not run any statements
+    after `st.stop()`. We recommend rendering an informational message that
+    would explain the stop in execution. When run outside of Streamlit, it
+    will raise an Exception
+
+    Example
+    -------
+
+    >>> name = st.text_input('Name')
+    >>> if not name:
+    >>>   st.warning('Please input a name.')
+    >>>   st.stop()
+    >>> st.success('Thank you for inputting a name.')
+
+    """
+    raise StopException()

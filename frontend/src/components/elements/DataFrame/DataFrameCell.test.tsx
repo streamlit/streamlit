@@ -17,12 +17,14 @@
 
 import React from "react"
 import { shallow } from "enzyme"
+import Icon from "components/shared/Icon"
 import { SortDirection } from "./SortDirection"
 
-import Icon from "components/shared/Icon"
-import DataFrameCell, { Props } from "./DataFrameCell"
+import DataFrameCell, { DataFrameCellProps } from "./DataFrameCell"
 
-const getProps = (props: Partial<Props> = {}): Props => ({
+const getProps = (
+  props: Partial<DataFrameCellProps> = {}
+): DataFrameCellProps => ({
   columnIndex: 0,
   rowIndex: 0,
   className: "dataframe corner",

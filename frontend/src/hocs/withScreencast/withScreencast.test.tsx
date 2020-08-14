@@ -15,18 +15,18 @@
  * limitations under the License.
  */
 
-jest.mock("lib/ScreenCastRecorder")
-
 import React, { ComponentType } from "react"
 import { shallow } from "enzyme"
 
-import withScreencast, { ScreenCastHOC } from "./withScreencast"
 import Countdown from "components/core/Countdown"
+import withScreencast, { ScreenCastHOC } from "./withScreencast"
 import {
   ScreencastDialog,
   UnsupportedBrowserDialog,
   VideoRecordedDialog,
 } from "./components"
+
+jest.mock("lib/ScreenCastRecorder")
 
 const testComponent: ComponentType = () => <div>test</div>
 

@@ -20,9 +20,9 @@ import { shallow } from "enzyme"
 import { fromJS } from "immutable"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
-import TextInput, { Props } from "./TextInput"
 import { Input as UIInput } from "baseui/input"
 import { TextInput as TextInputProto } from "autogen/proto"
+import TextInput, { Props } from "./TextInput"
 
 jest.mock("lib/WidgetStateManager")
 

@@ -55,7 +55,9 @@ interface Props {
  */
 export class ConnectionManager {
   private readonly props: Props
+
   private connection?: WebsocketConnection | StaticConnection
+
   private connectionState: ConnectionState = ConnectionState.INITIAL
 
   constructor(props: Props) {
@@ -84,9 +86,8 @@ export class ConnectionManager {
   public getBaseUriParts(): BaseUriParts | undefined {
     if (this.connection instanceof WebsocketConnection) {
       return this.connection.getBaseUriParts()
-    } else {
-      return undefined
     }
+    return undefined
   }
 
   public sendMessage(obj: BackMsg): void {

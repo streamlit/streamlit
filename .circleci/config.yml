@@ -6,6 +6,18 @@ version: 2.1
 orbs:
   slack: circleci/slack@3.4.2
 commands:
+  update-submodules:
+    steps:
+      - run:
+          # `git submodule update --remote` checks out the submodule repo's
+          # HEAD (as opposed to whatever commit is specified in the
+          # submodule). We want to ensure we're always testing against
+          # the most recent commit in our component-template repo.
+          name: Update submodules
+          command: |
+            git submodule init
+            git submodule update --remote
+
   pre-cache:
     steps:
       - run: &get_make_checksum
@@ -220,6 +232,8 @@ jobs:
       - checkout:
           name: Checkout Streamlit code
 
+      - update-submodules
+
       #################################################################
       # Pre Cache Steps
       #################################################################
@@ -358,6 +372,8 @@ jobs:
       - checkout:
           name: Checkout Streamlit code
 
+      - update-submodules
+
       - pre-cache
       - restore-from-cache
       - pre-make
@@ -410,6 +426,8 @@ jobs:
     steps:
       - checkout:
           name: Checkout Streamlit code
+
+      - update-submodules
 
       - pre-cache
       - restore-from-cache
@@ -468,6 +486,8 @@ jobs:
     steps:
       - checkout:
           name: Checkout Streamlit code
+
+      - update-submodules
 
       - pre-cache
       - restore-from-cache

@@ -22,11 +22,14 @@ import numpy as np
 
 from PIL import Image, ImageFile
 
-from streamlit.errors import StreamlitAPIException
+from streamlit import config
+from streamlit.proto.Image_pb2 import ImageList as ImageListProto
+from streamlit.errors import StreamlitAPIException, StreamlitDeprecationWarning
 from streamlit.logger import get_logger
+from urllib.parse import quote
 from urllib.parse import urlparse
 
-from streamlit.MediaFileManager import media_file_manager
+from streamlit.media_file_manager import media_file_manager
 
 LOGGER = get_logger(__name__)
 
@@ -35,6 +38,119 @@ LOGGER = get_logger(__name__)
 # 730 is the max width of element-container in the frontend, and 2x is for high
 # DPI.
 MAXIMUM_CONTENT_WIDTH = 2 * 730
+
+
+class ImageMixin:
+    def image(
+        dg,
+        image,
+        caption=None,
+        width=None,
+        use_column_width=False,
+        clamp=False,
+        channels="RGB",
+        output_format="auto",
+        **kwargs,
+    ):
+        """Display an image or list of images.
+
+        Parameters
+        ----------
+        image : numpy.ndarray, [numpy.ndarray], BytesIO, str, or [str]
+            Monochrome image of shape (w,h) or (w,h,1)
+            OR a color image of shape (w,h,3)
+            OR an RGBA image of shape (w,h,4)
+            OR a URL to fetch the image from
+            OR an SVG XML string like `<svg xmlns=...</svg>`
+            OR a list of one of the above, to display multiple images.
+        caption : str or list of str
+            Image caption. If displaying multiple images, caption should be a
+            list of captions (one for each image).
+        width : int or None
+            Image width. None means use the image width.
+            Should be set for SVG images, as they have no default image width.
+        use_column_width : bool
+            If True, set the image width to the column width. This takes
+            precedence over the `width` parameter.
+        clamp : bool
+            Clamp image pixel values to a valid range ([0-255] per channel).
+            This is only meaningful for byte array images; the parameter is
+            ignored for image URLs. If this is not set, and an image has an
+            out-of-range value, an error will be thrown.
+        channels : 'RGB' or 'BGR'
+            If image is an nd.array, this parameter denotes the format used to
+            represent color information. Defaults to 'RGB', meaning
+            `image[:, :, 0]` is the red channel, `image[:, :, 1]` is green, and
+            `image[:, :, 2]` is blue. For images coming from libraries like
+            OpenCV you should set this to 'BGR', instead.
+        output_format : 'JPEG', 'PNG', or 'auto'
+            This parameter specifies the format to use when transferring the
+            image data. Photos should use the JPEG format for lossy compression
+            while diagrams should use the PNG format for lossless compression.
+            Defaults to 'auto' which identifies the compression type based
+            on the type and format of the image argument.
+
+        Example
+        -------
+        >>> from PIL import Image
+        >>> image = Image.open('sunrise.jpg')
+        >>>
+        >>> st.image(image, caption='Sunrise by the mountains',
+        ...          use_column_width=True)
+
+        .. output::
+           https://share.streamlit.io/0.61.0-yRE1/index.html?id=Sn228UQxBfKoE5C7A7Y2Qk
+           height: 630px
+
+        """
+
+        format = kwargs.get("format")
+        if format != None:
+            # override output compression type if specified
+            output_format = format
+
+            if config.get_option("deprecation.showImageFormat"):
+                dg.exception(ImageFormatWarning(format))  # type: ignore
+
+        if use_column_width:
+            width = -2
+        elif width is None:
+            width = -1
+        elif width <= 0:
+            raise StreamlitAPIException("Image width must be positive.")
+
+        image_list_proto = ImageListProto()
+        marshall_images(
+            dg._get_coordinates(),  # type: ignore
+            image,
+            caption,
+            width,
+            image_list_proto,
+            clamp,
+            channels,
+            output_format,
+        )
+        return dg._enqueue("imgs", image_list_proto)  # type: ignore
+
+
+class ImageFormatWarning(StreamlitDeprecationWarning):
+    def __init__(self, format):
+        self.format = format
+
+        super(ImageFormatWarning, self).__init__(
+            msg=self._get_message(), config_option="deprecation.showImageFormat"
+        )
+
+    def _get_message(self):
+        return f"""
+The `format` parameter for `st.image` has been deprecated and will be removed
+or repurposed in the future. We recommend changing to the new `output_format`
+parameter to future-proof your code. For the parameter,
+`format="{self.format}"`, please use `output_format="{self.format}"` instead.
+
+See [https://github.com/streamlit/streamlit/issues/1137](https://github.com/streamlit/streamlit/issues/1137)
+for more information.
+            """
 
 
 def _image_has_alpha_channel(image):
@@ -46,14 +162,29 @@ def _image_has_alpha_channel(image):
         return False
 
 
-def _PIL_to_bytes(image, format="JPEG", quality=100):
-    format = format.upper()
-    tmp = io.BytesIO()
+def _format_from_image_type(image, output_format):
+    output_format = output_format.upper()
+    if output_format == "JPEG" or output_format == "PNG":
+        return output_format
+
+    # We are forgiving on the spelling of JPEG
+    if output_format == "JPG":
+        return "JPEG"
 
     if _image_has_alpha_channel(image):
-        image.save(tmp, format="PNG", quality=quality)
-    else:
-        image.save(tmp, format=format, quality=quality)
+        return "PNG"
+
+    return "JPEG"
+
+
+def _PIL_to_bytes(image, format="JPEG", quality=100):
+    tmp = io.BytesIO()
+
+    # User must have specified JPEG, so we must convert it
+    if format == "JPEG" and _image_has_alpha_channel(image):
+        image = image.convert("RGB")
+
+    image.save(tmp, format=format, quality=quality)
 
     return tmp.getvalue()
 
@@ -63,16 +194,11 @@ def _BytesIO_to_bytes(data):
     return data.getvalue()
 
 
-def _np_array_to_bytes(array, format="JPEG"):
-    tmp = io.BytesIO()
+def _np_array_to_bytes(array, output_format="JPEG"):
     img = Image.fromarray(array.astype(np.uint8))
+    format = _format_from_image_type(img, output_format)
 
-    if _image_has_alpha_channel(img):
-        img.save(tmp, format="PNG")
-    else:
-        img.save(tmp, format=format)
-
-    return tmp.getvalue()
+    return _PIL_to_bytes(img, format)
 
 
 def _4d_to_list_3d(array):
@@ -95,31 +221,24 @@ def _verify_np_shape(array):
     return array
 
 
-def _normalize_to_bytes(data, width, format):
-    format = format.lower()
-    ext = imghdr.what(None, data)
-
-    if format is None:
-        mimetype = mimetypes.guess_type("image.%s" % ext)[0]
-    else:
-        mimetype = "image/" + format
-
+def _normalize_to_bytes(data, width, output_format):
     image = Image.open(io.BytesIO(data))
     actual_width, actual_height = image.size
+    format = _format_from_image_type(image, output_format)
+    if output_format.lower() == "auto":
+        ext = imghdr.what(None, data)
+        mimetype = mimetypes.guess_type("image.%s" % ext)[0]
+    else:
+        mimetype = "image/" + format.lower()
 
     if width < 0 and actual_width > MAXIMUM_CONTENT_WIDTH:
         width = MAXIMUM_CONTENT_WIDTH
 
-    if width > 0:
-        if actual_width > width:
-            new_height = int(1.0 * actual_height * width / actual_width)
-            image = image.resize((width, new_height))
-            data = _PIL_to_bytes(image, format=format, quality=90)
-
-            if format is None:
-                mimetype = "image/png"
-            else:
-                mimetype = "image/" + format
+    if width > 0 and actual_width > width:
+        new_height = int(1.0 * actual_height * width / actual_width)
+        image = image.resize((width, new_height))
+        data = _PIL_to_bytes(image, format=format, quality=90)
+        mimetype = "image/" + format.lower()
 
     return data, mimetype
 
@@ -142,12 +261,17 @@ def _clip_image(image, clamp):
     return data
 
 
-def image_to_url(image, width, clamp, channels, format, image_id, allow_emoji=False):
+def image_to_url(
+    image, width, clamp, channels, output_format, image_id, allow_emoji=False
+):
     # PIL Images
     if isinstance(image, ImageFile.ImageFile) or isinstance(image, Image.Image):
+        format = _format_from_image_type(image, output_format)
         data = _PIL_to_bytes(image, format)
 
     # BytesIO
+    # Note: This doesn't support SVG. We could convert to png (cairosvg.svg2png)
+    # or just decode BytesIO to string and handle that way.
     elif type(image) is io.BytesIO:
         data = _BytesIO_to_bytes(image)
 
@@ -165,7 +289,7 @@ def image_to_url(image, width, clamp, channels, format, image_id, allow_emoji=Fa
                     "have exactly 3 color channels"
                 )
 
-        data = _np_array_to_bytes(data, format=format)
+        data = _np_array_to_bytes(data, output_format=output_format)
 
     # Strings
     elif isinstance(image, str):
@@ -177,7 +301,15 @@ def image_to_url(image, width, clamp, channels, format, image_id, allow_emoji=Fa
         except UnicodeDecodeError:
             pass
 
-        # If not, see if it's a file.
+        # Unpack local SVG image file to an SVG string
+        if image.endswith(".svg"):
+            with open(image) as textfile:
+                image = textfile.read()
+        # If it's an SVG string, then format and return an SVG data url
+        if image.startswith("<svg") or image.strip().startswith("<svg"):
+            return f"data:image/svg+xml,{image}"
+
+        # Finally, see if it's a file.
         try:
             with open(image, "rb") as f:
                 data = f.read()
@@ -193,8 +325,8 @@ def image_to_url(image, width, clamp, channels, format, image_id, allow_emoji=Fa
     else:
         data = image
 
-    (data, mimetype) = _normalize_to_bytes(data, width, format)
-
+    (data, mimetype) = _normalize_to_bytes(data, width, output_format)
+    print(mimetype)
     this_file = media_file_manager.add(data, mimetype, image_id)
     return this_file.url
 
@@ -207,7 +339,7 @@ def marshall_images(
     proto_imgs,
     clamp,
     channels="RGB",
-    format="JPEG",
+    output_format="auto",
 ):
     channels = channels.upper()
 
@@ -251,4 +383,6 @@ def marshall_images(
         # We use the index of the image in the input image list to identify this image inside
         # MediaFileManager. For this, we just add the index to the image's "coordinates".
         image_id = "%s-%i" % (coordinates, coord_suffix)
-        proto_img.url = image_to_url(image, width, clamp, channels, format, image_id)
+        proto_img.url = image_to_url(
+            image, width, clamp, channels, output_format, image_id
+        )
