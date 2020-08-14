@@ -51,6 +51,34 @@
     text-container table tr:nth-child(2n) {
       background: $gray-faint;
     }
+
+    // (Demo) TODO:
+    // Properly position and size elements
+    // Determine symbol / image to use
+    // Determine functionality (<a> tag encompasses heading or exists after?)
+    .heading-anchor {
+      cursor: pointer;
+      color: inherit;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      position: relative;
+      left: -4ex;
+
+      &::before {
+        content: "#";
+        color: $primary;
+        font-weight: bold;
+        font-size: 3ex;
+        transform: translateY(0.27ex);
+        padding-right: 1.25ex;
+        visibility: hidden;
+      }
+
+      &:hover::before {
+        visibility: visible;
+      }
+    }
   }
 
   pre.error {

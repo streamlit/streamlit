@@ -148,3 +148,40 @@ export function setCookie(
     : ""
   document.cookie = `${name}=${value};${expirationStr}path=/`
 }
+
+/**
+ * Turns regular text into "text slug"
+ * 'a b c' -> 'a-b-c'
+ */
+export function slugify(text: string | undefined): string | undefined {
+  if (!text) return
+
+  return text
+    .toString()
+    .toLowerCase()
+    .replace(/\s+/g, "-") // Replace spaces with -
+    .replace(/[^\w-]+/g, "") // Remove all non-word chars
+    .replace(/-+/g, "-") // Replace multiple - with single -
+    .replace(/^-+/, "") // Trim - from start of text
+    .replace(/-+$/, "") // Trim - from end of text
+}
+
+/**
+ * Find which headings have anchor tags from st.write(markdown)
+ * and have not already been used / have anchor tags applied already.
+ * Quick feature support for st.write() and heading anchors.
+ */
+export function findTheHeading(
+  source: string,
+  usedHeadings: string[]
+): string {
+  const heading = source
+    .split("\n")
+    .filter(line => line.includes("#"))
+    .find(heading => !usedHeadings.includes(heading))
+  if (heading) {
+    usedHeadings.push(heading)
+    return heading
+  }
+  return ""
+}

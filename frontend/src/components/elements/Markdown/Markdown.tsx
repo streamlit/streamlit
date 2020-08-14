@@ -24,6 +24,7 @@ import "assets/css/write.scss"
 export interface MarkdownProps {
   width: number
   element: ImmutableMap<string, any>
+  anchor?: string
 }
 
 /**
@@ -34,12 +35,13 @@ export default function Markdown({
   element,
 }: MarkdownProps): ReactElement {
   const body = element.get("body")
+  const anchor = element.get("anchor")
   const styleProp = { width }
 
   const allowHTML = element.get("allowHtml")
   return (
     <div className="markdown-text-container stMarkdown" style={styleProp}>
-      <StreamlitMarkdown source={body} allowHTML={allowHTML} />
+      <StreamlitMarkdown source={body} allowHTML={allowHTML} anchor={anchor} />
     </div>
   )
 }
