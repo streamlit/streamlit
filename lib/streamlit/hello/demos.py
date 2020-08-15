@@ -240,7 +240,7 @@ def data_frame_demo():
         return
 
     countries = st.multiselect(
-        "Choose countries", list(df.index), ["China", "United States of America"]
+        "Choose countries", list(df.index), ["China", "United States of America"], num_options=10
     )
     if not countries:
         st.error("Please select at least one country.")
