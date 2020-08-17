@@ -213,7 +213,7 @@ def _marshall_display_values(proto, df, styles):
 
     """
     new_df = _use_display_values(df, styles)
-    proto.styler.display_values = _dataframe_to_serialized_arrow_table(new_df)
+    proto.styler.display_values = _dataframe_to_pybytes(new_df)
 
 
 def _use_display_values(df, styles):
@@ -250,8 +250,8 @@ def _use_display_values(df, styles):
     return new_df
 
 
-def _dataframe_to_serialized_arrow_table(df):
-    """Convert pandas.DataFrame to Arrow Table pybytes.
+def _dataframe_to_pybytes(df):
+    """Convert pandas.DataFrame to pybytes.
 
     Parameters
     ----------
@@ -282,7 +282,7 @@ def _marshall_index(proto, index):
     """
     index = map(util._maybe_tuple_to_list, index.values)
     index_df = pd.DataFrame(index)
-    proto.index = _dataframe_to_serialized_arrow_table(index_df)
+    proto.index = _dataframe_to_pybytes(index_df)
 
 
 def _marshall_columns(proto, columns):
@@ -300,7 +300,7 @@ def _marshall_columns(proto, columns):
     """
     columns = map(util._maybe_tuple_to_list, columns.values)
     columns_df = pd.DataFrame(columns)
-    proto.columns = _dataframe_to_serialized_arrow_table(columns_df)
+    proto.columns = _dataframe_to_pybytes(columns_df)
 
 
 def _marshall_data(proto, data):
@@ -316,4 +316,35 @@ def _marshall_data(proto, data):
 
     """
     df = pd.DataFrame(data)
-    proto.data = _dataframe_to_serialized_arrow_table(df)
+    proto.data = _dataframe_to_pybytes(df)
+
+
+def arrow_proto_to_dataframe(proto):
+    """Convert ArrowTable proto to pandas.DataFrame.
+
+    Parameters
+    ----------
+    proto : proto.ArrowTable
+        Output. pandas.DataFrame
+
+    """
+    data = _pybytes_to_dataframe(proto.data)
+    index = _pybytes_to_dataframe(proto.index)
+    columns = _pybytes_to_dataframe(proto.columns)
+
+    return pd.DataFrame(
+        data.values, index=index.values.T.tolist(), columns=columns.values.T.tolist()
+    )
+
+
+def _pybytes_to_dataframe(source):
+    """Convert pybytes to pandas.DataFrame.
+
+    Parameters
+    ----------
+    source : pybytes
+        Will default to RangeIndex (0, 1, 2, ..., n) if no `index` or `columns` are provided.
+
+    """
+    reader = pa.RecordBatchStreamReader(source)
+    return reader.read_pandas()
