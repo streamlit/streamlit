@@ -16,6 +16,7 @@
  */
 
 import {
+  ArrowTable,
   IntArray,
   FloatArray,
   StringArray,
@@ -202,6 +203,15 @@ export class WidgetStateManager {
     this.getOrCreateWidgetStateProto(widgetId).jsonValue = JSON.stringify(
       value
     )
+    this.maybeSendUpdateWidgetsMessage(source)
+  }
+
+  public setArrowValue(
+    widgetId: string,
+    value: ArrowTable,
+    source: Source
+  ): void {
+    this.getOrCreateWidgetStateProto(widgetId).arrowValue = value
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
