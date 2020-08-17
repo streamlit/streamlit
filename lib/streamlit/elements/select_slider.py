@@ -8,9 +8,16 @@ class SelectSliderMixin:
     def select_slider(
         dg, label, options=[], value=None, format_func=str, key=None,
     ):
-        """Display a slider widget on a discrete set of options of any type.
+        """
+        Display a slider widget to select items from a list.
 
-        This also allows you to render a range slider by passing a two-element tuple or list as the `value`.
+        This also allows you to render a range slider by passing a two-element
+        tuple or list as the `value`.
+
+        The difference between `st.select_slider` and `st.slider` is that
+        `select_slider` accepts any datatype and takes a list as input, while
+        `slider` only accepts numerical or date/time data and takes a range as
+        input.
 
         Parameters
         ----------

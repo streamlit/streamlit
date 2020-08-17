@@ -22,7 +22,13 @@ class SliderMixin:
 
         This supports int, float, date, time, and datetime types.
 
-        This also allows you to render a range slider by passing a two-element tuple or list as the `value`.
+        This also allows you to render a range slider by passing a two-element
+        tuple or list as the `value`.
+
+        The difference between `st.slider` and `st.select_slider` is that
+        `slider` only accepts numerical or date/time data and takes a range as
+        input, while`select_slider` accepts any datatype and takes a list as
+        input.
 
         Parameters
         ----------
