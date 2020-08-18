@@ -3,6 +3,7 @@ import json as json
 import numpy as np
 
 from streamlit import type_util
+from streamlit.errors import StreamlitAPIException
 
 # Special methods:
 
@@ -131,6 +132,15 @@ class WriteMixin:
         try:
             string_buffer = []  # type: List[str]
             unsafe_allow_html = kwargs.get("unsafe_allow_html", False)
+
+            # This bans some valid cases like st.foo.write("a", "b"), BUT:
+            # 1) such cases are rare, 2) this is simple to understand, and
+            # 3) this will be removed once we have st.container()
+            if not dg._is_top_level and len(args) > 1:
+                raise StreamlitAPIException(
+                    "st.write() only permits multiple arguments "
+                    "when called from the main app or the sidebar."
+                )
 
             def flush_buffer():
                 if string_buffer:

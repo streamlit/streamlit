@@ -145,7 +145,7 @@ class DeltaGenerator(
 
         # This is either:
         # - None: if this is the running DeltaGenerator for a top-level
-        #   container.
+        #   container (MAIN or SIDEBAR)
         # - RunningCursor: if this is the running DeltaGenerator for a
         #   non-top-level container (created with dg._block())
         # - LockedCursor: if this is a locked DeltaGenerator returned by some
@@ -199,6 +199,10 @@ class DeltaGenerator(
             return cursor.get_container_cursor(self._container)
         else:
             return self._provided_cursor
+
+    @property
+    def _is_top_level(self):
+        return self._provided_cursor is None
 
     def _get_coordinates(self):
         """Returns the element's 4-component location as string like "M.(1,2).3".
