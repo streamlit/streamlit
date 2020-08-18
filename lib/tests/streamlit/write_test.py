@@ -15,7 +15,7 @@
 """Streamlit Unit test."""
 
 from collections import namedtuple
-from unittest.mock import call, patch, Mock
+from unittest.mock import call, patch, Mock, PropertyMock
 
 import time
 import unittest
@@ -25,6 +25,7 @@ import pandas as pd
 
 import streamlit as st
 from streamlit import type_util
+from streamlit.errors import StreamlitAPIException
 
 
 class StreamlitWriteTest(unittest.TestCase):
@@ -204,6 +205,36 @@ class StreamlitWriteTest(unittest.TestCase):
             with st.spinner("some message"):
                 time.sleep(0.15)
             e.assert_called_once_with()
+
+    def test_sidebar(self):
+        """Test st.write in the sidebar."""
+        with patch("streamlit.delta_generator.DeltaGenerator.markdown") as m, patch(
+            "streamlit.delta_generator.DeltaGenerator.help"
+        ) as h:
+            st.sidebar.write("markdown", st.help)
+
+            m.assert_called_once()
+            h.assert_called_once()
+
+    def test_empty(self):
+        """Test st.write from a specific element."""
+        placeholder = st.empty()
+
+        with patch("streamlit.delta_generator.DeltaGenerator.markdown") as p:
+            placeholder.write("One argument is okay...")
+
+            p.assert_called_once()
+
+        with patch("streamlit.delta_generator.DeltaGenerator.exception") as e:
+            # Also override dg._is_top_level for this test.
+            with patch.object(
+                st.delta_generator.DeltaGenerator,
+                "_is_top_level",
+                new_callable=PropertyMock,
+            ) as top_level:
+                top_level.return_value = False
+                placeholder.write("But", "multiple", "args", "should", "fail")
+                e.assert_called_once()
 
 
 def make_is_type_mock(true_type_matchers):
