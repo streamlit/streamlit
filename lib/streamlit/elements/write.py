@@ -6,7 +6,6 @@ from typing import cast, Any, List, Tuple, Type
 
 from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
-from streamlit.delta_generator import DeltaGenerator
 
 # Special methods:
 
@@ -132,6 +131,10 @@ class WriteMixin:
         height: 200px
 
         """
+        # Import dynamically, to resolve circular dependency
+        from streamlit.delta_generator import DeltaGenerator
+
+        # Cast self to DeltaGenerator, to resolve mypy type issues
         dg = cast(DeltaGenerator, self)
         try:
             string_buffer = []  # type: List[str]
