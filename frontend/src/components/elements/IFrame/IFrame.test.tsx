@@ -22,9 +22,11 @@ import {
   getIFrameSandboxPolicy,
 } from "lib/IFrameUtil"
 import React from "react"
-import IFrame, { Props } from "./IFrame"
+import IFrame, { IFrameProps } from "./IFrame"
 
-const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
+const getProps = (
+  elementProps: Record<string, unknown> = {}
+): IFrameProps => ({
   element: fromJS({
     ...elementProps,
   }),

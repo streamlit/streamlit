@@ -306,7 +306,7 @@ def image_to_url(
             with open(image) as textfile:
                 image = textfile.read()
         # If it's an SVG string, then format and return an SVG data url
-        if image.startswith("<svg"):
+        if image.startswith("<svg") or image.strip().startswith("<svg"):
             return f"data:image/svg+xml,{image}"
 
         # Finally, see if it's a file.
