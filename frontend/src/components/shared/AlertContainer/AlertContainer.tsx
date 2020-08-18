@@ -63,6 +63,8 @@ export default function AlertContainer({
       overrides={{
         Body: {
           style: {
+            marginTop: 0,
+            marginBottom: 0,
             width,
             border: getAlertBorder(kind),
           },
