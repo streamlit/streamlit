@@ -15,13 +15,12 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React from "react"
 import { shallow } from "enzyme"
 import { Map as ImmutableMap } from "immutable"
-
+import { KIND } from "components/shared/AlertContainer"
 import { Alert as AlertProto } from "autogen/proto"
 import Alert, { AlertProps } from "./Alert"
-import { KIND } from "components/shared/AlertContainer"
 
 const getProps = (elementProps: Record<string, unknown> = {}): AlertProps => ({
   element: ImmutableMap({

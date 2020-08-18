@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React from "react"
 import { shallow } from "enzyme"
 import { SCSS_VARS } from "autogen/scssVariables"
 

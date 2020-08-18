@@ -37,9 +37,9 @@ function getAlertBorder(kind: KindTypeT): string {
       return borderStyle + SCSS_VARS["$alert-warning-border-color"]
     case KIND.negative:
       return borderStyle + SCSS_VARS["$alert-danger-border-color"]
+    default:
+      throw new Error(`Unexpected alert type: ${kind}`)
   }
-
-  throw new Error(`Unexpected alert type: ${kind}`)
 }
 
 export interface AlertContainerProps {

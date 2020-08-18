@@ -16,5 +16,6 @@
  */
 
 import { KindTypeT as AlertKindTypeT } from "./AlertContainer"
+
 export { default, KIND } from "./AlertContainer"
 export type KindTypeT = AlertKindTypeT

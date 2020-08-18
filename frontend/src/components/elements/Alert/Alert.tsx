@@ -35,9 +35,9 @@ export function getAlertKind(format: number): KindTypeT {
       return KIND.warning
     case AlertProto.Format.ERROR:
       return KIND.negative
+    default:
+      throw new Error(`Unexpected alert type: ${format}`)
   }
-
-  throw new Error(`Unexpected alert type: ${format}`)
 }
 
 export interface AlertProps {
