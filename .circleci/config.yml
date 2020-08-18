@@ -389,14 +389,15 @@ jobs:
 
       - run:
           name: Create tag
+          # TODO move git commands into script
           command: |
+            git config user.email "jonathan@streamlit.io"
+            git config user.name "CircleCI"
+
             TAG="$(./scripts/pypi_nightly_create_tag.py)"
 
             ./scripts/update_version.py $TAG
             ./scripts/update_name.py streamlit-nightly
-
-            git config user.email "jonathan@streamlit.io"
-            git config user.name "CircleCI"
 
             git add lib/setup.py
             git add docs/troubleshooting/sanity-checks.md
@@ -457,9 +458,7 @@ jobs:
           no_output_timeout: 2h
           command: |
             ${SUDO} apt-get install rsync
-            make frontend
-            make install
-            make wheel
+            make package
 
       - run:
           name: upload to pypi
