@@ -15,9 +15,9 @@ class SelectSliderMixin:
         tuple or list as the `value`.
 
         The difference between `st.select_slider` and `st.slider` is that
-        `select_slider` accepts any datatype and takes a list as input, while
-        `slider` only accepts numerical or date/time data and takes a range as
-        input.
+        `select_slider` accepts any datatype and takes an iterable set of
+        options, while `slider` only accepts numerical or date/time data and
+        takes a range as input.
 
         Parameters
         ----------
