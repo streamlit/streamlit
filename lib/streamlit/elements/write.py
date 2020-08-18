@@ -2,8 +2,11 @@ import types
 import json as json
 import numpy as np
 
+from typing import cast, Any, List, Tuple, Type
+
 from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
+from streamlit.delta_generator import DeltaGenerator
 
 # Special methods:
 
@@ -17,7 +20,7 @@ HELP_TYPES = (
 
 
 class WriteMixin:
-    def write(dg, *args, **kwargs):
+    def write(self, *args, **kwargs):
         """Write arguments to the app.
 
         This is the Swiss Army knife of Streamlit commands: it does different
@@ -129,6 +132,7 @@ class WriteMixin:
         height: 200px
 
         """
+        dg = cast(DeltaGenerator, self)
         try:
             string_buffer = []  # type: List[str]
             unsafe_allow_html = kwargs.get("unsafe_allow_html", False)
