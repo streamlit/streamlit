@@ -69,6 +69,11 @@ export default function AlertContainer({
             border: getAlertBorder(kind),
           },
         },
+        InnerContainer: {
+          style: {
+            width: "100%",
+          },
+        },
       }}
     >
       {children}
