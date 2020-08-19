@@ -15,25 +15,4 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
-import { Map as ImmutableMap } from "immutable"
-import ProgressBar from "components/shared/ProgressBar"
-
-export interface ProgressProps {
-  width: number
-  element: ImmutableMap<string, any>
-}
-
-export const FAST_UPDATE_MS = 50
-
-function Progress({ element, width }: ProgressProps): ReactElement {
-  const value = element.get("value")
-
-  return (
-    <div className="stProgress">
-      <ProgressBar value={value} width={width} />
-    </div>
-  )
-}
-
-export default Progress
+export { default } from "./ProgressBar"

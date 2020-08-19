@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,19 +15,21 @@
  * limitations under the License.
  */
 
-@import "src/assets/css/variables";
+import React from "react"
+import { shallow } from "enzyme"
 
-// Reset the progress bar to 0 without animating on report re-run.
-.reportview-container {
-  .without-transition .progress-bar {
-    transition: none;
-  }
+import ProgressBar from "./ProgressBar"
 
-  .with-transition .progress-bar {
-    transition: width 0.1s linear;
-  }
+describe("ProgressBar component", () => {
+  it("renders without crashing", () => {
+    const wrapper = shallow(<ProgressBar value={50} width={100} />)
 
-  .stale-element .progress-bar {
-    background-color: transparent;
-  }
-}
+    expect(wrapper.find("ProgressBar").length).toBe(1)
+  })
+
+  it("sets the value correctly", () => {
+    const wrapper = shallow(<ProgressBar value={50} width={100} />)
+
+    expect(wrapper.find("ProgressBar").prop("value")).toEqual(50)
+  })
+})
