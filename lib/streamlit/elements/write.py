@@ -140,9 +140,9 @@ class WriteMixin:
             string_buffer = []  # type: List[str]
             unsafe_allow_html = kwargs.get("unsafe_allow_html", False)
 
-            # This bans some valid cases like st.foo.write("a", "b"), BUT:
-            # 1) such cases are rare, 2) this is simple to understand, and
-            # 3) this will be removed once we have st.container()
+            # This bans some valid cases like: e = st.empty(); e.write("a", "b").
+            # BUT: 1) such cases are rare, 2) this rule is easy to understand,
+            # and 3) this rule should be removed once we have st.container()
             if not dg._is_top_level and len(args) > 1:
                 raise StreamlitAPIException(
                     "st.write() only permits multiple arguments "
@@ -153,7 +153,7 @@ class WriteMixin:
                 if string_buffer:
                     dg.markdown(
                         " ".join(string_buffer), unsafe_allow_html=unsafe_allow_html,
-                    )  # noqa: F821
+                    )
                     string_buffer[:] = []
 
             for arg in args:
@@ -165,10 +165,10 @@ class WriteMixin:
                     if len(np.shape(arg)) > 2:
                         dg.text(arg)
                     else:
-                        dg.dataframe(arg)  # noqa: F821
+                        dg.dataframe(arg)
                 elif isinstance(arg, Exception):
                     flush_buffer()
-                    dg.exception(arg)  # noqa: F821
+                    dg.exception(arg)
                 elif isinstance(arg, HELP_TYPES):
                     flush_buffer()
                     dg.help(arg)
