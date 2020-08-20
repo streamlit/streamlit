@@ -26,7 +26,7 @@ from streamlit import env_util
 from streamlit import util
 from streamlit.report import Report
 from streamlit.logger import get_logger
-from streamlit.server.server import Server
+from streamlit.server.server import Server, server_address_is_unix_socket
 
 LOGGER = get_logger(__name__)
 
@@ -148,6 +148,9 @@ def _on_server_start(server):
         if config.is_manually_set("browser.serverAddress"):
             addr = config.get_option("browser.serverAddress")
         elif config.is_manually_set("server.address"):
+            if server_address_is_unix_socket():
+                # Don't open browser when server address is an unix socket
+                return
             addr = config.get_option("server.address")
         else:
             addr = "localhost"
@@ -179,7 +182,9 @@ def _print_url(is_running_hello):
             ("URL", Report.get_url(config.get_option("browser.serverAddress")))
         ]
 
-    elif config.is_manually_set("server.address"):
+    elif (
+        config.is_manually_set("server.address") and not server_address_is_unix_socket()
+    ):
         named_urls = [
             ("URL", Report.get_url(config.get_option("server.address"))),
         ]
