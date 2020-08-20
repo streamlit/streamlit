@@ -161,6 +161,11 @@ wheel:
 	cd lib ; python setup.py bdist_wheel --universal
 	# cd lib ; python setup.py bdist_wheel sdist
 
+.PHONY: package
+# Create a Python wheel file in dist/.
+package: mini-devel frontend install wheel
+
+
 .PHONY: clean
 # Remove all generated files.
 clean: clean-docs

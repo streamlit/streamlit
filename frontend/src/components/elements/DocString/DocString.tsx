@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-import React, { PureComponent } from "react"
+import React, { ReactElement } from "react"
 import { Map as ImmutableMap } from "immutable"
 import "./DocString.scss"
 
-export interface Props {
+export interface DocStringProps {
   width: number
   element: ImmutableMap<string, any>
 }
@@ -27,53 +27,50 @@ export interface Props {
 /**
  * Functional element representing formatted text.
  */
-class DocString extends PureComponent<Props> {
-  public render(): React.ReactNode {
-    const { element, width } = this.props
+export default function DocString({
+  width,
+  element,
+}: DocStringProps): ReactElement {
+  const name = element.get("name")
+  const module = element.get("module")
+  const docString = element.get("docString")
+  const type = element.get("type")
+  const signature = element.get("signature")
 
-    const name = element.get("name")
-    const module = element.get("module")
-    const docString = element.get("docString")
-    const type = element.get("type")
-    const signature = element.get("signature")
+  const moduleHtml = (
+    <span className="doc-module" key="module">
+      {module}.
+    </span>
+  )
+  const nameHtml = (
+    <span className="doc-name" key="name">
+      {name}
+    </span>
+  )
+  const signatureHtml = (
+    <span className="doc-signature" key="signature">
+      {signature}
+    </span>
+  )
+  const typeHtml = (
+    <span key="type" className="doc-type">
+      {type}
+    </span>
+  )
 
-    const moduleHtml = (
-      <span className="doc-module" key="module">
-        {module}.
-      </span>
-    )
-    const nameHtml = (
-      <span className="doc-name" key="name">
-        {name}
-      </span>
-    )
-    const signatureHtml = (
-      <span className="doc-signature" key="signature">
-        {signature}
-      </span>
-    )
-    const typeHtml = (
-      <span key="type" className="doc-type">
-        {type}
-      </span>
-    )
-
-    // Put it all together into a nice little html view.
-    return (
-      <div className="doc-containter" style={{ width }}>
-        <div className="doc-header">
-          {name
-            ? [
-                module ? moduleHtml : "",
-                nameHtml,
-                signature ? signatureHtml : "",
-              ]
-            : [typeHtml]}
-        </div>
-        <div className="doc-string">{docString}</div>
+  // Put it all together into a nice little html view.
+  return (
+    <div className="doc-containter" style={{ width }}>
+      <div className="doc-header">
+        {name
+          ? [
+              module ? moduleHtml : "",
+              nameHtml,
+              signature ? signatureHtml : "",
+            ]
+          : [typeHtml]}
       </div>
-    )
-  }
+      <div className="doc-string">{docString}</div>
+    </div>
+  )
 }
-
-export default DocString
