@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import logging
+import os
 import threading
 import socket
 import sys
@@ -25,6 +26,7 @@ from typing import Any, Dict, Optional, TYPE_CHECKING
 import tornado.concurrent
 import tornado.gen
 import tornado.ioloop
+import tornado.netutil
 import tornado.web
 import tornado.websocket
 
@@ -75,6 +77,10 @@ TORNADO_SETTINGS = {
 # up to MAX_PORT_SEARCH_RETRIES.
 MAX_PORT_SEARCH_RETRIES = 100
 
+# When server.address starts with this prefix, the server will bind
+# to an unix socket.
+UNIX_SOCKET_PREFIX = "unix://"
+
 
 class SessionInfo(object):
     """Type stored in our _session_info_by_id dict.
@@ -116,6 +122,11 @@ def server_port_is_manually_set():
     return config.is_manually_set("server.port")
 
 
+def server_address_is_unix_socket():
+    address = config.get_option("server.address")
+    return address and address.startswith(UNIX_SOCKET_PREFIX)
+
+
 def start_listening(app):
     """Makes the server start listening at the configured port.
 
@@ -124,10 +135,26 @@ def start_listening(app):
 
     """
 
-    call_count = 0
     http_server = tornado.httpserver.HTTPServer(
         app, max_buffer_size=config.get_option("server.maxUploadSize") * 1024 * 1024
     )
+
+    if server_address_is_unix_socket():
+        start_listening_unix_socket(http_server)
+    else:
+        start_listening_tcp_socket(http_server)
+
+
+def start_listening_unix_socket(http_server):
+    address = config.get_option("server.address")
+    file_name = os.path.expanduser(address[len(UNIX_SOCKET_PREFIX) :])
+
+    unix_socket = tornado.netutil.bind_unix_socket(file_name)
+    http_server.add_socket(unix_socket)
+
+
+def start_listening_tcp_socket(http_server):
+    call_count = 0
 
     while call_count < MAX_PORT_SEARCH_RETRIES:
         address = config.get_option("server.address")
