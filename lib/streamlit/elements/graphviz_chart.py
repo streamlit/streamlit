@@ -17,6 +17,7 @@
 from streamlit import type_util
 from streamlit.logger import get_logger
 from streamlit.proto.GraphVizChart_pb2 import GraphVizChart as GraphVizChartProto
+from streamlit.errors import StreamlitAPIException
 
 LOGGER = get_logger(__name__)
 
@@ -129,7 +130,9 @@ def marshall(proto, figure_or_dot, use_container_width):
     elif isinstance(figure_or_dot, str):
         dot = figure_or_dot
     else:
-        raise Exception("Unhandled type for graphviz chart: %s" % type(figure_or_dot))
+        raise StreamlitAPIException(
+            "Unhandled type for graphviz chart: %s" % type(figure_or_dot)
+        )
 
     proto.spec = dot
     proto.use_container_width = use_container_width
