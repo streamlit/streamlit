@@ -145,8 +145,10 @@ class WriteMixin:
             # and 3) this rule should be removed once we have st.container()
             if not dg._is_top_level and len(args) > 1:
                 raise StreamlitAPIException(
-                    "st.write() only permits multiple arguments "
-                    "when called from the main app or the sidebar."
+                    "Cannot replace a single element with multiple elements.\n\n"
+                    "The `write()` method only supports multiple elements when "
+                    "inserting elements rather than replacing. That is, only "
+                    "when called as `st.write()` or `st.sidebar.write()`."
                 )
 
             def flush_buffer():
