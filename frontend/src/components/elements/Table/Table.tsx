@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { PureComponent } from "react"
+import React, { ReactElement } from "react"
 import { Table as ReactTable } from "reactstrap"
 import { toFormattedString } from "lib/format"
 import { Map as ImmutableMap } from "immutable"
@@ -26,50 +26,46 @@ import "./Table.scss"
 /**
  * Functional element representing a DataFrame.
  */
-export interface Props {
-  width: number
+export interface TableProps {
   element: ImmutableMap<string, any>
 }
 
-export class Table extends PureComponent<Props> {
-  render(): JSX.Element {
-    const { element } = this.props
-    const { headerRows, rows, cols } = dataFrameGetDimensions(element)
+export function Table({ element }: TableProps): ReactElement {
+  const { headerRows, rows, cols } = dataFrameGetDimensions(element)
 
-    const hasNoData = rows === headerRows
+  const hasNoData = rows === headerRows
 
-    // TODO(tvst): Make tables have a max width with overflow: scroll (when
-    // media==screen). But need to fix the autosizer first.
-    return (
-      <div className="streamlit-table stTable">
-        <ReactTable className={hasNoData ? "empty-table" : ""}>
-          <thead>
+  // TODO(tvst): Make tables have a max width with overflow: scroll (when
+  // media==screen). But need to fix the autosizer first.
+  return (
+    <div className="streamlit-table stTable">
+      <ReactTable className={hasNoData ? "empty-table" : ""}>
+        <thead>
+          <TableRows
+            df={element}
+            header={true}
+            headerRows={headerRows}
+            rows={rows}
+            cols={cols}
+          />
+        </thead>
+        <tbody>
+          {hasNoData ? (
+            <tr>
+              <td colSpan={cols || 1}>empty</td>
+            </tr>
+          ) : (
             <TableRows
               df={element}
-              header={true}
               headerRows={headerRows}
               rows={rows}
               cols={cols}
             />
-          </thead>
-          <tbody>
-            {hasNoData ? (
-              <tr>
-                <td colSpan={cols || 1}>empty</td>
-              </tr>
-            ) : (
-              <TableRows
-                df={element}
-                headerRows={headerRows}
-                rows={rows}
-                cols={cols}
-              />
-            )}
-          </tbody>
-        </ReactTable>
-      </div>
-    )
-  }
+          )}
+        </tbody>
+      </ReactTable>
+    </div>
+  )
 }
 
 /**

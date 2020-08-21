@@ -18,7 +18,7 @@
 import React from "react"
 import { shallow } from "enzyme"
 import { Map as ImmutableMap } from "immutable"
-import Markdown, { Props as MarkdownProps } from "./Markdown"
+import Markdown, { MarkdownProps } from "./Markdown"
 
 const getProps = (
   elementProps: Record<string, unknown> = {}

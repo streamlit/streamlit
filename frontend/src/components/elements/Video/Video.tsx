@@ -15,83 +15,64 @@
  * limitations under the License.
  */
 
-import React, { createRef, PureComponent, ReactNode } from "react"
+import React, { ReactElement, useEffect, useRef } from "react"
 import { Map as ImmutableMap } from "immutable"
 import { Video as VideoProto } from "autogen/proto"
 import { buildMediaUri } from "lib/UriUtil"
 
-export interface Props {
+export interface VideoProps {
   width: number
   element: ImmutableMap<string, any>
 }
 
-class Video extends PureComponent<Props> {
-  private videoRef = createRef<HTMLVideoElement>()
+export default function Video({ element, width }: VideoProps): ReactElement {
+  const videoRef = useRef<HTMLVideoElement>(null)
 
-  public componentDidMount = (): void => {
-    this.updateTime()
-  }
+  /* Element may contain "url" or "data" property. */
 
-  public componentDidUpdate = (): void => {
-    this.updateTime()
-  }
+  const type = element.get("type")
+  const url = element.get("url")
 
-  private updateTime = (): void => {
-    if (this.videoRef.current) {
-      const { element } = this.props
-
-      this.videoRef.current.currentTime = element.get("startTime")
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = element.get("startTime")
     }
-  }
+  }, [element])
 
-  private getYoutubeSrc = (): string => {
-    const { element } = this.props
+  const getYoutubeSrc = (url: string): string => {
     const startTime = element.get("startTime")
-    const url = element.get("url")
-
     if (startTime) {
       return `${url}?start=${startTime}`
     }
-
     return url
   }
 
-  public render(): ReactNode {
-    /* Element may contain "url" or "data" property. */
-
-    const { element, width } = this.props
-    const url = element.get("url")
-    const type = element.get("type")
-
-    /* Is this a YouTube link? If so we need a fancier tag.
+  /* Is this a YouTube link? If so we need a fancier tag.
        NOTE: This part assumes the URL is already an "embed" link.
     */
-    if (type === VideoProto.Type.YOUTUBE_IFRAME) {
-      const height = width * 0.75
-
-      return (
-        <iframe
-          title={url}
-          src={this.getYoutubeSrc()}
-          width={width}
-          height={height}
-          frameBorder="0"
-          allow="autoplay; encrypted-media"
-          allowFullScreen
-        />
-      )
-    }
+  if (type === VideoProto.Type.YOUTUBE_IFRAME) {
+    const height = width * 0.75
 
     return (
-      <video
-        ref={this.videoRef}
-        controls
-        src={buildMediaUri(element.get("url"))}
-        className="stVideo"
-        style={{ width }}
+      <iframe
+        title={url}
+        src={getYoutubeSrc(url)}
+        width={width}
+        height={height}
+        frameBorder="0"
+        allow="autoplay; encrypted-media"
+        allowFullScreen
       />
     )
   }
-}
 
-export default Video
+  return (
+    <video
+      ref={videoRef}
+      controls
+      src={buildMediaUri(element.get("url"))}
+      className="stVideo"
+      style={{ width }}
+    />
+  )
+}

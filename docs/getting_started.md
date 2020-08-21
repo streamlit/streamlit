@@ -41,7 +41,7 @@ you're working on.
 $ pip install streamlit
 ```
 
-Now run the hello world app just to make sure everything it's working:
+Now run the hello world app just to make sure everything is working:
 
 ```bash
 $ streamlit hello

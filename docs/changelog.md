@@ -16,6 +16,22 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.65.0
+
+_Release date: August 12, 2020_
+
+**Highlights:**
+
+- ⚙️ Ability to set page title, favicon, sidebar state, and wide mode via st.beta_set_page_config(). See our [documentation](https://docs.streamlit.io/en/latest/api.html#streamlit.beta_set_page_config) for details.
+- 📝 Add stateful behaviors through the use of query parameters with st.experimental_set_query_params and st.experimental_get_query_params. Thanks [@zhaoooyue](https://github.com/zhaoooyue)!
+- 🐼 Improved pandas dataframe support for st.radio, st.selectbox, and st.multiselect.
+- 🛑 Break out of your Streamlit app with st.stop.
+- 🖼 Inline SVG support for st.image.
+
+**Callouts:**
+
+- 🚨Deprecation Warning: The st.image parameter format has been renamed to output_format.
+
 ## Version 0.64.0
 
 _Release date: July 23, 2020_
