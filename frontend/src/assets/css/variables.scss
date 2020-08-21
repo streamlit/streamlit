@@ -119,9 +119,9 @@ $alert-success-background-color: change-color($green, $alpha: 0.2);
 $alert-success-border-color: change-color($green, $alpha: 0.2);
 $alert-success-text-color: rgb(23, 108, 54);
 
-$alert-danger-background-color: change-color($red, $alpha: 0.2);
-$alert-danger-border-color: change-color($red, $alpha: 0.2);
-$alert-danger-text-color: rgb(157, 41, 45);
+$alert-error-background-color: change-color($red, $alpha: 0.2);
+$alert-error-border-color: change-color($red, $alpha: 0.2);
+$alert-error-text-color: rgb(157, 41, 45);
 
 $alert-warning-background-color: change-color($yellow, $alpha: 0.2);
 $alert-warning-border-color: change-color($yellow, $alpha: 0.8);

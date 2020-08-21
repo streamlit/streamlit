@@ -18,7 +18,7 @@
 import React from "react"
 import { shallow } from "enzyme"
 import { Map as ImmutableMap } from "immutable"
-import { KIND } from "components/shared/AlertContainer"
+import { Kind } from "components/shared/AlertContainer"
 import { Alert as AlertProto } from "autogen/proto"
 import Alert, { AlertProps } from "./Alert"
 
@@ -40,7 +40,7 @@ describe("Alert element", () => {
     const wrap = shallow(<Alert {...props} />)
     const elem = wrap.get(0)
     expect(elem.props.className.includes("stAlert")).toBeTruthy()
-    expect(wrap.find("AlertContainer").prop("kind")).toEqual(KIND.negative)
+    expect(wrap.find("AlertContainer").prop("kind")).toEqual(Kind.ERROR)
     expect(wrap.find("StreamlitMarkdown").prop("source")).toBe(
       "#what in the world?"
     )
@@ -55,7 +55,7 @@ describe("Alert element", () => {
     const wrap = shallow(<Alert {...props} />)
     const elem = wrap.get(0)
     expect(elem.props.className.includes("stAlert")).toBeTruthy()
-    expect(wrap.find("AlertContainer").prop("kind")).toEqual(KIND.warning)
+    expect(wrap.find("AlertContainer").prop("kind")).toEqual(Kind.WARNING)
     expect(wrap.find("StreamlitMarkdown").prop("source")).toBe(
       "Are you *sure*?"
     )
@@ -70,7 +70,7 @@ describe("Alert element", () => {
     const wrap = shallow(<Alert {...props} />)
     const elem = wrap.get(0)
     expect(elem.props.className.includes("stAlert")).toBeTruthy()
-    expect(wrap.find("AlertContainer").prop("kind")).toEqual(KIND.positive)
+    expect(wrap.find("AlertContainer").prop("kind")).toEqual(Kind.SUCCESS)
     expect(wrap.find("StreamlitMarkdown").prop("source")).toBe(
       "But our princess was in another castle!"
     )
@@ -85,7 +85,7 @@ describe("Alert element", () => {
     const wrap = shallow(<Alert {...props} />)
     const elem = wrap.get(0)
     expect(elem.props.className.includes("stAlert")).toBeTruthy()
-    expect(wrap.find("AlertContainer").prop("kind")).toEqual(KIND.info)
+    expect(wrap.find("AlertContainer").prop("kind")).toEqual(Kind.INFO)
     expect(wrap.find("StreamlitMarkdown").prop("source")).toBe(
       "It's dangerous to go alone."
     )

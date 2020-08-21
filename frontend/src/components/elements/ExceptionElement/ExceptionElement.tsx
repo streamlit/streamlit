@@ -17,7 +17,7 @@
 
 import React, { ReactElement } from "react"
 import { Map as ImmutableMap } from "immutable"
-import AlertContainer, { KIND } from "components/shared/AlertContainer"
+import AlertContainer, { Kind } from "components/shared/AlertContainer"
 import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
 import "./ExceptionElement.scss"
 
@@ -94,7 +94,7 @@ export default function ExceptionElement({
   return (
     <div className="stException">
       <AlertContainer
-        kind={isWarning ? KIND.warning : KIND.negative}
+        kind={isWarning ? Kind.WARNING : Kind.ERROR}
         width={width}
       >
         <div className="message">

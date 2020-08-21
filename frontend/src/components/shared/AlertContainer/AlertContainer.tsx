@@ -22,21 +22,40 @@ import { Notification, KIND } from "baseui/notification"
 
 import "assets/css/write.scss"
 
-export { KIND }
-export type KindTypeT = KIND[keyof KIND]
+export enum Kind {
+  ERROR = "error",
+  INFO = "info",
+  SUCCESS = "success",
+  WARNING = "warning",
+}
 
-function getAlertBorder(kind: KindTypeT): string {
+function getAlertBorder(kind: Kind): string {
   const borderStyle = "1px solid "
 
   switch (kind) {
-    case KIND.info:
+    case Kind.ERROR:
+      return borderStyle + SCSS_VARS["$alert-error-border-color"]
+    case Kind.INFO:
       return borderStyle + SCSS_VARS["$alert-info-border-color"]
-    case KIND.positive:
+    case Kind.SUCCESS:
       return borderStyle + SCSS_VARS["$alert-success-border-color"]
-    case KIND.warning:
+    case Kind.WARNING:
       return borderStyle + SCSS_VARS["$alert-warning-border-color"]
-    case KIND.negative:
-      return borderStyle + SCSS_VARS["$alert-danger-border-color"]
+    default:
+      throw new Error(`Unexpected alert type: ${kind}`)
+  }
+}
+
+function getNotificationKind(kind: Kind): KIND[keyof KIND] {
+  switch (kind) {
+    case Kind.ERROR:
+      return KIND.negative
+    case Kind.INFO:
+      return KIND.info
+    case Kind.SUCCESS:
+      return KIND.positive
+    case Kind.WARNING:
+      return KIND.warning
     default:
       throw new Error(`Unexpected alert type: ${kind}`)
   }
@@ -44,13 +63,19 @@ function getAlertBorder(kind: KindTypeT): string {
 
 export interface AlertContainerProps {
   width?: number
-  kind: KindTypeT
+  kind: Kind
   children: ReactNode
 }
 
 /**
- * Functional element representing error/warning/info/success boxes
- * which may be formatted in Markdown.
+ * Provides Base Styles for any Alert Type UI. Used in the following cases:
+ *   * Alert is the Streamlit specific alert component that users can use with
+ *     any Markdown. Users have API access to generate these.
+ *   * ExceptionElement is a special type of alert that formats an exception
+ *     with a stack trace provided. Users have API access to generate these.
+ *   * ErrorElement is an alert for an internal exception happening in
+ *     Streamlit (likely a JS exception happening at runtime). Users do NOT
+ *     have API access to generate these.
  */
 export default function AlertContainer({
   kind,
@@ -59,7 +84,7 @@ export default function AlertContainer({
 }: AlertContainerProps): ReactElement {
   return (
     <Notification
-      kind={kind}
+      kind={getNotificationKind(kind)}
       overrides={{
         Body: {
           style: {

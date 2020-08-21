@@ -19,12 +19,12 @@ import React from "react"
 import { shallow } from "enzyme"
 import { SCSS_VARS } from "autogen/scssVariables"
 
-import AlertContainer, { AlertContainerProps, KIND } from "./AlertContainer"
+import AlertContainer, { AlertContainerProps, Kind } from "./AlertContainer"
 
 const getProps = (
   propOverrides: Partial<AlertContainerProps> = {}
 ): AlertContainerProps => ({
-  kind: KIND.info,
+  kind: Kind.INFO,
   width: 100,
   children: null,
   ...propOverrides,
@@ -69,7 +69,7 @@ describe("AlertContainer element", () => {
 
   it("sets border color correctly for positive", () => {
     const wrapper = shallow(
-      <AlertContainer {...getProps({ kind: KIND.positive })} />
+      <AlertContainer {...getProps({ kind: Kind.SUCCESS })} />
     )
 
     const overrides = wrapper.find("Notification").prop("overrides")
@@ -82,7 +82,7 @@ describe("AlertContainer element", () => {
 
   it("sets border color correctly for warning", () => {
     const wrapper = shallow(
-      <AlertContainer {...getProps({ kind: KIND.warning })} />
+      <AlertContainer {...getProps({ kind: Kind.WARNING })} />
     )
 
     const overrides = wrapper.find("Notification").prop("overrides")
@@ -95,14 +95,14 @@ describe("AlertContainer element", () => {
 
   it("sets border color correctly for negative", () => {
     const wrapper = shallow(
-      <AlertContainer {...getProps({ kind: KIND.negative })} />
+      <AlertContainer {...getProps({ kind: Kind.ERROR })} />
     )
 
     const overrides = wrapper.find("Notification").prop("overrides")
 
     // @ts-ignore
     expect(overrides.Body.style.border).toContain(
-      SCSS_VARS["$alert-danger-border-color"]
+      SCSS_VARS["$alert-error-border-color"]
     )
   })
 })

@@ -20,21 +20,18 @@ import React, { ReactElement } from "react"
 import { Map as ImmutableMap } from "immutable"
 import { Alert as AlertProto } from "autogen/proto"
 import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
-import AlertContainer, {
-  KIND,
-  KindTypeT,
-} from "components/shared/AlertContainer"
+import AlertContainer, { Kind } from "components/shared/AlertContainer"
 
-export function getAlertKind(format: number): KindTypeT {
+export function getAlertKind(format: number): Kind {
   switch (format) {
-    case AlertProto.Format.INFO:
-      return KIND.info
-    case AlertProto.Format.SUCCESS:
-      return KIND.positive
-    case AlertProto.Format.WARNING:
-      return KIND.warning
     case AlertProto.Format.ERROR:
-      return KIND.negative
+      return Kind.ERROR
+    case AlertProto.Format.INFO:
+      return Kind.INFO
+    case AlertProto.Format.SUCCESS:
+      return Kind.SUCCESS
+    case AlertProto.Format.WARNING:
+      return Kind.WARNING
     default:
       throw new Error(`Unexpected alert type: ${format}`)
   }

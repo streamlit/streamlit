@@ -515,9 +515,8 @@ const themeOverrides = {
     notificationWarningBackground:
       SCSS_VARS["$alert-warning-background-color"],
     notificationWarningText: SCSS_VARS["$alert-warning-text-color"],
-    notificationNegativeBackground:
-      SCSS_VARS["$alert-danger-background-color"],
-    notificationNegativeText: SCSS_VARS["$alert-danger-text-color"],
+    notificationNegativeBackground: SCSS_VARS["$alert-error-background-color"],
+    notificationNegativeText: SCSS_VARS["$alert-error-text-color"],
   },
 }
 

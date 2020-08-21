@@ -15,7 +15,4 @@
  * limitations under the License.
  */
 
-import { KindTypeT as AlertKindTypeT } from "./AlertContainer"
-
-export { default, KIND } from "./AlertContainer"
-export type KindTypeT = AlertKindTypeT
+export { default, Kind } from "./AlertContainer"
