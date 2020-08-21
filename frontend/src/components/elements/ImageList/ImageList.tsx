@@ -15,13 +15,13 @@
  * limitations under the License.
  */
 
-import React, { PureComponent, ReactNode } from "react"
+import React, { ReactElement } from "react"
 import { Map as ImmutableMap } from "immutable"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import { buildMediaUri } from "lib/UriUtil"
 import "./ImageList.scss"
 
-export interface Props {
+export interface ImageListProps {
   width: number
   isFullScreen: boolean
   element: ImmutableMap<string, any>
@@ -36,59 +36,61 @@ enum WidthBehavior {
 /**
  * Functional element for a horizontal list of images.
  */
-export class ImageList extends PureComponent<Props> {
-  public render(): ReactNode {
-    const { element, width, height, isFullScreen } = this.props
-    // The width field in the proto sets the image width, but has special
-    // cases for -1 and -2.
-    let containerWidth: number | undefined
-    const protoWidth = element.get("width")
+export function ImageList({
+  width,
+  isFullScreen,
+  element,
+  height,
+}: ImageListProps): ReactElement {
+  // The width field in the proto sets the image width, but has special
+  // cases for -1 and -2.
+  let containerWidth: number | undefined
+  const protoWidth = element.get("width")
 
-    if (protoWidth === WidthBehavior.OriginalWidth) {
-      // Use the original image width.
-      containerWidth = undefined
-    } else if (protoWidth === WidthBehavior.ColumnWidth) {
-      // Use the column width
-      containerWidth = width
-    } else if (protoWidth > 0) {
-      // Set the image width explicitly.
-      containerWidth = element.get("width")
-    } else {
-      throw Error(`Invalid image width: ${protoWidth}`)
-    }
-
-    const imgStyle: any = {}
-
-    if (height && isFullScreen) {
-      imgStyle.height = height
-      imgStyle["object-fit"] = "contain"
-    } else {
-      imgStyle.width = containerWidth
-    }
-
-    return (
-      <div style={{ width }}>
-        {element
-          .get("imgs")
-          .map((img: ImmutableMap<string, any>, idx: string) => (
-            <div
-              className="image-container stImage"
-              key={idx}
-              style={{ width: containerWidth }}
-            >
-              <img
-                style={imgStyle}
-                src={buildMediaUri(img.get("url"))}
-                alt={idx}
-              />
-              {!isFullScreen && (
-                <div className="caption"> {img.get("caption")} </div>
-              )}
-            </div>
-          ))}
-      </div>
-    )
+  if (protoWidth === WidthBehavior.OriginalWidth) {
+    // Use the original image width.
+    containerWidth = undefined
+  } else if (protoWidth === WidthBehavior.ColumnWidth) {
+    // Use the column width
+    containerWidth = width
+  } else if (protoWidth > 0) {
+    // Set the image width explicitly.
+    containerWidth = element.get("width")
+  } else {
+    throw Error(`Invalid image width: ${protoWidth}`)
   }
+
+  const imgStyle: any = {}
+
+  if (height && isFullScreen) {
+    imgStyle.height = height
+    imgStyle["object-fit"] = "contain"
+  } else {
+    imgStyle.width = containerWidth
+  }
+
+  return (
+    <div style={{ width }}>
+      {element
+        .get("imgs")
+        .map((img: ImmutableMap<string, any>, idx: string) => (
+          <div
+            className="image-container stImage"
+            key={idx}
+            style={{ width: containerWidth }}
+          >
+            <img
+              style={imgStyle}
+              src={buildMediaUri(img.get("url"))}
+              alt={idx}
+            />
+            {!isFullScreen && (
+              <div className="caption"> {img.get("caption")} </div>
+            )}
+          </div>
+        ))}
+    </div>
+  )
 }
 
 export default withFullScreenWrapper(ImageList)

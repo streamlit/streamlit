@@ -15,13 +15,13 @@
  * limitations under the License.
  */
 
-import React, { ReactNode } from "react"
+import React, { ReactElement } from "react"
 import classNames from "classnames"
 import { Map as ImmutableMap } from "immutable"
 
 import "assets/css/write.scss"
 
-export interface Props {
+export interface TextProps {
   width: number
   element: ImmutableMap<string, any>
 }
@@ -29,18 +29,13 @@ export interface Props {
 /**
  * Functional element representing preformatted (plain) text.
  */
-class Text extends React.PureComponent<Props> {
-  public render(): ReactNode {
-    const { element, width } = this.props
-    const body = element.get("body")
-    const styleProp = { width }
+export default function Text({ width, element }: TextProps): ReactElement {
+  const body = element.get("body")
+  const styleProp = { width }
 
-    return (
-      <div className={classNames("fixed-width", "stText")} style={styleProp}>
-        {body}
-      </div>
-    )
-  }
+  return (
+    <div className={classNames("fixed-width", "stText")} style={styleProp}>
+      {body}
+    </div>
+  )
 }
-
-export default Text
