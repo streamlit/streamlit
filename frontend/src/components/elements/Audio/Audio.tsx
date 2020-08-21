@@ -15,48 +15,33 @@
  * limitations under the License.
  */
 
-import React, { PureComponent, ReactNode } from "react"
+import React, { ReactElement, useEffect, useRef } from "react"
 import { Map as ImmutableMap } from "immutable"
 import { buildMediaUri } from "lib/UriUtil"
 
-export interface Props {
+export interface AudioProps {
   width: number
   element: ImmutableMap<string, any>
 }
 
-class Audio extends PureComponent<Props> {
-  private audioRef = React.createRef<HTMLAudioElement>()
+export default function Audio({ element, width }: AudioProps): ReactElement {
+  const audioRef = useRef<HTMLAudioElement>(null)
 
-  public componentDidMount = (): void => {
-    this.updateTime()
-  }
-
-  public componentDidUpdate = (): void => {
-    this.updateTime()
-  }
-
-  private updateTime(): void {
-    if (this.audioRef.current) {
-      const { element } = this.props
-
-      this.audioRef.current.currentTime = element.get("startTime")
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = element.get("startTime")
     }
-  }
+  }, [element])
 
-  public render(): ReactNode {
-    const { element, width } = this.props
-
-    const uri = buildMediaUri(element.get("url"))
-    return (
-      <audio
-        ref={this.audioRef}
-        controls
-        src={uri}
-        className="stAudio"
-        style={{ width }}
-      />
-    )
-  }
+  const uri = buildMediaUri(element.get("url"))
+  return (
+    <audio
+      id="audio"
+      ref={audioRef}
+      controls
+      src={uri}
+      className="stAudio"
+      style={{ width }}
+    />
+  )
 }
-
-export default Audio

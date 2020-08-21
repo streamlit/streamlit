@@ -21,7 +21,7 @@ import { Map as ImmutableMap } from "immutable"
 
 import { Alert as AlertProto } from "autogen/proto"
 import { StreamlitMarkdown } from "../../shared/StreamlitMarkdown"
-import Alert, { getAlertCSSClass, Props as AlertProps } from "./Alert"
+import Alert, { getAlertCSSClass, AlertProps } from "./Alert"
 
 const getProps = (elementProps: Record<string, unknown> = {}): AlertProps => ({
   element: ImmutableMap({

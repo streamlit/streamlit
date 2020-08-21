@@ -326,7 +326,6 @@ def image_to_url(
         data = image
 
     (data, mimetype) = _normalize_to_bytes(data, width, output_format)
-    print(mimetype)
     this_file = media_file_manager.add(data, mimetype, image_id)
     return this_file.url
 

@@ -39,5 +39,6 @@ message Slider {
   double step = 11;
 
   reserved 3, 4, 5, 6;
-  // NEXT ID: 13
+  repeated string options = 13;
+  // NEXT ID: 14
 }
