@@ -60,28 +60,54 @@ class Slider extends React.PureComponent<Props, State> {
 
   public componentDidMount = (): void => {
     // Attach click event listener to slider knobs.
-    if (this.sliderRef.current) {
-      const knobSelector = '[role="slider"]'
-      const knobs = this.sliderRef.current.querySelectorAll(knobSelector)
-      knobs.forEach(knob => knob.addEventListener("click", this.handleClick))
-    }
+    this.getAllSliderRoles().forEach((knob, index) => {
+      knob.addEventListener("click", this.handleClick)
+      this.setAriaValueText(knob, index)
+    })
     this.setWidgetValueImmediately({ fromUi: false })
+  }
+
+  public componentDidUpdate = (): void => {
+    this.getAllSliderRoles().forEach((knob, index) => {
+      this.setAriaValueText(knob, index)
+    })
   }
 
   public componentWillUnmount = (): void => {
     // Remove click event listener from slider knobs.
-    if (this.sliderRef.current) {
-      const knobSelector = '[role="slider"]'
-      const knobs = this.sliderRef.current.querySelectorAll(knobSelector)
-      knobs.forEach(knob =>
-        knob.removeEventListener("click", this.handleClick)
-      )
-    }
+    this.getAllSliderRoles().forEach(knob => {
+      knob.removeEventListener("click", this.handleClick)
+    })
   }
 
   private setWidgetValueImmediately = (source: Source): void => {
     const widgetId: string = this.props.element.get("id")
     this.props.widgetMgr.setFloatArrayValue(widgetId, this.state.value, source)
+  }
+
+  private getAllSliderRoles = (): Element[] => {
+    if (!this.sliderRef.current) {
+      return []
+    }
+
+    const knobSelector = '[role="slider"]'
+    const knobs = this.sliderRef.current.querySelectorAll(knobSelector)
+
+    return Array.from(knobs)
+  }
+
+  private setAriaValueText = (sliderRoleRef: Element, index: number): void => {
+    // Setting `aria-valuetext` helps screen readers read options and dates
+    const options = this.props.element.get("options")
+    if (options.size > 0 || this.isDateTimeType()) {
+      const { value } = this
+      if (index < value.length) {
+        sliderRoleRef.setAttribute(
+          "aria-valuetext",
+          this.formatValue(value[index])
+        )
+      }
+    }
   }
 
   private handleChange = ({ value }: { value: number[] }): void => {
@@ -131,17 +157,28 @@ class Slider extends React.PureComponent<Props, State> {
     return value.length > 1 ? [start, end] : [start]
   }
 
-  private formatValue(value: number): string {
-    const format = this.props.element.get("format")
+  private isDateTimeType(): boolean {
     const dataType = this.props.element.get("dataType")
-    if (
+
+    return (
       dataType === SliderProto.DataType.DATETIME ||
       dataType === SliderProto.DataType.DATE ||
       dataType === SliderProto.DataType.TIME
-    ) {
+    )
+  }
+
+  private formatValue(value: number): string {
+    const format = this.props.element.get("format")
+    const options = this.props.element.get("options")
+    if (this.isDateTimeType()) {
       // Python datetime uses microseconds, but JS & Moment uses milliseconds
       return moment(value / 1000).format(format)
     }
+
+    if (options.size > 0) {
+      return sprintf(format, options.get(value))
+    }
+
     return sprintf(format, value)
   }
 

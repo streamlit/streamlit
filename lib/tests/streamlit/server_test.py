@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """Server.py unit tests"""
-
+import os
 from unittest import mock
 from unittest.mock import MagicMock, patch
 import unittest
@@ -548,6 +548,39 @@ class PortRotateOneTest(unittest.TestCase):
                 patched__set_option.assert_called_with(
                     "server.port", 8501, config.ConfigOption.STREAMLIT_DEFINITION
                 )
+
+
+class UnixSocketTest(unittest.TestCase):
+    """Tests start_listening uses a unix socket when socket.address starts with
+       unix:// """
+
+    def get_httpserver(self):
+        httpserver = mock.MagicMock()
+
+        httpserver.add_socket = mock.Mock()
+
+        return httpserver
+
+    def test_unix_socket(self):
+        app = mock.MagicMock()
+
+        config.set_option("server.address", "unix://~/fancy-test/testasd")
+        some_socket = object()
+
+        mock_server = self.get_httpserver()
+        with patch.object(
+            tornado.httpserver, "HTTPServer", return_value=mock_server
+        ), patch.object(
+            tornado.netutil, "bind_unix_socket", return_value=some_socket
+        ) as bind_unix_socket, patch.dict(
+            os.environ, {"HOME": "/home/superfakehomedir"}
+        ):
+            start_listening(app)
+
+            bind_unix_socket.assert_called_with(
+                "/home/superfakehomedir/fancy-test/testasd"
+            )
+            mock_server.add_socket.assert_called_with(some_socket)
 
 
 class MetricsHandlerTest(tornado.testing.AsyncHTTPTestCase):
