@@ -41,7 +41,6 @@ from streamlit.storage.file_storage import FileStorage
 from streamlit.storage.s3_storage import S3Storage
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 import streamlit.elements.exception_proto as exception_proto
-from streamlit.errors import StreamlitAPIException
 
 LOGGER = get_logger(__name__)
 
@@ -108,9 +107,6 @@ class ReportSession(object):
 
         self._scriptrunner = None
 
-        # set_page_config is allowed at most once, as the very first st.command
-        self._set_page_config_allowed = True
-
         LOGGER.debug("ReportSession initialized (id=%s)", self.id)
 
     def flush_browser_queue(self):
@@ -174,17 +170,6 @@ class ReportSession(object):
 
             if scriptrunner is not None:
                 scriptrunner.maybe_handle_execution_control_request()
-
-        if msg.HasField("page_config_changed") and not self._set_page_config_allowed:
-            raise StreamlitAPIException(
-                "`beta_set_page_config()` can only be called once per app, "
-                + "and must be called as the first Streamlit command in your script.\n\n"
-                + "For more information refer to the [docs]"
-                + "(https://docs.streamlit.io/en/stable/api.html#streamlit.beta_set_page_config)."
-            )
-
-        if msg.HasField("delta") or msg.HasField("page_config_changed"):
-            self._set_page_config_allowed = False
 
         self._report.enqueue(msg)
 

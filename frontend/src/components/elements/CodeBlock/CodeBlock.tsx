@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-import Prism from "prismjs"
-import React, { PureComponent, ReactNode } from "react"
+import Prism, { Grammar } from "prismjs"
+import React, { ReactElement } from "react"
 import { logWarning } from "lib/log"
 
 // Prism language definition files.
@@ -33,7 +33,7 @@ import "prismjs/components/prism-c"
 import CopyButton from "./CopyButton"
 import "./CodeBlock.scss"
 
-export interface Props {
+export interface CodeBlockProps {
   width: number
   language?: string
   value: string
@@ -42,47 +42,43 @@ export interface Props {
 /**
  * Renders a code block with syntax highlighting, via Prismjs
  */
-class CodeBlock extends PureComponent<Props> {
-  public render(): ReactNode {
-    if (this.props.language == null) {
-      return (
-        <div className="stCodeBlock">
-          <CopyButton text={this.props.value} />
-          <pre>
-            <code>{this.props.value}</code>
-          </pre>
-        </div>
-      )
-    }
-
-    // Language definition keys are lowercase
-    let lang = Prism.languages[this.props.language.toLowerCase()]
-    let languageClassName = `language-${this.props.language}`
-
-    if (lang === undefined) {
-      logWarning(
-        `No syntax highlighting for ${this.props.language}; defaulting to Python`
-      )
-      lang = Prism.languages.python
-      languageClassName = "language-python"
-    }
-
-    const safeHtml = this.props.value
-      ? Prism.highlight(this.props.value, lang, "")
-      : ""
-
+export default function CodeBlock({
+  width,
+  language,
+  value,
+}: CodeBlockProps): ReactElement {
+  if (language == null) {
     return (
       <div className="stCodeBlock">
-        <CopyButton text={this.props.value} />
+        <CopyButton text={value} />
         <pre>
-          <code
-            className={languageClassName}
-            dangerouslySetInnerHTML={{ __html: safeHtml }}
-          />
+          <code>{value}</code>
         </pre>
       </div>
     )
   }
-}
 
-export default CodeBlock
+  // Language definition keys are lowercase
+  let lang: Grammar = Prism.languages[language.toLowerCase()]
+  let languageClassName = `language-${language}`
+
+  if (lang === undefined) {
+    logWarning(`No syntax highlighting for ${language}; defaulting to Python`)
+    lang = Prism.languages.python
+    languageClassName = "language-python"
+  }
+
+  const safeHtml = value ? Prism.highlight(value, lang, "") : ""
+
+  return (
+    <div className="stCodeBlock">
+      <CopyButton text={value} />
+      <pre>
+        <code
+          className={languageClassName}
+          dangerouslySetInnerHTML={{ __html: safeHtml }}
+        />
+      </pre>
+    </div>
+  )
+}

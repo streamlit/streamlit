@@ -21,14 +21,13 @@ import { fromJS } from "immutable"
 
 import { Table as ReactTable } from "reactstrap"
 import mock from "./mock"
-import { Table, Props } from "./Table"
+import { Table, TableProps } from "./Table"
 
-const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
+const getProps = (elementProps: Record<string, unknown> = {}): TableProps => ({
   element: fromJS({
     ...mock,
     ...elementProps,
   }),
-  width: 0,
 })
 
 describe("Table Element", () => {

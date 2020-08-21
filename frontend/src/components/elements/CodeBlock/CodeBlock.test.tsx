@@ -18,13 +18,13 @@
 import React from "react"
 import { shallow } from "enzyme"
 import { logWarning } from "lib/log"
-import CodeBlock, { Props } from "./CodeBlock"
+import CodeBlock, { CodeBlockProps } from "./CodeBlock"
 
 jest.mock("lib/log", () => ({
   logWarning: jest.fn(),
 }))
 
-const getProps = (props: Record<string, unknown> = {}): Props => ({
+const getProps = (props: Record<string, unknown> = {}): CodeBlockProps => ({
   width: 0,
   value: `
     import streamlit as st
