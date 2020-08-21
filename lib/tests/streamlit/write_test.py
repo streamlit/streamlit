@@ -193,9 +193,9 @@ class StreamlitWriteTest(unittest.TestCase):
             side_effect=st.exception,
         ) as e:
             m.side_effect = Exception("some exception")
-            st.write("some text")
 
-            e.assert_called_once()
+            with self.assertRaises(Exception):
+                st.write("some text")
 
     def test_spinner(self):
         """Test st.spinner."""
@@ -225,7 +225,7 @@ class StreamlitWriteTest(unittest.TestCase):
 
             p.assert_called_once()
 
-        with patch("streamlit.delta_generator.DeltaGenerator.exception") as e:
+        with self.assertRaises(StreamlitAPIException):
             # Also override dg._is_top_level for this test.
             with patch.object(
                 st.delta_generator.DeltaGenerator,
@@ -233,8 +233,8 @@ class StreamlitWriteTest(unittest.TestCase):
                 new_callable=PropertyMock,
             ) as top_level:
                 top_level.return_value = False
+
                 placeholder.write("But", "multiple", "args", "should", "fail")
-                e.assert_called_once()
 
 
 def make_is_type_mock(true_type_matchers):
