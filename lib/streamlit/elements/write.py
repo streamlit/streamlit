@@ -136,81 +136,77 @@ class WriteMixin:
 
         # Cast self to DeltaGenerator, to resolve mypy type issues
         dg = cast(DeltaGenerator, self)
-        try:
-            string_buffer = []  # type: List[str]
-            unsafe_allow_html = kwargs.get("unsafe_allow_html", False)
+        string_buffer = []  # type: List[str]
+        unsafe_allow_html = kwargs.get("unsafe_allow_html", False)
 
-            # This bans some valid cases like: e = st.empty(); e.write("a", "b").
-            # BUT: 1) such cases are rare, 2) this rule is easy to understand,
-            # and 3) this rule should be removed once we have st.container()
-            if not dg._is_top_level and len(args) > 1:
-                raise StreamlitAPIException(
-                    "Cannot replace a single element with multiple elements.\n\n"
-                    "The `write()` method only supports multiple elements when "
-                    "inserting elements rather than replacing. That is, only "
-                    "when called as `st.write()` or `st.sidebar.write()`."
+        # This bans some valid cases like: e = st.empty(); e.write("a", "b").
+        # BUT: 1) such cases are rare, 2) this rule is easy to understand,
+        # and 3) this rule should be removed once we have st.container()
+        if not dg._is_top_level and len(args) > 1:
+            raise StreamlitAPIException(
+                "Cannot replace a single element with multiple elements.\n\n"
+                "The `write()` method only supports multiple elements when "
+                "inserting elements rather than replacing. That is, only "
+                "when called as `st.write()` or `st.sidebar.write()`."
+            )
+
+        def flush_buffer():
+            if string_buffer:
+                dg.markdown(
+                    " ".join(string_buffer), unsafe_allow_html=unsafe_allow_html,
                 )
+                string_buffer[:] = []
 
-            def flush_buffer():
-                if string_buffer:
-                    dg.markdown(
-                        " ".join(string_buffer), unsafe_allow_html=unsafe_allow_html,
-                    )
-                    string_buffer[:] = []
-
-            for arg in args:
-                # Order matters!
-                if isinstance(arg, str):
-                    string_buffer.append(arg)
-                elif type_util.is_dataframe_like(arg):
-                    flush_buffer()
-                    if len(np.shape(arg)) > 2:
-                        dg.text(arg)
-                    else:
-                        dg.dataframe(arg)
-                elif isinstance(arg, Exception):
-                    flush_buffer()
-                    dg.exception(arg)
-                elif isinstance(arg, HELP_TYPES):
-                    flush_buffer()
-                    dg.help(arg)
-                elif type_util.is_altair_chart(arg):
-                    flush_buffer()
-                    dg.altair_chart(arg)
-                elif type_util.is_type(arg, "matplotlib.figure.Figure"):
-                    flush_buffer()
-                    dg.pyplot(arg)
-                elif type_util.is_plotly_chart(arg):
-                    flush_buffer()
-                    dg.plotly_chart(arg)
-                elif type_util.is_type(arg, "bokeh.plotting.figure.Figure"):
-                    flush_buffer()
-                    dg.bokeh_chart(arg)
-                elif type_util.is_graphviz_chart(arg):
-                    flush_buffer()
-                    dg.graphviz_chart(arg)
-                elif type_util.is_sympy_expession(arg):
-                    flush_buffer()
-                    dg.latex(arg)
-                elif type_util.is_keras_model(arg):
-                    from tensorflow.python.keras.utils import vis_utils
-
-                    flush_buffer()
-                    dot = vis_utils.model_to_dot(arg)
-                    dg.graphviz_chart(dot.to_string())
-                elif isinstance(arg, (dict, list)):
-                    flush_buffer()
-                    dg.json(arg)
-                elif type_util.is_namedtuple(arg):
-                    flush_buffer()
-                    dg.json(json.dumps(arg._asdict()))
-                elif type_util.is_pydeck(arg):
-                    flush_buffer()
-                    dg.pydeck_chart(arg)
+        for arg in args:
+            # Order matters!
+            if isinstance(arg, str):
+                string_buffer.append(arg)
+            elif type_util.is_dataframe_like(arg):
+                flush_buffer()
+                if len(np.shape(arg)) > 2:
+                    dg.text(arg)
                 else:
-                    string_buffer.append("`%s`" % str(arg).replace("`", "\\`"))
+                    dg.dataframe(arg)
+            elif isinstance(arg, Exception):
+                flush_buffer()
+                dg.exception(arg)
+            elif isinstance(arg, HELP_TYPES):
+                flush_buffer()
+                dg.help(arg)
+            elif type_util.is_altair_chart(arg):
+                flush_buffer()
+                dg.altair_chart(arg)
+            elif type_util.is_type(arg, "matplotlib.figure.Figure"):
+                flush_buffer()
+                dg.pyplot(arg)
+            elif type_util.is_plotly_chart(arg):
+                flush_buffer()
+                dg.plotly_chart(arg)
+            elif type_util.is_type(arg, "bokeh.plotting.figure.Figure"):
+                flush_buffer()
+                dg.bokeh_chart(arg)
+            elif type_util.is_graphviz_chart(arg):
+                flush_buffer()
+                dg.graphviz_chart(arg)
+            elif type_util.is_sympy_expession(arg):
+                flush_buffer()
+                dg.latex(arg)
+            elif type_util.is_keras_model(arg):
+                from tensorflow.python.keras.utils import vis_utils
 
-            flush_buffer()
+                flush_buffer()
+                dot = vis_utils.model_to_dot(arg)
+                dg.graphviz_chart(dot.to_string())
+            elif isinstance(arg, (dict, list)):
+                flush_buffer()
+                dg.json(arg)
+            elif type_util.is_namedtuple(arg):
+                flush_buffer()
+                dg.json(json.dumps(arg._asdict()))
+            elif type_util.is_pydeck(arg):
+                flush_buffer()
+                dg.pydeck_chart(arg)
+            else:
+                string_buffer.append("`%s`" % str(arg).replace("`", "\\`"))
 
-        except Exception as exc:
-            dg.exception(exc)
+        flush_buffer()
