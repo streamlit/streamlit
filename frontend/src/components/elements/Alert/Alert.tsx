@@ -22,7 +22,7 @@ import { Alert as AlertProto } from "autogen/proto"
 import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
 import AlertContainer, { Kind } from "components/shared/AlertContainer"
 
-export function getAlertKind(format: number): Kind {
+export function getAlertKind(format: AlertProto.Format): Kind {
   switch (format) {
     case AlertProto.Format.ERROR:
       return Kind.ERROR
