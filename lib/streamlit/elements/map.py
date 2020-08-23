@@ -78,6 +78,7 @@ _DEFAULT_MAP["mapStyle"] = "mapbox://styles/mapbox/light-v10"
 
 # Other default parameters for st.map.
 _DEFAULT_COLOR = [200, 30, 0, 160]
+_DEFAULT_ZOOM_LEVEL = 12
 _ZOOM_LEVELS = [
     360,
     180,
@@ -99,6 +100,7 @@ _ZOOM_LEVELS = [
     0.003,
     0.001,
     0.0005,
+    0.00025,
 ]
 
 
@@ -115,9 +117,13 @@ def _get_zoom_level(distance):
     Returns
     -------
     int
-        The zoom level, from 0 to 29.
+        The zoom level, from 0 to 20.
 
     """
+
+    # For small number of points the default zoom level will be used.
+    if distance < _ZOOM_LEVELS[-1]:
+        return _DEFAULT_ZOOM_LEVEL
 
     for i in range(len(_ZOOM_LEVELS) - 1):
         if _ZOOM_LEVELS[i + 1] < distance <= _ZOOM_LEVELS[i]:
