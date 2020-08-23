@@ -16,8 +16,8 @@
  */
 
 import React, { ReactElement } from "react"
-import classNames from "classnames"
 import { Map as ImmutableMap } from "immutable"
+import AlertContainer, { Kind } from "components/shared/AlertContainer"
 import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
 import "./ExceptionElement.scss"
 
@@ -90,23 +90,24 @@ export default function ExceptionElement({
   const isWarning = element.get("isWarning")
   const type: string = element.get("type")
   const message: string = element.get("message")
-  const wrapperClasses = classNames("alert", "exception", "stException", {
-    "alert-danger": !isWarning,
-    "alert-warning": isWarning,
-  })
   const messageIsMarkdown: boolean = element.get("messageIsMarkdown")
   return (
-    <div className={wrapperClasses} style={{ width }}>
-      <div className="message">
-        <ExceptionMessage
-          type={type}
-          message={message}
-          messageIsMarkdown={messageIsMarkdown}
-        />
-      </div>
-      {stackTrace && stackTrace.size > 0 ? (
-        <StackTrace stackTrace={stackTrace} />
-      ) : null}
+    <div className="stException">
+      <AlertContainer
+        kind={isWarning ? Kind.WARNING : Kind.ERROR}
+        width={width}
+      >
+        <div className="message">
+          <ExceptionMessage
+            type={type}
+            message={message}
+            messageIsMarkdown={messageIsMarkdown}
+          />
+        </div>
+        {stackTrace && stackTrace.size > 0 ? (
+          <StackTrace stackTrace={stackTrace} />
+        ) : null}
+      </AlertContainer>
     </div>
   )
 }

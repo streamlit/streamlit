@@ -22,6 +22,7 @@ import pandas as pd
 
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as DeckGlJsonChartProto
 import streamlit.elements.deck_gl_json_chart as deck_gl_json_chart
+from streamlit.errors import StreamlitAPIException
 
 
 class MapMixin:
@@ -134,17 +135,21 @@ def to_deckgl_json(data, zoom):
     elif "latitude" in data:
         lat = "latitude"
     else:
-        raise Exception('Map data must contain a column named "latitude" or "lat".')
+        raise StreamlitAPIException(
+            'Map data must contain a column named "latitude" or "lat".'
+        )
 
     if "lon" in data:
         lon = "lon"
     elif "longitude" in data:
         lon = "longitude"
     else:
-        raise Exception('Map data must contain a column called "longitude" or "lon".')
+        raise StreamlitAPIException(
+            'Map data must contain a column called "longitude" or "lon".'
+        )
 
     if data[lon].isnull().values.any() or data[lat].isnull().values.any():
-        raise Exception("Latitude and longitude data must be numeric.")
+        raise StreamlitAPIException("Latitude and longitude data must be numeric.")
 
     data = pd.DataFrame(data)
 

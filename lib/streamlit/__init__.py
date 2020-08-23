@@ -90,16 +90,12 @@ import sys as _sys
 import textwrap as _textwrap
 import threading as _threading
 import traceback as _traceback
-import types as _types
-import json as _json
-import numpy as _np
 import urllib.parse as _parse
 
 from streamlit import code_util as _code_util
 from streamlit import env_util as _env_util
 from streamlit import source_util as _source_util
 from streamlit import string_util as _string_util
-from streamlit import type_util as _type_util
 from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
 from streamlit.report_thread import add_report_ctx as _add_report_ctx
 from streamlit.report_thread import get_report_ctx as _get_report_ctx
@@ -182,6 +178,7 @@ title = _main.title  # noqa: E221
 vega_lite_chart = _main.vega_lite_chart  # noqa: E221
 video = _main.video  # noqa: E221
 warning = _main.warning  # noqa: E221
+write = _main.write  # noqa: E221
 beta_color_picker = _main.beta_color_picker  # noqa: E221
 
 # Config
@@ -222,198 +219,6 @@ def set_option(key, value):
             key=key
         )
     )
-
-
-# Special methods:
-
-_HELP_TYPES = (
-    _types.BuiltinFunctionType,
-    _types.BuiltinMethodType,
-    _types.FunctionType,
-    _types.MethodType,
-    _types.ModuleType,
-)  # type: Tuple[Type[Any], ...]
-
-
-def write(*args, **kwargs):
-    """Write arguments to the app.
-
-    This is the Swiss Army knife of Streamlit commands: it does different
-    things depending on what you throw at it. Unlike other Streamlit commands,
-    write() has some unique properties:
-
-    1. You can pass in multiple arguments, all of which will be written.
-    2. Its behavior depends on the input types as follows.
-    3. It returns None, so it's "slot" in the App cannot be reused.
-
-    Parameters
-    ----------
-    *args : any
-        One or many objects to print to the App.
-
-        Arguments are handled as follows:
-
-        - write(string)     : Prints the formatted Markdown string, with
-            support for LaTeX expression and emoji shortcodes.
-            See docs for st.markdown for more.
-        - write(data_frame) : Displays the DataFrame as a table.
-        - write(error)      : Prints an exception specially.
-        - write(func)       : Displays information about a function.
-        - write(module)     : Displays information about the module.
-        - write(dict)       : Displays dict in an interactive widget.
-        - write(obj)        : The default is to print str(obj).
-        - write(mpl_fig)    : Displays a Matplotlib figure.
-        - write(altair)     : Displays an Altair chart.
-        - write(keras)      : Displays a Keras model.
-        - write(graphviz)   : Displays a Graphviz graph.
-        - write(plotly_fig) : Displays a Plotly figure.
-        - write(bokeh_fig)  : Displays a Bokeh figure.
-        - write(sympy_expr) : Prints SymPy expression using LaTeX.
-
-    unsafe_allow_html : bool
-        This is a keyword-only argument that defaults to False.
-
-        By default, any HTML tags found in strings will be escaped and
-        therefore treated as pure text. This behavior may be turned off by
-        setting this argument to True.
-
-        That said, *we strongly advise* against it*. It is hard to write secure
-        HTML, so by using this argument you may be compromising your users'
-        security. For more information, see:
-
-        https://github.com/streamlit/streamlit/issues/152
-
-        **Also note that `unsafe_allow_html` is a temporary measure and may be
-        removed from Streamlit at any time.**
-
-        If you decide to turn on HTML anyway, we ask you to please tell us your
-        exact use case here:
-        https://discuss.streamlit.io/t/96 .
-
-        This will help us come up with safe APIs that allow you to do what you
-        want.
-
-    Example
-    -------
-
-    Its simplest use case is to draw Markdown-formatted text, whenever the
-    input is a string:
-
-    >>> write('Hello, *World!* :sunglasses:')
-
-    .. output::
-       https://share.streamlit.io/0.50.2-ZWk9/index.html?id=Pn5sjhgNs4a8ZbiUoSTRxE
-       height: 50px
-
-    As mentioned earlier, `st.write()` also accepts other data formats, such as
-    numbers, data frames, styled data frames, and assorted objects:
-
-    >>> st.write(1234)
-    >>> st.write(pd.DataFrame({
-    ...     'first column': [1, 2, 3, 4],
-    ...     'second column': [10, 20, 30, 40],
-    ... }))
-
-    .. output::
-       https://share.streamlit.io/0.25.0-2JkNY/index.html?id=FCp9AMJHwHRsWSiqMgUZGD
-       height: 250px
-
-    Finally, you can pass in multiple arguments to do things like:
-
-    >>> st.write('1 + 1 = ', 2)
-    >>> st.write('Below is a DataFrame:', data_frame, 'Above is a dataframe.')
-
-    .. output::
-       https://share.streamlit.io/0.25.0-2JkNY/index.html?id=DHkcU72sxYcGarkFbf4kK1
-       height: 300px
-
-    Oh, one more thing: `st.write` accepts chart objects too! For example:
-
-    >>> import pandas as pd
-    >>> import numpy as np
-    >>> import altair as alt
-    >>>
-    >>> df = pd.DataFrame(
-    ...     np.random.randn(200, 3),
-    ...     columns=['a', 'b', 'c'])
-    ...
-    >>> c = alt.Chart(df).mark_circle().encode(
-    ...     x='a', y='b', size='c', color='c', tooltip=['a', 'b', 'c'])
-    >>>
-    >>> st.write(c)
-
-    .. output::
-       https://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
-       height: 200px
-
-    """
-    try:
-        string_buffer = []  # type: List[str]
-        unsafe_allow_html = kwargs.get("unsafe_allow_html", False)
-
-        def flush_buffer():
-            if string_buffer:
-                markdown(
-                    " ".join(string_buffer), unsafe_allow_html=unsafe_allow_html,
-                )  # noqa: F821
-                string_buffer[:] = []
-
-        for arg in args:
-            # Order matters!
-            if isinstance(arg, str):
-                string_buffer.append(arg)
-            elif _type_util.is_dataframe_like(arg):
-                flush_buffer()
-                if len(_np.shape(arg)) > 2:
-                    text(arg)
-                else:
-                    dataframe(arg)  # noqa: F821
-            elif isinstance(arg, Exception):
-                flush_buffer()
-                exception(arg)  # noqa: F821
-            elif isinstance(arg, _HELP_TYPES):
-                flush_buffer()
-                help(arg)
-            elif _type_util.is_altair_chart(arg):
-                flush_buffer()
-                altair_chart(arg)
-            elif _type_util.is_type(arg, "matplotlib.figure.Figure"):
-                flush_buffer()
-                pyplot(arg)
-            elif _type_util.is_plotly_chart(arg):
-                flush_buffer()
-                plotly_chart(arg)
-            elif _type_util.is_type(arg, "bokeh.plotting.figure.Figure"):
-                flush_buffer()
-                bokeh_chart(arg)
-            elif _type_util.is_graphviz_chart(arg):
-                flush_buffer()
-                graphviz_chart(arg)
-            elif _type_util.is_sympy_expession(arg):
-                flush_buffer()
-                latex(arg)
-            elif _type_util.is_keras_model(arg):
-                from tensorflow.python.keras.utils import vis_utils
-
-                flush_buffer()
-                dot = vis_utils.model_to_dot(arg)
-                graphviz_chart(dot.to_string())
-            elif isinstance(arg, (dict, list)):
-                flush_buffer()
-                json(arg)
-            elif _type_util.is_namedtuple(arg):
-                flush_buffer()
-                json(_json.dumps(arg._asdict()))
-            elif _type_util.is_pydeck(arg):
-                flush_buffer()
-                pydeck_chart(arg)
-            else:
-                string_buffer.append("`%s`" % str(arg).replace("`", "\\`"))
-
-        flush_buffer()
-
-    except Exception as exc:
-        exception(exc)
 
 
 def experimental_show(*args):
@@ -707,10 +512,11 @@ def _maybe_print_repl_warning():
 
 
 def stop():
-    """Stops excecution immediately. Streamlit will not run any statements
-    after `st.stop()`. We recommend rendering an informational message that
-    would explain the stop in execution. When run outside of Streamlit, it
-    will raise an Exception
+    """Stops execution immediately.
+    
+    Streamlit will not run any statements after `st.stop()`.
+    We recommend rendering a message to explain why the script has stopped.
+    When run outside of Streamlit, this will raise an Exception.
 
     Example
     -------

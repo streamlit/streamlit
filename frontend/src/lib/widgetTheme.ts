@@ -507,6 +507,16 @@ const themeOverrides = {
     calendarDayBackgroundSelectedHighlighted: primary,
     calendarDayForegroundSelected: white,
     calendarDayForegroundSelectedHighlighted: white,
+    notificationInfoBackground: SCSS_VARS["$alert-info-background-color"],
+    notificationInfoText: SCSS_VARS["$alert-info-text-color"],
+    notificationPositiveBackground:
+      SCSS_VARS["$alert-success-background-color"],
+    notificationPositiveText: SCSS_VARS["$alert-success-text-color"],
+    notificationWarningBackground:
+      SCSS_VARS["$alert-warning-background-color"],
+    notificationWarningText: SCSS_VARS["$alert-warning-text-color"],
+    notificationNegativeBackground: SCSS_VARS["$alert-error-background-color"],
+    notificationNegativeText: SCSS_VARS["$alert-error-text-color"],
   },
 }
 
