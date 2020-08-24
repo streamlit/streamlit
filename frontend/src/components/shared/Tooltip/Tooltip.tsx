@@ -38,19 +38,16 @@ function Tooltip({
         Arrow: {
           style: {
             backgroundColor: "black",
-            opacity: 0.9,
           },
         },
         Body: {
           style: {
-            backgroundColor: "black",
             borderRadius: "0.25rem",
-            opacity: 0.9,
           },
         },
         Inner: {
           style: {
-            backgroundColor: "transparent",
+            backgroundColor: "black",
             color: "white",
             fontSize: "0.875rem",
             fontWeight: "normal",
