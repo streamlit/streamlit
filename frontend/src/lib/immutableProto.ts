@@ -85,7 +85,7 @@ export function updateOneOf(
  *
  * obj   - The immutable protobuf object we're applying this to.
  * name  - The name of the oneof field.
- * funcs - Dictionary of values, one for each oneof field.
+ * values - Dictionary of values, one for each oneof field.
  */
 export function mapOneOf(
   obj: Map<string, any>,

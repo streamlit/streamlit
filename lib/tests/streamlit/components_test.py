@@ -202,8 +202,8 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.component_instance
 
         self.assertEqual(self.test_component.name, proto.component_name)
-        self.assertEqual(json.dumps({"foo": "bar"}), proto.args_json)
-        self.assertEqual("[]", str(proto.args_dataframe))
+        self.assertEqual(json.dumps({"foo": "bar"}), proto.json_args)
+        self.assertEqual("[]", str(proto.special_args))
 
     def test_only_df_args(self):
         """Test that component with only dataframe args is marshalled correctly."""
@@ -217,16 +217,16 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.component_instance
 
         self.assertEqual(self.test_component.name, proto.component_name)
-        self.assertEqual("{}", proto.args_json)
+        self.assertEqual("{}", proto.json_args)
         # (HK) TODO: Add assertEqual check for Apache Arrow pybytes.
-        self.assertIsNotNone(proto.args_dataframe)
+        self.assertIsNotNone(proto.special_args)
 
     def test_only_list_args(self):
         """Test that component with only list args is marshalled correctly."""
         self.test_component(data=["foo", "bar", "baz"])
         proto = self.get_delta_from_queue().new_element.component_instance
-        self.assertEqual(json.dumps({"data": ["foo", "bar", "baz"]}), proto.args_json)
-        self.assertEqual("[]", str(proto.args_dataframe))
+        self.assertEqual(json.dumps({"data": ["foo", "bar", "baz"]}), proto.json_args)
+        self.assertEqual("[]", str(proto.special_args))
 
     def test_no_args(self):
         """Test that component with no args is marshalled correctly."""
@@ -234,8 +234,8 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.component_instance
 
         self.assertEqual(self.test_component.name, proto.component_name)
-        self.assertEqual("{}", proto.args_json)
-        self.assertEqual("[]", str(proto.args_dataframe))
+        self.assertEqual("{}", proto.json_args)
+        self.assertEqual("[]", str(proto.special_args))
 
     def test_json_and_df_args(self):
         """Test that component with json and dataframe args is marshalled correctly."""
@@ -249,9 +249,9 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.component_instance
 
         self.assertEqual(self.test_component.name, proto.component_name)
-        self.assertEqual(json.dumps({"foo": "bar"}), proto.args_json)
+        self.assertEqual(json.dumps({"foo": "bar"}), proto.json_args)
         # (HK) TODO: Add assertEqual check for Apache Arrow pybytes.
-        self.assertIsNotNone(proto.args_dataframe)
+        self.assertIsNotNone(proto.special_args)
 
     def test_key(self):
         """Two components with the same `key` should throw DuplicateWidgetID exception"""

@@ -17,14 +17,16 @@
 
 import ErrorElement from "components/shared/ErrorElement"
 import { Map as ImmutableMap } from "immutable"
+import { SimpleElement } from "lib/DeltaParser"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
 } from "lib/IFrameUtil"
+import { dispatchOneOf } from "lib/immutableProto"
 import { logError, logWarning } from "lib/log"
 import { Source, WidgetStateManager } from "lib/WidgetStateManager"
-import React, { createRef, ReactNode } from "react"
 import queryString from "query-string"
+import React, { createRef, ReactNode } from "react"
 import { ComponentRegistry } from "./ComponentRegistry"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
 
@@ -54,9 +56,9 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
   // True when we've received the COMPONENT_READY message
   private componentReady = false
 
-  private lastRenderArgs = {}
+  private lastJSONArgs = {}
 
-  private lastRenderDataframes = []
+  private lastDataframeArgs: any[] = []
 
   private frameHeight = 0
 
@@ -125,8 +127,8 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
         } else {
           this.componentReady = true
           this.sendForwardMsg(StreamlitMessageType.RENDER, {
-            args: this.lastRenderArgs,
-            dfs: this.lastRenderDataframes,
+            args: this.lastJSONArgs,
+            dfs: this.lastDataframeArgs,
           })
         }
         break
@@ -241,8 +243,8 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     // and bail. The error will be displayed in the next call to render,
     // which will be triggered immediately. (This will not cause an infinite
     // loop.)
-    let renderArgs: any
-    let renderDfs: any
+    let jsonArgs: any
+    const dataframeArgs: any[] = []
     let src: string
     let componentName: string
     try {
@@ -262,9 +264,17 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
         query: { streamlitUrl: window.location.href },
       })
 
-      // Parse arguments
-      renderArgs = JSON.parse(this.props.element.get("argsJson"))
-      renderDfs = this.props.element.get("argsDataframe").toJS()
+      // Parse arguments. Our JSON arguments are just stored in a JSON string.
+      // All other arguments are stored in the "specialArgs" list
+      jsonArgs = JSON.parse(this.props.element.get("jsonArgs"))
+      const specialArgs = this.props.element.get("specialArgs")
+      specialArgs.forEach((specialArg: any) => {
+        const key = specialArg.get("key")
+        dispatchOneOf(specialArg, "value", {
+          arrowDataframe: (el: SimpleElement) =>
+            dataframeArgs.push({ key, value: el.toJS() }),
+        })
+      })
     } catch (err) {
       this.setState({ componentError: err })
       return undefined
@@ -273,8 +283,8 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     if (this.componentReady) {
       // The component has loaded. Send it a new render message immediately.
       this.sendForwardMsg(StreamlitMessageType.RENDER, {
-        args: renderArgs,
-        dfs: renderDfs,
+        args: jsonArgs,
+        dfs: dataframeArgs,
         disabled: this.props.disabled,
       })
     }
@@ -285,8 +295,8 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     // for example, if it's being served from a webpack dev server). When
     // component sends the COMPONENT_READY message, we send it the most
     // recent render arguments.
-    this.lastRenderArgs = renderArgs
-    this.lastRenderDataframes = renderDfs
+    this.lastJSONArgs = jsonArgs
+    this.lastDataframeArgs = dataframeArgs
 
     // Render the iframe. We set scrolling="no", because we don't want
     // scrollbars to appear; instead, we want components to properly auto-size
