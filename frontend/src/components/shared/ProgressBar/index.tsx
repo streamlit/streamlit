@@ -15,18 +15,4 @@
  * limitations under the License.
  */
 
-/// <reference types="cypress" />
-
-describe("st.progress", () => {
-  before(() => {
-    cy.visit("http://localhost:3000/");
-  });
-
-  it("displays a progress bar", () => {
-    cy.get(".stProgress [role='progressbar']").should(
-      "have.attr",
-      "aria-valuenow",
-      "50"
-    );
-  });
-});
+export { default } from "./ProgressBar"

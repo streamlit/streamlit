@@ -18,64 +18,30 @@
 import React from "react"
 import { shallow } from "enzyme"
 import { fromJS } from "immutable"
-import { timeout } from "lib/utils"
 
-import { Progress as UIProgress } from "reactstrap"
-import Progress, { Props, FAST_UPDATE_MS } from "./Progress"
+import Progress, { ProgressProps } from "./Progress"
 
-const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
+const getProps = (
+  propOverrides: Record<string, unknown> = {}
+): ProgressProps => ({
   element: fromJS({
     value: 50,
-    ...elementProps,
   }),
   width: 0,
+  ...propOverrides,
 })
 
-describe("Progress Element", () => {
+describe("ProgressBar component", () => {
   it("renders without crashing", () => {
-    const props = getProps()
-    const wrapper = shallow(<Progress {...props} />)
+    const wrapper = shallow(<Progress {...getProps()} />)
 
-    expect(wrapper.find(UIProgress).length).toBe(1)
+    expect(wrapper.find("ProgressBar").length).toBe(1)
   })
 
-  it("moving backwards", () => {
-    const props = getProps()
-    const wrapper = shallow(<Progress {...props} />)
+  it("sets the value and width correctly", () => {
+    const wrapper = shallow(<Progress {...getProps({ width: 100 })} />)
 
-    expect(wrapper.instance().lastValue).toBe(50)
-
-    wrapper.setProps({
-      element: fromJS({
-        value: 49,
-      }),
-    })
-
-    expect(wrapper.instance().lastValue).toBe(49)
-    expect(wrapper.find(UIProgress).prop("value")).toBe(49)
-    expect(wrapper.find(UIProgress).prop("className")).toBe(
-      "stProgress without-transition"
-    )
-  })
-
-  it("moving forward", async () => {
-    const props = getProps()
-    const wrapper = shallow(<Progress {...props} />)
-
-    expect(wrapper.instance().lastValue).toBe(50)
-
-    await timeout(FAST_UPDATE_MS)
-
-    wrapper.setProps({
-      element: fromJS({
-        value: 51,
-      }),
-    })
-
-    expect(wrapper.instance().lastValue).toBe(51)
-    expect(wrapper.find(UIProgress).prop("value")).toBe(51)
-    expect(wrapper.find(UIProgress).prop("className")).toBe(
-      "stProgress with-transition"
-    )
+    expect(wrapper.find("ProgressBar").prop("value")).toEqual(50)
+    expect(wrapper.find("ProgressBar").prop("width")).toEqual(100)
   })
 })

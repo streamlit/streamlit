@@ -283,7 +283,7 @@ export class App extends PureComponent<Props, State> {
           this.handlePageInfoChanged(pageInfo),
         reportFinished: (status: ForwardMsg.ReportFinishedStatus) =>
           this.handleReportFinished(status),
-        uploadReportProgress: (progress: string | number) =>
+        uploadReportProgress: (progress: number) =>
           this.handleUploadReportProgress(progress),
         reportUploaded: (url: string) => this.handleReportUploaded(url),
       })
@@ -293,7 +293,7 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
-  handleUploadReportProgress = (progress: string | number): void => {
+  handleUploadReportProgress = (progress: number): void => {
     const newDialog: DialogProps = {
       type: DialogType.UPLOAD_PROGRESS,
       progress,
