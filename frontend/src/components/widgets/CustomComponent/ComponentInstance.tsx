@@ -56,8 +56,10 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
   // True when we've received the COMPONENT_READY message
   private componentReady = false
 
+  // The most recent JSON args we've received for this component.
   private lastJSONArgs = {}
 
+  // The most recent Arrow Dataframe args we've received.
   private lastDataframeArgs: any[] = []
 
   private frameHeight = 0
