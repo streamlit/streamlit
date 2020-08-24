@@ -15,6 +15,7 @@
 import json
 import os
 import unittest
+from typing import Any
 from unittest import mock
 
 import pandas as pd
@@ -28,12 +29,21 @@ from streamlit.components.v1.components import ComponentRequestHandler
 from streamlit.components.v1.components import CustomComponent
 from streamlit.components.v1.components import declare_component
 import streamlit.components.v1 as components
+from streamlit.elements import arrow_table
 from streamlit.errors import DuplicateWidgetID
+from streamlit.proto.ComponentInstance_pb2 import SpecialArg
 from tests import testutil
 from tests.testutil import DeltaGeneratorTestCase
 
 URL = "http://not.a.real.url:3001"
 PATH = "not/a/real/path"
+
+
+def _serialize_dataframe_arg(key: str, value: Any) -> SpecialArg:
+    special_arg = SpecialArg()
+    special_arg.key = key
+    arrow_table.marshall(special_arg.arrow_dataframe.data, value)
+    return special_arg
 
 
 class DeclareComponentTest(unittest.TestCase):
@@ -218,8 +228,8 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
 
         self.assertEqual(self.test_component.name, proto.component_name)
         self.assertEqual("{}", proto.json_args)
-        # (HK) TODO: Add assertEqual check for Apache Arrow pybytes.
-        self.assertIsNotNone(proto.special_args)
+        self.assertEqual(1, len(proto.special_args))
+        self.assertEqual(_serialize_dataframe_arg("df", df), proto.special_args[0])
 
     def test_only_list_args(self):
         """Test that component with only list args is marshalled correctly."""
@@ -250,8 +260,8 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
 
         self.assertEqual(self.test_component.name, proto.component_name)
         self.assertEqual(json.dumps({"foo": "bar"}), proto.json_args)
-        # (HK) TODO: Add assertEqual check for Apache Arrow pybytes.
-        self.assertIsNotNone(proto.special_args)
+        self.assertEqual(1, len(proto.special_args))
+        self.assertEqual(_serialize_dataframe_arg("df", df), proto.special_args[0])
 
     def test_key(self):
         """Two components with the same `key` should throw DuplicateWidgetID exception"""
