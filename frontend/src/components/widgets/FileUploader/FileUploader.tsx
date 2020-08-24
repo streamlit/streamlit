@@ -23,7 +23,9 @@ import { FileUploadClient } from "lib/FileUploadClient"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { fileUploaderOverrides } from "lib/widgetTheme"
 import React from "react"
-import { Button, Spinner } from "reactstrap"
+import { Button } from "reactstrap"
+import { Spinner } from "baseui/spinner"
+import { SCSS_VARS } from "autogen/scssVariables"
 import "./FileUploader.scss"
 
 export interface Props {
@@ -153,7 +155,11 @@ class FileUploader extends React.PureComponent<Props, State> {
     return (
       <div className="uploadStatus uploadProgress">
         <span className="body">
-          <Spinner color="secondary" size="sm" /> Uploading...
+          <Spinner
+            size={SCSS_VARS["$font-size-sm"]}
+            color={SCSS_VARS.$secondary}
+          />{" "}
+          Uploading...
         </span>
         <Button color="link" onClick={this.cancelCurrentUpload}>
           Cancel
