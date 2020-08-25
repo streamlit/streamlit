@@ -30,6 +30,7 @@ from streamlit.logger import get_logger
 from streamlit.proto.ArrowTable_pb2 import ArrowTable as ArrowTableProto
 from streamlit.proto.ComponentInstance_pb2 import SpecialArg
 from streamlit.proto.Element_pb2 import Element
+from streamlit.type_util import to_bytes
 
 LOGGER = get_logger(__name__)
 
@@ -98,10 +99,18 @@ class CustomComponent:
             raise MarshallComponentException(f"Argument '{args[0]}' needs a label")
 
         json_args = {}
-        df_args = {}
+        special_args = []
         for arg_name, arg_val in kwargs.items():
-            if type_util.is_dataframe_like(arg_val):
-                df_args[arg_name] = arg_val
+            if type_util.is_bytes_like(arg_val):
+                bytes_arg = SpecialArg()
+                bytes_arg.key = arg_name
+                bytes_arg.bytes = to_bytes(arg_val)
+                special_args.append(bytes_arg)
+            elif type_util.is_dataframe_like(arg_val):
+                dataframe_arg = SpecialArg()
+                dataframe_arg.key = arg_name
+                arrow_table.marshall(dataframe_arg.arrow_dataframe.data, arg_val)
+                special_args.append(dataframe_arg)
             else:
                 json_args[arg_name] = arg_val
 
@@ -137,11 +146,7 @@ class CustomComponent:
 
             def marshall_element_args():
                 element.component_instance.json_args = serialized_json_args
-                for key, value in df_args.items():
-                    special_arg = SpecialArg()
-                    special_arg.key = key
-                    arrow_table.marshall(special_arg.arrow_dataframe.data, value)
-                    element.component_instance.special_args.append(special_arg)
+                element.component_instance.special_args.extend(special_args)
 
             if key is None:
                 marshall_element_args()

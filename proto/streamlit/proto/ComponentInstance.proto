@@ -43,5 +43,6 @@ message SpecialArg {
 
   oneof value {
     ArrowDataframe arrow_dataframe = 2;
+    bytes bytes = 3;
   }
 }

@@ -100,7 +100,7 @@ def is_dataframe_compatible(obj):
 
 def is_bytes_like(obj: Any) -> bool:
     """True if the type is considered bytes-like for the purposes of
-    data marshalling."""
+    protobuf data marshalling."""
     return isinstance(obj, _BYTES_LIKE_TYPES)
 
 
