@@ -62,6 +62,9 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
   // The most recent Arrow Dataframe args we've received.
   private lastDataframeArgs: any[] = []
 
+  // The most recent bytes args we've received.
+  private lastBytesArgs: any[] = []
+
   private frameHeight = 0
 
   public constructor(props: Props) {
@@ -128,10 +131,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
           })
         } else {
           this.componentReady = true
-          this.sendForwardMsg(StreamlitMessageType.RENDER, {
-            args: this.lastJSONArgs,
-            dfs: this.lastDataframeArgs,
-          })
+          this.sendRenderMessage()
         }
         break
       }
@@ -228,6 +228,22 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     )
   }
 
+  /**
+   * Send a RENDER message to the component with the most recent arguments
+   * received from Python.
+   */
+  private sendRenderMessage = (): void => {
+    // NB: if you change or remove any of the arguments here, you'll break
+    // existing components. You can *add* more arguments safely, but any
+    // other modifications require a CUSTOM_COMPONENT_API_VERSION bump.
+    this.sendForwardMsg(StreamlitMessageType.RENDER, {
+      args: this.lastJSONArgs,
+      dfs: this.lastDataframeArgs,
+      bytes: this.lastBytesArgs,
+      disabled: this.props.disabled,
+    })
+  }
+
   public render = (): ReactNode => {
     if (this.state.componentError != null) {
       // If we have an error, display it and bail.
@@ -247,6 +263,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     // loop.)
     let jsonArgs: any
     const dataframeArgs: any[] = []
+    const bytesArgs: any[] = []
     let src: string
     let componentName: string
     try {
@@ -275,6 +292,8 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
         dispatchOneOf(specialArg, "value", {
           arrowDataframe: (el: SimpleElement) =>
             dataframeArgs.push({ key, value: el.toJS() }),
+          bytes: (el: SimpleElement) =>
+            bytesArgs.push({ key, value: el.toJS() }),
         })
       })
     } catch (err) {
@@ -282,23 +301,22 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       return undefined
     }
 
-    if (this.componentReady) {
-      // The component has loaded. Send it a new render message immediately.
-      this.sendForwardMsg(StreamlitMessageType.RENDER, {
-        args: jsonArgs,
-        dfs: dataframeArgs,
-        disabled: this.props.disabled,
-      })
-    }
-
     // We always store the most recent render arguments in order to respond
     // to COMPONENT_READY messages. Components can indicate that they're ready
     // multiple times (this will happen if a plugin auto-reloads itself -
-    // for example, if it's being served from a webpack dev server). When
+    // for example, if it's being served from a webpack dev server). When a
     // component sends the COMPONENT_READY message, we send it the most
-    // recent render arguments.
+    // recent arguments.
     this.lastJSONArgs = jsonArgs
     this.lastDataframeArgs = dataframeArgs
+    this.lastBytesArgs = bytesArgs
+
+    if (this.componentReady) {
+      // The component has loaded. Send it a new render message immediately.
+      // This must happen *after* the above "last args" are saved, because
+      // the render message uses them.
+      this.sendRenderMessage()
+    }
 
     // Render the iframe. We set scrolling="no", because we don't want
     // scrollbars to appear; instead, we want components to properly auto-size
