@@ -517,6 +517,7 @@ const themeOverrides = {
     notificationWarningText: SCSS_VARS["$alert-warning-text-color"],
     notificationNegativeBackground: SCSS_VARS["$alert-error-background-color"],
     notificationNegativeText: SCSS_VARS["$alert-error-text-color"],
+    progressbarTrackFill: grayLightest,
   },
 }
 
@@ -557,6 +558,8 @@ export const sidebarWidgetTheme = createTheme(mainThemePrimitives, {
     sliderTrackFill: grayLight,
     sliderHandleInnerFill: grayLight,
     sliderHandleInnerFillDisabled: grayLight,
+
+    progressbarTrackFill: grayLight,
   },
 })
 
