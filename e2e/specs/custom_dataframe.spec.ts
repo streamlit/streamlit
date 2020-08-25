@@ -17,7 +17,7 @@
 
 /// <reference types="cypress" />
 
-const columnIndexes = ["", "First Name", "Last Name", "Age"];
+const columnIndices = ["", "First Name", "Last Name", "Age"];
 const cells = [
   "Jason",
   "Miller",
@@ -105,7 +105,7 @@ describe("Custom Dataframe template", () => {
 
   it("checks column indices content", () => {
     cy.get("@column_indices").each(($element, index) => {
-      return cy.wrap($element).should("contain", columnIndexes[index]);
+      return cy.wrap($element).should("contain", columnIndices[index]);
     });
   });
 
@@ -183,7 +183,7 @@ describe("It returns dataframe correctly", () => {
 
   it("checks column indices content", () => {
     cy.get("@column_indices").each(($element, index) => {
-      return cy.wrap($element).should("contain", columnIndexes[index]);
+      return cy.wrap($element).should("contain", columnIndices[index]);
     });
   });
 
