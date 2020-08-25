@@ -16,10 +16,10 @@
 
 @import "src/assets/css/theme";
 
-.streamlit-dialog.screencast {
+.screencast {
   width: 80%;
 
-  .modal-body {
+  .ModalBody {
     video {
       width: 100%;
       border-radius: $border-radius;

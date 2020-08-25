@@ -14,41 +14,21 @@
  * limitations under the License.
  */
 
-@import "../../../assets/css/variables";
+@import "src/assets/css/variables";
 
-.streamlit-upload-first-line {
-  margin-bottom: 0.5rem;
+.ModalTitle {
+  font-family: $font-family-sans-serif;
+  font-size: 1.25rem;
+  margin: 0;
+  font-weight: 300;
+  line-height: 1.5;
+  text-transform: none;
 }
 
-.rerun-header {
-  margin-bottom: 0.5rem;
-}
-
-.command-line {
+.ModalBody {
   width: 100%;
-  font-family: $font-family-monospace;
-  font-size: $font-size-sm;
-  height: 6rem;
-}
-
-/* We make this an id instead of a class to enable clipboard copy */
-#streamlit-upload-url {
-  font-family: $font-family-monospace;
-  font-size: $font-size-sm;
-  white-space: normal;
-  word-wrap: break-word;
-}
-
-.screenCastWarningDialog {
-  display: flex;
-
-  span {
-    font-size: 50px;
-    margin-right: 26px;
-    margin-left: 10px;
-  }
-
-  p {
-    margin: 0;
-  }
+  height: 100%;
+  padding: 0;
+  color: $black;
+  font-size: $font-size-base;
 }

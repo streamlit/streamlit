@@ -16,7 +16,8 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
-import { Button, Modal, ModalBody, ModalHeader } from "reactstrap"
+import { Button } from "reactstrap"
+import Modal, { ModalHeader, ModalBody } from "components/shared/Modal"
 
 import "./style.scss"
 
@@ -47,8 +48,8 @@ class VideoRecordedDialog extends PureComponent<Props> {
     const videoSource = this.getVideoSource()
 
     return (
-      <Modal size="lg" isOpen={true} className="streamlit-dialog screencast">
-        <ModalHeader toggle={onClose}>Next steps</ModalHeader>
+      <Modal size="auto" isOpen onClose={onClose}>
+        <ModalHeader>Next steps</ModalHeader>
         <ModalBody>
           <div className="steps-container">
             <div className="first-column first-step">Step 1</div>

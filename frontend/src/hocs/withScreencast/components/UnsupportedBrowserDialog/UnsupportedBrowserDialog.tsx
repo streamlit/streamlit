@@ -16,7 +16,7 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
-import { Modal, ModalBody, ModalHeader } from "reactstrap"
+import Modal, { ModalHeader, ModalBody } from "components/shared/Modal"
 
 export interface Props {
   /** Callback to close the dialog */
@@ -28,8 +28,8 @@ class UnsupportedBrowserDialog extends PureComponent<Props> {
     const { onClose } = this.props
 
     return (
-      <Modal isOpen={true} toggle={onClose} className="streamlit-dialog">
-        <ModalHeader toggle={onClose}>Record a screencast</ModalHeader>
+      <Modal isOpen onClose={onClose}>
+        <ModalHeader>Record a screencast</ModalHeader>
         <ModalBody>
           <div className="screenCastWarningDialog">
             <span role="img" aria-label="Alien Monster">

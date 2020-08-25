@@ -17,7 +17,6 @@
 
 import React from "react"
 import { shallow } from "enzyme"
-import { ModalHeader, ModalBody, Button } from "reactstrap"
 
 import VideoRecordedDialog, { Props } from "./VideoRecordedDialog"
 
@@ -40,18 +39,13 @@ describe("VideoRecordedDialog", () => {
   it("should render a header", () => {
     const props = getProps()
     const wrapper = shallow(<VideoRecordedDialog {...props} />)
-    const headerWrapper = wrapper.find(ModalHeader)
-
-    // @ts-ignore
-    headerWrapper.props().toggle()
-
+    const headerWrapper = wrapper.find("ModalHeader")
     expect(headerWrapper.props().children).toBe("Next steps")
-    expect(props.onClose).toBeCalled()
   })
 
   it("should render a video", () => {
     const wrapper = shallow(<VideoRecordedDialog {...getProps()} />)
-    const bodyWrapper = wrapper.find(ModalBody)
+    const bodyWrapper = wrapper.find("ModalBody")
 
     expect(bodyWrapper.find("video").length).toBe(1)
     expect(URL.createObjectURL).toBeCalled()
@@ -60,7 +54,7 @@ describe("VideoRecordedDialog", () => {
   it("should render a download button", () => {
     const props = getProps()
     const wrapper = shallow(<VideoRecordedDialog {...props} />)
-    const buttonWrapper = wrapper.find(ModalBody).find(Button)
+    const buttonWrapper = wrapper.find("ModalBody").find(Button)
 
     buttonWrapper.simulate("click")
 

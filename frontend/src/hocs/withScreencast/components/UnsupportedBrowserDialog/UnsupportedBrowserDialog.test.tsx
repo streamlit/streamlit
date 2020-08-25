@@ -17,7 +17,6 @@
 
 import React from "react"
 import { shallow } from "enzyme"
-import { ModalHeader, ModalBody } from "reactstrap"
 
 import UnsupportedBrowserDialog from "./UnsupportedBrowserDialog"
 
@@ -31,18 +30,13 @@ describe("UnsupportedBrowserDialog", () => {
   it("should render a header", () => {
     const onClose = jest.fn()
     const wrapper = shallow(<UnsupportedBrowserDialog onClose={onClose} />)
-    const headerWrapper = wrapper.find(ModalHeader)
-
-    // @ts-ignore
-    headerWrapper.props().toggle()
-
+    const headerWrapper = wrapper.find("ModalHeader")
     expect(headerWrapper.props().children).toBe("Record a screencast")
-    expect(onClose).toBeCalled()
   })
 
   it("should render a body with the correct message", () => {
     const wrapper = shallow(<UnsupportedBrowserDialog onClose={() => {}} />)
-    const bodyWrapper = wrapper.find(ModalBody)
+    const bodyWrapper = wrapper.find("ModalBody")
 
     expect(bodyWrapper.find("span[aria-label='Alien Monster']").text()).toBe(
       "👾"
