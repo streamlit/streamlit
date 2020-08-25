@@ -23,13 +23,14 @@ $gray-200: #f0f2f6;
 $gray-300: #e6eaf1;
 $gray-400: #d5dae5;
 $gray-500: #bfc5d3;
-$gray-600: #a3a8b4;
+$gray-600: #a3a8b8;
 $gray-700: #808495;
 $gray-800: #555867;
 $gray-900: #262730;
 $gray-1000: #0e1117;
+
 $black: $gray-900;
-$red: #ff2b2b;
+$red: #ff4b4b;
 $yellow: #faca2b;
 $blue: #0068c9;
 $green: #09ab3b;
@@ -45,12 +46,12 @@ $gray-darker: $gray-900;
 $yellow-light: #fffd80;
 
 // Overwrite some theme colors.
-$primary: #f63366;
+$primary: $red;
 $secondary: $gray;
 $light: $gray-100;
 $dark: $gray;
 
-$primary-a50: change-color($primary, $alpha: 0.5);
+$primary-a50: #ffc7c7;
 $white-a50: #ffffff88;
 $white-a25: #ffffff44;
 

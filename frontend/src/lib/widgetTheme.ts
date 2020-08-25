@@ -22,26 +22,29 @@ import { logMessage } from "lib/log"
 import { SCSS_VARS } from "autogen/scssVariables"
 import { FileUploaderOverrides, StyleProps } from "baseui/file-uploader"
 
-const black = SCSS_VARS.$black
 const borderRadius = SCSS_VARS["$border-radius"]
 const fontFamilyMono = SCSS_VARS["$font-family-monospace"]
 const fontFamilySans = SCSS_VARS["$font-family-sans-serif"]
 const fontSizeBase = SCSS_VARS["$font-size-base"]
 const fontSizeSm = SCSS_VARS["$font-size-sm"]
+
+const labelFontSize = SCSS_VARS["$font-size-sm"]
+const lineHeightBase = SCSS_VARS["$line-height-base"]
+const lineHeightTight = SCSS_VARS["$line-height-tight"]
+const smallTextMargin = SCSS_VARS["$m2-3-font-size-sm"]
+const textMargin = SCSS_VARS["$font-size-sm"]
+const tinyTextMargin = SCSS_VARS["$m1-2-font-size-sm"]
+
+// Colors
+const black = SCSS_VARS.$black
+const white = SCSS_VARS.$white
 const grayDark = SCSS_VARS["$gray-dark"]
 const gray = SCSS_VARS.$gray
 const grayLight = SCSS_VARS["$gray-light"]
 const grayLighter = SCSS_VARS["$gray-lighter"]
 const grayLightest = SCSS_VARS["$gray-lightest"]
-const labelFontSize = SCSS_VARS["$font-size-sm"]
-const lineHeightBase = SCSS_VARS["$line-height-base"]
-const lineHeightTight = SCSS_VARS["$line-height-tight"]
 const primary = SCSS_VARS.$primary
 const primaryA50 = SCSS_VARS["$primary-a50"]
-const smallTextMargin = SCSS_VARS["$m2-3-font-size-sm"]
-const textMargin = SCSS_VARS["$font-size-sm"]
-const tinyTextMargin = SCSS_VARS["$m1-2-font-size-sm"]
-const white = SCSS_VARS.$white
 
 const fontStyles = {
   fontFamily: fontFamilySans,
