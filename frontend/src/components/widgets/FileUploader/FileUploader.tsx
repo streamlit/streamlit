@@ -156,10 +156,19 @@ class FileUploader extends React.PureComponent<Props, State> {
       <div className="uploadStatus uploadProgress">
         <span className="body">
           <Spinner
-            size={SCSS_VARS["$font-size-sm"]}
+            size={SCSS_VARS["$file-uploader-spinner-size"]}
             color={SCSS_VARS.$secondary}
-          />{" "}
-          Uploading...
+            overrides={{
+              Svg: {
+                // Hardcoding since FileUploader is being converted
+                style: {
+                  verticalAlign: "baseline",
+                  marginRight: "0.375rem",
+                },
+              },
+            }}
+          />
+          <span>Uploading...</span>
         </span>
         <Button color="link" onClick={this.cancelCurrentUpload}>
           Cancel
