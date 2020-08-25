@@ -130,7 +130,7 @@ describe("It returns dataframe correctly", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
 
-    //Wait for iframe to be loaded.
+    // Wait for the iframe to be loaded.
     getIframeBody();
   });
 
@@ -200,6 +200,8 @@ describe("It returns dataframe correctly", () => {
   });
 
   it("matches snapshot", () => {
-    cy.get(".element-container .stTable").matchImageSnapshot("returned_table");
+    cy.get(".element-container .stTable").matchImageSnapshot(
+      "returned_dataframe"
+    );
   });
 });
