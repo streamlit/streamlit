@@ -1,0 +1,22 @@
+{
+  "name": "component-support",
+  "version": "0.0.1",
+  "description": "Support code for Streamlit Components",
+  "main": "index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/streamlit/streamlit.git"
+  },
+  "keywords": [
+    "streamlit"
+  ],
+  "author": "Streamlit",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/streamlit/streamlit/issues"
+  },
+  "homepage": "https://github.com/streamlit/streamlit#readme"
+}
