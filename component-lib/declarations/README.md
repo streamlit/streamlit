@@ -8,12 +8,16 @@ As a workaround, we provide a patched set of Arrow type declarations in this fol
 
 These are the changes:
 
-- Copied the entirety of `./node_modules/apache-arrow` into `./declarations/apache-arrow`
-- Added a `// @ts-nocheck` comment to the top of the declaration files that cause errors:
+- Copy the entirety of `./node_modules/apache-arrow` into `./declarations/apache-arrow`
+- Delete all non `.d.ts` files, except for `package.json`, from the copied directory:
+  ```
+  $ find declarations/apache-arrow ! -name "*d.ts" -and ! -name "package.json" -type f -delete
+  ```
+- Add a `// @ts-nocheck` comment to the top of the declaration files that cause errors:
   - `declarations/apache-arrow/column.d.ts`
   - `declarations/apache-arrow/ipc/reader.d.ts`
   - `declarations/apache-arrow/recordbatch.d.ts`
-- Added the following bits to `tsconfig.json`:
+- Add the following bits to `tsconfig.json`:
   ```
   "compilerOptions": {
     "paths": {
