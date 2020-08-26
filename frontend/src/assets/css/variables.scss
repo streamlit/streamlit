@@ -46,12 +46,12 @@ $gray-darker: $gray-900;
 $yellow-light: #fffd80;
 
 // Overwrite some theme colors.
-$primary: $red;
+$primary: #f63366;
 $secondary: $gray;
 $light: $gray-100;
 $dark: $gray;
 
-$primary-a50: #ffc7c7;
+$primary-a50: change-color($primary, $alpha: 0.5);
 $white-a50: #ffffff88;
 $white-a25: #ffffff44;
 

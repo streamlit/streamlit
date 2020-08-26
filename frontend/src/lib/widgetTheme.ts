@@ -22,12 +22,12 @@ import { logMessage } from "lib/log"
 import { SCSS_VARS } from "autogen/scssVariables"
 import { FileUploaderOverrides, StyleProps } from "baseui/file-uploader"
 
-const borderRadius = SCSS_VARS["$border-radius"]
 const fontFamilyMono = SCSS_VARS["$font-family-monospace"]
 const fontFamilySans = SCSS_VARS["$font-family-sans-serif"]
 const fontSizeBase = SCSS_VARS["$font-size-base"]
 const fontSizeSm = SCSS_VARS["$font-size-sm"]
 
+const borderRadius = SCSS_VARS["$border-radius"]
 const labelFontSize = SCSS_VARS["$font-size-sm"]
 const lineHeightBase = SCSS_VARS["$line-height-base"]
 const lineHeightTight = SCSS_VARS["$line-height-tight"]
@@ -36,15 +36,17 @@ const textMargin = SCSS_VARS["$font-size-sm"]
 const tinyTextMargin = SCSS_VARS["$m1-2-font-size-sm"]
 
 // Colors
-const black = SCSS_VARS.$black
-const white = SCSS_VARS.$white
-const grayDark = SCSS_VARS["$gray-dark"]
-const gray = SCSS_VARS.$gray
-const grayLight = SCSS_VARS["$gray-light"]
-const grayLighter = SCSS_VARS["$gray-lighter"]
-const grayLightest = SCSS_VARS["$gray-lightest"]
-const primary = SCSS_VARS.$primary
-const primaryA50 = SCSS_VARS["$primary-a50"]
+export const colors = {
+  black: SCSS_VARS.$black,
+  white: SCSS_VARS.$white,
+  grayDark: SCSS_VARS["$gray-dark"],
+  gray: SCSS_VARS.$gray,
+  grayLight: SCSS_VARS["$gray-light"],
+  grayLighter: SCSS_VARS["$gray-lighter"],
+  grayLightest: SCSS_VARS["$gray-lightest"],
+  primary: SCSS_VARS.$primary,
+  primaryA50: SCSS_VARS["$primary-a50"],
+}
 
 const fontStyles = {
   fontFamily: fontFamilySans,
@@ -61,7 +63,7 @@ export const sliderOverrides = {
   },
   Thumb: {
     style: ({ $disabled }: { $disabled: boolean }) => ({
-      backgroundColor: $disabled ? gray : primary,
+      backgroundColor: $disabled ? colors.gray : colors.primary,
       borderTopLeftRadius: "100%",
       borderTopRightRadius: "100%",
       borderBottomLeftRadius: "100%",
@@ -71,7 +73,7 @@ export const sliderOverrides = {
       height: SCSS_VARS["$border-radius-large"],
       width: SCSS_VARS["$border-radius-large"],
       ":focus": {
-        boxShadow: `0 0 0 0.2rem ${primaryA50}`,
+        boxShadow: `0 0 0 0.2rem ${colors.primaryA50}`,
         outline: "none",
       },
     }),
@@ -92,7 +94,7 @@ export const sliderOverrides = {
       fontFamily: fontFamilyMono,
       fontSize: labelFontSize,
       paddingBottom: smallTextMargin,
-      color: $disabled ? gray : primary,
+      color: $disabled ? colors.gray : colors.primary,
       top: "-22px",
       position: "absolute",
       whiteSpace: "nowrap",
@@ -130,7 +132,7 @@ export const sliderOverrides = {
   },
   InnerTrack: {
     style: ({ $disabled }: { $disabled: boolean }) =>
-      $disabled ? { background: grayLighter } : {},
+      $disabled ? { background: colors.grayLighter } : {},
   },
 }
 
@@ -146,7 +148,7 @@ export const fileUploaderOverrides: FileUploaderOverrides<StyleProps> = {
     }) => ({
       borderRadius,
       display: "flex",
-      color: grayDark,
+      color: colors.grayDark,
       fontSize: fontSizeSm,
       lineHeight: lineHeightTight,
       flexDirection: "column",
@@ -156,20 +158,22 @@ export const fileUploaderOverrides: FileUploaderOverrides<StyleProps> = {
       paddingLeft: "0.25rem",
       paddingRight: "0.25rem",
       height: "4.25rem",
-      borderColor: $isDragActive ? primary : "transparent",
-      backgroundColor: $isDragActive ? primaryA50 : $theme.colors.mono200,
+      borderColor: $isDragActive ? colors.primary : "transparent",
+      backgroundColor: $isDragActive
+        ? colors.primaryA50
+        : $theme.colors.mono200,
       borderStyle: "solid",
       borderWidth: "1px",
       ":focus": {
         outline: 0,
-        borderColor: primary,
+        borderColor: colors.primary,
       },
     }),
   },
   ContentSeparator: {
     style: {
       fontSize: fontSizeSm,
-      color: grayDark,
+      color: colors.grayDark,
       lineHeight: lineHeightTight,
       display: "",
     },
@@ -177,7 +181,7 @@ export const fileUploaderOverrides: FileUploaderOverrides<StyleProps> = {
   ContentMessage: {
     style: {
       fontSize: fontSizeSm,
-      color: grayDark,
+      color: colors.grayDark,
       lineHeight: lineHeightTight,
       display: "",
     },
@@ -187,7 +191,7 @@ export const fileUploaderOverrides: FileUploaderOverrides<StyleProps> = {
       overrides: {
         BaseButton: {
           style: {
-            color: primary,
+            color: colors.primary,
             fontSize: fontSizeSm,
             lineHeight: lineHeightTight,
             paddingBottom: 0,
@@ -205,7 +209,7 @@ export const fileUploaderOverrides: FileUploaderOverrides<StyleProps> = {
             },
             ":disabled": {
               backgroundColor: "transparent",
-              color: grayDark,
+              color: colors.grayDark,
             },
             ":focus": {
               outline: 0,
@@ -232,13 +236,13 @@ export const datePickerOverrides = {
   CalendarHeader: {
     style: {
       // Make header look nicer.
-      backgroundColor: gray,
+      backgroundColor: colors.gray,
     },
   },
   MonthHeader: {
     style: {
       // Make header look nicer.
-      backgroundColor: gray,
+      backgroundColor: colors.gray,
     },
   },
   Week: {
@@ -301,37 +305,37 @@ export const buttonOverrides = {
       paddingBottom: tinyTextMargin,
       paddingLeft: textMargin,
       paddingRight: textMargin,
-      backgroundColor: white,
+      backgroundColor: colors.white,
       // We shouldn't mix shorthand properties with longhand -- which usually
       // means we should use longhand for everything. But BaseUI's Button
       // actually uses the shorthand "border" property, so that's what I'm
       // using here too.
-      border: `1px solid ${grayLighter}`,
-      color: black,
+      border: `1px solid ${colors.grayLighter}`,
+      color: colors.black,
       ":hover": {
         backgroundColor: "transparent",
-        borderColor: primary,
-        color: primary,
+        borderColor: colors.primary,
+        color: colors.primary,
       },
       ":focus": {
-        backgroundColor: white,
-        borderColor: primary,
-        boxShadow: `0 0 0 0.2rem ${primaryA50}`,
-        color: primary,
+        backgroundColor: colors.white,
+        borderColor: colors.primary,
+        boxShadow: `0 0 0 0.2rem ${colors.primaryA50}`,
+        color: colors.primary,
         outline: "none",
       },
       ":active": {
-        color: white,
+        color: colors.white,
       },
       ":disabled": {
-        backgroundColor: grayLighter,
+        backgroundColor: colors.grayLighter,
         borderColor: "transparent",
-        color: gray,
+        color: colors.gray,
       },
       ":hover:disabled": {
-        backgroundColor: grayLighter,
+        backgroundColor: colors.grayLighter,
         borderColor: "transparent",
-        color: gray,
+        color: colors.gray,
       },
     },
   },
@@ -354,12 +358,12 @@ export const multiSelectOverrides = {
   },
   ClearIcon: {
     style: {
-      color: grayDark,
+      color: colors.grayDark,
     },
   },
   SearchIcon: {
     style: {
-      color: grayDark,
+      color: colors.grayDark,
     },
   },
   MultiValue: {
@@ -381,7 +385,7 @@ export const radioOverrides = {
       marginBottom: 0,
       marginTop: 0,
       paddingRight: smallTextMargin,
-      backgroundColor: $isFocused ? grayLightest : "",
+      backgroundColor: $isFocused ? colors.grayLightest : "",
       borderTopLeftRadius: borderRadius,
       borderTopRightRadius: borderRadius,
       borderBottomLeftRadius: borderRadius,
@@ -409,7 +413,7 @@ export const checkboxOverrides = {
       borderWidth: "2px",
       outline: 0,
       boxShadow:
-        $isFocusVisible && $checked ? `0 0 0 0.2rem ${primaryA50}` : "",
+        $isFocusVisible && $checked ? `0 0 0 0.2rem ${colors.primaryA50}` : "",
     }),
   },
 }
@@ -426,26 +430,26 @@ const mainThemePrimitives = {
 
   primaryFontFamily: SCSS_VARS["$font-family-sans-serif"],
 
-  primary100: primary,
-  primary200: primary,
-  primary300: primary,
-  primary400: primary,
-  primary500: primary,
-  primary600: primary,
-  primary700: primary,
+  primary100: colors.primary,
+  primary200: colors.primary,
+  primary300: colors.primary,
+  primary400: colors.primary,
+  primary500: colors.primary,
+  primary600: colors.primary,
+  primary700: colors.primary,
 
   // Override gray values based on what is actually used in BaseWeb, and the
   // way we want it to match our Bootstrap theme.
-  mono100: white, // Popup menu
-  mono200: grayLightest, // Text input, text area, selectbox
-  mono300: grayLighter, // Disabled widget background
-  mono400: grayLighter, // Slider track
-  mono500: gray, // Clicked checkbox and radio
-  mono600: gray, // Disabled widget text
-  mono700: gray, // Unselected checkbox and radio
-  mono800: grayDark, // Selectbox text
-  mono900: grayDark, // Not used, but just in case.
-  mono1000: black,
+  mono100: colors.white, // Popup menu
+  mono200: colors.grayLightest, // Text input, text area, selectbox
+  mono300: colors.grayLighter, // Disabled widget background
+  mono400: colors.grayLighter, // Slider track
+  mono500: colors.gray, // Clicked checkbox and radio
+  mono600: colors.gray, // Disabled widget text
+  mono700: colors.gray, // Unselected checkbox and radio
+  mono800: colors.grayDark, // Selectbox text
+  mono900: colors.grayDark, // Not used, but just in case.
+  mono1000: colors.black,
 
   rating200: "#FFE1A5",
   rating400: "#FFC043",
@@ -489,27 +493,27 @@ const themeOverrides = {
   },
 
   colors: {
-    white,
-    black,
-    primary,
-    primaryA: primary,
-    accent: primaryA50,
-    tagPrimarySolidBackground: primary,
-    borderFocus: primary,
-    contentPrimary: black,
-    inputFill: grayLightest,
-    inputPlaceholder: grayDark,
-    inputBorder: grayLightest,
-    inputFillActive: grayLightest,
-    tickMarkFillDisabled: grayLighter,
-    tickFillDisabled: gray,
-    tickMarkFill: grayLightest,
-    tickFillSelected: primary,
-    calendarHeaderForegroundDisabled: grayLight,
-    calendarDayBackgroundSelected: primary,
-    calendarDayBackgroundSelectedHighlighted: primary,
-    calendarDayForegroundSelected: white,
-    calendarDayForegroundSelectedHighlighted: white,
+    white: colors.white,
+    black: colors.black,
+    primary: colors.primary,
+    primaryA: colors.primary,
+    accent: colors.primaryA50,
+    tagPrimarySolidBackground: colors.primary,
+    borderFocus: colors.primary,
+    contentPrimary: colors.black,
+    inputFill: colors.grayLightest,
+    inputPlaceholder: colors.grayDark,
+    inputBorder: colors.grayLightest,
+    inputFillActive: colors.grayLightest,
+    tickMarkFillDisabled: colors.grayLighter,
+    tickFillDisabled: colors.gray,
+    tickMarkFill: colors.grayLightest,
+    tickFillSelected: colors.primary,
+    calendarHeaderForegroundDisabled: colors.grayLight,
+    calendarDayBackgroundSelected: colors.primary,
+    calendarDayBackgroundSelectedHighlighted: colors.primary,
+    calendarDayForegroundSelected: colors.white,
+    calendarDayForegroundSelectedHighlighted: colors.white,
     notificationInfoBackground: SCSS_VARS["$alert-info-background-color"],
     notificationInfoText: SCSS_VARS["$alert-info-text-color"],
     notificationPositiveBackground:
@@ -520,7 +524,7 @@ const themeOverrides = {
     notificationWarningText: SCSS_VARS["$alert-warning-text-color"],
     notificationNegativeBackground: SCSS_VARS["$alert-error-background-color"],
     notificationNegativeText: SCSS_VARS["$alert-error-text-color"],
-    progressbarTrackFill: grayLightest,
+    progressbarTrackFill: colors.grayLightest,
   },
 }
 
@@ -533,36 +537,36 @@ export const sidebarWidgetTheme = createTheme(mainThemePrimitives, {
     // Override gray values based on what is actually used in BaseWeb, and the
     // way we want it to match our Bootstrap theme.
     // mono100 overrides
-    datepickerBackground: white,
-    calendarBackground: white,
-    tickFill: white,
-    tickMarkFillDisabled: white,
-    menuFill: white,
+    datepickerBackground: colors.white,
+    calendarBackground: colors.white,
+    tickFill: colors.white,
+    tickMarkFillDisabled: colors.white,
+    menuFill: colors.white,
 
     // mono200 overrides
-    buttonDisabledFill: white,
-    fileUploaderBackgroundColor: white,
-    tickFillHover: white,
-    inputFillDisabled: white,
-    inputFillActive: white,
+    buttonDisabledFill: colors.white,
+    fileUploaderBackgroundColor: colors.white,
+    tickFillHover: colors.white,
+    inputFillDisabled: colors.white,
+    inputFillActive: colors.white,
 
     // mono300 overrides
-    toggleTrackFillDisabled: white,
-    tickFillActive: white,
-    sliderTrackFillDisabled: white,
-    inputBorder: white,
-    inputFill: white,
-    inputEnhanceFill: white,
-    inputEnhancerFillDisabled: white,
+    toggleTrackFillDisabled: colors.white,
+    tickFillActive: colors.white,
+    sliderTrackFillDisabled: colors.white,
+    inputBorder: colors.white,
+    inputFill: colors.white,
+    inputEnhanceFill: colors.white,
+    inputEnhancerFillDisabled: colors.white,
 
     // mono400 overrides
-    buttonDisabledSpinnerBackground: grayLight,
-    toggleTrackFill: grayLight,
-    sliderTrackFill: grayLight,
-    sliderHandleInnerFill: grayLight,
-    sliderHandleInnerFillDisabled: grayLight,
+    buttonDisabledSpinnerBackground: colors.grayLight,
+    toggleTrackFill: colors.grayLight,
+    sliderTrackFill: colors.grayLight,
+    sliderHandleInnerFill: colors.grayLight,
+    sliderHandleInnerFillDisabled: colors.grayLight,
 
-    progressbarTrackFill: grayLight,
+    progressbarTrackFill: colors.grayLight,
   },
 })
 
