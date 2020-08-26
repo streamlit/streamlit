@@ -26,23 +26,19 @@ class DeltaGeneratorDataframeTest(testutil.DeltaGeneratorTestCase):
     """
 
     def test_no_dimensions(self):
-        """When no dimension parameters are passed
-        """
+        """When no dimension parameters are passed"""
         self._do_test(lambda fn, df: fn(df), 0, 0)
 
     def test_with_dimensions(self):
-        """When dimension parameter are passed
-        """
+        """When dimension parameter are passed"""
         self._do_test(lambda fn, df: fn(df, 10, 20), 10, 20)
 
     def test_with_height_only(self):
-        """When only height parameter is passed
-        """
+        """When only height parameter is passed"""
         self._do_test(lambda fn, df: fn(df, height=20), 0, 20)
 
     def test_with_width_only(self):
-        """When only width parameter is passed
-        """
+        """When only width parameter is passed"""
         self._do_test(lambda fn, df: fn(df, width=20), 20, 0)
 
     def _do_test(self, fn, expectedWidth, expectedHeight):
