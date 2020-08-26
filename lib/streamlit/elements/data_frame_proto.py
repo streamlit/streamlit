@@ -388,6 +388,11 @@ def _marshall_any_array(pandas_array, proto_array):
         proto_array.int64s.data.extend(pandas_array)
     elif pandas_array.dtype == np.object:
         proto_array.strings.data.extend(map(str, pandas_array))
+    # dtype='string', <class 'pandas.core.arrays.string_.StringDtype'>
+    # NOTE: StringDtype is considered experimental.
+    # The implementation and parts of the API may change without warning.
+    elif pandas_array.dtype.name == "string":
+        proto_array.strings.data.extend(map(str, pandas_array))
     # Setting a timezone changes (dtype, dtype.type) from
     #   'datetime64[ns]', <class 'numpy.datetime64'>
     # to

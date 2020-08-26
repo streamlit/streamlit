@@ -18,7 +18,7 @@ import pandas as pd
 import numpy as np
 import json
 
-from streamlit.elements.map import _DEFAULT_MAP
+from streamlit.elements.map import _DEFAULT_MAP, _DEFAULT_ZOOM_LEVEL
 from tests import testutil
 import streamlit as st
 
@@ -57,6 +57,14 @@ class StMapTest(testutil.DeltaGeneratorTestCase):
 
         st.map(df1)
         self.assertEqual(_DEFAULT_MAP["initialViewState"]["latitude"], 0)
+
+    def test_default_zoom_level(self):
+        """Test that _DEFAULT_ZOOM_LEVEL is set if zoom is not provided and distance is too small."""
+        df = pd.DataFrame({"lat": [1], "lon": [1]})
+        st.map(df)
+
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+        self.assertEqual(c.get("initialViewState").get("zoom"), _DEFAULT_ZOOM_LEVEL)
 
     def test_map_leak(self):
         """Test that maps don't stay in memory when you create a new blank one.
