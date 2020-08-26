@@ -1,6 +1,6 @@
 {
   "name": "streamlit-component-support",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Support code for Streamlit Components",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
