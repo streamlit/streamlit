@@ -34,7 +34,6 @@ interface State {
    * The value specified by the user via the UI.
    */
   value: number[]
-  currentInputText: string
 }
 
 interface MultiselectOption {
@@ -45,7 +44,6 @@ interface MultiselectOption {
 class Multiselect extends React.PureComponent<Props, State> {
   public state: State = {
     value: this.props.element.get("default").toArray(),
-    currentInputText: "",
   }
 
   public componentDidMount(): void {
@@ -72,19 +70,13 @@ class Multiselect extends React.PureComponent<Props, State> {
 
     switch (data.type) {
       case "remove": {
-        return {
-          value: without(this.state.value, getIndex()),
-          currentInputText: "",
-        }
+        return { value: without(this.state.value, getIndex()) }
       }
       case "clear": {
-        return { value: [], currentInputText: "" }
+        return { value: [] }
       }
       case "select": {
-        return {
-          value: this.state.value.concat([getIndex()]),
-          currentInputText: "",
-        }
+        return { value: this.state.value.concat([getIndex()]) }
       }
       default: {
         throw new Error(`State transition is unkonwn: {data.type}`)
@@ -102,7 +94,6 @@ class Multiselect extends React.PureComponent<Props, State> {
     const style = { width }
     const label = element.get("label")
     const options = element.get("options")
-    const numOptions = element.get("numOptions")
     const disabled = options.size === 0 ? true : this.props.disabled
     const placeholder =
       options.size === 0 ? "No options to select." : "Choose an option"
@@ -113,14 +104,6 @@ class Multiselect extends React.PureComponent<Props, State> {
           value: idx.toString(),
         }
       })
-      .filter((opt: { [key: string]: string }) => {
-        return this.state.currentInputText
-          ? opt.label
-              .toLowerCase()
-              .indexOf(this.state.currentInputText.toLowerCase()) !== -1
-          : true
-      })
-      .slice(0, numOptions)
       .toArray()
 
     return (
@@ -134,9 +117,6 @@ class Multiselect extends React.PureComponent<Props, State> {
           type={TYPE.select}
           multi
           onChange={this.onChange}
-          onInputChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-            this.setState({ currentInputText: e.target.value || "" })
-          }}
           value={this.valueFromState}
           disabled={disabled}
           size={"compact"}

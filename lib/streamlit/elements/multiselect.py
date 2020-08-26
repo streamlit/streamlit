@@ -5,9 +5,7 @@ from .utils import _get_widget_ui_value, NoValue
 
 
 class MultiSelectMixin:
-    def multiselect(
-        dg, label, options, default=None, format_func=str, key=None, num_options=None
-    ):
+    def multiselect(dg, label, options, default=None, format_func=str, key=None):
         """Display a multiselect widget.
         The multiselect widget starts as empty.
 
@@ -87,7 +85,6 @@ class MultiSelectMixin:
         default_value = [] if indices is None else indices
         multiselect_proto.default[:] = default_value
         multiselect_proto.options[:] = [str(format_func(option)) for option in options]
-        multiselect_proto.num_options = num_options if num_options else len(options)
 
         ui_value = _get_widget_ui_value("multiselect", multiselect_proto, user_key=key)
         current_value = ui_value.value if ui_value is not None else default_value
