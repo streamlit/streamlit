@@ -3,18 +3,18 @@ import { StatefulTooltip, ACCESSIBILITY_TYPE, PLACEMENT } from "baseui/tooltip"
 
 export enum Placement {
   AUTO = "auto",
-  TOPLEFT = "topLeft",
+  TOP_LEFT = "topLeft",
   TOP = "top",
-  TOPRIGHT = "topRight",
-  RIGHTTOP = "rightTop",
+  TOP_RIGHT = "topRight",
+  RIGHT_TOP = "rightTop",
   RIGHT = "right",
-  RIGHTBOTTOM = "rightBottom",
-  BOTTOMRIGHT = "bottomRight",
+  RIGHT_BOTTOM = "rightBottom",
+  BOTTOM_RIGHT = "bottomRight",
   BOTTOM = "bottom",
-  BOTTOMLEFT = "bottomLeft",
-  LEFTBOTTOM = "leftBottom",
+  BOTTOM_LEFT = "bottomLeft",
+  LEFT_BOTTOM = "leftBottom",
   LEFT = "left",
-  LEFTTOP = "leftTop",
+  LEFT_TOP = "leftTop",
 }
 
 export interface TooltipProps {
@@ -55,7 +55,7 @@ function Tooltip({
         },
       }}
     >
-      {/* BaseWeb does manipulates its child, so we create a wrapper div for protection */}
+      {/* BaseWeb manipulates its child, so we create a wrapper div for protection */}
       <div>{children}</div>
     </StatefulTooltip>
   )

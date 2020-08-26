@@ -123,7 +123,7 @@ describe("Tooltip element", () => {
     expect(disconnectSpy).toBeCalled()
   })
 
-  it("Calls stopReport when clicked", () => {
+  it("calls stopReport when clicked", () => {
     const stopReport = jest.fn()
     const wrapper = shallow<StatusWidget>(
       <StatusWidget {...getProps({ stopReport })} />
