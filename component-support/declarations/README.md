@@ -21,11 +21,7 @@ These are the changes:
         "./*",
         "../declarations/*"
       ]
-    },
-    "typeRoots": [
-      "./declarations",
-      "./node_modules/@types"
-    ]
+    }
   }
   ```
 

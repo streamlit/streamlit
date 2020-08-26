@@ -18,8 +18,7 @@
     },
     "resolveJsonModule": true,
     "strict": true,
-    "target": "es5",
-    "typeRoots": ["./declarations", "./node_modules/@types"]
+    "target": "es5"
   },
   "include": ["src"]
 }
