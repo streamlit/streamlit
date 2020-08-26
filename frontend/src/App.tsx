@@ -22,7 +22,7 @@ import { fromJS, List } from "immutable"
 import classNames from "classnames"
 // Other local imports.
 import ReportView from "components/core/ReportView/"
-import { StatusWidget } from "components/core/StatusWidget/"
+import StatusWidget from "components/core/StatusWidget"
 import MainMenu from "components/core/MainMenu/"
 import {
   DialogProps,
