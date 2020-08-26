@@ -2,4 +2,4 @@
 
 ## Publishing
 
-- Login to npm
+- The [np](https://github.com/sindresorhus/np) utility makes publishing easier
