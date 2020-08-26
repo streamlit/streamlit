@@ -131,3 +131,6 @@ $alert-error-text-color: rgb(157, 41, 45);
 $alert-warning-background-color: change-color($yellow, $alpha: 0.2);
 $alert-warning-border-color: change-color($yellow, $alpha: 0.8);
 $alert-warning-text-color: rgb(148, 124, 45);
+
+// FileUploader
+$file-uploader-spinner-size: $font-size-sm * 0.8;
