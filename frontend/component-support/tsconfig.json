@@ -13,10 +13,13 @@
     "module": "esnext",
     "moduleResolution": "node",
     "outDir": "./dist",
+    "paths": {
+      "*": ["./*", "../declarations/*"]
+    },
     "resolveJsonModule": true,
     "strict": true,
     "target": "es5",
-    "typeRoots": ["./node_modules/@types"]
+    "typeRoots": ["./declarations", "./node_modules/@types"]
   },
   "include": ["src"]
 }
