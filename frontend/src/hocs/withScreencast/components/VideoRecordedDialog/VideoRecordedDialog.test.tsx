@@ -54,7 +54,7 @@ describe("VideoRecordedDialog", () => {
   it("should render a download button", () => {
     const props = getProps()
     const wrapper = shallow(<VideoRecordedDialog {...props} />)
-    const buttonWrapper = wrapper.find("ModalBody").find(Button)
+    const buttonWrapper = wrapper.find("ModalBody").find("Button")
 
     buttonWrapper.simulate("click")
 
