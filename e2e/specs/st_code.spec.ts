@@ -28,4 +28,8 @@ describe("st.code", () => {
       "This code is awesome!"
     );
   });
+
+  it("highlights syntax correctly", () => {
+    cy.get(".block-container").matchImageSnapshot("syntax_highlighting");
+  });
 });
