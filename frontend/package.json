@@ -119,6 +119,7 @@
     "@types/react-plotly.js": "^2.2.4",
     "@types/react-transition-group": "^4.2.4",
     "@types/react-virtualized": "^9.21.9",
+    "@types/react-window": "^1.8.2",
     "@types/reactstrap": "^8.0.1",
     "@types/sprintf-js": "^1.1.2",
     "@types/styletron-engine-atomic": "^1.1.0",
