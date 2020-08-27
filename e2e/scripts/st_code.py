@@ -18,6 +18,8 @@ st.code("# This code is awesome!")
 
 st.code("")
 
-code = """def hello():
-    print("Hello, Streamlit!")"""
+code = """
+def hello():
+    print("Hello, Streamlit!")
+"""
 st.code(code, language="python")
