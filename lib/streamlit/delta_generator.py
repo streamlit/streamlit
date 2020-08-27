@@ -816,7 +816,14 @@ class DeltaGenerator(
 
     @_with_element
     def multiselect(
-        self, element, label, options, default=None, format_func=str, key=None
+        self,
+        element,
+        label,
+        options,
+        default=None,
+        format_func=str,
+        max_dropdown_height=None,
+        key=None,
     ):
         """Display a multiselect widget.
         The multiselect widget starts as empty.
@@ -835,6 +842,8 @@ class DeltaGenerator(
             the raw option as an argument and should output the label to be
             shown for that option. This has no impact on the return value of
             the selectbox.
+        max_dropdown_height : int or None
+            The max height of the dropdown list. If None, will show the entire list.     
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -898,6 +907,8 @@ class DeltaGenerator(
         element.multiselect.options[:] = [
             str(format_func(option)) for option in options
         ]
+        if max_dropdown_height is not None:
+            element.multiselect.max_dropdown_height = max_dropdown_height
 
         ui_value = _get_widget_ui_value(
             "multiselect", element.multiselect, user_key=key
@@ -922,7 +933,7 @@ class DeltaGenerator(
             Function to modify the display of radio options. It receives
             the raw option as an argument and should output the label to be
             shown for that option. This has no impact on the return value of
-            the radio.
+            the radio.   
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -972,7 +983,16 @@ class DeltaGenerator(
         )
 
     @_with_element
-    def selectbox(self, element, label, options, index=0, format_func=str, key=None):
+    def selectbox(
+        self,
+        element,
+        label,
+        options,
+        index=0,
+        format_func=str,
+        max_dropdown_height=None,
+        key=None,
+    ):
         """Display a select widget.
 
         Parameters
@@ -987,6 +1007,8 @@ class DeltaGenerator(
         format_func : function
             Function to modify the display of the labels. It receives the option
             as an argument and its output will be cast to str.
+        max_dropdown_height : int
+            The max height of the dropdown list. If None, will show the entire list.  
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -1022,6 +1044,8 @@ class DeltaGenerator(
         element.selectbox.label = label
         element.selectbox.default = index
         element.selectbox.options[:] = [str(format_func(option)) for option in options]
+        if max_dropdown_height is not None:
+            element.selectbox.max_dropdown_height = max_dropdown_height
 
         ui_value = _get_widget_ui_value("selectbox", element.selectbox, user_key=key)
         current_value = ui_value if ui_value is not None else index

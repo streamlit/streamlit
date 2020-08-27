@@ -76,6 +76,22 @@ describe("Multiselect widget", () => {
     expect(wrapper.find("label").text()).toBe(props.element.get("label"))
   })
 
+  it("should set maxDropdownHeight", () => {
+    const props = getProps({
+      maxDropdownHeight: 5,
+    })
+    const wrapper = shallow(<Multiselect {...props} />)
+    console.log(wrapper.find(UISelect).prop("maxDropdownHeigh"))
+    expect(wrapper.find(UISelect).prop("maxDropdownHeight")).toBe("5px")
+  })
+
+  it("should set maxDropdownHeight to an empty string, if not provided", () => {
+    const props = getProps()
+    const wrapper = shallow(<Multiselect {...props} />)
+    console.log(wrapper.find(UISelect).prop("maxDropdownHeigh"))
+    expect(wrapper.find(UISelect).prop("maxDropdownHeight")).toBe("")
+  })
+
   describe("placeholder", () => {
     it("should render when it's not empty", () => {
       expect(wrapper.find(UISelect).prop("placeholder")).toBe(

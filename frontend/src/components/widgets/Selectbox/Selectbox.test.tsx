@@ -75,6 +75,22 @@ describe("Selectbox widget", () => {
     expect(wrapper.find("label").text()).toBe(props.element.get("label"))
   })
 
+  it("should set maxDropdownHeight", () => {
+    const props = getProps({
+      maxDropdownHeight: 5,
+    })
+    const wrapper = shallow(<Selectbox {...props} />)
+    console.log(wrapper.find(UISelect).prop("maxDropdownHeigh"))
+    expect(wrapper.find(UISelect).prop("maxDropdownHeight")).toBe("5px")
+  })
+
+  it("should set maxDropdownHeight to an empty string, if not provided", () => {
+    const props = getProps()
+    const wrapper = shallow(<Selectbox {...props} />)
+    console.log(wrapper.find(UISelect).prop("maxDropdownHeigh"))
+    expect(wrapper.find(UISelect).prop("maxDropdownHeight")).toBe("")
+  })
+
   it("should render a placeholder with empty options", () => {
     const props = getProps({
       options: [],

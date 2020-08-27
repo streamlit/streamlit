@@ -88,6 +88,26 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
         self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, proto_options)
 
+    def test_max_dropdown_height(self):
+        """Test that it sets max_dropdown_height correctly."""
+        options = ["foo", "bar", "baz"]
+        st.multiselect("the label", options, max_dropdown_height=400)
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        self.assertEqual(c.label, "the label")
+        self.assertEqual(c.options, options)
+        self.assertEqual(c.max_dropdown_height, 400)
+
+    def test_default_max_dropdown_height(self):
+        """Test that it sets max_dropdown_height to 0 if not provided."""
+        options = ["foo", "bar", "baz"]
+        st.multiselect("the label", options)
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        self.assertEqual(c.label, "the label")
+        self.assertEqual(c.options, options)
+        self.assertEqual(c.max_dropdown_height, 0)
+
     @parameterized.expand([((),), ([],), (np.array([]),), (pd.Series(np.array([])),)])
     def test_no_options(self, options):
         """Test that it handles no options."""

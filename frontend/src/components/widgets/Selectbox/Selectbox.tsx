@@ -84,8 +84,12 @@ class Selectbox extends React.PureComponent<Props, State> {
 
   public render = (): React.ReactNode => {
     const style = { width: this.props.width }
-    const label = this.props.element.get("label")
-    let options = this.props.element.get("options")
+    const { element } = this.props
+    const maxDropdownHeight = element.get("maxDropdownHeight")
+      ? element.get("maxDropdownHeight") + "px"
+      : ""
+    const label = element.get("label")
+    let options = element.get("options")
     let { disabled } = this.props
 
     const value = [
@@ -118,6 +122,7 @@ class Selectbox extends React.PureComponent<Props, State> {
           clearable={false}
           disabled={disabled}
           labelKey="label"
+          maxDropdownHeight={maxDropdownHeight}
           onChange={this.onChange}
           options={selectOptions}
           filterOptions={this.filterOptions}
