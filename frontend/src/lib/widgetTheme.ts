@@ -46,6 +46,7 @@ export const colors = {
   grayLightest: SCSS_VARS["$gray-lightest"],
   primary: SCSS_VARS.$primary,
   primaryA50: SCSS_VARS["$primary-a50"],
+  transparent: "transparent",
 }
 
 const fontStyles = {
@@ -98,7 +99,7 @@ export const sliderOverrides = {
       top: "-22px",
       position: "absolute",
       whiteSpace: "nowrap",
-      backgroundColor: "transparent",
+      backgroundColor: colors.transparent,
       lineHeight: lineHeightBase,
       fontWeight: "normal",
     }),
@@ -158,7 +159,7 @@ export const fileUploaderOverrides: FileUploaderOverrides<StyleProps> = {
       paddingLeft: "0.25rem",
       paddingRight: "0.25rem",
       height: "4.25rem",
-      borderColor: $isDragActive ? colors.primary : "transparent",
+      borderColor: $isDragActive ? colors.primary : colors.transparent,
       backgroundColor: $isDragActive
         ? colors.primaryA50
         : $theme.colors.mono200,
@@ -200,20 +201,20 @@ export const fileUploaderOverrides: FileUploaderOverrides<StyleProps> = {
             paddingTop: 0,
             textTransform: "lowercase",
             ":hover": {
-              backgroundColor: "transparent",
+              backgroundColor: colors.transparent,
               textDecoration: "underline",
             },
             ":active": {
-              backgroundColor: "transparent",
+              backgroundColor: colors.transparent,
               textDecoration: "underline",
             },
             ":disabled": {
-              backgroundColor: "transparent",
+              backgroundColor: colors.transparent,
               color: colors.grayDark,
             },
             ":focus": {
               outline: 0,
-              backgroundColor: "transparent",
+              backgroundColor: colors.transparent,
             },
           },
         },
@@ -253,7 +254,7 @@ export const datePickerOverrides = {
   Day: {
     style: ({ $selected }: { $selected: boolean }) => ({
       "::after": {
-        borderColor: $selected ? "transparent" : "",
+        borderColor: $selected ? colors.transparent : "",
       },
     }),
   },
@@ -265,10 +266,10 @@ export const datePickerOverrides = {
       justifyContent: "center",
       // Remove primary-color click effect.
       ":active": {
-        backgroundColor: "transparent",
+        backgroundColor: colors.transparent,
       },
       ":focus": {
-        backgroundColor: "transparent",
+        backgroundColor: colors.transparent,
         outline: 0,
       },
     }),
@@ -281,10 +282,10 @@ export const datePickerOverrides = {
       justifyContent: "center",
       // Remove primary-color click effect.
       ":active": {
-        backgroundColor: "transparent",
+        backgroundColor: colors.transparent,
       },
       ":focus": {
-        backgroundColor: "transparent",
+        backgroundColor: colors.transparent,
         outline: 0,
       },
     },
@@ -313,7 +314,7 @@ export const buttonOverrides = {
       border: `1px solid ${colors.grayLighter}`,
       color: colors.black,
       ":hover": {
-        backgroundColor: "transparent",
+        backgroundColor: colors.transparent,
         borderColor: colors.primary,
         color: colors.primary,
       },
@@ -329,12 +330,12 @@ export const buttonOverrides = {
       },
       ":disabled": {
         backgroundColor: colors.grayLighter,
-        borderColor: "transparent",
+        borderColor: colors.transparent,
         color: colors.gray,
       },
       ":hover:disabled": {
         backgroundColor: colors.grayLighter,
-        borderColor: "transparent",
+        borderColor: colors.transparent,
         color: colors.gray,
       },
     },
