@@ -29,7 +29,13 @@ class PyDeckTest(testutil.DeltaGeneratorTestCase):
     def test_basic(self):
         """Test that pydeck object orks."""
 
-        st.pydeck_chart(pdk.Deck(layers=[pdk.Layer("ScatterplotLayer", data=df1),]))
+        st.pydeck_chart(
+            pdk.Deck(
+                layers=[
+                    pdk.Layer("ScatterplotLayer", data=df1),
+                ]
+            )
+        )
 
         el = self.get_delta_from_queue().new_element
         actual = json.loads(el.deck_gl_json_chart.json)

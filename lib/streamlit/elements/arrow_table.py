@@ -25,7 +25,7 @@ def marshall(proto, data, default_uuid=None):
     ----------
     proto : proto.ArrowTable
         Output. The protobuf for a Streamlit ArrowTable proto.
-    
+
     data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
         Something that is or can be converted to a dataframe.
 
@@ -127,14 +127,16 @@ def _marshall_styles(proto, styler, styles):
         for style in table_styles:
             # NB: styles in "table_styles" have a space
             # between the UUID and the selector.
-            rule = _pandas_style_to_css(style, styler.uuid, separator=" ")
+            rule = _pandas_style_to_css(
+                "table_styles", style, styler.uuid, separator=" "
+            )
             css_rules.append(rule)
 
     if "cellstyle" in styles:
         cellstyle = styles["cellstyle"]
         cellstyle = _trim_pandas_styles(cellstyle)
         for style in cellstyle:
-            rule = _pandas_style_to_css(style, styler.uuid)
+            rule = _pandas_style_to_css("cell_style", style, styler.uuid)
             css_rules.append(rule)
 
     if len(css_rules) > 0:
@@ -155,7 +157,7 @@ def _trim_pandas_styles(styles):
     return [x for x in styles if any(any(y) for y in x["props"])]
 
 
-def _pandas_style_to_css(style, uuid, separator=""):
+def _pandas_style_to_css(style_type, style, uuid, separator=""):
     """Convert pandas.Styler translated styles entry to CSS.
 
     Parameters
@@ -176,8 +178,19 @@ def _pandas_style_to_css(style, uuid, separator=""):
         declarations.append(declaration)
 
     table_selector = "#T_" + str(uuid)
-    cell_selector = style["selector"]
-    selector = table_selector + separator + cell_selector
+
+    if style_type == "table_styles" or (
+        style_type == "cell_style" and type_util.is_old_pandas_version()
+    ):
+        cell_selectors = [style["selector"]]
+    else:
+        cell_selectors = style["selectors"]
+
+    selectors = []
+    for cell_selector in cell_selectors:
+        selectors.append(table_selector + separator + cell_selector)
+    selector = ", ".join(selectors)
+
     declaration_block = "; ".join(declarations)
     rule_set = selector + " { " + declaration_block + " }"
 
@@ -200,7 +213,7 @@ def _marshall_display_values(proto, df, styles):
 
     """
     new_df = _use_display_values(df, styles)
-    proto.styler.display_values = _dataframe_to_serialized_arrow_table(new_df)
+    proto.styler.display_values = _dataframe_to_pybytes(new_df)
 
 
 def _use_display_values(df, styles):
@@ -237,8 +250,8 @@ def _use_display_values(df, styles):
     return new_df
 
 
-def _dataframe_to_serialized_arrow_table(df):
-    """Convert pandas.DataFrame to Arrow Table pybytes.
+def _dataframe_to_pybytes(df):
+    """Convert pandas.DataFrame to pybytes.
 
     Parameters
     ----------
@@ -269,7 +282,7 @@ def _marshall_index(proto, index):
     """
     index = map(util._maybe_tuple_to_list, index.values)
     index_df = pd.DataFrame(index)
-    proto.index = _dataframe_to_serialized_arrow_table(index_df)
+    proto.index = _dataframe_to_pybytes(index_df)
 
 
 def _marshall_columns(proto, columns):
@@ -287,7 +300,7 @@ def _marshall_columns(proto, columns):
     """
     columns = map(util._maybe_tuple_to_list, columns.values)
     columns_df = pd.DataFrame(columns)
-    proto.columns = _dataframe_to_serialized_arrow_table(columns_df)
+    proto.columns = _dataframe_to_pybytes(columns_df)
 
 
 def _marshall_data(proto, data):
@@ -303,4 +316,35 @@ def _marshall_data(proto, data):
 
     """
     df = pd.DataFrame(data)
-    proto.data = _dataframe_to_serialized_arrow_table(df)
+    proto.data = _dataframe_to_pybytes(df)
+
+
+def arrow_proto_to_dataframe(proto):
+    """Convert ArrowTable proto to pandas.DataFrame.
+
+    Parameters
+    ----------
+    proto : proto.ArrowTable
+        Output. pandas.DataFrame
+
+    """
+    data = _pybytes_to_dataframe(proto.data)
+    index = _pybytes_to_dataframe(proto.index)
+    columns = _pybytes_to_dataframe(proto.columns)
+
+    return pd.DataFrame(
+        data.values, index=index.values.T.tolist(), columns=columns.values.T.tolist()
+    )
+
+
+def _pybytes_to_dataframe(source):
+    """Convert pybytes to pandas.DataFrame.
+
+    Parameters
+    ----------
+    source : pybytes
+        Will default to RangeIndex (0, 1, 2, ..., n) if no `index` or `columns` are provided.
+
+    """
+    reader = pa.RecordBatchStreamReader(source)
+    return reader.read_pandas()

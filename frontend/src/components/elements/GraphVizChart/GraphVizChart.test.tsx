@@ -16,10 +16,10 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { mount } from "enzyme"
 import { fromJS } from "immutable"
 
-import { PropsWithHeight } from "./GraphVizChart"
+import { GraphVizChartProps } from "./GraphVizChart"
 
 const mockLogError = {
   logError: jest.fn(),
@@ -49,7 +49,7 @@ const { GraphVizChart } = require("./GraphVizChart")
 
 const getProps = (
   elementProps: Record<string, unknown> = {}
-): PropsWithHeight => ({
+): GraphVizChartProps => ({
   element: fromJS({
     spec: `digraph "Hello World" {Hello -> World}`,
     ...elementProps,
@@ -66,7 +66,7 @@ describe("GraphVizChart Element", () => {
 
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<GraphVizChart {...props} />)
+    const wrapper = mount(<GraphVizChart {...props} />)
 
     expect(wrapper.find(".stGraphVizChart").length).toBe(1)
     expect(mockLogError.logError).not.toHaveBeenCalled()
@@ -77,7 +77,7 @@ describe("GraphVizChart Element", () => {
     const props = getProps({
       spec: "crash",
     })
-    const wrapper = shallow(<GraphVizChart {...props} />)
+    const wrapper = mount(<GraphVizChart {...props} />)
 
     mockLogError.logError.mockClear()
 
@@ -96,7 +96,7 @@ describe("GraphVizChart Element", () => {
       width: 400,
       index: 1,
     }
-    const wrapper = shallow(<GraphVizChart {...props} />)
+    const wrapper = mount(<GraphVizChart {...props} />)
 
     expect(wrapper.find(".stGraphVizChart").props()).toMatchSnapshot()
   })

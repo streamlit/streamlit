@@ -104,8 +104,32 @@ $overlayBtn-opacity-active: 0.75;
 // Animation settings
 $normal-animation-duration: 300ms;
 
+// Progress Bar
+$progress-bar-height: 1rem;
+$progress-bar-margin: 0;
+
 // Code
 $code-color: $green;
 $kbd-color: $green;
 $kbd-bg: $gray-faint;
 $pre-color: $black;
+
+// Alert
+$alert-info-background-color: change-color($blue, $alpha: 0.1);
+$alert-info-border-color: change-color($blue, $alpha: 0.1);
+$alert-info-text-color: rgb(30, 103, 119);
+
+$alert-success-background-color: change-color($green, $alpha: 0.2);
+$alert-success-border-color: change-color($green, $alpha: 0.2);
+$alert-success-text-color: rgb(23, 108, 54);
+
+$alert-error-background-color: change-color($red, $alpha: 0.2);
+$alert-error-border-color: change-color($red, $alpha: 0.2);
+$alert-error-text-color: rgb(157, 41, 45);
+
+$alert-warning-background-color: change-color($yellow, $alpha: 0.2);
+$alert-warning-border-color: change-color($yellow, $alpha: 0.8);
+$alert-warning-text-color: rgb(148, 124, 45);
+
+// FileUploader
+$file-uploader-spinner-size: $font-size-sm * 0.8;

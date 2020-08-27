@@ -139,6 +139,7 @@ With widgets, Streamlit allows you to bake interactivity directly into your apps
 .. autofunction:: streamlit.selectbox
 .. autofunction:: streamlit.multiselect
 .. autofunction:: streamlit.slider
+.. autofunction:: streamlit.select_slider
 .. autofunction:: streamlit.text_input
 .. autofunction:: streamlit.number_input
 .. autofunction:: streamlit.text_area
@@ -148,7 +149,7 @@ With widgets, Streamlit allows you to bake interactivity directly into your apps
 .. autofunction:: streamlit.beta_color_picker
 ```
 
-## Control Flow
+## Control flow
 
 By default, Streamlit apps execute the script entirely, but we allow some functionality to handle control flow in your applications.
 
@@ -158,8 +159,7 @@ By default, Streamlit apps execute the script entirely, but we allow some functi
 
 ## Add widgets to sidebar
 
-Not only can you add interactivity to your report with widgets, you can organize them into a sidebar with `st.sidebar.[element_name]`. Each element that's passed to `st.sidebar` is pinned to the left, allowing users to focus on the content in your app. The only elements that aren't supported are: `st.write` (you
-should use `st.sidebar.markdown()` instead), `st.echo`, and `st.spinner`.
+Not only can you add interactivity to your report with widgets, you can organize them into a sidebar with `st.sidebar.[element_name]`. Each element that's passed to `st.sidebar` is pinned to the left, allowing users to focus on the content in your app. The only elements that aren't supported are `st.echo` and `st.spinner`.
 
 Here's an example of how you'd add a selectbox to your sidebar.
 

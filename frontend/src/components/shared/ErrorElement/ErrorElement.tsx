@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-import React, { PureComponent, ReactElement } from "react"
-import { Alert } from "reactstrap"
+import React, { ReactElement } from "react"
+import AlertContainer, { Kind } from "components/shared/AlertContainer"
 
-export interface Props {
+export interface ErrorElementProps {
   name: string
   message: string | ReactElement
   stack?: string
@@ -31,28 +31,26 @@ export interface Props {
  * in a Streamlit report. For that, see st.exception / Exception.tsx or
  * st.error / Text.tsx.
  */
-class ErrorElement extends PureComponent<Props> {
-  public render(): React.ReactNode {
-    const { name, message, stack } = this.props
+function ErrorElement(props: ErrorElementProps): ReactElement {
+  const { name, message, stack, width } = props
 
-    // Remove first line from stack (because it's just the error message) and
-    // trim indentation.
-    const stackArray = stack ? stack.split("\n") : []
-    stackArray.shift()
-    const cleanedStack = stackArray.map(s => s.trim()).join("\n")
+  // Remove first line from stack (because it's just the error message) and
+  // trim indentation.
+  const stackArray = stack ? stack.split("\n") : []
+  stackArray.shift()
+  const cleanedStack = stackArray.map(s => s.trim()).join("\n")
 
-    return (
-      <Alert color="danger" style={{ width: this.props.width }}>
-        <strong>{name}: </strong>
-        {message}
-        {stack ? (
-          <pre className="error">
-            <code>{cleanedStack}</code>
-          </pre>
-        ) : null}
-      </Alert>
-    )
-  }
+  return (
+    <AlertContainer kind={Kind.ERROR} width={width}>
+      <strong>{name}: </strong>
+      {message}
+      {stack ? (
+        <pre className="error">
+          <code>{cleanedStack}</code>
+        </pre>
+      ) : null}
+    </AlertContainer>
+  )
 }
 
 export default ErrorElement

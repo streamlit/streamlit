@@ -16,13 +16,13 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { mount } from "enzyme"
 import { fromJS } from "immutable"
 import { Video as VideoProto } from "autogen/proto"
 
-import Video, { Props } from "./Video"
+import Video, { VideoProps } from "./Video"
 
-const getProps = (elementProps: Partial<VideoProto> = {}): Props => ({
+const getProps = (elementProps: Partial<VideoProto> = {}): VideoProps => ({
   element: fromJS({
     url: "https://www.w3schools.com/html/mov_bbb.mp4",
     type: VideoProto.Type.UNUSED,
@@ -39,14 +39,14 @@ describe("Video Element", () => {
 
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<Video {...props} />)
+    const wrapper = mount(<Video {...props} />)
 
     expect(wrapper.find("video").length).toBe(1)
   })
 
   it("should have correct style", () => {
     const props = getProps()
-    const wrapper = shallow(<Video {...props} />)
+    const wrapper = mount(<Video {...props} />)
     const videoWrapper = wrapper.find("video")
 
     expect(videoWrapper.prop("className")).toContain("stVideo")
@@ -57,7 +57,7 @@ describe("Video Element", () => {
 
   it("should have controls", () => {
     const props = getProps()
-    const wrapper = shallow(<Video {...props} />)
+    const wrapper = mount(<Video {...props} />)
 
     expect(wrapper.find("video").prop("controls")).toBeDefined()
   })
@@ -66,7 +66,7 @@ describe("Video Element", () => {
     const props = getProps({
       url: "/media/url.test.mp4",
     })
-    const wrapper = shallow(<Video {...props} />)
+    const wrapper = mount(<Video {...props} />)
 
     expect(wrapper.find("video").prop("src")).toBe(
       "http://localhost:80/media/url.test.mp4"
@@ -78,7 +78,7 @@ describe("Video Element", () => {
       const props = getProps({
         type: VideoProto.Type.YOUTUBE_IFRAME,
       })
-      const wrapper = shallow(<Video {...props} />)
+      const wrapper = mount(<Video {...props} />)
       const iframeWrapper = wrapper.find("iframe")
 
       expect(iframeWrapper.props()).toMatchSnapshot()
@@ -89,7 +89,7 @@ describe("Video Element", () => {
         type: VideoProto.Type.YOUTUBE_IFRAME,
         startTime: 10,
       })
-      const wrapper = shallow(<Video {...props} />)
+      const wrapper = mount(<Video {...props} />)
       const iframeWrapper = wrapper.find("iframe")
 
       expect(iframeWrapper.props()).toMatchSnapshot()
@@ -98,26 +98,16 @@ describe("Video Element", () => {
 
   describe("updateTime", () => {
     const props = getProps()
-    const wrapper = shallow(<Video {...props} />)
-    const instance = wrapper.instance()
+    const wrapper = mount(<Video {...props} />)
+    const videoElement: HTMLVideoElement = wrapper.find("video").getDOMNode()
 
-    // @ts-ignore
-    jest.spyOn(instance, "updateTime")
-
-    it("should call it on didMount", () => {
-      // @ts-ignore
-      instance.componentDidMount()
-
-      // @ts-ignore
-      expect(instance.updateTime).toBeCalledTimes(1)
+    it("should set the current time to startTime on mount", () => {
+      expect(videoElement.currentTime).toBe(0)
     })
 
-    it("should call it on didUpdate", () => {
-      // @ts-ignore
-      instance.componentDidUpdate()
-
-      // @ts-ignore
-      expect(instance.updateTime).toBeCalledTimes(1)
+    it("should update the current time when startTime is changed", () => {
+      wrapper.setProps(getProps({ startTime: 10 }))
+      expect(videoElement.currentTime).toBe(10)
     })
   })
 })

@@ -187,12 +187,22 @@ def _get_css_styles(translated_style):
     """Parses pandas.Styler style dictionary into a
     {(row, col): [CSSStyle]} dictionary
     """
-    # Create {(row, col): [CSSStyle]} from translated_style['cellstyle']
-    # translated_style['cellstyle'] has the shape:
+    # In pandas < 1.1.0
+    # translated_style["cellstyle"] has the following shape:
     # [
     #   {
-    #       'props': [['color', ' black'], ['background-color', 'orange'], ['', '']],
-    #       'selector': 'row0_col0'
+    #       "props": [["color", " black"], ["background-color", "orange"], ["", ""]],
+    #       "selector": "row0_col0"
+    #   }
+    #   ...
+    # ]
+    #
+    # In pandas >= 1.1.0
+    # translated_style["cellstyle"] has the following shape:
+    # [
+    #   {
+    #       "props": [("color", " black"), ("background-color", "orange"), ("", "")],
+    #       "selectors": ["row0_col0"]
     #   }
     #   ...
     # ]
@@ -201,25 +211,29 @@ def _get_css_styles(translated_style):
 
     css_styles = {}
     for cell_style in translated_style["cellstyle"]:
-        cell_selector = cell_style["selector"]  # a string of the form 'row0_col0'
-        match = cell_selector_regex.match(cell_selector)
-        if not match:
-            raise RuntimeError(
-                'Failed to parse cellstyle selector "%s"' % cell_selector
-            )
-        row = int(match.group(1))
-        col = int(match.group(2))
-        css_declarations = []
-        props = cell_style["props"]
-        for prop in props:
-            if not isinstance(prop, list) or len(prop) != 2:
-                raise RuntimeError('Unexpected cellstyle props "%s"' % prop)
-            name = str(prop[0]).strip()
-            value = str(prop[1]).strip()
-            if name and value:
-                css_declarations.append(CSSStyle(property=name, value=value))
+        if type_util.is_old_pandas_version():
+            cell_selectors = [cell_style["selector"]]
+        else:
+            cell_selectors = cell_style["selectors"]
 
-        css_styles[(row, col)] = css_declarations
+        for cell_selector in cell_selectors:
+            match = cell_selector_regex.match(cell_selector)
+            if not match:
+                raise RuntimeError(
+                    'Failed to parse cellstyle selector "%s"' % cell_selector
+                )
+            row = int(match.group(1))
+            col = int(match.group(2))
+            css_declarations = []
+            props = cell_style["props"]
+            for prop in props:
+                if not isinstance(prop, (tuple, list)) or len(prop) != 2:
+                    raise RuntimeError('Unexpected cellstyle props "%s"' % prop)
+                name = str(prop[0]).strip()
+                value = str(prop[1]).strip()
+                if name and value:
+                    css_declarations.append(CSSStyle(property=name, value=value))
+            css_styles[(row, col)] = css_declarations
 
     return css_styles
 
@@ -373,6 +387,11 @@ def _marshall_any_array(pandas_array, proto_array):
     elif pandas_array.dtype == np.bool:
         proto_array.int64s.data.extend(pandas_array)
     elif pandas_array.dtype == np.object:
+        proto_array.strings.data.extend(map(str, pandas_array))
+    # dtype='string', <class 'pandas.core.arrays.string_.StringDtype'>
+    # NOTE: StringDtype is considered experimental.
+    # The implementation and parts of the API may change without warning.
+    elif pandas_array.dtype.name == "string":
         proto_array.strings.data.extend(map(str, pandas_array))
     # Setting a timezone changes (dtype, dtype.type) from
     #   'datetime64[ns]', <class 'numpy.datetime64'>

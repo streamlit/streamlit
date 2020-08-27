@@ -37,8 +37,7 @@ class ReportSessionTest(unittest.TestCase):
     @patch("streamlit.report_session.Report")
     @patch("streamlit.report_session.LocalSourcesWatcher")
     def test_enqueue_without_tracer(self, _1, _2, patched_config):
-        """Make sure we try to handle execution control requests.
-        """
+        """Make sure we try to handle execution control requests."""
 
         def get_option(name):
             if name == "server.runOnSave":
@@ -105,35 +104,6 @@ class ReportSessionTest(unittest.TestCase):
         # likely because there's a bug in the enqueue function (which should
         # skip func when installTracer is on).
         func.assert_not_called()
-
-    @patch("streamlit.report_session.LocalSourcesWatcher")
-    def test_set_page_config_immutable(self, _1):
-        """st.set_page_config must be called at most once"""
-        file_mgr = MagicMock(spec=UploadedFileManager)
-        rs = ReportSession(None, "", "", file_mgr)
-
-        msg = ForwardMsg()
-        msg.page_config_changed.title = "foo"
-
-        rs.enqueue(msg)
-        with self.assertRaises(StreamlitAPIException):
-            rs.enqueue(msg)
-
-    @patch("streamlit.report_session.LocalSourcesWatcher")
-    def test_set_page_config_first(self, _1):
-        """st.set_page_config must be called before other st commands"""
-        file_mgr = MagicMock(spec=UploadedFileManager)
-        rs = ReportSession(None, "", "", file_mgr)
-
-        markdown_msg = ForwardMsg()
-        markdown_msg.delta.new_element.markdown.body = "foo"
-
-        msg = ForwardMsg()
-        msg.page_config_changed.title = "foo"
-
-        rs.enqueue(markdown_msg)
-        with self.assertRaises(StreamlitAPIException):
-            rs.enqueue(msg)
 
     @patch("streamlit.report_session.LocalSourcesWatcher")
     def test_shutdown(self, _1):
