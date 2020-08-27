@@ -37,8 +37,7 @@ class ReportSessionTest(unittest.TestCase):
     @patch("streamlit.report_session.Report")
     @patch("streamlit.report_session.LocalSourcesWatcher")
     def test_enqueue_without_tracer(self, _1, _2, patched_config):
-        """Make sure we try to handle execution control requests.
-        """
+        """Make sure we try to handle execution control requests."""
 
         def get_option(name):
             if name == "server.runOnSave":

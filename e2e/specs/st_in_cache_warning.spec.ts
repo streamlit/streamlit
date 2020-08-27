@@ -24,7 +24,7 @@ describe("st calls within cached functions", () => {
 
   it("displays expected results", () => {
     // We should have two alerts
-    cy.get(".element-container > .alert-warning").should("have.length", 2);
+    cy.get(".element-container > .stException").should("have.length", 2);
 
     // One button
     cy.get(".element-container > .stButton").should("have.length", 1);
