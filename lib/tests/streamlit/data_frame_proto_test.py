@@ -48,8 +48,7 @@ class DataFrameProtoTest(unittest.TestCase):
     """Test streamlit.data_frame_proto."""
 
     def test_marshall_data_frame(self):
-        """Test streamlit.data_frame_proto.marshall_data_frame.
-        """
+        """Test streamlit.data_frame_proto.marshall_data_frame."""
         pass
 
     def test_is_pandas_styler(self):
@@ -228,6 +227,12 @@ class DataFrameProtoTest(unittest.TestCase):
 
         data_frame_proto._marshall_any_array(obj_data, obj_proto)
         self.assertEqual(obj_proto.strings.data, truth)
+
+        # StringDtype
+        string_data = pd.Series(["foo", "bar", "baz"], dtype="string")
+        string_proto = AnyArray()
+        data_frame_proto._marshall_any_array(string_data, string_proto)
+        self.assertEqual(string_proto.strings.data, string_data.tolist())
 
         # No timezone
         dt_data = pd.Series([np.datetime64("2019-04-09T12:34:56")])

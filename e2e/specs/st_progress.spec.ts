@@ -23,7 +23,7 @@ describe("st.progress", () => {
   });
 
   it("displays a progress bar", () => {
-    cy.get(".element-container .stProgress .progress-bar").should(
+    cy.get(".stProgress [role='progressbar']").should(
       "have.attr",
       "aria-valuenow",
       "50"

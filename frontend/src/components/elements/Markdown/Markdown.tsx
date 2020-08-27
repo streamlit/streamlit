@@ -16,12 +16,12 @@
  */
 
 import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
-import React, { ReactNode } from "react"
+import React, { ReactElement } from "react"
 import { Map as ImmutableMap } from "immutable"
 
 import "assets/css/write.scss"
 
-export interface Props {
+export interface MarkdownProps {
   width: number
   element: ImmutableMap<string, any>
 }
@@ -29,19 +29,17 @@ export interface Props {
 /**
  * Functional element representing Markdown formatted text.
  */
-class Markdown extends React.PureComponent<Props> {
-  public render(): ReactNode {
-    const { element, width } = this.props
-    const body = element.get("body")
-    const styleProp = { width }
+export default function Markdown({
+  width,
+  element,
+}: MarkdownProps): ReactElement {
+  const body = element.get("body")
+  const styleProp = { width }
 
-    const allowHTML = element.get("allowHtml")
-    return (
-      <div className="markdown-text-container stMarkdown" style={styleProp}>
-        <StreamlitMarkdown source={body} allowHTML={allowHTML} />
-      </div>
-    )
-  }
+  const allowHTML = element.get("allowHtml")
+  return (
+    <div className="markdown-text-container stMarkdown" style={styleProp}>
+      <StreamlitMarkdown source={body} allowHTML={allowHTML} />
+    </div>
+  )
 }
-
-export default Markdown

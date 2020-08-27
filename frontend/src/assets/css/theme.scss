@@ -78,28 +78,6 @@
   color: $white;
 }
 
-// Make alert boxes work on different backgrounds.
-
-.alert-success {
-  background: change-color($green, $alpha: 0.2);
-  border-color: change-color($green, $alpha: 0.2);
-}
-
-.alert-info {
-  background: change-color($blue, $alpha: 0.1);
-  border-color: change-color($blue, $alpha: 0.1);
-}
-
-.alert-warning {
-  background: change-color($yellow, $alpha: 0.2);
-  border-color: change-color($yellow, $alpha: 0.8);
-}
-
-.alert-danger {
-  background: change-color($red, $alpha: 0.2);
-  border-color: change-color($red, $alpha: 0.2);
-}
-
 // Other theme overrides
 
 a,
@@ -149,14 +127,6 @@ pre {
     overflow-x: auto;
     color: $green;
   }
-}
-
-.progress {
-  background-color: $gray-lightest;
-}
-
-.progress-bar {
-  background-color: $blue;
 }
 
 .icon {

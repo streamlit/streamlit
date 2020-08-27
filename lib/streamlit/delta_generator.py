@@ -58,9 +58,11 @@ from streamlit.elements.empty import EmptyMixin
 from streamlit.elements.number_input import NumberInputMixin
 from streamlit.elements.color_picker import ColorPickerMixin
 from streamlit.elements.file_uploader import FileUploaderMixin
+from streamlit.elements.select_slider import SelectSliderMixin
 from streamlit.elements.slider import SliderMixin
 from streamlit.elements.image_proto import ImageMixin
 from streamlit.elements.pyplot import PyplotMixin
+from streamlit.elements.write import WriteMixin
 
 LOGGER = get_logger(__name__)
 
@@ -102,12 +104,14 @@ class DeltaGenerator(
     PyplotMixin,
     RadioMixin,
     SelectboxMixin,
+    SelectSliderMixin,
     SliderMixin,
     JsonMixin,
     TextMixin,
     TextWidgetsMixin,
     TimeWidgetsMixin,
     VegaLiteMixin,
+    WriteMixin,
 ):
     """Creator of Delta protobuf messages.
 
@@ -143,7 +147,7 @@ class DeltaGenerator(
 
         # This is either:
         # - None: if this is the running DeltaGenerator for a top-level
-        #   container.
+        #   container (MAIN or SIDEBAR)
         # - RunningCursor: if this is the running DeltaGenerator for a
         #   non-top-level container (created with dg._block())
         # - LockedCursor: if this is a locked DeltaGenerator returned by some
@@ -197,6 +201,10 @@ class DeltaGenerator(
             return cursor.get_container_cursor(self._container)
         else:
             return self._provided_cursor
+
+    @property
+    def _is_top_level(self):
+        return self._provided_cursor is None
 
     def _get_coordinates(self):
         """Returns the element's 4-component location as string like "M.(1,2).3".

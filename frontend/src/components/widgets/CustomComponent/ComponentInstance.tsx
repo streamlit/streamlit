@@ -166,7 +166,12 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     }
 
     const widgetId: string = this.props.element.get("id")
-    this.props.widgetMgr.setJsonValue(widgetId, value, source)
+    const { dataType } = data
+    if (dataType === "dataframe") {
+      this.props.widgetMgr.setArrowValue(widgetId, value, source)
+    } else {
+      this.props.widgetMgr.setJsonValue(widgetId, value, source)
+    }
   }
 
   /** The component has a new height. Resize its iframe. */

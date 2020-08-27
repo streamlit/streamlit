@@ -27,6 +27,7 @@ from streamlit.elements import arrow_table
 from streamlit.elements.utils import _get_widget_ui_value, NoValue
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
+from streamlit.proto.ArrowTable_pb2 import ArrowTable as ArrowTableProto
 from streamlit.proto.ComponentInstance_pb2 import ArgsDataframe
 from streamlit.proto.Element_pb2 import Element
 
@@ -157,6 +158,8 @@ class CustomComponent:
 
             if widget_value is None:
                 widget_value = default
+            elif isinstance(widget_value, ArrowTableProto):
+                widget_value = arrow_table.arrow_proto_to_dataframe(widget_value)
 
             # widget_value will be either None or whatever the component's most
             # recent setWidgetValue value is. We coerce None -> NoValue,
