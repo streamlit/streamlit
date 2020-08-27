@@ -1,0 +1,44 @@
+{
+  "version": "0.17.0",
+  "name": "apache-arrow",
+  "unpkg": "Arrow.es5.min.js",
+  "jsdelivr": "Arrow.es5.min.js",
+  "browser": "Arrow.dom",
+  "main": "Arrow.node",
+  "module": "Arrow.dom.mjs",
+  "esm": {
+    "mode": "all",
+    "sourceMap": true
+  },
+  "types": "Arrow.node.d.ts",
+  "license": "Apache-2.0",
+  "description": "Apache Arrow columnar in-memory format",
+  "author": "Apache Software Foundation",
+  "homepage": "https://github.com/apache/arrow/blob/master/js/README.md",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/apache/arrow.git"
+  },
+  "bugs": {
+    "url": "https://issues.apache.org/jira/projects/ARROW"
+  },
+  "keywords": [
+    "apache",
+    "arrow"
+  ],
+  "dependencies": {
+    "@types/flatbuffers": "^1.9.1",
+    "@types/node": "^12.0.4",
+    "@types/text-encoding-utf-8": "^1.0.1",
+    "command-line-args": "5.0.2",
+    "command-line-usage": "5.0.5",
+    "flatbuffers": "1.11.0",
+    "json-bignum": "^0.0.3",
+    "pad-left": "^2.1.0",
+    "text-encoding-utf-8": "^1.0.2",
+    "tslib": "^1.9.3"
+  },
+  "bin": {
+    "arrow2csv": "bin/arrow2csv.js"
+  }
+}
