@@ -86,7 +86,7 @@ class Selectbox extends React.PureComponent<Props, State> {
     const style = { width: this.props.width }
     const { element } = this.props
     const maxDropdownHeight = element.get("maxDropdownHeight")
-      ? element.get("maxDropdownHeight") + "px"
+      ? `${element.get("maxDropdownHeight")}px`
       : ""
     const label = element.get("label")
     let options = element.get("options")

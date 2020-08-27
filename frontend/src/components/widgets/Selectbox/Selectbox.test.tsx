@@ -80,14 +80,12 @@ describe("Selectbox widget", () => {
       maxDropdownHeight: 5,
     })
     const wrapper = shallow(<Selectbox {...props} />)
-    console.log(wrapper.find(UISelect).prop("maxDropdownHeigh"))
     expect(wrapper.find(UISelect).prop("maxDropdownHeight")).toBe("5px")
   })
 
   it("should set maxDropdownHeight to an empty string, if not provided", () => {
     const props = getProps()
     const wrapper = shallow(<Selectbox {...props} />)
-    console.log(wrapper.find(UISelect).prop("maxDropdownHeigh"))
     expect(wrapper.find(UISelect).prop("maxDropdownHeight")).toBe("")
   })
 

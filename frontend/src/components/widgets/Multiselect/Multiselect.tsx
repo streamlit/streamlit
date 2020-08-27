@@ -94,7 +94,7 @@ class Multiselect extends React.PureComponent<Props, State> {
     const style = { width }
     const label = element.get("label")
     const maxDropdownHeight = element.get("maxDropdownHeight")
-      ? element.get("maxDropdownHeight") + "px"
+      ? `${element.get("maxDropdownHeight")}px`
       : ""
     const options = element.get("options")
     const disabled = options.size === 0 ? true : this.props.disabled
