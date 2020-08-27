@@ -133,7 +133,8 @@ class ServerTest(ServerTestCase):
             session_infos = list(self.server._session_info_by_id.values())
             self.assertEqual(2, len(session_infos))
             self.assertNotEqual(
-                session_infos[0].session.id, session_infos[1].session.id,
+                session_infos[0].session.id,
+                session_infos[1].session.id,
             )
 
             # Close the first
@@ -199,7 +200,7 @@ class ServerTest(ServerTestCase):
     @tornado.testing.gen_test
     def test_forwardmsg_cacheable_flag(self):
         """Test that the metadata.cacheable flag is set properly on outgoing
-         ForwardMsgs."""
+        ForwardMsgs."""
         with self._patch_report_session():
             yield self.start_server_loop()
 
@@ -552,7 +553,7 @@ class PortRotateOneTest(unittest.TestCase):
 
 class UnixSocketTest(unittest.TestCase):
     """Tests start_listening uses a unix socket when socket.address starts with
-       unix:// """
+    unix://"""
 
     def get_httpserver(self):
         httpserver = mock.MagicMock()
