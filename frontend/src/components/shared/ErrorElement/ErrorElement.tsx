@@ -16,7 +16,7 @@
  */
 
 import React, { ReactElement } from "react"
-import { Alert } from "reactstrap"
+import AlertContainer, { Kind } from "components/shared/AlertContainer"
 
 export interface ErrorElementProps {
   name: string
@@ -41,7 +41,7 @@ function ErrorElement(props: ErrorElementProps): ReactElement {
   const cleanedStack = stackArray.map(s => s.trim()).join("\n")
 
   return (
-    <Alert color="danger" style={{ width }}>
+    <AlertContainer kind={Kind.ERROR} width={width}>
       <strong>{name}: </strong>
       {message}
       {stack ? (
@@ -49,7 +49,7 @@ function ErrorElement(props: ErrorElementProps): ReactElement {
           <code>{cleanedStack}</code>
         </pre>
       ) : null}
-    </Alert>
+    </AlertContainer>
   )
 }
 

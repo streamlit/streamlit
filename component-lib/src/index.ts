@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,13 +15,16 @@
  * limitations under the License.
  */
 
-@import "src/assets/css/variables";
+// Workaround for type-only exports:
+// https://stackoverflow.com/questions/53728230/cannot-re-export-a-type-when-using-the-isolatedmodules-with-ts-3-2-2
+import { ComponentProps as ComponentProps_ } from "./StreamlitReact";
+import { RenderData as RenderData_ } from "./streamlit";
 
-.stAlert {
-  &.alert {
-    // Needed to get precedence.
-    margin: 0;
-  }
-
-  // See write.scss for more.
-}
+export {
+  StreamlitComponentBase,
+  withStreamlitConnection
+} from "./StreamlitReact";
+export { ArrowTable } from "./ArrowTable";
+export { Streamlit } from "./streamlit";
+export type ComponentProps = ComponentProps_;
+export type RenderData = RenderData_;

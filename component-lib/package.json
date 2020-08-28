@@ -1,0 +1,42 @@
+{
+  "name": "streamlit-component-lib",
+  "version": "1.0.0",
+  "description": "Support code for Streamlit Components",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/streamlit/streamlit.git"
+  },
+  "keywords": [
+    "streamlit"
+  ],
+  "author": "Streamlit",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/streamlit/streamlit/issues"
+  },
+  "homepage": "https://github.com/streamlit/streamlit#readme",
+  "dependencies": {
+    "apache-arrow": "^0.17.0",
+    "event-target-shim": "^5.0.1",
+    "hoist-non-react-statics": "^3.3.2",
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1"
+  },
+  "devDependencies": {
+    "@types/hoist-non-react-statics": "^3.3.1",
+    "@types/jest": "^24.0.0",
+    "@types/node": "^12.0.0",
+    "@types/react": "^16.9.0",
+    "@types/react-dom": "^16.9.0",
+    "typescript": "~3.7.2"
+  }
+}
