@@ -55,11 +55,6 @@ interface DataframeArg {
   value: any
 }
 
-interface BytesArg {
-  key: string
-  value: Uint8Array
-}
-
 export class ComponentInstance extends React.PureComponent<Props, State> {
   private iframeRef = createRef<HTMLIFrameElement>()
 
