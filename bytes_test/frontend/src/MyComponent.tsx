@@ -20,6 +20,7 @@ class MyComponent extends StreamlitComponentBase<State> {
     // Arguments that are passed to the plugin in Python are accessible
     // via `this.props.args`. Here, we access the "name" arg.
     const name = this.props.args["name"]
+    const bytes = this.props.args["bytes"]
 
     // Show a button and some text.
     // When the button is clicked, we'll increment our "numClicks" state

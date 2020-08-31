@@ -50,21 +50,32 @@ interface State {
   componentError?: Error
 }
 
+interface DataframeArg {
+  key: string
+  value: any
+}
+
+interface BytesArg {
+  key: string
+  value: Uint8Array
+}
+
 export class ComponentInstance extends React.PureComponent<Props, State> {
   private iframeRef = createRef<HTMLIFrameElement>()
 
   // True when we've received the COMPONENT_READY message
   private componentReady = false
 
-  // The most recent JSON args we've received for this component.
+  // The most recent JSON args we've received from Python.
   private lastJSONArgs = {}
 
-  // The most recent Arrow Dataframe args we've received.
-  private lastDataframeArgs: any[] = []
+  // The most recent Arrow Dataframe args we've received from Python.
+  private lastDataframeArgs: DataframeArg[] = []
 
-  // The most recent bytes args we've received.
-  private lastBytesArgs: any[] = []
+  // The most recent bytes args we've received from Python.
+  private lastBytesArgs: BytesArg[] = []
 
+  // The most recent frame height we've received from the frontend.
   private frameHeight = 0
 
   public constructor(props: Props) {
@@ -244,15 +255,14 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     })
   }
 
+  private renderError = (error: Error): ReactNode => {
+    return <ErrorElement name={error.name} message={error.message} />
+  }
+
   public render = (): ReactNode => {
     if (this.state.componentError != null) {
       // If we have an error, display it and bail.
-      return (
-        <ErrorElement
-          name={this.state.componentError.name}
-          message={this.state.componentError.message}
-        />
-      )
+      return this.renderError(this.state.componentError)
     }
 
     // Parse the component's arguments and src URL.
@@ -262,8 +272,8 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     // which will be triggered immediately. (This will not cause an infinite
     // loop.)
     let jsonArgs: any
-    const dataframeArgs: any[] = []
-    const bytesArgs: any[] = []
+    const dataframeArgs: DataframeArg[] = []
+    const bytesArgs: BytesArg[] = []
     let src: string
     let componentName: string
     try {
@@ -284,21 +294,23 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       })
 
       // Parse arguments. Our JSON arguments are just stored in a JSON string.
-      // All other arguments are stored in the "specialArgs" list
       jsonArgs = JSON.parse(this.props.element.get("jsonArgs"))
+
+      // All other arguments are stored in the "specialArgs" list, from which
+      // we extract DataFrames and bytes.
       const specialArgs = this.props.element.get("specialArgs")
       specialArgs.forEach((specialArg: any) => {
         const key = specialArg.get("key")
         dispatchOneOf(specialArg, "value", {
           arrowDataframe: (el: SimpleElement) =>
             dataframeArgs.push({ key, value: el.toJS() }),
-          bytes: (el: SimpleElement) =>
-            bytesArgs.push({ key, value: el.toJS() }),
+          bytes: (bytesArray: Uint8Array) =>
+            bytesArgs.push({ key, value: bytesArray }),
         })
       })
     } catch (err) {
       this.setState({ componentError: err })
-      return undefined
+      return this.renderError(err)
     }
 
     // We always store the most recent render arguments in order to respond
