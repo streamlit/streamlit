@@ -146,7 +146,6 @@ checkbox = _main.checkbox  # noqa: E221
 code = _main.code  # noqa: E221
 dataframe = _main.dataframe  # noqa: E221
 date_input = _main.date_input  # noqa: E221
-deck_gl_chart = _main.deck_gl_chart  # noqa: E221
 pydeck_chart = _main.pydeck_chart  # noqa: E221
 empty = _main.empty  # noqa: E221
 error = _main.error  # noqa: E221

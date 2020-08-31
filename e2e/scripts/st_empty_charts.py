@@ -35,7 +35,6 @@ st.area_chart()
 # 1 empty map
 # comment this one out to avoid this Cypress-Mapbox related error.
 # ref: https://github.com/cypress-io/cypress/issues/4322
-# st.deck_gl_chart()
 # st.pydeck_chart()
 # st.map()
 
