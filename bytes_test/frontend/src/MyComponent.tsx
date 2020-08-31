@@ -22,13 +22,15 @@ class MyComponent extends StreamlitComponentBase<State> {
     const name = this.props.args["name"]
     const bytes = this.props.args["bytes"]
 
+    const byteString = new TextDecoder().decode(bytes)
+
     // Show a button and some text.
     // When the button is clicked, we'll increment our "numClicks" state
     // variable, and send its new value back to Streamlit, where it'll
     // be available to the Python program.
     return (
       <span>
-        Hello, {name}! &nbsp;
+        Hello, {byteString}! &nbsp;
         <button onClick={this.onClicked} disabled={this.props.disabled}>
           Click Me!
         </button>

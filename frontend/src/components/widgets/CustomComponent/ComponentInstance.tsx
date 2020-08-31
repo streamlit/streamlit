@@ -66,14 +66,11 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
   // True when we've received the COMPONENT_READY message
   private componentReady = false
 
-  // The most recent JSON args we've received from Python.
-  private lastJSONArgs = {}
+  // The most recent JSON and bytes args we've received from Python.
+  private curArgs: { [name: string]: any } = {}
 
   // The most recent Arrow Dataframe args we've received from Python.
-  private lastDataframeArgs: DataframeArg[] = []
-
-  // The most recent bytes args we've received from Python.
-  private lastBytesArgs: BytesArg[] = []
+  private curDataframeArgs: DataframeArg[] = []
 
   // The most recent frame height we've received from the frontend.
   private frameHeight = 0
@@ -248,9 +245,8 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     // existing components. You can *add* more arguments safely, but any
     // other modifications require a CUSTOM_COMPONENT_API_VERSION bump.
     this.sendForwardMsg(StreamlitMessageType.RENDER, {
-      args: this.lastJSONArgs,
-      dfs: this.lastDataframeArgs,
-      bytes: this.lastBytesArgs,
+      args: this.curArgs,
+      dfs: this.curDataframeArgs,
       disabled: this.props.disabled,
     })
   }
@@ -271,9 +267,8 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     // and bail. The error will be displayed in the next call to render,
     // which will be triggered immediately. (This will not cause an infinite
     // loop.)
-    let jsonArgs: any
-    const dataframeArgs: DataframeArg[] = []
-    const bytesArgs: BytesArg[] = []
+    let newArgs: { [name: string]: any }
+    const newDataframeArgs: DataframeArg[] = []
     let src: string
     let componentName: string
     try {
@@ -294,7 +289,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       })
 
       // Parse arguments. Our JSON arguments are just stored in a JSON string.
-      jsonArgs = JSON.parse(this.props.element.get("jsonArgs"))
+      newArgs = JSON.parse(this.props.element.get("jsonArgs"))
 
       // All other arguments are stored in the "specialArgs" list, from which
       // we extract DataFrames and bytes.
@@ -303,9 +298,10 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
         const key = specialArg.get("key")
         dispatchOneOf(specialArg, "value", {
           arrowDataframe: (el: SimpleElement) =>
-            dataframeArgs.push({ key, value: el.toJS() }),
-          bytes: (bytesArray: Uint8Array) =>
-            bytesArgs.push({ key, value: bytesArray }),
+            newDataframeArgs.push({ key, value: el.toJS() }),
+          bytes: (bytesArray: Uint8Array) => {
+            newArgs[key] = bytesArray
+          },
         })
       })
     } catch (err) {
@@ -319,9 +315,8 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     // for example, if it's being served from a webpack dev server). When a
     // component sends the COMPONENT_READY message, we send it the most
     // recent arguments.
-    this.lastJSONArgs = jsonArgs
-    this.lastDataframeArgs = dataframeArgs
-    this.lastBytesArgs = bytesArgs
+    this.curArgs = newArgs
+    this.curDataframeArgs = newDataframeArgs
 
     if (this.componentReady) {
       // The component has loaded. Send it a new render message immediately.
