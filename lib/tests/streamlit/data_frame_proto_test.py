@@ -48,8 +48,7 @@ class DataFrameProtoTest(unittest.TestCase):
     """Test streamlit.data_frame_proto."""
 
     def test_marshall_data_frame(self):
-        """Test streamlit.data_frame_proto.marshall_data_frame.
-        """
+        """Test streamlit.data_frame_proto.marshall_data_frame."""
         pass
 
     def test_is_pandas_styler(self):

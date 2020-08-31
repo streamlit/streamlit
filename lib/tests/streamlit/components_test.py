@@ -70,14 +70,16 @@ class DeclareComponentTest(unittest.TestCase):
         from component_test_data import component as init_component
 
         self.assertEqual(
-            "component_test_data.foo", init_component.name,
+            "component_test_data.foo",
+            init_component.name,
         )
 
         # Test a component defined in a module within a package
         from component_test_data.outer_module import component as outer_module_component
 
         self.assertEqual(
-            "component_test_data.outer_module.foo", outer_module_component.name,
+            "component_test_data.outer_module.foo",
+            outer_module_component.name,
         )
 
         # Test a component defined in module within a nested package
@@ -86,7 +88,8 @@ class DeclareComponentTest(unittest.TestCase):
         )
 
         self.assertEqual(
-            "component_test_data.nested.inner_module.foo", inner_module_component.name,
+            "component_test_data.nested.inner_module.foo",
+            inner_module_component.name,
         )
 
     def test_only_path(self):
@@ -355,7 +358,8 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         self.assertEqual(404, response.code)
         self.assertEqual(
-            b"components_test.test read error: Invalid content", response.body,
+            b"components_test.test read error: Invalid content",
+            response.body,
         )
 
 

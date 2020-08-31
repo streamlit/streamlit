@@ -22,7 +22,7 @@ import { fromJS, List } from "immutable"
 import classNames from "classnames"
 // Other local imports.
 import ReportView from "components/core/ReportView/"
-import { StatusWidget } from "components/core/StatusWidget/"
+import StatusWidget from "components/core/StatusWidget"
 import MainMenu from "components/core/MainMenu/"
 import {
   DialogProps,
@@ -283,7 +283,7 @@ export class App extends PureComponent<Props, State> {
           this.handlePageInfoChanged(pageInfo),
         reportFinished: (status: ForwardMsg.ReportFinishedStatus) =>
           this.handleReportFinished(status),
-        uploadReportProgress: (progress: string | number) =>
+        uploadReportProgress: (progress: number) =>
           this.handleUploadReportProgress(progress),
         reportUploaded: (url: string) => this.handleReportUploaded(url),
       })
@@ -293,7 +293,7 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
-  handleUploadReportProgress = (progress: string | number): void => {
+  handleUploadReportProgress = (progress: number): void => {
     const newDialog: DialogProps = {
       type: DialogType.UPLOAD_PROGRESS,
       progress,
