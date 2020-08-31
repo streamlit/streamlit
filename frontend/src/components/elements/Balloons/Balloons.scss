@@ -18,6 +18,7 @@
   position: fixed;
   bottom: 0;
   margin-left: -68px; /* Center 136px-wide image */
+  z-index: 1000000;
 
   /* If modifying the duration, you should also modify Balloons.js */
   animation-duration: 0.3s, 1s, 1s;
