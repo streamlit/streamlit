@@ -44,7 +44,7 @@ class MyComponent extends StreamlitComponentBase<State> {
     // Streamlit via `Streamlit.setComponentValue`.
     this.setState(
       prevState => ({ numClicks: prevState.numClicks + 1 }),
-      () => Streamlit.setComponentValue(this.state.numClicks)
+      () => Streamlit.setComponentValue(new Uint8Array([this.state.numClicks]))
     )
   }
 }

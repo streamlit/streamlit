@@ -238,6 +238,24 @@ export class WidgetStateManager {
     return undefined
   }
 
+  public setBytesValue(
+    widgetId: string,
+    value: Uint8Array,
+    source: Source
+  ): void {
+    this.getOrCreateWidgetStateProto(widgetId).bytesValue = value
+    this.maybeSendUpdateWidgetsMessage(source)
+  }
+
+  public getBytesValue(widgetId: string): Uint8Array | undefined {
+    const state = this.getWidgetStateProto(widgetId)
+    if (state != null && state.value === "bytesValue") {
+      return state.bytesValue
+    }
+
+    return undefined
+  }
+
   private maybeSendUpdateWidgetsMessage(source: Source): void {
     if (source.fromUi) {
       this.sendUpdateWidgetsMessage()

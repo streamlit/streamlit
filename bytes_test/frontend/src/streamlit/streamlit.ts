@@ -25,6 +25,9 @@ export interface RenderData {
   disabled: boolean
 }
 
+// Types that Streamlit.setComponentValue accepts
+type ComponentValue = ArrowTable | TypedArray | ArrayBuffer | any
+
 /** Messages from Component -> Streamlit */
 enum ComponentMessageType {
   // A component sends this message when it's ready to receive messages
@@ -115,13 +118,22 @@ export class Streamlit {
    * value = st.my_component(...)
    * st.write(value) # -> "ahoy!"
    *
-   * The value must be serializable into JSON or ArrowTable.
+   * The value must be an ArrowTable, a typed array, an ArrayBuffer, or be
+   * serializable to JSON.
    */
-  public static setComponentValue = (value: any): void => {
+  public static setComponentValue = (value: ComponentValue): void => {
     let dataType
     if (value instanceof ArrowTable) {
       dataType = "dataframe"
       value = value.serialize()
+    } else if (isTypedArray(value)) {
+      // All typed arrays get sent as Uint8Array, because that's what our
+      // protobuf library uses for the "bytes" field type.
+      dataType = "bytes"
+      value = new Uint8Array(value.buffer)
+    } else if (value instanceof ArrayBuffer) {
+      dataType = "bytes"
+      value = new Uint8Array(value)
     } else {
       dataType = "json"
     }
@@ -205,4 +217,36 @@ export class Streamlit {
 interface ArgsDataframe {
   key: string
   value: ArrowDataframeProto
+}
+
+// The TypedArray JavaScript types
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Typed_arrays
+type TypedArray =
+  | Int8Array
+  | Uint8Array
+  | Uint8ClampedArray
+  | Int16Array
+  | Uint16Array
+  | Int32Array
+  | Uint32Array
+  | Float32Array
+  | Float64Array
+  | BigInt64Array
+  | BigUint64Array
+
+/** True if the value is a TypedArray. */
+function isTypedArray(value: any): value is TypedArray {
+  return (
+    value instanceof Int8Array ||
+    value instanceof Uint8Array ||
+    value instanceof Uint8ClampedArray ||
+    value instanceof Int16Array ||
+    value instanceof Uint16Array ||
+    value instanceof Int32Array ||
+    value instanceof Uint32Array ||
+    value instanceof Float32Array ||
+    value instanceof Float64Array ||
+    value instanceof BigInt64Array ||
+    value instanceof BigUint64Array
+  )
 }

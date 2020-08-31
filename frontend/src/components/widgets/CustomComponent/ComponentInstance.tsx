@@ -181,6 +181,8 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     const { dataType } = data
     if (dataType === "dataframe") {
       this.props.widgetMgr.setArrowValue(widgetId, value, source)
+    } else if (dataType === "bytes") {
+      this.props.widgetMgr.setBytesValue(widgetId, value, source)
     } else {
       this.props.widgetMgr.setJsonValue(widgetId, value, source)
     }
