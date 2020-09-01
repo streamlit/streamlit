@@ -205,23 +205,23 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
             create_widget()
             with self.assertRaises(DuplicateWidgetID) as ctx:
                 create_widget()
-                self.assertIn(
-                    _build_duplicate_widget_message(
-                        widget_func_name=widget_type, user_key=None
-                    ),
-                    ctx.exception,
-                )
+            self.assertEqual(
+                _build_duplicate_widget_message(
+                    widget_func_name=widget_type, user_key=None
+                ),
+                str(ctx.exception),
+            )
 
             # Test duplicate user-specified widget key
             create_widget("key")
             with self.assertRaises(DuplicateWidgetID) as ctx:
                 create_widget("key")
-                self.assertIn(
-                    _build_duplicate_widget_message(
-                        widget_func_name=widget_type, user_key="key"
-                    ),
-                    ctx.exception,
-                )
+            self.assertEqual(
+                _build_duplicate_widget_message(
+                    widget_func_name=widget_type, user_key="key"
+                ),
+                str(ctx.exception),
+            )
 
 
 class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):

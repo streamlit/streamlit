@@ -24,7 +24,7 @@ For example, when the function `expensive_computation(a, b)`, decorated with [`@
    - Performs an **Output Mutation Check**, where a fresh hash of the output is computed and compared to the stored `output_hash`.
      - If the two hashes are different, shows a **Cached Object Mutated** warning. (Note: Setting `allow_output_mutation=True` disables this step).
 1. If the input key is not found in the cache, then:
-   - Executes the cached function (i.e. output = `expensive_computation(2, 21)`).
+   - Executes the cached function (i.e. `output = expensive_computation(2, 21)`).
    - Calculates the `output_hash` from the function's `output`.
    - Stores `key → (output, output_hash)` in the cache.
 1. Returns the output.
