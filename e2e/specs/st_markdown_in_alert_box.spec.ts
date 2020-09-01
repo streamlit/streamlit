@@ -26,7 +26,7 @@ describe("info/success/warning/error boxes", () => {
   });
 
   it("show complex markdown beautifully", () => {
-    cy.get(".stAlert.alert")
+    cy.get(".stAlert")
       .should("have.length", 4)
       .each((el, i) => {
         return cy.get(el).matchImageSnapshot(`stAlert-alert-${i}`);

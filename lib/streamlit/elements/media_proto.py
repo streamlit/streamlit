@@ -20,8 +20,85 @@ import re
 from validators import url
 
 from streamlit import type_util
-from streamlit.proto import Video_pb2
+from streamlit.proto.Audio_pb2 import Audio as AudioProto
+from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.media_file_manager import media_file_manager
+
+
+class MediaMixin:
+    def audio(dg, data, format="audio/wav", start_time=0):
+        """Display an audio player.
+
+        Parameters
+        ----------
+        data : str, bytes, BytesIO, numpy.ndarray, or file opened with
+                io.open().
+            Raw audio data, filename, or a URL pointing to the file to load.
+            Numpy arrays and raw data formats must include all necessary file
+            headers to match specified file format.
+        start_time: int
+            The time from which this element should start playing.
+        format : str
+            The mime type for the audio file. Defaults to 'audio/wav'.
+            See https://tools.ietf.org/html/rfc4281 for more info.
+
+        Example
+        -------
+        >>> audio_file = open('myaudio.ogg', 'rb')
+        >>> audio_bytes = audio_file.read()
+        >>>
+        >>> st.audio(audio_bytes, format='audio/ogg')
+
+        .. output::
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=Dv3M9sA7Cg8gwusgnVNTHb
+           height: 400px
+
+        """
+        audio_proto = AudioProto()
+        coordinates = dg._get_coordinates()  # type: ignore
+        marshall_audio(coordinates, audio_proto, data, format, start_time)
+        return dg._enqueue("audio", audio_proto)  # type: ignore
+
+    def video(dg, data, format="video/mp4", start_time=0):
+        """Display a video player.
+
+        Parameters
+        ----------
+        data : str, bytes, BytesIO, numpy.ndarray, or file opened with
+                io.open().
+            Raw video data, filename, or URL pointing to a video to load.
+            Includes support for YouTube URLs.
+            Numpy arrays and raw data formats must include all necessary file
+            headers to match specified file format.
+        format : str
+            The mime type for the video file. Defaults to 'video/mp4'.
+            See https://tools.ietf.org/html/rfc4281 for more info.
+        start_time: int
+            The time from which this element should start playing.
+
+        Example
+        -------
+        >>> video_file = open('myvideo.mp4', 'rb')
+        >>> video_bytes = video_file.read()
+        >>>
+        >>> st.video(video_bytes)
+
+        .. output::
+           https://share.streamlit.io/0.61.0-yRE1/index.html?id=LZLtVFFTf1s41yfPExzRu8
+           height: 600px
+
+        .. note::
+           Some videos may not display if they are encoded using MP4V (which is an export option in OpenCV), as this codec is
+           not widely supported by browsers. Converting your video to H.264 will allow the video to be displayed in Streamlit.
+           See this `StackOverflow post <https://stackoverflow.com/a/49535220/2394542>`_ or this
+           `Streamlit forum post <https://discuss.streamlit.io/t/st-video-doesnt-show-opencv-generated-mp4/3193/2>`_
+           for more information.
+
+        """
+        video_proto = VideoProto()
+        coordinates = dg._get_coordinates()  # type: ignore
+        marshall_video(coordinates, video_proto, data, format, start_time)
+        return dg._enqueue("video", video_proto)  # type: ignore
 
 
 # Regular expression explained at https://regexr.com/4n2l2 Covers any youtube
@@ -122,13 +199,13 @@ def marshall_video(coordinates, proto, data, mimetype="video/mp4", start_time=0)
     proto.start_time = start_time
 
     # "type" distinguishes between YouTube and non-YouTube links
-    proto.type = Video_pb2.Video.Type.NATIVE
+    proto.type = VideoProto.Type.NATIVE
 
     if isinstance(data, str) and url(data):
         youtube_url = _reshape_youtube_url(data)
         if youtube_url:
             proto.url = youtube_url
-            proto.type = Video_pb2.Video.Type.YOUTUBE_IFRAME
+            proto.type = VideoProto.Type.YOUTUBE_IFRAME
         else:
             proto.url = data
 

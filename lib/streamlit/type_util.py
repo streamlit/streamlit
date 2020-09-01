@@ -267,3 +267,11 @@ def ensure_iterable(obj):
         return obj
     except:
         raise
+
+
+def is_old_pandas_version():
+    """Return True if `pandas` version is < `1.1.0`."""
+    import pandas as pd
+    from packaging import version
+
+    return version.parse(pd.__version__) < version.parse("1.1.0")

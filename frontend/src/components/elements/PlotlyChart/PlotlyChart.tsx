@@ -20,64 +20,56 @@
  * Copyright 2019 Streamlit Inc. All rights reserved.
  */
 
-import React, { ReactNode, PureComponent } from "react"
+import React, { ReactElement } from "react"
 import { Map as ImmutableMap } from "immutable"
 import { dispatchOneOf } from "lib/immutableProto"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import Plot from "react-plotly.js"
 
-interface Props {
+export interface PlotlyChartProps {
   width: number
   element: ImmutableMap<string, any>
-}
-
-export interface PropsWithHeight extends Props {
   height: number | undefined
 }
 
 export const DEFAULT_HEIGHT = 450
 
-export class PlotlyChart extends PureComponent<PropsWithHeight> {
-  public render(): ReactNode {
-    const el = this.props.element
-    return dispatchOneOf(el, "chart", {
-      url: (url: string) => this.renderIFrame(url),
-      figure: (figure: ImmutableMap<string, any>) => this.renderFigure(figure),
-    })
-  }
+export function PlotlyChart({
+  width: propWidth,
+  element,
+  height: propHeight,
+}: PlotlyChartProps): ReactElement {
+  const el = element
 
-  private renderIFrame = (url: string): React.ReactNode => {
-    const { width } = this.props
-    const height = this.props.height ? this.props.height : DEFAULT_HEIGHT
+  const renderIFrame = (url: string): ReactElement => {
+    const height = propHeight || DEFAULT_HEIGHT
+    const width = propWidth
     return <iframe title="Plotly" src={url} style={{ width, height }} />
   }
 
-  private isFullScreen = (): boolean => !!this.props.height
+  const isFullScreen = (): boolean => !!propHeight
 
-  private generateSpec = (figure: ImmutableMap<string, any>): any => {
-    const { element, height, width } = this.props
+  const generateSpec = (figure: ImmutableMap<string, any>): any => {
     const spec = JSON.parse(figure.get("spec"))
     const useContainerWidth = JSON.parse(element.get("useContainerWidth"))
 
-    if (this.isFullScreen()) {
-      spec.layout.width = width
-      spec.layout.height = height
+    if (isFullScreen()) {
+      spec.layout.width = propWidth
+      spec.layout.height = propHeight
     } else if (useContainerWidth) {
-      spec.layout.width = width
+      spec.layout.width = propWidth
     }
 
     return spec
   }
 
-  private renderFigure = (
-    figure: ImmutableMap<string, any>
-  ): React.ReactNode => {
+  const renderFigure = (figure: ImmutableMap<string, any>): ReactElement => {
     const config = JSON.parse(figure.get("config"))
-    const { data, layout, frames } = this.generateSpec(figure)
+    const { data, layout, frames } = generateSpec(figure)
 
     return (
       <Plot
-        key={this.isFullScreen() ? "fullscreen" : "original"}
+        key={isFullScreen() ? "fullscreen" : "original"}
         className="stPlotlyChart"
         data={data}
         layout={layout}
@@ -86,6 +78,10 @@ export class PlotlyChart extends PureComponent<PropsWithHeight> {
       />
     )
   }
+  return dispatchOneOf(el, "chart", {
+    url: (url: string) => renderIFrame(url),
+    figure: (figure: ImmutableMap<string, any>) => renderFigure(figure),
+  })
 }
 
 export default withFullScreenWrapper(PlotlyChart)

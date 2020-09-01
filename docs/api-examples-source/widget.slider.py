@@ -11,7 +11,8 @@ st.write("Values:", values)
 
 st.subheader("Time slider")
 appointment = st.slider(
-    "Schedule your appointment:", value=(time(11, 30), time(12, 45)),
+    "Schedule your appointment:",
+    value=(time(11, 30), time(12, 45)),
 )
 st.write("You're scheduled for:", appointment)
 

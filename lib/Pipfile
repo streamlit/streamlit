@@ -12,6 +12,8 @@ pipenv = "*"
 pytest = "*"
 pytest-cov = "*"
 requests-mock = "*"
+# Hardcode setuptools - issue opened https://github.com/pypa/setuptools/issues/2366
+setuptools = "<=49.6.0"
 testfixtures = "*"
 twine = "*"
 wheel = "*"
@@ -37,10 +39,7 @@ click = ">=7.0"
 enum-compat = "*"
 numpy = "*"
 packaging = "*"
-# pandas 1.1.0 has breaking changes to its styling code. We're temporarily
-# pinning to < 1.1.0, and have an open issue to fix this here:
-# https://github.com/streamlit/streamlit/issues/1777
-pandas = ">=0.21.0, <1.1.0"
+pandas = ">=0.21.0"
 pillow = ">=6.2.0"
 protobuf = ">=3.6.0"
 pyarrow = "*"

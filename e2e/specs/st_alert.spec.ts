@@ -23,18 +23,18 @@ describe("st.error and friends", () => {
   });
 
   it("displays correctly", () => {
-    cy.get(
-      ".element-container .stAlert.alert-danger .markdown-text-container"
-    ).contains("This is an error");
-    cy.get(
-      ".element-container .stAlert.alert-warning .markdown-text-container"
-    ).contains("This is a warning");
-    cy.get(
-      ".element-container .stAlert.alert-info .markdown-text-container"
-    ).contains("This is an info message");
-    cy.get(
-      ".element-container .stAlert.alert-success .markdown-text-container"
-    ).contains("This is a success message");
+    cy.get(".element-container .stAlert .markdown-text-container")
+      .eq(0)
+      .contains("This is an error");
+    cy.get(".element-container .stAlert .markdown-text-container")
+      .eq(1)
+      .contains("This is a warning");
+    cy.get(".element-container .stAlert .markdown-text-container")
+      .eq(2)
+      .contains("This is an info message");
+    cy.get(".element-container .stAlert .markdown-text-container")
+      .eq(3)
+      .contains("This is a success message");
   });
 
   it("displays correctly", () => {

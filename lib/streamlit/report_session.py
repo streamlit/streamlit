@@ -217,6 +217,7 @@ class ReportSession(object):
             rerun_data = RerunData()
 
         self._enqueue_script_request(ScriptRequest.RERUN, rerun_data)
+        self._set_page_config_allowed = True
 
     def _on_source_file_changed(self):
         """One of our source files changed. Schedule a rerun if appropriate."""

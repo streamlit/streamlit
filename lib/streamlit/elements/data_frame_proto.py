@@ -21,10 +21,98 @@ from collections import namedtuple
 
 from streamlit import type_util
 from streamlit.logger import get_logger
+from streamlit.proto.DataFrame_pb2 import DataFrame as DataFrameProto
 
 LOGGER = get_logger(__name__)
 
 CSSStyle = namedtuple("CSSStyle", ["property", "value"])
+
+
+class DataFrameMixin:
+    def dataframe(dg, data=None, width=None, height=None):
+        """Display a dataframe as an interactive table.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
+            or None
+            The data to display.
+
+            If 'data' is a pandas.Styler, it will be used to style its
+            underyling DataFrame. Streamlit supports custom cell
+            values and colors. (It does not support some of the more exotic
+            pandas styling features, like bar charts, hovering, and captions.)
+            Styler support is experimental!
+        width : int or None
+            Desired width of the UI element expressed in pixels. If None, a
+            default width based on the page width is used.
+        height : int or None
+            Desired height of the UI element expressed in pixels. If None, a
+            default height is used.
+
+        Examples
+        --------
+        >>> df = pd.DataFrame(
+        ...    np.random.randn(50, 20),
+        ...    columns=('col %d' % i for i in range(20)))
+        ...
+        >>> st.dataframe(df)  # Same as st.write(df)
+
+        .. output::
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=165mJbzWdAC8Duf8a4tjyQ
+           height: 330px
+
+        >>> st.dataframe(df, 200, 100)
+
+        You can also pass a Pandas Styler object to change the style of
+        the rendered DataFrame:
+
+        >>> df = pd.DataFrame(
+        ...    np.random.randn(10, 20),
+        ...    columns=('col %d' % i for i in range(20)))
+        ...
+        >>> st.dataframe(df.style.highlight_max(axis=0))
+
+        .. output::
+           https://share.streamlit.io/0.29.0-dV1Y/index.html?id=Hb6UymSNuZDzojUNybzPby
+           height: 285px
+
+        """
+        data_frame_proto = DataFrameProto()
+        marshall_data_frame(data, data_frame_proto)
+
+        return dg._enqueue(  # type: ignore
+            "data_frame", data_frame_proto, element_width=width, element_height=height,
+        )
+
+    def table(dg, data=None):
+        """Display a static table.
+
+        This differs from `st.dataframe` in that the table in this case is
+        static: its entire contents are just laid out directly on the page.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
+            or None
+            The table data.
+
+        Example
+        -------
+        >>> df = pd.DataFrame(
+        ...    np.random.randn(10, 5),
+        ...    columns=('col %d' % i for i in range(5)))
+        ...
+        >>> st.table(df)
+
+        .. output::
+           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=KfZvDMprL4JFKXbpjD3fpq
+           height: 480px
+
+        """
+        table_proto = DataFrameProto()
+        marshall_data_frame(data, table_proto)
+        return dg._enqueue("table", table_proto)  # type: ignore
 
 
 def marshall_data_frame(data, proto_df):
@@ -99,12 +187,22 @@ def _get_css_styles(translated_style):
     """Parses pandas.Styler style dictionary into a
     {(row, col): [CSSStyle]} dictionary
     """
-    # Create {(row, col): [CSSStyle]} from translated_style['cellstyle']
-    # translated_style['cellstyle'] has the shape:
+    # In pandas < 1.1.0
+    # translated_style["cellstyle"] has the following shape:
     # [
     #   {
-    #       'props': [['color', ' black'], ['background-color', 'orange'], ['', '']],
-    #       'selector': 'row0_col0'
+    #       "props": [["color", " black"], ["background-color", "orange"], ["", ""]],
+    #       "selector": "row0_col0"
+    #   }
+    #   ...
+    # ]
+    #
+    # In pandas >= 1.1.0
+    # translated_style["cellstyle"] has the following shape:
+    # [
+    #   {
+    #       "props": [("color", " black"), ("background-color", "orange"), ("", "")],
+    #       "selectors": ["row0_col0"]
     #   }
     #   ...
     # ]
@@ -113,25 +211,29 @@ def _get_css_styles(translated_style):
 
     css_styles = {}
     for cell_style in translated_style["cellstyle"]:
-        cell_selector = cell_style["selector"]  # a string of the form 'row0_col0'
-        match = cell_selector_regex.match(cell_selector)
-        if not match:
-            raise RuntimeError(
-                'Failed to parse cellstyle selector "%s"' % cell_selector
-            )
-        row = int(match.group(1))
-        col = int(match.group(2))
-        css_declarations = []
-        props = cell_style["props"]
-        for prop in props:
-            if not isinstance(prop, list) or len(prop) != 2:
-                raise RuntimeError('Unexpected cellstyle props "%s"' % prop)
-            name = str(prop[0]).strip()
-            value = str(prop[1]).strip()
-            if name and value:
-                css_declarations.append(CSSStyle(property=name, value=value))
+        if type_util.is_old_pandas_version():
+            cell_selectors = [cell_style["selector"]]
+        else:
+            cell_selectors = cell_style["selectors"]
 
-        css_styles[(row, col)] = css_declarations
+        for cell_selector in cell_selectors:
+            match = cell_selector_regex.match(cell_selector)
+            if not match:
+                raise RuntimeError(
+                    'Failed to parse cellstyle selector "%s"' % cell_selector
+                )
+            row = int(match.group(1))
+            col = int(match.group(2))
+            css_declarations = []
+            props = cell_style["props"]
+            for prop in props:
+                if not isinstance(prop, (tuple, list)) or len(prop) != 2:
+                    raise RuntimeError('Unexpected cellstyle props "%s"' % prop)
+                name = str(prop[0]).strip()
+                value = str(prop[1]).strip()
+                if name and value:
+                    css_declarations.append(CSSStyle(property=name, value=value))
+            css_styles[(row, col)] = css_declarations
 
     return css_styles
 
@@ -285,6 +387,11 @@ def _marshall_any_array(pandas_array, proto_array):
     elif pandas_array.dtype == np.bool:
         proto_array.int64s.data.extend(pandas_array)
     elif pandas_array.dtype == np.object:
+        proto_array.strings.data.extend(map(str, pandas_array))
+    # dtype='string', <class 'pandas.core.arrays.string_.StringDtype'>
+    # NOTE: StringDtype is considered experimental.
+    # The implementation and parts of the API may change without warning.
+    elif pandas_array.dtype.name == "string":
         proto_array.strings.data.extend(map(str, pandas_array))
     # Setting a timezone changes (dtype, dtype.type) from
     #   'datetime64[ns]', <class 'numpy.datetime64'>

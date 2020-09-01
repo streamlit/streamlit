@@ -17,14 +17,8 @@
 
 import CopyToClipboard from "react-copy-to-clipboard"
 import React, { ReactElement, ReactNode } from "react"
-import {
-  Button,
-  Modal,
-  ModalBody,
-  ModalFooter,
-  ModalHeader,
-  Progress,
-} from "reactstrap"
+import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap"
+import ProgressBar from "components/shared/ProgressBar"
 import { HotKeys } from "react-hotkeys"
 
 import {
@@ -273,7 +267,7 @@ function settingsDialog(props: SettingsProps): ReactElement {
 
 interface UploadProgressProps {
   type: DialogType.UPLOAD_PROGRESS
-  progress?: string | number
+  progress?: number
   onClose: PlainEventHandler
 }
 
@@ -288,7 +282,7 @@ function uploadProgressDialog(props: UploadProgressProps): ReactElement {
           Saving app snapshot...
         </div>
         <div>
-          <Progress animated value={props.progress} />
+          <ProgressBar value={props.progress || 0} />
         </div>
       </ModalBody>
     </BasicDialog>

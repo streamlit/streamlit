@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { mount, shallow } from "enzyme"
 import { fromJS } from "immutable"
 import { sliderOverrides } from "lib/widgetTheme"
 import { Slider as SliderProto } from "autogen/proto"
@@ -38,6 +38,7 @@ const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
     min: 0,
     max: 10,
     step: 1,
+    options: [],
     ...elementProps,
   }),
   width: 0,
@@ -68,11 +69,9 @@ describe("Slider widget", () => {
     // We need to do this as we are using a debounce when the widget value is set
     jest.runAllTimers()
 
-    expect(props.widgetMgr.setFloatArrayValue).toHaveBeenCalledWith(
-      props.element.get("id"),
-      [5],
-      { fromUi: false }
-    )
+    expect(
+      props.widgetMgr.setFloatArrayValue
+    ).toHaveBeenCalledWith(props.element.get("id"), [5], { fromUi: false })
 
     wrapper.unmount()
   })
@@ -151,11 +150,9 @@ describe("Slider widget", () => {
       // We need to do this as we are using a debounce when the widget value is set
       jest.runAllTimers()
 
-      expect(props.widgetMgr.setFloatArrayValue).toHaveBeenCalledWith(
-        props.element.get("id"),
-        [10],
-        { fromUi: true }
-      )
+      expect(
+        props.widgetMgr.setFloatArrayValue
+      ).toHaveBeenCalledWith(props.element.get("id"), [10], { fromUi: true })
       expect(wrapper.find(UISlider).prop("value")).toStrictEqual([10])
     })
   })
@@ -252,11 +249,11 @@ describe("Slider widget", () => {
       // We need to do this as we are using a debounce when the widget value is set
       jest.runAllTimers()
 
-      expect(props.widgetMgr.setFloatArrayValue).toHaveBeenCalledWith(
-        props.element.get("id"),
-        [1, 10],
-        { fromUi: true }
-      )
+      expect(
+        props.widgetMgr.setFloatArrayValue
+      ).toHaveBeenCalledWith(props.element.get("id"), [1, 10], {
+        fromUi: true,
+      })
       expect(wrapper.find(UISlider).prop("value")).toStrictEqual([1, 10])
     })
   })
@@ -307,6 +304,106 @@ describe("Slider widget", () => {
 
       expect(thumbValueWrapper.find(".tickBarMin").text()).toBe("1970-01-01")
       expect(thumbValueWrapper.find(".tickBarMax").text()).toBe("1970-01-29")
+    })
+  })
+
+  describe("Options prop", () => {
+    it("renders without crashing", () => {
+      const props = getProps({
+        default: [1],
+        min: 0,
+        max: 6,
+        format: "%s",
+        options: [
+          "red",
+          "orange",
+          "yellow",
+          "green",
+          "blue",
+          "indigo",
+          "violet",
+        ],
+      })
+      const wrapper = mount(<Slider {...props} />)
+
+      expect(wrapper).toBeDefined()
+    })
+
+    it("sets aria-valuetext correctly", () => {
+      const props = getProps({
+        default: [1],
+        min: 0,
+        max: 6,
+        format: "%s",
+        options: [
+          "red",
+          "orange",
+          "yellow",
+          "green",
+          "blue",
+          "indigo",
+          "violet",
+        ],
+      })
+      const wrapper = mount(<Slider {...props} />)
+      const sliderDOMNodes = wrapper.find("div[role='slider']")
+      sliderDOMNodes.forEach(node => {
+        expect(node.getDOMNode().getAttribute("aria-valuetext")).toEqual(
+          "orange"
+        )
+      })
+    })
+
+    it("updates aria-valuetext correctly", () => {
+      const originalProps = {
+        default: [1],
+        min: 0,
+        max: 6,
+        format: "%s",
+        options: [
+          "red",
+          "orange",
+          "yellow",
+          "green",
+          "blue",
+          "indigo",
+          "violet",
+        ],
+      }
+      const props = getProps(originalProps)
+      const wrapper = mount(<Slider {...props} />)
+      wrapper.setState({ value: [4] })
+      const sliderDOMNodes = wrapper.find("div[role='slider']")
+      sliderDOMNodes.forEach(node => {
+        expect(node.getDOMNode().getAttribute("aria-valuetext")).toEqual(
+          "blue"
+        )
+      })
+    })
+
+    it("sets aria-valuetext correctly for a range", () => {
+      const props = getProps({
+        default: [1, 4],
+        min: 0,
+        max: 6,
+        format: "%s",
+        options: [
+          "red",
+          "orange",
+          "yellow",
+          "green",
+          "blue",
+          "indigo",
+          "violet",
+        ],
+      })
+      const wrapper = mount(<Slider {...props} />)
+      const sliderDOMNodes = wrapper.find("div[role='slider']")
+      const ariaTexts = sliderDOMNodes.map(node =>
+        node.getDOMNode().getAttribute("aria-valuetext")
+      )
+
+      expect(ariaTexts).toEqual(["orange", "blue"])
     })
   })
 })

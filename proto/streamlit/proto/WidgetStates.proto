@@ -16,6 +16,7 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/ArrowTable.proto";
 import "streamlit/proto/DataFrame.proto";
 
 // Contains updated state for each widget in a report
@@ -45,6 +46,7 @@ message WidgetState {
     IntArray int_array_value = 8;
     StringArray string_array_value = 9;
     string json_value = 10;
+    ArrowTable arrow_value = 11;
   }
 }
 

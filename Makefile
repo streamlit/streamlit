@@ -120,6 +120,18 @@ pycoverage:
 			--cov-report=term-missing tests/ \
 			$(PYTHON_MODULES)
 
+.PHONY: pycoverage_html
+# Generate HTML report of Python test coverage.
+pycoverage_html:
+	# testing + code coverage
+	cd lib; \
+		PYTHONPATH=. \
+		pytest -v \
+			--junitxml=test-reports/pytest/junit.xml \
+			-l $(foreach dir,$(PYTHON_MODULES),--cov=$(dir)) \
+			--cov-report=html tests/ \
+			$(PYTHON_MODULES)
+
 .PHONY: mypy
 # Run Mypy static type checker.
 mypy:
@@ -148,6 +160,11 @@ wheel:
 	rm -rfv lib/build
 	cd lib ; python setup.py bdist_wheel --universal
 	# cd lib ; python setup.py bdist_wheel sdist
+
+.PHONY: package
+# Create a Python wheel file in dist/.
+package: mini-devel frontend install wheel
+
 
 .PHONY: clean
 # Remove all generated files.

@@ -23,13 +23,15 @@ import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import { Button as UIButton } from "baseui/button"
 
-import Button, { Props } from "./Button"
+import Button, { ButtonProps } from "./Button"
 
 jest.mock("lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
 
-const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
+const getProps = (
+  elementProps: Record<string, unknown> = {}
+): ButtonProps => ({
   element: fromJS({
     id: 1,
     label: "Label",
@@ -85,10 +87,9 @@ describe("Button widget", () => {
 
       wrappedUIButton.simulate("click")
 
-      expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
-        props.element.get("id"),
-        { fromUi: true }
-      )
+      expect(
+        props.widgetMgr.setTriggerValue
+      ).toHaveBeenCalledWith(props.element.get("id"), { fromUi: true })
     })
 
     it("disable prop", () => {

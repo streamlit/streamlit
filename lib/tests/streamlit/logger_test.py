@@ -18,7 +18,11 @@ import logging
 import unittest
 
 import pytest
-import streamlit.logger
+from unittest.mock import patch
+from parameterized import parameterized
+
+from streamlit import logger
+from streamlit import config
 
 
 class LoggerTest(unittest.TestCase):
@@ -49,13 +53,13 @@ class LoggerTest(unittest.TestCase):
             logging.DEBUG,
         ]
         for k in data:
-            streamlit.logger.set_log_level(k)
+            logger.set_log_level(k)
             self.assertEqual(k, logging.getLogger().getEffectiveLevel())
 
     def test_set_log_level_error(self):
         """Test streamlit.logger.set_log_level."""
         with pytest.raises(SystemExit) as e:
-            streamlit.logger.set_log_level(90)
+            logger.set_log_level(90)
         self.assertEqual(e.type, SystemExit)
         self.assertEqual(e.value.code, 1)
 
@@ -74,10 +78,38 @@ class LoggerTest(unittest.TestCase):
     #     test2 = streamlit.logger.get_logger('test2')
     #     self.assertEqual(logging.CRITICAL, test2.getEffectiveLevel())
 
+    @parameterized.expand(
+        [
+            ("%(asctime)s.%(msecs)03d %(name)s: %(message)s", False),
+            ("%(asctime)s.%(msecs)03d %(name)s: %(message)s", True),
+            (None, False),
+            (None, True),
+        ]
+    )
+    def test_setup_log_formatter(self, messageFormat, config_parsed):
+        """Test streamlit.logger.setup_log_formatter."""
+
+        LOGGER = logger.get_logger("test")
+
+        config._set_option("logger.messageFormat", messageFormat, "test")
+        config._set_option("logger.level", logging.DEBUG, "test")
+
+        with patch.object(config, "_config_file_has_been_parsed", new=config_parsed):
+            logger.setup_formatter(LOGGER)
+            self.assertEqual(len(LOGGER.handlers), 1)
+            if config_parsed:
+                self.assertEqual(
+                    LOGGER.handlers[0].formatter._fmt, messageFormat or "%(message)s"
+                )
+            else:
+                self.assertEqual(
+                    LOGGER.handlers[0].formatter._fmt, logger.DEFAULT_LOG_MESSAGE
+                )
+
     def test_init_tornado_logs(self):
         """Test streamlit.logger.init_tornado_logs."""
-        streamlit.logger.init_tornado_logs()
-        loggers = [x for x in streamlit.logger.LOGGERS.keys() if "tornado." in x]
+        logger.init_tornado_logs()
+        loggers = [x for x in logger.LOGGERS.keys() if "tornado." in x]
         truth = ["tornado.access", "tornado.application", "tornado.general"]
         self.assertEqual(sorted(truth), sorted(loggers))
 
