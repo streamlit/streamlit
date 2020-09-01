@@ -267,7 +267,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       renderDfs = this.props.element.get("argsDataframe").toJS()
     } catch (err) {
       this.setState({ componentError: err })
-      return undefined
+      return null
     }
 
     if (this.componentReady) {
