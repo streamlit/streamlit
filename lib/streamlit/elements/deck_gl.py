@@ -30,7 +30,11 @@ LOGGER = get_logger(__name__)
 
 class DeckGlMixin:
     def deck_gl_chart(dg, spec=None, use_container_width=False, **kwargs):
-        """Draw a map chart using the Deck.GL library.
+        """
+        .. deprecated:: 0.53.0
+            Use :func:`streamlit.pydeck_chart` instead.
+
+        Draw a map chart using the Deck.GL library.
 
         This API closely follows Deck.GL's JavaScript API
         (https://deck.gl/#/documentation), with a few small adaptations and
