@@ -18,10 +18,20 @@
 import ErrorElement from "components/shared/ErrorElement"
 import { mount, ReactWrapper } from "enzyme"
 import { fromJS } from "immutable"
+import {
+  DEFAULT_IFRAME_FEATURE_POLICY,
+  DEFAULT_IFRAME_SANDBOX_POLICY,
+} from "lib/IFrameUtil"
+import { logWarning } from "lib/log"
 import { buildHttpUri } from "lib/UriUtil"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import React from "react"
-import { ComponentInstance, Props, State } from "./ComponentInstance"
+import {
+  ComponentInstance,
+  CUSTOM_COMPONENT_API_VERSION,
+  Props,
+  State,
+} from "./ComponentInstance"
 import { ComponentRegistry } from "./ComponentRegistry"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
 
@@ -32,6 +42,9 @@ jest.mock("lib/log")
 jest.mock("lib/UriUtil")
 const mockedBuildHttpUri = buildHttpUri as jest.Mock
 mockedBuildHttpUri.mockImplementation(() => "registry/url")
+
+// Mock our WidgetStateManager
+jest.mock("lib/WidgetStateManager")
 
 /**
  * Encapsulates all the plumbing for mocking a component,
@@ -45,16 +58,12 @@ class MockComponent {
   public readonly instance: ComponentInstance
 
   /**
-   * A function to post a mock ComponentMessage from our component iframe
-   * to the ComponentInstance under test.
-   */
-  public readonly sendBackMsg: (type: string, data: any) => void
-
-  /**
    * A mock that will receive ForwardMsgs posted from the ComponentInstance
    * under test to its iframe.
    */
   public readonly receiveForwardMsg: jest.Mock
+
+  private readonly mockIFrameRef: any
 
   public constructor(initialArgs: any = {}, initialDataframes: any = []) {
     const mountNode = document.createElement("div")
@@ -69,6 +78,8 @@ class MockComponent {
       }
     })
 
+    // Mock the registry's registerListener/deregisterListener - we assert
+    // that these are called in our tests.
     this.registry.registerListener = jest.fn()
     this.registry.deregisterListener = jest.fn()
 
@@ -95,271 +106,234 @@ class MockComponent {
 
     this.instance = this.wrapper.instance()
 
-    // Mock the ComponentInstance's iframeRef, and save a reference to
-    // its "onBackMsg" function. We use these to simulate data being sent
-    // between ComponentInstance and its mounted component.
-    const mockIFrameRef = {
-      current: { contentWindow: { postMessage: jest.fn() } },
+    // Mock the ComponentInstance's iframeRef so that we can receive the
+    // ForwardMsgs that ComponentInstance sends to our component iframe.
+    this.mockIFrameRef = {
+      current: {
+        contentWindow: { postMessage: jest.fn() },
+        height: "0",
+      },
     }
-    this.receiveForwardMsg = mockIFrameRef.current.contentWindow.postMessage
+    this.receiveForwardMsg = this.mockIFrameRef.current.contentWindow.postMessage
 
     const unsafeInstance = this.instance as any
-    this.sendBackMsg = unsafeInstance.onBackMsg
-    unsafeInstance.iframeRef = mockIFrameRef
+    unsafeInstance.iframeRef = this.mockIFrameRef
+  }
+
+  /** The component's WidgetID */
+  public get widgetId(): string {
+    return this.instance.props.element.get("id")
+  }
+
+  /** The component's frameHeight string */
+  public get frameHeight(): string {
+    return this.mockIFrameRef.current.height
+  }
+
+  /**
+   * Post a mock ComponentMessage from our component iframe to the mocked
+   * ComponentInstance.
+   */
+  public sendBackMsg(type: string, data: any): void {
+    // Call the ComponentInstance.onBackMsg private function. This is an
+    // event handler that responds to BackMessage events posted from
+    // the iframe - but since we're mocking the iframe, we hack around that.
+    const unsafeInstance = this.instance as any
+    unsafeInstance.onBackMsg(type, data)
+
+    // Synchronize the enzyme wrapper's tree snapshot
+    this.wrapper.update()
   }
 }
 
 describe("ComponentInstance", () => {
+  beforeEach(() => {
+    // Clear our mocks
+    const mockWidgetStateManager = WidgetStateManager as any
+    mockWidgetStateManager.mockClear()
+
+    const mockLog = logWarning as any
+    mockLog.mockClear()
+  })
+
   it("should register a message listener on mount", () => {
-    const mock = new MockComponent()
-    expect(mock.registry.registerListener).toHaveBeenCalled()
-    expect(mock.registry.deregisterListener).not.toHaveBeenCalled()
+    const mc = new MockComponent()
+    expect(mc.registry.registerListener).toHaveBeenCalled()
+    expect(mc.registry.deregisterListener).not.toHaveBeenCalled()
   })
 
   it("should deregister its message listener on unmount", () => {
-    const mock = new MockComponent()
-    mock.wrapper.unmount()
-    expect(mock.registry.deregisterListener).toHaveBeenCalled()
+    const mc = new MockComponent()
+    mc.wrapper.unmount()
+    expect(mc.registry.deregisterListener).toHaveBeenCalled()
+  })
+
+  it("should render its iframe correctly", () => {
+    // This is not an exhaustive check of rendering props - instead, it's
+    // the props whose values are functionally important.
+    const mc = new MockComponent()
+    const iframe = mc.wrapper.childAt(0)
+    expect(iframe.type()).toEqual("iframe")
+    expect(iframe.prop("src")).toContain("some/url")
+    expect(iframe.prop("allow")).toEqual(DEFAULT_IFRAME_FEATURE_POLICY)
+    expect(iframe.prop("sandbox")).toEqual(DEFAULT_IFRAME_SANDBOX_POLICY)
   })
 
   describe("COMPONENT_READY handler", () => {
     it("should post a RENDER message to the iframe", () => {
+      // When the component iframe sends the COMPONENT_READY message,
+      // ComponentInstance should respond with a RENDER message with the
+      // most recent args.
       const jsonArgs = { foo: "string", bar: 5 }
-
-      const mock = new MockComponent(jsonArgs)
-      mock.sendBackMsg(ComponentMessageType.COMPONENT_READY, { apiVersion: 1 })
-      expect(mock.receiveForwardMsg).toHaveBeenCalledWith(
+      const mc = new MockComponent(jsonArgs)
+      mc.sendBackMsg(ComponentMessageType.COMPONENT_READY, { apiVersion: 1 })
+      expect(mc.receiveForwardMsg).toHaveBeenCalledWith(
         renderMsg(jsonArgs, []),
         "*"
       )
+
+      const child = mc.wrapper.childAt(0)
+      expect(child.type()).toEqual("iframe")
+    })
+
+    it("can be called multiple times", () => {
+      // It's not an error for a component to call READY multiple times.
+      // (This can happen during development, when the component's devserver
+      // reloads.)
+      const jsonArgs = { foo: "string", bar: 5 }
+      const mc = new MockComponent(jsonArgs)
+      mc.sendBackMsg(ComponentMessageType.COMPONENT_READY, { apiVersion: 1 })
+      mc.sendBackMsg(ComponentMessageType.COMPONENT_READY, { apiVersion: 1 })
+      mc.sendBackMsg(ComponentMessageType.COMPONENT_READY, { apiVersion: 1 })
+
+      expect(mc.receiveForwardMsg).toHaveBeenCalledTimes(3)
+      for (let ii = 1; ii <= 3; ++ii) {
+        expect(mc.receiveForwardMsg).toHaveBeenNthCalledWith(
+          ii,
+          renderMsg(jsonArgs, []),
+          "*"
+        )
+      }
     })
 
     it("should error on unrecognized API version", () => {
+      const badAPIVersion = CUSTOM_COMPONENT_API_VERSION + 1
       const mock = new MockComponent()
-      mock.sendBackMsg(ComponentMessageType.COMPONENT_READY, { apiVersion: 2 })
-      const componentError = {
-        name: "Error",
-        message: "Unrecognized component API version: '2'",
-      }
-      console.log(mock.wrapper.debug())
-      expect(
-        mock.wrapper.contains(<ErrorElement {...componentError} />)
-      ).toBeTruthy()
+      mock.sendBackMsg(ComponentMessageType.COMPONENT_READY, {
+        apiVersion: badAPIVersion,
+      })
+
+      const child = mock.wrapper.childAt(0)
+      expect(child.type()).toEqual(ErrorElement)
+      expect(child.prop("message")).toEqual(
+        `Unrecognized component API version: '${badAPIVersion}'`
+      )
     })
   })
 
-  // describe("handleSetComponentValue", () => {
-  //   let handleSetComponentValue: (data: any, source: Source) => void
-  //   const source = { fromUi: true }
-  //
-  //   beforeEach(() => {
-  //     handleSetComponentValue = instance["handleSetComponentValue"]
-  //     WidgetStateManager.prototype.setJsonValue = jest.fn()
-  //   })
-  //
-  //   it("should warn that the `value` prop is missing", () => {
-  //     handleSetComponentValue({ value: undefined }, source)
-  //     expect(logWarning).toHaveBeenCalledWith(
-  //       `handleSetComponentValue: missing 'value' prop`
-  //     )
-  //     expect(WidgetStateManager.prototype.setJsonValue).not.toHaveBeenCalled()
-  //   })
-  //
-  //   it("should set widget value", () => {
-  //     handleSetComponentValue({ value: 1 }, source)
-  //     expect(WidgetStateManager.prototype.setJsonValue).toHaveBeenCalledWith(
-  //       "some_id",
-  //       1,
-  //       source
-  //     )
-  //   })
-  // })
-  //
-  // describe("handleSetFrameHeight", () => {
-  //   let handleSetFrameHeight: (data: any) => void
-  //
-  //   beforeEach(() => {
-  //     handleSetFrameHeight = instance["handleSetFrameHeight"]
-  //   })
-  //
-  //   it("should warn that the `height` prop is missing", () => {
-  //     handleSetFrameHeight({ height: undefined })
-  //     expect(logWarning).toHaveBeenCalledWith(
-  //       `handleSetFrameHeight: missing 'height' prop`
-  //     )
-  //     expect(instance["frameHeight"]).toEqual(0)
-  //   })
-  //
-  //   it("should set iframe height", () => {
-  //     handleSetFrameHeight({ height: 100 })
-  //     expect(instance["frameHeight"]).toEqual(100)
-  //   })
-  //
-  //   it("should warn that the `iframeRef` prop is missing", () => {
-  //     // @ts-ignore
-  //     instance["iframeRef"]["current"] = null
-  //     handleSetFrameHeight({ height: 200 })
-  //     expect(logWarning).toHaveBeenCalledWith(
-  //       `handleSetFrameHeight: missing our iframeRef!`
-  //     )
-  //   })
-  // })
-  //
-  // describe("sendForwardMsg", () => {
-  //   let sendForwardMsg: (type: StreamlitMessageType, data: any) => void
-  //   const renderType = StreamlitMessageType.RENDER
-  //   const data = {
-  //     args: { foo: "bar" },
-  //     dfs: [],
-  //   }
-  //
-  //   beforeEach(() => {
-  //     sendForwardMsg = instance["sendForwardMsg"]
-  //   })
-  //
-  //   it("should call postMessage", () => {
-  //     // @ts-ignore
-  //     instance["iframeRef"]["current"]["contentWindow"].postMessage = jest.fn()
-  //     sendForwardMsg(renderType, data)
-  //     expect(
-  //       // @ts-ignore
-  //       instance["iframeRef"]["current"]["contentWindow"].postMessage
-  //     ).toHaveBeenCalledWith({ type: renderType, ...data }, "*")
-  //   })
-  //
-  //   it("should warn that the iframe is missing", () => {
-  //     // @ts-ignore
-  //     instance["iframeRef"]["current"] = null
-  //     sendForwardMsg(renderType, data)
-  //     expect(logWarning).toHaveBeenCalledWith(
-  //       "Can't send ForwardMsg; missing our iframe!"
-  //     )
-  //   })
-  // })
-  //
-  // describe("onBackMsg", () => {
-  //   let onBackMsg: (type: string, data: any) => void
-  //
-  //   beforeEach(() => {
-  //     onBackMsg = instance["onBackMsg"]
-  //   })
-  //
-  //   describe("COMPONENT_READY", () => {
-  //     const componentReadyType = ComponentMessageType.COMPONENT_READY
-  //
-  //     it("should throw `Unrecognized component API version` exception", () => {
-  //       onBackMsg(componentReadyType, { apiVersion: "bad_api_version" })
-  //       // @ts-ignore
-  //       expect(instance["state"]["componentError"]["message"]).toBe(
-  //         "Unrecognized component API version: 'bad_api_version'"
-  //       )
-  //     })
-  //
-  //     it("should set component ready to true", () => {
-  //       onBackMsg(componentReadyType, { apiVersion: 1 })
-  //       expect(instance["componentReady"]).toBe(true)
-  //     })
-  //
-  //     it("should call postMessage", () => {
-  //       instance["sendForwardMsg"] = jest.fn()
-  //       onBackMsg(componentReadyType, { apiVersion: 1 })
-  //       expect(instance["sendForwardMsg"]).toHaveBeenCalledWith(
-  //         StreamlitMessageType.RENDER,
-  //         {
-  //           args: { foo: "bar" },
-  //           dfs: [],
-  //         }
-  //       )
-  //     })
-  //   })
-  //
-  //   describe("SET_COMPONENT_VALUE", () => {
-  //     const type = ComponentMessageType.SET_COMPONENT_VALUE
-  //     const data = { value: 1 }
-  //
-  //     it("should call handleSetComponentValue", () => {
-  //       instance["handleSetComponentValue"] = jest.fn()
-  //       instance["componentReady"] = true
-  //       onBackMsg(type, data)
-  //       expect(instance["handleSetComponentValue"]).toHaveBeenCalledWith(
-  //         data,
-  //         {
-  //           fromUi: true,
-  //         }
-  //       )
-  //     })
-  //
-  //     it("should warn component is not ready", () => {
-  //       instance["componentReady"] = false
-  //       onBackMsg(type, data)
-  //       expect(logWarning).toHaveBeenCalledWith(
-  //         "Got streamlit:setComponentValue before streamlit:componentReady!"
-  //       )
-  //     })
-  //   })
-  //
-  //   describe("SET_FRAME_HEIGHT", () => {
-  //     const setFrameHeightType = ComponentMessageType.SET_FRAME_HEIGHT
-  //     const data = { height: 100 }
-  //
-  //     it("should call handleSetFrameHeight", () => {
-  //       instance["handleSetFrameHeight"] = jest.fn()
-  //       instance["componentReady"] = true
-  //       onBackMsg(setFrameHeightType, data)
-  //       expect(instance["handleSetFrameHeight"]).toHaveBeenCalledWith(data)
-  //     })
-  //
-  //     it("should warn that the component is not ready", () => {
-  //       instance["componentReady"] = false
-  //       onBackMsg(setFrameHeightType, data)
-  //       expect(logWarning).toHaveBeenCalledWith(
-  //         "Got streamlit:setFrameHeight before streamlit:componentReady!"
-  //       )
-  //     })
-  //   })
-  //
-  //   it("should warn with `Unrecognized ComponentBackMsgType`", () => {
-  //     const type = "Wrong type"
-  //     onBackMsg(type, {})
-  //     expect(logWarning).toHaveBeenCalledWith(
-  //       "Unrecognized ComponentBackMsgType: Wrong type"
-  //     )
-  //   })
-  // })
-  //
-  // describe("Render iframe", () => {
-  //   const element = document.createElement("div")
-  //   document.body.appendChild(element)
-  //
-  //   it("should render ErrorElement", () => {
-  //     const componentError = {
-  //       name: "foo",
-  //       message: "bar",
-  //     }
-  //     wrapper.setState({ componentError })
-  //     expect(
-  //       wrapper.containsMatchingElement(<ErrorElement {...componentError} />)
-  //     ).toBeTruthy()
-  //   })
-  //
-  //   it("should render iframe and set `src` to registry/url", () => {
-  //     const props = getProps({ url: "" })
-  //     const wrapper = mount<ComponentInstance>(
-  //       <ComponentInstance {...props} />,
-  //       {
-  //         attachTo: element,
-  //       }
-  //     )
-  //     expect(wrapper.find("iframe").props()).toMatchSnapshot()
-  //   })
-  //
-  //   it("should render iframe and set `src` to element url", () => {
-  //     expect(wrapper.find("iframe").props()).toMatchSnapshot()
-  //   })
-  // })
+  describe("SET_COMPONENT_VALUE handler", () => {
+    it("handles JSON values", () => {
+      const jsonValue = {
+        foo: "string",
+        bar: 123,
+        list: [1, "foo", false],
+      }
+
+      const mc = new MockComponent()
+      // We must send COMPONENT_READY before SET_COMPONENT_VALUE
+      mc.sendBackMsg(ComponentMessageType.COMPONENT_READY, { apiVersion: 1 })
+      mc.sendBackMsg(ComponentMessageType.SET_COMPONENT_VALUE, {
+        dataType: "json",
+        value: jsonValue,
+      })
+
+      // Ensure we didn't create an ErrorElement
+      const child = mc.wrapper.childAt(0)
+      expect(child.type()).toEqual("iframe")
+
+      const widgetMgr = (WidgetStateManager as any).mock.instances[0]
+      expect(widgetMgr.setJsonValue).toHaveBeenCalledWith(
+        mc.widgetId,
+        jsonValue,
+        { fromUi: true }
+      )
+    })
+
+    it("handles dataframe values", () => {
+      // TODO by Henrikh
+    })
+
+    it("warns if called before COMPONENT_READY", () => {
+      const jsonValue = {
+        foo: "string",
+        bar: 123,
+        list: [1, "foo", false],
+      }
+
+      const mc = new MockComponent()
+      mc.sendBackMsg(ComponentMessageType.SET_COMPONENT_VALUE, {
+        dataType: "json",
+        value: jsonValue,
+      })
+
+      // Ensure we didn't create an ErrorElement
+      const child = mc.wrapper.childAt(0)
+      expect(child.type()).toEqual("iframe")
+
+      const widgetMgr = (WidgetStateManager as any).mock.instances[0]
+      expect(widgetMgr.setJsonValue).not.toHaveBeenCalled()
+
+      expect(logWarning).toHaveBeenCalledWith(
+        `Got ${ComponentMessageType.SET_COMPONENT_VALUE} before ${ComponentMessageType.COMPONENT_READY}!`
+      )
+    })
+
+    describe("SET_FRAME_HEIGHT handler", () => {
+      it("Updates the frameHeight without re-rendering", () => {
+        const mc = new MockComponent()
+        mc.sendBackMsg(ComponentMessageType.COMPONENT_READY, { apiVersion: 1 })
+        mc.sendBackMsg(ComponentMessageType.SET_FRAME_HEIGHT, {
+          height: 100,
+        })
+
+        const iframe = mc.wrapper.childAt(0)
+        expect(iframe.type()).toEqual("iframe")
+
+        // Updating the frameheight intentionally does *not* cause a re-render
+        // (instead, it directly updates the iframeRef) - so we can't check
+        // that `child.prop("height") == 100`
+        expect(mc.frameHeight).toEqual("100")
+        // We check that the instance's height prop has *not* updated -
+        // if this expect() call fails, that means that a re-render has
+        // occured.
+        expect(iframe.prop("height")).toEqual(0)
+
+        // Force a re-render. NOW the iframe element's height should be updated.
+        mc.wrapper.setProps({})
+        expect(iframe.prop("height")).toEqual(0)
+      })
+
+      it("warns if called before COMPONENT_READY", () => {
+        const mc = new MockComponent()
+        mc.sendBackMsg(ComponentMessageType.SET_FRAME_HEIGHT, {
+          height: 100,
+        })
+
+        // Ensure we didn't create an ErrorElement
+        const iframe = mc.wrapper.childAt(0)
+        expect(iframe.type()).toEqual("iframe")
+
+        expect(logWarning).toHaveBeenCalledWith(
+          `Got ${ComponentMessageType.SET_FRAME_HEIGHT} before ${ComponentMessageType.COMPONENT_READY}!`
+        )
+
+        expect(mc.frameHeight).toEqual("0")
+      })
+    })
+  })
 })
 
-function renderMsg(args: any, dataframes: any, disabled?: boolean): any {
+function renderMsg(args: any, dataframes: any, disabled = false): any {
   return forwardMsg(StreamlitMessageType.RENDER, {
     args,
     dfs: dataframes,

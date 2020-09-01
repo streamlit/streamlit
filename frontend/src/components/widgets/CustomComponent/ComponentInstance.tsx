@@ -23,8 +23,8 @@ import {
 } from "lib/IFrameUtil"
 import { logError, logWarning } from "lib/log"
 import { Source, WidgetStateManager } from "lib/WidgetStateManager"
-import React, { createRef, ReactNode } from "react"
 import queryString from "query-string"
+import React, { createRef, ReactNode } from "react"
 import { ComponentRegistry } from "./ComponentRegistry"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
 
@@ -48,16 +48,24 @@ export interface State {
   componentError?: Error
 }
 
+interface DataframeArg {
+  key: string
+  value: any
+}
+
 export class ComponentInstance extends React.PureComponent<Props, State> {
   private iframeRef = createRef<HTMLIFrameElement>()
 
   // True when we've received the COMPONENT_READY message
   private componentReady = false
 
-  private lastRenderArgs = {}
+  // The most recent JSON args we've received from Python.
+  private curArgs: { [name: string]: any } = {}
 
-  private lastRenderDataframes = []
+  // The most recent Arrow Dataframe args we've received from Python.
+  private curDataframeArgs: DataframeArg[] = []
 
+  // The most recent frame height we've received from the frontend.
   private frameHeight = 0
 
   public constructor(props: Props) {
@@ -124,10 +132,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
           })
         } else {
           this.componentReady = true
-          this.sendForwardMsg(StreamlitMessageType.RENDER, {
-            args: this.lastRenderArgs,
-            dfs: this.lastRenderDataframes,
-          })
+          this.sendRenderMessage()
         }
         break
       }
@@ -224,15 +229,29 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     )
   }
 
+  /**
+   * Send a RENDER message to the component with the most recent arguments
+   * received from Python.
+   */
+  private sendRenderMessage = (): void => {
+    // NB: if you change or remove any of the arguments here, you'll break
+    // existing components. You can *add* more arguments safely, but any
+    // other modifications require a CUSTOM_COMPONENT_API_VERSION bump.
+    this.sendForwardMsg(StreamlitMessageType.RENDER, {
+      args: this.curArgs,
+      dfs: this.curDataframeArgs,
+      disabled: this.props.disabled,
+    })
+  }
+
+  private renderError = (error: Error): ReactNode => {
+    return <ErrorElement name={error.name} message={error.message} />
+  }
+
   public render = (): ReactNode => {
     if (this.state.componentError != null) {
       // If we have an error, display it and bail.
-      return (
-        <ErrorElement
-          name={this.state.componentError.name}
-          message={this.state.componentError.message}
-        />
-      )
+      return this.renderError(this.state.componentError)
     }
 
     // Parse the component's arguments and src URL.
@@ -267,16 +286,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       renderDfs = this.props.element.get("argsDataframe").toJS()
     } catch (err) {
       this.setState({ componentError: err })
-      return null
-    }
-
-    if (this.componentReady) {
-      // The component has loaded. Send it a new render message immediately.
-      this.sendForwardMsg(StreamlitMessageType.RENDER, {
-        args: renderArgs,
-        dfs: renderDfs,
-        disabled: this.props.disabled,
-      })
+      return this.renderError(err)
     }
 
     // We always store the most recent render arguments in order to respond
@@ -285,8 +295,15 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     // for example, if it's being served from a webpack dev server). When
     // component sends the COMPONENT_READY message, we send it the most
     // recent render arguments.
-    this.lastRenderArgs = renderArgs
-    this.lastRenderDataframes = renderDfs
+    this.curArgs = renderArgs
+    this.curDataframeArgs = renderDfs
+
+    if (this.componentReady) {
+      // The component has loaded. Send it a new render message immediately.
+      // This must happen *after* the above "last args" are saved, because
+      // the render message uses them.
+      this.sendRenderMessage()
+    }
 
     // Render the iframe. We set scrolling="no", because we don't want
     // scrollbars to appear; instead, we want components to properly auto-size
