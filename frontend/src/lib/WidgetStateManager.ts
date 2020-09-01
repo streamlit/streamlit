@@ -16,7 +16,7 @@
  */
 
 import {
-  ArrowTable,
+  IArrowTable,
   IntArray,
   FloatArray,
   StringArray,
@@ -136,6 +136,20 @@ export class WidgetStateManager {
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
+  public getStringArrayValue(widgetId: string): string[] | undefined {
+    const state = this.getWidgetStateProto(widgetId)
+    if (
+      state != null &&
+      state.value === "stringArrayValue" &&
+      state.stringArrayValue != null &&
+      state.stringArrayValue.data != null
+    ) {
+      return state.stringArrayValue.data
+    }
+
+    return undefined
+  }
+
   public getFloatArrayValue(widgetId: string): number[] | undefined {
     const state = this.getWidgetStateProto(widgetId)
     if (
@@ -195,11 +209,7 @@ export class WidgetStateManager {
     return undefined
   }
 
-  public setJsonValue(
-    widgetId: string,
-    value: number[],
-    source: Source
-  ): void {
+  public setJsonValue(widgetId: string, value: any, source: Source): void {
     this.getOrCreateWidgetStateProto(widgetId).jsonValue = JSON.stringify(
       value
     )
@@ -208,11 +218,24 @@ export class WidgetStateManager {
 
   public setArrowValue(
     widgetId: string,
-    value: ArrowTable,
+    value: IArrowTable,
     source: Source
   ): void {
     this.getOrCreateWidgetStateProto(widgetId).arrowValue = value
     this.maybeSendUpdateWidgetsMessage(source)
+  }
+
+  public getArrowValue(widgetId: string): IArrowTable | undefined {
+    const state = this.getWidgetStateProto(widgetId)
+    if (
+      state != null &&
+      state.value === "arrowValue" &&
+      state.arrowValue != null
+    ) {
+      return state.arrowValue
+    }
+
+    return undefined
   }
 
   private maybeSendUpdateWidgetsMessage(source: Source): void {

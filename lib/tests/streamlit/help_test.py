@@ -99,16 +99,16 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         )
         self.assertTrue(ds.doc_string.startswith("Function decorator to"))
 
-    def test_st_write(self):
-        """Test st.write function (since it's from __init__)."""
-        st.help(st.write)
+    def test_st_echo(self):
+        """Test st.echo function (since it's from __init__)."""
+        st.help(st.echo)
 
         ds = self.get_delta_from_queue().new_element.doc_string
-        self.assertEqual("write", ds.name)
+        self.assertEqual("echo", ds.name)
         self.assertEqual("streamlit", ds.module)
         self.assertEqual("<class 'function'>", ds.type)
-        self.assertEqual("(*args, **kwargs)", ds.signature)
-        self.assertTrue(ds.doc_string.startswith("Write arguments to the"))
+        self.assertEqual("(code_location='above')", ds.signature)
+        self.assertTrue(ds.doc_string.startswith("Use in a `with` block"))
 
     def test_builtin_func(self):
         """Test a built-in function."""

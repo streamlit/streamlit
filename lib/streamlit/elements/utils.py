@@ -90,7 +90,7 @@ def _set_widget_id(
         added = ctx.widget_ids_this_run.add(widget_id)
         if not added:
             raise DuplicateWidgetID(
-                _build_duplicate_widget_message(widget_id, user_key)
+                _build_duplicate_widget_message(widget_func_name, user_key)
             )
     element_proto.id = widget_id
 

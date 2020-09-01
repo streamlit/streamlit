@@ -22,6 +22,7 @@ import pandas as pd
 
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as DeckGlJsonChartProto
 import streamlit.elements.deck_gl_json_chart as deck_gl_json_chart
+from streamlit.errors import StreamlitAPIException
 
 
 class MapMixin:
@@ -78,6 +79,7 @@ _DEFAULT_MAP["mapStyle"] = "mapbox://styles/mapbox/light-v10"
 
 # Other default parameters for st.map.
 _DEFAULT_COLOR = [200, 30, 0, 160]
+_DEFAULT_ZOOM_LEVEL = 12
 _ZOOM_LEVELS = [
     360,
     180,
@@ -99,6 +101,7 @@ _ZOOM_LEVELS = [
     0.003,
     0.001,
     0.0005,
+    0.00025,
 ]
 
 
@@ -115,9 +118,13 @@ def _get_zoom_level(distance):
     Returns
     -------
     int
-        The zoom level, from 0 to 29.
+        The zoom level, from 0 to 20.
 
     """
+
+    # For small number of points the default zoom level will be used.
+    if distance < _ZOOM_LEVELS[-1]:
+        return _DEFAULT_ZOOM_LEVEL
 
     for i in range(len(_ZOOM_LEVELS) - 1):
         if _ZOOM_LEVELS[i + 1] < distance <= _ZOOM_LEVELS[i]:
@@ -134,17 +141,21 @@ def to_deckgl_json(data, zoom):
     elif "latitude" in data:
         lat = "latitude"
     else:
-        raise Exception('Map data must contain a column named "latitude" or "lat".')
+        raise StreamlitAPIException(
+            'Map data must contain a column named "latitude" or "lat".'
+        )
 
     if "lon" in data:
         lon = "lon"
     elif "longitude" in data:
         lon = "longitude"
     else:
-        raise Exception('Map data must contain a column called "longitude" or "lon".')
+        raise StreamlitAPIException(
+            'Map data must contain a column called "longitude" or "lon".'
+        )
 
     if data[lon].isnull().values.any() or data[lat].isnull().values.any():
-        raise Exception("Latitude and longitude data must be numeric.")
+        raise StreamlitAPIException("Latitude and longitude data must be numeric.")
 
     data = pd.DataFrame(data)
 

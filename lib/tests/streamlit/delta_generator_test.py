@@ -133,12 +133,12 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
 
     def test_sidebar_nonexistent_method(self):
         with self.assertRaises(Exception) as ctx:
-            st.sidebar.write()
+            st.sidebar.echo()
 
         self.assertEqual(
             str(ctx.exception),
-            "Method `write()` does not exist for `st.sidebar`. "
-            "Did you mean `st.write()`?",
+            "Method `echo()` does not exist for `st.sidebar`. "
+            "Did you mean `st.echo()`?",
         )
 
     @parameterized.expand(
@@ -169,7 +169,7 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
                 "add_rows",
                 "(data=None, **kwargs)",
             ),
-            (st.write, "streamlit", "write", "(*args, **kwargs)"),
+            (st.write, "streamlit.delta_generator", "write", "(*args, **kwargs)"),
         ]
     )
     def test_function_signatures(self, func, module, name, sig):
@@ -205,23 +205,23 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
             create_widget()
             with self.assertRaises(DuplicateWidgetID) as ctx:
                 create_widget()
-                self.assertIn(
-                    _build_duplicate_widget_message(
-                        widget_func_name=widget_type, user_key=None
-                    ),
-                    ctx.exception,
-                )
+            self.assertEqual(
+                _build_duplicate_widget_message(
+                    widget_func_name=widget_type, user_key=None
+                ),
+                str(ctx.exception),
+            )
 
             # Test duplicate user-specified widget key
             create_widget("key")
             with self.assertRaises(DuplicateWidgetID) as ctx:
                 create_widget("key")
-                self.assertIn(
-                    _build_duplicate_widget_message(
-                        widget_func_name=widget_type, user_key="key"
-                    ),
-                    ctx.exception,
-                )
+            self.assertEqual(
+                _build_duplicate_widget_message(
+                    widget_func_name=widget_type, user_key="key"
+                ),
+                str(ctx.exception),
+            )
 
 
 class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
