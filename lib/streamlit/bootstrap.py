@@ -91,18 +91,18 @@ def _fix_matplotlib_crash():
 def _fix_tornado_crash():
     """Set default asyncio policy to be compatible with Tornado 6.
 
-        Tornado 6 (at least) is not compatible with the default
-        asyncio implementation on Windows. So here we
-        pick the older SelectorEventLoopPolicy when the OS is Windows
-        if the known-incompatible default policy is in use.
+    Tornado 6 (at least) is not compatible with the default
+    asyncio implementation on Windows. So here we
+    pick the older SelectorEventLoopPolicy when the OS is Windows
+    if the known-incompatible default policy is in use.
 
-        This has to happen as early as possible to make it a low priority and
-        overrideable
+    This has to happen as early as possible to make it a low priority and
+    overrideable
 
-        See: https://github.com/tornadoweb/tornado/issues/2608
+    See: https://github.com/tornadoweb/tornado/issues/2608
 
-        FIXME: if/when tornado supports the defaults in asyncio,
-        remove and bump tornado requirement for py38
+    FIXME: if/when tornado supports the defaults in asyncio,
+    remove and bump tornado requirement for py38
     """
     if env_util.IS_WINDOWS and sys.version_info >= (3, 8):
         import asyncio

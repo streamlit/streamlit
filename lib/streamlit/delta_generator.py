@@ -334,7 +334,12 @@ class DeltaGenerator(
         return block_dg
 
     def favicon(
-        self, element, image, clamp=False, channels="RGB", format="JPEG",
+        self,
+        element,
+        image,
+        clamp=False,
+        channels="RGB",
+        format="JPEG",
     ):
         """Set the page favicon to the specified image.
 
