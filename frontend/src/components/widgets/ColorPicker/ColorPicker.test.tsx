@@ -56,7 +56,9 @@ describe("ColorPicker widget", () => {
   })
 
   it("should set widget value on did mount", () => {
-    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+    expect(
+      props.widgetMgr.setStringValue
+    ).toHaveBeenCalledWith(
       props.element.get("id"),
       props.element.get("default"),
       { fromUi: false }

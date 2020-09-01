@@ -249,11 +249,13 @@ describe("Slider widget", () => {
       // We need to do this as we are using a debounce when the widget value is set
       jest.runAllTimers()
 
-      expect(
-        props.widgetMgr.setFloatArrayValue
-      ).toHaveBeenCalledWith(props.element.get("id"), [1, 10], {
-        fromUi: true,
-      })
+      expect(props.widgetMgr.setFloatArrayValue).toHaveBeenCalledWith(
+        props.element.get("id"),
+        [1, 10],
+        {
+          fromUi: true,
+        }
+      )
       expect(wrapper.find(UISlider).prop("value")).toStrictEqual([1, 10])
     })
   })
