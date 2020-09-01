@@ -1,0 +1,20 @@
+{
+  "projectName": "streamlit",
+  "projectOwner": "streamlit",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "contributorTemplate": "
+  <a href=\"<%= contributor.profile %>\">
+  <img src=\"<%= contributor.avatar_url %>\" style=\"border-radius: 50%\" width=\"<%= options.imageSize %>px;\" height=\"<%= options.imageSize %>px;\" alt=\"\"/>
+  <br /><sub><b><%= contributor.name %></b></sub>
+  </a>",
+
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 36,
+  "commit": true,
+  "commitConvention": "gitmoji",
+  "contributors": [],
+  "contributorsPerLine": 7
+}
