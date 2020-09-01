@@ -35,7 +35,7 @@ import { ComponentMessageType, StreamlitMessageType } from "./enums"
  */
 export const CUSTOM_COMPONENT_API_VERSION = 1
 
-interface Props {
+export interface Props {
   registry: ComponentRegistry
   widgetMgr: WidgetStateManager
 
@@ -44,7 +44,7 @@ interface Props {
   width: number
 }
 
-interface State {
+export interface State {
   componentError?: Error
 }
 
