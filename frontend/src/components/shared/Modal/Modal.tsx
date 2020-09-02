@@ -9,16 +9,11 @@ import {
 } from "baseui/modal"
 import { KIND, ButtonOverrides } from "baseui/button"
 import { Kind } from "components/shared/Button"
-import { SCSS_VARS } from "autogen/scssVariables"
+import { colors } from "lib/widgetTheme"
 
 import "./Modal.scss"
 
-const black = SCSS_VARS.$black
-const gray = SCSS_VARS.$gray
-const grayLighter = SCSS_VARS["$gray-lighter"]
-const primary = SCSS_VARS.$primary
-const primaryA50 = SCSS_VARS["$primary-a50"]
-const white = SCSS_VARS.$white
+const { black, gray, grayLighter, primary, primaryA50, white } = colors
 
 export interface ModalHeaderProps {
   children: ReactNode
@@ -39,7 +34,7 @@ function ModalHeader({ children }: ModalHeaderProps): ReactElement {
         borderBottom: `1px solid ${grayLighter}`,
       }}
     >
-      <span className="ModalTitle">{children}</span>
+      <span className="modalTitle">{children}</span>
     </UIModalHeader>
   )
 }
@@ -51,7 +46,7 @@ export interface ModalBodyProps {
 function ModalBody({ children }: ModalBodyProps): ReactElement {
   return (
     <UIModalBody>
-      <div className="ModalBody">{children}</div>
+      <div className="modalBody">{children}</div>
     </UIModalBody>
   )
 }

@@ -20,6 +20,7 @@ import moment from "moment"
 import { HotKeys, KeyMap } from "react-hotkeys"
 import { fromJS, List } from "immutable"
 import classNames from "classnames"
+import { ThemeProvider } from "baseui"
 // Other local imports.
 import ReportView from "components/core/ReportView/"
 import StatusWidget from "components/core/StatusWidget"
@@ -34,6 +35,7 @@ import { WidgetStateManager } from "lib/WidgetStateManager"
 import { ConnectionState } from "lib/ConnectionState"
 import { ReportRunState } from "lib/ReportRunState"
 import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
+import { mainWidgetTheme } from "lib/widgetTheme"
 import {
   applyDelta,
   BlockElement,
@@ -75,12 +77,10 @@ import "assets/css/header.scss"
 import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
 import { ComponentRegistry } from "./components/widgets/CustomComponent"
 import { handleFavicon } from "./components/elements/Favicon"
-import { mainWidgetTheme } from "lib/widgetTheme"
 
 import withScreencast, {
   ScreenCastHOC,
 } from "./hocs/withScreencast/withScreencast"
-import { ThemeProvider } from "baseui"
 
 export interface Props {
   screenCast: ScreenCastHOC
