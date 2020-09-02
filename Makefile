@@ -59,8 +59,9 @@ pipenv-dev-install: lib/Pipfile
 	# "more deterministic", per pipenv's documentation.
 	# (Omitting this flag is causing incorrect dependency version
 	# resolution on CircleCI.)
-	cd lib; \
-		pipenv install --dev --skip-lock --sequential
+	pip show setuptools; cd lib; \
+		pipenv install --dev --skip-lock --sequential; \
+		pip show setuptools
 
 .PHONY: pipenv-test-install
 pipenv-test-install: lib/test-requirements.txt
@@ -151,7 +152,7 @@ install:
 .PHONY: develop
 # Install Streamlit as links in your Python environment, pointing to local workspace.
 develop:
-	pip show setuptools; cd lib ; python setup.py develop
+	cd lib ; python setup.py develop
 
 .PHONY: wheel
 # Create a Python wheel file in dist/.
