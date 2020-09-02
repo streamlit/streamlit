@@ -103,7 +103,7 @@ export function flattenElements(
       const element = reportElement.get("element")
 
       if (element instanceof List) {
-        return flattenElements(element as BlockElement)
+        return acc.union(flattenElements(element as BlockElement))
       }
       return acc.union(ImmutableSet.of(element as SimpleElement))
     },
