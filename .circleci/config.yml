@@ -148,7 +148,10 @@ commands:
               pip install --upgrade pip
               make setup
               make pipenv-install
-              echo "finished make pipenv-install **********"
+              # Looks like the pinned setuptools is not being respected
+              # In the meantime, forcing a reinstall of setuptools to unblock
+              # TODO: Cleanup as part of GH #1963
+              pip install "setuptools<=49.6.0" --force-reinstall --no-cache-dir
               pip show setuptools
               deactivate
             else
@@ -271,7 +274,6 @@ jobs:
       - run: &make_develop
           name: Run make develop
           command: |
-            pip show setuptools
             make develop
 
       #################################################################

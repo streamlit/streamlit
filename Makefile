@@ -59,9 +59,8 @@ pipenv-dev-install: lib/Pipfile
 	# "more deterministic", per pipenv's documentation.
 	# (Omitting this flag is causing incorrect dependency version
 	# resolution on CircleCI.)
-	pip show setuptools; cd lib; \
-		pipenv install --dev --skip-lock --sequential; \
-		pip show setuptools
+	cd lib; \
+		pipenv install --dev --skip-lock --sequential
 
 .PHONY: pipenv-test-install
 pipenv-test-install: lib/test-requirements.txt
