@@ -67,22 +67,22 @@ commands:
       - restore_cache: &restore_virtualenv
           name: Restore virtualenv from cache
           keys:
-            - v14-python-venv-{{ checksum "~/python_cache_key.md5" }}
+            - v13-python-venv-{{ checksum "~/python_cache_key.md5" }}
 
       - restore_cache: &restore_nvm
           name: Restore nvm and node_modules from cache
           keys:
-            - v14-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
+            - v13-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
 
       - restore_cache: &restore_make
           name: Restore make from cache
           keys:
-            - v14_make.bin-{{ checksum "~/make.md5" }}
+            - v13_make.bin-{{ checksum "~/make.md5" }}
 
       - restore_cache: &restore_dot
           name: Restore dot from cache
           keys:
-            - v14_dot.bin-{{ checksum "~/dot.md5" }}
+            - v13_dot.bin-{{ checksum "~/dot.md5" }}
 
   pre-make:
     steps:
@@ -146,16 +146,9 @@ commands:
               python -m venv venv
               source venv/bin/activate
               pip install --upgrade pip
-              echo "finished pip install **********"
-              pip show setuptools
               make setup
-              echo "finished make setup **********"
-              pip show setuptools
               make pipenv-install
               echo "finished make pipenv-install **********"
-              pip show setuptools
-              pip install "setuptools<=49.6.0" --force-reinstall --no-cache-dir
-              echo "finished force installing setuptools again **********"
               pip show setuptools
               deactivate
             else
@@ -260,13 +253,13 @@ jobs:
 
       - save_cache:
           name: Save make to cache
-          key: v14_make.bin-{{ checksum "~/make.md5" }}
+          key: v13_make.bin-{{ checksum "~/make.md5" }}
           paths:
             - make.bin
 
       - save_cache:
           name: Save dot to cache
-          key: v14_dot.bin-{{ checksum "~/dot.md5" }}
+          key: v13_dot.bin-{{ checksum "~/dot.md5" }}
           paths:
             - dot.bin
 
@@ -347,13 +340,13 @@ jobs:
       #################################################################
       - save_cache:
           name: Save virtualenv to cache
-          key: v14-python-venv-{{ checksum "~/python_cache_key.md5" }}
+          key: v13-python-venv-{{ checksum "~/python_cache_key.md5" }}
           paths:
             - venv
 
       - save_cache:
           name: Save nvm and node_modules to cache
-          key: v14-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
+          key: v13-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
           paths:
             - ~/.nvm
             - ~/.cache
