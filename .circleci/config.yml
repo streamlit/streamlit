@@ -146,10 +146,17 @@ commands:
               python -m venv venv
               source venv/bin/activate
               pip install --upgrade pip
-              pip install "setuptools<=49.6.0"
+              echo "finished pip install **********"
               pip show setuptools
               make setup
+              echo "finished make setup **********"
+              pip show setuptools
               make pipenv-install
+              echo "finished make pipenv-install **********"
+              pip show setuptools
+              pip install "setuptools<=49.6.0" --force-reinstall --no-cache-dir
+              echo "finished force installing setuptools again **********"
+              pip show setuptools
               deactivate
             else
               # The virtualenv WAS restored from cache. Don't create a new one.
@@ -271,6 +278,7 @@ jobs:
       - run: &make_develop
           name: Run make develop
           command: |
+            pip show setuptools
             make develop
 
       #################################################################
