@@ -146,6 +146,7 @@ commands:
               python -m venv venv
               source venv/bin/activate
               pip install --upgrade pip
+              pip install "setuptools<=49.6.0"
               make setup
               make pipenv-install
               deactivate
