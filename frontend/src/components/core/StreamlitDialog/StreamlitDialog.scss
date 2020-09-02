@@ -42,10 +42,13 @@
 .screenCastWarningDialog {
   display: flex;
 
-  span {
-    font-size: 50px;
+  .unsupportedScreenCastIcon {
+    display: flex;
+    align-items: center;
+    justify-items: center;
     margin-right: 26px;
     margin-left: 10px;
+    font-size: 50px;
   }
 
   p {

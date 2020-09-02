@@ -48,7 +48,17 @@ class VideoRecordedDialog extends PureComponent<Props> {
     const videoSource = this.getVideoSource()
 
     return (
-      <Modal size="auto" isOpen onClose={onClose}>
+      <Modal
+        isOpen
+        onClose={onClose}
+        overrides={{
+          Dialog: {
+            style: {
+              width: "80vw",
+            },
+          },
+        }}
+      >
         <ModalHeader>Next steps</ModalHeader>
         <ModalBody>
           <div className="steps-container">

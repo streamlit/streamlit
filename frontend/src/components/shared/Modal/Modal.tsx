@@ -1,10 +1,11 @@
 import React, { ReactNode, ReactElement } from "react"
 import {
-  Modal,
+  Modal as UIModal,
   ModalHeader as UIModalHeader,
   ModalBody as UIModalBody,
-  ModalFooter,
+  ModalFooter as UIModalFooter,
   ModalButton as UIModalButton,
+  ModalProps,
 } from "baseui/modal"
 import { KIND, ButtonOverrides } from "baseui/button"
 import { Kind } from "components/shared/Button"
@@ -17,7 +18,6 @@ const gray = SCSS_VARS.$gray
 const grayLighter = SCSS_VARS["$gray-lighter"]
 const primary = SCSS_VARS.$primary
 const primaryA50 = SCSS_VARS["$primary-a50"]
-const textMargin = SCSS_VARS["$font-size-sm"]
 const white = SCSS_VARS.$white
 
 export interface ModalHeaderProps {
@@ -26,7 +26,19 @@ export interface ModalHeaderProps {
 
 function ModalHeader({ children }: ModalHeaderProps): ReactElement {
   return (
-    <UIModalHeader>
+    <UIModalHeader
+      style={{
+        marginTop: 0,
+        marginLeft: 0,
+        marginRight: 0,
+        marginBottom: 0,
+        paddingTop: "1rem",
+        paddingRight: "1rem",
+        paddingBottom: "1rem",
+        paddingLeft: "1rem",
+        borderBottom: `1px solid ${grayLighter}`,
+      }}
+    >
       <span className="ModalTitle">{children}</span>
     </UIModalHeader>
   )
@@ -44,10 +56,34 @@ function ModalBody({ children }: ModalBodyProps): ReactElement {
   )
 }
 
+export interface ModalFooterProps {
+  children: ReactNode
+}
+
+function ModalFooter({ children }: ModalFooterProps): ReactElement {
+  return (
+    <UIModalFooter
+      style={{
+        marginTop: 0,
+        marginLeft: 0,
+        marginRight: 0,
+        marginBottom: 0,
+        paddingTop: "0.75rem",
+        paddingRight: "0.75rem",
+        paddingBottom: "0.75rem",
+        paddingLeft: "0.75rem",
+        borderTop: `1px solid ${grayLighter}`,
+      }}
+    >
+      <div className="ModalBody">{children}</div>
+    </UIModalFooter>
+  )
+}
+
 export interface ModalButtonProps {
   kind: Kind
   children: ReactNode
-  onClick: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => any
+  onClick?: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => any
 }
 
 function ModalButton({
@@ -60,11 +96,13 @@ function ModalButton({
     BaseButton: {
       style: {
         fontWeight: "normal",
-        paddingTop: textMargin,
-        paddingBottom: textMargin,
-        paddingLeft: textMargin,
-        paddingRight: textMargin,
+        paddingTop: "0.375rem",
+        paddingBottom: "0.375rem",
+        paddingLeft: "0.75rem",
+        paddingRight: "0.75rem",
         backgroundColor: white,
+        borderRadius: "0.75rem",
+        lineHeight: "1.5",
         color: black,
         // We shouldn't mix shorthand properties with longhand -- which usually
         // means we should use longhand for everything. But BaseUI's Button
@@ -107,6 +145,30 @@ function ModalButton({
     <UIModalButton kind={buttonKind} onClick={onClick} overrides={overrides}>
       {children}
     </UIModalButton>
+  )
+}
+
+function Modal(props: ModalProps): ReactElement {
+  return (
+    <UIModal
+      {...props}
+      overrides={{
+        ...props.overrides,
+        DialogContainer: {
+          style: {
+            alignItems: "start",
+            paddingTop: "3rem",
+          },
+        },
+        Close: {
+          style: {
+            top: "1rem",
+            right: "1rem",
+            color: "rgba(0, 0, 0, 0.5)",
+          },
+        },
+      }}
+    />
   )
 }
 

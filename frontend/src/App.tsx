@@ -17,7 +17,7 @@
 
 import React, { Fragment, PureComponent, ReactNode } from "react"
 import moment from "moment"
-import { HotKeys } from "react-hotkeys"
+import { HotKeys, KeyMap } from "react-hotkeys"
 import { fromJS, List } from "immutable"
 import classNames from "classnames"
 // Other local imports.
@@ -75,10 +75,12 @@ import "assets/css/header.scss"
 import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
 import { ComponentRegistry } from "./components/widgets/CustomComponent"
 import { handleFavicon } from "./components/elements/Favicon"
+import { mainWidgetTheme } from "lib/widgetTheme"
 
 import withScreencast, {
   ScreenCastHOC,
 } from "./hocs/withScreencast/withScreencast"
+import { ThemeProvider } from "baseui"
 
 export interface Props {
   screenCast: ScreenCastHOC
@@ -174,14 +176,20 @@ export class App extends PureComponent<Props, State> {
   /**
    * Global keyboard shortcuts.
    */
+  keyMap: KeyMap = {
+    RERUN: "r",
+    CLEAR_CACHE: "c",
+    STOP_RECORDING: { sequence: "esc", action: "keyup" },
+  }
+
   keyHandlers = {
     // The r key reruns the script.
-    r: (): void => this.rerunScript(),
+    RERUN: (): void => this.rerunScript(),
 
     // The c key clears the cache.
-    c: (): void => this.openClearCacheDialog(),
+    CLEAR_CACHE: (): void => this.openClearCacheDialog(),
 
-    esc: this.props.screenCast.stopRecording,
+    STOP_RECORDING: this.props.screenCast.stopRecording,
   }
 
   componentDidMount(): void {
@@ -918,7 +926,12 @@ export class App extends PureComponent<Props, State> {
     // attach: DOM element the keyboard listeners should attach to
     // focused: A way to force focus behaviour
     return (
-      <HotKeys handlers={this.keyHandlers} attach={window} focused={true}>
+      <HotKeys
+        keyMap={this.keyMap}
+        handlers={this.keyHandlers}
+        attach={window}
+        focused={true}
+      >
         <div className={outerDivClass}>
           {/* The tabindex below is required for testing. */}
           <header tabIndex={-1}>
@@ -962,8 +975,7 @@ export class App extends PureComponent<Props, State> {
             uploadClient={this.uploadClient}
             componentRegistry={this.componentRegistry}
           />
-
-          {dialog}
+          <ThemeProvider theme={mainWidgetTheme}>{dialog}</ThemeProvider>
         </div>
       </HotKeys>
     )

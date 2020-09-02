@@ -18,7 +18,6 @@
 import CopyToClipboard from "react-copy-to-clipboard"
 import React, { ReactElement, ReactNode } from "react"
 import ProgressBar from "components/shared/ProgressBar"
-import { Button } from "reactstrap"
 import { Kind } from "components/shared/Button"
 import Modal, {
   ModalHeader,
@@ -156,6 +155,7 @@ function clearCacheDialog(props: ClearCacheProps): ReactElement {
   return (
     <HotKeys handlers={keyHandlers} attach={window}>
       <Modal isOpen onClose={props.onClose}>
+        <ModalHeader>Clear Cache</ModalHeader>
         <ModalBody>
           <div>
             Are you sure you want to clear the <code>@st.cache</code> function
@@ -319,9 +319,7 @@ function uploadedDialog(props: UploadedProps): ReactElement {
       </ModalBody>
       <ModalFooter>
         <CopyToClipboard text={props.url} onCopy={props.onClose}>
-          <Button outline className="mr-auto">
-            Copy to clipboard
-          </Button>
+          <ModalButton kind={Kind.SECONDARY}>Copy to clipboard</ModalButton>
         </CopyToClipboard>{" "}
         <ModalButton
           kind={Kind.SECONDARY}

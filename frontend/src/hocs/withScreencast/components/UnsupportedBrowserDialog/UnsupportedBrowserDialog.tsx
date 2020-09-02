@@ -32,9 +32,11 @@ class UnsupportedBrowserDialog extends PureComponent<Props> {
         <ModalHeader>Record a screencast</ModalHeader>
         <ModalBody>
           <div className="screenCastWarningDialog">
-            <span role="img" aria-label="Alien Monster">
-              👾
-            </span>
+            <div className="unsupportedScreenCastIcon">
+              <span role="img" aria-label="Alien Monster">
+                👾
+              </span>
+            </div>
             <p>
               Due to limitations with some browsers, this feature is only
               supported on recent desktop versions of Chrome, Firefox, and
