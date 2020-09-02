@@ -147,9 +147,9 @@ commands:
               source venv/bin/activate
               pip install --upgrade pip
               pip install "setuptools<=49.6.0"
+              pip show setuptools
               make setup
               make pipenv-install
-              pip show setuptools
               deactivate
             else
               # The virtualenv WAS restored from cache. Don't create a new one.
