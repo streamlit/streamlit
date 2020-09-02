@@ -307,7 +307,7 @@ describe("ComponentInstance", () => {
     })
 
     describe("SET_FRAME_HEIGHT handler", () => {
-      it("Updates the frameHeight without re-rendering", () => {
+      it("updates the frameHeight without re-rendering", () => {
         const mc = new MockComponent()
         mc.sendBackMsg(ComponentMessageType.COMPONENT_READY, { apiVersion: 1 })
         mc.sendBackMsg(ComponentMessageType.SET_FRAME_HEIGHT, {
