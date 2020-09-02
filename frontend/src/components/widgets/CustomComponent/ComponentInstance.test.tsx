@@ -18,6 +18,7 @@
 import ErrorElement from "components/shared/ErrorElement"
 import { mount, ReactWrapper } from "enzyme"
 import { fromJS } from "immutable"
+import { SimpleElement } from "lib/DeltaParser"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
@@ -46,6 +47,10 @@ mockedBuildHttpUri.mockImplementation(() => "registry/url")
 // Mock our WidgetStateManager
 jest.mock("lib/WidgetStateManager")
 
+const MOCK_COMPONENT_URL = "http://a.mock.url"
+const MOCK_WIDGET_ID = "mock_widget_id"
+const MOCK_COMPONENT_NAME = "mock_component_name"
+
 /**
  * Encapsulates all the plumbing for mocking a component,
  * sending it data, and receiving its messages.
@@ -61,9 +66,7 @@ class MockComponent {
    * A mock that will receive ForwardMsgs posted from the ComponentInstance
    * under test to its iframe.
    */
-  public readonly receiveForwardMsg: jest.Mock
-
-  private readonly mockIFrameRef: any
+  public readonly receiveForwardMsg: jest.SpyInstance
 
   public constructor(initialArgs: any = {}, initialDataframes: any = []) {
     const mountNode = document.createElement("div")
@@ -83,41 +86,27 @@ class MockComponent {
     this.registry.registerListener = jest.fn()
     this.registry.deregisterListener = jest.fn()
 
-    // mock Props
-    const props = {
-      element: fromJS({
-        argsDataframe: initialDataframes,
-        argsJson: JSON.stringify(initialArgs),
-        componentName: "some.component",
-        id: "some_id",
-        url: "some/url",
-      }),
-      registry: this.registry,
-      width: 100,
-      disabled: false,
-      widgetMgr: new WidgetStateManager(jest.fn()),
-    }
-
     // Create and mount our ComponentInstance. We need to mount it to an
     // existing DOM element - otherwise, iframe contentWindow is not available.
-    this.wrapper = mount(<ComponentInstance {...props} />, {
-      attachTo: mountNode,
-    })
+    this.wrapper = mount(
+      <ComponentInstance
+        element={createElementProp(initialArgs, initialDataframes)}
+        registry={this.registry}
+        width={100}
+        disabled={false}
+        widgetMgr={new WidgetStateManager(jest.fn())}
+      />,
+      { attachTo: mountNode }
+    )
 
     this.instance = this.wrapper.instance()
 
-    // Mock the ComponentInstance's iframeRef so that we can receive the
-    // ForwardMsgs that ComponentInstance sends to our component iframe.
-    this.mockIFrameRef = {
-      current: {
-        contentWindow: { postMessage: jest.fn() },
-        height: "0",
-      },
-    }
-    this.receiveForwardMsg = this.mockIFrameRef.current.contentWindow.postMessage
-
+    // Spy on the ComponentInstance's iframe's postMessage function.
     const unsafeInstance = this.instance as any
-    unsafeInstance.iframeRef = this.mockIFrameRef
+    this.receiveForwardMsg = jest.spyOn(
+      unsafeInstance.iframeRef.current.contentWindow,
+      "postMessage"
+    )
   }
 
   /** The component's WidgetID */
@@ -126,8 +115,13 @@ class MockComponent {
   }
 
   /** The component's frameHeight string */
-  public get frameHeight(): string {
-    return this.mockIFrameRef.current.height
+  public get frameHeight(): string | undefined {
+    const unsafeInstance = this.instance as any
+    if (unsafeInstance.iframeRef.current == null) {
+      return undefined
+    }
+
+    return unsafeInstance.iframeRef.current.height
   }
 
   /**
@@ -148,7 +142,7 @@ class MockComponent {
 
 describe("ComponentInstance", () => {
   beforeEach(() => {
-    // Clear our mocks
+    // Clear our class mocks
     const mockWidgetStateManager = WidgetStateManager as any
     mockWidgetStateManager.mockClear()
 
@@ -174,7 +168,7 @@ describe("ComponentInstance", () => {
     const mc = new MockComponent()
     const iframe = mc.wrapper.childAt(0)
     expect(iframe.type()).toEqual("iframe")
-    expect(iframe.prop("src")).toContain("some/url")
+    expect(iframe.prop("src")).toContain(MOCK_COMPONENT_URL)
     expect(iframe.prop("allow")).toEqual(DEFAULT_IFRAME_FEATURE_POLICY)
     expect(iframe.prop("sandbox")).toEqual(DEFAULT_IFRAME_SANDBOX_POLICY)
   })
@@ -194,6 +188,30 @@ describe("ComponentInstance", () => {
 
       const child = mc.wrapper.childAt(0)
       expect(child.type()).toEqual("iframe")
+    })
+
+    it("prevents RENDER message until component is ready", () => {
+      // If the component gets new arguments, it shouldn't send them along
+      // until COMPONENT_READY is sent.
+      const mc = new MockComponent()
+      expect(mc.receiveForwardMsg).not.toHaveBeenCalled()
+
+      // Not ready...
+      const args1 = { foo: "ahoy", bar: "matey" }
+      mc.wrapper.setProps({ element: createElementProp(args1) })
+      expect(mc.receiveForwardMsg).not.toHaveBeenCalled()
+
+      // Still not ready...
+      const args2 = { foo: "shiverme", bar: "timbers" }
+      mc.wrapper.setProps({ element: createElementProp(args2) })
+      expect(mc.receiveForwardMsg).not.toHaveBeenCalled()
+
+      // NOW we're ready!
+      mc.sendBackMsg(ComponentMessageType.COMPONENT_READY, { apiVersion: 1 })
+      expect(mc.receiveForwardMsg).toHaveBeenCalledWith(
+        renderMsg(args2, []),
+        "*"
+      )
     })
 
     it("can be called multiple times", () => {
@@ -343,4 +361,18 @@ function renderMsg(args: any, dataframes: any, disabled = false): any {
 
 function forwardMsg(type: StreamlitMessageType, data: any): any {
   return { type, ...data }
+}
+
+/** Create a ComponentInstance.props.element prop with the given args. */
+function createElementProp(
+  jsonArgs: any = {},
+  dataframeArgs: any[] = []
+): SimpleElement {
+  return fromJS({
+    argsDataframe: dataframeArgs,
+    argsJson: JSON.stringify(jsonArgs),
+    componentName: MOCK_COMPONENT_NAME,
+    id: MOCK_WIDGET_ID,
+    url: MOCK_COMPONENT_URL,
+  })
 }

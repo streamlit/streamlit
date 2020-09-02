@@ -54,7 +54,7 @@ interface DataframeArg {
 }
 
 export class ComponentInstance extends React.PureComponent<Props, State> {
-  private iframeRef = createRef<HTMLIFrameElement>()
+  private readonly iframeRef = createRef<HTMLIFrameElement>()
 
   // True when we've received the COMPONENT_READY message
   private componentReady = false
@@ -207,7 +207,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     this.iframeRef.current.height = this.frameHeight.toString()
   }
 
-  private sendForwardMsg = (type: StreamlitMessageType, data: any): void => {
+  private sendForwardMsg(type: StreamlitMessageType, data: any): void {
     if (this.iframeRef.current == null) {
       // This should never happen!
       logWarning("Can't send ForwardMsg; missing our iframe!")
