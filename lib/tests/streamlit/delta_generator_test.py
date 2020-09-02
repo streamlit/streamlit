@@ -282,6 +282,25 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(msg.delta.new_element.text.body, test_data)
 
 
+class DeltaGeneratorContainertest(testutil.DeltaGeneratorTestCase):
+    """Test DeltaGenerator Container."""
+
+    def test_container(self):
+        container = st.container()
+
+        self.assertIsInstance(container, DeltaGenerator)
+        self.assertFalse(container._cursor.is_locked)
+
+    def test_container_paths(self):
+        level3 = st.container().container().container()
+        level3.markdown("hi")
+        level3.markdown("bye")
+
+        msg = self.get_message_from_queue()
+        self.assertEqual(msg.metadata.parent_block.path, [0, 0, 0])
+        self.assertEqual(msg.metadata.delta_id, 1)
+
+
 class DeltaGeneratorWriteTest(testutil.DeltaGeneratorTestCase):
     """Test DeltaGenerator Text, Alert, Json, and Markdown Classes."""
 
