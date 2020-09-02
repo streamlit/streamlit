@@ -155,9 +155,7 @@ add_slider = st.sidebar.slider(
 
 ```eval_rst
 .. note::
-  The following Streamlit commands are not currently supported in the sidebar:
-  `st.write` (you should use `st.sidebar.markdown()` instead), `st.echo`, and
-  `st.spinner`.
+  `st.echo` and `st.spinner` are not currently supported in the sidebar.
 ```
 
 ## Caching
