@@ -18,6 +18,7 @@ pyodbc
 # Feel free to remove this dependency if the requirement is gone.
 scipy==1.4.1
 seaborn
+setuptools<50.0.0
 sqlalchemy
 # The > sign will skip rc versions.
 tensorflow>2.0.0rc3
