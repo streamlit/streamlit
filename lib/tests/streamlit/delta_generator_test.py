@@ -282,7 +282,7 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(msg.delta.new_element.text.body, test_data)
 
 
-class DeltaGeneratorContainertest(testutil.DeltaGeneratorTestCase):
+class DeltaGeneratorContainerTest(testutil.DeltaGeneratorTestCase):
     """Test DeltaGenerator Container."""
 
     def test_container(self):
