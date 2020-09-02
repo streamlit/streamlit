@@ -149,6 +149,7 @@ commands:
               pip install "setuptools<=49.6.0"
               make setup
               make pipenv-install
+              pip show setuptools
               deactivate
             else
               # The virtualenv WAS restored from cache. Don't create a new one.
