@@ -64,10 +64,12 @@ export function applyDelta(
 
   const topLevelBlock =
     parentBlockContainer === BlockPath.Container.MAIN ? "main" : "sidebar"
-  // Build the full path to a delta: [1, 0, 2] => [1, "element", 0, "element", 2]
-  let deltaPath: any[] = [...parentBlockPath, metadata.deltaId]
-  deltaPath = deltaPath.flatMap(path => [path, "element"])
-  deltaPath.pop() // Remove final "element" tag.
+  // The full path to the ReportElement within the element tree
+  // Used to find and update the element node specified by this Delta
+  const deltaPath: any[] = [...parentBlockPath, metadata.deltaId]
+    // e.g. [1, 0, 2] => [1, "element", 0, "element", 2]
+    .flatMap(index => ["element", index])
+    .slice(1)
 
   MetricsManager.current.incrementDeltaCounter(topLevelBlock)
   dispatchOneOf(delta, "type", {
