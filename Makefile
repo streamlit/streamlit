@@ -151,7 +151,7 @@ install:
 .PHONY: develop
 # Install Streamlit as links in your Python environment, pointing to local workspace.
 develop:
-	cd lib ; python setup.py develop
+	pip show setuptools; cd lib ; python setup.py develop
 
 .PHONY: wheel
 # Create a Python wheel file in dist/.
