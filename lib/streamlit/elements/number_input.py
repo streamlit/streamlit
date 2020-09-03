@@ -57,7 +57,7 @@ class NumberInputMixin:
         >>> number = st.number_input('Insert a number')
         >>> st.write('The current number is ', number)
         """
-
+        dg = dg._active_dg
         if isinstance(value, NoValue):
             if min_value:
                 value = min_value

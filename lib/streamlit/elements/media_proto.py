@@ -54,6 +54,7 @@ class MediaMixin:
            height: 400px
 
         """
+        dg = dg._active_dg
         audio_proto = AudioProto()
         coordinates = dg._get_coordinates()  # type: ignore
         marshall_audio(coordinates, audio_proto, data, format, start_time)
@@ -95,6 +96,7 @@ class MediaMixin:
            for more information.
 
         """
+        dg = dg._active_dg
         video_proto = VideoProto()
         coordinates = dg._get_coordinates()  # type: ignore
         marshall_video(coordinates, video_proto, data, format, start_time)

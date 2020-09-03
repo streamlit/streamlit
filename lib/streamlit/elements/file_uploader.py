@@ -52,6 +52,7 @@ class FileUploaderMixin:
         ...     st.write(data)
 
         """
+        dg = dg._active_dg
         # Don't release this just yet. (When ready to release, turn test back
         # on at file_uploader_test.py)
         accept_multiple_files = False

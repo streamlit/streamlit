@@ -20,6 +20,7 @@ class TextMixin:
            height: 50px
 
         """
+        dg = dg._active_dg
         text_proto = TextProto()
         text_proto.body = _clean_text(body)
         return dg._enqueue("text", text_proto)  # type: ignore

@@ -54,6 +54,7 @@ class MarkdownMixin:
            height: 50px
 
         """
+        dg = dg._active_dg
         markdown_proto = MarkdownProto()
 
         markdown_proto.body = _clean_text(body)
@@ -78,6 +79,7 @@ class MarkdownMixin:
            height: 100px
 
         """
+        dg = dg._active_dg
         header_proto = MarkdownProto()
         header_proto.body = "## %s" % _clean_text(body)
         return dg._enqueue("markdown", header_proto)  # type: ignore
@@ -99,6 +101,7 @@ class MarkdownMixin:
            height: 100px
 
         """
+        dg = dg._active_dg
         subheader_proto = MarkdownProto()
         subheader_proto.body = "### %s" % _clean_text(body)
         return dg._enqueue("markdown", subheader_proto)  # type: ignore
@@ -128,6 +131,7 @@ class MarkdownMixin:
            height: 100px
 
         """
+        dg = dg._active_dg
         code_proto = MarkdownProto()
         markdown = "```%(language)s\n%(body)s\n```" % {
             "language": language or "",
@@ -156,6 +160,7 @@ class MarkdownMixin:
            height: 100px
 
         """
+        dg = dg._active_dg
         title_proto = MarkdownProto()
         title_proto.body = "# %s" % _clean_text(body)
         return dg._enqueue("markdown", title_proto)  # type: ignore
@@ -189,6 +194,7 @@ class MarkdownMixin:
            height: 75px
 
         """
+        dg = dg._active_dg
         if type_util.is_sympy_expession(body):
             import sympy
 

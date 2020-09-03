@@ -37,6 +37,7 @@ class ColorPickerMixin:
         >>> st.write('The current color is', color)
 
         """
+        dg = dg._active_dg
         # set value default
         if value is None:
             value = "#000000"

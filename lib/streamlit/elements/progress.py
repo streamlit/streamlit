@@ -26,6 +26,7 @@ class ProgressMixin:
         ...     my_bar.progress(percent_complete + 1)
 
         """
+        dg = dg._active_dg
         # TODO: standardize numerical type checking across st.* functions.
         progress_proto = ProgressProto()
 

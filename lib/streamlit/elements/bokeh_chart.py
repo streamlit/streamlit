@@ -60,6 +60,7 @@ class BokehMixin:
            height: 600px
 
         """
+        dg = dg._active_dg
         bokeh_chart_proto = BokehChartProto()
         marshall(bokeh_chart_proto, figure, use_container_width)
         return dg._enqueue("bokeh_chart", bokeh_chart_proto)  # type: ignore

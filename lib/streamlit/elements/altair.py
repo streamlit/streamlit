@@ -63,6 +63,7 @@ class AltairMixin:
            height: 220px
 
         """
+        dg = dg._active_dg
         vega_lite_chart_proto = VegaLiteChartProto()
 
         chart = generate_chart("line", data, width, height)
@@ -107,6 +108,7 @@ class AltairMixin:
            height: 220px
 
         """
+        dg = dg._active_dg
         vega_lite_chart_proto = VegaLiteChartProto()
 
         chart = generate_chart("area", data, width, height)
@@ -151,6 +153,8 @@ class AltairMixin:
            height: 220px
 
         """
+        dg = dg._active_dg
+        dg = dg._active_dg
         vega_lite_chart_proto = VegaLiteChartProto()
 
         chart = generate_chart("bar", data, width, height)
@@ -200,6 +204,7 @@ class AltairMixin:
         https://altair-viz.github.io/gallery/.
 
         """
+        dg = dg._active_dg
         vega_lite_chart_proto = VegaLiteChartProto()
 
         if width != 0:

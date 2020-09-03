@@ -61,6 +61,7 @@ class IframeMixin:
             Otherwise, do not show a scrollbar. Defaults to False.
 
         """
+        dg = dg._active_dg
         iframe_proto = IFrameProto()
         marshall(
             iframe_proto, srcdoc=html, width=width, height=height, scrolling=scrolling,

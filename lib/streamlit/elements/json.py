@@ -32,6 +32,7 @@ class JsonMixin:
            height: 280px
 
         """
+        dg = dg._active_dg
         import streamlit as st
 
         if not isinstance(body, str):

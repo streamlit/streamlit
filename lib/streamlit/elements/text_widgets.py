@@ -38,6 +38,7 @@ class TextWidgetsMixin:
         >>> st.write('The current movie title is', title)
 
         """
+        dg = dg._active_dg
         text_input_proto = TextInputProto()
         text_input_proto.label = label
         text_input_proto.default = str(value)
@@ -97,6 +98,7 @@ class TextWidgetsMixin:
         >>> st.write('Sentiment:', run_sentiment_analysis(txt))
 
         """
+        dg = dg._active_dg
         text_area_proto = TextAreaProto()
         text_area_proto.label = label
         text_area_proto.default = str(value)

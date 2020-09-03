@@ -52,6 +52,7 @@ class HelpMixin:
         >>> st.help(x)
 
         """
+        dg = dg._active_dg
         doc_string_proto = DocStringProto()
         _marshall(doc_string_proto, obj)
         return dg._enqueue("doc_string", doc_string_proto)  # type: ignore

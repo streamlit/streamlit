@@ -32,6 +32,7 @@ class CheckboxMixin:
         ...     st.write('Great!')
 
         """
+        dg = dg._active_dg
         checkbox_proto = CheckboxProto()
         checkbox_proto.label = label
         checkbox_proto.default = bool(value)

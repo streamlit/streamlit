@@ -101,6 +101,7 @@ class SliderMixin:
         >>> st.write("Start time:", start_time)
 
         """
+        dg = dg._active_dg
 
         # Set value default.
         if value is None:
