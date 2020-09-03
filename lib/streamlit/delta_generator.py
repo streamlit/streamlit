@@ -143,13 +143,15 @@ class DeltaGenerator(
         an element `foo` inside the sidebar.
 
         """
+        # Whether this DeltaGenerator is nested in the main area or sidebar.
+        # No relation to `st.container()`.
         self._container = container
 
         # This is either:
         # - None: if this is the running DeltaGenerator for a top-level
         #   container (MAIN or SIDEBAR)
         # - RunningCursor: if this is the running DeltaGenerator for a
-        #   non-top-level container (created with dg._block())
+        #   non-top-level container (created with dg.container())
         # - LockedCursor: if this is a locked DeltaGenerator returned by some
         #   other DeltaGenerator method. E.g. the dg returned in dg =
         #   st.text("foo").
@@ -308,7 +310,7 @@ class DeltaGenerator(
 
         return _value_or_dg(return_value, output_dg)
 
-    def _block(self):
+    def container(self):
         if self._container is None or self._cursor is None:
             return self
 
@@ -327,7 +329,7 @@ class DeltaGenerator(
         block_dg = DeltaGenerator(container=self._container, cursor=block_cursor)
 
         # Must be called to increment this cursor's index.
-        self._cursor.get_locked_cursor(None)
+        self._cursor.get_locked_cursor(last_index=None)
 
         _enqueue_message(msg)
 

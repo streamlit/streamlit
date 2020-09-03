@@ -562,7 +562,7 @@ export class App extends PureComponent<Props, State> {
   /**
    * Removes old elements. The term old is defined as:
    *  - simple elements whose reportIds are no longer current
-   *  - empty block elements
+   *  - empty containers
    */
   clearOldElements = (elements: any, reportId: string): BlockElement => {
     return elements
@@ -574,7 +574,11 @@ export class App extends PureComponent<Props, State> {
             simpleElement,
             reportId
           )
-          return clearedElements.size > 0 ? clearedElements : null
+          // TODO: Consider not removing empty containers,
+          // e.g. to keep an st.column with no items in it.
+          return clearedElements.size > 0
+            ? reportElement.set("element", clearedElements)
+            : null
         }
 
         return reportElement.get("reportId") === reportId
