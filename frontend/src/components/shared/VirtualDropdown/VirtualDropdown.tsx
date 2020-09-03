@@ -35,9 +35,7 @@ function FixedSizeListItem(props: FixedSizeListeItemProps): ReactElement {
 }
 
 const VirtualDropdown = React.forwardRef((props: any, ref) => {
-  const children = React.Children.toArray(
-    props.children
-  ) as React.ReactElement[]
+  const children = React.Children.toArray(props.children) as ReactElement[]
 
   if (!children[0] || !children[0].props.item) {
     return (

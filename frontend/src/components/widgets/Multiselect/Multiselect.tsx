@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React from "react"
 import without from "lodash/without"
 import { Map as ImmutableMap } from "immutable"
 import { multiSelectOverrides } from "lib/widgetTheme"
