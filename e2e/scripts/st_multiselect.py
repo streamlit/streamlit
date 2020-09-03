@@ -26,3 +26,6 @@ st.text("value 3: %s" % i3)
 
 i4 = st.multiselect("selectbox 4", ["coffee", "tea", "water"], ["tea", "water"])
 st.text("value 4: %s" % i4)
+
+i5 = st.multiselect("selectbox 5", list(map(str, range(10000))), ["1", "5"])
+st.text("value 5: %s" % i5)

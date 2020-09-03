@@ -20,6 +20,7 @@ import { Select as UISelect, OnChangeParams, Option } from "baseui/select"
 import { Map as ImmutableMap } from "immutable"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { logWarning } from "lib/log"
+import VirtualDropdown from "components/shared/VirtualDropdown"
 
 export interface Props {
   disabled: boolean
@@ -123,6 +124,9 @@ class Selectbox extends React.PureComponent<Props, State> {
           filterOptions={this.filterOptions}
           value={value}
           valueKey="value"
+          overrides={{
+            Dropdown: { component: VirtualDropdown },
+          }}
         />
       </div>
     )
