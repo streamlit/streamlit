@@ -92,6 +92,10 @@ class MediaFile(object):
     def mimetype(self):
         return self._mimetype
 
+    @property
+    def content_size(self):
+        return len(self._content)
+
 
 class MediaFileManager(object):
     """In-memory file manager for MediaFile objects.

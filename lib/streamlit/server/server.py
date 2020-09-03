@@ -348,7 +348,7 @@ class Server(object):
                 AssetsFileHandler,
                 {"path": "%s/" % file_util.get_assets_dir()},
             ),
-            (make_url_path_regex(base, "media/(.*)"), MediaFileHandler),
+            (make_url_path_regex(base, "media/(.*)"), MediaFileHandler, {"path": ""}),
             (
                 make_url_path_regex(base, "component/(.*)"),
                 ComponentRequestHandler,

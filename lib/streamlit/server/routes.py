@@ -67,31 +67,54 @@ class AddSlashHandler(tornado.web.RequestHandler):
         pass
 
 
-class MediaFileHandler(tornado.web.RequestHandler):
+class MediaFileHandler(tornado.web.StaticFileHandler):
     def set_default_headers(self):
         if allow_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
 
-    def get(self, filename):
+    def validate_absolute_path(self, root, absolute_path):
+        try:
+            media_file_manager.get(absolute_path)
+        except KeyError:
+            LOGGER.error("MediaFileManager: Missing file %s" % absolute_path)
+            raise tornado.web.HTTPError(404, "%s not found", absolute_path)
+
+        return absolute_path
+
+    def get_content_size(self):
+        media = media_file_manager.get(self.absolute_path)
+        return media.content_size
+
+    def get_modified_time(self):
+        return 0
+
+    @classmethod
+    def get_absolute_path(cls, root, path):
         # Filename is {requested_hash}.{extension} but MediaFileManager
         # is indexed by requested_hash.
-        requested_hash = filename.split(".")[0]
-        LOGGER.debug("MediaFileHandler: GET %s" % filename)
+        return path.split(".")[0]
+
+    @classmethod
+    def get_content(cls, abspath, start=None, end=None):
+        LOGGER.debug("MediaFileHandler: GET %s" % abspath)
 
         try:
-            media = media_file_manager.get(requested_hash)
+            media = media_file_manager.get(abspath)
         except:
-            LOGGER.error("MediaFileManager: Missing file %s" % requested_hash)
-            self.write("%s not found" % requested_hash)
-            self.set_status(404)
+            LOGGER.error("MediaFileManager: Missing file %s" % abspath)
             return
 
-        LOGGER.debug(
-            "MediaFileManager: Sending %s file %s" % (media.mimetype, requested_hash)
-        )
-        self.write(media.content)
-        self.set_header("Content-Type", media.mimetype)
-        self.set_status(200)
+        LOGGER.debug("MediaFileManager: Sending %s file %s" % (media.mimetype, abspath))
+
+        if start is None and end is None:
+            return media.content
+
+        if start is None:
+            start = 0
+        if end is None:
+            end = len(media.content)
+
+        yield media.content[start:end]
 
 
 class _SpecialRequestHandler(tornado.web.RequestHandler):
