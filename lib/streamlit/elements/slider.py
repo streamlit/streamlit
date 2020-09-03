@@ -27,7 +27,7 @@ class SliderMixin:
 
         The difference between `st.slider` and `st.select_slider` is that
         `slider` only accepts numerical or date/time data and takes a range as
-        input, while`select_slider` accepts any datatype and takes an iterable
+        input, while `select_slider` accepts any datatype and takes an iterable
         set of options.
 
         Parameters

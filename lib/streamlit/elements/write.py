@@ -85,9 +85,9 @@ class WriteMixin:
 
         >>> write('Hello, *World!* :sunglasses:')
 
-        .. output::
-        https://share.streamlit.io/0.50.2-ZWk9/index.html?id=Pn5sjhgNs4a8ZbiUoSTRxE
-        height: 50px
+        ..  output::
+            https://share.streamlit.io/0.50.2-ZWk9/index.html?id=Pn5sjhgNs4a8ZbiUoSTRxE
+            height: 50px
 
         As mentioned earlier, `st.write()` also accepts other data formats, such as
         numbers, data frames, styled data frames, and assorted objects:
@@ -98,18 +98,18 @@ class WriteMixin:
         ...     'second column': [10, 20, 30, 40],
         ... }))
 
-        .. output::
-        https://share.streamlit.io/0.25.0-2JkNY/index.html?id=FCp9AMJHwHRsWSiqMgUZGD
-        height: 250px
+        ..  output::
+            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=FCp9AMJHwHRsWSiqMgUZGD
+            height: 250px
 
         Finally, you can pass in multiple arguments to do things like:
 
         >>> st.write('1 + 1 = ', 2)
         >>> st.write('Below is a DataFrame:', data_frame, 'Above is a dataframe.')
 
-        .. output::
-        https://share.streamlit.io/0.25.0-2JkNY/index.html?id=DHkcU72sxYcGarkFbf4kK1
-        height: 300px
+        ..  output::
+            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=DHkcU72sxYcGarkFbf4kK1
+            height: 300px
 
         Oh, one more thing: `st.write` accepts chart objects too! For example:
 
@@ -126,9 +126,9 @@ class WriteMixin:
         >>>
         >>> st.write(c)
 
-        .. output::
-        https://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
-        height: 200px
+        ..  output::
+            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
+            height: 200px
 
         """
         # Import dynamically, to resolve circular dependency
