@@ -17,9 +17,10 @@
 
 import React, { Fragment, PureComponent, ReactNode } from "react"
 import moment from "moment"
-import { HotKeys } from "react-hotkeys"
+import { HotKeys, KeyMap } from "react-hotkeys"
 import { fromJS, List } from "immutable"
 import classNames from "classnames"
+import { ThemeProvider } from "baseui"
 // Other local imports.
 import ReportView from "components/core/ReportView/"
 import StatusWidget from "components/core/StatusWidget"
@@ -34,6 +35,7 @@ import { WidgetStateManager } from "lib/WidgetStateManager"
 import { ConnectionState } from "lib/ConnectionState"
 import { ReportRunState } from "lib/ReportRunState"
 import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
+import { mainWidgetTheme } from "lib/widgetTheme"
 import {
   applyDelta,
   BlockElement,
@@ -174,14 +176,18 @@ export class App extends PureComponent<Props, State> {
   /**
    * Global keyboard shortcuts.
    */
+  keyMap: KeyMap = {
+    RERUN: "r",
+    CLEAR_CACHE: "c",
+    // We use key up for stop recording to ensure the esc key doesn't trigger
+    // other actions (like exiting modals)
+    STOP_RECORDING: { sequence: "esc", action: "keyup" },
+  }
+
   keyHandlers = {
-    // The r key reruns the script.
-    r: (): void => this.rerunScript(),
-
-    // The c key clears the cache.
-    c: (): void => this.openClearCacheDialog(),
-
-    esc: this.props.screenCast.stopRecording,
+    RERUN: (): void => this.rerunScript(),
+    CLEAR_CACHE: (): void => this.openClearCacheDialog(),
+    STOP_RECORDING: this.props.screenCast.stopRecording,
   }
 
   componentDidMount(): void {
@@ -918,7 +924,12 @@ export class App extends PureComponent<Props, State> {
     // attach: DOM element the keyboard listeners should attach to
     // focused: A way to force focus behaviour
     return (
-      <HotKeys handlers={this.keyHandlers} attach={window} focused={true}>
+      <HotKeys
+        keyMap={this.keyMap}
+        handlers={this.keyHandlers}
+        attach={window}
+        focused={true}
+      >
         <div className={outerDivClass}>
           {/* The tabindex below is required for testing. */}
           <header tabIndex={-1}>
@@ -962,8 +973,7 @@ export class App extends PureComponent<Props, State> {
             uploadClient={this.uploadClient}
             componentRegistry={this.componentRegistry}
           />
-
-          {dialog}
+          <ThemeProvider theme={mainWidgetTheme}>{dialog}</ThemeProvider>
         </div>
       </HotKeys>
     )
