@@ -143,7 +143,7 @@ function handleNewBlockMessage(
 
   // This node was already a list of elements; no need to change anything.
   if (reportElement.get("element") instanceof List) {
-    return reportElement
+    return reportElement.set("metadata", metadata)
   }
 
   // This node used to represent a single element; convert into an empty list.

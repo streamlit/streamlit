@@ -310,7 +310,7 @@ class DeltaGenerator(
 
         return _value_or_dg(return_value, output_dg)
 
-    def container(self):
+    def _container_block(self, collapsible=None, label=None):
         if self._container is None or self._cursor is None:
             return self
 
@@ -319,6 +319,10 @@ class DeltaGenerator(
         msg.metadata.parent_block.container = self._container
         msg.metadata.parent_block.path[:] = self._cursor.path
         msg.metadata.delta_id = self._cursor.index
+
+        msg.metadata.container.collapsible = collapsible or False
+        if label:
+            msg.metadata.container.label = label
 
         # Normally we'd return a new DeltaGenerator that uses the locked cursor
         # below. But in this case we want to return a DeltaGenerator that uses
@@ -330,13 +334,23 @@ class DeltaGenerator(
 
         # Must be called to increment this cursor's index.
         self._cursor.get_locked_cursor(last_index=None)
-
         _enqueue_message(msg)
 
         return block_dg
 
+    def container(self):
+        return self._container_block()
+
+    def collapsible_container(self, label=None):
+        return self._container_block(collapsible=True, label=label)
+
     def favicon(
-        self, element, image, clamp=False, channels="RGB", format="JPEG",
+        self,
+        element,
+        image,
+        clamp=False,
+        channels="RGB",
+        format="JPEG",
     ):
         """Set the page favicon to the specified image.
 
