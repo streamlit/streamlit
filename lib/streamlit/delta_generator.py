@@ -123,6 +123,19 @@ class DeltaGenerator(
       testing).
 
     cursor: cursor.AbstractCursor or None
+      This is either:
+      - None: if this is the running DeltaGenerator for a top-level
+        container (MAIN or SIDEBAR)
+      - RunningCursor: if this is the running DeltaGenerator for a
+        non-top-level container (created with dg.container())
+      - LockedCursor: if this is a locked DeltaGenerator returned by some
+        other DeltaGenerator method. E.g. the dg returned in dg =
+        st.text("foo").
+
+    parent: DeltaGenerator
+      To support the `with dg` notation, DGs are arranged as a tree. Each DG
+      remembers its own parent, and the root of the tree is the main DG.
+
     """
 
     # The pydoc below is for user consumption, so it doesn't talk about
@@ -149,26 +162,15 @@ class DeltaGenerator(
         # No relation to `st.container()`.
         self._container = container
 
-        # This is either:
-        # - None: if this is the running DeltaGenerator for a top-level
-        #   container (MAIN or SIDEBAR)
-        # - RunningCursor: if this is the running DeltaGenerator for a
-        #   non-top-level container (created with dg.container())
-        # - LockedCursor: if this is a locked DeltaGenerator returned by some
-        #   other DeltaGenerator method. E.g. the dg returned in dg =
-        #   st.text("foo").
-        #
         # You should never use this! Instead use self._cursor, which is a
         # computed property that fetches the right cursor.
-        #
         self._provided_cursor = cursor
 
-        # To support the `with dg` notation, DGs are arranged as a tree.
-        # The root of the tree is the main DG
         self.parent = parent
 
-        # Track the DG used for the `with` block
-        # NOTE: Should only ever be tracked by the main dg
+        # Track the DG used for the `with` block.
+        # NOTE: Only the main DG should ever reference this.
+        # You should use the computed property _active_dg instead.
         self._with_dg = self
 
         # Change the module of all mixin'ed functions to be st.delta_generator,
