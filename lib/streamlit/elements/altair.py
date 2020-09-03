@@ -63,14 +63,13 @@ class AltairMixin:
            height: 220px
 
         """
-        dg = dg._active_dg  # type: ignore
         vega_lite_chart_proto = VegaLiteChartProto()
 
         chart = generate_chart("line", data, width, height)
         marshall(vega_lite_chart_proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        return dg._enqueue("line_chart", vega_lite_chart_proto, last_index=last_index)
+        return dg._enqueue("line_chart", vega_lite_chart_proto, last_index=last_index)  # type: ignore
 
     def area_chart(dg, data=None, width=0, height=0, use_container_width=True):
         """Display a area chart.
@@ -108,14 +107,13 @@ class AltairMixin:
            height: 220px
 
         """
-        dg = dg._active_dg  # type: ignore
         vega_lite_chart_proto = VegaLiteChartProto()
 
         chart = generate_chart("area", data, width, height)
         marshall(vega_lite_chart_proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        return dg._enqueue("area_chart", vega_lite_chart_proto, last_index=last_index)
+        return dg._enqueue("area_chart", vega_lite_chart_proto, last_index=last_index)  # type: ignore
 
     def bar_chart(dg, data=None, width=0, height=0, use_container_width=True):
         """Display a bar chart.
@@ -153,14 +151,13 @@ class AltairMixin:
            height: 220px
 
         """
-        dg = dg._active_dg  # type: ignore
         vega_lite_chart_proto = VegaLiteChartProto()
 
         chart = generate_chart("bar", data, width, height)
         marshall(vega_lite_chart_proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        return dg._enqueue("bar_chart", vega_lite_chart_proto, last_index=last_index)
+        return dg._enqueue("bar_chart", vega_lite_chart_proto, last_index=last_index)  # type: ignore
 
     def altair_chart(dg, altair_chart, width=0, use_container_width=False):
         """Display a chart using the Altair library.
@@ -203,7 +200,6 @@ class AltairMixin:
         https://altair-viz.github.io/gallery/.
 
         """
-        dg = dg._active_dg  # type: ignore
         vega_lite_chart_proto = VegaLiteChartProto()
 
         if width != 0:
@@ -218,7 +214,7 @@ class AltairMixin:
             altair_chart,
             use_container_width=use_container_width,
         )
-        return dg._enqueue("vega_lite_chart", vega_lite_chart_proto)
+        return dg._enqueue("vega_lite_chart", vega_lite_chart_proto)  # type: ignore
 
 
 def _is_date_column(df, name):

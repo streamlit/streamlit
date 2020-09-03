@@ -45,7 +45,6 @@ class RadioMixin:
         ...     st.write("You didn\'t select comedy.")
 
         """
-        dg = dg._active_dg  # type: ignore
         options = ensure_iterable(options)
 
         if not isinstance(index, int):
@@ -71,4 +70,4 @@ class RadioMixin:
             if len(options) > 0 and options[current_value] is not None
             else NoValue
         )
-        return dg._enqueue("radio", radio_proto, return_value)
+        return dg._enqueue("radio", radio_proto, return_value)  # type: ignore

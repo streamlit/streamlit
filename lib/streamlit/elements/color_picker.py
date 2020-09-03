@@ -37,7 +37,6 @@ class ColorPickerMixin:
         >>> st.write('The current color is', color)
 
         """
-        dg = dg._active_dg  # type: ignore
         # set value default
         if value is None:
             value = "#000000"
@@ -72,4 +71,4 @@ class ColorPickerMixin:
             "color_picker", color_picker_proto, user_key=key
         )
         current_value = ui_value if ui_value is not None else value
-        return dg._enqueue("color_picker", color_picker_proto, str(current_value))
+        return dg._enqueue("color_picker", color_picker_proto, str(current_value))  # type: ignore

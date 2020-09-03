@@ -64,7 +64,6 @@ class SelectSliderMixin:
         ...     value=('red', 'blue'))
         >>> st.write('You selected wavelengths between', start_color, 'and', end_color)
         """
-        dg = dg._active_dg  # type: ignore
 
         options = ensure_iterable(options)
 
@@ -112,4 +111,4 @@ class SelectSliderMixin:
 
         # If the original value was a list/tuple, so will be the output (and vice versa)
         return_value = tuple(current_value) if is_range_value else current_value[0]
-        return dg._enqueue("slider", slider_proto, return_value)
+        return dg._enqueue("slider", slider_proto, return_value)  # type: ignore

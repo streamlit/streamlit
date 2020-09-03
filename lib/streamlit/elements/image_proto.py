@@ -103,7 +103,6 @@ class ImageMixin:
            height: 630px
 
         """
-        dg = dg._active_dg  # type: ignore
 
         format = kwargs.get("format")
         if format != None:
@@ -111,7 +110,7 @@ class ImageMixin:
             output_format = format
 
             if config.get_option("deprecation.showImageFormat"):
-                dg.exception(ImageFormatWarning(format))
+                dg.exception(ImageFormatWarning(format))  # type: ignore
 
         if use_column_width:
             width = -2
@@ -122,7 +121,7 @@ class ImageMixin:
 
         image_list_proto = ImageListProto()
         marshall_images(
-            dg._get_coordinates(),
+            dg._get_coordinates(),  # type: ignore
             image,
             caption,
             width,
@@ -131,7 +130,7 @@ class ImageMixin:
             channels,
             output_format,
         )
-        return dg._enqueue("imgs", image_list_proto)
+        return dg._enqueue("imgs", image_list_proto)  # type: ignore
 
 
 class ImageFormatWarning(StreamlitDeprecationWarning):

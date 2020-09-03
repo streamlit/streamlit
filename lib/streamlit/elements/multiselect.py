@@ -51,7 +51,6 @@ class MultiSelectMixin:
            `GitHub issue #1059 <https://github.com/streamlit/streamlit/issues/1059>`_ for updates on the issue.
 
         """
-        dg = dg._active_dg  # type: ignore
         options = ensure_iterable(options)
 
         # Perform validation checks and return indices base on the default values.
@@ -90,4 +89,4 @@ class MultiSelectMixin:
         ui_value = _get_widget_ui_value("multiselect", multiselect_proto, user_key=key)
         current_value = ui_value.value if ui_value is not None else default_value
         return_value = [options[i] for i in current_value]
-        return dg._enqueue("multiselect", multiselect_proto, return_value)
+        return dg._enqueue("multiselect", multiselect_proto, return_value)  # type: ignore

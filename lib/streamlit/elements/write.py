@@ -136,7 +136,6 @@ class WriteMixin:
 
         # Cast self to DeltaGenerator, to resolve mypy type issues
         dg = cast(DeltaGenerator, self)
-        dg = dg._active_dg
         string_buffer = []  # type: List[str]
         unsafe_allow_html = kwargs.get("unsafe_allow_html", False)
 

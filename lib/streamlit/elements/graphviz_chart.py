@@ -95,7 +95,6 @@ class GraphvizMixin:
            height: 400px
 
         """
-        dg = dg._active_dg  # type: ignore
         if width != 0 and height != 0:
             import streamlit as st
 
@@ -117,7 +116,7 @@ class GraphvizMixin:
 
         graphviz_chart_proto = GraphVizChartProto()
         marshall(graphviz_chart_proto, figure_or_dot, use_container_width)
-        return dg._enqueue("graphviz_chart", graphviz_chart_proto)
+        return dg._enqueue("graphviz_chart", graphviz_chart_proto)  # type: ignore
 
 
 def marshall(proto, figure_or_dot, use_container_width):

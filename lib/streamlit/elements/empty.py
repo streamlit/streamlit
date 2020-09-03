@@ -19,8 +19,7 @@ class EmptyMixin:
         >>> my_placeholder.image(my_image_bytes)
 
         """
-        dg = dg._active_dg  # type: ignore
         empty_proto = EmptyProto()
         # The protobuf needs something to be set
         empty_proto.unused = True
-        return dg._enqueue("empty", empty_proto)
+        return dg._enqueue("empty", empty_proto)  # type: ignore

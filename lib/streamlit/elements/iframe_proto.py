@@ -36,12 +36,11 @@ class IframeMixin:
             Otherwise, do not show a scrollbar. Defaults to False.
 
         """
-        dg = dg._active_dg  # type: ignore
         iframe_proto = IFrameProto()
         marshall(
             iframe_proto, src=src, width=width, height=height, scrolling=scrolling,
         )
-        return dg._enqueue("iframe", iframe_proto)
+        return dg._enqueue("iframe", iframe_proto)  # type: ignore
 
     def _html(
         dg, html, width=None, height=None, scrolling=False,
@@ -62,12 +61,11 @@ class IframeMixin:
             Otherwise, do not show a scrollbar. Defaults to False.
 
         """
-        dg = dg._active_dg  # type: ignore
         iframe_proto = IFrameProto()
         marshall(
             iframe_proto, srcdoc=html, width=width, height=height, scrolling=scrolling,
         )
-        return dg._enqueue("iframe", iframe_proto)
+        return dg._enqueue("iframe", iframe_proto)  # type: ignore
 
 
 def marshall(

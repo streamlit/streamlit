@@ -67,11 +67,10 @@ class MapMixin:
            height: 600px
 
         """
-        dg = dg._active_dg  # type: ignore
         map_proto = DeckGlJsonChartProto()
         map_proto.json = to_deckgl_json(data, zoom)
         map_proto.use_container_width = use_container_width
-        return dg._enqueue("deck_gl_json_chart", map_proto)
+        return dg._enqueue("deck_gl_json_chart", map_proto)  # type: ignore
 
 
 # Map used as the basis for st.map.

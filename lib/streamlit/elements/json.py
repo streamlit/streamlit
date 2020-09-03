@@ -32,7 +32,6 @@ class JsonMixin:
            height: 280px
 
         """
-        dg = dg._active_dg  # type: ignore
         import streamlit as st
 
         if not isinstance(body, str):
@@ -47,4 +46,4 @@ class JsonMixin:
 
         json_proto = JsonProto()
         json_proto.body = body
-        return dg._enqueue("json", json_proto)
+        return dg._enqueue("json", json_proto)  # type: ignore

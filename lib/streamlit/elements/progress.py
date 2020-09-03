@@ -26,7 +26,6 @@ class ProgressMixin:
         ...     my_bar.progress(percent_complete + 1)
 
         """
-        dg = dg._active_dg  # type: ignore
         # TODO: standardize numerical type checking across st.* functions.
         progress_proto = ProgressProto()
 
@@ -50,4 +49,4 @@ class ProgressMixin:
                 "Progress Value has invalid type: %s" % type(value).__name__
             )
 
-        return dg._enqueue("progress", progress_proto)
+        return dg._enqueue("progress", progress_proto)  # type: ignore

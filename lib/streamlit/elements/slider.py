@@ -101,7 +101,6 @@ class SliderMixin:
         >>> st.write("Start time:", start_time)
 
         """
-        dg = dg._active_dg  # type: ignore
 
         # Set value default.
         if value is None:
@@ -369,4 +368,4 @@ class SliderMixin:
             ]
         # If the original value was a list/tuple, so will be the output (and vice versa)
         return_value = current_value[0] if single_value else tuple(current_value)
-        return dg._enqueue("slider", slider_proto, return_value)
+        return dg._enqueue("slider", slider_proto, return_value)  # type: ignore

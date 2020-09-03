@@ -57,7 +57,7 @@ class NumberInputMixin:
         >>> number = st.number_input('Insert a number')
         >>> st.write('The current number is ', number)
         """
-        dg = dg._active_dg  # type: ignore
+
         if isinstance(value, NoValue):
             if min_value:
                 value = min_value
@@ -199,4 +199,4 @@ class NumberInputMixin:
         )
 
         return_value = ui_value if ui_value is not None else value
-        return dg._enqueue("number_input", number_input_proto, return_value)
+        return dg._enqueue("number_input", number_input_proto, return_value)  # type: ignore

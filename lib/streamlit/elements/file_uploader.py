@@ -52,7 +52,6 @@ class FileUploaderMixin:
         ...     st.write(data)
 
         """
-        dg = dg._active_dg  # type: ignore
         # Don't release this just yet. (When ready to release, turn test back
         # on at file_uploader_test.py)
         accept_multiple_files = False
@@ -69,7 +68,7 @@ class FileUploaderMixin:
         if show_deprecation_warning and (
             (has_encoding and encoding is not None) or not has_encoding
         ):
-            dg.exception(FileUploaderEncodingWarning())
+            dg.exception(FileUploaderEncodingWarning())  # type: ignore
 
         if not has_encoding:
             encoding = "auto"
@@ -95,7 +94,7 @@ class FileUploaderMixin:
         else:
             file_datas = [get_encoded_file_data(file.data, encoding) for file in files]
             return_value = file_datas if accept_multiple_files else file_datas[0]
-        return dg._enqueue("file_uploader", file_uploader_proto, return_value)
+        return dg._enqueue("file_uploader", file_uploader_proto, return_value)  # type: ignore
 
 
 class FileUploaderEncodingWarning(StreamlitDeprecationWarning):

@@ -54,11 +54,10 @@ class MediaMixin:
            height: 400px
 
         """
-        dg = dg._active_dg  # type: ignore
         audio_proto = AudioProto()
-        coordinates = dg._get_coordinates()
+        coordinates = dg._get_coordinates()  # type: ignore
         marshall_audio(coordinates, audio_proto, data, format, start_time)
-        return dg._enqueue("audio", audio_proto)
+        return dg._enqueue("audio", audio_proto)  # type: ignore
 
     def video(dg, data, format="video/mp4", start_time=0):
         """Display a video player.
@@ -96,11 +95,10 @@ class MediaMixin:
            for more information.
 
         """
-        dg = dg._active_dg  # type: ignore
         video_proto = VideoProto()
-        coordinates = dg._get_coordinates()
+        coordinates = dg._get_coordinates()  # type: ignore
         marshall_video(coordinates, video_proto, data, format, start_time)
-        return dg._enqueue("video", video_proto)
+        return dg._enqueue("video", video_proto)  # type: ignore
 
 
 # Regular expression explained at https://regexr.com/4n2l2 Covers any youtube

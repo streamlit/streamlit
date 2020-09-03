@@ -40,7 +40,6 @@ class SelectboxMixin:
         >>> st.write('You selected:', option)
 
         """
-        dg = dg._active_dg  # type: ignore
         options = ensure_iterable(options)
 
         if not isinstance(index, int):
@@ -66,4 +65,4 @@ class SelectboxMixin:
             if len(options) > 0 and options[current_value] is not None
             else NoValue
         )
-        return dg._enqueue("selectbox", selectbox_proto, return_value)
+        return dg._enqueue("selectbox", selectbox_proto, return_value)  # type: ignore

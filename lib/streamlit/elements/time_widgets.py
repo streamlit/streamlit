@@ -34,7 +34,6 @@ class TimeWidgetsMixin:
         >>> st.write('Alarm is set for', t)
 
         """
-        dg = dg._active_dg  # type: ignore
         # Set value default.
         if value is None:
             value = datetime.now().time()
@@ -59,7 +58,7 @@ class TimeWidgetsMixin:
             if ui_value is not None
             else value
         )
-        return dg._enqueue("time_input", time_input_proto, current_value)
+        return dg._enqueue("time_input", time_input_proto, current_value)  # type: ignore
 
     def date_input(
         dg, label, value=None, min_value=datetime.min, max_value=None, key=None,
@@ -97,7 +96,6 @@ class TimeWidgetsMixin:
         >>> st.write('Your birthday is:', d)
 
         """
-        dg = dg._active_dg  # type: ignore
         # Set value default.
         if value is None:
             value = datetime.now().date()
@@ -142,4 +140,4 @@ class TimeWidgetsMixin:
             value = [datetime.strptime(v, "%Y/%m/%d").date() for v in value]
 
         return_value = value[0] if single_value else tuple(value)
-        return dg._enqueue("date_input", date_input_proto, return_value)
+        return dg._enqueue("date_input", date_input_proto, return_value)  # type: ignore

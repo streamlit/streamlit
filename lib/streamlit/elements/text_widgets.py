@@ -38,7 +38,6 @@ class TextWidgetsMixin:
         >>> st.write('The current movie title is', title)
 
         """
-        dg = dg._active_dg  # type: ignore
         text_input_proto = TextInputProto()
         text_input_proto.label = label
         text_input_proto.default = str(value)
@@ -58,7 +57,7 @@ class TextWidgetsMixin:
 
         ui_value = _get_widget_ui_value("text_input", text_input_proto, user_key=key)
         current_value = ui_value if ui_value is not None else value
-        return dg._enqueue("text_input", text_input_proto, str(current_value))
+        return dg._enqueue("text_input", text_input_proto, str(current_value))  # type: ignore
 
     def text_area(dg, label, value="", height=None, max_chars=None, key=None):
         """Display a multi-line text input widget.
@@ -98,7 +97,6 @@ class TextWidgetsMixin:
         >>> st.write('Sentiment:', run_sentiment_analysis(txt))
 
         """
-        dg = dg._active_dg  # type: ignore
         text_area_proto = TextAreaProto()
         text_area_proto.label = label
         text_area_proto.default = str(value)
@@ -111,4 +109,4 @@ class TextWidgetsMixin:
 
         ui_value = _get_widget_ui_value("text_area", text_area_proto, user_key=key)
         current_value = ui_value if ui_value is not None else value
-        return dg._enqueue("text_area", text_area_proto, str(current_value))
+        return dg._enqueue("text_area", text_area_proto, str(current_value))  # type: ignore

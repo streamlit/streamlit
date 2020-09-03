@@ -16,11 +16,10 @@ class AlertMixin:
         >>> st.error('This is an error')
 
         """
-        dg = dg._active_dg  # type: ignore
         alert_proto = AlertProto()
         alert_proto.body = _clean_text(body)
         alert_proto.format = AlertProto.ERROR
-        return dg._enqueue("alert", alert_proto)
+        return dg._enqueue("alert", alert_proto)  # type: ignore
 
     def warning(dg, body):
         """Display warning message.
@@ -35,11 +34,10 @@ class AlertMixin:
         >>> st.warning('This is a warning')
 
         """
-        dg = dg._active_dg  # type: ignore
         alert_proto = AlertProto()
         alert_proto.body = _clean_text(body)
         alert_proto.format = AlertProto.WARNING
-        return dg._enqueue("alert", alert_proto)
+        return dg._enqueue("alert", alert_proto)  # type: ignore
 
     def info(dg, body):
         """Display an informational message.
@@ -54,11 +52,10 @@ class AlertMixin:
         >>> st.info('This is a purely informational message')
 
         """
-        dg = dg._active_dg  # type: ignore
         alert_proto = AlertProto()
         alert_proto.body = _clean_text(body)
         alert_proto.format = AlertProto.INFO
-        return dg._enqueue("alert", alert_proto)
+        return dg._enqueue("alert", alert_proto)  # type: ignore
 
     def success(dg, body):
         """Display a success message.
@@ -73,8 +70,7 @@ class AlertMixin:
         >>> st.success('This is a success message!')
 
         """
-        dg = dg._active_dg  # type: ignore
         alert_proto = AlertProto()
         alert_proto.body = _clean_text(body)
         alert_proto.format = AlertProto.SUCCESS
-        return dg._enqueue("alert", alert_proto)
+        return dg._enqueue("alert", alert_proto)  # type: ignore

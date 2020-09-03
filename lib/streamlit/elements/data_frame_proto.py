@@ -78,11 +78,10 @@ class DataFrameMixin:
            height: 285px
 
         """
-        dg = dg._active_dg  # type: ignore
         data_frame_proto = DataFrameProto()
         marshall_data_frame(data, data_frame_proto)
 
-        return dg._enqueue(
+        return dg._enqueue(  # type: ignore
             "data_frame", data_frame_proto, element_width=width, element_height=height,
         )
 
@@ -111,10 +110,9 @@ class DataFrameMixin:
            height: 480px
 
         """
-        dg = dg._active_dg  # type: ignore
         table_proto = DataFrameProto()
         marshall_data_frame(data, table_proto)
-        return dg._enqueue("table", table_proto)
+        return dg._enqueue("table", table_proto)  # type: ignore
 
 
 def marshall_data_frame(data, proto_df):
