@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { ReactElement } from "react"
 import without from "lodash/without"
 import { Map as ImmutableMap } from "immutable"
 import { multiSelectOverrides } from "lib/widgetTheme"
@@ -26,7 +26,6 @@ import {
   OnChangeParams,
   StyledDropdownListItem,
 } from "baseui/select"
-import { withStyle } from "baseui"
 import { StyledList, StyledEmptyState, OptionListProps } from "baseui/menu"
 import { FixedSizeList } from "react-window"
 
@@ -54,34 +53,30 @@ interface MultiselectOption {
   value: string
 }
 
-const ListItem = withStyle(StyledDropdownListItem, {
-  paddingTop: 0,
-  paddingBottom: 0,
-  display: "flex",
-  alignItems: "center",
-})
-
-const FixedSizeListItem = ({
-  data,
-  index,
-  style,
-}: {
+interface FixedSizeListeItemProps {
   data: { props: OptionListProps }[]
   index: number
   style: React.CSSProperties
-}) => {
-  const { item, overrides, ...restChildProps } = data[index].props
+}
+
+function FixedSizeListItem(props: FixedSizeListeItemProps): ReactElement {
+  const { data, index, style } = props
+  const { item, ...restChildProps } = data[index].props
   return (
-    <ListItem
+    <StyledDropdownListItem
       key={item.value}
       style={{
         boxSizing: "border-box",
+        paddingTop: 0,
+        paddingBottom: 0,
+        display: "flex",
+        alignItems: "center",
         ...style,
       }}
       {...restChildProps}
     >
       {item.label}
-    </ListItem>
+    </StyledDropdownListItem>
   )
 }
 
@@ -92,7 +87,7 @@ const VirtualDropdown = React.forwardRef((props: any, ref) => {
 
   if (!children[0] || !children[0].props.item) {
     return (
-      <StyledList $style={{ height: EMPTY_LIST_HEIGHT + "px" }} ref={ref}>
+      <StyledList $style={{ height: `${EMPTY_LIST_HEIGHT}px` }} ref={ref}>
         <StyledEmptyState {...children[0].props} />
       </StyledList>
     )
@@ -104,7 +99,7 @@ const VirtualDropdown = React.forwardRef((props: any, ref) => {
   )
 
   return (
-    <StyledList $style={{ height: height + "px" }} ref={ref}>
+    <StyledList ref={ref}>
       <FixedSizeList
         width="100%"
         height={height}
@@ -120,6 +115,8 @@ const VirtualDropdown = React.forwardRef((props: any, ref) => {
     </StyledList>
   )
 })
+
+VirtualDropdown.displayName = "VirtualDropdown"
 
 class Multiselect extends React.PureComponent<Props, State> {
   public state: State = {
