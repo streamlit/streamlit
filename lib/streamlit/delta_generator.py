@@ -253,6 +253,8 @@ class DeltaGenerator(
         This way, users can (say) use st.image with a stream of different images,
         and Streamlit will expire the older images and replace them in place.
         """
+        # Switch to the active DeltaGenerator, in case we're in a `with` block.
+        self = self._active_dg
         container = self._container  # Proto index of container (e.g. MAIN=1)
 
         if self._cursor:
@@ -298,6 +300,8 @@ class DeltaGenerator(
             element.
 
         """
+        # Switch to the active DeltaGenerator, in case we're in a `with` block.
+        self = self._active_dg
         # Warn if we're called from within an @st.cache function
         caching.maybe_show_cached_st_function_warning(self, delta_type)
 
@@ -347,6 +351,9 @@ class DeltaGenerator(
         return _value_or_dg(return_value, output_dg)
 
     def container(self):
+        # Switch to the active DeltaGenerator, in case we're in a `with` block.
+        self = self._active_dg
+
         if self._container is None or self._cursor is None:
             return self
 
@@ -473,6 +480,9 @@ class DeltaGenerator(
         >>> my_chart.add_rows(some_fancy_name=df2)  # <-- name used as keyword
 
         """
+        # Switch to the active DeltaGenerator, in case we're in a `with` block.
+        self = self._active_dg
+
         if self._container is None or self._cursor is None:
             return self
 
