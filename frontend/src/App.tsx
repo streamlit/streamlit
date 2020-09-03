@@ -179,16 +179,14 @@ export class App extends PureComponent<Props, State> {
   keyMap: KeyMap = {
     RERUN: "r",
     CLEAR_CACHE: "c",
+    // We use key up for stop recording to ensure the esc key doesn't trigger
+    // other actions (like exiting modals)
     STOP_RECORDING: { sequence: "esc", action: "keyup" },
   }
 
   keyHandlers = {
-    // The r key reruns the script.
     RERUN: (): void => this.rerunScript(),
-
-    // The c key clears the cache.
     CLEAR_CACHE: (): void => this.openClearCacheDialog(),
-
     STOP_RECORDING: this.props.screenCast.stopRecording,
   }
 

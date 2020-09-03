@@ -61,7 +61,7 @@ class VideoRecordedDialog extends PureComponent<Props> {
       >
         <ModalHeader>Next steps</ModalHeader>
         <ModalBody>
-          <div className="steps-container">
+          <div className="screencast-dialog">
             <div className="first-column first-step">Step 1</div>
             <div className="second-column first-step">
               <p>Preview your video below:</p>

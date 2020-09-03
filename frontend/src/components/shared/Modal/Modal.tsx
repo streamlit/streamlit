@@ -9,9 +9,7 @@ import {
 } from "baseui/modal"
 import { KIND, ButtonOverrides } from "baseui/button"
 import { Kind } from "components/shared/Button"
-import { colors } from "lib/widgetTheme"
-
-import "./Modal.scss"
+import { colors, fontStyles } from "lib/widgetTheme"
 
 const { black, gray, grayLighter, primary, primaryA50, white } = colors
 
@@ -32,9 +30,15 @@ function ModalHeader({ children }: ModalHeaderProps): ReactElement {
         paddingBottom: "1rem",
         paddingLeft: "1rem",
         borderBottom: `1px solid ${grayLighter}`,
+        fontFamily: fontStyles.fontFamily,
+        fontSize: "1.25rem",
+        margin: 0,
+        fontWeight: 300,
+        lineHeight: 1.5,
+        textTransform: "none",
       }}
     >
-      <span className="modalTitle">{children}</span>
+      {children}
     </UIModalHeader>
   )
 }
@@ -45,8 +49,16 @@ export interface ModalBodyProps {
 
 function ModalBody({ children }: ModalBodyProps): ReactElement {
   return (
-    <UIModalBody>
-      <div className="modalBody">{children}</div>
+    <UIModalBody
+      style={{
+        width: "100%",
+        height: "100%",
+        padding: 0,
+        color: black,
+        fontSize: fontStyles.fontSize,
+      }}
+    >
+      {children}
     </UIModalBody>
   )
 }
