@@ -128,7 +128,9 @@ class DeltaGenerator(
     # The pydoc below is for user consumption, so it doesn't talk about
     # DeltaGenerator constructor parameters (which users should never use). For
     # those, see above.
-    def __init__(self, container=BlockPath_pb2.BlockPath.MAIN, cursor=None):
+    def __init__(
+        self, container=BlockPath_pb2.BlockPath.MAIN, cursor=None, parent=None
+    ):
         """Inserts or updates elements in Streamlit apps.
 
         As a user, you should never initialize this object by hand. Instead,
@@ -161,12 +163,45 @@ class DeltaGenerator(
         #
         self._provided_cursor = cursor
 
+        # To support the `with dg` notation, DGs are arranged as a tree.
+        # The root of the tree is the main DG
+        self.parent = parent
+
+        # Track the DG used for the `with` block
+        # NOTE: Should only ever be tracked by the main dg
+        self._with_dg = self
+
         # Change the module of all mixin'ed functions to be st.delta_generator,
         # instead of the original module (e.g. st.elements.markdown)
         for mixin in self.__class__.__bases__:
             for (name, func) in mixin.__dict__.items():
                 if callable(func):
                     func.__module__ = self.__module__
+
+    def __enter__(self):
+        # with block started. store the current DG
+        self._main_dg._with_dg = self
+
+    def __exit__(self, type, value, traceback):
+        # with block ended. Reset the current dg back to MAIN
+        # NOTE: This won't handle nested with blocks correctly
+        self._main_dg._with_dg = self._main_dg
+        # Re-raise any exceptions
+        return False
+
+    @property
+    def _active_dg(self):
+        if self == self._main_dg:
+            # `st.button`: Use the current `with` dg
+            return self._with_dg
+        else:
+            # `st.sidebar.button`: Ignore the `with` dg
+            return self
+
+    @property
+    def _main_dg(self):
+        # Recursively traverse up the tree to find the main DG (parent = None)
+        return self.parent._main_dg if self.parent else self
 
     def __getattr__(self, name):
         import streamlit as st
@@ -302,6 +337,7 @@ class DeltaGenerator(
                 cursor=self._cursor.get_locked_cursor(
                     delta_type=delta_type, last_index=last_index
                 ),
+                parent=self,
             )
         else:
             # If the message was not enqueued, just return self since it's a
@@ -326,7 +362,9 @@ class DeltaGenerator(
         block_cursor = cursor.RunningCursor(
             path=self._cursor.path + (self._cursor.index,)
         )
-        block_dg = DeltaGenerator(container=self._container, cursor=block_cursor)
+        block_dg = DeltaGenerator(
+            container=self._container, cursor=block_cursor, parent=self
+        )
 
         # Must be called to increment this cursor's index.
         self._cursor.get_locked_cursor(last_index=None)
