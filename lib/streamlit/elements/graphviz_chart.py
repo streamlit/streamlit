@@ -117,7 +117,7 @@ class GraphvizMixin:
 
         graphviz_chart_proto = GraphVizChartProto()
         marshall(graphviz_chart_proto, figure_or_dot, use_container_width)
-        return dg._enqueue("graphviz_chart", graphviz_chart_proto)  # type: ignore
+        return dg._enqueue("graphviz_chart", graphviz_chart_proto)
 
 
 def marshall(proto, figure_or_dot, use_container_width):

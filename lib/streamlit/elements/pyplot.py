@@ -75,8 +75,8 @@ class PyplotMixin:
         """
         dg = dg._active_dg  # type: ignore
         image_list_proto = ImageListProto()
-        marshall(dg._get_coordinates, image_list_proto, fig, clear_figure, **kwargs)  # type: ignore
-        return dg._enqueue("imgs", image_list_proto)  # type: ignore
+        marshall(dg._get_coordinates, image_list_proto, fig, clear_figure, **kwargs)
+        return dg._enqueue("imgs", image_list_proto)
 
 
 def marshall(coordinates, image_list_proto, fig=None, clear_figure=True, **kwargs):

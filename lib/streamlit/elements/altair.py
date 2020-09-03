@@ -70,7 +70,7 @@ class AltairMixin:
         marshall(vega_lite_chart_proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        return dg._enqueue("line_chart", vega_lite_chart_proto, last_index=last_index)  # type: ignore
+        return dg._enqueue("line_chart", vega_lite_chart_proto, last_index=last_index)
 
     def area_chart(dg, data=None, width=0, height=0, use_container_width=True):
         """Display a area chart.
@@ -115,7 +115,7 @@ class AltairMixin:
         marshall(vega_lite_chart_proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        return dg._enqueue("area_chart", vega_lite_chart_proto, last_index=last_index)  # type: ignore
+        return dg._enqueue("area_chart", vega_lite_chart_proto, last_index=last_index)
 
     def bar_chart(dg, data=None, width=0, height=0, use_container_width=True):
         """Display a bar chart.
@@ -154,14 +154,13 @@ class AltairMixin:
 
         """
         dg = dg._active_dg  # type: ignore
-        dg = dg._active_dg  # type: ignore
         vega_lite_chart_proto = VegaLiteChartProto()
 
         chart = generate_chart("bar", data, width, height)
         marshall(vega_lite_chart_proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        return dg._enqueue("bar_chart", vega_lite_chart_proto, last_index=last_index)  # type: ignore
+        return dg._enqueue("bar_chart", vega_lite_chart_proto, last_index=last_index)
 
     def altair_chart(dg, altair_chart, width=0, use_container_width=False):
         """Display a chart using the Altair library.
@@ -219,7 +218,7 @@ class AltairMixin:
             altair_chart,
             use_container_width=use_container_width,
         )
-        return dg._enqueue("vega_lite_chart", vega_lite_chart_proto)  # type: ignore
+        return dg._enqueue("vega_lite_chart", vega_lite_chart_proto)
 
 
 def _is_date_column(df, name):

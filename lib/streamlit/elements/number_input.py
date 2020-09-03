@@ -199,4 +199,4 @@ class NumberInputMixin:
         )
 
         return_value = ui_value if ui_value is not None else value
-        return dg._enqueue("number_input", number_input_proto, return_value)  # type: ignore
+        return dg._enqueue("number_input", number_input_proto, return_value)

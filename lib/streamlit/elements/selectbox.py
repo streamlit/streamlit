@@ -66,4 +66,4 @@ class SelectboxMixin:
             if len(options) > 0 and options[current_value] is not None
             else NoValue
         )
-        return dg._enqueue("selectbox", selectbox_proto, return_value)  # type: ignore
+        return dg._enqueue("selectbox", selectbox_proto, return_value)

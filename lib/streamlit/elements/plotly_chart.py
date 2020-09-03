@@ -153,7 +153,7 @@ class PlotlyMixin:
         marshall(
             plotly_chart_proto, figure_or_data, use_container_width, sharing, **kwargs
         )
-        return dg._enqueue("plotly_chart", plotly_chart_proto)  # type: ignore
+        return dg._enqueue("plotly_chart", plotly_chart_proto)
 
 
 def marshall(proto, figure_or_data, use_container_width, sharing, **kwargs):

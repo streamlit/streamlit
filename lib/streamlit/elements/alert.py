@@ -20,7 +20,7 @@ class AlertMixin:
         alert_proto = AlertProto()
         alert_proto.body = _clean_text(body)
         alert_proto.format = AlertProto.ERROR
-        return dg._enqueue("alert", alert_proto)  # type: ignore
+        return dg._enqueue("alert", alert_proto)
 
     def warning(dg, body):
         """Display warning message.
@@ -39,7 +39,7 @@ class AlertMixin:
         alert_proto = AlertProto()
         alert_proto.body = _clean_text(body)
         alert_proto.format = AlertProto.WARNING
-        return dg._enqueue("alert", alert_proto)  # type: ignore
+        return dg._enqueue("alert", alert_proto)
 
     def info(dg, body):
         """Display an informational message.
@@ -58,7 +58,7 @@ class AlertMixin:
         alert_proto = AlertProto()
         alert_proto.body = _clean_text(body)
         alert_proto.format = AlertProto.INFO
-        return dg._enqueue("alert", alert_proto)  # type: ignore
+        return dg._enqueue("alert", alert_proto)
 
     def success(dg, body):
         """Display a success message.
@@ -77,4 +77,4 @@ class AlertMixin:
         alert_proto = AlertProto()
         alert_proto.body = _clean_text(body)
         alert_proto.format = AlertProto.SUCCESS
-        return dg._enqueue("alert", alert_proto)  # type: ignore
+        return dg._enqueue("alert", alert_proto)

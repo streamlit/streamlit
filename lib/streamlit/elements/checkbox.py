@@ -39,4 +39,4 @@ class CheckboxMixin:
 
         ui_value = _get_widget_ui_value("checkbox", checkbox_proto, user_key=key)
         current_value = ui_value if ui_value is not None else value
-        return dg._enqueue("checkbox", checkbox_proto, bool(current_value))  # type: ignore
+        return dg._enqueue("checkbox", checkbox_proto, bool(current_value))

@@ -47,4 +47,4 @@ class JsonMixin:
 
         json_proto = JsonProto()
         json_proto.body = body
-        return dg._enqueue("json", json_proto)  # type: ignore
+        return dg._enqueue("json", json_proto)

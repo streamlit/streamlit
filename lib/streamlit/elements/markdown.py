@@ -60,7 +60,7 @@ class MarkdownMixin:
         markdown_proto.body = _clean_text(body)
         markdown_proto.allow_html = unsafe_allow_html
 
-        return dg._enqueue("markdown", markdown_proto)  # type: ignore
+        return dg._enqueue("markdown", markdown_proto)
 
     def header(dg, body):
         """Display text in header formatting.
@@ -82,7 +82,7 @@ class MarkdownMixin:
         dg = dg._active_dg  # type: ignore
         header_proto = MarkdownProto()
         header_proto.body = "## %s" % _clean_text(body)
-        return dg._enqueue("markdown", header_proto)  # type: ignore
+        return dg._enqueue("markdown", header_proto)
 
     def subheader(dg, body):
         """Display text in subheader formatting.
@@ -104,7 +104,7 @@ class MarkdownMixin:
         dg = dg._active_dg  # type: ignore
         subheader_proto = MarkdownProto()
         subheader_proto.body = "### %s" % _clean_text(body)
-        return dg._enqueue("markdown", subheader_proto)  # type: ignore
+        return dg._enqueue("markdown", subheader_proto)
 
     def code(dg, body, language="python"):
         """Display a code block with optional syntax highlighting.
@@ -138,7 +138,7 @@ class MarkdownMixin:
             "body": body,
         }
         code_proto.body = _clean_text(markdown)
-        return dg._enqueue("markdown", code_proto)  # type: ignore
+        return dg._enqueue("markdown", code_proto)
 
     def title(dg, body):
         """Display text in title formatting.
@@ -163,7 +163,7 @@ class MarkdownMixin:
         dg = dg._active_dg  # type: ignore
         title_proto = MarkdownProto()
         title_proto.body = "# %s" % _clean_text(body)
-        return dg._enqueue("markdown", title_proto)  # type: ignore
+        return dg._enqueue("markdown", title_proto)
 
     def latex(dg, body):
         # This docstring needs to be "raw" because of the backslashes in the
@@ -202,4 +202,4 @@ class MarkdownMixin:
 
         latex_proto = MarkdownProto()
         latex_proto.body = "$$\n%s\n$$" % _clean_text(body)
-        return dg._enqueue("markdown", latex_proto)  # type: ignore
+        return dg._enqueue("markdown", latex_proto)

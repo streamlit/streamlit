@@ -369,4 +369,4 @@ class SliderMixin:
             ]
         # If the original value was a list/tuple, so will be the output (and vice versa)
         return_value = current_value[0] if single_value else tuple(current_value)
-        return dg._enqueue("slider", slider_proto, return_value)  # type: ignore
+        return dg._enqueue("slider", slider_proto, return_value)

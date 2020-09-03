@@ -112,4 +112,4 @@ class SelectSliderMixin:
 
         # If the original value was a list/tuple, so will be the output (and vice versa)
         return_value = tuple(current_value) if is_range_value else current_value[0]
-        return dg._enqueue("slider", slider_proto, return_value)  # type: ignore
+        return dg._enqueue("slider", slider_proto, return_value)

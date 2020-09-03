@@ -72,4 +72,4 @@ class ColorPickerMixin:
             "color_picker", color_picker_proto, user_key=key
         )
         current_value = ui_value if ui_value is not None else value
-        return dg._enqueue("color_picker", color_picker_proto, str(current_value))  # type: ignore
+        return dg._enqueue("color_picker", color_picker_proto, str(current_value))

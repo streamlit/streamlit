@@ -50,4 +50,4 @@ class ProgressMixin:
                 "Progress Value has invalid type: %s" % type(value).__name__
             )
 
-        return dg._enqueue("progress", progress_proto)  # type: ignore
+        return dg._enqueue("progress", progress_proto)

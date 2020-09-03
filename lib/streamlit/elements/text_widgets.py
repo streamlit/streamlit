@@ -58,7 +58,7 @@ class TextWidgetsMixin:
 
         ui_value = _get_widget_ui_value("text_input", text_input_proto, user_key=key)
         current_value = ui_value if ui_value is not None else value
-        return dg._enqueue("text_input", text_input_proto, str(current_value))  # type: ignore
+        return dg._enqueue("text_input", text_input_proto, str(current_value))
 
     def text_area(dg, label, value="", height=None, max_chars=None, key=None):
         """Display a multi-line text input widget.
@@ -111,4 +111,4 @@ class TextWidgetsMixin:
 
         ui_value = _get_widget_ui_value("text_area", text_area_proto, user_key=key)
         current_value = ui_value if ui_value is not None else value
-        return dg._enqueue("text_area", text_area_proto, str(current_value))  # type: ignore
+        return dg._enqueue("text_area", text_area_proto, str(current_value))
