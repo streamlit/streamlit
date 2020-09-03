@@ -51,9 +51,14 @@ function ModalBody({ children }: ModalBodyProps): ReactElement {
   return (
     <UIModalBody
       style={{
-        width: "100%",
-        height: "100%",
-        padding: 0,
+        marginTop: 0,
+        marginLeft: 0,
+        marginRight: 0,
+        marginBottom: 0,
+        paddingTop: "1rem",
+        paddingRight: "1rem",
+        paddingBottom: "1rem",
+        paddingLeft: "1rem",
         color: black,
         fontSize: fontStyles.fontSize,
       }}
