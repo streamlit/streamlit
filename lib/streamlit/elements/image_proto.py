@@ -103,7 +103,7 @@ class ImageMixin:
            height: 630px
 
         """
-        dg = dg._active_dg
+        dg = dg._active_dg  # type: ignore
 
         format = kwargs.get("format")
         if format != None:

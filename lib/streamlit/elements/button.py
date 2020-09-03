@@ -29,7 +29,7 @@ class ButtonMixin:
         ...     st.write('Goodbye')
 
         """
-        dg = dg._active_dg
+        dg = dg._active_dg  # type: ignore
         button_proto = ButtonProto()
 
         button_proto.label = label

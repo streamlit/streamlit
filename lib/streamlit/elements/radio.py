@@ -45,7 +45,7 @@ class RadioMixin:
         ...     st.write("You didn\'t select comedy.")
 
         """
-        dg = dg._active_dg
+        dg = dg._active_dg  # type: ignore
         options = ensure_iterable(options)
 
         if not isinstance(index, int):

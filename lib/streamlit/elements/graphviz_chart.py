@@ -95,7 +95,7 @@ class GraphvizMixin:
            height: 400px
 
         """
-        dg = dg._active_dg
+        dg = dg._active_dg  # type: ignore
         if width != 0 and height != 0:
             import streamlit as st
 

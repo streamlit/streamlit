@@ -51,7 +51,7 @@ class MultiSelectMixin:
            `GitHub issue #1059 <https://github.com/streamlit/streamlit/issues/1059>`_ for updates on the issue.
 
         """
-        dg = dg._active_dg
+        dg = dg._active_dg  # type: ignore
         options = ensure_iterable(options)
 
         # Perform validation checks and return indices base on the default values.

@@ -40,7 +40,7 @@ class SelectboxMixin:
         >>> st.write('You selected:', option)
 
         """
-        dg = dg._active_dg
+        dg = dg._active_dg  # type: ignore
         options = ensure_iterable(options)
 
         if not isinstance(index, int):

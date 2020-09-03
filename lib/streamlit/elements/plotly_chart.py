@@ -124,7 +124,7 @@ class PlotlyMixin:
            height: 400px
 
         """
-        dg = dg._active_dg
+        dg = dg._active_dg  # type: ignore
         # NOTE: "figure_or_data" is the name used in Plotly's .plot() method
         # for their main parameter. I don't like the name, but it's best to
         # keep it in sync with what Plotly calls it.

@@ -73,7 +73,7 @@ class PyplotMixin:
         For more information, see https://matplotlib.org/faq/usage_faq.html.
 
         """
-        dg = dg._active_dg
+        dg = dg._active_dg  # type: ignore
         image_list_proto = ImageListProto()
         marshall(dg._get_coordinates, image_list_proto, fig, clear_figure, **kwargs)  # type: ignore
         return dg._enqueue("imgs", image_list_proto)  # type: ignore

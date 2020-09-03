@@ -34,7 +34,7 @@ class TimeWidgetsMixin:
         >>> st.write('Alarm is set for', t)
 
         """
-        dg = dg._active_dg
+        dg = dg._active_dg  # type: ignore
         # Set value default.
         if value is None:
             value = datetime.now().time()
@@ -97,7 +97,7 @@ class TimeWidgetsMixin:
         >>> st.write('Your birthday is:', d)
 
         """
-        dg = dg._active_dg
+        dg = dg._active_dg  # type: ignore
         # Set value default.
         if value is None:
             value = datetime.now().date()

@@ -14,7 +14,7 @@ class BalloonsMixin:
         ...then watch your app and get ready for a celebration!
 
         """
-        dg = dg._active_dg
+        dg = dg._active_dg  # type: ignore
         balloons_proto = BalloonsProto()
 
         balloons_proto.type = BalloonsProto.DEFAULT

@@ -85,7 +85,7 @@ class PydeckMixin:
            height: 530px
 
         """
-        dg = dg._active_dg
+        dg = dg._active_dg  # type: ignore
         pydeck_proto = PydeckProto()
         marshall(pydeck_proto, pydeck_obj, use_container_width)
         return dg._enqueue("deck_gl_json_chart", pydeck_proto)  # type: ignore

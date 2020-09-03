@@ -16,7 +16,7 @@ class AlertMixin:
         >>> st.error('This is an error')
 
         """
-        dg = dg._active_dg
+        dg = dg._active_dg  # type: ignore
         alert_proto = AlertProto()
         alert_proto.body = _clean_text(body)
         alert_proto.format = AlertProto.ERROR
@@ -35,7 +35,7 @@ class AlertMixin:
         >>> st.warning('This is a warning')
 
         """
-        dg = dg._active_dg
+        dg = dg._active_dg  # type: ignore
         alert_proto = AlertProto()
         alert_proto.body = _clean_text(body)
         alert_proto.format = AlertProto.WARNING
@@ -54,7 +54,7 @@ class AlertMixin:
         >>> st.info('This is a purely informational message')
 
         """
-        dg = dg._active_dg
+        dg = dg._active_dg  # type: ignore
         alert_proto = AlertProto()
         alert_proto.body = _clean_text(body)
         alert_proto.format = AlertProto.INFO
@@ -73,7 +73,7 @@ class AlertMixin:
         >>> st.success('This is a success message!')
 
         """
-        dg = dg._active_dg
+        dg = dg._active_dg  # type: ignore
         alert_proto = AlertProto()
         alert_proto.body = _clean_text(body)
         alert_proto.format = AlertProto.SUCCESS

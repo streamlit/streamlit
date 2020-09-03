@@ -64,7 +64,7 @@ class SelectSliderMixin:
         ...     value=('red', 'blue'))
         >>> st.write('You selected wavelengths between', start_color, 'and', end_color)
         """
-        dg = dg._active_dg
+        dg = dg._active_dg  # type: ignore
 
         options = ensure_iterable(options)
 

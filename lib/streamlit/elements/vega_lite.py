@@ -84,7 +84,7 @@ class VegaLiteMixin:
         translated to the syntax shown above.
 
         """
-        dg = dg._active_dg
+        dg = dg._active_dg  # type: ignore
         vega_lite_chart_proto = VegaLiteChartProto()
 
         if width != 0:

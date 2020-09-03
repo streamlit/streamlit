@@ -78,7 +78,7 @@ class DataFrameMixin:
            height: 285px
 
         """
-        dg = dg._active_dg
+        dg = dg._active_dg  # type: ignore
         data_frame_proto = DataFrameProto()
         marshall_data_frame(data, data_frame_proto)
 
@@ -111,7 +111,7 @@ class DataFrameMixin:
            height: 480px
 
         """
-        dg = dg._active_dg
+        dg = dg._active_dg  # type: ignore
         table_proto = DataFrameProto()
         marshall_data_frame(data, table_proto)
         return dg._enqueue("table", table_proto)  # type: ignore
