@@ -32,5 +32,8 @@ describe("st.container", () => {
     cy.get(".element-container .stMarkdown p")
       .eq(2)
       .contains("Line 1");
+    cy.get(".element-container .stMarkdown p")
+      .eq(3)
+      .contains("Line 4");
   });
 });

@@ -18,4 +18,6 @@ container = st.container()
 
 st.write("Line 1")
 container.write("Line 2")
-container.write("Line 3")
+with container:
+    "Line 3"
+st.write("Line 4")
