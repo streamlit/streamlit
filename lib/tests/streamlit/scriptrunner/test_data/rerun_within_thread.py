@@ -3,6 +3,7 @@ import time
 
 import streamlit as st
 
+
 def get_session_id():
     ctx = st.report_thread.get_report_ctx()
     session_id = ctx.session_id
@@ -21,7 +22,9 @@ def rerun(session_id=None):
 
     session.request_rerun()
 
+
 session_id = get_session_id()
+
 
 def do_a_rerun():
     rerun(session_id)
