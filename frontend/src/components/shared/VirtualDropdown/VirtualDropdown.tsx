@@ -15,7 +15,8 @@ interface FixedSizeListeItemProps {
 
 function FixedSizeListItem(props: FixedSizeListeItemProps): ReactElement {
   const { data, index, style } = props
-  const { item, ...restChildProps } = data[index].props
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { item, overrides, ...restChildProps } = data[index].props
   return (
     <StyledDropdownListItem
       key={item.value}
