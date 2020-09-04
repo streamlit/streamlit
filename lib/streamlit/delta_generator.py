@@ -482,9 +482,6 @@ class DeltaGenerator(
         >>> my_chart.add_rows(some_fancy_name=df2)  # <-- name used as keyword
 
         """
-        # Switch to the active DeltaGenerator, in case we're in a `with` block.
-        self = self._active_dg
-
         if self._container is None or self._cursor is None:
             return self
 
