@@ -43,4 +43,20 @@ describe("st.pyplot", () => {
 
     cy.get(".stImage > img").matchImageSnapshot("pyplot-check-if-cleared");
   });
+
+  it("shows deprecation warning", () => {
+    cy.get(".stImage")
+      .first()
+      .closest(".element-container")
+      .prev()
+      .should("contain", "PyplotGlobalUseWarning");
+  });
+
+  it("hides deprecation warning", () => {
+    cy.get(".stImage")
+      .eq(1)
+      .closest(".element-container")
+      .prev()
+      .should("not.contain", "PyplotGlobalUseWarning");
+  });
 });

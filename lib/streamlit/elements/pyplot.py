@@ -16,7 +16,9 @@
 
 import io
 
+from streamlit import config
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
+from streamlit.errors import StreamlitDeprecationWarning
 from streamlit.logger import get_logger
 
 import streamlit.elements.image_proto as image_proto
@@ -32,8 +34,9 @@ class PyplotMixin:
         Parameters
         ----------
         fig : Matplotlib Figure
-            The figure to plot. When this argument isn't specified, which is
-            the usual case, this function will render the global plot.
+            The figure to plot. When this argument isn't specified, this
+            function will render the global plot. We have deprecated the use
+            of the global plot for thread safety.
 
         clear_figure : bool
             If True, the figure will be cleared after being rendered.
@@ -54,9 +57,10 @@ class PyplotMixin:
         >>> import numpy as np
         >>>
         >>> arr = np.random.normal(1, 1, size=100)
-        >>> plt.hist(arr, bins=20)
+        >>> fig, ax = plt.subplots()
+        >>> ax.hist(arr, bins=20)
         >>>
-        >>> st.pyplot()
+        >>> st.pyplot(fig)
 
         .. output::
            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=PwzFN7oLZsvb6HDdwdjkRB
@@ -73,6 +77,9 @@ class PyplotMixin:
         For more information, see https://matplotlib.org/faq/usage_faq.html.
 
         """
+
+        if not fig and config.get_option("deprecation.showPyplotGlobalUse"):
+            dg.exception(PyplotGlobalUseWarning())  # type: ignore
 
         image_list_proto = ImageListProto()
         marshall(dg._get_coordinates, image_list_proto, fig, clear_figure, **kwargs)  # type: ignore
@@ -93,6 +100,7 @@ def marshall(coordinates, image_list_proto, fig=None, clear_figure=True, **kwarg
     if not fig:
         if clear_figure is None:
             clear_figure = True
+
         fig = plt
 
     # Normally, dpi is set to 'figure', and the figure's dpi is set to 100.
@@ -123,3 +131,27 @@ def marshall(coordinates, image_list_proto, fig=None, clear_figure=True, **kwarg
     # plt calls will be starting fresh.
     if clear_figure:
         fig.clf()
+
+
+class PyplotGlobalUseWarning(StreamlitDeprecationWarning):
+    def __init__(self):
+        super(PyplotGlobalUseWarning, self).__init__(
+            msg=self._get_message(), config_option="deprecation.showPyplotGlobalUse"
+        )
+
+    def _get_message(self):
+        return """
+You are attempting to use the global pyplot instance to display your plots. We
+are deprecating this feature due to its lack of thread safety. We recommend
+using a [subplot](https://matplotlib.org/api/_as_gen/matplotlib.pyplot.subplot.html).
+
+```python
+>>> fig, ax = plt.subplots()
+>>> ax.scatter([1, 2, 3], [1, 2, 3])
+>>>    ... other plotting actions ...
+>>> st.pyplot(fig)
+```
+
+See [https://github.com/streamlit/streamlit/issues/923](https://github.com/streamlit/streamlit/issues/923)
+for more information.
+            """
