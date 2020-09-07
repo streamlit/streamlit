@@ -39,9 +39,10 @@ const VirtualDropdown = React.forwardRef((props: any, ref) => {
   const children = React.Children.toArray(props.children) as ReactElement[]
 
   if (!children[0] || !children[0].props.item) {
+    const childrenProps = children[0] ? children[0].props : {}
     return (
       <StyledList $style={{ height: `${EMPTY_LIST_HEIGHT}px` }} ref={ref}>
-        <StyledEmptyState {...children[0].props} />
+        <StyledEmptyState {...childrenProps} />
       </StyledList>
     )
   }
