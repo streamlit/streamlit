@@ -137,6 +137,11 @@ commands:
           command: |
             ${SUDO} apt-get install -y unixodbc-dev
 
+      - run:
+          name: Install graphviz dependencies
+          command: |
+            ${SUDO} apt-get install -y libgvc6
+
       - run: &activate_virtualenv
           name: Create virtualenv
           command: |
