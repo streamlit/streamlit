@@ -17,10 +17,7 @@
 
 import React, { ComponentType } from "react"
 import { shallow } from "enzyme"
-import withCollapsible, {
-  Props,
-  AnimatedComponentWrapper,
-} from "./withCollapsible"
+import withCollapsible, { Props, StyledToggle } from "./withCollapsible"
 
 const testComponent: ComponentType = () => <div>test</div>
 
@@ -40,25 +37,38 @@ describe("withCollapsible HOC", () => {
     expect(wrapper.html()).not.toBeNull()
   })
 
-  it("should render a collapsible component", () => {
+  it("should render a collapsible expanded component", () => {
     const props = getProps()
     const WithHoc = withCollapsible(testComponent)
     // @ts-ignore
     const wrapper = shallow(<WithHoc {...props} />)
-    const toggleHeader = wrapper.find(AnimatedComponentWrapper)
+    const toggleHeader = wrapper.find(StyledToggle)
 
     expect(toggleHeader.exists()).toBeTruthy()
+    expect(toggleHeader.text()).toEqual("Hide")
+  })
+
+  it("should render a collapsible collapsed component", () => {
+    const props = getProps({
+      collapsed: true,
+    })
+    const WithHoc = withCollapsible(testComponent)
+    // @ts-ignore
+    const wrapper = shallow(<WithHoc {...props} />)
+    const toggleHeader = wrapper.find(StyledToggle)
+
+    expect(toggleHeader.text()).toEqual("Show")
   })
 
   it("should render a non-collapsible component", () => {
     const props = getProps({
-      container: { collapsible: false },
+      collapsible: false,
     })
     const WithHoc = withCollapsible(testComponent)
 
     // @ts-ignore
     const wrapper = shallow(<WithHoc {...props} />)
-    const toggleHeader = wrapper.find(AnimatedComponentWrapper)
+    const toggleHeader = wrapper.find(StyledToggle)
     expect(toggleHeader.exists()).toBeFalsy()
   })
 })

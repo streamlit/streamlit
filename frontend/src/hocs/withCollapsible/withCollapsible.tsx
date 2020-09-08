@@ -15,13 +15,14 @@
  * limitations under the License.
  */
 
-import React, { ComponentType, ReactElement, useState } from "react"
+import React, { ComponentType, ReactElement, useEffect, useState } from "react"
 import { styled } from "styletron-react"
 import { colors, variables } from "lib/widgetTheme"
 
 export interface Props {
   collapsible: boolean
   label: string
+  collapsed: boolean
 }
 
 type ComponentProps = {
@@ -61,9 +62,17 @@ function withCollapsible(
   WrappedComponent: ComponentType<any>
 ): ComponentType<any> {
   const CollapsibleComponent = (props: Props): ReactElement => {
-    const [collapsed, toggleCollapse] = useState<boolean>(false)
+    const {
+      collapsible,
+      label,
+      collapsed: initialCollapsed,
+      ...componentProps
+    } = props
 
-    const { collapsible, label, ...componentProps } = props
+    const [collapsed, toggleCollapse] = useState<boolean>(initialCollapsed)
+    useEffect(() => {
+      toggleCollapse(initialCollapsed)
+    }, [initialCollapsed])
 
     const toggle = (): void => toggleCollapse(!collapsed)
 

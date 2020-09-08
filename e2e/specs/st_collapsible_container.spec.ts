@@ -17,12 +17,12 @@
 
 /// <reference types="cypress" />
 
-describe("st.container", () => {
+describe("st.collapsible_container", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
   });
 
-  it("permits multiple out-of-order elements", () => {
+  it("displays collapsible + regular containers properly", () => {
     cy.get(".stBlock")
       .first()
       .within(() => {
@@ -31,7 +31,39 @@ describe("st.container", () => {
     cy.get(".stBlock")
       .eq(1)
       .within(() => {
-        cy.get("small").should("not.exist");
+        cy.get("small").should("exist");
+      });
+    cy.get(".stBlock")
+      .eq(2)
+      .within(() => {
+        cy.get("small").should("exist");
+      });
+  });
+
+  it("collapses + expands", () => {
+    // Starts expanded
+    cy.get(".stBlock")
+      .eq(1)
+      .within(() => {
+        let toggle = cy.get("small");
+        toggle.should("exist");
+        toggle.should("have.text", "Hide");
+        toggle.click();
+
+        toggle = cy.get("small");
+        toggle.should("have.text", "Show");
+      });
+    // Starts collapsed
+    cy.get(".stBlock")
+      .eq(2)
+      .within(() => {
+        let toggle = cy.get("small");
+        toggle.should("exist");
+        toggle.should("have.text", "Show");
+        toggle.click();
+
+        toggle = cy.get("small");
+        toggle.should("have.text", "Hide");
       });
   });
 });

@@ -23,6 +23,7 @@ from streamlit.report_thread import get_report_ctx
 from streamlit.errors import StreamlitAPIException, StreamlitDeprecationWarning
 from streamlit.errors import NoSessionContext
 from streamlit.proto import BlockPath_pb2
+from streamlit.proto import Container_pb2
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto.Element_pb2 import Element
 from streamlit.logger import get_logger
@@ -310,7 +311,7 @@ class DeltaGenerator(
 
         return _value_or_dg(return_value, output_dg)
 
-    def _container_block(self, collapsible=None, label=None):
+    def _container_block(self, container_msg=None):
         if self._container is None or self._cursor is None:
             return self
 
@@ -319,10 +320,8 @@ class DeltaGenerator(
         msg.metadata.parent_block.container = self._container
         msg.metadata.parent_block.path[:] = self._cursor.path
         msg.metadata.delta_id = self._cursor.index
-
-        msg.metadata.container.collapsible = collapsible or False
-        if label:
-            msg.metadata.container.label = label
+        if container_msg:
+            msg.metadata.container.CopyFrom(container_msg)
 
         # Normally we'd return a new DeltaGenerator that uses the locked cursor
         # below. But in this case we want to return a DeltaGenerator that uses
@@ -341,8 +340,13 @@ class DeltaGenerator(
     def container(self):
         return self._container_block()
 
-    def collapsible_container(self, label=None):
-        return self._container_block(collapsible=True, label=label)
+    def collapsible_container(self, label=None, collapsed=False):
+        msg = Container_pb2.Container()
+        msg.collapsible = True
+        msg.collapsed = collapsed
+        if label:
+            msg.label = label
+        return self._container_block(container_msg=msg)
 
     def favicon(
         self,
