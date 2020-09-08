@@ -17,7 +17,6 @@
 
 import React from "react"
 import { shallow } from "enzyme"
-import { ModalHeader, ModalFooter, Button } from "reactstrap"
 
 import ScreencastDialog, { Props } from "./ScreencastDialog"
 
@@ -40,13 +39,8 @@ describe("ScreencastDialog", () => {
   it("should render a header", () => {
     const props = getProps()
     const wrapper = shallow(<ScreencastDialog {...props} />)
-    const headerWrapper = wrapper.find(ModalHeader)
-
-    // @ts-ignore
-    headerWrapper.props().toggle()
-
+    const headerWrapper = wrapper.find("ModalHeader")
     expect(headerWrapper.props().children).toBe("Record a screencast")
-    expect(props.onClose).toBeCalled()
   })
 
   describe("Modal body", () => {
@@ -84,7 +78,7 @@ describe("ScreencastDialog", () => {
     it("should have an start button", () => {
       const props = getProps()
       const wrapper = shallow(<ScreencastDialog {...props} />)
-      const buttonWrapper = wrapper.find(ModalFooter).find(Button)
+      const buttonWrapper = wrapper.find("ModalFooter").find("ModalButton")
 
       buttonWrapper.simulate("click")
 
