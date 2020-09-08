@@ -7,6 +7,11 @@ const LIST_ITEM_HEIGHT = 40
 const EMPTY_LIST_HEIGHT = 90
 const MAX_LIST_HEIGHT = 300
 
+/*
+ * A component that renders a large dropdown to render only a fixed amount of
+ * options at a time. Overall, the dropdown improves performance for
+ * [Multi]Select components to display a practically large number of options.
+ */
 interface FixedSizeListeItemProps {
   data: { props: OptionListProps }[]
   index: number
