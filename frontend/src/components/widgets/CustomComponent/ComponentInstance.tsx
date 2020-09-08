@@ -288,8 +288,22 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       // Parse arguments. Our JSON arguments are just stored in a JSON string.
       newArgs = JSON.parse(this.props.element.get("jsonArgs"))
 
-      // All other arguments are stored in the "specialArgs" list, from which
-      // we extract DataFrames and bytes.
+      // Some notes re: data marshalling:
+      //
+      // Non-JSON arguments are sent from Python in the "specialArgs"
+      // protobuf list. We get DataFrames and Bytes from this list - and
+      // any further non-JSON datatypes should also go into "specialArgs".
+      //
+      // We don't send protobuf objects to the iframe, however. Instead,
+      // JSON args and Bytes args are shipped to the iframe in an `args`
+      // dict.
+      //
+      // But! Because of a historical quirk in how this was first implemented,
+      // DataFrames are delivered to the iframe in their own separate Array,
+      // and then reassembled into the args dictionary by the receiving iframe.
+      // We can't change this state of affairs without breaking existing
+      // components, so this arrangement must remain until such time as we
+      // decide to ship components API v2.
       const specialArgs = this.props.element.get("specialArgs")
       specialArgs.forEach((specialArg: any) => {
         const key = specialArg.get("key")
