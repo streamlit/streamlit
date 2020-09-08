@@ -101,6 +101,9 @@ class MockComponent {
 
     this.instance = this.wrapper.instance()
 
+    // Ensure we mounted without error.
+    expect(this.instance.state.componentError).toBeUndefined()
+
     // Spy on the ComponentInstance's iframe's postMessage function.
     const unsafeInstance = this.instance as any
     this.receiveForwardMsg = jest.spyOn(
@@ -369,8 +372,8 @@ function createElementProp(
   dataframeArgs: any[] = []
 ): SimpleElement {
   return fromJS({
-    argsDataframe: dataframeArgs,
-    argsJson: JSON.stringify(jsonArgs),
+    specialArgs: dataframeArgs,
+    jsonArgs: JSON.stringify(jsonArgs),
     componentName: MOCK_COMPONENT_NAME,
     id: MOCK_WIDGET_ID,
     url: MOCK_COMPONENT_URL,
