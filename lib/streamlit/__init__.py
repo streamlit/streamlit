@@ -127,7 +127,7 @@ _config.on_config_parsed(_update_logger, True)
 
 
 _main = _DeltaGenerator(container=_BlockPath_pb2.BlockPath.MAIN)
-sidebar = _DeltaGenerator(container=_BlockPath_pb2.BlockPath.SIDEBAR)
+sidebar = _DeltaGenerator(container=_BlockPath_pb2.BlockPath.SIDEBAR, parent=_main)
 
 # DeltaGenerator methods:
 

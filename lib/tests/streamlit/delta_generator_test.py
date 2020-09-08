@@ -301,6 +301,26 @@ class DeltaGeneratorContainerTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(msg.metadata.delta_id, 1)
 
 
+class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
+    """Test the `with DG` feature"""
+
+    def test_with(self):
+        # Same as test_container_paths, but using `with` syntax
+        level3 = st.container().container().container()
+        with level3:
+            st.markdown("hi")
+            st.markdown("bye")
+
+        msg = self.get_message_from_queue()
+        self.assertEqual(msg.metadata.parent_block.path, [0, 0, 0])
+
+        # Now we're out of the `with` block, commands should use the main dg
+        st.markdown("outside")
+
+        msg = self.get_message_from_queue()
+        self.assertEqual(msg.metadata.parent_block.path, [])
+
+
 class DeltaGeneratorWriteTest(testutil.DeltaGeneratorTestCase):
     """Test DeltaGenerator Text, Alert, Json, and Markdown Classes."""
 
