@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+import { SpecialArg } from "autogen/proto"
 import ErrorElement from "components/shared/ErrorElement"
 import { mount, ReactWrapper } from "enzyme"
 import { fromJS } from "immutable"
@@ -68,7 +69,10 @@ class MockComponent {
    */
   public readonly receiveForwardMsg: jest.SpyInstance
 
-  public constructor(initialArgs: any = {}, initialDataframes: any = []) {
+  public constructor(
+    initialJSONArgs: { [name: string]: any } = {},
+    initialSpecialArgs: SpecialArg[] = []
+  ) {
     const mountNode = document.createElement("div")
     document.body.appendChild(mountNode)
 
@@ -90,7 +94,7 @@ class MockComponent {
     // existing DOM element - otherwise, iframe contentWindow is not available.
     this.wrapper = mount(
       <ComponentInstance
-        element={createElementProp(initialArgs, initialDataframes)}
+        element={createElementProp(initialJSONArgs, initialSpecialArgs)}
         registry={this.registry}
         width={100}
         disabled={false}
@@ -174,6 +178,66 @@ describe("ComponentInstance", () => {
     expect(iframe.prop("src")).toContain(MOCK_COMPONENT_URL)
     expect(iframe.prop("allow")).toEqual(DEFAULT_IFRAME_FEATURE_POLICY)
     expect(iframe.prop("sandbox")).toEqual(DEFAULT_IFRAME_SANDBOX_POLICY)
+  })
+
+  it("should send JSON args to iframe", () => {
+    const mc = new MockComponent()
+
+    // We should receive an initial RENDER message with no arguments
+    mc.sendBackMsg(ComponentMessageType.COMPONENT_READY, { apiVersion: 1 })
+    expect(mc.receiveForwardMsg).toHaveBeenLastCalledWith(
+      renderMsg({}, []),
+      "*"
+    )
+
+    // Simulate passing JSON arguments to the component.
+    const jsonArgs = { foo: "string", bar: 5 }
+    const element = createElementProp(jsonArgs, [])
+    mc.wrapper.setProps({ element })
+
+    expect(mc.instance.state.componentError).toBeUndefined()
+
+    // We should get those JSON arguments in our receiveForwardMsg callback.
+    expect(mc.receiveForwardMsg).toHaveBeenLastCalledWith(
+      renderMsg(jsonArgs, []),
+      "*"
+    )
+  })
+
+  it("should send bytes args to iframe", () => {
+    const mc = new MockComponent()
+
+    // We should receive an initial RENDER message with no arguments
+    mc.sendBackMsg(ComponentMessageType.COMPONENT_READY, { apiVersion: 1 })
+    expect(mc.receiveForwardMsg).toHaveBeenLastCalledWith(
+      renderMsg({}, []),
+      "*"
+    )
+
+    // Bytes are passed from the backend as "SpecialArgs".
+    const key1 = "bytes1"
+    const bytes1 = new Uint8Array([0, 1, 2, 3])
+    const key2 = "bytes2"
+    const bytes2 = new Uint8Array([4, 5, 6, 7])
+    const element = createElementProp({}, [
+      SpecialArg.create({ key: key1, bytes: bytes1 }),
+      SpecialArg.create({ key: key2, bytes: bytes2 }),
+    ])
+    mc.wrapper.setProps({ element })
+
+    expect(mc.instance.state.componentError).toBeUndefined()
+
+    // The iframe receives bytes in its args dict, alongside JSON.
+    // The funny `[key1]: bytes1` syntax is because these are computed
+    // property names (and not string literals).
+    expect(mc.receiveForwardMsg).toHaveBeenLastCalledWith(
+      renderMsg({ [key1]: bytes1, [key2]: bytes2 }, []),
+      "*"
+    )
+
+    it("should send dataframe args to iframe", () => {
+      // TODO for Henrikh
+    })
   })
 
   describe("COMPONENT_READY handler", () => {
@@ -376,7 +440,11 @@ describe("ComponentInstance", () => {
   })
 })
 
-function renderMsg(args: any, dataframes: any, disabled = false): any {
+function renderMsg(
+  args: { [name: string]: any },
+  dataframes: any[],
+  disabled = false
+): any {
   return forwardMsg(StreamlitMessageType.RENDER, {
     args,
     dfs: dataframes,
@@ -390,12 +458,17 @@ function forwardMsg(type: StreamlitMessageType, data: any): any {
 
 /** Create a ComponentInstance.props.element prop with the given args. */
 function createElementProp(
-  jsonArgs: any = {},
-  dataframeArgs: any[] = []
+  jsonArgs: { [name: string]: any } = {},
+  specialArgs: SpecialArg[] = []
 ): SimpleElement {
+  // Convert specialArgs to plain objects, for immutablejs-ification
+  const immutableFriendlySpecialArgs = specialArgs.map(arg =>
+    SpecialArg.toObject(arg, { oneofs: true })
+  )
+
   return fromJS({
-    specialArgs: dataframeArgs,
     jsonArgs: JSON.stringify(jsonArgs),
+    specialArgs: immutableFriendlySpecialArgs,
     componentName: MOCK_COMPONENT_NAME,
     id: MOCK_WIDGET_ID,
     url: MOCK_COMPONENT_URL,
