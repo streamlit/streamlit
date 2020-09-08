@@ -159,6 +159,7 @@
     "bl": "^2.2.1",
     "dot-prop": "^4.2.1",
     "esm": "^3.1.0",
+    "handlebars": "^4.4.5",
     "https-proxy-agent": "^2.2.4",
     "jquery": "^3.5.1",
     "kind-of": "^6.0.3",
