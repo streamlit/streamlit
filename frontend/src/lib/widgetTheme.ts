@@ -55,7 +55,7 @@ export const colors = {
   transparent: "transparent",
 }
 
-const fontStyles = {
+export const fontStyles = {
   fontFamily: fontFamilySans,
   fontSize: fontSizeBase,
   fontWeight: "normal",
