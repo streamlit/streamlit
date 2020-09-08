@@ -19,9 +19,8 @@ export enum ComponentMessageType {
 export enum StreamlitMessageType {
   // Sent by Streamlit when the component should re-render.
   // Data: {
-  //  args: any,     // JSON dictionary object
-  //  dfs: any[],    // list of {name: string, df: ArrowTable} pairs
-  //  bytes: any[],  // list of {name: string, bytes: UInt8Array} pairs
+  //  args: { [name: string]: any },  // dict of JSON and bytes args
+  //  dfs: any[],  // list of {name: string, df: ArrowTable} pairs
   //  disabled: boolean
   // }
   RENDER = "streamlit:render",
