@@ -291,19 +291,19 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       // Some notes re: data marshalling:
       //
       // Non-JSON arguments are sent from Python in the "specialArgs"
-      // protobuf list. We get DataFrames and Bytes from this list - and
-      // any further non-JSON datatypes should also go into "specialArgs".
+      // protobuf list. We get DataFrames and Bytes from this list (and
+      // any further non-JSON datatypes we add support for down the road will
+      // also go into it).
       //
-      // We don't send protobuf objects to the iframe, however. Instead,
-      // JSON args and Bytes args are shipped to the iframe in an `args`
-      // dict.
+      // We don't forward raw protobuf objects onto the iframe, however.
+      // Instead, JSON args and Bytes args are shipped to the iframe together
+      // in a plain old JS Object called `args`.
       //
-      // But! Because of a historical quirk in how this was first implemented,
-      // DataFrames are delivered to the iframe in their own separate Array,
-      // and then reassembled into the args dictionary by the receiving iframe.
-      // We can't change this state of affairs without breaking existing
-      // components, so this arrangement must remain until such time as we
-      // decide to ship components API v2.
+      // But! Because dataframes are delivered as instances of our custom
+      // "ArrowTable" class, they can't be sent to the iframe in this same
+      // `args` object. Instead, raw DataFrame data is delivered to the iframe
+      // in a separate Array. The iframe then constructs the required
+      // ArrowTable instances and inserts them into the `args` array itself.
       const specialArgs = this.props.element.get("specialArgs")
       specialArgs.forEach((specialArg: any) => {
         const key = specialArg.get("key")
