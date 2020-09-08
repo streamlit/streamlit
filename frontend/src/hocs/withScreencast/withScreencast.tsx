@@ -141,7 +141,6 @@ function withScreencast(
         this.recorder.getState() !== "inactive"
       ) {
         outputBlob = await this.recorder.stop()
-
         this.setState({
           outputBlob,
           currentState: "PREVIEW_FILE",

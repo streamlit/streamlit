@@ -128,7 +128,7 @@ describe("App", () => {
     const wrapper = shallow(<App {...props} />)
 
     // @ts-ignore
-    wrapper.instance().keyHandlers.esc()
+    wrapper.instance().keyHandlers.STOP_RECORDING()
 
     expect(props.screenCast.stopRecording).toBeCalled()
   })

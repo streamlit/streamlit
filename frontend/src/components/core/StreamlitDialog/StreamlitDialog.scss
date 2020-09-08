@@ -20,11 +20,11 @@
   margin-bottom: 0.5rem;
 }
 
-.streamlit-dialog .rerun-header {
+.rerun-header {
   margin-bottom: 0.5rem;
 }
 
-.streamlit-dialog .command-line {
+.command-line {
   width: 100%;
   font-family: $font-family-monospace;
   font-size: $font-size-sm;
@@ -39,22 +39,16 @@
   word-wrap: break-word;
 }
 
-h5.modal-title {
-  font-family: $font-family-sans-serif;
-  font-size: 1.25rem;
-  margin: 0;
-  font-weight: 300;
-  line-height: 1.5;
-  text-transform: none;
-}
-
 .screenCastWarningDialog {
   display: flex;
 
-  span {
-    font-size: 50px;
+  .unsupportedScreenCastIcon {
+    display: flex;
+    align-items: center;
+    justify-items: center;
     margin-right: 26px;
     margin-left: 10px;
+    font-size: 50px;
   }
 
   p {
