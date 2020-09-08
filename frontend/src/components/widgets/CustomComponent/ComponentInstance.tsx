@@ -37,7 +37,7 @@ import { ComponentMessageType, StreamlitMessageType } from "./enums"
  */
 export const CUSTOM_COMPONENT_API_VERSION = 1
 
-interface Props {
+export interface Props {
   registry: ComponentRegistry
   widgetMgr: WidgetStateManager
 
@@ -46,7 +46,7 @@ interface Props {
   width: number
 }
 
-interface State {
+export interface State {
   componentError?: Error
 }
 
@@ -56,7 +56,7 @@ interface DataframeArg {
 }
 
 export class ComponentInstance extends React.PureComponent<Props, State> {
-  private iframeRef = createRef<HTMLIFrameElement>()
+  private readonly iframeRef = createRef<HTMLIFrameElement>()
 
   // True when we've received the COMPONENT_READY message
   private componentReady = false
