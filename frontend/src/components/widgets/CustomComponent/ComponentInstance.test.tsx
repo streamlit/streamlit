@@ -280,6 +280,28 @@ describe("ComponentInstance", () => {
       )
     })
 
+    it("handles bytes values", () => {
+      const mc = new MockComponent()
+      mc.sendBackMsg(ComponentMessageType.COMPONENT_READY, { apiVersion: 1 })
+
+      const bytesValue = new Uint8Array([0, 1, 2])
+      mc.sendBackMsg(ComponentMessageType.SET_COMPONENT_VALUE, {
+        dataType: "bytes",
+        value: bytesValue,
+      })
+
+      // Ensure we didn't create an ErrorElement
+      const child = mc.wrapper.childAt(0)
+      expect(child.type()).toEqual("iframe")
+
+      const widgetMgr = (WidgetStateManager as any).mock.instances[0]
+      expect(widgetMgr.setBytesValue).toHaveBeenCalledWith(
+        mc.widgetId,
+        bytesValue,
+        { fromUi: true }
+      )
+    })
+
     it("handles dataframe values", () => {
       // TODO by Henrikh
     })
