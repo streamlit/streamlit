@@ -60,7 +60,7 @@ export class WidgetStateManager {
    * to the server, and then immediately unsets the trigger value.
    */
   public setTriggerValue(widgetId: string, source: Source): void {
-    this.getOrCreateWidgetStateProto(widgetId).triggerValue = true
+    this.createWidgetStateProto(widgetId).triggerValue = true
     this.maybeSendUpdateWidgetsMessage(source)
     this.deleteWidgetStateProto(widgetId)
   }
@@ -75,7 +75,7 @@ export class WidgetStateManager {
   }
 
   public setBoolValue(widgetId: string, value: boolean, source: Source): void {
-    this.getOrCreateWidgetStateProto(widgetId).boolValue = value
+    this.createWidgetStateProto(widgetId).boolValue = value
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
@@ -89,7 +89,7 @@ export class WidgetStateManager {
   }
 
   public setIntValue(widgetId: string, value: number, source: Source): void {
-    this.getOrCreateWidgetStateProto(widgetId).intValue = value
+    this.createWidgetStateProto(widgetId).intValue = value
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
@@ -103,7 +103,7 @@ export class WidgetStateManager {
   }
 
   public setFloatValue(widgetId: string, value: number, source: Source): void {
-    this.getOrCreateWidgetStateProto(widgetId).floatValue = value
+    this.createWidgetStateProto(widgetId).floatValue = value
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
@@ -121,7 +121,7 @@ export class WidgetStateManager {
     value: string,
     source: Source
   ): void {
-    this.getOrCreateWidgetStateProto(widgetId).stringValue = value
+    this.createWidgetStateProto(widgetId).stringValue = value
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
@@ -130,7 +130,7 @@ export class WidgetStateManager {
     value: string[],
     source: Source
   ): void {
-    this.getOrCreateWidgetStateProto(
+    this.createWidgetStateProto(
       widgetId
     ).stringArrayValue = StringArray.fromObject({ data: value })
     this.maybeSendUpdateWidgetsMessage(source)
@@ -169,7 +169,7 @@ export class WidgetStateManager {
     value: number[],
     source: Source
   ): void {
-    this.getOrCreateWidgetStateProto(
+    this.createWidgetStateProto(
       widgetId
     ).floatArrayValue = FloatArray.fromObject({ value })
     this.maybeSendUpdateWidgetsMessage(source)
@@ -194,9 +194,9 @@ export class WidgetStateManager {
     value: number[],
     source: Source
   ): void {
-    this.getOrCreateWidgetStateProto(
-      widgetId
-    ).intArrayValue = IntArray.fromObject({ value })
+    this.createWidgetStateProto(widgetId).intArrayValue = IntArray.fromObject({
+      value,
+    })
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
@@ -210,9 +210,7 @@ export class WidgetStateManager {
   }
 
   public setJsonValue(widgetId: string, value: any, source: Source): void {
-    this.getOrCreateWidgetStateProto(widgetId).jsonValue = JSON.stringify(
-      value
-    )
+    this.createWidgetStateProto(widgetId).jsonValue = JSON.stringify(value)
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
@@ -221,7 +219,7 @@ export class WidgetStateManager {
     value: IArrowTable,
     source: Source
   ): void {
-    this.getOrCreateWidgetStateProto(widgetId).arrowValue = value
+    this.createWidgetStateProto(widgetId).arrowValue = value
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
@@ -243,7 +241,7 @@ export class WidgetStateManager {
     value: Uint8Array,
     source: Source
   ): void {
-    this.getOrCreateWidgetStateProto(widgetId).bytesValue = value
+    this.createWidgetStateProto(widgetId).bytesValue = value
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
@@ -284,15 +282,12 @@ export class WidgetStateManager {
   }
 
   /**
-   * Returns the WidgetState proto for the widget with the given ID.
-   * If no such WidgetState exists yet, one will be created.
+   * Create a new WidgetState proto for the widget with the given ID,
+   * overwriting any that currently exists.
    */
-  private getOrCreateWidgetStateProto(id: string): WidgetState {
-    let state = this.getWidgetStateProto(id)
-    if (state == null) {
-      state = new WidgetState({ id })
-      this.widgetStates.set(id, state)
-    }
+  private createWidgetStateProto(id: string): WidgetState {
+    const state = new WidgetState({ id })
+    this.widgetStates.set(id, state)
     return state
   }
 
