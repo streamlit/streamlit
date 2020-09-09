@@ -388,11 +388,42 @@ class DeltaGenerator(
         return self._container_block()
 
     def collapsible_container(self, label=None, collapsed=False):
+        """Creates a collapsible container.
+
+        [TODO: get more container verbage]
+        Similar to `st.container`, `st.collapsible_container` provides a container
+        to add elements to. However, it has the added benefit of being collapsible.
+        Users will be able to expand and collapse the container that is identifiable
+        with the provided label.
+
+        Parameters
+        ----------
+        label : str
+            A short label used as the header for the collapsible container.
+            This will always be displayed even when the container is collapsed.
+        collapsed : boolean
+            The default state for the collapsible container.
+            Defaults to False
+
+        Returns
+        -------
+        [TODO] Technically a delta generator but let's please not tell the users that...
+
+        Examples
+        --------
+        >>> collapsible_container = st.collapsible_container("Collapse Me")
+        >>> collapsible_container.write("I can be collapsed")
+
+        """
+        if label is None:
+            raise StreamlitAPIException(
+                "A label is required for a collapsible container"
+            )
+
         msg = Container_pb2.Container()
         msg.collapsible = True
         msg.collapsed = collapsed
-        if label:
-            msg.label = label
+        msg.label = label
         return self._container_block(container_msg=msg)
 
     def favicon(
