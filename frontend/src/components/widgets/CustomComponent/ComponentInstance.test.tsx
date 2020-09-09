@@ -234,10 +234,10 @@ describe("ComponentInstance", () => {
       renderMsg({ [key1]: bytes1, [key2]: bytes2 }, []),
       "*"
     )
+  })
 
-    it("should send dataframe args to iframe", () => {
-      // TODO for Henrikh
-    })
+  it("should send dataframe args to iframe", () => {
+    // TODO for Henrikh
   })
 
   describe("COMPONENT_READY handler", () => {
