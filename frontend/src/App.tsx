@@ -73,6 +73,7 @@ import "assets/css/theme.scss"
 import "./App.scss"
 import "assets/css/header.scss"
 import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
+import { sendS4AMessage } from "hooks/useS4ACommunication"
 import { ComponentRegistry } from "./components/widgets/CustomComponent"
 import { handleFavicon } from "./components/elements/Favicon"
 
@@ -96,6 +97,8 @@ interface State {
   sharingEnabled?: boolean
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
+
+  queryParams?: string
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -142,6 +145,7 @@ export class App extends PureComponent<Props, State> {
       reportId: "<null>",
       reportHash: null,
       reportRunState: ReportRunState.NOT_RUNNING,
+      queryParams: "",
       userSettings: {
         wideMode: false,
         runOnSave: false,
@@ -313,7 +317,13 @@ export class App extends PureComponent<Props, State> {
 
   handlePageConfigChanged = (pageConfig: PageConfig): void => {
     const { title, favicon, layout, initialSidebarState } = pageConfig
+
     if (title) {
+      sendS4AMessage({
+        type: "SET_PAGE_TITLE",
+        title,
+      })
+
       document.title = `${title} · Streamlit`
     }
     if (favicon) {
@@ -340,6 +350,11 @@ export class App extends PureComponent<Props, State> {
   handlePageInfoChanged = (pageInfo: PageInfo): void => {
     const { queryString } = pageInfo
     window.history.pushState({}, "", queryString ? `?${queryString}` : "/")
+
+    sendS4AMessage({
+      type: "SET_QUERY_PARAM",
+      queryParams: queryString ? `?${queryString}` : "",
+    })
   }
 
   /**
@@ -776,17 +791,32 @@ export class App extends PureComponent<Props, State> {
     this.widgetMgr.sendUpdateWidgetsMessage()
   }
 
-  sendRerunBackMsg = (widgetStates?: WidgetStates): void => {
-    let queryString = document.location.search
+  sendRerunBackMsg = (widgetStates?: WidgetStates | undefined): void => {
+    const { queryParams } = this.state
+    let queryString =
+      queryParams && queryParams.length > 0
+        ? queryParams
+        : document.location.search
 
     if (queryString.startsWith("?")) {
       queryString = queryString.substring(1)
     }
 
-    const backMsg = new BackMsg({
-      rerunScript: { queryString, widgetStates },
-    })
-    this.sendBackMsg(backMsg)
+    console.log("== rerun", queryString)
+
+    if (widgetStates) {
+      this.sendBackMsg(
+        new BackMsg({
+          rerunScript: { queryString, widgetStates },
+        })
+      )
+    } else {
+      this.sendBackMsg(
+        new BackMsg({
+          rerunScript: { queryString },
+        })
+      )
+    }
   }
 
   /** Requests that the server stop running the report */
@@ -942,6 +972,16 @@ export class App extends PureComponent<Props, State> {
                 aboutCallback={this.aboutCallback}
                 screencastCallback={this.screencastCallback}
                 screenCastState={this.props.screenCast.currentState}
+                queryParamsCallback={queryParams => {
+                  this.setState(
+                    {
+                      queryParams,
+                    },
+                    () => {
+                      this.sendRerunBackMsg()
+                    }
+                  )
+                }}
               />
             </div>
           </header>

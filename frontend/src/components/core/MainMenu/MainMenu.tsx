@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useState, memo } from "react"
+import React, { ReactElement, useState, useEffect, memo } from "react"
 import {
   Dropdown,
   DropdownItem,
@@ -23,7 +23,7 @@ import {
   DropdownToggle,
 } from "reactstrap"
 
-import useS4ACommunication from "hooks/useS4ACommunication"
+import useS4ACommunication, { sendS4AMessage } from "hooks/useS4ACommunication"
 
 import Icon from "components/shared/Icon"
 import ScreencastOption from "./component/ScreencastOption"
@@ -60,7 +60,11 @@ interface Props {
   /** Show the About dialog. */
   aboutCallback: () => void
 
+  queryParamsCallback: (queryParams: string) => void
+
   screenCastState: string
+
+  queryParams?: string
 }
 
 const getOpenInWindowCallback = (url: string) => (): void => {
@@ -69,12 +73,16 @@ const getOpenInWindowCallback = (url: string) => (): void => {
 
 function MainMenu(props: Props): ReactElement {
   const [dropdownOpen, setDropdownOpen] = useState(false)
-  const { items, sendMessage } = useS4ACommunication()
+  const { items, queryParams } = useS4ACommunication()
   const isServerDisconnected = !props.isServerConnected()
 
   function toggleDropdown(): void {
     setDropdownOpen(prevState => !prevState)
   }
+
+  useEffect(() => {
+    props.queryParamsCallback(queryParams)
+  }, [queryParams])
 
   const S4AMenuOptions = items.map(item => {
     if (item.type === "separator") {
@@ -85,7 +93,7 @@ function MainMenu(props: Props): ReactElement {
       <DropdownItem
         key={item.key}
         onClick={() =>
-          sendMessage({
+          sendS4AMessage({
             type: "MENU_ITEM_CALLBACK",
             key: item.key,
           })

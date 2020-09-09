@@ -18,6 +18,7 @@
 import nodeEmoji from "node-emoji"
 import { buildMediaUri } from "lib/UriUtil"
 import { toCodePoint } from "vendor/twemoji"
+import { sendS4AMessage } from "hooks/useS4ACommunication"
 
 /**
  * Set the provided url/emoji as the page favicon.
@@ -38,9 +39,15 @@ export function handleFavicon(favicon: string): void {
 
 // Update the favicon in the DOM with the specified image.
 function overwriteFavicon(imageUrl: string): void {
+  sendS4AMessage({
+    type: "SET_PAGE_FAVICON",
+    favicon: imageUrl,
+  })
+
   const faviconElement: HTMLLinkElement | null = document.querySelector(
     "link[rel='shortcut icon']"
   )
+
   if (faviconElement) {
     faviconElement.href = imageUrl
   }

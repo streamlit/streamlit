@@ -49,7 +49,8 @@ type VersionedMessage<Message> = {
   stCommVersion: number
 } & Message
 
-function sendMessage(message: IGuestToHostMessage): void {
+export function sendS4AMessage(message: IGuestToHostMessage): void {
+  console.log("== sending message to s4a", message)
   window.parent.postMessage(
     {
       stCommVersion: S4A_COMM_VERSION,
@@ -61,14 +62,15 @@ function sendMessage(message: IGuestToHostMessage): void {
 
 interface ICommunicationResponse {
   items: IMenuItem[]
-  sendMessage: (message: IGuestToHostMessage) => void
+  queryParams: string
 }
 
 function useS4ACommunication(): ICommunicationResponse {
+  const [queryParams, setQueryParams] = useState("")
   const [items, setItems] = useState<IMenuItem[]>([])
 
   useEffect(() => {
-    sendMessage({
+    sendS4AMessage({
       type: "GUEST_READY",
     })
   }, [])
@@ -83,8 +85,15 @@ function useS4ACommunication(): ICommunicationResponse {
       )
         return
 
+      console.log("== receiving message within core", message)
+
       if (message.type === "SET_MENU_ITEMS") {
         setItems(message.items)
+      }
+
+      if (message.type === "UPDATE_FROM_QUERY_PARAMS") {
+        console.log("== setting query params state", message)
+        setQueryParams(message.queryParams)
       }
     }
 
@@ -97,7 +106,7 @@ function useS4ACommunication(): ICommunicationResponse {
 
   return {
     items,
-    sendMessage,
+    queryParams,
   }
 }
 
