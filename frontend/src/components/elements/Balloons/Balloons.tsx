@@ -31,13 +31,10 @@ import Balloon5 from "assets/img/balloons/balloon-5.png"
 
 import "./Balloons.scss"
 
-const NUM_BALLOONS = 15
+const NUM_BALLOONS = 30
 const POS_MIN_VW = 20
 const POS_MAX_VW = 80
-const DELAY_MAX_MS = 500
-const UNMOUNT_GRACE_PERIOD_MS = 500
-
-const MAX_ANIMATION_DURATION_MS = 1000 // see CSS
+const DELAY_MAX_MS = 1000
 
 // Prebuild array with NUM_BALLOONS dummy elements.
 const BALLOON_PLACEHOLDERS = Array.from({ length: NUM_BALLOONS })
@@ -58,30 +55,24 @@ export interface Props {
   element: ImmutableMap<string, any>
 }
 
-interface State {
-  show: boolean
+export function Balloons(props: Props): React.ReactNode {
+  const reportId = props.reportId
+
+  return (
+    <div className="balloons">
+      {BALLOON_PLACEHOLDERS.map((_, i) => drawBalloon(reportId, i))}
+    </div>
+  )
 }
 
-class Balloons extends React.PureComponent<Props, State> {
-  public render(): React.ReactNode {
-    const execId = this.props.element.get("executionId")
-
-    return (
-      <div className="balloons">
-        {BALLOON_PLACEHOLDERS.map((_, i) => drawBalloon(execId, i))}
-      </div>
-    )
-  }
-}
-
-function drawBalloon(execId: number, i: number) {
+function drawBalloon(reportId: number, i: number) {
   const randNum = Math.floor(Math.random() * BALLOON_TYPES)
 
   return (
     <img
       src={BALLOON_IMAGES[randNum]}
       className="balloon"
-      key={execId + i}
+      key={reportId + i}
       alt=""
       style={{
         left: `${Math.random() * (POS_MAX_VW - POS_MIN_VW) + POS_MIN_VW}vw`,

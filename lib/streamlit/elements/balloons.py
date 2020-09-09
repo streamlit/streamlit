@@ -15,7 +15,4 @@ class BalloonsMixin:
 
         """
         balloons_proto = BalloonsProto()
-
-        balloons_proto.execution_id = random.randrange(0xFFFFFFFF)
-
         return dg._enqueue("balloons", balloons_proto)  # type: ignore

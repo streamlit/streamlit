@@ -25,12 +25,12 @@
     width: 121px;
 
     /* If modifying the duration, you should also modify Balloons.js */
-    animation-duration: 1s, 1s;
-    animation-name: fade, move-up;
-    animation-timing-function: ease-in, ease-in;
-    animation-direction: normal, normal;
-    animation-iteration-count: 1, 1;
-    opacity: 0;
+    animation-duration: 750ms;
+    animation-name: move-up;
+    animation-timing-function: ease-in;
+    animation-direction: normal;
+    animation-iteration-count: 1;
+    opacity: 1;
   }
 }
 
@@ -41,19 +41,5 @@
 
   to {
     transform: translateY(0);
-  }
-}
-
-@keyframes fade {
-  0% {
-    opacity: 0;
-  }
-
-  2% {
-    opacity: 1;
-  }
-
-  100% {
-    opacity: 1;
   }
 }
