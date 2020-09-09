@@ -20,18 +20,10 @@ import { shallow } from "enzyme"
 import { fromJS } from "immutable"
 import { Balloons as BalloonsProto } from "autogen/proto"
 
-import Balloons, {
-  Props,
-  MAX_ANIMATION_DURATION_MS,
-  DELAY_MAX_MS,
-  NUM_BALLOONS,
-} from "./Balloons"
+import Balloons, { Props, DELAY_MAX_MS, NUM_BALLOONS } from "./Balloons"
 
 const getProps = (): Props => ({
-  element: fromJS({
-    type: BalloonsProto.Type.DEFAULT,
-    executionId: 51522269,
-  }),
+  reportId: 51522269,
   width: 0,
 })
 
@@ -57,19 +49,16 @@ describe("Balloons element", () => {
     })
   })
 
-  it("should render one time per session", async () => {
+  it("should render with correct key", async () => {
     const props = getProps()
     const wrapper = shallow(<Balloons {...props} />)
 
     expect(wrapper.html()).not.toBeNull()
-    expect(setTimeout).toHaveBeenCalledWith(
-      expect.any(Function),
-      MAX_ANIMATION_DURATION_MS + DELAY_MAX_MS + 100
-    )
-    expect(setTimeout).toBeCalledTimes(1)
 
-    jest.runAllTimers()
-
-    expect(wrapper.state("drawnId")).toBe(props.element.get("executionId"))
+    wrapper
+      .find(".balloons img")
+      .forEach((node, i) =>
+        expect(node.key()).toBe(String(props.reportId + i))
+      )
   })
 })

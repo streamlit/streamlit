@@ -31,10 +31,10 @@ import Balloon5 from "assets/img/balloons/balloon-5.png"
 
 import "./Balloons.scss"
 
-const NUM_BALLOONS = 30
+export const NUM_BALLOONS = 30
 const POS_MIN_VW = 20
 const POS_MAX_VW = 80
-const DELAY_MAX_MS = 1000
+export const DELAY_MAX_MS = 1000
 
 // Prebuild array with NUM_BALLOONS dummy elements.
 const BALLOON_PLACEHOLDERS = Array.from({ length: NUM_BALLOONS })
