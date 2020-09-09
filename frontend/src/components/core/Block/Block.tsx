@@ -255,7 +255,7 @@ class Block extends PureComponent<Props> {
       alert: (el: SimpleElement) => <Alert element={el} width={width} />,
       audio: (el: SimpleElement) => <Audio element={el} width={width} />,
       balloons: (el: SimpleElement) => (
-        <Balloons reportId={this.props.reportId} width={width} />
+        <Balloons reportId={this.props.reportId} />
       ),
       bokehChart: (el: SimpleElement) => (
         <BokehChart element={el} index={index} width={width} />

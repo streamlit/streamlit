@@ -15,8 +15,7 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { Map as ImmutableMap } from "immutable"
+import React, { ReactElement, memo } from "react"
 
 /*
  * IMPORTANT: If you change the asset imports below, make sure they still work if Streamlit is
@@ -51,21 +50,10 @@ const BALLOON_IMAGES: string[] = [
 const BALLOON_TYPES = BALLOON_IMAGES.length
 
 export interface Props {
-  width: number
-  element: ImmutableMap<string, any>
+  reportId: string
 }
 
-export function Balloons(props: Props): React.ReactNode {
-  const reportId = props.reportId
-
-  return (
-    <div className="balloons">
-      {BALLOON_PLACEHOLDERS.map((_, i) => drawBalloon(reportId, i))}
-    </div>
-  )
-}
-
-function drawBalloon(reportId: number, i: number) {
+function drawBalloon(reportId: string, i: number): ReactElement {
   const randNum = Math.floor(Math.random() * BALLOON_TYPES)
 
   return (
@@ -82,4 +70,12 @@ function drawBalloon(reportId: number, i: number) {
   )
 }
 
-export default Balloons
+function Balloons({ reportId }: Props): ReactElement {
+  return (
+    <div className="balloons">
+      {BALLOON_PLACEHOLDERS.map((_, i) => drawBalloon(reportId, i))}
+    </div>
+  )
+}
+
+export default memo(Balloons)

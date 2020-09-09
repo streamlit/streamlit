@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
+@import "src/assets/css/variables";
+
 .balloons {
   .balloon {
     position: fixed;
     top: -300px;
     margin-left: -60px; /* Center 121-wide image */
-    z-index: 1000000;
+    z-index: $z-index-balloons;
 
     height: 300px;
     width: 121px;

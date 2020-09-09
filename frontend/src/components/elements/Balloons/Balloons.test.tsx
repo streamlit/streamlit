@@ -17,10 +17,8 @@
 
 import React from "react"
 import { shallow } from "enzyme"
-import { fromJS } from "immutable"
-import { Balloons as BalloonsProto } from "autogen/proto"
 
-import Balloons, { Props, DELAY_MAX_MS, NUM_BALLOONS } from "./Balloons"
+import Balloons, { Props, NUM_BALLOONS } from "./Balloons"
 
 const getProps = (): Props => ({
   reportId: 51522269,
