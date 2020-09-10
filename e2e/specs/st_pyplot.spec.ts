@@ -30,7 +30,7 @@ describe("st.pyplot", () => {
 
   it("clears the figure on rerun", () => {
     // Rerun the script
-    cy.get(".stApp").trigger("keypress", {
+    cy.get(".stApp .decoration").trigger("keypress", {
       keyCode: 82, // "r"
       which: 82 // "r"
     });
@@ -41,7 +41,9 @@ describe("st.pyplot", () => {
     // Make the ribbon decoration line disappear
     cy.get(".decoration").invoke("css", "display", "none");
 
-    cy.get(".stImage > img").matchImageSnapshot("pyplot-check-if-cleared");
+    cy.get(".stImage > img")
+      .first()
+      .matchImageSnapshot("pyplot-check-if-cleared");
   });
 
   it("shows deprecation warning", () => {
