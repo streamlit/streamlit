@@ -22,7 +22,7 @@ import { dispatchOneOf } from "lib/immutableProto"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { makeElementWithInfoText } from "lib/utils"
-import { IForwardMsgMetadata, Delta } from "autogen/proto"
+import { IForwardMsgMetadata, IBlock } from "autogen/proto"
 import { ReportElement, BlockElement, SimpleElement } from "lib/DeltaParser"
 import { FileUploadClient } from "lib/FileUploadClient"
 
@@ -95,7 +95,7 @@ interface Props {
   uploadClient: FileUploadClient
   widgetsDisabled: boolean
   componentRegistry: ComponentRegistry
-  deltaBlock?: Delta.IBlock
+  deltaBlock?: IBlock
 }
 
 class Block extends PureComponent<Props> {
@@ -140,12 +140,15 @@ class Block extends PureComponent<Props> {
     element: BlockElement,
     index: number,
     width: number,
-    deltaBlock: Delta.IBlock
+    deltaBlock: IBlock
   ): ReactNode {
-    const { collapsible, label, collapsed } = deltaBlock
+    const BlockType = deltaBlock.collapsible
+      ? this.WithCollapsibleBlock
+      : Block
+    const optionalProps = deltaBlock.collapsible ? deltaBlock.collapsible : {}
     return (
       <div key={index} className="stBlock" style={{ width }}>
-        <this.WithCollapsibleBlock
+        <BlockType
           elements={element}
           reportId={this.props.reportId}
           reportRunState={this.props.reportRunState}
@@ -155,9 +158,7 @@ class Block extends PureComponent<Props> {
           widgetsDisabled={this.props.widgetsDisabled}
           componentRegistry={this.props.componentRegistry}
           deltaBlock={deltaBlock}
-          collapsible={collapsible}
-          label={label}
-          collapsed={collapsed}
+          {...optionalProps}
         />
       </div>
     )

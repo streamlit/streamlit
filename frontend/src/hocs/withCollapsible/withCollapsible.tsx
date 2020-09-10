@@ -62,12 +62,7 @@ function withCollapsible(
   WrappedComponent: ComponentType<any>
 ): ComponentType<any> {
   const CollapsibleComponent = (props: Props): ReactElement => {
-    const {
-      collapsible,
-      label,
-      collapsed: initialCollapsed,
-      ...componentProps
-    } = props
+    const { label, collapsed: initialCollapsed, ...componentProps } = props
 
     const [collapsed, toggleCollapse] = useState<boolean>(initialCollapsed)
     useEffect(() => {
@@ -76,7 +71,7 @@ function withCollapsible(
 
     const toggle = (): void => toggleCollapse(!collapsed)
 
-    return collapsible ? (
+    return (
       <>
         <StyledHeader collapsed={collapsed}>
           <div>{label}</div>
@@ -88,8 +83,6 @@ function withCollapsible(
           <WrappedComponent {...componentProps} />
         </AnimatedComponentWrapper>
       </>
-    ) : (
-      <WrappedComponent {...componentProps} />
     )
   }
 

@@ -22,8 +22,8 @@ from streamlit import type_util
 from streamlit.report_thread import get_report_ctx
 from streamlit.errors import StreamlitAPIException, StreamlitDeprecationWarning
 from streamlit.errors import NoSessionContext
+from streamlit.proto import Block_pb2
 from streamlit.proto import BlockPath_pb2
-from streamlit.proto.Delta_pb2 import Delta as DeltaProto
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto.Element_pb2 import Element
 from streamlit.logger import get_logger
@@ -353,7 +353,7 @@ class DeltaGenerator(
 
         return _value_or_dg(return_value, output_dg)
 
-    def _block(self, block_proto=DeltaProto.Block()):
+    def _block(self, block_proto=Block_pb2.Block()):
         # Switch to the active DeltaGenerator, in case we're in a `with` block.
         self = self._active_dg
 
@@ -418,10 +418,13 @@ class DeltaGenerator(
                 "A label is required for a collapsible container"
             )
 
-        block_proto = DeltaProto.Block()
-        block_proto.collapsible = True
-        block_proto.collapsed = collapsed
-        block_proto.label = label
+        collapsible_proto = Block_pb2.Block.Collapsible()
+        collapsible_proto.collapsed = collapsed
+        collapsible_proto.label = label
+
+        block_proto = Block_pb2.Block()
+        block_proto.collapsible.CopyFrom(collapsible_proto)
+
         return self._block(block_proto=block_proto)
 
     def favicon(

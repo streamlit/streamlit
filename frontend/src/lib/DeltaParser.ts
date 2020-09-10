@@ -138,16 +138,12 @@ function handleAddBlockMessage(
   MetricsManager.current.incrementDeltaCounter("new block")
 
   // This node was already a list of elements. Update everything but the element.
-  if (reportElement && reportElement.get("element") instanceof List) {
-    return ImmutableMap({
-      element: reportElement.get("element"),
-      reportId,
-      metadata,
-      deltaBlock,
-    })
-  }
+  const list =
+    reportElement && reportElement.get("element") instanceof List
+      ? reportElement.get("element")
+      : List()
 
-  return ImmutableMap({ element: List(), reportId, metadata, deltaBlock })
+  return ImmutableMap({ element: list, reportId, metadata, deltaBlock })
 }
 
 function handleAddRowsMessage(
