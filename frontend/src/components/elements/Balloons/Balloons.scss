@@ -16,15 +16,18 @@
 
 @import "src/assets/css/variables";
 
+$imageHeight: 300px;
+$imageWidth: 121px;
+
 .balloons {
   .balloon {
     position: fixed;
-    top: -300px;
-    margin-left: -60px; /* Center 121-wide image */
+    top: -$imageHeight;
+    margin-left: -$imageWidth / 2;
     z-index: $z-index-balloons;
 
-    height: 300px;
-    width: 121px;
+    height: $imageHeight;
+    width: $imageWidth;
 
     /* If modifying the duration, you should also modify Balloons.js */
     animation-duration: 750ms;

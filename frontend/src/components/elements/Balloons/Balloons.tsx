@@ -45,14 +45,12 @@ const BALLOON_IMAGES: string[] = [
   Balloon5,
 ]
 
-const BALLOON_TYPES = BALLOON_IMAGES.length
-
 export interface Props {
   reportId: string
 }
 
 function drawBalloon(reportId: string, balloonNumber: number): ReactElement {
-  const randNum = Math.floor(Math.random() * BALLOON_TYPES)
+  const randNum = Math.floor(Math.random() * BALLOON_IMAGES.length)
 
   return (
     <img
