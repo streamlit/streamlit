@@ -18,7 +18,7 @@ syntax = "proto3";
 
 // A python empty.
 message Balloons {
-  uint32 execution_id = 2;
+  bool show = 3;  // Dummy boolean because protos need to have something.
 
-  reserved 1;
+  reserved 1, 2;
 }

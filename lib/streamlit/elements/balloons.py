@@ -15,4 +15,5 @@ class BalloonsMixin:
 
         """
         balloons_proto = BalloonsProto()
+        balloons_proto.show = True
         return dg._enqueue("balloons", balloons_proto)  # type: ignore
