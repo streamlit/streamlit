@@ -16,6 +16,7 @@
  */
 
 import React, { ReactElement, memo } from "react"
+import range from "lodash/range"
 
 /*
  * IMPORTANT: If you change the asset imports below, make sure they still work if Streamlit is
@@ -35,9 +36,6 @@ const POS_MIN_VW = 20
 const POS_MAX_VW = 80
 export const DELAY_MAX_MS = 1000
 
-// Prebuild array with NUM_BALLOONS dummy elements.
-const BALLOON_PLACEHOLDERS = Array.from({ length: NUM_BALLOONS })
-
 const BALLOON_IMAGES: string[] = [
   Balloon0,
   Balloon1,
@@ -53,14 +51,14 @@ export interface Props {
   reportId: string
 }
 
-function drawBalloon(reportId: string, i: number): ReactElement {
+function drawBalloon(reportId: string, balloonNumber: number): ReactElement {
   const randNum = Math.floor(Math.random() * BALLOON_TYPES)
 
   return (
     <img
       src={BALLOON_IMAGES[randNum]}
       className="balloon"
-      key={reportId + i}
+      key={reportId + balloonNumber}
       alt=""
       style={{
         left: `${Math.random() * (POS_MAX_VW - POS_MIN_VW) + POS_MIN_VW}vw`,
@@ -73,7 +71,7 @@ function drawBalloon(reportId: string, i: number): ReactElement {
 function Balloons({ reportId }: Props): ReactElement {
   return (
     <div className="balloons">
-      {BALLOON_PLACEHOLDERS.map((_, i) => drawBalloon(reportId, i))}
+      {range(NUM_BALLOONS).map(i => drawBalloon(reportId, i))}
     </div>
   )
 }
