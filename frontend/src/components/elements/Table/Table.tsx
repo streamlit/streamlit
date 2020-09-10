@@ -85,7 +85,7 @@ interface TableRowsProps {
   cols: number
 }
 
-const TableRows: React.SFC<TableRowsProps> = props => {
+function TableRows(props: TableRowsProps): ReactElement {
   const { df, header, headerRows, rows, cols } = props
   const startRow = header ? 0 : headerRows
   const endRow = header ? headerRows : rows
@@ -114,7 +114,7 @@ interface TableRowProps {
   cols: number
 }
 
-const TableRow: React.SFC<TableRowProps> = (props: TableRowProps) => {
+function TableRow(props: TableRowProps): ReactElement {
   const { df, rowIdx, cols } = props
   const entries = []
   for (let colIdx = 0; colIdx < cols; colIdx++) {
