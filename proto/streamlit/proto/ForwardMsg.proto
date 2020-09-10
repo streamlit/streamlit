@@ -17,7 +17,6 @@
 syntax = "proto3";
 
 import "streamlit/proto/BlockPath.proto";
-import "streamlit/proto/Container.proto";
 import "streamlit/proto/Delta.proto";
 import "streamlit/proto/Initialize.proto";
 import "streamlit/proto/NewReport.proto";
@@ -94,8 +93,6 @@ message ForwardMsgMetadata {
   BlockPath parent_block = 3;
 
   ElementDimensionSpec element_dimension_spec = 4;
-
-  Container container = 5;
 }
 
 // Specifies the dimensions for the element

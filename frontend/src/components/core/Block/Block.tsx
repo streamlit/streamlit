@@ -22,7 +22,7 @@ import { dispatchOneOf } from "lib/immutableProto"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { makeElementWithInfoText } from "lib/utils"
-import { IContainer, IForwardMsgMetadata } from "autogen/proto"
+import { IForwardMsgMetadata, Delta } from "autogen/proto"
 import { ReportElement, BlockElement, SimpleElement } from "lib/DeltaParser"
 import { FileUploadClient } from "lib/FileUploadClient"
 
@@ -95,15 +95,16 @@ interface Props {
   uploadClient: FileUploadClient
   widgetsDisabled: boolean
   componentRegistry: ComponentRegistry
+  deltaBlock?: Delta.IBlock
 }
 
 class Block extends PureComponent<Props> {
   private WithCollapsibleBlock = withCollapsible(Block)
 
+  /** Recursively transform this BLockElement and all children to React Nodes. */
   private renderElements = (width: number): ReactNode[] => {
     const elementsToRender = this.props.elements
 
-    // Transform Streamlit elements into ReactNodes.
     return elementsToRender
       .toArray()
       .map((reportElement: ReportElement, index: number): ReactNode | null => {
@@ -114,9 +115,10 @@ class Block extends PureComponent<Props> {
             element as BlockElement,
             index,
             width,
-            reportElement.get("metadata").container
+            reportElement.get("deltaBlock").toJS()
           )
         }
+        // Base case AKA a single element AKA leaf node in the render tree
         return this.renderElementWithErrorBoundary(reportElement, index, width)
       })
       .filter((node: ReactNode | null): ReactNode => node != null)
@@ -138,8 +140,9 @@ class Block extends PureComponent<Props> {
     element: BlockElement,
     index: number,
     width: number,
-    containerProps: IContainer
+    deltaBlock: Delta.IBlock
   ): ReactNode {
+    const { collapsible, label, collapsed } = deltaBlock
     return (
       <div key={index} className="stBlock" style={{ width }}>
         <this.WithCollapsibleBlock
@@ -151,7 +154,10 @@ class Block extends PureComponent<Props> {
           uploadClient={this.props.uploadClient}
           widgetsDisabled={this.props.widgetsDisabled}
           componentRegistry={this.props.componentRegistry}
-          {...containerProps}
+          deltaBlock={deltaBlock}
+          collapsible={collapsible}
+          label={label}
+          collapsed={collapsed}
         />
       </div>
     )

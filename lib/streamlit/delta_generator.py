@@ -23,7 +23,7 @@ from streamlit.report_thread import get_report_ctx
 from streamlit.errors import StreamlitAPIException, StreamlitDeprecationWarning
 from streamlit.errors import NoSessionContext
 from streamlit.proto import BlockPath_pb2
-from streamlit.proto import Container_pb2
+from streamlit.proto.Delta_pb2 import Delta as DeltaProto
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto.Element_pb2 import Element
 from streamlit.logger import get_logger
@@ -353,7 +353,7 @@ class DeltaGenerator(
 
         return _value_or_dg(return_value, output_dg)
 
-    def _container_block(self, container_msg=None):
+    def _block(self, block_proto=DeltaProto.Block()):
         # Switch to the active DeltaGenerator, in case we're in a `with` block.
         self = self._active_dg
 
@@ -361,12 +361,10 @@ class DeltaGenerator(
             return self
 
         msg = ForwardMsg_pb2.ForwardMsg()
-        msg.delta.new_block = True
         msg.metadata.parent_block.container = self._container
         msg.metadata.parent_block.path[:] = self._cursor.path
         msg.metadata.delta_id = self._cursor.index
-        if container_msg:
-            msg.metadata.container.CopyFrom(container_msg)
+        msg.delta.add_block.CopyFrom(block_proto)
 
         # Normally we'd return a new DeltaGenerator that uses the locked cursor
         # below. But in this case we want to return a DeltaGenerator that uses
@@ -385,7 +383,7 @@ class DeltaGenerator(
         return block_dg
 
     def container(self):
-        return self._container_block()
+        return self._block()
 
     def collapsible_container(self, label=None, collapsed=False):
         """Creates a collapsible container.
@@ -420,11 +418,11 @@ class DeltaGenerator(
                 "A label is required for a collapsible container"
             )
 
-        msg = Container_pb2.Container()
-        msg.collapsible = True
-        msg.collapsed = collapsed
-        msg.label = label
-        return self._container_block(container_msg=msg)
+        block_proto = DeltaProto.Block()
+        block_proto.collapsible = True
+        block_proto.collapsed = collapsed
+        block_proto.label = label
+        return self._block(block_proto=block_proto)
 
     def favicon(
         self,
