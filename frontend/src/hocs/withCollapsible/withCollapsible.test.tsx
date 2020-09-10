@@ -37,7 +37,7 @@ describe("withCollapsible HOC", () => {
     expect(wrapper.html()).not.toBeNull()
   })
 
-  it("should render a collapsible expanded component", () => {
+  it("should render a expanded component", () => {
     const props = getProps()
     const WithHoc = withCollapsible(testComponent)
     // @ts-ignore
@@ -48,7 +48,7 @@ describe("withCollapsible HOC", () => {
     expect(toggleHeader.text()).toEqual("Hide")
   })
 
-  it("should render a collapsible collapsed component", () => {
+  it("should render a collapsed component", () => {
     const props = getProps({
       collapsed: true,
     })
@@ -58,17 +58,5 @@ describe("withCollapsible HOC", () => {
     const toggleHeader = wrapper.find(StyledToggle)
 
     expect(toggleHeader.text()).toEqual("Show")
-  })
-
-  it("should render a non-collapsible component", () => {
-    const props = getProps({
-      collapsible: false,
-    })
-    const WithHoc = withCollapsible(testComponent)
-
-    // @ts-ignore
-    const wrapper = shallow(<WithHoc {...props} />)
-    const toggleHeader = wrapper.find(StyledToggle)
-    expect(toggleHeader.exists()).toBeFalsy()
   })
 })

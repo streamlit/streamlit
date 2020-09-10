@@ -17,6 +17,8 @@
 
 /// <reference types="cypress" />
 
+const toggleIdentifier = "small[data-toggle]";
+
 describe("st.collapsible_container", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
@@ -26,17 +28,17 @@ describe("st.collapsible_container", () => {
     cy.get(".stBlock")
       .first()
       .within(() => {
-        cy.get("small").should("not.exist");
+        cy.get(toggleIdentifier).should("not.exist");
       });
     cy.get(".stBlock")
       .eq(1)
       .within(() => {
-        cy.get("small").should("exist");
+        cy.get(toggleIdentifier).should("exist");
       });
     cy.get(".stBlock")
       .eq(2)
       .within(() => {
-        cy.get("small").should("exist");
+        cy.get(toggleIdentifier).should("exist");
       });
   });
 
@@ -45,24 +47,24 @@ describe("st.collapsible_container", () => {
     cy.get(".stBlock")
       .eq(1)
       .within(() => {
-        let toggle = cy.get("small");
+        let toggle = cy.get(toggleIdentifier);
         toggle.should("exist");
         toggle.should("have.text", "Hide");
         toggle.click();
 
-        toggle = cy.get("small");
+        toggle = cy.get(toggleIdentifier);
         toggle.should("have.text", "Show");
       });
     // Starts collapsed
     cy.get(".stBlock")
       .eq(2)
       .within(() => {
-        let toggle = cy.get("small");
+        let toggle = cy.get(toggleIdentifier);
         toggle.should("exist");
         toggle.should("have.text", "Show");
         toggle.click();
 
-        toggle = cy.get("small");
+        toggle = cy.get(toggleIdentifier);
         toggle.should("have.text", "Hide");
       });
   });

@@ -75,7 +75,7 @@ function withCollapsible(
       <>
         <StyledHeader collapsed={collapsed}>
           <div>{label}</div>
-          <StyledToggle onClick={toggle}>
+          <StyledToggle onClick={toggle} role="button" data-toggle>
             {collapsed ? "Show" : "Hide"}
           </StyledToggle>
         </StyledHeader>
