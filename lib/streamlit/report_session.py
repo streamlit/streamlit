@@ -20,6 +20,8 @@ import tornado.gen
 import tornado.ioloop
 
 from streamlit import __installation_id__
+from streamlit import __installation_id_v1__
+from streamlit import __installation_id_v2__
 from streamlit import __version__
 from streamlit import caching
 from streamlit import config
@@ -383,6 +385,8 @@ class ReportSession(object):
         )
 
         imsg.user_info.installation_id = __installation_id__
+        imsg.user_info.installation_id_v1 = __installation_id_v1__
+        imsg.user_info.installation_id_v2 = __installation_id_v2__
         if Credentials.get_current().activation:
             imsg.user_info.email = Credentials.get_current().activation.email
         else:
