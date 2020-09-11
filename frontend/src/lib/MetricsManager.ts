@@ -199,7 +199,11 @@ export class MetricsManager {
   // Wrap analytics methods for mocking:
   // eslint-disable-next-line class-methods-use-this
   private identify(id: string, data: Record<string, unknown>): void {
-    analytics.identify(id, data)
+    if (IS_DEV_ENV) {
+      logAlways("[Dev mode] Not tracking identify: ", id, data)
+    } else {
+      analytics.identify(id, data)
+    }
   }
 
   // eslint-disable-next-line class-methods-use-this
