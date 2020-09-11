@@ -73,7 +73,6 @@ import "assets/css/theme.scss"
 import "./App.scss"
 import "assets/css/header.scss"
 import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
-import { sendS4AMessage } from "hooks/useS4ACommunication"
 import { ComponentRegistry } from "./components/widgets/CustomComponent"
 import { handleFavicon } from "./components/elements/Favicon"
 
@@ -81,8 +80,13 @@ import withScreencast, {
   ScreenCastHOC,
 } from "./hocs/withScreencast/withScreencast"
 
+import withS4ACommunication, {
+  S4ACommunicationHOC,
+} from "./hocs/withS4ACommunication/withS4ACommunication"
+
 export interface Props {
   screenCast: ScreenCastHOC
+  s4aCommunication: S4ACommunicationHOC
 }
 
 interface State {
@@ -97,8 +101,6 @@ interface State {
   sharingEnabled?: boolean
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
-
-  queryParams?: string
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -145,7 +147,6 @@ export class App extends PureComponent<Props, State> {
       reportId: "<null>",
       reportHash: null,
       reportRunState: ReportRunState.NOT_RUNNING,
-      queryParams: "",
       userSettings: {
         wideMode: false,
         runOnSave: false,
@@ -153,7 +154,7 @@ export class App extends PureComponent<Props, State> {
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
     }
-
+    console.log("== withs4a")
     this.sessionEventDispatcher = new SessionEventDispatcher()
     this.statusWidgetRef = React.createRef<StatusWidget>()
     this.connectionManager = null
@@ -202,6 +203,15 @@ export class App extends PureComponent<Props, State> {
     }
 
     MetricsManager.current.enqueue("viewReport")
+  }
+
+  componentDidUpdate(prevProps: Readonly<Props>) {
+    if (
+      prevProps.s4aCommunication.currentState.queryParams !==
+      this.props.s4aCommunication.currentState.queryParams
+    ) {
+      this.sendRerunBackMsg()
+    }
   }
 
   showError(title: string, errorNode: ReactNode): void {
@@ -319,7 +329,7 @@ export class App extends PureComponent<Props, State> {
     const { title, favicon, layout, initialSidebarState } = pageConfig
 
     if (title) {
-      sendS4AMessage({
+      this.props.s4aCommunication.sendMessage({
         type: "SET_PAGE_TITLE",
         title,
       })
@@ -327,7 +337,12 @@ export class App extends PureComponent<Props, State> {
       document.title = `${title} · Streamlit`
     }
     if (favicon) {
-      handleFavicon(favicon)
+      handleFavicon(favicon, imageUrl => {
+        this.props.s4aCommunication.sendMessage({
+          type: "SET_PAGE_FAVICON",
+          favicon: imageUrl,
+        })
+      })
     }
     // Only change layout/sidebar when the page config has changed.
     // This preserves the user's previous choice, and prevents extra re-renders.
@@ -351,7 +366,7 @@ export class App extends PureComponent<Props, State> {
     const { queryString } = pageInfo
     window.history.pushState({}, "", queryString ? `?${queryString}` : "/")
 
-    sendS4AMessage({
+    this.props.s4aCommunication.sendMessage({
       type: "SET_QUERY_PARAM",
       queryParams: queryString ? `?${queryString}` : "",
     })
@@ -408,6 +423,8 @@ export class App extends PureComponent<Props, State> {
       sharingEnabled: Boolean(config.sharingEnabled),
     })
 
+    console.log("== CONNECTING S4A")
+    this.props.s4aCommunication.connect()
     this.handleSessionStateChanged(sessionState)
   }
 
@@ -792,7 +809,8 @@ export class App extends PureComponent<Props, State> {
   }
 
   sendRerunBackMsg = (widgetStates?: WidgetStates | undefined): void => {
-    const { queryParams } = this.state
+    const { queryParams } = this.props.s4aCommunication.currentState
+
     let queryString =
       queryParams && queryParams.length > 0
         ? queryParams
@@ -972,16 +990,8 @@ export class App extends PureComponent<Props, State> {
                 aboutCallback={this.aboutCallback}
                 screencastCallback={this.screencastCallback}
                 screenCastState={this.props.screenCast.currentState}
-                queryParamsCallback={queryParams => {
-                  this.setState(
-                    {
-                      queryParams,
-                    },
-                    () => {
-                      this.sendRerunBackMsg()
-                    }
-                  )
-                }}
+                s4aMenuItems={this.props.s4aCommunication.currentState.items}
+                sendS4AMessage={this.props.s4aCommunication.sendMessage}
               />
             </div>
           </header>
@@ -1010,4 +1020,4 @@ export class App extends PureComponent<Props, State> {
   }
 }
 
-export default withScreencast(App)
+export default withS4ACommunication(withScreencast(App))

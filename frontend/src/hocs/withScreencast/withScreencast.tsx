@@ -210,7 +210,10 @@ function withScreencast(
 
       return (
         <div className="withScreencast">
-          <WrappedComponent screenCast={this.getScreenCastProps()} />
+          <WrappedComponent
+            screenCast={this.getScreenCastProps()}
+            {...this.props}
+          />
 
           {currentState === "UNSUPPORTED" && (
             <UnsupportedBrowserDialog onClose={this.closeDialog} />
