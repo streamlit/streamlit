@@ -102,6 +102,7 @@ interface State {
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
 
+// eslint-disable-next-line
 declare global {
   interface Window {
     streamlitDebug: any
