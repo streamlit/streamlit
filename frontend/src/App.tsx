@@ -154,7 +154,7 @@ export class App extends PureComponent<Props, State> {
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
     }
-    console.log("== withs4a")
+
     this.sessionEventDispatcher = new SessionEventDispatcher()
     this.statusWidgetRef = React.createRef<StatusWidget>()
     this.connectionManager = null
@@ -423,7 +423,6 @@ export class App extends PureComponent<Props, State> {
       sharingEnabled: Boolean(config.sharingEnabled),
     })
 
-    console.log("== CONNECTING S4A")
     this.props.s4aCommunication.connect()
     this.handleSessionStateChanged(sessionState)
   }
@@ -819,8 +818,6 @@ export class App extends PureComponent<Props, State> {
     if (queryString.startsWith("?")) {
       queryString = queryString.substring(1)
     }
-
-    console.log("== rerun", queryString)
 
     if (widgetStates) {
       this.sendBackMsg(

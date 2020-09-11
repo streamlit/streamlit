@@ -59,10 +59,6 @@ function withS4ACommunication(
     }
 
     sendMessage = (message: IGuestToHostMessage): void => {
-      console.log("== sending versioned message to s4a", {
-        stCommVersion: this.S4A_COMM_VERSION,
-        ...message,
-      } as VersionedMessage<IGuestToHostMessage>)
       window.parent.postMessage(
         {
           stCommVersion: this.S4A_COMM_VERSION,
@@ -81,8 +77,6 @@ function withS4ACommunication(
       )
         return
 
-      console.log("== receiving message within core", message)
-
       if (message.type === "SET_MENU_ITEMS") {
         this.setState({
           items: message.items,
@@ -90,7 +84,6 @@ function withS4ACommunication(
       }
 
       if (message.type === "UPDATE_FROM_QUERY_PARAMS") {
-        console.log("== setting query params state", message)
         this.setState({
           queryParams: message.queryParams,
         })
