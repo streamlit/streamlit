@@ -22,6 +22,7 @@ from streamlit import type_util
 from streamlit.report_thread import get_report_ctx
 from streamlit.errors import StreamlitAPIException, StreamlitDeprecationWarning
 from streamlit.errors import NoSessionContext
+from streamlit.proto import Block_pb2
 from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto.Element_pb2 import Element
@@ -352,7 +353,7 @@ class DeltaGenerator(
 
         return _value_or_dg(return_value, output_dg)
 
-    def container(self):
+    def _block(self, block_proto=Block_pb2.Block()):
         # Switch to the active DeltaGenerator, in case we're in a `with` block.
         self = self._active_dg
 
@@ -360,10 +361,10 @@ class DeltaGenerator(
             return self
 
         msg = ForwardMsg_pb2.ForwardMsg()
-        msg.delta.new_block = True
         msg.metadata.parent_block.container = self._container
         msg.metadata.parent_block.path[:] = self._cursor.path
         msg.metadata.delta_id = self._cursor.index
+        msg.delta.add_block.CopyFrom(block_proto)
 
         # Normally we'd return a new DeltaGenerator that uses the locked cursor
         # below. But in this case we want to return a DeltaGenerator that uses
@@ -377,13 +378,62 @@ class DeltaGenerator(
 
         # Must be called to increment this cursor's index.
         self._cursor.get_locked_cursor(last_index=None)
-
         _enqueue_message(msg)
 
         return block_dg
 
+    def container(self):
+        return self._block()
+
+    def collapsible_container(self, label=None, collapsed=False):
+        """Creates a collapsible container.
+
+        [TODO: get more container verbage]
+        Similar to `st.container`, `st.collapsible_container` provides a container
+        to add elements to. However, it has the added benefit of being collapsible.
+        Users will be able to expand and collapse the container that is identifiable
+        with the provided label.
+
+        Parameters
+        ----------
+        label : str
+            A short label used as the header for the collapsible container.
+            This will always be displayed even when the container is collapsed.
+        collapsed : boolean
+            The default state for the collapsible container.
+            Defaults to False
+
+        Returns
+        -------
+        [TODO] Technically a delta generator but let's please not tell the users that...
+
+        Examples
+        --------
+        >>> collapsible_container = st.collapsible_container("Collapse Me")
+        >>> collapsible_container.write("I can be collapsed")
+
+        """
+        if label is None:
+            raise StreamlitAPIException(
+                "A label is required for a collapsible container"
+            )
+
+        collapsible_proto = Block_pb2.Block.Collapsible()
+        collapsible_proto.collapsed = collapsed
+        collapsible_proto.label = label
+
+        block_proto = Block_pb2.Block()
+        block_proto.collapsible.CopyFrom(collapsible_proto)
+
+        return self._block(block_proto=block_proto)
+
     def favicon(
-        self, element, image, clamp=False, channels="RGB", format="JPEG",
+        self,
+        element,
+        image,
+        clamp=False,
+        channels="RGB",
+        format="JPEG",
     ):
         """Set the page favicon to the specified image.
 
