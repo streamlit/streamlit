@@ -47,23 +47,17 @@ const BALLOON_IMAGES: string[] = [
 
 const BALLOON_TYPES = BALLOON_IMAGES.length
 
-interface BalloonProps {
-  reportId: string
-  balloonNumber: number
-}
-
 interface BalloonsProps {
   reportId: string
 }
 
-function Balloon({ reportId, balloonNumber }: BalloonProps): ReactElement {
+function Balloon(): ReactElement {
   const randNum = Math.floor(Math.random() * BALLOON_TYPES)
 
   return (
     <img
       src={BALLOON_IMAGES[randNum]}
       className="balloon"
-      key={reportId + balloonNumber}
       alt=""
       style={{
         left: `${Math.random() * (POS_MAX_VW - POS_MIN_VW) + POS_MIN_VW}vw`,
@@ -77,7 +71,7 @@ function Balloons({ reportId }: BalloonsProps): ReactElement {
   return (
     <div className="balloons">
       {range(NUM_BALLOONS).map(i => (
-        <Balloon reportId={reportId} balloonNumber={i} />
+        <Balloon key={reportId + i} />
       ))}
     </div>
   )
