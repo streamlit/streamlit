@@ -29,7 +29,6 @@ $imageWidth: 121px;
     height: $imageHeight;
     width: $imageWidth;
 
-    /* If modifying the duration, you should also modify Balloons.js */
     animation-duration: 750ms;
     animation-name: move-up;
     animation-timing-function: ease-in;

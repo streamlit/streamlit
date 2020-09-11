@@ -45,12 +45,19 @@ const BALLOON_IMAGES: string[] = [
   Balloon5,
 ]
 
-export interface Props {
+const BALLOON_TYPES = BALLOON_IMAGES.length
+
+interface BalloonProps {
+  reportId: string
+  balloonNumber: number
+}
+
+interface BalloonsProps {
   reportId: string
 }
 
-function drawBalloon(reportId: string, balloonNumber: number): ReactElement {
-  const randNum = Math.floor(Math.random() * BALLOON_IMAGES.length)
+function Balloon({ reportId, balloonNumber }: BalloonProps): ReactElement {
+  const randNum = Math.floor(Math.random() * BALLOON_TYPES)
 
   return (
     <img
@@ -66,10 +73,12 @@ function drawBalloon(reportId: string, balloonNumber: number): ReactElement {
   )
 }
 
-function Balloons({ reportId }: Props): ReactElement {
+function Balloons({ reportId }: BalloonsProps): ReactElement {
   return (
     <div className="balloons">
-      {range(NUM_BALLOONS).map(i => drawBalloon(reportId, i))}
+      {range(NUM_BALLOONS).map(i => (
+        <Balloon reportId={reportId} balloonNumber={i} />
+      ))}
     </div>
   )
 }
