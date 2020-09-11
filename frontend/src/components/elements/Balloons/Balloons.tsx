@@ -47,7 +47,7 @@ const BALLOON_IMAGES: string[] = [
 
 const BALLOON_TYPES = BALLOON_IMAGES.length
 
-interface BalloonsProps {
+export interface Props {
   reportId: string
 }
 
@@ -67,7 +67,7 @@ function Balloon(): ReactElement {
   )
 }
 
-function Balloons({ reportId }: BalloonsProps): ReactElement {
+function Balloons({ reportId }: Props): ReactElement {
   // Keys should be unique each time, so React replaces the images in the DOM and their animations
   // actually rerun.
   return (
