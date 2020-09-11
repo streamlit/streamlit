@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { mount } from "enzyme"
 
 import Balloons, { Props, NUM_BALLOONS } from "./Balloons"
 
@@ -35,7 +35,7 @@ describe("Balloons element", () => {
 
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<Balloons {...props} />)
+    const wrapper = mount(<Balloons {...props} />)
 
     expect(wrapper).toBeDefined()
     expect(wrapper.find(".balloons img").length).toBe(NUM_BALLOONS)
@@ -45,18 +45,5 @@ describe("Balloons element", () => {
       expect(node.prop("style")).toHaveProperty("left")
       expect(node.prop("style")).toHaveProperty("animationDelay")
     })
-  })
-
-  it("should render with correct key", async () => {
-    const props = getProps()
-    const wrapper = shallow(<Balloons {...props} />)
-
-    expect(wrapper.html()).not.toBeNull()
-
-    wrapper
-      .find(".balloons img")
-      .forEach((node, i) =>
-        expect(node.key()).toBe(String(props.reportId + i))
-      )
   })
 })

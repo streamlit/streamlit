@@ -68,6 +68,8 @@ function Balloon(): ReactElement {
 }
 
 function Balloons({ reportId }: BalloonsProps): ReactElement {
+  // Keys should be unique each time, so React replaces the images in the DOM and their animations
+  // actually rerun.
   return (
     <div className="balloons">
       {range(NUM_BALLOONS).map(i => (
