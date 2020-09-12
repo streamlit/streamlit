@@ -35,8 +35,8 @@ class PyplotMixin:
         ----------
         fig : Matplotlib Figure
             The figure to plot. When this argument isn't specified, this
-            function will render the global plot. We have deprecated the use
-            of the global plot for thread safety.
+            function will render the global figure (but this is deprecated,
+            as described below)
 
         clear_figure : bool
             If True, the figure will be cleared after being rendered.
@@ -50,6 +50,12 @@ class PyplotMixin:
 
         **kwargs : any
             Arguments to pass to Matplotlib's savefig function.
+
+        .. info :: Deprecation warning. We will soon remove the ability to
+        specify no arguments in `st.plot()`, as that requires the use of
+        Matplotlib's global figure object, which is not thread-safe. So please
+        always pass a figure object as shown in the example section below.
+
 
         Example
         -------
@@ -141,9 +147,11 @@ class PyplotGlobalUseWarning(StreamlitDeprecationWarning):
 
     def _get_message(self):
         return """
-You are attempting to use the global pyplot instance to display your plots. We
-are deprecating this feature due to its lack of thread safety. We recommend
-using a [subplot](https://matplotlib.org/api/_as_gen/matplotlib.pyplot.subplot.html).
+You are calling `st.pyplot()` without any arguments. We will soon remove the
+ability to do this as it requires the use of Matplotlib's global figure object,
+which is not thread-safe.
+
+To future-proof this code, you should pass in a figure as shown below:
 
 ```python
 >>> fig, ax = plt.subplots()
@@ -151,7 +159,4 @@ using a [subplot](https://matplotlib.org/api/_as_gen/matplotlib.pyplot.subplot.h
 >>>    ... other plotting actions ...
 >>> st.pyplot(fig)
 ```
-
-See [https://github.com/streamlit/streamlit/issues/923](https://github.com/streamlit/streamlit/issues/923)
-for more information.
-            """
+"""
