@@ -51,11 +51,12 @@ class PyplotMixin:
         **kwargs : any
             Arguments to pass to Matplotlib's savefig function.
 
-        .. info :: Deprecation warning. We will soon remove the ability to
-        specify no arguments in `st.plot()`, as that requires the use of
-        Matplotlib's global figure object, which is not thread-safe. So please
-        always pass a figure object as shown in the example section below.
-
+        .. note::
+           Deprecation warning. We will soon remove the ability to specify
+           no arguments in `st.plot()`, as that requires the use of
+           Matplotlib's global figure object, which is not thread-safe. So
+           please always pass a figure object as shown in the example section
+           below.
 
         Example
         -------
