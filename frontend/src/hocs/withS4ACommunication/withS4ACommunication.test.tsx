@@ -21,7 +21,6 @@ import { shallow } from "enzyme"
 import withS4ACommunication, {
   S4ACommunicationHOC,
 } from "./withS4ACommunication"
-import { IMenuItem } from "./types"
 
 const testComponent = (props: {
   s4aCommunication: S4ACommunicationHOC
@@ -48,9 +47,10 @@ describe("withS4ACommunication HOC", () => {
 
   it("s4a should receive a GUEST_READY message", done => {
     const WithHoc = withS4ACommunication(testComponent)
-    const wrapper = shallow(<WithHoc />)
 
-    const listener = (event: MessageEvent) => {
+    shallow(<WithHoc />)
+
+    const listener = (event: MessageEvent): void => {
       expect(event.data).toStrictEqual({
         stCommVersion: 1,
         type: "GUEST_READY",

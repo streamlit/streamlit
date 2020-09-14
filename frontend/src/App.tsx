@@ -205,7 +205,7 @@ export class App extends PureComponent<Props, State> {
     MetricsManager.current.enqueue("viewReport")
   }
 
-  componentDidUpdate(prevProps: Readonly<Props>) {
+  componentDidUpdate(prevProps: Readonly<Props>): void {
     if (
       prevProps.s4aCommunication.currentState.queryParams !==
       this.props.s4aCommunication.currentState.queryParams
