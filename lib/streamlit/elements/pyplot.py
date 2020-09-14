@@ -51,6 +51,13 @@ class PyplotMixin:
         **kwargs : any
             Arguments to pass to Matplotlib's savefig function.
 
+        .. note::
+           Deprecation warning. We will soon remove the ability to specify
+           no arguments in `st.plot()`, as that requires the use of
+           Matplotlib's global figure object, which is not thread-safe. So
+           please always pass a figure object as shown in the example section
+           below.
+
         Example
         -------
         >>> import matplotlib.pyplot as plt
@@ -68,13 +75,6 @@ class PyplotMixin:
 
         Notes
         -----
-        .. note::
-           Deprecation warning. We will soon remove the ability to specify
-           no arguments in `st.plot()`, as that requires the use of
-           Matplotlib's global figure object, which is not thread-safe. So
-           please always pass a figure object as shown in the example section
-           above.
-
         Matplotlib support several different types of "backends". If you're
         getting an error using Matplotlib with Streamlit, try setting your
         backend to "TkAgg"::
