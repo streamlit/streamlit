@@ -205,13 +205,9 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_balloons(self):
         """Test st.balloons."""
-        with patch("random.randrange") as p:
-            p.return_value = 0xDEADBEEF
-            st.balloons()
-
+        st.balloons()
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.balloons.type, Balloons.DEFAULT)
-        self.assertEqual(el.balloons.execution_id, 0xDEADBEEF)
+        self.assertEqual(el.balloons.show, True)
 
     def test_st_bar_chart(self):
         """Test st.bar_chart."""
