@@ -329,21 +329,20 @@ export class App extends PureComponent<Props, State> {
     const { title, favicon, layout, initialSidebarState } = pageConfig
 
     if (title) {
+      const brandedTitle = `${title} · Streamlit`
+
       this.props.s4aCommunication.sendMessage({
         type: "SET_PAGE_TITLE",
-        title,
+        title: brandedTitle,
       })
 
-      document.title = `${title} · Streamlit`
+      document.title = brandedTitle
     }
+
     if (favicon) {
-      handleFavicon(favicon, imageUrl => {
-        this.props.s4aCommunication.sendMessage({
-          type: "SET_PAGE_FAVICON",
-          favicon: imageUrl,
-        })
-      })
+      handleFavicon(favicon)
     }
+
     // Only change layout/sidebar when the page config has changed.
     // This preserves the user's previous choice, and prevents extra re-renders.
     if (layout !== this.state.layout) {
@@ -819,19 +818,11 @@ export class App extends PureComponent<Props, State> {
       queryString = queryString.substring(1)
     }
 
-    if (widgetStates) {
-      this.sendBackMsg(
-        new BackMsg({
-          rerunScript: { queryString, widgetStates },
-        })
-      )
-    } else {
-      this.sendBackMsg(
-        new BackMsg({
-          rerunScript: { queryString },
-        })
-      )
-    }
+    this.sendBackMsg(
+      new BackMsg({
+        rerunScript: { queryString, widgetStates },
+      })
+    )
   }
 
   /** Requests that the server stop running the report */

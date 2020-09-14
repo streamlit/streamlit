@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { PureComponent, ComponentType, ReactNode } from "react"
+import React, { ComponentType, useState, useEffect, ReactElement } from "react"
 import hoistNonReactStatics from "hoist-non-react-statics"
 
 import {
@@ -36,83 +36,74 @@ export interface S4ACommunicationHOC {
   sendMessage: (message: IGuestToHostMessage) => void
 }
 
+const S4A_COMM_VERSION = 1
+
+export function sendS4AMessage(message: IGuestToHostMessage): void {
+  window.parent.postMessage(
+    {
+      stCommVersion: S4A_COMM_VERSION,
+      ...message,
+    } as VersionedMessage<IGuestToHostMessage>,
+    "*"
+  )
+}
+
 function withS4ACommunication(
   WrappedComponent: ComponentType<any>
 ): ComponentType<any> {
-  class ComponentWithS4ACommunication extends PureComponent<any, State> {
-    static readonly displayName = `withS4ACommunication(${WrappedComponent.displayName ||
-      WrappedComponent.name})`
+  function ComponentWithS4ACommunication(props: any): ReactElement {
+    const [items, setItems] = useState<IMenuItem[]>([])
+    const [queryParams, setQueryParams] = useState("")
 
-    readonly S4A_COMM_VERSION = 1
+    useEffect(() => {
+      function receiveMessage(event: MessageEvent): void {
+        const message: VersionedMessage<IHostToGuestMessage> = event.data
 
-    state = {
-      items: [],
-      queryParams: "",
-    }
+        if (
+          event.origin !== window.location.origin ||
+          message.stCommVersion !== S4A_COMM_VERSION
+        )
+          return
 
-    componentDidMount() {
-      window.addEventListener("message", this.receiveMessage)
-    }
+        if (message.type === "SET_MENU_ITEMS") {
+          setItems(message.items)
+        }
 
-    componentWillUnmount() {
-      window.removeEventListener("message", this.receiveMessage)
-    }
-
-    sendMessage = (message: IGuestToHostMessage): void => {
-      window.parent.postMessage(
-        {
-          stCommVersion: this.S4A_COMM_VERSION,
-          ...message,
-        } as VersionedMessage<IGuestToHostMessage>,
-        "*"
-      )
-    }
-
-    receiveMessage = (event: MessageEvent): void => {
-      const message: VersionedMessage<IHostToGuestMessage> = event.data
-
-      if (
-        event.origin !== window.location.origin ||
-        message.stCommVersion !== this.S4A_COMM_VERSION
-      )
-        return
-
-      if (message.type === "SET_MENU_ITEMS") {
-        this.setState({
-          items: message.items,
-        })
+        if (message.type === "UPDATE_FROM_QUERY_PARAMS") {
+          setQueryParams(message.queryParams)
+        }
       }
 
-      if (message.type === "UPDATE_FROM_QUERY_PARAMS") {
-        this.setState({
-          queryParams: message.queryParams,
-        })
+      window.addEventListener("message", receiveMessage)
+
+      return () => {
+        window.removeEventListener("message", receiveMessage)
       }
-    }
+    }, [])
 
-    connect = () => {
-      this.sendMessage({
-        type: "GUEST_READY",
-      })
-    }
-
-    getS4ACommunicationProps = (): S4ACommunicationHOC => ({
-      currentState: {
-        ...this.state,
-      },
-      connect: this.connect,
-      sendMessage: this.sendMessage,
-    })
-
-    render(): ReactNode {
-      return (
-        <WrappedComponent
-          s4aCommunication={this.getS4ACommunicationProps()}
-          {...this.props}
-        />
-      )
-    }
+    return (
+      <WrappedComponent
+        s4aCommunication={
+          {
+            currentState: {
+              items,
+              queryParams,
+            },
+            connect: () => {
+              sendS4AMessage({
+                type: "GUEST_READY",
+              })
+            },
+            sendMessage: sendS4AMessage,
+          } as S4ACommunicationHOC
+        }
+        {...props}
+      />
+    )
   }
+
+  ComponentWithS4ACommunication.displayName = `withS4ACommunication(${WrappedComponent.displayName ||
+    WrappedComponent.name})`
 
   // Static methods must be copied over
   // https://en.reactjs.org/docs/higher-order-components.html#static-methods-must-be-copied-over
