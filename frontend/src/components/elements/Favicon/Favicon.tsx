@@ -26,10 +26,7 @@ import { sendS4AMessage } from "hocs/withS4ACommunication/withS4ACommunication"
  * @param {string} favicon may be an image url, or an emoji like 🍕 or :pizza:
  * @param {function} callback
  */
-export function handleFavicon(
-  favicon: string,
-  callback?: (imageUrl: string) => void
-): void {
+export function handleFavicon(favicon: string): void {
   const emoji = extractEmoji(favicon)
   let imageUrl
 
