@@ -17,8 +17,8 @@ import streamlit as st
 container = st.container()
 container.write("I cannot collapse")
 
-expander = st.expander("Collapse me!")
+expander = st.expander("Collapse me!", expanded=True)
 expander.write("I can collapse")
 
-collapsed = st.expander("Expand me!", collapsed=True)
+collapsed = st.expander("Expand me!")
 collapsed.write("I am already collapsed")

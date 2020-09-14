@@ -385,7 +385,7 @@ class DeltaGenerator(
     def container(self):
         return self._block()
 
-    def expander(self, label=None, collapsed=True):
+    def expander(self, label=None, expanded=False):
         """Creates a container that can be expanded and collapsed.
 
         [TODO: get more container verbage]
@@ -399,9 +399,9 @@ class DeltaGenerator(
         label : str
             A short label used as the header for the expander.
             This will always be displayed even when the container is collapsed.
-        collapsed : boolean
+        expanded : boolean
             The default state for the expander.
-            Defaults to True
+            Defaults to False
 
         Returns
         -------
@@ -409,19 +409,19 @@ class DeltaGenerator(
 
         Examples
         --------
-        >>> expander = st.expander("Collapse Me")
-        >>> expander.write("I can be collapsed")
+        >>> expander = st.expander("Expand Me")
+        >>> expander.write("I can be expanded")
 
         """
         if label is None:
             raise StreamlitAPIException("A label is required for an expander")
 
-        collapsible_proto = Block_pb2.Block.Collapsible()
-        collapsible_proto.collapsed = collapsed
-        collapsible_proto.label = label
+        expandable_proto = Block_pb2.Block.Expandable()
+        expandable_proto.expanded = expanded
+        expandable_proto.label = label
 
         block_proto = Block_pb2.Block()
-        block_proto.collapsible.CopyFrom(collapsible_proto)
+        block_proto.expandable.CopyFrom(expandable_proto)
 
         return self._block(block_proto=block_proto)
 

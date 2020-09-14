@@ -17,20 +17,22 @@
 
 import React, { ComponentType } from "react"
 import { shallow } from "enzyme"
-import withCollapsible, { Props, StyledToggle } from "./withCollapsible"
+import withExpandable, { Props, StyledToggle } from "./withExpandable"
 
 const testComponent: ComponentType = () => <div>test</div>
 
-const getProps = (props: Partial<ReportElementProps> = {}): Props => ({
-  label: "hi",
-  collapsible: true,
-  ...props,
-})
+const getProps = (props?: Partial<Props>): Props =>
+  Object({
+    label: "hi",
+    expandable: true,
+    expanded: true,
+    ...props,
+  })
 
-describe("withCollapsible HOC", () => {
+describe("withExpandable HOC", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const WithHoc = withCollapsible(testComponent)
+    const WithHoc = withExpandable(testComponent)
     // @ts-ignore
     const wrapper = shallow(<WithHoc {...props} />)
 
@@ -39,7 +41,7 @@ describe("withCollapsible HOC", () => {
 
   it("should render a expanded component", () => {
     const props = getProps()
-    const WithHoc = withCollapsible(testComponent)
+    const WithHoc = withExpandable(testComponent)
     // @ts-ignore
     const wrapper = shallow(<WithHoc {...props} />)
     const toggleHeader = wrapper.find(StyledToggle)
@@ -50,9 +52,9 @@ describe("withCollapsible HOC", () => {
 
   it("should render a collapsed component", () => {
     const props = getProps({
-      collapsed: true,
+      expanded: false,
     })
-    const WithHoc = withCollapsible(testComponent)
+    const WithHoc = withExpandable(testComponent)
     // @ts-ignore
     const wrapper = shallow(<WithHoc {...props} />)
     const toggleHeader = wrapper.find(StyledToggle)
