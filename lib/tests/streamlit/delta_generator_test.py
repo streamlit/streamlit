@@ -301,6 +301,24 @@ class DeltaGeneratorContainerTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(msg.metadata.delta_id, 1)
 
 
+class DeltaGeneratorContainerTest(testutil.DeltaGeneratorTestCase):
+    """Test DeltaGenerator Columns."""
+
+    def test_equal_columns(self):
+        for column in st.columns(4):
+            self.assertIsInstance(column, DeltaGenerator)
+            self.assertFalse(column._cursor.is_locked)
+
+    def test_variable_columns(self):
+        weights = [3, 1, 4, 1, 5, 9]
+        st.columns(weights)
+
+        for i, w in enumerate(weights):
+            # Pull the delta from the back of the queue, using negative index
+            delta = self.get_delta_from_queue(i - len(weights))
+            self.assertEqual(delta.add_block.column.weight, w)
+
+
 class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
     """Test the `with DG` feature"""
 
