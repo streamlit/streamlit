@@ -21,7 +21,7 @@ import { shallow } from "enzyme"
 import { buttonOverrides } from "lib/widgetTheme"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
-import { Button as UIButton } from "baseui/button"
+import UIButton from "components/shared/Button"
 
 import Button, { ButtonProps } from "./Button"
 
@@ -100,15 +100,6 @@ describe("Button widget", () => {
       const wrappedUIButton = wrapper.find(UIButton)
 
       expect(wrappedUIButton.props().disabled).toBe(props.disabled)
-    })
-
-    it("overrides prop", () => {
-      const props = getProps()
-      const wrapper = shallow(<Button {...props} />)
-
-      const wrappedUIButton = wrapper.find(UIButton)
-
-      expect(wrappedUIButton.props().overrides).toBe(buttonOverrides)
     })
   })
 })

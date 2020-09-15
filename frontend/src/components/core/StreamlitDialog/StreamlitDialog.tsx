@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import CopyToClipboard from "react-copy-to-clipboard"
+import copy from "copy-to-clipboard"
 import React, { ReactElement, ReactNode } from "react"
 import ProgressBar from "components/shared/ProgressBar"
 import { Kind } from "components/shared/Button"
@@ -305,6 +305,11 @@ interface UploadedProps {
  * Shows the URL after something has been uploaded.
  */
 function uploadedDialog(props: UploadedProps): ReactElement {
+  const handleClick = () => {
+    copy(props.url)
+    props.onClose()
+  }
+
   return (
     <Modal isOpen onClose={props.onClose}>
       <ModalBody>
@@ -318,9 +323,9 @@ function uploadedDialog(props: UploadedProps): ReactElement {
         </pre>
       </ModalBody>
       <ModalFooter>
-        <CopyToClipboard text={props.url} onCopy={props.onClose}>
-          <ModalButton kind={Kind.SECONDARY}>Copy to clipboard</ModalButton>
-        </CopyToClipboard>{" "}
+        <ModalButton kind={Kind.SECONDARY} onClick={handleClick}>
+          Copy to clipboard
+        </ModalButton>
         <ModalButton
           kind={Kind.SECONDARY}
           onClick={() => {

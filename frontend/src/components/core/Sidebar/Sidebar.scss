@@ -64,26 +64,6 @@
       z-index: $z-index-sidebar-mobile;
     }
 
-    .sidebar-close {
-      position: absolute;
-      top: 0.5rem;
-      right: 0.5rem;
-      z-index: 1;
-
-      .open-iconic {
-        fill: $black;
-        opacity: 0.25;
-      }
-
-      &:hover {
-        background: transparent;
-
-        .open-iconic {
-          opacity: 1;
-        }
-      }
-    }
-
     h1 {
       font-size: 1.5rem;
       font-weight: 600;
@@ -159,5 +139,17 @@
       background: rgba(0, 0, 0, 0.61);
       border-radius: 100px;
     }
+  }
+}
+
+.sidebar-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 1;
+
+  .open-iconic {
+    fill: $black;
+    opacity: 0.25;
   }
 }
