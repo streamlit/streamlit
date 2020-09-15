@@ -111,6 +111,7 @@ class Block extends PureComponent<Props> {
         const element = reportElement.get("element")
 
         if (element instanceof List) {
+          // Recursive case AKA a single container AKA node with children
           return this.renderBlock(
             element as BlockElement,
             index,
@@ -144,8 +145,18 @@ class Block extends PureComponent<Props> {
   ): ReactNode {
     const BlockType = deltaBlock.expandable ? this.WithExpandableBlock : Block
     const optionalProps = deltaBlock.expandable ? deltaBlock.expandable : {}
+    let style: any = {width};
+    if (deltaBlock.column) {
+      style = {
+        ...style,
+        // Flex determines how much space is allocated to this column.
+        flex: deltaBlock.column.weight,
+        // Pad columns on each side. TODO: Should only pad between, not at ends.
+        margin: "0 4px",
+      }
+    }
     return (
-      <div key={index} className="stBlock" style={{ width }}>
+      <div key={index} className="stBlock" style={style}>
         <BlockType
           elements={element}
           reportId={this.props.reportId}
@@ -419,11 +430,24 @@ class Block extends PureComponent<Props> {
     })
   }
 
-  public render = (): ReactNode => (
-    <AutoSizer disableHeight={true}>
-      {({ width }) => this.renderElements(width)}
-    </AutoSizer>
-  )
+  public render = (): ReactNode => {
+    if (this.props.deltaBlock?.horizontal) {
+      // Create a horizontal block as the parent for columns
+      // TODO: Calculate widths for children? We just pick a big number for now.
+      return (
+        <div className="stBlock-horiz" style={{ display: "flex" }}>
+          {this.renderElements(8888)}
+        </div>
+      )
+    }
+
+    // Create a vertical block. Widths of children autosizes to window width.
+    return (
+      <AutoSizer disableHeight={true}>
+        {({ width }) => this.renderElements(width)}
+      </AutoSizer>
+    )
+  }
 }
 
 export default Block

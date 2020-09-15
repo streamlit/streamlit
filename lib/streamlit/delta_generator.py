@@ -26,6 +26,7 @@ from streamlit.proto import Block_pb2
 from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto.Element_pb2 import Element
+from streamlit.proto.Delta_pb2 import Delta as DeltaProto
 from streamlit.logger import get_logger
 
 from streamlit.elements.utils import NoValue
@@ -353,6 +354,28 @@ class DeltaGenerator(
 
         return _value_or_dg(return_value, output_dg)
 
+    def container(self):
+        return self._block()
+
+    # TODO: Enforce that columns are not nested or in Sidebar
+    def columns(self, weights):
+        if isinstance(weights, int):
+            # If the user provided a single number, expand into equal weights.
+            # E.g. 3 => (1, 1, 1)
+            # TODO: check that the number > 0
+            weights = (1,) * weights
+
+        def column_proto(weight):
+            col_proto = Block_pb2.Block()
+            col_proto.column.weight = weight
+            return col_proto
+
+        horiz_proto = Block_pb2.Block()
+        horiz_proto.horizontal.unused = False
+        row = self._block(horiz_proto)
+        return [row._block(column_proto(w)) for w in weights]
+
+    # Internal block element, to hide the 'layout' param from our users.
     def _block(self, block_proto=Block_pb2.Block()):
         # Switch to the active DeltaGenerator, in case we're in a `with` block.
         self = self._active_dg
@@ -426,12 +449,7 @@ class DeltaGenerator(
         return self._block(block_proto=block_proto)
 
     def favicon(
-        self,
-        element,
-        image,
-        clamp=False,
-        channels="RGB",
-        format="JPEG",
+        self, element, image, clamp=False, channels="RGB", format="JPEG",
     ):
         """Set the page favicon to the specified image.
 

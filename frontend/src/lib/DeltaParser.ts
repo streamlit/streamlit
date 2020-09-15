@@ -18,6 +18,7 @@
 import {
   BlockPath,
   Delta,
+  IBlock,
   IForwardMsgMetadata,
   NamedDataSet,
 } from "autogen/proto"
@@ -42,7 +43,8 @@ export interface Elements {
  * A node of the element tree, representing a single thing to render: {
  *  element: SimpleElement | BlockElement
  *  reportId: string
- *  metadata: IForwardMsgMetadata
+ *  metadata: IForwardMsgMetadata (proto)
+ *  deltaBlock: IBlock (proto)
  * }
  */
 export type ReportElement = ImmutableMap<string, any>
@@ -83,7 +85,7 @@ export function applyDelta(
         handleNewElementMessage(currentElement, element, reportId, metadata)
       )
     },
-    addBlock: (deltaBlock: Delta) => {
+    addBlock: (deltaBlock: IBlock) => {
       elements[topLevelBlock] = elements[topLevelBlock].updateIn(
         deltaPath,
         reportElement =>
@@ -133,17 +135,19 @@ function handleAddBlockMessage(
   reportElement: ReportElement,
   reportId: string,
   metadata: IForwardMsgMetadata,
-  deltaBlock: Delta
+  deltaBlock: IBlock
 ): ReportElement {
   MetricsManager.current.incrementDeltaCounter("new block")
 
-  // This node was already a list of elements. Update everything but the element.
-  const list =
-    reportElement && reportElement.get("element") instanceof List
-      ? reportElement.get("element")
-      : List()
-
-  return ImmutableMap({ element: list, reportId, metadata, deltaBlock })
+  const existingEl = reportElement?.get("element")
+  return ImmutableMap({
+    // If there are already children in list, don't overwrite them.
+    // This prevents existing widgets from getting their values reset.
+    element: existingEl instanceof List ? existingEl : List(),
+    reportId,
+    metadata,
+    deltaBlock,
+  })
 }
 
 function handleAddRowsMessage(

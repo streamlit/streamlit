@@ -17,7 +17,24 @@
 syntax = "proto3";
 
 message Block {
-  Expandable expandable = 1;
+  oneof type {
+    Vertical vertical = 1;
+    Horizontal horizontal = 2;
+    Column column = 3;
+    Expandable expandable = 4;
+  }
+
+  message Vertical {
+    bool unused = 1;
+  }
+
+  message Horizontal {
+    bool unused = 2;
+  }
+
+  message Column {
+    double weight = 1;
+  }
 
   message Expandable {
     string label = 1;
