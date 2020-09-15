@@ -145,7 +145,7 @@ class Block extends PureComponent<Props> {
   ): ReactNode {
     const BlockType = deltaBlock.expandable ? this.WithExpandableBlock : Block
     const optionalProps = deltaBlock.expandable ? deltaBlock.expandable : {}
-    let style: any = {width};
+    let style: any = { width }
     if (deltaBlock.column) {
       style = {
         ...style,
