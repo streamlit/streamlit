@@ -23,19 +23,25 @@ widgets, like a slider, to filter results.
    `uber_pickups.py`.
 2. Open `uber_pickups.py` in your favorite IDE or text editor, then add these
    lines:
-   ```Python
+
+   ```python
    import streamlit as st
    import pandas as pd
    import numpy as np
    ```
+
 3. Every good app has a title, so let's add one:
-   ```Python
+
+   ```python
    st.title('Uber pickups in NYC')
    ```
+
 4. Now it's time to run Streamlit from the command line:
-   ```Bash
-   $ streamlit run uber_pickups.py
+
+   ```bash
+   streamlit run uber_pickups.py
    ```
+
 5. As usual, the app should automatically open in a new tab in your
    browser.
 
@@ -47,7 +53,7 @@ dataset for pickups and drop-offs in New York City.
 1. Let's start by writing a function to load the data. Add this code to your
    script:
 
-   ```Python
+   ```python
    DATE_COLUMN = 'date/time'
    DATA_URL = ('https://s3-us-west-2.amazonaws.com/'
             'streamlit-demo-data/uber-raw-data-sep14.csv.gz')
@@ -68,7 +74,7 @@ dataset for pickups and drop-offs in New York City.
 2. Now let's test the function and review the output. Below your function, add
    these lines:
 
-   ```Python
+   ```python
    # Create a text element and let the reader know the data is loading.
    data_load_state = st.text('Loading data...')
    # Load 10,000 rows of data into the dataframe.
@@ -194,21 +200,27 @@ available, let's take things a step further and draw a histogram to see what
 Uber's busiest hours are in New York City.
 
 1. To start, let's add a subheader just below the raw data section:
+
    ```Python
    st.subheader('Number of pickups by hour')
    ```
+
 2. Use NumPy to generate a histogram that breaks down pickup times binned by
    hour:
-   ```Python
+
+   ```python
    hist_values = np.histogram(
        data[DATE_COLUMN].dt.hour, bins=24, range=(0,24))[0]
    ```
+
 3. Now, let's use Streamlit's
    [`st.bar_chart()`](../api.html#streamlit.bar_chart) method to draw this
    histogram.
-   ```Python
+
+   ```python
    st.bar_chart(hist_values)
    ```
+
 4. Save your script. This histogram should show up in your app right away.
    After a quick review, it looks like the busiest time is 17:00 (5 P.M.).
 
@@ -228,13 +240,17 @@ concentration, let's use Streamlit [`st.map()`](../api.html#streamlit.map)
 function to overlay the data on a map of New York City.
 
 1. Add a subheader for the section:
-   ```Python
+
+   ```python
    st.subheader('Map of all pickups')
    ```
+
 2. Use the `st.map()` function to plot the data:
-   ```Python
+
+   ```python
    st.map(data)
    ```
+
 3. Save your script. The map is fully interactive. Give it a try by panning or
    zooming in a bit.
 
@@ -243,17 +259,21 @@ pickups was 17:00. Let's redraw the map to show the concentration of pickups
 at 17:00.
 
 1. Locate the following code snippet:
-   ```Python
+
+   ```python
    st.subheader('Map of all pickups')
    st.map(data)
    ```
+
 2. Replace it with:
-   ```Python
+
+   ```python
    hour_to_filter = 17
    filtered_data = data[data[DATE_COLUMN].dt.hour == hour_to_filter]
    st.subheader(f'Map of all pickups at {hour_to_filter}:00')
    st.map(filtered_data)
    ```
+
 3. You should see the data update instantly.
 
 To draw this map we used a simple map function that's built into Streamlit, but
@@ -268,9 +288,11 @@ filter the data in real time? Using Streamlit's widgets you can. Let's add a
 slider to the app with the `st.slider()` method.
 
 1. Locate `hour_to_filter` and replace it with this code snippet:
-   ```Python
+
+   ```python
    hour_to_filter = st.slider('hour', 0, 23, 17)  # min: 0h, max: 23h, default: 17h
    ```
+
 2. Use the slider and watch the map update in real time.
 
 ## Use a button to toggle data
@@ -288,7 +310,8 @@ table at the top of your app.
    ```
 
 2. Replace these lines with the following code:
-   ```Python
+
+   ```python
    if st.checkbox('Show raw data'):
        st.subheader('Raw data')
        st.write(data)
