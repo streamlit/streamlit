@@ -15,7 +15,7 @@ code.
 Before you get started, you're going to need a few things:
 
 - Your favorite IDE or text editor
-- [python 3.6 or later](https://www.python.org/downloads/)
+- [Python 3.6 or later](https://www.python.org/downloads/)
 - [PIP](https://pip.pypa.io/en/stable/installing/)
 - [Streamlit](index.md) — This one's kind of important, so don't forget to
   install.
@@ -27,7 +27,7 @@ concepts](main_concepts.md) to understand Streamlit's data flow model.
 
 Regardless of which package management tool you're using, we recommend running
 these commands in a virtual environment. This ensures that the dependencies
-pulled in for Streamlit don't impact any other python projects
+pulled in for Streamlit don't impact any other Python projects
 you're working on.
 
 - [pipenv](https://pipenv.pypa.io/en/latest/)
@@ -50,10 +50,10 @@ streamlit hello
 
 ## Import Streamlit
 
-Now that everything's installed, let's create a new python script and import
+Now that everything's installed, let's create a new Python script and import
 Streamlit.
 
-1. Create a new python file named `first_app.py`, then open it with your IDE
+1. Create a new Python file named `first_app.py`, then open it with your IDE
    or text editor.
 2. Next, import Streamlit.
 
@@ -72,7 +72,7 @@ Streamlit.
    streamlit run first_app.py
    ```
 
-   Running a Streamlit app is no different than any other python script.
+   Running a Streamlit app is no different than any other Python script.
    Whenever you need to view the app, you can use this command.
 
    ```eval_rst
@@ -134,7 +134,7 @@ these features and how to add colors and styling to your data frames.
 
 ## Use magic
 
-If you're using python 3, you can also write to your app without calling any
+If you're using Python 3, you can also write to your app without calling any
 Streamlit methods. Streamlit supports "[magic
 commands](api.html#magic-commands)," which means you don't have to use
 [`st.write()`](api.html#streamlit.write) at all! Try replacing the code above
