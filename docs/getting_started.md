@@ -134,7 +134,7 @@ these features and how to add colors and styling to your data frames.
 
 ## Use magic
 
-If you're using Python 3, you can also write to your app without calling any
+You can also write to your app without calling any
 Streamlit methods. Streamlit supports "[magic
 commands](api.html#magic-commands)," which means you don't have to use
 [`st.write()`](api.html#streamlit.write) at all! Try replacing the code above
