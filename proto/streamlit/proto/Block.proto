@@ -17,10 +17,10 @@
 syntax = "proto3";
 
 message Block {
-  Collapsible collapsible = 1;
+  Expandable expandable = 1;
 
-  message Collapsible {
+  message Expandable {
     string label = 1;
-    bool collapsed = 2;
+    bool expanded = 2;
   }
 }

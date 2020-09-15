@@ -20,19 +20,19 @@ import { styled } from "styletron-react"
 import { colors, variables } from "lib/widgetTheme"
 
 export interface Props {
-  collapsible: boolean
+  expandable: boolean
   label: string
-  collapsed: boolean
+  expanded: boolean
 }
 
 type ComponentProps = {
-  collapsed: boolean
+  expanded: boolean
 }
 
 export const AnimatedComponentWrapper = styled(
   "div",
-  ({ collapsed }: ComponentProps) => ({
-    maxHeight: collapsed ? 0 : "100vh",
+  ({ expanded }: ComponentProps) => ({
+    maxHeight: expanded ? "100vh" : 0,
     overflow: "hidden",
     transitionProperty: "max-height",
     transitionDuration: "0.5s",
@@ -40,12 +40,12 @@ export const AnimatedComponentWrapper = styled(
   })
 )
 
-export const StyledHeader = styled("div", ({ collapsed }: ComponentProps) => ({
+export const StyledHeader = styled("div", ({ expanded }: ComponentProps) => ({
   display: "flex",
   justifyContent: "space-between",
   cursor: "pointer",
   borderWidth: 0,
-  borderBottomWidth: collapsed ? 0 : "1px",
+  borderBottomWidth: expanded ? "1px" : 0,
   borderStyle: "solid",
   borderColor: colors.grayLighter,
   marginBottom: variables.spacer,
@@ -58,35 +58,35 @@ export const StyledToggle = styled("small", {
   color: colors.gray,
 })
 
-function withCollapsible(
+function withExpandable(
   WrappedComponent: ComponentType<any>
 ): ComponentType<any> {
-  const CollapsibleComponent = (props: Props): ReactElement => {
-    const { label, collapsed: initialCollapsed, ...componentProps } = props
+  const ExpandableComponent = (props: Props): ReactElement => {
+    const { label, expanded: initialExpanded, ...componentProps } = props
 
-    const [collapsed, toggleCollapse] = useState<boolean>(initialCollapsed)
+    const [expanded, toggleExpanded] = useState<boolean>(initialExpanded)
     useEffect(() => {
-      toggleCollapse(initialCollapsed)
-    }, [initialCollapsed])
+      toggleExpanded(initialExpanded)
+    }, [initialExpanded])
 
-    const toggle = (): void => toggleCollapse(!collapsed)
+    const toggle = (): void => toggleExpanded(!expanded)
 
     return (
       <>
-        <StyledHeader collapsed={collapsed}>
+        <StyledHeader expanded={expanded}>
           <div>{label}</div>
           <StyledToggle onClick={toggle} role="button" data-toggle>
-            {collapsed ? "Show" : "Hide"}
+            {expanded ? "Hide" : "Show"}
           </StyledToggle>
         </StyledHeader>
-        <AnimatedComponentWrapper collapsed={collapsed}>
+        <AnimatedComponentWrapper expanded={expanded}>
           <WrappedComponent {...componentProps} />
         </AnimatedComponentWrapper>
       </>
     )
   }
 
-  return CollapsibleComponent
+  return ExpandableComponent
 }
 
-export default withCollapsible
+export default withExpandable

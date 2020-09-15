@@ -385,22 +385,22 @@ class DeltaGenerator(
     def container(self):
         return self._block()
 
-    def collapsible_container(self, label=None, collapsed=False):
-        """Creates a collapsible container.
+    def expander(self, label=None, expanded=False):
+        """Creates a container that can be expanded and collapsed.
 
         [TODO: get more container verbage]
-        Similar to `st.container`, `st.collapsible_container` provides a container
-        to add elements to. However, it has the added benefit of being collapsible.
-        Users will be able to expand and collapse the container that is identifiable
-        with the provided label.
+        Similar to `st.container`, `st.expander` provides a container
+        to add elements to. However, it has the added benefit of being expandable and
+        collapsible. Users will be able to expand and collapse the container that is
+        identifiable with the provided label.
 
         Parameters
         ----------
         label : str
-            A short label used as the header for the collapsible container.
+            A short label used as the header for the expander.
             This will always be displayed even when the container is collapsed.
-        collapsed : boolean
-            The default state for the collapsible container.
+        expanded : boolean
+            The default state for the expander.
             Defaults to False
 
         Returns
@@ -409,21 +409,19 @@ class DeltaGenerator(
 
         Examples
         --------
-        >>> collapsible_container = st.collapsible_container("Collapse Me")
-        >>> collapsible_container.write("I can be collapsed")
+        >>> expander = st.expander("Expand Me")
+        >>> expander.write("I can be expanded")
 
         """
         if label is None:
-            raise StreamlitAPIException(
-                "A label is required for a collapsible container"
-            )
+            raise StreamlitAPIException("A label is required for an expander")
 
-        collapsible_proto = Block_pb2.Block.Collapsible()
-        collapsible_proto.collapsed = collapsed
-        collapsible_proto.label = label
+        expandable_proto = Block_pb2.Block.Expandable()
+        expandable_proto.expanded = expanded
+        expandable_proto.label = label
 
         block_proto = Block_pb2.Block()
-        block_proto.collapsible.CopyFrom(collapsible_proto)
+        block_proto.expandable.CopyFrom(expandable_proto)
 
         return self._block(block_proto=block_proto)
 

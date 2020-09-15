@@ -42,7 +42,7 @@ import {
 } from "components/widgets/CustomComponent/"
 
 import Maybe from "components/core/Maybe/"
-import withCollapsible from "hocs/withCollapsible"
+import withExpandable from "hocs/withExpandable"
 
 // Lazy-load elements.
 const Audio = React.lazy(() => import("components/elements/Audio/"))
@@ -99,7 +99,7 @@ interface Props {
 }
 
 class Block extends PureComponent<Props> {
-  private WithCollapsibleBlock = withCollapsible(Block)
+  private WithExpandableBlock = withExpandable(Block)
 
   /** Recursively transform this BLockElement and all children to React Nodes. */
   private renderElements = (width: number): ReactNode[] => {
@@ -142,10 +142,8 @@ class Block extends PureComponent<Props> {
     width: number,
     deltaBlock: IBlock
   ): ReactNode {
-    const BlockType = deltaBlock.collapsible
-      ? this.WithCollapsibleBlock
-      : Block
-    const optionalProps = deltaBlock.collapsible ? deltaBlock.collapsible : {}
+    const BlockType = deltaBlock.expandable ? this.WithExpandableBlock : Block
+    const optionalProps = deltaBlock.expandable ? deltaBlock.expandable : {}
     return (
       <div key={index} className="stBlock" style={{ width }}>
         <BlockType
