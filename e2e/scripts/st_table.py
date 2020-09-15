@@ -19,3 +19,6 @@ import numpy as np
 grid = np.arange(0, 100, 1).reshape(10, 10)
 df = pd.DataFrame(grid)
 st.table(df)
+
+grid = np.arange(0, 10, 1).reshape(1, 10)
+st.table(grid)

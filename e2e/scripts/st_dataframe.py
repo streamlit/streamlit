@@ -25,3 +25,11 @@ def highlight_first(value):
 grid = np.arange(0, 100, 1).reshape(10, 10)
 df = pd.DataFrame(grid)
 st.dataframe(df.style.applymap(highlight_first))
+
+df = pd.DataFrame({"pear": [1, 2, 3], "apple": [2, 3, 4], "orange": [3, 4, 5]})
+st.dataframe(df)
+st.table(df)
+
+df = pd.DataFrame({"pear": [], "apple": [], "orange": []})
+st.dataframe(df)
+st.table(df)
