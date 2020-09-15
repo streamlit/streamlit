@@ -23,29 +23,29 @@ describe("st.column", () => {
   });
 
   it("creates 3 equal-width columns", () => {
-    cy.get(".stBlock-horiz stBlock")
+    cy.get(".stBlock-horiz .stBlock")
       .eq(0)
-      .should("have.attr", "flex", "1");
-    cy.get(".stBlock-horiz stBlock")
+      .should("have.css", "flex", "1 1 0%");
+    cy.get(".stBlock-horiz .stBlock")
       .eq(1)
-      .should("have.attr", "flex", "1");
-    cy.get(".stBlock-horiz stBlock")
+      .should("have.css", "flex", "1 1 0%");
+    cy.get(".stBlock-horiz .stBlock")
       .eq(2)
-      .should("have.attr", "flex", "1");
+      .should("have.css", "flex", "1 1 0%");
   });
 
   it("creates 4 variable-width columns", () => {
-    cy.get(".stBlock-horiz stBlock")
+    cy.get(".stBlock-horiz .stBlock")
       .eq(3)
-      .should("have.attr", "flex", "1");
-    cy.get(".stBlock-horiz stBlock")
+      .should("have.css", "flex", "1 1 0%");
+    cy.get(".stBlock-horiz .stBlock")
       .eq(4)
-      .should("have.attr", "flex", "2");
-    cy.get(".stBlock-horiz stBlock")
+      .should("have.css", "flex", "2 1 0%");
+    cy.get(".stBlock-horiz .stBlock")
       .eq(5)
-      .should("have.attr", "flex", "4");
-    cy.get(".stBlock-horiz stBlock")
+      .should("have.css", "flex", "4 1 0%");
+    cy.get(".stBlock-horiz .stBlock")
       .eq(6)
-      .should("have.attr", "flex", "8");
+      .should("have.css", "flex", "8 1 0%");
   });
 });
