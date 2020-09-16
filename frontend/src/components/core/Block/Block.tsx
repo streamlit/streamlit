@@ -151,8 +151,6 @@ class Block extends PureComponent<Props> {
         ...style,
         // Flex determines how much space is allocated to this column.
         flex: deltaBlock.column.weight,
-        // Pad columns on each side. TODO: Should only pad between, not at ends.
-        margin: "0 4px",
       }
     }
     return (
@@ -435,7 +433,7 @@ class Block extends PureComponent<Props> {
       // Create a horizontal block as the parent for columns
       // TODO: Calculate widths for children? We just pick a big number for now.
       return (
-        <div className="stBlock-horiz" style={{ display: "flex" }}>
+        <div className="stBlock-horiz" style={{ display: "flex", gap: "8px" }}>
           {this.renderElements(8888)}
         </div>
       )
