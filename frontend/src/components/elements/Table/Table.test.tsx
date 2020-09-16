@@ -39,7 +39,7 @@ describe("Table Element", () => {
   it("renders an empty row", () => {
     const props = getProps(emptyTable)
     const wrapper = mount(<Table {...props} />)
-    console.log(wrapper.debug())
+
     expect(wrapper.find("table").length).toBe(1)
     expect(wrapper.find(".stTable").length).toBe(1)
     expect(wrapper.find(".empty").exists()).toBeTruthy()
