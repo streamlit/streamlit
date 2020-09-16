@@ -596,6 +596,24 @@ PERFORMANCE OF THIS SOFTWARE.
 
 -----
 
+The following software may be included in this product: @mapbox/geojson-rewind. A copy of the source code may be downloaded from git://github.com/mapbox/geojson-rewind.git. This software contains the following license and notice below:
+
+Copyright (c) 2020, Mapbox
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
+-----
+
 The following software may be included in this product: @mapbox/geojson-types. This software contains the following license and notice below:
 
 MIT License
@@ -898,6 +916,32 @@ The following software may be included in this product: @plotly/d3-sankey-circul
 MIT License
 
 Copyright (c) 2017 Tom Shanley
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-----
+
+The following software may be included in this product: @plotly/point-cluster, has-passive-events, parse-rect, point-cluster, pxls, regl-error2d, regl-line2d, regl-scatter2d, to-float32, to-uint8. A copy of the source code may be downloaded from git://github.com/plotly/point-cluster.git (@plotly/point-cluster), git+https://github.com/dfcreative/has-passive-events.git (has-passive-events), git+https://github.com/dfcreative/parse-rect.git (parse-rect), git://github.com/dy/point-cluster.git (point-cluster), git+https://github.com/dy/pxls.git (pxls), git+https://github.com/dy/regl-error2d.git (regl-error2d), git+https://github.com/dy/regl-line2d.git (regl-line2d), git+https://github.com/dy/regl-scatter2d.git (regl-scatter2d), git+https://github.com/dy/to-float32.git (to-float32), git+https://github.com/dy/to-uint8.git (to-uint8). This software contains the following license and notice below:
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Dmitry Ivanov
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -1690,7 +1734,7 @@ THE SOFTWARE.
 
 -----
 
-The following software may be included in this product: a-big-triangle, affine-hull, almost-equal, barycentric, binary-search-bounds, bit-twiddle, box-intersect, circumcenter, compare-angle, cubic-hermite, cwise, cwise-compiler, cwise-parser, delaunay-triangulate, double-bits, dup, edges-to-adjacency-list, extract-frustum-planes, functional-red-black-tree, gl-buffer, gl-contour2d, gl-error3d, gl-fbo, gl-heatmap2d, gl-line3d, gl-matrix-invert, gl-mesh3d, gl-plot2d, gl-pointcloud2d, gl-scatter3d, gl-select-box, gl-select-static, gl-shader, gl-spikes2d, gl-spikes3d, gl-state, gl-texture2d, gl-vao, incremental-convex-hull, interval-tree-1d, invert-permutation, iota-array, marching-simplex-table, monotone-convex-hull-2d, ndarray, ndarray-extract-contour, ndarray-fill, ndarray-gradient, ndarray-homography, ndarray-linear-interpolate, ndarray-ops, ndarray-pack, ndarray-scratch, ndarray-sort, ndarray-warp, nextafter, normals, permutation-parity, permutation-rank, planar-dual, planar-graph-to-polyline, point-in-big-polygon, rat-vec, robust-compress, robust-determinant, robust-dot-product, robust-linear-solve, robust-orientation, robust-product, robust-scale, robust-segment-intersect, robust-subtract, robust-sum, signum, simplicial-complex, simplicial-complex-contour, simplify-planar-graph, slab-decomposition, split-polygon, strongly-connected-components, surface-nets, triangulate-hypercube, triangulate-polyline, two-product, two-sum, typedarray-pool, union-find, uniq, vectorize-text, zero-crossings. A copy of the source code may be downloaded from git://github.com/mikolalysenko/a-big-triangle.git (a-big-triangle), https://github.com/mikolalysenko/affine-hull.git (affine-hull), git://github.com/mikolalysenko/almost-equal.git (almost-equal), git://github.com/mikolalysenko/barycentric.git (barycentric), git://github.com/mikolalysenko/binary-search-bounds.git (binary-search-bounds), git://github.com/mikolalysenko/bit-twiddle.git (bit-twiddle), https://github.com/mikolalysenko/box-intersect.git (box-intersect), git://github.com/mikolalysenko/circumcenter.git (circumcenter), git://github.com/mikolalysenko/compare-angle.git (compare-angle), git://github.com/mikolalysenko/cubic-hermite.git (cubic-hermite), git://github.com/scijs/cwise.git (cwise), git://github.com/scijs/cwise-compiler.git (cwise-compiler), git://github.com/scijs/cwise-parser.git (cwise-parser), git://github.com/mikolalysenko/delaunay-triangulate.git (delaunay-triangulate), git://github.com/mikolalysenko/double-bits.git (double-bits), git://github.com/mikolalysenko/dup.git (dup), git://github.com/mikolalysenko/edges-to-adjacency-list.git (edges-to-adjacency-list), git://github.com/mikolalysenko/extract-frustum-planes.git (extract-frustum-planes), git://github.com/mikolalysenko/functional-red-black-tree.git (functional-red-black-tree), git://github.com/stackgl/gl-buffer.git (gl-buffer), git+https://github.com/gl-vis/gl-contour2d.git (gl-contour2d), git://github.com/gl-vis/gl-error3d.git (gl-error3d), git://github.com/stackgl/gl-fbo.git (gl-fbo), git+https://github.com/gl-vis/gl-heatmap2d.git (gl-heatmap2d), git://github.com/gl-vis/gl-line3d.git (gl-line3d), git://github.com/mikolalysenko/gl-matrix-invert.git (gl-matrix-invert), git://github.com/gl-vis/gl-mesh3d.git (gl-mesh3d), git+https://github.com/gl-vis/gl-plot2d.git (gl-plot2d), git+https://github.com/gl-vis/gl-pointcloud2d.git (gl-pointcloud2d), git://github.com/gl-vis/gl-scatter3d.git (gl-scatter3d), git+https://github.com/gl-vis/gl-select-box.git (gl-select-box), git://github.com/gl-vis/gl-select-static.git (gl-select-static), git://github.com/stackgl/gl-shader.git (gl-shader), git+https://github.com/gl-vis/gl-spikes2d.git (gl-spikes2d), git://github.com/gl-vis/gl-spikes3d.git (gl-spikes3d), git://github.com/mikolalysenko/gl-state.git (gl-state), git://github.com/stackgl/gl-texture2d.git (gl-texture2d), git://github.com/stackgl/gl-vao.git (gl-vao), git://github.com/mikolalysenko/incremental-convex-hull.git (incremental-convex-hull), git://github.com/mikolalysenko/interval-tree-1d.git (interval-tree-1d), git://github.com/mikolalysenko/invert-permutation.git (invert-permutation), git://github.com/mikolalysenko/iota-array.git (iota-array), https://github.com/mikolalysenko/marching-simplex-table.git (marching-simplex-table), git://github.com/mikolalysenko/monotone-convex-hull-2d.git (monotone-convex-hull-2d), git://github.com/mikolalysenko/ndarray.git (ndarray), git://github.com/mikolalysenko/ndarray-extract-contour.git (ndarray-extract-contour), git://github.com/mikolalysenko/ndarray-fill.git (ndarray-fill), git://github.com/mikolalysenko/ndarray-gradient.git (ndarray-gradient), git://github.com/mikolalysenko/ndarray-homography.git (ndarray-homography), git://github.com/mikolalysenko/ndarray-linear-interpolate.git (ndarray-linear-interpolate), git://github.com/mikolalysenko/ndarray-ops.git (ndarray-ops), git://github.com/mikolalysenko/ndarray-pack.git (ndarray-pack), git://github.com/mikolalysenko/ndarray-scratch.git (ndarray-scratch), git://github.com/mikolalysenko/ndarray-sort.git (ndarray-sort), git://github.com/mikolalysenko/ndarray-warp.git (ndarray-warp), git://github.com/mikolalysenko/nextafter.git (nextafter), git://github.com/mikolalysenko/normals.git (normals), git://github.com/mikolalysenko/permutation-parity.git (permutation-parity), git://github.com/mikolalysenko/permutation-rank.git (permutation-rank), git://github.com/mikolalysenko/planar-dual.git (planar-dual), git://github.com/mikolalysenko/planar-graph-to-polyline.git (planar-graph-to-polyline), git://github.com/mikolalysenko/point-in-big-polygon.git (point-in-big-polygon), git+https://github.com/rat-nest/rat-vec.git (rat-vec), git://github.com/mikolalysenko/robust-compress.git (robust-compress), git://github.com/mikolalysenko/robust-determinant.git (robust-determinant), git://github.com/mikolalysenko/robust-dot-product.git (robust-dot-product), git://github.com/mikolalysenko/robust-linear-solve.git (robust-linear-solve), git://github.com/mikolalysenko/robust-orientation.git (robust-orientation), git://github.com/mikolalysenko/robust-product.git (robust-product), git://github.com/mikolalysenko/robust-scale.git (robust-scale), git://github.com/mikolalysenko/robust-segment-intersect.git (robust-segment-intersect), git://github.com/mikolalysenko/robust-subtract.git (robust-subtract), git://github.com/mikolalysenko/robust-sum.git (robust-sum), git://github.com/mikolalysenko/signum.git (signum), git://github.com/mikolalysenko/simplicial-complex.git (simplicial-complex), https://github.com/mikolalysenko/simplicial-complex-contour.git (simplicial-complex-contour), git://github.com/mikolalysenko/simplify-planar-graph.git (simplify-planar-graph), git://github.com/mikolalysenko/slab-decomposition.git (slab-decomposition), git://github.com/mikolalysenko/split-polygon.git (split-polygon), git://github.com/mikolalysenko/strongly-connected-components.git (strongly-connected-components), git://github.com/mikolalysenko/surface-nets.git (surface-nets), git://github.com/mikolalysenko/triangulate-hypercube.git (triangulate-hypercube), git://github.com/mikolalysenko/triangulate-polyline.git (triangulate-polyline), git://github.com/mikolalysenko/two-product.git (two-product), git://github.com/mikolalysenko/two-sum.git (two-sum), git://github.com/mikolalysenko/typedarray-pool.git (typedarray-pool), git://github.com/mikolalysenko/union-find.git (union-find), git://github.com/mikolalysenko/uniq.git (uniq), git://github.com/mikolalysenko/vectorize-text.git (vectorize-text), git://github.com/mikolalysenko/zero-crossings.git (zero-crossings). This software contains the following license and notice below:
+The following software may be included in this product: a-big-triangle, affine-hull, almost-equal, barycentric, binary-search-bounds, bit-twiddle, box-intersect, circumcenter, compare-angle, cubic-hermite, cwise-compiler, delaunay-triangulate, double-bits, dup, edges-to-adjacency-list, extract-frustum-planes, functional-red-black-tree, gl-buffer, gl-contour2d, gl-error3d, gl-fbo, gl-heatmap2d, gl-line3d, gl-mesh3d, gl-plot2d, gl-pointcloud2d, gl-scatter3d, gl-select-box, gl-select-static, gl-shader, gl-spikes2d, gl-spikes3d, gl-state, gl-texture2d, gl-vao, incremental-convex-hull, interval-tree-1d, invert-permutation, iota-array, marching-simplex-table, monotone-convex-hull-2d, ndarray, ndarray-extract-contour, ndarray-gradient, ndarray-linear-interpolate, ndarray-ops, ndarray-pack, ndarray-scratch, ndarray-sort, nextafter, normals, permutation-parity, permutation-rank, planar-dual, planar-graph-to-polyline, point-in-big-polygon, rat-vec, robust-compress, robust-determinant, robust-dot-product, robust-linear-solve, robust-orientation, robust-product, robust-scale, robust-segment-intersect, robust-subtract, robust-sum, signum, simplicial-complex, simplicial-complex-contour, simplify-planar-graph, slab-decomposition, split-polygon, strongly-connected-components, surface-nets, triangulate-hypercube, triangulate-polyline, two-product, two-sum, typedarray-pool, union-find, uniq, vectorize-text, zero-crossings. A copy of the source code may be downloaded from git://github.com/mikolalysenko/a-big-triangle.git (a-big-triangle), https://github.com/mikolalysenko/affine-hull.git (affine-hull), git://github.com/mikolalysenko/almost-equal.git (almost-equal), git://github.com/mikolalysenko/barycentric.git (barycentric), git://github.com/mikolalysenko/binary-search-bounds.git (binary-search-bounds), git://github.com/mikolalysenko/bit-twiddle.git (bit-twiddle), https://github.com/mikolalysenko/box-intersect.git (box-intersect), git://github.com/mikolalysenko/circumcenter.git (circumcenter), git://github.com/mikolalysenko/compare-angle.git (compare-angle), git://github.com/mikolalysenko/cubic-hermite.git (cubic-hermite), git://github.com/scijs/cwise-compiler.git (cwise-compiler), git://github.com/mikolalysenko/delaunay-triangulate.git (delaunay-triangulate), git://github.com/mikolalysenko/double-bits.git (double-bits), git://github.com/mikolalysenko/dup.git (dup), git://github.com/mikolalysenko/edges-to-adjacency-list.git (edges-to-adjacency-list), git://github.com/mikolalysenko/extract-frustum-planes.git (extract-frustum-planes), git://github.com/mikolalysenko/functional-red-black-tree.git (functional-red-black-tree), git://github.com/stackgl/gl-buffer.git (gl-buffer), git+https://github.com/gl-vis/gl-contour2d.git (gl-contour2d), git://github.com/gl-vis/gl-error3d.git (gl-error3d), git://github.com/stackgl/gl-fbo.git (gl-fbo), git+https://github.com/gl-vis/gl-heatmap2d.git (gl-heatmap2d), git://github.com/gl-vis/gl-line3d.git (gl-line3d), git://github.com/gl-vis/gl-mesh3d.git (gl-mesh3d), git+https://github.com/gl-vis/gl-plot2d.git (gl-plot2d), git+https://github.com/gl-vis/gl-pointcloud2d.git (gl-pointcloud2d), git://github.com/gl-vis/gl-scatter3d.git (gl-scatter3d), git+https://github.com/gl-vis/gl-select-box.git (gl-select-box), git://github.com/gl-vis/gl-select-static.git (gl-select-static), git://github.com/stackgl/gl-shader.git (gl-shader), git+https://github.com/gl-vis/gl-spikes2d.git (gl-spikes2d), git://github.com/gl-vis/gl-spikes3d.git (gl-spikes3d), git://github.com/mikolalysenko/gl-state.git (gl-state), git://github.com/stackgl/gl-texture2d.git (gl-texture2d), git://github.com/stackgl/gl-vao.git (gl-vao), git://github.com/mikolalysenko/incremental-convex-hull.git (incremental-convex-hull), git://github.com/mikolalysenko/interval-tree-1d.git (interval-tree-1d), git://github.com/mikolalysenko/invert-permutation.git (invert-permutation), git://github.com/mikolalysenko/iota-array.git (iota-array), https://github.com/mikolalysenko/marching-simplex-table.git (marching-simplex-table), git://github.com/mikolalysenko/monotone-convex-hull-2d.git (monotone-convex-hull-2d), git://github.com/mikolalysenko/ndarray.git (ndarray), git://github.com/mikolalysenko/ndarray-extract-contour.git (ndarray-extract-contour), git://github.com/mikolalysenko/ndarray-gradient.git (ndarray-gradient), git://github.com/mikolalysenko/ndarray-linear-interpolate.git (ndarray-linear-interpolate), git://github.com/mikolalysenko/ndarray-ops.git (ndarray-ops), git://github.com/mikolalysenko/ndarray-pack.git (ndarray-pack), git://github.com/mikolalysenko/ndarray-scratch.git (ndarray-scratch), git://github.com/mikolalysenko/ndarray-sort.git (ndarray-sort), git://github.com/mikolalysenko/nextafter.git (nextafter), git://github.com/mikolalysenko/normals.git (normals), git://github.com/mikolalysenko/permutation-parity.git (permutation-parity), git://github.com/mikolalysenko/permutation-rank.git (permutation-rank), git://github.com/mikolalysenko/planar-dual.git (planar-dual), git://github.com/mikolalysenko/planar-graph-to-polyline.git (planar-graph-to-polyline), git://github.com/mikolalysenko/point-in-big-polygon.git (point-in-big-polygon), git+https://github.com/rat-nest/rat-vec.git (rat-vec), git://github.com/mikolalysenko/robust-compress.git (robust-compress), git://github.com/mikolalysenko/robust-determinant.git (robust-determinant), git://github.com/mikolalysenko/robust-dot-product.git (robust-dot-product), git://github.com/mikolalysenko/robust-linear-solve.git (robust-linear-solve), git://github.com/mikolalysenko/robust-orientation.git (robust-orientation), git://github.com/mikolalysenko/robust-product.git (robust-product), git://github.com/mikolalysenko/robust-scale.git (robust-scale), git://github.com/mikolalysenko/robust-segment-intersect.git (robust-segment-intersect), git://github.com/mikolalysenko/robust-subtract.git (robust-subtract), git://github.com/mikolalysenko/robust-sum.git (robust-sum), git://github.com/mikolalysenko/signum.git (signum), git://github.com/mikolalysenko/simplicial-complex.git (simplicial-complex), https://github.com/mikolalysenko/simplicial-complex-contour.git (simplicial-complex-contour), git://github.com/mikolalysenko/simplify-planar-graph.git (simplify-planar-graph), git://github.com/mikolalysenko/slab-decomposition.git (slab-decomposition), git://github.com/mikolalysenko/split-polygon.git (split-polygon), git://github.com/mikolalysenko/strongly-connected-components.git (strongly-connected-components), git://github.com/mikolalysenko/surface-nets.git (surface-nets), git://github.com/mikolalysenko/triangulate-hypercube.git (triangulate-hypercube), git://github.com/mikolalysenko/triangulate-polyline.git (triangulate-polyline), git://github.com/mikolalysenko/two-product.git (two-product), git://github.com/mikolalysenko/two-sum.git (two-sum), git://github.com/mikolalysenko/typedarray-pool.git (typedarray-pool), git://github.com/mikolalysenko/union-find.git (union-find), git://github.com/mikolalysenko/uniq.git (uniq), git://github.com/mikolalysenko/vectorize-text.git (vectorize-text), git://github.com/mikolalysenko/zero-crossings.git (zero-crossings). This software contains the following license and notice below:
 
 The MIT License (MIT)
 
@@ -2052,32 +2096,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
------
-
-The following software may be included in this product: align-text, assign-symbols, center-align, contains-path, define-property, is-accessor-descriptor, is-data-descriptor, is-extendable, lazy-cache, pascalcase, right-align, shallow-clone. A copy of the source code may be downloaded from git://github.com/jonschlinkert/align-text.git (align-text), https://github.com/jonschlinkert/assign-symbols.git (assign-symbols), https://github.com/jonschlinkert/center-align.git (center-align), https://github.com/jonschlinkert/contains-path.git (contains-path), https://github.com/jonschlinkert/define-property.git (define-property), https://github.com/jonschlinkert/is-accessor-descriptor.git (is-accessor-descriptor), https://github.com/jonschlinkert/is-data-descriptor.git (is-data-descriptor), https://github.com/jonschlinkert/is-extendable.git (is-extendable), https://github.com/jonschlinkert/lazy-cache.git (lazy-cache), https://github.com/jonschlinkert/pascalcase.git (pascalcase), git://github.com/jonschlinkert/right-align.git (right-align), https://github.com/jonschlinkert/shallow-clone.git (shallow-clone). This software contains the following license and notice below:
-
-The MIT License (MIT)
-
-Copyright (c) 2015, Jon Schlinkert.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
 
 -----
 
@@ -3127,6 +3145,32 @@ IN THE SOFTWARE.
 
 -----
 
+The following software may be included in this product: assign-symbols, contains-path, define-property, is-accessor-descriptor, is-data-descriptor, is-extendable, lazy-cache, pascalcase, shallow-clone. A copy of the source code may be downloaded from https://github.com/jonschlinkert/assign-symbols.git (assign-symbols), https://github.com/jonschlinkert/contains-path.git (contains-path), https://github.com/jonschlinkert/define-property.git (define-property), https://github.com/jonschlinkert/is-accessor-descriptor.git (is-accessor-descriptor), https://github.com/jonschlinkert/is-data-descriptor.git (is-data-descriptor), https://github.com/jonschlinkert/is-extendable.git (is-extendable), https://github.com/jonschlinkert/lazy-cache.git (lazy-cache), https://github.com/jonschlinkert/pascalcase.git (pascalcase), https://github.com/jonschlinkert/shallow-clone.git (shallow-clone). This software contains the following license and notice below:
+
+The MIT License (MIT)
+
+Copyright (c) 2015, Jon Schlinkert.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+-----
+
 The following software may be included in this product: astral-regex, dir-glob, shebang-command. A copy of the source code may be downloaded from https://github.com/kevva/astral-regex.git (astral-regex), https://github.com/kevva/dir-glob.git (dir-glob), https://github.com/kevva/shebang-command.git (shebang-command). This software contains the following license and notice below:
 
 MIT License
@@ -3439,7 +3483,7 @@ SOFTWARE.
 
 -----
 
-The following software may be included in this product: atob-lite, canvas-fit, concat-map, deep-equal, defined, element-size, fast-json-stable-stringify, font-atlas, gamma, is-typedarray, json-stable-stringify, json-stable-stringify-without-jsonify, minimist, object-inspect, path-browserify, quote-stream, resolve, resumer, right-now, safe-regex, shallow-copy, static-module, text-table, tty-browserify, vm-browserify, wordwrap. A copy of the source code may be downloaded from git://github.com/hughsk/atob-lite.git (atob-lite), git://github.com/hughsk/canvas-fit.git (canvas-fit), git://github.com/substack/node-concat-map.git (concat-map), http://github.com/substack/node-deep-equal.git (deep-equal), git://github.com/substack/defined.git (defined), git://github.com/hughsk/element-size.git (element-size), git://github.com/epoberezkin/fast-json-stable-stringify.git (fast-json-stable-stringify), git://github.com/hughsk/font-atlas.git (font-atlas), http://github.com/substack/gamma.js.git (gamma), git://github.com/hughsk/is-typedarray.git (is-typedarray), git://github.com/substack/json-stable-stringify.git (json-stable-stringify), git://github.com/samn/json-stable-stringify.git (json-stable-stringify-without-jsonify), git://github.com/substack/minimist.git (minimist), git://github.com/substack/object-inspect.git (object-inspect), git://github.com/substack/path-browserify.git (path-browserify), git://github.com/substack/quote-stream.git (quote-stream), git://github.com/substack/node-resolve.git (resolve), git://github.com/substack/resumer.git (resumer), git://github.com/hughsk/right-now.git (right-now), git://github.com/substack/safe-regex.git (safe-regex), git://github.com/substack/shallow-copy.git (shallow-copy), git://github.com/substack/static-module.git (static-module), git://github.com/substack/text-table.git (text-table), git://github.com/substack/tty-browserify.git (tty-browserify), http://github.com/substack/vm-browserify.git (vm-browserify), git://github.com/substack/node-wordwrap.git (wordwrap). This software contains the following license and notice below:
+The following software may be included in this product: atob-lite, canvas-fit, concat-map, deep-equal, defined, element-size, fast-json-stable-stringify, font-atlas, gamma, is-typedarray, json-stable-stringify, json-stable-stringify-without-jsonify, minimist, object-inspect, path-browserify, resolve, resumer, right-now, safe-regex, shallow-copy, text-table, tty-browserify, vm-browserify, wordwrap. A copy of the source code may be downloaded from git://github.com/hughsk/atob-lite.git (atob-lite), git://github.com/hughsk/canvas-fit.git (canvas-fit), git://github.com/substack/node-concat-map.git (concat-map), http://github.com/substack/node-deep-equal.git (deep-equal), git://github.com/substack/defined.git (defined), git://github.com/hughsk/element-size.git (element-size), git://github.com/epoberezkin/fast-json-stable-stringify.git (fast-json-stable-stringify), git://github.com/hughsk/font-atlas.git (font-atlas), http://github.com/substack/gamma.js.git (gamma), git://github.com/hughsk/is-typedarray.git (is-typedarray), git://github.com/substack/json-stable-stringify.git (json-stable-stringify), git://github.com/samn/json-stable-stringify.git (json-stable-stringify-without-jsonify), git://github.com/substack/minimist.git (minimist), git://github.com/substack/object-inspect.git (object-inspect), git://github.com/substack/path-browserify.git (path-browserify), git://github.com/substack/node-resolve.git (resolve), git://github.com/substack/resumer.git (resumer), git://github.com/hughsk/right-now.git (right-now), git://github.com/substack/safe-regex.git (safe-regex), git://github.com/substack/shallow-copy.git (shallow-copy), git://github.com/substack/text-table.git (text-table), git://github.com/substack/tty-browserify.git (tty-browserify), http://github.com/substack/vm-browserify.git (vm-browserify), git://github.com/substack/node-wordwrap.git (wordwrap). This software contains the following license and notice below:
 
 This software is released under the MIT license:
 
@@ -4265,7 +4309,7 @@ The following software may be included in this product: bl. A copy of the source
 The MIT License (MIT)
 =====================
 
-Copyright (c) 2013-2016 bl contributors
+Copyright (c) 2013-2018 bl contributors
 ----------------------------------
 
 *bl contributors listed at <https://github.com/rvagg/bl#contributors>*
@@ -5931,7 +5975,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 -----
 
-The following software may be included in this product: clone-deep, extend-shallow, longest, mixin-object, pad-left. A copy of the source code may be downloaded from https://github.com/jonschlinkert/clone-deep.git (clone-deep), https://github.com/jonschlinkert/extend-shallow.git (extend-shallow), https://github.com/jonschlinkert/longest.git (longest), https://github.com/jonschlinkert/mixin-object.git (mixin-object), git://github.com/jonschlinkert/pad-left.git (pad-left). This software contains the following license and notice below:
+The following software may be included in this product: clone-deep, extend-shallow, mixin-object, pad-left. A copy of the source code may be downloaded from https://github.com/jonschlinkert/clone-deep.git (clone-deep), https://github.com/jonschlinkert/extend-shallow.git (extend-shallow), https://github.com/jonschlinkert/mixin-object.git (mixin-object), git://github.com/jonschlinkert/pad-left.git (pad-left). This software contains the following license and notice below:
 
 The MIT License (MIT)
 
@@ -9655,37 +9699,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 -----
 
-The following software may be included in this product: duplexer2. A copy of the source code may be downloaded from git://github.com/deoxxa/duplexer2.git. This software contains the following license and notice below:
-
-Copyright (c) 2013, Deoxxa Development
-======================================
-All rights reserved.
---------------------
-  
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:  
-1. Redistributions of source code must retain the above copyright
-   notice, this list of conditions and the following disclaimer.  
-2. Redistributions in binary form must reproduce the above copyright
-   notice, this list of conditions and the following disclaimer in the
-   documentation and/or other materials provided with the distribution.  
-3. Neither the name of Deoxxa Development nor the names of its contributors
-   may be used to endorse or promote products derived from this software
-   without specific prior written permission.  
-  
-THIS SOFTWARE IS PROVIDED BY DEOXXA DEVELOPMENT ''AS IS'' AND ANY
-EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL DEOXXA DEVELOPMENT BE LIABLE FOR ANY
-DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
------
-
 The following software may be included in this product: duplexify, end-of-stream, protocol-buffers-schema, pump, pumpify. A copy of the source code may be downloaded from git://github.com/mafintosh/duplexify (duplexify), git://github.com/mafintosh/end-of-stream.git (end-of-stream), https://github.com/mafintosh/protocol-buffers-schema (protocol-buffers-schema), git://github.com/mafintosh/pump.git (pump), git://github.com/mafintosh/pumpify (pumpify). This software contains the following license and notice below:
 
 The MIT License (MIT)
@@ -10075,7 +10088,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 -----
 
-The following software may be included in this product: escodegen, esprima, estraverse, esutils. A copy of the source code may be downloaded from http://github.com/estools/escodegen.git (escodegen), http://github.com/ariya/esprima.git (esprima), http://github.com/Constellation/estraverse.git (estraverse), http://github.com/estools/esutils.git (esutils). This software contains the following license and notice below:
+The following software may be included in this product: escodegen, estraverse, esutils. A copy of the source code may be downloaded from http://github.com/estools/escodegen.git (escodegen), http://github.com/estools/estraverse.git (estraverse), http://github.com/estools/esutils.git (esutils). This software contains the following license and notice below:
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -12200,30 +12213,6 @@ For more information, please refer to <http://unlicense.org>
 
 -----
 
-The following software may be included in this product: gl-mat2. A copy of the source code may be downloaded from git://github.com/gl-modules/gl-mat2.git. This software contains the following license and notice below:
-
-Copyright (c) 2013 Brandon Jones, Colin MacKenzie IV, Hugh Kennedy
-
-This software is provided 'as-is', without any express or implied
-warranty. In no event will the authors be held liable for any damages
-arising from the use of this software.
-
-Permission is granted to anyone to use this software for any purpose,
-including commercial applications, and to alter it and redistribute it
-freely, subject to the following restrictions:
-
- 1. The origin of this software must not be misrepresented; you must not
-    claim that you wrote the original software. If you use this software
-    in a product, an acknowledgment in the product documentation would be
-    appreciated but is not required.
-
- 2. Altered source versions must be plainly marked as such, and must not
-    be misrepresented as being the original software.
-
- 3. This notice may not be removed or altered from any source distribution.
-
------
-
 The following software may be included in this product: gl-mat3. A copy of the source code may be downloaded from git://github.com/gl-modules/gl-mat3.git. This software contains the following license and notice below:
 
 Copyright (c) 2013 Brandon Jones, Colin MacKenzie IV, Hugh Kennedy
@@ -12275,6 +12264,30 @@ freely, subject to the following restrictions:
 The following software may be included in this product: gl-matrix. A copy of the source code may be downloaded from https://github.com/toji/gl-matrix.git. This software contains the following license and notice below:
 
 Copyright (c) 2015-2019, Brandon Jones, Colin MacKenzie IV.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+-----
+
+The following software may be included in this product: gl-matrix. A copy of the source code may be downloaded from https://github.com/toji/gl-matrix.git. This software contains the following license and notice below:
+
+Copyright (c) 2015-2020, Brandon Jones, Colin MacKenzie IV.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -12918,32 +12931,6 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
------
-
-The following software may be included in this product: has-passive-events, parse-rect, point-cluster, pxls, regl-error2d, regl-line2d, regl-scatter2d, to-float32, to-uint8. A copy of the source code may be downloaded from git+https://github.com/dfcreative/has-passive-events.git (has-passive-events), git+https://github.com/dfcreative/parse-rect.git (parse-rect), git://github.com/dy/point-cluster.git (point-cluster), git+https://github.com/dy/pxls.git (pxls), git+https://github.com/dy/regl-error2d.git (regl-error2d), git+https://github.com/dy/regl-line2d.git (regl-line2d), git+https://github.com/dy/regl-scatter2d.git (regl-scatter2d), git+https://github.com/dy/to-float32.git (to-float32), git+https://github.com/dy/to-uint8.git (to-uint8). This software contains the following license and notice below:
-
-The MIT License (MIT)
-
-Copyright (c) 2017 Dmitry Ivanov
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
 
 -----
 
@@ -13894,7 +13881,7 @@ SOFTWARE.
 
 -----
 
-The following software may be included in this product: is-browser, throat, uglify-to-browserify. A copy of the source code may be downloaded from https://github.com/ForbesLindesay/is-browser.git (is-browser), https://github.com/ForbesLindesay/throat.git (throat), https://github.com/ForbesLindesay/uglify-to-browserify.git (uglify-to-browserify). This software contains the following license and notice below:
+The following software may be included in this product: is-browser, throat. A copy of the source code may be downloaded from https://github.com/ForbesLindesay/is-browser.git (is-browser), https://github.com/ForbesLindesay/throat.git (throat). This software contains the following license and notice below:
 
 Copyright (c) 2013 Forbes Lindesay
 
@@ -15407,6 +15394,95 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 -----
 
+The following software may be included in this product: mapbox-gl. A copy of the source code may be downloaded from git://github.com/mapbox/mapbox-gl-js.git. This software contains the following license and notice below:
+
+Copyright (c) 2020, Mapbox
+
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright notice,
+      this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright notice,
+      this list of conditions and the following disclaimer in the documentation
+      and/or other materials provided with the distribution.
+    * Neither the name of Mapbox GL JS nor the names of its contributors
+      may be used to endorse or promote products derived from this software
+      without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+-------------------------------------------------------------------------------
+
+Contains code from glfx.js
+
+Copyright (C) 2011 by Evan Wallace
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+--------------------------------------------------------------------------------
+
+Contains a portion of d3-color https://github.com/d3/d3-color
+
+Copyright 2010-2016 Mike Bostock
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+* Neither the name of the author nor the names of contributors may be used to
+  endorse or promote products derived from this software without specific prior
+  written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+-----
+
 The following software may be included in this product: match-at. A copy of the source code may be downloaded from https://github.com/sophiebits/match-at.git. This software contains the following license and notice below:
 
 The MIT License (MIT)
@@ -16294,7 +16370,7 @@ SOFTWARE.
 
 -----
 
-The following software may be included in this product: mkdirp, optimist, yargs. A copy of the source code may be downloaded from https://github.com/substack/node-mkdirp.git (mkdirp), http://github.com/substack/node-optimist.git (optimist), http://github.com/bcoe/yargs.git (yargs). This software contains the following license and notice below:
+The following software may be included in this product: mkdirp, optimist. A copy of the source code may be downloaded from https://github.com/substack/node-mkdirp.git (mkdirp), http://github.com/substack/node-optimist.git (optimist). This software contains the following license and notice below:
 
 Copyright 2010 James Halliday (mail@substack.net)
 
@@ -16618,6 +16694,32 @@ The following software may be included in this product: nanomatch, to-regex. A c
 The MIT License (MIT)
 
 Copyright (c) 2016-2018, Jon Schlinkert.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+-----
+
+The following software may be included in this product: ndarray. A copy of the source code may be downloaded from git://github.com/mikolalysenko/ndarray.git. This software contains the following license and notice below:
+
+The MIT License (MIT)
+
+Copyright (c) 2013-2016 Mikola Lysenko
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22865,37 +22967,6 @@ SOFTWARE.
 
 The following software may be included in this product: topojson-client. A copy of the source code may be downloaded from https://github.com/topojson/topojson-client.git. This software contains the following license and notice below:
 
-Copyright (c) 2012-2016, Michael Bostock
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-* Redistributions of source code must retain the above copyright notice, this
-  list of conditions and the following disclaimer.
-
-* Redistributions in binary form must reproduce the above copyright notice,
-  this list of conditions and the following disclaimer in the documentation
-  and/or other materials provided with the distribution.
-
-* The name Michael Bostock may not be used to endorse or promote products
-  derived from this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL MICHAEL BOSTOCK BE LIABLE FOR ANY DIRECT,
-INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
-OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
-EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
------
-
-The following software may be included in this product: topojson-client. A copy of the source code may be downloaded from https://github.com/topojson/topojson-client.git. This software contains the following license and notice below:
-
 Copyright 2012-2019 Michael Bostock
 
 Permission to use, copy, modify, and/or distribute this software for any purpose
@@ -23282,40 +23353,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
------
-
-The following software may be included in this product: uglify-js. A copy of the source code may be downloaded from https://github.com/mishoo/UglifyJS2.git. This software contains the following license and notice below:
-
-UglifyJS is released under the BSD license:
-
-Copyright 2012-2013 (c) Mihai Bazon <mihai.bazon@gmail.com>
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions
-are met:
-
-    * Redistributions of source code must retain the above
-      copyright notice, this list of conditions and the following
-      disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials
-      provided with the distribution.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER “AS IS” AND ANY
-EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE
-LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
-OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
-TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
-THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
-SUCH DAMAGE.
 
 -----
 
