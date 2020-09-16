@@ -431,7 +431,7 @@ class Block extends PureComponent<Props> {
   }
 
   public render = (): ReactNode => {
-    if (this.props.deltaBlock?.horizontal) {
+    if (this.props.deltaBlock && this.props.deltaBlock.horizontal) {
       // Create a horizontal block as the parent for columns
       // TODO: Calculate widths for children? We just pick a big number for now.
       return (

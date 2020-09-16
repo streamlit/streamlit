@@ -139,7 +139,7 @@ function handleAddBlockMessage(
 ): ReportElement {
   MetricsManager.current.incrementDeltaCounter("new block")
 
-  const existingEl = reportElement?.get("element")
+  const existingEl = reportElement && reportElement.get("element")
   return ImmutableMap({
     // If there are already children in list, don't overwrite them.
     // This prevents existing widgets from getting their values reset.
