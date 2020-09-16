@@ -15,68 +15,103 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, memo } from "react"
-import range from "lodash/range"
+import React from "react"
+import { Balloons as BalloonsProto } from "autogen/proto"
+import { Map as ImmutableMap } from "immutable"
 
 /*
  * IMPORTANT: If you change the asset imports below, make sure they still work if Streamlit is
  * served from a subpath.
  */
-import Balloon0 from "assets/img/balloons/balloon-0.png"
-import Balloon1 from "assets/img/balloons/balloon-1.png"
-import Balloon2 from "assets/img/balloons/balloon-2.png"
-import Balloon3 from "assets/img/balloons/balloon-3.png"
-import Balloon4 from "assets/img/balloons/balloon-4.png"
-import Balloon5 from "assets/img/balloons/balloon-5.png"
+import BalloonEmoji from "assets/img/emoji/emoji_u1f388.png"
+import HappyFaceEmoji from "assets/img/emoji/emoji_u1f604.png"
+import StarFaceEmoji from "assets/img/emoji/emoji_u1f929.png"
+import CoolFaceEmoji from "assets/img/emoji/emoji_u1f60e.png"
 
 import "./Balloons.scss"
 
-export const NUM_BALLOONS = 30
-const POS_MIN_VW = 20
-const POS_MAX_VW = 80
-export const DELAY_MAX_MS = 1000
+export const NUM_BALLOONS = 15
+const POS_MIN_VW = 30
+const POS_MAX_VW = 70
+export const DELAY_MAX_MS = 500
 
-const BALLOON_IMAGES: string[] = [
-  Balloon0,
-  Balloon1,
-  Balloon2,
-  Balloon3,
-  Balloon4,
-  Balloon5,
-]
+const BALLOON_PROB = 0.5
 
-const BALLOON_TYPES = BALLOON_IMAGES.length
+export const MAX_ANIMATION_DURATION_MS = 1000 // see CSS
+
+const BALLOONS_INDICES = Array.from({ length: NUM_BALLOONS })
+
+const BALLOON_IMAGES: string[] = []
+BALLOON_IMAGES[0] = "" // 0 means random
+BALLOON_IMAGES[BalloonsProto.Type.BALLOON] = BalloonEmoji
+BALLOON_IMAGES[BalloonsProto.Type.HAPPY_FACE] = HappyFaceEmoji
+BALLOON_IMAGES[BalloonsProto.Type.STAR_FACE] = StarFaceEmoji
+BALLOON_IMAGES[BalloonsProto.Type.COOL_FACE] = CoolFaceEmoji
 
 export interface Props {
-  reportId: string
+  width: number
+  element: ImmutableMap<string, any>
 }
 
-function Balloon(): ReactElement {
-  const randNum = Math.floor(Math.random() * BALLOON_TYPES)
-
-  return (
-    <img
-      src={BALLOON_IMAGES[randNum]}
-      className="balloon"
-      alt=""
-      style={{
-        left: `${Math.random() * (POS_MAX_VW - POS_MIN_VW) + POS_MIN_VW}vw`,
-        animationDelay: `${Math.random() * DELAY_MAX_MS}ms`,
-      }}
-    />
-  )
+interface State {
+  drawnId: boolean
 }
 
-function Balloons({ reportId }: Props): ReactElement {
-  // Keys should be unique each time, so React replaces the images in the DOM and their animations
-  // actually rerun.
-  return (
-    <div className="balloons">
-      {range(NUM_BALLOONS).map(i => (
-        <Balloon key={reportId + i} />
-      ))}
-    </div>
-  )
+class Balloons extends React.PureComponent<Props, State> {
+  public readonly state: State = {
+    drawnId: true,
+  }
+
+  public render(): React.ReactNode {
+    if (this.state.drawnId === this.props.element.get("executionId")) {
+      return ""
+    }
+
+    this.setTimer()
+
+    return (
+      <div className="balloons">
+        {BALLOONS_INDICES.map((_, i) => (
+          <img
+            className="balloon"
+            key={i}
+            src={getBalloonUrl(this.props.element)}
+            alt=""
+            style={{
+              left: `${Math.random() * (POS_MAX_VW - POS_MIN_VW) +
+                POS_MIN_VW}vw`,
+              animationDelay: `${Math.random() * DELAY_MAX_MS}ms`,
+            }}
+          />
+        ))}
+      </div>
+    )
+  }
+
+  private setTimer(): void {
+    // Remove DOM elements after animation ends.
+    window.setTimeout(
+      () =>
+        this.setState({
+          drawnId: this.props.element.get("executionId"),
+        }),
+      MAX_ANIMATION_DURATION_MS + DELAY_MAX_MS + 100
+    )
+  }
 }
 
-export default memo(Balloons)
+function getBalloonUrl(balloonsProto: ImmutableMap<string, any>): string {
+  const type = balloonsProto.get("type")
+
+  if (type === BalloonsProto.Type.DEFAULT) {
+    if (Math.random() > BALLOON_PROB) {
+      const rand = Math.ceil(Math.random() * (BALLOON_IMAGES.length - 1))
+      return BALLOON_IMAGES[rand]
+    }
+    return BALLOON_IMAGES[BalloonsProto.Type.BALLOON]
+  }
+
+  return BALLOON_IMAGES[type]
+}
+
+export default Balloons

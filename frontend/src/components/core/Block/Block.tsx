@@ -254,9 +254,7 @@ class Block extends PureComponent<Props> {
     return dispatchOneOf(element, "type", {
       alert: (el: SimpleElement) => <Alert element={el} width={width} />,
       audio: (el: SimpleElement) => <Audio element={el} width={width} />,
-      balloons: (el: SimpleElement) => (
-        <Balloons reportId={this.props.reportId} />
-      ),
+      balloons: (el: SimpleElement) => <Balloons element={el} width={width} />,
       bokehChart: (el: SimpleElement) => (
         <BokehChart element={el} index={index} width={width} />
       ),

@@ -16,12 +16,22 @@
  */
 
 import React from "react"
-import { mount } from "enzyme"
+import { shallow } from "enzyme"
+import { fromJS } from "immutable"
+import { Balloons as BalloonsProto } from "autogen/proto"
 
-import Balloons, { Props, NUM_BALLOONS } from "./Balloons"
+import Balloons, {
+  Props,
+  MAX_ANIMATION_DURATION_MS,
+  DELAY_MAX_MS,
+  NUM_BALLOONS,
+} from "./Balloons"
 
 const getProps = (): Props => ({
-  reportId: 51522269,
+  element: fromJS({
+    type: BalloonsProto.Type.DEFAULT,
+    executionId: 51522269,
+  }),
   width: 0,
 })
 
@@ -35,7 +45,7 @@ describe("Balloons element", () => {
 
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = mount(<Balloons {...props} />)
+    const wrapper = shallow(<Balloons {...props} />)
 
     expect(wrapper).toBeDefined()
     expect(wrapper.find(".balloons img").length).toBe(NUM_BALLOONS)
@@ -45,5 +55,21 @@ describe("Balloons element", () => {
       expect(node.prop("style")).toHaveProperty("left")
       expect(node.prop("style")).toHaveProperty("animationDelay")
     })
+  })
+
+  it("should render one time per session", async () => {
+    const props = getProps()
+    const wrapper = shallow(<Balloons {...props} />)
+
+    expect(wrapper.html()).not.toBeNull()
+    expect(setTimeout).toHaveBeenCalledWith(
+      expect.any(Function),
+      MAX_ANIMATION_DURATION_MS + DELAY_MAX_MS + 100
+    )
+    expect(setTimeout).toBeCalledTimes(1)
+
+    jest.runAllTimers()
+
+    expect(wrapper.state("drawnId")).toBe(props.element.get("executionId"))
   })
 })
