@@ -405,9 +405,6 @@ class DeltaGenerator(
 
         return block_dg
 
-    def container(self):
-        return self._block()
-
     def expander(self, label=None, expanded=False):
         """Creates a container that can be expanded and collapsed.
 
