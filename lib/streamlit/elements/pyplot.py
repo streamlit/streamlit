@@ -69,8 +69,8 @@ class PyplotMixin:
         Notes
         -----
         .. note::
-           Deprecation warning. We will soon remove the ability to specify
-           no arguments in `st.plot()`, as that requires the use of
+           Deprecation warning. After December 1st, 2020, we will remove the ability
+           to specify no arguments in `st.pyplot()`, as that requires the use of
            Matplotlib's global figure object, which is not thread-safe. So
            please always pass a figure object as shown in the example section
            above.
@@ -148,9 +148,9 @@ class PyplotGlobalUseWarning(StreamlitDeprecationWarning):
 
     def _get_message(self):
         return """
-You are calling `st.pyplot()` without any arguments. We will soon remove the
-ability to do this as it requires the use of Matplotlib's global figure object,
-which is not thread-safe.
+You are calling `st.pyplot()` without any arguments. After December 1st, 2020,
+we will remove the ability to do this as it requires the use of Matplotlib's global
+figure object, which is not thread-safe.
 
 To future-proof this code, you should pass in a figure as shown below:
 
