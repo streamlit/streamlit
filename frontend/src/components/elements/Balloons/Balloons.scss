@@ -14,51 +14,36 @@
  * limitations under the License.
  */
 
-.balloons > .balloon {
-  position: fixed;
-  bottom: 0;
-  margin-left: -68px; /* Center 136px-wide image */
-  z-index: 1000000;
+@import "src/assets/css/variables";
 
-  /* If modifying the duration, you should also modify Balloons.js */
-  animation-duration: 0.3s, 1s, 1s;
-  animation-name: wobble, fade, move-up;
-  animation-timing-function: ease-in-out, ease-in, ease-in;
-  animation-direction: alternate, normal, normal;
-  animation-iteration-count: infinite, 1, 1;
-  opacity: 0;
+$imageHeight: 300px;
+$imageWidth: 121px;
+
+.balloons {
+  .balloon {
+    position: fixed;
+    top: -$imageHeight;
+    margin-left: -$imageWidth / 2;
+    z-index: $z-index-balloons;
+
+    height: $imageHeight;
+    width: $imageWidth;
+
+    animation-duration: 750ms;
+    animation-name: move-up;
+    animation-timing-function: ease-in;
+    animation-direction: normal;
+    animation-iteration-count: 1;
+    opacity: 1;
+  }
 }
 
 @keyframes move-up {
   from {
-    bottom: 0;
+    transform: translateY(calc(100vh + 300px));
   }
 
   to {
-    bottom: 110vh;
-  }
-}
-
-@keyframes fade {
-  0% {
-    opacity: 0;
-  }
-
-  80% {
-    opacity: 1;
-  }
-
-  100% {
-    opacity: 1;
-  }
-}
-
-@keyframes wobble {
-  from {
-    transform: translateX(-5vw);
-  }
-
-  to {
-    transform: translateX(5vw);
+    transform: translateY(0);
   }
 }

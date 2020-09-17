@@ -24,7 +24,7 @@
     bottom: 0;
     right: 0;
     background: white;
-    z-index: 1000;
+    z-index: $z-index-fullscreen-wrapper;
     padding: $fullscreen-padding;
     padding-top: $fullscreen-padding-top;
     overflow: auto;
