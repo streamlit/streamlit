@@ -148,7 +148,6 @@ class Block extends PureComponent<Props> {
     let style: any = { width }
     if (deltaBlock.column) {
       style = {
-        ...style,
         // Flex determines how much space is allocated to this column.
         flex: deltaBlock.column.weight,
       }
@@ -431,10 +430,10 @@ class Block extends PureComponent<Props> {
   public render = (): ReactNode => {
     if (this.props.deltaBlock && this.props.deltaBlock.horizontal) {
       // Create a horizontal block as the parent for columns
-      // TODO: Calculate widths for children? We just pick a big number for now.
+      // For now, all children are column blocks, so we can ignore `width`.
       return (
         <div className="stBlock-horiz" style={{ display: "flex", gap: "8px" }}>
-          {this.renderElements(8888)}
+          {this.renderElements(0)}
         </div>
       )
     }
