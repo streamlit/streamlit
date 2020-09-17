@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import matplotlib.pyplot as plt
 import streamlit as st
 import pandas as pd
 
@@ -27,7 +28,8 @@ spec = {
 
 # 5 empty charts
 st.vega_lite_chart(spec, use_container_width=True)
-st.pyplot(use_container_width=True)
+fig, ax = plt.subplots()
+st.pyplot(fig, use_container_width=True)
 st.line_chart()
 st.bar_chart()
 st.area_chart()

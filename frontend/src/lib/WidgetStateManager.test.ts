@@ -31,6 +31,7 @@ const MOCK_DATA = {
     foo: "bar",
     baz: "qux",
   },
+  bytesValue: new Uint8Array([0, 1, 2, 3]),
   arrowValue: new ArrowTable({
     data: new Uint8Array(),
     index: new Uint8Array(),
@@ -127,6 +128,15 @@ describe("Widget State Manager", () => {
     })
     expect(widgetMgr.getJsonValue(MOCK_DATA.widgetId)).toBe(
       JSON.stringify(MOCK_DATA.jsonValue)
+    )
+  })
+
+  it("sets bytes value correctly", () => {
+    widgetMgr.setBytesValue(MOCK_DATA.widgetId, MOCK_DATA.bytesValue, {
+      fromUi: true,
+    })
+    expect(widgetMgr.getBytesValue(MOCK_DATA.widgetId)).toEqual(
+      MOCK_DATA.bytesValue
     )
   })
 

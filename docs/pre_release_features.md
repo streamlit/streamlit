@@ -17,7 +17,7 @@ Official Streamlit releases go not only through both automated tests but also ri
 
 All you need to do is install the `streamlit-nightly` package:
 
-```
+```bash
 pip uninstall streamlit
 pip install streamlit-nightly --upgrade
 ```

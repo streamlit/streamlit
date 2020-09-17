@@ -16,6 +16,23 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.67.0
+
+_Release date: September 16, 2020_
+
+**Highlights:**
+
+- 🦷 Streamlit Components can now return bytes to your Streamlit App. To create a
+  component that returns bytes, make sure to upgrade to the latest
+  [streamlit-component-lib](https://www.npmjs.com/package/streamlit-component-lib).
+
+**Notable Changes**
+
+- 📈 Deprecation warning: Beginning December 1st, 2020 `st.pyplot()` will require a figure to
+  be provided. To disable the deprecation warning, please set `deprecation.showPyplotGlobalUse`
+  to `False`
+- 🎚 `st.multiselect` and `st.select` are now lightning fast when working with large datasets. Thanks [masa3141](https://github.com/masa3141)!
+
 ## Version 0.66.0
 
 _Release date: September 1, 2020_

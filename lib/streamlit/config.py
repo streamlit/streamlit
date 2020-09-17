@@ -626,6 +626,14 @@ _create_option(
     type_=bool,
 )
 
+_create_option(
+    "deprecation.showPyplotGlobalUse",
+    description="Set to false to disable the deprecation warning for using the global pyplot instance.",
+    default_val="True",
+    scriptable="True",
+    type_=bool,
+)
+
 # Config Section: S3 #
 
 _create_section("s3", 'Configuration for when global.sharingMode is set to "s3".')

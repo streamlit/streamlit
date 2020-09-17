@@ -206,7 +206,7 @@ This template has much more code than its React sibling, in that all the mechani
 - If you want to add more packages to your component, just `npm add` them from within your component's `frontend/` directory.
 
 ```shell
-$ npm add baseui
+npm add baseui
 ```
 
 - To build a static version of your component, run `npm run build`. See [Prepare your Component](publish_streamlit_components.md) for more information

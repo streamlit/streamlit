@@ -15,16 +15,21 @@
  * limitations under the License.
  */
 
-import React, { PureComponent } from "react"
+import React, { ReactElement, useState, memo } from "react"
 import {
   Dropdown,
   DropdownItem,
   DropdownMenu,
   DropdownToggle,
 } from "reactstrap"
-import Icon from "components/shared/Icon"
 
+import Icon from "components/shared/Icon"
+import {
+  IMenuItem,
+  IGuestToHostMessage,
+} from "hocs/withS4ACommunication/types"
 import ScreencastOption from "./component/ScreencastOption"
+
 import "./MainMenu.scss"
 
 const ONLINE_DOCS_URL = "https://docs.streamlit.io"
@@ -32,7 +37,7 @@ const COMMUNITY_URL = "https://discuss.streamlit.io"
 const TEAMS_URL = "https://streamlit.io/forteams"
 const BUG_URL = "https://github.com/streamlit/streamlit/issues/new/choose"
 
-interface Props {
+export interface Props {
   /** True if report sharing is properly configured and enabled. */
   sharingEnabled: boolean
 
@@ -58,116 +63,145 @@ interface Props {
   aboutCallback: () => void
 
   screenCastState: string
+
+  s4aMenuItems: IMenuItem[]
+
+  sendS4AMessage: (message: IGuestToHostMessage) => void
 }
 
-interface State {
-  /** True if the menu is currently visible. */
-  dropdownOpen: boolean
+const getOpenInWindowCallback = (url: string) => (): void => {
+  window.open(url, "_blank")
 }
 
-class MainMenu extends PureComponent<Props, State> {
-  /**
-   * Constructor.
-   */
-  constructor(props: Props) {
-    super(props)
-    this.state = {
-      dropdownOpen: false,
+function MainMenu(props: Props): ReactElement {
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const isServerDisconnected = !props.isServerConnected()
+
+  function toggleDropdown(): void {
+    setDropdownOpen(prevState => !prevState)
+  }
+
+  const S4AMenuOptions = props.s4aMenuItems.map(item => {
+    if (item.type === "separator") {
+      return <DropdownItem divider />
     }
-  }
-
-  toggle = (): void => {
-    this.setState(({ dropdownOpen }) => ({
-      dropdownOpen: !dropdownOpen,
-    }))
-  }
-
-  getOpenInWindowCallback = (url: string) => (): void => {
-    window.open(url, "_blank")
-  }
-
-  public render(): JSX.Element {
-    const isServerDisconnected = !this.props.isServerConnected()
 
     return (
-      <Dropdown
-        id="MainMenu"
-        isOpen={this.state.dropdownOpen}
-        toggle={this.toggle}
+      <DropdownItem
+        key={item.key}
+        onClick={() =>
+          props.sendS4AMessage({
+            type: "MENU_ITEM_CALLBACK",
+            key: item.key,
+          })
+        }
       >
-        <DropdownToggle outline color="secondary" id="MainMenuButton">
-          <Icon type="menu" />
-
-          {this.props.screenCastState === "RECORDING" && (
-            <span className="recording-indicator" />
-          )}
-        </DropdownToggle>
-
-        <DropdownMenu right>
-          <DropdownItem
-            disabled={isServerDisconnected}
-            onClick={this.props.quickRerunCallback}
-          >
-            <span>Rerun</span>
-            <span className="shortcut">R</span>
-          </DropdownItem>
-
-          <DropdownItem
-            disabled={isServerDisconnected}
-            onClick={this.props.clearCacheCallback}
-          >
-            <span>Clear cache</span>
-            <span className="shortcut">C</span>
-          </DropdownItem>
-
-          <DropdownItem divider />
-
-          <ScreencastOption
-            screenCastState={this.props.screenCastState}
-            onClick={this.props.screencastCallback}
-          />
-
-          {/* We hide 'Share Report' + divider if sharing is not configured */}
-          {this.props.sharingEnabled && (
-            <DropdownItem
-              disabled={isServerDisconnected}
-              onClick={this.props.shareCallback}
-            >
-              Save a snapshot
-            </DropdownItem>
-          )}
-
-          <DropdownItem divider />
-
-          <DropdownItem
-            onClick={this.getOpenInWindowCallback(ONLINE_DOCS_URL)}
-          >
-            Documentation
-          </DropdownItem>
-
-          <DropdownItem onClick={this.getOpenInWindowCallback(COMMUNITY_URL)}>
-            Ask a question
-          </DropdownItem>
-
-          <DropdownItem onClick={this.getOpenInWindowCallback(BUG_URL)}>
-            Report a bug
-          </DropdownItem>
-
-          <DropdownItem divider />
-
-          <DropdownItem onClick={this.getOpenInWindowCallback(TEAMS_URL)}>
-            Streamlit for Teams
-          </DropdownItem>
-
-          <DropdownItem onClick={this.props.settingsCallback}>
-            Settings
-          </DropdownItem>
-
-          <DropdownItem onClick={this.props.aboutCallback}>About</DropdownItem>
-        </DropdownMenu>
-      </Dropdown>
+        <span>{item.label}</span>
+      </DropdownItem>
     )
+  })
+
+  const shouldShowS4AMenu = !!S4AMenuOptions.length
+
+  const coreMenuOptions = {
+    rerun: (
+      <DropdownItem
+        disabled={isServerDisconnected}
+        onClick={props.quickRerunCallback}
+      >
+        <span>Rerun</span>
+        <span className="shortcut">R</span>
+      </DropdownItem>
+    ),
+    clearCache: (
+      <DropdownItem
+        disabled={isServerDisconnected}
+        onClick={props.clearCacheCallback}
+      >
+        <span>Clear cache</span>
+        <span className="shortcut">C</span>
+      </DropdownItem>
+    ),
+    divider: <DropdownItem divider />,
+    recordScreencast: (
+      <ScreencastOption
+        screenCastState={props.screenCastState}
+        onClick={props.screencastCallback}
+      />
+    ),
+    saveSnapshot: (
+      <DropdownItem
+        disabled={isServerDisconnected}
+        onClick={props.shareCallback}
+      >
+        Save a snapshot
+      </DropdownItem>
+    ),
+    documentation: (
+      <DropdownItem onClick={getOpenInWindowCallback(ONLINE_DOCS_URL)}>
+        Documentation
+      </DropdownItem>
+    ),
+    community: (
+      <DropdownItem onClick={getOpenInWindowCallback(COMMUNITY_URL)}>
+        Ask a question
+      </DropdownItem>
+    ),
+    report: (
+      <DropdownItem onClick={getOpenInWindowCallback(BUG_URL)}>
+        Report a bug
+      </DropdownItem>
+    ),
+    s4t: (
+      <DropdownItem onClick={getOpenInWindowCallback(TEAMS_URL)}>
+        Streamlit for Teams
+      </DropdownItem>
+    ),
+    settings: (
+      <DropdownItem onClick={props.settingsCallback}>Settings</DropdownItem>
+    ),
+    about: <DropdownItem onClick={props.aboutCallback}>About</DropdownItem>,
   }
+
+  let menuOptions = [coreMenuOptions.rerun, coreMenuOptions.clearCache]
+
+  if (shouldShowS4AMenu) {
+    menuOptions = [
+      ...menuOptions,
+      coreMenuOptions.settings,
+      coreMenuOptions.divider,
+      coreMenuOptions.recordScreencast,
+      ...S4AMenuOptions,
+    ]
+  } else {
+    menuOptions = [
+      ...menuOptions,
+      coreMenuOptions.divider,
+      coreMenuOptions.recordScreencast,
+      coreMenuOptions.divider,
+      coreMenuOptions.documentation,
+      coreMenuOptions.community,
+      coreMenuOptions.report,
+      coreMenuOptions.divider,
+      coreMenuOptions.s4t,
+      coreMenuOptions.settings,
+      coreMenuOptions.about,
+    ]
+  }
+
+  return (
+    <Dropdown id="MainMenu" isOpen={dropdownOpen} toggle={toggleDropdown}>
+      <DropdownToggle outline color="secondary" id="MainMenuButton">
+        <Icon type="menu" />
+
+        {props.screenCastState === "RECORDING" && (
+          <span className="recording-indicator" />
+        )}
+      </DropdownToggle>
+
+      <DropdownMenu right>{menuOptions}</DropdownMenu>
+    </Dropdown>
+  )
 }
 
-export default MainMenu
+export default memo(MainMenu)

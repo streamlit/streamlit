@@ -16,7 +16,13 @@
  */
 
 import React, { ChangeEvent, PureComponent, ReactNode } from "react"
-import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap"
+import { Kind } from "components/shared/Button"
+import Modal, {
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  ModalButton,
+} from "components/shared/Modal"
 
 export interface Props {
   /** Callback to close the dialog */
@@ -63,8 +69,8 @@ class ScreencastDialog extends PureComponent<Props, State> {
     const { onClose } = this.props
 
     return (
-      <Modal isOpen={true} toggle={onClose} className="streamlit-dialog">
-        <ModalHeader toggle={onClose}>Record a screencast</ModalHeader>
+      <Modal isOpen onClose={onClose}>
+        <ModalHeader>Record a screencast</ModalHeader>
         <ModalBody>
           <p>
             This will record a video with the contents of your screen, so you
@@ -86,9 +92,9 @@ class ScreencastDialog extends PureComponent<Props, State> {
           </p>
         </ModalBody>
         <ModalFooter>
-          <Button outline color="primary" onClick={this.handleStartButton}>
+          <ModalButton kind={Kind.PRIMARY} onClick={this.handleStartButton}>
             Start recording!
-          </Button>
+          </ModalButton>
         </ModalFooter>
       </Modal>
     )

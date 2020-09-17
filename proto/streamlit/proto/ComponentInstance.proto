@@ -19,16 +19,17 @@ syntax = "proto3";
 import "streamlit/proto/ArrowDataframe.proto";
 
 message ComponentInstance {
-  // Widget ID (meaningful only for bi-directional components)
+  // The instance's "widget ID", used to uniquely identify it.
   string id = 1;
 
-  // Dictionary with args for the plugin.
-  string args_json = 2;
+  // Argument dictionary, for JSON-serializable args.
+  string json_args = 2;
 
-  // We'll probably want to transmit dataframe data separately (not in JSON).
-  repeated ArgsDataframe args_dataframe = 3;
+  // Additional, non-JSON args. These require special processing
+  // on the other end.
+  repeated SpecialArg special_args = 3;
 
-  // The component's unique name.
+  // The component type's unique name.
   string component_name = 4;
 
   // Optional URL to load the component from. By default this is not set,
@@ -37,10 +38,11 @@ message ComponentInstance {
   string url = 5;
 }
 
-message ArgsDataframe {
-  // Dataframe key
+message SpecialArg {
   string key = 1;
 
-  // Dataframe value
-  ArrowDataframe value = 2;
+  oneof value {
+    ArrowDataframe arrow_dataframe = 2;
+    bytes bytes = 3;
+  }
 }

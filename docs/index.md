@@ -81,13 +81,17 @@ Follow these steps and to get a sample app running in less than 5 minutes.
 
 1. Make sure that you have [Python 3.6](https://www.python.org/downloads/) or greater installed.
 1. Install Streamlit using [PIP](https://pip.pypa.io/en/stable/installing/):
+
    ```bash
-   $ pip install streamlit
+   pip install streamlit
    ```
+
 1. Run the hello world app:
+
    ```bash
-   $ streamlit hello
+   streamlit hello
    ```
+
 1. That's it! In the next few seconds the sample app will open in a new tab in
    your default browser.
 
