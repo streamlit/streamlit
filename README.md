@@ -6,7 +6,7 @@
 
 Streamlit lets you create apps for your machine learning projects with deceptively simple Python scripts. It supports hot-reloading, so your app updates live as you edit and save your file. No need to mess with HTTP requests, HTML, JavaScript, etc. All you need is your favorite editor and a browser. Take a look at Streamlit in action:
 
-![Example of live coding a dashboard in Streamlit|635x380](https://github.com/streamlit/streamlit/blob/develop/docs/_static/img/uber_dashboard.gif)
+![Example of live coding a dashboard in Streamlit|635x380](https://github.com/streamlit/streamlit/raw/develop/docs/_static/img/uber_dashboard.gif)
 
 **Check out our [launch blog post](https://towardsdatascience.com/coding-ml-tools-like-you-code-ml-models-ddba3357eace)!!**
 
