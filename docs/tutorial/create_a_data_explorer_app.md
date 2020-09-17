@@ -278,7 +278,7 @@ at 17:00.
 
 To draw this map we used a simple map function that's built into Streamlit, but
 if you'd like to visualize complex map data, we encourage you to take a look at
-the [`st.deckgl_chart`](../api.html#streamlit.deck_gl_chart).
+the [`st.pydeck_chart`](../api.html#streamlit.pydeck_chart).
 
 ## Filter results with a slider
 

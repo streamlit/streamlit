@@ -599,7 +599,7 @@ _create_section("mapbox", "Mapbox configuration that is being used by DeckGL.")
 _create_option(
     "mapbox.token",
     description="""Configure Streamlit to use a custom Mapbox
-                token for elements like st.deck_gl_chart and st.map.
+                token for elements like st.pydeck_chart and st.map.
                 To get a token for yourself, create an account at
                 https://mapbox.com. It's free (for moderate usage levels)!""",
     default_val="",
