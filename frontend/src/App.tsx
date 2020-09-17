@@ -568,7 +568,6 @@ export class App extends PureComponent<Props, State> {
   /**
    * Removes old elements. The term old is defined as:
    *  - simple elements whose reportIds are no longer current
-   *  - empty containers
    */
   clearOldElements = (elements: any, reportId: string): BlockElement => {
     return elements
@@ -576,15 +575,14 @@ export class App extends PureComponent<Props, State> {
         const simpleElement = reportElement.get("element")
 
         if (simpleElement instanceof List) {
+          // Recursively clear old elements
           const clearedElements = this.clearOldElements(
             simpleElement,
             reportId
           )
-          // TODO: Consider not removing empty containers,
-          // e.g. to keep an st.column with no items in it.
-          return clearedElements.size > 0
-            ? reportElement.set("element", clearedElements)
-            : null
+          // Could check whether container is now empty, and return null.
+          // But we want to let empty columns take up sapce.
+          return reportElement.set("element", clearedElements)
         }
 
         return reportElement.get("reportId") === reportId
