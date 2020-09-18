@@ -335,14 +335,12 @@ export class App extends PureComponent<Props, State> {
     const { title, favicon, layout, initialSidebarState } = pageConfig
 
     if (title) {
-      const brandedTitle = `${title} · Streamlit`
-
       this.props.s4aCommunication.sendMessage({
         type: "SET_PAGE_TITLE",
-        title: brandedTitle,
+        title,
       })
 
-      document.title = brandedTitle
+      document.title = `${title} · Streamlit`
     }
 
     if (favicon) {
