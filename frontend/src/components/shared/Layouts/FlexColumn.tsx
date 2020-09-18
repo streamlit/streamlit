@@ -15,6 +15,9 @@
  * limitations under the License.
  */
 
-export { default } from "./Button"
-export { default as IconButton } from "./IconButton"
-export { default as UIButton } from "./UIButton"
+import { styled } from "styletron-react"
+
+export default styled("div", {
+  display: "flex",
+  flexDirection: "column",
+})

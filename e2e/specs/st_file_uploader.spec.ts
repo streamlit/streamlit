@@ -116,43 +116,43 @@ describe("st.file_uploader", () => {
     });
   });
 
-  // it("uploads multiple files", () => {
-  //   const fileName1 = "file1.txt";
-  //   const fileName2 = "file2.txt";
+  it("uploads multiple files", () => {
+    const fileName1 = "file1.txt";
+    const fileName2 = "file2.txt";
 
-  //   // Yes, this actually is the recommended way to load multiple fixtures
-  //   // in Cypress (!!) using Cypress.Promise.all is buggy. See:
-  //   // https://github.com/cypress-io/cypress-example-recipes/blob/master/examples/fundamentals__fixtures/cypress/integration/multiple-fixtures-spec.js
+    // Yes, this actually is the recommended way to load multiple fixtures
+    // in Cypress (!!) using Cypress.Promise.all is buggy. See:
+    // https://github.com/cypress-io/cypress-example-recipes/blob/master/examples/fundamentals__fixtures/cypress/integration/multiple-fixtures-spec.js
 
-  //   cy.fixture(fileName1).then(file1 => {
-  //     cy.fixture(fileName2).then(file2 => {
-  //       const files = [
-  //         { fileContent: file1, fileName: fileName1, mimeType: "text/plain" },
-  //         { fileContent: file2, fileName: fileName2, mimeType: "text/plain" }
-  //       ];
+    cy.fixture(fileName1).then(file1 => {
+      cy.fixture(fileName2).then(file2 => {
+        const files = [
+          { fileContent: file1, fileName: fileName1, mimeType: "text/plain" },
+          { fileContent: file2, fileName: fileName2, mimeType: "text/plain" }
+        ];
 
-  //       cy.get('[data-baseweb="file-uploader"] > div')
-  //         .eq(1)
-  //         .upload(files, {
-  //           force: true,
-  //           subjectType: "drag-n-drop",
-  //           events: ["dragenter", "drop"]
-  //         });
+        cy.get('[data-baseweb="file-uploader"] > div')
+          .eq(1)
+          .upload(files, {
+            force: true,
+            subjectType: "drag-n-drop",
+            events: ["dragenter", "drop"]
+          });
 
-  //       // The widget should show the names of the uploaded files.
-  //       const filenames = [fileName1, fileName2].join(", ");
-  //       cy.get(".uploadDone")
-  //         .eq(0) // eq(0), instead of eq(1), because the first widget won't have an uploadDone
-  //         .should("have.text", filenames);
+        // The widget should show the names of the uploaded files.
+        const filenames = [fileName1, fileName2].join(", ");
+        cy.get(".uploadDone")
+          .eq(0) // eq(0), instead of eq(1), because the first widget won't have an uploadDone
+          .should("have.text", filenames);
 
-  //       // The script should have printed the contents of the two files
-  //       // into an st.text. (This tests that the upload actually went
-  //       // through.)
-  //       const content = [file1, file2].sort().join("\n");
-  //       cy.get(".fixed-width.stText")
-  //         .eq(1)
-  //         .should("have.text", content);
-  //     });
-  //   });
-  // });
+        // The script should have printed the contents of the two files
+        // into an st.text. (This tests that the upload actually went
+        // through.)
+        const content = [file1, file2].sort().join("\n");
+        cy.get(".fixed-width.stText")
+          .eq(1)
+          .should("have.text", content);
+      });
+    });
+  });
 });

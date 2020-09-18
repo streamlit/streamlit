@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
-export { default } from "./Button"
-export { default as IconButton } from "./IconButton"
-export { default as UIButton } from "./UIButton"
+import { Props } from "./withPagination"
+
+export { default } from "./withPagination"
+export type PaginationProps = Props

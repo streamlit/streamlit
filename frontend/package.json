@@ -66,6 +66,7 @@
     "react-color": "^2.18.1",
     "react-copy-to-clipboard": "^5.0.2",
     "react-dom": "^16.8.4",
+    "react-dropzone": "^11.1.0",
     "react-feather": "^2.0.8",
     "react-google-login": "^5.0.4",
     "react-hotkeys": "^1.1.4",

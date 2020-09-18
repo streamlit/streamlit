@@ -50,6 +50,8 @@ $primary: #f63366;
 $secondary: $gray;
 $light: $gray-100;
 $dark: $gray;
+$disabled: $gray-lighter;
+$danger: rgb(157, 41, 45);
 
 $primary-a50: change-color($primary, $alpha: 0.5);
 $white-a50: #ffffff88;
@@ -66,6 +68,9 @@ $font-size-base: 1rem;
 $font-size-sm: 0.8rem;
 $line-height-base: 1.6;
 $line-height-tight: 1.25;
+
+// Spacing
+$spacer: 1rem;
 
 // Overwrite other theme settings.
 $border-radius: 0.25rem;
@@ -108,7 +113,11 @@ $overlayBtn-opacity-active: 0.75;
 $normal-animation-duration: 300ms;
 
 // Progress Bar
-$progress-bar-height: 1rem;
+$progress-bar-height-sm: $font-size-sm;
+$progress-bar-height-md: 1rem;
+$progress-bar-height-lg: 1.25rem;
+$progress-bar-height-xl: 1.5rem;
+$progress-bar-height: $progress-bar-height-md;
 $progress-bar-margin: 0;
 
 // Code
@@ -128,11 +137,8 @@ $alert-success-text-color: rgb(23, 108, 54);
 
 $alert-error-background-color: change-color($red, $alpha: 0.2);
 $alert-error-border-color: change-color($red, $alpha: 0.2);
-$alert-error-text-color: rgb(157, 41, 45);
+$alert-error-text-color: $danger;
 
 $alert-warning-background-color: change-color($yellow, $alpha: 0.2);
 $alert-warning-border-color: change-color($yellow, $alpha: 0.8);
 $alert-warning-text-color: rgb(148, 124, 45);
-
-// FileUploader
-$file-uploader-spinner-size: $font-size-sm * 0.8;

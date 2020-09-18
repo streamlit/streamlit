@@ -15,6 +15,12 @@
  * limitations under the License.
  */
 
-export { default } from "./Button"
-export { default as IconButton } from "./IconButton"
-export { default as UIButton } from "./UIButton"
+import { colors, fontStyles } from "lib/widgetTheme"
+import { styled } from "styletron-react"
+
+export default styled("small", {
+  color: colors.secondary,
+  fontSize: fontStyles.fontSizeSm,
+  height: fontStyles.fontSizeSm,
+  lineHeight: fontStyles.fontSizeSm,
+})

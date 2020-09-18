@@ -28,9 +28,9 @@ class UploadedFileManagerTest(unittest.TestCase):
     def setUp(self):
         self.mgr = UploadedFileManager()
         self.filemgr_events = []
-        self.mgr.on_files_added.connect(self._on_files_added)
+        self.mgr._on_files_updated.connect(self._on_files_updated)
 
-    def _on_files_added(self, file_list, **kwargs):
+    def _on_files_updated(self, file_list, **kwargs):
         self.filemgr_events.append(file_list)
 
     def test_add_file(self):

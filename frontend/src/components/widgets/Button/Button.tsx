@@ -16,10 +16,9 @@
  */
 
 import React, { ReactElement } from "react"
-import { Button as UIButton } from "baseui/button"
 import { Map as ImmutableMap } from "immutable"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import { buttonOverrides } from "lib/widgetTheme"
+import UIButton from "./UIButton"
 
 export interface ButtonProps {
   disabled: boolean
@@ -39,15 +38,13 @@ function Button(props: ButtonProps): ReactElement {
   }
 
   return (
-    <div className="Widget row-widget stButton" style={style}>
-      <UIButton
-        disabled={disabled}
-        onClick={handleClick}
-        overrides={buttonOverrides}
-      >
-        {label}
-      </UIButton>
-    </div>
+    <UIButton
+      disabled={disabled}
+      onClick={handleClick}
+      className="Widget row-widget"
+      style={style}
+      label={label}
+    />
   )
 }
 
