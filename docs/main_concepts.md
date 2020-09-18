@@ -3,8 +3,8 @@
 Working with Streamlit is simple. First you sprinkle a few Streamlit commands
 into a normal Python script, then you run it with `streamlit run`:
 
-```
-$ streamlit run your_script.py [-- script args]
+```bash
+streamlit run your_script.py [-- script args]
 ```
 
 As soon as you run the script as shown above, a local Streamlit server will
@@ -207,10 +207,10 @@ the loop and review how it works together:
 1. Every time a user interacts with a widget, your script is re-executed and
    the output value of that widget is set to the new value during that run.
 
-![](media/app_model.png)
+![App Model](media/app_model.png)
 
 ## Next steps
 
 - [Get started](getting_started.md) with Streamlit
 - Read up on [advanced concepts](advanced_concepts.md)
-- [Build your first app ](tutorial/index.md)
+- [Build your first app](tutorial/index.md)

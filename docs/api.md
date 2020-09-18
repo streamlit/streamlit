@@ -113,7 +113,6 @@ like `st.line_chart` and `st.area_chart`.
 .. autofunction:: streamlit.plotly_chart
 .. autofunction:: streamlit.bokeh_chart
 .. autofunction:: streamlit.pydeck_chart
-.. autofunction:: streamlit.deck_gl_chart
 .. autofunction:: streamlit.graphviz_chart
 .. autofunction:: streamlit.map
 ```

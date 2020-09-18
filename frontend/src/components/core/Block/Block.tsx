@@ -49,9 +49,6 @@ const Audio = React.lazy(() => import("components/elements/Audio/"))
 const Balloons = React.lazy(() => import("components/elements/Balloons/"))
 const BokehChart = React.lazy(() => import("components/elements/BokehChart/"))
 const DataFrame = React.lazy(() => import("components/elements/DataFrame/"))
-const DeckGlChart = React.lazy(() =>
-  import("components/elements/DeckGlChart/")
-)
 const DeckGlJsonChart = React.lazy(() =>
   import("components/elements/DeckGlJsonChart/")
 )
@@ -277,15 +274,14 @@ class Block extends PureComponent<Props> {
     return dispatchOneOf(element, "type", {
       alert: (el: SimpleElement) => <Alert element={el} width={width} />,
       audio: (el: SimpleElement) => <Audio element={el} width={width} />,
-      balloons: (el: SimpleElement) => <Balloons element={el} width={width} />,
+      balloons: (el: SimpleElement) => (
+        <Balloons reportId={this.props.reportId} />
+      ),
       bokehChart: (el: SimpleElement) => (
         <BokehChart element={el} index={index} width={width} />
       ),
       dataFrame: (el: SimpleElement) => (
         <DataFrame element={el} width={width} height={height} />
-      ),
-      deckGlChart: (el: SimpleElement) => (
-        <DeckGlChart element={el} width={width} />
       ),
       deckGlJsonChart: (el: SimpleElement) => (
         <DeckGlJsonChart element={el} width={width} />

@@ -19,6 +19,7 @@ from unittest.mock import patch
 import json
 import os
 import io
+import pytest
 import re
 import textwrap
 import unittest
@@ -31,6 +32,7 @@ from scipy.io import wavfile
 
 from streamlit import __version__
 from streamlit.errors import StreamlitAPIException
+from streamlit.elements.pyplot import PyplotGlobalUseWarning
 from streamlit.proto.Balloons_pb2 import Balloons
 
 from streamlit.proto.Alert_pb2 import Alert
@@ -205,13 +207,9 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_balloons(self):
         """Test st.balloons."""
-        with patch("random.randrange") as p:
-            p.return_value = 0xDEADBEEF
-            st.balloons()
-
+        st.balloons()
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.balloons.type, Balloons.DEFAULT)
-        self.assertEqual(el.balloons.execution_id, 0xDEADBEEF)
+        self.assertEqual(el.balloons.show, True)
 
     def test_st_bar_chart(self):
         """Test st.bar_chart."""
@@ -478,11 +476,11 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         data = np.random.randn(2, 20)
 
         # Generate a 2 inch x 2 inch figure
-        plt.figure(figsize=(2, 2))
+        fig, ax = plt.subplots(figsize=(2, 2))
         # Add 20 random points to scatter plot.
-        plt.scatter(data[0], data[1])
+        ax.scatter(data[0], data[1])
 
-        st.pyplot()
+        st.pyplot(fig)
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.imgs.width, -2)

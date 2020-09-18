@@ -377,7 +377,6 @@ class HashTest(unittest.TestCase):
             f.seek(0)
             self.assertEqual(h1, get_hash(f))
 
-    @testutil.requires_tensorflow
     def test_keras_model(self):
         a = keras.applications.vgg16.VGG16(include_top=False, weights=None)
         b = keras.applications.vgg16.VGG16(include_top=False, weights=None)
@@ -388,7 +387,6 @@ class HashTest(unittest.TestCase):
         self.assertEqual(get_hash(a), get_hash(a))
         self.assertNotEqual(get_hash(a), get_hash(b))
 
-    @testutil.requires_tensorflow
     def test_tf_keras_model(self):
         a = tf.keras.applications.vgg16.VGG16(include_top=False, weights=None)
         b = tf.keras.applications.vgg16.VGG16(include_top=False, weights=None)
@@ -396,7 +394,6 @@ class HashTest(unittest.TestCase):
         self.assertEqual(get_hash(a), get_hash(a))
         self.assertNotEqual(get_hash(a), get_hash(b))
 
-    @testutil.requires_tensorflow
     def test_tf_saved_model(self):
         tempdir = tempfile.TemporaryDirectory()
 
@@ -433,7 +430,6 @@ class HashTest(unittest.TestCase):
         # stack due to an infinite recursion.)
         self.assertNotEqual(get_hash(MagicMock()), get_hash(MagicMock()))
 
-    @testutil.requires_tensorflow
     def test_tensorflow_session(self):
         tf_config = tf.compat.v1.ConfigProto()
         tf_session = tf.compat.v1.Session(config=tf_config)

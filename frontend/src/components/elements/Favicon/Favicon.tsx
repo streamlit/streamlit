@@ -18,22 +18,34 @@
 import nodeEmoji from "node-emoji"
 import { buildMediaUri } from "lib/UriUtil"
 import { toCodePoint } from "vendor/twemoji"
+import { sendS4AMessage } from "hocs/withS4ACommunication/withS4ACommunication"
 
 /**
  * Set the provided url/emoji as the page favicon.
  *
  * @param {string} favicon may be an image url, or an emoji like 🍕 or :pizza:
+ * @param {function} callback
  */
 export function handleFavicon(favicon: string): void {
   const emoji = extractEmoji(favicon)
+  let imageUrl
+
   if (emoji) {
     // Find the corresponding Twitter emoji on the CDN.
     const codepoint = toCodePoint(emoji)
     const emojiUrl = `https://twemoji.maxcdn.com/2/72x72/${codepoint}.png`
-    overwriteFavicon(emojiUrl)
+
+    imageUrl = emojiUrl
   } else {
-    overwriteFavicon(buildMediaUri(favicon))
+    imageUrl = buildMediaUri(favicon)
   }
+
+  overwriteFavicon(imageUrl)
+
+  sendS4AMessage({
+    type: "SET_PAGE_FAVICON",
+    favicon: imageUrl,
+  })
 }
 
 // Update the favicon in the DOM with the specified image.
@@ -41,6 +53,7 @@ function overwriteFavicon(imageUrl: string): void {
   const faviconElement: HTMLLinkElement | null = document.querySelector(
     "link[rel='shortcut icon']"
   )
+
   if (faviconElement) {
     faviconElement.href = imageUrl
   }

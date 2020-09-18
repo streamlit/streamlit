@@ -25,7 +25,6 @@ import "streamlit/proto/Checkbox.proto";
 import "streamlit/proto/ColorPicker.proto";
 import "streamlit/proto/DataFrame.proto";
 import "streamlit/proto/DateInput.proto";
-import "streamlit/proto/DeckGlChart.proto";
 import "streamlit/proto/DeckGlJsonChart.proto";
 import "streamlit/proto/DocString.proto";
 import "streamlit/proto/Empty.proto";
@@ -68,7 +67,6 @@ message Element {
     DataFrame data_frame = 3;
     DataFrame table = 11;
     DateInput date_input = 27;
-    DeckGlChart deck_gl_chart = 15;
     DeckGlJsonChart deck_gl_json_chart = 34;
     DocString doc_string = 7;
     Empty empty = 2;
