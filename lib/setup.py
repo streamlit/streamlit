@@ -8,9 +8,9 @@ from pipenv.project import Project
 from pipenv.utils import convert_deps_to_pip
 from setuptools.command.install import install
 
-VERSION = "0.67.0"  # PEP-440
+VERSION = "0.67.1.dev20200917"  # PEP-440
 
-NAME = "streamlit"
+NAME = "streamlit-nightly"
 
 DESCRIPTION = "The fastest way to build data apps in Python"
 
