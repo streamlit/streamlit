@@ -62,7 +62,7 @@ from typing import Any, List, Tuple, Type
 
 # This used to be pkg_resources.require('streamlit') but it would cause
 # pex files to fail. See #394 for more details.
-__version__ = _pkg_resources.get_distribution("streamlit").version
+__version__ = _pkg_resources.get_distribution("streamlit-nightly").version
 
 # Deterministic Unique Streamlit User ID
 if (
@@ -512,7 +512,7 @@ def _maybe_print_repl_warning():
 
 def stop():
     """Stops execution immediately.
-    
+
     Streamlit will not run any statements after `st.stop()`.
     We recommend rendering a message to explain why the script has stopped.
     When run outside of Streamlit, this will raise an Exception.
