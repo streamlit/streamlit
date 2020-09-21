@@ -39,13 +39,13 @@ you're working on.
 ## Install Streamlit
 
 ```bash
-$ pip install streamlit
+pip install streamlit
 ```
 
 Now run the hello world app just to make sure everything is working:
 
 ```bash
-$ streamlit hello
+streamlit hello
 ```
 
 ## Import Streamlit
@@ -56,18 +56,20 @@ Streamlit.
 1. Create a new Python file named `first_app.py`, then open it with your IDE
    or text editor.
 2. Next, import Streamlit.
-   ```Python
+
+   ```python
    import streamlit as st
    # To make things easier later, we're also importing numpy and pandas for
    # working with sample data.
    import numpy as np
    import pandas as pd
    ```
+
 3. Run your app. A new tab will open in your default browser. It'll be blank
    for now. That's OK.
 
    ```bash
-   $ streamlit run first_app.py
+   streamlit run first_app.py
    ```
 
    Running a Streamlit app is no different than any other Python script.
@@ -91,7 +93,7 @@ Streamlit has a number of ways to add text to your app. Check out our
 
 Let's add a title to test things out:
 
-```Python
+```python
 st.title('My first app')
 ```
 
@@ -107,7 +109,7 @@ can pass almost anything to [`st.write()`](api.html#streamlit.write):
 text, data, Matplotlib figures, Altair charts, and more. Don't worry, Streamlit
 will figure it out and render things the right way.
 
-```Python
+```python
 st.write("Here's our first attempt at using data to create a table:")
 st.write(pd.DataFrame({
     'first column': [1, 2, 3, 4],
@@ -132,13 +134,13 @@ these features and how to add colors and styling to your data frames.
 
 ## Use magic
 
-If you're using Python 3, you can also write to your app without calling any
+You can also write to your app without calling any
 Streamlit methods. Streamlit supports "[magic
 commands](api.html#magic-commands)," which means you don't have to use
 [`st.write()`](api.html#streamlit.write) at all! Try replacing the code above
 with this snippet:
 
-```Python
+```python
 """
 # My first app
 Here's our first attempt at using data to create a table:
@@ -169,7 +171,7 @@ You can easily add a line chart to your app with
 [`st.line_chart()`](api.html#streamlit.line_chart). We'll generate a random
 sample using Numpy and then chart it.
 
-```Python
+```python
 chart_data = pd.DataFrame(
      np.random.randn(20, 3),
      columns=['a', 'b', 'c'])
@@ -183,7 +185,7 @@ With [`st.map()`](api.html#streamlit.map) you can display data points on a map.
 Let's use Numpy to generate some sample data and plot it on a map of
 San Francisco.
 
-```Python
+```python
 map_data = pd.DataFrame(
     np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
     columns=['lat', 'lon'])
@@ -204,7 +206,7 @@ an app. [`st.checkbox()`](api.html#streamlit.checkbox) takes a single argument,
 which is the widget label. In this sample, the checkbox is used to toggle a
 conditional statement.
 
-```Python
+```python
 if st.checkbox('Show dataframe'):
     chart_data = pd.DataFrame(
        np.random.randn(20, 3),
@@ -221,7 +223,7 @@ column.
 
 Let's use the `df` data frame we created earlier.
 
-```Python
+```python
 option = st.selectbox(
     'Which number do you like best?',
      df['first column'])
@@ -235,7 +237,7 @@ For a cleaner look, you can move your widgets into a sidebar. This keeps your
 app central, while widgets are pinned to the left. Let's take a look at how you
 can use [`st.sidebar`](api.html#add-widgets-to-sidebar) in your app.
 
-```Python
+```python
 option = st.sidebar.selectbox(
     'Which number do you like best?',
      df['first column'])
@@ -257,13 +259,13 @@ When adding long running computations to an app, you can use
 First, let's import time. We're going to use the `time.sleep()` method to
 simulate a long running computation:
 
-```Python
+```python
 import time
 ```
 
 Now, let's create a progress bar:
 
-```Python
+```python
 'Starting a long computation...'
 
 # Add a placeholder

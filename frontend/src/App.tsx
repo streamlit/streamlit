@@ -17,9 +17,10 @@
 
 import React, { Fragment, PureComponent, ReactNode } from "react"
 import moment from "moment"
-import { HotKeys } from "react-hotkeys"
+import { HotKeys, KeyMap } from "react-hotkeys"
 import { fromJS, List } from "immutable"
 import classNames from "classnames"
+import { ThemeProvider } from "baseui"
 // Other local imports.
 import ReportView from "components/core/ReportView/"
 import StatusWidget from "components/core/StatusWidget"
@@ -34,6 +35,7 @@ import { WidgetStateManager } from "lib/WidgetStateManager"
 import { ConnectionState } from "lib/ConnectionState"
 import { ReportRunState } from "lib/ReportRunState"
 import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
+import { mainWidgetTheme } from "lib/widgetTheme"
 import {
   applyDelta,
   BlockElement,
@@ -80,8 +82,13 @@ import withScreencast, {
   ScreenCastHOC,
 } from "./hocs/withScreencast/withScreencast"
 
+import withS4ACommunication, {
+  S4ACommunicationHOC,
+} from "./hocs/withS4ACommunication/withS4ACommunication"
+
 export interface Props {
   screenCast: ScreenCastHOC
+  s4aCommunication: S4ACommunicationHOC
 }
 
 interface State {
@@ -174,14 +181,18 @@ export class App extends PureComponent<Props, State> {
   /**
    * Global keyboard shortcuts.
    */
+  keyMap: KeyMap = {
+    RERUN: "r",
+    CLEAR_CACHE: "c",
+    // We use key up for stop recording to ensure the esc key doesn't trigger
+    // other actions (like exiting modals)
+    STOP_RECORDING: { sequence: "esc", action: "keyup" },
+  }
+
   keyHandlers = {
-    // The r key reruns the script.
-    r: (): void => this.rerunScript(),
-
-    // The c key clears the cache.
-    c: (): void => this.openClearCacheDialog(),
-
-    esc: this.props.screenCast.stopRecording,
+    RERUN: (): void => this.rerunScript(),
+    CLEAR_CACHE: (): void => this.openClearCacheDialog(),
+    STOP_RECORDING: this.props.screenCast.stopRecording,
   }
 
   componentDidMount(): void {
@@ -198,6 +209,15 @@ export class App extends PureComponent<Props, State> {
     }
 
     MetricsManager.current.enqueue("viewReport")
+  }
+
+  componentDidUpdate(prevProps: Readonly<Props>): void {
+    if (
+      prevProps.s4aCommunication.currentState.queryParams !==
+      this.props.s4aCommunication.currentState.queryParams
+    ) {
+      this.sendRerunBackMsg()
+    }
   }
 
   showError(title: string, errorNode: ReactNode): void {
@@ -313,12 +333,20 @@ export class App extends PureComponent<Props, State> {
 
   handlePageConfigChanged = (pageConfig: PageConfig): void => {
     const { title, favicon, layout, initialSidebarState } = pageConfig
+
     if (title) {
+      this.props.s4aCommunication.sendMessage({
+        type: "SET_PAGE_TITLE",
+        title,
+      })
+
       document.title = `${title} · Streamlit`
     }
+
     if (favicon) {
       handleFavicon(favicon)
     }
+
     // Only change layout/sidebar when the page config has changed.
     // This preserves the user's previous choice, and prevents extra re-renders.
     if (layout !== this.state.layout) {
@@ -340,6 +368,11 @@ export class App extends PureComponent<Props, State> {
   handlePageInfoChanged = (pageInfo: PageInfo): void => {
     const { queryString } = pageInfo
     window.history.pushState({}, "", queryString ? `?${queryString}` : "/")
+
+    this.props.s4aCommunication.sendMessage({
+      type: "SET_QUERY_PARAM",
+      queryParams: queryString ? `?${queryString}` : "",
+    })
   }
 
   /**
@@ -393,6 +426,7 @@ export class App extends PureComponent<Props, State> {
       sharingEnabled: Boolean(config.sharingEnabled),
     })
 
+    this.props.s4aCommunication.connect()
     this.handleSessionStateChanged(sessionState)
   }
 
@@ -776,17 +810,23 @@ export class App extends PureComponent<Props, State> {
     this.widgetMgr.sendUpdateWidgetsMessage()
   }
 
-  sendRerunBackMsg = (widgetStates?: WidgetStates): void => {
-    let queryString = document.location.search
+  sendRerunBackMsg = (widgetStates?: WidgetStates | undefined): void => {
+    const { queryParams } = this.props.s4aCommunication.currentState
+
+    let queryString =
+      queryParams && queryParams.length > 0
+        ? queryParams
+        : document.location.search
 
     if (queryString.startsWith("?")) {
       queryString = queryString.substring(1)
     }
 
-    const backMsg = new BackMsg({
-      rerunScript: { queryString, widgetStates },
-    })
-    this.sendBackMsg(backMsg)
+    this.sendBackMsg(
+      new BackMsg({
+        rerunScript: { queryString, widgetStates },
+      })
+    )
   }
 
   /** Requests that the server stop running the report */
@@ -918,7 +958,12 @@ export class App extends PureComponent<Props, State> {
     // attach: DOM element the keyboard listeners should attach to
     // focused: A way to force focus behaviour
     return (
-      <HotKeys handlers={this.keyHandlers} attach={window} focused={true}>
+      <HotKeys
+        keyMap={this.keyMap}
+        handlers={this.keyHandlers}
+        attach={window}
+        focused={true}
+      >
         <div className={outerDivClass}>
           {/* The tabindex below is required for testing. */}
           <header tabIndex={-1}>
@@ -942,6 +987,8 @@ export class App extends PureComponent<Props, State> {
                 aboutCallback={this.aboutCallback}
                 screencastCallback={this.screencastCallback}
                 screenCastState={this.props.screenCast.currentState}
+                s4aMenuItems={this.props.s4aCommunication.currentState.items}
+                sendS4AMessage={this.props.s4aCommunication.sendMessage}
               />
             </div>
           </header>
@@ -962,12 +1009,11 @@ export class App extends PureComponent<Props, State> {
             uploadClient={this.uploadClient}
             componentRegistry={this.componentRegistry}
           />
-
-          {dialog}
+          <ThemeProvider theme={mainWidgetTheme}>{dialog}</ThemeProvider>
         </div>
       </HotKeys>
     )
   }
 }
 
-export default withScreencast(App)
+export default withS4ACommunication(withScreencast(App))

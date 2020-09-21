@@ -16,6 +16,41 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.67.0
+
+_Release date: September 16, 2020_
+
+**Highlights:**
+
+- 🦷 Streamlit Components can now return bytes to your Streamlit App. To create a
+  component that returns bytes, make sure to upgrade to the latest
+  [streamlit-component-lib](https://www.npmjs.com/package/streamlit-component-lib).
+
+**Notable Changes**
+
+- 📈 Deprecation warning: Beginning December 1st, 2020 `st.pyplot()` will require a figure to
+  be provided. To disable the deprecation warning, please set `deprecation.showPyplotGlobalUse`
+  to `False`
+- 🎚 `st.multiselect` and `st.select` are now lightning fast when working with large datasets. Thanks [masa3141](https://github.com/masa3141)!
+
+## Version 0.66.0
+
+_Release date: September 1, 2020_
+
+**Highlights:**
+
+- ✏️ `st.write` is now available for use in the sidebar!
+- 🎚 A slider for distinct or non-numerical values is now available with `st.select_slider`.
+- ⌗ Streamlit Components can now return dataframes to your Streamlit App. Check out our [SelectableDataTable example](https://github.com/streamlit/component-template/tree/master/examples/SelectableDataTable).
+- 📦 The Streamlit Components library used in our Streamlit Component template is
+  now available as a npm package ([streamlit-component-lib](https://www.npmjs.com/package/streamlit-component-lib)) to simplify future upgrades to the latest version.
+  Existing components do not need to migrate.
+
+**Notable Changes**
+
+- 🐼 Support StringDtype from pandas version 1.0.0
+- 🧦 Support for running Streamlit on Unix sockets
+
 ## Version 0.65.0
 
 _Release date: August 12, 2020_

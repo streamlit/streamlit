@@ -17,14 +17,16 @@
 
 import ErrorElement from "components/shared/ErrorElement"
 import { Map as ImmutableMap } from "immutable"
+import { SimpleElement } from "lib/DeltaParser"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
 } from "lib/IFrameUtil"
+import { dispatchOneOf } from "lib/immutableProto"
 import { logError, logWarning } from "lib/log"
 import { Source, WidgetStateManager } from "lib/WidgetStateManager"
-import React, { createRef, ReactNode } from "react"
 import queryString from "query-string"
+import React, { createRef, ReactNode } from "react"
 import { ComponentRegistry } from "./ComponentRegistry"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
 
@@ -35,7 +37,7 @@ import { ComponentMessageType, StreamlitMessageType } from "./enums"
  */
 export const CUSTOM_COMPONENT_API_VERSION = 1
 
-interface Props {
+export interface Props {
   registry: ComponentRegistry
   widgetMgr: WidgetStateManager
 
@@ -44,20 +46,28 @@ interface Props {
   width: number
 }
 
-interface State {
+export interface State {
   componentError?: Error
 }
 
+interface DataframeArg {
+  key: string
+  value: any
+}
+
 export class ComponentInstance extends React.PureComponent<Props, State> {
-  private iframeRef = createRef<HTMLIFrameElement>()
+  private readonly iframeRef = createRef<HTMLIFrameElement>()
 
   // True when we've received the COMPONENT_READY message
   private componentReady = false
 
-  private lastRenderArgs = {}
+  // The most recent JSON and bytes args we've received from Python.
+  private curArgs: { [name: string]: any } = {}
 
-  private lastRenderDataframes = []
+  // The most recent Arrow Dataframe args we've received from Python.
+  private curDataframeArgs: DataframeArg[] = []
 
+  // The most recent frame height we've received from the frontend.
   private frameHeight = 0
 
   public constructor(props: Props) {
@@ -124,10 +134,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
           })
         } else {
           this.componentReady = true
-          this.sendForwardMsg(StreamlitMessageType.RENDER, {
-            args: this.lastRenderArgs,
-            dfs: this.lastRenderDataframes,
-          })
+          this.sendRenderMessage()
         }
         break
       }
@@ -169,6 +176,8 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     const { dataType } = data
     if (dataType === "dataframe") {
       this.props.widgetMgr.setArrowValue(widgetId, value, source)
+    } else if (dataType === "bytes") {
+      this.props.widgetMgr.setBytesValue(widgetId, value, source)
     } else {
       this.props.widgetMgr.setJsonValue(widgetId, value, source)
     }
@@ -224,15 +233,29 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     )
   }
 
+  /**
+   * Send a RENDER message to the component with the most recent arguments
+   * received from Python.
+   */
+  private sendRenderMessage = (): void => {
+    // NB: if you change or remove any of the arguments here, you'll break
+    // existing components. You can *add* more arguments safely, but any
+    // other modifications require a CUSTOM_COMPONENT_API_VERSION bump.
+    this.sendForwardMsg(StreamlitMessageType.RENDER, {
+      args: this.curArgs,
+      dfs: this.curDataframeArgs,
+      disabled: this.props.disabled,
+    })
+  }
+
+  private renderError = (error: Error): ReactNode => {
+    return <ErrorElement name={error.name} message={error.message} />
+  }
+
   public render = (): ReactNode => {
     if (this.state.componentError != null) {
       // If we have an error, display it and bail.
-      return (
-        <ErrorElement
-          name={this.state.componentError.name}
-          message={this.state.componentError.message}
-        />
-      )
+      return this.renderError(this.state.componentError)
     }
 
     // Parse the component's arguments and src URL.
@@ -241,8 +264,8 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     // and bail. The error will be displayed in the next call to render,
     // which will be triggered immediately. (This will not cause an infinite
     // loop.)
-    let renderArgs: any
-    let renderDfs: any
+    let newArgs: { [name: string]: any }
+    const newDataframeArgs: DataframeArg[] = []
     let src: string
     let componentName: string
     try {
@@ -262,31 +285,56 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
         query: { streamlitUrl: window.location.href },
       })
 
-      // Parse arguments
-      renderArgs = JSON.parse(this.props.element.get("argsJson"))
-      renderDfs = this.props.element.get("argsDataframe").toJS()
+      // Parse arguments. Our JSON arguments are just stored in a JSON string.
+      newArgs = JSON.parse(this.props.element.get("jsonArgs"))
+
+      // Some notes re: data marshalling:
+      //
+      // Non-JSON arguments are sent from Python in the "specialArgs"
+      // protobuf list. We get DataFrames and Bytes from this list (and
+      // any further non-JSON datatypes we add support for down the road will
+      // also go into it).
+      //
+      // We don't forward raw protobuf objects onto the iframe, however.
+      // Instead, JSON args and Bytes args are shipped to the iframe together
+      // in a plain old JS Object called `args`.
+      //
+      // But! Because dataframes are delivered as instances of our custom
+      // "ArrowTable" class, they can't be sent to the iframe in this same
+      // `args` object. Instead, raw DataFrame data is delivered to the iframe
+      // in a separate Array. The iframe then constructs the required
+      // ArrowTable instances and inserts them into the `args` array itself.
+      const specialArgs = this.props.element.get("specialArgs")
+      specialArgs.forEach((specialArg: any) => {
+        const key = specialArg.get("key")
+        dispatchOneOf(specialArg, "value", {
+          arrowDataframe: (el: SimpleElement) =>
+            newDataframeArgs.push({ key, value: el.toJS() }),
+          bytes: (bytesArray: Uint8Array) => {
+            newArgs[key] = bytesArray
+          },
+        })
+      })
     } catch (err) {
       this.setState({ componentError: err })
-      return undefined
-    }
-
-    if (this.componentReady) {
-      // The component has loaded. Send it a new render message immediately.
-      this.sendForwardMsg(StreamlitMessageType.RENDER, {
-        args: renderArgs,
-        dfs: renderDfs,
-        disabled: this.props.disabled,
-      })
+      return this.renderError(err)
     }
 
     // We always store the most recent render arguments in order to respond
     // to COMPONENT_READY messages. Components can indicate that they're ready
     // multiple times (this will happen if a plugin auto-reloads itself -
-    // for example, if it's being served from a webpack dev server). When
+    // for example, if it's being served from a webpack dev server). When a
     // component sends the COMPONENT_READY message, we send it the most
-    // recent render arguments.
-    this.lastRenderArgs = renderArgs
-    this.lastRenderDataframes = renderDfs
+    // recent arguments.
+    this.curArgs = newArgs
+    this.curDataframeArgs = newDataframeArgs
+
+    if (this.componentReady) {
+      // The component has loaded. Send it a new render message immediately.
+      // This must happen *after* the above "last args" are saved, because
+      // the render message uses them.
+      this.sendRenderMessage()
+    }
 
     // Render the iframe. We set scrolling="no", because we don't want
     // scrollbars to appear; instead, we want components to properly auto-size

@@ -15,10 +15,15 @@
  * limitations under the License.
  */
 
-import { BasicDialog } from "components/core/StreamlitDialog/StreamlitDialog"
 import React, { PureComponent, ReactNode } from "react"
 import { HotKeys } from "react-hotkeys"
-import { Button, ModalBody, ModalFooter, ModalHeader } from "reactstrap"
+import Modal, {
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  ModalButton,
+} from "components/shared/Modal"
+import { Kind } from "components/shared/Button"
 
 export interface Props {
   /** Called to close the dialog without rerunning the report. */
@@ -52,30 +57,20 @@ export class ScriptChangedDialog extends PureComponent<Props> {
     // HotKeys component here but its not working without them
     return (
       <HotKeys handlers={this.keyHandlers} attach={window} focused={true}>
-        <BasicDialog onClose={this.props.onClose}>
-          <ModalHeader toggle={this.props.onClose}>App changed</ModalHeader>
+        <Modal isOpen onClose={this.props.onClose}>
+          <ModalHeader>App changed</ModalHeader>
           <ModalBody>
             <div>The source files for this app have changed on disk.</div>
           </ModalBody>
           <ModalFooter>
-            <Button
-              className="underlineFirstLetter"
-              outline
-              color="secondary"
-              onClick={this.alwaysRerun}
-            >
-              Always rerun
-            </Button>{" "}
-            <Button
-              className="underlineFirstLetter"
-              outline
-              color="primary"
-              onClick={this.rerun}
-            >
-              Rerun
-            </Button>
+            <ModalButton kind={Kind.SECONDARY} onClick={this.alwaysRerun}>
+              <span className="underlineFirstLetter">Always rerun</span>
+            </ModalButton>
+            <ModalButton kind={Kind.PRIMARY} onClick={this.rerun}>
+              <span className="underlineFirstLetter">Rerun</span>
+            </ModalButton>
           </ModalFooter>
-        </BasicDialog>
+        </Modal>
       </HotKeys>
     )
   }

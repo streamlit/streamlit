@@ -1,6 +1,6 @@
 {
   "name": "streamlit-browser",
-  "version": "0.65.2",
+  "version": "0.67.0",
   "private": true,
   "homepage": "./",
   "scripts": {
@@ -20,6 +20,9 @@
     "typecheck": "tsc --noEmit"
   },
   "jest": {
+    "snapshotSerializers": [
+      "enzyme-to-json/serializer"
+    ],
     "coverageReporters": [
       "text",
       "html"
@@ -75,6 +78,7 @@
     "react-test-renderer": "^16.10.2",
     "react-transition-group": "^4.3.0",
     "react-virtualized": "^9.21.2",
+    "react-window": "^1.8.5",
     "reactstrap": "^8.0.1",
     "remark-emoji": "^2.0.2",
     "remark-math": "^2.0.1",
@@ -119,6 +123,7 @@
     "@types/react-plotly.js": "^2.2.4",
     "@types/react-transition-group": "^4.2.4",
     "@types/react-virtualized": "^9.21.9",
+    "@types/react-window": "^1.8.2",
     "@types/reactstrap": "^8.0.1",
     "@types/sprintf-js": "^1.1.2",
     "@types/styletron-engine-atomic": "^1.1.0",
@@ -133,6 +138,7 @@
     "cypress-image-snapshot": "^3.1.1",
     "enzyme": "^3.10.0",
     "enzyme-adapter-react-16": "^1.15.2",
+    "enzyme-to-json": "^3.5.0",
     "eslint-config-airbnb-typescript": "^9.0.0",
     "eslint-config-prettier": "^6.2.0",
     "eslint-plugin-import": "^2.22.0",
@@ -157,6 +163,7 @@
     "typescript": "^3.8.3"
   },
   "resolutions": {
+    "bl": "^2.2.1",
     "dot-prop": "^4.2.1",
     "esm": "^3.1.0",
     "https-proxy-agent": "^2.2.4",

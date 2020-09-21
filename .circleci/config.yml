@@ -137,6 +137,11 @@ commands:
           command: |
             ${SUDO} apt-get install -y unixodbc-dev
 
+      - run:
+          name: Install graphviz dependencies
+          command: |
+            ${SUDO} apt-get install -y libgvc6
+
       - run: &activate_virtualenv
           name: Create virtualenv
           command: |
@@ -148,6 +153,11 @@ commands:
               pip install --upgrade pip
               make setup
               make pipenv-install
+              # Looks like the pinned setuptools is not being respected
+              # In the meantime, forcing a reinstall of setuptools to unblock
+              # TODO: Cleanup as part of GH #1963
+              pip install "setuptools<=49.6.0" --force-reinstall --no-cache-dir
+              pip show setuptools
               deactivate
             else
               # The virtualenv WAS restored from cache. Don't create a new one.

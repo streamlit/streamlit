@@ -276,6 +276,7 @@ class ConfigTest(unittest.TestCase):
                 "client.caching",
                 "client.displayEnabled",
                 "deprecation.showfileUploaderEncoding",
+                "deprecation.showPyplotGlobalUse",
                 "deprecation.showImageFormat",
                 "global.developmentMode",
                 "global.disableWatchdogWarning",

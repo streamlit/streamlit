@@ -159,6 +159,8 @@ describe("Multiselect widget", () => {
   })
 
   it("should have our theme overrides", () => {
-    expect(wrapper.find(UISelect).prop("overrides")).toBe(multiSelectOverrides)
+    expect(wrapper.find(UISelect).prop("overrides")).toMatchObject(
+      multiSelectOverrides
+    )
   })
 })

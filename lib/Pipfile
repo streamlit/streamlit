@@ -12,6 +12,8 @@ pipenv = "*"
 pytest = "*"
 pytest-cov = "*"
 requests-mock = "*"
+# Hardcode setuptools - issue opened https://github.com/pypa/setuptools/issues/2366
+setuptools = "<=49.6.0"
 testfixtures = "*"
 twine = "*"
 wheel = "*"

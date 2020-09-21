@@ -114,6 +114,7 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
             ((i for i in ("Tea", "Water")), [1, 2]),
             (np.array(["Coffee", "Tea"]), [0, 1]),
             (pd.Series(np.array(["Coffee", "Tea"])), [0, 1]),
+            ("Coffee", [0]),
         ]
     )
     def test_default_types(self, defaults, expected):

@@ -21,6 +21,7 @@ import { Map as ImmutableMap } from "immutable"
 import { multiSelectOverrides } from "lib/widgetTheme"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { TYPE, Select as UISelect, OnChangeParams } from "baseui/select"
+import VirtualDropdown from "components/shared/VirtualDropdown"
 
 export interface Props {
   disabled: boolean
@@ -120,7 +121,10 @@ class Multiselect extends React.PureComponent<Props, State> {
           value={this.valueFromState}
           disabled={disabled}
           size={"compact"}
-          overrides={multiSelectOverrides}
+          overrides={{
+            ...multiSelectOverrides,
+            Dropdown: { component: VirtualDropdown },
+          }}
         />
       </div>
     )

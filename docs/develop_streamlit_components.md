@@ -206,7 +206,7 @@ This template has much more code than its React sibling, in that all the mechani
 - If you want to add more packages to your component, just `npm add` them from within your component's `frontend/` directory.
 
 ```shell
-$ npm add baseui
+npm add baseui
 ```
 
 - To build a static version of your component, run `npm run build`. See [Prepare your Component](publish_streamlit_components.md) for more information
@@ -255,4 +255,4 @@ Check out the [CustomDataframe](https://github.com/streamlit/component-template/
 
 You send data from the frontend to Python via the `Streamlit.setComponentValue()` API (which is part of the template code). Unlike arg-passing from Python → frontend, **this API takes a single value**. If you want to return multiple values, you'll need to wrap them in an `Array` or `Object`.
 
-Custom Components can currently _only_ send JSON-serializable data from the frontend to Python. We'll be adding support for returning `ArrowTable` from the frontend in the near future!
+Custom Components can send JSON-serializable data from the frontend to Python, as well as [Apache Arrow](http://arrow.apache.org/) `ArrowTable`s to represent dataframes.
