@@ -81,15 +81,17 @@ function generateTableRow(
 export function Table({ element }: TableProps): ReactElement {
   const { headerRows, rows, cols } = dataFrameGetDimensions(element)
   const allRows = range(rows)
-  const columns = allRows.slice(0, headerRows)
+  const columnHeaders = allRows.slice(0, headerRows)
   const dataRows = allRows.slice(headerRows)
 
   return (
     <div className="stTable">
       <table>
-        {columns.length > 0 && (
+        {columnHeaders.length > 0 && (
           <thead>
-            {columns.map(rowIdx => generateTableRow(element, rowIdx, cols))}
+            {columnHeaders.map(rowIdx =>
+              generateTableRow(element, rowIdx, cols)
+            )}
           </thead>
         )}
         <tbody>
