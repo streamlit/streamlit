@@ -10,7 +10,7 @@ as well. The main purpose of this tool is to help you diagnose and fix issues.
 You can find docs for our CLI tool as usual:
 
 ```bash
-$ streamlit --help
+streamlit --help
 ```
 
 Below are a few of the most useful commands accepted by Streamlit CLI:
@@ -18,7 +18,7 @@ Below are a few of the most useful commands accepted by Streamlit CLI:
 ## Run Streamlit apps
 
 ```bash
-$ streamlit run your_script.py [-- script args]
+streamlit run your_script.py [-- script args]
 ```
 
 Runs your app. At any time you can kill the server with **Ctrl+c**.
@@ -35,7 +35,7 @@ things like change the port the app is served from, disable run-on-save, and
 more. To see all options, run:
 
 ```bash
-$ streamlit run --help
+streamlit run --help
 ```
 
 ```eval_rst
@@ -50,7 +50,7 @@ $ streamlit run --help
 ## Run a cool demo
 
 ```bash
-$ streamlit hello
+streamlit hello
 ```
 
 Opens Streamlit's Hello World app in a web browser. This is useful for
@@ -59,7 +59,7 @@ testing Streamlit.
 ## View all config options
 
 ```bash
-$ streamlit config show
+streamlit config show
 ```
 
 Shows all config options available for Streamlit, including their current
@@ -82,14 +82,15 @@ values. You can set these options in four different ways:
   ```
 
 - **As flags in the command line** when running `streamlit run`. For example:
+
   ```bash
-  $ streamlit run your_script.py --server.port 80
+  streamlit run your_script.py --server.port 80
   ```
 
 ## Clear the cache
 
 ```bash
-$ streamlit cache clear
+streamlit cache clear
 ```
 
 Clears persisted files from the [Streamlit
@@ -98,7 +99,7 @@ cache](api.html#optimize-performance), if any.
 ## View documentation
 
 ```bash
-$ streamlit docs
+streamlit docs
 ```
 
 Opens Streamlit's documentation (i.e. this website) in a web browser.
@@ -106,7 +107,7 @@ Opens Streamlit's documentation (i.e. this website) in a web browser.
 ## Print Streamlit's version
 
 ```bash
-$ streamlit --version
+streamlit --version
 ```
 
 Shows the version of Streamlit in your current Python environment.

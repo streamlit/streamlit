@@ -42,7 +42,6 @@ from streamlit.elements.bokeh_chart import BokehMixin
 from streamlit.elements.graphviz_chart import GraphvizMixin
 from streamlit.elements.plotly_chart import PlotlyMixin
 from streamlit.elements.vega_lite import VegaLiteMixin
-from streamlit.elements.deck_gl import DeckGlMixin
 from streamlit.elements.deck_gl_json_chart import PydeckMixin
 from streamlit.elements.map import MapMixin
 from streamlit.elements.iframe_proto import IframeMixin
@@ -85,7 +84,6 @@ class DeltaGenerator(
     CheckboxMixin,
     ColorPickerMixin,
     DataFrameMixin,
-    DeckGlMixin,
     EmptyMixin,
     ExceptionMixin,
     FileUploaderMixin,

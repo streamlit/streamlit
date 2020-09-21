@@ -41,6 +41,24 @@ describe("st.pyplot", () => {
     // Make the ribbon decoration line disappear
     cy.get(".decoration").invoke("css", "display", "none");
 
-    cy.get(".stImage > img").matchImageSnapshot("pyplot-check-if-cleared");
+    cy.get(".stImage > img")
+      .first()
+      .matchImageSnapshot("pyplot-check-if-cleared");
+  });
+
+  it("shows deprecation warning", () => {
+    cy.get(".stImage")
+      .first()
+      .closest(".element-container")
+      .prev()
+      .should("contain", "PyplotGlobalUseWarning");
+  });
+
+  it("hides deprecation warning", () => {
+    cy.get(".stImage")
+      .eq(1)
+      .closest(".element-container")
+      .prev()
+      .should("not.contain", "PyplotGlobalUseWarning");
   });
 });

@@ -17,10 +17,12 @@
 
 import ErrorElement from "components/shared/ErrorElement"
 import { Map as ImmutableMap } from "immutable"
+import { SimpleElement } from "lib/DeltaParser"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
 } from "lib/IFrameUtil"
+import { dispatchOneOf } from "lib/immutableProto"
 import { logError, logWarning } from "lib/log"
 import { Source, WidgetStateManager } from "lib/WidgetStateManager"
 import queryString from "query-string"
@@ -59,7 +61,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
   // True when we've received the COMPONENT_READY message
   private componentReady = false
 
-  // The most recent JSON args we've received from Python.
+  // The most recent JSON and bytes args we've received from Python.
   private curArgs: { [name: string]: any } = {}
 
   // The most recent Arrow Dataframe args we've received from Python.
@@ -174,6 +176,8 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     const { dataType } = data
     if (dataType === "dataframe") {
       this.props.widgetMgr.setArrowValue(widgetId, value, source)
+    } else if (dataType === "bytes") {
+      this.props.widgetMgr.setBytesValue(widgetId, value, source)
     } else {
       this.props.widgetMgr.setJsonValue(widgetId, value, source)
     }
@@ -260,8 +264,8 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     // and bail. The error will be displayed in the next call to render,
     // which will be triggered immediately. (This will not cause an infinite
     // loop.)
-    let renderArgs: any
-    let renderDfs: any
+    let newArgs: { [name: string]: any }
+    const newDataframeArgs: DataframeArg[] = []
     let src: string
     let componentName: string
     try {
@@ -281,9 +285,36 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
         query: { streamlitUrl: window.location.href },
       })
 
-      // Parse arguments
-      renderArgs = JSON.parse(this.props.element.get("argsJson"))
-      renderDfs = this.props.element.get("argsDataframe").toJS()
+      // Parse arguments. Our JSON arguments are just stored in a JSON string.
+      newArgs = JSON.parse(this.props.element.get("jsonArgs"))
+
+      // Some notes re: data marshalling:
+      //
+      // Non-JSON arguments are sent from Python in the "specialArgs"
+      // protobuf list. We get DataFrames and Bytes from this list (and
+      // any further non-JSON datatypes we add support for down the road will
+      // also go into it).
+      //
+      // We don't forward raw protobuf objects onto the iframe, however.
+      // Instead, JSON args and Bytes args are shipped to the iframe together
+      // in a plain old JS Object called `args`.
+      //
+      // But! Because dataframes are delivered as instances of our custom
+      // "ArrowTable" class, they can't be sent to the iframe in this same
+      // `args` object. Instead, raw DataFrame data is delivered to the iframe
+      // in a separate Array. The iframe then constructs the required
+      // ArrowTable instances and inserts them into the `args` array itself.
+      const specialArgs = this.props.element.get("specialArgs")
+      specialArgs.forEach((specialArg: any) => {
+        const key = specialArg.get("key")
+        dispatchOneOf(specialArg, "value", {
+          arrowDataframe: (el: SimpleElement) =>
+            newDataframeArgs.push({ key, value: el.toJS() }),
+          bytes: (bytesArray: Uint8Array) => {
+            newArgs[key] = bytesArray
+          },
+        })
+      })
     } catch (err) {
       this.setState({ componentError: err })
       return this.renderError(err)
@@ -292,11 +323,11 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     // We always store the most recent render arguments in order to respond
     // to COMPONENT_READY messages. Components can indicate that they're ready
     // multiple times (this will happen if a plugin auto-reloads itself -
-    // for example, if it's being served from a webpack dev server). When
+    // for example, if it's being served from a webpack dev server). When a
     // component sends the COMPONENT_READY message, we send it the most
-    // recent render arguments.
-    this.curArgs = renderArgs
-    this.curDataframeArgs = renderDfs
+    // recent arguments.
+    this.curArgs = newArgs
+    this.curDataframeArgs = newDataframeArgs
 
     if (this.componentReady) {
       // The component has loaded. Send it a new render message immediately.

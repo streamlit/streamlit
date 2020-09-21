@@ -15,7 +15,7 @@
 """A bunch of useful utilities for dealing with types."""
 
 import re
-from typing import Tuple
+from typing import Tuple, Any
 
 from streamlit import errors
 
@@ -79,6 +79,11 @@ _DATAFRAME_COMPATIBLE_TYPES = (
     type(None),
 )  # type: Tuple[type, ...]
 
+_BYTES_LIKE_TYPES = (
+    bytes,
+    bytearray,
+)
+
 
 def is_dataframe(obj):
     return is_type(obj, _PANDAS_DF_TYPE_STR)
@@ -91,6 +96,26 @@ def is_dataframe_like(obj):
 def is_dataframe_compatible(obj):
     """True if type that can be passed to convert_anything_to_df."""
     return is_dataframe_like(obj) or type(obj) in _DATAFRAME_COMPATIBLE_TYPES
+
+
+def is_bytes_like(obj: Any) -> bool:
+    """True if the type is considered bytes-like for the purposes of
+    protobuf data marshalling."""
+    return isinstance(obj, _BYTES_LIKE_TYPES)
+
+
+def to_bytes(obj: Any) -> bytes:
+    """Converts the given object to bytes.
+
+    Only types for which `is_bytes_like` is true can be converted; anything
+    else will result in an exception.
+    """
+    if isinstance(obj, bytes):
+        return obj
+    elif isinstance(obj, bytearray):
+        return bytes(obj)
+
+    raise RuntimeError(f"{obj} is not convertible to bytes")
 
 
 _SYMPY_RE = re.compile(r"^sympy.*$")

@@ -46,11 +46,9 @@ to Streamlit.
 
 How to start a simple HTTP server:
 
-- Python 3:
-
-  ```bash
-  $ python -m http.server [port]
-  ```
+```bash
+$ python -m http.server [port]
+```
 
 ### Symptom #2: The app says "Please wait..." forever
 

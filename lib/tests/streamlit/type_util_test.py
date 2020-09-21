@@ -19,9 +19,10 @@ from unittest.mock import patch
 import plotly.graph_objs as go
 
 from streamlit import type_util
+from streamlit.type_util import is_bytes_like, to_bytes
 
 
-class UtilTest(unittest.TestCase):
+class TypeUtilTest(unittest.TestCase):
     def test_list_is_plotly_chart(self):
         trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
         trace1 = go.Scatter(x=[1, 2, 3, 4], y=[16, 5, 11, 9])
@@ -73,3 +74,17 @@ class UtilTest(unittest.TestCase):
 
         res = type_util.is_namedtuple(John)
         self.assertTrue(res)
+
+    def test_to_bytes(self):
+        bytes_obj = b"some bytes"
+        self.assertTrue(is_bytes_like(bytes_obj))
+        self.assertIsInstance(to_bytes(bytes_obj), bytes)
+
+        bytearray_obj = bytearray("a bytearray string", "utf-8")
+        self.assertTrue(is_bytes_like(bytearray_obj))
+        self.assertIsInstance(to_bytes(bytearray_obj), bytes)
+
+        string_obj = "a normal string"
+        self.assertFalse(is_bytes_like(string_obj))
+        with self.assertRaises(RuntimeError):
+            to_bytes(string_obj)
