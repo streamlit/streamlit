@@ -14,7 +14,7 @@ updates:
       - "needs triage"
       - "infra"
 
-  # Keep Pipfile up to date, batching pull requests weekly
+  # Keep Pipfile up to date
   - package-ecosystem: "pip"
     directory: "/lib"
     schedule:
