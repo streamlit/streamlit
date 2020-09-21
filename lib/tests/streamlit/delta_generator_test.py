@@ -282,6 +282,63 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(msg.delta.new_element.text.body, test_data)
 
 
+class DeltaGeneratorContainerTest(testutil.DeltaGeneratorTestCase):
+    """Test DeltaGenerator Container."""
+
+    def test_container(self):
+        container = st.beta_container()
+
+        self.assertIsInstance(container, DeltaGenerator)
+        self.assertFalse(container._cursor.is_locked)
+
+    def test_container_paths(self):
+        level3 = st.beta_container().beta_container().beta_container()
+        level3.markdown("hi")
+        level3.markdown("bye")
+
+        msg = self.get_message_from_queue()
+        self.assertEqual(msg.metadata.parent_block.path, [0, 0, 0])
+        self.assertEqual(msg.metadata.delta_id, 1)
+
+
+class DeltaGeneratorContainerTest(testutil.DeltaGeneratorTestCase):
+    """Test DeltaGenerator Columns."""
+
+    def test_equal_columns(self):
+        for column in st.beta_columns(4):
+            self.assertIsInstance(column, DeltaGenerator)
+            self.assertFalse(column._cursor.is_locked)
+
+    def test_variable_columns(self):
+        weights = [3, 1, 4, 1, 5, 9]
+        st.beta_columns(weights)
+
+        for i, w in enumerate(weights):
+            # Pull the delta from the back of the queue, using negative index
+            delta = self.get_delta_from_queue(i - len(weights))
+            self.assertEqual(delta.add_block.column.weight, w)
+
+
+class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
+    """Test the `with DG` feature"""
+
+    def test_with(self):
+        # Same as test_container_paths, but using `with` syntax
+        level3 = st.beta_container().beta_container().beta_container()
+        with level3:
+            st.markdown("hi")
+            st.markdown("bye")
+
+        msg = self.get_message_from_queue()
+        self.assertEqual(msg.metadata.parent_block.path, [0, 0, 0])
+
+        # Now we're out of the `with` block, commands should use the main dg
+        st.markdown("outside")
+
+        msg = self.get_message_from_queue()
+        self.assertEqual(msg.metadata.parent_block.path, [])
+
+
 class DeltaGeneratorWriteTest(testutil.DeltaGeneratorTestCase):
     """Test DeltaGenerator Text, Alert, Json, and Markdown Classes."""
 

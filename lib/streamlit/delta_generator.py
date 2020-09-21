@@ -22,9 +22,11 @@ from streamlit import type_util
 from streamlit.report_thread import get_report_ctx
 from streamlit.errors import StreamlitAPIException, StreamlitDeprecationWarning
 from streamlit.errors import NoSessionContext
+from streamlit.proto import Block_pb2
 from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto.Element_pb2 import Element
+from streamlit.proto.Delta_pb2 import Delta as DeltaProto
 from streamlit.logger import get_logger
 
 from streamlit.elements.utils import NoValue
@@ -121,12 +123,27 @@ class DeltaGenerator(
       testing).
 
     cursor: cursor.AbstractCursor or None
+      This is either:
+      - None: if this is the running DeltaGenerator for a top-level
+        container (MAIN or SIDEBAR)
+      - RunningCursor: if this is the running DeltaGenerator for a
+        non-top-level container (created with dg.container())
+      - LockedCursor: if this is a locked DeltaGenerator returned by some
+        other DeltaGenerator method. E.g. the dg returned in dg =
+        st.text("foo").
+
+    parent: DeltaGenerator
+      To support the `with dg` notation, DGs are arranged as a tree. Each DG
+      remembers its own parent, and the root of the tree is the main DG.
+
     """
 
     # The pydoc below is for user consumption, so it doesn't talk about
     # DeltaGenerator constructor parameters (which users should never use). For
     # those, see above.
-    def __init__(self, container=BlockPath_pb2.BlockPath.MAIN, cursor=None):
+    def __init__(
+        self, container=BlockPath_pb2.BlockPath.MAIN, cursor=None, parent=None
+    ):
         """Inserts or updates elements in Streamlit apps.
 
         As a user, you should never initialize this object by hand. Instead,
@@ -141,21 +158,20 @@ class DeltaGenerator(
         an element `foo` inside the sidebar.
 
         """
+        # Whether this DeltaGenerator is nested in the main area or sidebar.
+        # No relation to `st.beta_container()`.
         self._container = container
 
-        # This is either:
-        # - None: if this is the running DeltaGenerator for a top-level
-        #   container (MAIN or SIDEBAR)
-        # - RunningCursor: if this is the running DeltaGenerator for a
-        #   non-top-level container (created with dg._block())
-        # - LockedCursor: if this is a locked DeltaGenerator returned by some
-        #   other DeltaGenerator method. E.g. the dg returned in dg =
-        #   st.text("foo").
-        #
         # You should never use this! Instead use self._cursor, which is a
         # computed property that fetches the right cursor.
-        #
         self._provided_cursor = cursor
+
+        self.parent = parent
+
+        # Track the DG used for the `with` block.
+        # NOTE: Only the main DG should ever reference this.
+        # You should use the computed property _active_dg instead.
+        self._with_dg = self
 
         # Change the module of all mixin'ed functions to be st.delta_generator,
         # instead of the original module (e.g. st.elements.markdown)
@@ -163,6 +179,31 @@ class DeltaGenerator(
             for (name, func) in mixin.__dict__.items():
                 if callable(func):
                     func.__module__ = self.__module__
+
+    def __enter__(self):
+        # with block started. store the current DG
+        self._main_dg._with_dg = self
+
+    def __exit__(self, type, value, traceback):
+        # with block ended. Reset the current dg back to MAIN
+        # NOTE: This won't handle nested with blocks correctly
+        self._main_dg._with_dg = self._main_dg
+        # Re-raise any exceptions
+        return False
+
+    @property
+    def _active_dg(self):
+        if self == self._main_dg:
+            # `st.button`: Use the current `with` dg
+            return self._with_dg
+        else:
+            # `st.sidebar.button`: Ignore the `with` dg
+            return self
+
+    @property
+    def _main_dg(self):
+        # Recursively traverse up the tree to find the main DG (parent = None)
+        return self.parent._main_dg if self.parent else self
 
     def __getattr__(self, name):
         import streamlit as st
@@ -214,6 +255,8 @@ class DeltaGenerator(
         This way, users can (say) use st.image with a stream of different images,
         and Streamlit will expire the older images and replace them in place.
         """
+        # Switch to the active DeltaGenerator, in case we're in a `with` block.
+        self = self._active_dg
         container = self._container  # Proto index of container (e.g. MAIN=1)
 
         if self._cursor:
@@ -259,6 +302,8 @@ class DeltaGenerator(
             element.
 
         """
+        # Switch to the active DeltaGenerator, in case we're in a `with` block.
+        self = self._active_dg
         # Warn if we're called from within an @st.cache function
         caching.maybe_show_cached_st_function_warning(self, delta_type)
 
@@ -298,6 +343,7 @@ class DeltaGenerator(
                 cursor=self._cursor.get_locked_cursor(
                     delta_type=delta_type, last_index=last_index
                 ),
+                parent=self,
             )
         else:
             # If the message was not enqueued, just return self since it's a
@@ -306,15 +352,40 @@ class DeltaGenerator(
 
         return _value_or_dg(return_value, output_dg)
 
-    def _block(self):
+    def beta_container(self):
+        return self._block()
+
+    # TODO: Enforce that columns are not nested or in Sidebar
+    def beta_columns(self, weights):
+        if isinstance(weights, int):
+            # If the user provided a single number, expand into equal weights.
+            # E.g. 3 => (1, 1, 1)
+            # TODO: check that the number > 0
+            weights = (1,) * weights
+
+        def column_proto(weight):
+            col_proto = Block_pb2.Block()
+            col_proto.column.weight = weight
+            return col_proto
+
+        horiz_proto = Block_pb2.Block()
+        horiz_proto.horizontal.unused = True
+        row = self._block(horiz_proto)
+        return [row._block(column_proto(w)) for w in weights]
+
+    # Internal block element, to hide the 'layout' param from our users.
+    def _block(self, block_proto=Block_pb2.Block()):
+        # Switch to the active DeltaGenerator, in case we're in a `with` block.
+        self = self._active_dg
+
         if self._container is None or self._cursor is None:
             return self
 
         msg = ForwardMsg_pb2.ForwardMsg()
-        msg.delta.new_block = True
         msg.metadata.parent_block.container = self._container
         msg.metadata.parent_block.path[:] = self._cursor.path
         msg.metadata.delta_id = self._cursor.index
+        msg.delta.add_block.CopyFrom(block_proto)
 
         # Normally we'd return a new DeltaGenerator that uses the locked cursor
         # below. But in this case we want to return a DeltaGenerator that uses
@@ -322,14 +393,55 @@ class DeltaGenerator(
         block_cursor = cursor.RunningCursor(
             path=self._cursor.path + (self._cursor.index,)
         )
-        block_dg = DeltaGenerator(container=self._container, cursor=block_cursor)
+        block_dg = DeltaGenerator(
+            container=self._container, cursor=block_cursor, parent=self
+        )
 
         # Must be called to increment this cursor's index.
-        self._cursor.get_locked_cursor(None)
-
+        self._cursor.get_locked_cursor(last_index=None)
         _enqueue_message(msg)
 
         return block_dg
+
+    def beta_expander(self, label=None, expanded=False):
+        """Creates a container that can be expanded and collapsed.
+
+        [TODO: get more container verbage]
+        Similar to `st.container`, `st.expander` provides a container
+        to add elements to. However, it has the added benefit of being expandable and
+        collapsible. Users will be able to expand and collapse the container that is
+        identifiable with the provided label.
+
+        Parameters
+        ----------
+        label : str
+            A short label used as the header for the expander.
+            This will always be displayed even when the container is collapsed.
+        expanded : boolean
+            The default state for the expander.
+            Defaults to False
+
+        Returns
+        -------
+        [TODO] Technically a delta generator but let's please not tell the users that...
+
+        Examples
+        --------
+        >>> expander = st.beta_expander("Expand Me")
+        >>> expander.write("I can be expanded")
+
+        """
+        if label is None:
+            raise StreamlitAPIException("A label is required for an expander")
+
+        expandable_proto = Block_pb2.Block.Expandable()
+        expandable_proto.expanded = expanded
+        expandable_proto.label = label
+
+        block_proto = Block_pb2.Block()
+        block_proto.expandable.CopyFrom(expandable_proto)
+
+        return self._block(block_proto=block_proto)
 
     def favicon(
         self, element, image, clamp=False, channels="RGB", format="JPEG",

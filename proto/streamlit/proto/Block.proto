@@ -16,23 +16,28 @@
 
 syntax = "proto3";
 
-import "streamlit/proto/Block.proto";
-import "streamlit/proto/Element.proto";
-import "streamlit/proto/NamedDataSet.proto";
-
-// A change to an element.
-message Delta {
+message Block {
   oneof type {
-    // Append a new element to the report.
-    Element new_element = 3;
+    Vertical vertical = 1;
+    Horizontal horizontal = 2;
+    Column column = 3;
+    Expandable expandable = 4;
+  }
 
-    // Append a new block to the report.
-    Block add_block = 6;
+  message Vertical {
+    bool unused = 1;
+  }
 
-    // Append data to a DataFrame in for current element. The element to add to
-    // is identified by the ID field, above. The dataframe is identified either
-    // by NamedDataSet.name or by setting NamedDataSet.has_name to false.
-    // All elements that contain a DataFrame should support add_rows.
-    NamedDataSet add_rows = 5;
+  message Horizontal {
+    bool unused = 2;
+  }
+
+  message Column {
+    double weight = 1;
+  }
+
+  message Expandable {
+    string label = 1;
+    bool expanded = 2;
   }
 }

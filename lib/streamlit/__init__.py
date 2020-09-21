@@ -127,7 +127,7 @@ _config.on_config_parsed(_update_logger, True)
 
 
 _main = _DeltaGenerator(container=_BlockPath_pb2.BlockPath.MAIN)
-sidebar = _DeltaGenerator(container=_BlockPath_pb2.BlockPath.SIDEBAR)
+sidebar = _DeltaGenerator(container=_BlockPath_pb2.BlockPath.SIDEBAR, parent=_main)
 
 # DeltaGenerator methods:
 
@@ -179,6 +179,9 @@ video = _main.video  # noqa: E221
 warning = _main.warning  # noqa: E221
 write = _main.write  # noqa: E221
 beta_color_picker = _main.beta_color_picker  # noqa: E221
+beta_container = _main.beta_container  # noqa: E221
+beta_expander = _main.beta_expander  # noqa: E221
+beta_columns = _main.beta_columns  # noqa: E221
 
 # Config
 
@@ -512,7 +515,7 @@ def _maybe_print_repl_warning():
 
 def stop():
     """Stops execution immediately.
-    
+
     Streamlit will not run any statements after `st.stop()`.
     We recommend rendering a message to explain why the script has stopped.
     When run outside of Streamlit, this will raise an Exception.
