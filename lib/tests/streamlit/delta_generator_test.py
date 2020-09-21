@@ -286,13 +286,13 @@ class DeltaGeneratorContainerTest(testutil.DeltaGeneratorTestCase):
     """Test DeltaGenerator Container."""
 
     def test_container(self):
-        container = st.container()
+        container = st.beta_container()
 
         self.assertIsInstance(container, DeltaGenerator)
         self.assertFalse(container._cursor.is_locked)
 
     def test_container_paths(self):
-        level3 = st.container().container().container()
+        level3 = st.beta_container().beta_container().beta_container()
         level3.markdown("hi")
         level3.markdown("bye")
 
@@ -305,13 +305,13 @@ class DeltaGeneratorContainerTest(testutil.DeltaGeneratorTestCase):
     """Test DeltaGenerator Columns."""
 
     def test_equal_columns(self):
-        for column in st.columns(4):
+        for column in st.beta_columns(4):
             self.assertIsInstance(column, DeltaGenerator)
             self.assertFalse(column._cursor.is_locked)
 
     def test_variable_columns(self):
         weights = [3, 1, 4, 1, 5, 9]
-        st.columns(weights)
+        st.beta_columns(weights)
 
         for i, w in enumerate(weights):
             # Pull the delta from the back of the queue, using negative index
@@ -324,7 +324,7 @@ class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
 
     def test_with(self):
         # Same as test_container_paths, but using `with` syntax
-        level3 = st.container().container().container()
+        level3 = st.beta_container().beta_container().beta_container()
         with level3:
             st.markdown("hi")
             st.markdown("bye")

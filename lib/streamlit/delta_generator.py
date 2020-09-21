@@ -159,7 +159,7 @@ class DeltaGenerator(
 
         """
         # Whether this DeltaGenerator is nested in the main area or sidebar.
-        # No relation to `st.container()`.
+        # No relation to `st.beta_container()`.
         self._container = container
 
         # You should never use this! Instead use self._cursor, which is a
@@ -352,11 +352,11 @@ class DeltaGenerator(
 
         return _value_or_dg(return_value, output_dg)
 
-    def container(self):
+    def beta_container(self):
         return self._block()
 
     # TODO: Enforce that columns are not nested or in Sidebar
-    def columns(self, weights):
+    def beta_columns(self, weights):
         if isinstance(weights, int):
             # If the user provided a single number, expand into equal weights.
             # E.g. 3 => (1, 1, 1)
@@ -403,7 +403,7 @@ class DeltaGenerator(
 
         return block_dg
 
-    def expander(self, label=None, expanded=False):
+    def beta_expander(self, label=None, expanded=False):
         """Creates a container that can be expanded and collapsed.
 
         [TODO: get more container verbage]
@@ -427,7 +427,7 @@ class DeltaGenerator(
 
         Examples
         --------
-        >>> expander = st.expander("Expand Me")
+        >>> expander = st.beta_expander("Expand Me")
         >>> expander.write("I can be expanded")
 
         """

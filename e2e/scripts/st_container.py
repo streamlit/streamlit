@@ -14,7 +14,7 @@
 
 import streamlit as st
 
-container = st.container()
+container = st.beta_container()
 
 st.write("Line 1")
 container.write("Line 2")
