@@ -133,7 +133,7 @@ def compose_deltas(old_delta, new_delta):
     if new_delta_type == "new_element":
         return new_delta
 
-    elif new_delta_type == "new_block":
+    elif new_delta_type == "add_block":
         return new_delta
 
     elif new_delta_type == "add_rows":
