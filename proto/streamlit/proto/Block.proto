@@ -23,6 +23,7 @@ message Block {
     Column column = 3;
     Expandable expandable = 4;
   }
+  bool allow_empty = 5;
 
   message Vertical {
     bool unused = 1;

@@ -610,7 +610,10 @@ export class App extends PureComponent<Props, State> {
           )
           // Could check whether container is now empty, and return null.
           // But we want to let empty columns take up sapce.
-          return reportElement.set("element", clearedElements)
+          return clearedElements.size > 0 ||
+            reportElement.getIn(["deltaBlock", "allowEmpty"])
+            ? reportElement.set("element", clearedElements)
+            : null
         }
 
         return reportElement.get("reportId") === reportId
