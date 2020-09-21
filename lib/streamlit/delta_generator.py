@@ -366,6 +366,7 @@ class DeltaGenerator(
         def column_proto(weight):
             col_proto = Block_pb2.Block()
             col_proto.column.weight = weight
+            col_proto.allow_empty = True
             return col_proto
 
         horiz_proto = Block_pb2.Block()
