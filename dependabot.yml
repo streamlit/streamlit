@@ -1,20 +1,28 @@
-version: 1
-update_configs:
+version: 2
+updates:
   # Keep package.json (& lockfiles) up to date as soon as
   # new versions are published to the npm registry
-  - package_manager: "javascript"
+  - package-ecosystem: "npm"
     directory: "/frontend"
-    update_schedule: "live"
+    schedule:
+      interval: "daily"
 
-    default_labels:
+    reviewers:
+      - "streamlit/core"
+
+    labels:
       - "needs triage"
       - "infra"
 
   # Keep Pipfile up to date, batching pull requests weekly
-  - package_manager: "python"
+  - package-ecosystem: "pip"
     directory: "/lib"
-    update_schedule: "weekly"
+    schedule:
+      interval: "daily"
 
-    default_labels:
+    reviewers:
+      - "streamlit/core"
+
+    labels:
       - "needs triage"
       - "infra"
