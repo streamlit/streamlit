@@ -318,6 +318,13 @@ class DeltaGeneratorContainerTest(testutil.DeltaGeneratorTestCase):
             delta = self.get_delta_from_queue(i - len(weights))
             self.assertEqual(delta.add_block.column.weight, w)
 
+    def test_bad_columns(self):
+        with self.assertRaises(StreamlitAPIException):
+            st.beta_columns(-1337)
+
+        with self.assertRaises(StreamlitAPIException):
+            st.beta_columns(1)
+
 
 class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
     """Test the `with DG` feature"""
