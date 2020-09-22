@@ -341,6 +341,7 @@ class ScriptRunner(object):
         finally:
             self._widgets.reset_triggers()
             self.on_event.send(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
+            media_file_manager.del_expired_files()
 
         # Use _log_if_error() to make sure we never ever ever stop running the
         # script without meaning to.

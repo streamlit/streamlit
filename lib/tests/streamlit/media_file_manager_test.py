@@ -23,7 +23,6 @@ from tornado.testing import AsyncTestCase
 
 from streamlit.media_file_manager import MediaFileManager
 from streamlit.media_file_manager import _calculate_file_id
-from streamlit.media_file_manager import KEEP_DELAY_SEC
 
 
 def random_coordinates():
@@ -153,7 +152,7 @@ class MediaFileManagerTest(AsyncTestCase):
         pretend_time_passed = self.get_mock_call_later()
         self.mfm.clear_session_files()
 
-        _time.return_value = KEEP_DELAY_SEC + 1
+        _time.return_value = 5 + 1
         pretend_time_passed[0]()
 
         # There should be only 0 file in MFM.
@@ -261,7 +260,7 @@ class MediaFileManagerTest(AsyncTestCase):
             len(self.mfm._files_by_session_and_coord), 0
         )  # Clears immediately
 
-        _time.return_value = KEEP_DELAY_SEC + 1
+        _time.return_value = 5 + 1
         pretend_time_passed[0]()
 
         self.assertEqual(len(self.mfm), 0)  # Now this is cleared too!

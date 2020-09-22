@@ -36,7 +36,6 @@ from streamlit.config_option import ConfigOption
 from streamlit.forward_msg_cache import ForwardMsgCache
 from streamlit.forward_msg_cache import create_reference_msg
 from streamlit.forward_msg_cache import populate_hash_if_needed
-from streamlit.media_file_manager import media_file_manager
 from streamlit.report_session import ReportSession
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.logger import get_logger
@@ -232,8 +231,6 @@ class Server(object):
         self._ioloop = ioloop
         self._script_path = script_path
         self._command_line = command_line
-
-        media_file_manager.set_ioloop(ioloop=self._ioloop)
 
         # Mapping of ReportSession.id -> SessionInfo.
         self._session_info_by_id = {}
