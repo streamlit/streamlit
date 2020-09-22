@@ -46,11 +46,11 @@ const withPagination = (
       }
     }
 
-    public componentDidUpdate(prevProps: Props) {
+    public componentDidUpdate(prevProps: Props): void {
       if (prevProps.items.length !== this.props.items.length) {
         const totalPages = this.calculatePageSize(this.props.items)
 
-        let currentPage = this.state.currentPage
+        let { currentPage } = this.state
         if (prevProps.items.length < this.props.items.length) {
           if (this.props.resetOnAdd) {
             currentPage = 0
@@ -65,11 +65,11 @@ const withPagination = (
       }
     }
 
-    private calculatePageSize(items: any[]) {
+    private calculatePageSize(items: any[]): number {
       return Math.ceil(items.length / this.props.pageSize)
     }
 
-    public onNext = () => {
+    public onNext = (): void => {
       this.setState({
         currentPage: Math.min(
           this.state.currentPage + 1,
@@ -78,7 +78,7 @@ const withPagination = (
       })
     }
 
-    public onPrevious = () => {
+    public onPrevious = (): void => {
       this.setState({
         currentPage: Math.max(0, this.state.currentPage - 1),
       })

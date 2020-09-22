@@ -36,7 +36,7 @@ const Pagination = ({
   totalPages,
   onNext,
   onPrevious,
-}: Props) => {
+}: Props): React.ReactElement => {
   return (
     <StyledPagination className={className}>
       <Small>{`Showing page ${currentPage} of ${totalPages}`}</Small>

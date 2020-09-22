@@ -16,16 +16,22 @@
  */
 
 import React from "react"
+import { FileError } from "react-dropzone"
 import { shallow } from "enzyme"
-import { FileUploader as FileUploaderBaseui } from "baseui/file-uploader"
 import { fromJS } from "immutable"
 
+import FileDropzone from "./FileDropzone"
 import FileUploader, { Props } from "./FileUploader"
 
 const blobFile = new File(["Text in a file!"], "filename.txt", {
   type: "text/plain",
   lastModified: 0,
 })
+
+const fileError: FileError = {
+  message: "error message",
+  code: "file-too-large",
+}
 
 const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
   element: fromJS({
@@ -61,8 +67,8 @@ describe("FileUploader widget", () => {
   it("should upload files", () => {
     const props = getProps()
     const wrapper = shallow(<FileUploader {...props} />)
-    const internalFileUploader = wrapper.find(FileUploaderBaseui)
-    internalFileUploader.props().onDrop([blobFile], [], null)
+    const internalFileUploader = wrapper.find(FileDropzone)
+    internalFileUploader.props().onDrop([blobFile], [])
 
     expect(props.uploadClient.uploadFiles.mock.calls.length).toBe(1)
   })
@@ -70,8 +76,8 @@ describe("FileUploader widget", () => {
   it("should change status when dropping a File", () => {
     const props = getProps()
     const wrapper = shallow(<FileUploader {...props} />)
-    const internalFileUploader = wrapper.find(FileUploaderBaseui)
-    internalFileUploader.props().onDrop([blobFile], [], null)
+    const internalFileUploader = wrapper.find(FileDropzone)
+    internalFileUploader.props().onDrop([blobFile], [])
 
     expect(wrapper.state("status")).toBe("UPLOADING")
     expect(wrapper.find("div.uploadProgress").length).toBe(1)
@@ -80,8 +86,10 @@ describe("FileUploader widget", () => {
   it("should fail when File extension is not allowed", () => {
     const props = getProps({ type: ["png"] })
     const wrapper = shallow(<FileUploader {...props} />)
-    const internalFileUploader = wrapper.find(FileUploaderBaseui)
-    internalFileUploader.props().onDrop([], [blobFile], null)
+    const internalFileUploader = wrapper.find(FileDropzone)
+    internalFileUploader
+      .props()
+      .onDrop([], [{ file: blobFile, errors: [fileError] }])
 
     expect(wrapper.state("status")).toBe("ERROR")
     expect(wrapper.state("errorMessage")).toBe(
@@ -93,8 +101,8 @@ describe("FileUploader widget", () => {
   it("should fail when maxUploadSizeMb = 0", () => {
     const props = getProps({ maxUploadSizeMb: 0 })
     const wrapper = shallow(<FileUploader {...props} />)
-    const internalFileUploader = wrapper.find(FileUploaderBaseui)
-    internalFileUploader.props().onDrop([blobFile], [], null)
+    const internalFileUploader = wrapper.find(FileDropzone)
+    internalFileUploader.props().onDrop([blobFile], [])
 
     expect(wrapper.state("status")).toBe("ERROR")
     expect(wrapper.state("errorMessage")).toBe(

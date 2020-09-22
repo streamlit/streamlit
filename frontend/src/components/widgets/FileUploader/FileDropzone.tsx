@@ -21,7 +21,7 @@ import { MaterialIcon } from "components/shared/Icon"
 import { styled } from "styletron-react"
 
 import { ExtendedFile, getSizeDisplay } from "lib/FileHelper"
-import { colors, sizes, spacingCalculator, variables } from "lib/widgetTheme"
+import { colors, Sizes, spacingCalculator, variables } from "lib/widgetTheme"
 
 import UIButton from "components/widgets/Button/UIButton"
 import { FlexColumn } from "components/shared/Layouts"
@@ -68,7 +68,7 @@ const FileDropzone = ({
   acceptedExtensions,
   maxSizeBytes,
   disabled,
-}: Props) => (
+}: Props): React.ReactElement => (
   <Dropzone
     onDrop={onDrop}
     multiple={multiple}
@@ -90,7 +90,7 @@ const FileDropzone = ({
           <FileUploaderIcon
             icon="cloud_upload"
             type="outlined"
-            size={sizes.large}
+            size={Sizes.LARGE}
             className="fileUploaderIcon"
           />
           <FlexColumn>

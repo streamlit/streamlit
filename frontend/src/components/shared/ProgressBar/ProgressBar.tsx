@@ -19,19 +19,19 @@ import React, { ReactElement } from "react"
 import { SCSS_VARS } from "autogen/scssVariables"
 import { ProgressBar as UIProgressBar } from "baseui/progress-bar"
 import { mergeOverrides } from "baseui"
-import { sizes } from "lib/widgetTheme"
+import { Sizes } from "lib/widgetTheme"
 
 export interface ProgressBarProps {
   width?: number
   value: number
   overrides?: any
-  size?: "small" | "medium" | "large"
+  size?: Sizes
 }
 
 function ProgressBar({
   value,
   width,
-  size = "medium",
+  size = Sizes.MEDIUM,
   overrides,
 }: ProgressBarProps): ReactElement {
   const defaultOverrides = {
@@ -39,7 +39,7 @@ function ProgressBar({
       style: ({ $theme }: { $theme: any }) => ({
         width,
         margin: SCSS_VARS["$progress-bar-margin"],
-        height: SCSS_VARS[`$progress-bar-height-${sizes[size]}`],
+        height: SCSS_VARS[`$progress-bar-height-${size}`],
         backgroundColor: $theme.colors.progressbarTrackFill,
       }),
     },

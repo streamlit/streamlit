@@ -18,17 +18,17 @@
 import React, { ReactElement } from "react"
 import { styled } from "styletron-react"
 import classNames from "classnames"
-import { iconSizes, sizes } from "lib/widgetTheme"
+import { iconSizes, Sizes } from "lib/widgetTheme"
 import "./MaterialIcon.scss"
 
 interface Props {
   icon: string
   type?: string
   className?: string
-  size?: sizes
+  size?: Sizes
 }
 
-export const StyledMaterialIcon = styled("i", (props: { size: sizes }) => ({
+export const StyledMaterialIcon = styled("i", (props: { size: Sizes }) => ({
   fontSize: iconSizes[props.size],
 }))
 
@@ -36,7 +36,7 @@ const MaterialIcon = ({
   icon,
   type,
   className,
-  size = sizes.small,
+  size = Sizes.SMALL,
 }: Props): ReactElement => (
   <StyledMaterialIcon
     className={classNames(

@@ -11,15 +11,16 @@ export interface ExtendedFile extends File {
 export enum FileStatuses {
   ERROR = "ERROR",
   DELETING = "DELETING",
-  UPLOADED = "UPLOADED",
   READY = "READY",
+  UPLOADING = "UPLOADING",
+  UPLOADED = "UPLOADED",
 }
 
 const sizeUnitSequence = ["gb", "mb", "kb", "b"]
 export const getSizeDisplay = (
   size: number,
   unit: string,
-  rounding: number = 1
+  rounding = 1
 ): string => {
   const sizeIndex = sizeUnitSequence.indexOf(unit)
   const nextUnitSize = size / 1024

@@ -47,7 +47,7 @@ export class FileUploadClient extends HttpClient {
     }
 
     await this.request("upload_file", {
-      cancelToken: cancelToken,
+      cancelToken,
       method: "POST",
       data: form,
       onUploadProgress,

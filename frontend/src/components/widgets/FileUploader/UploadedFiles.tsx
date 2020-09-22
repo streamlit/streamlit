@@ -28,7 +28,6 @@ export interface Props {
     event: React.SyntheticEvent<HTMLElement> | null,
     id?: string
   ) => void
-  className: string
 }
 
 const StyledUploadedFiles = styled("div", {
@@ -40,14 +39,10 @@ const StyledUploadedFiles = styled("div", {
   paddingRight: spacingCalculator(2),
 })
 
-const UploadedFileList = ({
-  items,
-  onDelete,
-  className,
-}: Props): ReactElement => {
+const UploadedFileList = ({ items, onDelete }: Props): ReactElement => {
   return (
     <>
-      {items.map((file, index) => (
+      {items.map(file => (
         <UploadedFile
           key={file.id}
           file={file}
@@ -61,8 +56,9 @@ const UploadedFileList = ({
 
 export const PaginatedFiles = withPagination(UploadedFileList)
 
-export default (props: Props & PaginationProps): ReactElement => (
+const UploadedFiles = (props: Props & PaginationProps): ReactElement => (
   <StyledUploadedFiles className="uploadedFiles">
     <PaginatedFiles {...props} />
   </StyledUploadedFiles>
 )
+export default UploadedFiles

@@ -39,10 +39,11 @@ const spacer = SCSS_VARS.$spacer
 // Should use spacers instead of spacer but didn't want to
 // figure out map merges from .scss > SCSS_VARS
 // Using this calculator instead to work with spacer.
-export const spacingCalculator = (spacing?: number) => {
+export const spacingCalculator = (spacing?: number): string => {
   if (!spacing) return spacer
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const [match, amount, unit] = spacer.match(/(?<amount>\d)(?<unit>.*)/)!
-  const numberAmount: number = parseInt(amount)
+  const numberAmount: number = parseInt(amount, 10)
   return match && numberAmount ? `${numberAmount * spacing}${unit}` : spacer
 }
 
@@ -69,7 +70,7 @@ export const colors = {
 export const fontStyles = {
   fontFamily: fontFamilySans,
   fontSize: fontSizeBase,
-  fontSizeSm: fontSizeSm,
+  fontSizeSm,
   fontWeight: "normal",
   lineHeight: lineHeightBase,
   lineHeightTight,
@@ -80,11 +81,11 @@ export const variables = {
   spacer,
 }
 
-export enum sizes {
-  small = "sm",
-  medium = "md",
-  large = "lg",
-  "extraLarge" = "xl",
+export enum Sizes {
+  SMALL = "sm",
+  MEDIUM = "md",
+  LARGE = "lg",
+  EXTRALARGE = "xl",
 }
 
 export const iconSizes = {

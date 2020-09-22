@@ -16,8 +16,7 @@
  */
 
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios"
-import { BaseUriParts } from "lib/UriUtil"
-import { buildHttpUri } from "lib/UriUtil"
+import { buildHttpUri, BaseUriParts } from "lib/UriUtil"
 import { getCookie } from "lib/utils"
 
 /**

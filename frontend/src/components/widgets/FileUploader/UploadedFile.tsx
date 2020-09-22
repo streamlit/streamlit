@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-import { CancelTokenSource } from "axios"
 import React from "react"
 import { Delete } from "baseui/icon"
 import { styled, withStyleDeep } from "styletron-react"
@@ -27,7 +26,7 @@ import { Small, Error } from "components/shared/TextElements"
 import { ExtendedFile, FileStatuses, getSizeDisplay } from "lib/FileHelper"
 import {
   colors,
-  sizes,
+  Sizes,
   utilityClasses,
   spacingCalculator,
 } from "lib/widgetTheme"
@@ -72,7 +71,6 @@ const FileIcon = styled("div", {
 })
 
 class UploadedFile extends React.PureComponent<Props> {
-  private currentUploadCanceller?: CancelTokenSource
   public constructor(props: Props) {
     super(props)
     this.state = {
@@ -82,20 +80,13 @@ class UploadedFile extends React.PureComponent<Props> {
     }
   }
 
-  private cancelCurrentUpload = (): void => {
-    if (this.currentUploadCanceller != null) {
-      this.currentUploadCanceller.cancel()
-      this.currentUploadCanceller = undefined
-    }
-  }
-
-  private renderFileStatus = () => {
+  private renderFileStatus = (): React.ReactElement | null => {
     const { file, progress } = this.props
     if (progress) {
       return (
         <ProgressBar
           value={progress}
-          size="small"
+          size={Sizes.SMALL}
           overrides={{
             Bar: {
               style: {
@@ -137,7 +128,7 @@ class UploadedFile extends React.PureComponent<Props> {
           <MaterialIcon
             type="outlined"
             icon="insert_drive_file"
-            size={sizes.medium}
+            size={Sizes.MEDIUM}
           />
         </FileIcon>
         <UploadedFileData className="uploadedFileData">
