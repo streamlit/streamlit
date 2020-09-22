@@ -378,10 +378,11 @@ class DeltaGenerator(
         weights : int or list of numbers
             If a single int: lay out that many columns of equal width.
 
-            If a list of numbers: lay out one column for each number, whose
-            width is relative to the provided weight. For example,
-            `st.beta_columns([3, 1, 2])` would set the first column 3x the width
-            of the second, and the third column 2x the width of the second.
+            If a list of numbers: create a column for each number.
+            Each column's width is proportional to the number provided.
+            For example, `st.beta_columns([3, 1, 2])` would create 3 columns of varying widths.
+            The first column would be 3x the width of the second column;
+            the last column would be 2x the width of the second.
 
         Returns
         -------
