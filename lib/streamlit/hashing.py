@@ -38,6 +38,7 @@ from streamlit import type_util
 from streamlit.errors import StreamlitAPIException, MarkdownFormattedException
 from streamlit.folder_black_list import FolderBlackList
 from streamlit.logger import get_logger
+from streamlit.uploaded_file_manager import UploadedFile
 
 _LOGGER = get_logger(__name__)
 
@@ -287,7 +288,7 @@ class _CodeHasher:
             # Hash the input
             b = b"%s:%s" % (tname, self._to_bytes(obj, context))
 
-            # Hmmm... It's psosible that the size calculation is wrong. When we
+            # Hmmm... It's possible that the size calculation is wrong. When we
             # call to_bytes inside _to_bytes things get double-counted.
             self.size += sys.getsizeof(b)
 
@@ -418,6 +419,16 @@ class _CodeHasher:
 
         elif type_util.is_type(obj, "builtins.getset_descriptor"):
             return obj.__qualname__.encode()
+
+        elif isinstance(obj, UploadedFile):
+            # UploadedFile is a BytesIO (thus IOBase) but has a name.
+            # It does not have a timestamp so this must come before
+            # temproary files
+            h = hashlib.new("md5")
+            self.update(h, obj.name)
+            self.update(h, obj.tell())
+            self.update(h, obj.getvalue())
+            return h.digest()
 
         elif hasattr(obj, "name") and (
             isinstance(obj, io.IOBase)
@@ -607,8 +618,7 @@ class _CodeHasher:
 
     @staticmethod
     def _get_main_script_directory():
-        """Get the directory of the main script.
-        """
+        """Get the directory of the main script."""
         import __main__  # type: ignore[import]
         import os
 
