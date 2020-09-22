@@ -1,7 +1,7 @@
 import React, { ReactElement } from "react"
 import { StyledDropdownListItem } from "baseui/select"
 import { StyledList, StyledEmptyState, OptionListProps } from "baseui/menu"
-import { VariableSizeList } from "react-window"
+import { FixedSizeList } from "react-window"
 
 import "./VirtualDropdown.scss"
 
@@ -52,7 +52,7 @@ const VirtualDropdown = React.forwardRef((props: any, ref) => {
 
   return (
     <StyledList ref={ref}>
-      <VariableSizeList
+      <FixedSizeList
         width="100%"
         height={height}
         itemCount={children.length}
@@ -60,10 +60,10 @@ const VirtualDropdown = React.forwardRef((props: any, ref) => {
         itemKey={(index: number, data: { props: OptionListProps }[]) =>
           data[index].props.item.value
         }
-        itemSize={() => LIST_ITEM_HEIGHT}
+        itemSize={LIST_ITEM_HEIGHT}
       >
         {FixedSizeListItem}
-      </VariableSizeList>
+      </FixedSizeList>
     </StyledList>
   )
 })
