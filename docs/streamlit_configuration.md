@@ -1,4 +1,4 @@
-# Streamlit Configuration
+# Streamlit configuration
 
 ## Command-line interface
 
