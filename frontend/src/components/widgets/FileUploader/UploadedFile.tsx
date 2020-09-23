@@ -53,7 +53,6 @@ const UploadedFileData = styled("div", {
 const UploadedFileName = withStyleDeep(
   styled("div", {
     marginRight: spacingCalculator(0.5),
-    width: "100%",
   }),
   utilityClasses.ellipsis
 )
@@ -132,7 +131,9 @@ class UploadedFile extends React.PureComponent<Props> {
           />
         </FileIcon>
         <UploadedFileData className="uploadedFileData">
-          <UploadedFileName title={file.name}>{file.name}</UploadedFileName>
+          <UploadedFileName className="uploadedFileName" title={file.name}>
+            {file.name}
+          </UploadedFileName>
           {this.renderFileStatus()}
         </UploadedFileData>
         <IconButton onClick={onDelete} id={file.id}>
