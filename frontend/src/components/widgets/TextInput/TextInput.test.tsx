@@ -51,17 +51,15 @@ describe("TextInput widget", () => {
     expect(wrapper.find("label").text()).toBe(props.element.get("label"))
   })
 
-  it("should handle default input type properly", () => {
+  it("should handle TextInputProto.Type properly", () => {
     const defaultProps = getProps({ type: TextInputProto.Type.DEFAULT })
-    const textInput = shallow(<TextInput {...defaultProps} />)
-    const uiInput = textInput.find(UIInput)
-    expect(uiInput.props().type).toBe("text")
-  })
+    let textInput = shallow(<TextInput {...defaultProps} />)
+    let uiInput = textInput.find(UIInput)
+    expect(uiInput.props().type).toBeUndefined()
 
-  it("should handle password input type properly", () => {
     const passwordProps = getProps({ type: TextInputProto.Type.PASSWORD })
-    const textInput = shallow(<TextInput {...passwordProps} />)
-    const uiInput = textInput.find(UIInput)
+    textInput = shallow(<TextInput {...passwordProps} />)
+    uiInput = textInput.find(UIInput)
     expect(uiInput.props().type).toBe("password")
   })
 
