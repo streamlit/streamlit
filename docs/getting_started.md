@@ -154,7 +154,7 @@ df = pd.DataFrame({
 df
 ```
 
-How it works is simple. Any time that Streamlit sees a variable or a literal
+Any time that Streamlit sees a variable or a literal
 value on its own line, it automatically writes that to your app using
 [`st.write()`](api.html#streamlit.write). For more information, refer to the
 documentation on [magic commands](api.html#magic-commands).

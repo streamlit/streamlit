@@ -1,7 +1,6 @@
 # Sanity checks
 
-If you're having problems running your Streamlit app, here are a few "obvious"
-things to try out.
+If you're having problems running your Streamlit app, here are a few things to try out.
 
 ## Check #1: Is Streamlit running?
 
