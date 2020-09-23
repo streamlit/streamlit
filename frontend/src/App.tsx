@@ -985,7 +985,7 @@ export class App extends PureComponent<Props, State> {
               />
               <MainMenu
                 sharingEnabled={this.state.sharingEnabled === true}
-                isServerConnected={this.isServerConnected}
+                isServerConnected={this.isServerConnected()}
                 shareCallback={this.shareReport}
                 quickRerunCallback={this.rerunScript}
                 clearCacheCallback={this.openClearCacheDialog}
