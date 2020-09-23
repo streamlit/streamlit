@@ -39,7 +39,7 @@
     "@loaders.gl/csv": "^2.2.8",
     "aws-sdk": "^2.729.0",
     "axios": "^0.19.2",
-    "baseui": "^9.93.0",
+    "baseui": "9.67.1",
     "bootstrap": "^4.5.2",
     "camelcase": "^5.2.0",
     "classnames": "^2.2.6",
