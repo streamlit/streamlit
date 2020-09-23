@@ -19,9 +19,8 @@ We assume that:
 
 ## SSH with port forwarding
 
-To start with, let's SSH into your instance. But we won't just simply SSH.
-Instead we'll turn on port-forwarding, so the Streamlit server on the remote
-machine can be easily accessed on the local machine:
+To start with, let's SSH into your instance. In addition, we'll turn on port-forwarding,
+so the Streamlit server on the remote machine can be easily accessed on the local machine:
 
 ```bash
 ssh -o logLevel=ERROR -L 8501:$IP_ADDRESS:8501 $USERNAME@$IP_ADDRESS
@@ -81,7 +80,7 @@ edit your remote code:
    [PyCharm](https://www.jetbrains.com/help/pycharm/creating-a-remote-server-configuration.html),
    just point your IDE to your remote file using its SSH feature.
 2. If you use some other editor, set up SSHFS as described below.
-3. If you're a Vim or Emacs user, just start your editor directly inside the
+3. If you're a Vim or Emacs user, start your editor directly inside the
    instance!
 
 ### Optional: Install SSHFS

@@ -40,7 +40,7 @@ streamlit run --help
 
 ```eval_rst
 .. tip::
-  If you want to permanently set certain config options, just add them to
+  If you want to permanently set certain config options, add them to
   `$CWD/.streamlit/config.toml` or to a global
   `~/.streamlit/config.toml` (in Windows this would be
   `%userprofile%/.streamlit/config.toml`).

@@ -26,7 +26,7 @@ on this below).
 
 ## Building
 
-To build the docs just **go to the folder above this one** and run:
+To build the docs, **go to the folder above this one** and run:
 
 ```bash
 $ make docs
@@ -72,7 +72,7 @@ modules.
 
 It's a good idea to make sure our docs have plenty of example code and their
 results. Rather than showing the results using a boring static image, you can
-embed a Streamlit app right in the documentation. To do this, just use our
+embed a Streamlit app right in the documentation. To do this, use our
 custom directive, called `output`:
 
 ```rst
