@@ -276,7 +276,7 @@ at 17:00.
 
 3. You should see the data update instantly.
 
-To draw this map we used a simple map function that's built into Streamlit, but
+To draw this map we used the [`st.map`](../api.html#streamlit.map) function that's built into Streamlit, but
 if you'd like to visualize complex map data, we encourage you to take a look at
 the [`st.pydeck_chart`](../api.html#streamlit.pydeck_chart).
 

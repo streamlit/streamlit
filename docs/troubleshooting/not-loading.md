@@ -23,7 +23,7 @@ being exposed. The fix depends on your exact setup. Below are three example
 fixes:
 
 - **Try port 80:** Some hosts expose port 80 by default. To
-  set Streamlit to use that port, just run it with the `--server.port`
+  set Streamlit to use that port, start Streamlit with the `--server.port`
   option:
 
   ```bash

@@ -80,7 +80,7 @@ class WriteMixin:
         Example
         -------
 
-        Its simplest use case is to draw Markdown-formatted text, whenever the
+        Its basic use case is to draw Markdown-formatted text, whenever the
         input is a string:
 
         >>> write('Hello, *World!* :sunglasses:')
