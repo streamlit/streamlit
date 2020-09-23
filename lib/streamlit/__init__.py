@@ -54,19 +54,11 @@ _LOGGER = _logger.get_logger("root")
 
 # Give the package a version.
 import pkg_resources as _pkg_resources
-import uuid as _uuid
 from typing import Any, List, Tuple, Type
 
 # This used to be pkg_resources.require('streamlit') but it would cause
 # pex files to fail. See #394 for more details.
 __version__ = _pkg_resources.get_distribution("streamlit").version
-
-# Deterministic Unique Streamlit User ID
-from streamlit import metrics_util as _metrics_util
-
-__installation_id_v1__ = str(_uuid.uuid5(_uuid.NAMESPACE_DNS, _metrics_util.get_machine_id_v1()))
-__installation_id_v2__ = str(_uuid.uuid5(_uuid.NAMESPACE_DNS, _metrics_util.get_machine_id_v2()))
-__installation_id__  = __installation_id_v2__
 
 import contextlib as _contextlib
 import re as _re
