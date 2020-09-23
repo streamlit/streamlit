@@ -29,7 +29,7 @@ class AltairMixin:
     def line_chart(dg, data=None, width=0, height=0, use_container_width=True):
         """Display a line chart.
 
-        This is just syntax-sugar around st.altair_chart. The main difference
+        This is syntax-sugar around st.altair_chart. The main difference
         is this command uses the data's own column and indices to figure out
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.

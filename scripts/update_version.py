@@ -19,7 +19,7 @@ If the current version is 0.15.2 and I wanted to create a release for
 local development, ie make a wheel file and make either a conda or pex
 package to test on OSX or linux.  What should I call the next version?
 
-If its a patch change, then its just the third number being edited. If
+If its a patch change, then only the third number being edited. If
 its a minor change then its the second number.  In this example, we're
 doing a patch change.
 
