@@ -44,8 +44,6 @@ import streamlit.elements.exception_proto as exception_proto
 
 LOGGER = get_logger(__name__)
 
-Installation.instance.create_ids()
-
 class ReportSessionState(Enum):
     REPORT_NOT_RUNNING = "REPORT_NOT_RUNNING"
     REPORT_IS_RUNNING = "REPORT_IS_RUNNING"
@@ -81,6 +79,8 @@ class ReportSession(object):
             The server's UploadedFileManager.
 
         """
+        Installation.instance().create_ids()
+
         # Each ReportSession has a unique string ID.
         self.id = str(uuid.uuid4())
 
