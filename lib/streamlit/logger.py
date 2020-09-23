@@ -109,7 +109,7 @@ def get_logger(name):
     Parameters
     ----------
     name : str
-        The name of the logger to use. You should pass in __name__.
+        The name of the logger to use. You should just pass in __name__.
 
     Returns
     -------
