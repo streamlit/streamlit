@@ -19,7 +19,7 @@ class MarkdownMixin:
               For a list of all supported codes,
               see https://raw.githubusercontent.com/omnidan/node-emoji/master/lib/emoji.json.
 
-            * LaTeX expressions, by just wrapping them in "$" or "$$" (the "$$"
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 

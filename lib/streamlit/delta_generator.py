@@ -355,7 +355,7 @@ class DeltaGenerator(
     def beta_container(self):
         """Create a placeholder that can hold multiple widgets.
 
-        Just like st.sidebar, you can then call methods on the returned value;
+        Like st.sidebar, you can then call methods on the returned value;
         the elements and widgets you add will be grouped together in the
         container.
 
@@ -402,7 +402,7 @@ class DeltaGenerator(
                 raise StreamlitAPIException("You have to create at least one column!")
             if weights == 1:
                 raise StreamlitAPIException(
-                    "Instead of creating just one column, use st.beta_container."
+                    "Instead of creating only one column, use st.beta_container."
                 )
             # If the user provided a single number, expand into equal weights.
             # E.g. 3 => (1, 1, 1)
