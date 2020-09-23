@@ -4,6 +4,8 @@ import subprocess
 import threading
 import uuid
 
+from typing import Optional
+
 from streamlit import file_util
 
 def _get_machine_id_v1():
@@ -62,13 +64,13 @@ class Installation:
 
     def __init__(self):
         self._lock = threading.Lock()
-        self.installation_id = None
-        self.installation_id_v1 = None
-        self.installation_id_v2 = None
+        self.installation_id = ""
+        self.installation_id_v1 = ""
+        self.installation_id_v2 = ""
 
     def create_ids(self) -> None:
-        with self._lock:
-            if not self.installation_id:
+        if not self.installation_id:
+            with self._lock:
                 self.installation_id_v1 = str(uuid.uuid5(uuid.NAMESPACE_DNS, _get_machine_id_v1()))
                 self.installation_id_v2 = str(uuid.uuid5(uuid.NAMESPACE_DNS, _get_machine_id_v2()))
                 self.installation_id  = self.installation_id_v2
