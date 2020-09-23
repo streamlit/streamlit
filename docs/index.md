@@ -13,7 +13,7 @@
    advanced_concepts
 
    api
-   Configuring Streamlit <cli>
+   streamlit_configuration
    pre_release_features
 
 .. toctree::
