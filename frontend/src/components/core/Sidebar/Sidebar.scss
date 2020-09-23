@@ -26,6 +26,18 @@
     bottom: 0;
   }
 
+  .sidebar-close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 1;
+
+    .open-iconic {
+      fill: $black;
+      opacity: 0.25;
+    }
+  }
+
   &.--collapsed {
     .sidebar-content {
       margin-left: -$sidebar-width;
@@ -139,17 +151,5 @@
       background: rgba(0, 0, 0, 0.61);
       border-radius: 100px;
     }
-  }
-}
-
-.sidebar-close {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  z-index: 1;
-
-  .open-iconic {
-    fill: $black;
-    opacity: 0.25;
   }
 }

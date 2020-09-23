@@ -18,7 +18,6 @@
 import React from "react"
 import { fromJS } from "immutable"
 import { shallow } from "enzyme"
-import { buttonOverrides } from "lib/widgetTheme"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import UIButton from "components/shared/Button"

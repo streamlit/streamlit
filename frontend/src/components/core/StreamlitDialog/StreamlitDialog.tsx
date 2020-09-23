@@ -305,7 +305,7 @@ interface UploadedProps {
  * Shows the URL after something has been uploaded.
  */
 function uploadedDialog(props: UploadedProps): ReactElement {
-  const handleClick = () => {
+  const handleClick: () => void = () => {
     copy(props.url)
     props.onClose()
   }

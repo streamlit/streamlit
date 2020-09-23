@@ -34,7 +34,7 @@ const VideoRecordedDialog: FunctionComponent<Props> = ({
   fileName,
 }) => {
   const videoSource = URL.createObjectURL(videoBlob)
-  const handleDownloadClick = () => {
+  const handleDownloadClick: () => void = () => {
     // Downloads are only done on links, so create a hidden one and click it
     // for the user.
     const link = document.createElement("a")
