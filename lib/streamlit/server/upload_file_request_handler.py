@@ -127,7 +127,9 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             return
 
         self._file_mgr.add_files(
-            session_id=session_id, widget_id=widget_id, files=uploaded_files,
+            session_id=session_id,
+            widget_id=widget_id,
+            files=uploaded_files,
         )
 
         self.set_status(200)
