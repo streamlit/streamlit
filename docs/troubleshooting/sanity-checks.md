@@ -1,19 +1,17 @@
 # Sanity checks
 
-If you're having problems running your Streamlit app, here are a few "obvious"
-things to try out.
+If you're having problems running your Streamlit app, here are a few things to try out.
 
 ## Check #1: Is Streamlit running?
 
-On a Mac or Linux machine, just type this on the terminal:
+On a Mac or Linux machine, type this on the terminal:
 
 ```bash
 $ ps -Al | grep streamlit
 ```
 
 If you don't see `streamlit run` in the output (or `streamlit hello`, if that's
-the command you ran) then the Streamlit server is actually not running for some
-reason. So just run it and see if the bug goes away.
+the command you ran) then the Streamlit server is not running. So re-run your command and see if the bug goes away.
 
 ## Check #2: Is this an already-fixed Streamlit bug?
 
@@ -26,7 +24,7 @@ $ pip install --upgrade streamlit
 $ streamlit version
 ```
 
-...and then verify that the version number printed is `0.67.0`.
+...and then verify that the version number printed is `0.67.1`.
 
 **Try reproducing the issue now.** If not fixed, keep reading on.
 
@@ -54,7 +52,7 @@ There are two easy ways to check this:
    hard refresh (Chrome/Firefox).
 
 2. As a test, run Streamlit on another port. This way the browser starts the
-   page with a brand new cache. For that, just pass the `--server.port`
+   page with a brand new cache. For that, pass the `--server.port`
    argument to Streamlit on the command line:
 
    ```bash

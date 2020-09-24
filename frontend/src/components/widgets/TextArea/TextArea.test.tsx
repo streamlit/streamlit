@@ -101,7 +101,9 @@ describe("TextArea widget", () => {
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element.get("id"),
       "testing",
-      { fromUi: true }
+      {
+        fromUi: true,
+      }
     )
   })
 
@@ -126,7 +128,9 @@ describe("TextArea widget", () => {
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element.get("id"),
       "testing",
-      { fromUi: true }
+      {
+        fromUi: true,
+      }
     )
   })
 
@@ -197,7 +201,9 @@ describe("TextArea widget", () => {
       expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
         props.element.get("id"),
         "testing",
-        { fromUi: true }
+        {
+          fromUi: true,
+        }
       )
     })
   })

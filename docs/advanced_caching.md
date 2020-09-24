@@ -155,7 +155,7 @@ When Streamlit encounters an object of this type, it always converts the object 
 
 ## Example 3: Use Python's `hash()` function
 
-Sometimes, you might want to use Python’s default hashing instead of Streamlit's. For example, maybe you've encountered a type that Streamlit is unable to hash, but it's hashable with Python's built-in `hash()` function. In that case, the solution is quite simple:
+Sometimes, you might want to use Python’s default hashing instead of Streamlit's. For example, maybe you've encountered a type that Streamlit is unable to hash, but it's hashable with Python's built-in `hash()` function:
 
 ```Python
 @st.cache(hash_funcs={FooType: hash})

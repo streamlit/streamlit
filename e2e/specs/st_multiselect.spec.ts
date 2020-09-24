@@ -27,7 +27,7 @@ describe("st.multiselect", () => {
 
   describe("when first loaded", () => {
     it("should show widget correctly", () => {
-      cy.get(".stMultiSelect").should("have.length", 4);
+      cy.get(".stMultiSelect").should("have.length", 5);
 
       cy.get(".stMultiSelect").each((el, idx) => {
         return cy.wrap(el).matchImageSnapshot("multiselect" + idx);
@@ -36,10 +36,10 @@ describe("st.multiselect", () => {
 
     it("should show the correct text", () => {
       cy.get(".stText")
-        .should("have.length", 4)
+        .should("have.length", 5)
         .should(
           "have.text",
-          "value 1: []value 2: []value 3: []value 4: ['tea', 'water']"
+          "value 1: []value 2: []value 3: []value 4: ['tea', 'water']value 5: []"
         );
     });
 
@@ -78,11 +78,28 @@ describe("st.multiselect", () => {
             });
         });
     });
+    it("should show long values correctly (with ellipses) in the dropdown menu", () => {
+      cy.get(".stMultiSelect")
+        .eq(4)
+        .then(el => {
+          return cy
+            .wrap(el)
+            .find("input")
+            .click()
+            .get("li")
+            .should("have.length", 5)
+            .each((el, idx) => {
+              return cy
+                .wrap(el)
+                .matchImageSnapshot("multiselect-dropdown-long-label-" + idx);
+            });
+        });
+    });
   });
 
   function selectOption(idx) {
     cy.get(".stMultiSelect")
-      .should("have.length", 4)
+      .should("have.length", 5)
       .eq(1)
       .find("input")
       .click();
@@ -107,10 +124,10 @@ describe("st.multiselect", () => {
 
     it("outputs the correct value", () => {
       cy.get(".stText")
-        .should("have.length", 4)
+        .should("have.length", 5)
         .should(
           "have.text",
-          "value 1: []value 2: ['female']value 3: []value 4: ['tea', 'water']"
+          "value 1: []value 2: ['female']value 3: []value 4: ['tea', 'water']value 5: []"
         );
     });
 
@@ -119,10 +136,10 @@ describe("st.multiselect", () => {
 
       it("outputs the correct value", () => {
         cy.get(".stText")
-          .should("have.length", 4)
+          .should("have.length", 5)
           .should(
             "have.text",
-            "value 1: []value 2: ['female', 'male']value 3: []value 4: ['tea', 'water']"
+            "value 1: []value 2: ['female', 'male']value 3: []value 4: ['tea', 'water']value 5: []"
           );
       });
 
@@ -135,10 +152,10 @@ describe("st.multiselect", () => {
         });
         it("outputs the correct value", () => {
           cy.get(".stText")
-            .should("have.length", 4)
+            .should("have.length", 5)
             .should(
               "have.text",
-              "value 1: []value 2: ['male']value 3: []value 4: ['tea', 'water']"
+              "value 1: []value 2: ['male']value 3: []value 4: ['tea', 'water']value 5: []"
             );
         });
       });
@@ -151,10 +168,10 @@ describe("st.multiselect", () => {
         });
         it("outputs the correct value", () => {
           cy.get(".stText")
-            .should("have.length", 4)
+            .should("have.length", 5)
             .should(
               "have.text",
-              "value 1: []value 2: []value 3: []value 4: ['tea', 'water']"
+              "value 1: []value 2: []value 3: []value 4: ['tea', 'water']value 5: []"
             );
         });
       });

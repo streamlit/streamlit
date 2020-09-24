@@ -353,14 +353,59 @@ class DeltaGenerator(
         return _value_or_dg(return_value, output_dg)
 
     def beta_container(self):
+        """Create a placeholder that can hold multiple widgets.
+
+        Like st.sidebar, you can then call methods on the returned value;
+        the elements and widgets you add will be grouped together in the
+        container.
+
+        Examples
+        --------
+        >>> container = st.beta_container()
+        >>> container.write('The beginning?')
+        >>> st.write('The end!')
+        >>> container.write('The middle...')
+
+        """
         return self._block()
 
     # TODO: Enforce that columns are not nested or in Sidebar
     def beta_columns(self, weights):
+        """Create several columns, side-by-side.
+
+        Parameters
+        ----------
+        weights : int or list of numbers
+            If a single int: lay out that many columns of equal width.
+
+            If a list of numbers: create a column for each number.
+            Each column's width is proportional to the number provided.
+            For example, `st.beta_columns([3, 1, 2])` would create 3 columns of varying widths.
+            The first column would be 3x the width of the second column;
+            the last column would be 2x the width of the second.
+
+        Returns
+        -------
+        A list of containers, each of which can have their own elements.
+
+        Examples
+        --------
+        >>> col1, col2, col3 = st.beta_columns(3)
+        >>> col1.write('Hello?')
+        >>> col2.button('Press me!')
+        >>> col3.checkbox('Good to go~')
+
+        """
+
         if isinstance(weights, int):
+            if weights <= 0:
+                raise StreamlitAPIException("You have to create at least one column!")
+            if weights == 1:
+                raise StreamlitAPIException(
+                    "Instead of creating only one column, use st.beta_container."
+                )
             # If the user provided a single number, expand into equal weights.
             # E.g. 3 => (1, 1, 1)
-            # TODO: check that the number > 0
             weights = (1,) * weights
 
         def column_proto(weight):
@@ -405,9 +450,8 @@ class DeltaGenerator(
         return block_dg
 
     def beta_expander(self, label=None, expanded=False):
-        """Creates a container that can be expanded and collapsed.
+        """Create a container that can be expanded and collapsed.
 
-        [TODO: get more container verbage]
         Similar to `st.container`, `st.expander` provides a container
         to add elements to. However, it has the added benefit of being expandable and
         collapsible. Users will be able to expand and collapse the container that is
@@ -421,10 +465,6 @@ class DeltaGenerator(
         expanded : boolean
             The default state for the expander.
             Defaults to False
-
-        Returns
-        -------
-        [TODO] Technically a delta generator but let's please not tell the users that...
 
         Examples
         --------
@@ -445,7 +485,12 @@ class DeltaGenerator(
         return self._block(block_proto=block_proto)
 
     def favicon(
-        self, element, image, clamp=False, channels="RGB", format="JPEG",
+        self,
+        element,
+        image,
+        clamp=False,
+        channels="RGB",
+        format="JPEG",
     ):
         """Set the page favicon to the specified image.
 

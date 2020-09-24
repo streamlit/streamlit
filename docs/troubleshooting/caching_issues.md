@@ -4,7 +4,7 @@ While developing an app, if you see an error or warning that stems from a cached
 
 ## How to debug a cached function that isn't executing
 
-If you believe your cached function isn't executing even though its inputs are a "Cache miss", a simple way to debug is to add [`st.write`](../api.html#streamlit.write) statements inside and outside of your function like this:
+If you believe your cached function isn't executing even though its inputs are a "Cache miss", you can debug using [`st.write`](../api.html#streamlit.write) statements inside and outside of your function like this:
 
 ```Python
 @st.cache

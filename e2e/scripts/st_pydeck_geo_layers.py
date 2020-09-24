@@ -37,7 +37,6 @@ st.pydeck_chart(
                 pickable=True,
                 stroked=True,
                 filled=True,
-                extruded=False,
                 get_hexagon="hex",
                 get_fill_color="[0, 255, 0]",
                 get_line_color=[255, 255, 255],
