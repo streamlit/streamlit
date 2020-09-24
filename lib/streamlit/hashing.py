@@ -607,8 +607,7 @@ class _CodeHasher:
 
     @staticmethod
     def _get_main_script_directory():
-        """Get the directory of the main script.
-        """
+        """Get the directory of the main script."""
         import __main__  # type: ignore[import]
         import os
 

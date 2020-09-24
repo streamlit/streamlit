@@ -50,7 +50,9 @@ describe("Multiselect widget", () => {
   })
 
   it("should set widget value on did mount", () => {
-    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+    expect(
+      props.widgetMgr.setIntArrayValue
+    ).toHaveBeenCalledWith(
       props.element.get("id"),
       props.element.get("default").toJS(),
       { fromUi: false }

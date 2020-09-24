@@ -16,12 +16,12 @@
  */
 
 import React, { ReactElement } from "react"
-import { toFormattedString } from "lib/format"
 import { Map as ImmutableMap } from "immutable"
+import { range } from "lodash"
+import { toFormattedString } from "lib/format"
 import { dataFrameGet, dataFrameGetDimensions } from "lib/dataFrameProto"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import "./Table.scss"
-import { range } from "lodash"
 
 type DataFrame = ImmutableMap<string, any>
 
