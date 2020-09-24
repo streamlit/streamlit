@@ -16,9 +16,9 @@
 
 @import "variables";
 @import "fonts";
-@import "~bootstrap/scss/bootstrap";
 @import "src/assets/css/mixins";
 @import "scrollbars";
+@import "reboot";
 
 // IMPORTANT! This must come after the bootstrap import.
 // Styletron creates classes called h1, h2, etc., which conflict with Bootstrap classes.
