@@ -54,7 +54,9 @@ describe("DateInput widget", () => {
   })
 
   it("should set widget value on did mount", () => {
-    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+    expect(
+      props.widgetMgr.setStringArrayValue
+    ).toHaveBeenCalledWith(
       props.element.get("id"),
       props.element.get("default").toJS(),
       { fromUi: false }
