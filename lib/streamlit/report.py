@@ -139,7 +139,7 @@ class Report(object):
         -------
         list of tuples
             See `CloudStorage.save_report_files()` for schema. But as to the
-            output of this method, it's just a manifest pointing to the Server
+            output of this method, it's a manifest pointing to the Server
             so browsers who go to the shareable report URL can connect to it
             live.
 

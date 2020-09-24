@@ -15,4 +15,25 @@
  * limitations under the License.
  */
 
-export { default } from "./DeckGlChart"
+/// <reference types="cypress" />
+
+describe("st.container", () => {
+  before(() => {
+    cy.visit("http://localhost:3000/");
+  });
+
+  it("permits multiple out-of-order elements", () => {
+    cy.get(".element-container .stMarkdown p")
+      .eq(0)
+      .contains("Line 2");
+    cy.get(".element-container .stMarkdown p")
+      .eq(1)
+      .contains("Line 3");
+    cy.get(".element-container .stMarkdown p")
+      .eq(2)
+      .contains("Line 1");
+    cy.get(".element-container .stMarkdown p")
+      .eq(3)
+      .contains("Line 4");
+  });
+});

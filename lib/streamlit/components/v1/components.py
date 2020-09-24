@@ -28,8 +28,9 @@ from streamlit.elements.utils import _get_widget_ui_value, NoValue
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ArrowTable_pb2 import ArrowTable as ArrowTableProto
-from streamlit.proto.ComponentInstance_pb2 import ArgsDataframe
+from streamlit.proto.ComponentInstance_pb2 import SpecialArg
 from streamlit.proto.Element_pb2 import Element
+from streamlit.type_util import to_bytes
 
 LOGGER = get_logger(__name__)
 
@@ -44,7 +45,10 @@ class CustomComponent:
     """A Custom Component declaration."""
 
     def __init__(
-        self, name: str, path: Optional[str] = None, url: Optional[str] = None,
+        self,
+        name: str,
+        path: Optional[str] = None,
+        url: Optional[str] = None,
     ):
         if (path is None and url is None) or (path is not None and url is not None):
             raise StreamlitAPIException(
@@ -63,13 +67,21 @@ class CustomComponent:
         return os.path.abspath(self.path)
 
     def __call__(
-        self, *args, default: Any = None, key: Optional[str] = None, **kwargs,
+        self,
+        *args,
+        default: Any = None,
+        key: Optional[str] = None,
+        **kwargs,
     ) -> Any:
         """An alias for create_instance."""
         return self.create_instance(*args, default=default, key=key, **kwargs)
 
     def create_instance(
-        self, *args, default: Any = None, key: Optional[str] = None, **kwargs,
+        self,
+        *args,
+        default: Any = None,
+        key: Optional[str] = None,
+        **kwargs,
     ) -> Any:
         """Create a new instance of the component.
 
@@ -97,16 +109,24 @@ class CustomComponent:
         if len(args) > 0:
             raise MarshallComponentException(f"Argument '{args[0]}' needs a label")
 
-        args_json = {}
-        args_df = {}
+        json_args = {}
+        special_args = []
         for arg_name, arg_val in kwargs.items():
-            if type_util.is_dataframe_like(arg_val):
-                args_df[arg_name] = arg_val
+            if type_util.is_bytes_like(arg_val):
+                bytes_arg = SpecialArg()
+                bytes_arg.key = arg_name
+                bytes_arg.bytes = to_bytes(arg_val)
+                special_args.append(bytes_arg)
+            elif type_util.is_dataframe_like(arg_val):
+                dataframe_arg = SpecialArg()
+                dataframe_arg.key = arg_name
+                arrow_table.marshall(dataframe_arg.arrow_dataframe.data, arg_val)
+                special_args.append(dataframe_arg)
             else:
-                args_json[arg_name] = arg_val
+                json_args[arg_name] = arg_val
 
         try:
-            serialized_args_json = json.dumps(args_json)
+            serialized_json_args = json.dumps(json_args)
         except BaseException as e:
             raise MarshallComponentException(
                 "Could not convert component args to JSON", e
@@ -136,12 +156,8 @@ class CustomComponent:
             # If `key` is not None, we marshall the arguments *after*.
 
             def marshall_element_args():
-                element.component_instance.args_json = serialized_args_json
-                for key, value in args_df.items():
-                    new_args_dataframe = ArgsDataframe()
-                    new_args_dataframe.key = key
-                    arrow_table.marshall(new_args_dataframe.value.data, value)
-                    element.component_instance.args_dataframe.append(new_args_dataframe)
+                element.component_instance.json_args = serialized_json_args
+                element.component_instance.special_args.extend(special_args)
 
             if key is None:
                 marshall_element_args()
@@ -194,7 +210,9 @@ class CustomComponent:
 
 
 def declare_component(
-    name: str, path: Optional[str] = None, url: Optional[str] = None,
+    name: str,
+    path: Optional[str] = None,
+    url: Optional[str] = None,
 ) -> CustomComponent:
     """Create and register a custom component.
 
@@ -370,7 +388,9 @@ class ComponentRegistry:
 
         if existing is not None and component != existing:
             LOGGER.warning(
-                "%s overriding previously-registered %s", component, existing,
+                "%s overriding previously-registered %s",
+                component,
+                existing,
             )
 
         LOGGER.debug("Registered component %s", component)

@@ -276,7 +276,7 @@ def _marshall_index(proto, index):
         Output. The protobuf for a Streamlit ArrowTable proto.
 
     index : Index or array-like
-        Index to use for resulting frame. 
+        Index to use for resulting frame.
         Will default to RangeIndex (0, 1, 2, ..., n) if no index is provided.
 
     """
@@ -294,7 +294,7 @@ def _marshall_columns(proto, columns):
         Output. The protobuf for a Streamlit ArrowTable proto.
 
     columns : Index or array-like
-        Column labels to use for resulting frame. 
+        Column labels to use for resulting frame.
         Will default to RangeIndex (0, 1, 2, ..., n) if no column labels are provided.
 
     """

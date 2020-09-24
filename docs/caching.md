@@ -11,7 +11,7 @@ When you mark a function with the [`@st.cache`](api.html#streamlit.cache) decora
 
 If this is the first time Streamlit has seen these four components with these exact values and in this exact combination and order, it runs the function and stores the result in a local cache. Then, next time the cached function is called, if none of these components changed, Streamlit will just skip executing the function altogether and, instead, return the output previously stored in the cache.
 
-The way Streamlit keeps track of changes in these components is through hashing. Think of the cache as a simple in-memory key-value store, where the key is a hash of all of the above and the value is the actual output object passed by reference.
+The way Streamlit keeps track of changes in these components is through hashing. Think of the cache as an in-memory key-value store, where the key is a hash of all of the above and the value is the actual output object passed by reference.
 
 Finally, [`@st.cache`](api.html#streamlit.cache) supports arguments to configure the cache's behavior. You can find more information on those in our [API reference](api.md).
 

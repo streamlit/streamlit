@@ -35,7 +35,7 @@ class BokehMixin:
             If True, set the chart width to the column width. This takes
             precedence over Bokeh's native `width` value.
 
-        To show Bokeh charts in Streamlit, just call `st.bokeh_chart`
+        To show Bokeh charts in Streamlit, call `st.bokeh_chart`
         wherever you would call Bokeh's `show`.
 
         Example

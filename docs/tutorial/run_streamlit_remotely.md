@@ -19,12 +19,11 @@ We assume that:
 
 ## SSH with port forwarding
 
-To start with, let's SSH into your instance. But we won't just simply SSH.
-Instead we'll turn on port-forwarding, so the Streamlit server on the remote
-machine can be easily accessed on the local machine:
+To start with, let's SSH into your instance. In addition, we'll turn on port-forwarding,
+so the Streamlit server on the remote machine can be easily accessed on the local machine:
 
 ```bash
-$ ssh -o logLevel=ERROR -L 8501:$IP_ADDRESS:8501 $USERNAME@$IP_ADDRESS
+ssh -o logLevel=ERROR -L 8501:$IP_ADDRESS:8501 $USERNAME@$IP_ADDRESS
 ```
 
 ```eval_rst
@@ -44,13 +43,13 @@ Now that you're SSHed into the instance, make sure to
 install Streamlit on it. Using PIP, you can run:
 
 ```bash
-$ pip install streamlit
+pip install streamlit
 ```
 
 To check that everything is working, run the Hello command:
 
 ```bash
-$ streamlit hello
+streamlit hello
 ```
 
 Ignore the URLs that print on your terminal. Instead, since you're using
@@ -65,7 +64,7 @@ Now that you know Streamlit is working, let's try your actual code. First,
 press `Ctrl+C` to close the Hello program, and then type:
 
 ```bash
-$ streamlit run my_script.py
+streamlit run my_script.py
 ```
 
 And that's it! Now your browser should show your script at
@@ -81,7 +80,7 @@ edit your remote code:
    [PyCharm](https://www.jetbrains.com/help/pycharm/creating-a-remote-server-configuration.html),
    just point your IDE to your remote file using its SSH feature.
 2. If you use some other editor, set up SSHFS as described below.
-3. If you're a Vim or Emacs user, just start your editor directly inside the
+3. If you're a Vim or Emacs user, start your editor directly inside the
    instance!
 
 ### Optional: Install SSHFS
@@ -91,14 +90,15 @@ To get started, install SSHFS using one of the following methods:
 - On a Mac:
 
   ```bash
-  $ brew cask install osxfuse
-  $ brew install sshfs
+  brew cask install osxfuse
+  brew install sshfs
   ```
 
 - On Ubuntu:
+
   ```bash
-  $ sudo apt-get update
-  $ sudo apt-get install sshfs
+  sudo apt update
+  sudo apt install sshfs
   ```
 
 And then set it up:
@@ -110,13 +110,13 @@ And then set it up:
    to. We'll call it `~/remote`, but you can name it whatever you like:
 
    ```bash
-   $ mkdir ~/remote
+   mkdir ~/remote
    ```
 
 3. Open a terminal on your local machine and link the two folders using SSHFS:
 
    ```bash
-   $ sshfs [address of remote machine]:sshfs-folder ~/remote
+   sshfs [address of remote machine]:sshfs-folder ~/remote
    ```
 
 That's it!

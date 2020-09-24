@@ -3,8 +3,8 @@
 Working with Streamlit is simple. First you sprinkle a few Streamlit commands
 into a normal Python script, then you run it with `streamlit run`:
 
-```
-$ streamlit run your_script.py [-- script args]
+```bash
+streamlit run your_script.py [-- script args]
 ```
 
 As soon as you run the script as shown above, a local Streamlit server will
@@ -34,7 +34,7 @@ are available to you.
 
 ## Development flow
 
-Every time you want to update your app, just save the source file. When you do
+Every time you want to update your app, save the source file. When you do
 that, Streamlit detects if there is a change and asks you whether you want to
 rerun your app. Choose "Always rerun" at the top-right of your screen to
 automatically update your app every time you change its source code.
@@ -55,7 +55,7 @@ results live is one of the ways Streamlit makes your life easier.
 
 Streamlit's architecture allows you to write apps the same way you write plain
 Python scripts. To unlock this, Streamlit apps have a unique data flow: any
-time something must be updated on the screen, Streamlit just reruns your entire
+time something must be updated on the screen, Streamlit reruns your entire
 Python script from top to bottom.
 
 This can happen in two situations:
@@ -73,7 +73,7 @@ page.
 
 ## Drawing content
 
-Writing to Streamlit apps is simple. Just call the appropriate API command:
+Writing to Streamlit apps is simple:
 
 ```python
 import streamlit as st
@@ -108,7 +108,7 @@ When you've got the data or model into the state that you want to explore, you
 can add in widgets like [`st.slider()`](api.html#streamlit.slider),
 [`st.button()`](api.html#streamlit.button) or
 [`st.selectbox()`](api.html#streamlit.selectbox). It's really straightforward
-— just treat widgets as variables:
+— treat widgets as variables:
 
 ```python
 import streamlit as st
@@ -133,7 +133,7 @@ Streamlit makes it easy to organize your widgets in a left panel sidebar with
 users to focus on the content in your app while still having access to UI
 controls.
 
-For example, if you want to add a selectbox and a slider to a sidebar, just
+For example, if you want to add a selectbox and a slider to a sidebar,
 use `st.sidebar.slider` and `st.siderbar.selectbox` instead of `st.slider` and
 `st.selectbox`:
 
@@ -164,7 +164,7 @@ The Streamlit cache allows your app to execute quickly even when loading data
 from the web, manipulating large datasets, or performing expensive
 computations.
 
-To use the cache, just wrap functions in the
+To use the cache, wrap functions with the
 [`@st.cache`](api.html#streamlit.cache) decorator:
 
 ```python
@@ -186,7 +186,7 @@ check a few things:
 If this is the first time Streamlit has seen these four components with these
 exact values and in this exact combination and order, it runs the function and
 stores the result in a local cache. Then, next time the cached function is
-called, if none of these components changed, Streamlit will just skip executing
+called, if none of these components changed, Streamlit will skip executing
 the function altogether and, instead, return the output previously stored in
 the cache.
 
@@ -207,10 +207,10 @@ the loop and review how it works together:
 1. Every time a user interacts with a widget, your script is re-executed and
    the output value of that widget is set to the new value during that run.
 
-![](media/app_model.png)
+![App Model](media/app_model.png)
 
 ## Next steps
 
 - [Get started](getting_started.md) with Streamlit
 - Read up on [advanced concepts](advanced_concepts.md)
-- [Build your first app ](tutorial/index.md)
+- [Build your first app](tutorial/index.md)

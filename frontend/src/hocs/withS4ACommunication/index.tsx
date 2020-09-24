@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,29 +13,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
-syntax = "proto3";
-
-import "streamlit/proto/DataFrame.proto";
-
-message DeckGlChart {
-  // The dataframe that will be used as the chart's main data source.
-  DataFrame data = 1;
-
-  // A JSON-formatted string with the viewport spec.
-  string spec = 2;
-
-  repeated DeckGLLayer layers = 3;
-
-  // If True, will overwrite the chart width spec to fit to container.
-  bool use_container_width = 4;
-}
-
-message DeckGLLayer {
-  // The dataframe that will be used as the source for this layer.
-  DataFrame data = 1;
-
-  // A JSON-formatted string with the layer spec.
-  string spec = 2;
-}
+export { default } from "./withS4ACommunication"

@@ -48,7 +48,7 @@
 [Streamlit](https://streamlit.io) is an open-source Python library that makes it
 easy to build beautiful custom web-apps for machine learning and data science.
 
-To use it, just `pip install streamlit`, then import it, write a couple lines
+To use it, run `pip install streamlit` from a terminal, then import it in Python, write a couple lines
 of code, and run your script with `streamlit run [filename]`. Streamlit watches
 for changes on each save and updates the app live while you're coding. Code
 runs from top to bottom, always from a clean state, and with no need for
@@ -81,13 +81,17 @@ Follow these steps and to get a sample app running in less than 5 minutes.
 
 1. Make sure that you have [Python 3.6](https://www.python.org/downloads/) or greater installed.
 1. Install Streamlit using [PIP](https://pip.pypa.io/en/stable/installing/):
+
    ```bash
-   $ pip install streamlit
+   pip install streamlit
    ```
+
 1. Run the hello world app:
+
    ```bash
-   $ streamlit hello
+   streamlit hello
    ```
+
 1. That's it! In the next few seconds the sample app will open in a new tab in
    your default browser.
 

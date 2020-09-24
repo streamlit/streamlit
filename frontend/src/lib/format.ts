@@ -53,7 +53,8 @@ class Format {
   }
 
   static durationToString(duration: Duration): string {
-    return moment.duration(duration.getTime()).format()
+    const ms = moment.duration(duration.getTime()).asMilliseconds()
+    return moment.utc(ms).format()
   }
 }
 

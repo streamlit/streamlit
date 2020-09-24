@@ -82,8 +82,13 @@ import withScreencast, {
   ScreenCastHOC,
 } from "./hocs/withScreencast/withScreencast"
 
+import withS4ACommunication, {
+  S4ACommunicationHOC,
+} from "./hocs/withS4ACommunication/withS4ACommunication"
+
 export interface Props {
   screenCast: ScreenCastHOC
+  s4aCommunication: S4ACommunicationHOC
 }
 
 interface State {
@@ -102,6 +107,7 @@ interface State {
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
 
+// eslint-disable-next-line
 declare global {
   interface Window {
     streamlitDebug: any
@@ -204,6 +210,15 @@ export class App extends PureComponent<Props, State> {
     }
 
     MetricsManager.current.enqueue("viewReport")
+  }
+
+  componentDidUpdate(prevProps: Readonly<Props>): void {
+    if (
+      prevProps.s4aCommunication.currentState.queryParams !==
+      this.props.s4aCommunication.currentState.queryParams
+    ) {
+      this.sendRerunBackMsg()
+    }
   }
 
   showError(title: string, errorNode: ReactNode): void {
@@ -319,12 +334,20 @@ export class App extends PureComponent<Props, State> {
 
   handlePageConfigChanged = (pageConfig: PageConfig): void => {
     const { title, favicon, layout, initialSidebarState } = pageConfig
+
     if (title) {
+      this.props.s4aCommunication.sendMessage({
+        type: "SET_PAGE_TITLE",
+        title,
+      })
+
       document.title = `${title} · Streamlit`
     }
+
     if (favicon) {
       handleFavicon(favicon)
     }
+
     // Only change layout/sidebar when the page config has changed.
     // This preserves the user's previous choice, and prevents extra re-renders.
     if (layout !== this.state.layout) {
@@ -346,6 +369,11 @@ export class App extends PureComponent<Props, State> {
   handlePageInfoChanged = (pageInfo: PageInfo): void => {
     const { queryString } = pageInfo
     window.history.pushState({}, "", queryString ? `?${queryString}` : "/")
+
+    this.props.s4aCommunication.sendMessage({
+      type: "SET_QUERY_PARAM",
+      queryParams: queryString ? `?${queryString}` : "",
+    })
   }
 
   /**
@@ -399,6 +427,7 @@ export class App extends PureComponent<Props, State> {
       sharingEnabled: Boolean(config.sharingEnabled),
     })
 
+    this.props.s4aCommunication.connect()
     this.handleSessionStateChanged(sessionState)
   }
 
@@ -568,7 +597,6 @@ export class App extends PureComponent<Props, State> {
   /**
    * Removes old elements. The term old is defined as:
    *  - simple elements whose reportIds are no longer current
-   *  - empty block elements
    */
   clearOldElements = (elements: any, reportId: string): BlockElement => {
     return elements
@@ -576,11 +604,17 @@ export class App extends PureComponent<Props, State> {
         const simpleElement = reportElement.get("element")
 
         if (simpleElement instanceof List) {
+          // Recursively clear old elements
           const clearedElements = this.clearOldElements(
             simpleElement,
             reportId
           )
-          return clearedElements.size > 0 ? clearedElements : null
+          // Could check whether container is now empty, and return null.
+          // But we want to let empty columns take up sapce.
+          return clearedElements.size > 0 ||
+            reportElement.getIn(["deltaBlock", "allowEmpty"])
+            ? reportElement.set("element", clearedElements)
+            : null
         }
 
         return reportElement.get("reportId") === reportId
@@ -782,17 +816,23 @@ export class App extends PureComponent<Props, State> {
     this.widgetMgr.sendUpdateWidgetsMessage()
   }
 
-  sendRerunBackMsg = (widgetStates?: WidgetStates): void => {
-    let queryString = document.location.search
+  sendRerunBackMsg = (widgetStates?: WidgetStates | undefined): void => {
+    const { queryParams } = this.props.s4aCommunication.currentState
+
+    let queryString =
+      queryParams && queryParams.length > 0
+        ? queryParams
+        : document.location.search
 
     if (queryString.startsWith("?")) {
       queryString = queryString.substring(1)
     }
 
-    const backMsg = new BackMsg({
-      rerunScript: { queryString, widgetStates },
-    })
-    this.sendBackMsg(backMsg)
+    this.sendBackMsg(
+      new BackMsg({
+        rerunScript: { queryString, widgetStates },
+      })
+    )
   }
 
   /** Requests that the server stop running the report */
@@ -953,6 +993,8 @@ export class App extends PureComponent<Props, State> {
                 aboutCallback={this.aboutCallback}
                 screencastCallback={this.screencastCallback}
                 screenCastState={this.props.screenCast.currentState}
+                s4aMenuItems={this.props.s4aCommunication.currentState.items}
+                sendS4AMessage={this.props.s4aCommunication.sendMessage}
               />
             </div>
           </header>
@@ -980,4 +1022,4 @@ export class App extends PureComponent<Props, State> {
   }
 }
 
-export default withScreencast(App)
+export default withS4ACommunication(withScreencast(App))

@@ -34,7 +34,7 @@ x = 10
 'x', x  # <-- Draw the string 'x' and then the value of x
 ```
 
-How it works is simple: any time Streamlit sees either a variable or literal
+Any time Streamlit sees either a variable or literal
 value on its own line, it automatically writes that to your app using
 [`st.write`](api.html#streamlit.write) (which you'll learn about later).
 
@@ -113,7 +113,6 @@ like `st.line_chart` and `st.area_chart`.
 .. autofunction:: streamlit.plotly_chart
 .. autofunction:: streamlit.bokeh_chart
 .. autofunction:: streamlit.pydeck_chart
-.. autofunction:: streamlit.deck_gl_chart
 .. autofunction:: streamlit.graphviz_chart
 .. autofunction:: streamlit.map
 ```

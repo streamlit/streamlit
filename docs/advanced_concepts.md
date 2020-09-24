@@ -154,8 +154,3 @@ data2 = np.random.randn(10, 2)
 # Append the new data to the existing chart.
 chart.add_rows(data2)
 ```
-
-## Return the value of a Streamlit call
-
-Coming soon! Ping us in the [community forum](https://discuss.streamlit.io/) if
-you just can't wait and have to have this info immediately.

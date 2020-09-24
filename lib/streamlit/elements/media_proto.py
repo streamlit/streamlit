@@ -137,7 +137,7 @@ def _reshape_youtube_url(url):
 
 
 def _marshall_av_media(coordinates, proto, data, mimetype):
-    """ Fill audio or video proto based on contents of data.
+    """Fill audio or video proto based on contents of data.
 
     Given a string, check if it's a url; if so, send it out without modification.
     Otherwise assume strings are filenames and let any OS errors raise.

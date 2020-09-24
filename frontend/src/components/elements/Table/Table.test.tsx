@@ -19,23 +19,29 @@ import React from "react"
 import { mount } from "enzyme"
 import { fromJS } from "immutable"
 
-import { Table as ReactTable } from "reactstrap"
-import mock from "./mock"
+import { table, emptyTable } from "./mock"
 import { Table, TableProps } from "./Table"
 
 const getProps = (elementProps: Record<string, unknown> = {}): TableProps => ({
-  element: fromJS({
-    ...mock,
-    ...elementProps,
-  }),
+  element: fromJS(elementProps),
 })
 
 describe("Table Element", () => {
   it("renders without crashing", () => {
-    const props = getProps()
+    const props = getProps(table)
     const wrapper = mount(<Table {...props} />)
 
-    expect(wrapper.find(ReactTable).length).toBe(1)
+    expect(wrapper.find("table").length).toBe(1)
     expect(wrapper.find(".stTable").length).toBe(1)
+    expect(wrapper.find(".empty").exists()).toBeFalsy()
+  })
+
+  it("renders an empty row", () => {
+    const props = getProps(emptyTable)
+    const wrapper = mount(<Table {...props} />)
+
+    expect(wrapper.find("table").length).toBe(1)
+    expect(wrapper.find(".stTable").length).toBe(1)
+    expect(wrapper.find(".empty").exists()).toBeTruthy()
   })
 })

@@ -17,7 +17,7 @@ Official Streamlit releases go not only through both automated tests but also ri
 
 All you need to do is install the `streamlit-nightly` package:
 
-```
+```bash
 pip uninstall streamlit
 pip install streamlit-nightly --upgrade
 ```
@@ -38,7 +38,7 @@ While our automated tests have high coverage, there's still a significant likeli
 
 **Can I choose which nightly release I want to install?**
 
-If you'd like to use a specific version, you can find the version number in our [Release history](https://pypi.org/project/streamlit-nightly/#history). Just specify the desired version using `pip` as usual: `pip install streamlit-nightly==x.yy.zz-123456`.
+If you'd like to use a specific version, you can find the version number in our [Release history](https://pypi.org/project/streamlit-nightly/#history). Specify the desired version using `pip` as usual: `pip install streamlit-nightly==x.yy.zz-123456`.
 
 **Can I compare changes between releases?**
 

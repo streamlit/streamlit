@@ -203,10 +203,10 @@ This template has much more code than its React sibling, in that all the mechani
 #### Other frontend details
 
 - Because you're hosting your component from a dev server (via `npm run start`), any changes you make should be automatically reflected in the Streamlit app when you save.
-- If you want to add more packages to your component, just `npm add` them from within your component's `frontend/` directory.
+- If you want to add more packages to your component, run `npm add` to add them from within your component's `frontend/` directory.
 
 ```shell
-$ npm add baseui
+npm add baseui
 ```
 
 - To build a static version of your component, run `npm run build`. See [Prepare your Component](publish_streamlit_components.md) for more information
