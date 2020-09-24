@@ -2,6 +2,7 @@
 
 exports[`App renders without crashing 1`] = `
 <Dropdown
+  a11y={true}
   active={false}
   addonType={false}
   direction="down"
@@ -124,6 +125,7 @@ exports[`App renders without crashing 1`] = `
 
 exports[`App should render s4a menu items 1`] = `
 <Dropdown
+  a11y={true}
   active={false}
   addonType={false}
   direction="down"

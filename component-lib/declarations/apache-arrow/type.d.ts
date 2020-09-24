@@ -25,7 +25,7 @@ export declare type RowLike<
   T extends {
     [key: string]: DataType;
   }
-> = (Iterable<[string, T[keyof T]["TValue"] | null]>) &
+> = Iterable<[string, T[keyof T]["TValue"] | null]> &
   {
     [P in keyof T]: T[P]["TValue"] | null;
   } & {
@@ -40,7 +40,7 @@ export declare type MapLike<
 > = {
   [P in K["TValue"]]: V["TValue"] | null;
 } &
-  (Map<K["TValue"], V["TValue"] | null>);
+  Map<K["TValue"], V["TValue"] | null>;
 export interface DataType<
   TType extends Type = Type,
   TChildren extends {

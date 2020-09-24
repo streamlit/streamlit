@@ -5,19 +5,15 @@ import { DataType } from "../type";
 /** @ignore */
 export declare const selectArgs: <T>(Ctor: any, vals: any[]) => T[];
 /** @ignore */
-export declare const selectColumnArgs: <
-  T extends {
-    [key: string]: DataType<import("../enum").Type, any>;
-  }
->(
+export declare const selectColumnArgs: <T extends {
+  [key: string]: DataType<import("../enum").Type, any>;
+}>(
   args: any[]
 ) => Column<any>[];
 /** @ignore */
-export declare const selectFieldArgs: <
-  T extends {
-    [key: string]: DataType<import("../enum").Type, any>;
-  }
->(
+export declare const selectFieldArgs: <T extends {
+  [key: string]: DataType<import("../enum").Type, any>;
+}>(
   args: any[]
 ) => [Field<T[keyof T]>[], (T[keyof T] | Vector<T[keyof T]>)[]];
 /** @ignore */
