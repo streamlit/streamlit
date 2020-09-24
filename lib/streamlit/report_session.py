@@ -79,8 +79,6 @@ class ReportSession(object):
             The server's UploadedFileManager.
 
         """
-        Installation.instance().create_ids()
-
         # Each ReportSession has a unique string ID.
         self.id = str(uuid.uuid4())
 
