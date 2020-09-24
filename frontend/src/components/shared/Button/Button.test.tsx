@@ -31,7 +31,7 @@ const getProps = (propOverrides: Partial<ButtonProps> = {}): ButtonProps => ({
 })
 
 describe("Button element", () => {
-  for (let key in Kind) {
+  Object.keys(Kind).forEach(key => {
     const kind: Kind = Kind[key as keyof typeof Kind]
 
     it(`renders ${kind} buttons correctly`, () => {
@@ -39,9 +39,9 @@ describe("Button element", () => {
 
       expect(wrapper.find(`.${kind}-button`).exists()).toBeTruthy()
     })
-  }
+  })
 
-  for (let key in Size) {
+  Object.keys(Size).forEach(key => {
     const size: Size = Size[key as keyof typeof Size]
 
     it(`renders ${size} buttons correctly`, () => {
@@ -49,7 +49,7 @@ describe("Button element", () => {
 
       expect(wrapper.find(`.${size}-button`).exists()).toBeTruthy()
     })
-  }
+  })
 
   it("renders fluid width buttons correctly", () => {
     const wrapper = shallow(

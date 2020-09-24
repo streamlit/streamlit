@@ -151,6 +151,10 @@
       color: $white;
       border-color: $primary;
       background-color: $primary;
+
+      .open-iconic {
+        opacity: 1;
+      }
     }
 
     &:focus {
