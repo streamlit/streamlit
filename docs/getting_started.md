@@ -17,8 +17,6 @@ Before you get started, you're going to need a few things:
 - Your favorite IDE or text editor
 - [Python 3.6 or later](https://www.python.org/downloads/)
 - [PIP](https://pip.pypa.io/en/stable/installing/)
-- [Streamlit](index.md) — This one's kind of important, so don't forget to
-  install.
 
 If you haven't already, take a few minutes to read through [Main
 concepts](main_concepts.md) to understand Streamlit's data flow model.
