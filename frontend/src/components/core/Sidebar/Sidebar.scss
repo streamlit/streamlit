@@ -26,6 +26,18 @@
     bottom: 0;
   }
 
+  .sidebar-close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 1;
+
+    .open-iconic {
+      fill: $black;
+      opacity: 0.25;
+    }
+  }
+
   &.--collapsed {
     .sidebar-content {
       margin-left: -$sidebar-width;
@@ -62,26 +74,6 @@
     @include media-breakpoint-down(md) {
       box-shadow: 0 0 2rem #a3a8b488;
       z-index: $z-index-sidebar-mobile;
-    }
-
-    .sidebar-close {
-      position: absolute;
-      top: 0.5rem;
-      right: 0.5rem;
-      z-index: 1;
-
-      .open-iconic {
-        fill: $black;
-        opacity: 0.25;
-      }
-
-      &:hover {
-        background: transparent;
-
-        .open-iconic {
-          opacity: 1;
-        }
-      }
     }
 
     h1 {

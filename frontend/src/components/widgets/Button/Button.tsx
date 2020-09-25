@@ -16,10 +16,9 @@
  */
 
 import React, { ReactElement } from "react"
-import { Button as UIButton } from "baseui/button"
+import UIButton, { Kind, Size } from "components/shared/Button"
 import { Map as ImmutableMap } from "immutable"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import { buttonOverrides } from "lib/widgetTheme"
 
 export interface ButtonProps {
   disabled: boolean
@@ -41,9 +40,10 @@ function Button(props: ButtonProps): ReactElement {
   return (
     <div className="Widget row-widget stButton" style={style}>
       <UIButton
+        kind={Kind.PRIMARY}
+        size={Size.SMALL}
         disabled={disabled}
         onClick={handleClick}
-        overrides={buttonOverrides}
       >
         {label}
       </UIButton>
