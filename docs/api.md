@@ -315,7 +315,7 @@ and its limitations, see [Caching](caching.md).
 
 ## Pre-release features
 
-At Streamlit, we like to move quick while keeping things stable. In our latest effort to move even faster without sacrificing stability, we're offering our bold and fearless users two ways to try out Streamlit's most bleeding edge features:
+At Streamlit, we like to move quick while keeping things stable. In our latest effort to move even faster without sacrificing stability, we're offering our bold and fearless users two ways to try out Streamlit's bleeding-edge features:
 
 1. [Nightly releases](#nightly-releases)
 2. [Beta and experimental features](#beta-and-experimental-features)

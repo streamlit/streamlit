@@ -154,7 +154,7 @@ _Release date: May 05, 2020_
   [`st.beta_color_picker()`](https://docs.streamlit.io/en/latest/api.html#streamlit.beta_color_picker)
 - 🧪 Introducing `st.beta_*` and `st.experimental_*` function prefixes, for faster
   Streamlit feature releases. See
-  [docs](https://docs.streamlit.io/en/latest/pre_release_features.html) for more info.
+  [docs](https://docs.streamlit.io/en/latest/api.html#pre-release-features) for more info.
 - 📦 Improved `@st.cache` support for SQL Alchemy objects, CompiledFFI, PyTorch
   Tensors, and `builtins.mappingproxy`.
 

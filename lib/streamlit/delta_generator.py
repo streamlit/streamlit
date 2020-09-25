@@ -485,19 +485,14 @@ class DeltaGenerator(
         return self._block(block_proto=block_proto)
 
     def favicon(
-        self,
-        element,
-        image,
-        clamp=False,
-        channels="RGB",
-        format="JPEG",
+        self, element, image, clamp=False, channels="RGB", format="JPEG",
     ):
         """Set the page favicon to the specified image.
 
         This supports the same parameters as `st.image`.
 
         Note: This is a beta feature. See
-        https://docs.streamlit.io/en/latest/pre_release_features.html for more
+        https://docs.streamlit.io/en/latest/api.html#pre-release-features for more
         information.
 
         Parameters
