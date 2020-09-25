@@ -70,3 +70,34 @@ pip install --upgrade streamlit==0.50
 
 ...where `0.50` is the version you'd like to downgrade to. See
 [Changelog](../changelog.md) for a complete list of Streamlit versions.
+
+## Check #6 [Windows]: Is Python added to your PATH?
+
+When installed by downloading from [python.org](https://www.python.org/downloads/), Python is
+not automatically added to the [Windows system PATH](https://www.howtogeek.com/118594/how-to-edit-your-system-path-for-easy-command-line-access). Because of this, you may get error messages
+like the following:
+
+Command Prompt:
+
+```shell
+C:\Users\streamlit> streamlit hello
+'streamlit' is not recognized as an internal or external command,
+operable program or batch file.
+```
+
+PowerShell:
+
+```shell
+PS C:\Users\streamlit> streamlit hello
+streamlit : The term 'streamlit' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that
+the path is correct and try again.
+At line:1 char:1
++ streamlit hello
++ ~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (streamlit:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+```
+
+To resolve this issue, add [Python to the Windows system PATH](https://datatofish.com/add-python-to-windows-path/).
+
+After adding Python to your Windows PATH, you should then be able to follow the instructions in our [Get Started](../getting_started.md#install-streamlit) section.
