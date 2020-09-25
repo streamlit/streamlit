@@ -14,7 +14,6 @@
 
    api
    streamlit_configuration
-   pre_release_features
 
 .. toctree::
   :caption: Streamlit Components
