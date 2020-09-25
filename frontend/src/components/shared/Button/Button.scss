@@ -71,19 +71,19 @@
     border: 1px solid transparent;
 
     &:hover {
-      border-color: $primary;
+      border-color: transparent;
       color: $primary;
     }
 
     &:active {
-      color: $white;
-      border-color: $primary;
-      background-color: $primary;
+      color: $primary;
+      border-color: transparent;
+      background-color: transparent;
     }
 
     &:focus:not(:active) {
       color: $primary;
-      border-color: $primary;
+      border-color: transparent;
     }
 
     &:disabled,
