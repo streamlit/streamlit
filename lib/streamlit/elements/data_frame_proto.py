@@ -82,14 +82,17 @@ class DataFrameMixin:
         marshall_data_frame(data, data_frame_proto)
 
         return dg._enqueue(  # type: ignore
-            "data_frame", data_frame_proto, element_width=width, element_height=height,
+            "data_frame",
+            data_frame_proto,
+            element_width=width,
+            element_height=height,
         )
 
     def table(dg, data=None):
         """Display a static table.
 
         This differs from `st.dataframe` in that the table in this case is
-        static: its entire contents are just laid out directly on the page.
+        static: its entire contents are laid out directly on the page.
 
         Parameters
         ----------

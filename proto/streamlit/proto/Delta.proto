@@ -16,6 +16,7 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/Block.proto";
 import "streamlit/proto/Element.proto";
 import "streamlit/proto/NamedDataSet.proto";
 
@@ -26,7 +27,7 @@ message Delta {
     Element new_element = 3;
 
     // Append a new block to the report.
-    bool new_block = 4;
+    Block add_block = 6;
 
     // Append data to a DataFrame in for current element. The element to add to
     // is identified by the ID field, above. The dataframe is identified either

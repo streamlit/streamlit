@@ -23,7 +23,7 @@ import { styled } from "styletron-react"
 import { ExtendedFile, getSizeDisplay } from "lib/FileHelper"
 import { colors, Sizes, spacingCalculator, variables } from "lib/widgetTheme"
 
-import UIButton from "components/widgets/Button/UIButton"
+import Button, { Kind } from "components/shared/Button"
 import { FlexColumn } from "components/shared/Layouts"
 import { Small } from "components/shared/TextElements"
 
@@ -106,7 +106,9 @@ const FileDropzone = ({
             </Small>
           </FlexColumn>
         </StyledInstructions>
-        <UIButton label="Browse files" disabled={disabled} />
+        <Button kind={Kind.PRIMARY} disabled={disabled}>
+          {"Browse files"}
+        </Button>
       </StyledDropzoneSection>
     )}
   </Dropzone>

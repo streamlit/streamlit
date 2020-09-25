@@ -101,7 +101,9 @@ describe("DateInput widget", () => {
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element.get("id"),
       ["2020/02/06"],
-      { fromUi: true }
+      {
+        fromUi: true,
+      }
     )
   })
 

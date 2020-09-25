@@ -18,6 +18,7 @@
 import {
   BlockPath,
   Delta,
+  IBlock,
   IForwardMsgMetadata,
   NamedDataSet,
 } from "autogen/proto"
@@ -26,16 +27,26 @@ import { addRows } from "lib/dataFrameProto"
 import { dispatchOneOf, toImmutableProto } from "lib/immutableProto"
 import { MetricsManager } from "lib/MetricsManager"
 import { requireNonNull } from "lib/utils"
-
-type Container = "main" | "sidebar"
+// The actual protobuf Element.proto
 export type SimpleElement = ImmutableMap<string, any>
+// A list of nodes to render.
+// Example BlockElements include: main, sidebar, st.container, st.column
 export interface BlockElement extends List<ReportElement> {}
 
+// Pointers to the two root nodes of the element trees.
 export interface Elements {
   main: BlockElement
   sidebar: BlockElement
 }
 
+/**
+ * A node of the element tree, representing a single thing to render: {
+ *  element: SimpleElement | BlockElement
+ *  reportId: string
+ *  metadata: IForwardMsgMetadata (proto)
+ *  deltaBlock: IBlock (proto)
+ * }
+ */
 export type ReportElement = ImmutableMap<string, any>
 
 export function applyDelta(
@@ -53,38 +64,38 @@ export function applyDelta(
   const parentBlockPath = requireNonNull(parentBlock.path)
   const parentBlockContainer = requireNonNull(parentBlock.container)
 
-  const container =
+  const topLevelBlock =
     parentBlockContainer === BlockPath.Container.MAIN ? "main" : "sidebar"
-  const deltaPath = [...parentBlockPath, metadata.deltaId]
+  // The full path to the ReportElement within the element tree
+  // Used to find and update the element node specified by this Delta
+  const deltaPath: any[] = [...parentBlockPath, metadata.deltaId]
+    // e.g. [1, 0, 2] => [1, "element", 0, "element", 2]
+    .flatMap(index => ["element", index])
+    .slice(1)
 
+  MetricsManager.current.incrementDeltaCounter(topLevelBlock)
   dispatchOneOf(delta, "type", {
     newElement: (element: SimpleElement) => {
-      const currentElement: ReportElement = elements[container].getIn(
+      const currentElement: ReportElement = elements[topLevelBlock].getIn(
         deltaPath
       )
 
-      elements[container] = elements[container].setIn(
+      elements[topLevelBlock] = elements[topLevelBlock].setIn(
         deltaPath,
-        handleNewElementMessage(
-          container,
-          currentElement,
-          element,
-          reportId,
-          metadata
-        )
+        handleNewElementMessage(currentElement, element, reportId, metadata)
       )
     },
-    newBlock: () => {
-      elements[container] = elements[container].updateIn(
+    addBlock: (deltaBlock: IBlock) => {
+      elements[topLevelBlock] = elements[topLevelBlock].updateIn(
         deltaPath,
-        reportElement => handleNewBlockMessage(container, reportElement)
+        reportElement =>
+          handleAddBlockMessage(reportElement, reportId, metadata, deltaBlock)
       )
     },
     addRows: (namedDataSet: NamedDataSet) => {
-      elements[container] = elements[container].updateIn(
+      elements[topLevelBlock] = elements[topLevelBlock].updateIn(
         deltaPath,
-        reportElement =>
-          handleAddRowsMessage(container, reportElement, namedDataSet)
+        reportElement => handleAddRowsMessage(reportElement, namedDataSet)
       )
     },
   })
@@ -93,13 +104,11 @@ export function applyDelta(
 }
 
 function handleNewElementMessage(
-  container: Container,
   reportElement: ReportElement,
   element: SimpleElement,
   reportId: string,
   metadata: IForwardMsgMetadata
 ): ReportElement {
-  MetricsManager.current.incrementDeltaCounter(container)
   MetricsManager.current.incrementDeltaCounter(element.get("type"))
 
   // Track component instance name.
@@ -122,26 +131,29 @@ function handleNewElementMessage(
   })
 }
 
-function handleNewBlockMessage(
-  container: Container,
-  reportElement: ReportElement
+function handleAddBlockMessage(
+  reportElement: ReportElement,
+  reportId: string,
+  metadata: IForwardMsgMetadata,
+  deltaBlock: IBlock
 ): ReportElement {
-  MetricsManager.current.incrementDeltaCounter(container)
   MetricsManager.current.incrementDeltaCounter("new block")
 
-  if (reportElement.get("element") instanceof List) {
-    return reportElement
-  }
-
-  return reportElement.set("element", List())
+  const existingEl = reportElement && reportElement.get("element")
+  return ImmutableMap({
+    // If there are already children in list, don't overwrite them.
+    // This prevents existing widgets from getting their values reset.
+    element: existingEl instanceof List ? existingEl : List(),
+    reportId,
+    metadata,
+    deltaBlock,
+  })
 }
 
 function handleAddRowsMessage(
-  container: Container,
   reportElement: ReportElement,
   namedDataSet: NamedDataSet
 ): ReportElement {
-  MetricsManager.current.incrementDeltaCounter(container)
   MetricsManager.current.incrementDeltaCounter("add rows")
 
   return reportElement.update("element", element =>

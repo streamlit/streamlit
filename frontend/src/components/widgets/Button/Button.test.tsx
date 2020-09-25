@@ -20,7 +20,8 @@ import { fromJS } from "immutable"
 import { shallow } from "enzyme"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
-import UIButton from "./UIButton"
+import UIButton from "components/shared/Button"
+
 import Button, { ButtonProps } from "./Button"
 
 jest.mock("lib/WidgetStateManager")

@@ -80,7 +80,7 @@ class WriteMixin:
         Example
         -------
 
-        Its simplest use case is to draw Markdown-formatted text, whenever the
+        Its basic use case is to draw Markdown-formatted text, whenever the
         input is a string:
 
         >>> write('Hello, *World!* :sunglasses:')
@@ -153,7 +153,8 @@ class WriteMixin:
         def flush_buffer():
             if string_buffer:
                 dg.markdown(
-                    " ".join(string_buffer), unsafe_allow_html=unsafe_allow_html,
+                    " ".join(string_buffer),
+                    unsafe_allow_html=unsafe_allow_html,
                 )
                 string_buffer[:] = []
 

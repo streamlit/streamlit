@@ -3,6 +3,8 @@ import { StyledDropdownListItem } from "baseui/select"
 import { StyledList, StyledEmptyState, OptionListProps } from "baseui/menu"
 import { FixedSizeList } from "react-window"
 
+import "./VirtualDropdown.scss"
+
 const LIST_ITEM_HEIGHT = 40
 const EMPTY_LIST_HEIGHT = 90
 const MAX_LIST_HEIGHT = 300
@@ -25,17 +27,11 @@ function FixedSizeListItem(props: FixedSizeListeItemProps): ReactElement {
   return (
     <StyledDropdownListItem
       key={item.value}
-      style={{
-        boxSizing: "border-box",
-        paddingTop: 0,
-        paddingBottom: 0,
-        display: "flex",
-        alignItems: "center",
-        ...style,
-      }}
+      className="dropdownListItem"
+      style={style}
       {...restChildProps}
     >
-      {item.label}
+      <span className="noTextOverflow">{item.label}</span>
     </StyledDropdownListItem>
   )
 }

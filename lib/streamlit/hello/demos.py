@@ -86,7 +86,7 @@ def mapping_demo():
                 get_text="name",
                 get_color=[0, 0, 0, 200],
                 get_size=15,
-                get_alignment_baseline="bottom",
+                get_alignment_baseline="'bottom'",
             ),
             "Outbound Flow": pdk.Layer(
                 "ArcLayer",

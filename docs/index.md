@@ -13,8 +13,7 @@
    advanced_concepts
 
    api
-   cli
-   pre_release_features
+   streamlit_configuration
 
 .. toctree::
   :caption: Streamlit Components
@@ -48,7 +47,7 @@
 [Streamlit](https://streamlit.io) is an open-source Python library that makes it
 easy to build beautiful custom web-apps for machine learning and data science.
 
-To use it, just `pip install streamlit`, then import it, write a couple lines
+To use it, run `pip install streamlit` from a terminal, then import it in Python, write a couple lines
 of code, and run your script with `streamlit run [filename]`. Streamlit watches
 for changes on each save and updates the app live while you're coding. Code
 runs from top to bottom, always from a clean state, and with no need for

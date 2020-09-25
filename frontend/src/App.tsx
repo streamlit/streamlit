@@ -107,6 +107,7 @@ interface State {
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
 
+// eslint-disable-next-line
 declare global {
   interface Window {
     streamlitDebug: any
@@ -335,14 +336,12 @@ export class App extends PureComponent<Props, State> {
     const { title, favicon, layout, initialSidebarState } = pageConfig
 
     if (title) {
-      const brandedTitle = `${title} · Streamlit`
-
       this.props.s4aCommunication.sendMessage({
         type: "SET_PAGE_TITLE",
-        title: brandedTitle,
+        title,
       })
 
-      document.title = brandedTitle
+      document.title = `${title} · Streamlit`
     }
 
     if (favicon) {
@@ -598,7 +597,6 @@ export class App extends PureComponent<Props, State> {
   /**
    * Removes old elements. The term old is defined as:
    *  - simple elements whose reportIds are no longer current
-   *  - empty block elements
    */
   clearOldElements = (elements: any, reportId: string): BlockElement => {
     return elements
@@ -606,11 +604,17 @@ export class App extends PureComponent<Props, State> {
         const simpleElement = reportElement.get("element")
 
         if (simpleElement instanceof List) {
+          // Recursively clear old elements
           const clearedElements = this.clearOldElements(
             simpleElement,
             reportId
           )
-          return clearedElements.size > 0 ? clearedElements : null
+          // Could check whether container is now empty, and return null.
+          // But we want to let empty columns take up sapce.
+          return clearedElements.size > 0 ||
+            reportElement.getIn(["deltaBlock", "allowEmpty"])
+            ? reportElement.set("element", clearedElements)
+            : null
         }
 
         return reportElement.get("reportId") === reportId

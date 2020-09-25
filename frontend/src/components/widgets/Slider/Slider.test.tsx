@@ -256,7 +256,9 @@ describe("Slider widget", () => {
       expect(props.widgetMgr.setFloatArrayValue).toHaveBeenCalledWith(
         props.element.get("id"),
         [1, 10],
-        { fromUi: true }
+        {
+          fromUi: true,
+        }
       )
       expect(wrapper.find(UISlider).prop("value")).toStrictEqual([1, 10])
     })

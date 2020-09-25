@@ -408,7 +408,7 @@ def cache(
     >>> # encountered.
     >>>
     >>> d2 = fetch_and_clean_data(DATA_URL_1)
-    >>> # Does not execute the function. Just returns its previously computed
+    >>> # Does not execute the function. Instead, returns its previously computed
     >>> # value. This means that now the data in d1 is the same as in d2.
     >>>
     >>> d3 = fetch_and_clean_data(DATA_URL_2)
@@ -845,7 +845,7 @@ How to fix this:
   - Otherwise, you could also clone the returned value so you can freely
     mutate it.
 * If you actually meant to mutate the return value and know the consequences of
-doing so, just annotate the function with `@st.cache(allow_output_mutation=True)`.
+doing so, annotate the function with `@st.cache(allow_output_mutation=True)`.
 
 For more information and detailed solutions check out [our documentation.]
 (https://docs.streamlit.io/en/latest/advanced_caching.html)

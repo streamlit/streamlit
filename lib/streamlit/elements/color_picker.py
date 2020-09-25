@@ -10,7 +10,7 @@ class ColorPickerMixin:
         """Display a color picker widget.
 
         Note: This is a beta feature. See
-        https://docs.streamlit.io/en/latest/pre_release_features.html for more
+        https://docs.streamlit.io/en/latest/api.html#pre-release-features for more
         information.
 
         Parameters

@@ -106,7 +106,9 @@ describe("TextInput widget", () => {
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element.get("id"),
       "testing",
-      { fromUi: true }
+      {
+        fromUi: true,
+      }
     )
   })
 
@@ -130,7 +132,9 @@ describe("TextInput widget", () => {
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element.get("id"),
       "testing",
-      { fromUi: true }
+      {
+        fromUi: true,
+      }
     )
   })
 

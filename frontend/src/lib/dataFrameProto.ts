@@ -108,7 +108,10 @@ export function dataFrameGetDimensions(df: any): any {
   const [headerRows, dataColsCheck] = columns
     ? indexGetLevelsAndLength(columns)
     : [0, 0]
-  const [dataRows, dataCols] = data ? tableGetRowsAndCols(data) : [0, 0]
+  const [dataRows, dataCols] = data
+    ? tableGetRowsAndCols(data)
+    : // If there is no data, default to the number of header columns
+      [0, dataColsCheck]
 
   if (
     (dataRows !== 0 && dataRows !== dataRowsCheck) ||
