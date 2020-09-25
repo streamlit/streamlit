@@ -41,7 +41,7 @@ class MetricsUtilTest(unittest.TestCase):
 
             path_isfile = lambda path: path == "/etc/machine-id"
 
-            machine_id = metrics_util._get_machine_id_v1()
+            machine_id = metrics_util._get_machine_id()
         self.assertEqual(machine_id, file_data)
 
     def test_machine_id_from_dbus(self):
@@ -55,7 +55,7 @@ class MetricsUtilTest(unittest.TestCase):
 
             path_isfile = lambda path: path == "/var/lib/dbus/machine-id"
 
-            machine_id = metrics_util._get_machine_id_v1()
+            machine_id = metrics_util._get_machine_id()
         self.assertEqual(machine_id, file_data)
 
     def test_machine_id_from_node(self):
@@ -65,7 +65,7 @@ class MetricsUtilTest(unittest.TestCase):
              patch("streamlit.metrics_util.uuid.getnode", return_value=MAC),\
              patch("streamlit.metrics_util.os.path.isfile", return_value=False):
 
-            machine_id = metrics_util._get_machine_id_v1()
+            machine_id = metrics_util._get_machine_id()
         self.assertEqual(machine_id, MAC)
 
     @patch("streamlit.metrics_util.file_util.get_streamlit_file_path", mock_get_path)
@@ -77,7 +77,7 @@ class MetricsUtilTest(unittest.TestCase):
              patch("streamlit.file_util.open", mock_open()) as open,\
              patch("streamlit.util.os.makedirs") as makedirs:
 
-            machine_id = metrics_util._get_machine_id_v2()
+            machine_id = metrics_util._get_stable_random_id()
             open().write.assert_called_once_with(UUID)
         self.assertEqual(machine_id, UUID)
 
@@ -88,7 +88,7 @@ class MetricsUtilTest(unittest.TestCase):
         with patch("streamlit.metrics_util.os.path.exists", return_value=True),\
              patch("streamlit.file_util.open", mock_open(read_data=UUID)) as open:
 
-            machine_id = metrics_util._get_machine_id_v2()
+            machine_id = metrics_util._get_stable_random_id()
             open().read.assert_called_once()
         self.assertEqual(machine_id, UUID)
 
@@ -101,7 +101,7 @@ class MetricsUtilTest(unittest.TestCase):
              patch("streamlit.file_util.open", mock_open(read_data="")) as open,\
              patch("streamlit.util.os.makedirs") as makedirs:
 
-            machine_id = metrics_util._get_machine_id_v2()
+            machine_id = metrics_util._get_stable_random_id()
             open().read.assert_called_once()
             open().write.assert_called_once_with(UUID)
         self.assertEqual(machine_id, UUID)
