@@ -7,7 +7,7 @@ If you're having problems running your Streamlit app, here are a few things to t
 On a Mac or Linux machine, type this on the terminal:
 
 ```bash
-$ ps -Al | grep streamlit
+ps -Al | grep streamlit
 ```
 
 If you don't see `streamlit run` in the output (or `streamlit hello`, if that's
@@ -20,8 +20,8 @@ upgrade Streamlit. So the first thing to try when having an issue is upgrading
 to the latest version of Streamlit:
 
 ```bash
-$ pip install --upgrade streamlit
-$ streamlit version
+pip install --upgrade streamlit
+streamlit version
 ```
 
 ...and then verify that the version number printed is `0.67.1`.
@@ -56,7 +56,7 @@ There are two easy ways to check this:
    argument to Streamlit on the command line:
 
    ```bash
-   $ streamlit run my_app.py --server.port=9876
+   streamlit run my_app.py --server.port=9876
    ```
 
 ## Check #5: Is this a Streamlit regression?
@@ -65,7 +65,7 @@ If you've upgraded to the latest version of Streamlit and things aren't
 working, you can downgrade at any time using this command:
 
 ```bash
-$ pip install --upgrade streamlit==0.50
+pip install --upgrade streamlit==0.50
 ```
 
 ...where `0.50` is the version you'd like to downgrade to. See
