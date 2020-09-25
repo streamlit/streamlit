@@ -200,7 +200,7 @@ export class MetricsManager {
   // eslint-disable-next-line class-methods-use-this
   private identify(id: string, data: Record<string, unknown>): void {
     if (IS_DEV_ENV) {
-      logAlways("[Dev mode] Not tracking identify: ", id, data)
+      logAlways("[Dev mode] Not sending id: ", id, data)
     } else {
       analytics.identify(id, data)
     }

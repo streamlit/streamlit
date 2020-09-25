@@ -9,11 +9,18 @@ from typing import Optional
 from streamlit import file_util
 
 def _get_machine_id_v1():
-    """Generate the prior machine ID that we used as a unique identifier for a user while tracking
-    metrics in Segment.  This ID is broken in different ways in some Linux distros and Docker images.
-    - sometimes our machine ID is just a hash of '', which means many machines map to the same ID
-    - sometimes our machine ID is a hash of the same string, when running in a Docker container
+    """Generate the prior machine ID
+
+    This is a unique identifier for a user while tracking metrics in Segment,
+    that is broken in different ways in some Linux distros and Docker images.
+    - at times just a hash of '', which means many machines map to the same ID
+    - at times a hash of the same string, when running in a Docker container
     - we run a sudo command, which is weird and bad in all sorts of ways
+
+    We'll track multiple versions of this ID for a few months after which
+    we'll remove this version. The goal is to determine a ratio between them
+    that we can use to normalize our metrics.
+
     """
     if (
         platform.system() == "Linux"
@@ -34,9 +41,13 @@ def _get_machine_id_v1():
     return machine_id
 
 def _get_machine_id_v2():
-    """Generate the new machine ID that we'll as a unique identifier for a user while tracking
-    metrics in Segment. Instead of relying on a hardware address in the container or host we'll
-    generate a UUID and store it in the Streamlit hidden folder."""
+    """Generate the new machine ID
+
+    This is a unique identifier for a user while tracking metrics in Segment.
+    Instead of relying on a hardware address in the container or host we'll
+    generate a UUID and store it in the Streamlit hidden folder.
+
+    """
     filepath = file_util.get_streamlit_file_path(".stable_random_id")
     stable_id = None
 
