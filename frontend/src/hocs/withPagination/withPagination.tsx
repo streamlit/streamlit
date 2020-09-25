@@ -42,13 +42,13 @@ const withPagination = (
       this.state = {
         currentPage: 0,
         pageSize: props.pageSize,
-        totalPages: this.calculatePageSize(this.props.items),
+        totalPages: this.calculateNumPages(this.props.items),
       }
     }
 
     public componentDidUpdate(prevProps: Props): void {
       if (prevProps.items.length !== this.props.items.length) {
-        const totalPages = this.calculatePageSize(this.props.items)
+        const totalPages = this.calculateNumPages(this.props.items)
 
         let { currentPage } = this.state
         if (prevProps.items.length < this.props.items.length) {
@@ -65,7 +65,7 @@ const withPagination = (
       }
     }
 
-    private calculatePageSize(items: any[]): number {
+    private calculateNumPages(items: any[]): number {
       return Math.ceil(items.length / this.props.pageSize)
     }
 
@@ -95,7 +95,7 @@ const withPagination = (
       return (
         <>
           <WrappedComponent items={paginatedItems} {...props} />
-          {items.length > 4 ? (
+          {items.length > pageSize ? (
             <Pagination
               className={className}
               pageSize={pageSize}

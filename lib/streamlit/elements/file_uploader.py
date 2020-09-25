@@ -21,9 +21,9 @@ class FileUploaderMixin:
         type : str or list of str or None
             Array of allowed extensions. ['png', 'jpg']
             By default, all extensions are allowed.
-    	accept_multiple_files : bool
-			Determines if multiple files can be uploaded at once.
-			Default: False
+        accept_multiple_files : bool
+                        Determines if multiple files can be uploaded at once.
+                        Default: False
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -32,12 +32,12 @@ class FileUploaderMixin:
         Returns
         -------
         None or UploadedFile or list of UploadedFile
-			If no file has been uploaded, returns None. Otherwise, returns
-            the data for the uploaded file(s):
+                        If no file has been uploaded, returns None. Otherwise, returns
+            the data for the uploaded file(s). If multiple files are allowed,
+            files are returned in the order they were uploaded.
             Note that UploadedFile is a subclass of BytesIO, and therefore it's
             "file-like". This means you can pass them anywhere where a file is
             expected!
-            To convert UploadedFile to a string call uploaded_file.to_textio().
         Examples
         --------
         >>> # For a single file
@@ -45,23 +45,28 @@ class FileUploaderMixin:
         >>> if uploaded_file is not None:
         ...     # To read file as bytes:
         ...     bytes_data = uploaded_file.read()
-        ... 	st.write(bytes_data)
+        ...     st.write(bytes_data)
+
         ...     # To convert to a string based IO:
-        ... 	textio = uploaded_file.to_textio(encoding="utf-8")
-        ...	    st.write(textio)
+        ...     stringio = StringIO(uploaded_file.decode("utf-8"))
+        ...     st.write(stringio)
+
         ...     # To read file as string:
-        ...	 	string_data = textio.read()
-        ...	    st.write(string_data)
+        ...     string_data = stringio.read()
+        ...     st.write(string_data)
+
         ...     # Can be used wherever a "file-like" object is accepted:
-        ...		dataframe = pd.read_csv(uploaded_file)
-        ... 	st.write(dataframe)
+        ...     dataframe = pd.read_csv(uploaded_file)
+        ...     st.write(dataframe)
+
         >>> # For multiple files
         >>> uploaded_files = st.file_uploader("Choose a CSV file", accept_multiple_files=True)
         >>> for uploaded_file in uploaded_files:
         ...     bytes_data = uploaded_file.read()
-        ... 	  st.write("filename:", uploaded_file.name)
-        ... 	  st.write(bytes_data)
+        ...     st.write("filename:", uploaded_file.name)
+        ...     st.write(bytes_data)
         """
+
         if isinstance(type, str):
             type = [type]
 

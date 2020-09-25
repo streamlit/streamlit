@@ -55,13 +55,9 @@ export class FileUploadClient extends HttpClient {
   }
 
   public async delete(widgetId: string, fileId: string): Promise<void> {
-    await this.request("upload_file", {
-      method: "DELETE",
-      data: {
-        sessionId: SessionInfo.current.sessionId,
-        widgetId,
-        fileId,
-      },
-    })
+    await this.request(
+      `upload_file/${SessionInfo.current.sessionId}/${widgetId}/${fileId}`,
+      { method: "DELETE" }
+    )
   }
 }

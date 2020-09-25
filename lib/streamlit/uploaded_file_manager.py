@@ -20,6 +20,7 @@ from typing import NamedTuple
 from typing import Tuple
 from blinker import Signal
 
+
 class UploadedFile(io.BytesIO):
     def __init__(self, id, name, type, data, **kwargs):
         super(UploadedFile, self).__init__(data)
@@ -28,8 +29,6 @@ class UploadedFile(io.BytesIO):
         self.type = type
         self.size = self.getbuffer().nbytes
 
-    def to_textio(self, encoding="utf-8"):
-        return io.TextIOWrapper(self, encoding=encoding)
 
 class UploadedFileManager(object):
     """Holds files uploaded by users of the running Streamlit app,
@@ -74,7 +73,7 @@ class UploadedFileManager(object):
         with self._files_lock:
             file_list = self._files_by_id.get(files_by_widget, None)
             if file_list:
-                files = files + file_list
+                files = file_list + files
             self._files_by_id[files_by_widget] = files
         self.on_files_updated.send(files_by_widget)
 
@@ -117,7 +116,8 @@ class UploadedFileManager(object):
         self.on_files_updated.send(files_by_widget)
 
     def remove_files(self, session_id, widget_id):
-        """Remove the file list with the given ID, if it exists.
+        """Remove the file list for the provided widget in the
+        provided session, if it exists.
 
         Parameters
         ----------

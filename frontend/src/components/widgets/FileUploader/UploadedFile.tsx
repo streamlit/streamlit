@@ -42,6 +42,11 @@ export interface Props {
   ) => void
 }
 
+export interface FileStatusProps {
+  file: ExtendedFile
+  progress: number | undefined
+}
+
 const UploadedFileData = styled("div", {
   display: "flex",
   alignItems: "baseline",
@@ -63,85 +68,82 @@ const StyledUploadedFile = styled("div", {
   marginBottom: spacingCalculator(0.25),
 })
 
-const FileIcon = styled("div", {
+export const ErrorMessage = styled("span", {
+  marginRight: spacingCalculator(0.25),
+})
+
+export const FileIcon = styled("div", {
   display: "flex",
   padding: spacingCalculator(0.25),
   color: colors.secondary,
 })
 
-class UploadedFile extends React.PureComponent<Props> {
-  public constructor(props: Props) {
-    super(props)
-    this.state = {
-      status: FileStatuses.READY,
-      errorMessage: undefined,
-      files: [],
-    }
-  }
-
-  private renderFileStatus = (): React.ReactElement | null => {
-    const { file, progress } = this.props
-    if (progress) {
-      return (
-        <ProgressBar
-          value={progress}
-          size={Sizes.SMALL}
-          overrides={{
-            Bar: {
-              style: {
-                marginLeft: 0,
-                marginTop: "4px",
-              },
-            },
-          }}
-        />
-      )
-    }
-
-    if (file.status === FileStatuses.ERROR) {
-      return (
-        <Error className="fileError">
-          <span>{file.errorMessage || "error"}</span>
-          <MaterialIcon icon="error" className="ml-1" />
-        </Error>
-      )
-    }
-
-    if (file.status === FileStatuses.UPLOADED) {
-      return <Small>{getSizeDisplay(file.size, "b")}</Small>
-    }
-
-    if (file.status === FileStatuses.DELETING) {
-      return <Small>Removing file</Small>
-    }
-
-    return null
-  }
-
-  public render = (): React.ReactNode => {
-    const { file, onDelete } = this.props
-
+export const FileStatus = ({
+  file,
+  progress,
+}: FileStatusProps): React.ReactElement | null => {
+  if (progress) {
     return (
-      <StyledUploadedFile className="uploadedFile">
-        <FileIcon>
-          <MaterialIcon
-            type="outlined"
-            icon="insert_drive_file"
-            size={Sizes.MEDIUM}
-          />
-        </FileIcon>
-        <UploadedFileData className="uploadedFileData">
-          <UploadedFileName className="uploadedFileName" title={file.name}>
-            {file.name}
-          </UploadedFileName>
-          {this.renderFileStatus()}
-        </UploadedFileData>
-        <IconButton onClick={onDelete} id={file.id}>
-          <Delete size={22} />
-        </IconButton>
-      </StyledUploadedFile>
+      <ProgressBar
+        value={progress}
+        size={Sizes.SMALL}
+        overrides={{
+          Bar: {
+            style: {
+              marginLeft: 0,
+              marginTop: "4px",
+            },
+          },
+        }}
+      />
     )
   }
+
+  if (file.status === FileStatuses.ERROR) {
+    return (
+      <Error className="fileError">
+        <ErrorMessage>{file.errorMessage || "error"}</ErrorMessage>
+        <MaterialIcon icon="error" />
+      </Error>
+    )
+  }
+
+  if (file.status === FileStatuses.UPLOADED) {
+    return <Small>{getSizeDisplay(file.size, "b")}</Small>
+  }
+
+  if (file.status === FileStatuses.DELETING) {
+    return <Small>Removing file</Small>
+  }
+
+  return null
+}
+
+const UploadedFile = ({
+  file,
+  progress,
+  onDelete,
+}: Props): React.ReactElement => {
+  return (
+    <StyledUploadedFile className="uploadedFile">
+      <FileIcon>
+        <MaterialIcon
+          type="outlined"
+          icon="insert_drive_file"
+          size={Sizes.MEDIUM}
+        />
+      </FileIcon>
+      <UploadedFileData className="uploadedFileData">
+        <UploadedFileName className="uploadedFileName" title={file.name}>
+          {file.name}
+        </UploadedFileName>
+        <FileStatus file={file} progress={progress} />
+      </UploadedFileData>
+      <IconButton onClick={onDelete} id={file.id}>
+        <Delete size={22} />
+      </IconButton>
+    </StyledUploadedFile>
+  )
 }
 
 export default UploadedFile

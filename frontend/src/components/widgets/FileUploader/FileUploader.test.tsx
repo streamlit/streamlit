@@ -20,6 +20,8 @@ import { FileError } from "react-dropzone"
 import { shallow } from "enzyme"
 import { fromJS } from "immutable"
 
+import { ExtendedFile } from "lib/FileHelper"
+
 import FileDropzone from "./FileDropzone"
 import FileUploader, { Props } from "./FileUploader"
 
@@ -28,7 +30,17 @@ const blobFile = new File(["Text in a file!"], "filename.txt", {
   lastModified: 0,
 })
 
-const fileError: FileError = {
+const INVALID_TYPE_ERROR: FileError = {
+  message: "error message",
+  code: "file-invalid-type",
+}
+
+const TOO_MANY_FILES: FileError = {
+  message: "error message",
+  code: "too-many-files",
+}
+
+const FILE_TOO_LARGE: FileError = {
   message: "error message",
   code: "file-too-large",
 }
@@ -73,14 +85,34 @@ describe("FileUploader widget", () => {
     expect(props.uploadClient.uploadFiles.mock.calls.length).toBe(1)
   })
 
-  it("should change status when dropping a File", () => {
+  it("should upload single file only", () => {
+    const props = getProps({ multipleFiles: false })
+    const wrapper = shallow(<FileUploader {...props} />)
+    const internalFileUploader = wrapper.find(FileDropzone)
+    internalFileUploader
+      .props()
+      .onDrop(
+        [],
+        [
+          { file: blobFile, errors: [INVALID_TYPE_ERROR, TOO_MANY_FILES] },
+          { file: blobFile, errors: [TOO_MANY_FILES] },
+          { file: blobFile, errors: [TOO_MANY_FILES] },
+        ]
+      )
+
+    expect(props.uploadClient.uploadFiles.mock.calls.length).toBe(1)
+  })
+
+  it("should change status + add file attributes when dropping a File", () => {
     const props = getProps()
     const wrapper = shallow(<FileUploader {...props} />)
     const internalFileUploader = wrapper.find(FileDropzone)
     internalFileUploader.props().onDrop([blobFile], [])
+    const files: ExtendedFile[] = wrapper.state("files")
 
-    expect(wrapper.state("status")).toBe("UPLOADING")
-    expect(wrapper.find("div.uploadProgress").length).toBe(1)
+    expect(files[0].status).toBe("UPLOADING")
+    expect(files[0].id).toBeDefined()
+    expect(files[0].cancelToken).toBeDefined()
   })
 
   it("should fail when File extension is not allowed", () => {
@@ -89,26 +121,25 @@ describe("FileUploader widget", () => {
     const internalFileUploader = wrapper.find(FileDropzone)
     internalFileUploader
       .props()
-      .onDrop([], [{ file: blobFile, errors: [fileError] }])
+      .onDrop([], [{ file: blobFile, errors: [INVALID_TYPE_ERROR] }])
 
-    expect(wrapper.state("status")).toBe("ERROR")
-    expect(wrapper.state("errorMessage")).toBe(
-      "text/plain files are not allowed"
-    )
-    expect(wrapper.find("div.uploadError").length).toBe(1)
+    const files: ExtendedFile[] = wrapper.state("files")
+
+    expect(files[0].status).toBe("ERROR")
+    expect(files[0].errorMessage).toBe("text/plain files are not allowed.")
   })
 
   it("should fail when maxUploadSizeMb = 0", () => {
     const props = getProps({ maxUploadSizeMb: 0 })
     const wrapper = shallow(<FileUploader {...props} />)
     const internalFileUploader = wrapper.find(FileDropzone)
-    internalFileUploader.props().onDrop([blobFile], [])
+    internalFileUploader
+      .props()
+      .onDrop([], [{ file: blobFile, errors: [FILE_TOO_LARGE] }])
+    const files: ExtendedFile[] = wrapper.state("files")
 
-    expect(wrapper.state("status")).toBe("ERROR")
-    expect(wrapper.state("errorMessage")).toBe(
-      "The max file size allowed is 0MB"
-    )
-    expect(wrapper.find("div.uploadError").length).toBe(1)
+    expect(files[0].status).toBe("ERROR")
+    expect(files[0].errorMessage).toBe("File must be 0.0B or smaller.")
   })
 
   it("should reset on disconnect", () => {

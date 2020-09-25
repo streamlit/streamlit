@@ -18,11 +18,9 @@
 import React from "react"
 import { fromJS } from "immutable"
 import { shallow } from "enzyme"
-import { buttonOverrides } from "lib/widgetTheme"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
-import { Button as UIButton } from "baseui/button"
-
+import UIButton from "./UIButton"
 import Button, { ButtonProps } from "./Button"
 
 jest.mock("lib/WidgetStateManager")
@@ -50,19 +48,9 @@ describe("Button widget", () => {
     expect(wrapper).toBeDefined()
   })
 
-  it("should have correct className and style", () => {
+  it("should have correct style", () => {
     const wrapper = shallow(<Button {...getProps()} />)
-
-    const wrappedDiv = wrapper.find("div").first()
-
-    const { className, style } = wrappedDiv.props()
-    // @ts-ignore
-    const splittedClassName = className.split(" ")
-
-    expect(splittedClassName).toContain("Widget")
-    expect(splittedClassName).toContain("row-widget")
-    expect(splittedClassName).toContain("stButton")
-
+    const { style } = wrapper.props()
     // @ts-ignore
     expect(style.width).toBe(getProps().width)
   })
@@ -73,9 +61,7 @@ describe("Button widget", () => {
     const wrappedUIButton = wrapper.find(UIButton)
 
     expect(wrappedUIButton.length).toBe(1)
-    expect(wrappedUIButton.props().children).toBe(
-      getProps().element.get("label")
-    )
+    expect(wrappedUIButton.props().label).toBe(getProps().element.get("label"))
   })
 
   describe("UIButton props should work", () => {
@@ -100,15 +86,6 @@ describe("Button widget", () => {
       const wrappedUIButton = wrapper.find(UIButton)
 
       expect(wrappedUIButton.props().disabled).toBe(props.disabled)
-    })
-
-    it("overrides prop", () => {
-      const props = getProps()
-      const wrapper = shallow(<Button {...props} />)
-
-      const wrappedUIButton = wrapper.find(UIButton)
-
-      expect(wrappedUIButton.props().overrides).toBe(buttonOverrides)
     })
   })
 })

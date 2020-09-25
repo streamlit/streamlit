@@ -20,7 +20,12 @@ import axios from "axios"
 import { FileRejection } from "react-dropzone"
 import { Map as ImmutableMap } from "immutable"
 
-import { ExtendedFile, FileStatuses, getSizeDisplay } from "lib/FileHelper"
+import {
+  ExtendedFile,
+  FileStatuses,
+  getSizeDisplay,
+  UploadErrors,
+} from "lib/FileHelper"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
@@ -95,9 +100,18 @@ class FileUploader extends React.PureComponent<Props, State> {
       this.delete(null, this.state.files[0].id)
     }
 
+    // Too many files were uploaded. Upload the first eligible file
+    // and reject the rest
     if (rejectedFiles.length > 1 && !multipleFiles) {
-      const firstFile: FileRejection | undefined = rejectedFiles.shift()
-      if (firstFile) {
+      const firstFileIndex: number = rejectedFiles.findIndex(
+        file =>
+          file.errors.length === 1 && file.errors[0].code === "too-many-files"
+      )
+      if (firstFileIndex >= 0) {
+        const firstFile: FileRejection = rejectedFiles.splice(
+          firstFileIndex,
+          1
+        )[0]
         this.uploadFile(firstFile.file, acceptedFiles.length)
       }
       this.rejectFiles(rejectedFiles)

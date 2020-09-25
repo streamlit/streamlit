@@ -15,7 +15,6 @@
 from typing import Dict, Any
 from typing import List
 
-import tornado.escape
 import tornado.httputil
 import tornado.web
 
@@ -58,7 +57,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         elif routes.allow_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
 
-    def options(self):
+    def options(self, session_id=None, widget_id=None, file_id=None):
         """/OPTIONS handler for preflight CORS checks.
 
         When a browser is making a CORS request, it may sometimes first
@@ -133,25 +132,25 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             return
 
         self._file_mgr.add_files(
-            session_id=session_id, widget_id=widget_id, files=uploaded_files,
+            session_id=session_id,
+            widget_id=widget_id,
+            files=uploaded_files,
         )
 
         self.set_status(200)
 
-    def delete(self):
-        data = tornado.escape.json_decode(self.request.body)
-
-        try:
-            session_id = data["sessionId"]
-            widget_id = data["widgetId"]
-            file_id = data["fileId"]
-        except Exception as e:
-            self.send_error(400, reason=str(e))
+    def delete(self, session_id, widget_id, file_id):
+        if session_id is None or widget_id is None or file_id is None:
+            self.send_error(404)
             return
 
-        # logic for delete
-        self._file_mgr.remove_file(
-            session_id=session_id, widget_id=widget_id, file_id=file_id,
-        )
+        try:
+            self._file_mgr.remove_file(
+                session_id=session_id,
+                widget_id=widget_id,
+                file_id=file_id,
+            )
+        except KeyError:
+            self.send_error(404)
 
         self.set_status(200)

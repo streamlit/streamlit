@@ -22,6 +22,12 @@ export const getSizeDisplay = (
   unit: string,
   rounding = 1
 ): string => {
+  if (!unit) unit = "b"
+
+  if (rounding < 0) rounding = 0
+
+  if (size < 0) throw new Error("Size must be greater than or equal to 0")
+
   const sizeIndex = sizeUnitSequence.indexOf(unit)
   const nextUnitSize = size / 1024
   if (sizeIndex && size > 500) {
@@ -32,8 +38,4 @@ export const getSizeDisplay = (
     )
   }
   return `${size.toFixed(rounding)}${unit.toUpperCase()}`
-}
-
-export const getFileExtension = (filename: string): string => {
-  return filename.split(".").pop() || "app"
 }

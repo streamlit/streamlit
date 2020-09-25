@@ -162,7 +162,7 @@ def _marshall_av_media(coordinates, proto, data, mimetype):
     # Assume bytes; try methods until we run out.
     if isinstance(data, bytes):
         pass
-    elif isinstance(data, io.BytesIO) or isInstance(data, UploadedFile):
+    elif isinstance(data, io.BytesIO) or isinstance(data, UploadedFile):
         data.seek(0)
         data = data.getvalue()
     elif isinstance(data, io.RawIOBase) or isinstance(data, io.BufferedReader):

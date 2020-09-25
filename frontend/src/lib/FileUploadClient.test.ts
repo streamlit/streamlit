@@ -28,7 +28,7 @@ const MOCK_SERVER_URI = {
   basePath: "",
 }
 
-describe("FileUploadClient", () => {
+describe("FileUploadClient Upload", () => {
   let axiosMock: MockAdapter
 
   beforeEach(() => {
@@ -95,7 +95,7 @@ describe("FileUploadClient", () => {
   })
 
   test("handles errors", async () => {
-    const uploader = new FileUploadClient(() => MOCK_SERVER_URI)
+    const uploader = new FileUploadClient(() => MOCK_SERVER_URI, true)
 
     mockUploadResponseStatus(400)
 
@@ -107,5 +107,39 @@ describe("FileUploadClient", () => {
     await expect(uploader.uploadFiles("widgetId", files)).rejects.toEqual(
       new Error("Request failed with status code 400")
     )
+  })
+})
+
+describe("FileUploadClient delete", () => {
+  beforeEach(() => {
+    axios.request = jest.fn()
+    SessionInfo.current = new SessionInfo({
+      sessionId: "sessionId",
+      streamlitVersion: "sv",
+      pythonVersion: "pv",
+      installationId: "iid",
+      authorEmail: "ae",
+      maxCachedMessageAge: 2,
+      commandLine: "command line",
+      userMapboxToken: "mockUserMapboxToken",
+    })
+  })
+
+  afterEach(() => {
+    SessionInfo.singleton = undefined
+  })
+
+  test("deletes file", async () => {
+    const uploader = new FileUploadClient(() => MOCK_SERVER_URI, true)
+
+    uploader.delete("widgetId", "123")
+
+    expect(axios.request).toHaveBeenCalledWith({
+      method: "DELETE",
+      url: buildHttpUri(
+        MOCK_SERVER_URI,
+        `upload_file/${SessionInfo.current.sessionId}/widgetId/123`
+      ),
+    })
   })
 })

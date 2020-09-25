@@ -6,7 +6,7 @@ import { IconButton } from "components/widgets/Button"
 import { colors, spacingCalculator } from "lib/widgetTheme"
 import { Small } from "components/shared/TextElements"
 
-interface Props {
+export interface Props {
   className: string
   currentPage: number
   totalPages: number
