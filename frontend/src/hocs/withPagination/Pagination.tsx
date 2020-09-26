@@ -1,8 +1,8 @@
 import React from "react"
 import { styled } from "styletron-react"
 
+import { IconButton } from "components/shared/Button"
 import { MaterialIcon } from "components/shared/Icon"
-import { IconButton } from "components/widgets/Button"
 import { colors, spacingCalculator } from "lib/widgetTheme"
 import { Small } from "components/shared/TextElements"
 

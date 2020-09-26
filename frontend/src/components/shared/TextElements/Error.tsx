@@ -23,4 +23,6 @@ export default styled("small", {
   fontSize: fontStyles.fontSizeSm,
   height: fontStyles.fontSizeSm,
   lineHeight: fontStyles.fontSizeSm,
+  display: "flex",
+  alignItems: "center",
 })

@@ -20,12 +20,7 @@ import axios from "axios"
 import { FileRejection } from "react-dropzone"
 import { Map as ImmutableMap } from "immutable"
 
-import {
-  ExtendedFile,
-  FileStatuses,
-  getSizeDisplay,
-  UploadErrors,
-} from "lib/FileHelper"
+import { ExtendedFile, FileStatuses, getSizeDisplay } from "lib/FileHelper"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 

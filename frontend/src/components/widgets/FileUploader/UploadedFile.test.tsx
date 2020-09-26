@@ -20,8 +20,8 @@ import { shallow } from "enzyme"
 
 import { Small } from "components/shared/TextElements"
 import ProgressBar from "components/shared/ProgressBar"
-import { IconButton } from "components/widgets/Button"
-import { ExtendedFile, FileStatuses } from "lib/FileHelper"
+import { IconButton } from "components/shared/Button"
+import { FileStatuses } from "lib/FileHelper"
 
 import UploadedFile, { Props, FileStatus, ErrorMessage } from "./UploadedFile"
 
@@ -55,7 +55,7 @@ describe("FileStatus widget", () => {
 
   it("should show error", () => {
     const props = getProps({
-      file: Object.assign({ status: FileStatuses.ERROR }, blobFile),
+      file: { status: FileStatuses.DELETING, ...blobFile },
     })
     const wrapper = shallow(<FileStatus {...props} />)
     const errorMessageWrapper = wrapper.find(ErrorMessage)
@@ -64,7 +64,7 @@ describe("FileStatus widget", () => {
 
   it("should show deleting", () => {
     const props = getProps({
-      file: Object.assign({ status: FileStatuses.DELETING }, blobFile),
+      file: { status: FileStatuses.DELETING, ...blobFile },
     })
     const wrapper = shallow(<FileStatus {...props} />)
     const statusWrapper = wrapper.find(Small)
@@ -73,13 +73,11 @@ describe("FileStatus widget", () => {
 
   it("should show size", () => {
     const props = getProps({
-      file: Object.assign(
-        {
-          size: 2000,
-          status: FileStatuses.UPLOADED,
-        },
-        blobFile
-      ),
+      file: {
+        size: 2000,
+        status: FileStatuses.UPLOADED,
+        ...blobFile,
+      },
     })
 
     const wrapper = shallow(<FileStatus {...props} />)

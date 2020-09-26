@@ -17,8 +17,8 @@
 
 import React from "react"
 import { shallow } from "enzyme"
+import { IconButton } from "components/shared/Button"
 import { Small } from "components/shared/TextElements"
-import { IconButton } from "components/widgets/Button"
 import Pagination, { Props } from "./Pagination"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
@@ -44,7 +44,7 @@ describe("Pagination widget", () => {
       currentPage: 1,
       totalPages: 10,
     })
-    let pagination = shallow(<Pagination {...defaultProps} />)
+    const pagination = shallow(<Pagination {...defaultProps} />)
     expect(pagination.find(Small).text()).toBe(`Showing page 1 of 10`)
   })
 
