@@ -62,7 +62,7 @@ describe("st.file_uploader", () => {
     const fileName = "example.json";
 
     cy.fixture(fileName).then(fileContent => {
-      cy.get('[data-baseweb="file-uploader"] > div')
+      cy.get(".fileUploadDropzone")
         .first()
         .upload(
           { fileContent, fileName, mimeType: "application/json" },
@@ -78,9 +78,9 @@ describe("st.file_uploader", () => {
           }
         );
 
-      cy.get(".uploadError")
+      cy.get(".fileError")
         .first()
-        .should("have.text", " application/json files are not allowedOK");
+        .should("have.text", "application/pdf files are not allowed.error");
 
       cy.get(".stFileUploader")
         .first()
