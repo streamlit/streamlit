@@ -229,6 +229,9 @@ function MainMenu(props: Props): ReactElement {
           overrides={{
             Option: MenuListItem,
             List: {
+              props: {
+                "data-test": "main-menu-list",
+              },
               style: {
                 ":focus": {
                   outline: "none",

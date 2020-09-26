@@ -22,15 +22,15 @@ describe("main menu", () => {
     cy.visit("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
+    // cy.get(".decoration").invoke("css", "display", "none");
   });
 
   it("displays menu dropdown", () => {
     cy.get("#ConnectionStatus").should("not.exist");
 
     // Main menu renders visually as we expect
-    cy.get("#MainMenu").click();
-    cy.get(".dropdown-menu").matchImageSnapshot("main_menu");
+    cy.get("#MainMenu > button").click();
+    cy.get('[data-test="main-menu-list"]').matchImageSnapshot("main_menu");
 
     // Not possible to test the urls in the menu as they are hidden behind
     // the click handler of the button
