@@ -21,10 +21,6 @@ import Pagination from "./Pagination"
 
 import withPagination, { Props as HocProps } from "./withPagination"
 
-interface TestProps {
-  items: any[]
-}
-
 const TestComponent: React.ComponentType = () => <div>test</div>
 
 const getProps = (props: Partial<HocProps> = {}): HocProps => ({
@@ -41,7 +37,6 @@ describe("withPagination HOC", () => {
     const WithHoc = withPagination(TestComponent)
     // @ts-ignore
     const wrapper = shallow(<WithHoc {...props} />)
-    const pagination = wrapper.find(Pagination)
 
     expect(wrapper).toBeDefined()
   })

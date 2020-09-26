@@ -36,7 +36,7 @@ class UploadedFileManager(object):
     """
 
     def __init__(self):
-        self._files_by_id = {}  # type: Dict[Tuple[str, str], UploadedFileList]
+        self._files_by_id = {}  # type: Dict[Tuple[str, str], List[UploadedFile] ]
         # Prevents concurrent access to the _files_by_id dict.
         # In remove_session_files(), we iterate over the dict's keys. It's
         # an error to mutate a dict while iterating; this lock prevents that.

@@ -89,16 +89,14 @@ describe("FileUploader widget", () => {
     const props = getProps({ multipleFiles: false })
     const wrapper = shallow(<FileUploader {...props} />)
     const internalFileUploader = wrapper.find(FileDropzone)
-    internalFileUploader
-      .props()
-      .onDrop(
-        [],
-        [
-          { file: blobFile, errors: [INVALID_TYPE_ERROR, TOO_MANY_FILES] },
-          { file: blobFile, errors: [TOO_MANY_FILES] },
-          { file: blobFile, errors: [TOO_MANY_FILES] },
-        ]
-      )
+    internalFileUploader.props().onDrop(
+      [],
+      [
+        { file: blobFile, errors: [INVALID_TYPE_ERROR, TOO_MANY_FILES] },
+        { file: blobFile, errors: [TOO_MANY_FILES] },
+        { file: blobFile, errors: [TOO_MANY_FILES] },
+      ]
+    )
 
     expect(props.uploadClient.uploadFiles.mock.calls.length).toBe(1)
   })
