@@ -409,6 +409,8 @@ export class App extends PureComponent<Props, State> {
       streamlitVersion: environmentInfo.streamlitVersion,
       pythonVersion: environmentInfo.pythonVersion,
       installationId: userInfo.installationId,
+      installationIdV1: userInfo.installationIdV1,
+      installationIdV2: userInfo.installationIdV2,
       authorEmail: userInfo.email,
       maxCachedMessageAge: config.maxCachedMessageAge,
       commandLine: initializeMsg.commandLine,
