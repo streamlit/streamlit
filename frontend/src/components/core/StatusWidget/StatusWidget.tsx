@@ -273,7 +273,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
           id="ConnectionStatus"
           className={this.state.statusMinimized ? "minimized" : ""}
         >
-          <Icon className="icon" type={ui.icon} />
+          <Icon className="icon icon-xs" type={ui.icon} />
           <label>{ui.label}</label>
         </div>
       </Tooltip>

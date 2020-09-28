@@ -26,7 +26,7 @@ multiple_files = st.file_uploader(
     "Drop multiple files:", type=["txt"], accept_multiple_files=True
 )
 if multiple_files is not None:
-    file_names = [s.name for s in multiple_files]
-    st.text("\n".join(file_names))
+    files = [file.getvalue().decode() for file in multiple_files]
+    st.text("\n".join(files))
 else:
     st.text("No upload")
