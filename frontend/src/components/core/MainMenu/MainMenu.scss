@@ -51,25 +51,31 @@
 .menu-item {
   margin: 0;
   padding: 0.25rem 1.5rem;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
   cursor: pointer;
 
   &.menu-item-stop-recording {
     color: $red;
     font-weight: bolder;
 
-    span.shortcut {
+    span.menu-item-shortcut {
       color: $red;
     }
   }
 
-  span.shortcut {
+  span.menu-item-shortcut {
     color: $gray;
-    float: right;
     font-size: 0.75rem;
     margin-top: 0.25rem;
-    margin-left: 0.25rem;
     font-variant: small-caps;
     text-transform: uppercase;
+  }
+
+  span.menu-item-label {
+    margin-right: 0.75rem;
+    flex-grow: 1;
   }
 
   &-highlighted {
@@ -85,8 +91,9 @@
   &:active:not(.menu-item-disabled) {
     background-color: $primary;
     color: white;
+    outline: none;
 
-    .shortcut {
+    span.menu-item-shortcut {
       color: white;
     }
   }

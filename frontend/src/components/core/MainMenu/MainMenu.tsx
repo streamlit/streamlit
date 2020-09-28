@@ -121,8 +121,8 @@ const MenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
           aria-disabled={$disabled}
           {...interactiveProps}
         >
-          {label}
-          {shortcut && <span className="shortcut">{shortcut}</span>}
+          <span className="menu-item-label">{label}</span>
+          {shortcut && <span className="menu-item-shortcut">{shortcut}</span>}
         </li>
       </>
     )
@@ -249,6 +249,13 @@ function MainMenu(props: Props): ReactElement {
           }}
         />
       )}
+      overrides={{
+        Body: {
+          props: {
+            "data-test": "main-menu-popover",
+          },
+        },
+      }}
     >
       <span id="MainMenu">
         <Button kind={Kind.ICON}>
