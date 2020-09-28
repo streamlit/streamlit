@@ -19,12 +19,12 @@ from enum import Enum
 import tornado.gen
 import tornado.ioloop
 
-from streamlit import __installation_id__
 from streamlit import __version__
 from streamlit import caching
 from streamlit import config
 from streamlit import url_util
 from streamlit.media_file_manager import media_file_manager
+from streamlit.metrics_util import Installation
 from streamlit.report import Report
 from streamlit.script_request_queue import RerunData
 from streamlit.script_request_queue import ScriptRequest
@@ -43,7 +43,6 @@ from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 import streamlit.elements.exception_proto as exception_proto
 
 LOGGER = get_logger(__name__)
-
 
 class ReportSessionState(Enum):
     REPORT_NOT_RUNNING = "REPORT_NOT_RUNNING"
@@ -382,7 +381,9 @@ class ReportSession(object):
             self._state == ReportSessionState.REPORT_IS_RUNNING
         )
 
-        imsg.user_info.installation_id = __installation_id__
+        imsg.user_info.installation_id = Installation.instance().installation_id
+        imsg.user_info.installation_id_v1 = Installation.instance().installation_id_v1
+        imsg.user_info.installation_id_v2 = Installation.instance().installation_id_v2
         if Credentials.get_current().activation:
             imsg.user_info.email = Credentials.get_current().activation.email
         else:

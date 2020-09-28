@@ -54,35 +54,11 @@ _LOGGER = _logger.get_logger("root")
 
 # Give the package a version.
 import pkg_resources as _pkg_resources
-import uuid as _uuid
-import subprocess
-import platform
-import os
 from typing import Any, List, Tuple, Type
 
 # This used to be pkg_resources.require('streamlit') but it would cause
 # pex files to fail. See #394 for more details.
 __version__ = _pkg_resources.get_distribution("streamlit").version
-
-# Deterministic Unique Streamlit User ID
-if (
-    platform.system() == "Linux"
-    and os.path.isfile("/etc/machine-id") == False
-    and os.path.isfile("/var/lib/dbus/machine-id") == False
-):
-    print("Generate machine-id")
-    subprocess.run(["sudo", "dbus-uuidgen", "--ensure"])
-
-machine_id = str(_uuid.getnode())
-if os.path.isfile("/etc/machine-id"):
-    with open("/etc/machine-id", "r") as f:
-        machine_id = f.read()
-elif os.path.isfile("/var/lib/dbus/machine-id"):
-    with open("/var/lib/dbus/machine-id", "r") as f:
-        machine_id = f.read()
-
-__installation_id__ = str(_uuid.uuid5(_uuid.NAMESPACE_DNS, machine_id))
-
 
 import contextlib as _contextlib
 import re as _re
@@ -232,7 +208,7 @@ def experimental_show(*args):
         2. It returns None, so it's "slot" in the app cannot be reused.
 
     Note: This is an experimental feature. See
-    https://docs.streamlit.io/en/latest/pre_release_features.html for more information.
+    https://docs.streamlit.io/en/latest/api.html#pre-release-features for more information.
 
     Parameters
     ----------

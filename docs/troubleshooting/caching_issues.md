@@ -46,6 +46,7 @@ By default Streamlit expects its cached values to be treated as immutable -- tha
 
 - **Preferred:** rewrite your code to remove that mutation
 - Clone the output of the cached function before mutating it. For example:
+
   ```Python
   import copy
   cloned_output = copy.deepcopy(my_cached_function(...))

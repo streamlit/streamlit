@@ -23,7 +23,7 @@ import { FileUploadClient } from "lib/FileUploadClient"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { fileUploaderOverrides } from "lib/widgetTheme"
 import React from "react"
-import { Button } from "reactstrap"
+import Button, { Kind } from "components/shared/Button"
 import { Spinner } from "baseui/spinner"
 import { SCSS_VARS } from "autogen/scssVariables"
 import "./FileUploader.scss"
@@ -144,7 +144,7 @@ class FileUploader extends React.PureComponent<Props, State> {
         <span className="body">
           <Icon className="icon" type="warning" /> {errorMessage}
         </span>
-        <Button color="link" onClick={this.reset}>
+        <Button kind={Kind.LINK} onClick={this.reset}>
           OK
         </Button>
       </div>
@@ -170,7 +170,7 @@ class FileUploader extends React.PureComponent<Props, State> {
           />
           <span>Uploading...</span>
         </span>
-        <Button color="link" onClick={this.cancelCurrentUpload}>
+        <Button kind={Kind.LINK} onClick={this.cancelCurrentUpload}>
           Cancel
         </Button>
       </div>
