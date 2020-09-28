@@ -22,6 +22,7 @@ UUID = "uuid"
 FILENAME = "/some/id/file"
 mock_get_path = MagicMock(return_value=FILENAME)
 
+
 class MetricsUtilTest(unittest.TestCase):
     def setUp(self):
         self.patch1 = patch("streamlit.file_util.os.stat")
@@ -34,10 +35,13 @@ class MetricsUtilTest(unittest.TestCase):
         """Test getting the machine id from /etc"""
         file_data = "etc"
 
-        with patch("streamlit.metrics_util.platform.system", return_value=False),\
-             patch("streamlit.metrics_util.uuid.getnode", return_value=MAC),\
-             patch("streamlit.metrics_util.open", mock_open(read_data=file_data), create=True),\
-             patch("streamlit.metrics_util.os.path.isfile") as path_isfile:
+        with patch("streamlit.metrics_util.platform.system", return_value=False), patch(
+            "streamlit.metrics_util.uuid.getnode", return_value=MAC
+        ), patch(
+            "streamlit.metrics_util.open", mock_open(read_data=file_data), create=True
+        ), patch(
+            "streamlit.metrics_util.os.path.isfile"
+        ) as path_isfile:
 
             path_isfile = lambda path: path == "/etc/machine-id"
 
@@ -48,10 +52,13 @@ class MetricsUtilTest(unittest.TestCase):
         """Test getting the machine id from /var/lib/dbus"""
         file_data = "dbus"
 
-        with patch("streamlit.metrics_util.platform.system", return_value=False),\
-             patch("streamlit.metrics_util.uuid.getnode", return_value=MAC),\
-             patch("streamlit.metrics_util.open", mock_open(read_data=file_data), create=True),\
-             patch("streamlit.metrics_util.os.path.isfile") as path_isfile:
+        with patch("streamlit.metrics_util.platform.system", return_value=False), patch(
+            "streamlit.metrics_util.uuid.getnode", return_value=MAC
+        ), patch(
+            "streamlit.metrics_util.open", mock_open(read_data=file_data), create=True
+        ), patch(
+            "streamlit.metrics_util.os.path.isfile"
+        ) as path_isfile:
 
             path_isfile = lambda path: path == "/var/lib/dbus/machine-id"
 
@@ -61,9 +68,9 @@ class MetricsUtilTest(unittest.TestCase):
     def test_machine_id_from_node(self):
         """Test getting the machine id as the mac address"""
 
-        with patch("streamlit.metrics_util.platform.system", return_value=False),\
-             patch("streamlit.metrics_util.uuid.getnode", return_value=MAC),\
-             patch("streamlit.metrics_util.os.path.isfile", return_value=False):
+        with patch("streamlit.metrics_util.platform.system", return_value=False), patch(
+            "streamlit.metrics_util.uuid.getnode", return_value=MAC
+        ), patch("streamlit.metrics_util.os.path.isfile", return_value=False):
 
             machine_id = metrics_util._get_machine_id()
         self.assertEqual(machine_id, MAC)
@@ -72,10 +79,11 @@ class MetricsUtilTest(unittest.TestCase):
     def test_stable_id_not_exists(self):
         """Test creating a stable id """
 
-        with patch("streamlit.metrics_util.os.path.exists", return_value=False),\
-             patch("streamlit.metrics_util.uuid.uuid4", return_value=UUID),\
-             patch("streamlit.file_util.open", mock_open()) as open,\
-             patch("streamlit.util.os.makedirs") as makedirs:
+        with patch("streamlit.metrics_util.os.path.exists", return_value=False), patch(
+            "streamlit.metrics_util.uuid.uuid4", return_value=UUID
+        ), patch("streamlit.file_util.open", mock_open()) as open, patch(
+            "streamlit.util.os.makedirs"
+        ) as makedirs:
 
             machine_id = metrics_util._get_stable_random_id()
             open().write.assert_called_once_with(UUID)
@@ -85,8 +93,9 @@ class MetricsUtilTest(unittest.TestCase):
     def test_stable_id_exists_and_valid(self):
         """Test getting a stable valid id """
 
-        with patch("streamlit.metrics_util.os.path.exists", return_value=True),\
-             patch("streamlit.file_util.open", mock_open(read_data=UUID)) as open:
+        with patch("streamlit.metrics_util.os.path.exists", return_value=True), patch(
+            "streamlit.file_util.open", mock_open(read_data=UUID)
+        ) as open:
 
             machine_id = metrics_util._get_stable_random_id()
             open().read.assert_called_once()
@@ -96,10 +105,11 @@ class MetricsUtilTest(unittest.TestCase):
     def test_stable_id_exists_and_invalid(self):
         """Test getting a stable invalid id """
 
-        with patch("streamlit.metrics_util.os.path.exists", return_value=True),\
-             patch("streamlit.metrics_util.uuid.uuid4", return_value=UUID),\
-             patch("streamlit.file_util.open", mock_open(read_data="")) as open,\
-             patch("streamlit.util.os.makedirs") as makedirs:
+        with patch("streamlit.metrics_util.os.path.exists", return_value=True), patch(
+            "streamlit.metrics_util.uuid.uuid4", return_value=UUID
+        ), patch("streamlit.file_util.open", mock_open(read_data="")) as open, patch(
+            "streamlit.util.os.makedirs"
+        ) as makedirs:
 
             machine_id = metrics_util._get_stable_random_id()
             open().read.assert_called_once()
