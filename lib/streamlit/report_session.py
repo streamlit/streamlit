@@ -44,6 +44,7 @@ import streamlit.elements.exception_proto as exception_proto
 
 LOGGER = get_logger(__name__)
 
+
 class ReportSessionState(Enum):
     REPORT_NOT_RUNNING = "REPORT_NOT_RUNNING"
     REPORT_IS_RUNNING = "REPORT_IS_RUNNING"

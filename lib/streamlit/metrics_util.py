@@ -8,6 +8,7 @@ from typing import Optional
 
 from streamlit import file_util
 
+
 def _get_machine_id():
     """Get the machine ID
 
@@ -39,6 +40,7 @@ def _get_machine_id():
             machine_id = f.read()
 
     return machine_id
+
 
 def _get_stable_random_id():
     """Get a stable random ID
@@ -81,7 +83,9 @@ class Installation:
 
     def __init__(self):
         self.installation_id_v1 = str(uuid.uuid5(uuid.NAMESPACE_DNS, _get_machine_id()))
-        self.installation_id_v2 = str(uuid.uuid5(uuid.NAMESPACE_DNS, _get_stable_random_id()))
+        self.installation_id_v2 = str(
+            uuid.uuid5(uuid.NAMESPACE_DNS, _get_stable_random_id())
+        )
 
     @property
     def installation_id(self):
