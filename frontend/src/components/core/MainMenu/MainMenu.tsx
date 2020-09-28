@@ -132,20 +132,28 @@ const MenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
 function MainMenu(props: Props): ReactElement {
   const isServerDisconnected = !props.isServerConnected
 
-  const S4AMenuOptions = props.s4aMenuItems.map(item => {
-    if (item.type === "separator") {
-      return null
-    }
+  const S4AMenuOptions = props.s4aMenuItems.reduce(
+    (options, item, idx, arr) => {
+      if (item.type === "separator") {
+        return options
+      }
 
-    return {
-      onClick: () =>
-        props.sendS4AMessage({
-          type: "MENU_ITEM_CALLBACK",
-          key: item.key,
-        }),
-      label: item.label,
-    }
-  })
+      const hasDividerAbove = idx > 0 && arr[idx - 1].type === "separator"
+
+      return options.concat([
+        {
+          onClick: () =>
+            props.sendS4AMessage({
+              type: "MENU_ITEM_CALLBACK",
+              key: item.key,
+            }),
+          label: item.label,
+          hasDividerAbove,
+        },
+      ])
+    },
+    [] as any[]
+  )
 
   const shouldShowS4AMenu = !!S4AMenuOptions.length
 
