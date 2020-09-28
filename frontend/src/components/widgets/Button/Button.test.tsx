@@ -49,9 +49,19 @@ describe("Button widget", () => {
     expect(wrapper).toBeDefined()
   })
 
-  it("should have correct style", () => {
+  it("should have correct className and style", () => {
     const wrapper = shallow(<Button {...getProps()} />)
-    const { style } = wrapper.props()
+
+    const wrappedDiv = wrapper.find("div").first()
+
+    const { className, style } = wrappedDiv.props()
+    // @ts-ignore
+    const splittedClassName = className.split(" ")
+
+    expect(splittedClassName).toContain("Widget")
+    expect(splittedClassName).toContain("row-widget")
+    expect(splittedClassName).toContain("stButton")
+
     // @ts-ignore
     expect(style.width).toBe(getProps().width)
   })
@@ -62,7 +72,9 @@ describe("Button widget", () => {
     const wrappedUIButton = wrapper.find(UIButton)
 
     expect(wrappedUIButton.length).toBe(1)
-    expect(wrappedUIButton.props().label).toBe(getProps().element.get("label"))
+    expect(wrappedUIButton.props().children).toBe(
+      getProps().element.get("label")
+    )
   })
 
   describe("UIButton props should work", () => {

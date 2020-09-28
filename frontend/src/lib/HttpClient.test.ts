@@ -18,6 +18,7 @@
 import axios from "axios"
 import HttpClient from "lib/HttpClient"
 import { SessionInfo } from "lib/SessionInfo"
+import { buildHttpUri } from "lib/UriUtil"
 
 const MOCK_SERVER_URI = {
   host: "streamlit.mock",
@@ -53,20 +54,23 @@ describe("HttpClient", () => {
     document.cookie = "_xsrf=cookie;"
     const client = new HttpClient(() => MOCK_SERVER_URI, true)
 
-    client.request({})
+    client.request("url", {})
 
     expect(client.csrfEnabled).toBe(true)
     expect(spyRequest).toHaveBeenCalledWith({
       headers: { "X-Xsrftoken": "cookie" },
       withCredentials: true,
+      url: buildHttpUri(MOCK_SERVER_URI, `url`),
     })
   })
 
   test("has xsrf disabled", () => {
     const client = new HttpClient(() => MOCK_SERVER_URI, false)
 
-    client.request({})
+    client.request("url", {})
     expect(client.csrfEnabled).toBe(false)
-    expect(spyRequest).toHaveBeenCalledWith({})
+    expect(spyRequest).toHaveBeenCalledWith({
+      url: buildHttpUri(MOCK_SERVER_URI, `url`),
+    })
   })
 })

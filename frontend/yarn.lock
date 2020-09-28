@@ -7739,14 +7739,7 @@ file-loader@4.3.0:
     loader-utils "^1.2.3"
     schema-utils "^2.5.0"
 
-file-selector@^0.1.12:
-  version "0.1.13"
-  resolved "https://registry.yarnpkg.com/file-selector/-/file-selector-0.1.13.tgz#5efd977ca2bca1700992df1b10e254f4e73d2df4"
-  integrity sha512-T2efCBY6Ps+jLIWdNQsmzt/UnAjKOEAlsZVdnQztg/BtAZGNL4uX1Jet9cMM8gify/x4CSudreji2HssGBNVIQ==
-  dependencies:
-    tslib "^2.0.1"
-
-file-selector@^0.1.8:
+file-selector@^0.1.12, file-selector@^0.1.8:
   version "0.1.13"
   resolved "https://registry.yarnpkg.com/file-selector/-/file-selector-0.1.13.tgz#5efd977ca2bca1700992df1b10e254f4e73d2df4"
   integrity sha512-T2efCBY6Ps+jLIWdNQsmzt/UnAjKOEAlsZVdnQztg/BtAZGNL4uX1Jet9cMM8gify/x4CSudreji2HssGBNVIQ==
@@ -14471,10 +14464,10 @@ react-dom@^16.13.1, react-dom@^16.8.5:
     prop-types "^15.6.2"
     scheduler "^0.19.1"
 
-react-dropzone@^11.1.0:
-  version "11.1.0"
-  resolved "https://registry.yarnpkg.com/react-dropzone/-/react-dropzone-11.1.0.tgz#c225f3c53450c80fbd80954361dc039090bfc14c"
-  integrity sha512-gJT6iJadyTbevrigm6KZFaei/yNWfokzs1idumO7fXtRNPiGFDUpsQ+trHWwUO3yWOtJibpbo5tLZggjm+KV5w==
+react-dropzone@^11.2.0:
+  version "11.2.0"
+  resolved "https://registry.yarnpkg.com/react-dropzone/-/react-dropzone-11.2.0.tgz#4e54fa3479e6b6bb93f67914e4a27f1260807fdb"
+  integrity sha512-S/qaXQHCCg7MVlcrhqd05MLC6DupITLUB0CFn3iCLs6OTjzxdGDF1WTktTe5Jyq8jZdxYfMHNUZOHL0mg+K0Dw==
   dependencies:
     attr-accept "^2.0.0"
     file-selector "^0.1.12"
@@ -17164,11 +17157,6 @@ tslib@^1.10.0, tslib@^1.8.1, tslib@^1.9.0, tslib@^1.9.3:
   integrity sha512-i/6DQjL8Xf3be4K/E6Wgpekn5Qasl1usyw++dAA35Ue5orEn65VIxOA+YvNNl9HV3qv70T7CNwjODHZrLwvd1Q==
 
 tslib@^2.0.1, tslib@~2.0.1:
-  version "2.0.1"
-  resolved "https://registry.yarnpkg.com/tslib/-/tslib-2.0.1.tgz#410eb0d113e5b6356490eec749603725b021b43e"
-  integrity sha512-SgIkNheinmEBgx1IUNirK0TUD4X9yjjBRTqqjggWCU3pUEqIk3/Uwl3yRixYKT6WjQuGiwDv4NomL3wqRCj+CQ==
-
-tslib@^2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/tslib/-/tslib-2.0.1.tgz#410eb0d113e5b6356490eec749603725b021b43e"
   integrity sha512-SgIkNheinmEBgx1IUNirK0TUD4X9yjjBRTqqjggWCU3pUEqIk3/Uwl3yRixYKT6WjQuGiwDv4NomL3wqRCj+CQ==

@@ -55,7 +55,7 @@ describe("FileStatus widget", () => {
 
   it("should show error", () => {
     const props = getProps({
-      file: { status: FileStatuses.DELETING, ...blobFile },
+      file: { status: FileStatuses.ERROR, ...blobFile },
     })
     const wrapper = shallow(<FileStatus {...props} />)
     const errorMessageWrapper = wrapper.find(ErrorMessage)
