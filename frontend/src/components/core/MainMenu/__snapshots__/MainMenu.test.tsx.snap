@@ -10,7 +10,15 @@ exports[`App renders without crashing 1`] = `
   ignoreBoundary={false}
   onMouseEnterDelay={200}
   onMouseLeaveDelay={200}
-  overrides={Object {}}
+  overrides={
+    Object {
+      "Body": Object {
+        "props": Object {
+          "data-test": "main-menu-popover",
+        },
+      },
+    }
+  }
   placement="bottomRight"
   showArrow={false}
   stateReducer={[Function]}
@@ -43,7 +51,15 @@ exports[`App should render s4a menu items 1`] = `
   ignoreBoundary={false}
   onMouseEnterDelay={200}
   onMouseLeaveDelay={200}
-  overrides={Object {}}
+  overrides={
+    Object {
+      "Body": Object {
+        "props": Object {
+          "data-test": "main-menu-popover",
+        },
+      },
+    }
+  }
   placement="bottomRight"
   showArrow={false}
   stateReducer={[Function]}
