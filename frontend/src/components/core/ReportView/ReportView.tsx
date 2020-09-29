@@ -15,32 +15,27 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import { PageConfig } from "autogen/proto"
+
+import { ThemeProvider } from "baseui"
+import { Theme } from "baseui/theme"
 import classNames from "classnames"
 
 import Block from "components/core/Block/"
 import Sidebar from "components/core/Sidebar"
+import { ComponentRegistry } from "components/widgets/CustomComponent"
+import { FileUploadClient } from "lib/FileUploadClient"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import { FileUploadClient } from "lib/FileUploadClient"
-import { ComponentRegistry } from "components/widgets/CustomComponent"
-
-import { ThemeProvider } from "baseui"
-import { Theme } from "baseui/theme"
-import { BlockElement } from "lib/DeltaParser"
 import { mainWidgetTheme, sidebarWidgetTheme } from "lib/widgetTheme"
-import { PageConfig } from "autogen/proto"
+import React, { ReactElement } from "react"
+import { BlockNode, ReportRoot } from "lib/ReportNode"
 
 import "./ReportView.scss"
 import "./Widget.scss"
 
-export interface Elements {
-  main: BlockElement
-  sidebar: BlockElement
-}
-
 export interface ReportViewProps {
-  elements: Elements
+  elements: ReportRoot
 
   // The unique ID for the most recent run of the report.
   reportId: string
@@ -88,11 +83,11 @@ function ReportView(props: ReportViewProps): ReactElement {
     componentRegistry,
   } = props
 
-  const renderBlock = (theme: Theme, elements: BlockElement): ReactElement => (
+  const renderBlock = (theme: Theme, node: BlockNode): ReactElement => (
     <div className="block-container">
       <ThemeProvider theme={theme}>
         <Block
-          elements={elements}
+          elements={node}
           reportId={reportId}
           reportRunState={reportRunState}
           showStaleElementIndicator={showStaleElementIndicator}
@@ -112,7 +107,7 @@ function ReportView(props: ReportViewProps): ReactElement {
   // The tabindex is required to support scrolling by arrow keys.
   return (
     <div className={reportViewClassName}>
-      {!elements.sidebar.isEmpty() && (
+      {!elements.sidebar.isEmpty && (
         <Sidebar initialSidebarState={initialSidebarState}>
           {renderBlock(sidebarWidgetTheme, elements.sidebar)}
         </Sidebar>

@@ -92,6 +92,21 @@ export function requireNonNull<T>(obj: T | null | undefined): T {
 }
 
 /**
+ * A type predicate that is true if the given value is not undefined.
+ */
+export function notUndefined<T>(value: T | undefined): value is T {
+  return value !== undefined
+}
+
+/**
+ * A type predicate that is true if the given value is neither undefined
+ * nor null.
+ */
+export function notNull<T>(value: T | null | undefined): value is T {
+  return value != null
+}
+
+/**
  * Provide an ImmutableSet of SimpleElements by walking a BlockElement to
  * its leaves.
  */

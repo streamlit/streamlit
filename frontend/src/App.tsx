@@ -15,76 +15,70 @@
  * limitations under the License.
  */
 
-import React, { Fragment, PureComponent, ReactNode } from "react"
-import moment from "moment"
-import { HotKeys, KeyMap } from "react-hotkeys"
-import { fromJS, List } from "immutable"
-import classNames from "classnames"
-import { ThemeProvider } from "baseui"
-// Other local imports.
-import ReportView from "components/core/ReportView/"
-import StatusWidget from "components/core/StatusWidget"
-import MainMenu from "components/core/MainMenu/"
-import {
-  DialogProps,
-  DialogType,
-  StreamlitDialog,
-} from "components/core/StreamlitDialog/"
-import { ConnectionManager } from "lib/ConnectionManager"
-import { WidgetStateManager } from "lib/WidgetStateManager"
-import { ConnectionState } from "lib/ConnectionState"
-import { ReportRunState } from "lib/ReportRunState"
-import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
-import { mainWidgetTheme } from "lib/widgetTheme"
-import {
-  applyDelta,
-  BlockElement,
-  Elements,
-  ReportElement,
-  SimpleElement,
-} from "lib/DeltaParser"
-import {
-  setCookie,
-  flattenElements,
-  hashString,
-  isEmbeddedInIFrame,
-  makeElementWithInfoText,
-} from "lib/utils"
+import "assets/css/header.scss"
+// WARNING: order matters
+import "assets/css/theme.scss"
 import {
   BackMsg,
   Delta,
   ForwardMsg,
   IForwardMsgMetadata,
-  ISessionState,
   Initialize,
+  ISessionState,
   NewReport,
   PageConfig,
   PageInfo,
   SessionEvent,
   WidgetStates,
 } from "autogen/proto"
+import { ThemeProvider } from "baseui"
+import classNames from "classnames"
+import MainMenu from "components/core/MainMenu/"
+// Other local imports.
+import ReportView from "components/core/ReportView/"
+import StatusWidget from "components/core/StatusWidget"
+import {
+  DialogProps,
+  DialogType,
+  StreamlitDialog,
+} from "components/core/StreamlitDialog/"
+import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
+import { fromJS } from "immutable"
 
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
-import { SessionInfo } from "lib/SessionInfo"
-import { MetricsManager } from "lib/MetricsManager"
+import { ConnectionManager } from "lib/ConnectionManager"
+import { ConnectionState } from "lib/ConnectionState"
 import { FileUploadClient } from "lib/FileUploadClient"
 
 import { logError, logMessage } from "lib/log"
-// WARNING: order matters
-import "assets/css/theme.scss"
+import { MetricsManager } from "lib/MetricsManager"
+import { ReportRunState } from "lib/ReportRunState"
+import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
+import { SessionInfo } from "lib/SessionInfo"
+import {
+  hashString,
+  isEmbeddedInIFrame,
+  notUndefined,
+  requireNonNull,
+  setCookie,
+} from "lib/utils"
+import { WidgetStateManager } from "lib/WidgetStateManager"
+import { mainWidgetTheme } from "lib/widgetTheme"
+import moment from "moment"
+import React, { Fragment, PureComponent, ReactNode } from "react"
+import { HotKeys, KeyMap } from "react-hotkeys"
 import "./App.scss"
-import "assets/css/header.scss"
-import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
-import { ComponentRegistry } from "./components/widgets/CustomComponent"
 import { handleFavicon } from "./components/elements/Favicon"
-
-import withScreencast, {
-  ScreenCastHOC,
-} from "./hocs/withScreencast/withScreencast"
+import { ComponentRegistry } from "./components/widgets/CustomComponent"
 
 import withS4ACommunication, {
   S4ACommunicationHOC,
 } from "./hocs/withS4ACommunication/withS4ACommunication"
+
+import withScreencast, {
+  ScreenCastHOC,
+} from "./hocs/withScreencast/withScreencast"
+import { getElementWidgetID, ReportRoot } from "./lib/ReportNode"
 
 export interface Props {
   screenCast: ScreenCastHOC
@@ -93,7 +87,7 @@ export interface Props {
 
 interface State {
   connectionState: ConnectionState
-  elements: Elements
+  elements: ReportRoot
   reportId: string
   reportName: string
   reportHash: string | null
@@ -125,7 +119,7 @@ export class App extends PureComponent<Props, State> {
 
   private readonly uploadClient: FileUploadClient
 
-  private elementListBuffer: Elements | null
+  private elementListBuffer: ReportRoot | null
 
   private elementListBufferTimerIsSet: boolean
 
@@ -136,16 +130,7 @@ export class App extends PureComponent<Props, State> {
 
     this.state = {
       connectionState: ConnectionState.INITIAL,
-      elements: {
-        main: fromJS([
-          {
-            element: makeElementWithInfoText("Please wait..."),
-            metadata: {},
-            reportId: "no report",
-          },
-        ]),
-        sidebar: fromJS([]),
-      },
+      elements: ReportRoot.empty("Please wait..."),
       reportName: "",
       reportId: "<null>",
       reportHash: null,
@@ -297,7 +282,7 @@ export class App extends PureComponent<Props, State> {
         newReport: (newReportMsg: NewReport) =>
           this.handleNewReport(newReportMsg),
         delta: (deltaMsg: Delta) =>
-          this.handleDeltaMsg(deltaMsg, msgProto.metadata),
+          this.handleDeltaMsg(deltaMsg, requireNonNull(msgProto.metadata)),
         pageConfigChanged: (pageConfig: PageConfig) =>
           this.handlePageConfigChanged(pageConfig),
         pageInfoChanged: (pageInfo: PageInfo) =>
@@ -562,68 +547,37 @@ export class App extends PureComponent<Props, State> {
       // finish successfully.)
       this.setState(
         ({ elements, reportId }) => ({
-          elements: {
-            main: this.clearOldElements(elements.main, reportId),
-            sidebar: this.clearOldElements(elements.sidebar, reportId),
-          },
+          // If elementListBuffer is non-null, we still have pending
+          // elements that haven't been applied.
+          elements:
+            this.elementListBuffer != null
+              ? this.elementListBuffer.clearStaleNodes(reportId)
+              : elements.clearStaleNodes(reportId),
         }),
         () => {
-          this.elementListBuffer = this.state.elements
+          // Clear our pending element buffer
+          this.elementListBuffer = null
+
+          // Tell the WidgetManager which widgets still exist. It will remove
+          // widget state for widgets that have been removed.
+          const activeWidgetIds = new Set(
+            Array.from(this.state.elements.getElements())
+              .map(element => getElementWidgetID(element))
+              .filter(notUndefined)
+          )
+          this.widgetMgr.clean(activeWidgetIds)
+
+          // Tell the ConnectionManager to increment the message cache run
+          // count. This will result in expired ForwardMsgs being removed from
+          // the cache.
+          if (this.connectionManager !== null) {
+            this.connectionManager.incrementMessageCacheRunCount(
+              SessionInfo.current.maxCachedMessageAge
+            )
+          }
         }
       )
-
-      // This step removes from the WidgetManager the state of those widgets
-      // that are not shown on the page.
-      if (this.elementListBuffer) {
-        const activeWidgetIds = flattenElements(this.elementListBuffer.main)
-          .union(flattenElements(this.elementListBuffer.sidebar))
-          .map((e: SimpleElement) => {
-            const type = e.get("type")
-            return e.get(type).get("id") as string
-          })
-          .filter(id => id != null)
-        this.widgetMgr.clean(activeWidgetIds)
-      }
-
-      // Tell the ConnectionManager to increment the message cache run
-      // count. This will result in expired ForwardMsgs being removed from
-      // the cache.
-      if (this.connectionManager !== null) {
-        this.connectionManager.incrementMessageCacheRunCount(
-          SessionInfo.current.maxCachedMessageAge
-        )
-      }
     }
-  }
-
-  /**
-   * Removes old elements. The term old is defined as:
-   *  - simple elements whose reportIds are no longer current
-   */
-  clearOldElements = (elements: any, reportId: string): BlockElement => {
-    return elements
-      .map((reportElement: ReportElement) => {
-        const simpleElement = reportElement.get("element")
-
-        if (simpleElement instanceof List) {
-          // Recursively clear old elements
-          const clearedElements = this.clearOldElements(
-            simpleElement,
-            reportId
-          )
-          // Could check whether container is now empty, and return null.
-          // But we want to let empty columns take up sapce.
-          return clearedElements.size > 0 ||
-            reportElement.getIn(["deltaBlock", "allowEmpty"])
-            ? reportElement.set("element", clearedElements)
-            : null
-        }
-
-        return reportElement.get("reportId") === reportId
-          ? reportElement
-          : null
-      })
-      .filter((reportElement: any) => reportElement !== null)
   }
 
   /*
@@ -639,13 +593,10 @@ export class App extends PureComponent<Props, State> {
         reportId,
         reportName,
         reportHash,
-        elements: {
-          main: fromJS([]),
-          sidebar: fromJS([]),
-        },
+        elements: ReportRoot.empty(),
       },
       () => {
-        this.elementListBuffer = this.state.elements
+        this.elementListBuffer = null
         this.widgetMgr.clean(fromJS([]))
       }
     )
@@ -697,10 +648,13 @@ export class App extends PureComponent<Props, State> {
    */
   handleDeltaMsg = (
     deltaMsg: Delta,
-    metadataMsg: IForwardMsgMetadata | undefined | null
+    metadataMsg: IForwardMsgMetadata
   ): void => {
-    this.elementListBuffer = applyDelta(
-      this.state.elements,
+    if (this.elementListBuffer == null) {
+      this.elementListBuffer = this.state.elements
+    }
+
+    this.elementListBuffer = this.elementListBuffer.applyDelta(
       this.state.reportId,
       deltaMsg,
       metadataMsg
@@ -720,16 +674,10 @@ export class App extends PureComponent<Props, State> {
         this.state.reportRunState === ReportRunState.RUNNING
 
       setTimeout(() => {
+        const buffer = this.elementListBuffer
         this.elementListBufferTimerIsSet = false
-        if (isStaticConnection || reportIsRunning) {
-          // Create brand new `elements` instance, so components that depend on
-          // this for re-rendering catch the change.
-          if (this.elementListBuffer) {
-            const elements: Elements = {
-              ...this.elementListBuffer,
-            }
-            this.setState({ elements })
-          }
+        if (buffer != null && (isStaticConnection || reportIsRunning)) {
+          this.setState({ elements: buffer })
         }
       }, ELEMENT_LIST_BUFFER_TIMEOUT_MS)
     }

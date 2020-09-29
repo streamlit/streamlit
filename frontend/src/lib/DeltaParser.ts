@@ -27,17 +27,9 @@ import { addRows } from "lib/dataFrameProto"
 import { dispatchOneOf, toImmutableProto } from "lib/immutableProto"
 import { MetricsManager } from "lib/MetricsManager"
 import { requireNonNull } from "lib/utils"
+
 // The actual protobuf Element.proto
 export type SimpleElement = ImmutableMap<string, any>
-// A list of nodes to render.
-// Example BlockElements include: main, sidebar, st.container, st.column
-export interface BlockElement extends List<ReportElement> {}
-
-// Pointers to the two root nodes of the element trees.
-export interface Elements {
-  main: BlockElement
-  sidebar: BlockElement
-}
 
 /**
  * A node of the element tree, representing a single thing to render: {
@@ -48,6 +40,17 @@ export interface Elements {
  * }
  */
 export type ReportElement = ImmutableMap<string, any>
+
+// A list of nodes to render.
+// Example BlockElements include: main, sidebar, st.container, st.column
+export interface BlockElement extends List<ReportElement> {}
+
+// And finally, the "Elements" type contains pointers to the two root nodes
+// of the element trees.
+export interface Elements {
+  main: BlockElement
+  sidebar: BlockElement
+}
 
 export function applyDelta(
   elements: Elements,
