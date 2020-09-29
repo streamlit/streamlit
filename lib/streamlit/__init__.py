@@ -521,6 +521,7 @@ def experimental_rerun(session_id=None):
         session_id = experimental_get_session_id()
 
     from streamlit.server.server import Server as _Server
+
     server = _Server.get_current()
     session = server._get_session_info(  # pylint: disable = protected-access
         session_id
