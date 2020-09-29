@@ -34,10 +34,10 @@
   :maxdepth: 2
   :hidden:
 
-  changelog
+  Discussion forum <https://discuss.streamlit.io/>
   troubleshooting/index
   Frequently Asked Questions <streamlit_faq>
-  Community forum <https://discuss.streamlit.io/>
+  changelog
   Source code & issue tracker <https://github.com/streamlit/streamlit/>
 
 ```
