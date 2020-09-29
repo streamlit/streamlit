@@ -271,24 +271,31 @@ class Block extends PureComponent<Props> {
       }
     }
 
-    if (node.element.type === "text") {
-      return <Text width={width} element={requireNonNull(node.element.text)} />
-    }
+    switch (node.element.type) {
+      case "alert":
+        return (
+          <Alert width={width} element={requireNonNull(node.element.alert)} />
+        )
 
-    if (node.element.type === "markdown") {
-      return (
-        <Markdown
-          width={width}
-          element={requireNonNull(node.element.markdown)}
-        />
-      )
-    }
+      case "text":
+        return (
+          <Text width={width} element={requireNonNull(node.element.text)} />
+        )
 
-    if (node.element.type === "empty") {
-      return <div className="stHidden" key={index} />
-    }
+      case "markdown":
+        return (
+          <Markdown
+            width={width}
+            element={requireNonNull(node.element.markdown)}
+          />
+        )
 
-    return null
+      case "empty":
+        return <div className="stHidden" key={index} />
+
+      default:
+        throw new Error(`Unrecognized Element type ${node.element.type}`)
+    }
 
     // return dispatchOneOf(node, "type", {
     //   alert: (el: SimpleElement) => <Alert element={el} width={width} />,
