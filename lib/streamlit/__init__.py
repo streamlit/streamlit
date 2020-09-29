@@ -564,6 +564,7 @@ def experimental_rerun(session_id=None):
     if session_id is None:
         session_id = experimental_get_session_id()
 
+    # This is imported here to avoid a circular import at module load time
     from streamlit.server.server import Server as _Server
 
     server = _Server.get_current()
