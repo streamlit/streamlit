@@ -510,7 +510,7 @@ def stop():
 
 
 def experimental_get_session_id():
-    """Retrieves the session id of current streamlit instance."""
+    """Retrieves the session id of the current streamlit instance."""
     ctx = _get_report_ctx()
     session_id = ctx.session_id
 
@@ -524,7 +524,9 @@ def experimental_rerun(session_id=None):
     ----------
     session_id : Optional
         The session id of the streamlit instance to rerun. Retrieve a
-        session id by running ``experimental_get_session_id``.
+        session id by running ``experimental_get_session_id``. Defaults
+        to the current session. Use this parameter when triggering a
+        rerun from within a thread, such as a watchdog file watcher.
 
     Example
     -------
