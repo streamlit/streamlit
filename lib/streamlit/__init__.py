@@ -510,8 +510,7 @@ def stop():
 
 
 def experimental_get_session_id():
-    """Retrieves the session id of current streamlit instance.
-    """
+    """Retrieves the session id of current streamlit instance."""
     ctx = _get_report_ctx()
     session_id = ctx.session_id
 
