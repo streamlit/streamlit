@@ -558,7 +558,7 @@ def experimental_rerun(session_id=None):
     >>> run_counter = run_counter_cache()
     >>> run_counter[0] += 1
 
-    >>> st.write(f"This session has been run {run_counter[0]} times!")
+    >>> st.write(f"This streamlit app has been run {run_counter[0]} times!")
     """
 
     if session_id is None:
