@@ -507,3 +507,23 @@ def stop():
 
     """
     raise StopException()
+
+
+def experimental_get_session_id():
+    ctx = _get_report_ctx()
+    session_id = ctx.session_id
+
+    return session_id
+
+
+def experimental_rerun(session_id=None):
+    if session_id is None:
+        session_id = experimental_get_session_id()
+
+    from streamlit.server.server import Server as _Server
+    server = _Server.get_current()
+    session = server._get_session_info(  # pylint: disable = protected-access
+        session_id
+    ).session
+
+    session.request_rerun()

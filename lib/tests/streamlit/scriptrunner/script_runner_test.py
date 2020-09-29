@@ -364,18 +364,6 @@ class ScriptRunnerTest(AsyncTestCase):
         # The cached functions should not have been called on this second run
         self._assert_text_deltas(runner, [])
 
-    def test_rerun_api_within_thread(self):
-        """Test that st.rerun triggers a rerun within a separate thread"""
-
-        # Run st_cache_script.
-        scriptrunner = TestScriptRunner("rerun_within_thread.py")
-        scriptrunner.enqueue_rerun()
-        scriptrunner.start()
-        scriptrunner.join()
-
-        self._assert_no_exceptions(scriptrunner)
-        self._assert_text_deltas(scriptrunner, ["6"])
-
     def _assert_no_exceptions(self, scriptrunner):
         """Asserts that no uncaught exceptions were thrown in the
         scriptrunner's run thread.
