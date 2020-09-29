@@ -84,6 +84,18 @@ export interface MenuListItemProps {
   $isHighlighted: boolean
 }
 
+// BaseWeb provides a very basic list item (or option) for its dropdown
+// menus. We want to customize it to our liking. We want to support:
+//  * Shortcuts
+//  * Red coloring for the stop recording
+//  * Dividers (There's no special MenuListItem divider, so items have
+//    a hasDividerAbove property to add the border properly.
+// Unfortunately, because we are overriding the component, we need to
+// implement some of the built in-features, namely:
+//  * A11y for selected and disabled
+//  * $disabled field (BaseWeb does not use CSS :disabled here)
+//  * $isHighlighted field (BaseWeb does not use CSS :hover here)
+//  * creating a forward ref to add properties to the DOM element.
 const MenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
   (
     {
