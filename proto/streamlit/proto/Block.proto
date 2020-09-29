@@ -30,7 +30,7 @@ message Block {
   }
 
   message Horizontal {
-    bool unused = 2;
+    int32 total_columns = 2;
   }
 
   message Column {
