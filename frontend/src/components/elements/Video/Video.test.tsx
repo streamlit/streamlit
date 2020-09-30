@@ -102,11 +102,13 @@ describe("Video Element", () => {
     const videoElement: HTMLVideoElement = wrapper.find("video").getDOMNode()
 
     it("should set the current time to startTime on mount", () => {
+      videoElement.dispatchEvent(new Event("loadedmetadata"))
       expect(videoElement.currentTime).toBe(0)
     })
 
     it("should update the current time when startTime is changed", () => {
       wrapper.setProps(getProps({ startTime: 10 }))
+      videoElement.dispatchEvent(new Event("loadedmetadata"))
       expect(videoElement.currentTime).toBe(10)
     })
   })
