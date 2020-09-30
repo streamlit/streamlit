@@ -33,7 +33,7 @@ export default function Video({ element, width }: VideoProps): ReactElement {
   const type = element.get("type")
   const url = element.get("url")
 
-  const setStartTime = () => {
+  const setStartTime: () => void = () => {
     if (videoRef.current) {
       videoRef.current.currentTime = element.get("startTime")
     }
