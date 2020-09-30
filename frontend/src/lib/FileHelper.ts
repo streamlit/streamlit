@@ -16,12 +16,6 @@ export enum FileStatuses {
   UPLOADED = "UPLOADED",
 }
 
-const sizeUnitSequence = ["gb", "mb", "kb", "b"]
-const BYTE_CONVERSION_SIZE = 1024
-
-function mkenum<T extends { [index: string]: U }, U extends string>(x: T) {
-  return x
-}
 export const FileSizes = mkenum({
   GigaByte: "gb",
   KiloByte: "kb",
@@ -29,6 +23,13 @@ export const FileSizes = mkenum({
   Byte: "b",
 })
 type FileSizes = typeof FileSizes[keyof typeof FileSizes]
+export const BYTE_CONVERSION_SIZE = 1024
+const sizeUnitSequence = [
+  FileSizes.GigaByte,
+  FileSizes.MegaByte,
+  FileSizes.KiloByte,
+  FileSizes.Byte,
+]
 
 export const getSizeDisplay = (
   size: number,
@@ -58,11 +59,21 @@ export const sizeConverter = (
   inputUnit: FileSizes,
   outputUnit: FileSizes
 ): number => {
+  if (size < 0) {
+    throw Error("Size must be 0 or greater")
+  }
+
   const inputLevel = sizeUnitSequence.findIndex(unit => unit === inputUnit)
   const outputLevel = sizeUnitSequence.findIndex(unit => unit === outputUnit)
 
-  if (inputLevel === -1 || outputLevel === -1)
-    throw "Unexpected byte unit provided"
+  if (inputLevel === -1 || outputLevel === -1) {
+    // Should not ever occur
+    throw Error("Unexpected byte unit provided")
+  }
+
+  if (inputLevel === outputLevel) {
+    return size
+  }
 
   const levelsBetween = Math.abs(inputLevel - outputLevel)
   const byteDifference = Math.pow(BYTE_CONVERSION_SIZE, levelsBetween)

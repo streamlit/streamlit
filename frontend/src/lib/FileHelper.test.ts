@@ -15,13 +15,9 @@
  * limitations under the License.
  */
 
-import { BYTE_CONVERSION_SIZE, getSizeDisplay } from "./FileHelper"
+import { getSizeDisplay, sizeConverter, FileSizes } from "./FileHelper"
 
 describe("getSizeDisplay", () => {
-  beforeEach(() => {})
-
-  afterEach(() => {})
-
   test("shows unit", async () => {
     expect(getSizeDisplay(1024, "b")).toEqual("1.0KB")
     expect(getSizeDisplay(1024 * 1024, "b")).toEqual("1.0MB")
@@ -49,5 +45,40 @@ describe("getSizeDisplay", () => {
     expect(getSizeDisplay(500, "b")).toEqual("500.0B")
     expect(getSizeDisplay(800, "b")).toEqual("0.8KB")
     expect(getSizeDisplay(501, "gb")).toEqual("501.0GB")
+  })
+})
+
+describe("sizeConverter", () => {
+  test("Converts up", async () => {
+    expect(sizeConverter(0.5, FileSizes.KiloByte, FileSizes.MegaByte)).toEqual(
+      0.5 / 1024
+    )
+    expect(sizeConverter(1024, FileSizes.Byte, FileSizes.KiloByte)).toEqual(1)
+    expect(
+      sizeConverter(1024 ** 2, FileSizes.KiloByte, FileSizes.GigaByte)
+    ).toEqual(1)
+    expect(sizeConverter(1, FileSizes.MegaByte, FileSizes.GigaByte)).toEqual(
+      1 / 1024
+    )
+  })
+
+  test("Converts down", async () => {
+    expect(sizeConverter(0.5, FileSizes.GigaByte, FileSizes.MegaByte)).toEqual(
+      512
+    )
+    expect(
+      sizeConverter(1024, FileSizes.GigaByte, FileSizes.KiloByte)
+    ).toEqual(1024 ** 3)
+    expect(
+      sizeConverter(1024 ** 2, FileSizes.MegaByte, FileSizes.KiloByte)
+    ).toEqual(1024 ** 3)
+    expect(sizeConverter(1, FileSizes.KiloByte, FileSizes.Byte)).toEqual(1024)
+  })
+
+  test("unusual cases", async () => {
+    expect(sizeConverter(1024, FileSizes.Byte, FileSizes.Byte)).toEqual(1024)
+    expect(() =>
+      sizeConverter(-1, FileSizes.GigaByte, FileSizes.GigaByte)
+    ).toThrowError()
   })
 })
