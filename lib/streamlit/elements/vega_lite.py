@@ -27,12 +27,7 @@ LOGGER = get_logger(__name__)
 
 class VegaLiteMixin:
     def vega_lite_chart(
-        dg,
-        data=None,
-        spec=None,
-        width=0,
-        use_container_width=False,
-        **kwargs,
+        dg, data=None, spec=None, width=0, use_container_width=False, **kwargs,
     ):
         """Display a chart using the Vega-Lite library.
 
@@ -81,7 +76,7 @@ class VegaLiteMixin:
         ... })
 
         .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
+           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
            height: 200px
 
         Examples of Vega-Lite usage without Streamlit can be found at

@@ -63,7 +63,7 @@ class MapMixin:
         >>> st.map(df)
 
         .. output::
-           https://share.streamlit.io/0.53.0-SULT/index.html?id=9gTiomqPEbvHY2huTLoQtH
+           https://static.streamlit.io/0.53.0-SULT/index.html?id=9gTiomqPEbvHY2huTLoQtH
            height: 600px
 
         """
