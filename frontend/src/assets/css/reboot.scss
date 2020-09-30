@@ -1,7 +1,9 @@
-// stylelint-disable at-rule-no-vendor-prefix, declaration-no-important, selector-no-qualifying-type, property-no-vendor-prefix
-
+// stylelint-disable at-rule-no-vendor-prefix, declaration-no-important, selector-no-qualifying-type, property-no-vendor-prefi
+@import "variables";
 @import "vendor/rfs.scss";
 
+// These variables are needed for reboot. We supply them from bootstrap's
+// variable files
 $font-size-root: null !default;
 $font-family-base: $font-family-sans-serif !default;
 $font-family-code: $font-family-monospace !default;
