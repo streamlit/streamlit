@@ -16,11 +16,11 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { mount, shallow } from "enzyme"
 
 import { Small } from "components/shared/TextElements"
 import ProgressBar from "components/shared/ProgressBar"
-import { IconButton } from "components/shared/Button"
+import Button from "components/shared/Button"
 import { FileStatuses } from "lib/FileHelper"
 
 import UploadedFile, { Props, FileStatus, ErrorMessage } from "./UploadedFile"
@@ -96,8 +96,8 @@ describe("UploadedFile widget", () => {
 
   it("should delete", () => {
     const props = getProps()
-    const wrapper = shallow(<UploadedFile {...props} />)
-    const deleteBtn = wrapper.find(IconButton)
+    const wrapper = mount(<UploadedFile {...props} />)
+    const deleteBtn = wrapper.find(Button)
     deleteBtn.simulate("click")
     expect(props.onDelete).toBeCalled()
   })

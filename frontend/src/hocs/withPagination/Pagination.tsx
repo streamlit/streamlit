@@ -1,7 +1,7 @@
 import React from "react"
 import { styled } from "styletron-react"
 
-import { IconButton } from "components/shared/Button"
+import Button, { Kind } from "components/shared/Button"
 import { MaterialIcon } from "components/shared/Icon"
 import { colors, spacingCalculator } from "lib/widgetTheme"
 import { Small } from "components/shared/TextElements"
@@ -41,12 +41,12 @@ const Pagination = ({
     <StyledPagination className={className}>
       <Small>{`Showing page ${currentPage} of ${totalPages}`}</Small>
       <Paginators>
-        <IconButton onClick={onPrevious}>
+        <Button onClick={onPrevious} kind={Kind.MINIMAL}>
           <MaterialIcon icon="chevron_left" />
-        </IconButton>
-        <IconButton onClick={onNext}>
+        </Button>
+        <Button onClick={onNext} kind={Kind.MINIMAL}>
           <MaterialIcon icon="chevron_right" />
-        </IconButton>
+        </Button>
       </Paginators>
     </StyledPagination>
   )

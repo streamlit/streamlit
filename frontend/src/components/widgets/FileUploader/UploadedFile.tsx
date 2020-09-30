@@ -19,7 +19,7 @@ import React from "react"
 import { Delete } from "baseui/icon"
 import { styled, withStyleDeep } from "styletron-react"
 
-import { IconButton } from "components/shared/Button"
+import Button, { Kind } from "components/shared/Button"
 import { MaterialIcon } from "components/shared/Icon"
 import ProgressBar from "components/shared/ProgressBar"
 import { Small, Error } from "components/shared/TextElements"
@@ -36,10 +36,7 @@ import "./FileUploader.scss"
 export interface Props {
   file: ExtendedFile
   progress: number | undefined
-  onDelete: (
-    event: React.SyntheticEvent<HTMLElement> | null,
-    id?: string
-  ) => void
+  onDelete: (id: string) => void
 }
 
 export interface FileStatusProps {
@@ -124,6 +121,11 @@ const UploadedFile = ({
   progress,
   onDelete,
 }: Props): React.ReactElement => {
+  const handleDelete = (event: React.SyntheticEvent<HTMLElement>) => {
+    const id: string = event.currentTarget.id
+    onDelete(id)
+  }
+
   return (
     <StyledUploadedFile className="uploadedFile">
       <FileIcon>
@@ -139,9 +141,9 @@ const UploadedFile = ({
         </UploadedFileName>
         <FileStatus file={file} progress={progress} />
       </UploadedFileData>
-      <IconButton onClick={onDelete} id={file.id}>
+      <Button id={file.id} onClick={handleDelete} kind={Kind.MINIMAL}>
         <Delete size={22} />
-      </IconButton>
+      </Button>
     </StyledUploadedFile>
   )
 }

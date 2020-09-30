@@ -220,11 +220,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     }
   }
 
-  private delete = (
-    event: React.SyntheticEvent<HTMLElement> | null,
-    id?: string
-  ): void => {
-    const fileId = event ? event.currentTarget.id : id
+  private delete = (fileId: string): void => {
     const file = this.state.files.find(file => file.id === fileId)
     if (fileId && file) {
       if (file.cancelToken) {

@@ -17,7 +17,7 @@
 
 import React from "react"
 import { shallow } from "enzyme"
-import { IconButton } from "components/shared/Button"
+import Button from "components/shared/Button"
 import { Small } from "components/shared/TextElements"
 import Pagination, { Props } from "./Pagination"
 
@@ -51,7 +51,7 @@ describe("Pagination widget", () => {
   it("should be able to go to previous page", () => {
     const wrapper = shallow(<Pagination {...props} />)
     wrapper
-      .find(IconButton)
+      .find(Button)
       .at(0)
       .simulate("click")
     expect(props.onPrevious).toHaveBeenCalledTimes(1)
@@ -60,7 +60,7 @@ describe("Pagination widget", () => {
   it("should be able to go to next page", () => {
     const wrapper = shallow(<Pagination {...props} />)
     wrapper
-      .find(IconButton)
+      .find(Button)
       .at(1)
       .simulate("click")
     expect(props.onNext).toHaveBeenCalledTimes(1)

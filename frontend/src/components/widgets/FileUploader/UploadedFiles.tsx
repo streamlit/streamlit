@@ -24,10 +24,7 @@ import UploadedFile from "./UploadedFile"
 
 export interface Props {
   items: ExtendedFile[]
-  onDelete: (
-    event: React.SyntheticEvent<HTMLElement> | null,
-    id?: string
-  ) => void
+  onDelete: (id: string) => void
 }
 
 const StyledUploadedFiles = styled("div", {
