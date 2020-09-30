@@ -126,7 +126,7 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
             end = len(media.content)
 
         # content is bytes that work just by slicing supplied by start and end
-        yield media.content[start:end]
+        return media.content[start:end]
 
 
 class _SpecialRequestHandler(tornado.web.RequestHandler):
