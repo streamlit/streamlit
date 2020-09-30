@@ -132,6 +132,8 @@ class ReportSession(object):
         """
         if self._state != ReportSessionState.SHUTDOWN_REQUESTED:
             LOGGER.debug("Shutting down (id=%s)", self.id)
+            # Clear any unused session files in upload file manager and media
+            # file manager
             self._uploaded_file_mgr.remove_session_files(self.id)
             media_file_manager.clear_session_files(self.id)
             media_file_manager.del_expired_files()

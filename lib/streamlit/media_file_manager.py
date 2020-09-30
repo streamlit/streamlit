@@ -123,13 +123,14 @@ class MediaFileManager(object):
         LOGGER.debug("Deleting expired files...")
 
         # Get a flat set of every file ID in the session ID map.
-        active_files = set()  # type: Set[MediaFile]
+        active_file_ids = set()  # type: Set[MediaFile]
 
         for files_by_coord in self._files_by_session_and_coord.values():
-            active_files = active_files.union(files_by_coord.values())
+            file_ids = map(lambda mf: mf.id, files_by_coord.values())
+            active_file_ids = active_file_ids.union(file_ids)
 
         for file_id, mf in list(self._files_by_id.items()):
-            if mf not in active_files:
+            if mf.id not in active_file_ids:
                 LOGGER.debug(f"Deleting File: {file_id}")
                 del self._files_by_id[file_id]
 

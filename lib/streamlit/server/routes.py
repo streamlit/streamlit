@@ -72,6 +72,13 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
         if allow_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
 
+    # Overriding StaticFileHandler to use the MediaFileManager
+    #
+    # From the Torndado docs:
+    # To replace all interaction with the filesystem (e.g. to serve
+    # static content from a database), override `get_content`,
+    # `get_content_size`, `get_modified_time`, `get_absolute_path`, and
+    # `validate_absolute_path`.
     def validate_absolute_path(self, root, absolute_path):
         try:
             media_file_manager.get(absolute_path)
@@ -86,7 +93,9 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
         return media.content_size
 
     def get_modified_time(self):
-        return 0
+        # We do not track last modified time, but this can be improved to
+        # allow caching among files in the MediaFileManager
+        return None
 
     @classmethod
     def get_absolute_path(cls, root, path):
@@ -99,6 +108,7 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
         LOGGER.debug("MediaFileHandler: GET %s" % abspath)
 
         try:
+            # abspath is the hash as used `get_absolute_path`
             media = media_file_manager.get(abspath)
         except:
             LOGGER.error("MediaFileManager: Missing file %s" % abspath)
@@ -106,6 +116,7 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
 
         LOGGER.debug("MediaFileManager: Sending %s file %s" % (media.mimetype, abspath))
 
+        # If there is no start and end, just return the full content
         if start is None and end is None:
             return media.content
 
@@ -114,6 +125,7 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
         if end is None:
             end = len(media.content)
 
+        # content is bytes that work just by slicing supplied by start and end
         yield media.content[start:end]
 
 

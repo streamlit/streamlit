@@ -80,7 +80,6 @@ class MediaFileManagerTest(AsyncTestCase):
     def setUp(self):
         super(MediaFileManagerTest, self).setUp()
         self.mfm = MediaFileManager()
-        self.mfm.set_ioloop(self.io_loop)
         random.seed(1337)
 
     def tearDown(self):
@@ -132,7 +131,6 @@ class MediaFileManagerTest(AsyncTestCase):
     def test_add_files_same_coord(self, _time, _get_session_id):
         """Test that MediaFileManager.add works as expected."""
         _get_session_id.return_value = "SESSION1"
-        _time.return_value = 0
 
         coord = random_coordinates()
 
@@ -149,11 +147,8 @@ class MediaFileManagerTest(AsyncTestCase):
         # There should only be 1 coord in that session.
         self.assertEqual(len(self.mfm._files_by_session_and_coord["SESSION1"]), 1)
 
-        pretend_time_passed = self.get_mock_call_later()
         self.mfm.clear_session_files()
-
-        _time.return_value = 5 + 1
-        pretend_time_passed[0]()
+        self.mfm.del_expired_files()
 
         # There should be only 0 file in MFM.
         self.assertEqual(len(self.mfm), 0)
@@ -229,18 +224,16 @@ class MediaFileManagerTest(AsyncTestCase):
     def test_clear_session_files(self, _time, _get_session_id):
         """Test that MediaFileManager removes session maps when requested (even if empty)."""
         _get_session_id.return_value = "SESSION1"
-        _time.return_value = 0
 
         self.assertEqual(len(self.mfm), 0)
         self.assertEqual(len(self.mfm._files_by_session_and_coord), 0)
 
-        pretend_time_passed = self.get_mock_call_later()
         self.mfm.clear_session_files()
 
         self.assertEqual(len(self.mfm), 0)
         self.assertEqual(len(self.mfm._files_by_session_and_coord), 0)
 
-        pretend_time_passed[0]()
+        self.mfm.del_expired_files()
 
         self.assertEqual(len(self.mfm), 0)
         self.assertEqual(len(self.mfm._files_by_session_and_coord), 0)
@@ -252,7 +245,6 @@ class MediaFileManagerTest(AsyncTestCase):
         self.assertEqual(len(self.mfm), len(VIDEO_FIXTURES))
         self.assertEqual(len(self.mfm._files_by_session_and_coord), 1)
 
-        pretend_time_passed = self.get_mock_call_later()
         self.mfm.clear_session_files()
 
         self.assertEqual(len(self.mfm), len(VIDEO_FIXTURES))  # Clears later
@@ -260,8 +252,7 @@ class MediaFileManagerTest(AsyncTestCase):
             len(self.mfm._files_by_session_and_coord), 0
         )  # Clears immediately
 
-        _time.return_value = 5 + 1
-        pretend_time_passed[0]()
+        self.mfm.del_expired_files()
 
         self.assertEqual(len(self.mfm), 0)  # Now this is cleared too!
         self.assertEqual(len(self.mfm._files_by_session_and_coord), 0)
@@ -302,33 +293,3 @@ class MediaFileManagerTest(AsyncTestCase):
 
         # There should be 0 session with registered files.
         self.assertEqual(len(self.mfm._files_by_session_and_coord), 0)
-
-    def get_mock_call_later(self):
-        """Poor-man's mock of ioloop.call_later.
-
-        Returns a list that, once ioloop.call_later is called, will contain the
-        call_later's callback.
-
-        This means you should use it this way:
-
-            pretend_time_passed = self.get_mock_call_later()
-            self.mfm.something_that_calls_call_later()
-
-            # Add tests here for the case where the callback was not called yet.
-
-            pretend_time_passed[0]()
-
-            # Add tests here for the case where the callback was called.
-        """
-
-        # Don't need to do this since io_loop gets reset with every test.
-        # orig_call_later = self.io_loop.call_later
-
-        pretend_time_passed = []  # Hack!
-
-        def new_call_later(_, cb):
-            pretend_time_passed.append(cb)
-
-        self.io_loop.call_later = new_call_later
-
-        return pretend_time_passed
