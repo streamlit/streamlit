@@ -15,14 +15,25 @@
  * limitations under the License.
  */
 
-import { colors, fontStyles } from "lib/widgetTheme"
 import { styled } from "styletron-react"
+import { colors, fontStyles } from "lib/widgetTheme"
+import { mkenum } from "lib/utils"
 
-export default styled("small", {
-  color: colors.danger,
+export const Kind = mkenum({
+  SECONDARY: "secondary",
+  DANGER: "danger",
+})
+type Kind = typeof Kind[keyof typeof Kind]
+
+interface TextProps {
+  kind?: Kind
+}
+
+export const Small = styled("small", ({ kind }: TextProps) => ({
+  color: kind ? colors[kind] : colors.grayDark,
   fontSize: fontStyles.fontSizeSm,
   height: fontStyles.fontSizeSm,
   lineHeight: fontStyles.fontSizeSm,
   display: "flex",
   alignItems: "center",
-})
+}))

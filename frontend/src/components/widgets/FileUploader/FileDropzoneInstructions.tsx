@@ -23,7 +23,7 @@ import { getSizeDisplay } from "lib/FileHelper"
 import { colors, Sizes, spacingCalculator } from "lib/widgetTheme"
 
 import { FlexColumn } from "components/shared/Layouts"
-import { Small } from "components/shared/TextElements"
+import { Small, Kind } from "components/shared/TextElements"
 
 export interface Props {
   multiple: boolean
@@ -56,7 +56,7 @@ const FileDropzoneInstructions = ({
     />
     <FlexColumn>
       <span>Drag and drop file{multiple ? "s" : ""} here</span>
-      <Small>
+      <Small kind={Kind.SECONDARY}>
         {`Limit ${getSizeDisplay(maxSizeBytes, "b", 0)} per file`}
         {acceptedExtensions.length
           ? ` • ${acceptedExtensions

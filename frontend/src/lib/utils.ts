@@ -27,6 +27,13 @@ import { Alert as AlertProto } from "autogen/proto"
 import { BlockElement, ReportElement, SimpleElement } from "./DeltaParser"
 
 /**
+ * Creates a typed enumerator
+ */
+export const mkenum = <T extends { [index: string]: U }, U extends string>(
+  x: T
+): T => x
+
+/**
  * Wraps a function to allow it to be called, at most, once per interval
  * (specified in milliseconds). If the wrapper function is called N times
  * within that interval, only the Nth call will go through. The function

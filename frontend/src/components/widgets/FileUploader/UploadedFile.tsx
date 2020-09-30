@@ -22,7 +22,7 @@ import { styled, withStyleDeep } from "styletron-react"
 import Button, { Kind } from "components/shared/Button"
 import { MaterialIcon } from "components/shared/Icon"
 import ProgressBar from "components/shared/ProgressBar"
-import { Small, Error } from "components/shared/TextElements"
+import { Small, Kind as TextKind } from "components/shared/TextElements"
 import { ExtendedFile, FileStatuses, getSizeDisplay } from "lib/FileHelper"
 import {
   colors,
@@ -98,19 +98,21 @@ export const FileStatus = ({
 
   if (file.status === FileStatuses.ERROR) {
     return (
-      <Error className="fileError">
+      <Small className="fileError" kind={TextKind.DANGER}>
         <ErrorMessage>{file.errorMessage || "error"}</ErrorMessage>
         <MaterialIcon icon="error" />
-      </Error>
+      </Small>
     )
   }
 
   if (file.status === FileStatuses.UPLOADED) {
-    return <Small>{getSizeDisplay(file.size, "b")}</Small>
+    return (
+      <Small kind={TextKind.SECONDARY}>{getSizeDisplay(file.size, "b")}</Small>
+    )
   }
 
   if (file.status === FileStatuses.DELETING) {
-    return <Small>Removing file</Small>
+    return <Small kind={TextKind.SECONDARY}>Removing file</Small>
   }
 
   return null

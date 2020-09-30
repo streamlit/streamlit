@@ -15,5 +15,4 @@
  * limitations under the License.
  */
 
-export { default as Error } from "./Error"
-export { default as Small } from "./Small"
+export { Small, Kind } from "./Text"
