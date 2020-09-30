@@ -38,4 +38,36 @@ describe("FileDropzone widget", () => {
 
     expect(wrapper).toBeDefined()
   })
+
+  it("should show file size limit", () => {
+    const props = getProps({ maxSizeBytes: 2000 })
+    const wrapper = mount(<FileDropzone {...props} />)
+    const smallWrapper = wrapper.find(Small)
+
+    expect(smallWrapper.text()).toBe("Limit 2KB per file")
+  })
+
+  it("no extensions", () => {
+    const props = getProps({
+      acceptedExtensions: [],
+    })
+    const wrapper = mount(<FileDropzone {...props} />)
+    const dropzoneWrapper = wrapper.find(Dropzone)
+    expect(dropzoneWrapper.props().accept).toBe(undefined)
+
+    const smallWrapper = wrapper.find(Small)
+    expect(smallWrapper.text()).toMatch(/per file$/)
+  })
+
+  it("with extensions", () => {
+    const props = getProps({
+      acceptedExtensions: ["jpg"],
+    })
+    const wrapper = mount(<FileDropzone {...props} />)
+    const dropzoneWrapper = wrapper.find(Dropzone)
+    expect(dropzoneWrapper.props().accept).toEqual([".jpg"])
+
+    const smallWrapper = wrapper.find(Small)
+    expect(smallWrapper.text()).toMatch(/•/)
+  })
 })

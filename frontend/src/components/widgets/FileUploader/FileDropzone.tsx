@@ -17,15 +17,15 @@
 
 import React from "react"
 import Dropzone, { FileRejection } from "react-dropzone"
-import { MaterialIcon } from "components/shared/Icon"
 import { styled } from "styletron-react"
 
-import { ExtendedFile, getSizeDisplay } from "lib/FileHelper"
-import { colors, Sizes, spacingCalculator, variables } from "lib/widgetTheme"
+import { ExtendedFile } from "lib/FileHelper"
+import { colors, spacingCalculator, variables } from "lib/widgetTheme"
 
 import Button, { Kind } from "components/shared/Button"
-import { FlexColumn } from "components/shared/Layouts"
-import { Small } from "components/shared/TextElements"
+import { MaterialIcon } from "components/shared/Icon"
+
+import FileDropzoneInstructions from "./FileDropzoneInstructions"
 
 export interface Props {
   disabled: boolean
@@ -49,17 +49,6 @@ const StyledDropzoneSection = styled("section", {
   borderRadius: variables.borderRadius,
   alignItems: "center",
   display: "flex",
-})
-
-const StyledInstructions = styled("div", {
-  marginRight: "auto",
-  alignItems: "center",
-  display: "flex",
-})
-
-const FileUploaderIcon = styled(MaterialIcon, {
-  color: colors.secondary,
-  marginRight: spacingCalculator(),
 })
 
 const FileDropzone = ({
@@ -86,26 +75,11 @@ const FileDropzone = ({
         className={`fileUploadDropzone ${disabled ? "disabled" : ""}`}
       >
         <input {...getInputProps()} />
-        <StyledInstructions>
-          <FileUploaderIcon
-            icon="cloud_upload"
-            type="outlined"
-            size={Sizes.LARGE}
-            className="fileUploaderIcon"
-          />
-          <FlexColumn>
-            <span>Drag and drop file{multiple ? "s" : ""} here</span>
-            <Small>
-              {`Limit ${getSizeDisplay(maxSizeBytes, "b", 0)} per file`}
-              {acceptedExtensions.length
-                ? ` • ${acceptedExtensions
-                    .join(", ")
-                    .replace(".", "")
-                    .toUpperCase()}`
-                : null}
-            </Small>
-          </FlexColumn>
-        </StyledInstructions>
+        <FileDropzoneInstructions
+          multiple={multiple}
+          acceptedExtensions={acceptedExtensions}
+          maxSizeBytes={maxSizeBytes}
+        />
         <Button kind={Kind.PRIMARY} disabled={disabled}>
           {"Browse files"}
         </Button>
