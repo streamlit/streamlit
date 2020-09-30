@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import { getSizeDisplay } from "./FileHelper"
+import { BYTE_CONVERSION_SIZE, getSizeDisplay } from "./FileHelper"
 
 describe("getSizeDisplay", () => {
   beforeEach(() => {})
@@ -47,7 +47,7 @@ describe("getSizeDisplay", () => {
 
   test("rounding up unit", async () => {
     expect(getSizeDisplay(500, "b")).toEqual("500.0B")
-    expect(getSizeDisplay(501, "b")).toEqual("0.5KB")
+    expect(getSizeDisplay(800, "b")).toEqual("0.8KB")
     expect(getSizeDisplay(501, "gb")).toEqual("501.0GB")
   })
 })
