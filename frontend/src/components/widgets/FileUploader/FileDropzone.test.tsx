@@ -16,10 +16,8 @@
  */
 
 import React from "react"
-import { mount, shallow } from "enzyme"
+import { shallow } from "enzyme"
 import Dropzone from "react-dropzone"
-
-import { Small } from "components/shared/TextElements"
 import FileDropzone, { Props } from "./FileDropzone"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
@@ -37,5 +35,23 @@ describe("FileDropzone widget", () => {
     const wrapper = shallow(<FileDropzone {...props} />)
 
     expect(wrapper).toBeDefined()
+  })
+
+  it("no extensions", () => {
+    const props = getProps({
+      acceptedExtensions: [],
+    })
+    const wrapper = shallow(<FileDropzone {...props} />)
+    const dropzoneWrapper = wrapper.find(Dropzone)
+    expect(dropzoneWrapper.props().accept).toBe(undefined)
+  })
+
+  it("with extensions", () => {
+    const props = getProps({
+      acceptedExtensions: ["jpg"],
+    })
+    const wrapper = shallow(<FileDropzone {...props} />)
+    const dropzoneWrapper = wrapper.find(Dropzone)
+    expect(dropzoneWrapper.props().accept).toEqual([".jpg"])
   })
 })

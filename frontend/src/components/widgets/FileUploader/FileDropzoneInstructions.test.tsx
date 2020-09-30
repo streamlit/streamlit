@@ -17,31 +17,28 @@
 
 import React from "react"
 import { mount, shallow } from "enzyme"
-import Dropzone from "react-dropzone"
 
 import { Small } from "components/shared/TextElements"
-import FileDropzone, { Props } from "./FileDropzone"
+import FileDropzoneInstructions, { Props } from "./FileDropzoneInstructions"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
-  disabled: false,
-  onDrop: jest.fn(),
   multiple: true,
   acceptedExtensions: [],
   maxSizeBytes: 2000000,
   ...props,
 })
 
-describe("FileDropzone widget", () => {
+describe("FileDropzoneInstructions widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<FileDropzone {...props} />)
+    const wrapper = shallow(<FileDropzoneInstructions {...props} />)
 
     expect(wrapper).toBeDefined()
   })
 
   it("should show file size limit", () => {
     const props = getProps({ maxSizeBytes: 2000 })
-    const wrapper = mount(<FileDropzone {...props} />)
+    const wrapper = mount(<FileDropzoneInstructions {...props} />)
     const smallWrapper = wrapper.find(Small)
 
     expect(smallWrapper.text()).toBe("Limit 2KB per file")
@@ -51,10 +48,7 @@ describe("FileDropzone widget", () => {
     const props = getProps({
       acceptedExtensions: [],
     })
-    const wrapper = mount(<FileDropzone {...props} />)
-    const dropzoneWrapper = wrapper.find(Dropzone)
-    expect(dropzoneWrapper.props().accept).toBe(undefined)
-
+    const wrapper = mount(<FileDropzoneInstructions {...props} />)
     const smallWrapper = wrapper.find(Small)
     expect(smallWrapper.text()).toMatch(/per file$/)
   })
@@ -63,10 +57,7 @@ describe("FileDropzone widget", () => {
     const props = getProps({
       acceptedExtensions: ["jpg"],
     })
-    const wrapper = mount(<FileDropzone {...props} />)
-    const dropzoneWrapper = wrapper.find(Dropzone)
-    expect(dropzoneWrapper.props().accept).toEqual([".jpg"])
-
+    const wrapper = mount(<FileDropzoneInstructions {...props} />)
     const smallWrapper = wrapper.find(Small)
     expect(smallWrapper.text()).toMatch(/•/)
   })
