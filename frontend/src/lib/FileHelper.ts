@@ -76,13 +76,12 @@ export const sizeConverter = (
   }
 
   const levelsBetween = Math.abs(inputLevel - outputLevel)
-  const byteDifference = Math.pow(BYTE_CONVERSION_SIZE, levelsBetween)
+  const byteDifference = BYTE_CONVERSION_SIZE ** levelsBetween
 
   if (inputLevel > outputLevel) {
     // Going from smaller to bigger
     return size / byteDifference
-  } else {
-    // Going from bigger to smaller
-    return size * byteDifference
   }
+  // Going from bigger to smaller
+  return size * byteDifference
 }

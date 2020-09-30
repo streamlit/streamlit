@@ -98,7 +98,7 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     if (!multipleFiles && this.state.files.length) {
       // Only one file is allowed. Delete existing file.
-      this.delete(this.state.files[0].id!)
+      this.delete(this.state.files[0].id || "")
     }
 
     // Too many files were uploaded. Upload the first eligible file

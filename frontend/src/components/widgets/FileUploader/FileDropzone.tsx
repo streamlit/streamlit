@@ -19,11 +19,9 @@ import React from "react"
 import Dropzone, { FileRejection } from "react-dropzone"
 import { styled } from "styletron-react"
 
+import Button, { Kind } from "components/shared/Button"
 import { ExtendedFile } from "lib/FileHelper"
 import { colors, spacingCalculator, variables } from "lib/widgetTheme"
-
-import Button, { Kind } from "components/shared/Button"
-import { MaterialIcon } from "components/shared/Icon"
 
 import FileDropzoneInstructions from "./FileDropzoneInstructions"
 

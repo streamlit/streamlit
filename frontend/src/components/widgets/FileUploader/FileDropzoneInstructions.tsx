@@ -20,7 +20,7 @@ import { MaterialIcon } from "components/shared/Icon"
 import { styled } from "styletron-react"
 
 import { getSizeDisplay } from "lib/FileHelper"
-import { colors, Sizes, spacingCalculator, variables } from "lib/widgetTheme"
+import { colors, Sizes, spacingCalculator } from "lib/widgetTheme"
 
 import { FlexColumn } from "components/shared/Layouts"
 import { Small } from "components/shared/TextElements"

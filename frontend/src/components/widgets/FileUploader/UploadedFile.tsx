@@ -121,8 +121,8 @@ const UploadedFile = ({
   progress,
   onDelete,
 }: Props): React.ReactElement => {
-  const handleDelete = (event: React.SyntheticEvent<HTMLElement>) => {
-    const id: string = event.currentTarget.id
+  const handleDelete = (event: React.SyntheticEvent<HTMLElement>): void => {
+    const { id } = event.currentTarget
     onDelete(id)
   }
 
