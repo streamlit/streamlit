@@ -19,7 +19,7 @@ import React from "react"
 import Dropzone, { FileRejection } from "react-dropzone"
 import { styled } from "styletron-react"
 
-import Button, { Kind } from "components/shared/Button"
+import Button, { Kind, Size } from "components/shared/Button"
 import { ExtendedFile } from "lib/FileHelper"
 import { colors, spacing, variables } from "lib/widgetTheme"
 
@@ -78,7 +78,7 @@ const FileDropzone = ({
           acceptedExtensions={acceptedExtensions}
           maxSizeBytes={maxSizeBytes}
         />
-        <Button kind={Kind.PRIMARY} disabled={disabled}>
+        <Button kind={Kind.PRIMARY} disabled={disabled} size={Size.SMALL}>
           {"Browse files"}
         </Button>
       </StyledDropzoneSection>

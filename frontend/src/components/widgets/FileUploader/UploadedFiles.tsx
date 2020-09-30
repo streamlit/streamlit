@@ -44,7 +44,7 @@ const UploadedFileList = ({ items, onDelete }: Props): ReactElement => {
           <UploadedFile
             key={file.id}
             file={file}
-            progress={file.progress || 40}
+            progress={file.progress}
             onDelete={onDelete}
           />
         </li>
