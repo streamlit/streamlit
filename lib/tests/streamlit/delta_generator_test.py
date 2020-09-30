@@ -323,7 +323,7 @@ class DeltaGeneratorContainerTest(testutil.DeltaGeneratorTestCase):
             st.beta_columns(-1337)
 
         with self.assertRaises(StreamlitAPIException):
-            st.beta_columns(1)
+            st.beta_columns([1, 0, -1])
 
 
 class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
