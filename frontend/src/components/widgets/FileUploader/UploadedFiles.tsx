@@ -19,7 +19,7 @@ import { styled } from "styletron-react"
 
 import withPagination, { PaginationProps } from "hocs/withPagination"
 import { ExtendedFile } from "lib/FileHelper"
-import { fontStyles, spacingCalculator } from "lib/widgetTheme"
+import { fontStyles, spacing } from "lib/widgetTheme"
 import UploadedFile from "./UploadedFile"
 
 export interface Props {
@@ -31,9 +31,9 @@ const StyledUploadedFiles = styled("div", {
   left: 0,
   right: 0,
   lineHeight: fontStyles.lineHeightTight,
-  paddingTop: spacingCalculator(0.75),
-  paddingLeft: spacingCalculator(),
-  paddingRight: spacingCalculator(2),
+  paddingTop: spacing.md,
+  paddingLeft: spacing.lg,
+  paddingRight: spacing.xxxl,
 })
 
 const UploadedFileList = ({ items, onDelete }: Props): ReactElement => {

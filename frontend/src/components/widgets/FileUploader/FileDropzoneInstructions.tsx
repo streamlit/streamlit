@@ -20,7 +20,7 @@ import { MaterialIcon } from "components/shared/Icon"
 import { styled } from "styletron-react"
 
 import { getSizeDisplay } from "lib/FileHelper"
-import { colors, Sizes, spacingCalculator } from "lib/widgetTheme"
+import { colors, Sizes, spacing } from "lib/widgetTheme"
 
 import { FlexColumn } from "components/shared/Layouts"
 import { Small, Kind } from "components/shared/TextElements"
@@ -39,7 +39,7 @@ const StyledInstructions = styled("div", {
 
 const FileUploaderIcon = styled(MaterialIcon, {
   color: colors.secondary,
-  marginRight: spacingCalculator(),
+  marginRight: spacing.lg,
 })
 
 const FileDropzoneInstructions = ({

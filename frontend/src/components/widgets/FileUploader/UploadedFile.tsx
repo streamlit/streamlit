@@ -24,12 +24,7 @@ import { MaterialIcon } from "components/shared/Icon"
 import ProgressBar from "components/shared/ProgressBar"
 import { Small, Kind as TextKind } from "components/shared/TextElements"
 import { ExtendedFile, FileStatuses, getSizeDisplay } from "lib/FileHelper"
-import {
-  colors,
-  Sizes,
-  utilityClasses,
-  spacingCalculator,
-} from "lib/widgetTheme"
+import { colors, Sizes, utilityClasses, spacing } from "lib/widgetTheme"
 
 import "./FileUploader.scss"
 
@@ -48,13 +43,13 @@ const UploadedFileData = styled("div", {
   display: "flex",
   alignItems: "baseline",
   flex: 1,
-  paddingLeft: spacingCalculator(),
+  paddingLeft: spacing.lg,
   overflow: "hidden",
 })
 
 const UploadedFileName = withStyleDeep(
   styled("div", {
-    marginRight: spacingCalculator(0.5),
+    marginRight: spacing.sm,
   }),
   utilityClasses.ellipsis
 )
@@ -62,16 +57,16 @@ const UploadedFileName = withStyleDeep(
 const StyledUploadedFile = styled("div", {
   display: "flex",
   alignItems: "center",
-  marginBottom: spacingCalculator(0.25),
+  marginBottom: spacing.xxs,
 })
 
 export const ErrorMessage = styled("span", {
-  marginRight: spacingCalculator(0.25),
+  marginRight: spacing.xxs,
 })
 
 export const FileIcon = styled("div", {
   display: "flex",
-  padding: spacingCalculator(0.25),
+  padding: spacing.xxs,
   color: colors.secondary,
 })
 

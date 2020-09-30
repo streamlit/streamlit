@@ -3,7 +3,7 @@ import { styled } from "styletron-react"
 
 import Button, { Kind } from "components/shared/Button"
 import { MaterialIcon } from "components/shared/Icon"
-import { colors, spacingCalculator } from "lib/widgetTheme"
+import { colors, spacing } from "lib/widgetTheme"
 import { Small, Kind as TextKind } from "components/shared/TextElements"
 
 export interface Props {
@@ -19,8 +19,8 @@ const StyledPagination = styled("div", {
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  paddingBottom: spacingCalculator(0.25),
-  marginBottom: spacingCalculator(0.25),
+  paddingBottom: spacing.xxs,
+  marginBottom: spacing.xxs,
 })
 
 const Paginators = styled("div", {

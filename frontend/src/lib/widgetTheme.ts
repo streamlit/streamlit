@@ -36,15 +36,24 @@ const textMargin = SCSS_VARS["$font-size-sm"]
 const tinyTextMargin = SCSS_VARS["$m1-2-font-size-sm"]
 const spacer = SCSS_VARS.$spacer
 
-// Should use spacers instead of spacer but didn't want to
-// figure out map merges from .scss > SCSS_VARS
-// Using this calculator instead to work with spacer.
-export const spacingCalculator = (spacing?: number): string => {
+// Using this calculator instead to work with spacer
+const spacingCalculator = (spacing?: number): string => {
   if (!spacing) return spacer
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const [match, amount, unit] = spacer.match(/(?<amount>\d)(?<unit>.*)/)!
   const numberAmount: number = parseInt(amount, 10)
   return match && numberAmount ? `${numberAmount * spacing}${unit}` : spacer
+}
+
+export const spacing = {
+  xxs: spacingCalculator(0.25),
+  xs: spacingCalculator(0.375),
+  sm: spacingCalculator(0.5),
+  md: spacingCalculator(0.75),
+  lg: spacer,
+  xl: spacingCalculator(1.25),
+  xxl: spacingCalculator(1.5),
+  xxxl: spacingCalculator(2),
 }
 
 // Colors

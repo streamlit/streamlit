@@ -21,7 +21,7 @@ import { styled } from "styletron-react"
 
 import Button, { Kind } from "components/shared/Button"
 import { ExtendedFile } from "lib/FileHelper"
-import { colors, spacingCalculator, variables } from "lib/widgetTheme"
+import { colors, spacing, variables } from "lib/widgetTheme"
 
 import FileDropzoneInstructions from "./FileDropzoneInstructions"
 
@@ -42,7 +42,7 @@ const StyledDropzoneSection = styled("section", {
     boxShadow: `0 0 0 1px ${colors.primary}`,
   },
   padding: variables.spacer,
-  paddingRight: spacingCalculator(2),
+  paddingRight: spacing.xxxl,
   backgroundColor: colors.grayLightest,
   borderRadius: variables.borderRadius,
   alignItems: "center",

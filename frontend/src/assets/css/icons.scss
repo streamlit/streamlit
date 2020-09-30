@@ -10,6 +10,10 @@
   font-size: 0.75rem;
 }
 
+.icon-sm {
+  @extend .icon;
+}
+
 .icon-md {
   width: 1.8rem;
   height: 1.8rem;
