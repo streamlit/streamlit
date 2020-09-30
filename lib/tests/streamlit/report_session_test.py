@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, mock_open
 import unittest
 
 import tornado.gen
@@ -67,7 +67,9 @@ class ReportSessionTest(unittest.TestCase):
     @patch("streamlit.report_session.config")
     @patch("streamlit.report_session.Report")
     @patch("streamlit.report_session.LocalSourcesWatcher")
-    def test_enqueue_with_tracer(self, _1, _2, patched_config):
+    @patch("streamlit.util.os.makedirs")
+    @patch("streamlit.file_util.open", mock_open())
+    def test_enqueue_with_tracer(self, _1, _2, patched_config, _4):
         """Make sure there is no lock contention when tracer is on.
 
         When the tracer is set up, we want

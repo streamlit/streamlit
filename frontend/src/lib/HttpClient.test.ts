@@ -35,6 +35,8 @@ describe("HttpClient", () => {
       streamlitVersion: "sv",
       pythonVersion: "pv",
       installationId: "iid",
+      installationIdV1: "iid1",
+      installationIdV2: "iid2",
       authorEmail: "ae",
       maxCachedMessageAge: 2,
       commandLine: "command line",
