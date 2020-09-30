@@ -25,6 +25,7 @@ import { makeElementWithInfoText } from "lib/utils"
 import { IForwardMsgMetadata, IBlock } from "autogen/proto"
 import { ReportElement, BlockElement, SimpleElement } from "lib/DeltaParser"
 import { FileUploadClient } from "lib/FileUploadClient"
+import { variables as stylingVariables } from "lib/widgetTheme"
 
 // Load (non-lazy) elements.
 import Alert from "components/elements/Alert/"
@@ -148,7 +149,7 @@ class Block extends PureComponent<Props> {
       // 500px will be the minimal viewport width used to determine the
       // minimal fixed column width while accounting for column proportions.
       // Randomly selected based on visual experimentation.
-      const minViewportForColumns = 500
+      const minViewportForColumns = 640
 
       // When working with columns, width is driven by what percentage of space
       // the column takes in relation to the total number of columns
@@ -157,7 +158,9 @@ class Block extends PureComponent<Props> {
       style = {
         // Flex determines how much space is allocated to this column.
         flex: deltaBlock.column.weight,
-        minWidth: `max(${columnPercentage * 100}% - 8px, ${minColumnWidth}px)`,
+        minWidth: `max(${columnPercentage * 100}% - ${
+          stylingVariables.gutter
+        }, ${minColumnWidth}px)`,
       }
     }
     return (
@@ -437,12 +440,12 @@ class Block extends PureComponent<Props> {
   public render = (): ReactNode => {
     if (this.props.deltaBlock && this.props.deltaBlock.horizontal) {
       // Create a horizontal block as the parent for columns
-      // For now, all children are column blocks, and `width` is driven by
-      // the total number of columns available.
+      // For now, all children are column blocks. For columns, `width` is
+      // driven by the total number of columns available.
       return (
         <div className="stBlock-horiz">
           {this.renderElements(
-            this.props.deltaBlock.horizontal.totalColumns || 0
+            this.props.deltaBlock.horizontal.totalWeight || 0
           )}
         </div>
       )

@@ -30,7 +30,7 @@ message Block {
   }
 
   message Horizontal {
-    int32 total_columns = 2;
+    double total_weight = 2;
   }
 
   message Column {
