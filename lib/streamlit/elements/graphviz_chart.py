@@ -91,7 +91,7 @@ class GraphvizMixin:
         ''')
 
         .. output::
-           https://share.streamlit.io/0.56.0-xTAd/index.html?id=GBn3GXZie5K1kXuBKe4yQL
+           https://static.streamlit.io/0.56.0-xTAd/index.html?id=GBn3GXZie5K1kXuBKe4yQL
            height: 400px
 
         """

@@ -85,7 +85,7 @@ For example:
 
 ```rst
 .. output::
-   https://share.streamlit.io/0.25.0-22EmZ/index.html?id=YHHvgDnAdo5JKQivWhK6tE
+   https://static.streamlit.io/0.25.0-22EmZ/index.html?id=YHHvgDnAdo5JKQivWhK6tE
    height: 200px
 ```
 
@@ -93,7 +93,7 @@ or simply:
 
 ```rst
 .. output::
-   https://share.streamlit.io/0.25.0-22EmZ/index.html?id=YHHvgDnAdo5JKQivWhK6tE
+   https://static.streamlit.io/0.25.0-22EmZ/index.html?id=YHHvgDnAdo5JKQivWhK6tE
 ```
 
 You can use this directive "as is" inside pydoc strings and ReStructuredText
@@ -103,7 +103,7 @@ files. To use it in Markdown files, though, you need to do the following:
 
     ```eval_rst
     .. output::
-       https://share.streamlit.io/0.25.0-22EmZ/index.html?id=YHHvgDnAdo5JKQivWhK6tE
+       https://static.streamlit.io/0.25.0-22EmZ/index.html?id=YHHvgDnAdo5JKQivWhK6tE
     ```
 
     An this is Markdown again.
