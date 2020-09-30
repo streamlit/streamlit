@@ -120,7 +120,6 @@
     "@types/react-transition-group": "^4.4.0",
     "@types/react-virtualized": "^9.21.10",
     "@types/react-window": "^1.8.2",
-    "@types/reactstrap": "^8.5.0",
     "@types/sprintf-js": "^1.1.2",
     "@types/styletron-engine-atomic": "^1.1.0",
     "@types/styletron-react": "^5.0.2",

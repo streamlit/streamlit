@@ -20,65 +20,7 @@
 @import "scrollbars";
 @import "reboot";
 
-// IMPORTANT! This must come after the bootstrap import.
-// Styletron creates classes called h1, h2, etc., which conflict with Bootstrap classes.
-// So we have to override the bootstrap classes here. (We should not use these classes in our project)
-.h1,
-.h2,
-.h3,
-.h4,
-.h5,
-.h6 {
-  all: unset;
-}
-
-// Use this file to override specific bootstrap styles.
-
-.btn-outline-primary {
-  border-color: $gray-lighter;
-  color: $black;
-}
-
-.btn-outline-secondary {
-  border-color: transparent;
-  color: $black;
-}
-
-.btn-outline-info {
-  background-color: $white;
-  border-color: $gray-lighter;
-  color: $gray-darker;
-}
-
-.btn-outline-primary:not(:disabled):not(.disabled):hover,
-.btn-outline-secondary:not(:disabled):not(.disabled):hover,
-.btn-outline-info:not(:disabled):not(.disabled):hover,
-.btn-outline-primary:not(:disabled):not(.disabled):focus,
-.btn-outline-secondary:not(:disabled):not(.disabled):focus,
-.btn-outline-info:not(:disabled):not(.disabled):focus {
-  background-color: $white;
-  border-color: $primary;
-  color: $primary;
-}
-
-.btn-outline-primary:not(:disabled):not(.disabled):focus,
-.btn-outline-secondary:not(:disabled):not(.disabled):focus,
-.btn-outline-info:not(:disabled):not(.disabled):focus {
-  box-shadow: 0 0 0 0.2rem $primary-a50;
-}
-
-.btn-outline-primary:not(:disabled):not(.disabled).active,
-.btn-outline-primary:not(:disabled):not(.disabled):active,
-.btn-outline-secondary:not(:disabled):not(.disabled).active,
-.btn-outline-secondary:not(:disabled):not(.disabled):active,
-.btn-outline-info:not(:disabled):not(.disabled).active,
-.btn-outline-info:not(:disabled):not(.disabled):active {
-  background-color: $primary;
-  border-color: $primary;
-  color: $white;
-}
-
-// Other theme overrides
+// theme overrides
 
 a,
 a:visited {
