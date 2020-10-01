@@ -345,6 +345,17 @@ class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
         msg = self.get_message_from_queue()
         self.assertEqual(msg.metadata.parent_block.path, [])
 
+    def test_nested_with(self):
+        with st.beta_container():
+            with st.beta_container():
+                st.markdown("Level 2 with")
+                msg = self.get_message_from_queue()
+                self.assertEqual(msg.metadata.parent_block.path, [0, 0])
+
+            st.markdown("Level 1 with")
+            msg = self.get_message_from_queue()
+            self.assertEqual(msg.metadata.parent_block.path, [0])
+
 
 class DeltaGeneratorWriteTest(testutil.DeltaGeneratorTestCase):
     """Test DeltaGenerator Text, Alert, Json, and Markdown Classes."""
