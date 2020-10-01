@@ -33,8 +33,8 @@ interface State {
   collapsedSidebar: boolean
 }
 
-// Bootstrap medium breakpoint. See
-// https://getbootstrap.com/docs/4.3/layout/overview/.
+// This variable originated from Bootstrap medium breakpoint.
+// See https://getbootstrap.com/docs/4.3/layout/overview/.
 const MEDIUM_BREAKPOINT_PX = 991.98
 
 class Sidebar extends PureComponent<Props, State> {
