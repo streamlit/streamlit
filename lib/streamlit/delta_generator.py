@@ -374,7 +374,7 @@ class DeltaGenerator(
 
         Parameters
         ----------
-        weights : int or list of numbers
+        weights : int or list of positive floats
             If a single int: lay out that many columns of equal width.
 
             If a list of numbers: create a column for each number.
@@ -395,17 +395,21 @@ class DeltaGenerator(
         >>> col3.checkbox('Good to go~')
 
         """
+        weights_exception = StreamlitAPIException(
+            "The input argument to st.beta_columns must be either a "
+            + "positive integer or a list of numeric weights. "
+            + "See [documentation](https://docs.streamlit.io/en/stable/api.html#streamlit.beta_columns) "
+            + "for more information."
+        )
 
         if isinstance(weights, int):
-            if weights <= 0:
-                raise StreamlitAPIException("You have to create at least one column!")
-            if weights == 1:
-                raise StreamlitAPIException(
-                    "Instead of creating only one column, use st.beta_container."
-                )
             # If the user provided a single number, expand into equal weights.
-            # E.g. 3 => (1, 1, 1)
+            # E.g. (1,) * 3 => (1, 1, 1)
+            # NOTE: A negative/zero spec will expand into an empty tuple.
             weights = (1,) * weights
+
+        if len(weights) == 0 or any(weight <= 0 for weight in weights):
+            raise weights_exception
 
         def column_proto(weight):
             col_proto = Block_pb2.Block()
