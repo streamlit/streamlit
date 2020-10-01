@@ -189,10 +189,6 @@ the data type of the input. If it isn't doing what you expect you can use a
 specialized command like [`st.dataframe`](../api.html#streamlit.dataframe)
 instead. For a full list, see [API reference](../api.md).
 
-Alternatively, you could use a specialized statement, like
-[`st.dataframe()`](../api.html#streamlit.dataframe), to add a specific
-dataset to your app.
-
 ## Draw a histogram
 
 Now that you've had a chance to take a look at the dataset and observe what's
