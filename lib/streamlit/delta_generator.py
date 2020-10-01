@@ -404,13 +404,12 @@ class DeltaGenerator(
         )
 
         if isinstance(weights, int):
-            if weights <= 0:
-                raise weights_exception
             # If the user provided a single number, expand into equal weights.
-            # E.g. 3 => (1, 1, 1)
+            # E.g. (1,) * 3 => (1, 1, 1)
+            # NOTE: A negative/zero spec will expand into an empty tuple.
             weights = (1,) * weights
 
-        if any(weight <= 0 for weight in weights):
+        if len(weights) == 0 or any(weight <= 0 for weight in weights):
             raise weights_exception
 
         def column_proto(weight):
