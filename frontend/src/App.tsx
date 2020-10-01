@@ -598,12 +598,14 @@ export class App extends PureComponent<Props, State> {
 
   /**
    * Removes old elements. The term old is defined as:
-   *  - simple elements whose reportIds are no longer current
+   *  - element or container whose reportId is no longer current
+   *  - empty container
    */
   clearOldElements = (elements: any, reportId: string): BlockElement => {
     return elements
       .map((reportElement: ReportElement) => {
         const simpleElement = reportElement.get("element")
+        const isCurrent = reportElement.get("reportId") === reportId
 
         if (simpleElement instanceof List) {
           // Recursively clear old elements
@@ -611,17 +613,15 @@ export class App extends PureComponent<Props, State> {
             simpleElement,
             reportId
           )
-          // Could check whether container is now empty, and return null.
-          // But we want to let empty columns take up sapce.
-          return clearedElements.size > 0 ||
-            reportElement.getIn(["deltaBlock", "allowEmpty"])
+          return isCurrent &&
+            (clearedElements.size > 0 ||
+              // Allow empty columns, so that they space out other columns.
+              reportElement.getIn(["deltaBlock", "allowEmpty"]))
             ? reportElement.set("element", clearedElements)
             : null
         }
 
-        return reportElement.get("reportId") === reportId
-          ? reportElement
-          : null
+        return isCurrent ? reportElement : null
       })
       .filter((reportElement: any) => reportElement !== null)
   }
