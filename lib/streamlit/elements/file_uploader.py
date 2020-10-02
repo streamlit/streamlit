@@ -101,7 +101,7 @@ class FileUploaderMixin:
             )
 
         if files is None or len(files) == 0:
-            return_value = NoValue
+            return_value = [] if accept_multiple_files else NoValue
         else:
             return_value = files if accept_multiple_files else files[0]
 
