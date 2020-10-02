@@ -1,4 +1,4 @@
-# Advanced concepts
+# Cookbook
 
 Now that you've mastered Streamlit's main concepts, let's take a look at some
 advanced functionality, like styling data, adjusting the order of elements in a
@@ -11,7 +11,7 @@ report, and adding animations.
    <https://discuss.streamlit.io/>`_.
 ```
 
-## Display and style data
+<!-- ## Display and style data
 
 There are a few ways to display data (tables, arrays, data frames) in Streamlit
 apps. In [getting started](getting_started.md), you were introduced to _magic_
@@ -73,7 +73,7 @@ dataframe = pd.DataFrame(
     np.random.randn(10, 20),
     columns=('col %d' % i for i in range(20)))
 st.table(dataframe)
-```
+``` -->
 
 ## Insert elements out of order
 

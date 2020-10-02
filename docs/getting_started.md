@@ -10,46 +10,9 @@ goal is to use Streamlit to create an interactive app for your data or model
 and along the way to use Streamlit to review, debug, perfect, and share your
 code.
 
-## Prerequisites
+## Create your first Streamlit app
 
-Before you get started, you're going to need a few things:
-
-- Your favorite IDE or text editor
-- [Python 3.6 or later](https://www.python.org/downloads/)
-- [PIP](https://pip.pypa.io/en/stable/installing/)
-
-If you haven't already, take a few minutes to read through [Main
-concepts](main_concepts.md) to understand Streamlit's data flow model.
-
-## Set up your virtual environment
-
-Regardless of which package management tool you're using, we recommend running
-these commands in a virtual environment. This ensures that the dependencies
-pulled in for Streamlit don't impact any other Python projects
-you're working on.
-
-- [pipenv](https://pipenv.pypa.io/en/latest/)
-- [poetry](https://python-poetry.org/)
-- [venv](https://docs.python.org/3/library/venv.html)
-- [virtualenv](https://virtualenv.pypa.io/en/latest/)
-- [conda](https://www.anaconda.com/distribution/)
-
-## Install Streamlit
-
-```bash
-pip install streamlit
-```
-
-Now run the hello world app to make sure everything is working:
-
-```bash
-streamlit hello
-```
-
-## Import Streamlit
-
-Now that everything's installed, let's create a new Python script and import
-Streamlit.
+First, we'll create a new Python script and import Streamlit.
 
 1. Create a new Python file named `first_app.py`, then open it with your IDE
    or text editor.
@@ -300,7 +263,7 @@ run into difficulties here are a few things you can do.
   question
 - Quick help from command line with `$ streamlit --help`
 - Read more documentation! Check out:
-  - [Tutorials](tutorial/index.md) to make an app
+  <!-- - [Tutorials](tutorial/index.md) to make an app -->
   - [Advanced concepts](advanced_concepts.md) for things like caching and
     inserting elements out of order
   - [API reference](api.md) for examples of every Streamlit command

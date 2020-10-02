@@ -1,4 +1,4 @@
-# Main concepts
+# Create an app
 
 Working with Streamlit is simple. First you sprinkle a few Streamlit commands
 into a normal Python script, then you run it with `streamlit run`:

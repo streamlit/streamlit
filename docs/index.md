@@ -1,16 +1,6 @@
-```eval_rst
-.. toctree::
-   :caption: Package Documentation
-   :maxdepth: 2
-   :hidden:
+<!-- ```eval_rst
 
-   getting_started
-   main_concepts
-
-   tutorial/index
-   caching
    advanced_caching
-   advanced_concepts
 
    api
    streamlit_configuration
@@ -29,6 +19,30 @@
   develop_streamlit_components
   Publish Component to PyPI <publish_streamlit_components>
 
+
+``` -->
+
+```eval_rst
+.. toctree::
+   :caption: Tutorials
+   :titlesonly:
+   :hidden:
+
+   getting_started
+   tutorial/create_a_data_explorer_app
+   GitHub: The Udacity self-driving car image browser <https://github.com/streamlit/demo-self-driving>
+
+.. toctree::
+  :caption: Topic Guides
+  :maxdepth: 2
+  :hidden:
+
+  installation
+  main_concepts
+  deploy_streamlit_app
+  caching
+  advanced_concepts
+
 .. toctree::
   :caption: Support
   :maxdepth: 2
@@ -39,7 +53,6 @@
   Frequently Asked Questions <streamlit_faq>
   changelog
   Source code & issue tracker <https://github.com/streamlit/streamlit/>
-
 ```
 
 # Welcome to Streamlit
