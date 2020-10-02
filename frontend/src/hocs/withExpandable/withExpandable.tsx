@@ -72,7 +72,7 @@ function withExpandable(
           },
           Root: {
             props: {
-              className: classNames("streamlit-expander", { empty: empty }),
+              className: classNames("streamlit-expander", { empty }),
             },
           },
         }}
