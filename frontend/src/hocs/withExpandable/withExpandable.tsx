@@ -16,6 +16,7 @@
  */
 
 import React, { ComponentType, ReactElement, useEffect, useState } from "react"
+import classNames from "classnames"
 import { StatelessAccordion as Accordion, Panel } from "baseui/accordion"
 import { colors } from "lib/widgetTheme"
 import "./withExpandable.scss"
@@ -24,17 +25,19 @@ export interface Props {
   expandable: boolean
   label: string
   expanded: boolean
-}
-
-type ComponentProps = {
-  expanded: boolean
+  empty: boolean
 }
 
 function withExpandable(
   WrappedComponent: ComponentType<any>
 ): ComponentType<any> {
   const ExpandableComponent = (props: Props): ReactElement => {
-    const { label, expanded: initialExpanded, ...componentProps } = props
+    const {
+      label,
+      expanded: initialExpanded,
+      empty,
+      ...componentProps
+    } = props
 
     const [expanded, toggleExpanded] = useState<boolean>(initialExpanded)
     useEffect(() => {
@@ -50,6 +53,7 @@ function withExpandable(
         overrides={{
           Content: {
             style: { backgroundColor: colors.transparent },
+            props: { className: "streamlit-expanderContent" },
           },
           PanelContainer: {
             style: { marginLeft: "0 !important" },
@@ -65,6 +69,11 @@ function withExpandable(
           },
           ToggleIcon: {
             style: { marginRight: ".5rem" },
+          },
+          Root: {
+            props: {
+              className: classNames("streamlit-expander", { empty: empty }),
+            },
           },
         }}
       >

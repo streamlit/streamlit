@@ -7,3 +7,20 @@
     }
   }
 }
+
+.streamlit-expander {
+  &.empty {
+    div[aria-expanded="true"] + .streamlit-expanderContent {
+      color: $gray-dark;
+      font-style: italic;
+      font-size: $font-size-sm;
+      text-align: center;
+      padding-bottom: 1rem;
+      padding-top: 1rem;
+
+      &:before {
+        content: "empty";
+      }
+    }
+  }
+}

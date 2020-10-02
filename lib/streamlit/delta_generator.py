@@ -483,6 +483,7 @@ class DeltaGenerator(
         expandable_proto.label = label
 
         block_proto = Block_pb2.Block()
+        block_proto.allow_empty = True
         block_proto.expandable.CopyFrom(expandable_proto)
 
         return self._block(block_proto=block_proto)
