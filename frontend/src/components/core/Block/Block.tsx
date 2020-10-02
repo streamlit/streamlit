@@ -25,6 +25,7 @@ import { makeElementWithInfoText } from "lib/utils"
 import { IForwardMsgMetadata, IBlock } from "autogen/proto"
 import { ReportElement, BlockElement, SimpleElement } from "lib/DeltaParser"
 import { FileUploadClient } from "lib/FileUploadClient"
+import { variables as stylingVariables } from "lib/widgetTheme"
 
 // Load (non-lazy) elements.
 import Alert from "components/elements/Alert/"
@@ -43,6 +44,8 @@ import {
 
 import Maybe from "components/core/Maybe/"
 import withExpandable from "hocs/withExpandable"
+
+import "./Block.scss"
 
 // Lazy-load elements.
 const Audio = React.lazy(() => import("components/elements/Audio/"))
@@ -106,7 +109,6 @@ class Block extends PureComponent<Props> {
       .toArray()
       .map((reportElement: ReportElement, index: number): ReactNode | null => {
         const element = reportElement.get("element")
-
         if (element instanceof List) {
           // Recursive case AKA a single container AKA node with children
           return this.renderBlock(
@@ -143,10 +145,22 @@ class Block extends PureComponent<Props> {
     const BlockType = deltaBlock.expandable ? this.WithExpandableBlock : Block
     const optionalProps = deltaBlock.expandable ? deltaBlock.expandable : {}
     let style: any = { width }
-    if (deltaBlock.column) {
+    if (deltaBlock.column && deltaBlock.column.weight) {
+      // The minimal viewport width used to determine the minimal
+      // fixed column width while accounting for column proportions.
+      // Randomly selected based on visual experimentation.
+      const minViewportForColumns = 640
+
+      // When working with columns, width is driven by what percentage of space
+      // the column takes in relation to the total number of columns
+      const columnPercentage = deltaBlock.column.weight / width
+      const minColumnWidth = columnPercentage * minViewportForColumns
       style = {
         // Flex determines how much space is allocated to this column.
         flex: deltaBlock.column.weight,
+        minWidth: `max(${columnPercentage * 100}% - ${
+          stylingVariables.gutter
+        }, ${minColumnWidth}px)`,
       }
     }
     return (
@@ -426,10 +440,13 @@ class Block extends PureComponent<Props> {
   public render = (): ReactNode => {
     if (this.props.deltaBlock && this.props.deltaBlock.horizontal) {
       // Create a horizontal block as the parent for columns
-      // For now, all children are column blocks, so we can ignore `width`.
+      // For now, all children are column blocks. For columns, `width` is
+      // driven by the total number of columns available.
       return (
-        <div className="stBlock-horiz" style={{ display: "flex", gap: "8px" }}>
-          {this.renderElements(0)}
+        <div className="stBlock-horiz">
+          {this.renderElements(
+            this.props.deltaBlock.horizontal.totalWeight || 0
+          )}
         </div>
       )
     }
