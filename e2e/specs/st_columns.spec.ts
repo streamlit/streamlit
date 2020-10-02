@@ -48,4 +48,14 @@ describe("st.column", () => {
       .eq(6)
       .should("have.css", "flex", "8 1 0%");
   });
+
+  it("does not shift layout on a new element", () => {
+    cy.get(".stButton button").click();
+    cy.get(".stMarkdown").should("have.text", "Pressed!");
+
+    // When layout was shifting, there was an old "flex: 8" block here.
+    cy.get(".stBlock-horiz .stBlock")
+      .eq(3)
+      .should("have.css", "flex", "1 1 0%");
+  });
 });
