@@ -24,7 +24,7 @@ import MainMenu, { Props } from "./MainMenu"
 const getProps = (extend?: Partial<Props>): Props => ({
   aboutCallback: jest.fn(),
   clearCacheCallback: jest.fn(),
-  isServerConnected: jest.fn(),
+  isServerConnected: true,
   quickRerunCallback: jest.fn(),
   s4aMenuItems: [],
   screencastCallback: jest.fn(),

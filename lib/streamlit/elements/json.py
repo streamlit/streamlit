@@ -28,7 +28,7 @@ class JsonMixin:
         ... })
 
         .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=CTFkMQd89hw3yZbZ4AUymS
+           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=CTFkMQd89hw3yZbZ4AUymS
            height: 280px
 
         """

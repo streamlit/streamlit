@@ -50,7 +50,7 @@ class MarkdownMixin:
         >>> st.markdown('Streamlit is **_really_ cool**.')
 
         .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=PXz9xgY8aB88eziDVEZLyS
+           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=PXz9xgY8aB88eziDVEZLyS
            height: 50px
 
         """
@@ -74,7 +74,7 @@ class MarkdownMixin:
         >>> st.header('This is a header')
 
         .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=AnfQVFgSCQtGv6yMUMUYjj
+           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=AnfQVFgSCQtGv6yMUMUYjj
            height: 100px
 
         """
@@ -95,7 +95,7 @@ class MarkdownMixin:
         >>> st.subheader('This is a subheader')
 
         .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=LBKJTfFUwudrbWENSHV6cJ
+           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=LBKJTfFUwudrbWENSHV6cJ
            height: 100px
 
         """
@@ -124,7 +124,7 @@ class MarkdownMixin:
         >>> st.code(code, language='python')
 
         .. output::
-           https://share.streamlit.io/0.27.0-kBtt/index.html?id=VDRnaCEZWSBCNUd5gNQZv2
+           https://static.streamlit.io/0.27.0-kBtt/index.html?id=VDRnaCEZWSBCNUd5gNQZv2
            height: 100px
 
         """
@@ -152,7 +152,7 @@ class MarkdownMixin:
         >>> st.title('This is a title')
 
         .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=SFcBGANWd8kWXF28XnaEZj
+           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=SFcBGANWd8kWXF28XnaEZj
            height: 100px
 
         """
@@ -185,7 +185,7 @@ class MarkdownMixin:
         ...     ''')
 
         .. output::
-           https://share.streamlit.io/0.50.0-td2L/index.html?id=NJFsy6NbGTsH2RF9W6ioQ4
+           https://static.streamlit.io/0.50.0-td2L/index.html?id=NJFsy6NbGTsH2RF9W6ioQ4
            height: 75px
 
         """

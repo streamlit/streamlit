@@ -16,7 +16,7 @@ class TextMixin:
         >>> st.text('This is some text.')
 
         .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=PYxU1kee5ubuhGR11NsnT1
+           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=PYxU1kee5ubuhGR11NsnT1
            height: 50px
 
         """

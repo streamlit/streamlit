@@ -56,7 +56,7 @@ class BokehMixin:
         >>> st.bokeh_chart(p, use_container_width=True)
 
         .. output::
-           https://share.streamlit.io/0.56.0-xTAd/index.html?id=Fdhg51uMbGMLRRxXV6ubzp
+           https://static.streamlit.io/0.56.0-xTAd/index.html?id=Fdhg51uMbGMLRRxXV6ubzp
            height: 600px
 
         """
