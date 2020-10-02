@@ -18,6 +18,7 @@
 import React, { ComponentType, ReactElement, useEffect, useState } from "react"
 import { StatelessAccordion as Accordion, Panel } from "baseui/accordion"
 import { colors } from "lib/widgetTheme"
+import "./withExpandable.scss"
 
 export interface Props {
   expandable: boolean
@@ -60,6 +61,7 @@ function withExpandable(
               flexDirection: "row-reverse",
               paddingLeft: 0,
             },
+            props: { className: "streamlit-expanderHeader" },
           },
           ToggleIcon: {
             style: { marginRight: ".5rem" },

@@ -1,0 +1,9 @@
+@import "src/assets/css/variables";
+
+.streamlit-expanderHeader {
+  &:hover {
+    svg {
+      fill: $primary;
+    }
+  }
+}
