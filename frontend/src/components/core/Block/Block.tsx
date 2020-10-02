@@ -146,8 +146,8 @@ class Block extends PureComponent<Props> {
     const optionalProps = deltaBlock.expandable ? deltaBlock.expandable : {}
     let style: any = { width }
     if (deltaBlock.column && deltaBlock.column.weight) {
-      // 500px will be the minimal viewport width used to determine the
-      // minimal fixed column width while accounting for column proportions.
+      // The minimal viewport width used to determine the minimal
+      // fixed column width while accounting for column proportions.
       // Randomly selected based on visual experimentation.
       const minViewportForColumns = 640
 
