@@ -352,47 +352,110 @@ class DeltaGenerator(
         return _value_or_dg(return_value, output_dg)
 
     def beta_container(self):
-        """Create a placeholder that can hold multiple widgets.
+        """Insert a multi-element container.
 
-        Like st.sidebar, you can then call methods on the returned value;
-        the elements and widgets you add will be grouped together in the
-        container.
+        Inserts a container into your app that can be used to hold multiple elements.
+        This allows you to, for example, insert multiple elements into your app
+        out of order.
+
+        To add elements to the returned container, you can use "with" notation
+        (preferred) or just call methods directly on the returned object. See
+        examples below.
 
         Examples
         --------
-        >>> container = st.beta_container()
-        >>> container.write('The beginning?')
-        >>> st.write('The end!')
-        >>> container.write('The middle...')
 
+        Inserting elements using "with" notation:
+
+        >>> with st.beta_container():
+        ...    st.write("This is inside the container")
+        ...
+        ...    # You can call any Streamlit command, including custom components:
+        ...    st.line_chart({"data": [1, 5, 2, 6]})
+        ...
+        >>> st.write("This is outside the container")
+
+        .. output ::
+            https://static.streamlit.io/...  👈 put the example above here
+
+        Inserting elements out of order:
+
+        >>> container = st.beta_container()
+        >>> container.write("This is inside the container")
+        >>> st.write("This is outside the container")
+        >>>
+        >>> # Now insert some more in the container
+        >>> container.write("This is inside too")
+
+        .. output ::
+            https://static.streamlit.io/...  👈 put the example above here
         """
         return self._block()
 
     # TODO: Enforce that columns are not nested or in Sidebar
     def beta_columns(self, weights):
-        """Create several columns, side-by-side.
+        """Insert containers laid out as side-by-side columns.
+
+        Inserts a number of multi-element containers laid out side-by-side and
+        returns a list of container objects.
+
+        To add elements to the returned containers, you can use "with" notation
+        (preferred) or just call methods directly on the returned object. See
+        examples below.
 
         Parameters
         ----------
-        weights : int or list of positive floats
-            If a single int: lay out that many columns of equal width.
+        spec : int or list of number
+            If an int, specifies the number of columns to insert, and all columns
+            have equal width.
 
-            If a list of numbers: create a column for each number.
-            Each column's width is proportional to the number provided.
-            For example, `st.beta_columns([3, 1, 2])` would create 3 columns of varying widths.
-            The first column would be 3x the width of the second column;
-            the last column would be 2x the width of the second.
+            If a list of numbers, creates a column for each number, and each
+            column's width is proportional to the number provided. Numbers can
+            be ints or floats, but they must be positive.
+
+            For example, `st.beta_columns([3, 1, 2])` creates 3 columns where
+            the first column is 3 times the width of the second, and the last
+            column is 2 times that width.
 
         Returns
         -------
-        A list of containers, each of which can have their own elements.
+        list of containers
+            A list of container objects.
 
         Examples
         --------
+
+        You can use `with` notation to insert any element into a column:
+
         >>> col1, col2, col3 = st.beta_columns(3)
-        >>> col1.write('Hello?')
-        >>> col2.button('Press me!')
-        >>> col3.checkbox('Good to go~')
+        >>>
+        >>> with col1:
+        ...    st.header("A cat")
+        ...    st.image("https://static.streamlit.io/examples/cat.jpg", use_column_width=True)
+        ...
+        >>> with col2:
+        ...    st.header("A dog")
+        ...    st.image("https://static.streamlit.io/examples/dog.jpg", use_column_width=True)
+        ...
+        >>> with col3:
+        ...    st.header("An owl")
+        ...    st.image("https://static.streamlit.io/examples/owl.jpg", use_column_width=True)
+        ...
+
+        .. output ::
+            https://static.streamlit.io/...  👈 put the example above here
+
+        Or you can just call methods directly in the returned objects:
+
+        >>> col1, col2 = st.beta_columns([3, 1])
+        >>>
+        >>> col1.write("A wide column with a chart")
+        >>> col1.line_chart({"data": [1, 5, 2, 6]})
+        >>>
+        >>> col2.write("A narrow column")
+
+        .. output ::
+	        https://static.streamlit.io/...  👈 put the example above here
 
         """
         weights_exception = StreamlitAPIException(
@@ -453,26 +516,39 @@ class DeltaGenerator(
         return block_dg
 
     def beta_expander(self, label=None, expanded=False):
-        """Create a container that can be expanded and collapsed.
+        """Insert a multi-element container that can be expanded/collapsed.
 
-        Similar to `st.container`, `st.expander` provides a container
-        to add elements to. However, it has the added benefit of being expandable and
-        collapsible. Users will be able to expand and collapse the container that is
-        identifiable with the provided label.
+        Inserts a container into your app that can be used to hold multiple elements
+        and can be expanded or collapsed by the user. When collapsed, all that is
+        visible is the provided label.
+
+        To add elements to the returned container, you can use "with" notation
+        (preferred) or just call methods directly on the returned object. See
+        examples below.
 
         Parameters
         ----------
         label : str
-            A short label used as the header for the expander.
-            This will always be displayed even when the container is collapsed.
-        expanded : boolean
-            The default state for the expander.
-            Defaults to False
+            A string to use as the header for the expander.
+        expanded : bool
+            If True, initializes the expander in "expanded" state. Defaults to
+                False (collapsed).
 
         Examples
         --------
-        >>> expander = st.beta_expander("Expand Me")
-        >>> expander.write("I can be expanded")
+        >>> st.line_chart({"data": [1, 5, 2, 6]})
+        >>>
+        >>> with st.beta_expander("See explanation"):
+        ...     st.write(\"\"\"
+        ...         The chart above shows some numbers I picked for you.
+        ...         I rolled actual dice for these, so they're guaranteed to
+        ...         be random.
+        ...     \"\"\").
+        ...     st.image("https://static.streamlit.io/examples/dice.jpg")  👈 Put an actual image here
+        ...
+
+        .. output ::
+            https://static.streamlit.io/...  👈 put the example above here
 
         """
         if label is None:
