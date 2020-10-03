@@ -42,6 +42,10 @@ const FileUploaderIcon = styled(MaterialIcon, {
   marginRight: spacing.lg,
 })
 
+const StyledSpan = styled("span", {
+  marginBottom: spacing.xxs,
+})
+
 const FileDropzoneInstructions = ({
   multiple,
   acceptedExtensions,
@@ -55,8 +59,8 @@ const FileDropzoneInstructions = ({
       className="fileUploaderIcon"
     />
     <FlexColumn>
-      <span>Drag and drop file{multiple ? "s" : ""} here</span>
-      <Small kind={Kind.SECONDARY}>
+      <StyledSpan>Drag and drop file{multiple ? "s" : ""} here</StyledSpan>
+      <Small>
         {`Limit ${getSizeDisplay(maxSizeBytes, "b", 0)} per file`}
         {acceptedExtensions.length
           ? ` • ${acceptedExtensions

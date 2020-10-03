@@ -39,12 +39,12 @@ const StyledUploadedFiles = styled("div", {
 const UploadedFileList = ({ items, onDelete }: Props): ReactElement => {
   return (
     <ul>
-      {items.map(file => (
+      {items.map((file, index) => (
         <li>
           <UploadedFile
             key={file.id}
             file={file}
-            progress={file.progress}
+            progress={index % 2 ? file.progress : 40}
             onDelete={onDelete}
           />
         </li>

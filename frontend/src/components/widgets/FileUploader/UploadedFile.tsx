@@ -16,7 +16,6 @@
  */
 
 import React from "react"
-import { Delete } from "baseui/icon"
 import { styled, withStyleDeep } from "styletron-react"
 
 import Button, { Kind } from "components/shared/Button"
@@ -50,6 +49,7 @@ const UploadedFileData = styled("div", {
 const UploadedFileName = withStyleDeep(
   styled("div", {
     marginRight: spacing.sm,
+    marginBottom: spacing.xxs,
   }),
   utilityClasses.ellipsis
 )
@@ -139,7 +139,7 @@ const UploadedFile = ({
         <FileStatus file={file} progress={progress} />
       </UploadedFileData>
       <Button id={file.id} onClick={handleDelete} kind={Kind.MINIMAL}>
-        <Delete size={22} />
+        <MaterialIcon icon="clear" />
       </Button>
     </StyledUploadedFile>
   )

@@ -16,6 +16,7 @@
  */
 
 import React, { ComponentType, ReactNode, PureComponent } from "react"
+import classNames from "classnames"
 import hoistNonReactStatics from "hoist-non-react-statics"
 import Pagination from "hocs/withPagination/Pagination"
 
@@ -97,7 +98,7 @@ const withPagination = (
           <WrappedComponent items={paginatedItems} {...props} />
           {items.length > pageSize ? (
             <Pagination
-              className={className}
+              className={classNames(className, "streamlit-paginator")}
               pageSize={pageSize}
               totalPages={totalPages}
               currentPage={currentPage + 1}

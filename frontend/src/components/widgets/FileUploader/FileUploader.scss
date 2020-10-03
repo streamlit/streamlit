@@ -42,6 +42,8 @@
       .uploadedFile {
         max-width: inherit;
         flex: 1;
+        align-items: flex-start;
+        margin-bottom: $spacer/2;
       }
     }
 
@@ -76,6 +78,10 @@
 }
 
 .stFileUploader {
+  .streamlit-button i {
+    color: $gray-dark;
+  }
+
   .uploadedFiles {
     ul {
       list-style-type: none;
@@ -85,6 +91,14 @@
         margin: 0;
         padding: 0;
       }
+    }
+
+    // The chevrons are padded. Forcing them a bit bigger
+    // to work with the surrounding icons
+    .streamlit-paginator i {
+      font-size: 1.5rem;
+      width: 1.5rem;
+      height: 1.5rem;
     }
   }
 
