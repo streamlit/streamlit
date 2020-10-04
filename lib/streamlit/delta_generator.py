@@ -354,9 +354,9 @@ class DeltaGenerator(
     def beta_container(self):
         """Insert a multi-element container.
 
-        Inserts a container into your app that can be used to hold multiple elements.
-        This allows you to, for example, insert multiple elements into your app
-        out of order.
+        Inserts an invisible container into your app that can be used to hold
+        multiple elements. This allows you to, for example, insert multiple
+        elements into your app out of order.
 
         To add elements to the returned container, you can use "with" notation
         (preferred) or just call methods directly on the returned object. See
@@ -371,12 +371,13 @@ class DeltaGenerator(
         ...    st.write("This is inside the container")
         ...
         ...    # You can call any Streamlit command, including custom components:
-        ...    st.line_chart({"data": [1, 5, 2, 6]})
+        ...    st.bar_chart(np.random.randn(50, 3))
         ...
         >>> st.write("This is outside the container")
 
         .. output ::
-            https://static.streamlit.io/...  👈 put the example above here
+            https://share.streamlit.io/0.66.0-Wnid/index.html?id=Qj8PY3v3L8dgVjjQCreHux
+            height: 420px
 
         Inserting elements out of order:
 
@@ -388,12 +389,12 @@ class DeltaGenerator(
         >>> container.write("This is inside too")
 
         .. output ::
-            https://static.streamlit.io/...  👈 put the example above here
+            https://share.streamlit.io/0.66.0-Wnid/index.html?id=GsFVF5QYT3Ljr6jQjErPqL
         """
         return self._block()
 
     # TODO: Enforce that columns are not nested or in Sidebar
-    def beta_columns(self, weights):
+    def beta_columns(self, spec):
         """Insert containers laid out as side-by-side columns.
 
         Inserts a number of multi-element containers laid out side-by-side and
@@ -405,17 +406,19 @@ class DeltaGenerator(
 
         Parameters
         ----------
-        spec : int or list of number
-            If an int, specifies the number of columns to insert, and all columns
-            have equal width.
+        spec : int or list of numbers
+            If an int
+                Specifies the number of columns to insert, and all columns
+                have equal width.
 
-            If a list of numbers, creates a column for each number, and each
-            column's width is proportional to the number provided. Numbers can
-            be ints or floats, but they must be positive.
+            If a list of numbers
+                Creates a column for each number, and each
+                column's width is proportional to the number provided. Numbers can
+                be ints or floats, but they must be positive.
 
-            For example, `st.beta_columns([3, 1, 2])` creates 3 columns where
-            the first column is 3 times the width of the second, and the last
-            column is 2 times that width.
+                For example, `st.beta_columns([3, 1, 2])` creates 3 columns where
+                the first column is 3 times the width of the second, and the last
+                column is 2 times that width.
 
         Returns
         -------
@@ -440,24 +443,28 @@ class DeltaGenerator(
         >>> with col3:
         ...    st.header("An owl")
         ...    st.image("https://static.streamlit.io/examples/owl.jpg", use_column_width=True)
-        ...
 
         .. output ::
-            https://static.streamlit.io/...  👈 put the example above here
+            https://share.streamlit.io/0.66.0-Wnid/index.html?id=VW45Va5XmSKed2ayzf7vYa
+            height: 550px
 
         Or you can just call methods directly in the returned objects:
 
         >>> col1, col2 = st.beta_columns([3, 1])
+        >>> data = np.random.randn(10, 1)
         >>>
-        >>> col1.write("A wide column with a chart")
-        >>> col1.line_chart({"data": [1, 5, 2, 6]})
+        >>> col1.subheader("A wide column with a chart")
+        >>> col1.line_chart(data)
         >>>
-        >>> col2.write("A narrow column")
+        >>> col2.subheader("A narrow column with the data")
+        >>> col2.write(data)
 
         .. output ::
-	        https://static.streamlit.io/...  👈 put the example above here
+	        https://share.streamlit.io/0.66.0-Wnid/index.html?id=XSQ6VkonfGcT2AyNYMZN83
+            height: 400px
 
         """
+        weights = spec
         weights_exception = StreamlitAPIException(
             "The input argument to st.beta_columns must be either a "
             + "positive integer or a list of numeric weights. "
@@ -532,23 +539,23 @@ class DeltaGenerator(
             A string to use as the header for the expander.
         expanded : bool
             If True, initializes the expander in "expanded" state. Defaults to
-                False (collapsed).
+            False (collapsed).
 
         Examples
         --------
-        >>> st.line_chart({"data": [1, 5, 2, 6]})
+        >>> st.line_chart({"data": [1, 5, 2, 6, 2, 1]})
         >>>
         >>> with st.beta_expander("See explanation"):
         ...     st.write(\"\"\"
         ...         The chart above shows some numbers I picked for you.
-        ...         I rolled actual dice for these, so they're guaranteed to
+        ...         I rolled actual dice for these, so they're *guaranteed* to
         ...         be random.
         ...     \"\"\").
-        ...     st.image("https://static.streamlit.io/examples/dice.jpg")  👈 Put an actual image here
-        ...
+        ...     st.image("https://static.streamlit.io/examples/dice.jpg")
 
         .. output ::
-            https://static.streamlit.io/...  👈 put the example above here
+            https://share.streamlit.io/0.66.0-Wnid/index.html?id=T9Xt6z7nkweBSLiJcGTbYV
+            height: 650px
 
         """
         if label is None:
