@@ -331,6 +331,13 @@ class DeltaGeneratorColumnsTest(testutil.DeltaGeneratorTestCase):
             level2, _ = level1.beta_columns(2)
 
 
+class DeltaGeneratorExpanderTest(testutil.DeltaGeneratorTestCase):
+    def test_nested_expanders(self):
+        level1 = st.beta_expander("level 1")
+        with self.assertRaises(StreamlitAPIException):
+            level2 = level1.beta_expander("level 2")
+
+
 class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
     """Test the `with DG` feature"""
 
