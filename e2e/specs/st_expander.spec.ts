@@ -24,7 +24,7 @@ describe("st.expander", () => {
     cy.visit("http://localhost:3000/");
   });
 
-  it("displays epxander + regular containers properly", () => {
+  it("displays expander + regular containers properly", () => {
     cy.get(".stBlock")
       .first()
       .within(() => {
