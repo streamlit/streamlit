@@ -233,6 +233,10 @@ function MainMenu(props: Props): ReactElement {
       coreMenuOptions.settings,
       coreMenuOptions.about,
     ]
+    // Insert an extra menu item if Static Embedded Apps are enabled
+    if (props.sharingEnabled) {
+      menuOptions.splice(3, 0, coreMenuOptions.saveSnapshot)
+    }
   }
 
   return (

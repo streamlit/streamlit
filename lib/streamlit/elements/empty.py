@@ -3,20 +3,33 @@ from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 
 class EmptyMixin:
     def empty(dg):
-        """Add a placeholder to the app.
+        """Insert a single-element container.
 
-        The placeholder can be filled any time by calling methods on the return
-        value.
+        Inserts a container into your app that can be used to hold a single element.
+        This allows you to, for example, remove elements at any point, or replace
+        several elements at once (using a child multi-element container).
 
-        Example
-        -------
-        >>> my_placeholder = st.empty()
+        To insert/replace/clear an element on the returned container just call
+        methods directly on the returned object. See examples below.
+
+        Examples
+        --------
+
+        >>> placeholder = st.empty()
         >>>
-        >>> # Now replace the placeholder with some text:
-        >>> my_placeholder.text("Hello world!")
+        >>> # Replace the placeholder with some text:
+        >>> placeholder.text("Hello")
         >>>
-        >>> # And replace the text with an image:
-        >>> my_placeholder.image(my_image_bytes)
+        >>> # Replace the text with a chart:
+        >>> placeholder.line_chart({"data": [1, 5, 2, 6]})
+        >>>
+        >>> # Replace the chart with several elements:
+        >>> with placeholder.beta_container():
+        ...   st.write("This is one element")
+        ...   st.write("This is another")
+        ...
+        >>> # Clear all those elements:
+        >>> placeholder.empty()
 
         """
         empty_proto = EmptyProto()
