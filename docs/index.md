@@ -7,7 +7,7 @@
    getting_started
    tutorial/create_a_data_explorer_app
    streamlit_components
-   GitHub: The Udacity self-driving car image browser <https://github.com/streamlit/demo-self-driving>
+   Self-driving car image browser <https://github.com/streamlit/demo-self-driving>
 
 .. toctree::
   :caption: Topic Guides

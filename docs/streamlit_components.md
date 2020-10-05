@@ -1,4 +1,4 @@
-# Tutorial 2: Create a Streamlit Component
+# Create a Streamlit Component
 
 Starting with version [0.63.0](changelog.html#version-0-63-0), developers can write JavaScript and HTML "components" that can be rendered in Streamlit apps. Streamlit Components can receive data from, and also send data to, Streamlit Python scripts.
 
