@@ -301,7 +301,7 @@ class Block extends PureComponent<Props> {
         )
 
       case "balloons":
-        throw new Error("TODO")
+        return <Balloons reportId={this.props.reportId} />
 
       case "bokehChart":
         throw new Error("TODO")
@@ -313,7 +313,12 @@ class Block extends PureComponent<Props> {
         throw new Error("TODO")
 
       case "docString":
-        throw new Error("TODO")
+        return (
+          <DocString
+            width={width}
+            element={requireNonNull(node.element.docString)}
+          />
+        )
 
       case "empty":
         return <div className="stHidden" key={index} />
