@@ -17,7 +17,8 @@
 
 import React, { ComponentType } from "react"
 import { shallow } from "enzyme"
-import withExpandable, { Props, StyledToggle } from "./withExpandable"
+import { StatelessAccordion } from "baseui/accordion"
+import withExpandable, { Props } from "./withExpandable"
 
 const testComponent: ComponentType = () => <div>test</div>
 
@@ -44,10 +45,9 @@ describe("withExpandable HOC", () => {
     const WithHoc = withExpandable(testComponent)
     // @ts-ignore
     const wrapper = shallow(<WithHoc {...props} />)
-    const toggleHeader = wrapper.find(StyledToggle)
+    const accordion = wrapper.find(StatelessAccordion)
 
-    expect(toggleHeader.exists()).toBeTruthy()
-    expect(toggleHeader.text()).toEqual("Hide")
+    expect(accordion.prop("expanded").length).toBe(1)
   })
 
   it("should render a collapsed component", () => {
@@ -57,8 +57,8 @@ describe("withExpandable HOC", () => {
     const WithHoc = withExpandable(testComponent)
     // @ts-ignore
     const wrapper = shallow(<WithHoc {...props} />)
-    const toggleHeader = wrapper.find(StyledToggle)
+    const accordion = wrapper.find(StatelessAccordion)
 
-    expect(toggleHeader.text()).toEqual("Show")
+    expect(accordion.prop("expanded").length).toBe(0)
   })
 })
