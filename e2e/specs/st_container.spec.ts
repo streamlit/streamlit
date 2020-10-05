@@ -23,17 +23,26 @@ describe("st.container", () => {
   });
 
   it("permits multiple out-of-order elements", () => {
-    cy.get(".element-container .stMarkdown p")
+    cy.get(".stMarkdown p")
       .eq(0)
       .contains("Line 2");
-    cy.get(".element-container .stMarkdown p")
+    cy.get(".stMarkdown p")
       .eq(1)
       .contains("Line 3");
-    cy.get(".element-container .stMarkdown p")
+    cy.get(".stMarkdown p")
       .eq(2)
       .contains("Line 1");
-    cy.get(".element-container .stMarkdown p")
+    cy.get(".stMarkdown p")
       .eq(3)
       .contains("Line 4");
+  });
+
+  it("persists widget state across reruns", () => {
+    cy.get(".stCheckbox").click({ multiple: true });
+    cy.get("h1").contains("Checked!");
+
+    cy.get(".stButton button").click();
+    cy.get("h2").contains("Pressed!");
+    cy.get(".stCheckbox input").should("have.attr", "aria-checked", "true");
   });
 });
