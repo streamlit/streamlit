@@ -15,12 +15,11 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
-
-import { Map as ImmutableMap } from "immutable"
-import { Alert as AlertProto } from "autogen/proto"
-import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
+import { Alert as AlertProto, IAlert } from "autogen/proto"
 import AlertContainer, { Kind } from "components/shared/AlertContainer"
+import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
+import { requireNonNull } from "lib/utils"
+import React, { ReactElement } from "react"
 
 export function getAlertKind(format: AlertProto.Format): Kind {
   switch (format) {
@@ -39,7 +38,7 @@ export function getAlertKind(format: AlertProto.Format): Kind {
 
 export interface AlertProps {
   width: number
-  element: ImmutableMap<string, any>
+  element: IAlert
 }
 
 /**
@@ -47,8 +46,8 @@ export interface AlertProps {
  * which may be formatted in Markdown.
  */
 export default function Alert({ element, width }: AlertProps): ReactElement {
-  const body = element.get("body")
-  const format = element.get("format")
+  const body = requireNonNull(element.body)
+  const format = requireNonNull(element.format)
 
   return (
     <div className="stAlert">
