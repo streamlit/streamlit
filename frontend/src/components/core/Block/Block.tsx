@@ -15,56 +15,69 @@
  * limitations under the License.
  */
 
-import React, { PureComponent, ReactNode, Suspense } from "react"
-import { AutoSizer } from "react-virtualized"
-import { ReportRunState } from "lib/ReportRunState"
-import { WidgetStateManager } from "lib/WidgetStateManager"
-import { notNull } from "lib/utils"
 import {
-  IForwardMsgMetadata,
-  IBlock,
-  Audio as AudioProto,
   Alert as AlertProto,
+  Audio as AudioProto,
   BokehChart as BokehChartProto,
+  Button as ButtonProto,
+  Checkbox as CheckboxProto,
+  ColorPicker as ColorPickerProto,
+  ComponentInstance as ComponentInstanceProto,
+  DateInput as DateInputProto,
+  FileUploader as FileUploaderProto,
+  MultiSelect as MultiSelectProto,
+  NumberInput as NumberInputProto,
+  Radio as RadioProto,
+  Selectbox as SelectboxProto,
+  Slider as SliderProto,
+  TextArea as TextAreaProto,
+  TextInput as TextInputProto,
+  TimeInput as TimeInputProto,
   DeckGlJsonChart as DeckGlJsonChartProto,
   DocString as DocStringProto,
   Exception as ExceptionProto,
   GraphVizChart as GraphVizChartProto,
+  IBlock,
+  IForwardMsgMetadata,
   IFrame as IFrameProto,
   ImageList as ImageListProto,
   Json as JsonProto,
   Markdown as MarkdownProto,
   PlotlyChart as PlotlyChartProto,
-  Video as VideoProto,
-  Text as TextProto,
   Progress as ProgressProto,
+  Text as TextProto,
+  Video as VideoProto,
 } from "autogen/proto"
-import { FileUploadClient } from "lib/FileUploadClient"
-import { variables as stylingVariables } from "lib/widgetTheme"
+
+import Maybe from "components/core/Maybe/"
 
 // Load (non-lazy) elements.
 import Alert from "components/elements/Alert/"
 import DocString from "components/elements/DocString/"
-import ErrorBoundary from "components/shared/ErrorBoundary/"
-import FullScreenWrapper from "components/shared/FullScreenWrapper/"
 import ExceptionElement from "components/elements/ExceptionElement/"
 import Json from "components/elements/Json/"
 import Markdown from "components/elements/Markdown/"
 import Text from "components/elements/Text/"
+import ErrorBoundary from "components/shared/ErrorBoundary/"
+import FullScreenWrapper from "components/shared/FullScreenWrapper/"
 import {
   ComponentInstance,
   ComponentRegistry,
 } from "components/widgets/CustomComponent/"
-
-import Maybe from "components/core/Maybe/"
 import withExpandable from "hocs/withExpandable"
+import { FileUploadClient } from "lib/FileUploadClient"
+import { ReportRunState } from "lib/ReportRunState"
+import { notNull } from "lib/utils"
+import { WidgetStateManager } from "lib/WidgetStateManager"
+import { variables as stylingVariables } from "lib/widgetTheme"
+import React, { PureComponent, ReactNode, Suspense } from "react"
+import { AutoSizer } from "react-virtualized"
 import {
   BlockNode,
   ElementNode,
   getElementWidgetID,
   makeElementWithInfoTextNew,
   ReportNode,
-  ReportRoot,
 } from "../../../lib/ReportNode"
 
 import "./Block.scss"
@@ -425,16 +438,47 @@ class Block extends PureComponent<Props> {
       // Widgets
 
       case "button":
-        throw new Error("TODO")
+        return (
+          <Button
+            element={node.element.button as ButtonProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
 
-      case "checkbox":
-        throw new Error("TODO")
+      case "checkbox": {
+        const checkboxProto = node.element.checkbox as CheckboxProto
+        return (
+          <Checkbox
+            key={checkboxProto.id}
+            element={checkboxProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
+      }
 
-      case "colorPicker":
-        throw new Error("TODO")
+      case "colorPicker": {
+        const colorPickerProto = node.element.colorPicker as ColorPickerProto
+        return (
+          <ColorPicker
+            key={colorPickerProto.id}
+            element={colorPickerProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
+      }
 
       case "componentInstance":
-        throw new Error("TODO")
+        return (
+          <ComponentInstance
+            registry={this.props.componentRegistry}
+            element={node.element.componentInstance as ComponentInstanceProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
 
       case "dateInput":
         throw new Error("TODO")
@@ -471,34 +515,9 @@ class Block extends PureComponent<Props> {
     }
 
     // return dispatchOneOf(node, "type", {
-    //   alert: (el: SimpleElement) => <Alert element={el} width={width} />,
-    //   audio: (el: SimpleElement) => <Audio element={el} width={width} />,
-    //   balloons: (el: SimpleElement) => (
-    //     <Balloons reportId={this.props.reportId} />
-    //   ),
-    //   bokehChart: (el: SimpleElement) => (
-    //     <BokehChart element={el} index={index} width={width} />
-    //   ),
     //   dataFrame: (el: SimpleElement) => (
     //     <DataFrame element={el} width={width} height={height} />
     //   ),
-    //   deckGlJsonChart: (el: SimpleElement) => (
-    //     <DeckGlJsonChart element={el} width={width} />
-    //   ),
-    //   docString: (el: SimpleElement) => (
-    //     <DocString element={el} width={width} />
-    //   ),
-    //   empty: () => <div className="stHidden" key={index} />,
-    //   exception: (el: SimpleElement) => (
-    //     <ExceptionElement element={el} width={width} />
-    //   ),
-    //   graphvizChart: (el: SimpleElement) => (
-    //     <GraphVizChart element={el} index={index} width={width} />
-    //   ),
-    //   iframe: (el: SimpleElement) => <IFrame element={el} width={width} />,
-    //   imgs: (el: SimpleElement) => <ImageList element={el} width={width} />,
-    //   json: (el: SimpleElement) => <Json element={el} width={width} />,
-    //   markdown: (el: SimpleElement) => <Markdown element={el} width={width} />,
     //   multiselect: (el: SimpleElement) => (
     //     <Multiselect
     //       key={el.get("id")}
@@ -507,28 +526,11 @@ class Block extends PureComponent<Props> {
     //       {...widgetProps}
     //     />
     //   ),
-    //   plotlyChart: (el: SimpleElement) => (
-    //     <PlotlyChart element={el} width={width} />
-    //   ),
-    //   progress: (el: SimpleElement) => <Progress element={el} width={width} />,
     //   table: (el: SimpleElement) => <Table element={el} width={width} />,
     //   text: (el: SimpleElement) => <Text element={el} width={width} />,
-    //   vegaLiteChart: (el: SimpleElement) => (
     //     <VegaLiteChart element={el} width={width} />
     //   ),
-    //   video: (el: SimpleElement) => <Video element={el} width={width} />,
     //   // Widgets
-    //   button: (el: SimpleElement) => (
-    //     <Button element={el} width={width} {...widgetProps} />
-    //   ),
-    //   checkbox: (el: SimpleElement) => (
-    //     <Checkbox
-    //       key={el.get("id")}
-    //       element={el}
-    //       width={width}
-    //       {...widgetProps}
-    //     />
-    //   ),
     //   colorPicker: (el: SimpleElement) => (
     //     <ColorPicker
     //       key={el.get("id")}
@@ -606,14 +608,6 @@ class Block extends PureComponent<Props> {
     //   numberInput: (el: SimpleElement) => (
     //     <NumberInput
     //       key={el.get("id")}
-    //       element={el}
-    //       width={width}
-    //       {...widgetProps}
-    //     />
-    //   ),
-    //   componentInstance: (el: SimpleElement) => (
-    //     <ComponentInstance
-    //       registry={this.props.componentRegistry}
     //       element={el}
     //       width={width}
     //       {...widgetProps}

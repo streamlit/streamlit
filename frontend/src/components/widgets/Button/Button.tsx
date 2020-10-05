@@ -15,25 +15,24 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import { Button as ButtonProto } from "autogen/proto"
 import UIButton, { Kind, Size } from "components/shared/Button"
-import { Map as ImmutableMap } from "immutable"
 import { WidgetStateManager } from "lib/WidgetStateManager"
+import React, { ReactElement } from "react"
 
 export interface ButtonProps {
   disabled: boolean
-  element: ImmutableMap<string, any>
+  element: ButtonProto
   widgetMgr: WidgetStateManager
   width: number
 }
 
 function Button(props: ButtonProps): ReactElement {
   const { disabled, element, widgetMgr, width } = props
-  const label = element.get("label")
   const style = { width }
 
   const handleClick = (): void => {
-    const widgetId = element.get("id")
+    const widgetId = element.id
     widgetMgr.setTriggerValue(widgetId, { fromUi: true })
   }
 
@@ -45,7 +44,7 @@ function Button(props: ButtonProps): ReactElement {
         disabled={disabled}
         onClick={handleClick}
       >
-        {label}
+        {element.label}
       </UIButton>
     </div>
   )
