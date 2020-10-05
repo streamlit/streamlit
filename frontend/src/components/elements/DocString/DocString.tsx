@@ -15,14 +15,13 @@
  * limitations under the License.
  */
 
-import { IDocString } from "autogen/proto"
-import { requireNonNull } from "lib/utils"
+import { DocString as DocStringProto } from "autogen/proto"
 import React, { ReactElement } from "react"
 import "./DocString.scss"
 
 export interface DocStringProps {
   width: number
-  element: IDocString
+  element: DocStringProto
 }
 
 /**
@@ -32,11 +31,7 @@ export default function DocString({
   width,
   element,
 }: DocStringProps): ReactElement {
-  const name = requireNonNull(element.name)
-  const module = requireNonNull(element.module)
-  const docString = requireNonNull(element.docString)
-  const type = requireNonNull(element.type)
-  const signature = requireNonNull(element.signature)
+  const { name, module, docString, type, signature } = element
 
   const moduleHtml = (
     <span className="doc-module" key="module">

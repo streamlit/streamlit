@@ -16,13 +16,13 @@
  */
 
 import "assets/css/write.scss"
-import { IMarkdown } from "autogen/proto"
+import { Markdown as MarkdownProto } from "autogen/proto"
 import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
 import React, { ReactElement } from "react"
 
 export interface MarkdownProps {
   width: number
-  element: IMarkdown
+  element: MarkdownProto
 }
 
 /**
@@ -32,12 +32,10 @@ export default function Markdown({
   width,
   element,
 }: MarkdownProps): ReactElement {
-  const body = element.body || ""
-  const allowHTML = element.allowHtml || false
   const styleProp = { width }
   return (
     <div className="markdown-text-container stMarkdown" style={styleProp}>
-      <StreamlitMarkdown source={body} allowHTML={allowHTML} />
+      <StreamlitMarkdown source={element.body} allowHTML={element.allowHtml} />
     </div>
   )
 }

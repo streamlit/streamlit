@@ -20,15 +20,17 @@
  * Copyright 2019 Streamlit Inc. All rights reserved.
  */
 
-import { IFigure, IPlotlyChart } from "autogen/proto"
+import {
+  Figure as FigureProto,
+  PlotlyChart as PlotlyChartProto,
+} from "autogen/proto"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
-import { requireNonNull } from "lib/utils"
 import React, { ReactElement } from "react"
 import Plot from "react-plotly.js"
 
 export interface PlotlyChartProps {
   width: number
-  element: IPlotlyChart
+  element: PlotlyChartProto
   height: number | undefined
 }
 
@@ -39,8 +41,6 @@ export function PlotlyChart({
   element,
   height: propHeight,
 }: PlotlyChartProps): ReactElement {
-  const el = element
-
   const renderIFrame = (url: string): ReactElement => {
     const height = propHeight || DEFAULT_HEIGHT
     const width = propWidth
@@ -49,22 +49,21 @@ export function PlotlyChart({
 
   const isFullScreen = (): boolean => !!propHeight
 
-  const generateSpec = (figure: IFigure): any => {
-    const spec = JSON.parse(requireNonNull(figure.spec))
-    const useContainerWidth = requireNonNull(element.useContainerWidth)
+  const generateSpec = (figure: FigureProto): any => {
+    const spec = JSON.parse(figure.spec)
 
     if (isFullScreen()) {
       spec.layout.width = propWidth
       spec.layout.height = propHeight
-    } else if (useContainerWidth) {
+    } else if (element.useContainerWidth) {
       spec.layout.width = propWidth
     }
 
     return spec
   }
 
-  const renderFigure = (figure: IFigure): ReactElement => {
-    const config = JSON.parse(requireNonNull(figure.config))
+  const renderFigure = (figure: FigureProto): ReactElement => {
+    const config = JSON.parse(figure.config)
     const { data, layout, frames } = generateSpec(figure)
 
     return (
@@ -79,15 +78,14 @@ export function PlotlyChart({
     )
   }
 
-  if (el.url != null) {
-    return renderIFrame(el.url)
+  switch (element.chart) {
+    case "url":
+      return renderIFrame(element.url)
+    case "figure":
+      return renderFigure(element.figure as FigureProto)
+    default:
+      throw new Error(`Unrecognized PlotlyChart type: ${element.chart}`)
   }
-
-  if (el.figure != null) {
-    return renderFigure(el.figure)
-  }
-
-  throw new Error(`Unrecognized PlotlyChart type: ${el}`)
 }
 
 export default withFullScreenWrapper(PlotlyChart)

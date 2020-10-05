@@ -15,16 +15,15 @@
  * limitations under the License.
  */
 
-import { IException } from "autogen/proto"
+import { Exception as ExceptionProto } from "autogen/proto"
 import AlertContainer, { Kind } from "components/shared/AlertContainer"
 import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
-import { requireNonNull } from "lib/utils"
 import React, { ReactElement } from "react"
 import "./ExceptionElement.scss"
 
 export interface ExceptionElementProps {
   width: number
-  element: IException
+  element: ExceptionProto
 }
 
 interface ExceptionMessageProps {
@@ -87,26 +86,21 @@ export default function ExceptionElement({
   element,
   width,
 }: ExceptionElementProps): ReactElement {
-  const stackTrace = requireNonNull(element.stackTrace)
-  const isWarning = requireNonNull(element.isWarning)
-  const type = requireNonNull(element.type)
-  const message = requireNonNull(element.message)
-  const messageIsMarkdown = requireNonNull(element.messageIsMarkdown)
   return (
     <div className="stException">
       <AlertContainer
-        kind={isWarning ? Kind.WARNING : Kind.ERROR}
+        kind={element.isWarning ? Kind.WARNING : Kind.ERROR}
         width={width}
       >
         <div className="message">
           <ExceptionMessage
-            type={type}
-            message={message}
-            messageIsMarkdown={messageIsMarkdown}
+            type={element.type}
+            message={element.message}
+            messageIsMarkdown={element.messageIsMarkdown}
           />
         </div>
-        {stackTrace && stackTrace.length > 0 ? (
-          <StackTrace stackTrace={stackTrace} />
+        {element.stackTrace && element.stackTrace.length > 0 ? (
+          <StackTrace stackTrace={element.stackTrace} />
         ) : null}
       </AlertContainer>
     </div>

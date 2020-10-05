@@ -15,19 +15,18 @@
  * limitations under the License.
  */
 
-import { IGraphVizChart } from "autogen/proto"
+import { GraphVizChart as GraphVizChartProto } from "autogen/proto"
 
 import { select } from "d3"
 import { graphviz } from "d3-graphviz"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import { logError } from "lib/log"
-import { requireNonNull } from "lib/utils"
 import React, { ReactElement, useEffect } from "react"
 import "./GraphVizChart.scss"
 
 export interface GraphVizChartProps {
   width: number
-  element: IGraphVizChart
+  element: GraphVizChartProto
   index: number
   height: number | undefined
 }
@@ -54,19 +53,18 @@ export function GraphVizChart({
   let originalWidth = 0
 
   const getChartData = (): string => {
-    return requireNonNull(element.spec)
+    return element.spec
   }
 
   const getChartDimensions = (): Dimensions => {
     let chartWidth = originalWidth
     let chartHeight = originalHeight
-    const useContainerWidth = requireNonNull(element.useContainerWidth)
 
     if (propHeight) {
       // fullscreen
       chartWidth = propWidth
       chartHeight = propHeight
-    } else if (useContainerWidth) {
+    } else if (element.useContainerWidth) {
       chartWidth = propWidth
     }
     return { chartWidth, chartHeight }

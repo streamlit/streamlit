@@ -15,28 +15,25 @@
  * limitations under the License.
  */
 
-import { IAudio } from "autogen/proto"
+import { Audio as AudioProto } from "autogen/proto"
 import { buildMediaUri } from "lib/UriUtil"
-import { requireNonNull } from "lib/utils"
 import React, { ReactElement, useEffect, useRef } from "react"
 
 export interface AudioProps {
   width: number
-  element: IAudio
+  element: AudioProto
 }
 
 export default function Audio({ element, width }: AudioProps): ReactElement {
   const audioRef = useRef<HTMLAudioElement>(null)
-  const startTime = requireNonNull(element.startTime)
-  const url = requireNonNull(element.url)
 
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.currentTime = startTime
+      audioRef.current.currentTime = element.startTime
     }
-  }, [startTime])
+  }, [element.startTime])
 
-  const uri = buildMediaUri(url)
+  const uri = buildMediaUri(element.url)
   return (
     <audio
       id="audio"

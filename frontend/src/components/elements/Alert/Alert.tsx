@@ -15,10 +15,9 @@
  * limitations under the License.
  */
 
-import { Alert as AlertProto, IAlert } from "autogen/proto"
+import { Alert as AlertProto } from "autogen/proto"
 import AlertContainer, { Kind } from "components/shared/AlertContainer"
 import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
-import { requireNonNull } from "lib/utils"
 import React, { ReactElement } from "react"
 
 export function getAlertKind(format: AlertProto.Format): Kind {
@@ -38,7 +37,7 @@ export function getAlertKind(format: AlertProto.Format): Kind {
 
 export interface AlertProps {
   width: number
-  element: IAlert
+  element: AlertProto
 }
 
 /**
@@ -46,8 +45,7 @@ export interface AlertProps {
  * which may be formatted in Markdown.
  */
 export default function Alert({ element, width }: AlertProps): ReactElement {
-  const body = requireNonNull(element.body)
-  const format = requireNonNull(element.format)
+  const { body, format } = element
 
   return (
     <div className="stAlert">

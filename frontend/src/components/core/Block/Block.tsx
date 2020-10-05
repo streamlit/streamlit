@@ -17,12 +17,28 @@
 
 import React, { PureComponent, ReactNode, Suspense } from "react"
 import { AutoSizer } from "react-virtualized"
-import { List } from "immutable"
-import { dispatchOneOf } from "lib/immutableProto"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import { makeElementWithInfoText, notNull, requireNonNull } from "lib/utils"
-import { IForwardMsgMetadata, IBlock } from "autogen/proto"
+import { notNull } from "lib/utils"
+import {
+  IForwardMsgMetadata,
+  IBlock,
+  Audio as AudioProto,
+  Alert as AlertProto,
+  BokehChart as BokehChartProto,
+  DeckGlJsonChart as DeckGlJsonChartProto,
+  DocString as DocStringProto,
+  Exception as ExceptionProto,
+  GraphVizChart as GraphVizChartProto,
+  IFrame as IFrameProto,
+  ImageList as ImageListProto,
+  Json as JsonProto,
+  Markdown as MarkdownProto,
+  PlotlyChart as PlotlyChartProto,
+  Video as VideoProto,
+  Text as TextProto,
+  Progress as ProgressProto,
+} from "autogen/proto"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { variables as stylingVariables } from "lib/widgetTheme"
 
@@ -34,7 +50,6 @@ import FullScreenWrapper from "components/shared/FullScreenWrapper/"
 import ExceptionElement from "components/elements/ExceptionElement/"
 import Json from "components/elements/Json/"
 import Markdown from "components/elements/Markdown/"
-import Table from "components/elements/Table/"
 import Text from "components/elements/Text/"
 import {
   ComponentInstance,
@@ -43,7 +58,6 @@ import {
 
 import Maybe from "components/core/Maybe/"
 import withExpandable from "hocs/withExpandable"
-import { SimpleElement } from "../../../lib/DeltaParser"
 import {
   BlockNode,
   ElementNode,
@@ -238,9 +252,10 @@ class Block extends PureComponent<Props> {
             <Suspense
               fallback={
                 <Alert
-                  element={requireNonNull(
-                    makeElementWithInfoTextNew("Loading...").alert
-                  )}
+                  element={
+                    makeElementWithInfoTextNew("Loading...")
+                      .alert as AlertProto
+                  }
                   width={width}
                 />
               }
@@ -293,12 +308,12 @@ class Block extends PureComponent<Props> {
     switch (node.element.type) {
       case "alert":
         return (
-          <Alert width={width} element={requireNonNull(node.element.alert)} />
+          <Alert width={width} element={node.element.alert as AlertProto} />
         )
 
       case "audio":
         return (
-          <Audio width={width} element={requireNonNull(node.element.audio)} />
+          <Audio width={width} element={node.element.audio as AudioProto} />
         )
 
       case "balloons":
@@ -309,7 +324,7 @@ class Block extends PureComponent<Props> {
           <BokehChart
             width={width}
             index={index}
-            element={requireNonNull(node.element.bokehChart)}
+            element={node.element.bokehChart as BokehChartProto}
           />
         )
 
@@ -320,7 +335,7 @@ class Block extends PureComponent<Props> {
         return (
           <DeckGlJsonChart
             width={width}
-            element={requireNonNull(node.element.deckGlJsonChart)}
+            element={node.element.deckGlJsonChart as DeckGlJsonChartProto}
           />
         )
 
@@ -328,7 +343,7 @@ class Block extends PureComponent<Props> {
         return (
           <DocString
             width={width}
-            element={requireNonNull(node.element.docString)}
+            element={node.element.docString as DocStringProto}
           />
         )
 
@@ -339,14 +354,14 @@ class Block extends PureComponent<Props> {
         return (
           <ExceptionElement
             width={width}
-            element={requireNonNull(node.element.exception)}
+            element={node.element.exception as ExceptionProto}
           />
         )
 
       case "graphvizChart":
         return (
           <GraphVizChart
-            element={requireNonNull(node.element.graphvizChart)}
+            element={node.element.graphvizChart as GraphVizChartProto}
             index={index}
             width={width}
           />
@@ -354,30 +369,25 @@ class Block extends PureComponent<Props> {
 
       case "iframe":
         return (
-          <IFrame
-            element={requireNonNull(node.element.iframe)}
-            width={width}
-          />
+          <IFrame element={node.element.iframe as IFrameProto} width={width} />
         )
 
       case "imgs":
         return (
           <ImageList
             width={width}
-            element={requireNonNull(node.element.imgs)}
+            element={node.element.imgs as ImageListProto}
           />
         )
 
       case "json":
-        return (
-          <Json width={width} element={requireNonNull(node.element.json)} />
-        )
+        return <Json width={width} element={node.element.json as JsonProto} />
 
       case "markdown":
         return (
           <Markdown
             width={width}
-            element={requireNonNull(node.element.markdown)}
+            element={node.element.markdown as MarkdownProto}
           />
         )
 
@@ -386,7 +396,7 @@ class Block extends PureComponent<Props> {
           <PlotlyChart
             width={width}
             height={height}
-            element={requireNonNull(node.element.plotlyChart)}
+            element={node.element.plotlyChart as PlotlyChartProto}
           />
         )
 
@@ -394,7 +404,7 @@ class Block extends PureComponent<Props> {
         return (
           <Progress
             width={width}
-            element={requireNonNull(node.element.progress)}
+            element={node.element.progress as ProgressProto}
           />
         )
 
@@ -402,16 +412,14 @@ class Block extends PureComponent<Props> {
         throw new Error("TODO")
 
       case "text":
-        return (
-          <Text width={width} element={requireNonNull(node.element.text)} />
-        )
+        return <Text width={width} element={node.element.text as TextProto} />
 
       case "vegaLiteChart":
         throw new Error("TODO")
 
       case "video":
         return (
-          <Video width={width} element={requireNonNull(node.element.video)} />
+          <Video width={width} element={node.element.video as VideoProto} />
         )
 
       // Widgets

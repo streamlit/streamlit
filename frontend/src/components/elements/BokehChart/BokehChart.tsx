@@ -16,14 +16,13 @@
  */
 
 import { embed as BokehEmbed } from "@bokeh/bokehjs"
-import { IBokehChart } from "autogen/proto"
+import { BokehChart as BokehChartProto } from "autogen/proto"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import React, { ReactElement, useEffect } from "react"
-import { requireNonNull } from "lib/utils"
 
 export interface BokehChartProps {
   width: number
-  element: IBokehChart
+  element: BokehChartProto
   index: number
   height?: number
 }
@@ -42,12 +41,10 @@ export function BokehChart({
   const chartId = `bokeh-chart-${index}`
 
   const getChartData = (): any => {
-    const figure = requireNonNull(element.figure)
-    return JSON.parse(figure)
+    return JSON.parse(element.figure)
   }
 
   const getChartDimensions = (plot: any): Dimensions => {
-    const useContainerWidth = requireNonNull(element.useContainerWidth)
     // Default values
     let chartWidth: number = plot.attributes.plot_width
     let chartHeight: number = plot.attributes.plot_height
@@ -57,7 +54,7 @@ export function BokehChart({
       // fullscreen
       chartWidth = width
       chartHeight = height
-    } else if (useContainerWidth) {
+    } else if (element.useContainerWidth) {
       chartWidth = width
     }
 

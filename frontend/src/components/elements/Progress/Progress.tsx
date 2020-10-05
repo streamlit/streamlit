@@ -15,24 +15,21 @@
  * limitations under the License.
  */
 
-import { IProgress } from "autogen/proto"
+import { Progress as ProgressProto } from "autogen/proto"
 import ProgressBar from "components/shared/ProgressBar"
 import React, { ReactElement } from "react"
-import { requireNonNull } from "lib/utils"
 
 export interface ProgressProps {
   width: number
-  element: IProgress
+  element: ProgressProto
 }
 
 export const FAST_UPDATE_MS = 50
 
 function Progress({ element, width }: ProgressProps): ReactElement {
-  const value = requireNonNull(element.value)
-
   return (
     <div className="stProgress">
-      <ProgressBar value={value} width={width} />
+      <ProgressBar value={element.value} width={width} />
     </div>
   )
 }

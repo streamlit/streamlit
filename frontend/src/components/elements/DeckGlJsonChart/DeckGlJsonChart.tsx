@@ -35,8 +35,7 @@ import withMapboxToken from "hocs/withMapboxToken"
 
 import "mapbox-gl/dist/mapbox-gl.css"
 import "./DeckGlJsonChart.scss"
-import { IDeckGlJsonChart } from "autogen/proto"
-import { requireNonNull } from "lib/utils"
+import { DeckGlJsonChart as DeckGlJsonChartProto } from "autogen/proto"
 
 interface PickingInfo {
   object: {
@@ -64,7 +63,7 @@ const jsonConverter = new JSONConverter({ configuration })
 interface Props {
   width: number
   mapboxToken: string
-  element: IDeckGlJsonChart
+  element: DeckGlJsonChartProto
 }
 
 export interface PropsWithHeight extends Props {
@@ -134,8 +133,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
 
   static getDeckObject = (props: PropsWithHeight): DeckObject => {
     const { element, width, height } = props
-    const useContainerWidth = requireNonNull(element.useContainerWidth)
-    const json = JSON.parse(requireNonNull(element.json))
+    const json = JSON.parse(element.json)
 
     // The graph dimensions could be set from props ( like withFullscreen ) or
     // from the generated element object
@@ -147,7 +145,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
         json.initialViewState.height = DEFAULT_DECK_GL_HEIGHT
       }
 
-      if (useContainerWidth) {
+      if (element.useContainerWidth) {
         json.initialViewState.width = width
       }
     }

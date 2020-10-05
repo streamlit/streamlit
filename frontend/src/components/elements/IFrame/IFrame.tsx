@@ -15,16 +15,15 @@
  * limitations under the License.
  */
 
-import { IIFrame } from "autogen/proto"
+import { IFrame as IFrameProto } from "autogen/proto"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   getIFrameSandboxPolicy,
 } from "lib/IFrameUtil"
-import { requireNonNull } from "lib/utils"
 import React, { CSSProperties, ReactElement } from "react"
 
 export interface IFrameProps {
-  element: IIFrame
+  element: IFrameProto
   width: number
 }
 
@@ -32,7 +31,7 @@ export default function IFrame({
   element,
   width: propWidth,
 }: IFrameProps): ReactElement {
-  const width = element.hasWidth ? requireNonNull(element.width) : propWidth
+  const width = element.hasWidth ? element.width : propWidth
 
   // Handle scrollbar visibility. Chrome and other WebKit browsers still
   // seem to use the deprecated "scrolling" attribute, whereas the standard
@@ -72,7 +71,7 @@ export default function IFrame({
       src={src}
       srcDoc={srcDoc}
       width={width}
-      height={requireNonNull(element.height)}
+      height={element.height}
       scrolling={scrolling}
       sandbox={getIFrameSandboxPolicy(allowSameOrigin)}
       title="st.iframe"

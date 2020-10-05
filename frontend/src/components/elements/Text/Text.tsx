@@ -16,13 +16,13 @@
  */
 
 import "assets/css/write.scss"
-import { IText } from "autogen/proto"
+import { Text as TextProto } from "autogen/proto"
 import classNames from "classnames"
 import React, { ReactElement } from "react"
 
 export interface TextProps {
   width: number
-  element: IText
+  element: TextProto
 }
 
 /**

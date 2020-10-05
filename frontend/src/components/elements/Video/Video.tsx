@@ -15,14 +15,13 @@
  * limitations under the License.
  */
 
-import { IVideo, Video as VideoProto } from "autogen/proto"
+import { Video as VideoProto } from "autogen/proto"
 import { buildMediaUri } from "lib/UriUtil"
-import { requireNonNull } from "lib/utils"
 import React, { ReactElement, useEffect, useRef } from "react"
 
 export interface VideoProps {
   width: number
-  element: IVideo
+  element: VideoProto
 }
 
 export default function Video({ element, width }: VideoProps): ReactElement {
@@ -30,17 +29,16 @@ export default function Video({ element, width }: VideoProps): ReactElement {
 
   /* Element may contain "url" or "data" property. */
 
-  const type = requireNonNull(element.type)
-  const url = requireNonNull(element.url)
+  const { type, url } = element
 
   useEffect(() => {
     if (videoRef.current) {
-      videoRef.current.currentTime = requireNonNull(element.startTime)
+      videoRef.current.currentTime = element.startTime
     }
   }, [element])
 
   const getYoutubeSrc = (url: string): string => {
-    const startTime = requireNonNull(element.startTime)
+    const { startTime } = element
     if (startTime) {
       return `${url}?start=${startTime}`
     }

@@ -15,17 +15,20 @@
  * limitations under the License.
  */
 
-import { IImage, IImageList } from "autogen/proto"
+import {
+  IImage,
+  Image as ImageProto,
+  ImageList as ImageListProto,
+} from "autogen/proto"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import { buildMediaUri } from "lib/UriUtil"
-import { requireNonNull } from "lib/utils"
 import React, { ReactElement } from "react"
 import "./ImageList.scss"
 
 export interface ImageListProps {
   width: number
   isFullScreen: boolean
-  element: IImageList
+  element: ImageListProto
   height?: number
 }
 
@@ -46,7 +49,7 @@ export function ImageList({
   // The width field in the proto sets the image width, but has special
   // cases for -1 and -2.
   let containerWidth: number | undefined
-  const protoWidth = requireNonNull(element.width)
+  const protoWidth = element.width
 
   if (protoWidth === WidthBehavior.OriginalWidth) {
     // Use the original image width.
@@ -70,26 +73,29 @@ export function ImageList({
     imgStyle.width = containerWidth
   }
 
-  const images = requireNonNull(element.imgs)
-
   return (
     <div style={{ width }}>
-      {images.map((img: IImage, idx: number) => (
-        <div
-          className="image-container stImage"
-          key={idx}
-          style={{ width: containerWidth }}
-        >
-          <img
-            style={imgStyle}
-            src={buildMediaUri(requireNonNull(img.url))}
-            alt={idx.toString()}
-          />
-          {!isFullScreen && (
-            <div className="caption"> {requireNonNull(img.caption)} </div>
-          )}
-        </div>
-      ))}
+      {element.imgs.map(
+        (iimage: IImage, idx: number): ReactElement => {
+          const image = iimage as ImageProto
+          return (
+            <div
+              className="image-container stImage"
+              key={idx}
+              style={{ width: containerWidth }}
+            >
+              <img
+                style={imgStyle}
+                src={buildMediaUri(image.url)}
+                alt={idx.toString()}
+              />
+              {!isFullScreen && (
+                <div className="caption"> {image.caption} </div>
+              )}
+            </div>
+          )
+        }
+      )}
     </div>
   )
 }
