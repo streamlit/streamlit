@@ -48,6 +48,7 @@ import {
   BlockNode,
   ElementNode,
   getElementWidgetID,
+  makeElementWithInfoTextNew,
   ReportNode,
   ReportRoot,
 } from "../../../lib/ReportNode"
@@ -236,7 +237,9 @@ class Block extends PureComponent<Props> {
             <Suspense
               fallback={
                 <Alert
-                  element={makeElementWithInfoText("Loading...").get("alert")}
+                  element={requireNonNull(
+                    makeElementWithInfoTextNew("Loading...").alert
+                  )}
                   width={width}
                 />
               }
@@ -292,10 +295,43 @@ class Block extends PureComponent<Props> {
           <Alert width={width} element={requireNonNull(node.element.alert)} />
         )
 
-      case "text":
+      case "audio":
         return (
-          <Text width={width} element={requireNonNull(node.element.text)} />
+          <Audio width={width} element={requireNonNull(node.element.audio)} />
         )
+
+      case "balloons":
+        throw new Error("TODO")
+
+      case "bokehChart":
+        throw new Error("TODO")
+
+      case "dataFrame":
+        throw new Error("TODO")
+
+      case "deckGlJsonChart":
+        throw new Error("TODO")
+
+      case "docString":
+        throw new Error("TODO")
+
+      case "empty":
+        return <div className="stHidden" key={index} />
+
+      case "exception":
+        throw new Error("TODO")
+
+      case "graphvizChart":
+        throw new Error("TODO")
+
+      case "iframe":
+        throw new Error("TODO")
+
+      case "imgs":
+        throw new Error("TODO")
+
+      case "json":
+        throw new Error("TODO")
 
       case "markdown":
         return (
@@ -305,8 +341,69 @@ class Block extends PureComponent<Props> {
           />
         )
 
-      case "empty":
-        return <div className="stHidden" key={index} />
+      case "multiselect":
+        throw new Error("TODO")
+
+      case "plotlyChart":
+        throw new Error("TODO")
+
+      case "progress":
+        throw new Error("TODO")
+
+      case "table":
+        throw new Error("TODO")
+
+      case "text":
+        return (
+          <Text width={width} element={requireNonNull(node.element.text)} />
+        )
+
+      case "vegaLiteChart":
+        throw new Error("TODO")
+
+      case "video":
+        throw new Error("TODO")
+
+      // Widgets
+
+      case "button":
+        throw new Error("TODO")
+
+      case "checkbox":
+        throw new Error("TODO")
+
+      case "colorPicker":
+        throw new Error("TODO")
+
+      case "componentInstance":
+        throw new Error("TODO")
+
+      case "dateInput":
+        throw new Error("TODO")
+
+      case "fileUploader":
+        throw new Error("TODO")
+
+      case "numberInput":
+        throw new Error("TODO")
+
+      case "radio":
+        throw new Error("TODO")
+
+      case "selectbox":
+        throw new Error("TODO")
+
+      case "slider":
+        throw new Error("TODO")
+
+      case "textArea":
+        throw new Error("TODO")
+
+      case "textInput":
+        throw new Error("TODO")
+
+      case "timeInput":
+        throw new Error("TODO")
 
       default:
         throw new Error(`Unrecognized Element type ${node.element.type}`)

@@ -15,25 +15,28 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useRef } from "react"
-import { Map as ImmutableMap } from "immutable"
+import { IAudio } from "autogen/proto"
 import { buildMediaUri } from "lib/UriUtil"
+import { requireNonNull } from "lib/utils"
+import React, { ReactElement, useEffect, useRef } from "react"
 
 export interface AudioProps {
   width: number
-  element: ImmutableMap<string, any>
+  element: IAudio
 }
 
 export default function Audio({ element, width }: AudioProps): ReactElement {
   const audioRef = useRef<HTMLAudioElement>(null)
+  const startTime = requireNonNull(element.startTime)
+  const url = requireNonNull(element.url)
 
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.currentTime = element.get("startTime")
+      audioRef.current.currentTime = startTime
     }
-  }, [element])
+  }, [startTime])
 
-  const uri = buildMediaUri(element.get("url"))
+  const uri = buildMediaUri(url)
   return (
     <audio
       id="audio"
