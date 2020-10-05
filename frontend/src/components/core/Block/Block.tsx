@@ -143,7 +143,12 @@ class Block extends PureComponent<Props> {
     deltaBlock: IBlock
   ): ReactNode {
     const BlockType = deltaBlock.expandable ? this.WithExpandableBlock : Block
-    const optionalProps = deltaBlock.expandable ? deltaBlock.expandable : {}
+    const optionalProps = deltaBlock.expandable
+      ? {
+          empty: !element.size,
+          ...deltaBlock.expandable,
+        }
+      : {}
     let style: any = { width }
     if (deltaBlock.column && deltaBlock.column.weight) {
       // The minimal viewport width used to determine the minimal

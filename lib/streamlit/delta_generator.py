@@ -136,13 +136,20 @@ class DeltaGenerator(
       To support the `with dg` notation, DGs are arranged as a tree. Each DG
       remembers its own parent, and the root of the tree is the main DG.
 
+    block_type: None or "vertical" or "horizontal" or "column" or "expandable"
+      If this is a block DG, we track its type to prevent nested columns/expanders
+
     """
 
     # The pydoc below is for user consumption, so it doesn't talk about
     # DeltaGenerator constructor parameters (which users should never use). For
     # those, see above.
     def __init__(
-        self, container=BlockPath_pb2.BlockPath.MAIN, cursor=None, parent=None
+        self,
+        container=BlockPath_pb2.BlockPath.MAIN,
+        cursor=None,
+        parent=None,
+        block_type=None,
     ):
         """Inserts or updates elements in Streamlit apps.
 
@@ -167,6 +174,7 @@ class DeltaGenerator(
         self._provided_cursor = cursor
 
         self._parent = parent
+        self._block_type = block_type
 
         # Stack of DGs used for the `with` block. The current one is at the end.
         # NOTE: Only the main DG should ever reference this.
@@ -232,6 +240,13 @@ class DeltaGenerator(
             raise StreamlitAPIException(message)
 
         return wrapper
+
+    @property
+    def _parent_block_types(self):
+        current_dg = self
+        while current_dg:
+            yield current_dg._block_type
+            current_dg = current_dg._parent
 
     @property
     def _cursor(self):
@@ -497,6 +512,19 @@ class DeltaGenerator(
         # Switch to the active DeltaGenerator, in case we're in a `with` block.
         self = self._active_dg
 
+        # Prevent nested columns & expanders by checking all parents.
+        block_type = block_proto.WhichOneof("type")
+        # Convert the generator to a list, so we can use it multiple times.
+        parent_block_types = [t for t in self._parent_block_types]
+        if block_type == "column" and block_type in parent_block_types:
+            raise StreamlitAPIException(
+                "Columns may not be nested inside other columns."
+            )
+        if block_type == "expandable" and block_type in parent_block_types:
+            raise StreamlitAPIException(
+                "Expanders may not be nested inside other expanders."
+            )
+
         if self._container is None or self._cursor is None:
             return self
 
@@ -513,7 +541,10 @@ class DeltaGenerator(
             path=self._cursor.path + (self._cursor.index,)
         )
         block_dg = DeltaGenerator(
-            container=self._container, cursor=block_cursor, parent=self
+            container=self._container,
+            cursor=block_cursor,
+            parent=self,
+            block_type=block_type,
         )
 
         # Must be called to increment this cursor's index.
@@ -566,6 +597,7 @@ class DeltaGenerator(
         expandable_proto.label = label
 
         block_proto = Block_pb2.Block()
+        block_proto.allow_empty = True
         block_proto.expandable.CopyFrom(expandable_proto)
 
         return self._block(block_proto=block_proto)
