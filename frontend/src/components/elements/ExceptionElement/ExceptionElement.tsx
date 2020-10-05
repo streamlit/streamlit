@@ -15,15 +15,16 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
-import { Map as ImmutableMap } from "immutable"
+import { IException } from "autogen/proto"
 import AlertContainer, { Kind } from "components/shared/AlertContainer"
 import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
+import { requireNonNull } from "lib/utils"
+import React, { ReactElement } from "react"
 import "./ExceptionElement.scss"
 
 export interface ExceptionElementProps {
   width: number
-  element: ImmutableMap<string, any>
+  element: IException
 }
 
 interface ExceptionMessageProps {
@@ -86,11 +87,11 @@ export default function ExceptionElement({
   element,
   width,
 }: ExceptionElementProps): ReactElement {
-  const stackTrace = element.get("stackTrace")
-  const isWarning = element.get("isWarning")
-  const type: string = element.get("type")
-  const message: string = element.get("message")
-  const messageIsMarkdown: boolean = element.get("messageIsMarkdown")
+  const stackTrace = requireNonNull(element.stackTrace)
+  const isWarning = requireNonNull(element.isWarning)
+  const type = requireNonNull(element.type)
+  const message = requireNonNull(element.message)
+  const messageIsMarkdown = requireNonNull(element.messageIsMarkdown)
   return (
     <div className="stException">
       <AlertContainer
@@ -104,7 +105,7 @@ export default function ExceptionElement({
             messageIsMarkdown={messageIsMarkdown}
           />
         </div>
-        {stackTrace && stackTrace.size > 0 ? (
+        {stackTrace && stackTrace.length > 0 ? (
           <StackTrace stackTrace={stackTrace} />
         ) : null}
       </AlertContainer>

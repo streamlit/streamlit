@@ -6,3 +6,7 @@ st.info("st.info")
 st.warning("st.warning")
 st.error("st.error")
 st.audio("http://nthmost.net:8000/mutiny-studio")
+st.exception(RuntimeError("st.exception"))
+
+st.balloons()
+st.help(st.help)

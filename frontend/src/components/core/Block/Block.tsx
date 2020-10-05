@@ -324,7 +324,12 @@ class Block extends PureComponent<Props> {
         return <div className="stHidden" key={index} />
 
       case "exception":
-        throw new Error("TODO")
+        return (
+          <ExceptionElement
+            width={width}
+            element={requireNonNull(node.element.exception)}
+          />
+        )
 
       case "graphvizChart":
         throw new Error("TODO")
