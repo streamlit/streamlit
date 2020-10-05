@@ -16,5 +16,12 @@ graph.node("B", "Sir Bedevere the Wise")
 graph.edges(["AB"])
 st.graphviz_chart(graph)
 
+urls = [
+    "https://static01.nyt.com/images/2020/10/04/fashion/00MOTHERSHELPER/00MOTHERSHELPER-superJumbo.jpg?quality=90&auto=webp",
+    "https://static01.nyt.com/images/2020/10/04/fashion/00MOTHERSHELPER/00MOTHERSHELPER-superJumbo.jpg?quality=90&auto=webp",
+    "https://static01.nyt.com/images/2020/10/04/fashion/00MOTHERSHELPER/00MOTHERSHELPER-superJumbo.jpg?quality=90&auto=webp",
+]
+st.image(urls, caption=["some caption"] * 3, width=300)
+
 st.balloons()
 st.help(st.help)

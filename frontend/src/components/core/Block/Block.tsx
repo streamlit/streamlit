@@ -341,10 +341,20 @@ class Block extends PureComponent<Props> {
         )
 
       case "iframe":
-        throw new Error("TODO")
+        return (
+          <IFrame
+            element={requireNonNull(node.element.iframe)}
+            width={width}
+          />
+        )
 
       case "imgs":
-        throw new Error("TODO")
+        return (
+          <ImageList
+            width={width}
+            element={requireNonNull(node.element.imgs)}
+          />
+        )
 
       case "json":
         throw new Error("TODO")

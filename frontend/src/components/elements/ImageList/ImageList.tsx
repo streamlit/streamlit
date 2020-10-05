@@ -15,16 +15,17 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
-import { Map as ImmutableMap } from "immutable"
+import { IImage, IImageList } from "autogen/proto"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import { buildMediaUri } from "lib/UriUtil"
+import { requireNonNull } from "lib/utils"
+import React, { ReactElement } from "react"
 import "./ImageList.scss"
 
 export interface ImageListProps {
   width: number
   isFullScreen: boolean
-  element: ImmutableMap<string, any>
+  element: IImageList
   height?: number
 }
 
@@ -45,7 +46,7 @@ export function ImageList({
   // The width field in the proto sets the image width, but has special
   // cases for -1 and -2.
   let containerWidth: number | undefined
-  const protoWidth = element.get("width")
+  const protoWidth = requireNonNull(element.width)
 
   if (protoWidth === WidthBehavior.OriginalWidth) {
     // Use the original image width.
@@ -55,7 +56,7 @@ export function ImageList({
     containerWidth = width
   } else if (protoWidth > 0) {
     // Set the image width explicitly.
-    containerWidth = element.get("width")
+    containerWidth = protoWidth
   } else {
     throw Error(`Invalid image width: ${protoWidth}`)
   }
@@ -69,26 +70,26 @@ export function ImageList({
     imgStyle.width = containerWidth
   }
 
+  const images = requireNonNull(element.imgs)
+
   return (
     <div style={{ width }}>
-      {element
-        .get("imgs")
-        .map((img: ImmutableMap<string, any>, idx: string) => (
-          <div
-            className="image-container stImage"
-            key={idx}
-            style={{ width: containerWidth }}
-          >
-            <img
-              style={imgStyle}
-              src={buildMediaUri(img.get("url"))}
-              alt={idx}
-            />
-            {!isFullScreen && (
-              <div className="caption"> {img.get("caption")} </div>
-            )}
-          </div>
-        ))}
+      {images.map((img: IImage, idx: number) => (
+        <div
+          className="image-container stImage"
+          key={idx}
+          style={{ width: containerWidth }}
+        >
+          <img
+            style={imgStyle}
+            src={buildMediaUri(requireNonNull(img.url))}
+            alt={idx.toString()}
+          />
+          {!isFullScreen && (
+            <div className="caption"> {requireNonNull(img.caption)} </div>
+          )}
+        </div>
+      ))}
     </div>
   )
 }
