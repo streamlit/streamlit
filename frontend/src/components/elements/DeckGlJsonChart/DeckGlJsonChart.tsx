@@ -17,7 +17,6 @@
 
 import React, { PureComponent, ReactNode } from "react"
 import DeckGL from "deck.gl"
-import Immutable from "immutable"
 import isEqual from "lodash/isEqual"
 import { StaticMap } from "react-map-gl"
 // We don't have Typescript defs for these imports, which makes ESLint unhappy
@@ -36,6 +35,8 @@ import withMapboxToken from "hocs/withMapboxToken"
 
 import "mapbox-gl/dist/mapbox-gl.css"
 import "./DeckGlJsonChart.scss"
+import { IDeckGlJsonChart } from "autogen/proto"
+import { requireNonNull } from "lib/utils"
 
 interface PickingInfo {
   object: {
@@ -63,7 +64,7 @@ const jsonConverter = new JSONConverter({ configuration })
 interface Props {
   width: number
   mapboxToken: string
-  element: Immutable.Map<string, any>
+  element: IDeckGlJsonChart
 }
 
 export interface PropsWithHeight extends Props {
@@ -133,8 +134,8 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
 
   static getDeckObject = (props: PropsWithHeight): DeckObject => {
     const { element, width, height } = props
-    const useContainerWidth = element.get("useContainerWidth")
-    const json = JSON.parse(element.get("json"))
+    const useContainerWidth = requireNonNull(element.useContainerWidth)
+    const json = JSON.parse(requireNonNull(element.json))
 
     // The graph dimensions could be set from props ( like withFullscreen ) or
     // from the generated element object
@@ -158,13 +159,12 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
 
   createTooltip = (info: PickingInfo): Record<string, unknown> | boolean => {
     const { element } = this.props
-    let tooltip = element.get("tooltip")
 
-    if (!info || !info.object || !tooltip) {
+    if (!info || !info.object || element.tooltip == null) {
       return false
     }
 
-    tooltip = JSON.parse(tooltip)
+    const tooltip = JSON.parse(element.tooltip)
 
     // NB: https://deckgl.readthedocs.io/en/latest/tooltip.html
     if (tooltip.html) {

@@ -15,14 +15,15 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect } from "react"
-import { Map as ImmutableMap } from "immutable"
 import { embed as BokehEmbed } from "@bokeh/bokehjs"
+import { IBokehChart } from "autogen/proto"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
+import React, { ReactElement, useEffect } from "react"
+import { requireNonNull } from "lib/utils"
 
 export interface BokehChartProps {
   width: number
-  element: ImmutableMap<string, any>
+  element: IBokehChart
   index: number
   height?: number
 }
@@ -41,12 +42,12 @@ export function BokehChart({
   const chartId = `bokeh-chart-${index}`
 
   const getChartData = (): any => {
-    const figure = element.get("figure")
+    const figure = requireNonNull(element.figure)
     return JSON.parse(figure)
   }
 
   const getChartDimensions = (plot: any): Dimensions => {
-    const useContainerWidth = element.get("useContainerWidth")
+    const useContainerWidth = requireNonNull(element.useContainerWidth)
     // Default values
     let chartWidth: number = plot.attributes.plot_width
     let chartHeight: number = plot.attributes.plot_height

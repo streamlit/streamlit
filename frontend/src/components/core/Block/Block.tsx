@@ -305,13 +305,24 @@ class Block extends PureComponent<Props> {
         return <Balloons reportId={this.props.reportId} />
 
       case "bokehChart":
-        throw new Error("TODO")
+        return (
+          <BokehChart
+            width={width}
+            index={index}
+            element={requireNonNull(node.element.bokehChart)}
+          />
+        )
 
       case "dataFrame":
         throw new Error("TODO")
 
       case "deckGlJsonChart":
-        throw new Error("TODO")
+        return (
+          <DeckGlJsonChart
+            width={width}
+            element={requireNonNull(node.element.deckGlJsonChart)}
+          />
+        )
 
       case "docString":
         return (
