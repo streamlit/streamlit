@@ -162,7 +162,3 @@ Sometimes, you might want to use Python’s default hashing instead of Streamlit
 def func(...):
     ...
 ```
-
-## Next steps
-
-- [Advanced concepts](advanced_concepts.md)

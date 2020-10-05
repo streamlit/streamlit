@@ -15,20 +15,17 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useState, memo } from "react"
-import {
-  Dropdown,
-  DropdownItem,
-  DropdownMenu,
-  DropdownToggle,
-} from "reactstrap"
+import React, { ReactElement, memo, forwardRef, MouseEvent } from "react"
+import classNames from "classnames"
+import { StatefulPopover, PLACEMENT } from "baseui/popover"
+import { StatefulMenu } from "baseui/menu"
+import Button, { Kind } from "components/shared/Button"
 
 import Icon from "components/shared/Icon"
 import {
   IMenuItem,
   IGuestToHostMessage,
 } from "hocs/withS4ACommunication/types"
-import ScreencastOption from "./component/ScreencastOption"
 
 import "./MainMenu.scss"
 
@@ -37,12 +34,17 @@ const COMMUNITY_URL = "https://discuss.streamlit.io"
 const TEAMS_URL = "https://streamlit.io/forteams"
 const BUG_URL = "https://github.com/streamlit/streamlit/issues/new/choose"
 
+const SCREENCAST_LABEL: { [s: string]: string } = {
+  COUNTDOWN: "Cancel screencast",
+  RECORDING: "Stop recording",
+}
+
 export interface Props {
   /** True if report sharing is properly configured and enabled. */
   sharingEnabled: boolean
 
   /** True if we're connected to the Streamlit server. */
-  isServerConnected: () => boolean
+  isServerConnected: boolean
 
   /** Rerun the report. */
   quickRerunCallback: () => void
@@ -73,134 +75,209 @@ const getOpenInWindowCallback = (url: string) => (): void => {
   window.open(url, "_blank")
 }
 
-function MainMenu(props: Props): ReactElement {
-  const [dropdownOpen, setDropdownOpen] = useState(false)
-  const isServerDisconnected = !props.isServerConnected()
+export interface MenuListItemProps {
+  item: any
+  "aria-selected": boolean
+  onClick: (e: MouseEvent<HTMLLIElement>) => void
+  onMouseEnter: (e: MouseEvent<HTMLLIElement>) => void
+  $disabled: boolean
+  $isHighlighted: boolean
+}
 
-  function toggleDropdown(): void {
-    setDropdownOpen(prevState => !prevState)
-  }
-
-  const S4AMenuOptions = props.s4aMenuItems.map(item => {
-    if (item.type === "separator") {
-      return <DropdownItem divider />
-    }
+// BaseWeb provides a very basic list item (or option) for its dropdown
+// menus. We want to customize it to our liking. We want to support:
+//  * Shortcuts
+//  * Red coloring for the stop recording
+//  * Dividers (There's no special MenuListItem divider, so items have
+//    a hasDividerAbove property to add the border properly.
+// Unfortunately, because we are overriding the component, we need to
+// implement some of the built in-features, namely:
+//  * A11y for selected and disabled
+//  * $disabled field (BaseWeb does not use CSS :disabled here)
+//  * $isHighlighted field (BaseWeb does not use CSS :hover here)
+//  * creating a forward ref to add properties to the DOM element.
+const MenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
+  (
+    {
+      item,
+      "aria-selected": ariaSelected,
+      onClick,
+      onMouseEnter,
+      $disabled,
+      $isHighlighted,
+    },
+    ref
+  ) => {
+    const { label, shortcut, hasDividerAbove } = item
+    const className = classNames({
+      "menu-item": true,
+      "menu-item-highlighted": $isHighlighted,
+      "menu-item-disabled": $disabled,
+      "menu-item-stop-recording": Boolean(item.stopRecordingIndicator),
+    })
+    const interactiveProps = $disabled
+      ? {}
+      : {
+          onClick,
+          onMouseEnter,
+        }
 
     return (
-      <DropdownItem
-        key={item.key}
-        onClick={() =>
-          props.sendS4AMessage({
-            type: "MENU_ITEM_CALLBACK",
-            key: item.key,
-          })
-        }
-      >
-        <span>{item.label}</span>
-      </DropdownItem>
+      <>
+        {hasDividerAbove && <div className="menu-divider" />}
+        <li
+          ref={ref}
+          role="option"
+          className={className}
+          aria-selected={ariaSelected}
+          aria-disabled={$disabled}
+          {...interactiveProps}
+        >
+          <span className="menu-item-label">{label}</span>
+          {shortcut && <span className="menu-item-shortcut">{shortcut}</span>}
+        </li>
+      </>
     )
-  })
+  }
+)
+
+function MainMenu(props: Props): ReactElement {
+  const isServerDisconnected = !props.isServerConnected
+
+  const S4AMenuOptions = props.s4aMenuItems.reduce(
+    (options, item, idx, arr) => {
+      if (item.type === "separator") {
+        return options
+      }
+
+      const hasDividerAbove = idx > 0 && arr[idx - 1].type === "separator"
+
+      return options.concat([
+        {
+          onClick: () =>
+            props.sendS4AMessage({
+              type: "MENU_ITEM_CALLBACK",
+              key: item.key,
+            }),
+          label: item.label,
+          hasDividerAbove,
+        },
+      ])
+    },
+    [] as any[]
+  )
 
   const shouldShowS4AMenu = !!S4AMenuOptions.length
 
   const coreMenuOptions = {
-    rerun: (
-      <DropdownItem
-        disabled={isServerDisconnected}
-        onClick={props.quickRerunCallback}
-      >
-        <span>Rerun</span>
-        <span className="shortcut">R</span>
-      </DropdownItem>
-    ),
-    clearCache: (
-      <DropdownItem
-        disabled={isServerDisconnected}
-        onClick={props.clearCacheCallback}
-      >
-        <span>Clear cache</span>
-        <span className="shortcut">C</span>
-      </DropdownItem>
-    ),
-    divider: <DropdownItem divider />,
-    recordScreencast: (
-      <ScreencastOption
-        screenCastState={props.screenCastState}
-        onClick={props.screencastCallback}
-      />
-    ),
-    saveSnapshot: (
-      <DropdownItem
-        disabled={isServerDisconnected}
-        onClick={props.shareCallback}
-      >
-        Save a snapshot
-      </DropdownItem>
-    ),
-    documentation: (
-      <DropdownItem onClick={getOpenInWindowCallback(ONLINE_DOCS_URL)}>
-        Documentation
-      </DropdownItem>
-    ),
-    community: (
-      <DropdownItem onClick={getOpenInWindowCallback(COMMUNITY_URL)}>
-        Ask a question
-      </DropdownItem>
-    ),
-    report: (
-      <DropdownItem onClick={getOpenInWindowCallback(BUG_URL)}>
-        Report a bug
-      </DropdownItem>
-    ),
-    s4t: (
-      <DropdownItem onClick={getOpenInWindowCallback(TEAMS_URL)}>
-        Streamlit for Teams
-      </DropdownItem>
-    ),
-    settings: (
-      <DropdownItem onClick={props.settingsCallback}>Settings</DropdownItem>
-    ),
-    about: <DropdownItem onClick={props.aboutCallback}>About</DropdownItem>,
+    rerun: {
+      disabled: isServerDisconnected,
+      onClick: props.quickRerunCallback,
+      label: "Rerun",
+      shortcut: "r",
+    },
+    clearCache: {
+      disabled: isServerDisconnected,
+      onClick: props.clearCacheCallback,
+      label: "Clear cache",
+      shortcut: "c",
+    },
+    recordScreencast: {
+      onClick: props.screencastCallback,
+      label: SCREENCAST_LABEL[props.screenCastState] || "Record a screencast",
+      shortcut: SCREENCAST_LABEL[props.screenCastState] ? "esc" : "",
+      stopRecordingIndicator: Boolean(SCREENCAST_LABEL[props.screenCastState]),
+    },
+    saveSnapshot: {
+      disabled: isServerDisconnected,
+      onClick: props.shareCallback,
+      label: "Save a snapshot",
+    },
+    documentation: {
+      onClick: getOpenInWindowCallback(ONLINE_DOCS_URL),
+      label: "Documentation",
+    },
+    community: {
+      onClick: getOpenInWindowCallback(COMMUNITY_URL),
+      label: "Ask a question",
+    },
+    report: {
+      onClick: getOpenInWindowCallback(BUG_URL),
+      label: "Report a bug",
+    },
+    s4t: {
+      onClick: getOpenInWindowCallback(TEAMS_URL),
+      label: "Streamlit for Teams",
+    },
+    settings: { onClick: props.settingsCallback, label: "Settings" },
+    about: { onClick: props.aboutCallback, label: "About" },
   }
 
-  let menuOptions = [coreMenuOptions.rerun, coreMenuOptions.clearCache]
+  let menuOptions: any[] = [coreMenuOptions.rerun, coreMenuOptions.clearCache]
 
   if (shouldShowS4AMenu) {
     menuOptions = [
       ...menuOptions,
       coreMenuOptions.settings,
-      coreMenuOptions.divider,
-      coreMenuOptions.recordScreencast,
+      { ...coreMenuOptions.recordScreencast, hasDividerAbove: true },
       ...S4AMenuOptions,
     ]
   } else {
     menuOptions = [
       ...menuOptions,
-      coreMenuOptions.divider,
-      coreMenuOptions.recordScreencast,
-      coreMenuOptions.divider,
-      coreMenuOptions.documentation,
+      { ...coreMenuOptions.recordScreencast, hasDividerAbove: true },
+      { ...coreMenuOptions.documentation, hasDividerAbove: true },
       coreMenuOptions.community,
       coreMenuOptions.report,
-      coreMenuOptions.divider,
-      coreMenuOptions.s4t,
+      { ...coreMenuOptions.s4t, hasDividerAbove: true },
       coreMenuOptions.settings,
       coreMenuOptions.about,
     ]
   }
 
   return (
-    <Dropdown id="MainMenu" isOpen={dropdownOpen} toggle={toggleDropdown}>
-      <DropdownToggle outline color="secondary" id="MainMenuButton">
-        <Icon type="menu" />
-
+    <StatefulPopover
+      focusLock
+      placement={PLACEMENT.bottomRight}
+      content={({ close }) => (
+        <StatefulMenu
+          items={menuOptions}
+          onItemSelect={({ item }) => {
+            item.onClick()
+            close()
+          }}
+          overrides={{
+            Option: MenuListItem,
+            List: {
+              props: {
+                "data-test": "main-menu-list",
+              },
+              style: {
+                ":focus": {
+                  outline: "none",
+                },
+              },
+            },
+          }}
+        />
+      )}
+      overrides={{
+        Body: {
+          props: {
+            "data-test": "main-menu-popover",
+          },
+        },
+      }}
+    >
+      <span id="MainMenu">
+        <Button kind={Kind.ICON}>
+          <Icon type="menu" />
+        </Button>
         {props.screenCastState === "RECORDING" && (
           <span className="recording-indicator" />
         )}
-      </DropdownToggle>
-
-      <DropdownMenu right>{menuOptions}</DropdownMenu>
-    </Dropdown>
+      </span>
+    </StatefulPopover>
   )
 }
 

@@ -81,7 +81,7 @@ class PydeckMixin:
         ... ))
 
         .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=ASTdExBpJ1WxbGceneKN1i
+           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=ASTdExBpJ1WxbGceneKN1i
            height: 530px
 
         """

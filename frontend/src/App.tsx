@@ -613,14 +613,6 @@ export class App extends PureComponent<Props, State> {
    * Closes the upload dialog if it's open.
    */
   closeDialog = (): void => {
-    // HACK: Remove modal-open class that Bootstrap uses to hide scrollbars
-    // when a modal is open. Otherwise, when the user causes a syntax error in
-    // Python and we show an "Error" modal, and then the user presses "R" while
-    // that modal is showing, this causes "modal-open" to *not* be removed
-    // properly from <body>, thereby breaking scrolling. This seems to be
-    // related to the modal-close animation taking too long.
-    document.body.classList.remove("modal-open")
-
     this.setState({ dialog: undefined })
   }
 
@@ -935,7 +927,7 @@ export class App extends PureComponent<Props, State> {
               />
               <MainMenu
                 sharingEnabled={this.state.sharingEnabled === true}
-                isServerConnected={this.isServerConnected}
+                isServerConnected={this.isServerConnected()}
                 shareCallback={this.shareReport}
                 quickRerunCallback={this.rerunScript}
                 clearCacheCallback={this.openClearCacheDialog}

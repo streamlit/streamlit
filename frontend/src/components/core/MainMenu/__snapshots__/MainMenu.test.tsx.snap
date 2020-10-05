@@ -1,252 +1,83 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`App renders without crashing 1`] = `
-<Dropdown
-  a11y={true}
-  active={false}
-  addonType={false}
-  direction="down"
-  id="MainMenu"
-  inNavbar={false}
-  isOpen={false}
-  nav={false}
-  setActiveFromChild={false}
-  toggle={[Function]}
+<StatefulPopover
+  accessibilityType="menu"
+  content={[Function]}
+  dismissOnClickOutside={true}
+  dismissOnEsc={true}
+  focusLock={true}
+  ignoreBoundary={false}
+  onMouseEnterDelay={200}
+  onMouseLeaveDelay={200}
+  overrides={
+    Object {
+      "Body": Object {
+        "props": Object {
+          "data-test": "main-menu-popover",
+        },
+      },
+    }
+  }
+  placement="bottomRight"
+  showArrow={false}
+  stateReducer={[Function]}
+  triggerType="click"
 >
-  <DropdownToggle
-    aria-haspopup={true}
-    color="secondary"
-    id="MainMenuButton"
-    outline={true}
+  <span
+    id="MainMenu"
   >
-    <Icon
-      type="menu"
-    />
-  </DropdownToggle>
-  <DropdownMenu
-    flip={true}
-    right={true}
-    tag="div"
-  >
-    <DropdownItem
-      disabled={true}
-      onClick={[MockFunction]}
-      tag="button"
-      toggle={true}
+    <Button
+      disabled={false}
+      fluidWidth={false}
+      kind="icon"
+      size="medium"
     >
-      <span>
-        Rerun
-      </span>
-      <span
-        className="shortcut"
-      >
-        R
-      </span>
-    </DropdownItem>
-    <DropdownItem
-      disabled={true}
-      onClick={[MockFunction]}
-      tag="button"
-      toggle={true}
-    >
-      <span>
-        Clear cache
-      </span>
-      <span
-        className="shortcut"
-      >
-        C
-      </span>
-    </DropdownItem>
-    <DropdownItem
-      divider={true}
-      tag="button"
-      toggle={true}
-    />
-    <ScreencastOption
-      onClick={[MockFunction]}
-      screenCastState=""
-    />
-    <DropdownItem
-      divider={true}
-      tag="button"
-      toggle={true}
-    />
-    <DropdownItem
-      onClick={[Function]}
-      tag="button"
-      toggle={true}
-    >
-      Documentation
-    </DropdownItem>
-    <DropdownItem
-      onClick={[Function]}
-      tag="button"
-      toggle={true}
-    >
-      Ask a question
-    </DropdownItem>
-    <DropdownItem
-      onClick={[Function]}
-      tag="button"
-      toggle={true}
-    >
-      Report a bug
-    </DropdownItem>
-    <DropdownItem
-      divider={true}
-      tag="button"
-      toggle={true}
-    />
-    <DropdownItem
-      onClick={[Function]}
-      tag="button"
-      toggle={true}
-    >
-      Streamlit for Teams
-    </DropdownItem>
-    <DropdownItem
-      onClick={[MockFunction]}
-      tag="button"
-      toggle={true}
-    >
-      Settings
-    </DropdownItem>
-    <DropdownItem
-      onClick={[MockFunction]}
-      tag="button"
-      toggle={true}
-    >
-      About
-    </DropdownItem>
-  </DropdownMenu>
-</Dropdown>
+      <Icon
+        type="menu"
+      />
+    </Button>
+  </span>
+</StatefulPopover>
 `;
 
 exports[`App should render s4a menu items 1`] = `
-<Dropdown
-  a11y={true}
-  active={false}
-  addonType={false}
-  direction="down"
-  id="MainMenu"
-  inNavbar={false}
-  isOpen={false}
-  nav={false}
-  setActiveFromChild={false}
-  toggle={[Function]}
+<StatefulPopover
+  accessibilityType="menu"
+  content={[Function]}
+  dismissOnClickOutside={true}
+  dismissOnEsc={true}
+  focusLock={true}
+  ignoreBoundary={false}
+  onMouseEnterDelay={200}
+  onMouseLeaveDelay={200}
+  overrides={
+    Object {
+      "Body": Object {
+        "props": Object {
+          "data-test": "main-menu-popover",
+        },
+      },
+    }
+  }
+  placement="bottomRight"
+  showArrow={false}
+  stateReducer={[Function]}
+  triggerType="click"
 >
-  <DropdownToggle
-    aria-haspopup={true}
-    color="secondary"
-    id="MainMenuButton"
-    outline={true}
+  <span
+    id="MainMenu"
   >
-    <Icon
-      type="menu"
-    />
-  </DropdownToggle>
-  <DropdownMenu
-    flip={true}
-    right={true}
-    tag="div"
-  >
-    <DropdownItem
-      disabled={true}
-      onClick={[MockFunction]}
-      tag="button"
-      toggle={true}
+    <Button
+      disabled={false}
+      fluidWidth={false}
+      kind="icon"
+      size="medium"
     >
-      <span>
-        Rerun
-      </span>
-      <span
-        className="shortcut"
-      >
-        R
-      </span>
-    </DropdownItem>
-    <DropdownItem
-      disabled={true}
-      onClick={[MockFunction]}
-      tag="button"
-      toggle={true}
-    >
-      <span>
-        Clear cache
-      </span>
-      <span
-        className="shortcut"
-      >
-        C
-      </span>
-    </DropdownItem>
-    <DropdownItem
-      onClick={[MockFunction]}
-      tag="button"
-      toggle={true}
-    >
-      Settings
-    </DropdownItem>
-    <DropdownItem
-      divider={true}
-      tag="button"
-      toggle={true}
-    />
-    <ScreencastOption
-      onClick={[MockFunction]}
-      screenCastState=""
-    />
-    <DropdownItem
-      key="share"
-      onClick={[Function]}
-      tag="button"
-      toggle={true}
-    >
-      <span>
-        Share this app
-      </span>
-    </DropdownItem>
-    <DropdownItem
-      divider={true}
-      tag="button"
-      toggle={true}
-    />
-    <DropdownItem
-      key="source"
-      onClick={[Function]}
-      tag="button"
-      toggle={true}
-    >
-      <span>
-        View app source
-      </span>
-    </DropdownItem>
-    <DropdownItem
-      key="support"
-      onClick={[Function]}
-      tag="button"
-      toggle={true}
-    >
-      <span>
-        Report bug with app
-      </span>
-    </DropdownItem>
-    <DropdownItem
-      divider={true}
-      tag="button"
-      toggle={true}
-    />
-    <DropdownItem
-      key="about"
-      onClick={[Function]}
-      tag="button"
-      toggle={true}
-    >
-      <span>
-        About Streamlit for Teams
-      </span>
-    </DropdownItem>
-  </DropdownMenu>
-</Dropdown>
+      <Icon
+        type="menu"
+      />
+    </Button>
+  </span>
+</StatefulPopover>
 `;

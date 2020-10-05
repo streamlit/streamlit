@@ -162,16 +162,16 @@ class DeltaGenerator(
         # No relation to `st.beta_container()`.
         self._container = container
 
-        # You should never use this! Instead use self._cursor, which is a
+        # NOTE: You should never use this! Instead use self._cursor, which is a
         # computed property that fetches the right cursor.
         self._provided_cursor = cursor
 
-        self.parent = parent
+        self._parent = parent
 
-        # Track the DG used for the `with` block.
+        # Stack of DGs used for the `with` block. The current one is at the end.
         # NOTE: Only the main DG should ever reference this.
         # You should use the computed property _active_dg instead.
-        self._with_dg = self
+        self._with_dg_stack = [self]
 
         # Change the module of all mixin'ed functions to be st.delta_generator,
         # instead of the original module (e.g. st.elements.markdown)
@@ -181,21 +181,20 @@ class DeltaGenerator(
                     func.__module__ = self.__module__
 
     def __enter__(self):
-        # with block started. store the current DG
-        self._main_dg._with_dg = self
+        # with block started
+        self._main_dg._with_dg_stack.append(self)
 
     def __exit__(self, type, value, traceback):
-        # with block ended. Reset the current dg back to MAIN
-        # NOTE: This won't handle nested with blocks correctly
-        self._main_dg._with_dg = self._main_dg
+        # with block ended
+        self._main_dg._with_dg_stack.pop()
         # Re-raise any exceptions
         return False
 
     @property
     def _active_dg(self):
         if self == self._main_dg:
-            # `st.button`: Use the current `with` dg
-            return self._with_dg
+            # `st.button`: Use the current `with` dg (aka the top of the stack)
+            return self._with_dg_stack[-1]
         else:
             # `st.sidebar.button`: Ignore the `with` dg
             return self
@@ -203,7 +202,7 @@ class DeltaGenerator(
     @property
     def _main_dg(self):
         # Recursively traverse up the tree to find the main DG (parent = None)
-        return self.parent._main_dg if self.parent else self
+        return self._parent._main_dg if self._parent else self
 
     def __getattr__(self, name):
         import streamlit as st
@@ -375,7 +374,7 @@ class DeltaGenerator(
 
         Parameters
         ----------
-        weights : int or list of numbers
+        weights : int or list of positive floats
             If a single int: lay out that many columns of equal width.
 
             If a list of numbers: create a column for each number.
@@ -396,17 +395,21 @@ class DeltaGenerator(
         >>> col3.checkbox('Good to go~')
 
         """
+        weights_exception = StreamlitAPIException(
+            "The input argument to st.beta_columns must be either a "
+            + "positive integer or a list of numeric weights. "
+            + "See [documentation](https://docs.streamlit.io/en/stable/api.html#streamlit.beta_columns) "
+            + "for more information."
+        )
 
         if isinstance(weights, int):
-            if weights <= 0:
-                raise StreamlitAPIException("You have to create at least one column!")
-            if weights == 1:
-                raise StreamlitAPIException(
-                    "Instead of creating only one column, use st.beta_container."
-                )
             # If the user provided a single number, expand into equal weights.
-            # E.g. 3 => (1, 1, 1)
+            # E.g. (1,) * 3 => (1, 1, 1)
+            # NOTE: A negative/zero spec will expand into an empty tuple.
             weights = (1,) * weights
+
+        if len(weights) == 0 or any(weight <= 0 for weight in weights):
+            raise weights_exception
 
         def column_proto(weight):
             col_proto = Block_pb2.Block()
@@ -415,7 +418,7 @@ class DeltaGenerator(
             return col_proto
 
         horiz_proto = Block_pb2.Block()
-        horiz_proto.horizontal.unused = True
+        horiz_proto.horizontal.total_weight = sum(weights)
         row = self._block(horiz_proto)
         return [row._block(column_proto(w)) for w in weights]
 
@@ -485,12 +488,7 @@ class DeltaGenerator(
         return self._block(block_proto=block_proto)
 
     def favicon(
-        self,
-        element,
-        image,
-        clamp=False,
-        channels="RGB",
-        format="JPEG",
+        self, element, image, clamp=False, channels="RGB", format="JPEG",
     ):
         """Set the page favicon to the specified image.
 

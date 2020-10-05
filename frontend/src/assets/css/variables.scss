@@ -60,7 +60,7 @@ $font-family-sans-serif: "IBM Plex Sans", sans-serif;
 $font-family-monospace: "IBM Plex Mono", monospace;
 
 // 1rem == 16px
-// (Can't set actual pixels here because it breaks bootstrap)
+// (Can't set actual pixels here because it breaks reboot)
 $font-size-base: 1rem;
 
 $font-size-sm: 0.8rem;
@@ -69,6 +69,7 @@ $line-height-tight: 1.25;
 
 // Spacing
 $spacer: 1rem;
+$gutter: 1.5rem;
 
 // Overwrite other theme settings.
 $border-radius: 0.25rem;
@@ -76,7 +77,7 @@ $border-radius-sm: 0.25rem;
 $border-radius-large: 0.75rem;
 $btn-border-radius: $border-radius-large;
 
-// Custom z-index values (not related to bootstrap)
+// Custom z-index values
 $z-index-sidebar: 100;
 $z-index-menu-button: $z-index-sidebar + 10;
 $z-index-balloons: 1000000;
@@ -92,7 +93,7 @@ $m1-2-font-size-base: $font-size-base / 2; // m1-2 = multiply by 1/2
 
 // Layout sizing
 $sidebar-width: 21rem;
-$content-max-width: 730px; // This number comes from bootstrap.
+$content-max-width: 730px;
 $header-height: 3.5rem;
 $top-margin: 5rem;
 $bottom-margin: $top-margin * 2;

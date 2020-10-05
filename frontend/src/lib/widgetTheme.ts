@@ -35,10 +35,12 @@ const smallTextMargin = SCSS_VARS["$m2-3-font-size-sm"]
 const textMargin = SCSS_VARS["$font-size-sm"]
 const tinyTextMargin = SCSS_VARS["$m1-2-font-size-sm"]
 const spacer = SCSS_VARS.$spacer
+const gutter = SCSS_VARS.$gutter
 
 export const variables = {
   borderRadius,
   spacer,
+  gutter,
 }
 
 // Colors
@@ -446,7 +448,7 @@ const mainThemePrimitives = {
   primary700: colors.primary,
 
   // Override gray values based on what is actually used in BaseWeb, and the
-  // way we want it to match our Bootstrap theme.
+  // way we want it to match our theme originating from Bootstrap.
   mono100: colors.white, // Popup menu
   mono200: colors.grayLightest, // Text input, text area, selectbox
   mono300: colors.grayLighter, // Disabled widget background
@@ -541,8 +543,6 @@ export const sidebarWidgetTheme = createTheme(mainThemePrimitives, {
   ...themeOverrides,
   colors: {
     ...themeOverrides.colors,
-    // Override gray values based on what is actually used in BaseWeb, and the
-    // way we want it to match our Bootstrap theme.
     // mono100 overrides
     datepickerBackground: colors.white,
     calendarBackground: colors.white,

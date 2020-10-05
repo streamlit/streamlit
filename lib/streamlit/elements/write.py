@@ -86,7 +86,7 @@ class WriteMixin:
         >>> write('Hello, *World!* :sunglasses:')
 
         ..  output::
-            https://share.streamlit.io/0.50.2-ZWk9/index.html?id=Pn5sjhgNs4a8ZbiUoSTRxE
+            https://static.streamlit.io/0.50.2-ZWk9/index.html?id=Pn5sjhgNs4a8ZbiUoSTRxE
             height: 50px
 
         As mentioned earlier, `st.write()` also accepts other data formats, such as
@@ -99,7 +99,7 @@ class WriteMixin:
         ... }))
 
         ..  output::
-            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=FCp9AMJHwHRsWSiqMgUZGD
+            https://static.streamlit.io/0.25.0-2JkNY/index.html?id=FCp9AMJHwHRsWSiqMgUZGD
             height: 250px
 
         Finally, you can pass in multiple arguments to do things like:
@@ -108,7 +108,7 @@ class WriteMixin:
         >>> st.write('Below is a DataFrame:', data_frame, 'Above is a dataframe.')
 
         ..  output::
-            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=DHkcU72sxYcGarkFbf4kK1
+            https://static.streamlit.io/0.25.0-2JkNY/index.html?id=DHkcU72sxYcGarkFbf4kK1
             height: 300px
 
         Oh, one more thing: `st.write` accepts chart objects too! For example:
@@ -127,7 +127,7 @@ class WriteMixin:
         >>> st.write(c)
 
         ..  output::
-            https://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
+            https://static.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
             height: 200px
 
         """
@@ -153,8 +153,7 @@ class WriteMixin:
         def flush_buffer():
             if string_buffer:
                 dg.markdown(
-                    " ".join(string_buffer),
-                    unsafe_allow_html=unsafe_allow_html,
+                    " ".join(string_buffer), unsafe_allow_html=unsafe_allow_html,
                 )
                 string_buffer[:] = []
 
