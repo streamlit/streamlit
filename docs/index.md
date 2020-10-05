@@ -1,27 +1,3 @@
-<!-- ```eval_rst
-
-   advanced_caching
-
-   api
-   streamlit_configuration
-
-.. toctree::
-  :caption: Streamlit Components
-  :titlesonly:
-  :hidden:
-
-  Overview <streamlit_components>
-
-.. toctree::
-  :maxdepth: 2
-  :hidden:
-
-  develop_streamlit_components
-  Publish Component to PyPI <publish_streamlit_components>
-
-
-``` -->
-
 ```eval_rst
 .. toctree::
    :caption: Tutorials
@@ -30,6 +6,7 @@
 
    getting_started
    tutorial/create_a_data_explorer_app
+   streamlit_components
    GitHub: The Udacity self-driving car image browser <https://github.com/streamlit/demo-self-driving>
 
 .. toctree::
@@ -41,7 +18,18 @@
   main_concepts
   deploy_streamlit_app
   caching
+  advanced_caching
   advanced_concepts
+
+.. toctree::
+  :caption: Reference Guides
+  :maxdepth: 2
+  :hidden:
+
+  api
+  streamlit_configuration
+  develop_streamlit_components
+  publish_streamlit_components
 
 .. toctree::
   :caption: Support

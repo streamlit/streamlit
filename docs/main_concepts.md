@@ -71,7 +71,7 @@ for you behind the scenes. A big player in this story is the
 costly computations when their apps rerun. We'll cover caching later in this
 page.
 
-## Drawing content
+<!-- ## Drawing content
 
 Writing to Streamlit apps is simple:
 
@@ -100,7 +100,71 @@ x, 'squared is', x * x  # 👈 Magic!
 If you want to do something more advanced like changing specific settings,
 drawing animations, or inserting content out of order, check out other
 available Streamlit commands in our [API documentation](api.md) and [Advanced
-Concepts](advanced_concepts.md) pages.
+Concepts](advanced_concepts.md) pages. -->
+
+## Display and style data
+
+There are a few ways to display data (tables, arrays, data frames) in Streamlit
+apps. In [getting started](getting_started.md), you were introduced to _magic_
+and [`st.write()`](api.html#streamlit.write), which can be used to write
+anything from text to tables. Now let's take a look at methods designed
+specifically for visualizing data.
+
+You might be asking yourself, "why wouldn't I always use st.write()?" There are
+a few reasons:
+
+1. _Magic_ and [`st.write()`](api.html#streamlit.write) inspect the type of
+   data that you've passed in, and then decide how to best render it in the
+   app. Sometimes you want to draw it another way. For example, instead of
+   drawing a dataframe as an interactive table, you may want to draw it as a
+   static table by using st.table(df).
+2. The second reason is that other methods return an object that can be used
+   and modified, either by adding data to it or replacing it.
+3. Finally, if you use a more specific Streamlit method you can pass additional
+   arguments to customize its behavior.
+
+For example, let's create a data frame and change its formatting with a Pandas
+`Styler` object. In this example, you'll use Numpy to generate a random sample,
+and the [`st.dataframe()`](api.html#streamlit.dataframe) method to draw an
+interactive table.
+
+```eval_rst
+.. note::
+   This example uses Numpy to generate a random sample, but you can use Pandas
+   DataFrames, Numpy arrays, or plain Python arrays.
+```
+
+```Python
+dataframe = np.random.randn(10, 20)
+st.dataframe(dataframe)
+```
+
+Let's expand on the first example using the Pandas `Styler` object to highlight
+some elements in the interactive table.
+
+```eval_rst
+.. note::
+   If you used PIP to install Streamlit, you'll need to install Jinja2 to use
+   the Styler object. To install Jinja2, run: pip install jinja2.
+```
+
+```Python
+dataframe = pd.DataFrame(
+    np.random.randn(10, 20),
+    columns=('col %d' % i for i in range(20)))
+
+st.dataframe(dataframe.style.highlight_max(axis=0))
+```
+
+Streamlit also has a method for static table generation:
+[`st.table()`](api.html#streamlit.table).
+
+```Python
+dataframe = pd.DataFrame(
+    np.random.randn(10, 20),
+    columns=('col %d' % i for i in range(20)))
+st.table(dataframe)
+```
 
 ## Widgets
 
@@ -125,7 +189,7 @@ For example, if the user moves the slider to position `10`, Streamlit will
 rerun the code above and set `x` to `10` accordingly. So now you should see the
 text "10 squared is 100".
 
-## Sidebar
+## Layout
 
 Streamlit makes it easy to organize your widgets in a left panel sidebar with
 [`st.sidebar`](api.html#add-widgets-to-sidebar). Each element that's passed to
