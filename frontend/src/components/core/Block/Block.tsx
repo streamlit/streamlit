@@ -357,7 +357,9 @@ class Block extends PureComponent<Props> {
         )
 
       case "json":
-        throw new Error("TODO")
+        return (
+          <Json width={width} element={requireNonNull(node.element.json)} />
+        )
 
       case "markdown":
         return (
@@ -366,9 +368,6 @@ class Block extends PureComponent<Props> {
             element={requireNonNull(node.element.markdown)}
           />
         )
-
-      case "multiselect":
-        throw new Error("TODO")
 
       case "plotlyChart":
         throw new Error("TODO")
@@ -408,6 +407,9 @@ class Block extends PureComponent<Props> {
         throw new Error("TODO")
 
       case "fileUploader":
+        throw new Error("TODO")
+
+      case "multiselect":
         throw new Error("TODO")
 
       case "numberInput":

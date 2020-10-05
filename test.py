@@ -23,5 +23,7 @@ urls = [
 ]
 st.image(urls, caption=["some caption"] * 3, width=300)
 
+st.json({"st.json": [1, 2, 3]})
+
 st.balloons()
 st.help(st.help)

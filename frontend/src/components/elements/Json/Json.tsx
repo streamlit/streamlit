@@ -15,23 +15,23 @@
  * limitations under the License.
  */
 
+import "assets/css/write.scss"
+import { IJson } from "autogen/proto"
+import { requireNonNull } from "lib/utils"
 import React, { ReactElement } from "react"
 
 import ReactJson from "react-json-view"
-import { Map as ImmutableMap } from "immutable"
-
-import "assets/css/write.scss"
 
 export interface JsonProps {
   width: number
-  element: ImmutableMap<string, any>
+  element: IJson
 }
 
 /**
  * Functional element representing JSON structured text.
  */
 export default function Json({ width, element }: JsonProps): ReactElement {
-  const body = element.get("body")
+  const body = requireNonNull(element.body)
   const styleProp = { width }
 
   let bodyObject
