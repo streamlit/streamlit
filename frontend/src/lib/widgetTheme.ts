@@ -35,10 +35,12 @@ const smallTextMargin = SCSS_VARS["$m2-3-font-size-sm"]
 const textMargin = SCSS_VARS["$font-size-sm"]
 const tinyTextMargin = SCSS_VARS["$m1-2-font-size-sm"]
 const spacer = SCSS_VARS.$spacer
+const gutter = SCSS_VARS.$gutter
 
 export const variables = {
   borderRadius,
   spacer,
+  gutter,
 }
 
 // Colors

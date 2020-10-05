@@ -418,7 +418,7 @@ class DeltaGenerator(
             return col_proto
 
         horiz_proto = Block_pb2.Block()
-        horiz_proto.horizontal.unused = True
+        horiz_proto.horizontal.total_weight = sum(weights)
         row = self._block(horiz_proto)
         return [row._block(column_proto(w)) for w in weights]
 
