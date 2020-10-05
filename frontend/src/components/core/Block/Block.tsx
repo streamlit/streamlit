@@ -391,7 +391,12 @@ class Block extends PureComponent<Props> {
         )
 
       case "progress":
-        throw new Error("TODO")
+        return (
+          <Progress
+            width={width}
+            element={requireNonNull(node.element.progress)}
+          />
+        )
 
       case "table":
         throw new Error("TODO")
@@ -405,7 +410,9 @@ class Block extends PureComponent<Props> {
         throw new Error("TODO")
 
       case "video":
-        throw new Error("TODO")
+        return (
+          <Video width={width} element={requireNonNull(node.element.video)} />
+        )
 
       // Widgets
 

@@ -15,19 +15,20 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
-import { Map as ImmutableMap } from "immutable"
+import { IProgress } from "autogen/proto"
 import ProgressBar from "components/shared/ProgressBar"
+import React, { ReactElement } from "react"
+import { requireNonNull } from "lib/utils"
 
 export interface ProgressProps {
   width: number
-  element: ImmutableMap<string, any>
+  element: IProgress
 }
 
 export const FAST_UPDATE_MS = 50
 
 function Progress({ element, width }: ProgressProps): ReactElement {
-  const value = element.get("value")
+  const value = requireNonNull(element.value)
 
   return (
     <div className="stProgress">

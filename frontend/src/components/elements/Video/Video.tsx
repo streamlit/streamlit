@@ -15,14 +15,14 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useRef } from "react"
-import { Map as ImmutableMap } from "immutable"
-import { Video as VideoProto } from "autogen/proto"
+import { IVideo, Video as VideoProto } from "autogen/proto"
 import { buildMediaUri } from "lib/UriUtil"
+import { requireNonNull } from "lib/utils"
+import React, { ReactElement, useEffect, useRef } from "react"
 
 export interface VideoProps {
   width: number
-  element: ImmutableMap<string, any>
+  element: IVideo
 }
 
 export default function Video({ element, width }: VideoProps): ReactElement {
@@ -30,17 +30,17 @@ export default function Video({ element, width }: VideoProps): ReactElement {
 
   /* Element may contain "url" or "data" property. */
 
-  const type = element.get("type")
-  const url = element.get("url")
+  const type = requireNonNull(element.type)
+  const url = requireNonNull(element.url)
 
   useEffect(() => {
     if (videoRef.current) {
-      videoRef.current.currentTime = element.get("startTime")
+      videoRef.current.currentTime = requireNonNull(element.startTime)
     }
   }, [element])
 
   const getYoutubeSrc = (url: string): string => {
-    const startTime = element.get("startTime")
+    const startTime = requireNonNull(element.startTime)
     if (startTime) {
       return `${url}?start=${startTime}`
     }
@@ -70,7 +70,7 @@ export default function Video({ element, width }: VideoProps): ReactElement {
     <video
       ref={videoRef}
       controls
-      src={buildMediaUri(element.get("url"))}
+      src={buildMediaUri(url)}
       className="stVideo"
       style={{ width }}
     />
