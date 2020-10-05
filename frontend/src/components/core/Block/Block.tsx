@@ -332,7 +332,13 @@ class Block extends PureComponent<Props> {
         )
 
       case "graphvizChart":
-        throw new Error("TODO")
+        return (
+          <GraphVizChart
+            element={requireNonNull(node.element.graphvizChart)}
+            index={index}
+            width={width}
+          />
+        )
 
       case "iframe":
         throw new Error("TODO")
