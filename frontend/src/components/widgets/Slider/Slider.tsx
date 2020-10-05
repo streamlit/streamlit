@@ -55,10 +55,10 @@ class Slider extends React.PureComponent<Props, State> {
       DEBOUNCE_TIME_MS,
       this.setWidgetValueImmediately.bind(this)
     )
-    this.state = { value: this.initialValue() }
+    this.state = { value: this.initialValue }
   }
 
-  private initialValue(): number[] {
+  get initialValue(): number[] {
     const widgetId: string = this.props.element.get("id")
     const storedValue = this.props.widgetMgr.getFloatArrayValue(widgetId)
     return storedValue !== undefined

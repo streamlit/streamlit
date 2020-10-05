@@ -44,10 +44,10 @@ interface MultiselectOption {
 
 class Multiselect extends React.PureComponent<Props, State> {
   public state: State = {
-    value: this.initialValue(),
+    value: this.initialValue,
   }
 
-  private initialValue(): number[] {
+  get initialValue(): number[] {
     // If WidgetStateManager knew a value for this widget, initialize to that.
     const widgetId: string = this.props.element.get("id")
     const storedValue = this.props.widgetMgr.getIntArrayValue(widgetId)
