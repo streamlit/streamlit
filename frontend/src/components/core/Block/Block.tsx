@@ -370,7 +370,13 @@ class Block extends PureComponent<Props> {
         )
 
       case "plotlyChart":
-        throw new Error("TODO")
+        return (
+          <PlotlyChart
+            width={width}
+            height={height}
+            element={requireNonNull(node.element.plotlyChart)}
+          />
+        )
 
       case "progress":
         throw new Error("TODO")

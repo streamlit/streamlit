@@ -20,15 +20,15 @@
  * Copyright 2019 Streamlit Inc. All rights reserved.
  */
 
-import React, { ReactElement } from "react"
-import { Map as ImmutableMap } from "immutable"
-import { dispatchOneOf } from "lib/immutableProto"
+import { IFigure, IPlotlyChart } from "autogen/proto"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
+import { requireNonNull } from "lib/utils"
+import React, { ReactElement } from "react"
 import Plot from "react-plotly.js"
 
 export interface PlotlyChartProps {
   width: number
-  element: ImmutableMap<string, any>
+  element: IPlotlyChart
   height: number | undefined
 }
 
@@ -49,9 +49,9 @@ export function PlotlyChart({
 
   const isFullScreen = (): boolean => !!propHeight
 
-  const generateSpec = (figure: ImmutableMap<string, any>): any => {
-    const spec = JSON.parse(figure.get("spec"))
-    const useContainerWidth = JSON.parse(element.get("useContainerWidth"))
+  const generateSpec = (figure: IFigure): any => {
+    const spec = JSON.parse(requireNonNull(figure.spec))
+    const useContainerWidth = requireNonNull(element.useContainerWidth)
 
     if (isFullScreen()) {
       spec.layout.width = propWidth
@@ -63,8 +63,8 @@ export function PlotlyChart({
     return spec
   }
 
-  const renderFigure = (figure: ImmutableMap<string, any>): ReactElement => {
-    const config = JSON.parse(figure.get("config"))
+  const renderFigure = (figure: IFigure): ReactElement => {
+    const config = JSON.parse(requireNonNull(figure.config))
     const { data, layout, frames } = generateSpec(figure)
 
     return (
@@ -78,10 +78,16 @@ export function PlotlyChart({
       />
     )
   }
-  return dispatchOneOf(el, "chart", {
-    url: (url: string) => renderIFrame(url),
-    figure: (figure: ImmutableMap<string, any>) => renderFigure(figure),
-  })
+
+  if (el.url != null) {
+    return renderIFrame(el.url)
+  }
+
+  if (el.figure != null) {
+    return renderFigure(el.figure)
+  }
+
+  throw new Error(`Unrecognized PlotlyChart type: ${el}`)
 }
 
 export default withFullScreenWrapper(PlotlyChart)
