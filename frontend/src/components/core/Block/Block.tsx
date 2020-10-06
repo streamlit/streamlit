@@ -531,8 +531,17 @@ class Block extends PureComponent<Props> {
         )
       }
 
-      case "radio":
-        throw new Error("TODO")
+      case "radio": {
+        const radioProto = node.element.radio as RadioProto
+        return (
+          <Radio
+            key={radioProto.id}
+            element={radioProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
+      }
 
       case "selectbox":
         throw new Error("TODO")
@@ -561,14 +570,6 @@ class Block extends PureComponent<Props> {
     //     <VegaLiteChart element={el} width={width} />
     //   ),
     //   // Widgets
-    //   radio: (el: SimpleElement) => (
-    //     <Radio
-    //       key={el.get("id")}
-    //       element={el}
-    //       width={width}
-    //       {...widgetProps}
-    //     />
-    //   ),
     //   selectbox: (el: SimpleElement) => (
     //     <Selectbox
     //       key={el.get("id")}
