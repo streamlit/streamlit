@@ -23,7 +23,7 @@ import { getSizeDisplay } from "lib/FileHelper"
 import { colors, Sizes, spacing } from "lib/widgetTheme"
 
 import { FlexColumn } from "components/shared/Layouts"
-import { Small, Kind } from "components/shared/TextElements"
+import { Small } from "components/shared/TextElements"
 
 export interface Props {
   multiple: boolean
