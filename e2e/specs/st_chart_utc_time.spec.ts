@@ -17,7 +17,7 @@
 
 /// <reference types="cypress" />
 
-describe("st.area, bar, and line charts", () => {
+describe("st.area and line charts", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
 

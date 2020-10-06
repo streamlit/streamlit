@@ -278,7 +278,7 @@ def generate_chart(chart_type, data, width=0, height=0):
     chart = (
         getattr(alt.Chart(data, width=width, height=height), "mark_" + chart_type)()
         .encode(
-            alt.X(index_name, title="", scale=x_scale, type=x_type,),
+            alt.X(index_name, title="", scale=x_scale, type=x_type),
             alt.Y("value", title="", scale=y_scale),
             alt.Color("variable", title="", type="nominal"),
             alt.Tooltip([index_name, "value", "variable"]),
