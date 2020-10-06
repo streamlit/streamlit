@@ -18,7 +18,6 @@
   main_concepts
   deploy_streamlit_app
   caching
-  advanced_caching
   advanced_concepts
   publish_streamlit_components
 

@@ -1,6 +1,6 @@
 # Caching issues
 
-While developing an app, if you see an error or warning that stems from a cached function, it's probably related to the hashing procedure described in the [Advanced caching](../advanced_caching.md). In this article, we'll provide solutions to common issues encountered when using caching. If you have an issue that's not covered in this article, please let us know in the [community forum](https://discuss.streamlit.io/).
+While developing an app, if you see an error or warning that stems from a cached function, it's probably related to the hashing procedure described in the [Improve app performance](../caching.md). In this article, we'll provide solutions to common issues encountered when using caching. If you have an issue that's not covered in this article, please let us know in the [community forum](https://discuss.streamlit.io/).
 
 ## How to debug a cached function that isn't executing
 
@@ -36,7 +36,7 @@ def my_cached_func(a, b):
     ...
 ```
 
-For more information, see [Advanced caching](../advanced_caching.html#the-hash-funcs-parameter).
+For more information, see [Improve app performance](../caching.html#the-hash-funcs-parameter).
 
 ## How to fix the Cached Object Mutated warning
 
@@ -60,7 +60,7 @@ By default Streamlit expects its cached values to be treated as immutable -- tha
       ...
    ```
 
-   For examples, see [Advanced caching](../advanced_caching.md).
+   For examples, see [Advanced caching](../caching.md).
 
    ```eval_rst
    .. note::
