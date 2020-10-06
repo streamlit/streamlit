@@ -203,5 +203,34 @@ describe("Widget State Manager", () => {
         JSON.stringify(MOCK_DATA.floatArray)
       )
     })
+
+    it("setIntValue can handle MIN_ and MAX_SAFE_INTEGER", () => {
+      widgetMgr.setIntValue(MOCK_DATA.widgetId, Number.MAX_SAFE_INTEGER, {
+        fromUi: true,
+      })
+
+      expect(widgetMgr.getIntValue(MOCK_DATA.widgetId)).toBe(
+        Number.MAX_SAFE_INTEGER
+      )
+
+      widgetMgr.setIntValue(MOCK_DATA.widgetId, Number.MIN_SAFE_INTEGER, {
+        fromUi: true,
+      })
+
+      expect(widgetMgr.getIntValue(MOCK_DATA.widgetId)).toBe(
+        Number.MIN_SAFE_INTEGER
+      )
+    })
+
+    it("setIntArrayValue can handle MIN_ and MAX_SAFE_INTEGER", () => {
+      const values = [Number.MAX_SAFE_INTEGER, Number.MIN_SAFE_INTEGER]
+      widgetMgr.setIntArrayValue(MOCK_DATA.widgetId, values, {
+        fromUi: true,
+      })
+
+      expect(widgetMgr.getIntArrayValue(MOCK_DATA.widgetId)).toStrictEqual(
+        values
+      )
+    })
   })
 })

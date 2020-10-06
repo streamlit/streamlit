@@ -32,6 +32,18 @@ export interface Source {
 }
 
 /**
+ * Require that a number | Long is a number. If the value is a Long, throw
+ * an Error.
+ */
+function requireNumber(value: number | Long): number {
+  if (typeof value === "number") {
+    return value
+  }
+
+  throw new Error(`Expected a number, but got a Long: ${value}`)
+}
+
+/**
  * Manages widget values, and sends widget update messages back to the server.
  */
 export class WidgetStateManager {
@@ -79,10 +91,10 @@ export class WidgetStateManager {
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
-  public getIntValue(widgetId: string): number | Long | undefined {
+  public getIntValue(widgetId: string): number | undefined {
     const state = this.getWidgetStateProto(widgetId)
     if (state != null && state.value === "intValue") {
-      return state.intValue
+      return requireNumber(state.intValue)
     }
 
     return undefined
@@ -175,7 +187,7 @@ export class WidgetStateManager {
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
-  public getIntArrayValue(widgetId: string): (number | Long)[] | undefined {
+  public getIntArrayValue(widgetId: string): number[] | undefined {
     const state = this.getWidgetStateProto(widgetId)
     if (
       state != null &&
@@ -183,7 +195,7 @@ export class WidgetStateManager {
       state.intArrayValue != null &&
       state.intArrayValue.value != null
     ) {
-      return state.intArrayValue.value
+      return state.intArrayValue.value.map(requireNumber)
     }
 
     return undefined
