@@ -57,7 +57,7 @@ _Release date: August 12, 2020_
 
 **Highlights:**
 
-- ⚙️ Ability to set page title, favicon, sidebar state, and wide mode via st.beta_set_page_config(). See our [documentation](https://docs.streamlit.io/en/latest/api.html#streamlit.beta_set_page_config) for details.
+- ⚙️ Ability to set page title, favicon, sidebar state, and wide mode via st.beta_set_page_config(). See our [documentation](https://docs.streamlit.io/en/latest/api.html#streamlit.set_page_config) for details.
 - 📝 Add stateful behaviors through the use of query parameters with st.experimental_set_query_params and st.experimental_get_query_params. Thanks [@zhaoooyue](https://github.com/zhaoooyue)!
 - 🐼 Improved pandas dataframe support for st.radio, st.selectbox, and st.multiselect.
 - 🛑 Break out of your Streamlit app with st.stop.
