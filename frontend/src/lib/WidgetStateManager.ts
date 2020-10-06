@@ -35,9 +35,9 @@ export interface Source {
  * Require that a `number | Long` is a `number`. If the value is a `Long`,
  * throw an Error.
  *
- * Our "intValue" and "intArrayValue" widget protobuf values represent values
- * with sint64, because sint32 is too small to represent the full range of
- * JavaScript int values. Protobufjs uses `number | Long` to represent
+ * Our "intValue" and "intArrayValue" widget protobuf fields represent their
+ * values with sint64, because sint32 is too small to represent the full range
+ * of JavaScript int values. Protobufjs uses `number | Long` to represent
  * sint64. However, we're never putting Longs *into* int and intArrays -
  * because none of our widgets use Longs - so we'll never get a Long back out.
  * This function documents and asserts that.
