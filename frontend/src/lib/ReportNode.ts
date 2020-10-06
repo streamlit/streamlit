@@ -16,7 +16,6 @@
  */
 
 import {
-  Alert as AlertProto,
   Block,
   BlockPath,
   Delta,
@@ -27,19 +26,9 @@ import {
 } from "autogen/proto"
 import _ from "lodash"
 import { MetricsManager } from "./MetricsManager"
-import { notUndefined, requireNonNull } from "./utils"
+import { makeElementWithInfoText, notUndefined, requireNonNull } from "./utils"
 
 const NO_REPORT_ID = "NO_REPORT_ID"
-
-/** Return an Element protobuf with the given text. */
-export function makeElementWithInfoTextNew(text: string): Element {
-  return new Element({
-    alert: {
-      body: text,
-      format: AlertProto.Format.INFO,
-    },
-  })
-}
 
 /** Return an Element's widget ID, if it's a widget, and undefined otherwise. */
 export function getElementWidgetID(element: Element): string | undefined {
@@ -253,7 +242,7 @@ export class ReportRoot {
     let mainNodes: ReportNode[]
     if (placeholderText != null) {
       const waitNode = new ElementNode(
-        makeElementWithInfoTextNew(placeholderText),
+        makeElementWithInfoText(placeholderText),
         ForwardMsgMetadata.create({}),
         NO_REPORT_ID
       )

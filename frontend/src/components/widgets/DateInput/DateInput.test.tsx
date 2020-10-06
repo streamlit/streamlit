@@ -15,13 +15,12 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { shallow } from "enzyme"
-import { fromJS } from "immutable"
-import { WidgetStateManager } from "lib/WidgetStateManager"
 import { DateInput as DateInputProto } from "autogen/proto"
 
 import { Datepicker as UIDatePicker } from "baseui/datepicker"
+import { shallow } from "enzyme"
+import { WidgetStateManager } from "lib/WidgetStateManager"
+import React from "react"
 import DateInput, { Props } from "./DateInput"
 
 jest.mock("lib/WidgetStateManager")
@@ -29,8 +28,8 @@ jest.mock("lib/WidgetStateManager")
 const sendBackMsg = jest.fn()
 
 const getProps = (elementProps: Partial<DateInputProto> = {}): Props => ({
-  element: fromJS({
-    id: 1,
+  element: DateInputProto.create({
+    id: "1",
     label: "Label",
     default: ["1970/01/01"],
     min: "1970/1/1",
@@ -50,15 +49,13 @@ describe("DateInput widget", () => {
   })
 
   it("should render a label", () => {
-    expect(wrapper.find("label").text()).toBe(props.element.get("label"))
+    expect(wrapper.find("label").text()).toBe(props.element.label)
   })
 
   it("should set widget value on did mount", () => {
-    expect(
-      props.widgetMgr.setStringArrayValue
-    ).toHaveBeenCalledWith(
-      props.element.get("id"),
-      props.element.get("default").toJS(),
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      props.element.default,
       { fromUi: false }
     )
   })
@@ -101,7 +98,7 @@ describe("DateInput widget", () => {
 
     expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual([newDate])
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element.get("id"),
+      props.element.id,
       ["2020/02/06"],
       {
         fromUi: true,

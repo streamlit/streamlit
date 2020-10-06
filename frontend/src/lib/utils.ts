@@ -15,15 +15,10 @@
  * limitations under the License.
  */
 
+import { Alert as AlertProto, Element } from "autogen/proto"
+import { List, Set as ImmutableSet } from "immutable"
 import url from "url"
 import xxhash from "xxhashjs"
-import {
-  fromJS,
-  List,
-  Map as ImmutableMap,
-  Set as ImmutableSet,
-} from "immutable"
-import { Alert as AlertProto } from "autogen/proto"
 import { BlockElement, ReportElement, SimpleElement } from "./DeltaParser"
 
 /**
@@ -56,15 +51,9 @@ export function isEmbeddedInIFrame(): boolean {
   return url.parse(window.location.href, true).query.embed === "true"
 }
 
-/**
- * A helper function to make an ImmutableJS
- * info element from the given text.
- */
-export function makeElementWithInfoText(
-  text: string
-): ImmutableMap<string, any> {
-  return fromJS({
-    type: "alert",
+/** Return an Alert Element protobuf with the given text. */
+export function makeElementWithInfoText(text: string): Element {
+  return new Element({
     alert: {
       body: text,
       format: AlertProto.Format.INFO,

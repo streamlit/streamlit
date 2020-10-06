@@ -67,7 +67,7 @@ import {
 import withExpandable from "hocs/withExpandable"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { ReportRunState } from "lib/ReportRunState"
-import { notNull } from "lib/utils"
+import { makeElementWithInfoText, notNull } from "lib/utils"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { variables as stylingVariables } from "lib/widgetTheme"
 import React, { PureComponent, ReactNode, Suspense } from "react"
@@ -76,7 +76,6 @@ import {
   BlockNode,
   ElementNode,
   getElementWidgetID,
-  makeElementWithInfoTextNew,
   ReportNode,
 } from "lib/ReportNode"
 
@@ -266,8 +265,7 @@ class Block extends PureComponent<Props> {
               fallback={
                 <Alert
                   element={
-                    makeElementWithInfoTextNew("Loading...")
-                      .alert as AlertProto
+                    makeElementWithInfoText("Loading...").alert as AlertProto
                   }
                   width={width}
                 />
