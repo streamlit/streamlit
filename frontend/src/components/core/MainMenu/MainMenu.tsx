@@ -28,7 +28,10 @@ import {
 } from "hocs/withS4ACommunication/types"
 
 import "./MainMenu.scss"
+import { IDeployParams } from "autogen/proto"
 
+// const DEPLOY_URL = "https://streamlit.team"
+const DEPLOY_URL = "https://share-head.streamlit.io"
 const ONLINE_DOCS_URL = "https://docs.streamlit.io"
 const COMMUNITY_URL = "https://discuss.streamlit.io"
 const TEAMS_URL = "https://streamlit.io/forteams"
@@ -69,10 +72,35 @@ export interface Props {
   s4aMenuItems: IMenuItem[]
 
   sendS4AMessage: (message: IGuestToHostMessage) => void
+
+  isDeployable: boolean
+
+  deployParams?: IDeployParams | null
 }
 
 const getOpenInWindowCallback = (url: string) => (): void => {
   window.open(url, "_blank")
+}
+
+const getDeployAppUrl = (deployParams: IDeployParams | null | undefined) => {
+  if (deployParams) {
+    const deployUrl = new URL(`${DEPLOY_URL}/deploy`)
+
+    deployUrl.searchParams.set("repository", deployParams.repository || "")
+    deployUrl.searchParams.set("branch", deployParams.branch || "")
+    deployUrl.searchParams.set("mainModule", deployParams.module || "")
+
+    return getOpenInWindowCallback(deployUrl.toString())
+  } else {
+    return getOpenInWindowCallback(DEPLOY_URL)
+  }
+}
+
+const isLocalhost = () => {
+  return (
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1"
+  )
 }
 
 export interface MenuListItemProps {
@@ -188,6 +216,10 @@ function MainMenu(props: Props): ReactElement {
       shortcut: SCREENCAST_LABEL[props.screenCastState] ? "esc" : "",
       stopRecordingIndicator: Boolean(SCREENCAST_LABEL[props.screenCastState]),
     },
+    deployApp: {
+      onClick: getDeployAppUrl(props.deployParams),
+      label: "Deploy this app",
+    },
     saveSnapshot: {
       disabled: isServerDisconnected,
       onClick: props.shareCallback,
@@ -223,9 +255,19 @@ function MainMenu(props: Props): ReactElement {
       ...S4AMenuOptions,
     ]
   } else {
+    menuOptions = [...menuOptions]
+
+    const showDeploy = props.isDeployable && isLocalhost()
+    if (showDeploy) {
+      menuOptions.push({ ...coreMenuOptions.deployApp, hasDividerAbove: true })
+    }
+
     menuOptions = [
       ...menuOptions,
-      { ...coreMenuOptions.recordScreencast, hasDividerAbove: true },
+      {
+        ...coreMenuOptions.recordScreencast,
+        hasDividerAbove: !showDeploy,
+      },
       { ...coreMenuOptions.documentation, hasDividerAbove: true },
       coreMenuOptions.community,
       coreMenuOptions.report,

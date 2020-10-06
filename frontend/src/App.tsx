@@ -58,6 +58,7 @@ import {
   ISessionState,
   Initialize,
   NewReport,
+  IDeployParams,
   PageConfig,
   PageInfo,
   SessionEvent,
@@ -103,6 +104,8 @@ interface State {
   sharingEnabled?: boolean
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
+  isDeployable: boolean
+  deployParams?: IDeployParams | null
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -156,6 +159,8 @@ export class App extends PureComponent<Props, State> {
       },
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
+      isDeployable: false,
+      deployParams: null,
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -527,7 +532,13 @@ export class App extends PureComponent<Props, State> {
    */
   handleNewReport = (newReportProto: NewReport): void => {
     const { reportHash } = this.state
-    const { id: reportId, name: reportName, scriptPath } = newReportProto
+    const {
+      id: reportId,
+      name: reportName,
+      scriptPath,
+      deployParams,
+      isDeployable,
+    } = newReportProto
 
     const newReportHash = hashString(
       SessionInfo.current.installationId + scriptPath
@@ -545,9 +556,17 @@ export class App extends PureComponent<Props, State> {
     if (reportHash === newReportHash) {
       this.setState({
         reportId,
+        isDeployable,
+        deployParams,
       })
     } else {
-      this.clearAppState(newReportHash, reportId, reportName)
+      this.clearAppState(
+        newReportHash,
+        reportId,
+        reportName,
+        isDeployable,
+        deployParams
+      )
     }
   }
 
@@ -630,13 +649,17 @@ export class App extends PureComponent<Props, State> {
   clearAppState(
     reportHash: string,
     reportId: string,
-    reportName: string
+    reportName: string,
+    isDeployable: boolean,
+    deployParams?: IDeployParams | null
   ): void {
     this.setState(
       {
         reportId,
         reportName,
         reportHash,
+        isDeployable,
+        deployParams,
         elements: {
           main: fromJS([]),
           sidebar: fromJS([]),
@@ -987,6 +1010,8 @@ export class App extends PureComponent<Props, State> {
                 screenCastState={this.props.screenCast.currentState}
                 s4aMenuItems={this.props.s4aCommunication.currentState.items}
                 sendS4AMessage={this.props.s4aCommunication.sendMessage}
+                isDeployable={this.state.isDeployable}
+                deployParams={this.state.deployParams}
               />
             </div>
           </header>

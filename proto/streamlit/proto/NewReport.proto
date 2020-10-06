@@ -27,4 +27,13 @@ message NewReport {
   // The full path of the script that launched this report. Example:
   // "/foo/bar/foo.py"
   string script_path = 3;
+
+  bool is_deployable = 4;
+  DeployParams deploy_params = 5;
+}
+
+message DeployParams {
+  string repository = 1;
+  string branch = 2;
+  string module = 3;
 }
