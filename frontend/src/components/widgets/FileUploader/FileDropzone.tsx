@@ -58,11 +58,7 @@ const FileDropzone = ({
   <Dropzone
     onDrop={onDrop}
     multiple={multiple}
-    accept={
-      acceptedExtensions.length
-        ? acceptedExtensions.map((value: string): string => `.${value}`)
-        : undefined
-    }
+    accept={acceptedExtensions.length ? acceptedExtensions : undefined}
     maxSize={maxSizeBytes}
     disabled={disabled}
   >

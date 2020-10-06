@@ -1,5 +1,4 @@
 import { CancelTokenSource } from "axios"
-import { mkenum } from "lib/utils"
 
 export interface ExtendedFile extends File {
   id?: string
@@ -17,13 +16,13 @@ export enum FileStatuses {
   UPLOADED = "UPLOADED",
 }
 
-export const FileSizes = mkenum({
-  GigaByte: "gb",
-  KiloByte: "kb",
-  MegaByte: "mb",
-  Byte: "b",
-})
-type FileSizes = typeof FileSizes[keyof typeof FileSizes]
+export enum FileSizes {
+  GigaByte = "gb",
+  KiloByte = "kb",
+  MegaByte = "mb",
+  Byte = "b",
+}
+
 export const BYTE_CONVERSION_SIZE = 1024
 const sizeUnitSequence = [
   FileSizes.GigaByte,
@@ -34,10 +33,10 @@ const sizeUnitSequence = [
 
 export const getSizeDisplay = (
   size: number,
-  unit: string,
+  unit: FileSizes,
   rounding = 1
 ): string => {
-  if (!unit) unit = "b"
+  if (!unit) unit = FileSizes.Byte
 
   if (rounding < 0) rounding = 0
 

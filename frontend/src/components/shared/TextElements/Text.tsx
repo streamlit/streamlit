@@ -17,13 +17,11 @@
 
 import { styled } from "styletron-react"
 import { colors, fontStyles } from "lib/widgetTheme"
-import { mkenum } from "lib/utils"
 
-export const Kind = mkenum({
-  SECONDARY: "secondary",
-  DANGER: "danger",
-})
-type Kind = typeof Kind[keyof typeof Kind]
+export enum Kind {
+  SECONDARY = "secondary",
+  DANGER = "danger",
+}
 
 interface TextProps {
   kind?: Kind

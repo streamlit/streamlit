@@ -19,32 +19,31 @@ import { getSizeDisplay, sizeConverter, FileSizes } from "./FileHelper"
 
 describe("getSizeDisplay", () => {
   test("shows unit", async () => {
-    expect(getSizeDisplay(1024, "b")).toEqual("1.0KB")
-    expect(getSizeDisplay(1024 * 1024, "b")).toEqual("1.0MB")
-    expect(getSizeDisplay(1024 * 1024 * 1024, "b")).toEqual("1.0GB")
+    expect(getSizeDisplay(1024, FileSizes.Byte)).toEqual("1.0KB")
+    expect(getSizeDisplay(1024 * 1024, FileSizes.Byte)).toEqual("1.0MB")
+    expect(getSizeDisplay(1024 * 1024 * 1024, FileSizes.Byte)).toEqual("1.0GB")
 
-    expect(getSizeDisplay(10, "gb")).toEqual("10.0GB")
-    expect(getSizeDisplay(1024, "mb")).toEqual("1.0GB")
+    expect(getSizeDisplay(10, FileSizes.GigaByte)).toEqual("10.0GB")
+    expect(getSizeDisplay(1024, FileSizes.MegaByte)).toEqual("1.0GB")
   })
 
   test("unusual values", async () => {
-    expect(() => getSizeDisplay(-100, "b")).toThrow(
+    expect(() => getSizeDisplay(-100, FileSizes.Byte)).toThrow(
       "Size must be greater than or equal to 0"
     )
-    expect(getSizeDisplay(0, "")).toEqual("0.0B")
-    expect(getSizeDisplay(0, "b", -1)).toEqual("0B")
+    expect(getSizeDisplay(0, FileSizes.Byte, -1)).toEqual("0B")
   })
 
   test("rounding truncation", async () => {
-    expect(getSizeDisplay(1024, "b")).toEqual("1.0KB")
-    expect(getSizeDisplay(1024, "b", 0)).toEqual("1KB")
-    expect(getSizeDisplay(1024, "b", 3)).toEqual("1.000KB")
+    expect(getSizeDisplay(1024, FileSizes.Byte)).toEqual("1.0KB")
+    expect(getSizeDisplay(1024, FileSizes.Byte, 0)).toEqual("1KB")
+    expect(getSizeDisplay(1024, FileSizes.Byte, 3)).toEqual("1.000KB")
   })
 
   test("rounding up unit", async () => {
-    expect(getSizeDisplay(500, "b")).toEqual("500.0B")
-    expect(getSizeDisplay(800, "b")).toEqual("0.8KB")
-    expect(getSizeDisplay(501, "gb")).toEqual("501.0GB")
+    expect(getSizeDisplay(500, FileSizes.Byte)).toEqual("500.0B")
+    expect(getSizeDisplay(800, FileSizes.Byte)).toEqual("0.8KB")
+    expect(getSizeDisplay(501, FileSizes.GigaByte)).toEqual("501.0GB")
   })
 })
 

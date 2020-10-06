@@ -67,8 +67,13 @@ class FileUploaderMixin:
         ...     st.write(bytes_data)
         """
 
-        if isinstance(type, str):
-            type = [type]
+        if type:
+            if isinstance(type, str):
+                type = [type]
+
+            # May need a regex or a library to validate file types are valid
+            # extensions.
+            type = [file_type if file_type[0] == '.' else f".{file_type}" for file_type in type]
 
         encoding = kwargs.get("encoding")
         has_encoding = "encoding" in kwargs

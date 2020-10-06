@@ -77,7 +77,13 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     const currentMaxSize = this.props.element.get("maxUploadSizeMb")
     if (prevProps.element.get("maxUploadSizeMb") !== currentMaxSize) {
-      this.setState({ maxSizeBytes: sizeConverter(currentMaxSize, "mb", "b") })
+      this.setState({
+        maxSizeBytes: sizeConverter(
+          currentMaxSize,
+          FileSizes.MegaByte,
+          FileSizes.Byte
+        ),
+      })
     }
   }
 
@@ -89,6 +95,13 @@ class FileUploader extends React.PureComponent<Props, State> {
     })
   }
 
+  /**
+   * @param {ExtendedFile[]} acceptedFiles react-dropzone returns an array of
+   * files. ExtendedFile extends File so we can type it into an array of
+   * ExtendedFile
+   * @param {FileRejection[]} rejectedFiles react-dropzone returns an array
+   * of FileRejections which consists of the files and errors encountered.
+   */
   public dropHandler = (
     acceptedFiles: ExtendedFile[],
     rejectedFiles: FileRejection[]
@@ -203,7 +216,7 @@ class FileUploader extends React.PureComponent<Props, State> {
       case "file-too-large":
         return `File must be ${getSizeDisplay(
           this.state.maxSizeBytes,
-          "b"
+          FileSizes.Byte
         )} or smaller.`
       case "file-invalid-type":
         return `${file.type} files are not allowed.`

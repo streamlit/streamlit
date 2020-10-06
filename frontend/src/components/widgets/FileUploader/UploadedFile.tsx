@@ -22,7 +22,12 @@ import Button, { Kind } from "components/shared/Button"
 import { MaterialIcon } from "components/shared/Icon"
 import ProgressBar from "components/shared/ProgressBar"
 import { Small, Kind as TextKind } from "components/shared/TextElements"
-import { ExtendedFile, FileStatuses, getSizeDisplay } from "lib/FileHelper"
+import {
+  ExtendedFile,
+  FileSizes,
+  FileStatuses,
+  getSizeDisplay,
+} from "lib/FileHelper"
 import { colors, Sizes, utilityClasses, spacing } from "lib/widgetTheme"
 
 import "./FileUploader.scss"
@@ -102,7 +107,9 @@ export const FileStatus = ({
 
   if (file.status === FileStatuses.UPLOADED) {
     return (
-      <Small kind={TextKind.SECONDARY}>{getSizeDisplay(file.size, "b")}</Small>
+      <Small kind={TextKind.SECONDARY}>
+        {getSizeDisplay(file.size, FileSizes.Byte)}
+      </Small>
     )
   }
 
@@ -118,11 +125,6 @@ const UploadedFile = ({
   progress,
   onDelete,
 }: Props): React.ReactElement => {
-  const handleDelete = (event: React.SyntheticEvent<HTMLElement>): void => {
-    const { id } = event.currentTarget
-    onDelete(id)
-  }
-
   return (
     <StyledUploadedFile className="uploadedFile">
       <FileIcon>
@@ -138,7 +140,7 @@ const UploadedFile = ({
         </UploadedFileName>
         <FileStatus file={file} progress={progress} />
       </UploadedFileData>
-      <Button id={file.id} onClick={handleDelete} kind={Kind.MINIMAL}>
+      <Button onClick={() => onDelete(file.id || "")} kind={Kind.MINIMAL}>
         <MaterialIcon icon="clear" />
       </Button>
     </StyledUploadedFile>

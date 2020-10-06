@@ -19,10 +19,9 @@ import React from "react"
 import { MaterialIcon } from "components/shared/Icon"
 import { styled } from "styletron-react"
 
-import { getSizeDisplay } from "lib/FileHelper"
+import { FileSizes, getSizeDisplay } from "lib/FileHelper"
 import { colors, Sizes, spacing } from "lib/widgetTheme"
 
-import { FlexColumn } from "components/shared/Layouts"
 import { Small } from "components/shared/TextElements"
 
 export interface Props {
@@ -46,6 +45,11 @@ const StyledSpan = styled("span", {
   marginBottom: spacing.xxs,
 })
 
+const FlexColumn = styled("div", {
+  display: "flex",
+  flexDirection: "column",
+})
+
 const FileDropzoneInstructions = ({
   multiple,
   acceptedExtensions,
@@ -61,11 +65,11 @@ const FileDropzoneInstructions = ({
     <FlexColumn>
       <StyledSpan>Drag and drop file{multiple ? "s" : ""} here</StyledSpan>
       <Small>
-        {`Limit ${getSizeDisplay(maxSizeBytes, "b", 0)} per file`}
+        {`Limit ${getSizeDisplay(maxSizeBytes, FileSizes.Byte, 0)} per file`}
         {acceptedExtensions.length
           ? ` • ${acceptedExtensions
               .join(", ")
-              .replace(".", "")
+              .replace(/\./g, "")
               .toUpperCase()}`
           : null}
       </Small>
