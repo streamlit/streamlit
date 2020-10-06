@@ -32,10 +32,17 @@ export interface Source {
 }
 
 /**
- * Require that a number | Long is a number. If the value is a Long, throw
- * an Error.
+ * Require that a `number | Long` is a `number`. If the value is a `Long`,
+ * throw an Error.
+ *
+ * Our "intValue" and "intArrayValue" widget protobuf values represent values
+ * with sint64, because sint32 is too small to represent the full range of
+ * JavaScript int values. Protobufjs uses `number | Long` to represent
+ * sint64. However, we're never putting Longs *into* int and intArrays -
+ * because none of our widgets use Longs - so we'll never get a Long back out.
+ * This function documents and asserts that.
  */
-function requireNumber(value: number | Long): number {
+function requireNumberInt(value: number | Long): number {
   if (typeof value === "number") {
     return value
   }
@@ -94,7 +101,7 @@ export class WidgetStateManager {
   public getIntValue(widgetId: string): number | undefined {
     const state = this.getWidgetStateProto(widgetId)
     if (state != null && state.value === "intValue") {
-      return requireNumber(state.intValue)
+      return requireNumberInt(state.intValue)
     }
 
     return undefined
@@ -195,7 +202,7 @@ export class WidgetStateManager {
       state.intArrayValue != null &&
       state.intArrayValue.value != null
     ) {
-      return state.intArrayValue.value.map(requireNumber)
+      return state.intArrayValue.value.map(requireNumberInt)
     }
 
     return undefined
