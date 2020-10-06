@@ -149,7 +149,7 @@ class AltairMixin:
         >>> st.bar_chart(chart_data)
 
         .. output::
-           https://static.streamlit.io/0.50.0-td2L/index.html?id=5U5bjR2b3jFwnJdDfSvuRk
+           https://static.streamlit.io/0.66.0-2BLtg/index.html?id=GaYDn6vxskvBUkBwsGVEaL
            height: 220px
 
         """
