@@ -32,7 +32,7 @@ export interface Source {
 }
 
 /**
- * Coerce a `number | Long` a `number`.
+ * Coerce a `number | Long` to a `number`.
  *
  * Our "intValue" and "intArrayValue" widget protobuf fields represent their
  * values with sint64, because sint32 is too small to represent the full range
