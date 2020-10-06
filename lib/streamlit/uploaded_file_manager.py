@@ -51,11 +51,22 @@ class UploadedFileManager(object):
             """
         )
 
+    def _on_files_updated(self, session_id):
+        self.on_files_updated.send(session_id)
+
+    def _add_files(self, session_id, widget_id, files):
+        """
+        Add a list of files to the FileManager. Does not emit any signals
+        """
+        files_by_widget = session_id, widget_id
+        with self._files_lock:
+            file_list = self._files_by_id.get(files_by_widget, None)
+            if file_list:
+                files = file_list + files
+            self._files_by_id[files_by_widget] = files
+
     def add_files(self, session_id, widget_id, files):
         """Add a list of files to the FileManager.
-
-        If another list with the same (session_id, widget_id) key exists,
-        it will be replaced with this one.
 
         The "on_file_added" Signal will be emitted after the list is added.
 
@@ -67,15 +78,9 @@ class UploadedFileManager(object):
             The widget ID of the FileUploader that created the files.
         files : List[UploadedFile]
             The files to add.
-
         """
-        files_by_widget = session_id, widget_id
-        with self._files_lock:
-            file_list = self._files_by_id.get(files_by_widget, None)
-            if file_list:
-                files = file_list + files
-            self._files_by_id[files_by_widget] = files
-        self.on_files_updated.send(files_by_widget)
+        self._add_files(session_id, widget_id, files)
+        self._on_files_updated(session_id)
 
     def get_files(self, session_id, widget_id):
         """Return the file list with the given ID, or None if the ID doesn't exist.
@@ -90,7 +95,6 @@ class UploadedFileManager(object):
         Returns
         -------
         list of UploadedFile or None
-
         """
         files_id = session_id, widget_id
         with self._files_lock:
@@ -112,8 +116,17 @@ class UploadedFileManager(object):
             self._files_by_id[files_by_widget] = [
                 file for file in file_list if file.id != file_id
             ]
+        self._on_files_updated(session_id)
 
-        self.on_files_updated.send(files_by_widget)
+    def _remove_files(self, session_id, widget_id):
+        """Remove the file list for the provided widget in the
+        provided session, if it exists.
+
+        Does not emit any signals.
+        """
+        files_id = session_id, widget_id
+        with self._files_lock:
+            self._files_by_id.pop(files_id, None)
 
     def remove_files(self, session_id, widget_id):
         """Remove the file list for the provided widget in the
@@ -126,9 +139,8 @@ class UploadedFileManager(object):
         widget_id : str
             The widget ID of the FileUploader that created the file.
         """
-        files_id = session_id, widget_id
-        with self._files_lock:
-            self._files_by_id.pop(files_id, None)
+        self._remove_files(session_id, widget_id)
+        self._on_files_updated(session_id)
 
     def remove_session_files(self, session_id):
         """Remove all files that belong to the given report.
@@ -146,3 +158,21 @@ class UploadedFileManager(object):
         for files_id in all_ids:
             if files_id[0] == session_id:
                 self.remove_files(*files_id)
+
+    def replace_files(self, session_id, widget_id, files):
+        """Removes the file list for the provided widget in the
+        provided session, if it exists and add the provided files
+        to the widget in the session
+
+        Parameters
+        ----------
+        session_id : str
+            The session ID of the report that owns the file.
+        widget_id : str
+            The widget ID of the FileUploader that created the file.
+        files : List[UploadedFile]
+            The files to add.
+        """
+        self._remove_files(session_id, widget_id)
+        self._add_files(session_id, widget_id, files)
+        self._on_files_updated(session_id)

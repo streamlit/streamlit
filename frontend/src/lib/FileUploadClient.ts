@@ -37,11 +37,13 @@ export class FileUploadClient extends HttpClient {
     widgetId: string,
     files: ExtendedFile[],
     onUploadProgress?: (progressEvent: any) => void,
-    cancelToken?: CancelToken
+    cancelToken?: CancelToken,
+    replace?: boolean
   ): Promise<void> {
     const form = new FormData()
     form.append("sessionId", SessionInfo.current.sessionId)
     form.append("widgetId", widgetId)
+    if (replace) form.append("replace", "true")
     for (const file of files) {
       form.append(file.id || file.name, file, file.name)
     }

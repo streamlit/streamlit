@@ -111,7 +111,7 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     if (!multipleFiles && this.state.files.length) {
       // Only one file is allowed. Delete existing file.
-      this.delete(this.state.files[0].id || "")
+      this.removeFile(this.state.files[0].id || "")
     }
 
     // Too many files were uploaded. Upload the first eligible file
@@ -158,7 +158,8 @@ class FileUploader extends React.PureComponent<Props, State> {
         e => this.onUploadProgress(e, file),
         file.cancelToken
           ? file.cancelToken.token
-          : axios.CancelToken.source().token
+          : axios.CancelToken.source().token,
+        !this.props.element.get("multipleFiles")
       )
       .then(() => {
         this.setState(state => {
