@@ -184,7 +184,7 @@ class FileUploader extends React.PureComponent<Props, State> {
 
   private rejectFiles = (rejectedFiles: FileRejection[]): void => {
     rejectedFiles.forEach((rejectedFile, index) => {
-      Object.assign(rejectedFile, {
+      Object.assign(rejectedFile.file, {
         status: FileStatuses.ERROR,
         errorMessage: this.getErrorMessage(
           rejectedFile.errors[0].code,

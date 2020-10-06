@@ -33,7 +33,7 @@ const StyledUploadedFiles = styled("div", {
   lineHeight: fontStyles.lineHeightTight,
   paddingTop: spacing.md,
   paddingLeft: spacing.lg,
-  paddingRight: spacing.xxxl,
+  paddingRight: spacing.lg,
 })
 
 const UploadedFileList = ({ items, onDelete }: Props): ReactElement => {
