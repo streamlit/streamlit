@@ -21,7 +21,6 @@ import VirtualDropdown from "components/shared/VirtualDropdown"
 import { Source, WidgetStateManager } from "lib/WidgetStateManager"
 import { multiSelectOverrides } from "lib/widgetTheme"
 import without from "lodash/without"
-import { Long, util } from "protobufjs"
 import React from "react"
 
 export interface Props {
@@ -43,16 +42,6 @@ interface MultiselectOption {
   value: string
 }
 
-/**
- * Convert a Long to a number, if necessary.
- */
-function getNumber(value: number | Long): number {
-  if (typeof value === "number") {
-    return value
-  }
-  return new util.LongBits(value.low, value.high).toNumber()
-}
-
 class Multiselect extends React.PureComponent<Props, State> {
   public state: State = {
     value: this.initialValue,
@@ -63,9 +52,7 @@ class Multiselect extends React.PureComponent<Props, State> {
     // Otherwise, use the default value from the widget protobuf.
     const widgetId = this.props.element.id
     const storedValue = this.props.widgetMgr.getIntArrayValue(widgetId)
-    return storedValue !== undefined
-      ? storedValue.map(getNumber)
-      : this.props.element.default
+    return storedValue !== undefined ? storedValue : this.props.element.default
   }
 
   public componentDidMount(): void {
