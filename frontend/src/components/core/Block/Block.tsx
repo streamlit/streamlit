@@ -519,8 +519,17 @@ class Block extends PureComponent<Props> {
         )
       }
 
-      case "numberInput":
-        throw new Error("TODO")
+      case "numberInput": {
+        const numberInputProto = node.element.numberInput as NumberInputProto
+        return (
+          <NumberInput
+            key={numberInputProto.id}
+            element={numberInputProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
+      }
 
       case "radio":
         throw new Error("TODO")
@@ -594,14 +603,6 @@ class Block extends PureComponent<Props> {
     //   ),
     //   timeInput: (el: SimpleElement) => (
     //     <TimeInput
-    //       key={el.get("id")}
-    //       element={el}
-    //       width={width}
-    //       {...widgetProps}
-    //     />
-    //   ),
-    //   numberInput: (el: SimpleElement) => (
-    //     <NumberInput
     //       key={el.get("id")}
     //       element={el}
     //       width={width}

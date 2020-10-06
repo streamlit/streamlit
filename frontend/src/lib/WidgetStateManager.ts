@@ -23,8 +23,6 @@ import {
   WidgetState,
   WidgetStates,
 } from "autogen/proto"
-
-import { Set as ImmutableSet } from "immutable"
 import { Long, util } from "protobufjs"
 
 export interface Source {
