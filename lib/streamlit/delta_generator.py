@@ -391,7 +391,7 @@ class DeltaGenerator(
         >>> st.write("This is outside the container")
 
         .. output ::
-            https://share.streamlit.io/0.66.0-Wnid/index.html?id=Qj8PY3v3L8dgVjjQCreHux
+            https://static.streamlit.io/0.66.0-Wnid/index.html?id=Qj8PY3v3L8dgVjjQCreHux
             height: 420px
 
         Inserting elements out of order:
@@ -404,7 +404,7 @@ class DeltaGenerator(
         >>> container.write("This is inside too")
 
         .. output ::
-            https://share.streamlit.io/0.66.0-Wnid/index.html?id=GsFVF5QYT3Ljr6jQjErPqL
+            https://static.streamlit.io/0.66.0-Wnid/index.html?id=GsFVF5QYT3Ljr6jQjErPqL
         """
         return self._block()
 
@@ -460,7 +460,7 @@ class DeltaGenerator(
         ...    st.image("https://static.streamlit.io/examples/owl.jpg", use_column_width=True)
 
         .. output ::
-            https://share.streamlit.io/0.66.0-Wnid/index.html?id=VW45Va5XmSKed2ayzf7vYa
+            https://static.streamlit.io/0.66.0-Wnid/index.html?id=VW45Va5XmSKed2ayzf7vYa
             height: 550px
 
         Or you can just call methods directly in the returned objects:
@@ -475,7 +475,7 @@ class DeltaGenerator(
         >>> col2.write(data)
 
         .. output ::
-	        https://share.streamlit.io/0.66.0-Wnid/index.html?id=XSQ6VkonfGcT2AyNYMZN83
+	        https://static.streamlit.io/0.66.0-Wnid/index.html?id=XSQ6VkonfGcT2AyNYMZN83
             height: 400px
 
         """
@@ -585,7 +585,7 @@ class DeltaGenerator(
         ...     st.image("https://static.streamlit.io/examples/dice.jpg")
 
         .. output ::
-            https://share.streamlit.io/0.66.0-2BLtg/index.html?id=LzfUAiT1eM9Xy8EDMRkWyF
+            https://static.streamlit.io/0.66.0-2BLtg/index.html?id=LzfUAiT1eM9Xy8EDMRkWyF
             height: 750px
 
         """
