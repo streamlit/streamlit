@@ -15,15 +15,14 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { mount } from "enzyme"
-import { fromJS } from "immutable"
 import { Video as VideoProto } from "autogen/proto"
+import { mount } from "enzyme"
+import React from "react"
 
 import Video, { VideoProps } from "./Video"
 
 const getProps = (elementProps: Partial<VideoProto> = {}): VideoProps => ({
-  element: fromJS({
+  element: VideoProto.create({
     url: "https://www.w3schools.com/html/mov_bbb.mp4",
     type: VideoProto.Type.UNUSED,
     startTime: 0,

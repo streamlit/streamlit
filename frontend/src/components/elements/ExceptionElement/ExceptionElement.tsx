@@ -36,6 +36,13 @@ interface StackTraceProps {
   stackTrace: string[]
 }
 
+/**
+ * Return true if the string is non-null and non-empty.
+ */
+function isNonEmptyString(value: string | null | undefined): boolean {
+  return value != null && value !== ""
+}
+
 function ExceptionMessage({
   type,
   message,
@@ -56,7 +63,7 @@ function ExceptionMessage({
   return (
     <>
       <span className="type">{type}</span>
-      {message != null ? `: ${message}` : null}
+      {isNonEmptyString(message) ? `: ${message}` : null}
     </>
   )
 }

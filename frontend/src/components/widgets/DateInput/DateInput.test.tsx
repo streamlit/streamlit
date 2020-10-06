@@ -76,7 +76,7 @@ describe("DateInput widget", () => {
 
   it("should render a default value", () => {
     expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual([
-      new Date(props.element.get("default").toJS()),
+      new Date(props.element.default[0]),
     ])
   })
 

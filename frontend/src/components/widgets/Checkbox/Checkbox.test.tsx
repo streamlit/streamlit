@@ -15,12 +15,12 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { shallow } from "enzyme"
-import { fromJS } from "immutable"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { Checkbox as CheckboxProto } from "autogen/proto"
 
 import { Checkbox as UICheckbox } from "baseui/checkbox"
+import { shallow } from "enzyme"
+import { WidgetStateManager } from "lib/WidgetStateManager"
+import React from "react"
 import Checkbox, { Props } from "./Checkbox"
 
 jest.mock("lib/WidgetStateManager")
@@ -28,8 +28,8 @@ jest.mock("lib/WidgetStateManager")
 const sendBackMsg = jest.fn()
 
 const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
-  element: fromJS({
-    id: 1,
+  element: CheckboxProto.create({
+    id: "1",
     label: "Label",
     default: false,
     ...elementProps,
@@ -48,11 +48,9 @@ describe("Checkbox widget", () => {
   })
 
   it("should set widget value on did mount", () => {
-    expect(
-      props.widgetMgr.setBoolValue
-    ).toHaveBeenCalledWith(
-      props.element.get("id"),
-      props.element.get("default"),
+    expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
+      props.element.id,
+      props.element.default,
       { fromUi: false }
     )
   })
@@ -73,14 +71,12 @@ describe("Checkbox widget", () => {
   })
 
   it("should render a label", () => {
-    expect(wrapper.find(UICheckbox).prop("children")).toBe(
-      props.element.get("label")
-    )
+    expect(wrapper.find(UICheckbox).prop("children")).toBe(props.element.label)
   })
 
   it("should be unchecked by default", () => {
     expect(wrapper.find(UICheckbox).prop("checked")).toBe(
-      props.element.get("default")
+      props.element.default
     )
   })
 
@@ -96,9 +92,11 @@ describe("Checkbox widget", () => {
       },
     } as EventTarget)
 
-    expect(
-      props.widgetMgr.setBoolValue
-    ).toHaveBeenCalledWith(props.element.get("id"), true, { fromUi: true })
+    expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
+      props.element.id,
+      true,
+      { fromUi: true }
+    )
     expect(wrapper.state("value")).toBeTruthy()
   })
 })

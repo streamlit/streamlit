@@ -15,17 +15,17 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { mount } from "enzyme"
-import { fromJS } from "immutable"
+import { Exception as ExceptionProto } from "autogen/proto"
 
 import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
+import { mount } from "enzyme"
+import React from "react"
 import ExceptionElement, { ExceptionElementProps } from "./ExceptionElement"
 
 const getProps = (
   elementProps: Record<string, unknown> = {}
 ): ExceptionElementProps => ({
-  element: fromJS({
+  element: ExceptionProto.create({
     stackTrace: ["step 1", "step 2", "step 3"],
     type: "RuntimeError",
     message: "This is an exception of type RuntimeError",

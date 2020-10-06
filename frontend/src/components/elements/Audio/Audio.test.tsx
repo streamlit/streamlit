@@ -15,14 +15,14 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { Audio as AudioProto } from "autogen/proto"
 import { mount, shallow } from "enzyme"
-import { fromJS } from "immutable"
+import React from "react"
 
 import Audio, { AudioProps } from "./Audio"
 
 const getProps = (elementProps: Record<string, unknown> = {}): AudioProps => ({
-  element: fromJS({
+  element: AudioProto.create({
     startTime: 0,
     url: "/media/08a569df5f3bd617f11b7d137861a3bef91379309ce95bdb9ff04a38.wav",
     ...elementProps,
@@ -57,7 +57,7 @@ describe("Audio Element", () => {
       const wrapper = shallow(<Audio {...props} />)
       const audioElement = wrapper.find("audio")
 
-      expect(audioElement.prop("src")).toBe(props.element.get("url"))
+      expect(audioElement.prop("src")).toBe(props.element.url)
     })
   })
 

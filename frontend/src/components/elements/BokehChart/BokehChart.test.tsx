@@ -15,14 +15,13 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { fromJS } from "immutable"
-import { shallow, mount } from "enzyme"
 import { BokehChart as BokehChartProto } from "autogen/proto"
-
-import Figure from "./mock"
+import { mount, shallow } from "enzyme"
+import React from "react"
 
 import { BokehChartProps } from "./BokehChart"
+
+import Figure from "./mock"
 
 const mockBokehEmbed = {
   embed: {
@@ -38,7 +37,7 @@ const { BokehChart } = require("./BokehChart")
 const getProps = (
   elementProps: Partial<BokehChartProto> = {}
 ): BokehChartProps => ({
-  element: fromJS({
+  element: BokehChartProto.create({
     figure: JSON.stringify(Figure),
     useContainerWidth: false,
     ...elementProps,

@@ -15,16 +15,16 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { Progress as ProgressProto } from "autogen/proto"
 import { shallow } from "enzyme"
-import { fromJS } from "immutable"
+import React from "react"
 
 import Progress, { ProgressProps } from "./Progress"
 
 const getProps = (
   propOverrides: Record<string, unknown> = {}
 ): ProgressProps => ({
-  element: fromJS({
+  element: ProgressProto.create({
     value: 50,
   }),
   width: 0,

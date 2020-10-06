@@ -15,10 +15,9 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { GraphVizChart as GraphVizChartProto } from "autogen/proto"
 import { mount } from "enzyme"
-import { fromJS } from "immutable"
-
+import React from "react"
 import { GraphVizChartProps } from "./GraphVizChart"
 
 const mockLogError = {
@@ -50,7 +49,7 @@ const { GraphVizChart } = require("./GraphVizChart")
 const getProps = (
   elementProps: Record<string, unknown> = {}
 ): GraphVizChartProps => ({
-  element: fromJS({
+  element: GraphVizChartProto.create({
     spec: `digraph "Hello World" {Hello -> World}`,
     ...elementProps,
   }),

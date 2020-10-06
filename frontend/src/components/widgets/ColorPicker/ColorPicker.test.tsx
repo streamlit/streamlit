@@ -15,12 +15,11 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { shallow } from "enzyme"
-import { fromJS } from "immutable"
-import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ColorPicker as ColorPickerProto } from "autogen/proto"
+import { StatefulPopover as UIPopover } from "baseui/popover"
+import { shallow } from "enzyme"
 import { WidgetStateManager } from "lib/WidgetStateManager"
+import React from "react"
 import { ChromePicker } from "react-color"
 
 import ColorPicker, { Props } from "./ColorPicker"
@@ -30,8 +29,8 @@ jest.mock("lib/WidgetStateManager")
 const sendBackMsg = jest.fn()
 
 const getProps = (elementProps: Partial<ColorPickerProto> = {}): Props => ({
-  element: fromJS({
-    id: 1,
+  element: ColorPickerProto.create({
+    id: "1",
     label: "Label",
     default: "#000000",
     ...elementProps,
@@ -52,15 +51,13 @@ describe("ColorPicker widget", () => {
 
   it("should render a label in the title", () => {
     const wrappedDiv = wrapper.find("div").first()
-    expect(wrappedDiv.find("label").text()).toBe(props.element.get("label"))
+    expect(wrappedDiv.find("label").text()).toBe(props.element.label)
   })
 
   it("should set widget value on did mount", () => {
-    expect(
-      props.widgetMgr.setStringValue
-    ).toHaveBeenCalledWith(
-      props.element.get("id"),
-      props.element.get("default"),
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element.id,
+      props.element.default,
       { fromUi: false }
     )
   })

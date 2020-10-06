@@ -15,13 +15,13 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { Map as ImmutableMap } from "immutable"
+import { Json as JsonProto } from "autogen/proto"
 import { shallow } from "enzyme"
+import React from "react"
 import Json, { JsonProps } from "./Json"
 
 const getProps = (elementProps: Record<string, unknown> = {}): JsonProps => ({
-  element: ImmutableMap({
+  element: JsonProto.create({
     body:
       '{ "proper": [1,2,3],' +
       '  "nested": { "thing1": "cat", "thing2": "hat" },' +

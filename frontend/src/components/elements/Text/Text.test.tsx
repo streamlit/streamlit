@@ -15,13 +15,13 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { Text as TextProto } from "autogen/proto"
 import { shallow } from "enzyme"
-import { Map as ImmutableMap } from "immutable"
+import React from "react"
 import Text, { TextProps } from "./Text"
 
 const getProps = (elementProps: Record<string, unknown> = {}): TextProps => ({
-  element: ImmutableMap({
+  element: TextProto.create({
     body: "some plain text",
     ...elementProps,
   }),

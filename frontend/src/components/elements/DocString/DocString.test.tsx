@@ -15,16 +15,16 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { DocString as DocStringProto } from "autogen/proto"
 import { shallow } from "enzyme"
-import { fromJS } from "immutable"
+import React from "react"
 
 import DocString, { DocStringProps } from "./DocString"
 
 const getProps = (
   elementProps: Record<string, unknown> = {}
 ): DocStringProps => ({
-  element: fromJS({
+  element: DocStringProto.create({
     name: "balloons",
     module: "streamlit",
     docString:
@@ -45,9 +45,7 @@ describe("DocString Element", () => {
   })
 
   it("should render a doc-string", () => {
-    expect(wrapper.find(".doc-string").text()).toBe(
-      props.element.get("docString")
-    )
+    expect(wrapper.find(".doc-string").text()).toBe(props.element.docString)
   })
 
   describe("doc-header", () => {

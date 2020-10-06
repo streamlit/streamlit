@@ -16,7 +16,6 @@
  */
 
 import { GraphVizChart as GraphVizChartProto } from "autogen/proto"
-
 import { select } from "d3"
 import { graphviz } from "d3-graphviz"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"

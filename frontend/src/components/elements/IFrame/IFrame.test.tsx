@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
+import { IFrame as IFrameProto } from "autogen/proto"
 import { shallow, ShallowWrapper } from "enzyme"
-import { fromJS } from "immutable"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   getIFrameSandboxPolicy,
@@ -27,7 +27,7 @@ import IFrame, { IFrameProps } from "./IFrame"
 const getProps = (
   elementProps: Record<string, unknown> = {}
 ): IFrameProps => ({
-  element: fromJS({
+  element: IFrameProto.create({
     ...elementProps,
   }),
   width: 100,
