@@ -162,7 +162,43 @@ beta_columns = _main.beta_columns  # noqa: E221
 # Config
 
 get_option = _config.get_option
-from streamlit.commands.page_config import beta_set_page_config
+from streamlit.commands.page_config import set_page_config
+
+
+def _beta_warning(func, date):
+    """Wrapper for functions that are no longer in beta.
+
+    Wrapped functions will run as normal, but then proceed to show an st.warning
+    saying that the beta_ version will be removed in ~3 months.
+
+    Parameters
+    ----------
+    func: function
+        The `st.` function that used to be in beta.
+
+    date: str
+        A date like "2020-01-01", indicating the last day we'll guarantee
+        support for the beta_ prefix.
+    """
+
+    def wrapped(*args, **kwargs):
+        # Note: Since we use a wrapper, beta_ functions will not autocomplete
+        # correctly on VSCode.
+        result = func(*args, **kwargs)
+        warning(
+            f"`st.{func.__name__}` has graduated out of beta. "
+            + f"On {date}, the beta_ version will be removed.\n\n"
+            + f"Before then, update your code from `st.beta_{func.__name__}` to `st.{func.__name__}`."
+        )
+        return result
+
+    # Update the wrapped func's name & docstring so st.help does the right thing
+    wrapped.__name__ = "beta_" + func.__name__
+    wrapped.__doc__ = func.__doc__
+    return wrapped
+
+
+beta_set_page_config = _beta_warning(set_page_config, "2021-01-06")
 
 
 def set_option(key, value):
