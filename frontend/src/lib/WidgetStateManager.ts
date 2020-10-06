@@ -39,13 +39,23 @@ export interface Source {
  * of JavaScript int values. Protobufjs uses `number | Long` to represent
  * sint64. However, we're never putting Longs *into* int and intArrays -
  * because none of our widgets use Longs - so we'll never get a Long back out.
+ *
+ * If the given value cannot be converted to `number` without a loss of
+ * precision, throw an error instead.
  */
-function sint64ToNumber(value: number | Long): number {
+function requireNumberInt(value: number | Long): number {
   if (typeof value === "number") {
     return value
   }
 
-  return util.LongBits.from(value).toNumber()
+  const longNumber = util.LongBits.from(value).toNumber()
+  if (Number.isSafeInteger(longNumber)) {
+    return longNumber
+  }
+
+  throw new Error(
+    `value ${value} cannot be converted to number without a loss of precision!`
+  )
 }
 
 /**
@@ -99,7 +109,7 @@ export class WidgetStateManager {
   public getIntValue(widgetId: string): number | undefined {
     const state = this.getWidgetStateProto(widgetId)
     if (state != null && state.value === "intValue") {
-      return sint64ToNumber(state.intValue)
+      return requireNumberInt(state.intValue)
     }
 
     return undefined
@@ -200,7 +210,7 @@ export class WidgetStateManager {
       state.intArrayValue != null &&
       state.intArrayValue.value != null
     ) {
-      return state.intArrayValue.value.map(sint64ToNumber)
+      return state.intArrayValue.value.map(requireNumberInt)
     }
 
     return undefined
