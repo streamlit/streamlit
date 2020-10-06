@@ -15,21 +15,20 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { Slider as UISlider } from "baseui/slider"
-import { Map as ImmutableMap } from "immutable"
-import { sprintf } from "sprintf-js"
-import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { Slider as SliderProto } from "autogen/proto"
-import { sliderOverrides } from "lib/widgetTheme"
+import { Slider as UISlider } from "baseui/slider"
 import { debounce } from "lib/utils"
+import { Source, WidgetStateManager } from "lib/WidgetStateManager"
+import { sliderOverrides } from "lib/widgetTheme"
 import moment from "moment"
+import React from "react"
+import { sprintf } from "sprintf-js"
 
 const DEBOUNCE_TIME_MS = 200
 
 export interface Props {
   disabled: boolean
-  element: ImmutableMap<string, any>
+  element: SliderProto
   widgetMgr: WidgetStateManager
   width: number
 }
@@ -59,11 +58,9 @@ class Slider extends React.PureComponent<Props, State> {
   }
 
   get initialValue(): number[] {
-    const widgetId: string = this.props.element.get("id")
+    const widgetId = this.props.element.id
     const storedValue = this.props.widgetMgr.getFloatArrayValue(widgetId)
-    return storedValue !== undefined
-      ? storedValue
-      : this.props.element.get("default").toJS()
+    return storedValue !== undefined ? storedValue : this.props.element.default
   }
 
   public componentDidMount = (): void => {
@@ -89,7 +86,7 @@ class Slider extends React.PureComponent<Props, State> {
   }
 
   private setWidgetValueImmediately = (source: Source): void => {
-    const widgetId: string = this.props.element.get("id")
+    const widgetId = this.props.element.id
     this.props.widgetMgr.setFloatArrayValue(widgetId, this.state.value, source)
   }
 
@@ -106,8 +103,8 @@ class Slider extends React.PureComponent<Props, State> {
 
   private setAriaValueText = (sliderRoleRef: Element, index: number): void => {
     // Setting `aria-valuetext` helps screen readers read options and dates
-    const options = this.props.element.get("options")
-    if (options.size > 0 || this.isDateTimeType()) {
+    const { options } = this.props.element
+    if (options.length > 0 || this.isDateTimeType()) {
       const { value } = this
       if (index < value.length) {
         sliderRoleRef.setAttribute(
@@ -141,8 +138,7 @@ class Slider extends React.PureComponent<Props, State> {
    * values (for a range slider).
    */
   private get value(): number[] {
-    const min = this.props.element.get("min")
-    const max = this.props.element.get("max")
+    const { min, max } = this.props.element
     const { value } = this.state
     let start = value[0]
     let end = value.length > 1 ? value[1] : value[0]
@@ -166,8 +162,7 @@ class Slider extends React.PureComponent<Props, State> {
   }
 
   private isDateTimeType(): boolean {
-    const dataType = this.props.element.get("dataType")
-
+    const { dataType } = this.props.element
     return (
       dataType === SliderProto.DataType.DATETIME ||
       dataType === SliderProto.DataType.DATE ||
@@ -176,15 +171,14 @@ class Slider extends React.PureComponent<Props, State> {
   }
 
   private formatValue(value: number): string {
-    const format = this.props.element.get("format")
-    const options = this.props.element.get("options")
+    const { format, options } = this.props.element
     if (this.isDateTimeType()) {
       // Python datetime uses microseconds, but JS & Moment uses milliseconds
       return moment(value / 1000).format(format)
     }
 
-    if (options.size > 0) {
-      return sprintf(format, options.get(value))
+    if (options.length > 0) {
+      return sprintf(format, options[value])
     }
 
     return sprintf(format, value)
@@ -206,8 +200,7 @@ class Slider extends React.PureComponent<Props, State> {
   }
 
   private renderTickBar = (): JSX.Element => {
-    const max = this.props.element.get("max")
-    const min = this.props.element.get("min")
+    const { max, min } = this.props.element
     const tickBarItemStyle = sliderOverrides.TickBarItem
       .style as React.CSSProperties
 
@@ -225,18 +218,14 @@ class Slider extends React.PureComponent<Props, State> {
 
   public render = (): React.ReactNode => {
     const style = { width: this.props.width }
-    const label = this.props.element.get("label")
-    const min = this.props.element.get("min")
-    const max = this.props.element.get("max")
-    const step = this.props.element.get("step")
 
     return (
       <div ref={this.sliderRef} className="Widget stSlider" style={style}>
-        <label>{label}</label>
+        <label>{this.props.element.label}</label>
         <UISlider
-          min={min}
-          max={max}
-          step={step}
+          min={this.props.element.min}
+          max={this.props.element.max}
+          step={this.props.element.step}
           value={this.value}
           onChange={this.handleChange}
           onFinalChange={this.handleFinalChange}

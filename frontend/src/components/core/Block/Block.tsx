@@ -543,11 +543,29 @@ class Block extends PureComponent<Props> {
         )
       }
 
-      case "selectbox":
-        throw new Error("TODO")
+      case "selectbox": {
+        const selectboxProto = node.element.selectbox as SelectboxProto
+        return (
+          <Selectbox
+            key={selectboxProto.id}
+            element={selectboxProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
+      }
 
-      case "slider":
-        throw new Error("TODO")
+      case "slider": {
+        const sliderProto = node.element.slider as SliderProto
+        return (
+          <Slider
+            key={sliderProto.id}
+            element={sliderProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
+      }
 
       case "textArea":
         throw new Error("TODO")
@@ -570,22 +588,6 @@ class Block extends PureComponent<Props> {
     //     <VegaLiteChart element={el} width={width} />
     //   ),
     //   // Widgets
-    //   selectbox: (el: SimpleElement) => (
-    //     <Selectbox
-    //       key={el.get("id")}
-    //       element={el}
-    //       width={width}
-    //       {...widgetProps}
-    //     />
-    //   ),
-    //   slider: (el: SimpleElement) => (
-    //     <Slider
-    //       key={el.get("id")}
-    //       element={el}
-    //       width={width}
-    //       {...widgetProps}
-    //     />
-    //   ),
     //   textArea: (el: SimpleElement) => (
     //     <TextArea
     //       key={el.get("id")}
