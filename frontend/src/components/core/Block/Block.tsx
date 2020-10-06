@@ -480,14 +480,44 @@ class Block extends PureComponent<Props> {
           />
         )
 
-      case "dateInput":
-        throw new Error("TODO")
+      case "dateInput": {
+        const dateInputProto = node.element.dateInput as DateInputProto
+        return (
+          <DateInput
+            key={dateInputProto.id}
+            element={dateInputProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
+      }
 
-      case "fileUploader":
-        throw new Error("TODO")
+      case "fileUploader": {
+        const fileUploaderProto = node.element
+          .fileUploader as FileUploaderProto
+        return (
+          <FileUploader
+            key={fileUploaderProto.id}
+            element={fileUploaderProto}
+            width={width}
+            widgetStateManager={widgetProps.widgetMgr}
+            uploadClient={this.props.uploadClient}
+            disabled={widgetProps.disabled}
+          />
+        )
+      }
 
-      case "multiselect":
-        throw new Error("TODO")
+      case "multiselect": {
+        const multiSelectProto = node.element.multiselect as MultiSelectProto
+        return (
+          <Multiselect
+            key={multiSelectProto.id}
+            element={multiSelectProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
+      }
 
       case "numberInput":
         throw new Error("TODO")
@@ -518,35 +548,10 @@ class Block extends PureComponent<Props> {
     //   dataFrame: (el: SimpleElement) => (
     //     <DataFrame element={el} width={width} height={height} />
     //   ),
-    //   multiselect: (el: SimpleElement) => (
-    //     <Multiselect
-    //       key={el.get("id")}
-    //       element={el}
-    //       width={width}
-    //       {...widgetProps}
-    //     />
-    //   ),
     //   table: (el: SimpleElement) => <Table element={el} width={width} />,
-    //   text: (el: SimpleElement) => <Text element={el} width={width} />,
     //     <VegaLiteChart element={el} width={width} />
     //   ),
     //   // Widgets
-    //   colorPicker: (el: SimpleElement) => (
-    //     <ColorPicker
-    //       key={el.get("id")}
-    //       element={el}
-    //       width={width}
-    //       {...widgetProps}
-    //     />
-    //   ),
-    //   dateInput: (el: SimpleElement) => (
-    //     <DateInput
-    //       key={el.get("id")}
-    //       element={el}
-    //       width={width}
-    //       {...widgetProps}
-    //     />
-    //   ),
     //   radio: (el: SimpleElement) => (
     //     <Radio
     //       key={el.get("id")}
@@ -569,16 +574,6 @@ class Block extends PureComponent<Props> {
     //       element={el}
     //       width={width}
     //       {...widgetProps}
-    //     />
-    //   ),
-    //   fileUploader: (el: SimpleElement) => (
-    //     <FileUploader
-    //       key={el.get("id")}
-    //       element={el}
-    //       width={width}
-    //       widgetStateManager={widgetProps.widgetMgr}
-    //       uploadClient={this.props.uploadClient}
-    //       disabled={widgetProps.disabled}
     //     />
     //   ),
     //   textArea: (el: SimpleElement) => (

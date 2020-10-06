@@ -15,17 +15,18 @@
  * limitations under the License.
  */
 
-import React from "react"
-import without from "lodash/without"
-import { Map as ImmutableMap } from "immutable"
-import { multiSelectOverrides } from "lib/widgetTheme"
-import { WidgetStateManager, Source } from "lib/WidgetStateManager"
-import { TYPE, Select as UISelect, OnChangeParams } from "baseui/select"
+import { MultiSelect as MultiSelectProto } from "autogen/proto"
+import { OnChangeParams, Select as UISelect, TYPE } from "baseui/select"
 import VirtualDropdown from "components/shared/VirtualDropdown"
+import { Source, WidgetStateManager } from "lib/WidgetStateManager"
+import { multiSelectOverrides } from "lib/widgetTheme"
+import without from "lodash/without"
+import { Long, util } from "protobufjs"
+import React from "react"
 
 export interface Props {
   disabled: boolean
-  element: ImmutableMap<string, any>
+  element: MultiSelectProto
   widgetMgr: WidgetStateManager
   width: number
 }
@@ -42,6 +43,16 @@ interface MultiselectOption {
   value: string
 }
 
+/**
+ * Convert a Long to a number, if necessary.
+ */
+function getNumber(value: number | Long): number {
+  if (typeof value === "number") {
+    return value
+  }
+  return new util.LongBits(value.low, value.high).toNumber()
+}
+
 class Multiselect extends React.PureComponent<Props, State> {
   public state: State = {
     value: this.initialValue,
@@ -49,12 +60,12 @@ class Multiselect extends React.PureComponent<Props, State> {
 
   get initialValue(): number[] {
     // If WidgetStateManager knew a value for this widget, initialize to that.
-    const widgetId: string = this.props.element.get("id")
+    // Otherwise, use the default value from the widget protobuf.
+    const widgetId = this.props.element.id
     const storedValue = this.props.widgetMgr.getIntArrayValue(widgetId)
     return storedValue !== undefined
-      ? storedValue
-      : // Otherwise, use the default value from the widget protobuf
-        this.props.element.get("default").toArray()
+      ? storedValue.map(getNumber)
+      : this.props.element.default
   }
 
   public componentDidMount(): void {
@@ -62,13 +73,13 @@ class Multiselect extends React.PureComponent<Props, State> {
   }
 
   private setWidgetValue = (source: Source): void => {
-    const widgetId: string = this.props.element.get("id")
+    const widgetId = this.props.element.id
     this.props.widgetMgr.setIntArrayValue(widgetId, this.state.value, source)
   }
 
   private get valueFromState(): MultiselectOption[] {
     return this.state.value.map(i => {
-      const label = this.props.element.get("options").get(i)
+      const label = this.props.element.options[i]
       return { value: i.toString(), label }
     })
   }
@@ -103,23 +114,22 @@ class Multiselect extends React.PureComponent<Props, State> {
   public render(): React.ReactNode {
     const { element, width } = this.props
     const style = { width }
-    const label = element.get("label")
-    const options = element.get("options")
-    const disabled = options.size === 0 ? true : this.props.disabled
+    const { options } = element
+    const disabled = options.length === 0 ? true : this.props.disabled
     const placeholder =
-      options.size === 0 ? "No options to select." : "Choose an option"
-    const selectOptions: MultiselectOption[] = options
-      .map((option: string, idx: number) => {
+      options.length === 0 ? "No options to select." : "Choose an option"
+    const selectOptions: MultiselectOption[] = options.map(
+      (option: string, idx: number) => {
         return {
           label: option,
           value: idx.toString(),
         }
-      })
-      .toArray()
+      }
+    )
 
     return (
       <div className="Widget row-widget stMultiSelect" style={style}>
-        <label>{label}</label>
+        <label>{element.label}</label>
         <UISelect
           options={selectOptions}
           labelKey="label"

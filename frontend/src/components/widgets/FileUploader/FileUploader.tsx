@@ -15,22 +15,22 @@
  * limitations under the License.
  */
 
+import { FileUploader as FileUploaderProto } from "autogen/proto"
+import { SCSS_VARS } from "autogen/scssVariables"
 import axios, { CancelTokenSource } from "axios"
 import { FileUploader as FileUploaderBaseui } from "baseui/file-uploader"
+import { Spinner } from "baseui/spinner"
+import Button, { Kind } from "components/shared/Button"
 import Icon from "components/shared/Icon"
-import { Map as ImmutableMap } from "immutable"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { fileUploaderOverrides } from "lib/widgetTheme"
 import React from "react"
-import Button, { Kind } from "components/shared/Button"
-import { Spinner } from "baseui/spinner"
-import { SCSS_VARS } from "autogen/scssVariables"
 import "./FileUploader.scss"
 
 export interface Props {
   disabled: boolean
-  element: ImmutableMap<string, any>
+  element: FileUploaderProto
   widgetStateManager: WidgetStateManager
   uploadClient: FileUploadClient
   width: number
@@ -72,7 +72,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     event: React.SyntheticEvent<HTMLElement>
   ): void => {
     const { element } = this.props
-    const maxSizeMb = element.get("maxUploadSizeMb")
+    const maxSizeMb = element.maxUploadSizeMb
 
     if (rejectedFiles.length > 0) {
       // TODO: Tell user which files *are* allowed.
@@ -105,7 +105,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     this.currentUploadCanceller = axios.CancelToken.source()
     this.props.uploadClient
       .uploadFiles(
-        this.props.element.get("id"),
+        this.props.element.id,
         acceptedFiles,
         undefined,
         this.currentUploadCanceller.token
@@ -187,12 +187,9 @@ class FileUploader extends React.PureComponent<Props, State> {
   private renderFileUploader = (): React.ReactNode => {
     const { status, errorMessage } = this.state
     const { element } = this.props
-    const accept: string[] = element
-      .get("type")
-      .toArray()
-      .map((value: string) => `.${value}`)
+    const accept: string[] = element.type.map((value: string) => `.${value}`)
 
-    const multipleFiles: boolean = element.get("multipleFiles")
+    const { multipleFiles } = element
 
     // Hack to hide drag-and-drop message and leave space for filename.
     let overrides: any = fileUploaderOverrides
@@ -240,7 +237,6 @@ class FileUploader extends React.PureComponent<Props, State> {
   public render = (): React.ReactNode => {
     const { status } = this.state
     const { element } = this.props
-    const label: string = element.get("label")
 
     let renderFunction
     if (status === "ERROR") {
@@ -255,7 +251,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     // the uploader with our own UI where appropriate.
     return (
       <div className="Widget stFileUploader">
-        <label>{label}</label>
+        <label>{element.label}</label>
 
         {renderFunction()}
       </div>
