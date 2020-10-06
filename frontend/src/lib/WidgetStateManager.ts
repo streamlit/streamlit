@@ -41,7 +41,7 @@ export interface Source {
  * because none of our widgets use Longs - so we'll never get a Long back out.
  *
  * If the given value cannot be converted to `number` without a loss of
- * precision, throw an error instead.
+ * precision (which should not be possible!), throw an error instead.
  */
 function requireNumberInt(value: number | Long): number {
   if (typeof value === "number") {
