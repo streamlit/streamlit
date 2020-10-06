@@ -29,10 +29,6 @@ def set_page_config(
         This must be the first Streamlit command used in your app, and must only
         be set once.
 
-        This is a beta feature. See
-        https://docs.streamlit.io/en/latest/api.html#pre-release-features for more
-        information.
-
     Parameters
     ----------
     page_title: str or None
