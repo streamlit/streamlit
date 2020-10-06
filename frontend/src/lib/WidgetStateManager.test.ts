@@ -97,11 +97,9 @@ describe("Widget State Manager", () => {
     widgetMgr.setIntArrayValue(MOCK_DATA.widgetId, MOCK_DATA.intArray, {
       fromUi: true,
     })
-    expect(widgetMgr.getIntArrayValue(MOCK_DATA.widgetId)).toEqual([
-      { low: 1, high: 0, unsigned: false },
-      { low: 25, high: 0, unsigned: false },
-      { low: 50, high: 0, unsigned: false },
-    ])
+    expect(widgetMgr.getIntArrayValue(MOCK_DATA.widgetId)).toEqual(
+      MOCK_DATA.intArray
+    )
   })
 
   it("sets float array value correctly", () => {

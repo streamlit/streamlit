@@ -25,29 +25,27 @@ import {
 } from "autogen/proto"
 
 import { Set as ImmutableSet } from "immutable"
-import { Long } from "protobufjs"
+import { Long, util } from "protobufjs"
 
 export interface Source {
   fromUi: boolean
 }
 
 /**
- * Require that a `number | Long` is a `number`. If the value is a `Long`,
- * throw an Error.
+ * Coerce a `number | Long` a `number`.
  *
  * Our "intValue" and "intArrayValue" widget protobuf fields represent their
  * values with sint64, because sint32 is too small to represent the full range
  * of JavaScript int values. Protobufjs uses `number | Long` to represent
  * sint64. However, we're never putting Longs *into* int and intArrays -
  * because none of our widgets use Longs - so we'll never get a Long back out.
- * This function documents and asserts that.
  */
-function requireNumberInt(value: number | Long): number {
+function sint64ToNumber(value: number | Long): number {
   if (typeof value === "number") {
     return value
   }
 
-  throw new Error(`Expected a number, but got a Long: ${value}`)
+  return util.LongBits.from(value).toNumber()
 }
 
 /**
@@ -101,7 +99,7 @@ export class WidgetStateManager {
   public getIntValue(widgetId: string): number | undefined {
     const state = this.getWidgetStateProto(widgetId)
     if (state != null && state.value === "intValue") {
-      return requireNumberInt(state.intValue)
+      return sint64ToNumber(state.intValue)
     }
 
     return undefined
@@ -202,7 +200,7 @@ export class WidgetStateManager {
       state.intArrayValue != null &&
       state.intArrayValue.value != null
     ) {
-      return state.intArrayValue.value.map(requireNumberInt)
+      return state.intArrayValue.value.map(sint64ToNumber)
     }
 
     return undefined
