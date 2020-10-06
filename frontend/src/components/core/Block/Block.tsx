@@ -78,7 +78,7 @@ import {
   getElementWidgetID,
   makeElementWithInfoTextNew,
   ReportNode,
-} from "../../../lib/ReportNode"
+} from "lib/ReportNode"
 
 import "./Block.scss"
 
@@ -342,6 +342,7 @@ class Block extends PureComponent<Props> {
         )
 
       case "dataFrame":
+        // <DataFrame element={el} width={width} height={height} />
         throw new Error("TODO")
 
       case "deckGlJsonChart":
@@ -422,12 +423,14 @@ class Block extends PureComponent<Props> {
         )
 
       case "table":
+        //   table: (el: SimpleElement) => <Table element={el} width={width} />,
         throw new Error("TODO")
 
       case "text":
         return <Text width={width} element={node.element.text as TextProto} />
 
       case "vegaLiteChart":
+        //     <VegaLiteChart element={el} width={width} />
         throw new Error("TODO")
 
       case "video":
@@ -567,52 +570,45 @@ class Block extends PureComponent<Props> {
         )
       }
 
-      case "textArea":
-        throw new Error("TODO")
+      case "textArea": {
+        const textAreaProto = node.element.textArea as TextAreaProto
+        return (
+          <TextArea
+            key={textAreaProto.id}
+            element={textAreaProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
+      }
 
-      case "textInput":
-        throw new Error("TODO")
+      case "textInput": {
+        const textInputProto = node.element.textInput as TextInputProto
+        return (
+          <TextInput
+            key={textInputProto.id}
+            element={textInputProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
+      }
 
-      case "timeInput":
-        throw new Error("TODO")
+      case "timeInput": {
+        const timeInputProto = node.element.timeInput as TimeInputProto
+        return (
+          <TimeInput
+            key={timeInputProto.id}
+            element={timeInputProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
+      }
 
       default:
         throw new Error(`Unrecognized Element type ${node.element.type}`)
     }
-
-    // return dispatchOneOf(node, "type", {
-    //   dataFrame: (el: SimpleElement) => (
-    //     <DataFrame element={el} width={width} height={height} />
-    //   ),
-    //   table: (el: SimpleElement) => <Table element={el} width={width} />,
-    //     <VegaLiteChart element={el} width={width} />
-    //   ),
-    //   // Widgets
-    //   textArea: (el: SimpleElement) => (
-    //     <TextArea
-    //       key={el.get("id")}
-    //       element={el}
-    //       width={width}
-    //       {...widgetProps}
-    //     />
-    //   ),
-    //   textInput: (el: SimpleElement) => (
-    //     <TextInput
-    //       key={el.get("id")}
-    //       element={el}
-    //       width={width}
-    //       {...widgetProps}
-    //     />
-    //   ),
-    //   timeInput: (el: SimpleElement) => (
-    //     <TimeInput
-    //       key={el.get("id")}
-    //       element={el}
-    //       width={width}
-    //       {...widgetProps}
-    //     />
-    //   ),
-    // })
   }
 
   public render = (): ReactNode => {

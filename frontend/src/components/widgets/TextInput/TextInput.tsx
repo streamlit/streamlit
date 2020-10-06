@@ -15,16 +15,15 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { Input as UIInput } from "baseui/input"
-import { Map as ImmutableMap } from "immutable"
 import { TextInput as TextInputProto } from "autogen/proto"
-import { WidgetStateManager, Source } from "lib/WidgetStateManager"
+import { Input as UIInput } from "baseui/input"
 import InputInstructions from "components/shared/InputInstructions/InputInstructions"
+import { Source, WidgetStateManager } from "lib/WidgetStateManager"
+import React from "react"
 
 export interface Props {
   disabled: boolean
-  element: ImmutableMap<string, any>
+  element: TextInputProto
   widgetMgr: WidgetStateManager
   width: number
 }
@@ -50,12 +49,10 @@ class TextInput extends React.PureComponent<Props, State> {
 
   get initialValue(): string {
     // If WidgetStateManager knew a value for this widget, initialize to that.
-    const widgetId: string = this.props.element.get("id")
+    // Otherwise, use the default value from the widget protobuf.
+    const widgetId = this.props.element.id
     const storedValue = this.props.widgetMgr.getStringValue(widgetId)
-    return storedValue !== undefined
-      ? storedValue
-      : // Otherwise, use the default value from the widget protobuf
-        this.props.element.get("default")
+    return storedValue !== undefined ? storedValue : this.props.element.default
   }
 
   public componentDidMount(): void {
@@ -63,7 +60,7 @@ class TextInput extends React.PureComponent<Props, State> {
   }
 
   private setWidgetValue = (source: Source): void => {
-    const widgetId: string = this.props.element.get("id")
+    const widgetId = this.props.element.id
     this.props.widgetMgr.setStringValue(widgetId, this.state.value, source)
     this.setState({ dirty: false })
   }
@@ -77,8 +74,7 @@ class TextInput extends React.PureComponent<Props, State> {
   private onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const { value } = e.target
     const { element } = this.props
-
-    const maxChars = element.get("maxChars")
+    const { maxChars } = element
 
     if (!maxChars || value.length <= maxChars) {
       this.setState({
@@ -95,7 +91,7 @@ class TextInput extends React.PureComponent<Props, State> {
   }
 
   private getTypeString(): string | undefined {
-    return this.props.element.get("type") === TextInputProto.Type.PASSWORD
+    return this.props.element.type === TextInputProto.Type.PASSWORD
       ? "password"
       : undefined
   }
@@ -103,14 +99,11 @@ class TextInput extends React.PureComponent<Props, State> {
   public render = (): React.ReactNode => {
     const { dirty, value } = this.state
     const { element, width, disabled } = this.props
-
-    const label: string = element.get("label")
-    const maxChars = element.get("maxChars")
     const style = { width }
 
     return (
       <div className="Widget row-widget stTextInput" style={style}>
-        <label>{label}</label>
+        <label>{element.label}</label>
         <UIInput
           value={value}
           onBlur={this.onBlur}
@@ -119,7 +112,11 @@ class TextInput extends React.PureComponent<Props, State> {
           disabled={disabled}
           type={this.getTypeString()}
         />
-        <InputInstructions dirty={dirty} value={value} maxLength={maxChars} />
+        <InputInstructions
+          dirty={dirty}
+          value={value}
+          maxLength={element.maxChars}
+        />
       </div>
     )
   }
