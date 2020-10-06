@@ -20,6 +20,7 @@
   caching
   advanced_caching
   advanced_concepts
+  publish_streamlit_components
 
 .. toctree::
   :caption: Reference Guides
@@ -29,7 +30,6 @@
   api
   streamlit_configuration
   develop_streamlit_components
-  publish_streamlit_components
 
 .. toctree::
   :caption: Support
