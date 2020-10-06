@@ -201,12 +201,15 @@ class MediaFileManager(object):
 
         return mf
 
-    def get(self, mediafile_or_id):
+    def get(self, media_filename):
         """Returns MediaFile object for given file_id or MediaFile object.
 
         Raises KeyError if not found.
         """
-        return self._files_by_id[mediafile_or_id]
+        # Filename is {requested_hash}.{extension} but MediaFileManager
+        # is indexed by requested_hash.
+        hash = media_filename.split(".")[0]
+        return self._files_by_id[hash]
 
     def __contains__(self, mediafile_or_id):
         return mediafile_or_id in self._files_by_id

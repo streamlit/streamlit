@@ -99,9 +99,9 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
 
     @classmethod
     def get_absolute_path(cls, root, path):
-        # Filename is {requested_hash}.{extension} but MediaFileManager
-        # is indexed by requested_hash.
-        return path.split(".")[0]
+        # All files are stored in memory, so the absolute path is just the
+        # path itself. In the MediaFileHandler, it's just the filename
+        return path
 
     @classmethod
     def get_content(cls, abspath, start=None, end=None):
