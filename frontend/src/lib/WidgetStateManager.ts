@@ -23,10 +23,39 @@ import {
   WidgetState,
   WidgetStates,
 } from "autogen/proto"
-import { Long } from "protobufjs"
+
+import { Set as ImmutableSet } from "immutable"
+import { Long, util } from "protobufjs"
 
 export interface Source {
   fromUi: boolean
+}
+
+/**
+ * Coerce a `number | Long` to a `number`.
+ *
+ * Our "intValue" and "intArrayValue" widget protobuf fields represent their
+ * values with sint64, because sint32 is too small to represent the full range
+ * of JavaScript int values. Protobufjs uses `number | Long` to represent
+ * sint64. However, we're never putting Longs *into* int and intArrays -
+ * because none of our widgets use Longs - so we'll never get a Long back out.
+ *
+ * If the given value cannot be converted to `number` without a loss of
+ * precision (which should not be possible!), throw an error instead.
+ */
+function requireNumberInt(value: number | Long): number {
+  if (typeof value === "number") {
+    return value
+  }
+
+  const longNumber = util.LongBits.from(value).toNumber()
+  if (Number.isSafeInteger(longNumber)) {
+    return longNumber
+  }
+
+  throw new Error(
+    `value ${value} cannot be converted to number without a loss of precision!`
+  )
 }
 
 /**
@@ -77,10 +106,10 @@ export class WidgetStateManager {
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
-  public getIntValue(widgetId: string): number | Long | undefined {
+  public getIntValue(widgetId: string): number | undefined {
     const state = this.getWidgetStateProto(widgetId)
     if (state != null && state.value === "intValue") {
-      return state.intValue
+      return requireNumberInt(state.intValue)
     }
 
     return undefined
@@ -173,7 +202,7 @@ export class WidgetStateManager {
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
-  public getIntArrayValue(widgetId: string): (number | Long)[] | undefined {
+  public getIntArrayValue(widgetId: string): number[] | undefined {
     const state = this.getWidgetStateProto(widgetId)
     if (
       state != null &&
@@ -181,7 +210,7 @@ export class WidgetStateManager {
       state.intArrayValue != null &&
       state.intArrayValue.value != null
     ) {
-      return state.intArrayValue.value
+      return state.intArrayValue.value.map(requireNumberInt)
     }
 
     return undefined
