@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A Python wrapper around Altair."""
+"""A Python wrapper around Altair.
+Altair is a Python visualization library based on Vega-Lite,
+a nice JSON schema for expressing graphs and charts."""
 
 from datetime import date
 
@@ -270,10 +272,13 @@ def generate_chart(chart_type, data, width=0, height=0):
     )
     y_scale = alt.Scale(type="utc") if _is_date_column(data, "value") else alt.Undefined
 
+    # Bar charts should have discrete (ordered) x-axis; default is "quantitative"
+    x_type = "ordinal" if chart_type == "bar" else alt.Undefined
+
     chart = (
         getattr(alt.Chart(data, width=width, height=height), "mark_" + chart_type)()
         .encode(
-            alt.X(index_name, title="", scale=x_scale),
+            alt.X(index_name, title="", scale=x_scale, type=x_type,),
             alt.Y("value", title="", scale=y_scale),
             alt.Color("variable", title="", type="nominal"),
             alt.Tooltip([index_name, "value", "variable"]),
