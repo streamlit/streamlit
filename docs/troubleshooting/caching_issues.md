@@ -75,7 +75,7 @@ By default Streamlit expects its cached values to be treated as immutable -- tha
       ...
    ```
 
-   For more information, see [Advanced caching](../advanced_caching.html#the-hash-funcs-parameter).
+   For more information, see [Improve app performance](../caching.html#the-hash-funcs-parameter).
 
    By the way, the scenario above is fairly unlikely — unless `FooType` does something particularly tricky internally. This is the case with some `SpaCY` objects, which can automatically mutate behind the scenes for better performance, while keeping their semantics constant. That means Streamlit will correctly detect a mutation in the object's internal structure, even though semantically that mutation makes no difference.
 
