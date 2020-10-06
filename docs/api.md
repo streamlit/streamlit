@@ -171,6 +171,21 @@ add_selectbox = st.sidebar.selectbox(
 )
 ```
 
+## Lay out your app
+
+In addition to the sidebar, you have a few other options for controlling how your app is laid out.
+
+```eval_rst
+.. note:: These are beta features. See
+  https://docs.streamlit.io/en/latest/api.html#pre-release-features for more information.
+```
+
+```eval_rst
+.. autofunction:: streamlit.beta_container
+.. autofunction:: streamlit.beta_columns
+.. autofunction:: streamlit.beta_expander
+```
+
 ## Display code
 
 Sometimes you want your Streamlit app to contain _both_ your usual

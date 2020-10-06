@@ -38,7 +38,17 @@ interface State {
 
 class Checkbox extends React.PureComponent<Props, State> {
   public state: State = {
-    value: this.props.element.get("default"),
+    value: this.initialValue,
+  }
+
+  get initialValue(): boolean {
+    // If WidgetStateManager knew a value for this widget, initialize to that.
+    const widgetId: string = this.props.element.get("id")
+    const storedValue = this.props.widgetMgr.getBoolValue(widgetId)
+    return storedValue !== undefined
+      ? storedValue
+      : // Otherwise, use the default value from the widget protobuf
+        this.props.element.get("default")
   }
 
   public componentDidMount(): void {

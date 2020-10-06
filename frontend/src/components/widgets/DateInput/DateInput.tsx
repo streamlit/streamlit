@@ -46,11 +46,20 @@ const DATE_FORMAT = "YYYY/MM/DD"
 
 class DateInput extends React.PureComponent<Props, State> {
   public state: State = {
-    values: this.props.element
-      .get("default")
-      .toJS()
-      .map((val: string) => new Date(val)),
+    values: this.initialValue,
     isRange: this.props.element.get("isRange") || false,
+  }
+
+  get initialValue(): Date[] {
+    // If WidgetStateManager knew a value for this widget, initialize to that.
+    const widgetId: string = this.props.element.get("id")
+    const storedValue = this.props.widgetMgr.getStringArrayValue(widgetId)
+    const stringArray =
+      storedValue !== undefined
+        ? storedValue
+        : // Otherwise, use the default value from the widget protobuf
+          this.props.element.get("default").toJS()
+    return stringArray.map((val: string) => new Date(val))
   }
 
   public componentDidMount(): void {
