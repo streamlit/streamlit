@@ -48,7 +48,7 @@ describe("FileDropzone widget", () => {
 
   it("with extensions", () => {
     const props = getProps({
-      acceptedExtensions: ["jpg"],
+      acceptedExtensions: [".jpg"],
     })
     const wrapper = shallow(<FileDropzone {...props} />)
     const dropzoneWrapper = wrapper.find(Dropzone)

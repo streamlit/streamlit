@@ -36,14 +36,14 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         st.file_uploader("the label", type="png")
 
         c = self.get_delta_from_queue().new_element.file_uploader
-        self.assertEqual(c.type, ["png"])
+        self.assertEqual(c.type, [".png"])
 
     def test_multiple_types(self):
         """Test that it can be called using an array for type parameter."""
-        st.file_uploader("the label", type=["png", "svg", "jpeg"])
+        st.file_uploader("the label", type=["png", ".svg", "jpeg"])
 
         c = self.get_delta_from_queue().new_element.file_uploader
-        self.assertEqual(c.type, ["png", "svg", "jpeg"])
+        self.assertEqual(c.type, [".png", ".svg", ".jpeg"])
 
     @patch("streamlit.uploaded_file_manager.UploadedFileManager.get_files")
     def test_multiple_files(self, get_files_patch):
