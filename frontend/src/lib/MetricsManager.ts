@@ -102,7 +102,6 @@ export class MetricsManager {
 
       // Only record the user's email if they entered a non-empty one.
       const userTraits: any = this.getHostTrackingData()
-      logAlways("core initialize: ", userTraits)
 
       if (SessionInfo.current.authorEmail !== "") {
         userTraits.authoremail = SessionInfo.current.authorEmail
@@ -183,8 +182,6 @@ export class MetricsManager {
       source: "browser",
       streamlitVersion: SessionInfo.current.streamlitVersion,
     }
-
-    logAlways("core send: ", data)
 
     // Don't actually track events when in dev mode, just print them instead.
     // This is just to keep us from tracking too many events and having to pay
