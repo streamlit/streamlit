@@ -419,6 +419,9 @@ class DeltaGenerator(
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
+        .. warning::
+            Currently, you may not put columns inside another column.
+
         Parameters
         ----------
         spec : int or list of numbers
@@ -475,14 +478,14 @@ class DeltaGenerator(
         >>> col2.write(data)
 
         .. output ::
-	        https://static.streamlit.io/0.66.0-Wnid/index.html?id=XSQ6VkonfGcT2AyNYMZN83
+            https://static.streamlit.io/0.66.0-Wnid/index.html?id=XSQ6VkonfGcT2AyNYMZN83
             height: 400px
 
         """
         weights = spec
         weights_exception = StreamlitAPIException(
             "The input argument to st.beta_columns must be either a "
-            + "positive integer or a list of numeric weights. "
+            + "positive integer or a list of positive numeric weights. "
             + "See [documentation](https://docs.streamlit.io/en/stable/api.html#streamlit.beta_columns) "
             + "for more information."
         )
@@ -563,6 +566,9 @@ class DeltaGenerator(
         To add elements to the returned container, you can use "with" notation
         (preferred) or just call methods directly on the returned object. See
         examples below.
+
+        .. warning::
+            Currently, you may not put expanders inside another expander.
 
         Parameters
         ----------
