@@ -78,9 +78,9 @@ class NumberInput extends React.PureComponent<Props, State> {
   }
 
   private formatValue = (value: number): string => {
-    const { format } = this.props.element
+    const format = getNonEmptyString(this.props.element.format)
     if (format == null) {
-      return String(value)
+      return value.toString()
     }
 
     try {
@@ -292,6 +292,16 @@ class NumberInput extends React.PureComponent<Props, State> {
       </div>
     )
   }
+}
+
+/**
+ * Return a string property from an element. If the string is
+ * null or empty, return undefined instead.
+ */
+function getNonEmptyString(
+  value: string | null | undefined
+): string | undefined {
+  return value == null || value === "" ? undefined : value
 }
 
 export default NumberInput
