@@ -208,9 +208,3 @@ the loop and review how it works together:
    the output value of that widget is set to the new value during that run.
 
 ![App Model](media/app_model.png)
-
-## Next steps
-
-- [Get started](getting_started.md) with Streamlit
-- Read up on [advanced concepts](advanced_concepts.md)
-- [Build your first app](tutorial/index.md)

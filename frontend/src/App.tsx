@@ -597,31 +597,29 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Removes old elements. The term old is defined as:
-   *  - simple elements whose reportIds are no longer current
+   * Returns a copy without old elements. The term old is defined as:
+   *  - element or container whose reportId is from a previous rerun
+   *  - empty container
    */
   clearOldElements = (elements: any, reportId: string): BlockElement => {
     return elements
       .map((reportElement: ReportElement) => {
-        const simpleElement = reportElement.get("element")
+        if (reportElement.get("reportId") !== reportId) return null
 
+        const simpleElement = reportElement.get("element")
         if (simpleElement instanceof List) {
           // Recursively clear old elements
           const clearedElements = this.clearOldElements(
             simpleElement,
             reportId
           )
-          // Could check whether container is now empty, and return null.
-          // But we want to let empty columns take up sapce.
           return clearedElements.size > 0 ||
+            // Allow empty columns, so that they space out other columns.
             reportElement.getIn(["deltaBlock", "allowEmpty"])
             ? reportElement.set("element", clearedElements)
             : null
         }
-
-        return reportElement.get("reportId") === reportId
-          ? reportElement
-          : null
+        return reportElement
       })
       .filter((reportElement: any) => reportElement !== null)
   }
@@ -662,14 +660,6 @@ export class App extends PureComponent<Props, State> {
    * Closes the upload dialog if it's open.
    */
   closeDialog = (): void => {
-    // HACK: Remove modal-open class that Bootstrap uses to hide scrollbars
-    // when a modal is open. Otherwise, when the user causes a syntax error in
-    // Python and we show an "Error" modal, and then the user presses "R" while
-    // that modal is showing, this causes "modal-open" to *not* be removed
-    // properly from <body>, thereby breaking scrolling. This seems to be
-    // related to the modal-close animation taking too long.
-    document.body.classList.remove("modal-open")
-
     this.setState({ dialog: undefined })
   }
 

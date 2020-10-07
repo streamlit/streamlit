@@ -17,28 +17,28 @@
 
 /// <reference types="cypress" />
 
-const toggleIdentifier = "small[data-toggle]";
+const expanderHeaderIdentifier = ".streamlit-expanderHeader";
 
-describe("st.collapsible_container", () => {
+describe("st.expander", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
   });
 
-  it("displays collapsible + regular containers properly", () => {
+  it("displays expander + regular containers properly", () => {
     cy.get(".stBlock")
       .first()
       .within(() => {
-        cy.get(toggleIdentifier).should("not.exist");
+        cy.get(expanderHeaderIdentifier).should("not.exist");
       });
     cy.get(".stBlock")
       .eq(1)
       .within(() => {
-        cy.get(toggleIdentifier).should("exist");
+        cy.get(expanderHeaderIdentifier).should("exist");
       });
     cy.get(".stBlock")
       .eq(2)
       .within(() => {
-        cy.get(toggleIdentifier).should("exist");
+        cy.get(expanderHeaderIdentifier).should("exist");
       });
   });
 
@@ -47,25 +47,29 @@ describe("st.collapsible_container", () => {
     cy.get(".stBlock")
       .eq(1)
       .within(() => {
-        let toggle = cy.get(toggleIdentifier);
-        toggle.should("exist");
-        toggle.should("have.text", "Hide");
-        toggle.click();
+        const expanderHeader = cy.get(expanderHeaderIdentifier);
+        expanderHeader.should("exist");
 
-        toggle = cy.get(toggleIdentifier);
-        toggle.should("have.text", "Show");
+        let toggle = cy.get("svg[title='Collapse']");
+        toggle.should("exist");
+        expanderHeader.click();
+
+        toggle = cy.get("svg[title='Expand']");
+        toggle.should("exist");
       });
     // Starts collapsed
     cy.get(".stBlock")
       .eq(2)
       .within(() => {
-        let toggle = cy.get(toggleIdentifier);
-        toggle.should("exist");
-        toggle.should("have.text", "Show");
-        toggle.click();
+        let expanderHeader = cy.get(expanderHeaderIdentifier);
+        expanderHeader.should("exist");
 
-        toggle = cy.get(toggleIdentifier);
-        toggle.should("have.text", "Hide");
+        let toggle = cy.get("svg[title='Expand']");
+        toggle.should("exist");
+        expanderHeader.click();
+
+        toggle = cy.get("svg[title='Collapse']");
+        toggle.should("exist");
       });
   });
 });

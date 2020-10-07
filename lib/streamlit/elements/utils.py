@@ -38,11 +38,11 @@ def _build_duplicate_widget_message(
             There are multiple identical `st.{widget_type}` widgets with the
             same generated key.
 
-            (When a widget is created, it's assigned an internal key based on
+            When a widget is created, it's assigned an internal key based on
             its structure. Multiple widgets with an identical structure will
-            result in the same internal key, which causes this error.)
+            result in the same internal key, which causes this error.
 
-            To fix this, please pass a unique `key` argument to
+            To fix this error, please pass a unique `key` argument to
             `st.{widget_type}`.
             """
         )

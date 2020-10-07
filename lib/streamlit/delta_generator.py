@@ -136,13 +136,20 @@ class DeltaGenerator(
       To support the `with dg` notation, DGs are arranged as a tree. Each DG
       remembers its own parent, and the root of the tree is the main DG.
 
+    block_type: None or "vertical" or "horizontal" or "column" or "expandable"
+      If this is a block DG, we track its type to prevent nested columns/expanders
+
     """
 
     # The pydoc below is for user consumption, so it doesn't talk about
     # DeltaGenerator constructor parameters (which users should never use). For
     # those, see above.
     def __init__(
-        self, container=BlockPath_pb2.BlockPath.MAIN, cursor=None, parent=None
+        self,
+        container=BlockPath_pb2.BlockPath.MAIN,
+        cursor=None,
+        parent=None,
+        block_type=None,
     ):
         """Inserts or updates elements in Streamlit apps.
 
@@ -162,16 +169,17 @@ class DeltaGenerator(
         # No relation to `st.beta_container()`.
         self._container = container
 
-        # You should never use this! Instead use self._cursor, which is a
+        # NOTE: You should never use this! Instead use self._cursor, which is a
         # computed property that fetches the right cursor.
         self._provided_cursor = cursor
 
-        self.parent = parent
+        self._parent = parent
+        self._block_type = block_type
 
-        # Track the DG used for the `with` block.
+        # Stack of DGs used for the `with` block. The current one is at the end.
         # NOTE: Only the main DG should ever reference this.
         # You should use the computed property _active_dg instead.
-        self._with_dg = self
+        self._with_dg_stack = [self]
 
         # Change the module of all mixin'ed functions to be st.delta_generator,
         # instead of the original module (e.g. st.elements.markdown)
@@ -181,21 +189,20 @@ class DeltaGenerator(
                     func.__module__ = self.__module__
 
     def __enter__(self):
-        # with block started. store the current DG
-        self._main_dg._with_dg = self
+        # with block started
+        self._main_dg._with_dg_stack.append(self)
 
     def __exit__(self, type, value, traceback):
-        # with block ended. Reset the current dg back to MAIN
-        # NOTE: This won't handle nested with blocks correctly
-        self._main_dg._with_dg = self._main_dg
+        # with block ended
+        self._main_dg._with_dg_stack.pop()
         # Re-raise any exceptions
         return False
 
     @property
     def _active_dg(self):
         if self == self._main_dg:
-            # `st.button`: Use the current `with` dg
-            return self._with_dg
+            # `st.button`: Use the current `with` dg (aka the top of the stack)
+            return self._with_dg_stack[-1]
         else:
             # `st.sidebar.button`: Ignore the `with` dg
             return self
@@ -203,7 +210,7 @@ class DeltaGenerator(
     @property
     def _main_dg(self):
         # Recursively traverse up the tree to find the main DG (parent = None)
-        return self.parent._main_dg if self.parent else self
+        return self._parent._main_dg if self._parent else self
 
     def __getattr__(self, name):
         import streamlit as st
@@ -233,6 +240,13 @@ class DeltaGenerator(
             raise StreamlitAPIException(message)
 
         return wrapper
+
+    @property
+    def _parent_block_types(self):
+        current_dg = self
+        while current_dg:
+            yield current_dg._block_type
+            current_dg = current_dg._parent
 
     @property
     def _cursor(self):
@@ -353,60 +367,134 @@ class DeltaGenerator(
         return _value_or_dg(return_value, output_dg)
 
     def beta_container(self):
-        """Create a placeholder that can hold multiple widgets.
+        """Insert a multi-element container.
 
-        Like st.sidebar, you can then call methods on the returned value;
-        the elements and widgets you add will be grouped together in the
-        container.
+        Inserts an invisible container into your app that can be used to hold
+        multiple elements. This allows you to, for example, insert multiple
+        elements into your app out of order.
+
+        To add elements to the returned container, you can use "with" notation
+        (preferred) or just call methods directly on the returned object. See
+        examples below.
 
         Examples
         --------
-        >>> container = st.beta_container()
-        >>> container.write('The beginning?')
-        >>> st.write('The end!')
-        >>> container.write('The middle...')
 
+        Inserting elements using "with" notation:
+
+        >>> with st.beta_container():
+        ...    st.write("This is inside the container")
+        ...
+        ...    # You can call any Streamlit command, including custom components:
+        ...    st.bar_chart(np.random.randn(50, 3))
+        ...
+        >>> st.write("This is outside the container")
+
+        .. output ::
+            https://static.streamlit.io/0.66.0-Wnid/index.html?id=Qj8PY3v3L8dgVjjQCreHux
+            height: 420px
+
+        Inserting elements out of order:
+
+        >>> container = st.beta_container()
+        >>> container.write("This is inside the container")
+        >>> st.write("This is outside the container")
+        >>>
+        >>> # Now insert some more in the container
+        >>> container.write("This is inside too")
+
+        .. output ::
+            https://static.streamlit.io/0.66.0-Wnid/index.html?id=GsFVF5QYT3Ljr6jQjErPqL
         """
         return self._block()
 
     # TODO: Enforce that columns are not nested or in Sidebar
-    def beta_columns(self, weights):
-        """Create several columns, side-by-side.
+    def beta_columns(self, spec):
+        """Insert containers laid out as side-by-side columns.
+
+        Inserts a number of multi-element containers laid out side-by-side and
+        returns a list of container objects.
+
+        To add elements to the returned containers, you can use "with" notation
+        (preferred) or just call methods directly on the returned object. See
+        examples below.
 
         Parameters
         ----------
-        weights : int or list of numbers
-            If a single int: lay out that many columns of equal width.
+        spec : int or list of numbers
+            If an int
+                Specifies the number of columns to insert, and all columns
+                have equal width.
 
-            If a list of numbers: create a column for each number.
-            Each column's width is proportional to the number provided.
-            For example, `st.beta_columns([3, 1, 2])` would create 3 columns of varying widths.
-            The first column would be 3x the width of the second column;
-            the last column would be 2x the width of the second.
+            If a list of numbers
+                Creates a column for each number, and each
+                column's width is proportional to the number provided. Numbers can
+                be ints or floats, but they must be positive.
+
+                For example, `st.beta_columns([3, 1, 2])` creates 3 columns where
+                the first column is 3 times the width of the second, and the last
+                column is 2 times that width.
 
         Returns
         -------
-        A list of containers, each of which can have their own elements.
+        list of containers
+            A list of container objects.
 
         Examples
         --------
+
+        You can use `with` notation to insert any element into a column:
+
         >>> col1, col2, col3 = st.beta_columns(3)
-        >>> col1.write('Hello?')
-        >>> col2.button('Press me!')
-        >>> col3.checkbox('Good to go~')
+        >>>
+        >>> with col1:
+        ...    st.header("A cat")
+        ...    st.image("https://static.streamlit.io/examples/cat.jpg", use_column_width=True)
+        ...
+        >>> with col2:
+        ...    st.header("A dog")
+        ...    st.image("https://static.streamlit.io/examples/dog.jpg", use_column_width=True)
+        ...
+        >>> with col3:
+        ...    st.header("An owl")
+        ...    st.image("https://static.streamlit.io/examples/owl.jpg", use_column_width=True)
+
+        .. output ::
+            https://static.streamlit.io/0.66.0-Wnid/index.html?id=VW45Va5XmSKed2ayzf7vYa
+            height: 550px
+
+        Or you can just call methods directly in the returned objects:
+
+        >>> col1, col2 = st.beta_columns([3, 1])
+        >>> data = np.random.randn(10, 1)
+        >>>
+        >>> col1.subheader("A wide column with a chart")
+        >>> col1.line_chart(data)
+        >>>
+        >>> col2.subheader("A narrow column with the data")
+        >>> col2.write(data)
+
+        .. output ::
+	        https://static.streamlit.io/0.66.0-Wnid/index.html?id=XSQ6VkonfGcT2AyNYMZN83
+            height: 400px
 
         """
+        weights = spec
+        weights_exception = StreamlitAPIException(
+            "The input argument to st.beta_columns must be either a "
+            + "positive integer or a list of numeric weights. "
+            + "See [documentation](https://docs.streamlit.io/en/stable/api.html#streamlit.beta_columns) "
+            + "for more information."
+        )
 
         if isinstance(weights, int):
-            if weights <= 0:
-                raise StreamlitAPIException("You have to create at least one column!")
-            if weights == 1:
-                raise StreamlitAPIException(
-                    "Instead of creating only one column, use st.beta_container."
-                )
             # If the user provided a single number, expand into equal weights.
-            # E.g. 3 => (1, 1, 1)
+            # E.g. (1,) * 3 => (1, 1, 1)
+            # NOTE: A negative/zero spec will expand into an empty tuple.
             weights = (1,) * weights
+
+        if len(weights) == 0 or any(weight <= 0 for weight in weights):
+            raise weights_exception
 
         def column_proto(weight):
             col_proto = Block_pb2.Block()
@@ -415,7 +503,7 @@ class DeltaGenerator(
             return col_proto
 
         horiz_proto = Block_pb2.Block()
-        horiz_proto.horizontal.unused = True
+        horiz_proto.horizontal.total_weight = sum(weights)
         row = self._block(horiz_proto)
         return [row._block(column_proto(w)) for w in weights]
 
@@ -423,6 +511,19 @@ class DeltaGenerator(
     def _block(self, block_proto=Block_pb2.Block()):
         # Switch to the active DeltaGenerator, in case we're in a `with` block.
         self = self._active_dg
+
+        # Prevent nested columns & expanders by checking all parents.
+        block_type = block_proto.WhichOneof("type")
+        # Convert the generator to a list, so we can use it multiple times.
+        parent_block_types = [t for t in self._parent_block_types]
+        if block_type == "column" and block_type in parent_block_types:
+            raise StreamlitAPIException(
+                "Columns may not be nested inside other columns."
+            )
+        if block_type == "expandable" and block_type in parent_block_types:
+            raise StreamlitAPIException(
+                "Expanders may not be nested inside other expanders."
+            )
 
         if self._container is None or self._cursor is None:
             return self
@@ -440,7 +541,10 @@ class DeltaGenerator(
             path=self._cursor.path + (self._cursor.index,)
         )
         block_dg = DeltaGenerator(
-            container=self._container, cursor=block_cursor, parent=self
+            container=self._container,
+            cursor=block_cursor,
+            parent=self,
+            block_type=block_type,
         )
 
         # Must be called to increment this cursor's index.
@@ -450,26 +554,39 @@ class DeltaGenerator(
         return block_dg
 
     def beta_expander(self, label=None, expanded=False):
-        """Create a container that can be expanded and collapsed.
+        """Insert a multi-element container that can be expanded/collapsed.
 
-        Similar to `st.container`, `st.expander` provides a container
-        to add elements to. However, it has the added benefit of being expandable and
-        collapsible. Users will be able to expand and collapse the container that is
-        identifiable with the provided label.
+        Inserts a container into your app that can be used to hold multiple elements
+        and can be expanded or collapsed by the user. When collapsed, all that is
+        visible is the provided label.
+
+        To add elements to the returned container, you can use "with" notation
+        (preferred) or just call methods directly on the returned object. See
+        examples below.
 
         Parameters
         ----------
         label : str
-            A short label used as the header for the expander.
-            This will always be displayed even when the container is collapsed.
-        expanded : boolean
-            The default state for the expander.
-            Defaults to False
+            A string to use as the header for the expander.
+        expanded : bool
+            If True, initializes the expander in "expanded" state. Defaults to
+            False (collapsed).
 
         Examples
         --------
-        >>> expander = st.beta_expander("Expand Me")
-        >>> expander.write("I can be expanded")
+        >>> st.line_chart({"data": [1, 5, 2, 6, 2, 1]})
+        >>>
+        >>> with st.beta_expander("See explanation"):
+        ...     st.write(\"\"\"
+        ...         The chart above shows some numbers I picked for you.
+        ...         I rolled actual dice for these, so they're *guaranteed* to
+        ...         be random.
+        ...     \"\"\").
+        ...     st.image("https://static.streamlit.io/examples/dice.jpg")
+
+        .. output ::
+            https://static.streamlit.io/0.66.0-2BLtg/index.html?id=LzfUAiT1eM9Xy8EDMRkWyF
+            height: 750px
 
         """
         if label is None:
@@ -480,17 +597,13 @@ class DeltaGenerator(
         expandable_proto.label = label
 
         block_proto = Block_pb2.Block()
+        block_proto.allow_empty = True
         block_proto.expandable.CopyFrom(expandable_proto)
 
         return self._block(block_proto=block_proto)
 
     def favicon(
-        self,
-        element,
-        image,
-        clamp=False,
-        channels="RGB",
-        format="JPEG",
+        self, element, image, clamp=False, channels="RGB", format="JPEG",
     ):
         """Set the page favicon to the specified image.
 

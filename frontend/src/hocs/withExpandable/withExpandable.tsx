@@ -16,53 +16,28 @@
  */
 
 import React, { ComponentType, ReactElement, useEffect, useState } from "react"
-import { styled } from "styletron-react"
-import { colors, variables } from "lib/widgetTheme"
+import classNames from "classnames"
+import { StatelessAccordion as Accordion, Panel } from "baseui/accordion"
+import { colors } from "lib/widgetTheme"
+import "./withExpandable.scss"
 
 export interface Props {
   expandable: boolean
   label: string
   expanded: boolean
+  empty: boolean
 }
-
-type ComponentProps = {
-  expanded: boolean
-}
-
-export const AnimatedComponentWrapper = styled(
-  "div",
-  ({ expanded }: ComponentProps) => ({
-    maxHeight: expanded ? "100vh" : 0,
-    overflow: "hidden",
-    transitionProperty: "max-height",
-    transitionDuration: "0.5s",
-    transitionTimingFunction: "ease-in-out",
-  })
-)
-
-export const StyledHeader = styled("div", ({ expanded }: ComponentProps) => ({
-  display: "flex",
-  justifyContent: "space-between",
-  cursor: "pointer",
-  borderWidth: 0,
-  borderBottomWidth: expanded ? "1px" : 0,
-  borderStyle: "solid",
-  borderColor: colors.grayLighter,
-  marginBottom: variables.spacer,
-  transitionProperty: "border-bottom-width",
-  transitionDuration: "0.5s",
-  transitionTimingFunction: "ease-in-out",
-}))
-
-export const StyledToggle = styled("small", {
-  color: colors.gray,
-})
 
 function withExpandable(
   WrappedComponent: ComponentType<any>
 ): ComponentType<any> {
   const ExpandableComponent = (props: Props): ReactElement => {
-    const { label, expanded: initialExpanded, ...componentProps } = props
+    const {
+      label,
+      expanded: initialExpanded,
+      empty,
+      ...componentProps
+    } = props
 
     const [expanded, toggleExpanded] = useState<boolean>(initialExpanded)
     useEffect(() => {
@@ -72,17 +47,40 @@ function withExpandable(
     const toggle = (): void => toggleExpanded(!expanded)
 
     return (
-      <>
-        <StyledHeader expanded={expanded}>
-          <div>{label}</div>
-          <StyledToggle onClick={toggle} role="button" data-toggle>
-            {expanded ? "Hide" : "Show"}
-          </StyledToggle>
-        </StyledHeader>
-        <AnimatedComponentWrapper expanded={expanded}>
+      <Accordion
+        onChange={toggle}
+        expanded={expanded ? ["panel"] : []}
+        overrides={{
+          Content: {
+            style: { backgroundColor: colors.transparent },
+            props: { className: "streamlit-expanderContent" },
+          },
+          PanelContainer: {
+            style: { marginLeft: "0 !important" },
+          },
+          Header: {
+            style: {
+              display: "flex",
+              justifyContent: "flex-end",
+              flexDirection: "row-reverse",
+              paddingLeft: 0,
+            },
+            props: { className: "streamlit-expanderHeader" },
+          },
+          ToggleIcon: {
+            style: { marginRight: ".5rem" },
+          },
+          Root: {
+            props: {
+              className: classNames("streamlit-expander", { empty }),
+            },
+          },
+        }}
+      >
+        <Panel title={label} key="panel">
           <WrappedComponent {...componentProps} />
-        </AnimatedComponentWrapper>
-      </>
+        </Panel>
+      </Accordion>
     )
   }
 

@@ -279,7 +279,3 @@ What's going on here is that Streamlit caches the output `res` by reference. Whe
 Since this behavior is usually not what you'd expect, Streamlit tries to be helpful and show you a warning, along with some ideas about how to fix your code.
 
 In this specific case, the fix is just to not mutate `res["output"]` outside the cached function. There was no good reason for us to do that anyway! Another solution would be to clone the result value with `res = deepcopy(expensive_computation(2, 21))`. Check out the section entitled [Fixing caching issues](troubleshooting/caching_issues.md) for more information on these approaches and more.
-
-## Next steps
-
-- [Advanced caching](advanced_caching.md)
