@@ -15,14 +15,14 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { Block, ForwardMsgMetadata, PageConfig } from "autogen/proto"
 import { shallow } from "enzyme"
-import { List, Map } from "immutable"
-import { PageConfig } from "autogen/proto"
-import { ReportRunState } from "lib/ReportRunState"
 import { FileUploadClient } from "lib/FileUploadClient"
+import { BlockNode, ElementNode, ReportRoot } from "lib/ReportNode"
+import { ReportRunState } from "lib/ReportRunState"
+import { makeElementWithInfoText } from "lib/utils"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import { ReportRoot } from "lib/ReportNode"
+import React from "react"
 import { ComponentRegistry } from "../../widgets/CustomComponent"
 import ReportView, { ReportViewProps } from "./ReportView"
 
@@ -50,19 +50,34 @@ describe("ReportView element", () => {
     expect(wrapper).toBeDefined()
   })
 
-  it("does not render a sidebar with no elements", () => {
+  it("does not render a sidebar when there are no elements", () => {
     const props = getProps()
     const wrapper = shallow(<ReportView {...props} />)
 
     expect(wrapper.find("Sidebar").exists()).toBe(false)
   })
 
-  it("does render a sidebar with no elements", () => {
+  it("renders a sidebar when there are elements", () => {
+    const sidebarElement = new ElementNode(
+      makeElementWithInfoText("sidebar!"),
+      ForwardMsgMetadata.create({}),
+      "no report id"
+    )
+
+    const sidebar = new BlockNode(
+      [sidebarElement],
+      ForwardMsgMetadata.create({}),
+      Block.create({ allowEmpty: true })
+    )
+
+    const main = new BlockNode(
+      [],
+      ForwardMsgMetadata.create({}),
+      Block.create({ allowEmpty: true })
+    )
+
     const props = getProps({
-      elements: {
-        main: List(),
-        sidebar: List([Map({ key: "value" })]),
-      },
+      elements: new ReportRoot(main, sidebar),
     })
     const wrapper = shallow(<ReportView {...props} />)
 
