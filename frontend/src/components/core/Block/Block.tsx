@@ -362,7 +362,7 @@ class Block extends PureComponent<Props> {
       case "dataFrame":
         return (
           <DataFrame
-            element={node.immutableElement}
+            element={node.immutableElement.get("dataFrame")}
             width={width}
             height={height}
           />
@@ -446,13 +446,20 @@ class Block extends PureComponent<Props> {
         )
 
       case "table":
-        return <Table element={node.immutableElement} width={width} />
+        return (
+          <Table element={node.immutableElement.get("table")} width={width} />
+        )
 
       case "text":
         return <Text width={width} element={node.element.text as TextProto} />
 
       case "vegaLiteChart":
-        return <VegaLiteChart element={node.immutableElement} width={width} />
+        return (
+          <VegaLiteChart
+            element={node.immutableElement.get("vegaLiteChart")}
+            width={width}
+          />
+        )
 
       case "video":
         return (
