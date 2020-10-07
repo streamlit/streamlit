@@ -1,4 +1,4 @@
-# Tutorial: Create a data explorer app
+# Create a data explorer app
 
 If you've made it this far, chances are you've
 [installed Streamlit](https://docs.streamlit.io/en/latest/#install-streamlit) and

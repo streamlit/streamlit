@@ -726,7 +726,7 @@ then pass that to `hash_funcs` instead:
 ```
 
 Please see the `hash_funcs` [documentation]
-(https://streamlit.io/docs/advanced_caching.html)
+(https://streamlit.io/docs/caching.html)
 for more details.
             """
             % args
@@ -851,7 +851,7 @@ then pass that to `hash_funcs` instead:
 ```
 
 Please see the `hash_funcs` [documentation]
-(https://streamlit.io/docs/advanced_caching.html)
+(https://streamlit.io/docs/caching.html)
 for more details.
             """
             % args
