@@ -87,7 +87,7 @@ function ReportView(props: ReportViewProps): ReactElement {
     <div className="block-container">
       <ThemeProvider theme={theme}>
         <Block
-          elements={node}
+          node={node}
           reportId={reportId}
           reportRunState={reportRunState}
           showStaleElementIndicator={showStaleElementIndicator}
@@ -95,7 +95,6 @@ function ReportView(props: ReportViewProps): ReactElement {
           widgetsDisabled={widgetsDisabled}
           uploadClient={uploadClient}
           componentRegistry={componentRegistry}
-          deltaBlock={node.deltaBlock}
         />
       </ThemeProvider>
     </div>

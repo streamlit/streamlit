@@ -18,7 +18,6 @@
 import {
   Alert as AlertProto,
   Audio as AudioProto,
-  Block as BlockProto,
   BokehChart as BokehChartProto,
   Button as ButtonProto,
   Checkbox as CheckboxProto,
@@ -124,7 +123,7 @@ const TimeInput = React.lazy(() => import("components/widgets/TimeInput/"))
 const NumberInput = React.lazy(() => import("components/widgets/NumberInput/"))
 
 interface Props {
-  elements: BlockNode
+  node: BlockNode
   reportId: string
   reportRunState: ReportRunState
   showStaleElementIndicator: boolean
@@ -132,7 +131,6 @@ interface Props {
   uploadClient: FileUploadClient
   widgetsDisabled: boolean
   componentRegistry: ComponentRegistry
-  deltaBlock: BlockProto
 }
 
 const StyledBlock = "div"
@@ -167,12 +165,10 @@ class Block extends PureComponent<Props> {
 
   /** Recursively transform this BLockElement and all children to React Nodes. */
   private renderElements = (width: number): ReactNode[] => {
-    const elementsToRender = this.props.elements
-
-    return elementsToRender.children
+    return this.props.node.children
       .map((node: ReportNode, index: number): ReactNode | null => {
         if (node instanceof BlockNode) {
-          return this.renderBlock(node, index, width, node.deltaBlock)
+          return this.renderBlock(node, index, width)
         }
         if (node instanceof ElementNode) {
           return this.renderElementWithErrorBoundary(node, index, width)
@@ -200,29 +196,30 @@ class Block extends PureComponent<Props> {
   private renderBlock(
     node: BlockNode,
     index: number,
-    width: number,
-    deltaBlock: BlockProto
+    width: number
   ): ReactNode {
-    const BlockType = deltaBlock.expandable ? this.WithExpandableBlock : Block
+    const BlockType = node.deltaBlock.expandable
+      ? this.WithExpandableBlock
+      : Block
 
-    const optionalProps = deltaBlock.expandable
+    const optionalProps = node.deltaBlock.expandable
       ? {
-          empty: node.children.length === 0,
-          ...deltaBlock.expandable,
+          empty: node.isEmpty,
+          ...node.deltaBlock.expandable,
         }
       : {}
 
     const style: any = { width }
 
     const StyledDiv =
-      deltaBlock.column && deltaBlock.column.weight
-        ? StyledColumn(deltaBlock.column.weight, width)
+      node.deltaBlock.column && node.deltaBlock.column.weight
+        ? StyledColumn(node.deltaBlock.column.weight, width)
         : StyledBlock
 
     return (
       <StyledDiv key={index} className="stBlock" style={style}>
         <BlockType
-          elements={node}
+          node={node}
           reportId={this.props.reportId}
           reportRunState={this.props.reportRunState}
           showStaleElementIndicator={this.props.showStaleElementIndicator}
@@ -230,7 +227,6 @@ class Block extends PureComponent<Props> {
           uploadClient={this.props.uploadClient}
           widgetsDisabled={this.props.widgetsDisabled}
           componentRegistry={this.props.componentRegistry}
-          deltaBlock={deltaBlock}
           {...optionalProps}
         />
       </StyledDiv>
@@ -636,14 +632,14 @@ class Block extends PureComponent<Props> {
   }
 
   public render = (): ReactNode => {
-    if (this.props.deltaBlock.horizontal) {
+    if (this.props.node.deltaBlock.horizontal) {
       // Create a horizontal block as the parent for columns
       // For now, all children are column blocks. For columns, `width` is
       // driven by the total number of columns available.
       return (
         <div className="stBlock-horiz">
           {this.renderElements(
-            this.props.deltaBlock.horizontal.totalWeight || 0
+            this.props.node.deltaBlock.horizontal.totalWeight || 0
           )}
         </div>
       )
