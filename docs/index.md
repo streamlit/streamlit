@@ -66,7 +66,7 @@ Still with us? Great! Now make your own app in just 3 more steps:
 
    `streamlit run [filename]`
 
-3. When you're ready, click 'Deploy' from the Streamlit menu and use Streamlit sharing to share your app with the world!
+3. When you're ready, click 'Deploy' from the Streamlit menu to use Streamlit sharing to share your app with the world!
 
 Now that you're set up, let's dive into more of how Streamlit works and how to build great apps.
 
@@ -86,4 +86,4 @@ The docs are broken up into 5 sections that will help you get the most out of St
 
 ## **Join the community**
 
-Streamlit is more than just an app creation tool, it's also a community of creators that share their apps and ideas and help each other make their work better. Please come join us on the [community forum](https://discuss.streamlit.io/). We love to hear your questions, ideas, and help you work through your bugs — stop by today!
+Streamlit is more than just a way to make data apps, it's also a community of creators that share their apps and ideas and help each other make their work better. Please come join us on the [community forum](https://discuss.streamlit.io/). We love to hear your questions, ideas, and help you work through your bugs — stop by today!
