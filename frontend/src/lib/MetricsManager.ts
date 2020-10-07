@@ -102,7 +102,6 @@ export class MetricsManager {
 
       // Only record the user's email if they entered a non-empty one.
       const userTraits: any = this.getHostTrackingData()
-
       if (SessionInfo.current.authorEmail !== "") {
         userTraits.authoremail = SessionInfo.current.authorEmail
       }
@@ -206,20 +205,19 @@ export class MetricsManager {
     if (IS_DEV_ENV) {
       logAlways("[Dev mode] Not sending id: ", id, data)
     } else {
-      // analytics.identify(id, data)
+      analytics.identify(id, data)
     }
   }
 
   // eslint-disable-next-line class-methods-use-this
   private track(evName: string, data: Record<string, unknown>): void {
-    // analytics.track(evName, data)
+    analytics.track(evName, data)
   }
 
   // Use the tracking data injected by S4A if the app is hosted there
   private getHostTrackingData(): Record<string, unknown> {
     if (
-      // window.location.origin.toLowerCase().endsWith(".streamlit.io") &&
-      window.location.origin.toLowerCase().endsWith(".streamlit.test") &&
+      window.location.origin.toLowerCase().endsWith(".streamlit.io") &&
       window.parent.streamlitTracking
     ) {
       return pick(window.parent.streamlitTracking, [
