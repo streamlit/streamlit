@@ -15,13 +15,13 @@
  * limitations under the License.
  */
 
-import { MultiSelect as MultiSelectProto } from "autogen/proto"
-import { OnChangeParams, Select as UISelect, TYPE } from "baseui/select"
-import VirtualDropdown from "components/shared/VirtualDropdown"
-import { Source, WidgetStateManager } from "lib/WidgetStateManager"
-import { multiSelectOverrides } from "lib/widgetTheme"
-import without from "lodash/without"
 import React from "react"
+import without from "lodash/without"
+import { multiSelectOverrides } from "lib/widgetTheme"
+import { WidgetStateManager, Source } from "lib/WidgetStateManager"
+import { MultiSelect as MultiSelectProto } from "autogen/proto"
+import { TYPE, Select as UISelect, OnChangeParams } from "baseui/select"
+import VirtualDropdown from "components/shared/VirtualDropdown"
 
 export interface Props {
   disabled: boolean

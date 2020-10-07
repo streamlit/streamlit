@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
+import React, { PureComponent, ReactNode } from "react"
 import { TimeInput as TimeInputProto } from "autogen/proto"
 import { TimePicker as UITimePicker } from "baseui/timepicker"
-import { Source, WidgetStateManager } from "lib/WidgetStateManager"
-import React, { PureComponent, ReactNode } from "react"
+import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 
 export interface Props {
   disabled: boolean

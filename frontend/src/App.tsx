@@ -15,61 +15,58 @@
  * limitations under the License.
  */
 
-import "assets/css/header.scss"
-// WARNING: order matters
-import "assets/css/theme.scss"
+import React, { Fragment, PureComponent, ReactNode } from "react"
+import moment from "moment"
+import { HotKeys, KeyMap } from "react-hotkeys"
+import { fromJS } from "immutable"
+import classNames from "classnames"
+import { ThemeProvider } from "baseui"
+// Other local imports.
+import ReportView from "components/core/ReportView/"
+import StatusWidget from "components/core/StatusWidget"
+import MainMenu from "components/core/MainMenu/"
+import {
+  DialogProps,
+  DialogType,
+  StreamlitDialog,
+} from "components/core/StreamlitDialog/"
+import { ConnectionManager } from "lib/ConnectionManager"
+import { WidgetStateManager } from "lib/WidgetStateManager"
+import { ConnectionState } from "lib/ConnectionState"
+import { ReportRunState } from "lib/ReportRunState"
+import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
+import { mainWidgetTheme } from "lib/widgetTheme"
+import {
+  setCookie,
+  hashString,
+  isEmbeddedInIFrame,
+  notUndefined,
+  requireNonNull,
+} from "lib/utils"
 import {
   BackMsg,
   Delta,
   ForwardMsg,
   IForwardMsgMetadata,
-  Initialize,
   ISessionState,
+  Initialize,
   NewReport,
   PageConfig,
   PageInfo,
   SessionEvent,
   WidgetStates,
 } from "autogen/proto"
-import { ThemeProvider } from "baseui"
-import classNames from "classnames"
-import MainMenu from "components/core/MainMenu/"
-// Other local imports.
-import ReportView from "components/core/ReportView/"
-import StatusWidget from "components/core/StatusWidget"
-import {
-  DialogProps,
-  DialogType,
-  StreamlitDialog,
-} from "components/core/StreamlitDialog/"
-import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
-import { fromJS } from "immutable"
 
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
-import { ConnectionManager } from "lib/ConnectionManager"
-import { ConnectionState } from "lib/ConnectionState"
+import { SessionInfo } from "lib/SessionInfo"
+import { MetricsManager } from "lib/MetricsManager"
 import { FileUploadClient } from "lib/FileUploadClient"
 
 import { logError, logMessage } from "lib/log"
-import { MetricsManager } from "lib/MetricsManager"
-import { ReportRunState } from "lib/ReportRunState"
-import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
-import { SessionInfo } from "lib/SessionInfo"
-import {
-  hashString,
-  isEmbeddedInIFrame,
-  notUndefined,
-  requireNonNull,
-  setCookie,
-} from "lib/utils"
-import { WidgetStateManager } from "lib/WidgetStateManager"
-import { mainWidgetTheme } from "lib/widgetTheme"
-import moment from "moment"
-import React, { Fragment, PureComponent, ReactNode } from "react"
-import { HotKeys, KeyMap } from "react-hotkeys"
-import "./App.scss"
-import { handleFavicon } from "./components/elements/Favicon"
+import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
+import { getElementWidgetID, ReportRoot } from "./lib/ReportNode"
 import { ComponentRegistry } from "./components/widgets/CustomComponent"
+import { handleFavicon } from "./components/elements/Favicon"
 
 import withS4ACommunication, {
   S4ACommunicationHOC,
@@ -78,7 +75,11 @@ import withS4ACommunication, {
 import withScreencast, {
   ScreenCastHOC,
 } from "./hocs/withScreencast/withScreencast"
-import { getElementWidgetID, ReportRoot } from "./lib/ReportNode"
+
+// WARNING: order matters
+import "assets/css/theme.scss"
+import "./App.scss"
+import "assets/css/header.scss"
 
 export interface Props {
   screenCast: ScreenCastHOC

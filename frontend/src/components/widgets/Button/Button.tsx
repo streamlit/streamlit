@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-import { Button as ButtonProto } from "autogen/proto"
-import UIButton, { Kind, Size } from "components/shared/Button"
-import { WidgetStateManager } from "lib/WidgetStateManager"
 import React, { ReactElement } from "react"
+import UIButton, { Kind, Size } from "components/shared/Button"
+import { Button as ButtonProto } from "autogen/proto"
+import { WidgetStateManager } from "lib/WidgetStateManager"
 
 export interface ButtonProps {
   disabled: boolean

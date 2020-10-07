@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
+import React, { ReactElement } from "react"
 import { Progress as ProgressProto } from "autogen/proto"
 import ProgressBar from "components/shared/ProgressBar"
-import React, { ReactElement } from "react"
 
 export interface ProgressProps {
   width: number

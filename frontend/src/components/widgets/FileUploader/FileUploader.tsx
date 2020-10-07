@@ -15,17 +15,17 @@
  * limitations under the License.
  */
 
-import { FileUploader as FileUploaderProto } from "autogen/proto"
-import { SCSS_VARS } from "autogen/scssVariables"
 import axios, { CancelTokenSource } from "axios"
 import { FileUploader as FileUploaderBaseui } from "baseui/file-uploader"
-import { Spinner } from "baseui/spinner"
-import Button, { Kind } from "components/shared/Button"
 import Icon from "components/shared/Icon"
+import { FileUploader as FileUploaderProto } from "autogen/proto"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { fileUploaderOverrides } from "lib/widgetTheme"
 import React from "react"
+import Button, { Kind } from "components/shared/Button"
+import { Spinner } from "baseui/spinner"
+import { SCSS_VARS } from "autogen/scssVariables"
 import "./FileUploader.scss"
 
 export interface Props {

@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-import { Text as TextProto } from "autogen/proto"
-import { shallow } from "enzyme"
 import React from "react"
+import { shallow } from "enzyme"
+import { Text as TextProto } from "autogen/proto"
 import Text, { TextProps } from "./Text"
 
 const getProps = (elementProps: Partial<TextProto> = {}): TextProps => ({

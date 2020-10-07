@@ -15,14 +15,14 @@
  * limitations under the License.
  */
 
-import { Slider as SliderProto } from "autogen/proto"
-import { Slider as UISlider } from "baseui/slider"
-import { debounce } from "lib/utils"
-import { Source, WidgetStateManager } from "lib/WidgetStateManager"
-import { sliderOverrides } from "lib/widgetTheme"
-import moment from "moment"
 import React from "react"
+import { Slider as UISlider } from "baseui/slider"
 import { sprintf } from "sprintf-js"
+import { WidgetStateManager, Source } from "lib/WidgetStateManager"
+import { Slider as SliderProto } from "autogen/proto"
+import { sliderOverrides } from "lib/widgetTheme"
+import { debounce } from "lib/utils"
+import moment from "moment"
 
 const DEBOUNCE_TIME_MS = 200
 

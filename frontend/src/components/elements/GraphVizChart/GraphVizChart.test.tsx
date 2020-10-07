@@ -15,9 +15,10 @@
  * limitations under the License.
  */
 
-import { GraphVizChart as GraphVizChartProto } from "autogen/proto"
-import { mount } from "enzyme"
 import React from "react"
+import { mount } from "enzyme"
+
+import { GraphVizChart as GraphVizChartProto } from "autogen/proto"
 import { GraphVizChartProps } from "./GraphVizChart"
 
 const mockLogError = {

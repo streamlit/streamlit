@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-import { Checkbox as CheckboxProto } from "autogen/proto"
-import { Checkbox as UICheckbox } from "baseui/checkbox"
-import { Source, WidgetStateManager } from "lib/WidgetStateManager"
-import { checkboxOverrides } from "lib/widgetTheme"
 import React from "react"
+import { Checkbox as UICheckbox } from "baseui/checkbox"
+import { Checkbox as CheckboxProto } from "autogen/proto"
+import { WidgetStateManager, Source } from "lib/WidgetStateManager"
+import { checkboxOverrides } from "lib/widgetTheme"
 
 export interface Props {
   disabled: boolean

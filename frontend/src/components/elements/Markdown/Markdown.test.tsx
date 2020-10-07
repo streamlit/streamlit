@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-import { Markdown as MarkdownProto } from "autogen/proto"
-import { shallow } from "enzyme"
 import React from "react"
+import { shallow } from "enzyme"
+import { Markdown as MarkdownProto } from "autogen/proto"
 import Markdown, { MarkdownProps } from "./Markdown"
 
 const getProps = (

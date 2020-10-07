@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-import { Alert as AlertProto } from "autogen/proto"
-import { Kind } from "components/shared/AlertContainer"
-import { shallow } from "enzyme"
 import React from "react"
+import { shallow } from "enzyme"
+import { Kind } from "components/shared/AlertContainer"
+import { Alert as AlertProto } from "autogen/proto"
 import Alert, { AlertProps } from "./Alert"
 
 const getProps = (elementProps: Partial<AlertProto> = {}): AlertProps => ({

@@ -15,15 +15,15 @@
  * limitations under the License.
  */
 
-import { NumberInput as NumberInputProto } from "autogen/proto"
-import { Input as UIInput } from "baseui/input"
-
-import Icon from "components/shared/Icon"
-import InputInstructions from "components/shared/InputInstructions/InputInstructions"
-import { logWarning } from "lib/log"
-import { Source, WidgetStateManager } from "lib/WidgetStateManager"
 import React from "react"
 import { sprintf } from "sprintf-js"
+import { logWarning } from "lib/log"
+import { NumberInput as NumberInputProto } from "autogen/proto"
+import { WidgetStateManager, Source } from "lib/WidgetStateManager"
+
+import Icon from "components/shared/Icon"
+import { Input as UIInput } from "baseui/input"
+import InputInstructions from "components/shared/InputInstructions/InputInstructions"
 
 import "./NumberInput.scss"
 

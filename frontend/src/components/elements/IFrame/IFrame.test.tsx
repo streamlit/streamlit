@@ -15,13 +15,14 @@
  * limitations under the License.
  */
 
-import { IFrame as IFrameProto } from "autogen/proto"
+import React from "react"
 import { shallow, ShallowWrapper } from "enzyme"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   getIFrameSandboxPolicy,
 } from "lib/IFrameUtil"
-import React from "react"
+
+import { IFrame as IFrameProto } from "autogen/proto"
 import IFrame, { IFrameProps } from "./IFrame"
 
 const getProps = (elementProps: Partial<IFrameProto> = {}): IFrameProps => ({

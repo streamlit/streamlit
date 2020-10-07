@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-import { embed as BokehEmbed } from "@bokeh/bokehjs"
-import { BokehChart as BokehChartProto } from "autogen/proto"
-import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import React, { ReactElement, useEffect } from "react"
+import { embed as BokehEmbed } from "@bokeh/bokehjs"
+import withFullScreenWrapper from "hocs/withFullScreenWrapper"
+import { BokehChart as BokehChartProto } from "autogen/proto"
 
 export interface BokehChartProps {
   width: number

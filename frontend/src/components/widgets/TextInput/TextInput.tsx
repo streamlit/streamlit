@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-import { TextInput as TextInputProto } from "autogen/proto"
-import { Input as UIInput } from "baseui/input"
-import InputInstructions from "components/shared/InputInstructions/InputInstructions"
-import { Source, WidgetStateManager } from "lib/WidgetStateManager"
 import React from "react"
+import { Input as UIInput } from "baseui/input"
+import { TextInput as TextInputProto } from "autogen/proto"
+import { WidgetStateManager, Source } from "lib/WidgetStateManager"
+import InputInstructions from "components/shared/InputInstructions/InputInstructions"
 
 export interface Props {
   disabled: boolean

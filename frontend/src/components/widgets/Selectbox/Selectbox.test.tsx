@@ -15,11 +15,12 @@
  * limitations under the License.
  */
 
-import { Selectbox as SelectboxProto } from "autogen/proto"
-import { Select as UISelect } from "baseui/select"
+import React from "react"
 import { shallow } from "enzyme"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import React from "react"
+
+import { Select as UISelect } from "baseui/select"
+import { Selectbox as SelectboxProto } from "autogen/proto"
 import Selectbox, { Props } from "./Selectbox"
 
 jest.mock("lib/WidgetStateManager")

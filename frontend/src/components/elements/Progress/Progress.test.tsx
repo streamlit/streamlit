@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-import { Progress as ProgressProto } from "autogen/proto"
-import { shallow } from "enzyme"
 import React from "react"
+import { shallow } from "enzyme"
 
+import { Progress as ProgressProto } from "autogen/proto"
 import Progress, { ProgressProps } from "./Progress"
 
 const getProps = (

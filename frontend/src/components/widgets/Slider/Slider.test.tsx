@@ -15,13 +15,14 @@
  * limitations under the License.
  */
 
+import React from "react"
+import { mount, shallow } from "enzyme"
+import { sliderOverrides } from "lib/widgetTheme"
 import { Slider as SliderProto } from "autogen/proto"
 import { Slider as UISlider } from "baseui/slider"
-import { mount, shallow } from "enzyme"
-import { WidgetStateManager } from "lib/WidgetStateManager"
-import { sliderOverrides } from "lib/widgetTheme"
-import React from "react"
 import TimezoneMock from "timezone-mock"
+import { WidgetStateManager } from "lib/WidgetStateManager"
+
 import Slider, { Props } from "./Slider"
 
 jest.mock("lib/WidgetStateManager")

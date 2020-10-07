@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
+import React, { ReactElement, useEffect, useRef } from "react"
 import { Audio as AudioProto } from "autogen/proto"
 import { buildMediaUri } from "lib/UriUtil"
-import React, { ReactElement, useEffect, useRef } from "react"
 
 export interface AudioProps {
   width: number

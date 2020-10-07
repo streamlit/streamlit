@@ -15,11 +15,12 @@
  * limitations under the License.
  */
 
-import { DateInput as DateInputProto } from "autogen/proto"
-import { Datepicker as UIDatePicker } from "baseui/datepicker"
+import React from "react"
 import { shallow } from "enzyme"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import React from "react"
+import { DateInput as DateInputProto } from "autogen/proto"
+
+import { Datepicker as UIDatePicker } from "baseui/datepicker"
 import DateInput, { Props } from "./DateInput"
 
 jest.mock("lib/WidgetStateManager")

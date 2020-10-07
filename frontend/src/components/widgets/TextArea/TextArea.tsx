@@ -15,11 +15,12 @@
  * limitations under the License.
  */
 
+import React from "react"
 import { TextArea as TextAreaProto } from "autogen/proto"
+import { WidgetStateManager, Source } from "lib/WidgetStateManager"
+
 import { Textarea as UITextArea } from "baseui/textarea"
 import InputInstructions from "components/shared/InputInstructions/InputInstructions"
-import { Source, WidgetStateManager } from "lib/WidgetStateManager"
-import React from "react"
 
 export interface Props {
   disabled: boolean

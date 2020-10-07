@@ -15,12 +15,13 @@
  * limitations under the License.
  */
 
-import { MultiSelect as MultiSelectProto } from "autogen/proto"
-import { Select as UISelect, TYPE } from "baseui/select"
-import { shallow } from "enzyme"
-import { WidgetStateManager } from "lib/WidgetStateManager"
-import { multiSelectOverrides } from "lib/widgetTheme"
 import React from "react"
+import { shallow } from "enzyme"
+import { multiSelectOverrides } from "lib/widgetTheme"
+import { WidgetStateManager } from "lib/WidgetStateManager"
+
+import { Select as UISelect, TYPE } from "baseui/select"
+import { MultiSelect as MultiSelectProto } from "autogen/proto"
 import Multiselect, { Props } from "./Multiselect"
 
 jest.mock("lib/WidgetStateManager")

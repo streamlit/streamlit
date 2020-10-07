@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-import { Video as VideoProto } from "autogen/proto"
-import { mount } from "enzyme"
 import React from "react"
+import { mount } from "enzyme"
+import { Video as VideoProto } from "autogen/proto"
 
 import Video, { VideoProps } from "./Video"
 

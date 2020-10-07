@@ -15,10 +15,11 @@
  * limitations under the License.
  */
 
-import "assets/css/write.scss"
-import { Markdown as MarkdownProto } from "autogen/proto"
 import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
 import React, { ReactElement } from "react"
+import { Markdown as MarkdownProto } from "autogen/proto"
+
+import "assets/css/write.scss"
 
 export interface MarkdownProps {
   width: number

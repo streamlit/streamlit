@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-import { PlotlyChart as PlotlyChartProto } from "autogen/proto"
-import { shallow } from "enzyme"
 import React from "react"
+import { shallow } from "enzyme"
 import Plot from "react-plotly.js"
 
+import { PlotlyChart as PlotlyChartProto } from "autogen/proto"
 import mock from "./mock"
 import { DEFAULT_HEIGHT, PlotlyChartProps } from "./PlotlyChart"
 

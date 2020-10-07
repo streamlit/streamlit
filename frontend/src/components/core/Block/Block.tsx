@@ -49,38 +49,40 @@ import {
   Video as VideoProto,
 } from "autogen/proto"
 
-import Maybe from "components/core/Maybe/"
-import {
-  ComponentInstance,
-  ComponentRegistry,
-} from "components/widgets/CustomComponent/"
-import withExpandable from "hocs/withExpandable"
-import { FileUploadClient } from "lib/FileUploadClient"
 import React, { PureComponent, ReactNode, Suspense } from "react"
 import { AutoSizer } from "react-virtualized"
 import { styled, StyletronComponent } from "styletron-react"
 import { ReportRunState } from "lib/ReportRunState"
-import { makeElementWithInfoText, notNull } from "lib/utils"
 import { WidgetStateManager } from "lib/WidgetStateManager"
+import { makeElementWithInfoText, notNull } from "lib/utils"
+import { FileUploadClient } from "lib/FileUploadClient"
 import { variables as stylingVariables } from "lib/widgetTheme"
 import {
   BlockNode,
+  ReportNode,
   ElementNode,
   getElementWidgetID,
-  ReportNode,
 } from "lib/ReportNode"
-
-import "./Block.scss"
 
 // Load (non-lazy) elements.
 import Alert from "components/elements/Alert/"
 import DocString from "components/elements/DocString/"
+import ErrorBoundary from "components/shared/ErrorBoundary/"
+import FullScreenWrapper from "components/shared/FullScreenWrapper/"
 import ExceptionElement from "components/elements/ExceptionElement/"
 import Json from "components/elements/Json/"
 import Markdown from "components/elements/Markdown/"
+import Table from "components/elements/Table/"
 import Text from "components/elements/Text/"
-import ErrorBoundary from "components/shared/ErrorBoundary/"
-import FullScreenWrapper from "components/shared/FullScreenWrapper/"
+import {
+  ComponentInstance,
+  ComponentRegistry,
+} from "components/widgets/CustomComponent/"
+
+import Maybe from "components/core/Maybe/"
+import withExpandable from "hocs/withExpandable"
+
+import "./Block.scss"
 
 // Lazy-load elements.
 const Audio = React.lazy(() => import("components/elements/Audio/"))
@@ -98,7 +100,6 @@ const ImageList = React.lazy(() => import("components/elements/ImageList/"))
 const PlotlyChart = React.lazy(() =>
   import("components/elements/PlotlyChart/")
 )
-const Table = React.lazy(() => import("components/elements/Table/"))
 const VegaLiteChart = React.lazy(() =>
   import("components/elements/VegaLiteChart/")
 )

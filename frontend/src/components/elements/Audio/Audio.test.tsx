@@ -15,9 +15,10 @@
  * limitations under the License.
  */
 
-import { Audio as AudioProto } from "autogen/proto"
-import { mount, shallow } from "enzyme"
 import React from "react"
+import { mount, shallow } from "enzyme"
+
+import { Audio as AudioProto } from "autogen/proto"
 import Audio, { AudioProps } from "./Audio"
 
 const getProps = (elementProps: Partial<AudioProto> = {}): AudioProps => ({

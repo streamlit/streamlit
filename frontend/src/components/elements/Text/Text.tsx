@@ -15,10 +15,11 @@
  * limitations under the License.
  */
 
-import "assets/css/write.scss"
-import { Text as TextProto } from "autogen/proto"
-import classNames from "classnames"
 import React, { ReactElement } from "react"
+import classNames from "classnames"
+import { Text as TextProto } from "autogen/proto"
+
+import "assets/css/write.scss"
 
 export interface TextProps {
   width: number

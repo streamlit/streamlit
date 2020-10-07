@@ -15,12 +15,15 @@
  * limitations under the License.
  */
 
-import { GraphVizChart as GraphVizChartProto } from "autogen/proto"
+import React, { ReactElement, useEffect } from "react"
+
 import { select } from "d3"
 import { graphviz } from "d3-graphviz"
-import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import { logError } from "lib/log"
-import React, { ReactElement, useEffect } from "react"
+
+import withFullScreenWrapper from "hocs/withFullScreenWrapper"
+import { GraphVizChart as GraphVizChartProto } from "autogen/proto"
+
 import "./GraphVizChart.scss"
 
 export interface GraphVizChartProps {

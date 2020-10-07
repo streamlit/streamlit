@@ -15,10 +15,11 @@
  * limitations under the License.
  */
 
-import { Exception as ExceptionProto } from "autogen/proto"
+import React, { ReactElement } from "react"
 import AlertContainer, { Kind } from "components/shared/AlertContainer"
 import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
-import React, { ReactElement } from "react"
+import { Exception as ExceptionProto } from "autogen/proto"
+
 import "./ExceptionElement.scss"
 
 export interface ExceptionElementProps {

@@ -15,8 +15,9 @@
  * limitations under the License.
  */
 
-import { DocString as DocStringProto } from "autogen/proto"
 import React, { ReactElement } from "react"
+import { DocString as DocStringProto } from "autogen/proto"
+
 import "./DocString.scss"
 
 export interface DocStringProps {

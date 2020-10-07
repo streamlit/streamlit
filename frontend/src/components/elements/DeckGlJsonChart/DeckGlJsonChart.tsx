@@ -33,9 +33,10 @@ import { registerLoaders } from "@loaders.gl/core"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import withMapboxToken from "hocs/withMapboxToken"
 
+import { DeckGlJsonChart as DeckGlJsonChartProto } from "autogen/proto"
+
 import "mapbox-gl/dist/mapbox-gl.css"
 import "./DeckGlJsonChart.scss"
-import { DeckGlJsonChart as DeckGlJsonChartProto } from "autogen/proto"
 
 interface PickingInfo {
   object: {

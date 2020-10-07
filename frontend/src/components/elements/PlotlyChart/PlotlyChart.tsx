@@ -20,12 +20,12 @@
  * Copyright 2019 Streamlit Inc. All rights reserved.
  */
 
+import React, { ReactElement } from "react"
 import {
   Figure as FigureProto,
   PlotlyChart as PlotlyChartProto,
 } from "autogen/proto"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
-import React, { ReactElement } from "react"
 import Plot from "react-plotly.js"
 
 export interface PlotlyChartProps {

@@ -15,20 +15,20 @@
  * limitations under the License.
  */
 
-import { PageConfig } from "autogen/proto"
-
-import { ThemeProvider } from "baseui"
-import { Theme } from "baseui/theme"
+import React, { ReactElement } from "react"
 import classNames from "classnames"
 
 import Block from "components/core/Block/"
 import Sidebar from "components/core/Sidebar"
-import { ComponentRegistry } from "components/widgets/CustomComponent"
-import { FileUploadClient } from "lib/FileUploadClient"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
+import { FileUploadClient } from "lib/FileUploadClient"
+import { ComponentRegistry } from "components/widgets/CustomComponent"
+
+import { ThemeProvider } from "baseui"
+import { Theme } from "baseui/theme"
 import { mainWidgetTheme, sidebarWidgetTheme } from "lib/widgetTheme"
-import React, { ReactElement } from "react"
+import { PageConfig } from "autogen/proto"
 import { BlockNode, ReportRoot } from "lib/ReportNode"
 
 import "./ReportView.scss"

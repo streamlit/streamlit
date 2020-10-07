@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-import { DocString as DocStringProto } from "autogen/proto"
-import { shallow } from "enzyme"
 import React from "react"
+import { shallow } from "enzyme"
 
+import { DocString as DocStringProto } from "autogen/proto"
 import DocString, { DocStringProps } from "./DocString"
 
 const getProps = (

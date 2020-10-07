@@ -15,12 +15,13 @@
  * limitations under the License.
  */
 
-import { TimeInput as TimeInputProto } from "autogen/proto"
-import { TimePicker as UITimePicker } from "baseui/timepicker"
+import React from "react"
+import moment from "moment"
 import { shallow } from "enzyme"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import moment from "moment"
-import React from "react"
+import { TimeInput as TimeInputProto } from "autogen/proto"
+
+import { TimePicker as UITimePicker } from "baseui/timepicker"
 import TimeInput, { Props } from "./TimeInput"
 
 jest.mock("lib/WidgetStateManager")

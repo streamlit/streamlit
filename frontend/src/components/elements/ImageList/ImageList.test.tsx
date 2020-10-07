@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-import { ImageList as ImageListProto } from "autogen/proto"
-import { shallow } from "enzyme"
 import React from "react"
+import { shallow } from "enzyme"
 
+import { ImageList as ImageListProto } from "autogen/proto"
 import { ImageList, ImageListProps } from "./ImageList"
 
 const getProps = (

@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-import { Radio as RadioProto } from "autogen/proto"
-import { Radio as UIRadio, RadioGroup } from "baseui/radio"
-import { Source, WidgetStateManager } from "lib/WidgetStateManager"
-import { radioOverrides } from "lib/widgetTheme"
 import React from "react"
+import { Radio as UIRadio, RadioGroup } from "baseui/radio"
+import { Radio as RadioProto } from "autogen/proto"
+import { WidgetStateManager, Source } from "lib/WidgetStateManager"
+import { radioOverrides } from "lib/widgetTheme"
 
 export interface Props {
   disabled: boolean

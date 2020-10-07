@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-import { ColorPicker as ColorPickerProto } from "autogen/proto"
-import { StatefulPopover as UIPopover } from "baseui/popover"
-import { Source, WidgetStateManager } from "lib/WidgetStateManager"
 import React from "react"
+import { StatefulPopover as UIPopover } from "baseui/popover"
+import { ColorPicker as ColorPickerProto } from "autogen/proto"
+import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { ChromePicker, ColorResult } from "react-color"
 
 import "./ColorPicker.scss"

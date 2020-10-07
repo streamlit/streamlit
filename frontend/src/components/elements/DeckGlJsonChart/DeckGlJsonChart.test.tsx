@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-import { DeckGlJsonChart as DeckGlJsonChartProto } from "autogen/proto"
+import React from "react"
 import DeckGL from "deck.gl"
 import { shallow } from "enzyme"
-import React from "react"
 
+import { DeckGlJsonChart as DeckGlJsonChartProto } from "autogen/proto"
 import { DeckGlJsonChart, PropsWithHeight } from "./DeckGlJsonChart"
 
 const getProps = (

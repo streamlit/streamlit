@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-import { Json as JsonProto } from "autogen/proto"
-import { shallow } from "enzyme"
 import React from "react"
+import { shallow } from "enzyme"
+import { Json as JsonProto } from "autogen/proto"
 import Json, { JsonProps } from "./Json"
 
 const getProps = (elementProps: Partial<JsonProto> = {}): JsonProps => ({

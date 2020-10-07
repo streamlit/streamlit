@@ -15,12 +15,13 @@
  * limitations under the License.
  */
 
-import { Button as ButtonProto } from "autogen/proto"
-import UIButton from "components/shared/Button"
+import React from "react"
 import { shallow } from "enzyme"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import React from "react"
 
+import UIButton from "components/shared/Button"
+
+import { Button as ButtonProto } from "autogen/proto"
 import Button, { ButtonProps } from "./Button"
 
 jest.mock("lib/WidgetStateManager")

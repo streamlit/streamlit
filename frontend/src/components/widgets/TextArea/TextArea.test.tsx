@@ -15,11 +15,12 @@
  * limitations under the License.
  */
 
-import { TextArea as TextAreaProto } from "autogen/proto"
-import { Textarea as UITextArea } from "baseui/textarea"
-import { shallow } from "enzyme"
-import { WidgetStateManager } from "lib/WidgetStateManager"
 import React from "react"
+import { shallow } from "enzyme"
+import { TextArea as TextAreaProto } from "autogen/proto"
+import { WidgetStateManager } from "lib/WidgetStateManager"
+
+import { Textarea as UITextArea } from "baseui/textarea"
 import TextArea, { Props } from "./TextArea"
 
 jest.mock("lib/WidgetStateManager")

@@ -15,13 +15,13 @@
  * limitations under the License.
  */
 
-import { Radio as RadioProto } from "autogen/proto"
+import React from "react"
+import { shallow } from "enzyme"
+import { radioOverrides } from "lib/widgetTheme"
+import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import { Radio as UIRadio, RadioGroup } from "baseui/radio"
-import { shallow } from "enzyme"
-import { WidgetStateManager } from "lib/WidgetStateManager"
-import { radioOverrides } from "lib/widgetTheme"
-import React from "react"
+import { Radio as RadioProto } from "autogen/proto"
 import Radio, { Props } from "./Radio"
 
 jest.mock("lib/WidgetStateManager")

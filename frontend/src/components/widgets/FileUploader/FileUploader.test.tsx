@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-import { FileUploader as FileUploaderProto } from "autogen/proto"
-import { FileUploader as FileUploaderBaseui } from "baseui/file-uploader"
-import { shallow } from "enzyme"
 import React from "react"
+import { shallow } from "enzyme"
+import { FileUploader as FileUploaderBaseui } from "baseui/file-uploader"
+import { FileUploader as FileUploaderProto } from "autogen/proto"
 
 import FileUploader, { Props } from "./FileUploader"
 

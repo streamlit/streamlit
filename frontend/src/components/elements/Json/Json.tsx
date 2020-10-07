@@ -15,11 +15,12 @@
  * limitations under the License.
  */
 
-import "assets/css/write.scss"
-import { Json as JsonProto } from "autogen/proto"
 import React, { ReactElement } from "react"
 
 import ReactJson from "react-json-view"
+import { Json as JsonProto } from "autogen/proto"
+
+import "assets/css/write.scss"
 
 export interface JsonProps {
   width: number

@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-import { ColorPicker as ColorPickerProto } from "autogen/proto"
-import { StatefulPopover as UIPopover } from "baseui/popover"
-import { shallow } from "enzyme"
-import { WidgetStateManager } from "lib/WidgetStateManager"
 import React from "react"
+import { shallow } from "enzyme"
+import { StatefulPopover as UIPopover } from "baseui/popover"
+import { ColorPicker as ColorPickerProto } from "autogen/proto"
+import { WidgetStateManager } from "lib/WidgetStateManager"
 import { ChromePicker } from "react-color"
 
 import ColorPicker, { Props } from "./ColorPicker"

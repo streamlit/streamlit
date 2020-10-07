@@ -15,10 +15,11 @@
  * limitations under the License.
  */
 
-import { Exception as ExceptionProto } from "autogen/proto"
-import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
-import { mount } from "enzyme"
 import React from "react"
+import { mount } from "enzyme"
+
+import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
+import { Exception as ExceptionProto } from "autogen/proto"
 import ExceptionElement, { ExceptionElementProps } from "./ExceptionElement"
 
 const getProps = (

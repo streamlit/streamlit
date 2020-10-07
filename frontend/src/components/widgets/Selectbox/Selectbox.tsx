@@ -15,12 +15,12 @@
  * limitations under the License.
  */
 
-import { Selectbox as SelectboxProto } from "autogen/proto"
-import { OnChangeParams, Option, Select as UISelect } from "baseui/select"
-import VirtualDropdown from "components/shared/VirtualDropdown"
-import { logWarning } from "lib/log"
-import { Source, WidgetStateManager } from "lib/WidgetStateManager"
 import React from "react"
+import { Select as UISelect, OnChangeParams, Option } from "baseui/select"
+import { Selectbox as SelectboxProto } from "autogen/proto"
+import { WidgetStateManager, Source } from "lib/WidgetStateManager"
+import { logWarning } from "lib/log"
+import VirtualDropdown from "components/shared/VirtualDropdown"
 
 export interface Props {
   disabled: boolean

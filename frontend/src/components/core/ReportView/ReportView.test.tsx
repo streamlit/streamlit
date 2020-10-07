@@ -15,14 +15,14 @@
  * limitations under the License.
  */
 
-import { Block, ForwardMsgMetadata, PageConfig } from "autogen/proto"
-import { shallow } from "enzyme"
-import { FileUploadClient } from "lib/FileUploadClient"
-import { BlockNode, ElementNode, ReportRoot } from "lib/ReportNode"
-import { ReportRunState } from "lib/ReportRunState"
-import { makeElementWithInfoText } from "lib/utils"
-import { WidgetStateManager } from "lib/WidgetStateManager"
 import React from "react"
+import { shallow } from "enzyme"
+import { Block, ForwardMsgMetadata, PageConfig } from "autogen/proto"
+import { ReportRunState } from "lib/ReportRunState"
+import { BlockNode, ElementNode, ReportRoot } from "lib/ReportNode"
+import { FileUploadClient } from "lib/FileUploadClient"
+import { WidgetStateManager } from "lib/WidgetStateManager"
+import { makeElementWithInfoText } from "lib/utils"
 import { ComponentRegistry } from "../../widgets/CustomComponent"
 import ReportView, { ReportViewProps } from "./ReportView"
 

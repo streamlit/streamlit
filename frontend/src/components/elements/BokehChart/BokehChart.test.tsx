@@ -15,13 +15,13 @@
  * limitations under the License.
  */
 
-import { BokehChart as BokehChartProto } from "autogen/proto"
-import { mount, shallow } from "enzyme"
 import React from "react"
-
-import { BokehChartProps } from "./BokehChart"
+import { shallow, mount } from "enzyme"
+import { BokehChart as BokehChartProto } from "autogen/proto"
 
 import Figure from "./mock"
+
+import { BokehChartProps } from "./BokehChart"
 
 const mockBokehEmbed = {
   embed: {

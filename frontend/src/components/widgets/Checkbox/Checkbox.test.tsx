@@ -15,11 +15,12 @@
  * limitations under the License.
  */
 
-import { Checkbox as CheckboxProto } from "autogen/proto"
-import { Checkbox as UICheckbox } from "baseui/checkbox"
+import React from "react"
 import { shallow } from "enzyme"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import React from "react"
+
+import { Checkbox as UICheckbox } from "baseui/checkbox"
+import { Checkbox as CheckboxProto } from "autogen/proto"
 import Checkbox, { Props } from "./Checkbox"
 
 jest.mock("lib/WidgetStateManager")

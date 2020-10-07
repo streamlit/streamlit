@@ -15,12 +15,12 @@
  * limitations under the License.
  */
 
-import { DateInput as DateInputProto } from "autogen/proto"
-import { Datepicker as UIDatePicker } from "baseui/datepicker"
-import { Source, WidgetStateManager } from "lib/WidgetStateManager"
-import { datePickerOverrides } from "lib/widgetTheme"
-import moment from "moment"
 import React from "react"
+import moment from "moment"
+import { Datepicker as UIDatePicker } from "baseui/datepicker"
+import { DateInput as DateInputProto } from "autogen/proto"
+import { WidgetStateManager, Source } from "lib/WidgetStateManager"
+import { datePickerOverrides } from "lib/widgetTheme"
 
 export interface Props {
   disabled: boolean

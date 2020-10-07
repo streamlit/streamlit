@@ -15,14 +15,15 @@
  * limitations under the License.
  */
 
+import React, { ReactElement } from "react"
+import withFullScreenWrapper from "hocs/withFullScreenWrapper"
+import { buildMediaUri } from "lib/UriUtil"
 import {
   IImage,
   Image as ImageProto,
   ImageList as ImageListProto,
 } from "autogen/proto"
-import withFullScreenWrapper from "hocs/withFullScreenWrapper"
-import { buildMediaUri } from "lib/UriUtil"
-import React, { ReactElement } from "react"
+
 import "./ImageList.scss"
 
 export interface ImageListProps {

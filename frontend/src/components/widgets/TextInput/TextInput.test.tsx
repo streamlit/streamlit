@@ -15,11 +15,12 @@
  * limitations under the License.
  */
 
-import { TextInput as TextInputProto } from "autogen/proto"
-import { Input as UIInput } from "baseui/input"
+import React from "react"
 import { shallow } from "enzyme"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import React from "react"
+
+import { Input as UIInput } from "baseui/input"
+import { TextInput as TextInputProto } from "autogen/proto"
 import TextInput, { Props } from "./TextInput"
 
 jest.mock("lib/WidgetStateManager")
