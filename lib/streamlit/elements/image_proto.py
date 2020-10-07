@@ -144,7 +144,7 @@ class ImageFormatWarning(StreamlitDeprecationWarning):
     def _get_message(self):
         return f"""
 The `format` parameter for `st.image` has been deprecated and will be removed
-or repurposed in the future. We recommend changing to the new `output_format`
+on 2020-10-30. We recommend changing to the new `output_format`
 parameter to future-proof your code. For the parameter,
 `format="{self.format}"`, please use `output_format="{self.format}"` instead.
 
