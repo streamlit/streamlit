@@ -20,7 +20,7 @@ import { shallow } from "enzyme"
 import React from "react"
 import Text, { TextProps } from "./Text"
 
-const getProps = (elementProps: Record<string, unknown> = {}): TextProps => ({
+const getProps = (elementProps: Partial<TextProto> = {}): TextProps => ({
   element: TextProto.create({
     body: "some plain text",
     ...elementProps,

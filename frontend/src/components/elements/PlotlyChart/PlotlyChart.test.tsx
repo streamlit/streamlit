@@ -29,7 +29,7 @@ jest.mock("react-plotly.js", () => jest.fn())
 const { PlotlyChart } = require("./PlotlyChart")
 
 const getProps = (
-  elementProps: Record<string, unknown> = {}
+  elementProps: Partial<PlotlyChartProto> = {}
 ): PlotlyChartProps => ({
   element: PlotlyChartProto.create({
     ...mock,

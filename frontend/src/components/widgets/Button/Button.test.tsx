@@ -27,9 +27,7 @@ jest.mock("lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
 
-const getProps = (
-  elementProps: Record<string, unknown> = {}
-): ButtonProps => ({
+const getProps = (elementProps: Partial<ButtonProto> = {}): ButtonProps => ({
   element: ButtonProto.create({
     id: "1",
     label: "Label",

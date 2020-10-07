@@ -16,7 +16,6 @@
  */
 
 import { Checkbox as CheckboxProto } from "autogen/proto"
-
 import { Checkbox as UICheckbox } from "baseui/checkbox"
 import { shallow } from "enzyme"
 import { WidgetStateManager } from "lib/WidgetStateManager"
@@ -27,7 +26,7 @@ jest.mock("lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
 
-const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
+const getProps = (elementProps: Partial<CheckboxProto> = {}): Props => ({
   element: CheckboxProto.create({
     id: "1",
     label: "Label",

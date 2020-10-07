@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { shallow } from "enzyme"
+import { FileUploader as FileUploaderProto } from "autogen/proto"
 import { FileUploader as FileUploaderBaseui } from "baseui/file-uploader"
-import { fromJS } from "immutable"
+import { shallow } from "enzyme"
+import React from "react"
 
 import FileUploader, { Props } from "./FileUploader"
 
@@ -27,10 +27,9 @@ const blobFile = new File(["Text in a file!"], "filename.txt", {
   lastModified: 0,
 })
 
-const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
-  element: fromJS({
+const getProps = (elementProps: Partial<FileUploaderProto> = {}): Props => ({
+  element: FileUploaderProto.create({
     type: [],
-    progress: 0,
     maxUploadSizeMb: 50,
     ...elementProps,
   }),
@@ -55,7 +54,7 @@ describe("FileUploader widget", () => {
     const props = getProps({ label: "Test label" })
     const wrapper = shallow(<FileUploader {...props} />)
 
-    expect(wrapper.find("label").text()).toBe(props.element.get("label"))
+    expect(wrapper.find("label").text()).toBe(props.element.label)
   })
 
   it("should upload files", () => {

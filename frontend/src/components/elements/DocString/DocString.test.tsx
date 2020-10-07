@@ -22,7 +22,7 @@ import React from "react"
 import DocString, { DocStringProps } from "./DocString"
 
 const getProps = (
-  elementProps: Record<string, unknown> = {}
+  elementProps: Partial<DocStringProto> = {}
 ): DocStringProps => ({
   element: DocStringProto.create({
     name: "balloons",

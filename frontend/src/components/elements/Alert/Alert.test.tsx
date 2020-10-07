@@ -21,7 +21,7 @@ import { shallow } from "enzyme"
 import React from "react"
 import Alert, { AlertProps } from "./Alert"
 
-const getProps = (elementProps: Record<string, unknown> = {}): AlertProps => ({
+const getProps = (elementProps: Partial<AlertProto> = {}): AlertProps => ({
   element: AlertProto.create({
     body: "Something happened!",
     ...elementProps,
@@ -92,7 +92,7 @@ describe("Alert element", () => {
 
   it("should throw an error when the format is invalid", () => {
     const props = getProps({
-      format: "test",
+      format: ("test" as unknown) as AlertProto.Format,
       body: "It's dangerous to go alone.",
     })
 

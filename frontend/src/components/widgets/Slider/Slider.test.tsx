@@ -28,7 +28,7 @@ import Slider, { Props } from "./Slider"
 jest.mock("lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
-const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
+const getProps = (elementProps: Partial<SliderProto> = {}): Props => ({
   element: SliderProto.create({
     id: "1",
     label: "Label",

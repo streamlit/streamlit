@@ -22,7 +22,7 @@ import React from "react"
 import Progress, { ProgressProps } from "./Progress"
 
 const getProps = (
-  propOverrides: Record<string, unknown> = {}
+  propOverrides: Partial<ProgressProps> = {}
 ): ProgressProps => ({
   element: ProgressProto.create({
     value: 50,

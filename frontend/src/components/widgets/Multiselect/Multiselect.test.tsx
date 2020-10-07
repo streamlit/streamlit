@@ -15,22 +15,21 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { shallow } from "enzyme"
-import { fromJS } from "immutable"
-import { multiSelectOverrides } from "lib/widgetTheme"
-import { WidgetStateManager } from "lib/WidgetStateManager"
-
+import { MultiSelect as MultiSelectProto } from "autogen/proto"
 import { Select as UISelect, TYPE } from "baseui/select"
+import { shallow } from "enzyme"
+import { WidgetStateManager } from "lib/WidgetStateManager"
+import { multiSelectOverrides } from "lib/widgetTheme"
+import React from "react"
 import Multiselect, { Props } from "./Multiselect"
 
 jest.mock("lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
 
-const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
-  element: fromJS({
-    id: 1,
+const getProps = (elementProps: Partial<MultiSelectProto> = {}): Props => ({
+  element: MultiSelectProto.create({
+    id: "1",
     label: "Label",
     default: [0],
     options: ["a", "b", "c"],
@@ -50,11 +49,9 @@ describe("Multiselect widget", () => {
   })
 
   it("should set widget value on did mount", () => {
-    expect(
-      props.widgetMgr.setIntArrayValue
-    ).toHaveBeenCalledWith(
-      props.element.get("id"),
-      props.element.get("default").toJS(),
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      props.element.default,
       { fromUi: false }
     )
   })
@@ -75,7 +72,7 @@ describe("Multiselect widget", () => {
   })
 
   it("should render a label", () => {
-    expect(wrapper.find("label").text()).toBe(props.element.get("label"))
+    expect(wrapper.find("label").text()).toBe(props.element.label)
   })
 
   describe("placeholder", () => {
@@ -105,7 +102,7 @@ describe("Multiselect widget", () => {
       expect(option).toHaveProperty("value")
     })
 
-    expect(options.length).toBe(props.element.get("options").size)
+    expect(options.length).toBe(props.element.options.length)
     expect(wrapper.find(UISelect).prop("labelKey")).toBe("label")
     expect(wrapper.find(UISelect).prop("valueKey")).toBe("value")
   })

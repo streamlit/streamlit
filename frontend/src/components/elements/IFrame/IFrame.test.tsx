@@ -24,9 +24,7 @@ import {
 import React from "react"
 import IFrame, { IFrameProps } from "./IFrame"
 
-const getProps = (
-  elementProps: Record<string, unknown> = {}
-): IFrameProps => ({
+const getProps = (elementProps: Partial<IFrameProto> = {}): IFrameProps => ({
   element: IFrameProto.create({
     ...elementProps,
   }),
@@ -54,7 +52,7 @@ describe("st.iframe", () => {
     beforeAll(() => {
       const props = getProps({
         src: "foo",
-        srcDoc: "bar",
+        srcdoc: "bar",
       })
       wrapper = shallow(<IFrame {...props} />)
     })

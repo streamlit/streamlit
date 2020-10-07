@@ -16,7 +16,6 @@
  */
 
 import { DateInput as DateInputProto } from "autogen/proto"
-
 import { Datepicker as UIDatePicker } from "baseui/datepicker"
 import { shallow } from "enzyme"
 import { WidgetStateManager } from "lib/WidgetStateManager"

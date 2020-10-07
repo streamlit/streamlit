@@ -23,7 +23,7 @@ import React from "react"
 import { DeckGlJsonChart, PropsWithHeight } from "./DeckGlJsonChart"
 
 const getProps = (
-  elementProps: Record<string, unknown> = {},
+  elementProps: Partial<DeckGlJsonChartProto> = {},
   initialViewStateProps: Record<string, unknown> = {}
 ): PropsWithHeight => {
   // prettier-ignore

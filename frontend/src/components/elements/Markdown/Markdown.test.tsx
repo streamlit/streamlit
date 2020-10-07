@@ -21,7 +21,7 @@ import React from "react"
 import Markdown, { MarkdownProps } from "./Markdown"
 
 const getProps = (
-  elementProps: Record<string, unknown> = {}
+  elementProps: Partial<MarkdownProps> = {}
 ): MarkdownProps => ({
   element: MarkdownProto.create({
     body:

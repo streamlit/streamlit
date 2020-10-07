@@ -18,10 +18,9 @@
 import { Audio as AudioProto } from "autogen/proto"
 import { mount, shallow } from "enzyme"
 import React from "react"
-
 import Audio, { AudioProps } from "./Audio"
 
-const getProps = (elementProps: Record<string, unknown> = {}): AudioProps => ({
+const getProps = (elementProps: Partial<AudioProto> = {}): AudioProps => ({
   element: AudioProto.create({
     startTime: 0,
     url: "/media/08a569df5f3bd617f11b7d137861a3bef91379309ce95bdb9ff04a38.wav",

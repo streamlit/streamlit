@@ -20,7 +20,7 @@ import { shallow } from "enzyme"
 
 import ScreencastDialog, { Props } from "./ScreencastDialog"
 
-const getProps = (props: Record<string, unknown> = {}): Props => ({
+const getProps = (props: Partial<Props> = {}): Props => ({
   onClose: jest.fn(),
   startRecording: jest.fn(),
   toggleRecordAudio: jest.fn(),

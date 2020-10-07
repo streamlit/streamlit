@@ -20,7 +20,7 @@ import { shallow } from "enzyme"
 import React from "react"
 import Json, { JsonProps } from "./Json"
 
-const getProps = (elementProps: Record<string, unknown> = {}): JsonProps => ({
+const getProps = (elementProps: Partial<JsonProto> = {}): JsonProps => ({
   element: JsonProto.create({
     body:
       '{ "proper": [1,2,3],' +

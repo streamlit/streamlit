@@ -47,7 +47,7 @@ jest.mock("lib/log", () => mockLogError)
 const { GraphVizChart } = require("./GraphVizChart")
 
 const getProps = (
-  elementProps: Record<string, unknown> = {}
+  elementProps: Partial<GraphVizChartProto> = {}
 ): GraphVizChartProps => ({
   element: GraphVizChartProto.create({
     spec: `digraph "Hello World" {Hello -> World}`,

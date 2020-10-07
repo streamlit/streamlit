@@ -16,14 +16,13 @@
  */
 
 import { Exception as ExceptionProto } from "autogen/proto"
-
 import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
 import { mount } from "enzyme"
 import React from "react"
 import ExceptionElement, { ExceptionElementProps } from "./ExceptionElement"
 
 const getProps = (
-  elementProps: Record<string, unknown> = {}
+  elementProps: Partial<ExceptionProto> = {}
 ): ExceptionElementProps => ({
   element: ExceptionProto.create({
     stackTrace: ["step 1", "step 2", "step 3"],
@@ -64,9 +63,7 @@ describe("ExceptionElement Element", () => {
   })
 
   it("should render if there's no message", () => {
-    const props = getProps({
-      message: null,
-    })
+    const props = getProps({ message: "" })
     const wrapper = mount(<ExceptionElement {...props} />)
 
     expect(wrapper.find("div .message").text()).toBe("RuntimeError")
