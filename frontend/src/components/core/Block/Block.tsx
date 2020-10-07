@@ -18,6 +18,7 @@
 import React, { PureComponent, ReactNode, Suspense } from "react"
 import { AutoSizer } from "react-virtualized"
 import { List } from "immutable"
+import { styled, StyletronComponent } from "styletron-react"
 import { dispatchOneOf } from "lib/immutableProto"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
@@ -98,6 +99,33 @@ interface Props {
   deltaBlock?: IBlock
 }
 
+const StyledBlock = "div"
+
+const StyledColumn = (
+  weight: number,
+  width: number
+): StyletronComponent<any> => {
+  // The minimal viewport width used to determine the minimal
+  // fixed column width while accounting for column proportions.
+  // Randomly selected based on visual experimentation.
+  const minViewportForColumns = 640
+
+  // When working with columns, width is driven by what percentage of space
+  // the column takes in relation to the total number of columns
+  const columnPercentage = weight / width
+
+  return styled("div", {
+    // Flex determines how much space is allocated to this column.
+    flex: weight,
+    [`@media (max-width: ${minViewportForColumns}px)`]: {
+      minWidth: `${columnPercentage > 0.5 ? "min" : "max"}(
+        ${columnPercentage * 100}% - ${stylingVariables.gutter},
+        ${columnPercentage * minViewportForColumns}px
+      )`,
+    },
+  })
+}
+
 class Block extends PureComponent<Props> {
   private WithExpandableBlock = withExpandable(Block)
 
@@ -149,27 +177,14 @@ class Block extends PureComponent<Props> {
           ...deltaBlock.expandable,
         }
       : {}
-    let style: any = { width }
-    if (deltaBlock.column && deltaBlock.column.weight) {
-      // The minimal viewport width used to determine the minimal
-      // fixed column width while accounting for column proportions.
-      // Randomly selected based on visual experimentation.
-      const minViewportForColumns = 640
+    const style: any = { width }
+    const StyledDiv =
+      deltaBlock.column && deltaBlock.column.weight
+        ? StyledColumn(deltaBlock.column.weight, width)
+        : StyledBlock
 
-      // When working with columns, width is driven by what percentage of space
-      // the column takes in relation to the total number of columns
-      const columnPercentage = deltaBlock.column.weight / width
-      const minColumnWidth = columnPercentage * minViewportForColumns
-      style = {
-        // Flex determines how much space is allocated to this column.
-        flex: deltaBlock.column.weight,
-        minWidth: `max(${columnPercentage * 100}% - ${
-          stylingVariables.gutter
-        }, ${minColumnWidth}px)`,
-      }
-    }
     return (
-      <div key={index} className="stBlock" style={style}>
+      <StyledDiv key={index} className="stBlock" style={style}>
         <BlockType
           elements={element}
           reportId={this.props.reportId}
@@ -182,7 +197,7 @@ class Block extends PureComponent<Props> {
           deltaBlock={deltaBlock}
           {...optionalProps}
         />
-      </div>
+      </StyledDiv>
     )
   }
 
