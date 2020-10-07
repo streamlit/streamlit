@@ -24,7 +24,7 @@ import FileDropzoneInstructions, { Props } from "./FileDropzoneInstructions"
 const getProps = (props: Partial<Props> = {}): Props => ({
   multiple: true,
   acceptedExtensions: [],
-  maxSizeBytes: 2000000,
+  maxSizeBytes: 2000,
   ...props,
 })
 
@@ -36,7 +36,7 @@ describe("FileDropzoneInstructions widget", () => {
     expect(wrapper).toBeDefined()
   })
 
-  it("should show file size limit", () => {
+  it("shows file size limit", () => {
     const props = getProps({ maxSizeBytes: 2000 })
     const wrapper = mount(<FileDropzoneInstructions {...props} />)
     const smallWrapper = wrapper.find(Small)
@@ -44,7 +44,7 @@ describe("FileDropzoneInstructions widget", () => {
     expect(smallWrapper.text()).toBe("Limit 2KB per file")
   })
 
-  it("no extensions", () => {
+  it("renders without extensions", () => {
     const props = getProps({
       acceptedExtensions: [],
     })
@@ -53,7 +53,7 @@ describe("FileDropzoneInstructions widget", () => {
     expect(smallWrapper.text()).toMatch(/per file$/)
   })
 
-  it("with extensions", () => {
+  it("renders with extensions", () => {
     const props = getProps({
       acceptedExtensions: ["jpg"],
     })

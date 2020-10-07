@@ -14,18 +14,15 @@
  * limitations under the License.
  */
 
-/* IMPORTANT: Always use a relative path! */
+/* IMPORTANT: Always use a relative path for building of static assets! */
 $material-font-path: "../fonts/MaterialIcons/" !default;
 
 @font-face {
   font-family: "Material Icons";
   font-style: normal;
   font-weight: normal;
-  src: url("#{$material-font-path}MaterialIcons-Regular.eot"); /* For IE6-8 */
   src: local("Material Icons"), local("MaterialIcons-Regular"),
-    url("#{$material-font-path}MaterialIcons-Regular.woff2") format("woff2"),
-    url("#{$material-font-path}MaterialIcons-Regular.woff") format("woff"),
-    url("#{$material-font-path}MaterialIcons-Regular.ttf") format("truetype");
+    url("#{$material-font-path}MaterialIcons-Regular.woff2") format("woff2");
 }
 
 @font-face {

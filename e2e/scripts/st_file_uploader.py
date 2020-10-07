@@ -16,17 +16,17 @@ import streamlit as st
 
 st.set_option("deprecation.showfileUploaderEncoding", True)
 single_file = st.file_uploader("Drop a file:", type=["txt"])
-if single_file is not None:
-    st.text(single_file.getvalue())
-else:
+if single_file is None:
     st.text("No upload")
+else:
+    st.text(single_file.getvalue())
 
 st.set_option("deprecation.showfileUploaderEncoding", False)
 multiple_files = st.file_uploader(
     "Drop multiple files:", type=["txt"], accept_multiple_files=True
 )
-if multiple_files is not None:
+if multiple_files is None:
+    st.text("No upload")
+else:
     files = [file.getvalue().decode() for file in multiple_files]
     st.text("\n".join(files))
-else:
-    st.text("No upload")

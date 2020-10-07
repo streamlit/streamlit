@@ -25,7 +25,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   onDrop: jest.fn(),
   multiple: true,
   acceptedExtensions: [],
-  maxSizeBytes: 2000000,
+  maxSizeBytes: 200,
   ...props,
 })
 
@@ -37,7 +37,7 @@ describe("FileDropzone widget", () => {
     expect(wrapper).toBeDefined()
   })
 
-  it("no extensions", () => {
+  it("renders dropzone without extensions", () => {
     const props = getProps({
       acceptedExtensions: [],
     })
@@ -46,7 +46,7 @@ describe("FileDropzone widget", () => {
     expect(dropzoneWrapper.props().accept).toBe(undefined)
   })
 
-  it("with extensions", () => {
+  it("renders dropzone with extensions", () => {
     const props = getProps({
       acceptedExtensions: [".jpg"],
     })

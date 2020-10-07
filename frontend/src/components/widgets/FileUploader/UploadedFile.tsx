@@ -34,13 +34,13 @@ import "./FileUploader.scss"
 
 export interface Props {
   file: ExtendedFile
-  progress: number | undefined
+  progress?: number
   onDelete: (id: string) => void
 }
 
 export interface FileStatusProps {
   file: ExtendedFile
-  progress: number | undefined
+  progress?: number
 }
 
 const UploadedFileData = styled("div", {

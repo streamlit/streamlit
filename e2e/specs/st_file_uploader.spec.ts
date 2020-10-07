@@ -82,9 +82,9 @@ describe("st.file_uploader", () => {
           }
         );
 
-      cy.get(".fileError")
+      cy.get(".fileError span")
         .first()
-        .should("have.text", "application/json files are not allowed.error");
+        .should("have.text", "application/json files are not allowed.");
 
       cy.get(".stFileUploader")
         .first()
@@ -167,7 +167,8 @@ describe("st.file_uploader", () => {
             events: ["dragenter", "drop"]
           });
 
-        // The widget should show the names of the uploaded files.
+        // The widget should show the names of the uploaded files in reverse
+        // order
         const filenames = [fileName1, fileName2];
         cy.get(".uploadedFileName").each((uploadedFileName, index) => {
           cy.get(uploadedFileName).should("have.text", filenames[1 - index]);

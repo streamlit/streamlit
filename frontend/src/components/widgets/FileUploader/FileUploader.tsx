@@ -117,20 +117,21 @@ class FileUploader extends React.PureComponent<Props, State> {
     // Too many files were uploaded. Upload the first eligible file
     // and reject the rest
     if (rejectedFiles.length > 1 && !multipleFiles) {
-      const firstFileIndex: number = rejectedFiles.findIndex(
+      const firstFileIndex = rejectedFiles.findIndex(
         file =>
           file.errors.length === 1 && file.errors[0].code === "too-many-files"
       )
 
-      const parsedRejections = [...rejectedFiles]
       if (firstFileIndex >= 0) {
-        const firstFile: FileRejection = parsedRejections.splice(
-          firstFileIndex,
-          1
-        )[0]
+        const firstFile: FileRejection = rejectedFiles[firstFileIndex]
         this.uploadFile(firstFile.file, acceptedFiles.length)
+        this.rejectFiles([
+          ...rejectedFiles.slice(0, firstFileIndex),
+          ...rejectedFiles.slice(firstFileIndex + 1),
+        ])
+      } else {
+        this.rejectFiles(rejectedFiles)
       }
-      this.rejectFiles(parsedRejections)
     } else {
       this.rejectFiles(rejectedFiles)
     }
@@ -179,13 +180,14 @@ class FileUploader extends React.PureComponent<Props, State> {
         if (axios.isCancel(err)) {
           // If this was a cancel error, we don't show the user an error -
           // the cancellation was in response to an action they took
-          const files = this.state.files.map(existingFile => {
-            if (file.id === existingFile.id) {
-              return file
-            }
-            return existingFile
-          })
-          this.setState({ files })
+          this.setState(state => ({
+            files: state.files.map(existingFile => {
+              if (file.id === existingFile.id) {
+                return file
+              }
+              return existingFile
+            }),
+          }))
         } else {
           this.setState({
             status: "ERROR",

@@ -74,7 +74,7 @@ const FileDropzone = ({
           maxSizeBytes={maxSizeBytes}
         />
         <Button kind={Kind.PRIMARY} disabled={disabled} size={Size.SMALL}>
-          {"Browse files"}
+          Browse files
         </Button>
       </StyledDropzoneSection>
     )}
