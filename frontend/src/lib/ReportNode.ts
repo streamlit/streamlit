@@ -42,6 +42,12 @@ export function getElementWidgetID(element: Element): string | undefined {
  */
 export interface ReportNode {
   /**
+   * The ID of the report this node was generated in. When a report finishes
+   * running, the app prunes all stale nodes.
+   */
+  readonly reportId: string
+
+  /**
    * Return the ReportNode for the given index path, or undefined if the path
    * is invalid.
    */
@@ -51,13 +57,13 @@ export interface ReportNode {
    * Return a copy of this node with a new element set at the given index
    * path. Throws an error if the path is invalid.
    */
-  setIn(path: number[], node: ReportNode): ReportNode
+  setIn(path: number[], node: ReportNode, reportId: string): ReportNode
 
   /**
    * Recursively remove children nodes whose reportID is no longer current.
    * If this node should no longer exist, return undefined.
    */
-  clearStaleNodes(reportId: string): ReportNode | undefined
+  clearStaleNodes(currentReportId: string): ReportNode | undefined
 
   /**
    * Recursively add all Elements contained in the tree to a set.
@@ -73,10 +79,6 @@ export class ElementNode implements ReportNode {
 
   public readonly metadata: ForwardMsgMetadata
 
-  /**
-   * The ID of the report this node was generated in. When a report finishes
-   * running, the app prunes all stale nodes.
-   */
   public readonly reportId: string
 
   /**
@@ -119,23 +121,24 @@ export class ElementNode implements ReportNode {
   }
 
   // eslint-disable-next-line class-methods-use-this
-  public setIn(path: number[], node: ReportNode): ReportNode {
+  public setIn(
+    path: number[],
+    node: ReportNode,
+    reportId: string
+  ): ReportNode {
     throw new Error("'setIn' cannot be called on an ElementNode")
   }
 
-  public clearStaleNodes(reportId: string): ElementNode | undefined {
-    if (this.reportId === reportId) {
-      return this
-    }
-    return undefined
+  public clearStaleNodes(currentReportId: string): ElementNode | undefined {
+    return this.reportId === currentReportId ? this : undefined
   }
 
   public getElements(elements: Set<Element>): void {
     elements.add(this.element)
   }
 
-  public addRows(namedDataSet: NamedDataSet): ElementNode {
-    const newNode = new ElementNode(this.element, this.metadata, this.reportId)
+  public addRows(namedDataSet: NamedDataSet, reportId: string): ElementNode {
+    const newNode = new ElementNode(this.element, this.metadata, reportId)
     newNode.lazyImmutableElement = addRows(
       this.immutableElement,
       toImmutableProto(NamedDataSet, namedDataSet)
@@ -152,17 +155,23 @@ export class BlockNode implements ReportNode {
 
   public readonly deltaBlock: BlockProto
 
+  public readonly reportId: string
+
   /**
-   * Create an empty BlockNode. Its "allowEmpty" property will be set,
-   * so it will not be pruned when `clearStaleNodes` is called.
+   * Create an empty BlockNode.
    */
   public static empty(): BlockNode {
-    return new BlockNode([], BlockProto.create({ allowEmpty: true }))
+    return new BlockNode([], BlockProto.create({}), NO_REPORT_ID)
   }
 
-  public constructor(children: ReportNode[], deltaBlock: BlockProto) {
+  public constructor(
+    children: ReportNode[],
+    deltaBlock: BlockProto,
+    reportId: string
+  ) {
     this.children = children
     this.deltaBlock = deltaBlock
+    this.reportId = reportId
   }
 
   /** True if this Block has no children. */
@@ -187,7 +196,7 @@ export class BlockNode implements ReportNode {
     return this.children[childIndex].getIn(path.slice(1))
   }
 
-  public setIn(path: number[], node: ReportNode): BlockNode {
+  public setIn(path: number[], node: ReportNode, reportId: string): BlockNode {
     if (path.length === 0) {
       throw new Error(`empty path!`)
     }
@@ -207,23 +216,28 @@ export class BlockNode implements ReportNode {
       // Pop the current element off our path, and recurse into our children
       newChildren[childIndex] = newChildren[childIndex].setIn(
         path.slice(1),
-        node
+        node,
+        reportId
       )
     }
 
-    return new BlockNode(newChildren, this.deltaBlock)
+    return new BlockNode(newChildren, this.deltaBlock, reportId)
   }
 
-  public clearStaleNodes(reportId: string): BlockNode | undefined {
+  public clearStaleNodes(currentReportId: string): BlockNode | undefined {
+    if (this.reportId !== currentReportId) {
+      return undefined
+    }
+
     // Recursively clear our children.
     const newChildren = this.children
-      .map(child => child.clearStaleNodes(reportId))
+      .map(child => child.clearStaleNodes(currentReportId))
       .filter(notUndefined)
 
     // Container blocks that have the "allowEmpty" property continue
     // to exist even if they don't have children.
     if (newChildren.length > 0 || this.deltaBlock.allowEmpty) {
-      return new BlockNode(newChildren, this.deltaBlock)
+      return new BlockNode(newChildren, this.deltaBlock, currentReportId)
     }
 
     return undefined
@@ -264,7 +278,11 @@ export class ReportRoot {
     }
 
     return new ReportRoot(
-      new BlockNode(mainNodes, BlockProto.create({ allowEmpty: true })),
+      new BlockNode(
+        mainNodes,
+        BlockProto.create({ allowEmpty: true }),
+        NO_REPORT_ID
+      ),
       BlockNode.empty()
     )
   }
@@ -322,7 +340,8 @@ export class ReportRoot {
         return this.addBlock(
           containerId,
           deltaPath,
-          delta.addBlock as BlockProto
+          delta.addBlock as BlockProto,
+          reportId
         )
       }
 
@@ -331,7 +350,8 @@ export class ReportRoot {
         return this.addRows(
           containerId,
           deltaPath,
-          delta.addRows as NamedDataSet
+          delta.addRows as NamedDataSet,
+          reportId
         )
       }
 
@@ -340,9 +360,11 @@ export class ReportRoot {
     }
   }
 
-  public clearStaleNodes(reportId: string): ReportRoot {
-    const main = this.main.clearStaleNodes(reportId) || BlockNode.empty()
-    const sidebar = this.sidebar.clearStaleNodes(reportId) || BlockNode.empty()
+  public clearStaleNodes(currentReportId: string): ReportRoot {
+    const main =
+      this.main.clearStaleNodes(currentReportId) || BlockNode.empty()
+    const sidebar =
+      this.sidebar.clearStaleNodes(currentReportId) || BlockNode.empty()
 
     return new ReportRoot(main, sidebar)
   }
@@ -377,14 +399,15 @@ export class ReportRoot {
 
     // This is a new element!
     const newNode = new ElementNode(element, metadata, reportId)
-    const newContainer = existingContainer.setIn(deltaPath, newNode)
+    const newContainer = existingContainer.setIn(deltaPath, newNode, reportId)
     return this.setContainer(containerId, newContainer)
   }
 
   private addBlock(
     containerId: number,
     deltaPath: number[],
-    block: BlockProto
+    block: BlockProto,
+    reportId: string
   ): ReportRoot {
     const existingContainer = this.getContainer(containerId)
     const existingNode = existingContainer.getIn(deltaPath)
@@ -395,15 +418,16 @@ export class ReportRoot {
     const children: ReportNode[] =
       existingNode instanceof BlockNode ? existingNode.children : []
 
-    const newNode = new BlockNode(children, block)
-    const newContainer = existingContainer.setIn(deltaPath, newNode)
+    const newNode = new BlockNode(children, block, reportId)
+    const newContainer = existingContainer.setIn(deltaPath, newNode, reportId)
     return this.setContainer(containerId, newContainer)
   }
 
   private addRows(
     containerId: number,
     deltaPath: number[],
-    namedDataSet: NamedDataSet
+    namedDataSet: NamedDataSet,
+    reportId: string
   ): ReportRoot {
     const existingContainer = this.getContainer(containerId)
     const existingNode = existingContainer.getIn(deltaPath) as ElementNode
@@ -411,8 +435,8 @@ export class ReportRoot {
       throw new Error(`Can't addRows: invalid deltaPath: ${deltaPath}`)
     }
 
-    const newNode = existingNode.addRows(namedDataSet)
-    const newContainer = existingContainer.setIn(deltaPath, newNode)
+    const newNode = existingNode.addRows(namedDataSet, reportId)
+    const newContainer = existingContainer.setIn(deltaPath, newNode, reportId)
     return this.setContainer(containerId, newContainer)
   }
 

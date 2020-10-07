@@ -161,9 +161,9 @@ const StyledColumn = (
 }
 
 class Block extends PureComponent<Props> {
-  private WithExpandableBlock = withExpandable(Block)
+  private static readonly WithExpandableBlock = withExpandable(Block)
 
-  /** Recursively transform this BLockElement and all children to React Nodes. */
+  /** Recursively transform this BlockElement and all children to React Nodes. */
   private renderElements = (width: number): ReactNode[] => {
     return this.props.node.children
       .map((node: ReportNode, index: number): ReactNode | null => {
@@ -199,7 +199,7 @@ class Block extends PureComponent<Props> {
     width: number
   ): ReactNode {
     const BlockType = node.deltaBlock.expandable
-      ? this.WithExpandableBlock
+      ? Block.WithExpandableBlock
       : Block
 
     const optionalProps = node.deltaBlock.expandable
