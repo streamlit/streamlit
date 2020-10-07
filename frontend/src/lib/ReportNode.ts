@@ -136,7 +136,10 @@ export class ElementNode implements ReportNode {
 
   public addRows(namedDataSet: NamedDataSet): ElementNode {
     const newNode = new ElementNode(this.element, this.metadata, this.reportId)
-    newNode.lazyImmutableElement = addRows(this.immutableElement, namedDataSet)
+    newNode.lazyImmutableElement = addRows(
+      this.immutableElement,
+      toImmutableProto(NamedDataSet, namedDataSet)
+    )
     return newNode
   }
 }
