@@ -101,7 +101,7 @@ export class MetricsManager {
       initializeSegment()
 
       // Only record the user's email if they entered a non-empty one.
-      const userTraits: any = this.getHostTrackingData()
+      const userTraits: any = MetricsManager.getHostTrackingData()
       if (SessionInfo.current.authorEmail !== "") {
         userTraits.authoremail = SessionInfo.current.authorEmail
       }
@@ -175,7 +175,7 @@ export class MetricsManager {
   private send(evName: string, evData: Record<string, unknown> = {}): void {
     const data = {
       ...evData,
-      ...this.getHostTrackingData(),
+      ...MetricsManager.getHostTrackingData(),
       reportHash: this.reportHash,
       dev: IS_DEV_ENV,
       source: "browser",
@@ -215,7 +215,7 @@ export class MetricsManager {
   }
 
   // Use the tracking data injected by S4A if the app is hosted there
-  private getHostTrackingData(): Record<string, unknown> {
+  private static getHostTrackingData(): Record<string, unknown> {
     if (
       window.location.origin.toLowerCase().endsWith(".streamlit.io") &&
       window.parent.streamlitTracking
