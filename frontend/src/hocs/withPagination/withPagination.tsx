@@ -49,7 +49,7 @@ const withPagination = (
     const prevItems: any[] = usePrevious(items)
 
     useEffect(() => {
-      if (prevItems.length !== items.length) {
+      if (prevItems && prevItems.length !== items.length) {
         updateTotalPages(calculateNumPages(items, pageSize))
       }
       if (prevItems && prevItems.length < items.length) {
