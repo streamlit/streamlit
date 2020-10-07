@@ -41,11 +41,6 @@ export function getElementWidgetID(element: Element): string | undefined {
  */
 export interface ReportNode {
   /**
-   * The most recent metadata attached to this node.
-   */
-  readonly metadata: ForwardMsgMetadata
-
-  /**
    * Return the ReportNode for the given index path, or undefined if the path
    * is invalid.
    */
@@ -145,18 +140,10 @@ export class ElementNode implements ReportNode {
 export class BlockNode implements ReportNode {
   public readonly children: ReportNode[]
 
-  // TODO: is this used anywhere?
-  public readonly metadata: ForwardMsgMetadata
-
   public readonly deltaBlock: BlockProto
 
-  public constructor(
-    children: ReportNode[],
-    metadata: ForwardMsgMetadata,
-    deltaBlock: BlockProto
-  ) {
+  public constructor(children: ReportNode[], deltaBlock: BlockProto) {
     this.children = children
-    this.metadata = metadata
     this.deltaBlock = deltaBlock
   }
 
@@ -206,7 +193,7 @@ export class BlockNode implements ReportNode {
       )
     }
 
-    return new BlockNode(newChildren, this.metadata, this.deltaBlock)
+    return new BlockNode(newChildren, this.deltaBlock)
   }
 
   public clearStaleNodes(reportId: string): BlockNode | undefined {
@@ -221,7 +208,7 @@ export class BlockNode implements ReportNode {
       newChildren.length > 0 ||
       (this.deltaBlock != null && this.deltaBlock.allowEmpty)
     ) {
-      return new BlockNode(newChildren, this.metadata, this.deltaBlock)
+      return new BlockNode(newChildren, this.deltaBlock)
     }
 
     return undefined
@@ -262,16 +249,8 @@ export class ReportRoot {
     }
 
     return new ReportRoot(
-      new BlockNode(
-        mainNodes,
-        ForwardMsgMetadata.create({}),
-        BlockProto.create({ allowEmpty: true })
-      ),
-      new BlockNode(
-        [],
-        ForwardMsgMetadata.create({}),
-        BlockProto.create({ allowEmpty: true })
-      )
+      new BlockNode(mainNodes, BlockProto.create({ allowEmpty: true })),
+      new BlockNode([], BlockProto.create({ allowEmpty: true }))
     )
   }
 
@@ -328,8 +307,7 @@ export class ReportRoot {
         return this.addBlock(
           containerId,
           deltaPath,
-          delta.addBlock as BlockProto,
-          metadata
+          delta.addBlock as BlockProto
         )
       }
 
@@ -350,18 +328,10 @@ export class ReportRoot {
   public clearStaleNodes(reportId: string): ReportRoot {
     const main =
       this.main.clearStaleNodes(reportId) ||
-      new BlockNode(
-        [],
-        ForwardMsgMetadata.create({}),
-        BlockProto.create({ allowEmpty: true })
-      )
+      new BlockNode([], BlockProto.create({ allowEmpty: true }))
     const sidebar =
       this.sidebar.clearStaleNodes(reportId) ||
-      new BlockNode(
-        [],
-        ForwardMsgMetadata.create({}),
-        BlockProto.create({ allowEmpty: true })
-      )
+      new BlockNode([], BlockProto.create({ allowEmpty: true }))
 
     return new ReportRoot(main, sidebar)
   }
@@ -403,8 +373,7 @@ export class ReportRoot {
   private addBlock(
     containerId: number,
     deltaPath: number[],
-    block: BlockProto,
-    metadata: ForwardMsgMetadata
+    block: BlockProto
   ): ReportRoot {
     const existingContainer = this.getContainer(containerId)
     const existingNode = existingContainer.getIn(deltaPath)
@@ -415,7 +384,7 @@ export class ReportRoot {
     const children: ReportNode[] =
       existingNode instanceof BlockNode ? existingNode.children : []
 
-    const newNode = new BlockNode(children, metadata, block)
+    const newNode = new BlockNode(children, block)
     const newContainer = existingContainer.setIn(deltaPath, newNode)
     return this.setContainer(containerId, newContainer)
   }

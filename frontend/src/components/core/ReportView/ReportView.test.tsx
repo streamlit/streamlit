@@ -66,15 +66,10 @@ describe("ReportView element", () => {
 
     const sidebar = new BlockNode(
       [sidebarElement],
-      ForwardMsgMetadata.create({}),
       Block.create({ allowEmpty: true })
     )
 
-    const main = new BlockNode(
-      [],
-      ForwardMsgMetadata.create({}),
-      Block.create({ allowEmpty: true })
-    )
+    const main = new BlockNode([], Block.create({ allowEmpty: true }))
 
     const props = getProps({
       elements: new ReportRoot(main, sidebar),
