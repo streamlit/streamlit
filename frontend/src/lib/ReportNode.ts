@@ -152,6 +152,14 @@ export class BlockNode implements ReportNode {
 
   public readonly deltaBlock: BlockProto
 
+  /**
+   * Create an empty BlockNode. Its "allowEmpty" property will be set,
+   * so it will not be pruned when `clearStaleNodes` is called.
+   */
+  public static empty(): BlockNode {
+    return new BlockNode([], BlockProto.create({ allowEmpty: true }))
+  }
+
   public constructor(children: ReportNode[], deltaBlock: BlockProto) {
     this.children = children
     this.deltaBlock = deltaBlock
@@ -214,10 +222,7 @@ export class BlockNode implements ReportNode {
 
     // Container blocks that have the "allowEmpty" property continue
     // to exist even if they don't have children.
-    if (
-      newChildren.length > 0 ||
-      (this.deltaBlock != null && this.deltaBlock.allowEmpty)
-    ) {
+    if (newChildren.length > 0 || this.deltaBlock.allowEmpty) {
       return new BlockNode(newChildren, this.deltaBlock)
     }
 
@@ -260,7 +265,7 @@ export class ReportRoot {
 
     return new ReportRoot(
       new BlockNode(mainNodes, BlockProto.create({ allowEmpty: true })),
-      new BlockNode([], BlockProto.create({ allowEmpty: true }))
+      BlockNode.empty()
     )
   }
 
@@ -336,12 +341,8 @@ export class ReportRoot {
   }
 
   public clearStaleNodes(reportId: string): ReportRoot {
-    const main =
-      this.main.clearStaleNodes(reportId) ||
-      new BlockNode([], BlockProto.create({ allowEmpty: true }))
-    const sidebar =
-      this.sidebar.clearStaleNodes(reportId) ||
-      new BlockNode([], BlockProto.create({ allowEmpty: true }))
+    const main = this.main.clearStaleNodes(reportId) || BlockNode.empty()
+    const sidebar = this.sidebar.clearStaleNodes(reportId) || BlockNode.empty()
 
     return new ReportRoot(main, sidebar)
   }
