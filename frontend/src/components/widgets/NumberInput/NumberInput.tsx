@@ -122,8 +122,8 @@ class NumberInput extends React.PureComponent<Props, State> {
     const data = this.props.element
 
     const widgetId = element.id
-    const min: number = this.getMin()
-    const max: number = this.getMax()
+    const min = this.getMin()
+    const max = this.getMax()
 
     if (min > value || value > max) {
       const node = this.inputRef.current

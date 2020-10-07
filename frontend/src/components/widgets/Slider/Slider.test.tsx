@@ -22,7 +22,6 @@ import { WidgetStateManager } from "lib/WidgetStateManager"
 import { sliderOverrides } from "lib/widgetTheme"
 import React from "react"
 import TimezoneMock from "timezone-mock"
-
 import Slider, { Props } from "./Slider"
 
 jest.mock("lib/WidgetStateManager")

@@ -15,22 +15,22 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { shallow } from "enzyme"
-import { fromJS } from "immutable"
-import { radioOverrides } from "lib/widgetTheme"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { Radio as RadioProto } from "autogen/proto"
 
 import { Radio as UIRadio, RadioGroup } from "baseui/radio"
+import { shallow } from "enzyme"
+import { WidgetStateManager } from "lib/WidgetStateManager"
+import { radioOverrides } from "lib/widgetTheme"
+import React from "react"
 import Radio, { Props } from "./Radio"
 
 jest.mock("lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
 
-const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
-  element: fromJS({
-    id: 1,
+const getProps = (elementProps: Partial<RadioProto> = {}): Props => ({
+  element: RadioProto.create({
+    id: "1",
     label: "Label",
     default: 0,
     options: ["a", "b", "c"],
@@ -52,8 +52,8 @@ describe("Checkbox widget", () => {
 
   it("should set widget value on did mount", () => {
     expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
-      props.element.get("id"),
-      props.element.get("default"),
+      props.element.id,
+      props.element.default,
       { fromUi: false }
     )
   })
@@ -74,12 +74,12 @@ describe("Checkbox widget", () => {
   })
 
   it("should render a label", () => {
-    expect(wrapper.find("label").text()).toBe(props.element.get("label"))
+    expect(wrapper.find("label").text()).toBe(props.element.label)
   })
 
   it("should have a default value", () => {
     expect(wrapper.find(RadioGroup).prop("value")).toBe(
-      props.element.get("default").toString()
+      props.element.default.toString()
     )
   })
 
@@ -92,9 +92,7 @@ describe("Checkbox widget", () => {
 
     options.forEach((option, index) => {
       expect(option.prop("value")).toBe(index.toString())
-      expect(option.prop("children")).toBe(
-        props.element.get("options").get(index)
-      )
+      expect(option.prop("children")).toBe(props.element.options[index])
       expect(option.prop("overrides")).toBe(radioOverrides)
     })
   })
@@ -121,7 +119,7 @@ describe("Checkbox widget", () => {
 
     expect(wrapper.find(RadioGroup).prop("value")).toBe("1")
     expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
-      props.element.get("id"),
+      props.element.id,
       1,
       { fromUi: true }
     )
