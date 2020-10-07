@@ -16,10 +16,8 @@
  */
 
 import { Alert as AlertProto, Element } from "autogen/proto"
-import { List, Set as ImmutableSet } from "immutable"
 import url from "url"
 import xxhash from "xxhashjs"
-import { BlockElement, ReportElement, SimpleElement } from "./DeltaParser"
 
 /**
  * Wraps a function to allow it to be called, at most, once per interval
@@ -93,26 +91,6 @@ export function notUndefined<T>(value: T | undefined): value is T {
  */
 export function notNull<T>(value: T | null | undefined): value is T {
   return value != null
-}
-
-/**
- * Provide an ImmutableSet of SimpleElements by walking a BlockElement to
- * its leaves.
- */
-export function flattenElements(
-  elements: BlockElement
-): ImmutableSet<SimpleElement> {
-  return elements.reduce(
-    (flattened: ImmutableSet<SimpleElement>, reportElement: ReportElement) => {
-      const element = reportElement.get("element")
-
-      if (element instanceof List) {
-        return flattened.union(flattenElements(element as BlockElement))
-      }
-      return flattened.union(ImmutableSet.of(element as SimpleElement))
-    },
-    ImmutableSet.of<SimpleElement>()
-  )
 }
 
 /**
