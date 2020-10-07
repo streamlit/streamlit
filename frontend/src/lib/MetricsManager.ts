@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import { pick } from "lodash"
+
 import { SessionInfo } from "lib/SessionInfo"
 import { initializeSegment } from "vendor/Segment"
 import { IS_DEV_ENV, IS_SHARED_REPORT } from "./baseconsts"
@@ -99,7 +101,7 @@ export class MetricsManager {
       initializeSegment()
 
       // Only record the user's email if they entered a non-empty one.
-      const userTraits: any = {}
+      const userTraits: any = this.getHostTrackingData()
       if (SessionInfo.current.authorEmail !== "") {
         userTraits.authoremail = SessionInfo.current.authorEmail
       }
@@ -173,6 +175,7 @@ export class MetricsManager {
   private send(evName: string, evData: Record<string, unknown> = {}): void {
     const data = {
       ...evData,
+      ...this.getHostTrackingData(),
       reportHash: this.reportHash,
       dev: IS_DEV_ENV,
       source: "browser",
@@ -209,5 +212,23 @@ export class MetricsManager {
   // eslint-disable-next-line class-methods-use-this
   private track(evName: string, data: Record<string, unknown>): void {
     analytics.track(evName, data)
+  }
+
+  // Use the tracking data injected by S4A if the app is hosted there
+  private getHostTrackingData(): Record<string, unknown> {
+    if (
+      window.location.origin.toLowerCase().endsWith(".streamlit.io") &&
+      window.parent.streamlitTracking
+    ) {
+      return pick(window.parent.streamlitTracking, [
+        "hosted",
+        "owner",
+        "repo",
+        "branch",
+        "mainModule",
+        "creatorId",
+      ])
+    }
+    return {}
   }
 }
