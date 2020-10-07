@@ -36,11 +36,17 @@ export const getSizeDisplay = (
   unit: FileSizes,
   rounding = 1
 ): string => {
-  if (!unit) unit = FileSizes.Byte
+  if (!unit) {
+    unit = FileSizes.Byte
+  }
 
-  if (rounding < 0) rounding = 0
+  if (rounding < 0) {
+    rounding = 0
+  }
 
-  if (size < 0) throw new Error("Size must be greater than or equal to 0")
+  if (size < 0) {
+    throw new Error("Size must be greater than or equal to 0")
+  }
 
   const sizeIndex = sizeUnitSequence.indexOf(unit)
   const nextUnitSize = size / BYTE_CONVERSION_SIZE

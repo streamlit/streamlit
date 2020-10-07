@@ -15,10 +15,11 @@
  * limitations under the License.
  */
 
-import React, { ComponentType, ReactNode, PureComponent } from "react"
+import React, { ComponentType, ReactElement, useEffect, useState } from "react"
 import classNames from "classnames"
 import hoistNonReactStatics from "hoist-non-react-statics"
 import Pagination from "hocs/withPagination/Pagination"
+import { usePrevious } from "lib/Hooks"
 
 export interface Props {
   className: string
@@ -27,90 +28,67 @@ export interface Props {
   resetOnAdd: boolean
 }
 
-interface State {
-  currentPage: number
-  pageSize: number
-  totalPages: number
-}
+const calculateNumPages = (items: any[], pageSize: number): number =>
+  Math.ceil(items.length / pageSize)
 
 const withPagination = (
   WrappedComponent: ComponentType<any>
 ): ComponentType<any> => {
-  class WithPagination extends PureComponent<Props, State> {
-    public constructor(props: Props) {
-      super(props)
+  const WithPagination = ({
+    pageSize,
+    items,
+    resetOnAdd,
+    className,
+    ...props
+  }: Props): ReactElement => {
+    const [currentPage, updateCurrentPage] = useState<number>(0)
+    const [totalPages, updateTotalPages] = useState<number>(
+      calculateNumPages(items, pageSize)
+    )
 
-      this.state = {
-        currentPage: 0,
-        pageSize: props.pageSize,
-        totalPages: this.calculateNumPages(this.props.items),
+    const prevItems: any[] = usePrevious(items)
+
+    useEffect(() => {
+      if (prevItems.length !== items.length) {
+        updateTotalPages(calculateNumPages(items, pageSize))
       }
-    }
-
-    public componentDidUpdate(prevProps: Props): void {
-      if (prevProps.items.length !== this.props.items.length) {
-        const totalPages = this.calculateNumPages(this.props.items)
-
-        let { currentPage } = this.state
-        if (prevProps.items.length < this.props.items.length) {
-          if (this.props.resetOnAdd) {
-            currentPage = 0
-          }
-        } else if (currentPage + 1 >= totalPages) {
-          currentPage = totalPages - 1
+      if (prevItems && prevItems.length < items.length) {
+        if (resetOnAdd) {
+          updateCurrentPage(0)
         }
-        this.setState({
-          totalPages,
-          currentPage,
-        })
+      } else if (currentPage + 1 >= totalPages) {
+        updateCurrentPage(totalPages - 1)
       }
+    }, [items, currentPage])
+
+    const onNext = (): void => {
+      updateCurrentPage(Math.min(currentPage + 1, totalPages - 1))
     }
 
-    private calculateNumPages(items: any[]): number {
-      return Math.ceil(items.length / this.props.pageSize)
+    const onPrevious = (): void => {
+      updateCurrentPage(Math.max(0, currentPage - 1))
     }
 
-    public onNext = (): void => {
-      this.setState({
-        currentPage: Math.min(
-          this.state.currentPage + 1,
-          this.state.totalPages - 1
-        ),
-      })
-    }
-
-    public onPrevious = (): void => {
-      this.setState({
-        currentPage: Math.max(0, this.state.currentPage - 1),
-      })
-    }
-
-    render(): ReactNode {
-      const { pageSize, currentPage, totalPages } = this.state
-      const { items, className, ...props } = this.props
-      const paginatedItems = items.slice(
-        currentPage * pageSize,
-        currentPage * pageSize + pageSize
-      )
-
-      return (
-        <>
-          <WrappedComponent items={paginatedItems} {...props} />
-          {items.length > pageSize ? (
-            <Pagination
-              className={classNames(className, "streamlit-paginator")}
-              pageSize={pageSize}
-              totalPages={totalPages}
-              currentPage={currentPage + 1}
-              onNext={this.onNext}
-              onPrevious={this.onPrevious}
-            />
-          ) : null}
-        </>
-      )
-    }
+    const paginatedItems = items.slice(
+      currentPage * pageSize,
+      currentPage * pageSize + pageSize
+    )
+    return (
+      <>
+        <WrappedComponent items={paginatedItems} {...props} />
+        {items.length > pageSize ? (
+          <Pagination
+            className={classNames(className, "streamlit-paginator")}
+            pageSize={pageSize}
+            totalPages={totalPages}
+            currentPage={currentPage + 1}
+            onNext={onNext}
+            onPrevious={onPrevious}
+          />
+        ) : null}
+      </>
+    )
   }
-
   return hoistNonReactStatics(WithPagination, WrappedComponent)
 }
 

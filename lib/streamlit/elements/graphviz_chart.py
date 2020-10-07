@@ -23,23 +23,13 @@ LOGGER = get_logger(__name__)
 
 
 class GraphvizMixin:
-    def graphviz_chart(dg, figure_or_dot, width=0, height=0, use_container_width=False):
+    def graphviz_chart(dg, figure_or_dot, use_container_width=False):
         """Display a graph using the dagre-d3 library.
 
         Parameters
         ----------
         figure_or_dot : graphviz.dot.Graph, graphviz.dot.Digraph, str
             The Graphlib graph object or dot string to display
-
-        width : number
-            Deprecated. If != 0 (default), will show an alert.
-            From now on you should set the width directly in the Graphviz
-            spec. Please refer to the Graphviz documentation for details.
-
-        height : number
-            Deprecated. If != 0 (default), will show an alert.
-            From now on you should set the height directly in the Graphviz
-            spec. Please refer to the Graphviz documentation for details.
 
         use_container_width : bool
             If True, set the chart width to the column width. This takes
@@ -95,25 +85,6 @@ class GraphvizMixin:
            height: 400px
 
         """
-        if width != 0 and height != 0:
-            import streamlit as st
-
-            st.warning(
-                "The `width` and `height` arguments in `st.graphviz` are deprecated and will be removed on 2020-03-04"
-            )
-        elif width != 0:
-            import streamlit as st
-
-            st.warning(
-                "The `width` argument in `st.graphviz` is deprecated and will be removed on 2020-03-04"
-            )
-        elif height != 0:
-            import streamlit as st
-
-            st.warning(
-                "The `height` argument in `st.graphviz` is deprecated and will be removed on 2020-03-04"
-            )
-
         graphviz_chart_proto = GraphVizChartProto()
         marshall(graphviz_chart_proto, figure_or_dot, use_container_width)
         return dg._enqueue("graphviz_chart", graphviz_chart_proto)  # type: ignore

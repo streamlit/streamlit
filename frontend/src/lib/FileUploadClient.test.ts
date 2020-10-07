@@ -81,7 +81,7 @@ describe("FileUploadClient Upload", () => {
       })
   }
 
-  test("uploads files correctly", async () => {
+  test("it uploads files correctly", async () => {
     const uploader = new FileUploadClient(() => MOCK_SERVER_URI)
 
     mockUploadResponseStatus(200)
@@ -96,7 +96,7 @@ describe("FileUploadClient Upload", () => {
     ).resolves.toBeUndefined()
   })
 
-  test("handles errors", async () => {
+  test("it handles errors", async () => {
     const uploader = new FileUploadClient(() => MOCK_SERVER_URI, true)
 
     mockUploadResponseStatus(400)
@@ -133,7 +133,7 @@ describe("FileUploadClient delete", () => {
     SessionInfo.singleton = undefined
   })
 
-  test("deletes file", async () => {
+  test("it deletes file", async () => {
     const uploader = new FileUploadClient(() => MOCK_SERVER_URI, true)
 
     uploader.delete("widgetId", "123")

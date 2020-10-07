@@ -23,7 +23,6 @@ from streamlit import type_util
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.media_file_manager import media_file_manager
-from streamlit.uploaded_file_manager import UploadedFile
 
 
 class MediaMixin:

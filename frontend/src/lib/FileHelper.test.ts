@@ -18,7 +18,7 @@
 import { getSizeDisplay, sizeConverter, FileSizes } from "./FileHelper"
 
 describe("getSizeDisplay", () => {
-  test("shows unit", async () => {
+  test("it shows unit", async () => {
     expect(getSizeDisplay(1024, FileSizes.Byte)).toEqual("1.0KB")
     expect(getSizeDisplay(1024 * 1024, FileSizes.Byte)).toEqual("1.0MB")
     expect(getSizeDisplay(1024 * 1024 * 1024, FileSizes.Byte)).toEqual("1.0GB")
@@ -27,20 +27,20 @@ describe("getSizeDisplay", () => {
     expect(getSizeDisplay(1024, FileSizes.MegaByte)).toEqual("1.0GB")
   })
 
-  test("unusual values", async () => {
+  test("it has unusual values", async () => {
     expect(() => getSizeDisplay(-100, FileSizes.Byte)).toThrow(
       "Size must be greater than or equal to 0"
     )
     expect(getSizeDisplay(0, FileSizes.Byte, -1)).toEqual("0B")
   })
 
-  test("rounding truncation", async () => {
+  test("it truncates to the right amount of decimals", async () => {
     expect(getSizeDisplay(1024, FileSizes.Byte)).toEqual("1.0KB")
     expect(getSizeDisplay(1024, FileSizes.Byte, 0)).toEqual("1KB")
     expect(getSizeDisplay(1024, FileSizes.Byte, 3)).toEqual("1.000KB")
   })
 
-  test("rounding up unit", async () => {
+  test("it rounds up to the next unit", async () => {
     expect(getSizeDisplay(500, FileSizes.Byte)).toEqual("500.0B")
     expect(getSizeDisplay(800, FileSizes.Byte)).toEqual("0.8KB")
     expect(getSizeDisplay(501, FileSizes.GigaByte)).toEqual("501.0GB")
@@ -48,7 +48,7 @@ describe("getSizeDisplay", () => {
 })
 
 describe("sizeConverter", () => {
-  test("Converts up", async () => {
+  test("it converts up to the bigger unit", async () => {
     expect(sizeConverter(0.5, FileSizes.KiloByte, FileSizes.MegaByte)).toEqual(
       0.5 / 1024
     )
@@ -61,7 +61,7 @@ describe("sizeConverter", () => {
     )
   })
 
-  test("Converts down", async () => {
+  test("it converts down to the smaller unit", async () => {
     expect(sizeConverter(0.5, FileSizes.GigaByte, FileSizes.MegaByte)).toEqual(
       512
     )
@@ -74,7 +74,7 @@ describe("sizeConverter", () => {
     expect(sizeConverter(1, FileSizes.KiloByte, FileSizes.Byte)).toEqual(1024)
   })
 
-  test("unusual cases", async () => {
+  test("it handles unusual cases", async () => {
     expect(sizeConverter(1024, FileSizes.Byte, FileSizes.Byte)).toEqual(1024)
     expect(() =>
       sizeConverter(-1, FileSizes.GigaByte, FileSizes.GigaByte)

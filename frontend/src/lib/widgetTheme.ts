@@ -39,7 +39,9 @@ const gutter = SCSS_VARS.$gutter
 
 // Using this calculator instead to work with spacer
 const spacingCalculator = (spacing?: number): string => {
-  if (!spacing) return spacer
+  if (!spacing) {
+    return spacer
+  }
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const [match, amount, unit] = spacer.match(/(?<amount>\d)(?<unit>.*)/)!
   const numberAmount: number = parseInt(amount, 10)
