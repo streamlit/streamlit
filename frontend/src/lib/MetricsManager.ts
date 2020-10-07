@@ -102,6 +102,9 @@ export class MetricsManager {
 
       // Only record the user's email if they entered a non-empty one.
       const userTraits: any = this.getHostTrackingData()
+      logAlways("core initialize")
+      logAlways(userTraits)
+
       if (SessionInfo.current.authorEmail !== "") {
         userTraits.authoremail = SessionInfo.current.authorEmail
       }
@@ -112,7 +115,7 @@ export class MetricsManager {
       this.sendPendingEvents()
     }
 
-    logAlways("Gather usage stats: ", this.actuallySendMetrics)
+    logAlways("Gather usage rhone stats: ", this.actuallySendMetrics)
   }
 
   public enqueue(evName: string, evData: Record<string, unknown> = {}): void {
@@ -182,6 +185,9 @@ export class MetricsManager {
       streamlitVersion: SessionInfo.current.streamlitVersion,
     }
 
+    logAlways("core send")
+    logAlways(data)
+
     // Don't actually track events when in dev mode, just print them instead.
     // This is just to keep us from tracking too many events and having to pay
     // for all of them.
@@ -205,13 +211,13 @@ export class MetricsManager {
     if (IS_DEV_ENV) {
       logAlways("[Dev mode] Not sending id: ", id, data)
     } else {
-      analytics.identify(id, data)
+      // analytics.identify(id, data)
     }
   }
 
   // eslint-disable-next-line class-methods-use-this
   private track(evName: string, data: Record<string, unknown>): void {
-    analytics.track(evName, data)
+    // analytics.track(evName, data)
   }
 
   // Use the tracking data injected by S4A if the app is hosted there
