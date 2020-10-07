@@ -9,11 +9,24 @@ class EmptyMixin:
         This allows you to, for example, remove elements at any point, or replace
         several elements at once (using a child multi-element container).
 
-        To insert/replace/clear an element on the returned container just call
-        methods directly on the returned object. See examples below.
+        To insert/replace/clear an element on the returned container, you can
+        use "with" notation or just call methods directly on the returned object.
+        See examples below.
 
         Examples
         --------
+
+        Overwriting elements in-place using "with" notation:
+
+        >>> import time
+        >>>
+        >>> with st.empty():
+        ...     for seconds in range(60):
+        ...         st.write(f"⏳ {seconds} seconds have passed")
+        ...         time.sleep(1)
+        ...     st.write("✔️ 1 minute over!")
+
+        Replacing several elements, then clearing them:
 
         >>> placeholder = st.empty()
         >>>
@@ -25,8 +38,8 @@ class EmptyMixin:
         >>>
         >>> # Replace the chart with several elements:
         >>> with placeholder.beta_container():
-        ...   st.write("This is one element")
-        ...   st.write("This is another")
+        ...     st.write("This is one element")
+        ...     st.write("This is another")
         ...
         >>> # Clear all those elements:
         >>> placeholder.empty()
