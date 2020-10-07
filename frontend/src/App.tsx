@@ -41,13 +41,12 @@ import {
   hashString,
   isEmbeddedInIFrame,
   notUndefined,
-  requireNonNull,
 } from "lib/utils"
 import {
   BackMsg,
   Delta,
   ForwardMsg,
-  IForwardMsgMetadata,
+  ForwardMsgMetadata,
   ISessionState,
   Initialize,
   NewReport,
@@ -283,7 +282,10 @@ export class App extends PureComponent<Props, State> {
         newReport: (newReportMsg: NewReport) =>
           this.handleNewReport(newReportMsg),
         delta: (deltaMsg: Delta) =>
-          this.handleDeltaMsg(deltaMsg, requireNonNull(msgProto.metadata)),
+          this.handleDeltaMsg(
+            deltaMsg,
+            msgProto.metadata as ForwardMsgMetadata
+          ),
         pageConfigChanged: (pageConfig: PageConfig) =>
           this.handlePageConfigChanged(pageConfig),
         pageInfoChanged: (pageInfo: PageInfo) =>
@@ -641,7 +643,7 @@ export class App extends PureComponent<Props, State> {
    */
   handleDeltaMsg = (
     deltaMsg: Delta,
-    metadataMsg: IForwardMsgMetadata
+    metadataMsg: ForwardMsgMetadata
   ): void => {
     if (this.elementListBuffer == null) {
       this.elementListBuffer = this.state.elements

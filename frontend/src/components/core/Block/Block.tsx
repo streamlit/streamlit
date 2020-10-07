@@ -18,6 +18,7 @@
 import {
   Alert as AlertProto,
   Audio as AudioProto,
+  Block as BlockProto,
   BokehChart as BokehChartProto,
   Button as ButtonProto,
   Checkbox as CheckboxProto,
@@ -37,7 +38,6 @@ import {
   DocString as DocStringProto,
   Exception as ExceptionProto,
   GraphVizChart as GraphVizChartProto,
-  IBlock,
   IForwardMsgMetadata,
   IFrame as IFrameProto,
   ImageList as ImageListProto,
@@ -132,7 +132,7 @@ interface Props {
   uploadClient: FileUploadClient
   widgetsDisabled: boolean
   componentRegistry: ComponentRegistry
-  deltaBlock?: IBlock
+  deltaBlock: BlockProto
 }
 
 const StyledBlock = "div"
@@ -201,25 +201,21 @@ class Block extends PureComponent<Props> {
     node: BlockNode,
     index: number,
     width: number,
-    deltaBlock?: IBlock
+    deltaBlock: BlockProto
   ): ReactNode {
-    const BlockType =
-      deltaBlock != null && deltaBlock.expandable
-        ? this.WithExpandableBlock
-        : Block
+    const BlockType = deltaBlock.expandable ? this.WithExpandableBlock : Block
 
-    const optionalProps =
-      deltaBlock != null && deltaBlock.expandable
-        ? {
-            empty: node.children.length === 0,
-            ...deltaBlock.expandable,
-          }
-        : {}
+    const optionalProps = deltaBlock.expandable
+      ? {
+          empty: node.children.length === 0,
+          ...deltaBlock.expandable,
+        }
+      : {}
 
     const style: any = { width }
 
     const StyledDiv =
-      deltaBlock != null && deltaBlock.column && deltaBlock.column.weight
+      deltaBlock.column && deltaBlock.column.weight
         ? StyledColumn(deltaBlock.column.weight, width)
         : StyledBlock
 
@@ -640,7 +636,7 @@ class Block extends PureComponent<Props> {
   }
 
   public render = (): ReactNode => {
-    if (this.props.deltaBlock && this.props.deltaBlock.horizontal) {
+    if (this.props.deltaBlock.horizontal) {
       // Create a horizontal block as the parent for columns
       // For now, all children are column blocks. For columns, `width` is
       // driven by the total number of columns available.

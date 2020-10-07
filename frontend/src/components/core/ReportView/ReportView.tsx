@@ -95,6 +95,7 @@ function ReportView(props: ReportViewProps): ReactElement {
           widgetsDisabled={widgetsDisabled}
           uploadClient={uploadClient}
           componentRegistry={componentRegistry}
+          deltaBlock={node.deltaBlock}
         />
       </ThemeProvider>
     </div>

@@ -16,13 +16,12 @@
  */
 
 import {
-  Block,
+  Block as BlockProto,
   BlockPath,
   Delta,
   Element,
   ForwardMsgMetadata,
-  IBlock,
-  IForwardMsgMetadata,
+  NamedDataSet,
 } from "autogen/proto"
 import { Map as ImmutableMap } from "immutable"
 import _ from "lodash"
@@ -44,7 +43,7 @@ export interface ReportNode {
   /**
    * The most recent metadata attached to this node.
    */
-  readonly metadata: IForwardMsgMetadata
+  readonly metadata: ForwardMsgMetadata
 
   /**
    * Return the ReportNode for the given index path, or undefined if the path
@@ -76,7 +75,7 @@ export interface ReportNode {
 export class ElementNode implements ReportNode {
   public readonly element: Element
 
-  public readonly metadata: IForwardMsgMetadata
+  public readonly metadata: ForwardMsgMetadata
 
   /**
    * The ID of the report this node was generated in. When a report finishes
@@ -100,7 +99,7 @@ export class ElementNode implements ReportNode {
   /** Create a new ElementNode. */
   public constructor(
     element: Element,
-    metadata: IForwardMsgMetadata,
+    metadata: ForwardMsgMetadata,
     reportId: string
   ) {
     this.element = element
@@ -147,14 +146,14 @@ export class BlockNode implements ReportNode {
   public readonly children: ReportNode[]
 
   // TODO: is this used anywhere?
-  public readonly metadata: IForwardMsgMetadata
+  public readonly metadata: ForwardMsgMetadata
 
-  public readonly deltaBlock?: IBlock
+  public readonly deltaBlock: BlockProto
 
   public constructor(
     children: ReportNode[],
-    metadata: IForwardMsgMetadata,
-    deltaBlock?: IBlock
+    metadata: ForwardMsgMetadata,
+    deltaBlock: BlockProto
   ) {
     this.children = children
     this.metadata = metadata
@@ -266,12 +265,12 @@ export class ReportRoot {
       new BlockNode(
         mainNodes,
         ForwardMsgMetadata.create({}),
-        Block.create({ allowEmpty: true })
+        BlockProto.create({ allowEmpty: true })
       ),
       new BlockNode(
         [],
         ForwardMsgMetadata.create({}),
-        Block.create({ allowEmpty: true })
+        BlockProto.create({ allowEmpty: true })
       )
     )
   }
@@ -284,12 +283,12 @@ export class ReportRoot {
   public applyDelta(
     reportId: string,
     delta: Delta,
-    metadata: IForwardMsgMetadata
+    metadata: ForwardMsgMetadata
   ): ReportRoot {
-    const parentBlock = requireNonNull(metadata.parentBlock)
-    const parentBlockPath = requireNonNull(parentBlock.path)
-    const containerId = requireNonNull(parentBlock.container)
-    const deltaId = requireNonNull(metadata.deltaId)
+    const parentBlock = metadata.parentBlock as BlockPath
+    const parentBlockPath = parentBlock.path
+    const containerId = parentBlock.container
+    const { deltaId } = metadata
 
     // Update Metrics
     MetricsManager.current.incrementDeltaCounter(getContainerName(containerId))
@@ -298,45 +297,54 @@ export class ReportRoot {
     // Used to find and update the element node specified by this Delta.
     const deltaPath: number[] = [...parentBlockPath, deltaId]
 
-    if (delta.type === "newElement") {
-      const element = requireNonNull(delta.newElement) as Element
-      if (element.type != null) {
-        MetricsManager.current.incrementDeltaCounter(element.type)
-      }
-
-      // Track component instance name.
-      if (element.type === "componentInstance") {
-        const componentName = element.componentInstance?.componentName
-        if (componentName != null) {
-          MetricsManager.current.incrementCustomComponentCounter(componentName)
+    switch (delta.type) {
+      case "newElement": {
+        const element = delta.newElement as Element
+        if (element.type != null) {
+          MetricsManager.current.incrementDeltaCounter(element.type)
         }
+
+        // Track component instance name.
+        if (element.type === "componentInstance") {
+          const componentName = element.componentInstance?.componentName
+          if (componentName != null) {
+            MetricsManager.current.incrementCustomComponentCounter(
+              componentName
+            )
+          }
+        }
+
+        return this.addElement(
+          containerId,
+          deltaPath,
+          reportId,
+          element,
+          metadata
+        )
       }
 
-      return this.addElement(
-        containerId,
-        deltaPath,
-        reportId,
-        element,
-        metadata
-      )
-    }
+      case "addBlock": {
+        MetricsManager.current.incrementDeltaCounter("new block")
+        return this.addBlock(
+          containerId,
+          deltaPath,
+          delta.addBlock as BlockProto,
+          metadata
+        )
+      }
 
-    if (delta.type === "addBlock") {
-      MetricsManager.current.incrementDeltaCounter("new block")
-      return this.addBlock(
-        containerId,
-        deltaPath,
-        requireNonNull(delta.addBlock),
-        metadata
-      )
-    }
+      case "addRows": {
+        MetricsManager.current.incrementDeltaCounter("add rows")
+        return this.addRows(
+          containerId,
+          deltaPath,
+          delta.addRows as NamedDataSet
+        )
+      }
 
-    if (delta.type === "addRows") {
-      MetricsManager.current.incrementDeltaCounter("add rows")
-      throw new Error("TODO: addRows!")
+      default:
+        throw new Error(`Unrecognized deltaType: '${delta.type}'`)
     }
-
-    throw new Error(`Unrecognized deltaType: '${delta.type}'`)
   }
 
   public clearStaleNodes(reportId: string): ReportRoot {
@@ -345,14 +353,14 @@ export class ReportRoot {
       new BlockNode(
         [],
         ForwardMsgMetadata.create({}),
-        Block.create({ allowEmpty: true })
+        BlockProto.create({ allowEmpty: true })
       )
     const sidebar =
       this.sidebar.clearStaleNodes(reportId) ||
       new BlockNode(
         [],
         ForwardMsgMetadata.create({}),
-        Block.create({ allowEmpty: true })
+        BlockProto.create({ allowEmpty: true })
       )
 
     return new ReportRoot(main, sidebar)
@@ -371,7 +379,7 @@ export class ReportRoot {
     deltaPath: number[],
     reportId: string,
     element: Element,
-    metadata: IForwardMsgMetadata
+    metadata: ForwardMsgMetadata
   ): ReportRoot {
     const existingContainer = this.getContainer(containerId)
 
@@ -395,8 +403,8 @@ export class ReportRoot {
   private addBlock(
     containerId: number,
     deltaPath: number[],
-    block: IBlock,
-    metadata: IForwardMsgMetadata
+    block: BlockProto,
+    metadata: ForwardMsgMetadata
   ): ReportRoot {
     const existingContainer = this.getContainer(containerId)
     const existingNode = existingContainer.getIn(deltaPath)
@@ -410,6 +418,15 @@ export class ReportRoot {
     const newNode = new BlockNode(children, metadata, block)
     const newContainer = existingContainer.setIn(deltaPath, newNode)
     return this.setContainer(containerId, newContainer)
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  private addRows(
+    containerId: number,
+    deltaPath: number[],
+    namedDataSet: NamedDataSet
+  ): ReportRoot {
+    throw new Error("TODO")
   }
 
   private setContainer(
