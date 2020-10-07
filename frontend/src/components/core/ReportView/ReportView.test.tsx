@@ -22,16 +22,14 @@ import { PageConfig } from "autogen/proto"
 import { ReportRunState } from "lib/ReportRunState"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { WidgetStateManager } from "lib/WidgetStateManager"
+import { ReportRoot } from "lib/ReportNode"
 import { ComponentRegistry } from "../../widgets/CustomComponent"
 import ReportView, { ReportViewProps } from "./ReportView"
 
 const getProps = (
   propOverrides: Partial<ReportViewProps> = {}
 ): ReportViewProps => ({
-  elements: {
-    main: List(),
-    sidebar: List(),
-  },
+  elements: ReportRoot.empty(),
   reportId: "report 123",
   reportRunState: ReportRunState.NOT_RUNNING,
   showStaleElementIndicator: true,

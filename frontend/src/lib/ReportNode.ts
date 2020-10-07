@@ -24,29 +24,17 @@ import {
   IBlock,
   IForwardMsgMetadata,
 } from "autogen/proto"
+import { Map as ImmutableMap } from "immutable"
 import _ from "lodash"
+import { toImmutableProto } from "./immutableProto"
 import { MetricsManager } from "./MetricsManager"
 import { makeElementWithInfoText, notUndefined, requireNonNull } from "./utils"
 
 const NO_REPORT_ID = "NO_REPORT_ID"
 
-/** Return an Element's widget ID, if it's a widget, and undefined otherwise. */
+/** Return an Element's widget ID if it's a widget, and undefined otherwise. */
 export function getElementWidgetID(element: Element): string | undefined {
   return _.get(element as any, [requireNonNull(element.type), "id"])
-}
-
-/**
- * Return the element's oneOf data.
- * (We don't have a great way of generating the data's type from our protobuf
- * definitions, but it's along the lines of `Alert | Audio | Balloons | etc`.)
- */
-export function getElementData(element: Element): any {
-  const { type } = element
-  if (type == null) {
-    throw new Error(`Element.type is missing`)
-  }
-
-  return (element as any)[type]
 }
 
 /**
@@ -96,6 +84,19 @@ export class ElementNode implements ReportNode {
    */
   public readonly reportId: string
 
+  /**
+   * A lazily-created immutableJS version of our element.
+   *
+   * This is a temporary! `immutableElement` is currently needed for
+   * dataframe-consuming elements because our dataframe API is
+   * immutableJS-based. It'll go away when we've converted to an ArrowJS-based
+   * dataframe API.
+   *
+   * Because most elements do *not* use the Dataframe API, and therefore
+   * do not need to access `immutableElement`, it is calculated lazily.
+   */
+  private lazyImmutableElement: ImmutableMap<string, any> | undefined
+
   /** Create a new ElementNode. */
   public constructor(
     element: Element,
@@ -105,6 +106,16 @@ export class ElementNode implements ReportNode {
     this.element = element
     this.metadata = metadata
     this.reportId = reportId
+  }
+
+  public get immutableElement(): ImmutableMap<string, any> {
+    if (this.lazyImmutableElement !== undefined) {
+      return this.lazyImmutableElement
+    }
+
+    const toReturn = toImmutableProto(Element, this.element)
+    this.lazyImmutableElement = toReturn
+    return toReturn
   }
 
   // eslint-disable-next-line class-methods-use-this

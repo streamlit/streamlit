@@ -50,16 +50,6 @@ import {
 } from "autogen/proto"
 
 import Maybe from "components/core/Maybe/"
-
-// Load (non-lazy) elements.
-import Alert from "components/elements/Alert/"
-import DocString from "components/elements/DocString/"
-import ExceptionElement from "components/elements/ExceptionElement/"
-import Json from "components/elements/Json/"
-import Markdown from "components/elements/Markdown/"
-import Text from "components/elements/Text/"
-import ErrorBoundary from "components/shared/ErrorBoundary/"
-import FullScreenWrapper from "components/shared/FullScreenWrapper/"
 import {
   ComponentInstance,
   ComponentRegistry,
@@ -81,6 +71,16 @@ import {
 
 import "./Block.scss"
 
+// Load (non-lazy) elements.
+import Alert from "components/elements/Alert/"
+import DocString from "components/elements/DocString/"
+import ExceptionElement from "components/elements/ExceptionElement/"
+import Json from "components/elements/Json/"
+import Markdown from "components/elements/Markdown/"
+import Text from "components/elements/Text/"
+import ErrorBoundary from "components/shared/ErrorBoundary/"
+import FullScreenWrapper from "components/shared/FullScreenWrapper/"
+
 // Lazy-load elements.
 const Audio = React.lazy(() => import("components/elements/Audio/"))
 const Balloons = React.lazy(() => import("components/elements/Balloons/"))
@@ -97,6 +97,7 @@ const ImageList = React.lazy(() => import("components/elements/ImageList/"))
 const PlotlyChart = React.lazy(() =>
   import("components/elements/PlotlyChart/")
 )
+const Table = React.lazy(() => import("components/elements/Table/"))
 const VegaLiteChart = React.lazy(() =>
   import("components/elements/VegaLiteChart/")
 )
@@ -340,8 +341,13 @@ class Block extends PureComponent<Props> {
         )
 
       case "dataFrame":
-        // <DataFrame element={el} width={width} height={height} />
-        throw new Error("TODO")
+        return (
+          <DataFrame
+            element={node.immutableElement}
+            width={width}
+            height={height}
+          />
+        )
 
       case "deckGlJsonChart":
         return (
@@ -421,15 +427,13 @@ class Block extends PureComponent<Props> {
         )
 
       case "table":
-        //   table: (el: SimpleElement) => <Table element={el} width={width} />,
-        throw new Error("TODO")
+        return <Table element={node.immutableElement} width={width} />
 
       case "text":
         return <Text width={width} element={node.element.text as TextProto} />
 
       case "vegaLiteChart":
-        //     <VegaLiteChart element={el} width={width} />
-        throw new Error("TODO")
+        return <VegaLiteChart element={node.immutableElement} width={width} />
 
       case "video":
         return (
