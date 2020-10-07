@@ -52,18 +52,52 @@ function withExpandable(
         expanded={expanded ? ["panel"] : []}
         overrides={{
           Content: {
-            style: { backgroundColor: colors.transparent },
+            style: ({ $expanded }) => ({
+              backgroundColor: colors.transparent,
+              borderTopStyle: "none",
+              borderBottomStyle: "solid",
+              borderBottomColor: $expanded
+                ? colors.grayLighter
+                : colors.transparent,
+              marginLeft: "0",
+              marginRight: "0",
+              marginTop: "0",
+              marginBottom: "0",
+              paddingLeft: "0",
+              paddingRight: "0",
+              paddingTop: $expanded ? "1em" : 0,
+              paddingBottom: 0,
+            }),
             props: { className: "streamlit-expanderContent" },
           },
           PanelContainer: {
-            style: { marginLeft: "0 !important" },
+            style: {
+              marginLeft: "0 !important",
+              marginRight: "0 !important",
+              marginTop: "0 !important",
+              marginBottom: "0 !important",
+              paddingLeft: "0 !important",
+              paddingRight: "0 !important",
+              paddingTop: "0 !important",
+              paddingBottom: "0 !important",
+            },
           },
           Header: {
             style: {
-              display: "flex",
-              justifyContent: "flex-end",
-              flexDirection: "row-reverse",
-              paddingLeft: 0,
+              marginBottom: "0",
+              marginLeft: "0",
+              marginRight: "0",
+              marginTop: "0",
+              paddingLeft: "0",
+              borderBottomColor: colors.grayLighter,
+              borderTopStyle: "none",
+              paddingBottom: "0.5em",
+              paddingRight: "0",
+              paddingTop: "0.5em",
+              fontWeight: 500,
+              ":hover": {
+                borderBottomColor: colors.primary,
+              },
             },
             props: { className: "streamlit-expanderHeader" },
           },
