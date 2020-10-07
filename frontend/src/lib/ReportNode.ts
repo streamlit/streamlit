@@ -402,35 +402,35 @@ export class ReportRoot {
     id: BlockPath.Container,
     container: BlockNode
   ): ReportRoot {
-    if (id === BlockPath.Container.MAIN) {
-      return new ReportRoot(container, this.sidebar)
+    switch (id) {
+      case BlockPath.Container.MAIN:
+        return new ReportRoot(container, this.sidebar)
+      case BlockPath.Container.SIDEBAR:
+        return new ReportRoot(this.main, container)
+      default:
+        throw new Error(`Unrecognized BlockPathContainer ID: ${id}`)
     }
-    if (id === BlockPath.Container.SIDEBAR) {
-      return new ReportRoot(this.main, container)
-    }
-
-    throw new Error(`Unrecognized BlockPathContainer ID: ${id}`)
   }
 
   private getContainer(id: BlockPath.Container): BlockNode {
-    if (id === BlockPath.Container.MAIN) {
-      return this.main
+    switch (id) {
+      case BlockPath.Container.MAIN:
+        return this.main
+      case BlockPath.Container.SIDEBAR:
+        return this.sidebar
+      default:
+        throw new Error(`Unrecognized BlockPathContainer ID: ${id}`)
     }
-    if (id === BlockPath.Container.SIDEBAR) {
-      return this.sidebar
-    }
-
-    throw new Error(`Unrecognized BlockPathContainer ID: ${id}`)
   }
 }
 
 function getContainerName(id: BlockPath.Container): string {
-  if (id === BlockPath.Container.MAIN) {
-    return "main"
+  switch (id) {
+    case BlockPath.Container.MAIN:
+      return "main"
+    case BlockPath.Container.SIDEBAR:
+      return "sidebar"
+    default:
+      throw new Error(`Unrecognized BlockPathContainer ID: ${id}`)
   }
-  if (id === BlockPath.Container.SIDEBAR) {
-    return "sidebar"
-  }
-
-  throw new Error(`Unrecognized BlockPathContainer ID: ${id}`)
 }
