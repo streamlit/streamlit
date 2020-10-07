@@ -25,6 +25,7 @@ import {
 } from "autogen/proto"
 import { Map as ImmutableMap } from "immutable"
 import _ from "lodash"
+import { addRows } from "./dataFrameProto"
 import { toImmutableProto } from "./immutableProto"
 import { MetricsManager } from "./MetricsManager"
 import { makeElementWithInfoText, notUndefined, requireNonNull } from "./utils"
@@ -131,6 +132,12 @@ export class ElementNode implements ReportNode {
 
   public getElements(elements: Set<Element>): void {
     elements.add(this.element)
+  }
+
+  public addRows(namedDataSet: NamedDataSet): ElementNode {
+    const newNode = new ElementNode(this.element, this.metadata, this.reportId)
+    newNode.lazyImmutableElement = addRows(this.immutableElement, namedDataSet)
+    return newNode
   }
 }
 
@@ -389,13 +396,20 @@ export class ReportRoot {
     return this.setContainer(containerId, newContainer)
   }
 
-  // eslint-disable-next-line class-methods-use-this
   private addRows(
     containerId: number,
     deltaPath: number[],
     namedDataSet: NamedDataSet
   ): ReportRoot {
-    throw new Error("TODO")
+    const existingContainer = this.getContainer(containerId)
+    const existingNode = existingContainer.getIn(deltaPath) as ElementNode
+    if (existingNode == null) {
+      throw new Error(`Can't addRows: invalid deltaPath: ${deltaPath}`)
+    }
+
+    const newNode = existingNode.addRows(namedDataSet)
+    const newContainer = existingContainer.setIn(deltaPath, newNode)
+    return this.setContainer(containerId, newContainer)
   }
 
   private setContainer(
