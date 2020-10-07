@@ -169,9 +169,9 @@ describe("st.file_uploader", () => {
 
         // The widget should show the names of the uploaded files in reverse
         // order
-        const filenames = [fileName1, fileName2];
+        const filenames = [fileName2, fileName1];
         cy.get(".uploadedFileName").each((uploadedFileName, index) => {
-          cy.get(uploadedFileName).should("have.text", filenames[1 - index]);
+          cy.get(uploadedFileName).should("have.text", filenames[index]);
         });
 
         // The script should have printed the contents of the two files
