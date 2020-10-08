@@ -4,7 +4,7 @@ import { styled } from "styletron-react"
 import Button, { Kind } from "components/shared/Button"
 import { MaterialIcon } from "components/shared/Icon"
 import { colors, spacing } from "lib/widgetTheme"
-import { Small, Kind as TextKind } from "components/shared/TextElements"
+import { Small } from "components/shared/TextElements"
 
 export interface Props {
   className: string
