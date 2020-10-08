@@ -4,7 +4,7 @@ import { styled } from "styletron-react"
 import Button, { Kind } from "components/shared/Button"
 import { MaterialIcon } from "components/shared/Icon"
 import { colors, spacing } from "lib/widgetTheme"
-import { Small, Kind as TextKind } from "components/shared/TextElements"
+import { Small } from "components/shared/TextElements"
 
 export interface Props {
   className: string
@@ -39,9 +39,7 @@ const Pagination = ({
 }: Props): React.ReactElement => {
   return (
     <StyledPagination className={className}>
-      <Small
-        kind={TextKind.SECONDARY}
-      >{`Showing page ${currentPage} of ${totalPages}`}</Small>
+      <Small>{`Showing page ${currentPage} of ${totalPages}`}</Small>
       <Paginators>
         <Button onClick={onPrevious} kind={Kind.MINIMAL}>
           <MaterialIcon icon="chevron_left" />

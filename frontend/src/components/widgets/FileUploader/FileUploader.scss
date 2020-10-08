@@ -57,6 +57,7 @@
 
     .fileError {
       height: auto;
+      white-space: initial;
 
       i {
         display: none;
@@ -78,10 +79,6 @@
 }
 
 .stFileUploader {
-  .streamlit-button i {
-    color: $gray-dark;
-  }
-
   .uploadedFiles {
     ul {
       list-style-type: none;
@@ -107,5 +104,9 @@
     small {
       color: $gray;
     }
+  }
+
+  .fileError {
+    white-space: nowrap;
   }
 }
