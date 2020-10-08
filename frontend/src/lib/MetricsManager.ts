@@ -216,10 +216,7 @@ export class MetricsManager {
 
   // Use the tracking data injected by S4A if the app is hosted there
   private static getHostTrackingData(): Record<string, unknown> {
-    if (
-      window.location.origin.toLowerCase().endsWith(".streamlit.io") &&
-      window.parent.streamlitTracking
-    ) {
+    if (window.parent.streamlitTracking) {
       return pick(window.parent.streamlitTracking, [
         "hosted",
         "owner",
