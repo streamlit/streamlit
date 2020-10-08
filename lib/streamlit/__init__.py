@@ -512,9 +512,14 @@ def stop():
 
 
 def experimental_rerun():
-    """Reruns the streamlit application.
+    """Rerun the script immediately.
 
-    When run outside of Streamlit this will raise an Exception.
+    When `st.experimental_rerun()` is called, the script is halted - no
+    more statements will be run, and the script will be queued to re-run
+    from the top.
+
+    If this function is called outside of Streamlit, it will raise an
+    Exception.
     """
 
     raise _RerunException(_RerunData(None))

@@ -22,7 +22,7 @@ describe("st.experimental_rerun", () => {
     cy.visit("http://localhost:3000/");
   });
 
-  it("works within threads", () => {
+  it("restarts the session when invoked", () => {
     cy.get(".element-container .stText").should(
       "contain",
       "Being able to rerun a session is awesome!"
