@@ -16,6 +16,7 @@
  */
 
 import { Alert as AlertProto, Element } from "autogen/proto"
+import _ from "lodash"
 import url from "url"
 import xxhash from "xxhashjs"
 
@@ -129,4 +130,9 @@ export function setCookie(
     ? `expires=${expirationDate.toUTCString()};`
     : ""
   document.cookie = `${name}=${value};${expirationStr}path=/`
+}
+
+/** Return an Element's widget ID if it's a widget, and undefined otherwise. */
+export function getElementWidgetID(element: Element): string | undefined {
+  return _.get(element as any, [requireNonNull(element.type), "id"])
 }

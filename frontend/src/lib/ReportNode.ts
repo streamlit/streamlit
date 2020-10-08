@@ -24,21 +24,52 @@ import {
   NamedDataSet,
 } from "autogen/proto"
 import { Map as ImmutableMap } from "immutable"
-import _ from "lodash"
 import { addRows } from "./dataFrameProto"
 import { toImmutableProto } from "./immutableProto"
 import { MetricsManager } from "./MetricsManager"
-import { makeElementWithInfoText, notUndefined, requireNonNull } from "./utils"
+import { makeElementWithInfoText, notUndefined } from "./utils"
 
 const NO_REPORT_ID = "NO_REPORT_ID"
 
-/** Return an Element's widget ID if it's a widget, and undefined otherwise. */
-export function getElementWidgetID(element: Element): string | undefined {
-  return _.get(element as any, [requireNonNull(element.type), "id"])
-}
-
 /**
- * An immutable node of the element tree.
+ * An immutable node of the "Report Data Tree".
+ *
+ * Trees are composed of `ElementNode` leaves, which contain data about
+ * a single visual element, and `BlockNode` branches, which determine the
+ * layout of a group of children nodes.
+ *
+ * A simple tree might look like this:
+ *
+ *   ReportRoot
+ *   ├── BlockNode ("main")
+ *   │   ├── ElementNode (text: "Ahoy, Streamlit!")
+ *   │   └── ElementNode (button: "Don't Push This")
+ *   └── BlockNode ("sidebar")
+ *       └── ElementNode (checkbox: "Batten The Hatches")
+ *
+ * To build this tree, the frontend receives `Delta` messages from Python,
+ * each of which corresponds to a tree mutation ("add an element",
+ * "add a block", "add rows to an existing element"). The frontend builds the
+ * tree bit by bit in response to these `Delta`s.
+ *
+ * To render the app, the `ReportView` class walks this tree and outputs
+ * a corresponding DOM structure, using React, that's essentially a mapping
+ * of `ReportElement` -> `ReactNode`. This rendering happens "live" - that is,
+ * the app is re-rendered each time a new `Delta` is received.
+ *
+ * Because the app gets re-rendered frequently, updates need to be fast.
+ * Our React components - the building blocks of the app - are "pure"
+ * (see https://reactjs.org/docs/react-api.html#reactpurecomponent), which
+ * means that React uses shallow comparison to determine which ReactNodes to
+ * update.
+ *
+ * Thus, each node in our tree is _immutable_ - any change to a `ReportNode`
+ * actually results in a *new* `ReportNode` instance. This occurs recursively,
+ * so inserting a new `ElementNode` into the tree will also result in new
+ * `BlockNode`s for each of that Element's ancestors, all the way up to the
+ * root node. Then, when React re-renders the app, it will re-traverse the new
+ * nodes that have been created, and rebuild just the bits of the app that
+ * have changed.
  */
 export interface ReportNode {
   /**

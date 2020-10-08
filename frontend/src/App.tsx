@@ -41,6 +41,7 @@ import {
   hashString,
   isEmbeddedInIFrame,
   notUndefined,
+  getElementWidgetID,
 } from "lib/utils"
 import {
   BackMsg,
@@ -63,7 +64,7 @@ import { FileUploadClient } from "lib/FileUploadClient"
 
 import { logError, logMessage } from "lib/log"
 import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
-import { getElementWidgetID, ReportRoot } from "./lib/ReportNode"
+import { ReportRoot } from "./lib/ReportNode"
 import { ComponentRegistry } from "./components/widgets/CustomComponent"
 import { handleFavicon } from "./components/elements/Favicon"
 
