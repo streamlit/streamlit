@@ -15,7 +15,7 @@
 import streamlit as st
 
 st.set_option("deprecation.showfileUploaderEncoding", True)
-single_file = st.file_uploader("Drop a file:", type=["txt"])
+single_file = st.file_uploader("Drop a file:", type=["txt"], encoding="encoding")
 if single_file is None:
     st.text("No upload")
 else:
