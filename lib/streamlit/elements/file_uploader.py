@@ -14,33 +14,43 @@ class FileUploaderMixin:
         """Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure
         this using the `server.maxUploadSize` config option.
+
         Parameters
         ----------
         label : str or None
             A short label explaining to the user what this file uploader is for.
+
         type : str or list of str or None
             Array of allowed extensions. ['png', 'jpg']
-            By default, all extensions are allowed.
+            The default is None, which means all extensions are allowed.
+
         accept_multiple_files : bool
-                        Determines if multiple files can be uploaded at once.
-                        Default: False
+            If True, allows the user to upload multiple files at the same time,
+            in which case the return value will be a list of files.
+            Default: False
+
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+
         Returns
         -------
         None or UploadedFile or list of UploadedFile
-                        If no file has been uploaded, returns None. Otherwise, returns
-            the data for the uploaded file(s). If multiple files are allowed,
-            files are returned in the order they were uploaded.
-            Note that UploadedFile is a subclass of BytesIO, and therefore it's
-            "file-like". This means you can pass them anywhere where a file is
-            expected!
+            - If allow_multiple_files is False, returns either None or
+              an UploadedFile object.
+            - If allow_multiple_files is True, returns a list with the
+              uploaded files as UploadedFile objects. If no files were
+              uploaded, returns an empty list.
+            The UploadedFile class is a subclass of BytesIO, and therefore
+            it is "file-like". This means you can pass them anywhere where
+            a file is expected.
+
         Examples
         --------
-        >>> # For a single file
+        Insert a file uploader that accepts a single file at a time:
+
         >>> uploaded_file = st.file_uploader("Choose a file")
         >>> if uploaded_file is not None:
         ...     # To read file as bytes:
@@ -59,7 +69,8 @@ class FileUploaderMixin:
         ...     dataframe = pd.read_csv(uploaded_file)
         ...     st.write(dataframe)
 
-        >>> # For multiple files
+        Insert a file uploader that accepts multiple files at a time:
+
         >>> uploaded_files = st.file_uploader("Choose a CSV file", accept_multiple_files=True)
         >>> for uploaded_file in uploaded_files:
         ...     bytes_data = uploaded_file.read()
