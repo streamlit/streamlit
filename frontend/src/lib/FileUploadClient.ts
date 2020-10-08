@@ -31,8 +31,8 @@ export class FileUploadClient extends HttpClient {
    * @param files: the files to upload.
    * @param onUploadProgress: an optional function that will be called repeatedly with progress events during the upload.
    * @param cancelToken: an optional axios CancelToken that can be used to cancel the in-progress upload.
+   * @param replace: an optional boolean to indicate if the file should replace existing files associated with the widget.
    */
-
   public async uploadFiles(
     widgetId: string,
     files: ExtendedFile[],
