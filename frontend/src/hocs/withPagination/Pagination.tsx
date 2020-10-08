@@ -39,9 +39,7 @@ const Pagination = ({
 }: Props): React.ReactElement => {
   return (
     <StyledPagination className={className}>
-      <Small
-        kind={TextKind.SECONDARY}
-      >{`Showing page ${currentPage} of ${totalPages}`}</Small>
+      <Small>{`Showing page ${currentPage} of ${totalPages}`}</Small>
       <Paginators>
         <Button onClick={onPrevious} kind={Kind.MINIMAL}>
           <MaterialIcon icon="chevron_left" />
