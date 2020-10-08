@@ -28,11 +28,6 @@ LOGGER = get_logger(__name__)
 
 STATIC_MEDIA_ENDPOINT = "/media"
 
-# Length of time (seconds) to keep media files so that we don't pull the rug out from
-# under rapid-media-generating elements, e.g. using a slider to produce pyplots.
-# See Issues #1440, #1445, #1294
-KEEP_DELAY_SEC = 5
-
 
 def _get_session_id():
     """Semantic wrapper to retrieve current ReportSession ID."""
@@ -72,7 +67,6 @@ class MediaFile(object):
         self._file_id = file_id
         self._content = content
         self._mimetype = mimetype
-        self.ttd = time.time() + KEEP_DELAY_SEC
 
     @property
     def url(self):
@@ -91,6 +85,10 @@ class MediaFile(object):
     @property
     def mimetype(self):
         return self._mimetype
+
+    @property
+    def content_size(self):
+        return len(self._content)
 
 
 class MediaFileManager(object):
@@ -121,21 +119,19 @@ class MediaFileManager(object):
             dict
         )  # type: DefaultDict[str, Dict[str, MediaFile]]
 
-        self._ioloop = None  # type: Any
-
-    def _del_expired_files(self):
+    def del_expired_files(self):
         LOGGER.debug("Deleting expired files...")
 
         # Get a flat set of every file ID in the session ID map.
         active_file_ids = set()  # type: Set[MediaFile]
 
         for files_by_coord in self._files_by_session_and_coord.values():
-            active_file_ids = active_file_ids.union(files_by_coord.values())
+            file_ids = map(lambda mf: mf.id, files_by_coord.values())  # type: ignore[no-any-return]
+            active_file_ids = active_file_ids.union(file_ids)
 
-        now = time.time()
         for file_id, mf in list(self._files_by_id.items()):
-            file_is_expired = mf.ttd < now
-            if file_id not in active_file_ids and file_is_expired:
+            if mf.id not in active_file_ids:
+                LOGGER.debug(f"Deleting File: {file_id}")
                 del self._files_by_id[file_id]
 
     def clear_session_files(self, session_id=None):
@@ -154,7 +150,6 @@ class MediaFileManager(object):
         LOGGER.debug(
             "Sessions still active: %r", self._files_by_session_and_coord.keys()
         )
-        self._ioloop.call_later(KEEP_DELAY_SEC, self._del_expired_files)
 
         LOGGER.debug(
             "Files: %s; Sessions with files: %s",
@@ -206,15 +201,15 @@ class MediaFileManager(object):
 
         return mf
 
-    def get(self, mediafile_or_id):
+    def get(self, media_filename):
         """Returns MediaFile object for given file_id or MediaFile object.
 
         Raises KeyError if not found.
         """
-        return self._files_by_id[mediafile_or_id]
-
-    def set_ioloop(self, ioloop):
-        self._ioloop = ioloop
+        # Filename is {requested_hash}.{extension} but MediaFileManager
+        # is indexed by requested_hash.
+        hash = media_filename.split(".")[0]
+        return self._files_by_id[hash]
 
     def __contains__(self, mediafile_or_id):
         return mediafile_or_id in self._files_by_id
