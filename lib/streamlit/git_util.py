@@ -1,4 +1,4 @@
-import git
+import git  # type: ignore[import]
 import os
 import re
 
@@ -76,7 +76,7 @@ class GitRepo:
                 repo = f"{https_matches.group(2)}/{https_matches.group(3)}"
 
             if ssh_matches is not None:
-                repo = f"{https_matches.group(1)}/{https_matches.group(2)}"
+                repo = f"{ssh_matches.group(1)}/{ssh_matches.group(2)}"
 
         if repo is None:
             return None
