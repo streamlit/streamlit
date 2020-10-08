@@ -76,6 +76,8 @@ from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
 from streamlit.report_thread import add_report_ctx as _add_report_ctx
 from streamlit.report_thread import get_report_ctx as _get_report_ctx
 from streamlit.script_runner import StopException
+from streamlit.script_runner import RerunException as _RerunException
+from streamlit.script_request_queue import RerunData as _RerunData
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import BlockPath_pb2 as _BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
@@ -509,67 +511,10 @@ def stop():
     raise StopException()
 
 
-def experimental_get_session_id():
-    """Retrieves the session id of the current streamlit instance."""
-    ctx = _get_report_ctx()
-    session_id = ctx.session_id
-
-    return session_id
-
-
-def experimental_rerun(session_id=None):
+def experimental_rerun():
     """Reruns the streamlit application.
 
-    Parameters
-    ----------
-    session_id : Optional
-        The session id of the streamlit instance to rerun. Retrieve a
-        session id by running ``experimental_get_session_id``. Defaults
-        to the current session. Use this parameter when triggering a
-        rerun from within a thread, such as a watchdog file watcher.
-
-    Example
-    -------
-
-    >>> import streamlit as st
-
-    >>> # Basic usage
-    >>> if st.button("Rerun"):
-    ...     st.experimental_rerun()
-
-    >>> # Advanced usage within threads (such as a watchdog file watcher)
-    >>> import threading
-
-    >>> session_id = st.experimental_get_session_id()
-
-    >>> def do_a_rerun():
-    ...     st.experimental_rerun(session_id)
-
-    >>> if st.button("Rerun within a thread"):
-    ...     thread = threading.Thread(target=do_a_rerun)
-    ...     thread.start()
-    ...     thread.join()
-
-    >>> # Counter for display purposes
-    >>> @st.cache(allow_output_mutation=True)
-    >>> def run_counter_cache():
-    ...     return [0]
-
-    >>> run_counter = run_counter_cache()
-    >>> run_counter[0] += 1
-
-    >>> st.write(f"This streamlit app has been run {run_counter[0]} times!")
+    When run outside of Streamlit this will raise an Exception.
     """
 
-    if session_id is None:
-        session_id = experimental_get_session_id()
-
-    # This is imported here to avoid a circular import at module load time
-    from streamlit.server.server import Server as _Server
-
-    server = _Server.get_current()
-    session = server._get_session_info(  # pylint: disable = protected-access
-        session_id
-    ).session
-
-    session.request_rerun()
+    raise _RerunException(_RerunData(None))

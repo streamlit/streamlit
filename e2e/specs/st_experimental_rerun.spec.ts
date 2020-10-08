@@ -25,7 +25,7 @@ describe("st.experimental_rerun", () => {
   it("works within threads", () => {
     cy.get(".element-container .stText").should(
       "contain",
-      "Being able to rerun a session within a thread is awesome!"
+      "Being able to rerun a session is awesome!"
     );
   });
 });
