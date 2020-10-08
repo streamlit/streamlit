@@ -82,7 +82,9 @@ const getOpenInWindowCallback = (url: string) => (): void => {
   window.open(url, "_blank")
 }
 
-const getDeployAppUrl = (deployParams: IDeployParams | null | undefined) => {
+const getDeployAppUrl = (
+  deployParams: IDeployParams | null | undefined
+): (() => void) => {
   if (deployParams) {
     const deployUrl = new URL(`${DEPLOY_URL}/deploy`)
 
@@ -91,12 +93,12 @@ const getDeployAppUrl = (deployParams: IDeployParams | null | undefined) => {
     deployUrl.searchParams.set("mainModule", deployParams.module || "")
 
     return getOpenInWindowCallback(deployUrl.toString())
-  } else {
-    return getOpenInWindowCallback(DEPLOY_URL)
   }
+
+  return getOpenInWindowCallback(DEPLOY_URL)
 }
 
-const isLocalhost = () => {
+const isLocalhost = (): boolean => {
   return (
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1"
