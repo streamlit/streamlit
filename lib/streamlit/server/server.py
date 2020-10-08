@@ -243,11 +243,11 @@ class Server(object):
         self._set_state(State.INITIAL)
         self._message_cache = ForwardMsgCache()
         self._uploaded_file_mgr = UploadedFileManager()
-        self._uploaded_file_mgr.on_files_added.connect(self._on_file_uploaded)
+        self._uploaded_file_mgr.on_files_updated.connect(self.on_files_updated)
         self._report = None  # type: Optional[Report]
         self._preheated_session_id = None  # type: Optional[str]
 
-    def _on_file_uploaded(self, file):
+    def on_files_updated(self, session_id):
         """Event handler for UploadedFileManager.on_file_added.
 
         When a file is uploaded by a user, schedule a re-run of the
@@ -259,13 +259,13 @@ class Server(object):
             The file that was just uploaded.
 
         """
-        session_info = self._get_session_info(file.session_id)
+        session_info = self._get_session_info(session_id)
         if session_info is not None:
             session_info.session.request_rerun()
         else:
             # If an uploaded file doesn't belong to an existing session,
             # remove it so it doesn't stick around forever.
-            self._uploaded_file_mgr.remove_files(file.session_id, file.widget_id)
+            self._uploaded_file_mgr.remove_session_files(session_id)
 
     def _get_session_info(self, session_id):
         """Return the SessionInfo with the given id, or None if no such
@@ -337,6 +337,16 @@ class Server(object):
                 make_url_path_regex(base, "message"),
                 MessageCacheHandler,
                 dict(cache=self._message_cache),
+            ),
+            (
+                # Tornado doesn't allow body in DELETE requests.
+                # Passing lookup values in URL
+                make_url_path_regex(
+                    base,
+                    "/upload_file/(?P<session_id>.*)/(?P<widget_id>.*)/(?P<file_id>[0-9]*)?",
+                ),
+                UploadFileRequestHandler,
+                dict(file_mgr=self._uploaded_file_mgr),
             ),
             (
                 make_url_path_regex(base, "upload_file"),
