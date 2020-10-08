@@ -60,7 +60,7 @@
     "numbro": "^2.3.1",
     "plotly.js": "^1.54.7",
     "prismjs": "^1.21.0",
-    "protobufjs": "~6.9.0",
+    "protobufjs": "^6.10.1",
     "query-string": "^6.13.1",
     "react": "^16.13.1",
     "react-color": "^2.18.1",
