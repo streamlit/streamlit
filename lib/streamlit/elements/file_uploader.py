@@ -73,21 +73,18 @@ class FileUploaderMixin:
 
             # May need a regex or a library to validate file types are valid
             # extensions.
-            type = [file_type if file_type[0] == '.' else f".{file_type}" for file_type in type]
+            type = [
+                file_type if file_type[0] == "." else f".{file_type}"
+                for file_type in type
+            ]
 
-        encoding = kwargs.get("encoding")
         has_encoding = "encoding" in kwargs
         show_deprecation_warning = config.get_option(
             "deprecation.showfileUploaderEncoding"
         )
 
-        if show_deprecation_warning and (
-            (has_encoding and encoding is not None) or not has_encoding
-        ):
+        if show_deprecation_warning and has_encoding:
             dg.exception(FileUploaderEncodingWarning())  # type: ignore
-
-        if not has_encoding:
-            encoding = "auto"
 
         file_uploader_proto = FileUploaderProto()
         file_uploader_proto.label = label
@@ -123,19 +120,13 @@ class FileUploaderEncodingWarning(StreamlitDeprecationWarning):
 
     def _get_message(self):
         return """
-The behavior of `st.file_uploader` will soon change to no longer autodetect
-the file's encoding. This means that _all files_ will be returned as binary buffers.
-
-This change will go in effect after August 15, 2020.
-
-If you are expecting a text buffer, you can future-proof your code now by
-wrapping the returned buffer in a [`TextIOWrapper`](https://docs.python.org/3/library/io.html#io.TextIOWrapper),
-as shown below:
+The behavior of `st.file_uploader` no longer autodetects the file's encoding.
+This means that _all files_ will be returned as binary buffers. If you need to
+work with a string buffer, you can convert to a StringIO by decoding the binary
+buffer as shown below:
 
 ```
-import io
-
 file_buffer = st.file_uploader(...)
-text_io = io.TextIOWrapper(file_buffer)
+string_io = file_buffer.decode()
 ```
             """
