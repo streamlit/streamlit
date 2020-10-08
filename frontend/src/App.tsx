@@ -120,9 +120,18 @@ export class App extends PureComponent<Props, State> {
 
   private readonly uploadClient: FileUploadClient
 
-  private elementListBuffer: ReportRoot | null
+  /**
+   * When new Deltas are received, they are applied to `pendingElementsBuffer`
+   * rather than directly to `this.state.elements`. We assign
+   * `pendingElementsBuffer` to `this.state` on a timer, in order to
+   * decouple Delta updates from React re-renders, for performance reasons.
+   *
+   * (If `pendingElementsBuffer === this.state.elements` - the default state -
+   * then we have no pending elements.)
+   */
+  private pendingElementsBuffer: ReportRoot
 
-  private elementListBufferTimerIsSet: boolean
+  private pendingElementsTimerRunning: boolean
 
   private readonly componentRegistry: ComponentRegistry
 
@@ -158,8 +167,8 @@ export class App extends PureComponent<Props, State> {
         ? this.connectionManager.getBaseUriParts()
         : undefined
     })
-    this.elementListBufferTimerIsSet = false
-    this.elementListBuffer = null
+    this.pendingElementsTimerRunning = false
+    this.pendingElementsBuffer = this.state.elements
 
     window.streamlitDebug = {}
     window.streamlitDebug.closeConnection = this.closeConnection.bind(this)
@@ -550,17 +559,13 @@ export class App extends PureComponent<Props, State> {
       // (We don't do this if our script had a compilation error and didn't
       // finish successfully.)
       this.setState(
-        ({ elements, reportId }) => ({
-          // If elementListBuffer is non-null, we still have pending
-          // elements that haven't been applied.
-          elements:
-            this.elementListBuffer != null
-              ? this.elementListBuffer.clearStaleNodes(reportId)
-              : elements.clearStaleNodes(reportId),
+        ({ reportId }) => ({
+          // Apply any pending elements that haven't been applied.
+          elements: this.pendingElementsBuffer.clearStaleNodes(reportId),
         }),
         () => {
-          // Clear our pending element buffer
-          this.elementListBuffer = null
+          // We now have no pending elements.
+          this.pendingElementsBuffer = this.state.elements
 
           // Tell the WidgetManager which widgets still exist. It will remove
           // widget state for widgets that have been removed.
@@ -600,7 +605,7 @@ export class App extends PureComponent<Props, State> {
         elements: ReportRoot.empty(),
       },
       () => {
-        this.elementListBuffer = null
+        this.pendingElementsBuffer = this.state.elements
         this.widgetMgr.clean(fromJS([]))
       }
     )
@@ -637,27 +642,22 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Updates elementListBuffer with the given delta, and sets up a timer to
-   * update the elementList in the state as well. This buffer allows us to
-   * receive deltas extremely quickly without spamming React with lots of
-   * render() calls.
+   * Update pendingElementsBuffer with the given Delta and set up a timer to
+   * update state.elements. This buffer allows us to process Deltas quickly
+   * without spamming React with too many of render() calls.
    */
   handleDeltaMsg = (
     deltaMsg: Delta,
     metadataMsg: ForwardMsgMetadata
   ): void => {
-    if (this.elementListBuffer == null) {
-      this.elementListBuffer = this.state.elements
-    }
-
-    this.elementListBuffer = this.elementListBuffer.applyDelta(
+    this.pendingElementsBuffer = this.pendingElementsBuffer.applyDelta(
       this.state.reportId,
       deltaMsg,
       metadataMsg
     )
 
-    if (!this.elementListBufferTimerIsSet) {
-      this.elementListBufferTimerIsSet = true
+    if (!this.pendingElementsTimerRunning) {
+      this.pendingElementsTimerRunning = true
 
       // (BUG #685) When user presses stop, stop adding elements to
       // report immediately to avoid race condition.
@@ -670,10 +670,9 @@ export class App extends PureComponent<Props, State> {
         this.state.reportRunState === ReportRunState.RUNNING
 
       setTimeout(() => {
-        const buffer = this.elementListBuffer
-        this.elementListBufferTimerIsSet = false
-        if (buffer != null && (isStaticConnection || reportIsRunning)) {
-          this.setState({ elements: buffer })
+        this.pendingElementsTimerRunning = false
+        if (isStaticConnection || reportIsRunning) {
+          this.setState({ elements: this.pendingElementsBuffer })
         }
       }, ELEMENT_LIST_BUFFER_TIMEOUT_MS)
     }
