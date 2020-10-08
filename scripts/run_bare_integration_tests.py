@@ -36,6 +36,10 @@ E2E_DIR = "e2e/scripts"
 
 EXCLUDED_FILENAMES = set()  # type: Set[str]
 
+# st_experimental_rerun.py calls st.experimental_rerun which raises a
+# RerunException when called within plain Python.
+EXCLUDED_FILENAMES.add("st_experimental_rerun.py")
+
 # Since there is not DISPLAY set (and since Streamlit is not actually running
 # and fixing Matplotlib in these tests), we set the MPL backend to something
 # that doesn't require a display.
