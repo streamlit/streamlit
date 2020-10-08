@@ -230,7 +230,7 @@ export class MetricsManager {
   private static getHostTrackingData(): Record<string, unknown> {
     if (isInChildFrame() && window.parent.streamlitShareMetadata) {
       return pick(window.parent.streamlitShareMetadata, [
-        "hosted",
+        "hostedAt",
         "owner",
         "repo",
         "branch",

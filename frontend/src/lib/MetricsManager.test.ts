@@ -118,7 +118,7 @@ test("tracks events immediately after initialized", () => {
 
 test("tracks host data when in an iFrame", () => {
   window.parent.streamlitShareMetadata = {
-    hosted: "S4A",
+    hostedAt: "S4A",
     k: "v",
   }
 
@@ -127,10 +127,10 @@ test("tracks host data when in an iFrame", () => {
   mm.enqueue("ev1", { data1: 11 })
 
   expect(mm.identify.mock.calls[0][1]).toMatchObject({
-    hosted: "S4A",
+    hostedAt: "S4A",
   })
   expect(mm.track.mock.calls[0][1]).toMatchObject({
-    hosted: "S4A",
+    hostedAt: "S4A",
     data1: 11,
   })
   expect(mm.track.mock.calls[0][1]).not.toMatchObject({
