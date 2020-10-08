@@ -117,7 +117,7 @@ test("tracks events immediately after initialized", () => {
 })
 
 test("tracks host data when in an iFrame", () => {
-  window.parent.streamlitTracking = {
+  window.parent.streamlitShareMetadata = {
     hosted: "S4A",
     k: "v",
   }

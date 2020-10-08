@@ -111,7 +111,7 @@ const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
 declare global {
   interface Window {
     streamlitDebug: any
-    streamlitTracking: Record<string, unknown>
+    streamlitShareMetadata: Record<string, unknown>
   }
 }
 
