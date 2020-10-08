@@ -233,43 +233,45 @@ class FileUploader extends React.PureComponent<Props, State> {
   }
 
   private delete = (fileId: string): void => {
-    const file = this.state.files.find(file => file.id === fileId)
-    if (fileId && file) {
-      if (file.cancelToken) {
-        // The file hasn't been uploaded. Let's cancel the request
-        file.cancelToken.cancel()
-      }
-      file.status = FileStatuses.DELETING
-      this.setState({ files: [...this.state.files] })
+    // TODO resolve typing issues
+    // @ts-ignore
+    this.setState(state => {
+      const files = [...state.files]
+      const file = files.find(file => file.id === fileId)
+      if (fileId && file) {
+        if (file.cancelToken) {
+          // The file hasn't been uploaded. Let's cancel the request
+          file.cancelToken.cancel()
+        }
+        file.status = FileStatuses.DELETING
+        if (file.errorMessage || file.cancelToken) {
+          this.removeFile(fileId)
+          return null
+        }
 
-      // File was not uploaded. No need to make a HTTP call.
-      if (file.errorMessage || file.cancelToken) {
-        this.removeFile(fileId)
-        return
+        this.props.uploadClient
+          .delete(this.props.element.get("id"), fileId)
+          .then(() => this.removeFile(fileId))
+        return { files: state.files }
       }
-    } else {
       const errorMessage = "File not found. Please try again."
-      this.setState({
+      return {
         status: FileStatuses.ERROR,
         errorMessage,
-      })
-
-      return
-    }
-
-    this.props.uploadClient
-      .delete(this.props.element.get("id"), fileId)
-      .then(() => this.removeFile(fileId))
+      }
+    })
   }
 
   private removeFile = (fileId: string): void => {
-    const filteredFiles = this.state.files.filter(file => file.id !== fileId)
-    this.setState({
-      status: filteredFiles.length
-        ? FileStatuses.UPLOADED
-        : FileStatuses.READY,
-      errorMessage: undefined,
-      files: filteredFiles,
+    this.setState(state => {
+      const filteredFiles = state.files.filter(file => file.id !== fileId)
+      return {
+        status: filteredFiles.length
+          ? FileStatuses.UPLOADED
+          : FileStatuses.READY,
+        errorMessage: undefined,
+        files: filteredFiles,
+      }
     })
   }
 
