@@ -13,8 +13,6 @@ class GitRepo:
             self.repo = git.Repo(path, search_parent_directories=True)
             git_root = self.repo.git.rev_parse("--show-toplevel")
             self.module = os.path.relpath(path, git_root)
-            print("PATH")
-            print(self.module)
         except:
             self.repo = None
 

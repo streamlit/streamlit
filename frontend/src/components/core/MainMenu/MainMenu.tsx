@@ -30,8 +30,7 @@ import {
 import "./MainMenu.scss"
 import { IDeployParams } from "autogen/proto"
 
-// const DEPLOY_URL = "https://streamlit.team"
-const DEPLOY_URL = "https://share-head.streamlit.io"
+const DEPLOY_URL = "https://streamlit.team"
 const ONLINE_DOCS_URL = "https://docs.streamlit.io"
 const COMMUNITY_URL = "https://discuss.streamlit.io"
 const TEAMS_URL = "https://streamlit.io/forteams"
