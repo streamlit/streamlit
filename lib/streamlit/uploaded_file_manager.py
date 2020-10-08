@@ -12,29 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import io
 import threading
 from typing import Dict
 from typing import List
 from typing import NamedTuple
 from typing import Tuple
-
 from blinker import Signal
 
-# An uploaded file's data and metadata
-UploadedFile = NamedTuple("UploadedFile", [("name", str), ("data", bytes)])
 
-# A list of UploadedFiles, and associated ID
-_UploadedFileListBase = NamedTuple(
-    "_UploadedFileListBase",
-    [("session_id", str), ("widget_id", str), ("files", List[UploadedFile])],
-)
-
-
-class UploadedFileList(_UploadedFileListBase):
-    @property
-    def id(self):
-        """The list's unique ID."""
-        return self.session_id, self.widget_id
+class UploadedFile(io.BytesIO):
+    def __init__(self, id, name, type, data, **kwargs):
+        super(UploadedFile, self).__init__(data)
+        self.id = id
+        self.name = name
+        self.type = type
+        self.size = self.getbuffer().nbytes
 
 
 class UploadedFileManager(object):
@@ -43,18 +36,18 @@ class UploadedFileManager(object):
     """
 
     def __init__(self):
-        self._files_by_id = {}  # type: Dict[Tuple[str, str], UploadedFileList]
+        self._files_by_id = {}  # type: Dict[Tuple[str, str], List[UploadedFile] ]
         # Prevents concurrent access to the _files_by_id dict.
         # In remove_session_files(), we iterate over the dict's keys. It's
         # an error to mutate a dict while iterating; this lock prevents that.
         self._files_lock = threading.Lock()
-        self.on_files_added = Signal(
-            doc="""Emitted when a file list is added to the manager.
+        self.on_files_updated = Signal(
+            doc="""Emitted when a file list is added to the manager or updated.
 
             Parameters
             ----------
             files : UploadedFileList
-                The file list that was added.
+                The file list that was added or updated.
             """
         )
 
@@ -76,12 +69,13 @@ class UploadedFileManager(object):
             The files to add.
 
         """
-        file_list = UploadedFileList(
-            session_id=session_id, widget_id=widget_id, files=files
-        )
+        files_by_widget = session_id, widget_id
         with self._files_lock:
-            self._files_by_id[file_list.id] = file_list
-        self.on_files_added.send(file_list)
+            file_list = self._files_by_id.get(files_by_widget, None)
+            if file_list:
+                files = file_list + files
+            self._files_by_id[files_by_widget] = files
+        self.on_files_updated.send(files_by_widget)
 
     def get_files(self, session_id, widget_id):
         """Return the file list with the given ID, or None if the ID doesn't exist.
@@ -101,10 +95,29 @@ class UploadedFileManager(object):
         files_id = session_id, widget_id
         with self._files_lock:
             file_list = self._files_by_id.get(files_id, None)
-        return file_list.files if file_list is not None else None
+        return file_list
+
+    def remove_file(self, session_id, widget_id, file_id):
+        """Remove the file list with the given ID, if it exists.
+        Parameters
+        ----------
+        session_id : str
+            The session ID of the report that owns the file.
+        widget_id : str
+            The widget ID of the FileUploader that created the file.
+        """
+        files_by_widget = session_id, widget_id
+        with self._files_lock:
+            file_list = self._files_by_id[files_by_widget]
+            self._files_by_id[files_by_widget] = [
+                file for file in file_list if file.id != file_id
+            ]
+
+        self.on_files_updated.send(files_by_widget)
 
     def remove_files(self, session_id, widget_id):
-        """Remove the file list with the given ID, if it exists.
+        """Remove the file list for the provided widget in the
+        provided session, if it exists.
 
         Parameters
         ----------

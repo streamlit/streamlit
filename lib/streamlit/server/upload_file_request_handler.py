@@ -15,8 +15,8 @@
 from typing import Dict, Any
 from typing import List
 
-import tornado.web
 import tornado.httputil
+import tornado.web
 
 from streamlit.uploaded_file_manager import UploadedFile
 from streamlit import config
@@ -29,7 +29,7 @@ LOGGER = get_logger(__name__)
 
 class UploadFileRequestHandler(tornado.web.RequestHandler):
     """
-    Implements the PUT /upload_file endpoint.
+    Implements the POST and DELETE /upload_file endpoint.
     """
 
     def initialize(self, file_mgr):
@@ -44,8 +44,10 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         self._file_mgr = file_mgr
 
     def set_default_headers(self):
+        self.set_header("Access-Control-Allow-Methods", "POST, DELETE")
+        self.set_header("Access-Control-Allow-Headers", "Content-Type")
         if config.get_option("server.enableXsrfProtection"):
-            self.set_header("Access-Control-Allow-Headers", "X-Xsrftoken")
+            self.set_header("Access-Control-Allow-Headers", "X-Xsrftoken, Content-Type")
             self.set_header(
                 "Access-Control-Allow-Origin",
                 Report.get_url(config.get_option("browser.serverAddress")),
@@ -55,7 +57,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         elif routes.allow_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
 
-    def options(self):
+    def options(self, session_id=None, widget_id=None, file_id=None):
         """/OPTIONS handler for preflight CORS checks.
 
         When a browser is making a CORS request, it may sometimes first
@@ -114,12 +116,15 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
 
         # Create an UploadedFile object for each file.
         uploaded_files = []
-        for flist in files.values():
-            # Because multiple files with the same name can be uploaded, each
-            # entry in the files dict is itself a list.
+        for id, flist in files.items():
             for file in flist:
                 uploaded_files.append(
-                    UploadedFile(name=file["filename"], data=file["body"])
+                    UploadedFile(
+                        id=id,
+                        name=file["filename"],
+                        type=file["content_type"],
+                        data=file["body"],
+                    )
                 )
 
         if len(uploaded_files) == 0:
@@ -131,5 +136,21 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             widget_id=widget_id,
             files=uploaded_files,
         )
+
+        self.set_status(200)
+
+    def delete(self, session_id, widget_id, file_id):
+        if session_id is None or widget_id is None or file_id is None:
+            self.send_error(404)
+            return
+
+        try:
+            self._file_mgr.remove_file(
+                session_id=session_id,
+                widget_id=widget_id,
+                file_id=file_id,
+            )
+        except KeyError:
+            self.send_error(404)
 
         self.set_status(200)

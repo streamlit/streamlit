@@ -8,12 +8,12 @@ from .utils import NoValue, _set_widget_id
 
 
 class FileUploaderMixin:
-    def file_uploader(dg, label, type=None, key=None, **kwargs):
+    def file_uploader(
+        dg, label, type=None, accept_multiple_files=False, key=None, **kwargs
+    ):
         """Display a file uploader widget.
-
         By default, uploaded files are limited to 200MB. You can configure
         this using the `server.maxUploadSize` config option.
-
         Parameters
         ----------
         label : str or None
@@ -21,43 +21,59 @@ class FileUploaderMixin:
         type : str or list of str or None
             Array of allowed extensions. ['png', 'jpg']
             By default, all extensions are allowed.
-        encoding : str or None
-            The encoding to use when opening textual files (i.e. non-binary).
-            For example: 'utf-8'. If set to 'auto', will try to guess the
-            encoding. If None, will assume the file is binary.
+        accept_multiple_files : bool
+                        Determines if multiple files can be uploaded at once.
+                        Default: False
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
-
         Returns
         -------
-        BytesIO or StringIO or or list of BytesIO/StringIO or None
-            If no file has been uploaded, returns None. Otherwise, returns
-            the data for the uploaded file(s):
-            - If the file is in a well-known textual format (or if the encoding
-            parameter is set), the file data is a StringIO.
-            - Otherwise the file data is BytesIO.
-            - If multiple_files is True, a list of file data will be returned.
-
-            Note that BytesIO/StringIO are "file-like", which means you can
-            pass them anywhere where a file is expected!
-
+        None or UploadedFile or list of UploadedFile
+                        If no file has been uploaded, returns None. Otherwise, returns
+            the data for the uploaded file(s). If multiple files are allowed,
+            files are returned in the order they were uploaded.
+            Note that UploadedFile is a subclass of BytesIO, and therefore it's
+            "file-like". This means you can pass them anywhere where a file is
+            expected!
         Examples
         --------
-        >>> uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+        >>> # For a single file
+        >>> uploaded_file = st.file_uploader("Choose a file")
         >>> if uploaded_file is not None:
-        ...     data = pd.read_csv(uploaded_file)
-        ...     st.write(data)
+        ...     # To read file as bytes:
+        ...     bytes_data = uploaded_file.read()
+        ...     st.write(bytes_data)
 
+        ...     # To convert to a string based IO:
+        ...     stringio = StringIO(uploaded_file.decode("utf-8"))
+        ...     st.write(stringio)
+
+        ...     # To read file as string:
+        ...     string_data = stringio.read()
+        ...     st.write(string_data)
+
+        ...     # Can be used wherever a "file-like" object is accepted:
+        ...     dataframe = pd.read_csv(uploaded_file)
+        ...     st.write(dataframe)
+
+        >>> # For multiple files
+        >>> uploaded_files = st.file_uploader("Choose a CSV file", accept_multiple_files=True)
+        >>> for uploaded_file in uploaded_files:
+        ...     bytes_data = uploaded_file.read()
+        ...     st.write("filename:", uploaded_file.name)
+        ...     st.write(bytes_data)
         """
-        # Don't release this just yet. (When ready to release, turn test back
-        # on at file_uploader_test.py)
-        accept_multiple_files = False
 
-        if isinstance(type, str):
-            type = [type]
+        if type:
+            if isinstance(type, str):
+                type = [type]
+
+            # May need a regex or a library to validate file types are valid
+            # extensions.
+            type = [file_type if file_type[0] == '.' else f".{file_type}" for file_type in type]
 
         encoding = kwargs.get("encoding")
         has_encoding = "encoding" in kwargs
@@ -89,11 +105,11 @@ class FileUploaderMixin:
                 session_id=ctx.session_id, widget_id=file_uploader_proto.id
             )
 
-        if files is None:
-            return_value = NoValue
+        if files is None or len(files) == 0:
+            return_value = [] if accept_multiple_files else NoValue
         else:
-            file_datas = [get_encoded_file_data(file.data, encoding) for file in files]
-            return_value = file_datas if accept_multiple_files else file_datas[0]
+            return_value = files if accept_multiple_files else files[0]
+
         return dg._enqueue("file_uploader", file_uploader_proto, return_value)  # type: ignore
 
 

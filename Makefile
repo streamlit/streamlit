@@ -257,7 +257,7 @@ react-build:
 scssvars: react-init
 	mkdir -p frontend/src/autogen
 	cd frontend ; ( \
-		echo "export const SCSS_VARS = " ; \
+		echo "export const SCSS_VARS:Record<string, string> = " ; \
 		yarn run --silent scss-to-json src/assets/css/variables.scss \
 	) > src/autogen/scssVariables.ts
 

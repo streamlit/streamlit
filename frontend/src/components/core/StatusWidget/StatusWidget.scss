@@ -44,7 +44,7 @@
     margin 500ms 0ms, visibility 0ms 500ms;
 }
 
-#ConnectionStatus .icon {
+#ConnectionStatus .icon-xs {
   color: $gray;
   // Make up for 1px spacing that open-iconic adds.
   margin-top: -1px;
@@ -98,7 +98,7 @@
   white-space: nowrap;
 }
 
-#ReportStatus .icon {
+#ReportStatus .icon-sm {
   color: $gray-700;
   display: inline-flex;
   font-size: 1rem;

@@ -16,9 +16,9 @@
  */
 
 import { CancelToken } from "axios"
+import { ExtendedFile } from "lib/FileHelper"
 import HttpClient from "lib/HttpClient"
 import { SessionInfo } from "lib/SessionInfo"
-import { buildHttpUri } from "lib/UriUtil"
 
 /**
  * Handles uploading files to the server.
@@ -32,30 +32,32 @@ export class FileUploadClient extends HttpClient {
    * @param onUploadProgress: an optional function that will be called repeatedly with progress events during the upload.
    * @param cancelToken: an optional axios CancelToken that can be used to cancel the in-progress upload.
    */
+
   public async uploadFiles(
     widgetId: string,
-    files: File[],
+    files: ExtendedFile[],
     onUploadProgress?: (progressEvent: any) => void,
     cancelToken?: CancelToken
   ): Promise<void> {
-    const serverURI = this.getServerUri()
-    if (serverURI === undefined) {
-      throw new Error("Cannot upload file: not connected to a server")
-    }
-
     const form = new FormData()
     form.append("sessionId", SessionInfo.current.sessionId)
     form.append("widgetId", widgetId)
     for (const file of files) {
-      form.append(file.name, file)
+      form.append(file.id || file.name, file, file.name)
     }
 
-    await this.request({
+    await this.request("upload_file", {
       cancelToken,
-      url: buildHttpUri(serverURI, "upload_file"),
       method: "POST",
       data: form,
       onUploadProgress,
     })
+  }
+
+  public async delete(widgetId: string, fileId: string): Promise<void> {
+    await this.request(
+      `upload_file/${SessionInfo.current.sessionId}/${widgetId}/${fileId}`,
+      { method: "DELETE" }
+    )
   }
 }
