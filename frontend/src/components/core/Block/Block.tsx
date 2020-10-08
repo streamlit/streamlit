@@ -53,15 +53,14 @@ import { AutoSizer } from "react-virtualized"
 import { styled, StyletronComponent } from "styletron-react"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import { makeElementWithInfoText, notNull } from "lib/utils"
+import {
+  getElementWidgetID,
+  makeElementWithInfoText,
+  notNull,
+} from "lib/utils"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { variables as stylingVariables } from "lib/widgetTheme"
-import {
-  BlockNode,
-  ReportNode,
-  ElementNode,
-  getElementWidgetID,
-} from "lib/ReportNode"
+import { BlockNode, ReportNode, ElementNode } from "lib/ReportNode"
 
 // Load (non-lazy) elements.
 import Alert from "components/elements/Alert/"
