@@ -114,6 +114,8 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             self.send_error(400, reason=str(e))
             return
 
+        LOGGER.debug(f"{len(files)} file(s) received for session {session_id} widget {widget_id}")
+
         # Create an UploadedFile object for each file.
         uploaded_files = []
         for id, flist in files.items():
@@ -131,11 +133,18 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             self.send_error(400, reason="Expected at least 1 file, but got 0")
             return
 
-        self._file_mgr.add_files(
+        replace = self.get_argument("replace", "false")
+
+        update_files = (
+            self._file_mgr.replace_files if replace == "true" else self._file_mgr.add_files
+        )
+        update_files(
             session_id=session_id,
             widget_id=widget_id,
             files=uploaded_files,
         )
+
+        LOGGER.debug(f"{len(files)} file(s) uploaded for session {session_id} widget {widget_id}. replace {replace}")
 
         self.set_status(200)
 
