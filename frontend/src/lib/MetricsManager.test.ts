@@ -20,8 +20,6 @@
 import { SessionInfo } from "lib/SessionInfo"
 import { getMetricsManagerForTest } from "lib/MetricsManagerTestUtils"
 
-import { MetricsManager } from "./MetricsManager"
-
 beforeEach(() => {
   SessionInfo.current = new SessionInfo({
     sessionId: "sessionId",
@@ -116,23 +114,22 @@ test("tracks events immediately after initialized", () => {
   expect(mm.track.mock.calls.length).toBe(3)
 })
 
-test("tracks host data when on S4A", () => {
+test("tracks host data when in an iFrame", () => {
   window.parent.streamlitTracking = {
     hosted: "S4A",
     k: "v",
   }
-  const hostData = MetricsManager.getHostTrackingData()
-  expect(hostData).toStrictEqual({ hosted: "S4A" })
 
   const mm = getMetricsManagerForTest()
   mm.initialize({ gatherUsageStats: true })
-
-  expect(mm.track.mock.calls.length).toBe(0)
   mm.enqueue("ev1", { data1: 11 })
-  expect(mm.track.mock.calls.length).toBe(1)
+
   expect(mm.track.mock.calls[0][1]).toMatchObject({
     hosted: "S4A",
     data1: 11,
+  })
+  expect(mm.track.mock.calls[0][1]).not.toMatchObject({
+    k: "v",
   })
 })
 
