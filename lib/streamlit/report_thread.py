@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import streamlit
 import threading
 
 from streamlit.logger import get_logger
@@ -60,6 +61,7 @@ class ReportContext(object):
         self.uploaded_file_mgr = uploaded_file_mgr
         # set_page_config is allowed at most once, as the very first st.command
         self._set_page_config_allowed = True
+        self.dg_stack = []
 
     def reset(self, query_string=""):
         self.cursors = {}
@@ -215,4 +217,3 @@ def get_report_ctx():
 
 
 # Needed to avoid circular dependencies while running tests.
-import streamlit
