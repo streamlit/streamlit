@@ -72,8 +72,6 @@ export interface Props {
 
   sendS4AMessage: (message: IGuestToHostMessage) => void
 
-  isDeployable: boolean
-
   deployParams?: IDeployParams | null
 }
 
@@ -84,6 +82,8 @@ const getOpenInWindowCallback = (url: string) => (): void => {
 const getDeployAppUrl = (
   deployParams: IDeployParams | null | undefined
 ): (() => void) => {
+  // If the app was run inside a GitHub repo, autofill for a one-click deploy.
+  // E.g.: https://streamlit.team/deploy?repository=melon&branch=develop&mainModule=streamlit_app.py
   if (deployParams) {
     const deployUrl = new URL(`${DEPLOY_URL}/deploy`)
 
@@ -94,6 +94,7 @@ const getDeployAppUrl = (
     return getOpenInWindowCallback(deployUrl.toString())
   }
 
+  // Otherwise, just direct them to the S4a deploy page.
   return getOpenInWindowCallback(DEPLOY_URL)
 }
 
@@ -173,32 +174,8 @@ const MenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
 function MainMenu(props: Props): ReactElement {
   const isServerDisconnected = !props.isServerConnected
 
-  const S4AMenuOptions = props.s4aMenuItems.reduce(
-    (options, item, idx, arr) => {
-      if (item.type === "separator") {
-        return options
-      }
-
-      const hasDividerAbove = idx > 0 && arr[idx - 1].type === "separator"
-
-      return options.concat([
-        {
-          onClick: () =>
-            props.sendS4AMessage({
-              type: "MENU_ITEM_CALLBACK",
-              key: item.key,
-            }),
-          label: item.label,
-          hasDividerAbove,
-        },
-      ])
-    },
-    [] as any[]
-  )
-
-  const shouldShowS4AMenu = !!S4AMenuOptions.length
-
   const coreMenuOptions = {
+    DIVIDER: { isDivider: true },
     rerun: {
       disabled: isServerDisconnected,
       onClick: props.quickRerunCallback,
@@ -246,39 +223,61 @@ function MainMenu(props: Props): ReactElement {
     about: { onClick: props.aboutCallback, label: "About" },
   }
 
-  let menuOptions: any[] = [coreMenuOptions.rerun, coreMenuOptions.clearCache]
-
-  if (shouldShowS4AMenu) {
-    menuOptions = [
-      ...menuOptions,
-      coreMenuOptions.settings,
-      { ...coreMenuOptions.recordScreencast, hasDividerAbove: true },
-      ...S4AMenuOptions,
-    ]
-  } else {
-    menuOptions = [...menuOptions]
-
-    const showDeploy = props.isDeployable && isLocalhost()
-    if (showDeploy) {
-      menuOptions.push({ ...coreMenuOptions.deployApp, hasDividerAbove: true })
+  const S4AMenuOptions = props.s4aMenuItems.map(item => {
+    if (item.type === "separator") {
+      return coreMenuOptions.DIVIDER
     }
 
-    menuOptions = [
-      ...menuOptions,
-      {
-        ...coreMenuOptions.recordScreencast,
-        hasDividerAbove: !showDeploy,
-      },
-      { ...coreMenuOptions.documentation, hasDividerAbove: true },
-      coreMenuOptions.community,
-      coreMenuOptions.report,
-      { ...coreMenuOptions.s4t, hasDividerAbove: true },
-      coreMenuOptions.settings,
-      coreMenuOptions.about,
-    ]
-    // Insert an extra menu item if Static Embedded Apps are enabled
-    if (props.sharingEnabled) {
-      menuOptions.splice(3, 0, coreMenuOptions.saveSnapshot)
+    return {
+      onClick: () =>
+        props.sendS4AMessage({
+          type: "MENU_ITEM_CALLBACK",
+          key: item.key,
+        }),
+      label: item.label,
+    }
+  }, [] as any[])
+
+  const shouldShowS4AMenu = !!S4AMenuOptions.length
+
+  const preferredMenuOrder: any[] = [
+    coreMenuOptions.rerun,
+    coreMenuOptions.clearCache,
+    coreMenuOptions.DIVIDER,
+    props.deployParams &&
+      isLocalhost() &&
+      !shouldShowS4AMenu &&
+      coreMenuOptions.deployApp,
+    !shouldShowS4AMenu && props.sharingEnabled && coreMenuOptions.saveSnapshot,
+    coreMenuOptions.recordScreencast,
+    ...(shouldShowS4AMenu
+      ? S4AMenuOptions
+      : [
+          coreMenuOptions.DIVIDER,
+          coreMenuOptions.documentation,
+          coreMenuOptions.community,
+          coreMenuOptions.report,
+          coreMenuOptions.DIVIDER,
+          coreMenuOptions.s4t,
+          coreMenuOptions.settings,
+          coreMenuOptions.about,
+        ]),
+  ]
+
+  // Remove empty entries, and add dividers into menu options as needed.
+  const menuOptions: any[] = []
+  let lastMenuItem = null
+  for (const menuItem of preferredMenuOrder) {
+    if (menuItem) {
+      if (menuItem !== coreMenuOptions.DIVIDER) {
+        if (lastMenuItem === coreMenuOptions.DIVIDER) {
+          menuOptions.push({ ...menuItem, hasDividerAbove: true })
+        } else {
+          menuOptions.push(menuItem)
+        }
+      }
+
+      lastMenuItem = menuItem
     }
   }
 

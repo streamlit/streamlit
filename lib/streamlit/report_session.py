@@ -408,7 +408,6 @@ class ReportSession(object):
         msg.new_report.name = self._report.name
         msg.new_report.script_path = self._report.script_path
         deploy_params = self._repo.get_repo_info()
-        msg.new_report.is_deployable = deploy_params is not None
         if deploy_params is not None:
             repo, branch, module = deploy_params
             msg.new_report.deploy_params.repository = repo

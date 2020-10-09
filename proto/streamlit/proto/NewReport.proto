@@ -28,7 +28,6 @@ message NewReport {
   // "/foo/bar/foo.py"
   string script_path = 3;
 
-  bool is_deployable = 4;
   DeployParams deploy_params = 5;
 }
 

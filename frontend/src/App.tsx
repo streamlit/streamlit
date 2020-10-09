@@ -104,7 +104,6 @@ interface State {
   sharingEnabled?: boolean
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
-  isDeployable: boolean
   deployParams?: IDeployParams | null
 }
 
@@ -160,7 +159,6 @@ export class App extends PureComponent<Props, State> {
       },
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
-      isDeployable: false,
       deployParams: null,
     }
 
@@ -538,7 +536,6 @@ export class App extends PureComponent<Props, State> {
       name: reportName,
       scriptPath,
       deployParams,
-      isDeployable,
     } = newReportProto
 
     const newReportHash = hashString(
@@ -557,17 +554,10 @@ export class App extends PureComponent<Props, State> {
     if (reportHash === newReportHash) {
       this.setState({
         reportId,
-        isDeployable,
         deployParams,
       })
     } else {
-      this.clearAppState(
-        newReportHash,
-        reportId,
-        reportName,
-        isDeployable,
-        deployParams
-      )
+      this.clearAppState(newReportHash, reportId, reportName, deployParams)
     }
   }
 
@@ -651,7 +641,6 @@ export class App extends PureComponent<Props, State> {
     reportHash: string,
     reportId: string,
     reportName: string,
-    isDeployable: boolean,
     deployParams?: IDeployParams | null
   ): void {
     this.setState(
@@ -659,7 +648,6 @@ export class App extends PureComponent<Props, State> {
         reportId,
         reportName,
         reportHash,
-        isDeployable,
         deployParams,
         elements: {
           main: fromJS([]),
@@ -1011,7 +999,6 @@ export class App extends PureComponent<Props, State> {
                 screenCastState={this.props.screenCast.currentState}
                 s4aMenuItems={this.props.s4aCommunication.currentState.items}
                 sendS4AMessage={this.props.s4aCommunication.sendMessage}
-                isDeployable={this.state.isDeployable}
                 deployParams={this.state.deployParams}
               />
             </div>
