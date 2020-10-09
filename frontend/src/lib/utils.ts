@@ -57,6 +57,14 @@ export function isEmbeddedInIFrame(): boolean {
 }
 
 /**
+ * Returns true if the frameElement and parent parameters indicate that we're in an
+ * iframe.
+ */
+export function isInChildFrame(): boolean {
+  return window.parent !== window && !!window.frameElement
+}
+
+/**
  * A helper function to make an ImmutableJS
  * info element from the given text.
  */

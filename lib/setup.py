@@ -74,5 +74,7 @@ setuptools.setup(
     # - streamlit version
     # - streamlit hello
     scripts=["bin/streamlit.cmd"],
-    cmdclass={"verify": VerifyVersionCommand,},
+    cmdclass={
+        "verify": VerifyVersionCommand,
+    },
 )
