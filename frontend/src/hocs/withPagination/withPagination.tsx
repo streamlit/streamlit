@@ -59,7 +59,7 @@ const withPagination = (
       } else if (currentPage + 1 >= totalPages) {
         updateCurrentPage(totalPages - 1)
       }
-    }, [items, currentPage])
+    }, [items, currentPage, pageSize, prevItems, resetOnAdd, totalPages])
 
     const onNext = (): void => {
       updateCurrentPage(Math.min(currentPage + 1, totalPages - 1))
