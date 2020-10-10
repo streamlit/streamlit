@@ -490,13 +490,30 @@ jobs:
     working_directory: ~/repo
 
     steps:
+      - run:
+          name: Logging 1
+          command: |
+            ls ~/.ssh
+
       - add_ssh_keys:
           name: Add the read/write Github deploy key
           fingerprints:
             - "1e:a1:89:9c:71:50:c7:1c:48:16:1b:26:52:91:4e:93"
 
+      - run:
+          name: Logging 2
+          command: |
+            ls ~/.ssh
+
+
       - checkout:
           name: Checkout Streamlit code
+
+      - run:
+          name: Logging 3
+          command: |
+            ls ~/.ssh
+            ssh -v -i ~/.ssh/id_rsa_1e:a1:89:9c:71:50:c7:1c:48:16:1b:26:52:91:4e:93
 
       - update-submodules
 
