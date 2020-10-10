@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit
 import threading
 
 from streamlit.logger import get_logger
@@ -218,3 +217,4 @@ def get_report_ctx():
 
 
 # Needed to avoid circular dependencies while running tests.
+import streamlit
