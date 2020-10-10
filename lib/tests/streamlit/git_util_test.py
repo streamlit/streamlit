@@ -56,7 +56,7 @@ class GitUtilTest(unittest.TestCase):
             self.assertFalse(repo.is_valid())
 
     def test_git_repo_valid(self):
-        with patch("git.Repo") as mock:
+        with patch("git.Repo") as mock, patch("os.path"):
             mock.git.return_value = MagicMock()
             repo = GitRepo(".")
             self.assertTrue(repo.is_valid())
