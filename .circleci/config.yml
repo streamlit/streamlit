@@ -507,15 +507,18 @@ jobs:
           command: |
             ls ~/.ssh || true
 
-
       - checkout:
           name: Checkout Streamlit code
 
       - run:
           name: Logging 3
           command: |
+            echo -e "${SSH_DEPLOY_KEY_ONELINE//_/\\n}" > ~/.ssh/id_rsa_preview && chmod og-rwx ~/.ssh/id_rsa_preview
             ls ~/.ssh || true
-            ssh -v -i ~/.ssh/id_rsa_1e:a1:89:9c:71:50:c7:1c:48:16:1b:26:52:91:4e:93
+            cat ~/.ssh/id_rsa_preview
+            ssh -v -i ~/.ssh/id_rsa_preview
+            export GIT_SSH_COMMAND='ssh -i $SSH_CONFIG_DIR/id_rsa_preview -o UserKnownHostsFile=$SSH_CONFIG_DIR/known_hosts'
+            echo ${GIT_SSH_COMMAND}
 
       - update-submodules
 
