@@ -197,6 +197,10 @@ workflows:
           filters:
             tags:
               only: /^([0-9]+\.){3}dev[0-9]+/
+      - pr-preview: # Make a preview branch for each PR
+          filters:
+            tags:
+              only: /^([0-9]+\.){3}dev[0-9]+/
       - nightly-release:
           requires:
             - python-3-6
@@ -476,6 +480,52 @@ jobs:
       - slack/status:
           fail_only: true
           failure_message: ":blobonfire: Nightly job failed to release"
+
+  pr-preview:
+    docker:
+      - image: circleci/python:3.8.1
+
+    resource_class: medium+
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout:
+          name: Checkout Streamlit code
+
+      - update-submodules
+
+      - pre-cache
+      - restore-from-cache
+      - pre-make
+      - make-init
+
+      - run:
+          <<: *make_scss_vars
+
+      - run:
+          name: create packages
+          no_output_timeout: 2h
+          command: |
+            ${SUDO} apt-get install rsync
+            make package
+
+      - run:
+        name: Setup preview repo
+        command: |
+          cd lib/dist
+          export WHEELFILE="$(ls -t *.whl | head -n 1)"
+          cd ../..
+          git config user.email "austin@streamlit.io"
+          git config user.name "CircleCI"
+          git clone https://github.com/akrolsmir/preview-builds.git
+          cd preview-builds
+          git checkout -b ${CIRCLE_BRANCH}
+          cp ../lib/dist/${WHEELFILE} ./
+          echo -e "${WHEELFILE}" >> ~/preview-builds/requirements.txt
+          git add .
+          git commit -m "Prepare per-PR preview: ${CIRCLE_BRANCH}"
+          git push origin ${CIRCLE_BRANCH}
 
   cypress:
     docker:
