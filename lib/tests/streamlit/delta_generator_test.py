@@ -143,42 +143,36 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (lambda: st.empty().empty, "streamlit.delta_generator", "empty", "()"),
-            (lambda: st.empty().text, "streamlit.delta_generator", "text", "(body)"),
+            (st.empty().empty, "streamlit.delta_generator", "empty", "()"),
+            (st.empty().text, "streamlit.delta_generator", "text", "(body)"),
             (
-                lambda: st.empty().markdown,
+                st.empty().markdown,
                 "streamlit.delta_generator",
                 "markdown",
                 "(body, unsafe_allow_html=False)",
             ),
             (
-                lambda: st.empty().checkbox,
+                st.empty().checkbox,
                 "streamlit.delta_generator",
                 "checkbox",
                 "(label, value=False, key=None)",
             ),
             (
-                lambda: st.empty().dataframe,
+                st.empty().dataframe,
                 "streamlit.delta_generator",
                 "dataframe",
                 "(data=None, width=None, height=None)",
             ),
             (
-                lambda: st.empty().add_rows,
+                st.empty().add_rows,
                 "streamlit.delta_generator",
                 "add_rows",
                 "(data=None, **kwargs)",
             ),
-            (
-                lambda: st.write,
-                "streamlit.delta_generator",
-                "write",
-                "(*args, **kwargs)",
-            ),
+            (st.write, "streamlit.delta_generator", "write", "(*args, **kwargs)",),
         ]
     )
-    def test_function_signatures(self, lambda_func, module, name, sig):
-        func = lambda_func()
+    def test_function_signatures(self, func, module, name, sig):
         self.assertEqual(module, func.__module__)
         self.assertEqual(name, func.__name__)
         actual_sig = signature(func)
@@ -249,10 +243,6 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
     def test_enqueue_null(self):
         # Test "Null" Delta generators
         dg = DeltaGenerator(container=None)
-
-        def enqueue_fn(x):
-            return None
-
         new_dg = dg._enqueue("empty", EmptyProto())
         self.assertEqual(dg, new_dg)
 

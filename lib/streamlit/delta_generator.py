@@ -176,11 +176,6 @@ class DeltaGenerator(
         self._parent = parent
         self._block_type = block_type
 
-        # Stack of DGs used for the `with` block. The current one is at the end.
-        # NOTE: Only the main DG should ever reference this.
-        # You should use the computed property _active_dg instead.
-        self.dg_stack = [self]
-
         # Change the module of all mixin'ed functions to be st.delta_generator,
         # instead of the original module (e.g. st.elements.markdown)
         for mixin in self.__class__.__bases__:
@@ -190,13 +185,16 @@ class DeltaGenerator(
 
     def __enter__(self):
         # with block started
-        ctx = ensure_report_context(self)
-        ctx.dg_stack.append(self)
+        ctx = get_report_ctx()
+        if ctx:
+            ctx.dg_stack.append(self)
 
     def __exit__(self, type, value, traceback):
         # with block ended
-        ctx = ensure_report_context(self)
-        ctx.dg_stack.pop()
+        ctx = get_report_ctx()
+        if ctx:
+            ctx.dg_stack.pop()
+
         # Re-raise any exceptions
         return False
 
@@ -204,8 +202,8 @@ class DeltaGenerator(
     def _active_dg(self):
         if self == self._main_dg:
             # `st.button`: Use the current `with` dg (aka the top of the stack)
-            ctx = ensure_report_context(self)
-            if len(ctx.dg_stack) > 0:
+            ctx = get_report_ctx()
+            if ctx and len(ctx.dg_stack) > 0:
                 return ctx.dg_stack[-1]
 
         # `st.sidebar.button`: Ignore the `with` dg
@@ -781,21 +779,11 @@ def _value_or_dg(value, dg):
     return value
 
 
-def ensure_report_context(default_return=None):
+def _enqueue_message(msg):
+    """Enqueues a ForwardMsg proto to send to the app."""
     ctx = get_report_ctx()
 
     if ctx is None:
-        if default_return is None:
-            raise NoSessionContext()
-        else:
-            # For scripts not running through streamlit
-            return default_return
-
-    return ctx
-
-
-def _enqueue_message(msg):
-    """Enqueues a ForwardMsg proto to send to the app."""
-    ctx = ensure_report_context()
+        raise NoSessionContext()
 
     ctx.enqueue(msg)
