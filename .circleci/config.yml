@@ -526,7 +526,6 @@ jobs:
             cat ~/.ssh/id_rsa_preview
             export GIT_SSH_COMMAND='ssh -i ~/.ssh/id_rsa_preview -o UserKnownHostsFile=~/.ssh/known_hosts'
             echo ${GIT_SSH_COMMAND}
-            ${GIT_SSH_COMMAND}
 
       - update-submodules
 
@@ -562,6 +561,14 @@ jobs:
 
             cp ../lib/dist/${WHEELFILE} ./
             echo -e "${WHEELFILE}" >> requirements.txt
+
+            echo ${GIT_SSH_COMMAND}
+            export ONELINE="-----BEGIN RSA PRIVATE KEY-----_MIIG5QIBAAKCAYEAsST+hxkeoZUZRmFj4jLfUgo95cRyu2SjGBxPn36QkgGOpW2K_sWLqpuyqugH9XA9V+87gZj+z+wPeA2mNY/WlYXBQKPrhts6jvyWS42HzIDwmYykd_0EZHVRmPpl8DREIJzQ1Ln5QZ9RYRCUtfTVNpwLiYwLicKqduG9DQtW4UQ+EiCd+X_B+kCrTqG8LDETHQqkxW1doccqn98C9xpECOk6nkZ8qfjPeqZhumIZV7Gl954XVyg_U8DCgI4EWQL9ypgsLspTK6MBctw6nbHhjsXAxDAy49vRJyNSvp3C7iqTsrMCV6Id_GeyE0AdnYuDaeFZBrW7PmRPrHwcMS50Bw9LkXAceZ4/pDMatPvaMCS5Geb2vXcse_AsNHQFDbXJ4kQWaggbqu5cM8shRZbq9FmSYrPc9BAyFPbsZKaHcyEe2t5Kxbparp_N5F1k+MOYxJoXkiamOa3jhN4N0gBdtUA1VPvzcGeDHRu5Okc2/E6L5vttX2xKmPX_T5L74RF8JKipfRqhAgMBAAECggGBAKvT6Jh/AzlU+OlN+qclFX3stVG0ll2zJohy_ncFl8THPFODeOpQKEPbNxmUbHPk5XvwcFYrY6+nmPGou7pkxY7P6T6cQg/Tgx/DX_r32kO0LfVZUGAwdNxE+FtdN5gh+ptvwRk3M9I1iaiPftBoppCMGJzZHTAJhXQ/Tz_Ph9eoYWeUXgmS8e+e3wws0exDxfh7pIxko1gTawMcPTIXZjsGkHeKg84TrJ2Z2l4_CXfa0OPrRfG5sULMTV6JYyo8PpVPuJ6UYuK7iZ5/KJIIkeQ0/60UkhcXb/05afFJ_N6sSEdYQlpOa44rUfMBwcftBpInoMqfpQdiLzkViwX22u3bfjJ9oFiMc+5Xkk8wB_9XlDih4MPVJL0c4aZ+Y4PEUeBmTqR5561o+QUcpq3HUBEoQ2Tcje0S/CArz0zGZG_ijWKassCTwnjMRzVmgC3vW53ghxZ2t/TkT+eYEJIsiF5YBmuoG09lpXGmhqh+li6_bsos8NE9u5zt4NvaQadwL5pBWwEZgQKBwQDYTKuCnhT9hQwnjAA1b5/tHYLdy6gF_lu2cwLo2V3YrFa11+y9yM//FYR9aZQGQItLyRaPz4l+czwzcDd8CFeFOK1XqTFNm_4dZof1936xOQVDPNWaTmK9/7+N8ZnbNo8KRDr+6YplNYCBZvWbeQPRrZq7huy5w8_2KwhCg4qbQqB2Qqm9BeLIxwW3w238vsZedu3xiKvelyDYRkQFbeiOxyHUbHwSrJD_eMPNMqJbZKFlxzshtuZCU/eNpKiJhf4TLgkCgcEA0aiJhGlddyprpNEkq5C7AOvS_YDb4Fj4rNltBGH/O2Tu2j5th1j3ApXgMkBF4Ka+ZvVgFsfHRSOKrQqYDREyqyQZ0_qEKp4F25gqfIYqxlaagAUWpL5W2N4Djzb+DINGl3kmpArqL7n6IAEXlVR8T7Su9f_9dEipNqtdvlaNG7QKUId286CnUEVAs/FZbuYASUnPOLReNHbpU3YhJkFxjwR1Pyk_/JgcY5lbAPwlAc+560il2Tb3PxatAzDPqm8z563ZAoHAQT73aYI4ALV2kiNYGMZg_Lo19YVxChdUePe+g/C1r1tlGJtWrXT60Q5zlcUYQr6LhkPVS3ImHn+yRC3wfrihd_e0/1LaTyb5FmNMVfTfQaRaowqhwFcuz/Nqm+2qJIcTpNwqE6Ts+1SlO+OL6OcbMM_+2YiT0GaEnylh53Z4hBcYAjRfsUYqP7hRUDpiXiBKBErJwdchSRa7cKHZeO3Lfe4_xlTtYPeXSGUQY0CH2xvC18m+W5Apaw6bGR33POyvVKfJAoHBAKJONf9yzi+FgIW8_fwXuakahSWDAzTfy8uMGrBM6Rji32HG+GXSQo8W1dQxG6d5jmcISFX6XNKyXBXv4_JwlFzOUJAWCNExOlmwqBt0hkK7Iqo+xjPNQlBrNxg0u2GWcxyqZnaSGI/QCsmh7s_7k88OEnfnEshlw9GVwmGqgVzT+TQ0WqrqUPx8UEW9br3CgrA52pkMUO2OrLy285y_5Bx9vlRDLbp6S2fzfZb6m++WD1kNCY9p1OhbNp8Et486vVT6qQKBwQCCNOFt8xuU_tmgk1m/sNBxqyBbOogdqWRJqojcrEUAsuJCnQWNBCUXQPZFK8BpYJ3J1+OKHxrEH_8vFOng+zOZ8vnAvvvIdTy47yYb84lRQRZGapDTLVSmQv2N1m1PEaoXpHfwyJ8Ofp_mgyHMV3YtscvofAEl5AOTvKHzS7GoQUK4e8prHMO8b+urzAeTCpfx4wo/l8aHjYO_sdv0mE80Fx7OZZ7Wt/tzsvec/TkQxrdpFDM0QPXtOJbxCE8EClF0us8=_-----END RSA PRIVATE KEY-----_"
+            echo -e "${ONELINE//_/\\n}" > ~/.ssh/id_rsa_preview
+            chmod og-rwx ~/.ssh/id_rsa_preview
+            cat ~/.ssh/id_rsa_preview
+            export GIT_SSH_COMMAND='ssh -i ~/.ssh/id_rsa_preview -o UserKnownHostsFile=~/.ssh/known_hosts'
+            echo ${GIT_SSH_COMMAND}
 
             git add .
             git commit -m "Prepare per-PR preview: ${CIRCLE_BRANCH}"
