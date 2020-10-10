@@ -512,6 +512,10 @@ jobs:
             ${SUDO} apt-get install rsync
             make package
 
+      - add_ssh_keys:
+          fingerprints:
+            - "1e:a1:89:9c:71:50:c7:1c:48:16:1b:26:52:91:4e:93"
+
       - run:
           name: Setup preview repo
           command: |
