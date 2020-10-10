@@ -14,7 +14,7 @@
 
 import re
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from git.exc import InvalidGitRepositoryError
 
 from streamlit.git_util import GITHUB_HTTP_URL, GITHUB_SSH_URL, GitRepo
@@ -57,6 +57,6 @@ class GitUtilTest(unittest.TestCase):
 
     def test_git_repo_valid(self):
         with patch("git.Repo") as mock:
-            mock.returns({})
+            mock.git.return_value = MagicMock()
             repo = GitRepo(".")
             self.assertTrue(repo.is_valid())
