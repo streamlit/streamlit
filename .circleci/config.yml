@@ -513,21 +513,21 @@ jobs:
             make package
 
       - run:
-        name: Setup preview repo
-        command: |
-          cd lib/dist
-          export WHEELFILE="$(ls -t *.whl | head -n 1)"
-          cd ../..
-          git config user.email "austin@streamlit.io"
-          git config user.name "CircleCI"
-          git clone https://github.com/akrolsmir/preview-builds.git
-          cd preview-builds
-          git checkout -b ${CIRCLE_BRANCH}
-          cp ../lib/dist/${WHEELFILE} ./
-          echo -e "${WHEELFILE}" >> ~/preview-builds/requirements.txt
-          git add .
-          git commit -m "Prepare per-PR preview: ${CIRCLE_BRANCH}"
-          git push origin ${CIRCLE_BRANCH}
+          name: Setup preview repo
+          command: |
+            cd lib/dist
+            export WHEELFILE="$(ls -t *.whl | head -n 1)"
+            cd ../..
+            git config user.email "austin@streamlit.io"
+            git config user.name "CircleCI"
+            git clone https://github.com/akrolsmir/preview-builds.git
+            cd preview-builds
+            git checkout -b ${CIRCLE_BRANCH}
+            cp ../lib/dist/${WHEELFILE} ./
+            echo -e "${WHEELFILE}" >> requirements.txt
+            git add .
+            git commit -m "Prepare per-PR preview: ${CIRCLE_BRANCH}"
+            git push origin ${CIRCLE_BRANCH}
 
   cypress:
     docker:
