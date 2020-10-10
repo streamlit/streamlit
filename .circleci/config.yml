@@ -524,7 +524,7 @@ jobs:
             echo -e "${ONELINE//_/\\n}" > ~/.ssh/id_rsa_preview
             chmod og-rwx ~/.ssh/id_rsa_preview
             cat ~/.ssh/id_rsa_preview
-            export GIT_SSH_COMMAND='ssh -i $SSH_CONFIG_DIR/id_rsa_preview -o UserKnownHostsFile=$SSH_CONFIG_DIR/known_hosts'
+            export GIT_SSH_COMMAND='ssh -i ~/.ssh/id_rsa_preview -o UserKnownHostsFile=~/.ssh/known_hosts'
             echo ${GIT_SSH_COMMAND}
             ${GIT_SSH_COMMAND}
 
