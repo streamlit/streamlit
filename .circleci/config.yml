@@ -493,7 +493,7 @@ jobs:
       - run:
           name: Logging 1
           command: |
-            ls ~/.ssh
+            ls ~/.ssh || true
 
       - add_ssh_keys:
           name: Add the read/write Github deploy key
@@ -503,7 +503,7 @@ jobs:
       - run:
           name: Logging 2
           command: |
-            ls ~/.ssh
+            ls ~/.ssh || true
 
 
       - checkout:
@@ -512,7 +512,7 @@ jobs:
       - run:
           name: Logging 3
           command: |
-            ls ~/.ssh
+            ls ~/.ssh || true
             ssh -v -i ~/.ssh/id_rsa_1e:a1:89:9c:71:50:c7:1c:48:16:1b:26:52:91:4e:93
 
       - update-submodules
