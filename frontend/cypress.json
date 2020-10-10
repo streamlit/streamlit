@@ -1,5 +1,4 @@
 {
-  "projectId": "r53s63",
   "reporter": "mocha-multi-reporters",
   "reporterOptions": {
     "configFile": "reporter-config.json"
@@ -9,5 +8,6 @@
   "trashAssetsBeforeRuns": false,
   "viewportWidth": 1366,
   "viewportHeight": 768,
-  "chromeWebSecurity": false
+  "chromeWebSecurity": false,
+  "projectId": "m44heo"
 }

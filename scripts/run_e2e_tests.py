@@ -119,7 +119,9 @@ class Context:
         flags = ["--config", f"integrationFolder={self.tests_dir}/specs"]
         if self.record_results:
             flags.append("--record")
+            flags.extend(["--key", "e75ccf30-bc2b-4b46-bc13-e751ce4357a2"])
         if self.parallel:
+            flags.extend(["--group", "4x-electron"])
             flags.append("--parallel")
         if self.update_snapshots:
             flags.extend(["--env", "updateSnapshots=true"])
