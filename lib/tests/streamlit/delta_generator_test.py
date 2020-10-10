@@ -169,7 +169,7 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
                 "add_rows",
                 "(data=None, **kwargs)",
             ),
-            (st.write, "streamlit.delta_generator", "write", "(*args, **kwargs)",),
+            (st.write, "streamlit.delta_generator", "write", "(*args, **kwargs)"),
         ]
     )
     def test_function_signatures(self, func, module, name, sig):
