@@ -194,8 +194,6 @@ workflows:
             tags:
               only: /^([0-9]+\.){3}dev[0-9]+/
       - cypress: # Non flaky Cypress tests
-          requires:
-            - python-3-8
           filters:
             tags:
               only: /^([0-9]+\.){3}dev[0-9]+/
@@ -484,6 +482,8 @@ jobs:
       - image: circleci/python:3.7.4-stretch
 
     resource_class: xlarge
+
+    parallelism: 4
 
     working_directory: ~/repo
 

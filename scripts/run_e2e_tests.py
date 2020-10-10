@@ -99,6 +99,8 @@ class Context:
         # True if Cypress will record videos of our results.
         self.record_results = False
         # True if we're automatically updating snapshots.
+        self.parallel = False
+        # True if we're running tests across multiple machines.
         self.update_snapshots = False
         # Parent folder of the specs and scripts.
         # 'e2e' for tests we expect to pass or 'e2e_flaky' for tests with
@@ -117,6 +119,8 @@ class Context:
         flags = ["--config", f"integrationFolder={self.tests_dir}/specs"]
         if self.record_results:
             flags.append("--record")
+        if self.parallel:
+            flags.append("--parallel")
         if self.update_snapshots:
             flags.extend(["--env", "updateSnapshots=true"])
         return flags
@@ -338,6 +342,13 @@ def run_component_template_e2e_test(ctx: Context, template_dir: str) -> bool:
     "See https://docs.cypress.io/guides/dashboard/introduction.html for more details.",
 )
 @click.option(
+    "-p",
+    "--parallel",
+    is_flag=True,
+    help="Run tests in parallel across multiple machines. Requires --record-results"
+    "See https://docs.cypress.io/guides/guides/parallelization.html#Turning-on-parallelization.",
+)
+@click.option(
     "-u",
     "--update-snapshots",
     is_flag=True,
@@ -352,6 +363,7 @@ def run_component_template_e2e_test(ctx: Context, template_dir: str) -> bool:
 def run_e2e_tests(
     always_continue: bool,
     record_results: bool,
+    parallel: bool,
     update_snapshots: bool,
     flaky_tests: bool,
 ):
@@ -366,6 +378,7 @@ def run_e2e_tests(
     ctx = Context()
     ctx.always_continue = always_continue
     ctx.record_results = record_results
+    ctx.parallel = parallel
     ctx.update_snapshots = update_snapshots
     ctx.tests_dir_name = "e2e_flaky" if flaky_tests else "e2e"
 
