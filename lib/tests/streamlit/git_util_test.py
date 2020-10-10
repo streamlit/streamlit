@@ -49,8 +49,14 @@ class GitUtilTest(unittest.TestCase):
         # no .git
         self.assertFalse(re.search(GITHUB_SSH_URL, "git@github.com:username/repo"))
 
-    def test_git_repo_valid(self):
+    def test_git_repo_invalid(self):
         with patch("git.Repo") as mock:
             mock.side_effect = InvalidGitRepositoryError("Not a git repo")
+            repo = GitRepo(".")
+            self.assertFalse(repo.is_valid())
+
+    def test_git_repo_valid(self):
+        with patch("git.Repo") as mock:
+            mock.returns({})
             repo = GitRepo(".")
             self.assertTrue(repo.is_valid())

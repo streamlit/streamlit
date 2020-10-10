@@ -30,7 +30,8 @@ import {
 import "./MainMenu.scss"
 import { IDeployParams } from "autogen/proto"
 
-const DEPLOY_URL = "https://streamlit.team"
+const DEPLOY_URL = "https://share.streamlit.io/deploy"
+const STREAMLIT_SHARE_URL = "https://streamlit.io/share"
 const ONLINE_DOCS_URL = "https://docs.streamlit.io"
 const COMMUNITY_URL = "https://discuss.streamlit.io"
 const TEAMS_URL = "https://streamlit.io/forteams"
@@ -83,9 +84,9 @@ const getDeployAppUrl = (
   deployParams: IDeployParams | null | undefined
 ): (() => void) => {
   // If the app was run inside a GitHub repo, autofill for a one-click deploy.
-  // E.g.: https://streamlit.team/deploy?repository=melon&branch=develop&mainModule=streamlit_app.py
+  // E.g.: https://share.streamlit.io/deploy?repository=melon&branch=develop&mainModule=streamlit_app.py
   if (deployParams) {
-    const deployUrl = new URL(`${DEPLOY_URL}/deploy`)
+    const deployUrl = new URL(DEPLOY_URL)
 
     deployUrl.searchParams.set("repository", deployParams.repository || "")
     deployUrl.searchParams.set("branch", deployParams.branch || "")
@@ -94,8 +95,8 @@ const getDeployAppUrl = (
     return getOpenInWindowCallback(deployUrl.toString())
   }
 
-  // Otherwise, just direct them to the S4a deploy page.
-  return getOpenInWindowCallback(DEPLOY_URL)
+  // Otherwise, just direct them to the Streamlit Share page.
+  return getOpenInWindowCallback(STREAMLIT_SHARE_URL)
 }
 
 const isLocalhost = (): boolean => {
@@ -240,15 +241,14 @@ function MainMenu(props: Props): ReactElement {
 
   const shouldShowS4AMenu = !!S4AMenuOptions.length
 
+  const showDeploy = props.deployParams && isLocalhost() && !shouldShowS4AMenu
+  const showSnapshot = !shouldShowS4AMenu && props.sharingEnabled
   const preferredMenuOrder: any[] = [
     coreMenuOptions.rerun,
     coreMenuOptions.clearCache,
     coreMenuOptions.DIVIDER,
-    props.deployParams &&
-      isLocalhost() &&
-      !shouldShowS4AMenu &&
-      coreMenuOptions.deployApp,
-    !shouldShowS4AMenu && props.sharingEnabled && coreMenuOptions.saveSnapshot,
+    showDeploy && coreMenuOptions.deployApp,
+    showSnapshot && coreMenuOptions.saveSnapshot,
     coreMenuOptions.recordScreencast,
     ...(shouldShowS4AMenu
       ? S4AMenuOptions

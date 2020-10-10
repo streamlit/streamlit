@@ -77,7 +77,78 @@ describe("App", () => {
       s4aMenuItems: items,
     })
     const wrapper = shallow(<MainMenu {...props} />)
+    const popoverContent = wrapper.find("StatefulPopover").prop("content")
 
-    expect(wrapper).toMatchSnapshot()
+    // @ts-ignore
+    const menuWrapper = shallow(popoverContent(() => {})).dive()
+
+    // @ts-ignore
+    const menuLabels = menuWrapper
+      .find("MenuStatefulContainer")
+      .prop("items")
+      // @ts-ignore
+      .map(item => item.label)
+    expect(menuLabels).toEqual([
+      "Rerun",
+      "Clear cache",
+      "Record a screencast",
+      "Share this app",
+      "View app source",
+      "Report bug with app",
+      "About Streamlit for Teams",
+    ])
+  })
+
+  it("should render core set of menu elements", () => {
+    const props = getProps()
+    const wrapper = shallow(<MainMenu {...props} />)
+    const popoverContent = wrapper.find("StatefulPopover").prop("content")
+    // @ts-ignore
+    const menuWrapper = shallow(popoverContent(() => {})).dive()
+
+    // @ts-ignore
+    const menuLabels = menuWrapper
+      .find("MenuStatefulContainer")
+      .prop("items")
+      // @ts-ignore
+      .map(item => item.label)
+    expect(menuLabels).toEqual([
+      "Rerun",
+      "Clear cache",
+      "Record a screencast",
+      "Documentation",
+      "Ask a question",
+      "Report a bug",
+      "Streamlit for Teams",
+      "Settings",
+      "About",
+    ])
+  })
+
+  it("should render deploy app menu item", () => {
+    const props = getProps({ deployParams: {} })
+    const wrapper = shallow(<MainMenu {...props} />)
+    const popoverContent = wrapper.find("StatefulPopover").prop("content")
+    // @ts-ignore
+    const menuWrapper = shallow(popoverContent(() => {})).dive()
+
+    // @ts-ignore
+    const menuLabels = menuWrapper
+      .find("MenuStatefulContainer")
+      .prop("items")
+      // @ts-ignore
+      .map(item => item.label)
+    expect(menuLabels).toEqual([
+      "Rerun",
+      "Clear cache",
+      "Deploy this app",
+      "Record a screencast",
+      "Documentation",
+      "Ask a question",
+      "Report a bug",
+      "Streamlit for Teams",
+      "Settings",
+      "About",
+    ])
   })
 })
