@@ -528,7 +528,7 @@ jobs:
             git clone https://github.com/akrolsmir/preview-builds.git
 
             cd preview-builds
-            git branch -d ${CIRCLE_BRANCH}
+            git branch -D ${CIRCLE_BRANCH} &>/dev/null || true
             git checkout -b ${CIRCLE_BRANCH}
 
             cp ../lib/dist/${WHEELFILE} ./
