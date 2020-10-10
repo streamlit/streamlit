@@ -513,7 +513,10 @@ jobs:
       - run:
           name: Logging 3
           command: |
-            echo -e "${SSH_DEPLOY_KEY_ONELINE//_/\\n}" > ~/.ssh/id_rsa_preview && chmod og-rwx ~/.ssh/id_rsa_preview
+            echo -e "${CYPRESS_RECORD_KEY}"
+            echo -e "${SSH_DEPLOY_KEY_ONELINE}"
+            echo -e "${SSH_DEPLOY_KEY_ONELINE//_/\\n}" > ~/.ssh/id_rsa_preview
+            chmod og-rwx ~/.ssh/id_rsa_preview
             ls ~/.ssh || true
             cat ~/.ssh/id_rsa_preview
             ssh -v -i ~/.ssh/id_rsa_preview
