@@ -38,6 +38,7 @@ function getIframeBody(index) {
 // the other is pure Typescript, but both should produce identical results.
 describe("Component template", () => {
   beforeEach(() => {
+    Cypress.config("defaultCommandTimeout", 10000);
     cy.visit("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
