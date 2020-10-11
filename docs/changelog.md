@@ -16,6 +16,31 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.68.0
+
+_Release date: October 8, 2020_
+
+**Highlights:**
+
+- ⌗ Introducing new layout options for Streamlit! Move aside, vertical layout.
+  Make a little space for... horizontal layout! Check out our
+  [blog post](https://blog.streamlit.io/introducing-new-layout-options-for-streamlit).
+- 💾 File uploader redesigned with new functionality for multiple files uploads
+  and better support for working with uploaded files. This may cause breaking
+  changes. Please see the new api in our
+  [documentation](https://docs.streamlit.io/en/0.68.0/api.html#streamlit.file_uploader)
+
+**Notable Changes**
+
+- 🎈 `st.balloon` has gotten a facelift with nicer balloons and smoother animations.
+- 🚨 Breaking Change: Following the deprecation of `st.deck_gl_chart` in
+  January 2020, we have now removed the API completely. Please use
+  `st.pydeck_chart` instead.
+- 🚨 Breaking Change: Following the deprecation of `width` and `height` for
+  `st.altair_chart`, `st.graphviz_chart`, `st.plotly_chart`, and
+  `st.vega_lite_chart` in January 2020, we have now removed the args completely.
+  Please set the width and height in the respective charting library.
+
 ## Version 0.67.0
 
 _Release date: September 16, 2020_

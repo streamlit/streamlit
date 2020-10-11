@@ -243,9 +243,10 @@ function MainMenu(props: Props): ReactElement {
 
   const showDeploy = props.deployParams && isLocalhost() && !shouldShowS4AMenu
   const showSnapshot = !shouldShowS4AMenu && props.sharingEnabled
+  const showClearCache = !shouldShowS4AMenu
   const preferredMenuOrder: any[] = [
     coreMenuOptions.rerun,
-    coreMenuOptions.clearCache,
+    showClearCache && coreMenuOptions.clearCache,
     coreMenuOptions.DIVIDER,
     showDeploy && coreMenuOptions.deployApp,
     showSnapshot && coreMenuOptions.saveSnapshot,
