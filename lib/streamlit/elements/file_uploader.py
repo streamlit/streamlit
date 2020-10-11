@@ -43,6 +43,7 @@ class FileUploaderMixin:
             - If allow_multiple_files is True, returns a list with the
               uploaded files as UploadedFile objects. If no files were
               uploaded, returns an empty list.
+
             The UploadedFile class is a subclass of BytesIO, and therefore
             it is "file-like". This means you can pass them anywhere where
             a file is expected.
