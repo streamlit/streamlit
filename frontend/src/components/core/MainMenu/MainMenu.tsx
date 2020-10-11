@@ -213,7 +213,7 @@ function MainMenu(props: Props): ReactElement {
     about: { onClick: props.aboutCallback, label: "About" },
   }
 
-  let menuOptions: any[] = [coreMenuOptions.rerun, coreMenuOptions.clearCache]
+  let menuOptions: any[] = [coreMenuOptions.rerun]
 
   if (shouldShowS4AMenu) {
     menuOptions = [
@@ -225,6 +225,7 @@ function MainMenu(props: Props): ReactElement {
   } else {
     menuOptions = [
       ...menuOptions,
+      coreMenuOptions.clearCache,
       { ...coreMenuOptions.recordScreencast, hasDividerAbove: true },
       { ...coreMenuOptions.documentation, hasDividerAbove: true },
       coreMenuOptions.community,
