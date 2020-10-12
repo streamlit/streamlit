@@ -60,6 +60,8 @@ class ReportContext(object):
         self.uploaded_file_mgr = uploaded_file_mgr
         # set_page_config is allowed at most once, as the very first st.command
         self._set_page_config_allowed = True
+        # Stack of DGs used for the with block. The current one is at the end.
+        self.dg_stack = []
 
     def reset(self, query_string=""):
         self.cursors = {}
