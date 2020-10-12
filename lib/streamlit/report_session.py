@@ -407,7 +407,13 @@ class ReportSession(object):
         msg.new_report.id = self._report.report_id
         msg.new_report.name = self._report.name
         msg.new_report.script_path = self._report.script_path
-        deploy_params = self._repo.get_repo_info()
+        try:
+            deploy_params = self._repo.get_repo_info()
+        except:
+            # Issues can arise based on the git structure
+            # (e.g. if branch is in DETACHED HEAD state)
+            # In this case, catch any errors
+            deploy_params = None
         if deploy_params is not None:
             repo, branch, module = deploy_params
             msg.new_report.deploy_params.repository = repo
