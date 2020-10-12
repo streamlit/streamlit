@@ -8,9 +8,10 @@ from .utils import NoValue, _set_widget_id
 
 
 class FileUploaderMixin:
-    def file_uploader(dg, label, type=None, key=None, **kwargs):
+    def file_uploader(
+        dg, label, type=None, accept_multiple_files=False, key=None, **kwargs
+    ):
         """Display a file uploader widget.
-
         By default, uploaded files are limited to 200MB. You can configure
         this using the `server.maxUploadSize` config option.
 
@@ -18,13 +19,16 @@ class FileUploaderMixin:
         ----------
         label : str or None
             A short label explaining to the user what this file uploader is for.
+
         type : str or list of str or None
             Array of allowed extensions. ['png', 'jpg']
-            By default, all extensions are allowed.
-        encoding : str or None
-            The encoding to use when opening textual files (i.e. non-binary).
-            For example: 'utf-8'. If set to 'auto', will try to guess the
-            encoding. If None, will assume the file is binary.
+            The default is None, which means all extensions are allowed.
+
+        accept_multiple_files : bool
+            If True, allows the user to upload multiple files at the same time,
+            in which case the return value will be a list of files.
+            Default: False
+
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -33,45 +37,66 @@ class FileUploaderMixin:
 
         Returns
         -------
-        BytesIO or StringIO or or list of BytesIO/StringIO or None
-            If no file has been uploaded, returns None. Otherwise, returns
-            the data for the uploaded file(s):
-            - If the file is in a well-known textual format (or if the encoding
-            parameter is set), the file data is a StringIO.
-            - Otherwise the file data is BytesIO.
-            - If multiple_files is True, a list of file data will be returned.
+        None or UploadedFile or list of UploadedFile
+            - If allow_multiple_files is False, returns either None or
+              an UploadedFile object.
+            - If allow_multiple_files is True, returns a list with the
+              uploaded files as UploadedFile objects. If no files were
+              uploaded, returns an empty list.
 
-            Note that BytesIO/StringIO are "file-like", which means you can
-            pass them anywhere where a file is expected!
+            The UploadedFile class is a subclass of BytesIO, and therefore
+            it is "file-like". This means you can pass them anywhere where
+            a file is expected.
 
         Examples
         --------
-        >>> uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+        Insert a file uploader that accepts a single file at a time:
+
+        >>> uploaded_file = st.file_uploader("Choose a file")
         >>> if uploaded_file is not None:
-        ...     data = pd.read_csv(uploaded_file)
-        ...     st.write(data)
+        ...     # To read file as bytes:
+        ...     bytes_data = uploaded_file.read()
+        ...     st.write(bytes_data)
+        >>>
+        ...     # To convert to a string based IO:
+        ...     stringio = StringIO(uploaded_file.decode("utf-8"))
+        ...     st.write(stringio)
+        >>>
+        ...     # To read file as string:
+        ...     string_data = stringio.read()
+        ...     st.write(string_data)
+        >>>
+        ...     # Can be used wherever a "file-like" object is accepted:
+        ...     dataframe = pd.read_csv(uploaded_file)
+        ...     st.write(dataframe)
 
+        Insert a file uploader that accepts multiple files at a time:
+
+        >>> uploaded_files = st.file_uploader("Choose a CSV file", accept_multiple_files=True)
+        >>> for uploaded_file in uploaded_files:
+        ...     bytes_data = uploaded_file.read()
+        ...     st.write("filename:", uploaded_file.name)
+        ...     st.write(bytes_data)
         """
-        # Don't release this just yet. (When ready to release, turn test back
-        # on at file_uploader_test.py)
-        accept_multiple_files = False
 
-        if isinstance(type, str):
-            type = [type]
+        if type:
+            if isinstance(type, str):
+                type = [type]
 
-        encoding = kwargs.get("encoding")
+            # May need a regex or a library to validate file types are valid
+            # extensions.
+            type = [
+                file_type if file_type[0] == "." else f".{file_type}"
+                for file_type in type
+            ]
+
         has_encoding = "encoding" in kwargs
         show_deprecation_warning = config.get_option(
             "deprecation.showfileUploaderEncoding"
         )
 
-        if show_deprecation_warning and (
-            (has_encoding and encoding is not None) or not has_encoding
-        ):
+        if show_deprecation_warning and has_encoding:
             dg.exception(FileUploaderEncodingWarning())  # type: ignore
-
-        if not has_encoding:
-            encoding = "auto"
 
         file_uploader_proto = FileUploaderProto()
         file_uploader_proto.label = label
@@ -89,11 +114,11 @@ class FileUploaderMixin:
                 session_id=ctx.session_id, widget_id=file_uploader_proto.id
             )
 
-        if files is None:
-            return_value = NoValue
+        if files is None or len(files) == 0:
+            return_value = [] if accept_multiple_files else NoValue
         else:
-            file_datas = [get_encoded_file_data(file.data, encoding) for file in files]
-            return_value = file_datas if accept_multiple_files else file_datas[0]
+            return_value = files if accept_multiple_files else files[0]
+
         return dg._enqueue("file_uploader", file_uploader_proto, return_value)  # type: ignore
 
 
@@ -107,19 +132,13 @@ class FileUploaderEncodingWarning(StreamlitDeprecationWarning):
 
     def _get_message(self):
         return """
-The behavior of `st.file_uploader` will soon change to no longer autodetect
-the file's encoding. This means that _all files_ will be returned as binary buffers.
-
-This change will go in effect after August 15, 2020.
-
-If you are expecting a text buffer, you can future-proof your code now by
-wrapping the returned buffer in a [`TextIOWrapper`](https://docs.python.org/3/library/io.html#io.TextIOWrapper),
-as shown below:
+The behavior of `st.file_uploader` no longer autodetects the file's encoding.
+This means that _all files_ will be returned as binary buffers. If you need to
+work with a string buffer, you can convert to a StringIO by decoding the binary
+buffer as shown below:
 
 ```
-import io
-
 file_buffer = st.file_uploader(...)
-text_io = io.TextIOWrapper(file_buffer)
+string_io = file_buffer.decode()
 ```
             """

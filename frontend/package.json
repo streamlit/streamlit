@@ -1,6 +1,6 @@
 {
   "name": "streamlit-browser",
-  "version": "0.67.1",
+  "version": "0.68.0",
   "private": true,
   "homepage": "./",
   "scripts": {
@@ -60,11 +60,12 @@
     "numbro": "^2.3.1",
     "plotly.js": "^1.54.7",
     "prismjs": "^1.21.0",
-    "protobufjs": "~6.9.0",
+    "protobufjs": "^6.10.1",
     "query-string": "^6.13.1",
     "react": "^16.13.1",
     "react-color": "^2.18.1",
     "react-dom": "^16.13.1",
+    "react-dropzone": "^11.2.0",
     "react-feather": "^2.0.8",
     "react-google-login": "^5.1.21",
     "react-hotkeys": "^1.1.4",

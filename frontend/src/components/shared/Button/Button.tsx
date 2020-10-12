@@ -6,6 +6,7 @@ export enum Kind {
   SECONDARY = "secondary",
   LINK = "link",
   ICON = "icon",
+  MINIMAL = "minimal",
 }
 
 export enum Size {
@@ -16,6 +17,7 @@ export enum Size {
 }
 
 export interface ButtonProps {
+  id?: string
   kind: Kind
   size?: Size
   onClick?: (event: MouseEvent<HTMLButtonElement>) => any
@@ -25,6 +27,7 @@ export interface ButtonProps {
 }
 
 const Button: FunctionComponent<ButtonProps> = ({
+  id,
   kind,
   size,
   disabled,
@@ -35,6 +38,7 @@ const Button: FunctionComponent<ButtonProps> = ({
   const fluidWidthClass = fluidWidth ? "button-fluid-width" : ""
   return (
     <button
+      id={id}
       className={`streamlit-button ${size}-button ${kind}-button ${fluidWidthClass}`}
       disabled={disabled}
       onClick={onClick}

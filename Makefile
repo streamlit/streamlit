@@ -229,7 +229,7 @@ protobuf:
 		echo ; \
 		./node_modules/protobufjs/bin/pbjs \
 			../proto/streamlit/proto/*.proto \
-			-t static-module --es6 \
+			-t static-module --wrap es6 \
 	) > ./src/autogen/proto.js
 
 	@# Typescript type declarations for our generated protobufs
@@ -257,7 +257,7 @@ react-build:
 scssvars: react-init
 	mkdir -p frontend/src/autogen
 	cd frontend ; ( \
-		echo "export const SCSS_VARS = " ; \
+		echo "export const SCSS_VARS:Record<string, string> = " ; \
 		yarn run --silent scss-to-json src/assets/css/variables.scss \
 	) > src/autogen/scssVariables.ts
 

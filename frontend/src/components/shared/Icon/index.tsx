@@ -16,3 +16,4 @@
  */
 
 export { default } from "./Icon"
+export { default as MaterialIcon } from "./MaterialIcon"

@@ -217,9 +217,29 @@ add_slider = st.sidebar.slider(
 )
 ```
 
+Beyond the sidebar, Streamlit offers several other ways to control the layout
+of your app. [`st.beta_columns`](https://docs.streamlit.io/en/latest/api.html#streamlit.beta_columns) lets you place widgets side-by-side, and
+[`st.beta_expander`](https://docs.streamlit.io/en/latest/api.html#streamlit.beta_expander) lets you conserve space by hiding away large content.
+
+```python
+import streamlit as st
+
+left_column, right_column = st.beta_columns(2)
+# You can use a column just like st.sidebar:
+left_column.button('Press me!')
+
+# Or even better, call Streamlit functions inside a "with" block:
+with right_column:
+    chosen = st.radio(
+        'Sorting hat',
+        ("Gryffindor", "Ravenclaw", "Hufflepuff", "Slytherin"))
+    st.write(f"You are in {chosen} house!")
+```
+
 ```eval_rst
 .. note::
-  `st.echo` and `st.spinner` are not currently supported in the sidebar.
+  `st.echo` and `st.spinner` are not currently supported inside the sidebar
+  or layout options.
 ```
 
 ## Caching

@@ -20,6 +20,10 @@
 import { SessionInfo } from "lib/SessionInfo"
 import { getMetricsManagerForTest } from "lib/MetricsManagerTestUtils"
 
+jest.mock("lib/utils", () => ({
+  isInChildFrame: jest.fn(x => true),
+}))
+
 beforeEach(() => {
   SessionInfo.current = new SessionInfo({
     sessionId: "sessionId",
@@ -96,8 +100,6 @@ test("enqueues events before initialization", () => {
   expect(mm.identify.mock.calls[0][0]).toBe(SessionInfo.current.installationId)
   expect(mm.identify.mock.calls[0][1]).toMatchObject({
     authoremail: SessionInfo.current.authorEmail,
-    machineIdV1: SessionInfo.current.installationIdV1,
-    machineIdV2: SessionInfo.current.installationIdV2,
   })
 })
 
@@ -112,6 +114,43 @@ test("tracks events immediately after initialized", () => {
   expect(mm.track.mock.calls.length).toBe(2)
   mm.enqueue("ev3", { data3: 13 })
   expect(mm.track.mock.calls.length).toBe(3)
+})
+
+test("tracks host data when in an iFrame", () => {
+  window.parent.streamlitShareMetadata = {
+    hostedAt: "S4A",
+    k: "v",
+  }
+
+  const mm = getMetricsManagerForTest()
+  mm.initialize({ gatherUsageStats: true })
+  mm.enqueue("ev1", { data1: 11 })
+
+  expect(mm.identify.mock.calls[0][1]).toMatchObject({
+    hostedAt: "S4A",
+  })
+  expect(mm.track.mock.calls[0][1]).toMatchObject({
+    hostedAt: "S4A",
+    data1: 11,
+  })
+  expect(mm.track.mock.calls[0][1]).not.toMatchObject({
+    k: "v",
+  })
+})
+
+test("tracks installation data", () => {
+  const mm = getMetricsManagerForTest()
+  mm.initialize({ gatherUsageStats: true })
+  mm.enqueue("ev1", { data1: 11 })
+
+  expect(mm.identify.mock.calls[0][1]).toMatchObject({
+    machineIdV1: SessionInfo.current.installationIdV1,
+    machineIdV2: SessionInfo.current.installationIdV2,
+  })
+  expect(mm.track.mock.calls[0][1]).toMatchObject({
+    machineIdV1: SessionInfo.current.installationIdV1,
+    machineIdV2: SessionInfo.current.installationIdV2,
+  })
 })
 
 test("increments deltas", () => {

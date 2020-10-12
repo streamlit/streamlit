@@ -50,6 +50,14 @@ export function isEmbeddedInIFrame(): boolean {
   return url.parse(window.location.href, true).query.embed === "true"
 }
 
+/**
+ * Returns true if the frameElement and parent parameters indicate that we're in an
+ * iframe.
+ */
+export function isInChildFrame(): boolean {
+  return window.parent !== window && !!window.frameElement
+}
+
 /** Return an Alert Element protobuf with the given text. */
 export function makeElementWithInfoText(text: string): Element {
   return new Element({
