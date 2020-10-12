@@ -26,6 +26,7 @@ export interface Props {
   label: string
   expanded: boolean
   empty: boolean
+  widgetsDisabled: boolean
 }
 
 function withExpandable(
@@ -36,6 +37,7 @@ function withExpandable(
       label,
       expanded: initialExpanded,
       empty,
+      widgetsDisabled,
       ...componentProps
     } = props
 
@@ -50,6 +52,7 @@ function withExpandable(
       <Accordion
         onChange={toggle}
         expanded={expanded ? ["panel"] : []}
+        disabled={widgetsDisabled}
         overrides={{
           Content: {
             style: ({ $expanded }) => ({
@@ -83,13 +86,15 @@ function withExpandable(
             },
           },
           Header: {
-            style: {
+            style: ({ $disabled }) => ({
               marginBottom: "0",
               marginLeft: "0",
               marginRight: "0",
               marginTop: "0",
               paddingLeft: "0",
+              backgroundColor: colors.transparent,
               borderBottomColor: colors.grayLighter,
+              color: $disabled ? colors.disabledColor : colors.black,
               borderTopStyle: "none",
               paddingBottom: "0.5em",
               paddingRight: "0",
@@ -98,11 +103,14 @@ function withExpandable(
               ":hover": {
                 borderBottomColor: colors.primary,
               },
-            },
+            }),
             props: { className: "streamlit-expanderHeader" },
           },
           ToggleIcon: {
-            style: { marginRight: ".5rem" },
+            style: ({ $disabled }) => ({
+              marginRight: ".5rem",
+              color: $disabled ? colors.disabledColor : colors.black,
+            }),
           },
           Root: {
             props: {
@@ -112,7 +120,7 @@ function withExpandable(
         }}
       >
         <Panel title={label} key="panel">
-          <WrappedComponent {...componentProps} />
+          <WrappedComponent {...componentProps} disabled={widgetsDisabled} />
         </Panel>
       </Accordion>
     )
