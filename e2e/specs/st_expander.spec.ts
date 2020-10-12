@@ -25,26 +25,37 @@ describe("st.expander", () => {
   });
 
   it("displays expander + regular containers properly", () => {
-    cy.get(".stBlock")
+    cy.get(".main .stBlock")
       .first()
       .within(() => {
         cy.get(expanderHeaderIdentifier).should("not.exist");
       });
-    cy.get(".stBlock")
+    cy.get(".main .stBlock")
       .eq(1)
       .within(() => {
         cy.get(expanderHeaderIdentifier).should("exist");
       });
-    cy.get(".stBlock")
+    cy.get(".main .stBlock")
       .eq(2)
+      .within(() => {
+        cy.get(expanderHeaderIdentifier).should("exist");
+      });
+
+    cy.get(".sidebar .stBlock")
+      .eq(0)
       .within(() => {
         cy.get(expanderHeaderIdentifier).should("exist");
       });
   });
 
+  it("displays correctly", () => {
+    cy.get(".main").matchImageSnapshot("expanders-in-main");
+    cy.get(".sidebar").matchImageSnapshot("expanders-in-sidebar");
+  });
+
   it("collapses + expands", () => {
     // Starts expanded
-    cy.get(".stBlock")
+    cy.get(".main .stBlock")
       .eq(1)
       .within(() => {
         const expanderHeader = cy.get(expanderHeaderIdentifier);
@@ -57,8 +68,9 @@ describe("st.expander", () => {
         toggle = cy.get("svg[title='Expand']");
         toggle.should("exist");
       });
+
     // Starts collapsed
-    cy.get(".stBlock")
+    cy.get(".main .stBlock")
       .eq(2)
       .within(() => {
         let expanderHeader = cy.get(expanderHeaderIdentifier);
