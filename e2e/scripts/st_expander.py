@@ -22,3 +22,6 @@ expander.write("I can collapse")
 
 collapsed = st.beta_expander("Expand me!")
 collapsed.write("I am already collapsed")
+
+sidebar = st.sidebar.beta_expander("Expand me!")
+sidebar.write("I am in the sidebar")
