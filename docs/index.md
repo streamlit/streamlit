@@ -1,7 +1,7 @@
 ```eval_rst
 .. toctree::
    :caption: Tutorials
-   :titlesonly:
+   :maxdepth: 2
    :hidden:
 
    getting_started

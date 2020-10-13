@@ -192,7 +192,7 @@ option = st.selectbox(
 'You selected: ', option
 ```
 
-### Lay out your app
+## Lay out your app
 
 For a cleaner look, you can move your widgets into a sidebar. This keeps your
 app central, while widgets are pinned to the left. Let's take a look at how you
