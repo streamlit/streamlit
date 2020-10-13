@@ -71,37 +71,6 @@ for you behind the scenes. A big player in this story is the
 costly computations when their apps rerun. We'll cover caching later in this
 page.
 
-<!-- ## Drawing content
-
-Writing to Streamlit apps is simple:
-
-```python
-import streamlit as st
-x = 4
-st.write(x, 'squared is', x * x)
-```
-
-In the example above we used the [`st.write()`](api.html#streamlit.write)
-command. Whenever you want to draw something to the screen
-[`st.write()`](api.html#streamlit.write) is always a good first start! It tries
-to guess the best visual representation for its arguments based on their data
-types, so things like dataframes are drawn as beautiful tables, Matplotlib
-figures are drawn as charts, and so on.
-
-And you can even use [Streamlit magic](api.html#magic) to skip the
-[`st.write()`](api.html#streamlit.write) command altogether:
-
-```python
-import streamlit as st
-x = 4
-x, 'squared is', x * x  # 👈 Magic!
-```
-
-If you want to do something more advanced like changing specific settings,
-drawing animations, or inserting content out of order, check out other
-available Streamlit commands in our [API documentation](api.md) and [Advanced
-Concepts](advanced_concepts.md) pages. -->
-
 ## Display and style data
 
 There are a few ways to display data (tables, arrays, data frames) in Streamlit

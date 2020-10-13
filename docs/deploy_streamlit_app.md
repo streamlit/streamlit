@@ -19,7 +19,11 @@ pip install pipreqs
 pipreqs /home/project/location
 ```
 
-- If you have requirements for apt-get, add them to `packages.txt`, one package name per line.
+```eval_rst
+.. note:: You should only include packages in requirements.txt that are not distributed with a standard Python installation (i.e. only packages that need to be installed from PyPI/conda). If you `include any of these modules from base Python <https://docs.python.org/3/py-modindex.html>`_ in your requirements.txt file, you will get an error when you try to deploy.
+```
+
+- If you have requirements for apt-get, add them to `packages.txt`, one package name per line. See our streamlit-apps demo repo for an [example packages.txt file](https://github.com/streamlit-apps/ml-projects/blob/master/packages.txt).
 
 ## Log in to share.streamlit.io
 
@@ -143,7 +147,7 @@ Here are some limitations and known issues that we're actively working to resolv
 
   with _lock:
     fig.title('This is a figure)')
-  	fig.plot([1,20,3,40])
+    fig.plot([1,20,3,40])
     st.pyplot(fig)
   ```
 
