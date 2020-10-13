@@ -103,6 +103,7 @@ interface State {
   sharingEnabled?: boolean
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
+  allowRunOnSave: boolean
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -157,6 +158,7 @@ export class App extends PureComponent<Props, State> {
       },
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
+      allowRunOnSave: true,
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -428,6 +430,7 @@ export class App extends PureComponent<Props, State> {
 
     this.setState({
       sharingEnabled: Boolean(config.sharingEnabled),
+      allowRunOnSave: Boolean(config.allowRunOnSave),
     })
 
     this.props.s4aCommunication.connect()
@@ -517,6 +520,7 @@ export class App extends PureComponent<Props, State> {
         type: DialogType.SCRIPT_CHANGED,
         onRerun: this.rerunScript,
         onClose: () => {},
+        allowRunOnSave: this.state.allowRunOnSave,
       }
       this.openDialog(newDialog)
     }
@@ -915,6 +919,7 @@ export class App extends PureComponent<Props, State> {
       type: DialogType.SETTINGS,
       isServerConnected: this.isServerConnected(),
       settings: this.state.userSettings,
+      allowRunOnSave: this.state.allowRunOnSave,
       onSave: this.saveSettings,
       onClose: () => {},
     }
@@ -975,6 +980,7 @@ export class App extends PureComponent<Props, State> {
                 reportRunState={this.state.reportRunState}
                 rerunReport={this.rerunScript}
                 stopReport={this.stopReport}
+                allowRunOnSave={this.state.allowRunOnSave}
               />
               <MainMenu
                 sharingEnabled={this.state.sharingEnabled === true}
