@@ -543,7 +543,7 @@ jobs:
       - run:
           name: Ready to deploy!
           command: |
-            echo -e "https://share.streamlit.io/deploy?repository=akrolsmir/preview-builds&branch=${PREVIEW_BRANCH}&mainModule=streamlit_app.py"
+            echo -e "https://share.streamlit.io/deploy?repository=akrolsmir/preview-builds&branch=pr-${CIRCLE_PR_NUMBER}&mainModule=streamlit_app.py"
 
   cypress:
     docker:
