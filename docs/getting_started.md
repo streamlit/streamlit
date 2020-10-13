@@ -255,6 +255,20 @@ for i in range(100):
 '...and now we\'re done!'
 ```
 
+## Share your app
+
+After you’ve built a Streamlit app, it's time to share it! To show it off to the world you can use **Streamlit sharing** to deploy, manage, and share your app for free. Streamlit sharing is currently invitation only, so please [request an invite](https://www.streamlit.io/sharing) and we'll get you one soon!
+
+<!-- [[we'll need to grab the gif after the video editors are done with it on Wednesday]] -->
+
+It works in 3 simple steps:
+
+1. ✏️ Put your app in a public Github repo (and make sure to have a requirements.txt!)
+2. 👣 Sign into [share.streamlit.io](https://share.streamlit.io)
+3. 🏄‍♀️ Click 'Deploy an app' and then paste in your GitHub URL
+
+That's it! **🎈**You now have a publicly deployed app that you can share with the world. Click to learn more about [how to use Streamlit sharing](deploy_streamlit_app.md). If you're looking for private sharing for your team, check out [Streamlit for Teams](https://www.streamlit.io/for-teams).
+
 ## Get help
 
 That's it for getting started, now you can go and build your own apps! If you
@@ -265,6 +279,6 @@ run into difficulties here are a few things you can do.
 - Quick help from command line with `$ streamlit --help`
 - Read more documentation! Check out:
   <!-- - [Tutorials](tutorial/index.md) to make an app -->
-  - [Advanced concepts](advanced_concepts.md) for things like caching and
+  - [Streamlit Cookbook](advanced_concepts.md) for things like caching and
     inserting elements out of order
   - [API reference](api.md) for examples of every Streamlit command
