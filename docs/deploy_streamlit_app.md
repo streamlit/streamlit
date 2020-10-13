@@ -53,10 +53,10 @@ https://share.streamlit.io/[user name]/[repo name]/[branch name]/[app path]
 for example:
 
 ```python
-https://share.streamlit.io/streamlit-apps/ml-projects/master/av_explorer.py
+http://share.streamlit.io/streamlit/demo-self-driving/master/streamlit_app.py
 ```
 
-<!-- Also for your URL, the branch and app path are not required, if there's only one matching app in that repo. So for the above example, you could also use the shortened URL: [https://share.streamlit.io/tvst/demo-deepdream](https://share.streamlit.io/tvst/demo-deepdream) -->
+Also for your URL, the branch and app path are not required, if there's only one matching app in that repo. So for the above example, you could also use the shortened URL: [http://share.streamlit.io/streamlit/demo-self-driving](http://share.streamlit.io/streamlit/demo-self-driving)
 
 ## Share, update, and collaborate
 
