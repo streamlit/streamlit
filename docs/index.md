@@ -73,15 +73,15 @@ Now that you're set up, let's dive into more of how Streamlit works and how to b
 
 The docs are broken up into 5 sections that will help you get the most out of Streamlit.
 
-**Tutorials**: include our [Get Started](getting_started.md) guide and a few step-by-step examples to building different types of apps in Streamlit.
+- **Tutorials**: include our [Get Started](getting_started.md) guide and a few step-by-step examples to building different types of apps in Streamlit.
 
-**Topic guides**: give you background on how different parts of Streamlit work. Make sure to check out the sections on [Creating an app](main_concepts.md) and [Deploying an app](deploy_streamlit_app.md), and for you advanced users who want to level up your apps, be sure to read up on [Caching](caching.md) and [Components](develop_streamlit_components.md).
+- **Topic guides**: give you background on how different parts of Streamlit work. Make sure to check out the sections on [Creating an app](main_concepts.md) and [Deploying an app](deploy_streamlit_app.md), and for you advanced users who want to level up your apps, be sure to read up on [Caching](caching.md) and [Components](develop_streamlit_components.md).
 
-**Cookbook**: provides short code snippets that you can copy in for specific use cases.
+- **Cookbook**: provides short code snippets that you can copy in for specific use cases.
 
-**Reference guides**: are the bread and butter of how our [APIs](api.md) and [configuration files](streamlit_configuration.md) work and will give you short, actionable explanations of specific functions and features.
+- **Reference guides**: are the bread and butter of how our [APIs](api.md) and [configuration files](streamlit_configuration.md) work and will give you short, actionable explanations of specific functions and features.
 
-**Support**: gives you more options for when you're stuck or want to talk about an idea. Check out our discussion forum as well as a number of [troubleshooting guides](/troubleshooting/index.md).
+- **Support**: gives you more options for when you're stuck or want to talk about an idea. Check out our discussion forum as well as a number of [troubleshooting guides](/troubleshooting/index.md).
 
 ## **Join the community**
 
