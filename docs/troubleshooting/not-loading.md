@@ -15,7 +15,7 @@ first check that Streamlit is actually running on the remote server. On a Linux
 server you can SSH into it and then run:
 
 ```bash
-$ ps -Al | grep streamlit
+ps -Al | grep streamlit
 ```
 
 If you see Streamlit running, the most likely culprit is the Streamlit port not
@@ -23,11 +23,11 @@ being exposed. The fix depends on your exact setup. Below are three example
 fixes:
 
 - **Try port 80:** Some hosts expose port 80 by default. To
-  set Streamlit to use that port, just run it with the `--server.port`
+  set Streamlit to use that port, start Streamlit with the `--server.port`
   option:
 
   ```bash
-  $ streamlit run my_app.py --server.port=80
+  streamlit run my_app.py --server.port=80
   ```
 
 - **AWS EC2 server**: First, click on your instance in the [AWS Console](https://us-west-2.console.aws.amazon.com/ec2/v2/home).
@@ -46,11 +46,9 @@ to Streamlit.
 
 How to start a simple HTTP server:
 
-- Python 3:
-
-  ```bash
-  $ python -m http.server [port]
-  ```
+```bash
+python -m http.server [port]
+```
 
 ### Symptom #2: The app says "Please wait..." forever
 
@@ -67,7 +65,7 @@ To diagnose the issue, try temporarily disabling CORS protection by running
 Streamlit with the `--server.enableCORS` flag set to `false`:
 
 ```bash
-$ streamlit run my_app.py --server.enableCORS=false
+streamlit run my_app.py --server.enableCORS=false
 ```
 
 If this fixes your issue, **you should re-enable CORS protection** and then set
@@ -78,7 +76,7 @@ If the issue persists, try disabling websocket compression by running Streamlit 
 `--server.enableWebsocketCompression` flag set to `false`
 
 ```bash
-$ streamlit run my_app.py --server.enableWebsocketCompression=false
+streamlit run my_app.py --server.enableWebsocketCompression=false
 ```
 
 If this fixes your issue, your server setup is likely stripping the
@@ -99,7 +97,7 @@ To diagnose the issue, try temporarily disabling XSRF protection by running Stre
 with the `--server.enableXsrfProtection` flag set to `false`:
 
 ```bash
-$ streamlit run my_app.py --server.enableXsrfProtection=false
+streamlit run my_app.py --server.enableXsrfProtection=false
 ```
 
 If this fixes your issue, **you should re-enable XSRF protection** and then

@@ -19,7 +19,7 @@ import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
 import React, { PureComponent, ReactNode } from "react"
 import { HotKeys } from "react-hotkeys"
 import { CSSTransition } from "react-transition-group"
-import { Button } from "reactstrap"
+import Button, { Kind, Size } from "components/shared/Button"
 import Tooltip, { Placement } from "components/shared/Tooltip"
 import { SignalConnection } from "typed-signals"
 
@@ -273,7 +273,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
           id="ConnectionStatus"
           className={this.state.statusMinimized ? "minimized" : ""}
         >
-          <Icon className="icon" type={ui.icon} />
+          <Icon className="icon-xs" type={ui.icon} />
           <label>{ui.label}</label>
         </div>
       </Tooltip>
@@ -338,7 +338,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
             id="ReportStatus"
             className={minimized ? "rerun-prompt-minimized" : ""}
           >
-            <Icon className="icon" type="info" />
+            <Icon className="icon-sm" type="info" />
             <label className="prompt">Source file changed.</label>
 
             {StatusWidget.promptButton(
@@ -385,15 +385,17 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     onClick: () => void
   ): ReactNode {
     return (
-      <Button
-        outline
-        size="sm"
-        color="info"
-        disabled={disabled}
-        onClick={onClick}
-      >
-        <div>{title}</div>
-      </Button>
+      <span className="button-container">
+        <Button
+          kind={Kind.PRIMARY}
+          size={Size.XSMALL}
+          disabled={disabled}
+          fluidWidth
+          onClick={onClick}
+        >
+          {title}
+        </Button>
+      </span>
     )
   }
 

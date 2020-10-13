@@ -18,7 +18,7 @@
 import React, { PureComponent, ReactElement } from "react"
 import classNames from "classnames"
 import Icon from "components/shared/Icon"
-import { Button } from "reactstrap"
+import Button, { Kind } from "components/shared/Button"
 import { PageConfig } from "autogen/proto"
 
 import "./Sidebar.scss"
@@ -33,8 +33,8 @@ interface State {
   collapsedSidebar: boolean
 }
 
-// Bootstrap medium breakpoint. See
-// https://getbootstrap.com/docs/4.3/layout/overview/.
+// This variable originated from Bootstrap medium breakpoint.
+// See https://getbootstrap.com/docs/4.3/layout/overview/.
 const MEDIUM_BREAKPOINT_PX = 991.98
 
 class Sidebar extends PureComponent<Props, State> {
@@ -130,23 +130,19 @@ class Sidebar extends PureComponent<Props, State> {
     return (
       <section className={sectionClassName} ref={this.sidebarRef}>
         <div className="sidebar-content">
-          <Button
-            outline
-            onClick={this.toggleCollapse}
-            className="sidebar-close"
-          >
-            <Icon type="x" />
-          </Button>
+          <div className="sidebar-close">
+            <Button kind={Kind.ICON} onClick={this.toggleCollapse}>
+              <Icon type="x" />
+            </Button>
+          </div>
 
           {children}
         </div>
-        <Button
-          outline
-          onClick={this.toggleCollapse}
-          className="sidebar-collapse-control"
-        >
-          <Icon type="chevron-right" />
-        </Button>
+        <div className="sidebar-collapse-control">
+          <Button kind={Kind.ICON} onClick={this.toggleCollapse}>
+            <Icon type="chevron-right" />
+          </Button>
+        </div>
       </section>
     )
   }

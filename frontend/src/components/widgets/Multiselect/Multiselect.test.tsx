@@ -50,7 +50,9 @@ describe("Multiselect widget", () => {
   })
 
   it("should set widget value on did mount", () => {
-    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+    expect(
+      props.widgetMgr.setIntArrayValue
+    ).toHaveBeenCalledWith(
       props.element.get("id"),
       props.element.get("default").toJS(),
       { fromUi: false }
@@ -159,6 +161,8 @@ describe("Multiselect widget", () => {
   })
 
   it("should have our theme overrides", () => {
-    expect(wrapper.find(UISelect).prop("overrides")).toBe(multiSelectOverrides)
+    expect(wrapper.find(UISelect).prop("overrides")).toMatchObject(
+      multiSelectOverrides
+    )
   })
 })

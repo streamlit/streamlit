@@ -18,13 +18,15 @@
 import React, { PureComponent, ReactNode, Suspense } from "react"
 import { AutoSizer } from "react-virtualized"
 import { List } from "immutable"
+import { styled, StyletronComponent } from "styletron-react"
 import { dispatchOneOf } from "lib/immutableProto"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { makeElementWithInfoText } from "lib/utils"
-import { IForwardMsgMetadata } from "autogen/proto"
+import { IForwardMsgMetadata, IBlock } from "autogen/proto"
 import { ReportElement, BlockElement, SimpleElement } from "lib/DeltaParser"
 import { FileUploadClient } from "lib/FileUploadClient"
+import { variables as stylingVariables } from "lib/widgetTheme"
 
 // Load (non-lazy) elements.
 import Alert from "components/elements/Alert/"
@@ -42,15 +44,15 @@ import {
 } from "components/widgets/CustomComponent/"
 
 import Maybe from "components/core/Maybe/"
+import withExpandable from "hocs/withExpandable"
+
+import "./Block.scss"
 
 // Lazy-load elements.
 const Audio = React.lazy(() => import("components/elements/Audio/"))
 const Balloons = React.lazy(() => import("components/elements/Balloons/"))
 const BokehChart = React.lazy(() => import("components/elements/BokehChart/"))
 const DataFrame = React.lazy(() => import("components/elements/DataFrame/"))
-const DeckGlChart = React.lazy(() =>
-  import("components/elements/DeckGlChart/")
-)
 const DeckGlJsonChart = React.lazy(() =>
   import("components/elements/DeckGlJsonChart/")
 )
@@ -94,21 +96,57 @@ interface Props {
   uploadClient: FileUploadClient
   widgetsDisabled: boolean
   componentRegistry: ComponentRegistry
+  deltaBlock?: IBlock
+}
+
+const StyledBlock = "div"
+
+const StyledColumn = (
+  weight: number,
+  width: number
+): StyletronComponent<any> => {
+  // The minimal viewport width used to determine the minimal
+  // fixed column width while accounting for column proportions.
+  // Randomly selected based on visual experimentation.
+  const minViewportForColumns = 640
+
+  // When working with columns, width is driven by what percentage of space
+  // the column takes in relation to the total number of columns
+  const columnPercentage = weight / width
+
+  return styled("div", {
+    // Flex determines how much space is allocated to this column.
+    flex: weight,
+    [`@media (max-width: ${minViewportForColumns}px)`]: {
+      minWidth: `${columnPercentage > 0.5 ? "min" : "max"}(
+        ${columnPercentage * 100}% - ${stylingVariables.gutter},
+        ${columnPercentage * minViewportForColumns}px
+      )`,
+    },
+  })
 }
 
 class Block extends PureComponent<Props> {
+  private WithExpandableBlock = withExpandable(Block)
+
+  /** Recursively transform this BLockElement and all children to React Nodes. */
   private renderElements = (width: number): ReactNode[] => {
     const elementsToRender = this.props.elements
 
-    // Transform Streamlit elements into ReactNodes.
     return elementsToRender
       .toArray()
       .map((reportElement: ReportElement, index: number): ReactNode | null => {
         const element = reportElement.get("element")
-
         if (element instanceof List) {
-          return this.renderBlock(element as BlockElement, index, width)
+          // Recursive case AKA a single container AKA node with children
+          return this.renderBlock(
+            element as BlockElement,
+            index,
+            width,
+            reportElement.get("deltaBlock").toJS()
+          )
         }
+        // Base case AKA a single element AKA leaf node in the render tree
         return this.renderElementWithErrorBoundary(reportElement, index, width)
       })
       .filter((node: ReactNode | null): ReactNode => node != null)
@@ -129,11 +167,25 @@ class Block extends PureComponent<Props> {
   private renderBlock(
     element: BlockElement,
     index: number,
-    width: number
+    width: number,
+    deltaBlock: IBlock
   ): ReactNode {
+    const BlockType = deltaBlock.expandable ? this.WithExpandableBlock : Block
+    const optionalProps = deltaBlock.expandable
+      ? {
+          empty: !element.size,
+          ...deltaBlock.expandable,
+        }
+      : {}
+    const style: any = { width }
+    const StyledDiv =
+      deltaBlock.column && deltaBlock.column.weight
+        ? StyledColumn(deltaBlock.column.weight, width)
+        : StyledBlock
+
     return (
-      <div key={index} className="stBlock" style={{ width }}>
-        <Block
+      <StyledDiv key={index} className="stBlock" style={style}>
+        <BlockType
           elements={element}
           reportId={this.props.reportId}
           reportRunState={this.props.reportRunState}
@@ -142,8 +194,10 @@ class Block extends PureComponent<Props> {
           uploadClient={this.props.uploadClient}
           widgetsDisabled={this.props.widgetsDisabled}
           componentRegistry={this.props.componentRegistry}
+          deltaBlock={deltaBlock}
+          {...optionalProps}
         />
-      </div>
+      </StyledDiv>
     )
   }
 
@@ -254,15 +308,14 @@ class Block extends PureComponent<Props> {
     return dispatchOneOf(element, "type", {
       alert: (el: SimpleElement) => <Alert element={el} width={width} />,
       audio: (el: SimpleElement) => <Audio element={el} width={width} />,
-      balloons: (el: SimpleElement) => <Balloons element={el} width={width} />,
+      balloons: (el: SimpleElement) => (
+        <Balloons reportId={this.props.reportId} />
+      ),
       bokehChart: (el: SimpleElement) => (
         <BokehChart element={el} index={index} width={width} />
       ),
       dataFrame: (el: SimpleElement) => (
         <DataFrame element={el} width={width} height={height} />
-      ),
-      deckGlChart: (el: SimpleElement) => (
-        <DeckGlChart element={el} width={width} />
       ),
       deckGlJsonChart: (el: SimpleElement) => (
         <DeckGlJsonChart element={el} width={width} />
@@ -404,11 +457,27 @@ class Block extends PureComponent<Props> {
     })
   }
 
-  public render = (): ReactNode => (
-    <AutoSizer disableHeight={true}>
-      {({ width }) => this.renderElements(width)}
-    </AutoSizer>
-  )
+  public render = (): ReactNode => {
+    if (this.props.deltaBlock && this.props.deltaBlock.horizontal) {
+      // Create a horizontal block as the parent for columns
+      // For now, all children are column blocks. For columns, `width` is
+      // driven by the total number of columns available.
+      return (
+        <div className="stBlock-horiz">
+          {this.renderElements(
+            this.props.deltaBlock.horizontal.totalWeight || 0
+          )}
+        </div>
+      )
+    }
+
+    // Create a vertical block. Widths of children autosizes to window width.
+    return (
+      <AutoSizer disableHeight={true}>
+        {({ width }) => this.renderElements(width)}
+      </AutoSizer>
+    )
+  }
 }
 
 export default Block

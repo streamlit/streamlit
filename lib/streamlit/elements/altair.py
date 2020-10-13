@@ -29,7 +29,7 @@ class AltairMixin:
     def line_chart(dg, data=None, width=0, height=0, use_container_width=True):
         """Display a line chart.
 
-        This is just syntax-sugar around st.altair_chart. The main difference
+        This is syntax-sugar around st.altair_chart. The main difference
         is this command uses the data's own column and indices to figure out
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
@@ -59,7 +59,7 @@ class AltairMixin:
         >>> st.line_chart(chart_data)
 
         .. output::
-           https://share.streamlit.io/0.50.0-td2L/index.html?id=BdxXG3MmrVBfJyqS2R2ki8
+           https://static.streamlit.io/0.50.0-td2L/index.html?id=BdxXG3MmrVBfJyqS2R2ki8
            height: 220px
 
         """
@@ -103,7 +103,7 @@ class AltairMixin:
         >>> st.area_chart(chart_data)
 
         .. output::
-           https://share.streamlit.io/0.50.0-td2L/index.html?id=Pp65STuFj65cJRDfhGh4Jt
+           https://static.streamlit.io/0.50.0-td2L/index.html?id=Pp65STuFj65cJRDfhGh4Jt
            height: 220px
 
         """
@@ -147,7 +147,7 @@ class AltairMixin:
         >>> st.bar_chart(chart_data)
 
         .. output::
-           https://share.streamlit.io/0.50.0-td2L/index.html?id=5U5bjR2b3jFwnJdDfSvuRk
+           https://static.streamlit.io/0.50.0-td2L/index.html?id=5U5bjR2b3jFwnJdDfSvuRk
            height: 220px
 
         """
@@ -159,18 +159,13 @@ class AltairMixin:
 
         return dg._enqueue("bar_chart", vega_lite_chart_proto, last_index=last_index)  # type: ignore
 
-    def altair_chart(dg, altair_chart, width=0, use_container_width=False):
+    def altair_chart(dg, altair_chart, use_container_width=False):
         """Display a chart using the Altair library.
 
         Parameters
         ----------
         altair_chart : altair.vegalite.v2.api.Chart
             The Altair chart object to display.
-
-        width : number
-            Deprecated. If != 0 (default), will show an alert.
-            From now on you should set the width directly in the Altair
-            spec. Please refer to the Altair documentation for details.
 
         use_container_width : bool
             If True, set the chart width to the column width. This takes
@@ -193,7 +188,7 @@ class AltairMixin:
         >>> st.altair_chart(c, use_container_width=True)
 
         .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
+           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
            height: 200px
 
         Examples of Altair charts can be found at
@@ -201,13 +196,6 @@ class AltairMixin:
 
         """
         vega_lite_chart_proto = VegaLiteChartProto()
-
-        if width != 0:
-            import streamlit as st
-
-            st.warning(
-                "The `width` argument in `st.vega_lite_chart` is deprecated and will be removed on 2020-03-04. To set the width, you should instead use altair's native `width` argument as described at https://altair-viz.github.io/user_guide/generated/toplevel/altair.Chart.html"
-            )
 
         marshall(
             vega_lite_chart_proto,

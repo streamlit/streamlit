@@ -56,6 +56,7 @@ from streamlit.hashing import _CodeHasher
 from streamlit.hashing import _NP_SIZE_LARGE
 from streamlit.hashing import _PANDAS_ROWS_LARGE
 from streamlit.type_util import is_type, get_fqn_type
+from streamlit.uploaded_file_manager import UploadedFile
 import streamlit as st
 
 from tests import testutil
@@ -316,30 +317,30 @@ class HashTest(unittest.TestCase):
 
         self.assertEqual(get_hash(np4), get_hash(np5))
 
-    def test_io(self):
-        b1 = BytesIO(b"123")
-        b2 = BytesIO(b"456")
-        b3 = BytesIO(b"123")
+    @parameterized.expand(
+        [
+            (BytesIO, {b"123"}, {b"456"}, {b"123"}),
+            (StringIO, {"123"}, {"456"}, {"123"}),
+            (
+                UploadedFile,
+                ["id", "name", "type", b"123"],
+                ["id", "name", "type", b"456"],
+                ["id", "name", "type", b"123"],
+            ),
+        ]
+    )
+    def test_io(self, io_type, io_data1, io_data2, io_data3):
+        io1 = io_type(*io_data1)
+        io2 = io_type(*io_data2)
+        io3 = io_type(*io_data3)
 
-        self.assertEqual(get_hash(b1), get_hash(b3))
-        self.assertNotEqual(get_hash(b1), get_hash(b2))
+        self.assertEqual(get_hash(io1), get_hash(io3))
+        self.assertNotEqual(get_hash(io1), get_hash(io2))
 
         # Changing the stream position should change the hash
-        b1.seek(1)
-        b3.seek(0)
-        self.assertNotEqual(get_hash(b1), get_hash(b3))
-
-        s1 = StringIO("123")
-        s2 = StringIO("456")
-        s3 = StringIO("123")
-
-        self.assertEqual(get_hash(s1), get_hash(s3))
-        self.assertNotEqual(get_hash(s1), get_hash(s2))
-
-        # Changing the stream position should change the hash
-        s1.seek(1)
-        s3.seek(0)
-        self.assertNotEqual(get_hash(s1), get_hash(s3))
+        io1.seek(1)
+        io3.seek(0)
+        self.assertNotEqual(get_hash(io1), get_hash(io3))
 
     def test_partial(self):
         p1 = functools.partial(int, base=2)
@@ -377,7 +378,6 @@ class HashTest(unittest.TestCase):
             f.seek(0)
             self.assertEqual(h1, get_hash(f))
 
-    @testutil.requires_tensorflow
     def test_keras_model(self):
         a = keras.applications.vgg16.VGG16(include_top=False, weights=None)
         b = keras.applications.vgg16.VGG16(include_top=False, weights=None)
@@ -388,7 +388,6 @@ class HashTest(unittest.TestCase):
         self.assertEqual(get_hash(a), get_hash(a))
         self.assertNotEqual(get_hash(a), get_hash(b))
 
-    @testutil.requires_tensorflow
     def test_tf_keras_model(self):
         a = tf.keras.applications.vgg16.VGG16(include_top=False, weights=None)
         b = tf.keras.applications.vgg16.VGG16(include_top=False, weights=None)
@@ -396,7 +395,6 @@ class HashTest(unittest.TestCase):
         self.assertEqual(get_hash(a), get_hash(a))
         self.assertNotEqual(get_hash(a), get_hash(b))
 
-    @testutil.requires_tensorflow
     def test_tf_saved_model(self):
         tempdir = tempfile.TemporaryDirectory()
 
@@ -433,7 +431,6 @@ class HashTest(unittest.TestCase):
         # stack due to an infinite recursion.)
         self.assertNotEqual(get_hash(MagicMock()), get_hash(MagicMock()))
 
-    @testutil.requires_tensorflow
     def test_tensorflow_session(self):
         tf_config = tf.compat.v1.ConfigProto()
         tf_session = tf.compat.v1.Session(config=tf_config)

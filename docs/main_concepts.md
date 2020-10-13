@@ -1,10 +1,10 @@
-# Main concepts
+# Create an app
 
 Working with Streamlit is simple. First you sprinkle a few Streamlit commands
 into a normal Python script, then you run it with `streamlit run`:
 
-```
-$ streamlit run your_script.py [-- script args]
+```bash
+streamlit run your_script.py [-- script args]
 ```
 
 As soon as you run the script as shown above, a local Streamlit server will
@@ -34,7 +34,7 @@ are available to you.
 
 ## Development flow
 
-Every time you want to update your app, just save the source file. When you do
+Every time you want to update your app, save the source file. When you do
 that, Streamlit detects if there is a change and asks you whether you want to
 rerun your app. Choose "Always rerun" at the top-right of your screen to
 automatically update your app every time you change its source code.
@@ -55,7 +55,7 @@ results live is one of the ways Streamlit makes your life easier.
 
 Streamlit's architecture allows you to write apps the same way you write plain
 Python scripts. To unlock this, Streamlit apps have a unique data flow: any
-time something must be updated on the screen, Streamlit just reruns your entire
+time something must be updated on the screen, Streamlit reruns your entire
 Python script from top to bottom.
 
 This can happen in two situations:
@@ -71,9 +71,9 @@ for you behind the scenes. A big player in this story is the
 costly computations when their apps rerun. We'll cover caching later in this
 page.
 
-## Drawing content
+<!-- ## Drawing content
 
-Writing to Streamlit apps is simple. Just call the appropriate API command:
+Writing to Streamlit apps is simple:
 
 ```python
 import streamlit as st
@@ -100,7 +100,71 @@ x, 'squared is', x * x  # 👈 Magic!
 If you want to do something more advanced like changing specific settings,
 drawing animations, or inserting content out of order, check out other
 available Streamlit commands in our [API documentation](api.md) and [Advanced
-Concepts](advanced_concepts.md) pages.
+Concepts](advanced_concepts.md) pages. -->
+
+## Display and style data
+
+There are a few ways to display data (tables, arrays, data frames) in Streamlit
+apps. In [getting started](getting_started.md), you were introduced to _magic_
+and [`st.write()`](api.html#streamlit.write), which can be used to write
+anything from text to tables. Now let's take a look at methods designed
+specifically for visualizing data.
+
+You might be asking yourself, "why wouldn't I always use st.write()?" There are
+a few reasons:
+
+1. _Magic_ and [`st.write()`](api.html#streamlit.write) inspect the type of
+   data that you've passed in, and then decide how to best render it in the
+   app. Sometimes you want to draw it another way. For example, instead of
+   drawing a dataframe as an interactive table, you may want to draw it as a
+   static table by using st.table(df).
+2. The second reason is that other methods return an object that can be used
+   and modified, either by adding data to it or replacing it.
+3. Finally, if you use a more specific Streamlit method you can pass additional
+   arguments to customize its behavior.
+
+For example, let's create a data frame and change its formatting with a Pandas
+`Styler` object. In this example, you'll use Numpy to generate a random sample,
+and the [`st.dataframe()`](api.html#streamlit.dataframe) method to draw an
+interactive table.
+
+```eval_rst
+.. note::
+   This example uses Numpy to generate a random sample, but you can use Pandas
+   DataFrames, Numpy arrays, or plain Python arrays.
+```
+
+```Python
+dataframe = np.random.randn(10, 20)
+st.dataframe(dataframe)
+```
+
+Let's expand on the first example using the Pandas `Styler` object to highlight
+some elements in the interactive table.
+
+```eval_rst
+.. note::
+   If you used PIP to install Streamlit, you'll need to install Jinja2 to use
+   the Styler object. To install Jinja2, run: pip install jinja2.
+```
+
+```Python
+dataframe = pd.DataFrame(
+    np.random.randn(10, 20),
+    columns=('col %d' % i for i in range(20)))
+
+st.dataframe(dataframe.style.highlight_max(axis=0))
+```
+
+Streamlit also has a method for static table generation:
+[`st.table()`](api.html#streamlit.table).
+
+```Python
+dataframe = pd.DataFrame(
+    np.random.randn(10, 20),
+    columns=('col %d' % i for i in range(20)))
+st.table(dataframe)
+```
 
 ## Widgets
 
@@ -108,7 +172,7 @@ When you've got the data or model into the state that you want to explore, you
 can add in widgets like [`st.slider()`](api.html#streamlit.slider),
 [`st.button()`](api.html#streamlit.button) or
 [`st.selectbox()`](api.html#streamlit.selectbox). It's really straightforward
-— just treat widgets as variables:
+— treat widgets as variables:
 
 ```python
 import streamlit as st
@@ -125,7 +189,7 @@ For example, if the user moves the slider to position `10`, Streamlit will
 rerun the code above and set `x` to `10` accordingly. So now you should see the
 text "10 squared is 100".
 
-## Sidebar
+## Layout
 
 Streamlit makes it easy to organize your widgets in a left panel sidebar with
 [`st.sidebar`](api.html#add-widgets-to-sidebar). Each element that's passed to
@@ -133,7 +197,7 @@ Streamlit makes it easy to organize your widgets in a left panel sidebar with
 users to focus on the content in your app while still having access to UI
 controls.
 
-For example, if you want to add a selectbox and a slider to a sidebar, just
+For example, if you want to add a selectbox and a slider to a sidebar,
 use `st.sidebar.slider` and `st.siderbar.selectbox` instead of `st.slider` and
 `st.selectbox`:
 
@@ -153,11 +217,29 @@ add_slider = st.sidebar.slider(
 )
 ```
 
+Beyond the sidebar, Streamlit offers several other ways to control the layout
+of your app. [`st.beta_columns`](https://docs.streamlit.io/en/latest/api.html#streamlit.beta_columns) lets you place widgets side-by-side, and
+[`st.beta_expander`](https://docs.streamlit.io/en/latest/api.html#streamlit.beta_expander) lets you conserve space by hiding away large content.
+
+```python
+import streamlit as st
+
+left_column, right_column = st.beta_columns(2)
+# You can use a column just like st.sidebar:
+left_column.button('Press me!')
+
+# Or even better, call Streamlit functions inside a "with" block:
+with right_column:
+    chosen = st.radio(
+        'Sorting hat',
+        ("Gryffindor", "Ravenclaw", "Hufflepuff", "Slytherin"))
+    st.write(f"You are in {chosen} house!")
+```
+
 ```eval_rst
 .. note::
-  The following Streamlit commands are not currently supported in the sidebar:
-  `st.write` (you should use `st.sidebar.markdown()` instead), `st.echo`, and
-  `st.spinner`.
+  `st.echo` and `st.spinner` are not currently supported inside the sidebar
+  or layout options.
 ```
 
 ## Caching
@@ -166,7 +248,7 @@ The Streamlit cache allows your app to execute quickly even when loading data
 from the web, manipulating large datasets, or performing expensive
 computations.
 
-To use the cache, just wrap functions in the
+To use the cache, wrap functions with the
 [`@st.cache`](api.html#streamlit.cache) decorator:
 
 ```python
@@ -188,7 +270,7 @@ check a few things:
 If this is the first time Streamlit has seen these four components with these
 exact values and in this exact combination and order, it runs the function and
 stores the result in a local cache. Then, next time the cached function is
-called, if none of these components changed, Streamlit will just skip executing
+called, if none of these components changed, Streamlit will skip executing
 the function altogether and, instead, return the output previously stored in
 the cache.
 
@@ -209,10 +291,4 @@ the loop and review how it works together:
 1. Every time a user interacts with a widget, your script is re-executed and
    the output value of that widget is set to the new value during that run.
 
-![](media/app_model.png)
-
-## Next steps
-
-- [Get started](getting_started.md) with Streamlit
-- Read up on [advanced concepts](advanced_concepts.md)
-- [Build your first app ](tutorial/index.md)
+![App Model](media/app_model.png)

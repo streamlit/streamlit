@@ -10,64 +10,27 @@ goal is to use Streamlit to create an interactive app for your data or model
 and along the way to use Streamlit to review, debug, perfect, and share your
 code.
 
-## Prerequisites
+## Create your first Streamlit app
 
-Before you get started, you're going to need a few things:
-
-- Your favorite IDE or text editor
-- [Python 3.6 or later](https://www.python.org/downloads/)
-- [PIP](https://pip.pypa.io/en/stable/installing/)
-- [Streamlit](index.md) — This one's kind of important, so don't forget to
-  install.
-
-If you haven't already, take a few minutes to read through [Main
-concepts](main_concepts.md) to understand Streamlit's data flow model.
-
-## Set up your virtual environment
-
-Regardless of which package management tool you're using, we recommend running
-these commands in a virtual environment. This ensures that the dependencies
-pulled in for Streamlit don't impact any other Python projects
-you're working on.
-
-- [pipenv](https://pipenv.pypa.io/en/latest/)
-- [poetry](https://python-poetry.org/)
-- [venv](https://docs.python.org/3/library/venv.html)
-- [virtualenv](https://virtualenv.pypa.io/en/latest/)
-- [conda](https://www.anaconda.com/distribution/)
-
-## Install Streamlit
-
-```bash
-$ pip install streamlit
-```
-
-Now run the hello world app just to make sure everything is working:
-
-```bash
-$ streamlit hello
-```
-
-## Import Streamlit
-
-Now that everything's installed, let's create a new Python script and import
-Streamlit.
+First, we'll create a new Python script and import Streamlit.
 
 1. Create a new Python file named `first_app.py`, then open it with your IDE
    or text editor.
 2. Next, import Streamlit.
-   ```Python
+
+   ```python
    import streamlit as st
    # To make things easier later, we're also importing numpy and pandas for
    # working with sample data.
    import numpy as np
    import pandas as pd
    ```
+
 3. Run your app. A new tab will open in your default browser. It'll be blank
    for now. That's OK.
 
    ```bash
-   $ streamlit run first_app.py
+   streamlit run first_app.py
    ```
 
    Running a Streamlit app is no different than any other Python script.
@@ -91,7 +54,7 @@ Streamlit has a number of ways to add text to your app. Check out our
 
 Let's add a title to test things out:
 
-```Python
+```python
 st.title('My first app')
 ```
 
@@ -107,7 +70,7 @@ can pass almost anything to [`st.write()`](api.html#streamlit.write):
 text, data, Matplotlib figures, Altair charts, and more. Don't worry, Streamlit
 will figure it out and render things the right way.
 
-```Python
+```python
 st.write("Here's our first attempt at using data to create a table:")
 st.write(pd.DataFrame({
     'first column': [1, 2, 3, 4],
@@ -132,13 +95,13 @@ these features and how to add colors and styling to your data frames.
 
 ## Use magic
 
-If you're using Python 3, you can also write to your app without calling any
+You can also write to your app without calling any
 Streamlit methods. Streamlit supports "[magic
 commands](api.html#magic-commands)," which means you don't have to use
 [`st.write()`](api.html#streamlit.write) at all! Try replacing the code above
 with this snippet:
 
-```Python
+```python
 """
 # My first app
 Here's our first attempt at using data to create a table:
@@ -152,7 +115,7 @@ df = pd.DataFrame({
 df
 ```
 
-How it works is simple. Any time that Streamlit sees a variable or a literal
+Any time that Streamlit sees a variable or a literal
 value on its own line, it automatically writes that to your app using
 [`st.write()`](api.html#streamlit.write). For more information, refer to the
 documentation on [magic commands](api.html#magic-commands).
@@ -169,7 +132,7 @@ You can easily add a line chart to your app with
 [`st.line_chart()`](api.html#streamlit.line_chart). We'll generate a random
 sample using Numpy and then chart it.
 
-```Python
+```python
 chart_data = pd.DataFrame(
      np.random.randn(20, 3),
      columns=['a', 'b', 'c'])
@@ -183,7 +146,7 @@ With [`st.map()`](api.html#streamlit.map) you can display data points on a map.
 Let's use Numpy to generate some sample data and plot it on a map of
 San Francisco.
 
-```Python
+```python
 map_data = pd.DataFrame(
     np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
     columns=['lat', 'lon'])
@@ -204,7 +167,7 @@ an app. [`st.checkbox()`](api.html#streamlit.checkbox) takes a single argument,
 which is the widget label. In this sample, the checkbox is used to toggle a
 conditional statement.
 
-```Python
+```python
 if st.checkbox('Show dataframe'):
     chart_data = pd.DataFrame(
        np.random.randn(20, 3),
@@ -221,7 +184,7 @@ column.
 
 Let's use the `df` data frame we created earlier.
 
-```Python
+```python
 option = st.selectbox(
     'Which number do you like best?',
      df['first column'])
@@ -229,13 +192,13 @@ option = st.selectbox(
 'You selected: ', option
 ```
 
-### Put widgets in a sidebar
+### Lay out your app
 
 For a cleaner look, you can move your widgets into a sidebar. This keeps your
 app central, while widgets are pinned to the left. Let's take a look at how you
 can use [`st.sidebar`](api.html#add-widgets-to-sidebar) in your app.
 
-```Python
+```python
 option = st.sidebar.selectbox(
     'Which number do you like best?',
      df['first column'])
@@ -246,7 +209,20 @@ option = st.sidebar.selectbox(
 Most of the elements you can put into your app can also be put into a sidebar using this syntax:
 `st.sidebar.[element_name]()`. Here are a few examples that show how it's used: `st.sidebar.markdown()`, `st.sidebar.slider()`, `st.sidebar.line_chart()`.
 
-The only exceptions right now are `st.echo` and `st.spinner`. Rest
+You can also use [`st.beta_columns`](https://docs.streamlit.io/en/latest/api.html#streamlit.beta_columns) to lay out widgets side-by-side, or
+[`st.beta_expander`](https://docs.streamlit.io/en/latest/api.html#streamlit.beta_expander) to conserve space by hiding away large content.
+
+```python
+left_column, right_column = st.beta_columns(2)
+pressed = left_column.button('Press me?')
+if pressed:
+    right_column.write("Woohoo!")
+
+expander = st.beta_expander("FAQ")
+expander.write("Here you could put in some really, really long explanations...")
+```
+
+The only exceptions right now are [`st.echo`](https://docs.streamlit.io/en/latest/api.html#streamlit.echo) and [`st.spinner`](https://docs.streamlit.io/en/latest/api.html#streamlit.spinner). Rest
 assured, though, we're currently working on adding support for those too!
 
 ## Show progress
@@ -257,13 +233,13 @@ When adding long running computations to an app, you can use
 First, let's import time. We're going to use the `time.sleep()` method to
 simulate a long running computation:
 
-```Python
+```python
 import time
 ```
 
 Now, let's create a progress bar:
 
-```Python
+```python
 'Starting a long computation...'
 
 # Add a placeholder
@@ -300,7 +276,7 @@ run into difficulties here are a few things you can do.
   question
 - Quick help from command line with `$ streamlit --help`
 - Read more documentation! Check out:
-  - [Tutorials](tutorial/index.md) to make an app
+  <!-- - [Tutorials](tutorial/index.md) to make an app -->
   - [Advanced concepts](advanced_concepts.md) for things like caching and
     inserting elements out of order
   - [API reference](api.md) for examples of every Streamlit command

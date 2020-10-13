@@ -23,6 +23,7 @@ import { GraphVizChartProps } from "./GraphVizChart"
 
 const mockLogError = {
   logError: jest.fn(),
+  logMessage: jest.fn(),
 }
 
 const mockGraphViz = jest.fn().mockReturnValue({

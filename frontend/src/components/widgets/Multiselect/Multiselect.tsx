@@ -21,6 +21,7 @@ import { Map as ImmutableMap } from "immutable"
 import { multiSelectOverrides } from "lib/widgetTheme"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { TYPE, Select as UISelect, OnChangeParams } from "baseui/select"
+import VirtualDropdown from "components/shared/VirtualDropdown"
 
 export interface Props {
   disabled: boolean
@@ -43,7 +44,17 @@ interface MultiselectOption {
 
 class Multiselect extends React.PureComponent<Props, State> {
   public state: State = {
-    value: this.props.element.get("default").toArray(),
+    value: this.initialValue,
+  }
+
+  get initialValue(): number[] {
+    // If WidgetStateManager knew a value for this widget, initialize to that.
+    const widgetId: string = this.props.element.get("id")
+    const storedValue = this.props.widgetMgr.getIntArrayValue(widgetId)
+    return storedValue !== undefined
+      ? storedValue
+      : // Otherwise, use the default value from the widget protobuf
+        this.props.element.get("default").toArray()
   }
 
   public componentDidMount(): void {
@@ -120,7 +131,10 @@ class Multiselect extends React.PureComponent<Props, State> {
           value={this.valueFromState}
           disabled={disabled}
           size={"compact"}
-          overrides={multiSelectOverrides}
+          overrides={{
+            ...multiSelectOverrides,
+            Dropdown: { component: VirtualDropdown },
+          }}
         />
       </div>
     )

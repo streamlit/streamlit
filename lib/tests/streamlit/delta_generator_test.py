@@ -205,23 +205,23 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
             create_widget()
             with self.assertRaises(DuplicateWidgetID) as ctx:
                 create_widget()
-                self.assertIn(
-                    _build_duplicate_widget_message(
-                        widget_func_name=widget_type, user_key=None
-                    ),
-                    ctx.exception,
-                )
+            self.assertEqual(
+                _build_duplicate_widget_message(
+                    widget_func_name=widget_type, user_key=None
+                ),
+                str(ctx.exception),
+            )
 
             # Test duplicate user-specified widget key
             create_widget("key")
             with self.assertRaises(DuplicateWidgetID) as ctx:
                 create_widget("key")
-                self.assertIn(
-                    _build_duplicate_widget_message(
-                        widget_func_name=widget_type, user_key="key"
-                    ),
-                    ctx.exception,
-                )
+            self.assertEqual(
+                _build_duplicate_widget_message(
+                    widget_func_name=widget_type, user_key="key"
+                ),
+                str(ctx.exception),
+            )
 
 
 class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
@@ -243,7 +243,6 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
     def test_enqueue_null(self):
         # Test "Null" Delta generators
         dg = DeltaGenerator(container=None)
-        enqueue_fn = lambda x: None
         new_dg = dg._enqueue("empty", EmptyProto())
         self.assertEqual(dg, new_dg)
 
@@ -280,6 +279,93 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         msg = self.get_message_from_queue()
         self.assertEqual(123, msg.metadata.delta_id)
         self.assertEqual(msg.delta.new_element.text.body, test_data)
+
+
+class DeltaGeneratorContainerTest(testutil.DeltaGeneratorTestCase):
+    """Test DeltaGenerator Container."""
+
+    def test_container(self):
+        container = st.beta_container()
+
+        self.assertIsInstance(container, DeltaGenerator)
+        self.assertFalse(container._cursor.is_locked)
+
+    def test_container_paths(self):
+        level3 = st.beta_container().beta_container().beta_container()
+        level3.markdown("hi")
+        level3.markdown("bye")
+
+        msg = self.get_message_from_queue()
+        self.assertEqual(msg.metadata.parent_block.path, [0, 0, 0])
+        self.assertEqual(msg.metadata.delta_id, 1)
+
+
+class DeltaGeneratorColumnsTest(testutil.DeltaGeneratorTestCase):
+    """Test DeltaGenerator Columns."""
+
+    def test_equal_columns(self):
+        for column in st.beta_columns(4):
+            self.assertIsInstance(column, DeltaGenerator)
+            self.assertFalse(column._cursor.is_locked)
+
+    def test_variable_columns(self):
+        weights = [3, 1, 4, 1, 5, 9]
+        st.beta_columns(weights)
+
+        for i, w in enumerate(weights):
+            # Pull the delta from the back of the queue, using negative index
+            delta = self.get_delta_from_queue(i - len(weights))
+            self.assertEqual(delta.add_block.column.weight, w)
+
+    def test_bad_columns(self):
+        with self.assertRaises(StreamlitAPIException):
+            st.beta_columns(-1337)
+
+        with self.assertRaises(StreamlitAPIException):
+            st.beta_columns([1, 0, -1])
+
+    def test_nested_columns(self):
+        level1, _ = st.beta_columns(2)
+        with self.assertRaises(StreamlitAPIException):
+            level2, _ = level1.beta_columns(2)
+
+
+class DeltaGeneratorExpanderTest(testutil.DeltaGeneratorTestCase):
+    def test_nested_expanders(self):
+        level1 = st.beta_expander("level 1")
+        with self.assertRaises(StreamlitAPIException):
+            level2 = level1.beta_expander("level 2")
+
+
+class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
+    """Test the `with DG` feature"""
+
+    def test_with(self):
+        # Same as test_container_paths, but using `with` syntax
+        level3 = st.beta_container().beta_container().beta_container()
+        with level3:
+            st.markdown("hi")
+            st.markdown("bye")
+
+        msg = self.get_message_from_queue()
+        self.assertEqual(msg.metadata.parent_block.path, [0, 0, 0])
+
+        # Now we're out of the `with` block, commands should use the main dg
+        st.markdown("outside")
+
+        msg = self.get_message_from_queue()
+        self.assertEqual(msg.metadata.parent_block.path, [])
+
+    def test_nested_with(self):
+        with st.beta_container():
+            with st.beta_container():
+                st.markdown("Level 2 with")
+                msg = self.get_message_from_queue()
+                self.assertEqual(msg.metadata.parent_block.path, [0, 0])
+
+            st.markdown("Level 1 with")
+            msg = self.get_message_from_queue()
+            self.assertEqual(msg.metadata.parent_block.path, [0])
 
 
 class DeltaGeneratorWriteTest(testutil.DeltaGeneratorTestCase):

@@ -16,7 +16,9 @@
 
 import io
 
+from streamlit import config
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
+from streamlit.errors import StreamlitDeprecationWarning
 from streamlit.logger import get_logger
 
 import streamlit.elements.image_proto as image_proto
@@ -32,8 +34,9 @@ class PyplotMixin:
         Parameters
         ----------
         fig : Matplotlib Figure
-            The figure to plot. When this argument isn't specified, which is
-            the usual case, this function will render the global plot.
+            The figure to plot. When this argument isn't specified, this
+            function will render the global figure (but this is deprecated,
+            as described below)
 
         clear_figure : bool
             If True, the figure will be cleared after being rendered.
@@ -54,16 +57,24 @@ class PyplotMixin:
         >>> import numpy as np
         >>>
         >>> arr = np.random.normal(1, 1, size=100)
-        >>> plt.hist(arr, bins=20)
+        >>> fig, ax = plt.subplots()
+        >>> ax.hist(arr, bins=20)
         >>>
-        >>> st.pyplot()
+        >>> st.pyplot(fig)
 
         .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=PwzFN7oLZsvb6HDdwdjkRB
+           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=PwzFN7oLZsvb6HDdwdjkRB
            height: 530px
 
         Notes
         -----
+        .. note::
+           Deprecation warning. After December 1st, 2020, we will remove the ability
+           to specify no arguments in `st.pyplot()`, as that requires the use of
+           Matplotlib's global figure object, which is not thread-safe. So
+           please always pass a figure object as shown in the example section
+           above.
+
         Matplotlib support several different types of "backends". If you're
         getting an error using Matplotlib with Streamlit, try setting your
         backend to "TkAgg"::
@@ -74,8 +85,11 @@ class PyplotMixin:
 
         """
 
+        if not fig and config.get_option("deprecation.showPyplotGlobalUse"):
+            dg.exception(PyplotGlobalUseWarning())  # type: ignore
+
         image_list_proto = ImageListProto()
-        marshall(dg._get_coordinates, image_list_proto, fig, clear_figure, **kwargs)  # type: ignore
+        marshall(dg._get_coordinates(), image_list_proto, fig, clear_figure, **kwargs)  # type: ignore
         return dg._enqueue("imgs", image_list_proto)  # type: ignore
 
 
@@ -93,6 +107,7 @@ def marshall(coordinates, image_list_proto, fig=None, clear_figure=True, **kwarg
     if not fig:
         if clear_figure is None:
             clear_figure = True
+
         fig = plt
 
     # Normally, dpi is set to 'figure', and the figure's dpi is set to 100.
@@ -123,3 +138,26 @@ def marshall(coordinates, image_list_proto, fig=None, clear_figure=True, **kwarg
     # plt calls will be starting fresh.
     if clear_figure:
         fig.clf()
+
+
+class PyplotGlobalUseWarning(StreamlitDeprecationWarning):
+    def __init__(self):
+        super(PyplotGlobalUseWarning, self).__init__(
+            msg=self._get_message(), config_option="deprecation.showPyplotGlobalUse"
+        )
+
+    def _get_message(self):
+        return """
+You are calling `st.pyplot()` without any arguments. After December 1st, 2020,
+we will remove the ability to do this as it requires the use of Matplotlib's global
+figure object, which is not thread-safe.
+
+To future-proof this code, you should pass in a figure as shown below:
+
+```python
+>>> fig, ax = plt.subplots()
+>>> ax.scatter([1, 2, 3], [1, 2, 3])
+>>>    ... other plotting actions ...
+>>> st.pyplot(fig)
+```
+"""

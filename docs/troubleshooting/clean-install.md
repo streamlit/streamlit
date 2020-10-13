@@ -1,6 +1,6 @@
 # How to clean install Streamlit
 
-If you run into any issues while installing Streamlit or if you just want to do a clean install, don't worry, we've got you covered. In this guide, we'll show you how to clean install Streamlit for Windows, macOS, and Linux.
+If you run into any issues while installing Streamlit or if you want to do a clean install, don't worry, we've got you covered. In this guide, we'll show you how to clean install Streamlit for Windows, macOS, and Linux.
 
 ```eval_rst
 .. contents::
@@ -126,5 +126,5 @@ Streamlit's officially-supported environment manager for macOS and Linux is [Pip
    ```sh
    streamlit run myfile.py
    ```
-   
+
 3. When you're done using this environment, just type `exit` or press `ctrl-D` to return to your normall shell.

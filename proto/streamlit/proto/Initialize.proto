@@ -54,6 +54,8 @@ message Config {
 
 message UserInfo {
   string installation_id = 1;
+  string installation_id_v1 = 3;
+  string installation_id_v2 = 4;
   string email = 2;
 }
 

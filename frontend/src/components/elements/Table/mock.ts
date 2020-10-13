@@ -16,7 +16,7 @@
  */
 
 // Serialized Table data for testing purposes
-export default {
+export const table = {
   data: {
     cols: [
       {
@@ -404,6 +404,25 @@ export default {
             hasDisplayValue: false,
           },
         ],
+      },
+    ],
+  },
+}
+
+export const emptyTable = {
+  data: null,
+  index: { rangeIndex: { start: 0, stop: 1 }, type: "rangeIndex" },
+  columns: { rangeIndex: { start: 0, stop: 3 }, type: "rangeIndex" },
+  style: {
+    cols: [
+      {
+        styles: [{ css: [], displayValue: "", hasDisplayValue: false }],
+      },
+      {
+        styles: [{ css: [], displayValue: "", hasDisplayValue: false }],
+      },
+      {
+        styles: [{ css: [], displayValue: "", hasDisplayValue: false }],
       },
     ],
   },

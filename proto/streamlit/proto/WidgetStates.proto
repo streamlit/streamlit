@@ -47,6 +47,7 @@ message WidgetState {
     StringArray string_array_value = 9;
     string json_value = 10;
     ArrowTable arrow_value = 11;
+    bytes bytes_value = 12;
   }
 }
 

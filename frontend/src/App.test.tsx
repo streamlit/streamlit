@@ -18,6 +18,7 @@
 import React from "react"
 import { shallow, mount, ReactWrapper } from "enzyme"
 import { ForwardMsg } from "autogen/proto"
+import { IMenuItem } from "hocs/withS4ACommunication/types"
 import { MetricsManager } from "./lib/MetricsManager"
 import { getMetricsManagerForTest } from "./lib/MetricsManagerTestUtils"
 import { SessionInfo, Args as SessionInfoArgs } from "./lib/SessionInfo"
@@ -25,7 +26,7 @@ import { SessionInfo, Args as SessionInfoArgs } from "./lib/SessionInfo"
 import { App, Props } from "./App"
 import MainMenu from "./components/core/MainMenu"
 
-const getProps = (): Props => ({
+const getProps = (extend?: Partial<Props>): Props => ({
   screenCast: {
     toggleRecordAudio: jest.fn(),
     startRecording: jest.fn(),
@@ -39,6 +40,15 @@ const getProps = (): Props => ({
     showScreencastDialog: false,
     showUnsupportedDialog: false,
   },
+  s4aCommunication: {
+    connect: jest.fn(),
+    sendMessage: jest.fn(),
+    currentState: {
+      queryParams: "",
+      items: [],
+    },
+  },
+  ...extend,
 })
 
 const getWrapper = (): ReactWrapper => {
@@ -63,6 +73,8 @@ describe("App", () => {
       streamlitVersion: "sv",
       pythonVersion: "pv",
       installationId: "iid",
+      installationIdV1: "iid1",
+      installationIdV2: "iid2",
       authorEmail: "ae",
       maxCachedMessageAge: 2,
       commandLine: "command line",
@@ -128,8 +140,30 @@ describe("App", () => {
     const wrapper = shallow(<App {...props} />)
 
     // @ts-ignore
-    wrapper.instance().keyHandlers.esc()
+    wrapper.instance().keyHandlers.STOP_RECORDING()
 
     expect(props.screenCast.stopRecording).toBeCalled()
+  })
+
+  it("should show s4aMenuItems", () => {
+    const props = getProps({
+      s4aCommunication: {
+        connect: jest.fn(),
+        sendMessage: jest.fn(),
+        currentState: {
+          queryParams: "",
+          items: [
+            {
+              type: "separator",
+            },
+          ] as IMenuItem[],
+        },
+      },
+    })
+    const wrapper = shallow(<App {...props} />)
+
+    expect(wrapper.find(MainMenu).prop("s4aMenuItems")).toStrictEqual([
+      { type: "separator" },
+    ])
   })
 })

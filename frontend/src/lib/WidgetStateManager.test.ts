@@ -31,6 +31,7 @@ const MOCK_DATA = {
     foo: "bar",
     baz: "qux",
   },
+  bytesValue: new Uint8Array([0, 1, 2, 3]),
   arrowValue: new ArrowTable({
     data: new Uint8Array(),
     index: new Uint8Array(),
@@ -96,11 +97,9 @@ describe("Widget State Manager", () => {
     widgetMgr.setIntArrayValue(MOCK_DATA.widgetId, MOCK_DATA.intArray, {
       fromUi: true,
     })
-    expect(widgetMgr.getIntArrayValue(MOCK_DATA.widgetId)).toEqual([
-      { low: 1, high: 0, unsigned: false },
-      { low: 25, high: 0, unsigned: false },
-      { low: 50, high: 0, unsigned: false },
-    ])
+    expect(widgetMgr.getIntArrayValue(MOCK_DATA.widgetId)).toEqual(
+      MOCK_DATA.intArray
+    )
   })
 
   it("sets float array value correctly", () => {
@@ -127,6 +126,15 @@ describe("Widget State Manager", () => {
     })
     expect(widgetMgr.getJsonValue(MOCK_DATA.widgetId)).toBe(
       JSON.stringify(MOCK_DATA.jsonValue)
+    )
+  })
+
+  it("sets bytes value correctly", () => {
+    widgetMgr.setBytesValue(MOCK_DATA.widgetId, MOCK_DATA.bytesValue, {
+      fromUi: true,
+    })
+    expect(widgetMgr.getBytesValue(MOCK_DATA.widgetId)).toEqual(
+      MOCK_DATA.bytesValue
     )
   })
 
@@ -191,6 +199,35 @@ describe("Widget State Manager", () => {
       })
       expect(widgetMgr.getJsonValue(MOCK_DATA.widgetId)).toBe(
         JSON.stringify(MOCK_DATA.floatArray)
+      )
+    })
+
+    it("setIntValue can handle MIN_ and MAX_SAFE_INTEGER", () => {
+      widgetMgr.setIntValue(MOCK_DATA.widgetId, Number.MAX_SAFE_INTEGER, {
+        fromUi: true,
+      })
+
+      expect(widgetMgr.getIntValue(MOCK_DATA.widgetId)).toBe(
+        Number.MAX_SAFE_INTEGER
+      )
+
+      widgetMgr.setIntValue(MOCK_DATA.widgetId, Number.MIN_SAFE_INTEGER, {
+        fromUi: true,
+      })
+
+      expect(widgetMgr.getIntValue(MOCK_DATA.widgetId)).toBe(
+        Number.MIN_SAFE_INTEGER
+      )
+    })
+
+    it("setIntArrayValue can handle MIN_ and MAX_SAFE_INTEGER", () => {
+      const values = [Number.MAX_SAFE_INTEGER, Number.MIN_SAFE_INTEGER]
+      widgetMgr.setIntArrayValue(MOCK_DATA.widgetId, values, {
+        fromUi: true,
+      })
+
+      expect(widgetMgr.getIntArrayValue(MOCK_DATA.widgetId)).toStrictEqual(
+        values
       )
     })
   })

@@ -36,7 +36,6 @@ from streamlit.config_option import ConfigOption
 from streamlit.forward_msg_cache import ForwardMsgCache
 from streamlit.forward_msg_cache import create_reference_msg
 from streamlit.forward_msg_cache import populate_hash_if_needed
-from streamlit.media_file_manager import media_file_manager
 from streamlit.report_session import ReportSession
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.logger import get_logger
@@ -233,8 +232,6 @@ class Server(object):
         self._script_path = script_path
         self._command_line = command_line
 
-        media_file_manager.set_ioloop(ioloop=self._ioloop)
-
         # Mapping of ReportSession.id -> SessionInfo.
         self._session_info_by_id = {}
 
@@ -243,11 +240,11 @@ class Server(object):
         self._set_state(State.INITIAL)
         self._message_cache = ForwardMsgCache()
         self._uploaded_file_mgr = UploadedFileManager()
-        self._uploaded_file_mgr.on_files_added.connect(self._on_file_uploaded)
+        self._uploaded_file_mgr.on_files_updated.connect(self.on_files_updated)
         self._report = None  # type: Optional[Report]
         self._preheated_session_id = None  # type: Optional[str]
 
-    def _on_file_uploaded(self, file):
+    def on_files_updated(self, session_id):
         """Event handler for UploadedFileManager.on_file_added.
 
         When a file is uploaded by a user, schedule a re-run of the
@@ -259,13 +256,13 @@ class Server(object):
             The file that was just uploaded.
 
         """
-        session_info = self._get_session_info(file.session_id)
+        session_info = self._get_session_info(session_id)
         if session_info is not None:
             session_info.session.request_rerun()
         else:
             # If an uploaded file doesn't belong to an existing session,
             # remove it so it doesn't stick around forever.
-            self._uploaded_file_mgr.remove_files(file.session_id, file.widget_id)
+            self._uploaded_file_mgr.remove_session_files(session_id)
 
     def _get_session_info(self, session_id):
         """Return the SessionInfo with the given id, or None if no such
@@ -339,6 +336,16 @@ class Server(object):
                 dict(cache=self._message_cache),
             ),
             (
+                # Tornado doesn't allow body in DELETE requests.
+                # Passing lookup values in URL
+                make_url_path_regex(
+                    base,
+                    "/upload_file/(?P<session_id>.*)/(?P<widget_id>.*)/(?P<file_id>[0-9]*)?",
+                ),
+                UploadFileRequestHandler,
+                dict(file_mgr=self._uploaded_file_mgr),
+            ),
+            (
                 make_url_path_regex(base, "upload_file"),
                 UploadFileRequestHandler,
                 dict(file_mgr=self._uploaded_file_mgr),
@@ -348,7 +355,7 @@ class Server(object):
                 AssetsFileHandler,
                 {"path": "%s/" % file_util.get_assets_dir()},
             ),
-            (make_url_path_regex(base, "media/(.*)"), MediaFileHandler),
+            (make_url_path_regex(base, "media/(.*)"), MediaFileHandler, {"path": ""}),
             (
                 make_url_path_regex(base, "component/(.*)"),
                 ComponentRequestHandler,

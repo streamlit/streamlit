@@ -59,7 +59,7 @@ class DataFrameMixin:
         >>> st.dataframe(df)  # Same as st.write(df)
 
         .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=165mJbzWdAC8Duf8a4tjyQ
+           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=165mJbzWdAC8Duf8a4tjyQ
            height: 330px
 
         >>> st.dataframe(df, 200, 100)
@@ -74,7 +74,7 @@ class DataFrameMixin:
         >>> st.dataframe(df.style.highlight_max(axis=0))
 
         .. output::
-           https://share.streamlit.io/0.29.0-dV1Y/index.html?id=Hb6UymSNuZDzojUNybzPby
+           https://static.streamlit.io/0.29.0-dV1Y/index.html?id=Hb6UymSNuZDzojUNybzPby
            height: 285px
 
         """
@@ -89,7 +89,7 @@ class DataFrameMixin:
         """Display a static table.
 
         This differs from `st.dataframe` in that the table in this case is
-        static: its entire contents are just laid out directly on the page.
+        static: its entire contents are laid out directly on the page.
 
         Parameters
         ----------
@@ -106,7 +106,7 @@ class DataFrameMixin:
         >>> st.table(df)
 
         .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=KfZvDMprL4JFKXbpjD3fpq
+           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=KfZvDMprL4JFKXbpjD3fpq
            height: 480px
 
         """

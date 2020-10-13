@@ -66,7 +66,7 @@ class MultiSelectMixin:
                     default_values, "pandas.core.series.Series"
                 ):
                     default_values = list(default_values)
-                elif not default_values:
+                elif not default_values or default_values in options:
                     default_values = [default_values]
                 else:
                     default_values = list(default_values)

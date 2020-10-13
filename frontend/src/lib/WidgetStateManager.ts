@@ -25,10 +25,37 @@ import {
 } from "autogen/proto"
 
 import { Set as ImmutableSet } from "immutable"
-import { Long } from "protobufjs"
+import { Long, util } from "protobufjs"
 
 export interface Source {
   fromUi: boolean
+}
+
+/**
+ * Coerce a `number | Long` to a `number`.
+ *
+ * Our "intValue" and "intArrayValue" widget protobuf fields represent their
+ * values with sint64, because sint32 is too small to represent the full range
+ * of JavaScript int values. Protobufjs uses `number | Long` to represent
+ * sint64. However, we're never putting Longs *into* int and intArrays -
+ * because none of our widgets use Longs - so we'll never get a Long back out.
+ *
+ * If the given value cannot be converted to `number` without a loss of
+ * precision (which should not be possible!), throw an error instead.
+ */
+function requireNumberInt(value: number | Long): number {
+  if (typeof value === "number") {
+    return value
+  }
+
+  const longNumber = util.LongBits.from(value).toNumber()
+  if (Number.isSafeInteger(longNumber)) {
+    return longNumber
+  }
+
+  throw new Error(
+    `value ${value} cannot be converted to number without a loss of precision!`
+  )
 }
 
 /**
@@ -60,7 +87,7 @@ export class WidgetStateManager {
    * to the server, and then immediately unsets the trigger value.
    */
   public setTriggerValue(widgetId: string, source: Source): void {
-    this.getOrCreateWidgetStateProto(widgetId).triggerValue = true
+    this.createWidgetStateProto(widgetId).triggerValue = true
     this.maybeSendUpdateWidgetsMessage(source)
     this.deleteWidgetStateProto(widgetId)
   }
@@ -75,21 +102,21 @@ export class WidgetStateManager {
   }
 
   public setBoolValue(widgetId: string, value: boolean, source: Source): void {
-    this.getOrCreateWidgetStateProto(widgetId).boolValue = value
+    this.createWidgetStateProto(widgetId).boolValue = value
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
-  public getIntValue(widgetId: string): number | Long | undefined {
+  public getIntValue(widgetId: string): number | undefined {
     const state = this.getWidgetStateProto(widgetId)
     if (state != null && state.value === "intValue") {
-      return state.intValue
+      return requireNumberInt(state.intValue)
     }
 
     return undefined
   }
 
   public setIntValue(widgetId: string, value: number, source: Source): void {
-    this.getOrCreateWidgetStateProto(widgetId).intValue = value
+    this.createWidgetStateProto(widgetId).intValue = value
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
@@ -103,7 +130,7 @@ export class WidgetStateManager {
   }
 
   public setFloatValue(widgetId: string, value: number, source: Source): void {
-    this.getOrCreateWidgetStateProto(widgetId).floatValue = value
+    this.createWidgetStateProto(widgetId).floatValue = value
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
@@ -121,7 +148,7 @@ export class WidgetStateManager {
     value: string,
     source: Source
   ): void {
-    this.getOrCreateWidgetStateProto(widgetId).stringValue = value
+    this.createWidgetStateProto(widgetId).stringValue = value
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
@@ -130,7 +157,7 @@ export class WidgetStateManager {
     value: string[],
     source: Source
   ): void {
-    this.getOrCreateWidgetStateProto(
+    this.createWidgetStateProto(
       widgetId
     ).stringArrayValue = StringArray.fromObject({ data: value })
     this.maybeSendUpdateWidgetsMessage(source)
@@ -169,13 +196,13 @@ export class WidgetStateManager {
     value: number[],
     source: Source
   ): void {
-    this.getOrCreateWidgetStateProto(
+    this.createWidgetStateProto(
       widgetId
     ).floatArrayValue = FloatArray.fromObject({ value })
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
-  public getIntArrayValue(widgetId: string): (number | Long)[] | undefined {
+  public getIntArrayValue(widgetId: string): number[] | undefined {
     const state = this.getWidgetStateProto(widgetId)
     if (
       state != null &&
@@ -183,7 +210,7 @@ export class WidgetStateManager {
       state.intArrayValue != null &&
       state.intArrayValue.value != null
     ) {
-      return state.intArrayValue.value
+      return state.intArrayValue.value.map(requireNumberInt)
     }
 
     return undefined
@@ -194,9 +221,9 @@ export class WidgetStateManager {
     value: number[],
     source: Source
   ): void {
-    this.getOrCreateWidgetStateProto(
-      widgetId
-    ).intArrayValue = IntArray.fromObject({ value })
+    this.createWidgetStateProto(widgetId).intArrayValue = IntArray.fromObject({
+      value,
+    })
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
@@ -210,9 +237,7 @@ export class WidgetStateManager {
   }
 
   public setJsonValue(widgetId: string, value: any, source: Source): void {
-    this.getOrCreateWidgetStateProto(widgetId).jsonValue = JSON.stringify(
-      value
-    )
+    this.createWidgetStateProto(widgetId).jsonValue = JSON.stringify(value)
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
@@ -221,7 +246,7 @@ export class WidgetStateManager {
     value: IArrowTable,
     source: Source
   ): void {
-    this.getOrCreateWidgetStateProto(widgetId).arrowValue = value
+    this.createWidgetStateProto(widgetId).arrowValue = value
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
@@ -233,6 +258,24 @@ export class WidgetStateManager {
       state.arrowValue != null
     ) {
       return state.arrowValue
+    }
+
+    return undefined
+  }
+
+  public setBytesValue(
+    widgetId: string,
+    value: Uint8Array,
+    source: Source
+  ): void {
+    this.createWidgetStateProto(widgetId).bytesValue = value
+    this.maybeSendUpdateWidgetsMessage(source)
+  }
+
+  public getBytesValue(widgetId: string): Uint8Array | undefined {
+    const state = this.getWidgetStateProto(widgetId)
+    if (state != null && state.value === "bytesValue") {
+      return state.bytesValue
     }
 
     return undefined
@@ -266,15 +309,12 @@ export class WidgetStateManager {
   }
 
   /**
-   * Returns the WidgetState proto for the widget with the given ID.
-   * If no such WidgetState exists yet, one will be created.
+   * Create a new WidgetState proto for the widget with the given ID,
+   * overwriting any that currently exists.
    */
-  private getOrCreateWidgetStateProto(id: string): WidgetState {
-    let state = this.getWidgetStateProto(id)
-    if (state == null) {
-      state = new WidgetState({ id })
-      this.widgetStates.set(id, state)
-    }
+  private createWidgetStateProto(id: string): WidgetState {
+    const state = new WidgetState({ id })
+    this.widgetStates.set(id, state)
     return state
   }
 

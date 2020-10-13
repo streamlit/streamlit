@@ -57,6 +57,14 @@ export function isEmbeddedInIFrame(): boolean {
 }
 
 /**
+ * Returns true if the frameElement and parent parameters indicate that we're in an
+ * iframe.
+ */
+export function isInChildFrame(): boolean {
+  return window.parent !== window && !!window.frameElement
+}
+
+/**
  * A helper function to make an ImmutableJS
  * info element from the given text.
  */
@@ -99,13 +107,13 @@ export function flattenElements(
   elements: BlockElement
 ): ImmutableSet<SimpleElement> {
   return elements.reduce(
-    (acc: ImmutableSet<SimpleElement>, reportElement: ReportElement) => {
+    (flattened: ImmutableSet<SimpleElement>, reportElement: ReportElement) => {
       const element = reportElement.get("element")
 
       if (element instanceof List) {
-        return flattenElements(element as BlockElement)
+        return flattened.union(flattenElements(element as BlockElement))
       }
-      return acc.union(ImmutableSet.of(element as SimpleElement))
+      return flattened.union(ImmutableSet.of(element as SimpleElement))
     },
     ImmutableSet.of<SimpleElement>()
   )

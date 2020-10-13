@@ -1,10 +1,10 @@
+/* eslint-disable */
+
 declare global {
   interface Window {
     analytics: any
   }
 }
-
-/* eslint-disable */
 
 /** @function initializeSegment
  * Loads the global analytics service provided segment.io

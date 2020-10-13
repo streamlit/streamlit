@@ -4,7 +4,7 @@
 
 # Changelog
 
-This page lists highlights, bug fixes, and known issues for official Streamlit releases. If you're looking for information about nightly releases, beta features, or experimental features, see [Try pre-release features](pre_release_features.md).
+This page lists highlights, bug fixes, and known issues for official Streamlit releases. If you're looking for information about nightly releases, beta features, or experimental features, see [Try pre-release features](api.md#pre-release-features).
 
 ```eval_rst
 .. tip::
@@ -15,6 +15,66 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
 
       $ pip install --upgrade streamlit
 ```
+
+## Version 0.68.0
+
+_Release date: October 8, 2020_
+
+**Highlights:**
+
+- ⌗ Introducing new layout options for Streamlit! Move aside, vertical layout.
+  Make a little space for... horizontal layout! Check out our
+  [blog post](https://blog.streamlit.io/introducing-new-layout-options-for-streamlit).
+- 💾 File uploader redesigned with new functionality for multiple files uploads
+  and better support for working with uploaded files. This may cause breaking
+  changes. Please see the new api in our
+  [documentation](https://docs.streamlit.io/en/0.68.0/api.html#streamlit.file_uploader)
+
+**Notable Changes**
+
+- 🎈 `st.balloon` has gotten a facelift with nicer balloons and smoother animations.
+- 🚨 Breaking Change: Following the deprecation of `st.deck_gl_chart` in
+  January 2020, we have now removed the API completely. Please use
+  `st.pydeck_chart` instead.
+- 🚨 Breaking Change: Following the deprecation of `width` and `height` for
+  `st.altair_chart`, `st.graphviz_chart`, `st.plotly_chart`, and
+  `st.vega_lite_chart` in January 2020, we have now removed the args completely.
+  Please set the width and height in the respective charting library.
+
+## Version 0.67.0
+
+_Release date: September 16, 2020_
+
+**Highlights:**
+
+- 🦷 Streamlit Components can now return bytes to your Streamlit App. To create a
+  component that returns bytes, make sure to upgrade to the latest
+  [streamlit-component-lib](https://www.npmjs.com/package/streamlit-component-lib).
+
+**Notable Changes**
+
+- 📈 Deprecation warning: Beginning December 1st, 2020 `st.pyplot()` will require a figure to
+  be provided. To disable the deprecation warning, please set `deprecation.showPyplotGlobalUse`
+  to `False`
+- 🎚 `st.multiselect` and `st.select` are now lightning fast when working with large datasets. Thanks [masa3141](https://github.com/masa3141)!
+
+## Version 0.66.0
+
+_Release date: September 1, 2020_
+
+**Highlights:**
+
+- ✏️ `st.write` is now available for use in the sidebar!
+- 🎚 A slider for distinct or non-numerical values is now available with `st.select_slider`.
+- ⌗ Streamlit Components can now return dataframes to your Streamlit App. Check out our [SelectableDataTable example](https://github.com/streamlit/component-template/tree/master/examples/SelectableDataTable).
+- 📦 The Streamlit Components library used in our Streamlit Component template is
+  now available as a npm package ([streamlit-component-lib](https://www.npmjs.com/package/streamlit-component-lib)) to simplify future upgrades to the latest version.
+  Existing components do not need to migrate.
+
+**Notable Changes**
+
+- 🐼 Support StringDtype from pandas version 1.0.0
+- 🧦 Support for running Streamlit on Unix sockets
 
 ## Version 0.65.0
 
@@ -119,7 +179,7 @@ _Release date: May 05, 2020_
   [`st.beta_color_picker()`](https://docs.streamlit.io/en/latest/api.html#streamlit.beta_color_picker)
 - 🧪 Introducing `st.beta_*` and `st.experimental_*` function prefixes, for faster
   Streamlit feature releases. See
-  [docs](https://docs.streamlit.io/en/latest/pre_release_features.html) for more info.
+  [docs](https://docs.streamlit.io/en/latest/api.html#pre-release-features) for more info.
 - 📦 Improved `@st.cache` support for SQL Alchemy objects, CompiledFFI, PyTorch
   Tensors, and `builtins.mappingproxy`.
 

@@ -29,40 +29,9 @@
 }
 
 #MainMenu {
-  #MainMenuButton {
-    height: $overlayBtn-height;
-    width: $overlayBtn-width;
-
-    > svg {
-      margin-top: -0.25rem;
-    }
-  }
-
-  /* The menu itself. */
-  div.dropdown-menu {
-    width: 13rem;
-  }
-
-  /* For keyboard shortcuts. */
-  span.shortcut {
-    color: darkgray;
-    float: right;
-    font-size: 0.75rem;
-    font-variant: small-caps;
-    margin-top: 0.25rem;
-  }
-
-  .stop-recording {
-    color: $red;
-
-    .shortcut {
-      color: $red;
-    }
-  }
-
   .recording-indicator {
     display: block;
-    bottom: 0.5rem;
+    bottom: 1rem;
     right: 0.5rem;
     position: absolute;
     background-color: red;
@@ -71,5 +40,66 @@
     border-radius: 50px;
     box-shadow: 0 0 0.25rem $red;
     animation: recording-indicator-pulse 2s linear infinite;
+  }
+}
+
+.menu-divider {
+  border-top: 1px solid $gray-lightest;
+  margin: 0.5rem 0;
+}
+
+.menu-item {
+  margin: 0;
+  padding: 0.25rem 1.5rem;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  cursor: pointer;
+
+  &.menu-item-stop-recording {
+    color: $red;
+    font-weight: bolder;
+
+    span.menu-item-shortcut {
+      color: $red;
+    }
+  }
+
+  span.menu-item-shortcut {
+    color: $gray;
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    font-variant: small-caps;
+    text-transform: uppercase;
+  }
+
+  span.menu-item-label {
+    margin-right: 0.75rem;
+    flex-grow: 1;
+  }
+
+  &-highlighted {
+    background-color: $gray-lightest;
+  }
+
+  &-disabled {
+    background-color: transparent;
+    color: $gray;
+    cursor: not-allowed;
+  }
+
+  &:active:not(.menu-item-disabled) {
+    background-color: $primary;
+    color: white;
+    outline: none;
+
+    span.menu-item-shortcut {
+      color: white;
+    }
+  }
+
+  &:focus:not(.menu-item-disabled) {
+    background-color: $primary;
+    color: white;
   }
 }

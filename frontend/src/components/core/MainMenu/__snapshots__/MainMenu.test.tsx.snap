@@ -1,0 +1,83 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`App renders without crashing 1`] = `
+<StatefulPopover
+  accessibilityType="menu"
+  content={[Function]}
+  dismissOnClickOutside={true}
+  dismissOnEsc={true}
+  focusLock={true}
+  ignoreBoundary={false}
+  onMouseEnterDelay={200}
+  onMouseLeaveDelay={200}
+  overrides={
+    Object {
+      "Body": Object {
+        "props": Object {
+          "data-test": "main-menu-popover",
+        },
+      },
+    }
+  }
+  placement="bottomRight"
+  showArrow={false}
+  stateReducer={[Function]}
+  triggerType="click"
+>
+  <span
+    id="MainMenu"
+  >
+    <Button
+      disabled={false}
+      fluidWidth={false}
+      kind="icon"
+      size="medium"
+    >
+      <Icon
+        type="menu"
+      />
+    </Button>
+  </span>
+</StatefulPopover>
+`;
+
+exports[`App should render s4a menu items 1`] = `
+<StatefulPopover
+  accessibilityType="menu"
+  content={[Function]}
+  dismissOnClickOutside={true}
+  dismissOnEsc={true}
+  focusLock={true}
+  ignoreBoundary={false}
+  onMouseEnterDelay={200}
+  onMouseLeaveDelay={200}
+  overrides={
+    Object {
+      "Body": Object {
+        "props": Object {
+          "data-test": "main-menu-popover",
+        },
+      },
+    }
+  }
+  placement="bottomRight"
+  showArrow={false}
+  stateReducer={[Function]}
+  triggerType="click"
+>
+  <span
+    id="MainMenu"
+  >
+    <Button
+      disabled={false}
+      fluidWidth={false}
+      kind="icon"
+      size="medium"
+    >
+      <Icon
+        type="menu"
+      />
+    </Button>
+  </span>
+</StatefulPopover>
+`;

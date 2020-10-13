@@ -1,10 +1,10 @@
 # Caching issues
 
-While developing an app, if you see an error or warning that stems from a cached function, it's probably related to the hashing procedure described in the [Advanced caching](../advanced_caching.md). In this article, we'll provide solutions to common issues encountered when using caching. If you have an issue that's not covered in this article, please let us know in the [community forum](https://discuss.streamlit.io/).
+While developing an app, if you see an error or warning that stems from a cached function, it's probably related to the hashing procedure described in the [Improve app performance](../caching.md). In this article, we'll provide solutions to common issues encountered when using caching. If you have an issue that's not covered in this article, please let us know in the [community forum](https://discuss.streamlit.io/).
 
 ## How to debug a cached function that isn't executing
 
-If you believe your cached function isn't executing even though its inputs are a "Cache miss", a simple way to debug is to add [`st.write`](../api.html#streamlit.write) statements inside and outside of your function like this:
+If you believe your cached function isn't executing even though its inputs are a "Cache miss", you can debug using [`st.write`](../api.html#streamlit.write) statements inside and outside of your function like this:
 
 ```Python
 @st.cache
@@ -36,7 +36,7 @@ def my_cached_func(a, b):
     ...
 ```
 
-For more information, see [Advanced caching](../advanced_caching.html#the-hash-funcs-parameter).
+For more information, see [Improve app performance](../caching.html#the-hash-funcs-parameter).
 
 ## How to fix the Cached Object Mutated warning
 
@@ -46,6 +46,7 @@ By default Streamlit expects its cached values to be treated as immutable -- tha
 
 - **Preferred:** rewrite your code to remove that mutation
 - Clone the output of the cached function before mutating it. For example:
+
   ```Python
   import copy
   cloned_output = copy.deepcopy(my_cached_function(...))
@@ -59,7 +60,7 @@ By default Streamlit expects its cached values to be treated as immutable -- tha
       ...
    ```
 
-   For examples, see [Advanced caching](../advanced_caching.md).
+   For examples, see [Advanced caching](../caching.md).
 
    ```eval_rst
    .. note::
@@ -74,7 +75,7 @@ By default Streamlit expects its cached values to be treated as immutable -- tha
       ...
    ```
 
-   For more information, see [Advanced caching](../advanced_caching.html#the-hash-funcs-parameter).
+   For more information, see [Improve app performance](../caching.html#the-hash-funcs-parameter).
 
    By the way, the scenario above is fairly unlikely — unless `FooType` does something particularly tricky internally. This is the case with some `SpaCY` objects, which can automatically mutate behind the scenes for better performance, while keeping their semantics constant. That means Streamlit will correctly detect a mutation in the object's internal structure, even though semantically that mutation makes no difference.
 

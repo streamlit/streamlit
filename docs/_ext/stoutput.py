@@ -12,10 +12,10 @@ class StOutput(Directive):
     --------
 
         .. output::
-        https://share.streamlit.io/0.25.0-2EdmD/index.html?id=jD8gaXYmw8WZeSNQbko9p
+        https://static.streamlit.io/0.25.0-2EdmD/index.html?id=jD8gaXYmw8WZeSNQbko9p
 
         .. output::
-        https://share.streamlit.io/0.25.0-2EdmD/index.html?id=jD8gaXYmw8WZeSNQbko9p
+        https://static.streamlit.io/0.25.0-2EdmD/index.html?id=jD8gaXYmw8WZeSNQbko9p
         height: 5rem; border: 1px solid red;
 
     """
@@ -44,6 +44,7 @@ class StOutput(Directive):
             format="html",
             text="""
                 <iframe
+                    loading="lazy"
                     src="%(src)s&embed=true"
                     style="
                         width: 100%%;

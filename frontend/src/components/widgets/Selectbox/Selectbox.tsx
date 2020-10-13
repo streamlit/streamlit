@@ -20,6 +20,7 @@ import { Select as UISelect, OnChangeParams, Option } from "baseui/select"
 import { Map as ImmutableMap } from "immutable"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { logWarning } from "lib/log"
+import VirtualDropdown from "components/shared/VirtualDropdown"
 
 export interface Props {
   disabled: boolean
@@ -43,7 +44,17 @@ interface SelectOption {
 
 class Selectbox extends React.PureComponent<Props, State> {
   public state: State = {
-    value: this.props.element.get("default"),
+    value: this.initialValue,
+  }
+
+  get initialValue(): number {
+    // If WidgetStateManager knew a value for this widget, initialize to that.
+    const widgetId: string = this.props.element.get("id")
+    const storedValue = this.props.widgetMgr.getIntValue(widgetId)
+    return storedValue !== undefined
+      ? storedValue
+      : // Otherwise, use the default value from the widget protobuf
+        this.props.element.get("default")
   }
 
   public componentDidMount(): void {
@@ -123,6 +134,9 @@ class Selectbox extends React.PureComponent<Props, State> {
           filterOptions={this.filterOptions}
           value={value}
           valueKey="value"
+          overrides={{
+            Dropdown: { component: VirtualDropdown },
+          }}
         />
       </div>
     )

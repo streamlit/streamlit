@@ -27,7 +27,7 @@ class SliderMixin:
 
         The difference between `st.slider` and `st.select_slider` is that
         `slider` only accepts numerical or date/time data and takes a range as
-        input, while`select_slider` accepts any datatype and takes an iterable
+        input, while `select_slider` accepts any datatype and takes an iterable
         set of options.
 
         Parameters
@@ -190,10 +190,14 @@ class SliderMixin:
             max_value = DEFAULTS[data_type]["max_value"]
         if step is None:
             step = DEFAULTS[data_type]["step"]
-            if data_type in (
-                SliderProto.DATETIME,
-                SliderProto.DATE,
-            ) and max_value - min_value < timedelta(days=1):
+            if (
+                data_type
+                in (
+                    SliderProto.DATETIME,
+                    SliderProto.DATE,
+                )
+                and max_value - min_value < timedelta(days=1)
+            ):
                 step = timedelta(minutes=15)
         if format is None:
             format = DEFAULTS[data_type]["format"]

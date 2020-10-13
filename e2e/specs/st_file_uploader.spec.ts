@@ -39,7 +39,11 @@ describe("st.file_uploader", () => {
 
     cy.get(".stFileUploader")
       .first()
-      .matchImageSnapshot("file_uploader");
+      .matchImageSnapshot("single_file_uploader");
+
+    cy.get(".stFileUploader")
+      .last()
+      .matchImageSnapshot("multi_file_uploader");
   });
 
   it("shows deprecation warning", () => {
@@ -62,7 +66,7 @@ describe("st.file_uploader", () => {
     const fileName = "example.json";
 
     cy.fixture(fileName).then(fileContent => {
-      cy.get('[data-baseweb="file-uploader"] > div')
+      cy.get(".fileUploadDropzone")
         .first()
         .upload(
           { fileContent, fileName, mimeType: "application/json" },
@@ -78,9 +82,9 @@ describe("st.file_uploader", () => {
           }
         );
 
-      cy.get(".uploadError")
+      cy.get(".fileError span")
         .first()
-        .should("have.text", " application/json files are not allowedOK");
+        .should("have.text", "application/json files are not allowed.");
 
       cy.get(".stFileUploader")
         .first()
@@ -88,71 +92,100 @@ describe("st.file_uploader", () => {
     });
   });
 
-  it("uploads single files", () => {
-    const fileName = "file1.txt";
+  it("uploads single file only", () => {
+    const fileName1 = "file1.txt";
+    const fileName2 = "file2.txt";
 
-    cy.fixture(fileName).then(fileContent => {
-      cy.get('[data-baseweb="file-uploader"] > div')
-        .first()
-        .upload(
-          { fileContent, fileName, mimeType: "text/plain" },
-          {
+    // Yes, this actually is the recommended way to load multiple fixtures
+    // in Cypress (!!) using Cypress.Promise.all is buggy. See:
+    // https://github.com/cypress-io/cypress-example-recipes/blob/master/examples/fundamentals__fixtures/cypress/integration/multiple-fixtures-spec.js
+    cy.fixture(fileName1).then(file1 => {
+      cy.fixture(fileName2).then(file2 => {
+        const files = [
+          { fileContent: file1, fileName: fileName1, mimeType: "text/plain" },
+          { fileContent: file2, fileName: fileName2, mimeType: "text/plain" }
+        ];
+
+        cy.get(".fileUploadDropzone")
+          .eq(0)
+          .upload(files[0], {
             force: true,
             subjectType: "drag-n-drop",
             events: ["dragenter", "drop"]
-          }
-        );
+          });
 
-      cy.get(".uploadDone")
-        .first()
-        .should("have.text", fileName);
-      cy.get(".fixed-width.stText")
-        .first()
-        .should("have.text", fileContent);
+        // The script should have printed the contents of the two files
+        // into an st.text. (This tests that the upload actually went
+        // through.)
+        cy.get(".uploadedFileName").should("have.text", fileName1);
+        cy.get(".fixed-width.stText")
+          .first()
+          .should("contain.text", file1);
 
-      cy.get(".stFileUploader")
-        .first()
-        .matchImageSnapshot("file_uploader-uploaded");
+        cy.get(".stFileUploader")
+          .first()
+          .matchImageSnapshot("single_file_uploader-uploaded");
+
+        cy.get(".fileUploadDropzone")
+          .eq(0)
+          .upload(files[1], {
+            force: true,
+            subjectType: "drag-n-drop",
+            events: ["dragenter", "drop"]
+          });
+
+        cy.get(".uploadedFileName")
+          .should("have.text", fileName2)
+          .should("not.have.text", fileName1);
+        cy.get(".fixed-width.stText")
+          .first()
+          .should("contain.text", file2)
+          .should("not.contain.text", file1);
+      });
     });
   });
 
-  // it("uploads multiple files", () => {
-  //   const fileName1 = "file1.txt";
-  //   const fileName2 = "file2.txt";
+  it("uploads multiple files", () => {
+    const fileName1 = "file1.txt";
+    const fileName2 = "file2.txt";
 
-  //   // Yes, this actually is the recommended way to load multiple fixtures
-  //   // in Cypress (!!) using Cypress.Promise.all is buggy. See:
-  //   // https://github.com/cypress-io/cypress-example-recipes/blob/master/examples/fundamentals__fixtures/cypress/integration/multiple-fixtures-spec.js
+    // Yes, this actually is the recommended way to load multiple fixtures
+    // in Cypress (!!) using Cypress.Promise.all is buggy. See:
+    // https://github.com/cypress-io/cypress-example-recipes/blob/master/examples/fundamentals__fixtures/cypress/integration/multiple-fixtures-spec.js
+    cy.fixture(fileName1).then(file1 => {
+      cy.fixture(fileName2).then(file2 => {
+        const files = [
+          { fileContent: file1, fileName: fileName1, mimeType: "text/plain" },
+          { fileContent: file2, fileName: fileName2, mimeType: "text/plain" }
+        ];
 
-  //   cy.fixture(fileName1).then(file1 => {
-  //     cy.fixture(fileName2).then(file2 => {
-  //       const files = [
-  //         { fileContent: file1, fileName: fileName1, mimeType: "text/plain" },
-  //         { fileContent: file2, fileName: fileName2, mimeType: "text/plain" }
-  //       ];
+        cy.get(".fileUploadDropzone")
+          .eq(1)
+          .upload(files, {
+            force: true,
+            subjectType: "drag-n-drop",
+            events: ["dragenter", "drop"]
+          });
 
-  //       cy.get('[data-baseweb="file-uploader"] > div')
-  //         .eq(1)
-  //         .upload(files, {
-  //           force: true,
-  //           subjectType: "drag-n-drop",
-  //           events: ["dragenter", "drop"]
-  //         });
+        // The widget should show the names of the uploaded files in reverse
+        // order
+        const filenames = [fileName2, fileName1];
+        cy.get(".uploadedFileName").each((uploadedFileName, index) => {
+          cy.get(uploadedFileName).should("have.text", filenames[index]);
+        });
 
-  //       // The widget should show the names of the uploaded files.
-  //       const filenames = [fileName1, fileName2].join(", ");
-  //       cy.get(".uploadDone")
-  //         .eq(0) // eq(0), instead of eq(1), because the first widget won't have an uploadDone
-  //         .should("have.text", filenames);
+        // The script should have printed the contents of the two files
+        // into an st.text. (This tests that the upload actually went
+        // through.)
+        const content = [file1, file2].sort().join("\n");
+        cy.get(".fixed-width.stText")
+          .last()
+          .should("have.text", content);
 
-  //       // The script should have printed the contents of the two files
-  //       // into an st.text. (This tests that the upload actually went
-  //       // through.)
-  //       const content = [file1, file2].sort().join("\n");
-  //       cy.get(".fixed-width.stText")
-  //         .eq(1)
-  //         .should("have.text", content);
-  //     });
-  //   });
-  // });
+        cy.get(".stFileUploader")
+          .last()
+          .matchImageSnapshot("multi_file_uploader-uploaded");
+      });
+    });
+  });
 });
