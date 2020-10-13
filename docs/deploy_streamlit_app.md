@@ -36,7 +36,7 @@ The first thing you'll see is a button to login with GitHub. Please login with t
 ```
 
 You can find your [GitHub account email](https://github.com/settings/emails) here:
-<img src="_static/img/GitHub_email.png" alt="Github email" width="450"/>
+<img src="_static/img/GitHub_email.png" alt="Github email" width="450" style='display: block; margin-left: auto; margin-right: auto; padding-top: 15px;'/>
 
 ## Deploy your app
 
@@ -110,19 +110,19 @@ When you first log into [share.streamlit.io](http://s4a.streamlit.io) you will l
 
 If your app needs a hard reboot, just click on the "︙" overflow menu to the right of the app and click to Reboot. This will interrupt any user that may currently be using that app. It may also take a few minutes for your app to re-deploy, and in that time you - and anyone visiting the app - will see the 'Your app is in the oven' screen.
 
-<img src="_static/img/streamlit_share_reboot.png" alt="Reboot Streamlit share" width="250"/>
+<img src="_static/img/streamlit_share_reboot.png" alt="Reboot Streamlit share" width="250" style='display: block; margin-left: auto; margin-right: auto;' />
 
 ### Delete an app
 
 If you're not using the app anymore, go ahead and delete it! That will free up space for you to host new apps. Simply click the "︙" overflow menu to the right of the app and select delete. To make sure that you do want to delete the app we ask you to type in the name of the repo to confirm that app will be deleted. Don't worry if you have multiple apps in that repo, we'll just delete the one you selected.
 
-<img src="_static/img/delete_streamlit_share_app.png" alt="Delete Streamlit share app" width="250"/>
+<img src="_static/img/delete_streamlit_share_app.png" alt="Delete Streamlit share app" width="250" style='display: block; margin-left: auto; margin-right: auto;'/>
 
 ### View logs
 
 You can see logs for your app by just navigating to your app and expanding the "Manage app" button on the bottom right. That will open up a terminal view that will let you see live all the logs for your app.
 
-<img src="_static/img/view_streamlit_share_logs.png" alt="Delete Streamlit share app" width="250"/>
+<img src="_static/img/view_streamlit_share_logs.png" alt="Delete Streamlit share app" width="250" style='display: block; margin-left: auto; margin-right: auto;'/>
 
 ### Add or remove dependencies
 
