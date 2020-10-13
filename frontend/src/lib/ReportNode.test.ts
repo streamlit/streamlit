@@ -18,13 +18,14 @@
 import {
   Block as BlockProto,
   BlockPath,
-  DataFrame as DataFrameProto,
   Delta as DeltaProto,
   Element,
   ForwardMsgMetadata,
+  NamedDataSet,
 } from "autogen/proto"
 import mockDataFrameData from "components/elements/DataFrame/mock"
 import { Writer } from "protobufjs"
+import { addRows } from "./dataFrameProto"
 import { toImmutableProto } from "./immutableProto"
 import { BlockNode, ElementNode, ReportNode, ReportRoot } from "./ReportNode"
 
@@ -162,45 +163,40 @@ describe("ReportRoot.applyDelta", () => {
     expect(newRoot.sidebar.reportId).toBe(NO_REPORT_ID)
   })
 
-  it("handles 'addRows' deltas", () => {
+  const addRowsTypes = ["dataFrame", "table", "vegaLiteChart"]
+  it.each(addRowsTypes)("handles 'addRows' for %s", elementType => {
     // Create a report with a dataframe node
-    const mockDataFrameProto = makeProto(DataFrameProto, mockDataFrameData)
-
     const root = ReportRoot.empty().applyDelta(
       "preAddRows",
-      makeProto(DeltaProto, { newElement: { dataFrame: mockDataFrameProto } }),
+      makeProto(DeltaProto, {
+        newElement: { [elementType]: mockDataFrameData },
+      }),
       forwardMsgMetadata(BlockPath.Container.MAIN, [0])
-    )
-
-    const preAddRowsElement = root.main.getIn([0]) as ElementNode
-    expect(preAddRowsElement.reportId).toBe("preAddRows")
-
-    // Sanity check - ensure we have a dataframe.
-    expect(preAddRowsElement.immutableElement.get("dataFrame")).toEqual(
-      toImmutableProto(DataFrameProto, mockDataFrameProto)
     )
 
     // Add rows
     const newRoot = root.applyDelta(
       "postAddRows",
-      makeProto(DeltaProto, { addRows: { data: mockDataFrameProto } }),
+      makeProto(DeltaProto, { addRows: { data: mockDataFrameData } }),
       forwardMsgMetadata(BlockPath.Container.MAIN, [0])
+    )
+
+    // Our new element should look like the result of calling `addRows`
+    // with the same dataframe data twice.
+    const expectedData = addRows(
+      toImmutableProto(
+        Element,
+        makeProto(Element, { [elementType]: mockDataFrameData })
+      ),
+      toImmutableProto(
+        NamedDataSet,
+        makeProto(NamedDataSet, { data: mockDataFrameData })
+      )
     )
 
     const addRowsElement = newRoot.main.getIn([0]) as ElementNode
     expect(addRowsElement.reportId).toBe("postAddRows")
-
-    // Our new element should look like the result of calling `addRows`
-    // with the same dataframe data twice.
-    // const immutableElement = toImmutableProto(
-    //   Element,
-    //   makeProto(Element, { dataFrame: mockDataFrameProto })
-    // )
-    // const expectedData = addRows(immutableElement, immutableElement)
-    // expect(addRowsElement.immutableElement.get("dataFrame")).toEqual(
-    //   expectedData
-    // )
-    // TODO!
+    expect(addRowsElement.immutableElement).toEqual(expectedData)
   })
 })
 
