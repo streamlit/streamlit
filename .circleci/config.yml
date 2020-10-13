@@ -538,6 +538,11 @@ jobs:
             git commit -m "Prepare per-PR preview: ${PREVIEW_BRANCH}"
             git push -f origin ${PREVIEW_BRANCH}
 
+      - run:
+          name: Ready to deploy!
+          command: }
+            echo -e "https://share.streamlit.io/deploy?repository=akrolsmir/preview-builds&branch=${PREVIEW_BRANCH}&mainModule=streamlit_app.py"
+
   cypress:
     docker:
       - image: circleci/python:3.7.4-stretch
