@@ -37,7 +37,6 @@ import {
   DocString as DocStringProto,
   Exception as ExceptionProto,
   GraphVizChart as GraphVizChartProto,
-  IForwardMsgMetadata,
   IFrame as IFrameProto,
   ImageList as ImageListProto,
   Json as JsonProto,
@@ -259,7 +258,7 @@ class Block extends PureComponent<Props> {
     index: number,
     width: number
   ): ReactNode | null {
-    const component = this.renderElement(node, index, width, node.metadata)
+    const element = this.renderElement(node, index, width)
 
     const elementType = node.element.type
     const isHidden = elementType === "empty"
@@ -282,7 +281,7 @@ class Block extends PureComponent<Props> {
                 />
               }
             >
-              {component}
+              {element}
             </Suspense>
           </ErrorBoundary>
         </div>
@@ -293,8 +292,7 @@ class Block extends PureComponent<Props> {
   private renderElement = (
     node: ElementNode,
     index: number,
-    width: number,
-    metadata: IForwardMsgMetadata
+    width: number
   ): ReactNode => {
     if (!node) {
       throw new Error("Transmission error.")
@@ -308,22 +306,18 @@ class Block extends PureComponent<Props> {
     let height: number | undefined
 
     // Modify width using the value from the spec as passed with the message when applicable
-    if (metadata && metadata.elementDimensionSpec) {
+    if (node.metadata.elementDimensionSpec) {
       if (
-        metadata &&
-        metadata.elementDimensionSpec &&
-        metadata.elementDimensionSpec.width &&
-        metadata.elementDimensionSpec.width > 0
+        node.metadata.elementDimensionSpec.width &&
+        node.metadata.elementDimensionSpec.width > 0
       ) {
-        width = Math.min(metadata.elementDimensionSpec.width, width)
+        width = Math.min(node.metadata.elementDimensionSpec.width, width)
       }
       if (
-        metadata &&
-        metadata.elementDimensionSpec &&
-        metadata.elementDimensionSpec.height &&
-        metadata.elementDimensionSpec.height > 0
+        node.metadata.elementDimensionSpec.height &&
+        node.metadata.elementDimensionSpec.height > 0
       ) {
-        height = metadata.elementDimensionSpec.height
+        height = node.metadata.elementDimensionSpec.height
       }
     }
 

@@ -265,13 +265,13 @@ export class BlockNode implements ReportNode {
       .map(child => child.clearStaleNodes(currentReportId))
       .filter(notUndefined)
 
-    // Container blocks that have the "allowEmpty" property continue
-    // to exist even if they don't have children.
-    if (newChildren.length > 0 || this.deltaBlock.allowEmpty) {
-      return new BlockNode(newChildren, this.deltaBlock, currentReportId)
+    // If we have no children and our `allowEmpty` flag is not set, prune
+    // ourselves!
+    if (newChildren.length === 0 && !this.deltaBlock.allowEmpty) {
+      return undefined
     }
 
-    return undefined
+    return new BlockNode(newChildren, this.deltaBlock, currentReportId)
   }
 
   public getElements(elementSet: Set<Element>): void {
