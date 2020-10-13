@@ -243,7 +243,6 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
     def test_enqueue_null(self):
         # Test "Null" Delta generators
         dg = DeltaGenerator(container=None)
-        enqueue_fn = lambda x: None
         new_dg = dg._enqueue("empty", EmptyProto())
         self.assertEqual(dg, new_dg)
 
