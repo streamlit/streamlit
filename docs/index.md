@@ -50,8 +50,10 @@ In just a few minutes you can build and deploy powerful data apps - so let's get
 1. Make sure that you have [Python 3.6](https://www.python.org/downloads/) or greater installed.
 2. Install Streamlit using [PIP](https://pip.pypa.io/en/stable/installing/) and run the 'hello world' app:
 
-   `pip install streamlit`
-   `streamlit hello`
+   ```shell
+   pip install streamlit
+   streamlit hello`
+   ```
 
 3. That's it! In the next few seconds the sample app will open in a new tab in your default browser.
 
