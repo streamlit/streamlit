@@ -48,15 +48,12 @@
 In just a few minutes you can build and deploy powerful data apps - so let's get started!
 
 1. Make sure that you have [Python 3.6](https://www.python.org/downloads/) or greater installed.
-2. Install Streamlit using [PIP](https://pip.pypa.io/en/stable/installing/):
+2. Install Streamlit using [PIP](https://pip.pypa.io/en/stable/installing/) and run the 'hello world' app:
 
    `pip install streamlit`
-
-3. Run the hello world app:
-
    `streamlit hello`
 
-4. That's it! In the next few seconds the sample app will open in a new tab in your default browser.
+3. That's it! In the next few seconds the sample app will open in a new tab in your default browser.
 
 Still with us? Great! Now make your own app in just 3 more steps:
 
@@ -66,7 +63,7 @@ Still with us? Great! Now make your own app in just 3 more steps:
 
    `streamlit run [filename]`
 
-3. When you're ready, click 'Deploy' from the Streamlit menu to use Streamlit sharing to share your app with the world!
+3. When you're ready, click 'Deploy' from the Streamlit menu to [share your app with the world](deploy_streamlit_app.md)!
 
 Now that you're set up, let's dive into more of how Streamlit works and how to build great apps.
 
