@@ -64,7 +64,7 @@ Now that your app is deployed you can easily share it and collaborate on it. But
 
 ### Share your app
 
-Your app is now live at that fixed URL, so go wild and share it with whomever you want. And please share it with us as well. We'd love to see what you're up to on Twitter or on our [Forum](https://discuss.streamlit.io/c/streamlit-examples/9).
+Your app is now live at that fixed URL, so go wild and share it with whomever you want. From your deployed app you can click on the "☰" menu on the top right and select 'Share this app' to post it directly into social media or to share with the community on the [Forum](https://discuss.streamlit.io/c/streamlit-examples/9). We'd love to see what you make!
 
 ### Update your app
 
@@ -98,13 +98,13 @@ Streamlit sharing is completely free and is meant to get you started with sharin
 
 ## Managing apps
 
-To view or change your deployed Streamlit apps, use your app dashboard at share.streamlit.io to view your apps, deploy a new app, delete an app, or reboot an app.
+To view or change your deployed Streamlit apps, use your app dashboard at [share.streamlit.io](https://share.streamlit.io) to view your apps, deploy a new app, delete an app, or reboot an app.
 
 ### App dashboard
 
 When you first log into [share.streamlit.io](http://s4a.streamlit.io) you will land your app dashboard, which gives you a list of all your deployed apps. This list does includes apps deployed by other people who have push access to the same repos as you, since you're all managers of those apps. Such apps are indicated with an icon like this one:
 
-<!-- ![https://s3-us-west-2.amazonaws.com/secure.notion-static.com/537b3a05-f315-4c23-a01d-2db834b93ebf/Untitled.png](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/537b3a05-f315-4c23-a01d-2db834b93ebf/Untitled.png) -->
+<img src="_static/img/streamlit_share_dashboard.png" alt="Streamlit share dashboard" width="450" style='display: block; margin-left: auto; margin-right: auto; padding-top: 15px;'/>
 
 ### Reboot an app
 
