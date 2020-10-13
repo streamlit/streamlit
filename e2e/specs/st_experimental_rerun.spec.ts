@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,27 +13,19 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
-syntax = "proto3";
+/// <reference types="cypress" />
 
-// This is the first message that is sent when a new report is run
-message NewReport {
-  // The report ID
-  string id = 1;
+describe("st.experimental_rerun", () => {
+  before(() => {
+    cy.visit("http://localhost:3000/");
+  });
 
-  // The basename of the script that launched this report. Example: "foo.py"
-  string name = 2;
-
-  // The full path of the script that launched this report. Example:
-  // "/foo/bar/foo.py"
-  string script_path = 3;
-
-  DeployParams deploy_params = 5;
-}
-
-message DeployParams {
-  string repository = 1;
-  string branch = 2;
-  string module = 3;
-}
+  it("restarts the session when invoked", () => {
+    cy.get(".element-container .stText").should(
+      "contain",
+      "Being able to rerun a session is awesome!"
+    );
+  });
+});
