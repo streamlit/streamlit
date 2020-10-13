@@ -34,8 +34,22 @@ export default function Video({ element, width }: VideoProps): ReactElement {
   const url = element.get("url")
 
   useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = element.get("startTime")
+    const videoNode = videoRef.current
+
+    const setStartTime: () => void = () => {
+      if (videoNode) {
+        videoNode.currentTime = element.get("startTime")
+      }
+    }
+
+    if (videoNode) {
+      videoNode.addEventListener("loadedmetadata", setStartTime)
+    }
+
+    return () => {
+      if (videoNode) {
+        videoNode.removeEventListener("loadedmetadata", setStartTime)
+      }
     }
   }, [element])
 

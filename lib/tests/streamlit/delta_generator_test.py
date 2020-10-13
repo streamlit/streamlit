@@ -243,7 +243,6 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
     def test_enqueue_null(self):
         # Test "Null" Delta generators
         dg = DeltaGenerator(container=None)
-        enqueue_fn = lambda x: None
         new_dg = dg._enqueue("empty", EmptyProto())
         self.assertEqual(dg, new_dg)
 
@@ -301,7 +300,7 @@ class DeltaGeneratorContainerTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(msg.metadata.delta_id, 1)
 
 
-class DeltaGeneratorContainerTest(testutil.DeltaGeneratorTestCase):
+class DeltaGeneratorColumnsTest(testutil.DeltaGeneratorTestCase):
     """Test DeltaGenerator Columns."""
 
     def test_equal_columns(self):
@@ -323,7 +322,19 @@ class DeltaGeneratorContainerTest(testutil.DeltaGeneratorTestCase):
             st.beta_columns(-1337)
 
         with self.assertRaises(StreamlitAPIException):
-            st.beta_columns(1)
+            st.beta_columns([1, 0, -1])
+
+    def test_nested_columns(self):
+        level1, _ = st.beta_columns(2)
+        with self.assertRaises(StreamlitAPIException):
+            level2, _ = level1.beta_columns(2)
+
+
+class DeltaGeneratorExpanderTest(testutil.DeltaGeneratorTestCase):
+    def test_nested_expanders(self):
+        level1 = st.beta_expander("level 1")
+        with self.assertRaises(StreamlitAPIException):
+            level2 = level1.beta_expander("level 2")
 
 
 class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
@@ -344,6 +355,17 @@ class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
 
         msg = self.get_message_from_queue()
         self.assertEqual(msg.metadata.parent_block.path, [])
+
+    def test_nested_with(self):
+        with st.beta_container():
+            with st.beta_container():
+                st.markdown("Level 2 with")
+                msg = self.get_message_from_queue()
+                self.assertEqual(msg.metadata.parent_block.path, [0, 0])
+
+            st.markdown("Level 1 with")
+            msg = self.get_message_from_queue()
+            self.assertEqual(msg.metadata.parent_block.path, [0])
 
 
 class DeltaGeneratorWriteTest(testutil.DeltaGeneratorTestCase):

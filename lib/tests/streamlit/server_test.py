@@ -327,7 +327,7 @@ class ServerTest(ServerTestCase):
             session_info1 = list(self.server._session_info_by_id.values())[0]
             session_info2 = list(self.server._session_info_by_id.values())[1]
 
-            file = UploadedFile("file.txt", b"123")
+            file = UploadedFile("id", "file.txt", "type", b"123")
 
             # "Upload a file" for Session1
             self.server._uploaded_file_mgr.add_files(
@@ -359,7 +359,7 @@ class ServerTest(ServerTestCase):
             self.server._uploaded_file_mgr.add_files(
                 session_id="no_such_session",
                 widget_id="widget_id",
-                files=[UploadedFile("file.txt", b"123")],
+                files=[UploadedFile("id", "file.txt", "type", b"123")],
             )
 
             self.assertIsNone(

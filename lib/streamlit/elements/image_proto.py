@@ -99,7 +99,7 @@ class ImageMixin:
         ...          use_column_width=True)
 
         .. output::
-           https://share.streamlit.io/0.61.0-yRE1/index.html?id=Sn228UQxBfKoE5C7A7Y2Qk
+           https://static.streamlit.io/0.61.0-yRE1/index.html?id=Sn228UQxBfKoE5C7A7Y2Qk
            height: 630px
 
         """
@@ -144,7 +144,7 @@ class ImageFormatWarning(StreamlitDeprecationWarning):
     def _get_message(self):
         return f"""
 The `format` parameter for `st.image` has been deprecated and will be removed
-or repurposed in the future. We recommend changing to the new `output_format`
+on 2020-10-30. We recommend changing to the new `output_format`
 parameter to future-proof your code. For the parameter,
 `format="{self.format}"`, please use `output_format="{self.format}"` instead.
 

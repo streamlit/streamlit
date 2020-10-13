@@ -61,12 +61,7 @@ class TimeWidgetsMixin:
         return dg._enqueue("time_input", time_input_proto, current_value)  # type: ignore
 
     def date_input(
-        dg,
-        label,
-        value=None,
-        min_value=datetime.min,
-        max_value=None,
-        key=None,
+        dg, label, value=None, min_value=None, max_value=None, key=None,
     ):
         """Display a date input widget.
 
@@ -79,7 +74,7 @@ class TimeWidgetsMixin:
             0 to 2 date/datetime values is provided, the datepicker will allow
             users to provide a range. Defaults to today as a single-date picker.
         min_value : datetime.date or datetime.datetime
-            The minimum selectable date. Defaults to datetime.min.
+            The minimum selectable date. Defaults to today-10y.
         max_value : datetime.date or datetime.datetime
             The maximum selectable date. Defaults to today+10y.
         key : str
@@ -126,6 +121,9 @@ class TimeWidgetsMixin:
 
         if isinstance(min_value, datetime):
             min_value = min_value.date()
+        elif min_value is None:
+            today = date.today()
+            min_value = date(today.year - 10, today.month, today.day)
 
         date_input_proto.min = date.strftime(min_value, "%Y/%m/%d")
 

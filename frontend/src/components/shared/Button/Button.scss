@@ -39,7 +39,7 @@
 
   &.primary-button {
     background-color: $white;
-    border: 1px solid $gray-dark;
+    border: 1px solid $gray-lighter;
 
     &:hover {
       border-color: $primary;
@@ -117,6 +117,19 @@
       background-color: $gray-lighter;
       border-color: transparent;
       color: $gray;
+    }
+  }
+
+  &.minimal-button {
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+
+    &:hover,
+    &:active,
+    &:focus {
+      color: $primary;
     }
   }
 

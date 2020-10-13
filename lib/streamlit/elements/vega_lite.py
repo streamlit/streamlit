@@ -27,12 +27,7 @@ LOGGER = get_logger(__name__)
 
 class VegaLiteMixin:
     def vega_lite_chart(
-        dg,
-        data=None,
-        spec=None,
-        width=0,
-        use_container_width=False,
-        **kwargs,
+        dg, data=None, spec=None, use_container_width=False, **kwargs,
     ):
         """Display a chart using the Vega-Lite library.
 
@@ -47,11 +42,6 @@ class VegaLiteMixin:
             The Vega-Lite spec for the chart. If the spec was already passed in
             the previous argument, this must be set to None. See
             https://vega.github.io/vega-lite/docs/ for more info.
-
-        width : number
-            Deprecated. If != 0 (default), will show an alert.
-            From now on you should set the width directly in the Vega-Lite
-            spec. Please refer to the Vega-Lite documentation for details.
 
         use_container_width : bool
             If True, set the chart width to the column width. This takes
@@ -81,7 +71,7 @@ class VegaLiteMixin:
         ... })
 
         .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
+           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
            height: 200px
 
         Examples of Vega-Lite usage without Streamlit can be found at
@@ -90,14 +80,6 @@ class VegaLiteMixin:
 
         """
         vega_lite_chart_proto = VegaLiteChartProto()
-
-        if width != 0:
-            import streamlit as st
-
-            st.warning(
-                "The `width` argument in `st.vega_lite_chart` is deprecated and will be removed on 2020-03-04. To set the width, you should instead use Vega-Lite's native `width` argument as described at https://vega.github.io/vega-lite/docs/size.html"
-            )
-
         marshall(
             vega_lite_chart_proto,
             data,

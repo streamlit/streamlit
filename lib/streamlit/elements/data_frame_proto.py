@@ -59,7 +59,7 @@ class DataFrameMixin:
         >>> st.dataframe(df)  # Same as st.write(df)
 
         .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=165mJbzWdAC8Duf8a4tjyQ
+           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=165mJbzWdAC8Duf8a4tjyQ
            height: 330px
 
         >>> st.dataframe(df, 200, 100)
@@ -74,7 +74,7 @@ class DataFrameMixin:
         >>> st.dataframe(df.style.highlight_max(axis=0))
 
         .. output::
-           https://share.streamlit.io/0.29.0-dV1Y/index.html?id=Hb6UymSNuZDzojUNybzPby
+           https://static.streamlit.io/0.29.0-dV1Y/index.html?id=Hb6UymSNuZDzojUNybzPby
            height: 285px
 
         """
@@ -82,10 +82,7 @@ class DataFrameMixin:
         marshall_data_frame(data, data_frame_proto)
 
         return dg._enqueue(  # type: ignore
-            "data_frame",
-            data_frame_proto,
-            element_width=width,
-            element_height=height,
+            "data_frame", data_frame_proto, element_width=width, element_height=height,
         )
 
     def table(dg, data=None):
@@ -109,7 +106,7 @@ class DataFrameMixin:
         >>> st.table(df)
 
         .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=KfZvDMprL4JFKXbpjD3fpq
+           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=KfZvDMprL4JFKXbpjD3fpq
            height: 480px
 
         """

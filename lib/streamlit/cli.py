@@ -204,10 +204,15 @@ def main_run(target, args=None, **kwargs):
 
     _, extension = os.path.splitext(target)
     if extension[1:] not in ACCEPTED_FILE_EXTENSIONS:
-        raise click.BadArgumentUsage(
-            "Streamlit requires raw Python (.py) files, not %s.\nFor more information, please see https://docs.streamlit.io"
-            % extension
-        )
+        if extension[1:] == "":
+            raise click.BadArgumentUsage(
+                "Streamlit requires raw Python (.py) files, but the provided file has no extension.\nFor more information, please see https://docs.streamlit.io"
+            )
+        else:    
+            raise click.BadArgumentUsage(
+                "Streamlit requires raw Python (.py) files, not %s.\nFor more information, please see https://docs.streamlit.io"
+                % extension
+            )
 
     if url(target):
         from streamlit.temporary_directory import TemporaryDirectory

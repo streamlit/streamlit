@@ -58,6 +58,7 @@ import {
   ISessionState,
   Initialize,
   NewReport,
+  IDeployParams,
   PageConfig,
   PageInfo,
   SessionEvent,
@@ -103,6 +104,7 @@ interface State {
   sharingEnabled?: boolean
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
+  deployParams?: IDeployParams | null
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -111,6 +113,7 @@ const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
 declare global {
   interface Window {
     streamlitDebug: any
+    streamlitShareMetadata: Record<string, unknown>
   }
 }
 
@@ -156,6 +159,7 @@ export class App extends PureComponent<Props, State> {
       },
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
+      deployParams: null,
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -527,7 +531,12 @@ export class App extends PureComponent<Props, State> {
    */
   handleNewReport = (newReportProto: NewReport): void => {
     const { reportHash } = this.state
-    const { id: reportId, name: reportName, scriptPath } = newReportProto
+    const {
+      id: reportId,
+      name: reportName,
+      scriptPath,
+      deployParams,
+    } = newReportProto
 
     const newReportHash = hashString(
       SessionInfo.current.installationId + scriptPath
@@ -545,9 +554,10 @@ export class App extends PureComponent<Props, State> {
     if (reportHash === newReportHash) {
       this.setState({
         reportId,
+        deployParams,
       })
     } else {
-      this.clearAppState(newReportHash, reportId, reportName)
+      this.clearAppState(newReportHash, reportId, reportName, deployParams)
     }
   }
 
@@ -597,31 +607,29 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Removes old elements. The term old is defined as:
-   *  - simple elements whose reportIds are no longer current
+   * Returns a copy without old elements. The term old is defined as:
+   *  - element or container whose reportId is from a previous rerun
+   *  - empty container
    */
   clearOldElements = (elements: any, reportId: string): BlockElement => {
     return elements
       .map((reportElement: ReportElement) => {
-        const simpleElement = reportElement.get("element")
+        if (reportElement.get("reportId") !== reportId) return null
 
+        const simpleElement = reportElement.get("element")
         if (simpleElement instanceof List) {
           // Recursively clear old elements
           const clearedElements = this.clearOldElements(
             simpleElement,
             reportId
           )
-          // Could check whether container is now empty, and return null.
-          // But we want to let empty columns take up sapce.
           return clearedElements.size > 0 ||
+            // Allow empty columns, so that they space out other columns.
             reportElement.getIn(["deltaBlock", "allowEmpty"])
             ? reportElement.set("element", clearedElements)
             : null
         }
-
-        return reportElement.get("reportId") === reportId
-          ? reportElement
-          : null
+        return reportElement
       })
       .filter((reportElement: any) => reportElement !== null)
   }
@@ -632,13 +640,15 @@ export class App extends PureComponent<Props, State> {
   clearAppState(
     reportHash: string,
     reportId: string,
-    reportName: string
+    reportName: string,
+    deployParams?: IDeployParams | null
   ): void {
     this.setState(
       {
         reportId,
         reportName,
         reportHash,
+        deployParams,
         elements: {
           main: fromJS([]),
           sidebar: fromJS([]),
@@ -662,14 +672,6 @@ export class App extends PureComponent<Props, State> {
    * Closes the upload dialog if it's open.
    */
   closeDialog = (): void => {
-    // HACK: Remove modal-open class that Bootstrap uses to hide scrollbars
-    // when a modal is open. Otherwise, when the user causes a syntax error in
-    // Python and we show an "Error" modal, and then the user presses "R" while
-    // that modal is showing, this causes "modal-open" to *not* be removed
-    // properly from <body>, thereby breaking scrolling. This seems to be
-    // related to the modal-close animation taking too long.
-    document.body.classList.remove("modal-open")
-
     this.setState({ dialog: undefined })
   }
 
@@ -987,7 +989,7 @@ export class App extends PureComponent<Props, State> {
               />
               <MainMenu
                 sharingEnabled={this.state.sharingEnabled === true}
-                isServerConnected={this.isServerConnected}
+                isServerConnected={this.isServerConnected()}
                 shareCallback={this.shareReport}
                 quickRerunCallback={this.rerunScript}
                 clearCacheCallback={this.openClearCacheDialog}
@@ -997,6 +999,7 @@ export class App extends PureComponent<Props, State> {
                 screenCastState={this.props.screenCast.currentState}
                 s4aMenuItems={this.props.s4aCommunication.currentState.items}
                 sendS4AMessage={this.props.s4aCommunication.sendMessage}
+                deployParams={this.state.deployParams}
               />
             </div>
           </header>

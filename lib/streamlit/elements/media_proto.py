@@ -50,7 +50,7 @@ class MediaMixin:
         >>> st.audio(audio_bytes, format='audio/ogg')
 
         .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=Dv3M9sA7Cg8gwusgnVNTHb
+           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=Dv3M9sA7Cg8gwusgnVNTHb
            height: 400px
 
         """
@@ -84,7 +84,7 @@ class MediaMixin:
         >>> st.video(video_bytes)
 
         .. output::
-           https://share.streamlit.io/0.61.0-yRE1/index.html?id=LZLtVFFTf1s41yfPExzRu8
+           https://static.streamlit.io/0.66.0-2BLtg/index.html?id=DzAouvizGRAyuLjkPpR894
            height: 600px
 
         .. note::

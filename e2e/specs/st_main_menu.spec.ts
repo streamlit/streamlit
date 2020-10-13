@@ -29,8 +29,15 @@ describe("main menu", () => {
     cy.get("#ConnectionStatus").should("not.exist");
 
     // Main menu renders visually as we expect
-    cy.get("#MainMenu").click();
-    cy.get(".dropdown-menu").matchImageSnapshot("main_menu");
+    cy.get("#MainMenu > button").click();
+    // Cypress cuts the popover off due to the transform property, so we move
+    // the main menu to a location to show it clearly for snapshots.
+    cy.get('[data-test="main-menu-popover"]').invoke(
+      "attr",
+      "style",
+      "transform: translate3d(20px, 20px, 0px)"
+    );
+    cy.get('[data-test="main-menu-list"]').matchImageSnapshot("main_menu");
 
     // Not possible to test the urls in the menu as they are hidden behind
     // the click handler of the button

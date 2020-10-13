@@ -273,7 +273,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
           id="ConnectionStatus"
           className={this.state.statusMinimized ? "minimized" : ""}
         >
-          <Icon className="icon" type={ui.icon} />
+          <Icon className="icon-xs" type={ui.icon} />
           <label>{ui.label}</label>
         </div>
       </Tooltip>
@@ -338,7 +338,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
             id="ReportStatus"
             className={minimized ? "rerun-prompt-minimized" : ""}
           >
-            <Icon className="icon" type="info" />
+            <Icon className="icon-sm" type="info" />
             <label className="prompt">Source file changed.</label>
 
             {StatusWidget.promptButton(

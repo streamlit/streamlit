@@ -15,12 +15,11 @@
  * limitations under the License.
  */
 
-import { Theme } from "baseui/theme"
 import { createTheme, lightThemePrimitives } from "baseui"
 import { PLACEMENT as POPOVER_PLACEMENT } from "baseui/popover"
+import { StyleObject } from "styletron-react"
 import { logMessage } from "lib/log"
 import { SCSS_VARS } from "autogen/scssVariables"
-import { FileUploaderOverrides, StyleProps } from "baseui/file-uploader"
 
 const fontFamilyMono = SCSS_VARS["$font-family-monospace"]
 const fontFamilySans = SCSS_VARS["$font-family-sans-serif"]
@@ -31,14 +30,33 @@ const borderRadius = SCSS_VARS["$border-radius"]
 const labelFontSize = SCSS_VARS["$font-size-sm"]
 const lineHeightBase = SCSS_VARS["$line-height-base"]
 const lineHeightTight = SCSS_VARS["$line-height-tight"]
+
 const smallTextMargin = SCSS_VARS["$m2-3-font-size-sm"]
 const textMargin = SCSS_VARS["$font-size-sm"]
 const tinyTextMargin = SCSS_VARS["$m1-2-font-size-sm"]
 const spacer = SCSS_VARS.$spacer
+const gutter = SCSS_VARS.$gutter
 
-export const variables = {
-  borderRadius,
-  spacer,
+// Using this calculator instead to work with spacer
+const spacingCalculator = (spacing?: number): string => {
+  if (!spacing) {
+    return spacer
+  }
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const [match, amount, unit] = spacer.match(/(?<amount>\d)(?<unit>.*)/)!
+  const numberAmount: number = parseInt(amount, 10)
+  return match && numberAmount ? `${numberAmount * spacing}${unit}` : spacer
+}
+
+export const spacing = {
+  xxs: spacingCalculator(0.25),
+  xs: spacingCalculator(0.375),
+  sm: spacingCalculator(0.5),
+  md: spacingCalculator(0.75),
+  lg: spacer,
+  xl: spacingCalculator(1.25),
+  xxl: spacingCalculator(1.5),
+  xxxl: spacingCalculator(2),
 }
 
 // Colors
@@ -50,16 +68,53 @@ export const colors = {
   grayLight: SCSS_VARS["$gray-light"],
   grayLighter: SCSS_VARS["$gray-lighter"],
   grayLightest: SCSS_VARS["$gray-lightest"],
+  transparent: "transparent",
+
   primary: SCSS_VARS.$primary,
   primaryA50: SCSS_VARS["$primary-a50"],
-  transparent: "transparent",
+
+  secondary: SCSS_VARS.$secondary,
+  danger: SCSS_VARS.$danger,
+  disabledBg: SCSS_VARS.$disabled,
+  disabledColor: SCSS_VARS.$gray,
 }
 
 export const fontStyles = {
   fontFamily: fontFamilySans,
   fontSize: fontSizeBase,
+  fontSizeSm,
   fontWeight: "normal",
   lineHeight: lineHeightBase,
+  lineHeightTight,
+}
+
+export const variables = {
+  borderRadius,
+  spacer,
+  gutter,
+}
+
+export enum Sizes {
+  SMALL = "sm",
+  MEDIUM = "md",
+  LARGE = "lg",
+  EXTRALARGE = "xl",
+}
+
+export const iconSizes = {
+  xs: ".75rem",
+  sm: "1.25rem",
+  md: "1.8rem",
+  lg: "2.3rem",
+  xl: "2.5rem",
+}
+
+export const utilityClasses: { [any: string]: StyleObject } = {
+  ellipsis: {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
 }
 
 export const sliderOverrides = {
@@ -140,92 +195,6 @@ export const sliderOverrides = {
   InnerTrack: {
     style: ({ $disabled }: { $disabled: boolean }) =>
       $disabled ? { background: colors.grayLighter } : {},
-  },
-}
-
-export const fileUploaderOverrides: FileUploaderOverrides<StyleProps> = {
-  // Important: these values must match the ones in FileUploader.scss!
-  FileDragAndDrop: {
-    style: ({
-      $theme,
-      $isDragActive,
-    }: {
-      $theme: Theme
-      $isDragActive: boolean
-    }) => ({
-      borderRadius,
-      display: "flex",
-      color: colors.grayDark,
-      fontSize: fontSizeSm,
-      lineHeight: lineHeightTight,
-      flexDirection: "column",
-      justifyContent: "center",
-      paddingTop: "0.25rem",
-      paddingBottom: "0.25rem",
-      paddingLeft: "0.25rem",
-      paddingRight: "0.25rem",
-      height: "4.25rem",
-      borderColor: $isDragActive ? colors.primary : colors.transparent,
-      backgroundColor: $isDragActive
-        ? colors.primaryA50
-        : $theme.colors.mono200,
-      borderStyle: "solid",
-      borderWidth: "1px",
-      ":focus": {
-        outline: 0,
-        borderColor: colors.primary,
-      },
-    }),
-  },
-  ContentSeparator: {
-    style: {
-      fontSize: fontSizeSm,
-      color: colors.grayDark,
-      lineHeight: lineHeightTight,
-      display: "",
-    },
-  },
-  ContentMessage: {
-    style: {
-      fontSize: fontSizeSm,
-      color: colors.grayDark,
-      lineHeight: lineHeightTight,
-      display: "",
-    },
-  },
-  ButtonComponent: {
-    props: {
-      overrides: {
-        BaseButton: {
-          style: {
-            color: colors.primary,
-            fontSize: fontSizeSm,
-            lineHeight: lineHeightTight,
-            paddingBottom: 0,
-            paddingLeft: "0.25em",
-            paddingRight: "0.25em",
-            paddingTop: 0,
-            textTransform: "lowercase",
-            ":hover": {
-              backgroundColor: colors.transparent,
-              textDecoration: "underline",
-            },
-            ":active": {
-              backgroundColor: colors.transparent,
-              textDecoration: "underline",
-            },
-            ":disabled": {
-              backgroundColor: colors.transparent,
-              color: colors.grayDark,
-            },
-            ":focus": {
-              outline: 0,
-              backgroundColor: colors.transparent,
-            },
-          },
-        },
-      },
-    },
   },
 }
 
@@ -320,7 +289,7 @@ export const buttonOverrides = {
       border: `1px solid ${colors.grayLighter}`,
       color: colors.black,
       ":hover": {
-        backgroundColor: colors.transparent,
+        backgroundColor: colors.white,
         borderColor: colors.primary,
         color: colors.primary,
       },
@@ -446,7 +415,7 @@ const mainThemePrimitives = {
   primary700: colors.primary,
 
   // Override gray values based on what is actually used in BaseWeb, and the
-  // way we want it to match our Bootstrap theme.
+  // way we want it to match our theme originating from Bootstrap.
   mono100: colors.white, // Popup menu
   mono200: colors.grayLightest, // Text input, text area, selectbox
   mono300: colors.grayLighter, // Disabled widget background
@@ -465,7 +434,7 @@ const mainThemePrimitives = {
 // Theme overrides.
 // NOTE: A lot of the properties we can override here don't seem to actually
 // be used anywhere in BaseWeb's source. Will report a bug about it.
-const themeOverrides = {
+export const themeOverrides = {
   borders: {
     radius100: borderRadius,
     radius200: borderRadius,
@@ -541,8 +510,6 @@ export const sidebarWidgetTheme = createTheme(mainThemePrimitives, {
   ...themeOverrides,
   colors: {
     ...themeOverrides.colors,
-    // Override gray values based on what is actually used in BaseWeb, and the
-    // way we want it to match our Bootstrap theme.
     // mono100 overrides
     datepickerBackground: colors.white,
     calendarBackground: colors.white,

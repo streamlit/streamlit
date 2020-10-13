@@ -63,7 +63,7 @@ class PyplotMixin:
         >>> st.pyplot(fig)
 
         .. output::
-           https://share.streamlit.io/0.25.0-2JkNY/index.html?id=PwzFN7oLZsvb6HDdwdjkRB
+           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=PwzFN7oLZsvb6HDdwdjkRB
            height: 530px
 
         Notes
@@ -89,7 +89,7 @@ class PyplotMixin:
             dg.exception(PyplotGlobalUseWarning())  # type: ignore
 
         image_list_proto = ImageListProto()
-        marshall(dg._get_coordinates, image_list_proto, fig, clear_figure, **kwargs)  # type: ignore
+        marshall(dg._get_coordinates(), image_list_proto, fig, clear_figure, **kwargs)  # type: ignore
         return dg._enqueue("imgs", image_list_proto)  # type: ignore
 
 

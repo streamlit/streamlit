@@ -15,60 +15,98 @@
  */
 
 @import "src/assets/css/variables";
+@import "src/assets/css/reboot";
 
-.stFileUploader {
-  // Important: these must match the ones in widgetTheme.ts!
+// Styles for when the file uploader needs to be compact
+// (i.e. mobile or sidebar)  Keeping this in scss since CSS in JS
+// for nested component in sidebar is TBD
+@mixin compactFileUploader() {
+  .stFileUploader {
+    .fileUploadDropzone {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
 
-  .uploadStatus {
-    align-items: center;
-    background-color: $gray-lightest;
-    border-color: transparent;
-    border-radius: $border-radius;
-    border-width: 1px;
-    display: flex;
-    flex-direction: column;
-    font-size: $font-size-sm;
-    height: 4.25rem;
-    justify-content: center;
-    line-height: 1.25;
-    width: 100%;
+      .streamlit-button {
+        margin-top: $spacer;
+      }
 
-    .btn {
-      color: $primary;
-      font-size: $font-size-sm;
-      margin: 0.25em 0;
-      padding: 0.125em 0.5em;
-      transition: none;
+      .fileUploaderIcon {
+        display: none;
+      }
+    }
 
-      &:hover {
-        color: $primary;
+    .uploadedFiles {
+      padding-right: $spacer;
+
+      .uploadedFile {
+        max-width: inherit;
+        flex: 1;
+        align-items: flex-start;
+        margin-bottom: $spacer/2;
+      }
+    }
+
+    .uploadedFileName {
+      width: 100%;
+    }
+
+    .uploadedFileData {
+      flex-direction: column;
+    }
+
+    .fileError {
+      height: auto;
+      white-space: initial;
+
+      i {
+        display: none;
       }
     }
   }
+}
 
-  .uploadOverlay {
-    align-items: center;
-    display: flex;
-    flex-direction: column;
-    left: 0;
-    line-height: 1.25;
-    padding-top: 0.75rem;
-    pointer-events: none;
-    position: absolute;
-    right: 0;
+.sidebar {
+  @include compactFileUploader();
+
+  .fileUploadDropzone {
+    background: $white;
+  }
+}
+
+@include media-breakpoint-down(sm) {
+  @include compactFileUploader();
+}
+
+.stFileUploader {
+  .uploadedFiles {
+    ul {
+      list-style-type: none;
+      margin: 0;
+
+      li {
+        margin: 0;
+        padding: 0;
+      }
+    }
+
+    // The chevrons are padded. Forcing them a bit bigger
+    // to work with the surrounding icons
+    .streamlit-paginator i {
+      font-size: 1.5rem;
+      width: 1.5rem;
+      height: 1.5rem;
+    }
   }
 
-  .uploadStatus .body,
-  .uploadOverlay .body {
-    box-sizing: border-box;
-    color: $gray-dark;
-    display: block;
-    flex-direction: column;
-    font-family: "IBM Plex Sans", sans-serif;
-    font-size: $font-size-sm;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  .disabled {
+    &,
+    small {
+      color: $gray;
+    }
+  }
+
+  .fileError {
     white-space: nowrap;
   }
 }

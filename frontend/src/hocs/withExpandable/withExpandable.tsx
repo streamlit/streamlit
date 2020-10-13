@@ -16,53 +16,30 @@
  */
 
 import React, { ComponentType, ReactElement, useEffect, useState } from "react"
-import { styled } from "styletron-react"
-import { colors, variables } from "lib/widgetTheme"
+import classNames from "classnames"
+import { StatelessAccordion as Accordion, Panel } from "baseui/accordion"
+import { colors } from "lib/widgetTheme"
+import "./withExpandable.scss"
 
 export interface Props {
   expandable: boolean
   label: string
   expanded: boolean
+  empty: boolean
+  widgetsDisabled: boolean
 }
-
-type ComponentProps = {
-  expanded: boolean
-}
-
-export const AnimatedComponentWrapper = styled(
-  "div",
-  ({ expanded }: ComponentProps) => ({
-    maxHeight: expanded ? "100vh" : 0,
-    overflow: "hidden",
-    transitionProperty: "max-height",
-    transitionDuration: "0.5s",
-    transitionTimingFunction: "ease-in-out",
-  })
-)
-
-export const StyledHeader = styled("div", ({ expanded }: ComponentProps) => ({
-  display: "flex",
-  justifyContent: "space-between",
-  cursor: "pointer",
-  borderWidth: 0,
-  borderBottomWidth: expanded ? "1px" : 0,
-  borderStyle: "solid",
-  borderColor: colors.grayLighter,
-  marginBottom: variables.spacer,
-  transitionProperty: "border-bottom-width",
-  transitionDuration: "0.5s",
-  transitionTimingFunction: "ease-in-out",
-}))
-
-export const StyledToggle = styled("small", {
-  color: colors.gray,
-})
 
 function withExpandable(
   WrappedComponent: ComponentType<any>
 ): ComponentType<any> {
   const ExpandableComponent = (props: Props): ReactElement => {
-    const { label, expanded: initialExpanded, ...componentProps } = props
+    const {
+      label,
+      expanded: initialExpanded,
+      empty,
+      widgetsDisabled,
+      ...componentProps
+    } = props
 
     const [expanded, toggleExpanded] = useState<boolean>(initialExpanded)
     useEffect(() => {
@@ -72,17 +49,80 @@ function withExpandable(
     const toggle = (): void => toggleExpanded(!expanded)
 
     return (
-      <>
-        <StyledHeader expanded={expanded}>
-          <div>{label}</div>
-          <StyledToggle onClick={toggle} role="button" data-toggle>
-            {expanded ? "Hide" : "Show"}
-          </StyledToggle>
-        </StyledHeader>
-        <AnimatedComponentWrapper expanded={expanded}>
-          <WrappedComponent {...componentProps} />
-        </AnimatedComponentWrapper>
-      </>
+      <Accordion
+        onChange={toggle}
+        expanded={expanded ? ["panel"] : []}
+        disabled={widgetsDisabled}
+        overrides={{
+          Content: {
+            style: ({ $expanded }) => ({
+              backgroundColor: colors.transparent,
+              borderTopStyle: "none",
+              borderBottomStyle: "solid",
+              borderBottomColor: $expanded
+                ? colors.grayLighter
+                : colors.transparent,
+              marginLeft: "0",
+              marginRight: "0",
+              marginTop: "0",
+              marginBottom: "0",
+              paddingLeft: "0",
+              paddingRight: "0",
+              paddingTop: $expanded ? "1em" : 0,
+              paddingBottom: 0,
+            }),
+            props: { className: "streamlit-expanderContent" },
+          },
+          PanelContainer: {
+            style: {
+              marginLeft: "0 !important",
+              marginRight: "0 !important",
+              marginTop: "0 !important",
+              marginBottom: "0 !important",
+              paddingLeft: "0 !important",
+              paddingRight: "0 !important",
+              paddingTop: "0 !important",
+              paddingBottom: "0 !important",
+            },
+          },
+          Header: {
+            style: ({ $disabled }) => ({
+              marginBottom: "0",
+              marginLeft: "0",
+              marginRight: "0",
+              marginTop: "0",
+              paddingLeft: "0",
+              backgroundColor: colors.transparent,
+              borderBottomColor: colors.grayLighter,
+              color: $disabled ? colors.disabledColor : colors.black,
+              borderTopStyle: "none",
+              paddingBottom: "0.5em",
+              paddingRight: "0",
+              paddingTop: "0.5em",
+              fontWeight: 500,
+              ":hover": {
+                borderBottomColor: colors.primary,
+              },
+            }),
+            props: { className: "streamlit-expanderHeader" },
+          },
+          ToggleIcon: {
+            style: ({ $disabled }) => ({
+              marginRight: ".5rem",
+              color: $disabled ? colors.disabledColor : colors.black,
+            }),
+          },
+          Root: {
+            props: {
+              className: classNames("streamlit-expander", { empty }),
+            },
+          },
+        }}
+      >
+        <Panel title={label} key="panel">
+          <WrappedComponent {...componentProps} disabled={widgetsDisabled} />
+        </Panel>
+      </Accordion>
     )
   }
 

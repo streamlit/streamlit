@@ -52,11 +52,9 @@ def _create_widget(id, states):
 class ScriptRunnerTest(AsyncTestCase):
     def setUp(self):
         super(ScriptRunnerTest, self).setUp()
-        media_file_manager.set_ioloop(self.io_loop)
 
     def tearDown(self):
         super(ScriptRunnerTest, self).tearDown()
-        media_file_manager.set_ioloop(None)
 
     def test_startup_shutdown(self):
         """Test that we can create and shut down a ScriptRunner."""
@@ -522,10 +520,8 @@ def require_widgets_deltas(
 
     # If we get here, at least 1 runner hasn't yet completed before our
     # timeout. Create an error string for debugging.
-    err_string = (
-        "require_widgets_deltas() timed out after {}s ({}/{} runners complete)".format(
-            timeout, num_complete, len(runners)
-        )
+    err_string = "require_widgets_deltas() timed out after {}s ({}/{} runners complete)".format(
+        timeout, num_complete, len(runners)
     )
     for runner in runners:
         if len(runner.deltas()) < NUM_DELTAS:
