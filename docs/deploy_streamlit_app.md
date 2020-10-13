@@ -8,6 +8,8 @@ Of course, if you want to host your app using another hosting provider, go for i
 
 To get started, first request an invite at [streamlit.io/sharing](http://streamlit.io/sharing). Streamlit sharing is currently invitation-only while we ramp things up. We promise to get you one very quickly ❤️
 
+Once you have your invite you're ready to deploy! It's really straightforward, just follow the next few steps.
+
 ## Put your Streamlit app on GitHub
 
 Make sure it's in a public folder and that you have a [requirements.txt file](https://pip.pypa.io/en/stable/reference/pip_install/#requirements-file-format)
