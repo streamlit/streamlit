@@ -192,7 +192,7 @@ option = st.selectbox(
 'You selected: ', option
 ```
 
-## Lay out your app
+### Lay out your app
 
 For a cleaner look, you can move your widgets into a sidebar. This keeps your
 app central, while widgets are pinned to the left. Let's take a look at how you
@@ -255,19 +255,17 @@ for i in range(100):
 '...and now we\'re done!'
 ```
 
-## Share your app
+## Record a screencast
 
-After you’ve built a Streamlit app, it's time to share it! To show it off to the world you can use **Streamlit sharing** to deploy, manage, and share your app for free. Streamlit sharing is currently invitation only, so please [request an invite](https://www.streamlit.io/sharing) and we'll get you one soon!
+After you've built a Streamlit app, you may want to discuss some of it with co-workers over email or Slack, or share it with the world on Twitter. A great way to do that is with Streamlit's built-in screencast recorder. With it, you can record, narrate, stop, save, and share with a few clicks.
 
-<!-- [[we'll need to grab the gif after the video editors are done with it on Wednesday]] -->
+To start a screencast, locate the menu in the upper right corner of your app (**☰**), select **Record a screencast**, and follow the prompts. Before the recording starts, you'll see a countdown — this means it's showtime.
 
-It works in 3 simple steps:
+To stop your screencast, go back to the menu (**☰**) and select **Stop recording** (or hit the **ESC** key). Follow the prompts to preview your recording and save it to disk. That's it, you're ready to share your Streamlit app.
 
-1. Put your app in a public Github repo (and make sure it has a requirements.txt!)
-2. Sign into [share.streamlit.io](https://share.streamlit.io)
-3. Click 'Deploy an app' and then paste in your GitHub URL
-
-That's it! **🎈**You now have a publicly deployed app that you can share with the world. Click to learn more about [how to use Streamlit sharing](deploy_streamlit_app.md). If you're looking for private sharing for your team, check out [Streamlit for Teams](https://www.streamlit.io/for-teams).
+```eval_rst
+.. image:: ./media/screenshare.gif
+```
 
 ## Get help
 
@@ -279,6 +277,6 @@ run into difficulties here are a few things you can do.
 - Quick help from command line with `$ streamlit --help`
 - Read more documentation! Check out:
   <!-- - [Tutorials](tutorial/index.md) to make an app -->
-  - [Streamlit Cookbook](advanced_concepts.md) for things like caching and
+  - [Advanced concepts](advanced_concepts.md) for things like caching and
     inserting elements out of order
   - [API reference](api.md) for examples of every Streamlit command
