@@ -22,14 +22,14 @@ pipreqs /home/project/location
 ```
 
 ```eval_rst
-.. note:: You should only include packages in requirements.txt that are not distributed with a standard Python installation (i.e. only packages that need to be installed from PyPI/conda). If you `include any of these modules from base Python <https://docs.python.org/3/py-modindex.html>`_ in your requirements.txt file, you will get an error when you try to deploy.
+.. note:: You should only include packages in requirements.txt that are not distributed with a standard Python installation (i.e. only packages that need to be installed with pip or conda). If you `include any of these modules from base Python <https://docs.python.org/3/py-modindex.html>`_ in your requirements.txt file, you will get an error when you try to deploy.
 ```
 
 - If you have requirements for apt-get, add them to `packages.txt`, one package name per line. See our streamlit-apps demo repo for an [example packages.txt file](https://github.com/streamlit-apps/ml-projects/blob/master/packages.txt).
 
 ## Log in to share.streamlit.io
 
-The first thing you'll see is a button to login with GitHub. Please login with the primary email associated with your GitHub account.
+The first thing you'll see is a button to login with GitHub. Click on the button to login with the primary email associated with your GitHub account.
 
 ```eval_rst
 .. important:: If the email you originally signed-up with isn't the primary email associated with your GitHub account, just reply to your invite email telling us your primary Github email so we can grant access to the correct account.
@@ -42,9 +42,9 @@ You can find your [GitHub account email](https://github.com/settings/emails) her
 
 Click "New app", then fill in your repo, branch, and file path, and click "Deploy". Your app will take a minute or two to deploy and then you'll be ready to share!
 
-If your app has a lot of dependencies it may take a few minutes to deploy the first time. But after that, any change that does not touch your dependencies should show up immediately!
+If your app has a lot of dependencies it may take some time to deploy the first time. But after that, any change that does not touch your dependencies should show up immediately.
 
-That's it — you're done! Once your app is deployed it will be available at
+That's it — you're done! Your app can be found at:
 
 ```python
 https://share.streamlit.io/[user name]/[repo name]/[branch name]/[app path]
@@ -80,7 +80,7 @@ Every deployed app has its Github source code linked in the "☰" menu on the to
 
 ## App access and usage
 
-Streamlit sharing is completely free and is meant to get you started with sharing your Streamlit apps. If you need a solution with with access controls, ability to deploy from private repos, ability to customize resources, and much more, please check out [Streamlit for Teams](http://streamlit.io/for-teams).
+Streamlit sharing is completely free and is meant to get you started with sharing your Streamlit apps. If you need a solution with access controls, ability to deploy from private repos, ability to customize resources, and much more, please check out [Streamlit for Teams](http://streamlit.io/for-teams).
 
 ### Access
 
@@ -102,7 +102,7 @@ To view or change your deployed Streamlit apps, use your app dashboard at [share
 
 ### App dashboard
 
-When you first log into [share.streamlit.io](http://s4a.streamlit.io) you will land your app dashboard, which gives you a list of all your deployed apps. This list does includes apps deployed by other people who have push access to the same repos as you, since you're all managers of those apps. Such apps are indicated with an icon like this one:
+When you first log into [share.streamlit.io](http://s4a.streamlit.io) you will land on your app dashboard, which gives you a list of all your deployed apps. This list does include apps deployed by other people who have push access to the same repos as you, since you're all managers of those apps. Such apps are indicated with an icon like this one:
 
 <img src="_static/img/streamlit_share_dashboard.png" alt="Streamlit share dashboard" width="450" style='display: block; margin-left: auto; margin-right: auto; padding-top: 15px;'/>
 
