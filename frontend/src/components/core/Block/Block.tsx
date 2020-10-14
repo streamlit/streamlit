@@ -19,6 +19,9 @@ import React, { PureComponent, ReactNode, Suspense } from "react"
 import { AutoSizer } from "react-virtualized"
 import { List } from "immutable"
 import { styled, StyletronComponent } from "styletron-react"
+// @ts-ignore
+import debounceRender from "react-debounce-render"
+
 import { dispatchOneOf } from "lib/immutableProto"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
@@ -51,7 +54,12 @@ import "./Block.scss"
 // Lazy-load elements.
 const Audio = React.lazy(() => import("components/elements/Audio/"))
 const Balloons = React.lazy(() => import("components/elements/Balloons/"))
+
+// BokehChart render function for is slow. If the component is not debounced,
+// AutoSizer causes it to rerender multiple times, which may signifantly slow the app.
 const BokehChart = React.lazy(() => import("components/elements/BokehChart/"))
+const DebouncedBokehChart = debounceRender(BokehChart, 100)
+
 const DataFrame = React.lazy(() => import("components/elements/DataFrame/"))
 const DeckGlJsonChart = React.lazy(() =>
   import("components/elements/DeckGlJsonChart/")
@@ -312,7 +320,7 @@ class Block extends PureComponent<Props> {
         <Balloons reportId={this.props.reportId} />
       ),
       bokehChart: (el: SimpleElement) => (
-        <BokehChart element={el} index={index} width={width} />
+        <DebouncedBokehChart element={el} index={index} width={width} />
       ),
       dataFrame: (el: SimpleElement) => (
         <DataFrame element={el} width={width} height={height} />
