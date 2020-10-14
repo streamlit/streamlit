@@ -107,32 +107,37 @@ interface Props {
   deltaBlock?: IBlock
 }
 
-const StyledBlock = "div"
-
-const StyledColumn = (
-  weight: number,
+interface StyledColumnProps {
+  weight: number
   width: number
-): StyletronComponent<any> => {
-  // The minimal viewport width used to determine the minimal
-  // fixed column width while accounting for column proportions.
-  // Randomly selected based on visual experimentation.
-  const minViewportForColumns = 640
-
-  // When working with columns, width is driven by what percentage of space
-  // the column takes in relation to the total number of columns
-  const columnPercentage = weight / width
-
-  return styled("div", {
-    // Flex determines how much space is allocated to this column.
-    flex: weight,
-    [`@media (max-width: ${minViewportForColumns}px)`]: {
-      minWidth: `${columnPercentage > 0.5 ? "min" : "max"}(
-        ${columnPercentage * 100}% - ${stylingVariables.gutter},
-        ${columnPercentage * minViewportForColumns}px
-      )`,
-    },
-  })
+  className: string
 }
+
+const StyledColumn: StyletronComponent<StyledColumnProps> = styled(
+  "div",
+  ({ weight, width }) => {
+    // The minimal viewport width used to determine the minimal
+    // fixed column width while accounting for column proportions.
+    // Randomly selected based on visual experimentation.
+    const minViewportForColumns = 640
+
+    // When working with columns, width is driven by what percentage of space
+    // the column takes in relation to the total number of columns
+    const columnPercentage = weight / width
+
+    return {
+      // Flex determines how much space is allocated to this column.
+      flex: weight,
+      width,
+      [`@media (max-width: ${minViewportForColumns}px)`]: {
+        minWidth: `${columnPercentage > 0.5 ? "min" : "max"}(
+      ${columnPercentage * 100}% - ${stylingVariables.gutter},
+      ${columnPercentage * minViewportForColumns}px
+    )`,
+      },
+    }
+  }
+)
 
 class Block extends PureComponent<Props> {
   private WithExpandableBlock = withExpandable(Block)
@@ -185,27 +190,39 @@ class Block extends PureComponent<Props> {
           ...deltaBlock.expandable,
         }
       : {}
-    const style: any = { width }
-    const StyledDiv =
-      deltaBlock.column && deltaBlock.column.weight
-        ? StyledColumn(deltaBlock.column.weight, width)
-        : StyledBlock
+
+    const child = (
+      <BlockType
+        elements={element}
+        reportId={this.props.reportId}
+        reportRunState={this.props.reportRunState}
+        showStaleElementIndicator={this.props.showStaleElementIndicator}
+        widgetMgr={this.props.widgetMgr}
+        uploadClient={this.props.uploadClient}
+        widgetsDisabled={this.props.widgetsDisabled}
+        componentRegistry={this.props.componentRegistry}
+        deltaBlock={deltaBlock}
+        {...optionalProps}
+      />
+    )
+
+    if (deltaBlock.column && deltaBlock.column.weight) {
+      return (
+        <StyledColumn
+          key={index}
+          className="stBlock"
+          weight={deltaBlock.column.weight}
+          width={width}
+        >
+          {child}
+        </StyledColumn>
+      )
+    }
 
     return (
-      <StyledDiv key={index} className="stBlock" style={style}>
-        <BlockType
-          elements={element}
-          reportId={this.props.reportId}
-          reportRunState={this.props.reportRunState}
-          showStaleElementIndicator={this.props.showStaleElementIndicator}
-          widgetMgr={this.props.widgetMgr}
-          uploadClient={this.props.uploadClient}
-          widgetsDisabled={this.props.widgetsDisabled}
-          componentRegistry={this.props.componentRegistry}
-          deltaBlock={deltaBlock}
-          {...optionalProps}
-        />
-      </StyledDiv>
+      <div key={index} className="stBlock" style={{ width }}>
+        {child}
+      </div>
     )
   }
 
