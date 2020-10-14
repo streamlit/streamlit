@@ -197,6 +197,10 @@ workflows:
           filters:
             tags:
               only: /^([0-9]+\.){3}dev[0-9]+/
+      - pr-preview: # Make a preview branch for each PR
+          filters:
+            tags:
+              only: /^([0-9]+\.){3}dev[0-9]+/
       - nightly-release:
           requires:
             - python-3-6
@@ -476,6 +480,68 @@ jobs:
       - slack/status:
           fail_only: true
           failure_message: ":blobonfire: Nightly job failed to release"
+
+  pr-preview:
+    docker:
+      - image: circleci/python:3.8.1
+
+    resource_class: medium+
+
+    working_directory: ~/repo
+
+    steps:
+      - add_ssh_keys:
+          name: Add the read/write Github deploy key
+          fingerprints:
+            - "1e:a1:89:9c:71:50:c7:1c:48:16:1b:26:52:91:4e:93"
+
+      - checkout:
+          name: Checkout Streamlit code
+
+      - update-submodules
+
+      - pre-cache
+      - restore-from-cache
+      - pre-make
+      - make-init
+
+      - run:
+          <<: *make_scss_vars
+
+      - run:
+          name: create packages
+          no_output_timeout: 2h
+          command: |
+            ${SUDO} apt-get install rsync
+            make package
+
+      - run:
+          name: Setup preview repo
+          command: |
+            cd lib/dist
+            export WHEELFILE="$(ls -t *.whl | head -n 1)"
+            cd ../..
+
+            git config --global user.email "austin@streamlit.io"
+            git config --global user.name "CircleCI"
+            git clone git@github.com:akrolsmir/preview-builds.git
+
+            cd preview-builds
+            export PREVIEW_BRANCH="pr-${CIRCLE_PR_NUMBER}"
+            git branch -D ${PREVIEW_BRANCH} &>/dev/null || true
+            git checkout -b ${PREVIEW_BRANCH}
+
+            cp ../lib/dist/${WHEELFILE} ./
+            echo -e "${WHEELFILE}" >> requirements.txt
+
+            git add .
+            git commit -m "Prepare per-PR preview: ${PREVIEW_BRANCH}"
+            git push -f origin ${PREVIEW_BRANCH}
+
+      - run:
+          name: Ready to deploy!
+          command: |
+            echo -e "https://share.streamlit.io/deploy?repository=akrolsmir/preview-builds&branch=pr-${CIRCLE_PR_NUMBER}&mainModule=streamlit_app.py"
 
   cypress:
     docker:
