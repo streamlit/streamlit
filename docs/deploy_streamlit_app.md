@@ -6,7 +6,7 @@ Of course, if you want to host your app using another hosting provider, go for i
 
 ## Get a Streamlit sharing account
 
-To get started, first request an invite at [streamlit.io/sharing](http://streamlit.io/sharing). Streamlit sharing is currently invitation-only while we ramp things up. We promise to get you one very quickly ❤️
+To get started, first request an invite at [streamlit.io/sharing](http://streamlit.io/sharing). Streamlit sharing is currently available by invitation only while we ramp things up. We promise to get you one very quickly ❤️
 
 Once you have your invite you're ready to deploy! It's really straightforward, just follow the next few steps.
 
@@ -56,7 +56,7 @@ for example:
 http://share.streamlit.io/streamlit/demo-self-driving/master/streamlit_app.py
 ```
 
-Also for your URL, the branch and app path are not required, if there's only one matching app in that repo. So for the above example, you could also use the shortened URL: [http://share.streamlit.io/streamlit/demo-self-driving](http://share.streamlit.io/streamlit/demo-self-driving)
+Most times, your app is also given a shortened URL of the form `https://share.streamlit.io/[user name]/[repo name]`. The only time you need the full URL is when you deployed multiple apps from the same repo. So you can also reach the example URL above at the short URL [http://share.streamlit.io/streamlit/demo-self-driving](http://share.streamlit.io/streamlit/demo-self-driving).
 
 ## Share, update, and collaborate
 
@@ -92,7 +92,7 @@ Streamlit sharing is completely free and is meant to get you started with sharin
 ### Resource limits
 
 - You can deploy up to 3 apps per account.
-- Apps get up to 1 CPU, 800 MB of RAM, and 10 GB of dedicated storage in a shared execution environment.
+- Apps get up to 1 CPU, 800 MB of RAM, and 800 MB of dedicated storage in a shared execution environment.
 - Apps do not have access to a GPU.
 - If you have a special good-for-the-world case that needs more resources, [send us an email](mailto:product@streamlit.io) and we'll see about making an exception!
 
@@ -108,7 +108,7 @@ When you first log into [share.streamlit.io](http://s4a.streamlit.io) you will l
 
 ### Reboot an app
 
-If your app needs a hard reboot, just click on the "︙" overflow menu to the right of the app and click to Reboot. This will interrupt any user that may currently be using that app. It may also take a few minutes for your app to re-deploy, and in that time you - and anyone visiting the app - will see the 'Your app is in the oven' screen.
+If your app needs a hard reboot, just click on the "︙" overflow menu to the right of the app and click to Reboot. This will interrupt any user that may currently be using that app. It may also take a few minutes for your app to re-deploy, and in that time you — and anyone visiting the app — will see the 'Your app is in the oven' screen.
 
 <img src="_static/img/streamlit_share_reboot.png" alt="Reboot Streamlit share" width="250" style='display: block; margin-left: auto; margin-right: auto;' />
 
@@ -141,7 +141,8 @@ Here are some limitations and known issues that we're actively working to resolv
 - **If you're having trouble logging in,** check your Streamlit sharing invitation email and make sure you signed up using your Primary Github email, which you can find [here](https://github.com/settings/emails).
 - When you print something to the terminal, you may need to do a `sys.stdout.flush()` before it shows up.
 - Apps execute in a Linux environment running Debian Buster (slim) with Python 3.7. There is no way to change these, and we may upgrade the environment at any point. If we do upgrade it, we will _usually_ not touch existing apps, so they'll continue to work as expected. But if there's a critical fix in the update, we _may_ force-upgrade all apps.
-- Matplotlib doesn't work well with threads. So if you're using Matplotlib you should wrap your code with locks as shown in the snippet below. This Matplotlib bug is more prominent when you share your app apps since you're more likely to get more concurrent users then.
+- Matplotlib [doesn't work well with threads.](https://matplotlib.org/3.3.2/faq/howto_faq.html#working-with-threads)
+  . So if you're using Matplotlib you should wrap your code with locks as shown in the snippet below. This Matplotlib bug is more prominent when you share your app apps since you're more likely to get more concurrent users then.
 
   ```python
   from matplotlib.backends.backend_agg import RendererAgg

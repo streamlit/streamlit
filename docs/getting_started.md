@@ -263,9 +263,9 @@ After you’ve built a Streamlit app, it's time to share it! To show it off to t
 
 It works in 3 simple steps:
 
-1. ✏️ Put your app in a public Github repo (and make sure to have a requirements.txt!)
-2. 👣 Sign into [share.streamlit.io](https://share.streamlit.io)
-3. 🏄‍♀️ Click 'Deploy an app' and then paste in your GitHub URL
+1. Put your app in a public Github repo (and make sure it has a requirements.txt!)
+2. Sign into [share.streamlit.io](https://share.streamlit.io)
+3. Click 'Deploy an app' and then paste in your GitHub URL
 
 That's it! **🎈**You now have a publicly deployed app that you can share with the world. Click to learn more about [how to use Streamlit sharing](deploy_streamlit_app.md). If you're looking for private sharing for your team, check out [Streamlit for Teams](https://www.streamlit.io/for-teams).
 
