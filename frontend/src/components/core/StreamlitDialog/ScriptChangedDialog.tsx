@@ -34,6 +34,7 @@ export interface Props {
    * @param alwaysRerun if true, also change the run-on-save setting for this report
    */
   onRerun: (alwaysRerun: boolean) => void
+  allowRunOnSave: boolean
 }
 
 export class ScriptChangedDialog extends PureComponent<Props> {
@@ -63,9 +64,11 @@ export class ScriptChangedDialog extends PureComponent<Props> {
             <div>The source files for this app have changed on disk.</div>
           </ModalBody>
           <ModalFooter>
-            <ModalButton kind={Kind.SECONDARY} onClick={this.alwaysRerun}>
-              <span className="underlineFirstLetter">Always rerun</span>
-            </ModalButton>
+            {this.props.allowRunOnSave ? (
+              <ModalButton kind={Kind.SECONDARY} onClick={this.alwaysRerun}>
+                <span className="underlineFirstLetter">Always rerun</span>
+              </ModalButton>
+            ) : null}
             <ModalButton kind={Kind.PRIMARY} onClick={this.rerun}>
               <span className="underlineFirstLetter">Rerun</span>
             </ModalButton>

@@ -58,6 +58,9 @@ export interface StatusWidgetProps {
 
   /** Function called when the user chooses to stop the running report. */
   stopReport: () => void
+
+  /** Allows users to change user settings to allow rerun on save */
+  allowRunOnSave: boolean
 }
 
 /** Component state */
@@ -347,11 +350,12 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
               this.handleRerunClick
             )}
 
-            {StatusWidget.promptButton(
-              <div className="underlineFirstLetter">Always rerun</div>,
-              rerunRequested,
-              this.handleAlwaysRerunClick
-            )}
+            {this.props.allowRunOnSave &&
+              StatusWidget.promptButton(
+                <div className="underlineFirstLetter">Always rerun</div>,
+                rerunRequested,
+                this.handleAlwaysRerunClick
+              )}
           </div>
         </div>
       </HotKeys>
@@ -376,7 +380,9 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
   }
 
   private handleAlwaysRerunClick = (): void => {
-    this.props.rerunReport(true)
+    if (this.props.allowRunOnSave) {
+      this.props.rerunReport(true)
+    }
   }
 
   private static promptButton(

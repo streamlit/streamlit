@@ -30,6 +30,7 @@ export interface Props {
   onClose: () => void
   onSave: (settings: UserSettings) => void
   settings: UserSettings
+  allowRunOnSave: boolean
 }
 
 /**
@@ -53,17 +54,23 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
       <Modal isOpen onClose={this.handleCancelButtonClick}>
         <ModalHeader>Settings</ModalHeader>
         <ModalBody>
-          <label>
-            <input
-              disabled={!this.props.isServerConnected}
-              type="checkbox"
-              name="runOnSave"
-              checked={this.state.runOnSave && this.props.isServerConnected}
-              onChange={this.handleCheckboxChange}
-            />{" "}
-            Run on save
-          </label>
-          <br />
+          {this.props.allowRunOnSave ? (
+            <>
+              <label>
+                <input
+                  disabled={!this.props.isServerConnected}
+                  type="checkbox"
+                  name="runOnSave"
+                  checked={
+                    this.state.runOnSave && this.props.isServerConnected
+                  }
+                  onChange={this.handleCheckboxChange}
+                />{" "}
+                Run on save
+              </label>
+              <br />
+            </>
+          ) : null}
           <label>
             <input
               type="checkbox"
