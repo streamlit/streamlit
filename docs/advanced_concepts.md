@@ -6,8 +6,8 @@ report, and adding animations.
 
 ```eval_rst
 .. note::
-   We're adding these sections as quickly as we can, but please let us know
-   what's important to you. Ping us in the `community forum
+   Have something to add? Please let us know
+   what's important to you! Ping us in the `community forum
    <https://discuss.streamlit.io/>`_.
 ```
 
@@ -89,4 +89,16 @@ data2 = np.random.randn(10, 2)
 
 # Append the new data to the existing chart.
 chart.add_rows(data2)
+```
+
+## Record a screencast
+
+After you've built a Streamlit app, you may want to discuss some of it with co-workers over email or Slack, or share it with the world on Twitter. A great way to do that is with Streamlit's built-in screencast recorder. With it, you can record, narrate, stop, save, and share with a few clicks.
+
+To start a screencast, locate the menu in the upper right corner of your app (**☰**), select **Record a screencast**, and follow the prompts. Before the recording starts, you'll see a countdown — this means it's showtime.
+
+To stop your screencast, go back to the menu (**☰**) and select **Stop recording** (or hit the **ESC** key). Follow the prompts to preview your recording and save it to disk. That's it, you're ready to share your Streamlit app.
+
+```eval_rst
+.. image:: ./media/screenshare.gif
 ```
