@@ -247,6 +247,7 @@ function MainMenu(props: Props): ReactElement {
   const preferredMenuOrder: any[] = [
     coreMenuOptions.rerun,
     showClearCache && coreMenuOptions.clearCache,
+    shouldShowS4AMenu && coreMenuOptions.settings,
     coreMenuOptions.DIVIDER,
     showDeploy && coreMenuOptions.deployApp,
     showSnapshot && coreMenuOptions.saveSnapshot,
