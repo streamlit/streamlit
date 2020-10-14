@@ -55,8 +55,9 @@ import "./Block.scss"
 const Audio = React.lazy(() => import("components/elements/Audio/"))
 const Balloons = React.lazy(() => import("components/elements/Balloons/"))
 
-// BokehChart render function for is slow. If the component is not debounced,
-// AutoSizer causes it to rerender multiple times, which may signifantly slow the app.
+// BokehChart render function is sluggish. If the component is not debounced,
+// AutoSizer causes it to rerender multiple times for different widths
+// when the sidebar is toggled, which significantly slows down the app.
 const BokehChart = React.lazy(() => import("components/elements/BokehChart/"))
 const DebouncedBokehChart = debounceRender(BokehChart, 100)
 
