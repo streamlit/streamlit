@@ -236,6 +236,15 @@ type TypedArray =
 
 /** True if the value is a TypedArray. */
 function isTypedArray(value: any): value is TypedArray {
+  let isBigIntArray = false;
+  try {
+    isBigIntArray =
+      value instanceof BigInt64Array || value instanceof BigUint64Array;
+  } catch (e) {
+    // Ignore cause Safari does not support this
+    // https://caniuse.com/mdn-javascript_builtins_bigint64array
+  }
+
   return (
     value instanceof Int8Array ||
     value instanceof Uint8Array ||
@@ -246,7 +255,6 @@ function isTypedArray(value: any): value is TypedArray {
     value instanceof Uint32Array ||
     value instanceof Float32Array ||
     value instanceof Float64Array ||
-    value instanceof BigInt64Array ||
-    value instanceof BigUint64Array
+    isBigIntArray
   );
 }

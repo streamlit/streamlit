@@ -90,6 +90,7 @@ describe("App", () => {
       .map(item => item.label)
     expect(menuLabels).toEqual([
       "Rerun",
+      "Settings",
       "Record a screencast",
       "Share this app",
       "View app source",

@@ -370,6 +370,8 @@ class ReportSession(object):
 
         imsg.config.mapbox_token = config.get_option("mapbox.token")
 
+        imsg.config.allow_run_on_save = config.get_option("server.allowRunOnSave")
+
         LOGGER.debug(
             "New browser connection: "
             "gather_usage_stats=%s, "
