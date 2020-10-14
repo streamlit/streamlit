@@ -1,33 +1,34 @@
 ```eval_rst
 .. toctree::
-   :caption: Package Documentation
+   :caption: Tutorials
    :maxdepth: 2
    :hidden:
 
    getting_started
-   main_concepts
-
-   tutorial/index
-   caching
-   advanced_caching
-   advanced_concepts
-
-   api
-   streamlit_configuration
+   tutorial/create_a_data_explorer_app
+   streamlit_components
+   Self-driving car image browser <https://github.com/streamlit/demo-self-driving>
 
 .. toctree::
-  :caption: Streamlit Components
-  :titlesonly:
-  :hidden:
-
-  Overview <streamlit_components>
-
-.. toctree::
+  :caption: Topic Guides
   :maxdepth: 2
   :hidden:
 
+  installation
+  main_concepts
+  deploy_streamlit_app
+  caching
+  advanced_concepts
+  publish_streamlit_components
+
+.. toctree::
+  :caption: Reference Guides
+  :maxdepth: 2
+  :hidden:
+
+  api
+  streamlit_configuration
   develop_streamlit_components
-  Publish Component to PyPI <publish_streamlit_components>
 
 .. toctree::
   :caption: Support
@@ -39,89 +40,49 @@
   Frequently Asked Questions <streamlit_faq>
   changelog
   Source code & issue tracker <https://github.com/streamlit/streamlit/>
-
 ```
 
 # Welcome to Streamlit
 
-[Streamlit](https://streamlit.io) is an open-source Python library that makes it
-easy to build beautiful custom web-apps for machine learning and data science.
+[Streamlit](https://streamlit.io/) is an open-source Python library that makes it easy to create and share beautiful, custom web apps for machine learning and data science.
+In just a few minutes you can build and deploy powerful data apps - so let's get started!
 
-To use it, run `pip install streamlit` from a terminal, then import it in Python, write a couple lines
-of code, and run your script with `streamlit run [filename]`. Streamlit watches
-for changes on each save and updates the app live while you're coding. Code
-runs from top to bottom, always from a clean state, and with no need for
-callbacks. It's a simple and powerful app model that lets you build rich UIs
-incredibly quickly. To learn more about how Streamlit works, see [Main
-concepts](main_concepts.md).
+1. Make sure that you have [Python 3.6](https://www.python.org/downloads/) or greater installed.
+2. Install Streamlit using [PIP](https://pip.pypa.io/en/stable/installing/) and run the 'hello world' app:
 
-You may also want to check out [this four-part
-video](https://www.youtube.com/watch?v=R2nr1uZ8ffc&list=PLgkF0qak9G49QlteBtxUIPapT8TzfPuB8)
-recorded at our PyData talk on December 2019. In it we describe the motivation
-behind Streamlit, then go over how to install and create apps with it.
-
-## Install Streamlit
-
-```eval_rst
-.. raw:: html
-
-  <div class='embed-container'><iframe
-    width="560"
-    height="315"
-    src="https://www.youtube.com/embed/sxLNCDnqyFc"
-    style="margin: 0 0 2rem 0;"
-    frameborder="0"
-    allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
-    allowfullscreen>
-  </iframe></div>
-```
-
-Follow these steps and to get a sample app running in less than 5 minutes.
-
-1. Make sure that you have [Python 3.6](https://www.python.org/downloads/) or greater installed.
-1. Install Streamlit using [PIP](https://pip.pypa.io/en/stable/installing/):
-
-   ```bash
+   ```shell
    pip install streamlit
+   streamlit hello`
    ```
 
-1. Run the hello world app:
+3. That's it! In the next few seconds the sample app will open in a new tab in your default browser.
 
-   ```bash
-   streamlit hello
-   ```
+Still with us? Great! Now make your own app in just 3 more steps:
 
-1. That's it! In the next few seconds the sample app will open in a new tab in
-   your default browser.
+1. Open a new Python file, import Streamlit, and write some code
 
-## Get started
+2. Run the file with:
 
-The easiest way to learn how to use Streamlit is to actually try it out. Our
-[get started guide](getting_started.md) walks you through the basics
-of building a Streamlit app.
+   `streamlit run [filename]`
 
-## Build your first app
+3. When you're ready, click 'Deploy' from the Streamlit menu to [share your app with the world](deploy_streamlit_app.md)!
 
-```eval_rst
-.. raw:: html
+Now that you're set up, let's dive into more of how Streamlit works and how to build great apps.
 
-  <div class='embed-container'><iframe
-    width="560"
-    height="315"
-    src="https://www.youtube.com/embed/VtrFjkSGgKM"
-    style="margin: 0 0 2rem 0;"
-    frameborder="0"
-    allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
-    allowfullscreen>
-  </iframe></div>
-```
+## How to use our docs
 
-[Create an app](tutorial/create_a_data_explorer_app.md) to explore a dataset of
-Uber ride pickups in New York City. You'll learn about caching, drawing charts,
-plotting data on a map, and how to use interactive widgets.
+The docs are broken up into 5 sections that will help you get the most out of Streamlit.
 
-## Join the community
+- **Tutorials**: include our [Get Started](getting_started.md) guide and a few step-by-step examples to building different types of apps in Streamlit.
 
-The quickest way to get help is to reach out on our [community
-forum](https://discuss.streamlit.io/). We love to hear our users' questions,
-ideas, and bugs — please share!
+- **Topic guides**: give you background on how different parts of Streamlit work. Make sure to check out the sections on [Creating an app](main_concepts.md) and [Deploying an app](deploy_streamlit_app.md), and for you advanced users who want to level up your apps, be sure to read up on [Caching](caching.md) and [Components](develop_streamlit_components.md).
+
+- **Cookbook**: provides short code snippets that you can copy in for specific use cases.
+
+- **Reference guides**: are the bread and butter of how our [APIs](api.md) and [configuration files](streamlit_configuration.md) work and will give you short, actionable explanations of specific functions and features.
+
+- **Support**: gives you more options for when you're stuck or want to talk about an idea. Check out our discussion forum as well as a number of [troubleshooting guides](/troubleshooting/index.md).
+
+## **Join the community**
+
+Streamlit is more than just a way to make data apps, it's also a community of creators that share their apps and ideas and help each other make their work better. Please come join us on the [community forum](https://discuss.streamlit.io/). We love to hear your questions, ideas, and help you work through your bugs — stop by today!

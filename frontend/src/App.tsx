@@ -58,6 +58,7 @@ import {
   ISessionState,
   Initialize,
   NewReport,
+  IDeployParams,
   PageConfig,
   PageInfo,
   SessionEvent,
@@ -103,6 +104,8 @@ interface State {
   sharingEnabled?: boolean
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
+  allowRunOnSave: boolean
+  deployParams?: IDeployParams | null
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -111,6 +114,7 @@ const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
 declare global {
   interface Window {
     streamlitDebug: any
+    streamlitShareMetadata: Record<string, unknown>
   }
 }
 
@@ -156,6 +160,8 @@ export class App extends PureComponent<Props, State> {
       },
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
+      allowRunOnSave: true,
+      deployParams: null,
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -427,6 +433,7 @@ export class App extends PureComponent<Props, State> {
 
     this.setState({
       sharingEnabled: Boolean(config.sharingEnabled),
+      allowRunOnSave: Boolean(config.allowRunOnSave),
     })
 
     this.props.s4aCommunication.connect()
@@ -516,6 +523,7 @@ export class App extends PureComponent<Props, State> {
         type: DialogType.SCRIPT_CHANGED,
         onRerun: this.rerunScript,
         onClose: () => {},
+        allowRunOnSave: this.state.allowRunOnSave,
       }
       this.openDialog(newDialog)
     }
@@ -527,7 +535,12 @@ export class App extends PureComponent<Props, State> {
    */
   handleNewReport = (newReportProto: NewReport): void => {
     const { reportHash } = this.state
-    const { id: reportId, name: reportName, scriptPath } = newReportProto
+    const {
+      id: reportId,
+      name: reportName,
+      scriptPath,
+      deployParams,
+    } = newReportProto
 
     const newReportHash = hashString(
       SessionInfo.current.installationId + scriptPath
@@ -545,9 +558,10 @@ export class App extends PureComponent<Props, State> {
     if (reportHash === newReportHash) {
       this.setState({
         reportId,
+        deployParams,
       })
     } else {
-      this.clearAppState(newReportHash, reportId, reportName)
+      this.clearAppState(newReportHash, reportId, reportName, deployParams)
     }
   }
 
@@ -630,13 +644,15 @@ export class App extends PureComponent<Props, State> {
   clearAppState(
     reportHash: string,
     reportId: string,
-    reportName: string
+    reportName: string,
+    deployParams?: IDeployParams | null
   ): void {
     this.setState(
       {
         reportId,
         reportName,
         reportHash,
+        deployParams,
         elements: {
           main: fromJS([]),
           sidebar: fromJS([]),
@@ -914,6 +930,7 @@ export class App extends PureComponent<Props, State> {
       type: DialogType.SETTINGS,
       isServerConnected: this.isServerConnected(),
       settings: this.state.userSettings,
+      allowRunOnSave: this.state.allowRunOnSave,
       onSave: this.saveSettings,
       onClose: () => {},
     }
@@ -974,6 +991,7 @@ export class App extends PureComponent<Props, State> {
                 reportRunState={this.state.reportRunState}
                 rerunReport={this.rerunScript}
                 stopReport={this.stopReport}
+                allowRunOnSave={this.state.allowRunOnSave}
               />
               <MainMenu
                 sharingEnabled={this.state.sharingEnabled === true}
@@ -987,6 +1005,7 @@ export class App extends PureComponent<Props, State> {
                 screenCastState={this.props.screenCast.currentState}
                 s4aMenuItems={this.props.s4aCommunication.currentState.items}
                 sendS4AMessage={this.props.s4aCommunication.sendMessage}
+                deployParams={this.state.deployParams}
               />
             </div>
           </header>

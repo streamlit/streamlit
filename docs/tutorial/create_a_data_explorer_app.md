@@ -1,4 +1,4 @@
-# Tutorial: Create a data explorer app
+# Create a data explorer app
 
 If you've made it this far, chances are you've
 [installed Streamlit](https://docs.streamlit.io/en/latest/#install-streamlit) and
@@ -143,8 +143,8 @@ true. What are the limitations of all this awesomesauce?"
 Well, there are a few:
 
 1. Streamlit will only check for changes within the current working directory.
-   This means that Streamlit only detects code updates inside installed Python
-   libraries.
+   If you upgrade a Python library, Streamlit's cache will only notice this if
+   that library is installed inside your working directory.
 2. If your function is not deterministic (that is, its output depends on random
    numbers), or if it pulls data from an external time-varying source (for
    example, a live stock market ticker service) the cached value will be

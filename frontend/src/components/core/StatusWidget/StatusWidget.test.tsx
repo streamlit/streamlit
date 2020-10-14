@@ -32,6 +32,7 @@ const getProps = (
   reportRunState: ReportRunState.RUNNING,
   rerunReport: (alwaysRerun: boolean) => {},
   stopReport: () => {},
+  allowRunOnSave: true,
   ...propOverrides,
 })
 
@@ -194,5 +195,31 @@ describe("Tooltip element", () => {
       .at(1)
       .simulate("click")
     expect(rerunReport).toBeCalledWith(true)
+  })
+
+  it("does not show the always rerun button when report changes", () => {
+    const sessionEventDispatcher = new SessionEventDispatcher()
+    const rerunReport = jest.fn()
+
+    const wrapper = shallow<StatusWidget>(
+      <StatusWidget
+        {...getProps({
+          rerunReport,
+          sessionEventDispatcher,
+          reportRunState: ReportRunState.NOT_RUNNING,
+          allowRunOnSave: false,
+        })}
+      />
+    )
+
+    sessionEventDispatcher.handleSessionEventMsg(
+      new SessionEvent({
+        reportChangedOnDisk: true,
+        reportWasManuallyStopped: null,
+        scriptCompilationException: null,
+      })
+    )
+
+    expect(wrapper.find("Button").length).toEqual(1)
   })
 })

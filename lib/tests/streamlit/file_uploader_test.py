@@ -36,22 +36,22 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         st.file_uploader("the label", type="png")
 
         c = self.get_delta_from_queue().new_element.file_uploader
-        self.assertEqual(c.type, ["png"])
+        self.assertEqual(c.type, [".png"])
 
     def test_multiple_types(self):
         """Test that it can be called using an array for type parameter."""
-        st.file_uploader("the label", type=["png", "svg", "jpeg"])
+        st.file_uploader("the label", type=["png", ".svg", "jpeg"])
 
         c = self.get_delta_from_queue().new_element.file_uploader
-        self.assertEqual(c.type, ["png", "svg", "jpeg"])
+        self.assertEqual(c.type, [".png", ".svg", ".jpeg"])
 
-    # Don't test this yet! Feature was not released. Remove "x" from name to
-    # turn this back on.
-    @patch("streamlit.UploadedFileManager.UploadedFileManager.get_files")
-    def xtest_multiple_files(self, get_files_patch):
+    @patch("streamlit.uploaded_file_manager.UploadedFileManager.get_files")
+    def test_multiple_files(self, get_files_patch):
         """Test the accept_multiple_files flag"""
-        files = [UploadedFile("file1", b"123"), UploadedFile("file2", b"456")]
-        file_vals = [get_encoded_file_data(file.data).getvalue() for file in files]
+        files = [
+            UploadedFile("id1", "file1", "type", b"123"),
+            UploadedFile("id2", "file2", "type", b"456"),
+        ]
 
         get_files_patch.return_value = files
 
@@ -65,9 +65,9 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
             # If "accept_multiple_files" is True, then we should get a list of values
             # back. Otherwise, we should just get a single value.
             if accept_multiple:
-                self.assertEqual(file_vals, [val.getvalue() for val in return_val])
+                self.assertEqual(files, return_val)
             else:
-                self.assertEqual(file_vals[0], return_val.getvalue())
+                self.assertEqual(files[0], return_val)
 
     def test_max_upload_size_mb(self):
         """Test that the max upload size is the configuration value."""

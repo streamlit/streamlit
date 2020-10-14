@@ -161,18 +161,13 @@ class AltairMixin:
 
         return dg._enqueue("bar_chart", vega_lite_chart_proto, last_index=last_index)  # type: ignore
 
-    def altair_chart(dg, altair_chart, width=0, use_container_width=False):
+    def altair_chart(dg, altair_chart, use_container_width=False):
         """Display a chart using the Altair library.
 
         Parameters
         ----------
         altair_chart : altair.vegalite.v2.api.Chart
             The Altair chart object to display.
-
-        width : number
-            Deprecated. If != 0 (default), will show an alert.
-            From now on you should set the width directly in the Altair
-            spec. Please refer to the Altair documentation for details.
 
         use_container_width : bool
             If True, set the chart width to the column width. This takes
@@ -203,13 +198,6 @@ class AltairMixin:
 
         """
         vega_lite_chart_proto = VegaLiteChartProto()
-
-        if width != 0:
-            import streamlit as st
-
-            st.warning(
-                "The `width` argument in `st.vega_lite_chart` is deprecated and will be removed on 2020-03-04. To set the width, you should instead use altair's native `width` argument as described at https://altair-viz.github.io/user_guide/generated/toplevel/altair.Chart.html"
-            )
 
         marshall(
             vega_lite_chart_proto,

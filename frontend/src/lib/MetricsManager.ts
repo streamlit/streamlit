@@ -15,10 +15,13 @@
  * limitations under the License.
  */
 
+import { pick } from "lodash"
+
 import { SessionInfo } from "lib/SessionInfo"
 import { initializeSegment } from "vendor/Segment"
 import { IS_DEV_ENV, IS_SHARED_REPORT } from "./baseconsts"
 import { logAlways } from "./log"
+import { isInChildFrame } from "./utils"
 
 /**
  * The analytics is the Segment.io object. It is initialized in Segment.ts
@@ -98,14 +101,16 @@ export class MetricsManager {
       // Segment will not initialize if this is rendered with SSR
       initializeSegment()
 
+      const userTraits: any = {
+        ...MetricsManager.getInstallationData(),
+        ...MetricsManager.getHostTrackingData(),
+      }
+
       // Only record the user's email if they entered a non-empty one.
-      const userTraits: any = {}
       if (SessionInfo.current.authorEmail !== "") {
         userTraits.authoremail = SessionInfo.current.authorEmail
       }
 
-      userTraits.machineIdV1 = SessionInfo.current.installationIdV1
-      userTraits.machineIdV2 = SessionInfo.current.installationIdV2
       this.identify(SessionInfo.current.installationId, userTraits)
       this.sendPendingEvents()
     }
@@ -173,6 +178,8 @@ export class MetricsManager {
   private send(evName: string, evData: Record<string, unknown> = {}): void {
     const data = {
       ...evData,
+      ...MetricsManager.getHostTrackingData(),
+      ...MetricsManager.getInstallationData(),
       reportHash: this.reportHash,
       dev: IS_DEV_ENV,
       source: "browser",
@@ -209,5 +216,28 @@ export class MetricsManager {
   // eslint-disable-next-line class-methods-use-this
   private track(evName: string, data: Record<string, unknown>): void {
     analytics.track(evName, data)
+  }
+
+  // Get the installation IDs from the session
+  private static getInstallationData(): Record<string, unknown> {
+    return {
+      machineIdV1: SessionInfo.current.installationIdV1,
+      machineIdV2: SessionInfo.current.installationIdV2,
+    }
+  }
+
+  // Use the tracking data injected by S4A if the app is hosted there
+  private static getHostTrackingData(): Record<string, unknown> {
+    if (isInChildFrame() && window.parent.streamlitShareMetadata) {
+      return pick(window.parent.streamlitShareMetadata, [
+        "hostedAt",
+        "owner",
+        "repo",
+        "branch",
+        "mainModule",
+        "creatorId",
+      ])
+    }
+    return {}
   }
 }

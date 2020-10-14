@@ -76,6 +76,8 @@ from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
 from streamlit.report_thread import add_report_ctx as _add_report_ctx
 from streamlit.report_thread import get_report_ctx as _get_report_ctx
 from streamlit.script_runner import StopException
+from streamlit.script_runner import RerunException as _RerunException
+from streamlit.script_request_queue import RerunData as _RerunData
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import BlockPath_pb2 as _BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
@@ -507,3 +509,17 @@ def stop():
 
     """
     raise StopException()
+
+
+def experimental_rerun():
+    """Rerun the script immediately.
+
+    When `st.experimental_rerun()` is called, the script is halted - no
+    more statements will be run, and the script will be queued to re-run
+    from the top.
+
+    If this function is called outside of Streamlit, it will raise an
+    Exception.
+    """
+
+    raise _RerunException(_RerunData(None))

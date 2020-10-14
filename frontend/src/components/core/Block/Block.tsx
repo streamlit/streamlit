@@ -18,6 +18,10 @@
 import React, { PureComponent, ReactNode, Suspense } from "react"
 import { AutoSizer } from "react-virtualized"
 import { List } from "immutable"
+import { styled, StyletronComponent } from "styletron-react"
+// @ts-ignore
+import debounceRender from "react-debounce-render"
+
 import { dispatchOneOf } from "lib/immutableProto"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
@@ -50,7 +54,13 @@ import "./Block.scss"
 // Lazy-load elements.
 const Audio = React.lazy(() => import("components/elements/Audio/"))
 const Balloons = React.lazy(() => import("components/elements/Balloons/"))
+
+// BokehChart render function is sluggish. If the component is not debounced,
+// AutoSizer causes it to rerender multiple times for different widths
+// when the sidebar is toggled, which significantly slows down the app.
 const BokehChart = React.lazy(() => import("components/elements/BokehChart/"))
+const DebouncedBokehChart = debounceRender(BokehChart, 100)
+
 const DataFrame = React.lazy(() => import("components/elements/DataFrame/"))
 const DeckGlJsonChart = React.lazy(() =>
   import("components/elements/DeckGlJsonChart/")
@@ -97,6 +107,38 @@ interface Props {
   componentRegistry: ComponentRegistry
   deltaBlock?: IBlock
 }
+
+interface StyledColumnProps {
+  weight: number
+  width: number
+  className: string
+}
+
+const StyledColumn: StyletronComponent<StyledColumnProps> = styled(
+  "div",
+  ({ weight, width }) => {
+    // The minimal viewport width used to determine the minimal
+    // fixed column width while accounting for column proportions.
+    // Randomly selected based on visual experimentation.
+    const minViewportForColumns = 640
+
+    // When working with columns, width is driven by what percentage of space
+    // the column takes in relation to the total number of columns
+    const columnPercentage = weight / width
+
+    return {
+      // Flex determines how much space is allocated to this column.
+      flex: weight,
+      width,
+      [`@media (max-width: ${minViewportForColumns}px)`]: {
+        minWidth: `${columnPercentage > 0.5 ? "min" : "max"}(
+      ${columnPercentage * 100}% - ${stylingVariables.gutter},
+      ${columnPercentage * minViewportForColumns}px
+    )`,
+      },
+    }
+  }
+)
 
 class Block extends PureComponent<Props> {
   private WithExpandableBlock = withExpandable(Block)
@@ -149,39 +191,38 @@ class Block extends PureComponent<Props> {
           ...deltaBlock.expandable,
         }
       : {}
-    let style: any = { width }
-    if (deltaBlock.column && deltaBlock.column.weight) {
-      // The minimal viewport width used to determine the minimal
-      // fixed column width while accounting for column proportions.
-      // Randomly selected based on visual experimentation.
-      const minViewportForColumns = 640
 
-      // When working with columns, width is driven by what percentage of space
-      // the column takes in relation to the total number of columns
-      const columnPercentage = deltaBlock.column.weight / width
-      const minColumnWidth = columnPercentage * minViewportForColumns
-      style = {
-        // Flex determines how much space is allocated to this column.
-        flex: deltaBlock.column.weight,
-        minWidth: `max(${columnPercentage * 100}% - ${
-          stylingVariables.gutter
-        }, ${minColumnWidth}px)`,
-      }
+    const child = (
+      <BlockType
+        elements={element}
+        reportId={this.props.reportId}
+        reportRunState={this.props.reportRunState}
+        showStaleElementIndicator={this.props.showStaleElementIndicator}
+        widgetMgr={this.props.widgetMgr}
+        uploadClient={this.props.uploadClient}
+        widgetsDisabled={this.props.widgetsDisabled}
+        componentRegistry={this.props.componentRegistry}
+        deltaBlock={deltaBlock}
+        {...optionalProps}
+      />
+    )
+
+    if (deltaBlock.column && deltaBlock.column.weight) {
+      return (
+        <StyledColumn
+          key={index}
+          className="stBlock"
+          weight={deltaBlock.column.weight}
+          width={width}
+        >
+          {child}
+        </StyledColumn>
+      )
     }
+
     return (
-      <div key={index} className="stBlock" style={style}>
-        <BlockType
-          elements={element}
-          reportId={this.props.reportId}
-          reportRunState={this.props.reportRunState}
-          showStaleElementIndicator={this.props.showStaleElementIndicator}
-          widgetMgr={this.props.widgetMgr}
-          uploadClient={this.props.uploadClient}
-          widgetsDisabled={this.props.widgetsDisabled}
-          componentRegistry={this.props.componentRegistry}
-          deltaBlock={deltaBlock}
-          {...optionalProps}
-        />
+      <div key={index} className="stBlock" style={{ width }}>
+        {child}
       </div>
     )
   }
@@ -297,7 +338,7 @@ class Block extends PureComponent<Props> {
         <Balloons reportId={this.props.reportId} />
       ),
       bokehChart: (el: SimpleElement) => (
-        <BokehChart element={el} index={index} width={width} />
+        <DebouncedBokehChart element={el} index={index} width={width} />
       ),
       dataFrame: (el: SimpleElement) => (
         <DataFrame element={el} width={width} height={height} />

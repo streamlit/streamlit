@@ -16,7 +16,7 @@
  */
 
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios"
-import { BaseUriParts } from "lib/UriUtil"
+import { buildHttpUri, BaseUriParts } from "lib/UriUtil"
 import { getCookie } from "lib/utils"
 
 /**
@@ -39,7 +39,16 @@ export default class HttpClient {
    * Wrapper around axios.request to update the request config with
    * CSRF headers if client has CSRF protection enabled.
    */
-  public request(params: AxiosRequestConfig): Promise<AxiosResponse> {
+  public request(
+    url: string,
+    params: AxiosRequestConfig
+  ): Promise<AxiosResponse> {
+    const serverURI = this.getServerUri()
+    if (serverURI === undefined) {
+      throw new Error("Cannot complete request: not connected to a server")
+    }
+    params.url = buildHttpUri(serverURI, url)
+
     if (this.csrfEnabled) {
       const xsrfCookie = getCookie("_xsrf")
       if (xsrfCookie != null) {
@@ -50,6 +59,7 @@ export default class HttpClient {
         params.withCredentials = true
       }
     }
+
     return axios.request(params)
   }
 }

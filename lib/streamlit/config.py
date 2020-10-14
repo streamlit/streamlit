@@ -471,6 +471,15 @@ def _server_run_on_save():
     return False
 
 
+@_create_option("server.allowRunOnSave", type_=bool, visibility="hidden")
+def _server_allow_run_on_save():
+    """Allows users to automatically rerun when app is updated.
+
+    Default: true
+    """
+    return True
+
+
 @_create_option("server.address")
 def _server_address():
     """The address where the server will listen for client and browser

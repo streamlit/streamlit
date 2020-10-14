@@ -1,4 +1,6 @@
-# Publish Streamlit Component to PyPI
+# Extend your app with Components
+
+## Publish to PyPI
 
 Publishing your Streamlit Component to [PyPI](https://pypi.org/) makes it easily accessible to Python users around the world. This step is completely optional, so if you won’t be releasing your component publicly, you can skip this section!
 
@@ -9,7 +11,7 @@ Publishing your Streamlit Component to [PyPI](https://pypi.org/) makes it easily
    `Bi-directional Streamlit Components </develop_streamlit_components.html#create-a-bi-directional-component>`_ at minimum include both Python and JavaScript code, and as such, need a bit more preparation before they can be published on PyPI. The remainder of this page focuses on the bi-directional Component preparation process.
 ```
 
-## Prepare your Component
+### Prepare your Component
 
 A bi-directional Streamlit Component varies slightly from a pure Python library in that it must contain pre-compiled frontend code. This is how base Streamlit works as well; when you `pip install streamlit`, you are getting a Python library where the HTML and frontend code contained within it have been compiled into static assets.
 
@@ -41,7 +43,7 @@ The [component-template](https://github.com/streamlit/component-template) GitHub
       component = components.declare_component("new_component_name", path=build_dir)
    ```
 
-## Build a Python wheel
+### Build a Python wheel
 
 Once you've changed the default `my_component` references, compiled the HTML and JavaScript code and set your new component name in `components.declare_component()`, you're ready to build a Python wheel:
 
@@ -55,7 +57,7 @@ Once you've changed the default `my_component` references, compiled the HTML and
     $ python setup.py sdist bdist_wheel
    ```
 
-## Upload your wheel to PyPI
+### Upload your wheel to PyPI
 
 With your wheel created, the final step is to upload to PyPI. The instructions here highlight how to upload to [Test PyPI](https://test.pypi.org/), so that you can learn the mechanics of the process without worrying about messing anything up. Uploading to PyPI follows the same basic procedure.
 

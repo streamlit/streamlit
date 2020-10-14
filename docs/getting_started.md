@@ -10,46 +10,9 @@ goal is to use Streamlit to create an interactive app for your data or model
 and along the way to use Streamlit to review, debug, perfect, and share your
 code.
 
-## Prerequisites
+## Create your first Streamlit app
 
-Before you get started, you're going to need a few things:
-
-- Your favorite IDE or text editor
-- [Python 3.6 or later](https://www.python.org/downloads/)
-- [PIP](https://pip.pypa.io/en/stable/installing/)
-
-If you haven't already, take a few minutes to read through [Main
-concepts](main_concepts.md) to understand Streamlit's data flow model.
-
-## Set up your virtual environment
-
-Regardless of which package management tool you're using, we recommend running
-these commands in a virtual environment. This ensures that the dependencies
-pulled in for Streamlit don't impact any other Python projects
-you're working on.
-
-- [pipenv](https://pipenv.pypa.io/en/latest/)
-- [poetry](https://python-poetry.org/)
-- [venv](https://docs.python.org/3/library/venv.html)
-- [virtualenv](https://virtualenv.pypa.io/en/latest/)
-- [conda](https://www.anaconda.com/distribution/)
-
-## Install Streamlit
-
-```bash
-pip install streamlit
-```
-
-Now run the hello world app to make sure everything is working:
-
-```bash
-streamlit hello
-```
-
-## Import Streamlit
-
-Now that everything's installed, let's create a new Python script and import
-Streamlit.
+First, we'll create a new Python script and import Streamlit.
 
 1. Create a new Python file named `first_app.py`, then open it with your IDE
    or text editor.
@@ -229,7 +192,7 @@ option = st.selectbox(
 'You selected: ', option
 ```
 
-### Put widgets in a sidebar
+## Lay out your app
 
 For a cleaner look, you can move your widgets into a sidebar. This keeps your
 app central, while widgets are pinned to the left. Let's take a look at how you
@@ -246,7 +209,20 @@ option = st.sidebar.selectbox(
 Most of the elements you can put into your app can also be put into a sidebar using this syntax:
 `st.sidebar.[element_name]()`. Here are a few examples that show how it's used: `st.sidebar.markdown()`, `st.sidebar.slider()`, `st.sidebar.line_chart()`.
 
-The only exceptions right now are `st.echo` and `st.spinner`. Rest
+You can also use [`st.beta_columns`](https://docs.streamlit.io/en/latest/api.html#streamlit.beta_columns) to lay out widgets side-by-side, or
+[`st.beta_expander`](https://docs.streamlit.io/en/latest/api.html#streamlit.beta_expander) to conserve space by hiding away large content.
+
+```python
+left_column, right_column = st.beta_columns(2)
+pressed = left_column.button('Press me?')
+if pressed:
+    right_column.write("Woohoo!")
+
+expander = st.beta_expander("FAQ")
+expander.write("Here you could put in some really, really long explanations...")
+```
+
+The only exceptions right now are [`st.echo`](https://docs.streamlit.io/en/latest/api.html#streamlit.echo) and [`st.spinner`](https://docs.streamlit.io/en/latest/api.html#streamlit.spinner). Rest
 assured, though, we're currently working on adding support for those too!
 
 ## Show progress
@@ -279,17 +255,19 @@ for i in range(100):
 '...and now we\'re done!'
 ```
 
-## Record a screencast
+## Share your app
 
-After you've built a Streamlit app, you may want to discuss some of it with co-workers over email or Slack, or share it with the world on Twitter. A great way to do that is with Streamlit's built-in screencast recorder. With it, you can record, narrate, stop, save, and share with a few clicks.
+After you’ve built a Streamlit app, it's time to share it! To show it off to the world you can use **Streamlit sharing** to deploy, manage, and share your app for free. Streamlit sharing is currently invitation only, so please [request an invite](https://www.streamlit.io/sharing) and we'll get you one soon!
 
-To start a screencast, locate the menu in the upper right corner of your app (**☰**), select **Record a screencast**, and follow the prompts. Before the recording starts, you'll see a countdown — this means it's showtime.
+<!-- [[we'll need to grab the gif after the video editors are done with it on Wednesday]] -->
 
-To stop your screencast, go back to the menu (**☰**) and select **Stop recording** (or hit the **ESC** key). Follow the prompts to preview your recording and save it to disk. That's it, you're ready to share your Streamlit app.
+It works in 3 simple steps:
 
-```eval_rst
-.. image:: ./media/screenshare.gif
-```
+1. Put your app in a public Github repo (and make sure it has a requirements.txt!)
+2. Sign into [share.streamlit.io](https://share.streamlit.io)
+3. Click 'Deploy an app' and then paste in your GitHub URL
+
+That's it! **🎈**You now have a publicly deployed app that you can share with the world. Click to learn more about [how to use Streamlit sharing](deploy_streamlit_app.md). If you're looking for private sharing for your team, check out [Streamlit for Teams](https://www.streamlit.io/for-teams).
 
 ## Get help
 
@@ -300,7 +278,7 @@ run into difficulties here are a few things you can do.
   question
 - Quick help from command line with `$ streamlit --help`
 - Read more documentation! Check out:
-  - [Tutorials](tutorial/index.md) to make an app
-  - [Advanced concepts](advanced_concepts.md) for things like caching and
+  <!-- - [Tutorials](tutorial/index.md) to make an app -->
+  - [Streamlit Cookbook](advanced_concepts.md) for things like caching and
     inserting elements out of order
   - [API reference](api.md) for examples of every Streamlit command

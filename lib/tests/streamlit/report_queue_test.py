@@ -27,6 +27,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 INIT_MSG = ForwardMsg()
 INIT_MSG.initialize.config.sharing_enabled = True
+INIT_MSG.initialize.config.allow_run_on_save = True
 
 TEXT_DELTA_MSG1 = ForwardMsg()
 TEXT_DELTA_MSG1.delta.new_element.text.body = "text1"
@@ -57,6 +58,7 @@ class ReportQueueTest(unittest.TestCase):
         self.assertTrue(rq.is_empty())
         self.assertEqual(len(queue), 1)
         self.assertTrue(queue[0].initialize.config.sharing_enabled)
+        self.assertTrue(queue[0].initialize.config.allow_run_on_save)
 
     def test_enqueue_two(self):
         rq = ReportQueue()

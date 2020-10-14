@@ -176,11 +176,6 @@ class DeltaGenerator(
         self._parent = parent
         self._block_type = block_type
 
-        # Stack of DGs used for the `with` block. The current one is at the end.
-        # NOTE: Only the main DG should ever reference this.
-        # You should use the computed property _active_dg instead.
-        self._with_dg_stack = [self]
-
         # Change the module of all mixin'ed functions to be st.delta_generator,
         # instead of the original module (e.g. st.elements.markdown)
         for mixin in self.__class__.__bases__:
@@ -190,11 +185,16 @@ class DeltaGenerator(
 
     def __enter__(self):
         # with block started
-        self._main_dg._with_dg_stack.append(self)
+        ctx = get_report_ctx()
+        if ctx:
+            ctx.dg_stack.append(self)
 
     def __exit__(self, type, value, traceback):
         # with block ended
-        self._main_dg._with_dg_stack.pop()
+        ctx = get_report_ctx()
+        if ctx:
+            ctx.dg_stack.pop()
+
         # Re-raise any exceptions
         return False
 
@@ -202,10 +202,12 @@ class DeltaGenerator(
     def _active_dg(self):
         if self == self._main_dg:
             # `st.button`: Use the current `with` dg (aka the top of the stack)
-            return self._with_dg_stack[-1]
-        else:
-            # `st.sidebar.button`: Ignore the `with` dg
-            return self
+            ctx = get_report_ctx()
+            if ctx and len(ctx.dg_stack) > 0:
+                return ctx.dg_stack[-1]
+
+        # `st.sidebar.button`: Ignore the `with` dg
+        return self
 
     @property
     def _main_dg(self):
@@ -391,7 +393,7 @@ class DeltaGenerator(
         >>> st.write("This is outside the container")
 
         .. output ::
-            https://share.streamlit.io/0.66.0-Wnid/index.html?id=Qj8PY3v3L8dgVjjQCreHux
+            https://static.streamlit.io/0.66.0-Wnid/index.html?id=Qj8PY3v3L8dgVjjQCreHux
             height: 420px
 
         Inserting elements out of order:
@@ -404,7 +406,7 @@ class DeltaGenerator(
         >>> container.write("This is inside too")
 
         .. output ::
-            https://share.streamlit.io/0.66.0-Wnid/index.html?id=GsFVF5QYT3Ljr6jQjErPqL
+            https://static.streamlit.io/0.66.0-Wnid/index.html?id=GsFVF5QYT3Ljr6jQjErPqL
         """
         return self._block()
 
@@ -418,6 +420,9 @@ class DeltaGenerator(
         To add elements to the returned containers, you can use "with" notation
         (preferred) or just call methods directly on the returned object. See
         examples below.
+
+        .. warning::
+            Currently, you may not put columns inside another column.
 
         Parameters
         ----------
@@ -460,7 +465,7 @@ class DeltaGenerator(
         ...    st.image("https://static.streamlit.io/examples/owl.jpg", use_column_width=True)
 
         .. output ::
-            https://share.streamlit.io/0.66.0-Wnid/index.html?id=VW45Va5XmSKed2ayzf7vYa
+            https://static.streamlit.io/0.66.0-Wnid/index.html?id=VW45Va5XmSKed2ayzf7vYa
             height: 550px
 
         Or you can just call methods directly in the returned objects:
@@ -475,14 +480,14 @@ class DeltaGenerator(
         >>> col2.write(data)
 
         .. output ::
-	        https://share.streamlit.io/0.66.0-Wnid/index.html?id=XSQ6VkonfGcT2AyNYMZN83
+            https://static.streamlit.io/0.66.0-Wnid/index.html?id=XSQ6VkonfGcT2AyNYMZN83
             height: 400px
 
         """
         weights = spec
         weights_exception = StreamlitAPIException(
             "The input argument to st.beta_columns must be either a "
-            + "positive integer or a list of numeric weights. "
+            + "positive integer or a list of positive numeric weights. "
             + "See [documentation](https://docs.streamlit.io/en/stable/api.html#streamlit.beta_columns) "
             + "for more information."
         )
@@ -564,6 +569,9 @@ class DeltaGenerator(
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
+        .. warning::
+            Currently, you may not put expanders inside another expander.
+
         Parameters
         ----------
         label : str
@@ -601,54 +609,6 @@ class DeltaGenerator(
         block_proto.expandable.CopyFrom(expandable_proto)
 
         return self._block(block_proto=block_proto)
-
-    def favicon(
-        self, element, image, clamp=False, channels="RGB", format="JPEG",
-    ):
-        """Set the page favicon to the specified image.
-
-        This supports the same parameters as `st.image`.
-
-        Note: This is a beta feature. See
-        https://docs.streamlit.io/en/latest/api.html#pre-release-features for more
-        information.
-
-        Parameters
-        ----------
-        image : numpy.ndarray, [numpy.ndarray], BytesIO, str, or [str]
-            Monochrome image of shape (w,h) or (w,h,1)
-            OR a color image of shape (w,h,3)
-            OR an RGBA image of shape (w,h,4)
-            OR a URL to fetch the image from
-        clamp : bool
-            Clamp image pixel values to a valid range ([0-255] per channel).
-            This is only meaningful for byte array images; the parameter is
-            ignored for image URLs. If this is not set, and an image has an
-            out-of-range value, an error will be thrown.
-        channels : 'RGB' or 'BGR'
-            If image is an nd.array, this parameter denotes the format used to
-            represent color information. Defaults to 'RGB', meaning
-            `image[:, :, 0]` is the red channel, `image[:, :, 1]` is green, and
-            `image[:, :, 2]` is blue. For images coming from libraries like
-            OpenCV you should set this to 'BGR', instead.
-        format : 'JPEG' or 'PNG'
-            This parameter specifies the image format to use when transferring
-            the image data. Defaults to 'JPEG'.
-
-        Example
-        -------
-        >>> from PIL import Image
-        >>> image = Image.open('sunrise.jpg')
-        >>>
-        >>> st.beta_set_favicon(image)
-
-        """
-        from .elements import image_proto
-
-        width = -1  # Always use full width for favicons
-        element.favicon.url = image_proto.image_to_url(
-            image, width, clamp, channels, format, image_id="favicon", allow_emoji=True
-        )
 
     def add_rows(self, data=None, **kwargs):
         """Concatenate a dataframe to the bottom of the current one.
