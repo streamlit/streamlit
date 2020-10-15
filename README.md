@@ -39,6 +39,18 @@ Streamlit's simple and focused API lets you build incredibly rich and powerful t
 
 The complete demo is implemented in less than 300 lines of Python. In fact, the app contains [only 23 Streamlit calls](https://github.com/streamlit/demo-self-driving/blob/master/app.py) which illustrates all the major building blocks of Streamlit. You can try it right now at [share.streamlit.io/streamlit/demo-self-driving](share.streamlit.io/streamlit/demo-self-driving).
 
+## The Streamlit GitHub badge
+Streamlit's GitHub badge helps others find and play with your Streamlit app. 
+
+<img src="https://static.streamlit.io/badges/streamlit_badge_black_white.svg"/>
+
+Once you deploy your app, you can embed this badge right into your GitHub readme.md as follows:
+
+```markdown
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)]
+(https://share.streamlit.io/yourGitHubName/yourRepo/yourApp/)
+```
+
 ## More Information
 
 - Our [launch post](https://towardsdatascience.com/coding-ml-tools-like-you-code-ml-models-ddba3357eace?source=friends_link&sk=f7774c54571148b33cde3ba6c6310086) explaining why we created Streamlit
