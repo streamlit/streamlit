@@ -47,7 +47,7 @@
     "d3": "^5.16.0",
     "d3-graphviz": "^2.6.1",
     "deck.gl": "^8.2.5",
-    "dompurify": "^2.0.12",
+    "dompurify": "^2.1.1",
     "hoist-non-react-statics": "^3.3.2",
     "immutable": "^4.0.0-rc.12",
     "katex": "^0.11.1",
