@@ -115,6 +115,7 @@ describe("App", () => {
     expect(menuLabels).toEqual([
       "Rerun",
       "Clear cache",
+      "Deploy this app",
       "Record a screencast",
       "Documentation",
       "Ask a question",

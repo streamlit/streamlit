@@ -31,7 +31,7 @@ import "./MainMenu.scss"
 import { IDeployParams } from "autogen/proto"
 
 const DEPLOY_URL = "https://share.streamlit.io/deploy"
-const STREAMLIT_SHARE_URL = "https://streamlit.io/share"
+const STREAMLIT_SHARE_URL = "https://streamlit.io/sharing"
 const ONLINE_DOCS_URL = "https://docs.streamlit.io"
 const COMMUNITY_URL = "https://discuss.streamlit.io"
 const TEAMS_URL = "https://streamlit.io/forteams"
@@ -241,7 +241,7 @@ function MainMenu(props: Props): ReactElement {
 
   const shouldShowS4AMenu = !!S4AMenuOptions.length
 
-  const showDeploy = props.deployParams && isLocalhost() && !shouldShowS4AMenu
+  const showDeploy = isLocalhost() && !shouldShowS4AMenu
   const showSnapshot = !shouldShowS4AMenu && props.sharingEnabled
   const showClearCache = !shouldShowS4AMenu
   const preferredMenuOrder: any[] = [
