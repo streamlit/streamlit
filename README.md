@@ -42,7 +42,8 @@ The complete demo is implemented in less than 300 lines of Python. In fact, the 
 ## The Streamlit GitHub badge
 Streamlit's GitHub badge helps others find and play with your Streamlit app. 
 
-<img src="https://static.streamlit.io/badges/streamlit_badge_black_white.svg"/>
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)]
+(https://share.streamlit.io/streamlit/demo-face-gan)
 
 Once you deploy your app, you can embed this badge right into your GitHub readme.md as follows:
 
