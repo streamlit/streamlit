@@ -29,7 +29,7 @@ x = st.slider('Select a value')
 st.write(x, 'squared is', x * x)
 ```
 
-<img src="https://github.com/streamlit/streamlit/raw/develop/docs/_static/img/simple_app_example.png"/>
+<img src="https://github.com/streamlit/streamlit/raw/develop/docs/_static/img/simple_example.png"/>
 
 ## A bigger example
 
