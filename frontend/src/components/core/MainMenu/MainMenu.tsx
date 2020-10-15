@@ -248,6 +248,7 @@ function MainMenu(props: Props): ReactElement {
     coreMenuOptions.rerun,
     shouldShowS4AMenu && coreMenuOptions.settings,
     showClearCache && coreMenuOptions.clearCache,
+    shouldShowS4AMenu && coreMenuOptions.settings,
     coreMenuOptions.DIVIDER,
     showDeploy && coreMenuOptions.deployApp,
     showSnapshot && coreMenuOptions.saveSnapshot,
