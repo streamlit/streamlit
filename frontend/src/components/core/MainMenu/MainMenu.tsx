@@ -246,7 +246,6 @@ function MainMenu(props: Props): ReactElement {
   const showClearCache = !shouldShowS4AMenu
   const preferredMenuOrder: any[] = [
     coreMenuOptions.rerun,
-    shouldShowS4AMenu && coreMenuOptions.settings,
     showClearCache && coreMenuOptions.clearCache,
     shouldShowS4AMenu && coreMenuOptions.settings,
     coreMenuOptions.DIVIDER,
