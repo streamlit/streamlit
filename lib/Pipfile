@@ -5,7 +5,7 @@ verify_ssl = true
 
 [dev-packages]
 flake8 = "*"
-mypy = "==0.761"
+mypy = "==0.790"
 mypy-protobuf = ">=1.17"
 parameterized = "*"
 pipenv = "*"
