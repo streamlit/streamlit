@@ -84,7 +84,7 @@
     "sprintf-js": "^1.1.2",
     "styletron-engine-atomic": "^1.4.6",
     "styletron-react": "^5.2.6",
-    "typed-signals": "^1.0.5",
+    "typed-signals": "^2.1.0",
     "vega": "^5.13.0",
     "vega-embed": "^6.10.0",
     "vega-lite": "^4.14.1",
