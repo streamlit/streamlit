@@ -52,7 +52,7 @@ In just a few minutes you can build and deploy powerful data apps - so let's get
 
    ```shell
    pip install streamlit
-   streamlit hello`
+   streamlit hello
    ```
 
 3. That's it! In the next few seconds the sample app will open in a new tab in your default browser.
