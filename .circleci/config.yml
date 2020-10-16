@@ -519,8 +519,8 @@ jobs:
           name: Upload wheel to S3
           command: |
             ${SUDO} apt-get install -y awscli
-            aws configure set aws_access_key_id ${CORE_PREVIEW_S3_KEY_ID}
-            aws configure set aws_secret_access_key ${CORE_PREVIEW_S3_SECRET_KEY}
+            aws configure set aws_access_key_id ${CORE_PREVIEWS_S3_KEY_ID}
+            aws configure set aws_secret_access_key ${CORE_PREVIEWS_S3_SECRET_KEY}
 
             cd lib/dist
             export WHEELFILE="$(ls -t *.whl | head -n 1)"
