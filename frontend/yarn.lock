@@ -6484,10 +6484,10 @@ domhandler@^3.0, domhandler@^3.0.0, domhandler@^3.1.0:
   dependencies:
     domelementtype "^2.0.1"
 
-dompurify@^2.0.12:
-  version "2.1.0"
-  resolved "https://registry.yarnpkg.com/dompurify/-/dompurify-2.1.0.tgz#29ae507c1e50ea8e46929844194670605160df01"
-  integrity sha512-wKExRhOwUnfm1icoISSXnlmM1P2l07W2tFQqbU+8oySnvy7tHwj2iHJ1kJQi8EfcTlojsHKESOJwCGVJmNUdPQ==
+dompurify@^2.1.1:
+  version "2.1.1"
+  resolved "https://registry.yarnpkg.com/dompurify/-/dompurify-2.1.1.tgz#b5aa988676b093a9c836d8b855680a8598af25fe"
+  integrity sha512-NijiNVkS/OL8mdQL1hUbCD6uty/cgFpmNiuFxrmJ5YPH2cXrPKIewoixoji56rbZ6XBPmtM8GA8/sf9unlSuwg==
 
 domutils@1.5.1:
   version "1.5.1"
@@ -11083,6 +11083,11 @@ lodash.curry@^4.0.1:
   resolved "https://registry.yarnpkg.com/lodash.curry/-/lodash.curry-4.1.1.tgz#248e36072ede906501d75966200a86dab8b23170"
   integrity sha1-JI42By7ekGUB11lmIAqG2riyMXA=
 
+lodash.debounce@^4.0.8:
+  version "4.0.8"
+  resolved "https://registry.yarnpkg.com/lodash.debounce/-/lodash.debounce-4.0.8.tgz#82d79bff30a67c4005ffd5e2515300ad9ca4d7af"
+  integrity sha1-gteb/zCmfEAF/9XiUVMArZyk168=
+
 lodash.escape@^4.0.1:
   version "4.0.1"
   resolved "https://registry.yarnpkg.com/lodash.escape/-/lodash.escape-4.0.1.tgz#c9044690c21e04294beaa517712fded1fa88de98"
@@ -14390,6 +14395,14 @@ react-color@^2.18.1:
     prop-types "^15.5.10"
     reactcss "^1.2.0"
     tinycolor2 "^1.4.1"
+
+react-debounce-render@^7.0.0:
+  version "7.0.0"
+  resolved "https://registry.yarnpkg.com/react-debounce-render/-/react-debounce-render-7.0.0.tgz#4e36df3a867b298ef64b6ab3b8bffb3d46d3055d"
+  integrity sha512-OaI1RhLxchlV2nKukQgbq2CZG5DQoNkHG1O9vMw8fnY4bLCIdKPDy2EL4aQY9cdeXW/NkYkso7O/5ARbs/XI6w==
+  dependencies:
+    hoist-non-react-statics "^3.3.2"
+    lodash.debounce "^4.0.8"
 
 react-dev-utils@^10.2.0:
   version "10.2.1"
