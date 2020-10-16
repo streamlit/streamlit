@@ -43,6 +43,7 @@ class FileUploaderMixin:
             - If allow_multiple_files is True, returns a list with the
               uploaded files as UploadedFile objects. If no files were
               uploaded, returns an empty list.
+
             The UploadedFile class is a subclass of BytesIO, and therefore
             it is "file-like". This means you can pass them anywhere where
             a file is expected.
@@ -56,15 +57,15 @@ class FileUploaderMixin:
         ...     # To read file as bytes:
         ...     bytes_data = uploaded_file.read()
         ...     st.write(bytes_data)
-
+        >>>
         ...     # To convert to a string based IO:
         ...     stringio = StringIO(uploaded_file.decode("utf-8"))
         ...     st.write(stringio)
-
+        >>>
         ...     # To read file as string:
         ...     string_data = stringio.read()
         ...     st.write(string_data)
-
+        >>>
         ...     # Can be used wherever a "file-like" object is accepted:
         ...     dataframe = pd.read_csv(uploaded_file)
         ...     st.write(dataframe)

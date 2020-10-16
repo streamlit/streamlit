@@ -14,14 +14,17 @@
 
 import streamlit as st
 
-container = st.beta_container()
-container.write("I cannot collapse")
 
-expander = st.beta_expander("Collapse me!", expanded=True)
-expander.write("I can collapse")
+@st.cache(allow_output_mutation=True)
+def rerun_record():
+    return [0]
 
-collapsed = st.beta_expander("Expand me!")
-collapsed.write("I am already collapsed")
 
-sidebar = st.sidebar.beta_expander("Expand me!")
-sidebar.write("I am in the sidebar")
+count = rerun_record()
+count[0] += 1
+
+if count[0] < 4:
+    st.experimental_rerun()
+
+if count[0] >= 4:
+    st.text("Being able to rerun a session is awesome!")

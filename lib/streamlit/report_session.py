@@ -23,6 +23,7 @@ from streamlit import __version__
 from streamlit import caching
 from streamlit import config
 from streamlit import url_util
+from streamlit.git_util import GitRepo
 from streamlit.media_file_manager import media_file_manager
 from streamlit.metrics_util import Installation
 from streamlit.report import Report
@@ -86,6 +87,7 @@ class ReportSession(object):
         self._ioloop = ioloop
         self._report = Report(script_path, command_line)
         self._uploaded_file_mgr = uploaded_file_manager
+        self._repo = GitRepo(self._report.script_path)
 
         self._state = ReportSessionState.REPORT_NOT_RUNNING
 
@@ -368,6 +370,8 @@ class ReportSession(object):
 
         imsg.config.mapbox_token = config.get_option("mapbox.token")
 
+        imsg.config.allow_run_on_save = config.get_option("server.allowRunOnSave")
+
         LOGGER.debug(
             "New browser connection: "
             "gather_usage_stats=%s, "
@@ -405,6 +409,18 @@ class ReportSession(object):
         msg.new_report.id = self._report.report_id
         msg.new_report.name = self._report.name
         msg.new_report.script_path = self._report.script_path
+        try:
+            deploy_params = self._repo.get_repo_info()
+        except:
+            # Issues can arise based on the git structure
+            # (e.g. if branch is in DETACHED HEAD state)
+            # In this case, catch any errors
+            deploy_params = None
+        if deploy_params is not None:
+            repo, branch, module = deploy_params
+            msg.new_report.deploy_params.repository = repo
+            msg.new_report.deploy_params.branch = branch
+            msg.new_report.deploy_params.module = module
         self.enqueue(msg)
 
     def _enqueue_report_finished_message(self, status):

@@ -311,6 +311,7 @@ class ConfigTest(unittest.TestCase):
                 "server.headless",
                 "server.liveSave",
                 "server.address",
+                "server.allowRunOnSave",
                 "server.port",
                 "server.runOnSave",
                 "server.maxUploadSize",

@@ -124,12 +124,6 @@ class Slider extends React.PureComponent<Props, State> {
     )
   }
 
-  private handleFinalChange = ({ value }: { value: number[] }): void => {
-    this.setState({ value }, () =>
-      this.setWidgetValueImmediately({ fromUi: true })
-    )
-  }
-
   private handleClick = (e: Event): void => {
     const knob = e.target as HTMLElement
     knob.focus()
@@ -239,7 +233,6 @@ class Slider extends React.PureComponent<Props, State> {
           step={step}
           value={this.value}
           onChange={this.handleChange}
-          onFinalChange={this.handleFinalChange}
           disabled={this.props.disabled}
           overrides={{
             ...sliderOverrides,
