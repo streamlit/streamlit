@@ -497,7 +497,7 @@ jobs:
       - add_ssh_keys:
           name: Add the read/write Github deploy key
           fingerprints:
-            - "1e:a1:89:9c:71:50:c7:1c:48:16:1b:26:52:91:4e:93"
+            - "06:66:05:ea:ba:10:ec:b4:93:06:ab:62:7c:20:33:f0"
 
       - checkout:
           name: Checkout Streamlit code
@@ -528,7 +528,7 @@ jobs:
 
             git config --global user.email "austin@streamlit.io"
             git config --global user.name "CircleCI"
-            git clone git@github.com:akrolsmir/preview-builds.git
+            git clone git@github.com:streamlit/core-previews.git
 
             cd preview-builds
             export PREVIEW_BRANCH="pr-${CIRCLE_PR_NUMBER}"
@@ -545,7 +545,7 @@ jobs:
       - run:
           name: Ready to deploy!
           command: |
-            echo -e "https://share.streamlit.io/deploy?repository=akrolsmir/preview-builds&branch=pr-${CIRCLE_PR_NUMBER}&mainModule=streamlit_app.py"
+            echo -e "https://share.streamlit.io/deploy?repository=streamlit/core-previews&branch=pr-${CIRCLE_PR_NUMBER}&mainModule=streamlit_app.py"
 
   cypress:
     docker:
