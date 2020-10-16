@@ -201,10 +201,6 @@ workflows:
           filters:
             tags:
               only: /^([0-9]+\.){3}dev[0-9]+/
-      - pr-preview: # Make a preview branch for each PR
-          filters:
-            tags:
-              only: /^([0-9]+\.){3}dev[0-9]+/
       - nightly-release:
           requires:
             - python-3-6
