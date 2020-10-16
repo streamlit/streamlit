@@ -65,14 +65,6 @@ class ReportSessionTest(unittest.TestCase):
         func.assert_called_once()
 
     @patch("streamlit.report_session.LocalSourcesWatcher")
-    def test_get_deploy_params(self, _1):
-        """Make sure we try to handle execution control requests."""
-        # use the same file we are testing
-        rs = ReportSession(None, report_session.__file__, "", UploadedFileManager())
-
-        self.assertIsNotNone(rs.get_deploy_params())
-
-    @patch("streamlit.report_session.LocalSourcesWatcher")
     def test_get_deploy_params_with_no_git(self, _1):
         """Make sure we try to handle execution control requests."""
         import os
