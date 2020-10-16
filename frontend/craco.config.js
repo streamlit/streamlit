@@ -22,7 +22,10 @@ module.exports = {
       // HardSourceWebpackPlugin adds aggressive build caching
       // to speed up our slow builds.
       // https://github.com/mzgoddard/hard-source-webpack-plugin
-      webpackConfig.plugins.unshift(new HardSourceWebpackPlugin())
+      if (!process.env.CIRCLECI) {
+        // Skip HardSource on CircleCI, since it slows down the first build.
+        webpackConfig.plugins.unshift(new HardSourceWebpackPlugin())
+      }
 
       const minimizerIndex = webpackConfig.optimization.minimizer.findIndex(
         item => item.options.terserOptions
