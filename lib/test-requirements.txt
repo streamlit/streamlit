@@ -14,9 +14,9 @@ prometheus-client
 psycopg2-binary
 pydot
 pyodbc
-# Tensorflow 2.x requires scipy==1.4.1.
+# Tensorflow 2.x requires scipy>=1.4.1.
 # Feel free to remove this dependency if the requirement is gone.
-scipy==1.5.2
+scipy>=1.4.1
 seaborn
 setuptools<50.0.0
 sqlalchemy
