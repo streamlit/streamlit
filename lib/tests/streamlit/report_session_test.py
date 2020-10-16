@@ -14,6 +14,7 @@
 
 from unittest.mock import MagicMock, patch, mock_open
 import unittest
+import pytest
 
 import tornado.gen
 import tornado.testing
@@ -30,6 +31,11 @@ from streamlit.proto.StaticManifest_pb2 import StaticManifest
 from streamlit.errors import StreamlitAPIException
 from tests.mock_storage import MockStorage
 import streamlit as st
+
+
+@pytest.fixture
+def del_path(monkeypatch):
+    monkeypatch.setenv("PATH", "")
 
 
 class ReportSessionTest(unittest.TestCase):
@@ -65,11 +71,9 @@ class ReportSessionTest(unittest.TestCase):
         func.assert_called_once()
 
     @patch("streamlit.report_session.LocalSourcesWatcher")
+    @pytest.mark.usefixtures("del_path")
     def test_get_deploy_params_with_no_git(self, _1):
         """Make sure we try to handle execution control requests."""
-        import os
-
-        os.environ["PATH"] = ""
         rs = ReportSession(None, report_session.__file__, "", UploadedFileManager())
 
         self.assertIsNone(rs.get_deploy_params())
