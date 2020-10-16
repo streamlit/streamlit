@@ -23,7 +23,6 @@ from streamlit import __version__
 from streamlit import caching
 from streamlit import config
 from streamlit import url_util
-from streamlit.git_util import GitRepo
 from streamlit.media_file_manager import media_file_manager
 from streamlit.metrics_util import Installation
 from streamlit.report import Report
@@ -87,7 +86,6 @@ class ReportSession(object):
         self._ioloop = ioloop
         self._report = Report(script_path, command_line)
         self._uploaded_file_mgr = uploaded_file_manager
-        self._repo = GitRepo(self._report.script_path)
 
         self._state = ReportSessionState.REPORT_NOT_RUNNING
 
@@ -403,19 +401,27 @@ class ReportSession(object):
 
         self.enqueue(msg)
 
+    def get_deploy_params(self):
+        try:
+            from streamlit.git_util import GitRepo
+
+            self._repo = GitRepo(self._report.script_path)
+            return self._repo.get_repo_info()
+        except:
+            # Issues can arise based on the git structure
+            # (e.g. if branch is in DETACHED HEAD state,
+            # git is not installed, etc)
+            # In this case, catch any errors
+            return None
+
     def _enqueue_new_report_message(self):
         self._report.generate_new_id()
         msg = ForwardMsg()
         msg.new_report.id = self._report.report_id
         msg.new_report.name = self._report.name
         msg.new_report.script_path = self._report.script_path
-        try:
-            deploy_params = self._repo.get_repo_info()
-        except:
-            # Issues can arise based on the git structure
-            # (e.g. if branch is in DETACHED HEAD state)
-            # In this case, catch any errors
-            deploy_params = None
+
+        deploy_params = self.get_deploy_params()
         if deploy_params is not None:
             repo, branch, module = deploy_params
             msg.new_report.deploy_params.repository = repo
