@@ -23,7 +23,7 @@ module.exports = {
       // to speed up our slow builds.
       // https://github.com/mzgoddard/hard-source-webpack-plugin
       if (!process.env.CIRCLECI) {
-        // Skip HardSource on CircleCI, since it slows down the first build.
+        // HardSource slows down the very first build, so skip it on CircleCI.
         webpackConfig.plugins.unshift(new HardSourceWebpackPlugin())
       }
 
