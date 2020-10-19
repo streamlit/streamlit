@@ -37,7 +37,7 @@ Streamlit's simple and focused API lets you build incredibly rich and powerful t
 
 ![Final App Animation](https://github.com/streamlit/streamlit/raw/develop/docs/_static/img/complex_app_example.gif "Final App Animation")
 
-The complete demo is implemented in less than 300 lines of Python. In fact, the app contains [only 23 Streamlit calls](https://github.com/streamlit/demo-self-driving/blob/master/app.py) which illustrates all the major building blocks of Streamlit. You can try it right now at [share.streamlit.io/streamlit/demo-self-driving](share.streamlit.io/streamlit/demo-self-driving).
+The complete demo is implemented in less than 300 lines of Python. In fact, the app contains [only 23 Streamlit calls](https://github.com/streamlit/demo-self-driving/blob/master/streamlit_app.py) which illustrates all the major building blocks of Streamlit. You can try it right now at [https://share.streamlit.io/streamlit/demo-self-driving](share.streamlit.io/streamlit/demo-self-driving).
 
 ## The Streamlit GitHub badge
 Streamlit's GitHub badge helps others find and play with your Streamlit app. 
