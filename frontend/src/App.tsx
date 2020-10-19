@@ -580,26 +580,26 @@ export class App extends PureComponent<Props, State> {
         () => {
           // We now have no pending elements.
           this.pendingElementsBuffer = this.state.elements
-
-          // Tell the WidgetManager which widgets still exist. It will remove
-          // widget state for widgets that have been removed.
-          const activeWidgetIds = new Set(
-            Array.from(this.state.elements.getElements())
-              .map(element => getElementWidgetID(element))
-              .filter(notUndefined)
-          )
-          this.widgetMgr.clean(activeWidgetIds)
-
-          // Tell the ConnectionManager to increment the message cache run
-          // count. This will result in expired ForwardMsgs being removed from
-          // the cache.
-          if (this.connectionManager !== null) {
-            this.connectionManager.incrementMessageCacheRunCount(
-              SessionInfo.current.maxCachedMessageAge
-            )
-          }
         }
       )
+
+      // Tell the WidgetManager which widgets still exist. It will remove
+      // widget state for widgets that have been removed.
+      const activeWidgetIds = new Set(
+        Array.from(this.state.elements.getElements())
+          .map(element => getElementWidgetID(element))
+          .filter(notUndefined)
+      )
+      this.widgetMgr.clean(activeWidgetIds)
+
+      // Tell the ConnectionManager to increment the message cache run
+      // count. This will result in expired ForwardMsgs being removed from
+      // the cache.
+      if (this.connectionManager !== null) {
+        this.connectionManager.incrementMessageCacheRunCount(
+          SessionInfo.current.maxCachedMessageAge
+        )
+      }
     }
   }
 
