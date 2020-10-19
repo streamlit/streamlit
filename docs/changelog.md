@@ -16,6 +16,21 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.69.0
+
+_Release date: October 15, 2020_
+
+**Highlights:**
+
+- 🎁 Introducing Streamlit sharing, the best way to deploy, manage, and share your public Streamlit apps - for free. Read more about it on our [blog post](http://blog.streamlit.io/introducing-streamlit-sharing/) or sign up [here](http://streamlit.io/sharing)!
+- Added `st.experimental_rerun` to programatically re-run your app. Thanks [SimonBiggs](https://github.com/SimonBiggs)!
+
+**Notable Changes**
+
+- 📹 Better support across browsers for start and stop times for st.video.
+- 🖼 Bug fix for intermittently failing media files
+- 📦 Bug fix for custom components compatibility with Safari. Make sure to upgrade to the latest [streamlit-component-lib](https://www.npmjs.com/package/streamlit-component-lib).
+
 ## Version 0.68.0
 
 _Release date: October 8, 2020_
@@ -24,7 +39,7 @@ _Release date: October 8, 2020_
 
 - ⌗ Introducing new layout options for Streamlit! Move aside, vertical layout.
   Make a little space for... horizontal layout! Check out our
-  [blog post](https://blog.streamlit.io/introducing-new-layout-options-for-streamlit).
+  [blog post](https://blog.streamlit.io/introducing-new-layout-options-for-streamlit/).
 - 💾 File uploader redesigned with new functionality for multiple files uploads
   and better support for working with uploaded files. This may cause breaking
   changes. Please see the new api in our
@@ -82,7 +97,7 @@ _Release date: August 12, 2020_
 
 **Highlights:**
 
-- ⚙️ Ability to set page title, favicon, sidebar state, and wide mode via st.beta_set_page_config(). See our [documentation](https://docs.streamlit.io/en/latest/api.html#streamlit.beta_set_page_config) for details.
+- ⚙️ Ability to set page title, favicon, sidebar state, and wide mode via st.beta_set_page_config(). See our [documentation](https://docs.streamlit.io/en/0.65.0/api.html#streamlit.set_page_config) for details.
 - 📝 Add stateful behaviors through the use of query parameters with st.experimental_set_query_params and st.experimental_get_query_params. Thanks [@zhaoooyue](https://github.com/zhaoooyue)!
 - 🐼 Improved pandas dataframe support for st.radio, st.selectbox, and st.multiselect.
 - 🛑 Break out of your Streamlit app with st.stop.
