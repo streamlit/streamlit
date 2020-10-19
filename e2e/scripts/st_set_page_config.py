@@ -14,7 +14,7 @@
 
 import streamlit as st
 
-st.beta_set_page_config(
+st.set_page_config(
     page_title="Heya, world?",
     page_icon=":shark:",
     layout="wide",
