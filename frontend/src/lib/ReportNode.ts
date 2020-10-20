@@ -415,22 +415,12 @@ export class ReportRoot {
     element: Element,
     metadata: ForwardMsgMetadata
   ): ReportRoot {
-    const existingContainer = this.getContainer(containerId)
-
-    // TODO: do we care about this? Is it a meaningful optimization?
-    // (We'll need to implement IElement equality checking for it to work.)
-
-    // Does this element already exist from a previously script run? If so,
-    // we simply update its reportID and metadata, which will prevent it from
-    // being cleared after the script execution is complete.
-    // const existingNode = existingContainer.getIn(deltaPath)
-    // if (existingNode != null && existingNode.value == element) {
-    //   return existingNode.setMetadata(reportId, metadata)
-    // }
-
-    // This is a new element!
     const newNode = new ElementNode(element, metadata, reportId)
-    const newContainer = existingContainer.setIn(deltaPath, newNode, reportId)
+    const newContainer = this.getContainer(containerId).setIn(
+      deltaPath,
+      newNode,
+      reportId
+    )
     return this.setContainer(containerId, newContainer)
   }
 
