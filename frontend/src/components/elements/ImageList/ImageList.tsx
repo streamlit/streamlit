@@ -17,8 +17,9 @@
 
 import React, { ReactElement } from "react"
 import { Map as ImmutableMap } from "immutable"
+import ReactHtmlParser from "react-html-parser"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
-import { buildMediaUri } from "lib/UriUtil"
+import { buildMediaUri, sanitizeSvg } from "lib/UriUtil"
 import "./ImageList.scss"
 
 export interface ImageListProps {
@@ -73,22 +74,28 @@ export function ImageList({
     <div style={{ width }}>
       {element
         .get("imgs")
-        .map((img: ImmutableMap<string, any>, idx: string) => (
-          <div
-            className="image-container stImage"
-            key={idx}
-            style={{ width: containerWidth }}
-          >
-            <img
-              style={imgStyle}
-              src={buildMediaUri(img.get("url"))}
-              alt={idx}
-            />
-            {!isFullScreen && (
-              <div className="caption"> {img.get("caption")} </div>
-            )}
-          </div>
-        ))}
+        .map((img: ImmutableMap<string, any>, idx: string) => {
+          return (
+            <div
+              className="image-container stImage"
+              key={idx}
+              style={{ width: containerWidth }}
+            >
+              {img.get("markup") ? (
+                ReactHtmlParser(sanitizeSvg(img.get("markup")))
+              ) : (
+                <img
+                  style={imgStyle}
+                  src={buildMediaUri(img.get("url"))}
+                  alt={idx}
+                />
+              )}
+              {!isFullScreen && (
+                <div className="caption"> {img.get("caption")} </div>
+              )}
+            </div>
+          )
+        })}
     </div>
   )
 }
