@@ -289,7 +289,7 @@ app, provide help using doc strings, and get and modify configuration options.
 .. autofunction:: streamlit.help
 .. autofunction:: streamlit.get_option
 .. autofunction:: streamlit.set_option
-.. autofunction:: streamlit.beta_set_page_config
+.. autofunction:: streamlit.set_page_config
 ```
 
 ## Mutate data
