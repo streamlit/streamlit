@@ -115,7 +115,7 @@ export class ElementNode implements ReportNode {
   /**
    * A lazily-created immutableJS version of our element.
    *
-   * This is a temporary! `immutableElement` is currently needed for
+   * This is temporary! `immutableElement` is currently needed for
    * dataframe-consuming elements because our dataframe API is
    * immutableJS-based. It'll go away when we've converted to an ArrowJS-based
    * dataframe API.
