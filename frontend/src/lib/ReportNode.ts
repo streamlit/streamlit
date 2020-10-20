@@ -97,9 +97,11 @@ export interface ReportNode {
   clearStaleNodes(currentReportId: string): ReportNode | undefined
 
   /**
-   * Recursively add all Elements contained in the tree to a set.
+   * Return a Set of all the Elements contained in the tree.
+   * If an existing Set is passed in, that Set will be mutated and returned.
+   * Otherwise, a new Set will be created and will be returned.
    */
-  getElements(elementSet: Set<Element>): void
+  getElements(elementSet?: Set<Element>): Set<Element>
 }
 
 /**
@@ -164,8 +166,12 @@ export class ElementNode implements ReportNode {
     return this.reportId === currentReportId ? this : undefined
   }
 
-  public getElements(elements: Set<Element>): void {
+  public getElements(elements?: Set<Element>): Set<Element> {
+    if (elements == null) {
+      elements = new Set<Element>()
+    }
     elements.add(this.element)
+    return elements
   }
 
   public addRows(namedDataSet: NamedDataSet, reportId: string): ElementNode {
@@ -274,10 +280,16 @@ export class BlockNode implements ReportNode {
     return new BlockNode(newChildren, this.deltaBlock, currentReportId)
   }
 
-  public getElements(elementSet: Set<Element>): void {
+  public getElements(elementSet?: Set<Element>): Set<Element> {
+    if (elementSet == null) {
+      elementSet = new Set<Element>()
+    }
+
     for (const child of this.children) {
       child.getElements(elementSet)
     }
+
+    return elementSet
   }
 }
 
