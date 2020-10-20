@@ -34,6 +34,9 @@ class AltairMixin:
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
 
+        In the case where this function does not guess the data specification
+        correctly, specifying your desired chart using st.altair_chart is recommended.
+
         Parameters
         ----------
         data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict
@@ -72,12 +75,15 @@ class AltairMixin:
         return dg._enqueue("line_chart", vega_lite_chart_proto, last_index=last_index)  # type: ignore
 
     def area_chart(dg, data=None, width=0, height=0, use_container_width=True):
-        """Display a area chart.
+        """Display an area chart.
 
         This is just syntax-sugar around st.altair_chart. The main difference
         is this command uses the data's own column and indices to figure out
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
+
+        In the case where this function does not guess the data specification
+        correctly, specifying your desired chart using st.altair_chart is recommended.
 
         Parameters
         ----------
@@ -122,6 +128,9 @@ class AltairMixin:
         is this command uses the data's own column and indices to figure out
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
+
+        In the case where this function does not guess the data specification
+        correctly, specifying your desired chart using st.altair_chart is recommended.
 
         Parameters
         ----------
