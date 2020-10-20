@@ -11,7 +11,9 @@ Streamlit Components let you expand the functionality provided in the base Strea
 - Rendering Python objects having methods that output HTML, such as IPython [`__repr_html__`](https://ipython.readthedocs.io/en/stable/config/integrating.html#rich-display)
 - Convenience functions for commonly-used web features like [GitHub gists and Pastebin](https://github.com/randyzwitch/streamlit-embedcode)
 
-Check out this [Streamlit Components Tutorial video](https://www.youtube.com/watch?v=BuD3gILJW-Q&feature=youtu.be) by Streamlit engineer Tim Conkling to get started:
+Check out these Streamlit Components Tutorial videos by Streamlit engineer Tim Conkling to get started:
+
+[Part 1: Setup and Architecture](https://www.youtube.com/watch?v=BuD3gILJW-Q&feature=youtu.be)
 
 ```eval_rst
 .. raw:: html
@@ -20,6 +22,22 @@ Check out this [Streamlit Components Tutorial video](https://www.youtube.com/wat
     width="560"
     height="315"
     src="https://www.youtube.com/embed/BuD3gILJW-Q"
+    style="margin: 0 0 2rem 0;"
+    frameborder="0"
+    allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+    allowfullscreen>
+  </iframe></div>
+```
+
+[Part 2 - Make a Slider Widget](https://www.youtube.com/watch?v=QjccJl_7Jco)
+
+```eval_rst
+.. raw:: html
+
+  <div class='embed-container'><iframe
+    width="560"
+    height="315"
+    src="https://www.youtube.com/embed/QjccJl_7Jco"
     style="margin: 0 0 2rem 0;"
     frameborder="0"
     allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
