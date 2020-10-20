@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit tests for Report.py."""
+"""Unit tests for report.py."""
 
 from unittest.mock import patch
 import copy
