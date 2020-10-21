@@ -16,23 +16,21 @@
  */
 
 import React from "react"
-import { fromJS } from "immutable"
 import { shallow } from "enzyme"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import UIButton from "components/shared/Button"
 
+import { Button as ButtonProto } from "autogen/proto"
 import Button, { ButtonProps } from "./Button"
 
 jest.mock("lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
 
-const getProps = (
-  elementProps: Record<string, unknown> = {}
-): ButtonProps => ({
-  element: fromJS({
-    id: 1,
+const getProps = (elementProps: Partial<ButtonProto> = {}): ButtonProps => ({
+  element: ButtonProto.create({
+    id: "1",
     label: "Label",
     ...elementProps,
   }),
@@ -72,9 +70,7 @@ describe("Button widget", () => {
     const wrappedUIButton = wrapper.find(UIButton)
 
     expect(wrappedUIButton.length).toBe(1)
-    expect(wrappedUIButton.props().children).toBe(
-      getProps().element.get("label")
-    )
+    expect(wrappedUIButton.props().children).toBe(getProps().element.label)
   })
 
   describe("UIButton props should work", () => {
@@ -86,9 +82,10 @@ describe("Button widget", () => {
 
       wrappedUIButton.simulate("click")
 
-      expect(
-        props.widgetMgr.setTriggerValue
-      ).toHaveBeenCalledWith(props.element.get("id"), { fromUi: true })
+      expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
+        props.element.id,
+        { fromUi: true }
+      )
     })
 
     it("disable prop", () => {

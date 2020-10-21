@@ -18,12 +18,12 @@
 import React from "react"
 import DeckGL from "deck.gl"
 import { shallow } from "enzyme"
-import { fromJS } from "immutable"
 
+import { DeckGlJsonChart as DeckGlJsonChartProto } from "autogen/proto"
 import { DeckGlJsonChart, PropsWithHeight } from "./DeckGlJsonChart"
 
 const getProps = (
-  elementProps: Record<string, unknown> = {},
+  elementProps: Partial<DeckGlJsonChartProto> = {},
   initialViewStateProps: Record<string, unknown> = {}
 ): PropsWithHeight => {
   // prettier-ignore
@@ -35,7 +35,7 @@ const getProps = (
   }
 
   return {
-    element: fromJS({
+    element: DeckGlJsonChartProto.create({
       json: JSON.stringify(json),
       ...elementProps,
     }),

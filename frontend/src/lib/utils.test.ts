@@ -15,43 +15,7 @@
  * limitations under the License.
  */
 
-import { BlockElement } from "lib/DeltaParser"
-import { List, Set as ImmutableSet, Map as ImmutableMap } from "immutable"
-import { getCookie, flattenElements, setCookie } from "./utils"
-
-describe("flattenElements", () => {
-  const simpleElement1 = ImmutableMap({ key1: "value1", key2: "value2" })
-  const simpleElement2 = ImmutableMap({ key3: "value3", key4: "value4" })
-  const simpleElement3 = ImmutableMap({ key5: "value5", key6: "value6" })
-  const simpleBlockElement: BlockElement = List([
-    ImmutableMap({
-      element: simpleElement1,
-    }),
-    ImmutableMap({
-      element: simpleElement2,
-    }),
-  ])
-  const nestedBlockElement: BlockElement = List([
-    ImmutableMap({
-      element: List(simpleBlockElement),
-    }),
-    ImmutableMap({
-      element: simpleElement3,
-    }),
-  ])
-
-  it("should walk down a simple BlockElement", () => {
-    const elements = flattenElements(simpleBlockElement)
-    expect(elements).toEqual(ImmutableSet([simpleElement1, simpleElement2]))
-  })
-
-  it("should walk down a simple BlockElement", () => {
-    const elements = flattenElements(nestedBlockElement)
-    expect(elements).toEqual(
-      ImmutableSet([simpleElement1, simpleElement2, simpleElement3])
-    )
-  })
-})
+import { getCookie, setCookie } from "./utils"
 
 describe("getCookie", () => {
   afterEach(() => {

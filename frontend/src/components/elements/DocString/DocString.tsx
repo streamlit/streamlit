@@ -16,12 +16,13 @@
  */
 
 import React, { ReactElement } from "react"
-import { Map as ImmutableMap } from "immutable"
+import { DocString as DocStringProto } from "autogen/proto"
+
 import "./DocString.scss"
 
 export interface DocStringProps {
   width: number
-  element: ImmutableMap<string, any>
+  element: DocStringProto
 }
 
 /**
@@ -31,11 +32,7 @@ export default function DocString({
   width,
   element,
 }: DocStringProps): ReactElement {
-  const name = element.get("name")
-  const module = element.get("module")
-  const docString = element.get("docString")
-  const type = element.get("type")
-  const signature = element.get("signature")
+  const { name, module, docString, type, signature } = element
 
   const moduleHtml = (
     <span className="doc-module" key="module">

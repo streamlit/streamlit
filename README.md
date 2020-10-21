@@ -8,7 +8,6 @@ Streamlit lets you turn data scripts into sharable web apps in minutes, not week
 
 ![Example of live coding an app in Streamlit|635x380](https://github.com/streamlit/streamlit/raw/develop/docs/_static/img/Streamlit_overview.gif)
 
-
 ## Installation
 
 ```bash
@@ -40,7 +39,8 @@ Streamlit's simple and focused API lets you build incredibly rich and powerful t
 The complete demo is implemented in less than 300 lines of Python. In fact, the app contains [only 23 Streamlit calls](https://github.com/streamlit/demo-self-driving/blob/master/streamlit_app.py) which illustrates all the major building blocks of Streamlit. You can try it right now at [share.streamlit.io/streamlit/demo-self-driving](https://share.streamlit.io/streamlit/demo-self-driving).
 
 ## The Streamlit GitHub badge
-Streamlit's GitHub badge helps others find and play with your Streamlit app. 
+
+Streamlit's GitHub badge helps others find and play with your Streamlit app.
 
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/streamlit/demo-face-gan)
 
