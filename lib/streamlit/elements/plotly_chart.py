@@ -41,11 +41,7 @@ SHARING_MODES = set(
 
 class PlotlyMixin:
     def plotly_chart(
-        dg,
-        figure_or_data,
-        use_container_width=False,
-        sharing="streamlit",
-        **kwargs,
+        dg, figure_or_data, use_container_width=False, sharing="streamlit", **kwargs,
     ):
         """Display an interactive Plotly chart.
 
@@ -66,8 +62,8 @@ class PlotlyMixin:
 
         sharing : {'streamlit', 'private', 'secret', 'public'}
             Use 'streamlit' to insert the plot and all its dependencies
-            directly in the Streamlit app, which means it uses plotly's offline mode.
-            Use any other sharing mode to send the app to Plotly chart studio, which
+            directly in the Streamlit app using plotly's offline mode.
+            Use any other sharing mode to send the chart to Plotly chart studio, which
             requires an account. See https://plotly.com/chart-studio/ for more information.
 
         **kwargs
