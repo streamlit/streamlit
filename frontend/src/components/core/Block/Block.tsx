@@ -54,11 +54,7 @@ import { styled, StyletronComponent } from "styletron-react"
 import debounceRender from "react-debounce-render"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import {
-  getElementWidgetID,
-  makeElementWithInfoText,
-  notNull,
-} from "lib/utils"
+import { getElementWidgetID, makeElementWithInfoText } from "lib/utils"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { variables as stylingVariables } from "lib/widgetTheme"
 import { BlockNode, ReportNode, ElementNode } from "lib/ReportNode"
@@ -176,18 +172,23 @@ class Block extends PureComponent<Props> {
 
   /** Recursively transform this BlockElement and all children to React Nodes. */
   private renderElements = (width: number): ReactNode[] => {
-    return this.props.node.children
-      .map((node: ReportNode, index: number): ReactNode | null => {
-        if (node instanceof BlockNode) {
-          return this.renderBlock(node, index, width)
-        }
+    return this.props.node.children.map(
+      (node: ReportNode, index: number): ReactNode => {
         if (node instanceof ElementNode) {
+          // Base case: render a leaf node.
           return this.renderElementWithErrorBoundary(node, index, width)
         }
 
-        return null
-      })
-      .filter(notNull)
+        if (node instanceof BlockNode) {
+          // Recursive case: render a block, which can contain other blocks
+          // and elements.
+          return this.renderBlock(node, index, width)
+        }
+
+        // We don't have any other node types!
+        throw new Error(`Unrecognized ReportNode: ${node}`)
+      }
+    )
   }
 
   private isElementStale(node: ReportNode): boolean {
