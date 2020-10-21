@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import { Map as ImmutableMap } from "immutable"
+import { IFrame as IFrameProto } from "autogen/proto"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   getIFrameSandboxPolicy,
@@ -23,7 +23,7 @@ import {
 import React, { CSSProperties, ReactElement } from "react"
 
 export interface IFrameProps {
-  element: ImmutableMap<string, any>
+  element: IFrameProto
   width: number
 }
 
@@ -31,14 +31,14 @@ export default function IFrame({
   element,
   width: propWidth,
 }: IFrameProps): ReactElement {
-  const width = element.get("hasWidth") ? element.get("width") : propWidth
+  const width = element.hasWidth ? element.width : propWidth
 
   // Handle scrollbar visibility. Chrome and other WebKit browsers still
   // seem to use the deprecated "scrolling" attribute, whereas the standard
   // says to use a CSS style.
   let scrolling: string
   let style: CSSProperties
-  if (element.get("scrolling")) {
+  if (element.scrolling) {
     scrolling = "auto"
     style = {}
   } else {
@@ -53,14 +53,14 @@ export default function IFrame({
   // and our iframe will have the same origin as we do, and therefore
   // we cannot safely use `allow-same-origin` because doing so would
   // let the iframe'd content escape its sandbox.
-  const src = getNonEmptyString(element, "src")
+  const src = getNonEmptyString(element.src)
   let srcDoc: string | undefined
   let allowSameOrigin: boolean
   if (src != null) {
     srcDoc = undefined
     allowSameOrigin = true
   } else {
-    srcDoc = getNonEmptyString(element, "srcdoc")
+    srcDoc = getNonEmptyString(element.srcdoc)
     allowSameOrigin = false
   }
 
@@ -71,7 +71,7 @@ export default function IFrame({
       src={src}
       srcDoc={srcDoc}
       width={width}
-      height={element.get("height")}
+      height={element.height}
       scrolling={scrolling}
       sandbox={getIFrameSandboxPolicy(allowSameOrigin)}
       title="st.iframe"
@@ -84,9 +84,7 @@ export default function IFrame({
  * null or empty, return undefined instead.
  */
 function getNonEmptyString(
-  element: ImmutableMap<string, any>,
-  name: string
+  value: string | null | undefined
 ): string | undefined {
-  const value = element.get(name)
   return value == null || value === "" ? undefined : value
 }

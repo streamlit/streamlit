@@ -16,12 +16,12 @@
  */
 
 import React, { ReactElement, useEffect, useRef } from "react"
-import { Map as ImmutableMap } from "immutable"
+import { Audio as AudioProto } from "autogen/proto"
 import { buildMediaUri } from "lib/UriUtil"
 
 export interface AudioProps {
   width: number
-  element: ImmutableMap<string, any>
+  element: AudioProto
 }
 
 export default function Audio({ element, width }: AudioProps): ReactElement {
@@ -29,11 +29,11 @@ export default function Audio({ element, width }: AudioProps): ReactElement {
 
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.currentTime = element.get("startTime")
+      audioRef.current.currentTime = element.startTime
     }
-  }, [element])
+  }, [element.startTime])
 
-  const uri = buildMediaUri(element.get("url"))
+  const uri = buildMediaUri(element.url)
   return (
     <audio
       id="audio"

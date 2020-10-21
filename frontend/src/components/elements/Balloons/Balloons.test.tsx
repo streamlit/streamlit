@@ -21,8 +21,7 @@ import { mount } from "enzyme"
 import Balloons, { Props, NUM_BALLOONS } from "./Balloons"
 
 const getProps = (): Props => ({
-  reportId: 51522269,
-  width: 0,
+  reportId: "51522269",
 })
 
 describe("Balloons element", () => {

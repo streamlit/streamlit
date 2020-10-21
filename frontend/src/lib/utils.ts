@@ -15,16 +15,10 @@
  * limitations under the License.
  */
 
+import { Alert as AlertProto, Element } from "autogen/proto"
+import _ from "lodash"
 import url from "url"
 import xxhash from "xxhashjs"
-import {
-  fromJS,
-  List,
-  Map as ImmutableMap,
-  Set as ImmutableSet,
-} from "immutable"
-import { Alert as AlertProto } from "autogen/proto"
-import { BlockElement, ReportElement, SimpleElement } from "./DeltaParser"
 
 /**
  * Wraps a function to allow it to be called, at most, once per interval
@@ -64,15 +58,9 @@ export function isInChildFrame(): boolean {
   return window.parent !== window && !!window.frameElement
 }
 
-/**
- * A helper function to make an ImmutableJS
- * info element from the given text.
- */
-export function makeElementWithInfoText(
-  text: string
-): ImmutableMap<string, any> {
-  return fromJS({
-    type: "alert",
+/** Return an Alert Element protobuf with the given text. */
+export function makeElementWithInfoText(text: string): Element {
+  return new Element({
     alert: {
       body: text,
       format: AlertProto.Format.INFO,
@@ -100,23 +88,18 @@ export function requireNonNull<T>(obj: T | null | undefined): T {
 }
 
 /**
- * Provide an ImmutableSet of SimpleElements by walking a BlockElement to
- * its leaves.
+ * A type predicate that is true if the given value is not undefined.
  */
-export function flattenElements(
-  elements: BlockElement
-): ImmutableSet<SimpleElement> {
-  return elements.reduce(
-    (flattened: ImmutableSet<SimpleElement>, reportElement: ReportElement) => {
-      const element = reportElement.get("element")
+export function notUndefined<T>(value: T | undefined): value is T {
+  return value !== undefined
+}
 
-      if (element instanceof List) {
-        return flattened.union(flattenElements(element as BlockElement))
-      }
-      return flattened.union(ImmutableSet.of(element as SimpleElement))
-    },
-    ImmutableSet.of<SimpleElement>()
-  )
+/**
+ * A type predicate that is true if the given value is neither undefined
+ * nor null.
+ */
+export function notNull<T>(value: T | null | undefined): value is T {
+  return value != null
 }
 
 /**
@@ -155,4 +138,9 @@ export function setCookie(
     ? `expires=${expirationDate.toUTCString()};`
     : ""
   document.cookie = `${name}=${value};${expirationStr}path=/`
+}
+
+/** Return an Element's widget ID if it's a widget, and undefined otherwise. */
+export function getElementWidgetID(element: Element): string | undefined {
+  return _.get(element as any, [requireNonNull(element.type), "id"])
 }

@@ -19,7 +19,6 @@ import { NumberInput as NumberInputProto } from "autogen/proto"
 import React from "react"
 import { shallow } from "enzyme"
 import { Input as UIInput } from "baseui/input"
-import { fromJS } from "immutable"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import NumberInput, { Props } from "./NumberInput"
@@ -28,11 +27,11 @@ jest.mock("lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
 const preventDefault = jest.fn()
-const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
-  element: fromJS({
+const getProps = (elementProps: Partial<NumberInputProto> = {}): Props => ({
+  element: NumberInputProto.create({
     label: "Label",
-    has_min: false,
-    has_max: false,
+    hasMin: false,
+    hasMax: false,
     ...elementProps,
   }),
   width: 0,
@@ -40,7 +39,7 @@ const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
   widgetMgr: new WidgetStateManager(sendBackMsg),
 })
 
-const getIntProps = (elementProps: Record<string, unknown> = {}): Props => {
+const getIntProps = (elementProps: Partial<NumberInputProto> = {}): Props => {
   return getProps({
     dataType: NumberInputProto.DataType.INT,
     default: 10,
@@ -50,7 +49,9 @@ const getIntProps = (elementProps: Record<string, unknown> = {}): Props => {
   })
 }
 
-const getFloatProps = (elementProps: Record<string, unknown> = {}): Props => {
+const getFloatProps = (
+  elementProps: Partial<NumberInputProto> = {}
+): Props => {
   return getProps({
     dataType: NumberInputProto.DataType.FLOAT,
     default: 10.0,
@@ -84,7 +85,7 @@ describe("NumberInput widget", () => {
     const props = getIntProps()
     const wrapper = shallow(<NumberInput {...props} />)
 
-    expect(wrapper.find("label").text()).toBe(props.element.get("label"))
+    expect(wrapper.find("label").text()).toBe(props.element.label)
   })
 
   it("should set min/max defaults", () => {
@@ -144,11 +145,7 @@ describe("NumberInput widget", () => {
     })
 
     it("should call onChange", () => {
-      const props = getIntProps({
-        intData: {
-          default: 10,
-        },
-      })
+      const props = getIntProps({ default: 10 })
       const wrapper = shallow(<NumberInput {...props} />)
 
       const InputWrapper = wrapper.find(UIInput)
@@ -166,11 +163,7 @@ describe("NumberInput widget", () => {
     })
 
     it("should set value on Enter", () => {
-      const props = getIntProps({
-        intData: {
-          default: 10,
-        },
-      })
+      const props = getIntProps({ default: 10 })
       const wrapper = shallow(<NumberInput {...props} />)
 
       wrapper.setState({
@@ -191,12 +184,7 @@ describe("NumberInput widget", () => {
 
   describe("Step", () => {
     it("should have an step", () => {
-      const props = getIntProps({
-        intData: {
-          default: 10,
-          step: 1,
-        },
-      })
+      const props = getIntProps({ default: 10, step: 1 })
       const wrapper = shallow(<NumberInput {...props} />)
 
       // @ts-ignore
@@ -206,10 +194,8 @@ describe("NumberInput widget", () => {
     it("should change the state when ArrowUp", () => {
       const props = getIntProps({
         format: "%d",
-        intData: {
-          default: 10,
-          step: 1,
-        },
+        default: 10,
+        step: 1,
       })
       const wrapper = shallow(<NumberInput {...props} />)
       const InputWrapper = wrapper.find(UIInput)
@@ -228,10 +214,8 @@ describe("NumberInput widget", () => {
     it("should change the state when ArrowDown", () => {
       const props = getIntProps({
         format: "%d",
-        intData: {
-          default: 10,
-          step: 1,
-        },
+        default: 10,
+        step: 1,
       })
       const wrapper = shallow(<NumberInput {...props} />)
       const InputWrapper = wrapper.find(UIInput)
@@ -250,10 +234,8 @@ describe("NumberInput widget", () => {
     it("stepDown button onClick", () => {
       const props = getIntProps({
         format: "%d",
-        intData: {
-          default: 10,
-          step: 1,
-        },
+        default: 10,
+        step: 1,
       })
       const wrapper = shallow(<NumberInput {...props} />)
       const enhancer = wrapper.find(".controls .step-down")
@@ -268,10 +250,8 @@ describe("NumberInput widget", () => {
     it("stepUp button onClick", () => {
       const props = getIntProps({
         format: "%d",
-        intData: {
-          default: 10,
-          step: 1,
-        },
+        default: 10,
+        step: 1,
       })
       const wrapper = shallow(<NumberInput {...props} />)
       const enhancer = wrapper.find(".controls .step-up")
