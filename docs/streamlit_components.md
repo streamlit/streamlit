@@ -1,5 +1,10 @@
 # Create a Streamlit Component
 
+```eval_rst
+.. note::
+   If you are only interested in **using Streamlit Components**, then you can skip this section and head over to the `Streamlit Components Gallery <https://streamlit.io/components>`_ to find and install components created by the community!
+```
+
 Starting with version [0.63.0](changelog.html#version-0-63-0), developers can write JavaScript and HTML "components" that can be rendered in Streamlit apps. Streamlit Components can receive data from, and also send data to, Streamlit Python scripts.
 
 Streamlit Components let you expand the functionality provided in the base Streamlit package. Use Streamlit Components to create the needed functionality for your use case, then wrap it up in a Python package and share with the broader Streamlit community!
@@ -13,7 +18,7 @@ Streamlit Components let you expand the functionality provided in the base Strea
 
 Check out these Streamlit Components Tutorial videos by Streamlit engineer Tim Conkling to get started:
 
-[Part 1: Setup and Architecture](https://www.youtube.com/watch?v=BuD3gILJW-Q&feature=youtu.be)
+## Part 1: Setup and Architecture
 
 ```eval_rst
 .. raw:: html
@@ -29,7 +34,7 @@ Check out these Streamlit Components Tutorial videos by Streamlit engineer Tim C
   </iframe></div>
 ```
 
-[Part 2 - Make a Slider Widget](https://www.youtube.com/watch?v=QjccJl_7Jco)
+## Part 2: Make a Slider Widget
 
 ```eval_rst
 .. raw:: html
@@ -43,13 +48,4 @@ Check out these Streamlit Components Tutorial videos by Streamlit engineer Tim C
     allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
     allowfullscreen>
   </iframe></div>
-```
-
-```eval_rst
-.. note::
-   The remainder of the documentation in this section is for users
-   that want to **develop Streamlit Components** or are generally interested in the
-   Streamlit project from a developer/contributor perspective.
-
-   If you are only interested in **using Streamlit Components**, then you can skip these sections and head over to the `Streamlit Components Gallery <https://streamlit.io/components>`_ to see examples created by the community!
 ```
