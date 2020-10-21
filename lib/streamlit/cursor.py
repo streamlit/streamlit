@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Any
 
 from streamlit.report_thread import get_report_ctx
 
@@ -59,6 +59,15 @@ class Cursor(object):
         return self._is_locked
 
     def get_locked_cursor(self, **props) -> "LockedCursor":
+        raise NotImplementedError()
+
+    @property
+    def props(self) -> Any:
+        """Other data in this cursor. This is a temporary measure that will go
+        away when we implement improved return values for elements.
+
+        This is only implemented in LockedCursor.
+        """
         raise NotImplementedError()
 
 
@@ -110,8 +119,12 @@ class LockedCursor(Cursor):
         self._is_locked = True
         self._index = index
         self._path = path
-        self.props = props
+        self._props = props
 
     def get_locked_cursor(self, **props) -> "LockedCursor":
-        self.props = props
+        self._props = props
         return self
+
+    @property
+    def props(self) -> Any:
+        return self._props
