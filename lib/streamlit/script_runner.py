@@ -252,7 +252,9 @@ class ScriptRunner(object):
         ctx = get_report_ctx()
         if ctx is None:
             # This should never be possible on the script_runner thread.
-            raise RuntimeError("Null ReportContext!")
+            raise RuntimeError(
+                "ScriptRunner thread has a null ReportContext. Something has gone very wrong!"
+            )
 
         ctx.reset(query_string=rerun_data.query_string)
 
