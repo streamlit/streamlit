@@ -34,8 +34,8 @@ class AltairMixin:
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
 
-        In the case where this function does not guess the data specification
-        correctly, specifying your desired chart using st.altair_chart is recommended.
+        If st.line_chart does not guess the data specification
+        correctly, try specifying your desired chart using st.altair_chart.
 
         Parameters
         ----------
@@ -82,8 +82,8 @@ class AltairMixin:
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
 
-        In the case where this function does not guess the data specification
-        correctly, specifying your desired chart using st.altair_chart is recommended.
+        If st.area_chart does not guess the data specification
+        correctly, try specifying your desired chart using st.altair_chart.
 
         Parameters
         ----------
@@ -129,8 +129,8 @@ class AltairMixin:
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
 
-        In the case where this function does not guess the data specification
-        correctly, specifying your desired chart using st.altair_chart is recommended.
+        If st.bar_chart does not guess the data specification
+        correctly, try specifying your desired chart using st.altair_chart.
 
         Parameters
         ----------
