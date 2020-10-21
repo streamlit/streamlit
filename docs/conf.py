@@ -223,7 +223,8 @@ autosummary_generate = True
 html_copy_source = False
 github_doc_root = "https://github.com/streamlit/streamlit/tree/master/docs"
 
-# Resolve function for the linkcode extension.
+# Resolve function for the linkcode extension
+# inspired by https://github.com/Lasagne/Lasagne/blob/master/docs/conf.py#L113-L135
 def linkcode_resolve(domain, info):
     def find_source():
         import inspect
