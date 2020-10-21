@@ -13,20 +13,19 @@
 # limitations under the License.
 
 """Allows us to create and absorb changes (aka Deltas) to elements."""
-
-import functools
+from typing import Optional, Iterable
 
 from streamlit import caching
 from streamlit import cursor
 from streamlit import type_util
+from streamlit.cursor import Cursor
+from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.report_thread import get_report_ctx
-from streamlit.errors import StreamlitAPIException, StreamlitDeprecationWarning
+from streamlit.errors import StreamlitAPIException
 from streamlit.errors import NoSessionContext
 from streamlit.proto import Block_pb2
 from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
-from streamlit.proto.Element_pb2 import Element
-from streamlit.proto.Delta_pb2 import Delta as DeltaProto
 from streamlit.logger import get_logger
 
 from streamlit.elements.utils import NoValue
@@ -76,6 +75,8 @@ MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
 # input dataframes.
 DELTAS_TYPES_THAT_MELT_DATAFRAMES = ("line_chart", "area_chart", "bar_chart")
 
+ContainerValue = BlockPath_pb2.BlockPath.ContainerValue
+
 
 class DeltaGenerator(
     AlertMixin,
@@ -117,12 +118,12 @@ class DeltaGenerator(
 
     Parameters
     ----------
-    container: BlockPath_pb2.BlockPath or None
+    container: BlockPath_pb2.BlockPath.ContainerValue or None
       The root container for this DeltaGenerator. If None, this is a null
       DeltaGenerator which doesn't print to the app at all (useful for
       testing).
 
-    cursor: cursor.AbstractCursor or None
+    cursor: cursor.Cursor or None
       This is either:
       - None: if this is the running DeltaGenerator for a top-level
         container (MAIN or SIDEBAR)
@@ -146,10 +147,10 @@ class DeltaGenerator(
     # those, see above.
     def __init__(
         self,
-        container=BlockPath_pb2.BlockPath.MAIN,
-        cursor=None,
-        parent=None,
-        block_type=None,
+        container: Optional[ContainerValue] = BlockPath.MAIN,
+        cursor: Optional[Cursor] = None,
+        parent: Optional["DeltaGenerator"] = None,
+        block_type: Optional[str] = None,
     ):
         """Inserts or updates elements in Streamlit apps.
 
@@ -169,8 +170,8 @@ class DeltaGenerator(
         # No relation to `st.beta_container()`.
         self._container = container
 
-        # NOTE: You should never use this! Instead use self._cursor, which is a
-        # computed property that fetches the right cursor.
+        # NOTE: You should never use this directly! Instead, use self._cursor,
+        # which is a computed property that fetches the right cursor.
         self._provided_cursor = cursor
 
         self._parent = parent
@@ -199,7 +200,7 @@ class DeltaGenerator(
         return False
 
     @property
-    def _active_dg(self):
+    def _active_dg(self) -> "DeltaGenerator":
         if self == self._main_dg:
             # `st.button`: Use the current `with` dg (aka the top of the stack)
             ctx = get_report_ctx()
@@ -210,7 +211,7 @@ class DeltaGenerator(
         return self
 
     @property
-    def _main_dg(self):
+    def _main_dg(self) -> "DeltaGenerator":
         # Recursively traverse up the tree to find the main DG (parent = None)
         return self._parent._main_dg if self._parent else self
 
@@ -244,24 +245,24 @@ class DeltaGenerator(
         return wrapper
 
     @property
-    def _parent_block_types(self):
-        current_dg = self
-        while current_dg:
+    def _parent_block_types(self) -> Iterable[Optional[str]]:
+        current_dg: Optional[DeltaGenerator] = self
+        while current_dg is not None:
             yield current_dg._block_type
             current_dg = current_dg._parent
 
     @property
-    def _cursor(self):
+    def _cursor(self) -> Cursor:
         if self._provided_cursor is None:
             return cursor.get_container_cursor(self._container)
         else:
             return self._provided_cursor
 
     @property
-    def _is_top_level(self):
+    def _is_top_level(self) -> bool:
         return self._provided_cursor is None
 
-    def _get_coordinates(self):
+    def _get_coordinates(self) -> str:
         """Returns the element's 4-component location as string like "M.(1,2).3".
 
         This function uniquely identifies the element's position in the front-end,
@@ -520,7 +521,7 @@ class DeltaGenerator(
         # Prevent nested columns & expanders by checking all parents.
         block_type = block_proto.WhichOneof("type")
         # Convert the generator to a list, so we can use it multiple times.
-        parent_block_types = [t for t in self._parent_block_types]
+        parent_block_types = list(self._parent_block_types)
         if block_type == "column" and block_type in parent_block_types:
             raise StreamlitAPIException(
                 "Columns may not be nested inside other columns."

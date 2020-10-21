@@ -13,7 +13,10 @@
 # limitations under the License.
 
 import threading
+from typing import Any, Dict, Optional, cast, List
 
+from streamlit.cursor import Cursor
+from streamlit.delta_generator import DeltaGenerator
 from streamlit.logger import get_logger
 from streamlit.errors import StreamlitAPIException
 
@@ -51,7 +54,7 @@ class ReportContext(object):
         """
         # (dict) Mapping of container (type str or BlockPath) to top-level
         # cursor (type AbstractCursor).
-        self.cursors = {}
+        self.cursors = {}  # type: Dict[Any, Cursor]
         self.session_id = session_id
         self._enqueue = enqueue
         self.query_string = query_string
@@ -61,7 +64,7 @@ class ReportContext(object):
         # set_page_config is allowed at most once, as the very first st.command
         self._set_page_config_allowed = True
         # Stack of DGs used for the with block. The current one is at the end.
-        self.dg_stack = []
+        self.dg_stack = []  # type: List[DeltaGenerator]
 
     def reset(self, query_string=""):
         self.cursors = {}
@@ -197,7 +200,7 @@ def add_report_ctx(thread=None, ctx=None):
     return thread
 
 
-def get_report_ctx():
+def get_report_ctx() -> Optional[ReportContext]:
     """
     Returns
     -------
@@ -207,13 +210,16 @@ def get_report_ctx():
     """
     thread = threading.current_thread()
     ctx = getattr(thread, REPORT_CONTEXT_ATTR_NAME, None)
-    if ctx is None and streamlit._is_running_with_streamlit:
-        # Only warn about a missing ReportContext if we were started
-        # via `streamlit run`. Otherwise, the user is likely running a
-        # script "bare", and doesn't need to be warned about streamlit
-        # bits that are irrelevant when not connected to a report.
-        LOGGER.warning("Thread '%s': missing ReportContext" % thread.name)
-    return ctx
+    if ctx is None:
+        if streamlit._is_running_with_streamlit:
+            # Only warn about a missing ReportContext if we were started
+            # via `streamlit run`. Otherwise, the user is likely running a
+            # script "bare", and doesn't need to be warned about streamlit
+            # bits that are irrelevant when not connected to a report.
+            LOGGER.warning("Thread '%s': missing ReportContext" % thread.name)
+        return None
+
+    return cast(ReportContext, ctx)
 
 
 # Needed to avoid circular dependencies while running tests.

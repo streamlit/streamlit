@@ -16,12 +16,15 @@ from typing import Optional, Tuple
 
 from streamlit.report_thread import get_report_ctx
 
+# A "CursorPath" is a variable-length tuple of ints.
+CursorPath = Tuple[int, ...]
 
-def get_container_cursor(container):
+
+def get_container_cursor(container) -> "Cursor":
     ctx = get_report_ctx()
 
     if ctx is None:
-        return None
+        raise RuntimeError("get_container_cursor called from outside a ReportThread")
 
     if container in ctx.cursors:
         return ctx.cursors[container]
@@ -31,7 +34,7 @@ def get_container_cursor(container):
     return cursor
 
 
-class AbstractCursor(object):
+class Cursor(object):
     """A pointer to a location in the app.
 
     When adding an element to the app, you should always call
@@ -41,26 +44,26 @@ class AbstractCursor(object):
     def __init__(self):
         self._is_locked = False
         self._index = None  # type: Optional[int]
-        self._path = ()  # type: Tuple[int, ...]
+        self._path = ()  # type: CursorPath
 
     @property
     def index(self):
         return self._index
 
     @property
-    def path(self):
+    def path(self) -> CursorPath:
         return self._path
 
     @property
-    def is_locked(self):
+    def is_locked(self) -> bool:
         return self._is_locked
 
-    def get_locked_cursor(self, **props):
+    def get_locked_cursor(self, **props) -> "LockedCursor":
         raise NotImplementedError()
 
 
-class RunningCursor(AbstractCursor):
-    def __init__(self, path: Tuple[int, ...] = ()):
+class RunningCursor(Cursor):
+    def __init__(self, path: CursorPath = ()):
         """A moving pointer to a location in the app.
 
         RunningCursors auto-increment to the next available location when you
@@ -77,7 +80,7 @@ class RunningCursor(AbstractCursor):
         self._index = 0  # type: int
         self._path = path
 
-    def get_locked_cursor(self, **props):
+    def get_locked_cursor(self, **props) -> "LockedCursor":
         locked_cursor = LockedCursor(path=self._path, index=self._index, **props)
 
         self._index += 1
@@ -85,10 +88,8 @@ class RunningCursor(AbstractCursor):
         return locked_cursor
 
 
-class LockedCursor(AbstractCursor):
-    def __init__(
-        self, path: Tuple[int, ...] = (), index: Optional[int] = None, **props
-    ):
+class LockedCursor(Cursor):
+    def __init__(self, path: CursorPath = (), index: Optional[int] = None, **props):
         """A locked pointer to a location in the app.
 
         LockedCursors always point to the same location, even when you call
@@ -111,6 +112,6 @@ class LockedCursor(AbstractCursor):
         self._path = path
         self.props = props
 
-    def get_locked_cursor(self, **props):
+    def get_locked_cursor(self, **props) -> "LockedCursor":
         self.props = props
         return self
