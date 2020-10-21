@@ -153,7 +153,7 @@
     "mochawesome-report-generator": "^4.0.1",
     "prettier": "^1.18.2",
     "pretty-quick": "^1.11.1",
-    "react-scripts": "3.4.0",
+    "react-scripts": "^3.4.4",
     "scss-to-json": "^2.0.0",
     "source-map-explorer": "^2.4.2",
     "start-server-and-test": "^1.11.2",
