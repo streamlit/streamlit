@@ -62,12 +62,9 @@ class PlotlyMixin:
 
         sharing : {'streamlit', 'private', 'secret', 'public'}
             Use 'streamlit' to insert the plot and all its dependencies
-            directly in the Streamlit app, which means it works offline too.
-            This is the default.
-            Use any other sharing mode to send the app to Plotly's servers,
-            and embed the result into the Streamlit app. See
-            https://plot.ly/python/privacy/ for more. Note that these sharing
-            modes require a Plotly account.
+            directly in the Streamlit app, which means it uses plotly's offline mode.
+            Use any other sharing mode to send the app to Plotly chart studio, which
+            requires an account. See https://plotly.com/chart-studio/ for more information.
 
         **kwargs
             Any argument accepted by Plotly's `plot()` function.
