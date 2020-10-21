@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import threading
-from typing import Any, Dict, Optional, cast, List
+from typing import Any, Dict, Optional, List
 
 from streamlit.logger import get_logger
 from streamlit.errors import StreamlitAPIException
@@ -207,7 +207,7 @@ def get_report_ctx() -> Optional[ReportContext]:
 
     """
     thread = threading.current_thread()
-    ctx = getattr(thread, REPORT_CONTEXT_ATTR_NAME, None)
+    ctx: Optional[ReportContext] = getattr(thread, REPORT_CONTEXT_ATTR_NAME, None)
     if ctx is None:
         if streamlit._is_running_with_streamlit:
             # Only warn about a missing ReportContext if we were started
@@ -217,7 +217,7 @@ def get_report_ctx() -> Optional[ReportContext]:
             LOGGER.warning("Thread '%s': missing ReportContext" % thread.name)
         return None
 
-    return cast(ReportContext, ctx)
+    return ctx
 
 
 # Needed to avoid circular dependencies while running tests.
