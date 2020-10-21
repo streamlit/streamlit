@@ -290,7 +290,7 @@ export class WidgetStateManager {
   }
 
   /**
-   * Remove the state of widgets that are not contained in `active_ids`.
+   * Remove the state of widgets that are not contained in `activeIds`.
    */
   public clean(activeIds: Set<string>): void {
     this.widgetStates.forEach((value, key) => {
