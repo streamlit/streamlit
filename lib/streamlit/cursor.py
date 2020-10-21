@@ -20,11 +20,11 @@ from streamlit.report_thread import get_report_ctx
 CursorPath = Tuple[int, ...]
 
 
-def get_container_cursor(container) -> "Cursor":
+def get_container_cursor(container) -> Optional["Cursor"]:
     ctx = get_report_ctx()
 
     if ctx is None:
-        raise RuntimeError("get_container_cursor called from outside a ReportThread")
+        return None
 
     if container in ctx.cursors:
         return ctx.cursors[container]

@@ -75,8 +75,6 @@ MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
 # input dataframes.
 DELTAS_TYPES_THAT_MELT_DATAFRAMES = ("line_chart", "area_chart", "bar_chart")
 
-ContainerValue = BlockPath_pb2.BlockPath.ContainerValue
-
 
 class DeltaGenerator(
     AlertMixin,
@@ -147,7 +145,7 @@ class DeltaGenerator(
     # those, see above.
     def __init__(
         self,
-        container: Optional[ContainerValue] = BlockPath.MAIN,
+        container: Optional["BlockPath.ContainerValue"] = BlockPath.MAIN,
         cursor: Optional[Cursor] = None,
         parent: Optional["DeltaGenerator"] = None,
         block_type: Optional[str] = None,
@@ -254,7 +252,13 @@ class DeltaGenerator(
     @property
     def _cursor(self) -> Cursor:
         if self._provided_cursor is None:
-            return cursor.get_container_cursor(self._container)
+            result = cursor.get_container_cursor(self._container)
+            if result is None:
+                # This should not be possible.
+                raise RuntimeError(
+                    "Missing Cursor! Are we not running in a ReportThread?"
+                )
+            return result
         else:
             return self._provided_cursor
 
@@ -277,16 +281,14 @@ class DeltaGenerator(
         container = self._container  # Proto index of container (e.g. MAIN=1)
 
         if self._cursor:
-            path = (
-                self._cursor.path
-            )  # [uint, uint] - "breadcrumbs" w/ ancestor positions
+            path_str = f"{self._cursor.path}"
             index = self._cursor.index  # index - element's own position
         else:
             # Case in which we have started up in headless mode.
-            path = "(,)"
+            path_str = "(,)"
             index = ""
 
-        return "{}.{}.{}".format(container, path, index)
+        return f"{container}.{path_str}.{index}"
 
     def _enqueue(
         self,
