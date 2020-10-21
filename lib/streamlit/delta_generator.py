@@ -250,15 +250,13 @@ class DeltaGenerator(
             current_dg = current_dg._parent
 
     @property
-    def _cursor(self) -> Cursor:
+    def _cursor(self) -> Optional[Cursor]:
+        """Return our Cursor. This will be None if we're not running in a
+        ReportThread - e.g., if we're running a "bare" script outside of
+        Streamlit.
+        """
         if self._provided_cursor is None:
-            result = cursor.get_container_cursor(self._container)
-            if result is None:
-                # This should not be possible.
-                raise RuntimeError(
-                    "Missing Cursor! Are we not running in a ReportThread?"
-                )
-            return result
+            return cursor.get_container_cursor(self._container)
         else:
             return self._provided_cursor
 
@@ -357,11 +355,17 @@ class DeltaGenerator(
         if msg_was_enqueued:
             # Get a DeltaGenerator that is locked to the current element
             # position.
+            new_cursor = (
+                self._cursor.get_locked_cursor(
+                    delta_type=delta_type, last_index=last_index
+                )
+                if self._cursor is not None
+                else None
+            )
+
             output_dg = DeltaGenerator(
                 container=self._container,
-                cursor=self._cursor.get_locked_cursor(
-                    delta_type=delta_type, last_index=last_index
-                ),
+                cursor=new_cursor,
                 parent=self,
             )
         else:
@@ -516,14 +520,14 @@ class DeltaGenerator(
         return [row._block(column_proto(w)) for w in weights]
 
     # Internal block element, to hide the 'layout' param from our users.
-    def _block(self, block_proto=Block_pb2.Block()):
+    def _block(self, block_proto=Block_pb2.Block()) -> "DeltaGenerator":
         # Switch to the active DeltaGenerator, in case we're in a `with` block.
         self = self._active_dg
 
         # Prevent nested columns & expanders by checking all parents.
         block_type = block_proto.WhichOneof("type")
         # Convert the generator to a list, so we can use it multiple times.
-        parent_block_types = list(self._parent_block_types)
+        parent_block_types = frozenset(self._parent_block_types)
         if block_type == "column" and block_type in parent_block_types:
             raise StreamlitAPIException(
                 "Columns may not be nested inside other columns."
