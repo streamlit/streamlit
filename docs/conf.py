@@ -62,6 +62,7 @@ extensions = [
     "stoutput",
     "sphinx_markdown_tables",
     "sphinx_rtd_theme",
+    "sphinx.ext.linkcode",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -221,6 +222,38 @@ autodoc_default_flags = ["members"]
 autosummary_generate = True
 html_copy_source = False
 github_doc_root = "https://github.com/streamlit/streamlit/tree/master/docs"
+
+# Resolve function for the linkcode extension.
+def linkcode_resolve(domain, info):
+    def find_source():
+        import inspect
+        import os
+
+        obj = sys.modules[info["module"]]
+        for part in info["fullname"].split("."):
+            obj = getattr(obj, part)
+        fn = inspect.getsourcefile(obj)  # string of path
+        fn = os.path.relpath(fn)
+
+        source, lineno = inspect.getsourcelines(obj)
+        return fn, lineno, lineno + len(source) - 1
+
+    if domain != "py" or not info["module"]:
+        return None
+
+    filename = "%s#L%d-L%d" % find_source()
+
+    try:
+        import git  # in case git not available, just point to develop branch
+
+        repo = git.Repo(search_parent_directories=True)
+        sha = repo.head.object.hexsha
+        commit_chksum = repo.git.rev_parse(sha)
+    except:
+        commit_chksum = "develop"
+
+    return f"https://github.com/streamlit/streamlit/tree/{commit_chksum}/{filename[3:]}"
+
 
 # At the bottom of conf.py
 def setup(app):
