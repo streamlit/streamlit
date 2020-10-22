@@ -13,9 +13,11 @@
 # limitations under the License.
 
 import threading
+from typing import Dict, Optional, List
 
 from streamlit.logger import get_logger
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.BlockPath_pb2 import BlockPath
 
 LOGGER = get_logger(__name__)
 
@@ -49,9 +51,9 @@ class ReportContext(object):
             The manager for files uploaded by all users.
 
         """
-        # (dict) Mapping of container (type str or BlockPath) to top-level
-        # cursor (type AbstractCursor).
-        self.cursors = {}
+        self.cursors = (
+            {}
+        )  # type: Dict[BlockPath.ContainerValue, "streamlit.cursor.Cursor"]
         self.session_id = session_id
         self._enqueue = enqueue
         self.query_string = query_string
@@ -61,7 +63,7 @@ class ReportContext(object):
         # set_page_config is allowed at most once, as the very first st.command
         self._set_page_config_allowed = True
         # Stack of DGs used for the with block. The current one is at the end.
-        self.dg_stack = []
+        self.dg_stack = []  # type: List["streamlit.delta_generator.DeltaGenerator"]
 
     def reset(self, query_string=""):
         self.cursors = {}
@@ -73,10 +75,10 @@ class ReportContext(object):
     def enqueue(self, msg):
         if msg.HasField("page_config_changed") and not self._set_page_config_allowed:
             raise StreamlitAPIException(
-                "`beta_set_page_config()` can only be called once per app, "
+                "`set_page_config()` can only be called once per app, "
                 + "and must be called as the first Streamlit command in your script.\n\n"
                 + "For more information refer to the [docs]"
-                + "(https://docs.streamlit.io/en/stable/api.html#streamlit.beta_set_page_config)."
+                + "(https://docs.streamlit.io/en/stable/api.html#streamlit.set_page_config)."
             )
 
         if msg.HasField("delta") or msg.HasField("page_config_changed"):
@@ -197,7 +199,7 @@ def add_report_ctx(thread=None, ctx=None):
     return thread
 
 
-def get_report_ctx():
+def get_report_ctx() -> Optional[ReportContext]:
     """
     Returns
     -------
@@ -206,13 +208,14 @@ def get_report_ctx():
 
     """
     thread = threading.current_thread()
-    ctx = getattr(thread, REPORT_CONTEXT_ATTR_NAME, None)
+    ctx: Optional[ReportContext] = getattr(thread, REPORT_CONTEXT_ATTR_NAME, None)
     if ctx is None and streamlit._is_running_with_streamlit:
         # Only warn about a missing ReportContext if we were started
         # via `streamlit run`. Otherwise, the user is likely running a
         # script "bare", and doesn't need to be warned about streamlit
         # bits that are irrelevant when not connected to a report.
         LOGGER.warning("Thread '%s': missing ReportContext" % thread.name)
+
     return ctx
 
 

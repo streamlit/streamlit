@@ -17,13 +17,13 @@
 
 import React from "react"
 import { Radio as UIRadio, RadioGroup } from "baseui/radio"
-import { Map as ImmutableMap } from "immutable"
+import { Radio as RadioProto } from "autogen/proto"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { radioOverrides } from "lib/widgetTheme"
 
 export interface Props {
   disabled: boolean
-  element: ImmutableMap<string, any>
+  element: RadioProto
   widgetMgr: WidgetStateManager
   width: number
 }
@@ -43,12 +43,10 @@ class Radio extends React.PureComponent<Props, State> {
 
   get initialValue(): number {
     // If WidgetStateManager knew a value for this widget, initialize to that.
-    const widgetId: string = this.props.element.get("id")
+    // Otherwise, use the default value from the widget protobuf.
+    const widgetId = this.props.element.id
     const storedValue = this.props.widgetMgr.getIntValue(widgetId)
-    return storedValue !== undefined
-      ? storedValue
-      : // Otherwise, use the default value from the widget protobuf
-        this.props.element.get("default")
+    return storedValue !== undefined ? storedValue : this.props.element.default
   }
 
   public componentDidMount(): void {
@@ -56,7 +54,7 @@ class Radio extends React.PureComponent<Props, State> {
   }
 
   private setWidgetValue = (source: Source): void => {
-    const widgetId: string = this.props.element.get("id")
+    const widgetId = this.props.element.id
     this.props.widgetMgr.setIntValue(widgetId, this.state.value, source)
   }
 
@@ -67,18 +65,17 @@ class Radio extends React.PureComponent<Props, State> {
 
   public render = (): React.ReactNode => {
     const style = { width: this.props.width }
-    const label = this.props.element.get("label")
-    let options = this.props.element.get("options")
+    let { options } = this.props.element
     let { disabled } = this.props
 
-    if (options.size === 0) {
+    if (options.length === 0) {
       options = ["No options to select."]
       disabled = true
     }
 
     return (
       <div className="Widget row-widget stRadio" style={style}>
-        <label>{label}</label>
+        <label>{this.props.element.label}</label>
         <RadioGroup
           onChange={this.onChange}
           value={this.state.value.toString()}

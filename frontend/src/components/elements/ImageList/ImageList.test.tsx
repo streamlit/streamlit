@@ -17,14 +17,14 @@
 
 import React from "react"
 import { shallow } from "enzyme"
-import { fromJS } from "immutable"
 
+import { ImageList as ImageListProto } from "autogen/proto"
 import { ImageList, ImageListProps } from "./ImageList"
 
 const getProps = (
-  elementProps: Record<string, unknown> = {}
+  elementProps: Partial<ImageListProto> = {}
 ): ImageListProps => ({
-  element: fromJS({
+  element: ImageListProto.create({
     imgs: [
       {
         caption: "a",
@@ -86,7 +86,7 @@ describe("ImageList Element", () => {
     const props = getProps()
     const wrapper = shallow(<ImageList {...props} />)
 
-    const imgs = props.element.get("imgs").toJS()
+    const { imgs } = props.element
     wrapper.find(".stImage img").forEach((imgWrapper, id) => {
       // @ts-ignore
       expect(imgWrapper.prop("src")).toBe(`http://localhost:80${imgs[id].url}`)
@@ -97,7 +97,7 @@ describe("ImageList Element", () => {
     const props = getProps()
     const wrapper = shallow(<ImageList {...props} />)
 
-    const imgs = props.element.get("imgs").toJS()
+    const { imgs } = props.element
     wrapper.find(".stImage .caption").forEach((captionWrapper, id) => {
       // @ts-ignore
       expect(captionWrapper.text()).toBe(` ${imgs[id].caption} `)
@@ -115,7 +115,7 @@ describe("ImageList Element", () => {
     })
     const wrapper = shallow(<ImageList {...props} />)
 
-    const imgs = props.element.get("imgs").toJS()
+    const { imgs } = props.element
     wrapper.find(".stImage img").forEach((imgWrapper, id) => {
       // @ts-ignore
       expect(imgWrapper.prop("src")).toBe(imgs[id].url)

@@ -17,11 +17,11 @@
 
 import React from "react"
 import { shallow } from "enzyme"
-import { Map as ImmutableMap } from "immutable"
+import { Text as TextProto } from "autogen/proto"
 import Text, { TextProps } from "./Text"
 
-const getProps = (elementProps: Record<string, unknown> = {}): TextProps => ({
-  element: ImmutableMap({
+const getProps = (elementProps: Partial<TextProto> = {}): TextProps => ({
+  element: TextProto.create({
     body: "some plain text",
     ...elementProps,
   }),

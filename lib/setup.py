@@ -4,11 +4,18 @@ import setuptools
 import subprocess
 import sys
 
-from pipenv.project import Project
-from pipenv.utils import convert_deps_to_pip
 from setuptools.command.install import install
 
-VERSION = "0.68.0"  # PEP-440
+try:
+    from pipenv.project import Project
+    from pipenv.utils import convert_deps_to_pip
+except:
+    exit_msg = (
+        "pipenv is required to package Streamlit. Please install pipenv and try again"
+    )
+    sys.exit(exit_msg)
+
+VERSION = "0.69.2"  # PEP-440
 
 NAME = "streamlit"
 

@@ -243,7 +243,10 @@ def run_test(
             with AsyncSubprocess(streamlit_command, cwd=FRONTEND_DIR) as streamlit_proc:
                 # Run the Cypress spec to completion.
                 cypress_result = subprocess.run(
-                    cypress_command, cwd=FRONTEND_DIR, capture_output=True, text=True,
+                    cypress_command,
+                    cwd=FRONTEND_DIR,
+                    capture_output=True,
+                    text=True,
                 )
 
                 # Terminate the streamlit command and get its output
@@ -269,7 +272,8 @@ def run_test(
                 else:
                     # Prompt the user for what to do next.
                     user_input = click.prompt(
-                        "[R]etry, [U]pdate snapshots, [S]kip, or [Q]uit?", default="r",
+                        "[R]etry, [U]pdate snapshots, [S]kip, or [Q]uit?",
+                        default="r",
                     )
                     key = user_input[0].lower()
                     if key == "s":
@@ -311,7 +315,7 @@ def run_component_template_e2e_test(ctx: Context, template_dir: str) -> bool:
     with AsyncSubprocess(["yarn", "start"], cwd=frontend_dir) as webpack_proc:
         # Run the test!
         script_path = join(template_dir, "__init__.py")
-        spec_path = join(ROOT_DIR, "e2e/specs/component_template.spec.ts")
+        spec_path = join(ROOT_DIR, "e2e/specs/component_template.spec.js")
         success = run_test(ctx, spec_path, ["streamlit", "run", script_path])
 
         webpack_stdout = webpack_proc.terminate()
@@ -374,7 +378,7 @@ def run_e2e_tests(
         # `no_credentials=True` for the `--server.headless=false` test, because
         # it'll give a credentials prompt.
         if not flaky_tests:
-            hello_spec = join(ROOT_DIR, "e2e/specs/st_hello.spec.ts")
+            hello_spec = join(ROOT_DIR, "e2e/specs/st_hello.spec.js")
             run_test(
                 ctx,
                 hello_spec,
@@ -392,7 +396,7 @@ def run_e2e_tests(
         p = pathlib.Path(join(ROOT_DIR, ctx.tests_dir_name, "scripts")).resolve()
         for test_path in sorted(p.glob("*.py")):
             test_name, _ = splitext(basename(test_path.as_posix()))
-            specpath = join(ctx.tests_dir, "specs", f"{test_name}.spec.ts")
+            specpath = join(ctx.tests_dir, "specs", f"{test_name}.spec.js")
             run_test(ctx, specpath, ["streamlit", "run", test_path.as_posix()])
     except QuitException:
         # Swallow the exception we raise if the user chooses to exit early.

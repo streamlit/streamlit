@@ -19,7 +19,7 @@ from streamlit.elements import image_proto
 from streamlit.errors import StreamlitAPIException
 
 
-def beta_set_page_config(
+def set_page_config(
     page_title=None, page_icon=None, layout="centered", initial_sidebar_state="auto"
 ):
     """
@@ -28,10 +28,6 @@ def beta_set_page_config(
     .. note::
         This must be the first Streamlit command used in your app, and must only
         be set once.
-
-        This is a beta feature. See
-        https://docs.streamlit.io/en/latest/api.html#pre-release-features for more
-        information.
 
     Parameters
     ----------
@@ -54,7 +50,7 @@ def beta_set_page_config(
 
     Example
     -------
-    >>> st.beta_set_page_config(
+    >>> st.set_page_config(
     ...     page_title="Ex-stream-ly Cool App",
     ...     page_icon="🧊",
     ...     layout="wide",

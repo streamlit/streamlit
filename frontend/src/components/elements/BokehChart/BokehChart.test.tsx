@@ -16,7 +16,6 @@
  */
 
 import React from "react"
-import { fromJS } from "immutable"
 import { shallow, mount } from "enzyme"
 import { BokehChart as BokehChartProto } from "autogen/proto"
 
@@ -38,7 +37,7 @@ const { BokehChart } = require("./BokehChart")
 const getProps = (
   elementProps: Partial<BokehChartProto> = {}
 ): BokehChartProps => ({
-  element: fromJS({
+  element: BokehChartProto.create({
     figure: JSON.stringify(Figure),
     useContainerWidth: false,
     ...elementProps,
