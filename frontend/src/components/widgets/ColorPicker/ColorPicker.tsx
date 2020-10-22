@@ -16,8 +16,8 @@
  */
 
 import React from "react"
-import { Map as ImmutableMap } from "immutable"
 import { StatefulPopover as UIPopover } from "baseui/popover"
+import { ColorPicker as ColorPickerProto } from "autogen/proto"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { ChromePicker, ColorResult } from "react-color"
 
@@ -25,7 +25,7 @@ import "./ColorPicker.scss"
 
 export interface Props {
   disabled: boolean
-  element: ImmutableMap<string, any>
+  element: ColorPickerProto
   widgetMgr: WidgetStateManager
   width: number
 }
@@ -45,12 +45,10 @@ class ColorPicker extends React.PureComponent<Props, State> {
 
   get initialValue(): string {
     // If WidgetStateManager knew a value for this widget, initialize to that.
-    const widgetId: string = this.props.element.get("id")
+    // Otherwise, use the default value from the widget protobuf.
+    const widgetId = this.props.element.id
     const storedValue = this.props.widgetMgr.getStringValue(widgetId)
-    return storedValue !== undefined
-      ? storedValue
-      : // Otherwise, use the default value from the widget protobuf
-        this.props.element.get("default")
+    return storedValue !== undefined ? storedValue : this.props.element.default
   }
 
   public componentDidMount(): void {
@@ -58,7 +56,7 @@ class ColorPicker extends React.PureComponent<Props, State> {
   }
 
   private setWidgetValue = (source: Source): void => {
-    const widgetId: string = this.props.element.get("id")
+    const widgetId = this.props.element.id
     this.props.widgetMgr.setStringValue(widgetId, this.state.value, source)
   }
 
@@ -79,10 +77,9 @@ class ColorPicker extends React.PureComponent<Props, State> {
       backgroundColor: value,
       boxShadow: `${value} 0px 0px 4px`,
     }
-    const label = element.get("label")
     return (
       <div className="Widget stColorPicker" style={style}>
-        <label>{label}</label>
+        <label>{element.label}</label>
         <UIPopover
           content={() => (
             <ChromePicker
