@@ -157,17 +157,22 @@ install:
 develop:
 	cd lib ; python setup.py develop
 
-.PHONY: wheel
-# Create a Python wheel file in dist/.
-wheel:
+.PHONY: distribution
+# Create Python distribution files in dist/.
+distribution:
 	# Get rid of the old build folder to make sure that we delete old js and css.
 	rm -rfv lib/build
-	cd lib ; python setup.py bdist_wheel --universal
-	# cd lib ; python setup.py bdist_wheel sdist
+	cd lib ; python setup.py bdist_wheel --universal sdist
+
+.PHONY: clean-package
+# Removes existing packages and creates distribution files in dist/.
+clean-package:
+	rm -rfv lib/dist
+	package
 
 .PHONY: package
-# Create a Python wheel file in dist/.
-package: mini-devel frontend install wheel
+# Create Python distribution files in dist/.
+package: mini-devel frontend install distribution
 
 
 .PHONY: clean
@@ -328,7 +333,7 @@ loc:
 # Distributes the package to PyPi
 distribute:
 	cd lib/dist; \
-		twine upload $$(ls -t *.whl | head -n 1)
+		twine upload $$(ls -t *.(whl|tar.gz) | head -n 1)
 
 .PHONY: notices
 # Rebuild the NOTICES file.
