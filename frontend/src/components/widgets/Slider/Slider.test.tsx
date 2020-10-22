@@ -17,7 +17,6 @@
 
 import React from "react"
 import { mount, shallow } from "enzyme"
-import { fromJS } from "immutable"
 import { sliderOverrides } from "lib/widgetTheme"
 import { Slider as SliderProto } from "autogen/proto"
 import { Slider as UISlider } from "baseui/slider"
@@ -29,9 +28,9 @@ import Slider, { Props } from "./Slider"
 jest.mock("lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
-const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
-  element: fromJS({
-    id: 1,
+const getProps = (elementProps: Partial<SliderProto> = {}): Props => ({
+  element: SliderProto.create({
+    id: "1",
     label: "Label",
     format: "%d",
     default: [5],
@@ -69,9 +68,11 @@ describe("Slider widget", () => {
     // We need to do this as we are using a debounce when the widget value is set
     jest.runAllTimers()
 
-    expect(
-      props.widgetMgr.setFloatArrayValue
-    ).toHaveBeenCalledWith(props.element.get("id"), [5], { fromUi: false })
+    expect(props.widgetMgr.setFloatArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      [5],
+      { fromUi: false }
+    )
 
     wrapper.unmount()
   })
@@ -133,9 +134,9 @@ describe("Slider widget", () => {
       const UISliderWrapper = wrapper.find(UISlider)
       const propValue = UISliderWrapper.prop("value")
 
-      expect(propValue).toStrictEqual(props.element.get("default").toJS())
-      expect(propValue[0]).toBeGreaterThanOrEqual(props.element.get("min"))
-      expect(propValue[0]).toBeLessThan(props.element.get("max"))
+      expect(propValue).toStrictEqual(props.element.default)
+      expect(propValue[0]).toBeGreaterThanOrEqual(props.element.min)
+      expect(propValue[0]).toBeLessThan(props.element.max)
     })
 
     it("should handle value changes", async () => {
@@ -150,9 +151,11 @@ describe("Slider widget", () => {
       // We need to do this as we are using a debounce when the widget value is set
       jest.runAllTimers()
 
-      expect(
-        props.widgetMgr.setFloatArrayValue
-      ).toHaveBeenCalledWith(props.element.get("id"), [10], { fromUi: true })
+      expect(props.widgetMgr.setFloatArrayValue).toHaveBeenCalledWith(
+        props.element.id,
+        [10],
+        { fromUi: true }
+      )
       expect(wrapper.find(UISlider).prop("value")).toStrictEqual([10])
     })
   })
@@ -175,11 +178,11 @@ describe("Slider widget", () => {
       const UISliderWrapper = wrapper.find(UISlider)
       const propValue = UISliderWrapper.prop("value")
 
-      expect(propValue).toStrictEqual(props.element.get("default").toJS())
+      expect(propValue).toStrictEqual(props.element.default)
 
       propValue.forEach(value => {
-        expect(value).toBeGreaterThanOrEqual(props.element.get("min"))
-        expect(value).toBeLessThan(props.element.get("max"))
+        expect(value).toBeGreaterThanOrEqual(props.element.min)
+        expect(value).toBeLessThan(props.element.max)
       })
     })
 
@@ -250,7 +253,7 @@ describe("Slider widget", () => {
       jest.runAllTimers()
 
       expect(props.widgetMgr.setFloatArrayValue).toHaveBeenCalledWith(
-        props.element.get("id"),
+        props.element.id,
         [1, 10],
         {
           fromUi: true,

@@ -16,12 +16,12 @@
  */
 
 import React from "react"
-import { Map as ImmutableMap } from "immutable"
 import { shallow } from "enzyme"
+import { Json as JsonProto } from "autogen/proto"
 import Json, { JsonProps } from "./Json"
 
-const getProps = (elementProps: Record<string, unknown> = {}): JsonProps => ({
-  element: ImmutableMap({
+const getProps = (elementProps: Partial<JsonProto> = {}): JsonProps => ({
+  element: JsonProto.create({
     body:
       '{ "proper": [1,2,3],' +
       '  "nested": { "thing1": "cat", "thing2": "hat" },' +

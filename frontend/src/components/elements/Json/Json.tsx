@@ -18,30 +18,29 @@
 import React, { ReactElement } from "react"
 
 import ReactJson from "react-json-view"
-import { Map as ImmutableMap } from "immutable"
+import { Json as JsonProto } from "autogen/proto"
 
 import "assets/css/write.scss"
 
 export interface JsonProps {
   width: number
-  element: ImmutableMap<string, any>
+  element: JsonProto
 }
 
 /**
  * Functional element representing JSON structured text.
  */
 export default function Json({ width, element }: JsonProps): ReactElement {
-  const body = element.get("body")
   const styleProp = { width }
 
   let bodyObject
   try {
-    bodyObject = JSON.parse(body)
+    bodyObject = JSON.parse(element.body)
   } catch (e) {
     // If content fails to parse as Json, rebuild the error message
     // to show where the problem occurred.
     const pos = parseInt(e.message.replace(/[^0-9]/g, ""), 10)
-    e.message += `\n${body.substr(0, pos + 1)} ← here`
+    e.message += `\n${element.body.substr(0, pos + 1)} ← here`
     throw e
   }
   return (

@@ -197,6 +197,10 @@ workflows:
           filters:
             tags:
               only: /^([0-9]+\.){3}dev[0-9]+/
+      - pr-preview: # Make a preview branch for each PR
+          filters:
+            tags:
+              only: /^([0-9]+\.){3}dev[0-9]+/
       - nightly-release:
           requires:
             - python-3-7
@@ -476,6 +480,78 @@ jobs:
       - slack/status:
           fail_only: true
           failure_message: ":blobonfire: Nightly job failed to release"
+
+  pr-preview:
+    docker:
+      - image: circleci/python:3.8.1
+
+    resource_class: medium+
+
+    working_directory: ~/repo
+
+    steps:
+      - add_ssh_keys:
+          name: Add the read/write Github deploy key
+          fingerprints:
+            - "06:66:05:ea:ba:10:ec:b4:93:06:ab:62:7c:20:33:f0"
+
+      - checkout:
+          name: Checkout Streamlit code
+
+      - update-submodules
+
+      - pre-cache
+      - restore-from-cache
+      - pre-make
+      - make-init
+
+      - run:
+          <<: *make_scss_vars
+
+      - run:
+          name: Create wheel file
+          no_output_timeout: 2h
+          command: |
+            ${SUDO} apt-get install rsync
+            make package
+
+      - run:
+          name: Upload wheel to S3
+          command: |
+            ${SUDO} apt-get install -y awscli
+            aws configure set aws_access_key_id ${CORE_PREVIEWS_S3_KEY_ID}
+            aws configure set aws_secret_access_key ${CORE_PREVIEWS_S3_SECRET_KEY}
+
+            cd lib/dist
+            export WHEELFILE="$(ls -t *.whl | head -n 1)"
+            export PREVIEW_BRANCH="pr-${CIRCLE_PR_NUMBER}"
+            aws s3 cp ${WHEELFILE} s3://core-previews/${PREVIEW_BRANCH}/ --acl public-read
+            cd ../..
+
+            echo -e "https://core-previews.s3-us-west-2.amazonaws.com/${PREVIEW_BRANCH}/${WHEELFILE}" >> S3_URL
+
+      - run:
+          name: Setup preview repo
+          command: |
+            git config --global user.email "austin@streamlit.io"
+            git config --global user.name "CircleCI"
+            git clone git@github.com:streamlit/core-previews.git
+
+            cd core-previews
+            export PREVIEW_BRANCH="pr-${CIRCLE_PR_NUMBER}"
+            git branch -D ${PREVIEW_BRANCH} &>/dev/null || true
+            git checkout -b ${PREVIEW_BRANCH}
+
+            cat ../S3_URL >> requirements.txt
+
+            git add .
+            git commit -m "Prepare per-PR preview: ${PREVIEW_BRANCH}"
+            git push -f origin ${PREVIEW_BRANCH}
+
+      - run:
+          name: Ready to deploy!
+          command: |
+            echo -e "https://share.streamlit.io/deploy?repository=streamlit/core-previews&branch=pr-${CIRCLE_PR_NUMBER}&mainModule=streamlit_app.py"
 
   cypress:
     docker:

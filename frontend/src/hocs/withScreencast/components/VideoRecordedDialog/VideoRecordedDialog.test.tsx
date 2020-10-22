@@ -22,7 +22,7 @@ import VideoRecordedDialog, { Props } from "./VideoRecordedDialog"
 
 URL.createObjectURL = jest.fn()
 
-const getProps = (props: Record<string, unknown> = {}): Props => ({
+const getProps = (props: Partial<Props> = {}): Props => ({
   fileName: "test",
   onClose: jest.fn(),
   videoBlob: new Blob(),

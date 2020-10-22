@@ -17,13 +17,13 @@
 
 import React from "react"
 import { Checkbox as UICheckbox } from "baseui/checkbox"
-import { Map as ImmutableMap } from "immutable"
+import { Checkbox as CheckboxProto } from "autogen/proto"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { checkboxOverrides } from "lib/widgetTheme"
 
 export interface Props {
   disabled: boolean
-  element: ImmutableMap<string, any>
+  element: CheckboxProto
   widgetMgr: WidgetStateManager
   width: number
 }
@@ -43,12 +43,10 @@ class Checkbox extends React.PureComponent<Props, State> {
 
   get initialValue(): boolean {
     // If WidgetStateManager knew a value for this widget, initialize to that.
-    const widgetId: string = this.props.element.get("id")
+    // Otherwise, use the default value from the widget protobuf.
+    const widgetId = this.props.element.id
     const storedValue = this.props.widgetMgr.getBoolValue(widgetId)
-    return storedValue !== undefined
-      ? storedValue
-      : // Otherwise, use the default value from the widget protobuf
-        this.props.element.get("default")
+    return storedValue !== undefined ? storedValue : this.props.element.default
   }
 
   public componentDidMount(): void {
@@ -56,7 +54,7 @@ class Checkbox extends React.PureComponent<Props, State> {
   }
 
   private setWidgetValue = (source: Source): void => {
-    const widgetId: string = this.props.element.get("id")
+    const widgetId = this.props.element.id
     this.props.widgetMgr.setBoolValue(widgetId, this.state.value, source)
   }
 
@@ -66,7 +64,6 @@ class Checkbox extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const label = this.props.element.get("label")
     const style = { width: this.props.width }
 
     return (
@@ -77,7 +74,7 @@ class Checkbox extends React.PureComponent<Props, State> {
           onChange={this.onChange}
           overrides={checkboxOverrides}
         >
-          {label}
+          {this.props.element.label}
         </UICheckbox>
       </div>
     )
