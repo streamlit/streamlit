@@ -168,7 +168,7 @@ distribution:
 # Removes existing packages and creates distribution files in dist/.
 clean-package:
 	rm -rfv lib/dist
-	distribution
+	package
 
 .PHONY: package
 # Create Python distribution files in dist/.
