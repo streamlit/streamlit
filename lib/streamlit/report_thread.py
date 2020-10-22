@@ -13,10 +13,11 @@
 # limitations under the License.
 
 import threading
-from typing import Any, Dict, Optional, List
+from typing import Dict, Optional, List
 
 from streamlit.logger import get_logger
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.BlockPath_pb2 import BlockPath
 
 LOGGER = get_logger(__name__)
 
@@ -50,9 +51,9 @@ class ReportContext(object):
             The manager for files uploaded by all users.
 
         """
-        # (dict) Mapping of container (type str or BlockPath) to top-level
-        # cursor (type AbstractCursor).
-        self.cursors = {}  # type: Dict[Any, "streamlit.cursor.Cursor"]
+        self.cursors = (
+            {}
+        )  # type: Dict[BlockPath.ContainerValue, "streamlit.cursor.Cursor"]
         self.session_id = session_id
         self._enqueue = enqueue
         self.query_string = query_string
