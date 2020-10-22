@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """Allows us to create and absorb changes (aka Deltas) to elements."""
-from typing import Optional, Iterable
+from typing import Optional, Iterable, List
 
 from streamlit import caching
 from streamlit import cursor
@@ -293,14 +293,14 @@ class DeltaGenerator(
         container = self._container  # Proto index of container (e.g. MAIN=1)
 
         if self._cursor:
-            path_str = f"{self._cursor.path}"
-            index = self._cursor.index  # index - element's own position
+            path_str = str(self._cursor.path)
+            index_str = str(self._cursor.index)  # index - element's own position
         else:
             # Case in which we have started up in headless mode.
             path_str = "(,)"
-            index = ""
+            index_str = ""
 
-        return f"{container}.{path_str}.{index}"
+        return f"{container}.{path_str}.{index_str}"
 
     def _enqueue(
         self,
@@ -389,7 +389,7 @@ class DeltaGenerator(
 
         return _value_or_dg(return_value, output_dg)
 
-    def beta_container(self):
+    def beta_container(self) -> "DeltaGenerator":
         """Insert a multi-element container.
 
         Inserts an invisible container into your app that can be used to hold
@@ -432,7 +432,7 @@ class DeltaGenerator(
         return self._block()
 
     # TODO: Enforce that columns are not nested or in Sidebar
-    def beta_columns(self, spec):
+    def beta_columns(self, spec) -> List["DeltaGenerator"]:
         """Insert containers laid out as side-by-side columns.
 
         Inserts a number of multi-element containers laid out side-by-side and
@@ -579,7 +579,7 @@ class DeltaGenerator(
 
         return block_dg
 
-    def beta_expander(self, label=None, expanded=False):
+    def beta_expander(self, label=None, expanded=False) -> "DeltaGenerator":
         """Insert a multi-element container that can be expanded/collapsed.
 
         Inserts a container into your app that can be used to hold multiple elements
@@ -631,7 +631,7 @@ class DeltaGenerator(
 
         return self._block(block_proto=block_proto)
 
-    def add_rows(self, data=None, **kwargs):
+    def add_rows(self, data=None, **kwargs) -> "DeltaGenerator":
         """Concatenate a dataframe to the bottom of the current one.
 
         Parameters

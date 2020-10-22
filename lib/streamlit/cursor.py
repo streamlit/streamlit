@@ -47,7 +47,7 @@ class Cursor(object):
         self._path = ()  # type: CursorPath
 
     @property
-    def index(self):
+    def index(self) -> Optional[int]:
         return self._index
 
     @property
