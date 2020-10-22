@@ -145,7 +145,7 @@ class DeltaGenerator(
     # those, see above.
     def __init__(
         self,
-        container: Optional[BlockPath.ContainerValue] = BlockPath.MAIN,
+        container: Optional["BlockPath.ContainerValue"] = BlockPath.MAIN,
         cursor: Optional[Cursor] = None,
         parent: Optional["DeltaGenerator"] = None,
         block_type: Optional[str] = None,
