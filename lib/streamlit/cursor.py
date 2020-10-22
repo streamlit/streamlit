@@ -38,7 +38,7 @@ class Cursor:
     """A pointer to a location in the app.
 
     When adding an element to the app, you should always call
-    get_locked_cursor() on that element's respective AbstractCursor.
+    get_locked_cursor() on that element's respective Cursor.
     """
 
     @property
