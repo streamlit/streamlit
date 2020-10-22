@@ -41,11 +41,7 @@ SHARING_MODES = set(
 
 class PlotlyMixin:
     def plotly_chart(
-        dg,
-        figure_or_data,
-        use_container_width=False,
-        sharing="streamlit",
-        **kwargs,
+        dg, figure_or_data, use_container_width=False, sharing="streamlit", **kwargs,
     ):
         """Display an interactive Plotly chart.
 

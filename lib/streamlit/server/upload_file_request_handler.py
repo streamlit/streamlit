@@ -114,9 +114,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             self.send_error(400, reason=str(e))
             return
 
-        LOGGER.debug(
-            f"{len(files)} file(s) received for session {session_id} widget {widget_id}"
-        )
+        LOGGER.debug(f"{len(files)} file(s) received for session {session_id} widget {widget_id}")
 
         # Create an UploadedFile object for each file.
         uploaded_files = []
@@ -138,9 +136,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         replace = self.get_argument("replace", "false")
 
         update_files = (
-            self._file_mgr.replace_files
-            if replace == "true"
-            else self._file_mgr.add_files
+            self._file_mgr.replace_files if replace == "true" else self._file_mgr.add_files
         )
         update_files(
             session_id=session_id,
@@ -148,9 +144,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             files=uploaded_files,
         )
 
-        LOGGER.debug(
-            f"{len(files)} file(s) uploaded for session {session_id} widget {widget_id}. replace {replace}"
-        )
+        LOGGER.debug(f"{len(files)} file(s) uploaded for session {session_id} widget {widget_id}. replace {replace}")
 
         self.set_status(200)
 
