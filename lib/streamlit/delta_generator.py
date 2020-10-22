@@ -631,7 +631,7 @@ class DeltaGenerator(
 
         return self._block(block_proto=block_proto)
 
-    def add_rows(self, data=None, **kwargs) -> "DeltaGenerator":
+    def add_rows(self, data=None, **kwargs):
         """Concatenate a dataframe to the bottom of the current one.
 
         Parameters

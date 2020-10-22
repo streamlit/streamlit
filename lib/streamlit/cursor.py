@@ -34,29 +34,24 @@ def get_container_cursor(container) -> Optional["Cursor"]:
     return cursor
 
 
-class Cursor(object):
+class Cursor:
     """A pointer to a location in the app.
 
     When adding an element to the app, you should always call
     get_locked_cursor() on that element's respective AbstractCursor.
     """
 
-    def __init__(self):
-        self._is_locked = False
-        self._index = None  # type: Optional[int]
-        self._path = ()  # type: CursorPath
-
     @property
-    def index(self) -> Optional[int]:
-        return self._index
+    def index(self) -> int:
+        raise NotImplementedError()
 
     @property
     def path(self) -> CursorPath:
-        return self._path
+        raise NotImplementedError()
 
     @property
     def is_locked(self) -> bool:
-        return self._is_locked
+        raise NotImplementedError()
 
     def get_locked_cursor(self, **props) -> "LockedCursor":
         raise NotImplementedError()
@@ -85,9 +80,20 @@ class RunningCursor(Cursor):
           0th item is the topmost ancestor.
 
         """
-        self._is_locked = False
-        self._index = 0  # type: int
+        self._index = 0
         self._path = path
+
+    @property
+    def index(self) -> int:
+        return self._index
+
+    @property
+    def path(self) -> CursorPath:
+        return self._path
+
+    @property
+    def is_locked(self) -> bool:
+        return False
 
     def get_locked_cursor(self, **props) -> "LockedCursor":
         locked_cursor = LockedCursor(path=self._path, index=self._index, **props)
@@ -98,7 +104,7 @@ class RunningCursor(Cursor):
 
 
 class LockedCursor(Cursor):
-    def __init__(self, path: CursorPath = (), index: Optional[int] = None, **props):
+    def __init__(self, path: CursorPath = (), index: int = 0, **props):
         """A locked pointer to a location in the app.
 
         LockedCursors always point to the same location, even when you call
@@ -109,17 +115,28 @@ class LockedCursor(Cursor):
         path: tuple of ints
           The full path of this cursor, consisting of the IDs of all ancestors. The
           0th item is the topmost ancestor.
-        index: int or None
+        index: int
         **props: any
           Anything else you want to store in this cursor. This is a temporary
           measure that will go away when we implement improved return values
           for elements.
 
         """
-        self._is_locked = True
         self._index = index
         self._path = path
         self._props = props
+
+    @property
+    def index(self) -> int:
+        return self._index
+
+    @property
+    def path(self) -> CursorPath:
+        return self._path
+
+    @property
+    def is_locked(self) -> bool:
+        return True
 
     def get_locked_cursor(self, **props) -> "LockedCursor":
         self._props = props
