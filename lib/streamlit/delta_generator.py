@@ -199,18 +199,28 @@ class DeltaGenerator(
 
     @property
     def _active_dg(self) -> "DeltaGenerator":
+        """Return the DeltaGenerator that's currently 'active'.
+        If we are the main DeltaGenerator, and are inside a `with` block that
+        creates a container, our active_dg is that container. Otherwise,
+        our active_dg is self.
+        """
         if self == self._main_dg:
-            # `st.button`: Use the current `with` dg (aka the top of the stack)
+            # We're being invoked via an `st.foo` pattern - use the current
+            # `with` dg (aka the top of the stack).
             ctx = get_report_ctx()
             if ctx and len(ctx.dg_stack) > 0:
                 return ctx.dg_stack[-1]
 
-        # `st.sidebar.button`: Ignore the `with` dg
+        # We're being invoked via an `st.sidebar.foo` pattern - ignore the
+        # current `with` dg.
         return self
 
     @property
     def _main_dg(self) -> "DeltaGenerator":
-        # Recursively traverse up the tree to find the main DG (parent = None)
+        """Return this DeltaGenerator's root - that is, the top-level ancestor
+        DeltaGenerator that we belong to (this generally means the st._main
+        DeltaGenerator).
+        """
         return self._parent._main_dg if self._parent else self
 
     def __getattr__(self, name):
