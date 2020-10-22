@@ -209,14 +209,12 @@ def get_report_ctx() -> Optional[ReportContext]:
     """
     thread = threading.current_thread()
     ctx: Optional[ReportContext] = getattr(thread, REPORT_CONTEXT_ATTR_NAME, None)
-    if ctx is None:
-        if streamlit._is_running_with_streamlit:
-            # Only warn about a missing ReportContext if we were started
-            # via `streamlit run`. Otherwise, the user is likely running a
-            # script "bare", and doesn't need to be warned about streamlit
-            # bits that are irrelevant when not connected to a report.
-            LOGGER.warning("Thread '%s': missing ReportContext" % thread.name)
-        return None
+    if ctx is None and streamlit._is_running_with_streamlit:
+        # Only warn about a missing ReportContext if we were started
+        # via `streamlit run`. Otherwise, the user is likely running a
+        # script "bare", and doesn't need to be warned about streamlit
+        # bits that are irrelevant when not connected to a report.
+        LOGGER.warning("Thread '%s': missing ReportContext" % thread.name)
 
     return ctx
 
