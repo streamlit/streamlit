@@ -37,4 +37,5 @@ df.set_index("index", inplace=True)
 # display to UTC, so that our results are consistent. This test verifies
 # that change!
 st.area_chart(df)
+st.bar_chart(df)
 st.line_chart(df)

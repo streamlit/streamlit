@@ -269,8 +269,11 @@ def generate_chart(chart_type, data, width=0, height=0):
     )
     y_scale = alt.Scale(type="utc") if _is_date_column(data, "value") else alt.Undefined
 
-    # Bar charts should have discrete (ordered) x-axis; default is "quantitative"
-    x_type = "ordinal" if chart_type == "bar" else alt.Undefined
+    x_type = alt.Undefined
+    # Bar charts should have a discrete (ordinal) x-axis, UNLESS type is date/time
+    # https://github.com/streamlit/streamlit/pull/2097#issuecomment-714802475
+    if chart_type == "bar" and not _is_date_column(data, index_name):
+        x_type = "ordinal"
 
     chart = (
         getattr(alt.Chart(data, width=width, height=height), "mark_" + chart_type)()
