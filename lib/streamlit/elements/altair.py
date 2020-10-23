@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A Python wrapper around Altair."""
+"""A Python wrapper around Altair.
+Altair is a Python visualization library based on Vega-Lite,
+a nice JSON schema for expressing graphs and charts."""
 
 from datetime import date
 
@@ -156,7 +158,7 @@ class AltairMixin:
         >>> st.bar_chart(chart_data)
 
         .. output::
-           https://static.streamlit.io/0.50.0-td2L/index.html?id=5U5bjR2b3jFwnJdDfSvuRk
+           https://static.streamlit.io/0.66.0-2BLtg/index.html?id=GaYDn6vxskvBUkBwsGVEaL
            height: 220px
 
         """
@@ -267,10 +269,16 @@ def generate_chart(chart_type, data, width=0, height=0):
     )
     y_scale = alt.Scale(type="utc") if _is_date_column(data, "value") else alt.Undefined
 
+    x_type = alt.Undefined
+    # Bar charts should have a discrete (ordinal) x-axis, UNLESS type is date/time
+    # https://github.com/streamlit/streamlit/pull/2097#issuecomment-714802475
+    if chart_type == "bar" and not _is_date_column(data, index_name):
+        x_type = "ordinal"
+
     chart = (
         getattr(alt.Chart(data, width=width, height=height), "mark_" + chart_type)()
         .encode(
-            alt.X(index_name, title="", scale=x_scale),
+            alt.X(index_name, title="", scale=x_scale, type=x_type),
             alt.Y("value", title="", scale=y_scale),
             alt.Color("variable", title="", type="nominal"),
             alt.Tooltip([index_name, "value", "variable"]),
