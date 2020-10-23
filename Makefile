@@ -333,7 +333,8 @@ loc:
 # Distributes the package to PyPi
 distribute:
 	cd lib/dist; \
-		twine upload $$(ls -t *.(whl|tar.gz) | head -n 1)
+		twine upload $$(ls -t *.whl | head -n 1); \
+		twine upload $$(ls -t *.tar.gz | head -n 1)
 
 .PHONY: notices
 # Rebuild the NOTICES file.
