@@ -195,7 +195,6 @@ class ReportSession(object):
         self._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
 
         msg = ForwardMsg()
-        msg.metadata.delta_id = 0
         exception_proto.marshall(msg.delta.new_element.exception, e)
 
         self.enqueue(msg)

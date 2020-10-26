@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-import "streamlit/proto/BlockPath.proto";
 import "streamlit/proto/Delta.proto";
 import "streamlit/proto/Initialize.proto";
 import "streamlit/proto/NewReport.proto";
@@ -86,13 +85,9 @@ message ForwardMsgMetadata {
   // and a client that receives it should do the same.
   bool cacheable = 1;
 
-  // Each delta applies to a particular ID. Only set for Delta messages.
-  uint32 delta_id = 2;
+  repeated uint32 delta_path = 2;
 
-  // Path to parent block. Only set for Delta messages.
-  BlockPath parent_block = 3;
-
-  ElementDimensionSpec element_dimension_spec = 4;
+  ElementDimensionSpec element_dimension_spec = 3;
 }
 
 // Specifies the dimensions for the element

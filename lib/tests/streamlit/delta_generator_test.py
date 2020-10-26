@@ -14,9 +14,7 @@
 
 """DeltaGenerator Unittest."""
 
-from unittest import mock
 import json
-import unittest
 
 try:
     from inspect import signature
@@ -29,10 +27,9 @@ import pandas as pd
 
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.elements.utils import _build_duplicate_widget_message
-from streamlit.cursor import LockedCursor
+from streamlit.cursor import LockedCursor, Container
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.TextArea_pb2 import TextArea
@@ -235,8 +232,8 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
 
     def test_constructor_with_id(self):
         """Test DeltaGenerator() with an id."""
-        cursor = LockedCursor(index=1234)
-        dg = DeltaGenerator(cursor=cursor)
+        cursor = LockedCursor(container=Container.MAIN, index=1234)
+        dg = DeltaGenerator(container=Container.MAIN, cursor=cursor)
         self.assertTrue(dg._cursor.is_locked)
         self.assertEqual(dg._cursor.index, 1234)
 
@@ -246,7 +243,7 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         new_dg = dg._enqueue("empty", EmptyProto())
         self.assertEqual(dg, new_dg)
 
-    @parameterized.expand([(BlockPath.MAIN,), (BlockPath.SIDEBAR,)])
+    @parameterized.expand([(Container.MAIN,), (Container.SIDEBAR,)])
     def test_enqueue(self, container):
         dg = DeltaGenerator(container=container)
         self.assertEqual(0, dg._cursor.index)
@@ -265,8 +262,8 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(element.text.body, test_data)
 
     def test_enqueue_same_id(self):
-        cursor = LockedCursor(index=123)
-        dg = DeltaGenerator(cursor=cursor)
+        cursor = LockedCursor(container=Container.MAIN, index=123)
+        dg = DeltaGenerator(container=Container.MAIN, cursor=cursor)
         self.assertEqual(123, dg._cursor.index)
 
         test_data = "some test data"
@@ -277,7 +274,8 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(dg._cursor, new_dg._cursor)
 
         msg = self.get_message_from_queue()
-        self.assertEqual(123, msg.metadata.delta_id)
+        # The last element in delta_path is the delta's index in its container.
+        self.assertEqual(123, msg.metadata.delta_path[-1])
         self.assertEqual(msg.delta.new_element.text.body, test_data)
 
 
@@ -296,8 +294,7 @@ class DeltaGeneratorContainerTest(testutil.DeltaGeneratorTestCase):
         level3.markdown("bye")
 
         msg = self.get_message_from_queue()
-        self.assertEqual(msg.metadata.parent_block.path, [0, 0, 0])
-        self.assertEqual(msg.metadata.delta_id, 1)
+        self.assertEqual(msg.metadata.delta_path, [Container.MAIN.value, 0, 0, 0, 1])
 
 
 class DeltaGeneratorColumnsTest(testutil.DeltaGeneratorTestCase):
@@ -361,11 +358,13 @@ class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
             with st.beta_container():
                 st.markdown("Level 2 with")
                 msg = self.get_message_from_queue()
-                self.assertEqual(msg.metadata.parent_block.path, [0, 0])
+                self.assertEqual(
+                    msg.metadata.delta_path, [Container.MAIN.value, 0, 0, 0]
+                )
 
             st.markdown("Level 1 with")
             msg = self.get_message_from_queue()
-            self.assertEqual(msg.metadata.parent_block.path, [0])
+            self.assertEqual(msg.metadata.delta_path, [Container.MAIN.value, 0, 1])
 
 
 class DeltaGeneratorWriteTest(testutil.DeltaGeneratorTestCase):

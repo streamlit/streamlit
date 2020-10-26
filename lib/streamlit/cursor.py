@@ -11,18 +11,30 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from enum import Enum
+from typing import Optional, Tuple, Any, List
 
-from typing import Optional, Tuple, Any
-
-from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.report_thread import get_report_ctx
 
 # A "CursorPath" is a variable-length tuple of ints.
 CursorPath = Tuple[int, ...]
 
 
+class Container(Enum):
+    """The top-level containers in a Streamlit app.
+
+    There are currently two, "main", which is used whenever user code calls
+    an `st.foo` function; and "sidebar", which is used for `st.sidebar.foo`.
+    A container's integer enum value is its index in the top-level ReportRoot
+    node on the client.
+    """
+
+    MAIN = 0
+    SIDEBAR = 1
+
+
 def get_container_cursor(
-    container: Optional[BlockPath.ContainerValue],
+    container: Optional[Container],
 ) -> Optional["RunningCursor"]:
     """Return the top-level RunningCursor for the given container.
     This is the cursor that is used when user code calls something like
@@ -40,7 +52,7 @@ def get_container_cursor(
     if container in ctx.cursors:
         return ctx.cursors[container]
 
-    cursor = RunningCursor()
+    cursor = RunningCursor(container=container)
     ctx.cursors[container] = cursor
     return cursor
 
@@ -53,12 +65,21 @@ class Cursor:
     """
 
     @property
+    def container(self) -> Container:
+        """The top-level container this cursor lives within."""
+        raise NotImplementedError()
+
+    @property
     def index(self) -> int:
         raise NotImplementedError()
 
     @property
     def path(self) -> CursorPath:
         raise NotImplementedError()
+
+    @property
+    def delta_path(self) -> List[int]:
+        return [self.container.value] + list(self.path) + [self.index]
 
     @property
     def is_locked(self) -> bool:
@@ -78,7 +99,7 @@ class Cursor:
 
 
 class RunningCursor(Cursor):
-    def __init__(self, path: CursorPath = ()):
+    def __init__(self, container: Container, path: CursorPath = ()):
         """A moving pointer to a location in the app.
 
         RunningCursors auto-increment to the next available location when you
@@ -91,8 +112,13 @@ class RunningCursor(Cursor):
           0th item is the topmost ancestor.
 
         """
+        self._container = container
         self._index = 0
         self._path = path
+
+    @property
+    def container(self) -> Container:
+        return self._container
 
     @property
     def index(self) -> int:
@@ -107,7 +133,9 @@ class RunningCursor(Cursor):
         return False
 
     def get_locked_cursor(self, **props) -> "LockedCursor":
-        locked_cursor = LockedCursor(path=self._path, index=self._index, **props)
+        locked_cursor = LockedCursor(
+            container=self._container, path=self._path, index=self._index, **props
+        )
 
         self._index += 1
 
@@ -115,7 +143,9 @@ class RunningCursor(Cursor):
 
 
 class LockedCursor(Cursor):
-    def __init__(self, path: CursorPath = (), index: int = 0, **props):
+    def __init__(
+        self, container: Container, path: CursorPath = (), index: int = 0, **props
+    ):
         """A locked pointer to a location in the app.
 
         LockedCursors always point to the same location, even when you call
@@ -133,9 +163,14 @@ class LockedCursor(Cursor):
           for elements.
 
         """
+        self._container = container
         self._index = index
         self._path = path
         self._props = props
+
+    @property
+    def container(self) -> Container:
+        return self._container
 
     @property
     def index(self) -> int:
