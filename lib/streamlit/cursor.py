@@ -36,7 +36,10 @@ class Container(Enum):
 def make_delta_path(
     container: Container, parent_path: List[int], index: int
 ) -> List[int]:
-    return [container.value] + parent_path + [index]
+    delta_path = [container.value]
+    delta_path.extend(parent_path)
+    delta_path.append(index)
+    return delta_path
 
 
 def get_container_cursor(
@@ -76,16 +79,21 @@ class Cursor:
         raise NotImplementedError()
 
     @property
-    def index(self) -> int:
+    def parent_path(self) -> CursorPath:
+        """The Cursor's parent's path within its container."""
         raise NotImplementedError()
 
     @property
-    def path(self) -> CursorPath:
+    def index(self) -> int:
+        """The index of the delta within its parent block."""
         raise NotImplementedError()
 
     @property
     def delta_path(self) -> List[int]:
-        return make_delta_path(self.container, list(self.path), self.index)
+        """The complete path of the delta - its container, parent path,
+        and index.
+        """
+        return make_delta_path(self.container, list(self.parent_path), self.index)
 
     @property
     def is_locked(self) -> bool:
@@ -105,7 +113,7 @@ class Cursor:
 
 
 class RunningCursor(Cursor):
-    def __init__(self, container: Container, path: CursorPath = ()):
+    def __init__(self, container: Container, parent_path: CursorPath = ()):
         """A moving pointer to a location in the app.
 
         RunningCursors auto-increment to the next available location when you
@@ -113,26 +121,26 @@ class RunningCursor(Cursor):
 
         Parameters
         ----------
-        path: tuple of ints
-          The full path of this cursor, consisting of the IDs of all ancestors. The
-          0th item is the topmost ancestor.
+        parent_path: tuple of ints
+          The full path of this cursor, consisting of the IDs of all ancestors.
+          The 0th item is the topmost ancestor.
 
         """
         self._container = container
+        self._parent_path = parent_path
         self._index = 0
-        self._path = path
 
     @property
     def container(self) -> Container:
         return self._container
 
     @property
-    def index(self) -> int:
-        return self._index
+    def parent_path(self) -> CursorPath:
+        return self._parent_path
 
     @property
-    def path(self) -> CursorPath:
-        return self._path
+    def index(self) -> int:
+        return self._index
 
     @property
     def is_locked(self) -> bool:
@@ -140,7 +148,10 @@ class RunningCursor(Cursor):
 
     def get_locked_cursor(self, **props) -> "LockedCursor":
         locked_cursor = LockedCursor(
-            container=self._container, path=self._path, index=self._index, **props
+            container=self._container,
+            parent_path=self._parent_path,
+            index=self._index,
+            **props
         )
 
         self._index += 1
@@ -150,7 +161,11 @@ class RunningCursor(Cursor):
 
 class LockedCursor(Cursor):
     def __init__(
-        self, container: Container, path: CursorPath = (), index: int = 0, **props
+        self,
+        container: Container,
+        parent_path: CursorPath = (),
+        index: int = 0,
+        **props
     ):
         """A locked pointer to a location in the app.
 
@@ -159,7 +174,7 @@ class LockedCursor(Cursor):
 
         Parameters
         ----------
-        path: tuple of ints
+        parent_path: tuple of ints
           The full path of this cursor, consisting of the IDs of all ancestors. The
           0th item is the topmost ancestor.
         index: int
@@ -171,7 +186,7 @@ class LockedCursor(Cursor):
         """
         self._container = container
         self._index = index
-        self._path = path
+        self._parent_path = parent_path
         self._props = props
 
     @property
@@ -179,12 +194,12 @@ class LockedCursor(Cursor):
         return self._container
 
     @property
-    def index(self) -> int:
-        return self._index
+    def parent_path(self) -> CursorPath:
+        return self._parent_path
 
     @property
-    def path(self) -> CursorPath:
-        return self._path
+    def index(self) -> int:
+        return self._index
 
     @property
     def is_locked(self) -> bool:

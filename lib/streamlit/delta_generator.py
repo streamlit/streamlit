@@ -548,7 +548,8 @@ class DeltaGenerator(
         # below. But in this case we want to return a DeltaGenerator that uses
         # a brand new cursor for this new block we're creating.
         block_cursor = cursor.RunningCursor(
-            container=self._container, path=self._cursor.path + (self._cursor.index,)
+            container=self._container,
+            parent_path=self._cursor.parent_path + (self._cursor.index,),
         )
         block_dg = DeltaGenerator(
             container=self._container,
