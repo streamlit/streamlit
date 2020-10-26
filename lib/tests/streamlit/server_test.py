@@ -26,14 +26,14 @@ import errno
 from tornado import gen
 
 import streamlit.server.server
-from streamlit import config
+from streamlit import config, Container
+from streamlit.cursor import make_delta_path
 from streamlit.report_session import ReportSession
 from streamlit.uploaded_file_manager import UploadedFile
 from streamlit.server.server import MAX_PORT_SEARCH_RETRIES
 from streamlit.forward_msg_cache import ForwardMsgCache
 from streamlit.forward_msg_cache import populate_hash_if_needed
 from streamlit.elements import data_frame_proto
-from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.server.server import State
 from streamlit.server.server import start_listening
@@ -52,15 +52,14 @@ from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 
-def _create_dataframe_msg(df, id=1):
+def _create_dataframe_msg(df, id=1) -> ForwardMsg:
     msg = ForwardMsg()
-    msg.metadata.delta_id = id
-    msg.metadata.parent_block.container = BlockPath.SIDEBAR
+    msg.metadata.delta_path[:] = make_delta_path(Container.SIDEBAR, [], id)
     data_frame_proto.marshall_data_frame(df, msg.delta.new_element.data_frame)
     return msg
 
 
-def _create_report_finished_msg(status):
+def _create_report_finished_msg(status) -> ForwardMsg:
     msg = ForwardMsg()
     msg.report_finished = status
     return msg

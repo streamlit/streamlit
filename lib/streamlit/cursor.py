@@ -33,6 +33,12 @@ class Container(Enum):
     SIDEBAR = 1
 
 
+def make_delta_path(
+    container: Container, parent_path: List[int], index: int
+) -> List[int]:
+    return [container.value] + parent_path + [index]
+
+
 def get_container_cursor(
     container: Optional[Container],
 ) -> Optional["RunningCursor"]:
@@ -79,7 +85,7 @@ class Cursor:
 
     @property
     def delta_path(self) -> List[int]:
-        return [self.container.value] + list(self.path) + [self.index]
+        return make_delta_path(self.container, list(self.path), self.index)
 
     @property
     def is_locked(self) -> bool:
