@@ -614,7 +614,7 @@ class DeltaGenerator(
         ...     st.image("https://static.streamlit.io/examples/dice.jpg")
 
         .. output ::
-            https://static.streamlit.io/0.66.0-2BLtg/index.html?id=LzfUAiT1eM9Xy8EDMRkWyF
+            https://static.streamlit.io/0.66.0-2BLtg/index.html?id=7v2tgefVbW278gemvYrRny
             height: 750px
 
         """
