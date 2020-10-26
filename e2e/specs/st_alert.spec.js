@@ -50,7 +50,7 @@ describe("st.error and friends", () => {
       .contains("This is a success message");
   });
 
-  it("matches snapshot", () => {
+  it("matches the snapshot", () => {
     cy.get(".main > .block-container").matchImageSnapshot("alerts");
   });
 });
