@@ -276,10 +276,10 @@ class DeltaGenerator(
     def _is_top_level(self) -> bool:
         return self._provided_cursor is None
 
-    def _get_coordinates(self) -> str:
-        """Returns the element's 4-component location as string like "M.(1,2).3".
+    def _get_delta_path_str(self) -> str:
+        """Returns the element's delta path as a string like "[0, 2, 3, 1]".
 
-        This function uniquely identifies the element's position in the front-end,
+        This uniquely identifies the element's position in the front-end,
         which allows (among other potential uses) the MediaFileManager to maintain
         session-specific maps of MediaFile objects placed with their "coordinates".
 
@@ -288,17 +288,7 @@ class DeltaGenerator(
         """
         # Switch to the active DeltaGenerator, in case we're in a `with` block.
         self = self._active_dg
-        container = self._container  # Proto index of container (e.g. MAIN=1)
-
-        if self._cursor:
-            path_str = str(self._cursor.path)
-            index_str = str(self._cursor.index)  # index - element's own position
-        else:
-            # Case in which we have started up in headless mode.
-            path_str = "(,)"
-            index_str = ""
-
-        return f"{container}.{path_str}.{index_str}"
+        return str(self._cursor.delta_path) if self._cursor is not None else "[]"
 
     def _enqueue(
         self,
