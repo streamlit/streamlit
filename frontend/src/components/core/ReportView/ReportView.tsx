@@ -25,11 +25,11 @@ import { WidgetStateManager } from "lib/WidgetStateManager"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { ComponentRegistry } from "components/widgets/CustomComponent"
 
-import { ThemeProvider } from "baseui"
-import { Theme } from "baseui/theme"
-import { mainWidgetTheme, sidebarWidgetTheme } from "lib/widgetTheme"
+import ThemeProvider from "components/core/ThemeProvider"
+import { sidebarWidgetTheme } from "lib/widgetTheme"
+import { sidebarTheme } from "theme"
 import { PageConfig } from "autogen/proto"
-import { BlockNode, ReportRoot } from "lib/ReportNode"
+import { ReportRoot } from "lib/ReportNode"
 
 import "./ReportView.scss"
 import "./Widget.scss"
@@ -83,23 +83,6 @@ function ReportView(props: ReportViewProps): ReactElement {
     componentRegistry,
   } = props
 
-  const renderBlock = (theme: Theme, node: BlockNode): ReactElement => (
-    <div className="block-container">
-      <ThemeProvider theme={theme}>
-        <Block
-          node={node}
-          reportId={reportId}
-          reportRunState={reportRunState}
-          showStaleElementIndicator={showStaleElementIndicator}
-          widgetMgr={widgetMgr}
-          widgetsDisabled={widgetsDisabled}
-          uploadClient={uploadClient}
-          componentRegistry={componentRegistry}
-        />
-      </ThemeProvider>
-    </div>
-  )
-
   const reportViewClassName = classNames("reportview-container", {
     "--wide": wide,
   })
@@ -109,11 +92,38 @@ function ReportView(props: ReportViewProps): ReactElement {
     <div className={reportViewClassName}>
       {!elements.sidebar.isEmpty && (
         <Sidebar initialSidebarState={initialSidebarState}>
-          {renderBlock(sidebarWidgetTheme, elements.sidebar)}
+          <div className="block-container">
+            <ThemeProvider
+              theme={sidebarTheme}
+              baseuiTheme={sidebarWidgetTheme}
+            >
+              <Block
+                node={elements.sidebar}
+                reportId={reportId}
+                reportRunState={reportRunState}
+                showStaleElementIndicator={showStaleElementIndicator}
+                widgetMgr={widgetMgr}
+                widgetsDisabled={widgetsDisabled}
+                uploadClient={uploadClient}
+                componentRegistry={componentRegistry}
+              />
+            </ThemeProvider>
+          </div>
         </Sidebar>
       )}
       <section className="main" tabIndex={0}>
-        {renderBlock(mainWidgetTheme, elements.main)}
+        <div className="block-container">
+          <Block
+            node={elements.main}
+            reportId={reportId}
+            reportRunState={reportRunState}
+            showStaleElementIndicator={showStaleElementIndicator}
+            widgetMgr={widgetMgr}
+            widgetsDisabled={widgetsDisabled}
+            uploadClient={uploadClient}
+            componentRegistry={componentRegistry}
+          />
+        </div>
         <footer>
           Made with <a href="//streamlit.io">Streamlit</a>
         </footer>

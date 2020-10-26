@@ -547,3 +547,6 @@ export const sidebarWidgetTheme = createTheme(mainThemePrimitives, {
 // Log the widget theme just for debug purposes.
 logMessage("mainWidgetTheme", mainWidgetTheme)
 logMessage("sidebarWidgetTheme", sidebarWidgetTheme)
+
+export type MainWidgetTheme = typeof mainWidgetTheme
+export type SidebarWidgetTheme = typeof sidebarWidgetTheme
