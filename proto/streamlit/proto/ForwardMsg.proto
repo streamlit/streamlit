@@ -85,6 +85,8 @@ message ForwardMsgMetadata {
   // and a client that receives it should do the same.
   bool cacheable = 1;
 
+  // The path that identifies a delta's location in the report tree.
+  // Only set for Delta messages.
   repeated uint32 delta_path = 2;
 
   ElementDimensionSpec element_dimension_spec = 3;
