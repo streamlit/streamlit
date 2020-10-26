@@ -90,7 +90,10 @@ export function ImageList({
                 alt={idx.toString()}
               />
               {!isFullScreen && (
-                <StyledCaption> {image.caption} </StyledCaption>
+                <StyledCaption data-test="caption">
+                  {" "}
+                  {image.caption}{" "}
+                </StyledCaption>
               )}
             </StyledImageContainer>
           )
