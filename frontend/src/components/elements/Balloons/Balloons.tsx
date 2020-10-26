@@ -18,8 +18,6 @@
 import React, { ReactElement, memo } from "react"
 import range from "lodash/range"
 
-import { StyledBalloon } from "./styled-components"
-
 /*
  * IMPORTANT: If you change the asset imports below, make sure they still work if Streamlit is
  * served from a subpath.
@@ -30,6 +28,8 @@ import Balloon2 from "assets/img/balloons/balloon-2.png"
 import Balloon3 from "assets/img/balloons/balloon-3.png"
 import Balloon4 from "assets/img/balloons/balloon-4.png"
 import Balloon5 from "assets/img/balloons/balloon-5.png"
+
+import { StyledBalloon } from "./styled-components"
 
 export const NUM_BALLOONS = 30
 
