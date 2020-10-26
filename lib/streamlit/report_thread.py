@@ -53,7 +53,7 @@ class ReportContext(object):
         """
         self.cursors = (
             {}
-        )  # type: Dict[BlockPath.ContainerValue, "streamlit.cursor.Cursor"]
+        )  # type: Dict[BlockPath.ContainerValue, "streamlit.cursor.RunningCursor"]
         self.session_id = session_id
         self._enqueue = enqueue
         self.query_string = query_string

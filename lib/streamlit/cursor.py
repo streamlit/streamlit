@@ -14,13 +14,24 @@
 
 from typing import Optional, Tuple, Any
 
+from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.report_thread import get_report_ctx
 
 # A "CursorPath" is a variable-length tuple of ints.
 CursorPath = Tuple[int, ...]
 
 
-def get_container_cursor(container) -> Optional["Cursor"]:
+def get_container_cursor(
+    container: Optional[BlockPath.ContainerValue],
+) -> Optional["RunningCursor"]:
+    """Return the top-level RunningCursor for the given container.
+    This is the cursor that is used when user code calls something like
+    `st.foo` (which uses the main container) or `st.sidebar.foo` (which uses
+    the sidebar container).
+    """
+    if container is None:
+        return None
+
     ctx = get_report_ctx()
 
     if ctx is None:
