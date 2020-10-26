@@ -162,6 +162,17 @@ class DeltaGenerator(
         an element `foo` inside the sidebar.
 
         """
+        # Sanity check our Container + Cursor, to ensure that our Cursor
+        # is using the same Container that we are.
+        if (
+            container is not None
+            and cursor is not None
+            and container != cursor.container
+        ):
+            raise RuntimeError(
+                "DeltaGenerator container and cursor.container must be the same"
+            )
+
         # Whether this DeltaGenerator is nested in the main area or sidebar.
         # No relation to `st.beta_container()`.
         self._container = container
