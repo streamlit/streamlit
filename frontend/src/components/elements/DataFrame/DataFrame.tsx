@@ -15,13 +15,14 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useState } from "react"
+import React, { ReactElement, useEffect, useState } from "react"
 import { Map as ImmutableMap } from "immutable"
 import { MultiGrid } from "react-virtualized"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import {
   dataFrameGetDimensions,
   getSortedDataRowIndices,
+  tableGetRowsAndCols,
 } from "lib/dataFrameProto"
 import { SortDirection } from "./SortDirection"
 import "./DataFrame.scss"
@@ -36,7 +37,7 @@ import DataFrameCell from "./DataFrameCell"
 
 export interface DataFrameProps {
   width: number
-  height: number | undefined
+  height?: number
   element: ImmutableMap<string, any>
 }
 
@@ -55,11 +56,13 @@ export function DataFrame({
    * table.
    */
   const [sortedByUser, setSortedByUser] = useState(false)
+
   /**
    * Index of the column on which the table is sorted.
    * (Column 0 = row indices).
    */
   const [sortColumn, setSortColumn] = useState(0)
+
   /** Sort direction for table sorting. */
   const [sortDirection, setSortDirection] = useState(SortDirection.ASCENDING)
 
@@ -134,7 +137,7 @@ export function DataFrame({
 
     // If we're sorting a header column, our sorted row indices are just the
     // row indices themselves (reversed, if SortDirection == DESCENDING)
-    if (sortColumn < headerCols) {
+    if (sortColumn < headerCols || sortColumn - headerCols >= nCols) {
       const rowIndices = new Array(dataRows)
       for (let i = 0; i < dataRows; i += 1) {
         rowIndices[i] = sortAscending ? i : dataRows - (i + 1)
@@ -161,6 +164,8 @@ export function DataFrame({
       }
     }, 0)
   }
+
+  const [, nCols] = tableGetRowsAndCols(element.get("data"))
 
   // Calculate the dimensions of this array.
   const {
@@ -196,6 +201,14 @@ export function DataFrame({
   // means that the props have changed, so we should force a rerender of the
   // widths.
   recomputeSizeIfNeeded()
+
+  useEffect(() => {
+    if (sortColumn - headerCols >= nCols) {
+      setSortColumn(0)
+      setSortDirection(SortDirection.ASCENDING)
+      setSortedByUser(false)
+    }
+  }, [sortColumn, headerCols, nCols])
 
   // Put it all together.
   return (
