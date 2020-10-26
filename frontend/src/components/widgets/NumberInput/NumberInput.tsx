@@ -18,7 +18,6 @@
 import React from "react"
 import { sprintf } from "sprintf-js"
 import { logWarning } from "lib/log"
-import { Map as ImmutableMap } from "immutable"
 import { NumberInput as NumberInputProto } from "autogen/proto"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 
@@ -30,7 +29,7 @@ import "./NumberInput.scss"
 
 export interface Props {
   disabled: boolean
-  element: ImmutableMap<string, any>
+  element: NumberInputProto
   widgetMgr: WidgetStateManager
   width: number
 }
@@ -68,12 +67,10 @@ class NumberInput extends React.PureComponent<Props, State> {
 
   get initialValue(): number {
     // If WidgetStateManager knew a value for this widget, initialize to that.
-    const widgetId: string = this.props.element.get("id")
+    // Otherwise, use the default value from the widget protobuf
+    const widgetId = this.props.element.id
     const storedValue = this.props.widgetMgr.getIntValue(widgetId)
-    return storedValue !== undefined
-      ? storedValue
-      : // Otherwise, use the default value from the widget protobuf
-        this.props.element.get("default")
+    return storedValue !== undefined ? storedValue : this.props.element.default
   }
 
   public componentDidMount(): void {
@@ -81,9 +78,9 @@ class NumberInput extends React.PureComponent<Props, State> {
   }
 
   private formatValue = (value: number): string => {
-    const format: string = this.props.element.get("format")
+    const format = getNonEmptyString(this.props.element.format)
     if (format == null) {
-      return String(value)
+      return value.toString()
     }
 
     try {
@@ -96,23 +93,19 @@ class NumberInput extends React.PureComponent<Props, State> {
   }
 
   private isIntData = (): boolean => {
-    return this.props.element.get("dataType") === NumberInputProto.DataType.INT
+    return this.props.element.dataType === NumberInputProto.DataType.INT
   }
 
   private getMin = (): number => {
-    return this.props.element.get("hasMin")
-      ? this.props.element.get("min")
-      : -Infinity
+    return this.props.element.hasMin ? this.props.element.min : -Infinity
   }
 
   private getMax = (): number => {
-    return this.props.element.get("hasMax")
-      ? this.props.element.get("max")
-      : +Infinity
+    return this.props.element.hasMax ? this.props.element.max : +Infinity
   }
 
   private getStep = (): number => {
-    const step = this.props.element.get("step")
+    const { step } = this.props.element
 
     if (step) {
       return step
@@ -128,9 +121,9 @@ class NumberInput extends React.PureComponent<Props, State> {
     const { element, widgetMgr } = this.props
     const data = this.props.element
 
-    const widgetId: string = element.get("id")
-    const min: number = this.getMin()
-    const max: number = this.getMax()
+    const widgetId = element.id
+    const min = this.getMin()
+    const max = this.getMax()
 
     if (min > value || value > max) {
       const node = this.inputRef.current
@@ -138,7 +131,7 @@ class NumberInput extends React.PureComponent<Props, State> {
         node.reportValidity()
       }
     } else {
-      const valueToBeSaved = value || value === 0 ? value : data.get("default")
+      const valueToBeSaved = value || value === 0 ? value : data.default
 
       if (this.isIntData()) {
         widgetMgr.setIntValue(widgetId, valueToBeSaved, source)
@@ -245,12 +238,11 @@ class NumberInput extends React.PureComponent<Props, State> {
     const { element, width, disabled } = this.props
     const { formattedValue, dirty } = this.state
 
-    const label: string = element.get("label")
     const style = { width }
 
     return (
       <div className="Widget row-widget stNumberInput" style={style}>
-        <label>{label}</label>
+        <label>{element.label}</label>
         <div className="input-container">
           <UIInput
             type="number"
@@ -300,6 +292,16 @@ class NumberInput extends React.PureComponent<Props, State> {
       </div>
     )
   }
+}
+
+/**
+ * Return a string property from an element. If the string is
+ * null or empty, return undefined instead.
+ */
+function getNonEmptyString(
+  value: string | null | undefined
+): string | undefined {
+  return value == null || value === "" ? undefined : value
 }
 
 export default NumberInput

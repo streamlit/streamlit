@@ -1,6 +1,6 @@
 import streamlit as st
 
-st.line_chart({"d6": [1, 5, 2, 6, 2, 1]})
+st.bar_chart({"d6": [1, 5, 2, 6, 2, 1]})
 
 with st.beta_expander("See explanation"):
     st.write(

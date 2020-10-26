@@ -15,11 +15,12 @@
  * limitations under the License.
  */
 
-import { SpecialArg } from "autogen/proto"
+import {
+  ComponentInstance as ComponentInstanceProto,
+  SpecialArg,
+} from "autogen/proto"
 import ErrorElement from "components/shared/ErrorElement"
 import { mount, ReactWrapper } from "enzyme"
-import { fromJS } from "immutable"
-import { SimpleElement } from "lib/DeltaParser"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
@@ -118,7 +119,7 @@ class MockComponent {
 
   /** The component's WidgetID */
   public get widgetId(): string {
-    return this.instance.props.element.get("id")
+    return this.instance.props.element.id
   }
 
   /** The component's frameHeight string */
@@ -460,15 +461,10 @@ function forwardMsg(type: StreamlitMessageType, data: any): any {
 function createElementProp(
   jsonArgs: { [name: string]: any } = {},
   specialArgs: SpecialArg[] = []
-): SimpleElement {
-  // Convert specialArgs to plain objects, for immutablejs-ification
-  const immutableFriendlySpecialArgs = specialArgs.map(arg =>
-    SpecialArg.toObject(arg, { oneofs: true })
-  )
-
-  return fromJS({
+): ComponentInstanceProto {
+  return ComponentInstanceProto.create({
     jsonArgs: JSON.stringify(jsonArgs),
-    specialArgs: immutableFriendlySpecialArgs,
+    specialArgs,
     componentName: MOCK_COMPONENT_NAME,
     id: MOCK_WIDGET_ID,
     url: MOCK_COMPONENT_URL,

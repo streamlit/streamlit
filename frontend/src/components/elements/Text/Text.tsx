@@ -17,25 +17,24 @@
 
 import React, { ReactElement } from "react"
 import classNames from "classnames"
-import { Map as ImmutableMap } from "immutable"
+import { Text as TextProto } from "autogen/proto"
 
 import "assets/css/write.scss"
 
 export interface TextProps {
   width: number
-  element: ImmutableMap<string, any>
+  element: TextProto
 }
 
 /**
  * Functional element representing preformatted (plain) text.
  */
 export default function Text({ width, element }: TextProps): ReactElement {
-  const body = element.get("body")
   const styleProp = { width }
 
   return (
     <div className={classNames("fixed-width", "stText")} style={styleProp}>
-      {body}
+      {element.body}
     </div>
   )
 }
