@@ -35,7 +35,7 @@ describe("handles empty charts", () => {
     });
 
     // pyplot
-    cy.get(".stImage > img").should("have.attr", "src");
+    cy.get("[data-test='stImage'] > img").should("have.attr", "src");
 
     // BUG https://github.com/cypress-io/cypress/issues/4322
     // cy.get('.stDeckGlChart canvas')
