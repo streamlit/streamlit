@@ -66,6 +66,16 @@ export function DataFrame({
   /** Sort direction for table sorting. */
   const [sortDirection, setSortDirection] = useState(SortDirection.ASCENDING)
 
+  // Calculate the dimensions of this array.
+  const [, nCols] = tableGetRowsAndCols(element.get("data"))
+  const {
+    headerRows,
+    headerCols,
+    dataRows,
+    cols,
+    rows,
+  } = dataFrameGetDimensions(element)
+
   /**
    * Called when one of our column headers is clicked.
    * Changes the sort order of the table.
@@ -73,7 +83,7 @@ export function DataFrame({
   const toggleSortOrder = (columnIndex: number): void => {
     let sortDirection = SortDirection.ASCENDING
     if (sortColumn === columnIndex) {
-      // Clicking the same header toggles between ascending and descending
+      // Clicking the same header toggles between ascending and descending.
       sortDirection =
         sortDirection !== SortDirection.ASCENDING
           ? SortDirection.ASCENDING
@@ -102,8 +112,10 @@ export function DataFrame({
         styles: additionalStyles,
         contents,
       } = cellContentsGetter(columnIndex, rowIndex)
+
       const headerClickedCallback =
         rowIndex === 0 ? toggleSortOrder : undefined
+
       const columnSortDirection =
         columnIndex === sortColumn ? sortDirection : undefined
 
@@ -126,11 +138,12 @@ export function DataFrame({
       )
     }
   }
+
   /**
    * Returns the row indices, in display order, for this DataFrame,
    * given its sortColumn and sortDirection.
    */
-  const getDataRowIndices = (): number[] => {
+  const getDataRowIndices = (nCols: number): number[] => {
     const { headerCols, dataRows } = dataFrameGetDimensions(element)
 
     const sortAscending = sortDirection !== SortDirection.DESCENDING
@@ -165,18 +178,7 @@ export function DataFrame({
     }, 0)
   }
 
-  const [, nCols] = tableGetRowsAndCols(element.get("data"))
-
-  // Calculate the dimensions of this array.
-  const {
-    headerRows,
-    headerCols,
-    dataRows,
-    cols,
-    rows,
-  } = dataFrameGetDimensions(element)
-
-  const sortedDataRowIndices = getDataRowIndices()
+  const sortedDataRowIndices = getDataRowIndices(nCols)
 
   // Get the cell renderer.
   const cellContentsGetter = getCellContentsGetter({
