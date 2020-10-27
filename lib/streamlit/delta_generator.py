@@ -18,7 +18,7 @@ from typing import Optional, Iterable, List
 from streamlit import caching
 from streamlit import cursor
 from streamlit import type_util
-from streamlit.cursor import Cursor, Container
+from streamlit.cursor import Cursor, RootContainer
 from streamlit.report_thread import get_report_ctx
 from streamlit.errors import StreamlitAPIException
 from streamlit.errors import NoSessionContext
@@ -143,7 +143,7 @@ class DeltaGenerator(
     # those, see above.
     def __init__(
         self,
-        container: Optional[Container] = Container.MAIN,
+        container: Optional[RootContainer] = RootContainer.MAIN,
         cursor: Optional[Cursor] = None,
         parent: Optional["DeltaGenerator"] = None,
         block_type: Optional[str] = None,
@@ -241,7 +241,7 @@ class DeltaGenerator(
 
         def wrapper(*args, **kwargs):
             if name in streamlit_methods:
-                if self._container == Container.SIDEBAR:
+                if self._container == RootContainer.SIDEBAR:
                     message = (
                         "Method `%(name)s()` does not exist for "
                         "`st.sidebar`. Did you mean `st.%(name)s()`?" % {"name": name}

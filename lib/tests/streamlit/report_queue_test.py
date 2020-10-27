@@ -18,7 +18,7 @@ import copy
 import unittest
 from typing import Tuple
 
-from streamlit import Container
+from streamlit import RootContainer
 from streamlit.cursor import make_delta_path
 from streamlit.report_queue import ReportQueue
 from streamlit.elements import data_frame_proto
@@ -33,23 +33,23 @@ INIT_MSG.initialize.config.allow_run_on_save = True
 
 TEXT_DELTA_MSG1 = ForwardMsg()
 TEXT_DELTA_MSG1.delta.new_element.text.body = "text1"
-TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(Container.MAIN, (), 0)
+TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
 TEXT_DELTA_MSG2 = ForwardMsg()
 TEXT_DELTA_MSG2.delta.new_element.text.body = "text2"
-TEXT_DELTA_MSG2.metadata.delta_path[:] = make_delta_path(Container.MAIN, (), 0)
+TEXT_DELTA_MSG2.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
 DF_DELTA_MSG = ForwardMsg()
 data_frame_proto.marshall_data_frame(
     {"col1": [0, 1, 2], "col2": [10, 11, 12]}, DF_DELTA_MSG.delta.new_element.data_frame
 )
-DF_DELTA_MSG.metadata.delta_path[:] = make_delta_path(Container.MAIN, (), 0)
+DF_DELTA_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
 ADD_ROWS_MSG = ForwardMsg()
 data_frame_proto.marshall_data_frame(
     {"col1": [3, 4, 5], "col2": [13, 14, 15]}, ADD_ROWS_MSG.delta.add_rows.data
 )
-ADD_ROWS_MSG.metadata.delta_path[:] = make_delta_path(Container.MAIN, (), 0)
+ADD_ROWS_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
 
 class ReportQueueTest(unittest.TestCase):
@@ -72,14 +72,16 @@ class ReportQueueTest(unittest.TestCase):
 
         rq.enqueue(INIT_MSG)
 
-        TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(Container.MAIN, (), 0)
+        TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(
+            RootContainer.MAIN, (), 0
+        )
         rq.enqueue(TEXT_DELTA_MSG1)
 
         queue = rq.flush()
         self.assertEqual(len(queue), 2)
         self.assertTrue(queue[0].initialize.config.sharing_enabled)
         self.assertEqual(
-            make_delta_path(Container.MAIN, (), 0), queue[1].metadata.delta_path
+            make_delta_path(RootContainer.MAIN, (), 0), queue[1].metadata.delta_path
         )
         self.assertEqual(queue[1].delta.new_element.text.body, "text1")
 
@@ -89,21 +91,25 @@ class ReportQueueTest(unittest.TestCase):
 
         rq.enqueue(INIT_MSG)
 
-        TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(Container.MAIN, (), 0)
+        TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(
+            RootContainer.MAIN, (), 0
+        )
         rq.enqueue(TEXT_DELTA_MSG1)
 
-        TEXT_DELTA_MSG2.metadata.delta_path[:] = make_delta_path(Container.MAIN, (), 1)
+        TEXT_DELTA_MSG2.metadata.delta_path[:] = make_delta_path(
+            RootContainer.MAIN, (), 1
+        )
         rq.enqueue(TEXT_DELTA_MSG2)
 
         queue = rq.flush()
         self.assertEqual(len(queue), 3)
         self.assertTrue(queue[0].initialize.config.sharing_enabled)
         self.assertEqual(
-            make_delta_path(Container.MAIN, (), 0), queue[1].metadata.delta_path
+            make_delta_path(RootContainer.MAIN, (), 0), queue[1].metadata.delta_path
         )
         self.assertEqual(queue[1].delta.new_element.text.body, "text1")
         self.assertEqual(
-            make_delta_path(Container.MAIN, (), 1), queue[2].metadata.delta_path
+            make_delta_path(RootContainer.MAIN, (), 1), queue[2].metadata.delta_path
         )
         self.assertEqual(queue[2].delta.new_element.text.body, "text2")
 
@@ -113,17 +119,21 @@ class ReportQueueTest(unittest.TestCase):
 
         rq.enqueue(INIT_MSG)
 
-        TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(Container.MAIN, (), 0)
+        TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(
+            RootContainer.MAIN, (), 0
+        )
         rq.enqueue(TEXT_DELTA_MSG1)
 
-        TEXT_DELTA_MSG2.metadata.delta_path[:] = make_delta_path(Container.MAIN, (), 0)
+        TEXT_DELTA_MSG2.metadata.delta_path[:] = make_delta_path(
+            RootContainer.MAIN, (), 0
+        )
         rq.enqueue(TEXT_DELTA_MSG2)
 
         queue = rq.flush()
         self.assertEqual(len(queue), 2)
         self.assertTrue(queue[0].initialize.config.sharing_enabled)
         self.assertEqual(
-            make_delta_path(Container.MAIN, (), 0), queue[1].metadata.delta_path
+            make_delta_path(RootContainer.MAIN, (), 0), queue[1].metadata.delta_path
         )
         self.assertEqual(queue[1].delta.new_element.text.body, "text2")
 
@@ -133,24 +143,26 @@ class ReportQueueTest(unittest.TestCase):
 
         rq.enqueue(INIT_MSG)
 
-        TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(Container.MAIN, (), 0)
+        TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(
+            RootContainer.MAIN, (), 0
+        )
         rq.enqueue(TEXT_DELTA_MSG1)
 
-        DF_DELTA_MSG.metadata.delta_path[:] = make_delta_path(Container.MAIN, (), 1)
+        DF_DELTA_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 1)
         rq.enqueue(DF_DELTA_MSG)
 
-        ADD_ROWS_MSG.metadata.delta_path[:] = make_delta_path(Container.MAIN, (), 1)
+        ADD_ROWS_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 1)
         rq.enqueue(ADD_ROWS_MSG)
 
         queue = rq.flush()
         self.assertEqual(len(queue), 3)
         self.assertTrue(queue[0].initialize.config.sharing_enabled)
         self.assertEqual(
-            make_delta_path(Container.MAIN, (), 0), queue[1].metadata.delta_path
+            make_delta_path(RootContainer.MAIN, (), 0), queue[1].metadata.delta_path
         )
         self.assertEqual(queue[1].delta.new_element.text.body, "text1")
         self.assertEqual(
-            make_delta_path(Container.MAIN, (), 1), queue[2].metadata.delta_path
+            make_delta_path(RootContainer.MAIN, (), 1), queue[2].metadata.delta_path
         )
         col0 = queue[2].delta.new_element.data_frame.data.cols[0].int64s.data
         col1 = queue[2].delta.new_element.data_frame.data.cols[1].int64s.data
@@ -166,25 +178,29 @@ class ReportQueueTest(unittest.TestCase):
         # Simulate rerun
         for i in range(2):
             TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(
-                Container.MAIN, (), 0
+                RootContainer.MAIN, (), 0
             )
             rq.enqueue(TEXT_DELTA_MSG1)
 
-            DF_DELTA_MSG.metadata.delta_path[:] = make_delta_path(Container.MAIN, (), 1)
+            DF_DELTA_MSG.metadata.delta_path[:] = make_delta_path(
+                RootContainer.MAIN, (), 1
+            )
             rq.enqueue(DF_DELTA_MSG)
 
-            ADD_ROWS_MSG.metadata.delta_path[:] = make_delta_path(Container.MAIN, (), 1)
+            ADD_ROWS_MSG.metadata.delta_path[:] = make_delta_path(
+                RootContainer.MAIN, (), 1
+            )
             rq.enqueue(ADD_ROWS_MSG)
 
         queue = rq.flush()
         self.assertEqual(len(queue), 3)
         self.assertTrue(queue[0].initialize.config.sharing_enabled)
         self.assertEqual(
-            make_delta_path(Container.MAIN, (), 0), queue[1].metadata.delta_path
+            make_delta_path(RootContainer.MAIN, (), 0), queue[1].metadata.delta_path
         )
         self.assertEqual(queue[1].delta.new_element.text.body, "text1")
         self.assertEqual(
-            make_delta_path(Container.MAIN, (), 1), queue[2].metadata.delta_path
+            make_delta_path(RootContainer.MAIN, (), 1), queue[2].metadata.delta_path
         )
         col0 = queue[2].delta.new_element.data_frame.data.cols[0].int64s.data
         col1 = queue[2].delta.new_element.data_frame.data.cols[1].int64s.data
@@ -198,7 +214,7 @@ class ReportQueueTest(unittest.TestCase):
 
         rq.enqueue(INIT_MSG)
 
-        def enqueue_deltas(container: Container, path: Tuple[int, ...]):
+        def enqueue_deltas(container: RootContainer, path: Tuple[int, ...]):
             # We deep-copy the protos because we mutate each one
             # multiple times.
             msg = copy.deepcopy(TEXT_DELTA_MSG1)
@@ -213,10 +229,10 @@ class ReportQueueTest(unittest.TestCase):
             msg.metadata.delta_path[:] = make_delta_path(container, path, 1)
             rq.enqueue(msg)
 
-        enqueue_deltas(Container.MAIN, ())
-        enqueue_deltas(Container.SIDEBAR, (0, 0, 1))
+        enqueue_deltas(RootContainer.MAIN, ())
+        enqueue_deltas(RootContainer.SIDEBAR, (0, 0, 1))
 
-        def assert_deltas(container: Container, path: Tuple[int, ...], idx: int):
+        def assert_deltas(container: RootContainer, path: Tuple[int, ...], idx: int):
             self.assertEqual(
                 make_delta_path(container, path, 0), queue[idx].metadata.delta_path
             )
@@ -234,5 +250,5 @@ class ReportQueueTest(unittest.TestCase):
         self.assertEqual(5, len(queue))
         self.assertTrue(queue[0].initialize.config.sharing_enabled)
 
-        assert_deltas(Container.MAIN, (), 1)
-        assert_deltas(Container.SIDEBAR, (0, 0, 1), 3)
+        assert_deltas(RootContainer.MAIN, (), 1)
+        assert_deltas(RootContainer.SIDEBAR, (0, 0, 1), 3)

@@ -17,7 +17,7 @@
 from unittest.mock import MagicMock
 import unittest
 
-from streamlit import config, Container
+from streamlit import config, RootContainer
 from streamlit import report_session
 from streamlit.forward_msg_cache import ForwardMsgCache
 from streamlit.forward_msg_cache import create_reference_msg
@@ -28,7 +28,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 def _create_dataframe_msg(df, id=1):
     msg = ForwardMsg()
-    msg.metadata.delta_path[:] = [Container.SIDEBAR.value, id]
+    msg.metadata.delta_path[:] = [RootContainer.SIDEBAR.value, id]
     data_frame_proto.marshall_data_frame(df, msg.delta.new_element.data_frame)
     return msg
 

@@ -20,7 +20,7 @@ import unittest
 
 from parameterized import parameterized
 
-from streamlit import config, Container
+from streamlit import config, RootContainer
 from streamlit.cursor import make_delta_path
 from streamlit.report import Report
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -29,15 +29,15 @@ from tests import testutil
 
 INIT_MSG = ForwardMsg()
 INIT_MSG.initialize.config.sharing_enabled = True
-INIT_MSG.metadata.delta_path[:] = make_delta_path(Container.MAIN, (), 0)
+INIT_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
 TEXT_DELTA_MSG = ForwardMsg()
 TEXT_DELTA_MSG.delta.new_element.text.body = "text1"
-TEXT_DELTA_MSG.metadata.delta_path[:] = make_delta_path(Container.MAIN, (), 0)
+TEXT_DELTA_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
 EMPTY_DELTA_MSG = ForwardMsg()
 EMPTY_DELTA_MSG.delta.new_element.empty.unused = True
-EMPTY_DELTA_MSG.metadata.delta_path[:] = make_delta_path(Container.MAIN, (), 0)
+EMPTY_DELTA_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
 
 def _enqueue(report, msg):

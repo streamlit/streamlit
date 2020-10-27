@@ -26,7 +26,7 @@ import errno
 from tornado import gen
 
 import streamlit.server.server
-from streamlit import config, Container
+from streamlit import config, RootContainer
 from streamlit.cursor import make_delta_path
 from streamlit.report_session import ReportSession
 from streamlit.uploaded_file_manager import UploadedFile
@@ -54,7 +54,7 @@ LOGGER = get_logger(__name__)
 
 def _create_dataframe_msg(df, id=1) -> ForwardMsg:
     msg = ForwardMsg()
-    msg.metadata.delta_path[:] = make_delta_path(Container.SIDEBAR, (), id)
+    msg.metadata.delta_path[:] = make_delta_path(RootContainer.SIDEBAR, (), id)
     data_frame_proto.marshall_data_frame(df, msg.delta.new_element.data_frame)
     return msg
 
