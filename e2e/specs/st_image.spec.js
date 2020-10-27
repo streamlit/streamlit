@@ -27,10 +27,9 @@ describe("st.image", () => {
   });
 
   it("displays a caption", () => {
-    cy.get(".element-container [data-test='stImage'] .caption").should(
-      "contain",
-      "Black Square"
-    );
+    cy.get(
+      ".element-container [data-test='stImage'] [data-test='caption']"
+    ).should("contain", "Black Square");
   });
 
   it("shows deprecation warning", () => {
