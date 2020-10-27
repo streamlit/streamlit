@@ -156,10 +156,7 @@ vega_lite_chart = _main.vega_lite_chart  # noqa: E221
 video = _main.video  # noqa: E221
 warning = _main.warning  # noqa: E221
 write = _main.write  # noqa: E221
-beta_color_picker = _main.beta_color_picker  # noqa: E221
-beta_container = _main.beta_container  # noqa: E221
-beta_expander = _main.beta_expander  # noqa: E221
-beta_columns = _main.beta_columns  # noqa: E221
+color_picker = _main.color_picker  # noqa: E221
 
 # Config
 
@@ -201,6 +198,10 @@ def _beta_warning(func, date):
 
 
 beta_set_page_config = _beta_warning(set_page_config, "2021-01-06")
+beta_color_picker = _beta_warning(_main.color_picker, "January 28, 2021")
+beta_container = _main.beta_container  # noqa: E221
+beta_expander = _main.beta_expander  # noqa: E221
+beta_columns = _main.beta_columns  # noqa: E221
 
 
 def set_option(key, value):
