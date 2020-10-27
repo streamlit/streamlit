@@ -20,3 +20,47 @@ import { SessionInfo } from "lib/SessionInfo"
 test("Throws an error when used before initialization", () => {
   expect(() => SessionInfo.current).toThrow()
 })
+
+test("Properly implements equals()", () => {
+  const a = new SessionInfo({
+    sessionId: "sessionId",
+    streamlitVersion: "streamlitVersion",
+    pythonVersion: "pythonVersion",
+    installationId: "installationId",
+    installationIdV1: "installationIdV1",
+    installationIdV2: "installationIdV2",
+    authorEmail: "authorEmail",
+    maxCachedMessageAge: 0,
+    commandLine: "commandLine",
+    userMapboxToken: "userMapboxToken",
+  })
+
+  const b = new SessionInfo({
+    sessionId: "sessionId",
+    streamlitVersion: "streamlitVersion",
+    pythonVersion: "pythonVersion",
+    installationId: "installationId",
+    installationIdV1: "installationIdV1",
+    installationIdV2: "installationIdV2",
+    authorEmail: "authorEmail",
+    maxCachedMessageAge: 0,
+    commandLine: "commandLine",
+    userMapboxToken: "userMapboxToken",
+  })
+
+  const c = new SessionInfo({
+    sessionId: "modified!",
+    streamlitVersion: "streamlitVersion",
+    pythonVersion: "pythonVersion",
+    installationId: "installationId",
+    installationIdV1: "installationIdV1",
+    installationIdV2: "installationIdV2",
+    authorEmail: "authorEmail",
+    maxCachedMessageAge: 0,
+    commandLine: "commandLine",
+    userMapboxToken: "userMapboxToken",
+  })
+
+  expect(a).toEqual(b)
+  expect(a).not.toEqual(c)
+})

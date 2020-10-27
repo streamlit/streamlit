@@ -84,6 +84,25 @@ export class SessionInfo {
     return this.current.commandLine === "streamlit hello"
   }
 
+  public equals(other: SessionInfo): boolean {
+    if (this === other) {
+      return true
+    }
+
+    return (
+      this.sessionId === other.sessionId &&
+      this.streamlitVersion === other.streamlitVersion &&
+      this.pythonVersion === other.pythonVersion &&
+      this.installationId === other.installationId &&
+      this.installationIdV1 === other.installationIdV1 &&
+      this.installationIdV2 === other.installationIdV2 &&
+      this.authorEmail === other.authorEmail &&
+      this.maxCachedMessageAge === other.maxCachedMessageAge &&
+      this.commandLine === other.commandLine &&
+      this.userMapboxToken === other.userMapboxToken
+    )
+  }
+
   constructor({
     sessionId,
     streamlitVersion,
