@@ -20,7 +20,7 @@ from streamlit.report_thread import get_report_ctx
 class RootContainer(Enum):
     """The top-level containers in a Streamlit app.
 
-    There are two: "main", which is used whenever user code callsan `st.foo`
+    There are two: "main", which is used whenever user code calls an `st.foo`
     function; and "sidebar", which is used for `st.sidebar.foo`. A container's
     integer value is its index in the top-level ReportRoot node on the client.
     """

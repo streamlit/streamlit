@@ -52,7 +52,7 @@ class ReportContext(object):
         """
         self.cursors = (
             {}
-        )  # type: Dict["streamlit.cursor.Container", "streamlit.cursor.RunningCursor"]
+        )  # type: Dict["streamlit.cursor.RootContainer", "streamlit.cursor.RunningCursor"]
         self.session_id = session_id
         self._enqueue = enqueue
         self.query_string = query_string
