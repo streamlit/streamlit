@@ -28,17 +28,10 @@ import MainMenu from "./components/core/MainMenu"
 
 const getProps = (extend?: Partial<Props>): Props => ({
   screenCast: {
+    currentState: "OFF",
     toggleRecordAudio: jest.fn(),
     startRecording: jest.fn(),
     stopRecording: jest.fn(),
-    fileName: "",
-    recording: false,
-    recordAudio: false,
-    countdown: -1,
-    startAnimation: false,
-    showRecordedDialog: false,
-    showScreencastDialog: false,
-    showUnsupportedDialog: false,
   },
   s4aCommunication: {
     connect: jest.fn(),
@@ -84,7 +77,8 @@ describe("App", () => {
   })
 
   afterEach(() => {
-    SessionInfo.singleton = undefined
+    const UnsafeSessionInfo = SessionInfo as any
+    UnsafeSessionInfo.singleton = undefined
   })
 
   it("renders without crashing", () => {
