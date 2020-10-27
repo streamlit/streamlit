@@ -54,7 +54,7 @@ LOGGER = get_logger(__name__)
 
 def _create_dataframe_msg(df, id=1) -> ForwardMsg:
     msg = ForwardMsg()
-    msg.metadata.delta_path[:] = make_delta_path(Container.SIDEBAR, [], id)
+    msg.metadata.delta_path[:] = make_delta_path(Container.SIDEBAR, (), id)
     data_frame_proto.marshall_data_frame(df, msg.delta.new_element.data_frame)
     return msg
 

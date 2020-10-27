@@ -30,7 +30,7 @@ class Container(Enum):
 
 
 def make_delta_path(
-    container: Container, parent_path: List[int], index: int
+    container: Container, parent_path: Tuple[int, ...], index: int
 ) -> List[int]:
     delta_path = [container.value]
     delta_path.extend(parent_path)
@@ -89,7 +89,7 @@ class Cursor:
         """The complete path of the delta pointed to by this cursor - its
         container, parent path, and index.
         """
-        return make_delta_path(self.container, list(self.parent_path), self.index)
+        return make_delta_path(self.container, self.parent_path, self.index)
 
     @property
     def is_locked(self) -> bool:

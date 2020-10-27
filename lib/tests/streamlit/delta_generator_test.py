@@ -276,7 +276,7 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         msg = self.get_message_from_queue()
         # The last element in delta_path is the delta's index in its container.
         self.assertEqual(
-            make_delta_path(Container.MAIN, [], 123), msg.metadata.delta_path
+            make_delta_path(Container.MAIN, (), 123), msg.metadata.delta_path
         )
         self.assertEqual(msg.delta.new_element.text.body, test_data)
 
@@ -297,7 +297,7 @@ class DeltaGeneratorContainerTest(testutil.DeltaGeneratorTestCase):
 
         msg = self.get_message_from_queue()
         self.assertEqual(
-            make_delta_path(Container.MAIN, [0, 0, 0], 1), msg.metadata.delta_path
+            make_delta_path(Container.MAIN, (0, 0, 0), 1), msg.metadata.delta_path
         )
 
 
@@ -350,7 +350,7 @@ class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
 
         msg = self.get_message_from_queue()
         self.assertEqual(
-            make_delta_path(Container.MAIN, [0, 0, 0], 1), msg.metadata.delta_path
+            make_delta_path(Container.MAIN, (0, 0, 0), 1), msg.metadata.delta_path
         )
 
         # Now we're out of the `with` block, commands should use the main dg
@@ -358,7 +358,7 @@ class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
 
         msg = self.get_message_from_queue()
         self.assertEqual(
-            make_delta_path(Container.MAIN, [], 1), msg.metadata.delta_path
+            make_delta_path(Container.MAIN, (), 1), msg.metadata.delta_path
         )
 
     def test_nested_with(self):
@@ -367,14 +367,14 @@ class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
                 st.markdown("Level 2 with")
                 msg = self.get_message_from_queue()
                 self.assertEqual(
-                    make_delta_path(Container.MAIN, [0, 0], 0),
+                    make_delta_path(Container.MAIN, (0, 0), 0),
                     msg.metadata.delta_path,
                 )
 
             st.markdown("Level 1 with")
             msg = self.get_message_from_queue()
             self.assertEqual(
-                make_delta_path(Container.MAIN, [0], 1),
+                make_delta_path(Container.MAIN, (0,), 1),
                 msg.metadata.delta_path,
             )
 
