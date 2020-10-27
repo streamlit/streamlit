@@ -191,7 +191,7 @@ _Release date: May 05, 2020_
 **Highlights:**
 
 - 🎨 New color-picker widget! Use it with
-  [`st.beta_color_picker()`](https://docs.streamlit.io/en/latest/api.html#streamlit.beta_color_picker)
+  [`st.beta_color_picker()`](https://docs.streamlit.io/en/0.69.0/api.html#streamlit.beta_color_picker)
 - 🧪 Introducing `st.beta_*` and `st.experimental_*` function prefixes, for faster
   Streamlit feature releases. See
   [docs](https://docs.streamlit.io/en/latest/api.html#pre-release-features) for more info.
