@@ -16,17 +16,13 @@ from typing import Optional, Tuple, Any, List
 
 from streamlit.report_thread import get_report_ctx
 
-# A "CursorPath" is a variable-length tuple of ints.
-CursorPath = Tuple[int, ...]
-
 
 class Container(Enum):
     """The top-level containers in a Streamlit app.
 
-    There are currently two, "main", which is used whenever user code calls
-    an `st.foo` function; and "sidebar", which is used for `st.sidebar.foo`.
-    A container's integer enum value is its index in the top-level ReportRoot
-    node on the client.
+    There are two: "main", which is used whenever user code callsan `st.foo`
+    function; and "sidebar", which is used for `st.sidebar.foo`. A container's
+    integer value is its index in the top-level ReportRoot node on the client.
     """
 
     MAIN = 0
@@ -67,7 +63,7 @@ def get_container_cursor(
 
 
 class Cursor:
-    """A pointer to a location in the app.
+    """A pointer to a delta location in the app.
 
     When adding an element to the app, you should always call
     get_locked_cursor() on that element's respective Cursor.
@@ -79,19 +75,19 @@ class Cursor:
         raise NotImplementedError()
 
     @property
-    def parent_path(self) -> CursorPath:
-        """The Cursor's parent's path within its container."""
+    def parent_path(self) -> Tuple[int, ...]:
+        """The cursor's parent's path within its container."""
         raise NotImplementedError()
 
     @property
     def index(self) -> int:
-        """The index of the delta within its parent block."""
+        """The index of the Delta within its parent block."""
         raise NotImplementedError()
 
     @property
     def delta_path(self) -> List[int]:
-        """The complete path of the delta - its container, parent path,
-        and index.
+        """The complete path of the delta pointed to by this cursor - its
+        container, parent path, and index.
         """
         return make_delta_path(self.container, list(self.parent_path), self.index)
 
@@ -113,14 +109,16 @@ class Cursor:
 
 
 class RunningCursor(Cursor):
-    def __init__(self, container: Container, parent_path: CursorPath = ()):
-        """A moving pointer to a location in the app.
+    def __init__(self, container: Container, parent_path: Tuple[int, ...] = ()):
+        """A moving pointer to a delta location in the app.
 
         RunningCursors auto-increment to the next available location when you
         call get_locked_cursor() on them.
 
         Parameters
         ----------
+        container: Container
+            The container this cursor lives in.
         parent_path: tuple of ints
           The full path of this cursor, consisting of the IDs of all ancestors.
           The 0th item is the topmost ancestor.
@@ -135,7 +133,7 @@ class RunningCursor(Cursor):
         return self._container
 
     @property
-    def parent_path(self) -> CursorPath:
+    def parent_path(self) -> Tuple[int, ...]:
         return self._parent_path
 
     @property
@@ -163,7 +161,7 @@ class LockedCursor(Cursor):
     def __init__(
         self,
         container: Container,
-        parent_path: CursorPath = (),
+        parent_path: Tuple[int, ...] = (),
         index: int = 0,
         **props
     ):
@@ -174,6 +172,8 @@ class LockedCursor(Cursor):
 
         Parameters
         ----------
+        container: Container
+            The container this cursor lives in.
         parent_path: tuple of ints
           The full path of this cursor, consisting of the IDs of all ancestors. The
           0th item is the topmost ancestor.
@@ -194,7 +194,7 @@ class LockedCursor(Cursor):
         return self._container
 
     @property
-    def parent_path(self) -> CursorPath:
+    def parent_path(self) -> Tuple[int, ...]:
         return self._parent_path
 
     @property
