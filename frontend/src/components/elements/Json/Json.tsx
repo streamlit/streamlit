@@ -16,8 +16,8 @@
  */
 
 import React, { ReactElement } from "react"
-
 import ReactJson from "react-json-view"
+import JSON5 from "json5"
 import { Json as JsonProto } from "autogen/proto"
 
 import "assets/css/write.scss"
@@ -37,11 +37,15 @@ export default function Json({ width, element }: JsonProps): ReactElement {
   try {
     bodyObject = JSON.parse(element.body)
   } catch (e) {
-    // If content fails to parse as Json, rebuild the error message
-    // to show where the problem occurred.
-    const pos = parseInt(e.message.replace(/[^0-9]/g, ""), 10)
-    e.message += `\n${element.body.substr(0, pos + 1)} ← here`
-    throw e
+    try {
+      bodyObject = JSON5.parse(element.body)
+    } catch (json5Error) {
+      // If content fails to parse as Json, rebuild the error message
+      // to show where the problem occurred.
+      const pos = parseInt(e.message.replace(/[^0-9]/g, ""), 10)
+      e.message += `\n${element.body.substr(0, pos + 1)} ← here`
+      throw e
+    }
   }
   return (
     <div className="json-text-container stJson" style={styleProp}>
