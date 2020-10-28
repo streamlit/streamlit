@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import {
+import Protobuf, {
   Block as BlockProto,
   Delta,
   Element,
@@ -29,10 +29,6 @@ import { MetricsManager } from "./MetricsManager"
 import { makeElementWithInfoText, notUndefined } from "./utils"
 
 const NO_REPORT_ID = "NO_REPORT_ID"
-
-// Indices for our two top-level block nodes.
-const CONTAINER_MAIN = 0
-const CONTAINER_SIDEBAR = 1
 
 /**
  * An immutable node of the "Report Data Tree".
@@ -341,11 +337,11 @@ export class ReportRoot {
   }
 
   public get main(): BlockNode {
-    return this.root.children[CONTAINER_MAIN] as BlockNode
+    return this.root.children[Protobuf.RootContainer.MAIN] as BlockNode
   }
 
   public get sidebar(): BlockNode {
-    return this.root.children[CONTAINER_SIDEBAR] as BlockNode
+    return this.root.children[Protobuf.RootContainer.SIDEBAR] as BlockNode
   }
 
   public applyDelta(
@@ -358,7 +354,9 @@ export class ReportRoot {
     const { deltaPath } = metadata
 
     // Update Metrics
-    MetricsManager.current.incrementDeltaCounter(getContainerName(deltaPath))
+    MetricsManager.current.incrementDeltaCounter(
+      getRootContainerName(deltaPath)
+    )
 
     switch (delta.type) {
       case "newElement": {
@@ -459,17 +457,17 @@ export class ReportRoot {
   }
 }
 
-function getContainerName(deltaPath: number[]): string {
+function getRootContainerName(deltaPath: number[]): string {
   if (deltaPath.length > 0) {
     switch (deltaPath[0]) {
-      case CONTAINER_MAIN:
+      case Protobuf.RootContainer.MAIN:
         return "main"
-      case CONTAINER_SIDEBAR:
+      case Protobuf.RootContainer.SIDEBAR:
         return "sidebar"
       default:
         break
     }
   }
 
-  throw new Error(`Unrecognized BlockPathContainer in deltaPath: ${deltaPath}`)
+  throw new Error(`Unrecognized RootContainer in deltaPath: ${deltaPath}`)
 }
