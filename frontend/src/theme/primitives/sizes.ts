@@ -1,16 +1,4 @@
 export const sizes = {
   full: "100%",
   sidebar: "21rem",
-  threeXS: "14rem",
-  twoXS: "16rem",
-  xs: "20rem",
-  sm: "24rem",
-  md: "28rem",
-  lg: "32rem",
-  xl: "36rem",
-  twoXL: "42rem",
-  threeXL: "48rem",
-  fourXL: "56rem",
-  fiveXL: "64rem",
-  sixXL: "72rem",
 }
