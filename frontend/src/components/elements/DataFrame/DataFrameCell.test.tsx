@@ -17,7 +17,6 @@
 
 import React from "react"
 import { shallow } from "enzyme"
-import Icon from "components/shared/Icon"
 import { SortDirection } from "./SortDirection"
 
 import DataFrameCell, { DataFrameCellProps } from "./DataFrameCell"
@@ -51,7 +50,7 @@ describe("DataFrameCell Element", () => {
       })
       const wrapper = shallow(<DataFrameCell {...props} />)
 
-      expect(wrapper.find(Icon).prop("type")).toBe("chevron-top")
+      expect(wrapper.find("SortArrowIcon").prop("type")).toBe("chevron-top")
     })
 
     it("should render descending icon", () => {
@@ -61,7 +60,7 @@ describe("DataFrameCell Element", () => {
       })
       const wrapper = shallow(<DataFrameCell {...props} />)
 
-      expect(wrapper.find(Icon).prop("type")).toBe("chevron-bottom")
+      expect(wrapper.find("SortArrowIcon").prop("type")).toBe("chevron-bottom")
     })
 
     it("should only render sort icon in the top row", () => {
@@ -72,7 +71,7 @@ describe("DataFrameCell Element", () => {
       })
       const wrapper = shallow(<DataFrameCell {...props} />)
 
-      expect(wrapper.find(Icon).length).toBeFalsy()
+      expect(wrapper.find("SortArrowIcon").length).toBeFalsy()
     })
 
     it("should not render if it's undefined", () => {
@@ -82,7 +81,7 @@ describe("DataFrameCell Element", () => {
       })
       const wrapper = shallow(<DataFrameCell {...props} />)
 
-      expect(wrapper.find(Icon).length).toBeFalsy()
+      expect(wrapper.find("SortArrowIcon").length).toBeFalsy()
     })
   })
 

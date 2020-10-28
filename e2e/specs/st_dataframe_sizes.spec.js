@@ -17,7 +17,7 @@
 
 describe("Dataframes", () => {
   const DF_SELECTOR = ".stDataFrame";
-  const TABLE_SELECTOR = ".stTable > table";
+  const TABLE_SELECTOR = "[data-testid='stTable'] > table";
 
   before(() => {
     cy.visit("http://localhost:3000/");

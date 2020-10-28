@@ -25,7 +25,11 @@ import {
   tableGetRowsAndCols,
 } from "lib/dataFrameProto"
 import { SortDirection } from "./SortDirection"
-import "./DataFrame.scss"
+import {
+  StyledDataFrameContainer,
+  StyledEmptyDataframe,
+  StyledFixup,
+} from "./styled-components"
 import {
   CellContentsGetter,
   CellRenderer,
@@ -214,12 +218,8 @@ export function DataFrame({
 
   // Put it all together.
   return (
-    <div
-      style={{ width: elementWidth }}
-      className="dataframe-container stDataFrame"
-    >
+    <StyledDataFrameContainer width={elementWidth} className="stDataFrame">
       <MultiGrid
-        className="dataFrame"
         cellRenderer={cellRenderer}
         fixedColumnCount={headerCols}
         fixedRowCount={headerRows}
@@ -233,24 +233,26 @@ export function DataFrame({
         width={elementWidth}
         classNameBottomLeftGrid="table-bottom-left"
         classNameTopRightGrid="table-top-right"
+        hideBottomLeftGridScrollbar
+        hideTopRightGridScrollbar
         ref={multiGridRef}
       />
-      <div
-        className="fixup fixup-top-right"
-        style={{
-          width: border,
-          height: headerHeight,
-        }}
+      <StyledFixup
+        verticalLocator="top"
+        horizontalLocator="right"
+        width={border}
+        height={headerHeight}
       />
-      <div
-        className="fixup fixup-bottom-left"
-        style={{
-          width: headerWidth,
-          height: border,
-        }}
+      <StyledFixup
+        verticalLocator="bottom"
+        horizontalLocator="left"
+        width={headerWidth}
+        height={border}
       />
-      {dataRows === 0 ? <div className="empty-dataframe">empty</div> : null}
-    </div>
+      {dataRows === 0 ? (
+        <StyledEmptyDataframe>empty</StyledEmptyDataframe>
+      ) : null}
+    </StyledDataFrameContainer>
   )
 }
 

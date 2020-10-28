@@ -16,6 +16,7 @@
  */
 
 import React, { ReactElement } from "react"
+import styled from "@emotion/styled"
 import Icon from "components/shared/Icon"
 import { SortDirection } from "./SortDirection"
 
@@ -61,6 +62,13 @@ export interface DataFrameCellProps {
    */
   headerClickedCallback?: (columnIndex: number) => void
 }
+
+const SortArrowIcon = styled(Icon)(({ theme }) => ({
+  fontSize: theme.fontSizes.xs,
+  marginRight: theme.spacing.xxs,
+  opacity: 0.3,
+  verticalAlign: "top",
+}))
 
 export default function DataFrameCell({
   className,
@@ -117,10 +125,10 @@ function drawSortIcon(sortDirection?: SortDirection): React.ReactNode {
   // to ensure proper column width padding
   switch (sortDirection) {
     case SortDirection.ASCENDING:
-      return <Icon className="sort-arrow-icon" type="chevron-top" />
+      return <SortArrowIcon type="chevron-top" />
 
     case SortDirection.DESCENDING:
-      return <Icon className="sort-arrow-icon" type="chevron-bottom" />
+      return <SortArrowIcon type="chevron-bottom" />
 
     case undefined:
     default:

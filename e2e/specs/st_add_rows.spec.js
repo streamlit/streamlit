@@ -39,7 +39,10 @@ describe("st.add_rows", () => {
   });
 
   it("works for all elements that support it", () => {
-    cy.get(".element-container .stTable").should("have.length", 3);
+    cy.get(".element-container [data-testid='stTable']").should(
+      "have.length",
+      3
+    );
     cy.get(".element-container .stDataFrame").should("have.length", 4);
     cy.get(".element-container .stVegaLiteChart").should("have.length", 18);
   });
@@ -51,7 +54,10 @@ describe("st.add_rows", () => {
   });
 
   it("correctly adds rows to tables and dataframes", () => {
-    cy.get(".element-container .stTable tr").should("have.length", 10);
+    cy.get(".element-container [data-testid='stTable'] tr").should(
+      "have.length",
+      10
+    );
     cy.get(".element-container .stDataFrame .col-header").should(
       "have.length",
       7
