@@ -29,7 +29,7 @@ import ThemeProvider from "components/core/ThemeProvider"
 import { sidebarWidgetTheme } from "lib/widgetTheme"
 import { sidebarTheme } from "theme"
 import { PageConfig } from "autogen/proto"
-import { ReportRoot } from "lib/ReportNode"
+import { BlockNode, ReportRoot } from "lib/ReportNode"
 
 import "./ReportView.scss"
 import "./Widget.scss"
@@ -87,43 +87,33 @@ function ReportView(props: ReportViewProps): ReactElement {
     "--wide": wide,
   })
 
+  const renderBlock = (node: BlockNode): ReactElement => (
+    <div className="block-container">
+      <Block
+        node={node}
+        reportId={reportId}
+        reportRunState={reportRunState}
+        showStaleElementIndicator={showStaleElementIndicator}
+        widgetMgr={widgetMgr}
+        widgetsDisabled={widgetsDisabled}
+        uploadClient={uploadClient}
+        componentRegistry={componentRegistry}
+      />
+    </div>
+  )
+
   // The tabindex is required to support scrolling by arrow keys.
   return (
     <div className={reportViewClassName}>
       {!elements.sidebar.isEmpty && (
         <Sidebar initialSidebarState={initialSidebarState}>
-          <div className="block-container">
-            <ThemeProvider
-              theme={sidebarTheme}
-              baseuiTheme={sidebarWidgetTheme}
-            >
-              <Block
-                node={elements.sidebar}
-                reportId={reportId}
-                reportRunState={reportRunState}
-                showStaleElementIndicator={showStaleElementIndicator}
-                widgetMgr={widgetMgr}
-                widgetsDisabled={widgetsDisabled}
-                uploadClient={uploadClient}
-                componentRegistry={componentRegistry}
-              />
-            </ThemeProvider>
-          </div>
+          <ThemeProvider theme={sidebarTheme} baseuiTheme={sidebarWidgetTheme}>
+            {renderBlock(elements.sidebar)}
+          </ThemeProvider>
         </Sidebar>
       )}
       <section className="main" tabIndex={0}>
-        <div className="block-container">
-          <Block
-            node={elements.main}
-            reportId={reportId}
-            reportRunState={reportRunState}
-            showStaleElementIndicator={showStaleElementIndicator}
-            widgetMgr={widgetMgr}
-            widgetsDisabled={widgetsDisabled}
-            uploadClient={uploadClient}
-            componentRegistry={componentRegistry}
-          />
-        </div>
+        {renderBlock(elements.main)}
         <footer>
           Made with <a href="//streamlit.io">Streamlit</a>
         </footer>
