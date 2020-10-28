@@ -185,11 +185,11 @@ commands:
 workflows:
   circleci:
     jobs:
-      - python-3-7: # Oldest supported Python minor version.
+      - python-earliest: # Oldest supported Python minor version.
           filters:
             tags:
               only: /^([0-9]+\.){3}dev[0-9]+/ # 0.56.1.dev20201129
-      - python-3-9: # Latest supported Python minor version.
+      - python-latest: # Latest supported Python minor version.
           filters:
             tags:
               only: /^([0-9]+\.){3}dev[0-9]+/
@@ -203,8 +203,8 @@ workflows:
               only: /^([0-9]+\.){3}dev[0-9]+/
       - nightly-release:
           requires:
-            - python-3-7
-            - python-3-9
+            - python-earliest
+            - python-latest
             - cypress
           filters:
             tags:
@@ -214,7 +214,7 @@ workflows:
       - cypress-flaky-approval:
           type: approval
           requires:
-            - python-3-9
+            - python-latest
       - cypress: # Flaky Cypress tests
           name: cypress-flaky
           flaky: true
@@ -234,7 +234,7 @@ workflows:
       - create-tag
 
 jobs:
-  python-3-9: &job-template
+  python-latest: &job-template
     docker:
       - image: circleci/python:3.9.0
 
@@ -302,8 +302,8 @@ jobs:
       - run:
           name: Run mypy
           command: |
-            if [ "${CIRCLE_JOB}" != "python-3-9" ] ; then
-              echo "Mypy is only run in python-3.9 job"
+            if [ "${CIRCLE_JOB}" != "python-latest" ] ; then
+              echo "Mypy is only run in python-latest job"
             else
               scripts/mypy --report
             fi
@@ -338,8 +338,8 @@ jobs:
       - run:
           name: Run frontend tests
           command: |
-            if [ "${CIRCLE_JOB}" != "python-3-9" ] ; then
-              echo "Frontend tests are only run in python-3.9 job"
+            if [ "${CIRCLE_JOB}" != "python-latest" ] ; then
+              echo "Frontend tests are only run in python-latest job"
             else
               make jstest
             fi
@@ -369,10 +369,10 @@ jobs:
 
   # The following inherits from python-3-8. In a few cases, steps are skipped
   # based on the name of the current job (see, e.g., "Run frontend tests").
-  python-3-7:
+  python-earliest:
     <<: *job-template
     docker:
-      - image: circleci/python:3.7.0
+      - image: circleci/python:3.6.0
 
   create-tag:
     docker:
@@ -483,7 +483,7 @@ jobs:
 
   pr-preview:
     docker:
-      - image: circleci/python:3.8.1
+      - image: circleci/python:3.9.0
 
     resource_class: medium+
 
@@ -571,7 +571,7 @@ jobs:
 
   cypress:
     docker:
-      - image: circleci/python:3.7.4-stretch
+      - image: circleci/python:3.9.0
 
     resource_class: xlarge
 
