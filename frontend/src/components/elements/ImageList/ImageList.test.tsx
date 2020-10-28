@@ -104,7 +104,7 @@ describe("ImageList Element", () => {
     const wrapper = shallow(<ImageList {...props} />)
 
     const { imgs } = props.element
-    expect(wrapper.find("StyledImageContainer").length).toEqual(2)
+    expect(wrapper.find("StyledCaption").length).toEqual(2)
     wrapper.find("StyledCaption").forEach((captionWrapper, id) => {
       // @ts-ignore
       expect(captionWrapper.text()).toBe(` ${imgs[id].caption} `)
