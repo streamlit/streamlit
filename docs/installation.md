@@ -14,9 +14,11 @@ concepts](main_concepts.md) to understand Streamlit's data flow model.
 ## Set up your virtual environment
 
 Regardless of which package management tool you're using, we recommend running
-these commands in a virtual environment. This ensures that the dependencies
+the commands on this page in a virtual environment. This ensures that the dependencies
 pulled in for Streamlit don't impact any other Python projects
 you're working on.
+
+Below are a few tools you can use for environment management:
 
 - [pipenv](https://pipenv.pypa.io/en/latest/)
 - [poetry](https://python-poetry.org/)

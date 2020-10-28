@@ -418,7 +418,7 @@ jobs:
             git add lib/streamlit/__init__.py
             git add lib/streamlit/version.py
 
-            git commit -m"Update version and project name in files"
+            git commit -m "Update version and project name in files"
 
             git tag -a $TAG -m "Streamlit nightly $TAG"
             git push origin $TAG
@@ -431,7 +431,7 @@ jobs:
     docker:
       - image: circleci/python:3.9.0
 
-    resource_class: medium+
+    resource_class: large
 
     working_directory: ~/repo
 
@@ -499,7 +499,6 @@ jobs:
           name: Checkout Streamlit code
 
       - update-submodules
-
       - pre-cache
       - restore-from-cache
       - pre-make
@@ -516,6 +515,24 @@ jobs:
             make package
 
       - run:
+          name: Set PREVIEW_BRANCH envvar
+          command: |
+            echo "export PREVIEW_BRANCH=$(
+              if [[ -n "${CIRCLE_PR_NUMBER}" ]]
+              then
+                echo "pr-${CIRCLE_PR_NUMBER}"
+              elif [[ -n "${CIRCLE_BRANCH}" ]]
+              then
+                echo "${CIRCLE_BRANCH}-preview"
+              elif [[ -n "${CIRCLE_TAG}" ]]
+              then
+                echo "tag-${CIRCLE_TAG}"
+              else
+                echo "main-preview"
+              fi
+            )" >> $BASH_ENV
+
+      - run:
           name: Upload wheel to S3
           command: |
             ${SUDO} apt-get install -y awscli
@@ -524,7 +541,7 @@ jobs:
 
             cd lib/dist
             export WHEELFILE="$(ls -t *.whl | head -n 1)"
-            export PREVIEW_BRANCH="pr-${CIRCLE_PR_NUMBER}"
+
             aws s3 cp ${WHEELFILE} s3://core-previews/${PREVIEW_BRANCH}/ --acl public-read
             cd ../..
 
@@ -538,14 +555,13 @@ jobs:
             git clone git@github.com:streamlit/core-previews.git
 
             cd core-previews
-            export PREVIEW_BRANCH="pr-${CIRCLE_PR_NUMBER}"
             git branch -D ${PREVIEW_BRANCH} &>/dev/null || true
             git checkout -b ${PREVIEW_BRANCH}
 
             cat ../S3_URL >> requirements.txt
 
             git add .
-            git commit -m "Prepare per-PR preview: ${PREVIEW_BRANCH}"
+            git commit -m "Prepare core preview: ${PREVIEW_BRANCH}"
             git push -f origin ${PREVIEW_BRANCH}
 
       - run:

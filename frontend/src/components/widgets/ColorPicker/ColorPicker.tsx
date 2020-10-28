@@ -61,12 +61,11 @@ class ColorPicker extends React.PureComponent<Props, State> {
   }
 
   private onChangeComplete = (color: ColorResult): void => {
-    this.setState(
-      {
-        value: color.hex,
-      },
-      () => this.setWidgetValue({ fromUi: true })
-    )
+    this.setState({ value: color.hex })
+  }
+
+  private onColorClose = (): void => {
+    this.setWidgetValue({ fromUi: true })
   }
 
   public render = (): React.ReactNode => {
@@ -81,6 +80,7 @@ class ColorPicker extends React.PureComponent<Props, State> {
       <div className="Widget stColorPicker" style={style}>
         <label>{element.label}</label>
         <UIPopover
+          onClose={this.onColorClose}
           content={() => (
             <ChromePicker
               color={value}
