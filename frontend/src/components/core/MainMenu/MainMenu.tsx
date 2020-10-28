@@ -298,7 +298,7 @@ function MainMenu(props: Props): ReactElement {
             Option: MenuListItem,
             List: {
               props: {
-                "data-test": "main-menu-list",
+                "data-testid": "main-menu-list",
               },
               style: {
                 ":focus": {
@@ -312,7 +312,7 @@ function MainMenu(props: Props): ReactElement {
       overrides={{
         Body: {
           props: {
-            "data-test": "main-menu-popover",
+            "data-testid": "main-menu-popover",
           },
         },
       }}
