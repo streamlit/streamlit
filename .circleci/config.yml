@@ -372,7 +372,7 @@ jobs:
   python-earliest:
     <<: *job-template
     docker:
-      - image: circleci/python:3.6.0
+      - image: circleci/python:3.6.5
 
   create-tag:
     docker:
