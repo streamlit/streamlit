@@ -22,7 +22,6 @@ import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import { tableGetRowsAndCols, indexGet, tableGet } from "lib/dataFrameProto"
 import embed from "vega-embed"
 import * as vega from "vega"
-import "./VegaLiteChart.scss"
 
 const MagicFields = {
   DATAFRAME_INDEX: "(index)",

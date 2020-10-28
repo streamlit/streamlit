@@ -74,3 +74,23 @@ pre {
 .disabled {
   color: $disabled;
 }
+
+// VegaLite Specific CSS information
+#vg-tooltip-element td {
+  border: none;
+}
+
+.stVegaLiteChart {
+  &.vega-embed {
+    .vega-actions {
+      z-index: $z-index-popup-menu;
+    }
+
+    summary {
+      // Fix weird floating button height issue in Vega Lite.
+      height: auto;
+      // Fix floating button appearing above pop-ups.
+      z-index: $z-index-menu-button;
+    }
+  }
+}
