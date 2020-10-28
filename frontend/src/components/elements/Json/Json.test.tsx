@@ -46,4 +46,16 @@ describe("JSON element", () => {
       shallow(<Json {...props} />)
     }).toThrow(SyntaxError)
   })
+
+  it("renders json with NaN and infinity values", () => {
+    const props = getProps({
+      body: `{
+      "numbers":[ -1e27, NaN, Infinity, -Infinity, 2.2822022,-2.2702775],
+    }`,
+    })
+    const wrapper = shallow(<Json {...props} />)
+    expect(wrapper).toBeDefined()
+    const elem = wrapper.get(0)
+    expect(elem.props.className.includes("stJson")).toBeTruthy()
+  })
 })
