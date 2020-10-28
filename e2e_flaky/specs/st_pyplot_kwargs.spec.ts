@@ -31,10 +31,10 @@ describe("st.pyplot with kwargs", () => {
   });
 
   it("draws long text strings correctly", () => {
-    cy.get("[data-test='stImage']")
+    cy.get("[data-testid='stImage']")
       .find("img")
       .should("have.attr", "src");
-    cy.get("[data-test='stImage'] > img").matchImageSnapshot(
+    cy.get("[data-testid='stImage'] > img").matchImageSnapshot(
       "pyplot-long-text-strings"
     );
   });

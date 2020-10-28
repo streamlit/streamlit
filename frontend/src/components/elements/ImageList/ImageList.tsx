@@ -81,7 +81,7 @@ export function ImageList({
           return (
             <StyledImageContainer
               key={idx}
-              data-test="stImage"
+              data-testid="stImage"
               style={{ width: containerWidth }}
             >
               <img
@@ -90,9 +90,8 @@ export function ImageList({
                 alt={idx.toString()}
               />
               {!isFullScreen && (
-                <StyledCaption data-test="caption">
-                  {" "}
-                  {image.caption}{" "}
+                <StyledCaption data-testid="caption">
+                  {` ${image.caption} `}
                 </StyledCaption>
               )}
             </StyledImageContainer>

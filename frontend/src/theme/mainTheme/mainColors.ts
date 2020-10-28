@@ -16,6 +16,8 @@ const genericColors = {
   darkGray: colors.gray70,
   red: colors.red80,
   blue: colors.blue80,
+  green: colors.green80,
+  yellow: colors.yellow80,
 }
 
 export default {
@@ -24,14 +26,14 @@ export default {
   alertErrorBorderColor: transparentize(genericColors.red, 0.8),
   alertErrorBackgroundColor: transparentize(genericColors.red, 0.8),
   alertErrorTextColor: genericColors.danger,
-  alertInfoBorderColor: transparentize(colors.blue80, 0.9),
-  alertInfoBackgroundColor: transparentize(colors.blue80, 0.9),
+  alertInfoBorderColor: transparentize(genericColors.blue, 0.9),
+  alertInfoBackgroundColor: transparentize(genericColors.blue, 0.9),
   alertInfoTextColor: genericColors.info,
-  alertSuccessBorderColor: transparentize(colors.green80, 0.8),
-  alertSuccessBackgroundColor: transparentize(colors.green80, 0.8),
+  alertSuccessBorderColor: transparentize(genericColors.green, 0.8),
+  alertSuccessBackgroundColor: transparentize(genericColors.green, 0.8),
   alertSuccessTextColor: genericColors.success,
-  alertWarningBorderColor: transparentize(colors.yellow80, 0.2),
-  alertWarningBackgroundColor: transparentize(colors.yellow80, 0.8),
+  alertWarningBorderColor: transparentize(genericColors.yellow, 0.2),
+  alertWarningBackgroundColor: transparentize(genericColors.yellow, 0.8),
   alertWarningTextColor: genericColors.warning,
 
   docStringHeaderBorder: "#e6e9ef",

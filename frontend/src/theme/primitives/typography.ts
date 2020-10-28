@@ -4,16 +4,16 @@ export const fonts = {
 }
 
 export const fontSizes = {
-  xxs: "0.375rem",
+  twoXS: "0.375rem",
   xs: "0.5rem",
   sm: "0.75rem",
   smDefault: "0.8rem",
   md: "1rem",
   lg: "1.25rem",
   xl: "1.5rem",
-  xxl: "1.75rem",
-  xxxl: "2.25rem",
-  xxxxl: "3.125rem",
+  twoXL: "1.75rem",
+  threeXL: "2.25rem",
+  fourXL: "3.125rem",
 }
 
 export const fontWeights = {

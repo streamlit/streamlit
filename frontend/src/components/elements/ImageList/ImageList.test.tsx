@@ -60,7 +60,7 @@ describe("ImageList Element", () => {
       width: 200,
     }
     const wrapper = shallow(<ImageList {...props} />)
-
+    expect(wrapper.find("StyledImageContainer").length).toEqual(2)
     wrapper.find("StyledImageContainer").forEach(imageWrapper => {
       // @ts-ignore
       expect(imageWrapper.prop("style").width).toBe(200)
@@ -75,8 +75,8 @@ describe("ImageList Element", () => {
       width: 1,
     }
     const wrapper = shallow(<ImageList {...props} />)
-
-    wrapper.find("ImageContainer").forEach(imageWrapper => {
+    expect(wrapper.find("StyledImageContainer").length).toEqual(2)
+    wrapper.find("StyledImageContainer").forEach(imageWrapper => {
       // @ts-ignore
       expect(imageWrapper.prop("style").width).toBe(300)
     })
@@ -87,8 +87,9 @@ describe("ImageList Element", () => {
     const wrapper = shallow(<ImageList {...props} />)
 
     const { imgs } = props.element
+    expect(wrapper.find("StyledImageContainer").length).toEqual(2)
     wrapper
-      .find("ImageContainer")
+      .find("StyledImageContainer")
       .find("img")
       .forEach((imgWrapper, id) => {
         // @ts-ignore
@@ -103,6 +104,7 @@ describe("ImageList Element", () => {
     const wrapper = shallow(<ImageList {...props} />)
 
     const { imgs } = props.element
+    expect(wrapper.find("StyledImageContainer").length).toEqual(2)
     wrapper.find("StyledCaption").forEach((captionWrapper, id) => {
       // @ts-ignore
       expect(captionWrapper.text()).toBe(` ${imgs[id].caption} `)
@@ -121,6 +123,7 @@ describe("ImageList Element", () => {
     const wrapper = shallow(<ImageList {...props} />)
 
     const { imgs } = props.element
+    expect(wrapper.find("StyledImageContainer").length).toEqual(1)
     wrapper
       .find("StyledImageContainer")
       .find("img")
@@ -141,6 +144,7 @@ describe("ImageList Element", () => {
     it("should have the proper style", () => {
       const fullScreenAppearance = { height: 100, "object-fit": "contain" }
 
+      expect(wrapper.find("StyledImageContainer").length).toEqual(2)
       wrapper
         .find("StyledImageContainer")
         .find("img")
