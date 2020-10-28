@@ -11,42 +11,30 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from enum import Enum
+
 from typing import Optional, Tuple, Any, List
 
 from streamlit.report_thread import get_report_ctx
 
 
-class RootContainer(Enum):
-    """The top-level containers in a Streamlit app.
-
-    There are two: "main", which is used whenever user code calls an `st.foo`
-    function; and "sidebar", which is used for `st.sidebar.foo`. A container's
-    integer value is its index in the top-level ReportRoot node on the client.
-    """
-
-    MAIN = 0
-    SIDEBAR = 1
-
-
 def make_delta_path(
-    container: RootContainer, parent_path: Tuple[int, ...], index: int
+    root_container: int, parent_path: Tuple[int, ...], index: int
 ) -> List[int]:
-    delta_path = [container.value]
+    delta_path = [root_container]
     delta_path.extend(parent_path)
     delta_path.append(index)
     return delta_path
 
 
 def get_container_cursor(
-    container: Optional[RootContainer],
+    root_container: Optional[int],
 ) -> Optional["RunningCursor"]:
     """Return the top-level RunningCursor for the given container.
     This is the cursor that is used when user code calls something like
     `st.foo` (which uses the main container) or `st.sidebar.foo` (which uses
     the sidebar container).
     """
-    if container is None:
+    if root_container is None:
         return None
 
     ctx = get_report_ctx()
@@ -54,11 +42,11 @@ def get_container_cursor(
     if ctx is None:
         return None
 
-    if container in ctx.cursors:
-        return ctx.cursors[container]
+    if root_container in ctx.cursors:
+        return ctx.cursors[root_container]
 
-    cursor = RunningCursor(container=container)
-    ctx.cursors[container] = cursor
+    cursor = RunningCursor(root_container=root_container)
+    ctx.cursors[root_container] = cursor
     return cursor
 
 
@@ -70,8 +58,9 @@ class Cursor:
     """
 
     @property
-    def container(self) -> RootContainer:
-        """The top-level container this cursor lives within."""
+    def root_container(self) -> int:
+        """The top-level container this cursor lives within - either
+        RootContainer.MAIN or RootContainer.SIDEBAR."""
         raise NotImplementedError()
 
     @property
@@ -89,7 +78,7 @@ class Cursor:
         """The complete path of the delta pointed to by this cursor - its
         container, parent path, and index.
         """
-        return make_delta_path(self.container, self.parent_path, self.index)
+        return make_delta_path(self.root_container, self.parent_path, self.index)
 
     @property
     def is_locked(self) -> bool:
@@ -109,7 +98,7 @@ class Cursor:
 
 
 class RunningCursor(Cursor):
-    def __init__(self, container: RootContainer, parent_path: Tuple[int, ...] = ()):
+    def __init__(self, root_container: int, parent_path: Tuple[int, ...] = ()):
         """A moving pointer to a delta location in the app.
 
         RunningCursors auto-increment to the next available location when you
@@ -117,20 +106,20 @@ class RunningCursor(Cursor):
 
         Parameters
         ----------
-        container: RootContainer
-            The container this cursor lives in.
+        root_container: int
+            The root container this cursor lives in.
         parent_path: tuple of ints
           The full path of this cursor, consisting of the IDs of all ancestors.
           The 0th item is the topmost ancestor.
 
         """
-        self._container = container
+        self._root_container = root_container
         self._parent_path = parent_path
         self._index = 0
 
     @property
-    def container(self) -> RootContainer:
-        return self._container
+    def root_container(self) -> int:
+        return self._root_container
 
     @property
     def parent_path(self) -> Tuple[int, ...]:
@@ -146,7 +135,7 @@ class RunningCursor(Cursor):
 
     def get_locked_cursor(self, **props) -> "LockedCursor":
         locked_cursor = LockedCursor(
-            container=self._container,
+            root_container=self._root_container,
             parent_path=self._parent_path,
             index=self._index,
             **props
@@ -160,7 +149,7 @@ class RunningCursor(Cursor):
 class LockedCursor(Cursor):
     def __init__(
         self,
-        container: RootContainer,
+        root_container: int,
         parent_path: Tuple[int, ...] = (),
         index: int = 0,
         **props
@@ -172,8 +161,8 @@ class LockedCursor(Cursor):
 
         Parameters
         ----------
-        container: RootContainer
-            The container this cursor lives in.
+        root_container: int
+            The root container this cursor lives in.
         parent_path: tuple of ints
           The full path of this cursor, consisting of the IDs of all ancestors. The
           0th item is the topmost ancestor.
@@ -184,14 +173,14 @@ class LockedCursor(Cursor):
           for elements.
 
         """
-        self._container = container
+        self._root_container = root_container
         self._index = index
         self._parent_path = parent_path
         self._props = props
 
     @property
-    def container(self) -> RootContainer:
-        return self._container
+    def root_container(self) -> int:
+        return self._root_container
 
     @property
     def parent_path(self) -> Tuple[int, ...]:

@@ -50,9 +50,7 @@ class ReportContext(object):
             The manager for files uploaded by all users.
 
         """
-        self.cursors = (
-            {}
-        )  # type: Dict["streamlit.cursor.RootContainer", "streamlit.cursor.RunningCursor"]
+        self.cursors = {}  # type: Dict[int, "streamlit.cursor.RunningCursor"]
         self.session_id = session_id
         self._enqueue = enqueue
         self.query_string = query_string

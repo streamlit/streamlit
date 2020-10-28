@@ -49,7 +49,7 @@ For more detailed info, see https://docs.streamlit.io.
 # Must be at the top, to avoid circular dependency.
 from streamlit import logger as _logger
 from streamlit import config as _config
-from streamlit.cursor import RootContainer
+from streamlit.proto.RootContainer_pb2 import RootContainer
 
 _LOGGER = _logger.get_logger("root")
 
@@ -104,8 +104,8 @@ def _update_logger():
 _config.on_config_parsed(_update_logger, True)
 
 
-_main = _DeltaGenerator(container=RootContainer.MAIN)
-sidebar = _DeltaGenerator(container=RootContainer.SIDEBAR, parent=_main)
+_main = _DeltaGenerator(root_container=RootContainer.MAIN)
+sidebar = _DeltaGenerator(root_container=RootContainer.SIDEBAR, parent=_main)
 
 # DeltaGenerator methods:
 
