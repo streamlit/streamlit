@@ -24,7 +24,7 @@ jest.mock("lib/log", () => ({
   logWarning: jest.fn(),
 }))
 
-const getProps = (props: Record<string, unknown> = {}): CodeBlockProps => ({
+const getProps = (props: Partial<CodeBlockProps> = {}): CodeBlockProps => ({
   width: 0,
   value: `
     import streamlit as st

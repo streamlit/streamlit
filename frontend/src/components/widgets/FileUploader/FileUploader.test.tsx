@@ -18,10 +18,10 @@
 import React from "react"
 import { FileError } from "react-dropzone"
 import { shallow } from "enzyme"
-import { fromJS } from "immutable"
 
 import { ExtendedFile } from "lib/FileHelper"
 
+import { FileUploader as FileUploaderProto } from "autogen/proto"
 import FileDropzone from "./FileDropzone"
 import FileUploader, { Props } from "./FileUploader"
 
@@ -46,9 +46,8 @@ const FILE_TOO_LARGE: FileError = {
 }
 
 const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
-  element: fromJS({
+  element: FileUploaderProto.create({
     type: [],
-    progress: 0,
     maxUploadSizeMb: 50,
     ...elementProps,
   }),
@@ -73,7 +72,7 @@ describe("FileUploader widget", () => {
     const props = getProps({ label: "Test label" })
     const wrapper = shallow(<FileUploader {...props} />)
 
-    expect(wrapper.find("label").text()).toBe(props.element.get("label"))
+    expect(wrapper.find("label").text()).toBe(props.element.label)
   })
 
   it("should upload files", () => {

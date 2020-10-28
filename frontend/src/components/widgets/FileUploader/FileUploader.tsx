@@ -18,7 +18,7 @@
 import React from "react"
 import axios from "axios"
 import { FileRejection } from "react-dropzone"
-import { Map as ImmutableMap } from "immutable"
+import { FileUploader as FileUploaderProto } from "autogen/proto"
 
 import {
   ExtendedFile,
@@ -39,7 +39,7 @@ import "./FileUploader.scss"
 
 export interface Props {
   disabled: boolean
-  element: ImmutableMap<string, any>
+  element: FileUploaderProto
   widgetStateManager: WidgetStateManager
   uploadClient: FileUploadClient
   width: number
@@ -55,7 +55,7 @@ interface State {
 class FileUploader extends React.PureComponent<Props, State> {
   public constructor(props: Props) {
     super(props)
-    const maxMbs = props.element.get("maxUploadSizeMb")
+    const maxMbs = props.element.maxUploadSizeMb
 
     this.state = {
       status: "READY",
@@ -75,8 +75,8 @@ class FileUploader extends React.PureComponent<Props, State> {
       this.reset()
     }
 
-    const currentMaxSize = this.props.element.get("maxUploadSizeMb")
-    if (prevProps.element.get("maxUploadSizeMb") !== currentMaxSize) {
+    const currentMaxSize = this.props.element.maxUploadSizeMb
+    if (prevProps.element.maxUploadSizeMb !== currentMaxSize) {
       this.setState({
         maxSizeBytes: sizeConverter(
           currentMaxSize,
@@ -107,7 +107,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     rejectedFiles: FileRejection[]
   ): void => {
     const { element } = this.props
-    const multipleFiles = element.get("multipleFiles")
+    const { multipleFiles } = element
 
     if (!multipleFiles && this.state.files.length) {
       // Only one file is allowed. Remove existing file
@@ -153,13 +153,13 @@ class FileUploader extends React.PureComponent<Props, State> {
     this.handleFile(file, index)
     this.props.uploadClient
       .uploadFiles(
-        this.props.element.get("id"),
+        this.props.element.id,
         [file],
         e => this.onUploadProgress(e, file),
         file.cancelToken
           ? file.cancelToken.token
           : axios.CancelToken.source().token,
-        !this.props.element.get("multipleFiles")
+        !this.props.element.multipleFiles
       )
       .then(() => {
         this.setState(state => {
@@ -251,7 +251,7 @@ class FileUploader extends React.PureComponent<Props, State> {
         }
 
         this.props.uploadClient
-          .delete(this.props.element.get("id"), fileId)
+          .delete(this.props.element.id, fileId)
           .then(() => this.removeFile(fileId))
         return { files: state.files }
       }
@@ -296,13 +296,11 @@ class FileUploader extends React.PureComponent<Props, State> {
   public render = (): React.ReactNode => {
     const { maxSizeBytes, errorMessage, files } = this.state
     const { element, disabled } = this.props
-    const label: string = element.get("label")
-    const multipleFiles: boolean = element.get("multipleFiles")
-    const acceptedExtensions: string[] = element.get("type").toArray()
+    const acceptedExtensions = element.type
 
     return (
       <div className="Widget stFileUploader">
-        <label>{label}</label>
+        <label>{element.label}</label>
         {errorMessage ? (
           <AlertContainer kind={AlertKind.ERROR}>
             {errorMessage}
@@ -310,7 +308,7 @@ class FileUploader extends React.PureComponent<Props, State> {
         ) : null}
         <FileDropzone
           onDrop={this.dropHandler}
-          multiple={multipleFiles}
+          multiple={element.multipleFiles}
           acceptedExtensions={acceptedExtensions}
           maxSizeBytes={maxSizeBytes}
           disabled={disabled}

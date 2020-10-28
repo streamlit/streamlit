@@ -16,17 +16,19 @@
  */
 
 import React, { ReactElement, useEffect } from "react"
-import { Map as ImmutableMap } from "immutable"
-import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 
 import { select } from "d3"
 import { graphviz } from "d3-graphviz"
 import { logError } from "lib/log"
+
+import withFullScreenWrapper from "hocs/withFullScreenWrapper"
+import { GraphVizChart as GraphVizChartProto } from "autogen/proto"
+
 import "./GraphVizChart.scss"
 
 export interface GraphVizChartProps {
   width: number
-  element: ImmutableMap<string, any>
+  element: GraphVizChartProto
   index: number
   height: number | undefined
 }
@@ -53,19 +55,18 @@ export function GraphVizChart({
   let originalWidth = 0
 
   const getChartData = (): string => {
-    return element.get("spec")
+    return element.spec
   }
 
   const getChartDimensions = (): Dimensions => {
     let chartWidth = originalWidth
     let chartHeight = originalHeight
-    const useContainerWidth = element.get("useContainerWidth")
 
     if (propHeight) {
       // fullscreen
       chartWidth = propWidth
       chartHeight = propHeight
-    } else if (useContainerWidth) {
+    } else if (element.useContainerWidth) {
       chartWidth = propWidth
     }
     return { chartWidth, chartHeight }

@@ -15,21 +15,49 @@
  * limitations under the License.
  */
 
+import {
+  Alert as AlertProto,
+  Audio as AudioProto,
+  BokehChart as BokehChartProto,
+  Button as ButtonProto,
+  Checkbox as CheckboxProto,
+  ColorPicker as ColorPickerProto,
+  ComponentInstance as ComponentInstanceProto,
+  DateInput as DateInputProto,
+  FileUploader as FileUploaderProto,
+  MultiSelect as MultiSelectProto,
+  NumberInput as NumberInputProto,
+  Radio as RadioProto,
+  Selectbox as SelectboxProto,
+  Slider as SliderProto,
+  TextArea as TextAreaProto,
+  TextInput as TextInputProto,
+  TimeInput as TimeInputProto,
+  DeckGlJsonChart as DeckGlJsonChartProto,
+  DocString as DocStringProto,
+  Exception as ExceptionProto,
+  GraphVizChart as GraphVizChartProto,
+  IFrame as IFrameProto,
+  ImageList as ImageListProto,
+  Json as JsonProto,
+  Markdown as MarkdownProto,
+  PlotlyChart as PlotlyChartProto,
+  Progress as ProgressProto,
+  Text as TextProto,
+  Video as VideoProto,
+} from "autogen/proto"
+
 import React, { PureComponent, ReactNode, Suspense } from "react"
 import { AutoSizer } from "react-virtualized"
-import { List } from "immutable"
 import { styled, StyletronComponent } from "styletron-react"
 // @ts-ignore
 import debounceRender from "react-debounce-render"
-
-import { dispatchOneOf } from "lib/immutableProto"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import { makeElementWithInfoText } from "lib/utils"
-import { IForwardMsgMetadata, IBlock } from "autogen/proto"
-import { ReportElement, BlockElement, SimpleElement } from "lib/DeltaParser"
+import { getElementWidgetID, makeElementWithInfoText } from "lib/utils"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { variables as stylingVariables } from "lib/widgetTheme"
+import { BlockNode, ReportNode, ElementNode } from "lib/ReportNode"
 
 // Load (non-lazy) elements.
 import Alert from "components/elements/Alert/"
@@ -97,7 +125,7 @@ const TimeInput = React.lazy(() => import("components/widgets/TimeInput/"))
 const NumberInput = React.lazy(() => import("components/widgets/NumberInput/"))
 
 interface Props {
-  elements: BlockElement
+  node: BlockNode
   reportId: string
   reportRunState: ReportRunState
   showStaleElementIndicator: boolean
@@ -105,7 +133,6 @@ interface Props {
   uploadClient: FileUploadClient
   widgetsDisabled: boolean
   componentRegistry: ComponentRegistry
-  deltaBlock?: IBlock
 }
 
 interface StyledColumnProps {
@@ -141,60 +168,62 @@ const StyledColumn: StyletronComponent<StyledColumnProps> = styled(
 )
 
 class Block extends PureComponent<Props> {
-  private WithExpandableBlock = withExpandable(Block)
+  private static readonly WithExpandableBlock = withExpandable(Block)
 
-  /** Recursively transform this BLockElement and all children to React Nodes. */
+  /** Recursively transform this BlockElement and all children to React Nodes. */
   private renderElements = (width: number): ReactNode[] => {
-    const elementsToRender = this.props.elements
-
-    return elementsToRender
-      .toArray()
-      .map((reportElement: ReportElement, index: number): ReactNode | null => {
-        const element = reportElement.get("element")
-        if (element instanceof List) {
-          // Recursive case AKA a single container AKA node with children
-          return this.renderBlock(
-            element as BlockElement,
-            index,
-            width,
-            reportElement.get("deltaBlock").toJS()
-          )
+    return this.props.node.children.map(
+      (node: ReportNode, index: number): ReactNode => {
+        if (node instanceof ElementNode) {
+          // Base case: render a leaf node.
+          return this.renderElementWithErrorBoundary(node, index, width)
         }
-        // Base case AKA a single element AKA leaf node in the render tree
-        return this.renderElementWithErrorBoundary(reportElement, index, width)
-      })
-      .filter((node: ReactNode | null): ReactNode => node != null)
+
+        if (node instanceof BlockNode) {
+          // Recursive case: render a block, which can contain other blocks
+          // and elements.
+          return this.renderBlock(node, index, width)
+        }
+
+        // We don't have any other node types!
+        throw new Error(`Unrecognized ReportNode: ${node}`)
+      }
+    )
   }
 
-  private isElementStale(reportElement: ReportElement): boolean {
+  private isElementStale(node: ReportNode): boolean {
     if (this.props.reportRunState === ReportRunState.RERUN_REQUESTED) {
       // If a rerun was just requested, all of our current elements
       // are about to become stale.
       return true
     }
     if (this.props.reportRunState === ReportRunState.RUNNING) {
-      return reportElement.get("reportId") !== this.props.reportId
+      return (
+        node instanceof ElementNode && node.reportId !== this.props.reportId
+      )
     }
     return false
   }
 
   private renderBlock(
-    element: BlockElement,
+    node: BlockNode,
     index: number,
-    width: number,
-    deltaBlock: IBlock
+    width: number
   ): ReactNode {
-    const BlockType = deltaBlock.expandable ? this.WithExpandableBlock : Block
-    const optionalProps = deltaBlock.expandable
+    const BlockType = node.deltaBlock.expandable
+      ? Block.WithExpandableBlock
+      : Block
+
+    const optionalProps = node.deltaBlock.expandable
       ? {
-          empty: !element.size,
-          ...deltaBlock.expandable,
+          empty: node.isEmpty,
+          ...node.deltaBlock.expandable,
         }
       : {}
 
     const child = (
       <BlockType
-        elements={element}
+        node={node}
         reportId={this.props.reportId}
         reportRunState={this.props.reportRunState}
         showStaleElementIndicator={this.props.showStaleElementIndicator}
@@ -202,17 +231,16 @@ class Block extends PureComponent<Props> {
         uploadClient={this.props.uploadClient}
         widgetsDisabled={this.props.widgetsDisabled}
         componentRegistry={this.props.componentRegistry}
-        deltaBlock={deltaBlock}
         {...optionalProps}
       />
     )
 
-    if (deltaBlock.column && deltaBlock.column.weight) {
+    if (node.deltaBlock.column && node.deltaBlock.column.weight) {
       return (
         <StyledColumn
           key={index}
           className="stBlock"
-          weight={deltaBlock.column.weight}
+          weight={node.deltaBlock.column.weight}
           width={width}
         >
           {child}
@@ -242,37 +270,26 @@ class Block extends PureComponent<Props> {
     return !isHidden || this.props.reportRunState !== ReportRunState.RUNNING
   }
 
-  private isComponentStale(
-    enable: boolean,
-    reportElement: ReportElement
-  ): boolean {
+  private isComponentStale(enable: boolean, node: ReportNode): boolean {
     return (
       !enable ||
-      (this.props.showStaleElementIndicator &&
-        this.isElementStale(reportElement))
+      (this.props.showStaleElementIndicator && this.isElementStale(node))
     )
   }
 
   private renderElementWithErrorBoundary(
-    reportElement: ReportElement,
+    node: ElementNode,
     index: number,
     width: number
   ): ReactNode | null {
-    const element = reportElement.get("element") as SimpleElement
-    const component = this.renderElement(
-      element,
-      index,
-      width,
-      reportElement.get("metadata")
-    )
+    const element = this.renderElement(node, index, width)
 
-    const elementType = element.get("type")
+    const elementType = node.element.type
     const isHidden = elementType === "empty" || elementType === "balloons"
     const enable = this.shouldComponentBeEnabled(isHidden)
-    const isStale = this.isComponentStale(enable, reportElement)
+    const isStale = this.isComponentStale(enable, node)
     const className = Block.getClassNames(isStale, isHidden)
-    const simpleElement = element.get(elementType)
-    const key = simpleElement.get("id") || index
+    const key = getElementWidgetID(node.element) || index
 
     return (
       <Maybe enable={enable} key={key}>
@@ -281,12 +298,14 @@ class Block extends PureComponent<Props> {
             <Suspense
               fallback={
                 <Alert
-                  element={makeElementWithInfoText("Loading...").get("alert")}
+                  element={
+                    makeElementWithInfoText("Loading...").alert as AlertProto
+                  }
                   width={width}
                 />
               }
             >
-              {component}
+              {element}
             </Suspense>
           </ErrorBoundary>
         </div>
@@ -295,12 +314,11 @@ class Block extends PureComponent<Props> {
   }
 
   private renderElement = (
-    element: SimpleElement,
+    node: ElementNode,
     index: number,
-    width: number,
-    metadata: IForwardMsgMetadata
+    width: number
   ): ReactNode => {
-    if (!element) {
+    if (!node) {
       throw new Error("Transmission error.")
     }
 
@@ -312,186 +330,333 @@ class Block extends PureComponent<Props> {
     let height: number | undefined
 
     // Modify width using the value from the spec as passed with the message when applicable
-    if (metadata && metadata.elementDimensionSpec) {
+    if (node.metadata.elementDimensionSpec) {
       if (
-        metadata &&
-        metadata.elementDimensionSpec &&
-        metadata.elementDimensionSpec.width &&
-        metadata.elementDimensionSpec.width > 0
+        node.metadata.elementDimensionSpec.width &&
+        node.metadata.elementDimensionSpec.width > 0
       ) {
-        width = Math.min(metadata.elementDimensionSpec.width, width)
+        width = Math.min(node.metadata.elementDimensionSpec.width, width)
       }
       if (
-        metadata &&
-        metadata.elementDimensionSpec &&
-        metadata.elementDimensionSpec.height &&
-        metadata.elementDimensionSpec.height > 0
+        node.metadata.elementDimensionSpec.height &&
+        node.metadata.elementDimensionSpec.height > 0
       ) {
-        height = metadata.elementDimensionSpec.height
+        height = node.metadata.elementDimensionSpec.height
       }
     }
 
-    return dispatchOneOf(element, "type", {
-      alert: (el: SimpleElement) => <Alert element={el} width={width} />,
-      audio: (el: SimpleElement) => <Audio element={el} width={width} />,
-      balloons: (el: SimpleElement) => (
-        <Balloons reportId={this.props.reportId} />
-      ),
-      bokehChart: (el: SimpleElement) => (
-        <DebouncedBokehChart element={el} index={index} width={width} />
-      ),
-      dataFrame: (el: SimpleElement) => (
-        <DataFrame element={el} width={width} height={height} />
-      ),
-      deckGlJsonChart: (el: SimpleElement) => (
-        <DeckGlJsonChart element={el} width={width} />
-      ),
-      docString: (el: SimpleElement) => (
-        <DocString element={el} width={width} />
-      ),
-      empty: () => <div className="stHidden" key={index} />,
-      exception: (el: SimpleElement) => (
-        <ExceptionElement element={el} width={width} />
-      ),
-      graphvizChart: (el: SimpleElement) => (
-        <GraphVizChart element={el} index={index} width={width} />
-      ),
-      iframe: (el: SimpleElement) => <IFrame element={el} width={width} />,
-      imgs: (el: SimpleElement) => <ImageList element={el} width={width} />,
-      json: (el: SimpleElement) => <Json element={el} width={width} />,
-      markdown: (el: SimpleElement) => <Markdown element={el} width={width} />,
-      multiselect: (el: SimpleElement) => (
-        <Multiselect
-          key={el.get("id")}
-          element={el}
-          width={width}
-          {...widgetProps}
-        />
-      ),
-      plotlyChart: (el: SimpleElement) => (
-        <PlotlyChart element={el} width={width} />
-      ),
-      progress: (el: SimpleElement) => <Progress element={el} width={width} />,
-      table: (el: SimpleElement) => <Table element={el} width={width} />,
-      text: (el: SimpleElement) => <Text element={el} width={width} />,
-      vegaLiteChart: (el: SimpleElement) => (
-        <VegaLiteChart element={el} width={width} />
-      ),
-      video: (el: SimpleElement) => <Video element={el} width={width} />,
+    switch (node.element.type) {
+      case "alert":
+        return (
+          <Alert width={width} element={node.element.alert as AlertProto} />
+        )
+
+      case "audio":
+        return (
+          <Audio width={width} element={node.element.audio as AudioProto} />
+        )
+
+      case "balloons":
+        return <Balloons reportId={this.props.reportId} />
+
+      case "bokehChart":
+        return (
+          <DebouncedBokehChart
+            width={width}
+            index={index}
+            element={node.element.bokehChart as BokehChartProto}
+          />
+        )
+
+      case "dataFrame":
+        return (
+          <DataFrame
+            element={node.immutableElement.get("dataFrame")}
+            width={width}
+            height={height}
+          />
+        )
+
+      case "deckGlJsonChart":
+        return (
+          <DeckGlJsonChart
+            width={width}
+            element={node.element.deckGlJsonChart as DeckGlJsonChartProto}
+          />
+        )
+
+      case "docString":
+        return (
+          <DocString
+            width={width}
+            element={node.element.docString as DocStringProto}
+          />
+        )
+
+      case "empty":
+        return <div className="stHidden" key={index} />
+
+      case "exception":
+        return (
+          <ExceptionElement
+            width={width}
+            element={node.element.exception as ExceptionProto}
+          />
+        )
+
+      case "graphvizChart":
+        return (
+          <GraphVizChart
+            element={node.element.graphvizChart as GraphVizChartProto}
+            index={index}
+            width={width}
+          />
+        )
+
+      case "iframe":
+        return (
+          <IFrame element={node.element.iframe as IFrameProto} width={width} />
+        )
+
+      case "imgs":
+        return (
+          <ImageList
+            width={width}
+            element={node.element.imgs as ImageListProto}
+          />
+        )
+
+      case "json":
+        return <Json width={width} element={node.element.json as JsonProto} />
+
+      case "markdown":
+        return (
+          <Markdown
+            width={width}
+            element={node.element.markdown as MarkdownProto}
+          />
+        )
+
+      case "plotlyChart":
+        return (
+          <PlotlyChart
+            width={width}
+            height={height}
+            element={node.element.plotlyChart as PlotlyChartProto}
+          />
+        )
+
+      case "progress":
+        return (
+          <Progress
+            width={width}
+            element={node.element.progress as ProgressProto}
+          />
+        )
+
+      case "table":
+        return (
+          <Table element={node.immutableElement.get("table")} width={width} />
+        )
+
+      case "text":
+        return <Text width={width} element={node.element.text as TextProto} />
+
+      case "vegaLiteChart":
+        return (
+          <VegaLiteChart
+            element={node.immutableElement.get("vegaLiteChart")}
+            width={width}
+          />
+        )
+
+      case "video":
+        return (
+          <Video width={width} element={node.element.video as VideoProto} />
+        )
+
       // Widgets
-      button: (el: SimpleElement) => (
-        <Button element={el} width={width} {...widgetProps} />
-      ),
-      checkbox: (el: SimpleElement) => (
-        <Checkbox
-          key={el.get("id")}
-          element={el}
-          width={width}
-          {...widgetProps}
-        />
-      ),
-      colorPicker: (el: SimpleElement) => (
-        <ColorPicker
-          key={el.get("id")}
-          element={el}
-          width={width}
-          {...widgetProps}
-        />
-      ),
-      dateInput: (el: SimpleElement) => (
-        <DateInput
-          key={el.get("id")}
-          element={el}
-          width={width}
-          {...widgetProps}
-        />
-      ),
-      radio: (el: SimpleElement) => (
-        <Radio
-          key={el.get("id")}
-          element={el}
-          width={width}
-          {...widgetProps}
-        />
-      ),
-      selectbox: (el: SimpleElement) => (
-        <Selectbox
-          key={el.get("id")}
-          element={el}
-          width={width}
-          {...widgetProps}
-        />
-      ),
-      slider: (el: SimpleElement) => (
-        <Slider
-          key={el.get("id")}
-          element={el}
-          width={width}
-          {...widgetProps}
-        />
-      ),
-      fileUploader: (el: SimpleElement) => (
-        <FileUploader
-          key={el.get("id")}
-          element={el}
-          width={width}
-          widgetStateManager={widgetProps.widgetMgr}
-          uploadClient={this.props.uploadClient}
-          disabled={widgetProps.disabled}
-        />
-      ),
-      textArea: (el: SimpleElement) => (
-        <TextArea
-          key={el.get("id")}
-          element={el}
-          width={width}
-          {...widgetProps}
-        />
-      ),
-      textInput: (el: SimpleElement) => (
-        <TextInput
-          key={el.get("id")}
-          element={el}
-          width={width}
-          {...widgetProps}
-        />
-      ),
-      timeInput: (el: SimpleElement) => (
-        <TimeInput
-          key={el.get("id")}
-          element={el}
-          width={width}
-          {...widgetProps}
-        />
-      ),
-      numberInput: (el: SimpleElement) => (
-        <NumberInput
-          key={el.get("id")}
-          element={el}
-          width={width}
-          {...widgetProps}
-        />
-      ),
-      componentInstance: (el: SimpleElement) => (
-        <ComponentInstance
-          registry={this.props.componentRegistry}
-          element={el}
-          width={width}
-          {...widgetProps}
-        />
-      ),
-    })
+
+      case "button":
+        return (
+          <Button
+            element={node.element.button as ButtonProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
+
+      case "checkbox": {
+        const checkboxProto = node.element.checkbox as CheckboxProto
+        return (
+          <Checkbox
+            key={checkboxProto.id}
+            element={checkboxProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
+      }
+
+      case "colorPicker": {
+        const colorPickerProto = node.element.colorPicker as ColorPickerProto
+        return (
+          <ColorPicker
+            key={colorPickerProto.id}
+            element={colorPickerProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
+      }
+
+      case "componentInstance":
+        return (
+          <ComponentInstance
+            registry={this.props.componentRegistry}
+            element={node.element.componentInstance as ComponentInstanceProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
+
+      case "dateInput": {
+        const dateInputProto = node.element.dateInput as DateInputProto
+        return (
+          <DateInput
+            key={dateInputProto.id}
+            element={dateInputProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
+      }
+
+      case "fileUploader": {
+        const fileUploaderProto = node.element
+          .fileUploader as FileUploaderProto
+        return (
+          <FileUploader
+            key={fileUploaderProto.id}
+            element={fileUploaderProto}
+            width={width}
+            widgetStateManager={widgetProps.widgetMgr}
+            uploadClient={this.props.uploadClient}
+            disabled={widgetProps.disabled}
+          />
+        )
+      }
+
+      case "multiselect": {
+        const multiSelectProto = node.element.multiselect as MultiSelectProto
+        return (
+          <Multiselect
+            key={multiSelectProto.id}
+            element={multiSelectProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
+      }
+
+      case "numberInput": {
+        const numberInputProto = node.element.numberInput as NumberInputProto
+        return (
+          <NumberInput
+            key={numberInputProto.id}
+            element={numberInputProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
+      }
+
+      case "radio": {
+        const radioProto = node.element.radio as RadioProto
+        return (
+          <Radio
+            key={radioProto.id}
+            element={radioProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
+      }
+
+      case "selectbox": {
+        const selectboxProto = node.element.selectbox as SelectboxProto
+        return (
+          <Selectbox
+            key={selectboxProto.id}
+            element={selectboxProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
+      }
+
+      case "slider": {
+        const sliderProto = node.element.slider as SliderProto
+        return (
+          <Slider
+            key={sliderProto.id}
+            element={sliderProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
+      }
+
+      case "textArea": {
+        const textAreaProto = node.element.textArea as TextAreaProto
+        return (
+          <TextArea
+            key={textAreaProto.id}
+            element={textAreaProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
+      }
+
+      case "textInput": {
+        const textInputProto = node.element.textInput as TextInputProto
+        return (
+          <TextInput
+            key={textInputProto.id}
+            element={textInputProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
+      }
+
+      case "timeInput": {
+        const timeInputProto = node.element.timeInput as TimeInputProto
+        return (
+          <TimeInput
+            key={timeInputProto.id}
+            element={timeInputProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
+      }
+
+      default:
+        throw new Error(`Unrecognized Element type ${node.element.type}`)
+    }
   }
 
   public render = (): ReactNode => {
-    if (this.props.deltaBlock && this.props.deltaBlock.horizontal) {
+    if (this.props.node.deltaBlock.horizontal) {
       // Create a horizontal block as the parent for columns
       // For now, all children are column blocks. For columns, `width` is
       // driven by the total number of columns available.
       return (
         <div className="stBlock-horiz">
           {this.renderElements(
-            this.props.deltaBlock.horizontal.totalWeight || 0
+            this.props.node.deltaBlock.horizontal.totalWeight || 0
           )}
         </div>
       )

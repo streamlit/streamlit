@@ -145,7 +145,7 @@ With widgets, Streamlit allows you to bake interactivity directly into your apps
 .. autofunction:: streamlit.date_input
 .. autofunction:: streamlit.time_input
 .. autofunction:: streamlit.file_uploader
-.. autofunction:: streamlit.beta_color_picker
+.. autofunction:: streamlit.color_picker
 ```
 
 ## Control flow
@@ -289,7 +289,7 @@ app, provide help using doc strings, and get and modify configuration options.
 .. autofunction:: streamlit.help
 .. autofunction:: streamlit.get_option
 .. autofunction:: streamlit.set_option
-.. autofunction:: streamlit.beta_set_page_config
+.. autofunction:: streamlit.set_page_config
 ```
 
 ## Mutate data

@@ -15,14 +15,17 @@
  * limitations under the License.
  */
 
+import {
+  ArrowDataframe,
+  ComponentInstance as ComponentInstanceProto,
+  ISpecialArg,
+  SpecialArg as SpecialArgProto,
+} from "autogen/proto"
 import ErrorElement from "components/shared/ErrorElement"
-import { Map as ImmutableMap } from "immutable"
-import { SimpleElement } from "lib/DeltaParser"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
 } from "lib/IFrameUtil"
-import { dispatchOneOf } from "lib/immutableProto"
 import { logError, logWarning } from "lib/log"
 import { Source, WidgetStateManager } from "lib/WidgetStateManager"
 import queryString from "query-string"
@@ -42,7 +45,7 @@ export interface Props {
   widgetMgr: WidgetStateManager
 
   disabled: boolean
-  element: ImmutableMap<string, any>
+  element: ComponentInstanceProto
   width: number
 }
 
@@ -172,7 +175,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       return
     }
 
-    const widgetId: string = this.props.element.get("id")
+    const widgetId = this.props.element.id
     const { dataType } = data
     if (dataType === "dataframe") {
       this.props.widgetMgr.setArrowValue(widgetId, value, source)
@@ -271,8 +274,8 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     try {
       // Determine the component iframe's src. If a URL is specified, we just
       // use that. Otherwise, we derive the URL from the component's ID.
-      componentName = this.props.element.get("componentName")
-      const url = this.props.element.get("url")
+      componentName = this.props.element.componentName
+      const { url } = this.props.element
       if (url != null && url !== "") {
         src = url
       } else {
@@ -286,7 +289,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       })
 
       // Parse arguments. Our JSON arguments are just stored in a JSON string.
-      newArgs = JSON.parse(this.props.element.get("jsonArgs"))
+      newArgs = JSON.parse(this.props.element.jsonArgs)
 
       // Some notes re: data marshalling:
       //
@@ -304,16 +307,28 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       // `args` object. Instead, raw DataFrame data is delivered to the iframe
       // in a separate Array. The iframe then constructs the required
       // ArrowTable instances and inserts them into the `args` array itself.
-      const specialArgs = this.props.element.get("specialArgs")
-      specialArgs.forEach((specialArg: any) => {
-        const key = specialArg.get("key")
-        dispatchOneOf(specialArg, "value", {
-          arrowDataframe: (el: SimpleElement) =>
-            newDataframeArgs.push({ key, value: el.toJS() }),
-          bytes: (bytesArray: Uint8Array) => {
-            newArgs[key] = bytesArray
-          },
-        })
+      this.props.element.specialArgs.forEach((ispecialArg: ISpecialArg) => {
+        const specialArg = ispecialArg as SpecialArgProto
+        const { key } = specialArg
+        switch (specialArg.value) {
+          case "arrowDataframe":
+            newDataframeArgs.push({
+              key,
+              value: ArrowDataframe.toObject(
+                specialArg.arrowDataframe as ArrowDataframe
+              ),
+            })
+            break
+
+          case "bytes":
+            newArgs[key] = specialArg.bytes
+            break
+
+          default:
+            throw new Error(
+              `Unrecognized SpecialArg type: ${specialArg.value}`
+            )
+        }
       })
     } catch (err) {
       this.setState({ componentError: err })
