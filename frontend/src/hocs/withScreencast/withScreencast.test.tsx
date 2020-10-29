@@ -16,7 +16,7 @@
  */
 
 import React, { ComponentType } from "react"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 
 import Countdown from "components/core/Countdown"
 import withScreencast, { ScreenCastHOC } from "./withScreencast"

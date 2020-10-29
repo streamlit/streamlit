@@ -23,6 +23,7 @@ import Modal, {
   ModalFooter,
   ModalButton,
 } from "components/shared/Modal"
+import { StyledInstruction, StyledRecordAudioLabel } from "./styled-components"
 
 export interface Props {
   /** Callback to close the dialog */
@@ -77,7 +78,7 @@ class ScreencastDialog extends PureComponent<Props, State> {
             can easily share what you're seeing with others.
           </p>
           <p>
-            <label style={{ margin: 0 }}>
+            <StyledRecordAudioLabel>
               <input
                 type="checkbox"
                 name="recordAudio"
@@ -85,11 +86,11 @@ class ScreencastDialog extends PureComponent<Props, State> {
                 onChange={this.handleRecordAudioCheckbox}
               />{" "}
               Also record audio
-            </label>
+            </StyledRecordAudioLabel>
           </p>
-          <p style={{ margin: 0 }}>
+          <StyledInstruction>
             Press <kbd>Esc</kbd> any time to stop recording.
-          </p>
+          </StyledInstruction>
         </ModalBody>
         <ModalFooter>
           <ModalButton kind={Kind.PRIMARY} onClick={this.handleStartButton}>
