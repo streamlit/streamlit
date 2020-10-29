@@ -7,7 +7,6 @@ export const StyledTableContainer = styled.div(({ theme }) => ({
   textAlign: "right",
   padding: theme.spacing.sm,
   lineHeight: theme.lineHeights.table,
-  overflowX: "auto",
 }))
 
 export const StyledTable = styled.table(({ theme }) => ({
