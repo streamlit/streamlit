@@ -30,9 +30,11 @@ const StyledDataFrameCell = styled.div(({ theme }) => ({
   lineHeight: theme.lineHeights.none,
 }))
 
-export const StyledDataFrameCornerCell = styled(
-  StyledDataFrameCell
-)(({ theme }) => headerCellFormatter(theme))
+const headerCellFormatter = (theme: Theme): CSSObject => ({
+  backgroundColor: theme.colors.lightestGray,
+  color: theme.colors.darkGray,
+  zIndex: 1,
+})
 
 const cellTextFormatter = (theme: Theme): CSSObject => ({
   overflow: "hidden",
@@ -41,11 +43,9 @@ const cellTextFormatter = (theme: Theme): CSSObject => ({
   lineHeight: theme.lineHeights.dataframeCell,
 })
 
-const headerCellFormatter = (theme: Theme): CSSObject => ({
-  backgroundColor: theme.colors.lightestGray,
-  color: theme.colors.darkGray,
-  zIndex: 1,
-})
+export const StyledDataFrameCornerCell = styled(
+  StyledDataFrameCell
+)(({ theme }) => headerCellFormatter(theme))
 
 export const StyledDataFrameColHeaderCell = styled(StyledDataFrameCell)(
   ({ theme }) => ({
