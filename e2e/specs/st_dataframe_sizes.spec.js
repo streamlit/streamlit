@@ -28,6 +28,12 @@ describe("Dataframes and Tables snapshots", () => {
 
     // Make the ribbon decoration line disappear
     cy.get(".decoration").invoke("css", "display", "none");
+
+    // HACK: Add `overflow: auto` to all tables to prevent Cypress
+    // from throwing [RangeError: The value of "offset" is out of range.]
+    cy.get(".stTable").each($element => {
+      cy.wrap($element).invoke("css", "overflow", "auto");
+    });
   });
 
   it("show a tooltip for each cell", () => {
