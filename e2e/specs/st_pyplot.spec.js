@@ -21,7 +21,7 @@ describe("st.pyplot", () => {
   });
 
   it("displays a pyplot figure", () => {
-    cy.get(".stImage")
+    cy.get("[data-testid='stImage']")
       .find("img")
       .should("have.attr", "src");
   });
@@ -39,13 +39,13 @@ describe("st.pyplot", () => {
     // Make the ribbon decoration line disappear
     cy.get(".decoration").invoke("css", "display", "none");
 
-    cy.get(".stImage > img")
+    cy.get("[data-testid='stImage'] > img")
       .first()
       .matchImageSnapshot("pyplot-check-if-cleared");
   });
 
   it("shows deprecation warning", () => {
-    cy.get(".stImage")
+    cy.get("[data-testid='stImage']")
       .first()
       .closest(".element-container")
       .prev()
@@ -53,7 +53,7 @@ describe("st.pyplot", () => {
   });
 
   it("hides deprecation warning", () => {
-    cy.get(".stImage")
+    cy.get("[data-testid='stImage']")
       .eq(1)
       .closest(".element-container")
       .prev()

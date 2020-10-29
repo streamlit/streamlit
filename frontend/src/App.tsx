@@ -20,7 +20,6 @@ import moment from "moment"
 import { HotKeys, KeyMap } from "react-hotkeys"
 import { fromJS } from "immutable"
 import classNames from "classnames"
-import { ThemeProvider } from "baseui"
 // Other local imports.
 import ReportView from "components/core/ReportView/"
 import StatusWidget from "components/core/StatusWidget"
@@ -35,7 +34,6 @@ import { WidgetStateManager } from "lib/WidgetStateManager"
 import { ConnectionState } from "lib/ConnectionState"
 import { ReportRunState } from "lib/ReportRunState"
 import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
-import { mainWidgetTheme } from "lib/widgetTheme"
 import {
   setCookie,
   hashString,
@@ -979,7 +977,7 @@ export class App extends PureComponent<Props, State> {
             uploadClient={this.uploadClient}
             componentRegistry={this.componentRegistry}
           />
-          <ThemeProvider theme={mainWidgetTheme}>{dialog}</ThemeProvider>
+          {dialog}
         </div>
       </HotKeys>
     )
