@@ -45,4 +45,11 @@ describe("Balloons element", () => {
       expect(node.prop("style")).toHaveProperty("animationDelay")
     })
   })
+
+  it("renders as hidden element", () => {
+    const props = getProps()
+    const wrapper = mount(<Balloons {...props} />)
+
+    expect(wrapper.find("div").prop("className")).toContain("stHidden")
+  })
 })
