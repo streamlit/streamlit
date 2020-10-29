@@ -15,6 +15,9 @@ module.exports = {
       return jestConfig
     },
   },
+  babel: {
+    plugins: ["emotion"],
+  },
   webpack: {
     configure: (webpackConfig, { env, paths }) => {
       webpackConfig.resolve.mainFields = ["main", "module"]

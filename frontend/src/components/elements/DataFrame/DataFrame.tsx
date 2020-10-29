@@ -15,13 +15,14 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useState } from "react"
+import React, { ReactElement, useEffect, useState } from "react"
 import { Map as ImmutableMap } from "immutable"
 import { MultiGrid } from "react-virtualized"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import {
   dataFrameGetDimensions,
   getSortedDataRowIndices,
+  tableGetRowsAndCols,
 } from "lib/dataFrameProto"
 import { SortDirection } from "./SortDirection"
 import "./DataFrame.scss"
@@ -36,7 +37,7 @@ import DataFrameCell from "./DataFrameCell"
 
 export interface DataFrameProps {
   width: number
-  height: number | undefined
+  height?: number
   element: ImmutableMap<string, any>
 }
 
@@ -55,13 +56,25 @@ export function DataFrame({
    * table.
    */
   const [sortedByUser, setSortedByUser] = useState(false)
+
   /**
    * Index of the column on which the table is sorted.
    * (Column 0 = row indices).
    */
   const [sortColumn, setSortColumn] = useState(0)
+
   /** Sort direction for table sorting. */
   const [sortDirection, setSortDirection] = useState(SortDirection.ASCENDING)
+
+  // Calculate the dimensions of this array.
+  const [, nCols] = tableGetRowsAndCols(element.get("data"))
+  const {
+    headerRows,
+    headerCols,
+    dataRows,
+    cols,
+    rows,
+  } = dataFrameGetDimensions(element)
 
   /**
    * Called when one of our column headers is clicked.
@@ -70,7 +83,7 @@ export function DataFrame({
   const toggleSortOrder = (columnIndex: number): void => {
     let sortDirection = SortDirection.ASCENDING
     if (sortColumn === columnIndex) {
-      // Clicking the same header toggles between ascending and descending
+      // Clicking the same header toggles between ascending and descending.
       sortDirection =
         sortDirection !== SortDirection.ASCENDING
           ? SortDirection.ASCENDING
@@ -99,8 +112,10 @@ export function DataFrame({
         styles: additionalStyles,
         contents,
       } = cellContentsGetter(columnIndex, rowIndex)
+
       const headerClickedCallback =
         rowIndex === 0 ? toggleSortOrder : undefined
+
       const columnSortDirection =
         columnIndex === sortColumn ? sortDirection : undefined
 
@@ -123,18 +138,19 @@ export function DataFrame({
       )
     }
   }
+
   /**
    * Returns the row indices, in display order, for this DataFrame,
    * given its sortColumn and sortDirection.
    */
-  const getDataRowIndices = (): number[] => {
+  const getDataRowIndices = (nCols: number): number[] => {
     const { headerCols, dataRows } = dataFrameGetDimensions(element)
 
     const sortAscending = sortDirection !== SortDirection.DESCENDING
 
     // If we're sorting a header column, our sorted row indices are just the
     // row indices themselves (reversed, if SortDirection == DESCENDING)
-    if (sortColumn < headerCols) {
+    if (sortColumn < headerCols || sortColumn - headerCols >= nCols) {
       const rowIndices = new Array(dataRows)
       for (let i = 0; i < dataRows; i += 1) {
         rowIndices[i] = sortAscending ? i : dataRows - (i + 1)
@@ -162,16 +178,7 @@ export function DataFrame({
     }, 0)
   }
 
-  // Calculate the dimensions of this array.
-  const {
-    headerRows,
-    headerCols,
-    dataRows,
-    cols,
-    rows,
-  } = dataFrameGetDimensions(element)
-
-  const sortedDataRowIndices = getDataRowIndices()
+  const sortedDataRowIndices = getDataRowIndices(nCols)
 
   // Get the cell renderer.
   const cellContentsGetter = getCellContentsGetter({
@@ -196,6 +203,14 @@ export function DataFrame({
   // means that the props have changed, so we should force a rerender of the
   // widths.
   recomputeSizeIfNeeded()
+
+  useEffect(() => {
+    if (sortColumn - headerCols >= nCols) {
+      setSortColumn(0)
+      setSortDirection(SortDirection.ASCENDING)
+      setSortedByUser(false)
+    }
+  }, [sortColumn, headerCols, nCols])
 
   // Put it all together.
   return (

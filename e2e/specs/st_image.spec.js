@@ -21,20 +21,19 @@ describe("st.image", () => {
   });
 
   it("displays an image", () => {
-    cy.get(".element-container .stImage img")
+    cy.get(".element-container [data-testid='stImage'] img")
       .should("have.css", "height", "100px")
       .should("have.css", "width", "100px");
   });
 
   it("displays a caption", () => {
-    cy.get(".element-container .stImage .caption").should(
-      "contain",
-      "Black Square"
-    );
+    cy.get(
+      ".element-container [data-testid='stImage'] [data-testid='caption']"
+    ).should("contain", "Black Square");
   });
 
   it("shows deprecation warning", () => {
-    cy.get(".stImage")
+    cy.get("[data-testid='stImage']")
       .first()
       .closest(".element-container")
       .prev()
@@ -42,7 +41,7 @@ describe("st.image", () => {
   });
 
   it("hides deprecation warning", () => {
-    cy.get(".stImage")
+    cy.get("[data-testid='stImage']")
       .eq(1)
       .closest(".element-container")
       .prev()
@@ -50,28 +49,28 @@ describe("st.image", () => {
   });
 
   it("displays a JPEG image when specified", () => {
-    cy.get(".element-container .stImage img")
+    cy.get(".element-container [data-testid='stImage'] img")
       .eq(2)
       .should("have.attr", "src")
       .should("match", /^.*\.jpeg$/);
   });
 
   it("displays a PNG image when specified", () => {
-    cy.get(".element-container .stImage img")
+    cy.get(".element-container [data-testid='stImage'] img")
       .eq(3)
       .should("have.attr", "src")
       .should("match", /^.*\.png$/);
   });
 
   it("displays a JPEG image when not specified with no alpha channel", () => {
-    cy.get(".element-container .stImage img")
+    cy.get(".element-container [data-testid='stImage'] img")
       .eq(4)
       .should("have.attr", "src")
       .should("match", /^.*\.jpeg$/);
   });
 
   it("displays a PNG image when not specified with alpha channel", () => {
-    cy.get(".element-container .stImage img")
+    cy.get(".element-container [data-testid='stImage'] img")
       .eq(5)
       .should("have.attr", "src")
       .should("match", /^.*\.png$/);

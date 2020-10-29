@@ -23,7 +23,7 @@ from parameterized import parameterized
 class ColorPickerTest(testutil.DeltaGeneratorTestCase):
     def test_just_label(self):
         """Test that it can be called with no value."""
-        st.beta_color_picker("the label")
+        st.color_picker("the label")
 
         c = self.get_delta_from_queue().new_element.color_picker
         self.assertEqual(c.label, "the label")
@@ -32,7 +32,7 @@ class ColorPickerTest(testutil.DeltaGeneratorTestCase):
     @parameterized.expand([("#333333", "#333333"), ("#333", "#333"), (None, "#000000")])
     def test_value_types(self, arg_value, proto_value):
         """Test that it supports different types of values."""
-        st.beta_color_picker("the label", arg_value)
+        st.color_picker("the label", arg_value)
 
         c = self.get_delta_from_queue().new_element.color_picker
         self.assertEqual(c.label, "the label")
@@ -41,9 +41,9 @@ class ColorPickerTest(testutil.DeltaGeneratorTestCase):
     def test_invalid_value_type_error(self):
         """Tests that when the value type is invalid, an exception is generated"""
         with pytest.raises(StreamlitAPIException) as exc_message:
-            st.beta_color_picker("the label", 1234567)
+            st.color_picker("the label", 1234567)
 
     def test_invalid_string(self):
         """Tests that when the string doesn't match regex, an exception is generated"""
         with pytest.raises(StreamlitAPIException) as exc_message:
-            st.beta_color_picker("the label", "#invalid-string")
+            st.color_picker("the label", "#invalid-string")

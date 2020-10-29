@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,18 +15,23 @@
  * limitations under the License.
  */
 
-@import "src/assets/css/variables";
+describe("st.dataframe - sort by column", () => {
+  before(() => {
+    cy.visit("http://localhost:3000/");
+  });
 
-.reportview-container {
-  .image-container {
-    display: inline-flex;
-    flex-direction: column;
-    margin-right: $font-size-sm;
-  }
+  it("resets sort column index if the sorted column was removed", () => {
+    // Sort the dataframe by the last column.
+    cy.get(".element-container .stDataFrame")
+      .find(".dataframe.row-header")
+      .last()
+      .click();
 
-  .caption {
-    font-family: $font-family-monospace;
-    font-size: $font-size-sm;
-    text-align: center;
-  }
-}
+    // Remove the last column.
+    cy.get(".control.step-down").click();
+
+    cy.get(".element-container .stDataFrame .sort-arrow-icon").should(
+      "not.exist"
+    );
+  });
+});
