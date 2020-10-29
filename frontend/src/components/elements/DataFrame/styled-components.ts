@@ -1,4 +1,5 @@
-import styled from "@emotion/styled"
+import styled, { CSSObject } from "@emotion/styled"
+import { Theme } from "theme"
 
 export interface StyledDataFrameContainerProps {
   width: number
@@ -11,14 +12,6 @@ export const StyledDataFrameContainer = styled.div<
   border: `1px solid ${theme.colors.lightestGray}`,
   boxSizing: "content-box",
 
-  ".dataframe": {
-    padding: theme.spacing.sm,
-    fontSize: theme.fontSizes.smDefault,
-    fontFamily: theme.fonts.mono,
-    textAlign: "right",
-    lineHeight: theme.lineHeights.none,
-  },
-
   "& .table-top-right": {
     overflowX: "hidden",
     backgroundColor: theme.colors.lightestGray,
@@ -27,24 +20,58 @@ export const StyledDataFrameContainer = styled.div<
     overflowY: "hidden",
     backgroundColor: theme.colors.lightestGray,
   },
-  ".row-header, .col-header, .corner": {
-    backgroundColor: theme.colors.lightestGray,
-    color: theme.colors.darkGray,
-    zIndex: 1,
-  },
-  ".row-header, .col-header": {
-    /* Row headers are click-to-sort, so we make the text unselectable.
-        Column headers are also unselectable, so that clicking to sort the
-        column's row header doesn't result in the entire column being selected */
-    userSelect: "none",
-  },
-  ".row-header, .col-header, .data": {
-    overflow: "hidden",
-    whiteSpace: "nowrap",
-    textOverflow: "ellipsis",
-    lineHeight: 0.75,
-  },
 }))
+
+const StyledDataFrameCell = styled.div(({ theme }) => ({
+  padding: theme.spacing.sm,
+  fontSize: theme.fontSizes.smDefault,
+  fontFamily: theme.fonts.mono,
+  textAlign: "right",
+  lineHeight: theme.lineHeights.none,
+}))
+
+export const StyledDataFrameCornerCell = styled(
+  StyledDataFrameCell
+)(({ theme }) => headerCellFormatter(theme))
+
+const cellTextFormatter = (theme: Theme): CSSObject => ({
+  overflow: "hidden",
+  whiteSpace: "nowrap",
+  textOverflow: "ellipsis",
+  lineHeight: theme.lineHeights.dataframeCell,
+})
+
+const headerCellFormatter = (theme: Theme): CSSObject => ({
+  backgroundColor: theme.colors.lightestGray,
+  color: theme.colors.darkGray,
+  zIndex: 1,
+})
+
+export const StyledDataFrameColHeaderCell = styled(StyledDataFrameCell)(
+  ({ theme }) => ({
+    /* Row headers are click-to-sort, so we make the text unselectable.
+     Column headers are also unselectable, so that clicking to sort the
+     column's row header doesn't result in the entire column being selected */
+    userSelect: "none",
+    ...headerCellFormatter(theme),
+    ...cellTextFormatter(theme),
+  })
+)
+
+export const StyledDataFrameRowHeaderCell = styled(StyledDataFrameCell)(
+  ({ theme }) => ({
+    /* Row headers are click-to-sort, so we make the text unselectable.
+     Column headers are also unselectable, so that clicking to sort the
+     column's row header doesn't result in the entire column being selected */
+    userSelect: "none",
+    ...headerCellFormatter(theme),
+    ...cellTextFormatter(theme),
+  })
+)
+
+export const StyledDataFrameDataCell = styled(
+  StyledDataFrameCell
+)(({ theme }) => cellTextFormatter(theme))
 
 export interface StyledFixupProps {
   verticalLocator: "top" | "bottom"

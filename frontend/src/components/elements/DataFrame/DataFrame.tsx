@@ -112,7 +112,7 @@ export function DataFrame({
       style: baseStyle,
     }: CellRendererInput): ReactElement => {
       const {
-        classes,
+        Component,
         styles: additionalStyles,
         contents,
       } = cellContentsGetter(columnIndex, rowIndex)
@@ -130,9 +130,9 @@ export function DataFrame({
       return (
         <DataFrameCell
           key={key}
+          as={Component}
           columnIndex={columnIndex}
           rowIndex={rowIndex}
-          className={classes}
           style={styles}
           contents={contents}
           sortedByUser={sortedByUser}

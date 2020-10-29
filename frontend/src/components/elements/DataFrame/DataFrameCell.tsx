@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { ComponentType, ReactElement } from "react"
 import styled from "@emotion/styled"
 import Icon from "components/shared/Icon"
 import { SortDirection } from "./SortDirection"
@@ -27,8 +27,8 @@ export interface DataFrameCellProps {
   /** The cell's row index in the DataFrame */
   rowIndex: number
 
-  /** The cell's css class name */
-  className: string
+  /** The cell's component to render */
+  as: ComponentType
 
   /** Additional css styling for the cell */
   style: Record<string, unknown>
@@ -65,13 +65,13 @@ export interface DataFrameCellProps {
 
 const SortArrowIcon = styled(Icon)(({ theme }) => ({
   fontSize: theme.fontSizes.xs,
-  marginRight: theme.spacing.xxs,
+  marginRight: theme.spacing.twoXS,
   opacity: 0.3,
   verticalAlign: "top",
 }))
 
 export default function DataFrameCell({
-  className,
+  as,
   columnIndex,
   contents,
   rowIndex,
@@ -102,12 +102,14 @@ export default function DataFrameCell({
   // The sort icon is only drawn in the top row
   const sortIcon =
     rowIndex === 0 ? drawSortIcon(columnSortDirection) : undefined
+  const Component = as
 
   return (
     // (ESLint erroneously believes we're not assigning a role to our clickable div)
     // eslint-disable-next-line
-    <div
-      className={className}
+
+    <Component
+      // @ts-ignore
       style={style}
       onClick={onClick}
       role={role}
@@ -116,7 +118,7 @@ export default function DataFrameCell({
     >
       {sortedByUser ? sortIcon : ""}
       {contents}
-    </div>
+    </Component>
   )
 }
 
