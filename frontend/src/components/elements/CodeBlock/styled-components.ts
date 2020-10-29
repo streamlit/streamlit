@@ -82,7 +82,10 @@ export const StyledPre = styled.pre`
   }
 `
 
-export const StyledCodeBlock = styled.div({
-  margin: "0 0 1rem 0",
+export const StyledCodeBlock = styled.div(({ theme }) => ({
+  marginLeft: theme.spacing.none,
+  marginRight: theme.spacing.none,
+  marginTop: theme.spacing.none,
+  marginBottom: theme.spacing.lg,
   position: "relative",
-})
+}))

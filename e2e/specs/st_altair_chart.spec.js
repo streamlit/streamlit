@@ -24,7 +24,7 @@ describe("st.altair_chart", () => {
   });
 
   it("displays an altair chart", () => {
-    cy.get(".element-container .stVegaLiteChart")
+    cy.get(".element-container [data-testid='stVegaLiteChart']")
       .find("canvas")
       .should("have.class", "marks");
   });

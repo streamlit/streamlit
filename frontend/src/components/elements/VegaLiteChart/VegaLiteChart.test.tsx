@@ -42,6 +42,6 @@ describe("VegaLiteChart Element", () => {
     const props = getProps()
     const wrapper = shallow(<VegaLiteChart {...props} />)
 
-    expect(wrapper.find(".stVegaLiteChart").length).toBe(1)
+    expect(wrapper.find("StyledVegaLiteChartContainer").length).toBe(1)
   })
 })
