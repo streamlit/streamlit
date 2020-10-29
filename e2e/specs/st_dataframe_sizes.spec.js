@@ -15,11 +15,15 @@
  * limitations under the License.
  */
 
-describe("Dataframes", () => {
+describe("Dataframes and Tables snapshots", () => {
   const DF_SELECTOR = ".stDataFrame";
   const TABLE_SELECTOR = ".stTable > table";
 
   before(() => {
+    // Increasing timeout since we're waiting for
+    // dataframes and tables to be rendered.
+    Cypress.config("defaultCommandTimeout", 30000);
+
     cy.visit("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
@@ -32,21 +36,21 @@ describe("Dataframes", () => {
     cy.get(DF_SELECTOR)
       .first()
       .within(() => {
-        cy.get(`div.data`).each(el => {
-          expect(el.text()).to.eq(el.attr("title"));
+        cy.get(`div.data`).each($element => {
+          expect($element.text()).to.eq($element.attr("title"));
         });
       });
   });
 
   it("have consistent st.dataframe visuals", () => {
-    cy.get(DF_SELECTOR).each((el, idx) => {
-      return cy.wrap(el).matchImageSnapshot("dataframe-visuals" + idx);
+    cy.get(DF_SELECTOR).each(($element, index) => {
+      return cy.wrap($element).matchImageSnapshot("dataframe-visuals" + index);
     });
   });
 
   it("have consistent st.table visuals", () => {
-    cy.get(TABLE_SELECTOR).each((el, idx) => {
-      return cy.wrap(el).matchImageSnapshot("table-visuals" + idx);
+    cy.get(TABLE_SELECTOR).each(($element, index) => {
+      return cy.wrap($element).matchImageSnapshot("table-visuals" + index);
     });
   });
 });
