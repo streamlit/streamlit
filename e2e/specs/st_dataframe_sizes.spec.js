@@ -16,9 +16,6 @@
  */
 
 describe("Dataframes and Tables snapshots", () => {
-  const DF_SELECTOR = ".stDataFrame";
-  const TABLE_SELECTOR = ".stTable > table";
-
   before(() => {
     // Increasing timeout since we're waiting for
     // dataframes and tables to be rendered.
@@ -39,7 +36,7 @@ describe("Dataframes and Tables snapshots", () => {
   it("show a tooltip for each cell", () => {
     // Each cell's title should be equal to its text content.
     // (We just check the first dataframe, rather than every single one.)
-    cy.get(DF_SELECTOR)
+    cy.get(".stDataFrame")
       .first()
       .within(() => {
         cy.get(`div.data`).each($element => {
@@ -49,13 +46,13 @@ describe("Dataframes and Tables snapshots", () => {
   });
 
   it("have consistent st.dataframe visuals", () => {
-    cy.get(DF_SELECTOR).each(($element, index) => {
+    cy.get(".stDataFrame").each(($element, index) => {
       return cy.wrap($element).matchImageSnapshot("dataframe-visuals" + index);
     });
   });
 
   it("have consistent st.table visuals", () => {
-    cy.get(TABLE_SELECTOR).each(($element, index) => {
+    cy.get(".stTable").each(($element, index) => {
       return cy.wrap($element).matchImageSnapshot("table-visuals" + index);
     });
   });
