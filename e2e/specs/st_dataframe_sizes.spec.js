@@ -32,7 +32,7 @@ describe("Dataframes", () => {
     cy.get(DF_SELECTOR)
       .first()
       .within(() => {
-        cy.get(`div.data`).each(el => {
+        cy.get(`[data-testid='StyledDataFrameDataCell']`).each(el => {
           expect(el.text()).to.eq(el.attr("title"));
         });
       });

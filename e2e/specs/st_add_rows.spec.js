@@ -58,9 +58,8 @@ describe("st.add_rows", () => {
       "have.length",
       10
     );
-    cy.get(".element-container .stDataFrame .col-header").should(
-      "have.length",
-      7
-    );
+    cy.get(
+      ".element-container .stDataFrame [data-testid='StyledDataFrameColHeaderCell']"
+    ).should("have.length", 7);
   });
 });

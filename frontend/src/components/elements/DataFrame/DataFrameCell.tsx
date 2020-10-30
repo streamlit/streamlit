@@ -115,6 +115,7 @@ export default function DataFrameCell({
       role={role}
       tabIndex={tabIndex}
       title={title}
+      data-testid={Component.displayName}
     >
       {sortedByUser ? sortIcon : ""}
       {contents}
