@@ -184,7 +184,7 @@ class DeltaGenerator(
 
     def __enter__(self):
         # with block started
-        if self._cursor.is_locked:
+        if self._cursor and self._cursor.is_locked:
             raise StreamlitAPIException(
                 "This command cannot have child elements. "
                 + "So it cannot be used as the root of a `with` block."
