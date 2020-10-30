@@ -51,9 +51,9 @@ describe("Dataframes and Tables snapshots", () => {
     });
   });
 
-  it("have consistent st.table visuals", () => {
-    cy.get("[data-testid='stTable']").each(($element, index) => {
-      return cy.wrap($element).matchImageSnapshot("table-visuals" + index);
-    });
-  });
+  // it("have consistent st.table visuals", () => {
+  //   cy.get("[data-testid='stTable']").each(($element, index) => {
+  //     return cy.wrap($element).matchImageSnapshot("table-visuals" + index);
+  //   });
+  // });
 });
