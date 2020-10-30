@@ -67,7 +67,7 @@
     "prismjs": "^1.21.0",
     "protobufjs": "^6.10.1",
     "query-string": "^6.13.1",
-    "react": "^16.13.1",
+    "react": "^16.14.0",
     "react-color": "^2.18.1",
     "react-debounce-render": "^7.0.0",
     "react-dom": "^16.13.1",
