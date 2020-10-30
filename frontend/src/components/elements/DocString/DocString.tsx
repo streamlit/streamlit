@@ -17,8 +17,13 @@
 
 import React, { ReactElement } from "react"
 import { DocString as DocStringProto } from "autogen/proto"
-
-import "./DocString.scss"
+import {
+  StyledDocContainer,
+  StyledDocHeader,
+  StyledDocModule,
+  StyledDocName,
+  StyledDocString,
+} from "./styled-components"
 
 export interface DocStringProps {
   width: number
@@ -34,16 +39,8 @@ export default function DocString({
 }: DocStringProps): ReactElement {
   const { name, module, docString, type, signature } = element
 
-  const moduleHtml = (
-    <span className="doc-module" key="module">
-      {module}.
-    </span>
-  )
-  const nameHtml = (
-    <span className="doc-name" key="name">
-      {name}
-    </span>
-  )
+  const moduleHtml = <StyledDocModule key="module">{module}.</StyledDocModule>
+  const nameHtml = <StyledDocName key="name">{name}</StyledDocName>
   const signatureHtml = (
     <span className="doc-signature" key="signature">
       {signature}
@@ -57,8 +54,8 @@ export default function DocString({
 
   // Put it all together into a nice little html view.
   return (
-    <div className="doc-containter" style={{ width }}>
-      <div className="doc-header">
+    <StyledDocContainer width={width}>
+      <StyledDocHeader>
         {name
           ? [
               module ? moduleHtml : "",
@@ -66,8 +63,8 @@ export default function DocString({
               signature ? signatureHtml : "",
             ]
           : [typeHtml]}
-      </div>
-      <div className="doc-string">{docString}</div>
-    </div>
+      </StyledDocHeader>
+      <StyledDocString>{docString}</StyledDocString>
+    </StyledDocContainer>
   )
 }

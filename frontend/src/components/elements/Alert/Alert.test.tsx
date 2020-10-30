@@ -16,7 +16,8 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+
+import { shallow } from "lib/test_util"
 import { Kind } from "components/shared/AlertContainer"
 import { Alert as AlertProto } from "autogen/proto"
 import Alert, { AlertProps } from "./Alert"

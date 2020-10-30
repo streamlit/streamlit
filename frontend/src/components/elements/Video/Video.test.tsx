@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { mount } from "enzyme"
+import { mount } from "lib/test_util"
 import { Video as VideoProto } from "autogen/proto"
 
 import Video, { VideoProps } from "./Video"
