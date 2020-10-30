@@ -43,4 +43,11 @@ describe("st.container", () => {
     cy.get("h2").contains("Pressed!");
     cy.get(".stCheckbox input").should("have.attr", "aria-checked", "true");
   });
+
+  it("restricts `with` syntax to containers", () => {
+    cy.get(".element-container .stException").should(
+      "contain",
+      "This command cannot have child elements."
+    );
+  });
 });

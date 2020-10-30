@@ -28,3 +28,6 @@ if st.button("Step 2: Press me"):
 c = st.beta_container()
 if c.checkbox("Step 1: Check me"):
     c.title("Checked!")
+
+with st.text("Only containers can use `with` syntax"):
+    st.text("So this should show an error")
