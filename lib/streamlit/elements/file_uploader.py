@@ -118,6 +118,9 @@ class FileUploaderMixin:
         if files is None or len(files) == 0:
             return_value = [] if accept_multiple_files else NoValue
         else:
+            for file in files:
+                if file.tell() > 0:
+                    file.seek(0)
             return_value = files if accept_multiple_files else files[0]
 
         return dg._enqueue("file_uploader", file_uploader_proto, return_value)  # type: ignore

@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 import { Json as JsonProto } from "autogen/proto"
 import Json, { JsonProps } from "./Json"
 

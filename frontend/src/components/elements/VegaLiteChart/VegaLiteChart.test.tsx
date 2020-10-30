@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { mount } from "enzyme"
+import { shallow } from "lib/test_util"
 import { fromJS } from "immutable"
 import { VegaLiteChart as VegaLiteChartProto } from "autogen/proto"
 
@@ -40,8 +40,8 @@ const getProps = (
 describe("VegaLiteChart Element", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = mount(<VegaLiteChart {...props} />)
+    const wrapper = shallow(<VegaLiteChart {...props} />)
 
-    expect(wrapper.find(".stVegaLiteChart").length).toBe(1)
+    expect(wrapper.find("StyledVegaLiteChartContainer").length).toBe(1)
   })
 })

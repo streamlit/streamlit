@@ -21,7 +21,7 @@ describe("st.line_chart", () => {
   });
 
   it("displays a line chart", () => {
-    cy.get(".element-container .stVegaLiteChart")
+    cy.get(".element-container [data-testid='stVegaLiteChart']")
       .find("canvas")
       .should("have.css", "height", "300px");
   });

@@ -24,7 +24,7 @@ describe("st.area, bar, and line charts", () => {
   });
 
   it("display times in UTC", () => {
-    cy.get(".element-container .stVegaLiteChart")
+    cy.get(".element-container [data-testid='stVegaLiteChart']")
       .find("canvas")
       .each((el, i) => {
         return cy.get(el).matchImageSnapshot(`chartUTCTime-${i}`);

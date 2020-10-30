@@ -44,7 +44,10 @@ describe("st.add_rows", () => {
       3
     );
     cy.get(".element-container .stDataFrame").should("have.length", 4);
-    cy.get(".element-container .stVegaLiteChart").should("have.length", 18);
+    cy.get(".element-container [data-testid='stVegaLiteChart']").should(
+      "have.length",
+      18
+    );
   });
 
   it("raises an exception when the shapes don't match", () => {
