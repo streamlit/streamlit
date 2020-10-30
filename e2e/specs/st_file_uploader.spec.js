@@ -139,6 +139,13 @@ describe("st.file_uploader", () => {
           .first()
           .should("contain.text", file2)
           .should("not.contain.text", file1);
+
+        // On rerun, make sure file is still returned
+        cy.get("body").type("r");
+        cy.wait(1000);
+        cy.get(".fixed-width.stText")
+          .first()
+          .should("contain.text", file2);
       });
     });
   });
