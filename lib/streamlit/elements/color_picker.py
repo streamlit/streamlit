@@ -6,7 +6,7 @@ from .utils import _get_widget_ui_value
 
 
 class ColorPickerMixin:
-    def beta_color_picker(dg, label, value=None, key=None):
+    def color_picker(dg, label, value=None, key=None):
         """Display a color picker widget.
 
         Note: This is a beta feature. See
@@ -33,7 +33,7 @@ class ColorPickerMixin:
 
         Example
         -------
-        >>> color = st.beta_color_picker('Pick A Color', '#00f900')
+        >>> color = st.color_picker('Pick A Color', '#00f900')
         >>> st.write('The current color is', color)
 
         """

@@ -17,21 +17,19 @@
 
 import React from "react"
 import { shallow } from "enzyme"
-import { List, Map } from "immutable"
-import { PageConfig } from "autogen/proto"
+import { Block, ForwardMsgMetadata, PageConfig } from "autogen/proto"
 import { ReportRunState } from "lib/ReportRunState"
+import { BlockNode, ElementNode, ReportRoot } from "lib/ReportNode"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { WidgetStateManager } from "lib/WidgetStateManager"
+import { makeElementWithInfoText } from "lib/utils"
 import { ComponentRegistry } from "../../widgets/CustomComponent"
 import ReportView, { ReportViewProps } from "./ReportView"
 
 const getProps = (
   propOverrides: Partial<ReportViewProps> = {}
 ): ReportViewProps => ({
-  elements: {
-    main: List(),
-    sidebar: List(),
-  },
+  elements: ReportRoot.empty(),
   reportId: "report 123",
   reportRunState: ReportRunState.NOT_RUNNING,
   showStaleElementIndicator: true,
@@ -52,19 +50,29 @@ describe("ReportView element", () => {
     expect(wrapper).toBeDefined()
   })
 
-  it("does not render a sidebar with no elements", () => {
+  it("does not render a sidebar when there are no elements", () => {
     const props = getProps()
     const wrapper = shallow(<ReportView {...props} />)
 
     expect(wrapper.find("Sidebar").exists()).toBe(false)
   })
 
-  it("does render a sidebar with no elements", () => {
+  it("renders a sidebar when there are elements", () => {
+    const sidebarElement = new ElementNode(
+      makeElementWithInfoText("sidebar!"),
+      ForwardMsgMetadata.create({}),
+      "no report id"
+    )
+
+    const sidebar = new BlockNode(
+      [sidebarElement],
+      Block.create({ allowEmpty: true })
+    )
+
+    const main = new BlockNode([], Block.create({ allowEmpty: true }))
+
     const props = getProps({
-      elements: {
-        main: List(),
-        sidebar: List([Map({ key: "value" })]),
-      },
+      elements: new ReportRoot(main, sidebar),
     })
     const wrapper = shallow(<ReportView {...props} />)
 

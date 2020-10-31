@@ -16,14 +16,14 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
-import { Map as ImmutableMap } from "immutable"
+
+import { shallow } from "lib/test_util"
 import { Kind } from "components/shared/AlertContainer"
 import { Alert as AlertProto } from "autogen/proto"
 import Alert, { AlertProps } from "./Alert"
 
-const getProps = (elementProps: Record<string, unknown> = {}): AlertProps => ({
-  element: ImmutableMap({
+const getProps = (elementProps: Partial<AlertProto> = {}): AlertProps => ({
+  element: AlertProto.create({
     body: "Something happened!",
     ...elementProps,
   }),
@@ -93,7 +93,7 @@ describe("Alert element", () => {
 
   it("should throw an error when the format is invalid", () => {
     const props = getProps({
-      format: "test",
+      format: ("test" as unknown) as AlertProto.Format,
       body: "It's dangerous to go alone.",
     })
 

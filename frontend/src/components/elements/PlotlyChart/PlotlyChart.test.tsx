@@ -16,12 +16,12 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
-import { fromJS } from "immutable"
+import { shallow } from "lib/test_util"
 import Plot from "react-plotly.js"
 
+import { PlotlyChart as PlotlyChartProto } from "autogen/proto"
 import mock from "./mock"
-import { PlotlyChartProps, DEFAULT_HEIGHT } from "./PlotlyChart"
+import { DEFAULT_HEIGHT, PlotlyChartProps } from "./PlotlyChart"
 
 jest.mock("react-plotly.js", () => jest.fn())
 
@@ -29,9 +29,9 @@ jest.mock("react-plotly.js", () => jest.fn())
 const { PlotlyChart } = require("./PlotlyChart")
 
 const getProps = (
-  elementProps: Record<string, unknown> = {}
+  elementProps: Partial<PlotlyChartProto> = {}
 ): PlotlyChartProps => ({
-  element: fromJS({
+  element: PlotlyChartProto.create({
     ...mock,
     ...elementProps,
   }),

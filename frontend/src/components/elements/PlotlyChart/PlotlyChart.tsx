@@ -21,14 +21,16 @@
  */
 
 import React, { ReactElement } from "react"
-import { Map as ImmutableMap } from "immutable"
-import { dispatchOneOf } from "lib/immutableProto"
+import {
+  Figure as FigureProto,
+  PlotlyChart as PlotlyChartProto,
+} from "autogen/proto"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import Plot from "react-plotly.js"
 
 export interface PlotlyChartProps {
   width: number
-  element: ImmutableMap<string, any>
+  element: PlotlyChartProto
   height: number | undefined
 }
 
@@ -39,8 +41,6 @@ export function PlotlyChart({
   element,
   height: propHeight,
 }: PlotlyChartProps): ReactElement {
-  const el = element
-
   const renderIFrame = (url: string): ReactElement => {
     const height = propHeight || DEFAULT_HEIGHT
     const width = propWidth
@@ -49,22 +49,21 @@ export function PlotlyChart({
 
   const isFullScreen = (): boolean => !!propHeight
 
-  const generateSpec = (figure: ImmutableMap<string, any>): any => {
-    const spec = JSON.parse(figure.get("spec"))
-    const useContainerWidth = JSON.parse(element.get("useContainerWidth"))
+  const generateSpec = (figure: FigureProto): any => {
+    const spec = JSON.parse(figure.spec)
 
     if (isFullScreen()) {
       spec.layout.width = propWidth
       spec.layout.height = propHeight
-    } else if (useContainerWidth) {
+    } else if (element.useContainerWidth) {
       spec.layout.width = propWidth
     }
 
     return spec
   }
 
-  const renderFigure = (figure: ImmutableMap<string, any>): ReactElement => {
-    const config = JSON.parse(figure.get("config"))
+  const renderFigure = (figure: FigureProto): ReactElement => {
+    const config = JSON.parse(figure.config)
     const { data, layout, frames } = generateSpec(figure)
 
     return (
@@ -78,10 +77,15 @@ export function PlotlyChart({
       />
     )
   }
-  return dispatchOneOf(el, "chart", {
-    url: (url: string) => renderIFrame(url),
-    figure: (figure: ImmutableMap<string, any>) => renderFigure(figure),
-  })
+
+  switch (element.chart) {
+    case "url":
+      return renderIFrame(element.url)
+    case "figure":
+      return renderFigure(element.figure as FigureProto)
+    default:
+      throw new Error(`Unrecognized PlotlyChart type: ${element.chart}`)
+  }
 }
 
 export default withFullScreenWrapper(PlotlyChart)

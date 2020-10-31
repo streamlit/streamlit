@@ -17,19 +17,19 @@
 
 import React from "react"
 import { shallow } from "enzyme"
-import { fromJS } from "immutable"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import { Select as UISelect } from "baseui/select"
+import { Selectbox as SelectboxProto } from "autogen/proto"
 import Selectbox, { Props } from "./Selectbox"
 
 jest.mock("lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
 
-const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
-  element: fromJS({
-    id: 1,
+const getProps = (elementProps: Partial<SelectboxProto> = {}): Props => ({
+  element: SelectboxProto.create({
+    id: "1",
     label: "Label",
     default: 0,
     options: ["a", "b", "c"],
@@ -50,8 +50,8 @@ describe("Selectbox widget", () => {
 
   it("should set widget value on did mount", () => {
     expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
-      props.element.get("id"),
-      props.element.get("default"),
+      props.element.id,
+      props.element.default,
       { fromUi: false }
     )
   })
@@ -72,7 +72,7 @@ describe("Selectbox widget", () => {
   })
 
   it("should render a label", () => {
-    expect(wrapper.find("label").text()).toBe(props.element.get("label"))
+    expect(wrapper.find("label").text()).toBe(props.element.label)
   })
 
   it("should render a placeholder with empty options", () => {
@@ -97,7 +97,7 @@ describe("Selectbox widget", () => {
       expect(option).toHaveProperty("value")
     })
 
-    expect(options.length).toBe(props.element.get("options").size)
+    expect(options.length).toBe(props.element.options.length)
     expect(wrapper.find(UISelect).prop("labelKey")).toBe("label")
     expect(wrapper.find(UISelect).prop("valueKey")).toBe("value")
   })

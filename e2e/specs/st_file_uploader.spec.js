@@ -18,7 +18,7 @@
 describe("st.file_uploader", () => {
   beforeEach(() => {
     Cypress.Cookies.defaults({
-      whitelist: ["_xsrf"]
+      preserve: ["_xsrf"]
     });
 
     cy.visit("http://localhost:3000/");
@@ -66,7 +66,7 @@ describe("st.file_uploader", () => {
     cy.fixture(fileName).then(fileContent => {
       cy.get(".fileUploadDropzone")
         .first()
-        .upload(
+        .attachFile(
           { fileContent, fileName, mimeType: "application/json" },
           {
             force: true,
@@ -106,7 +106,7 @@ describe("st.file_uploader", () => {
 
         cy.get(".fileUploadDropzone")
           .eq(0)
-          .upload(files[0], {
+          .attachFile(files[0], {
             force: true,
             subjectType: "drag-n-drop",
             events: ["dragenter", "drop"]
@@ -126,7 +126,7 @@ describe("st.file_uploader", () => {
 
         cy.get(".fileUploadDropzone")
           .eq(0)
-          .upload(files[1], {
+          .attachFile(files[1], {
             force: true,
             subjectType: "drag-n-drop",
             events: ["dragenter", "drop"]
@@ -139,6 +139,13 @@ describe("st.file_uploader", () => {
           .first()
           .should("contain.text", file2)
           .should("not.contain.text", file1);
+
+        // On rerun, make sure file is still returned
+        cy.get("body").type("r");
+        cy.wait(1000);
+        cy.get(".fixed-width.stText")
+          .first()
+          .should("contain.text", file2);
       });
     });
   });
@@ -159,7 +166,12 @@ describe("st.file_uploader", () => {
 
         cy.get(".fileUploadDropzone")
           .eq(1)
-          .upload(files, {
+          .attachFile(files[0], {
+            force: true,
+            subjectType: "drag-n-drop",
+            events: ["dragenter", "drop"]
+          })
+          .attachFile(files[1], {
             force: true,
             subjectType: "drag-n-drop",
             events: ["dragenter", "drop"]

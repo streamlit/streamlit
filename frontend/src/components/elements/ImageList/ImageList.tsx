@@ -16,16 +16,20 @@
  */
 
 import React, { ReactElement } from "react"
-import { Map as ImmutableMap } from "immutable"
 import ReactHtmlParser from "react-html-parser"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import { buildMediaUri, sanitizeSvg } from "lib/UriUtil"
-import "./ImageList.scss"
+import {
+  IImage,
+  Image as ImageProto,
+  ImageList as ImageListProto,
+} from "autogen/proto"
+import { StyledCaption, StyledImageContainer } from "./styled-components"
 
 export interface ImageListProps {
   width: number
   isFullScreen: boolean
-  element: ImmutableMap<string, any>
+  element: ImageListProto
   height?: number
 }
 
@@ -46,7 +50,7 @@ export function ImageList({
   // The width field in the proto sets the image width, but has special
   // cases for -1 and -2.
   let containerWidth: number | undefined
-  const protoWidth = element.get("width")
+  const protoWidth = element.width
 
   if (protoWidth === WidthBehavior.OriginalWidth) {
     // Use the original image width.
@@ -56,7 +60,7 @@ export function ImageList({
     containerWidth = width
   } else if (protoWidth > 0) {
     // Set the image width explicitly.
-    containerWidth = element.get("width")
+    containerWidth = protoWidth
   } else {
     throw Error(`Invalid image width: ${protoWidth}`)
   }
@@ -72,30 +76,33 @@ export function ImageList({
 
   return (
     <div style={{ width }}>
-      {element
-        .get("imgs")
-        .map((img: ImmutableMap<string, any>, idx: string) => {
+      {element.imgs.map(
+        (iimage: IImage, idx: number): ReactElement => {
+          const image = iimage as ImageProto
           return (
-            <div
-              className="image-container stImage"
+            <StyledImageContainer
               key={idx}
+              data-testid="stImage"
               style={{ width: containerWidth }}
             >
-              {img.get("markup") ? (
-                ReactHtmlParser(sanitizeSvg(img.get("markup")))
+              {image.markup ? (
+                ReactHtmlParser(sanitizeSvg(image.get("markup")))
               ) : (
                 <img
                   style={imgStyle}
-                  src={buildMediaUri(img.get("url"))}
-                  alt={idx}
+                  src={buildMediaUri(image.url)}
+                  alt={idx.toString()}
                 />
               )}
               {!isFullScreen && (
-                <div className="caption"> {img.get("caption")} </div>
+                <StyledCaption data-testid="caption">
+                  {` ${image.caption} `}
+                </StyledCaption>
               )}
-            </div>
+            </StyledImageContainer>
           )
-        })}
+        }
+      )}
     </div>
   )
 }

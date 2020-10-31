@@ -16,19 +16,19 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
-import { Map as ImmutableMap } from "immutable"
+import { shallow } from "lib/test_util"
+import { Markdown as MarkdownProto } from "autogen/proto"
 import Markdown, { MarkdownProps } from "./Markdown"
 
 const getProps = (
-  elementProps: Record<string, unknown> = {}
+  elementProps: Partial<MarkdownProps> = {}
 ): MarkdownProps => ({
-  element: ImmutableMap({
+  element: MarkdownProto.create({
     body:
       "Emphasis, aka italics, with *asterisks* or _underscores_." +
       "Combined emphasis with **asterisks and _underscores_**." +
       "[I'm an inline-style link with title](https://www.https://streamlit.io/ Streamlit)",
-    allowHTML: false,
+    allowHtml: false,
     ...elementProps,
   }),
   width: 100,

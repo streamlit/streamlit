@@ -18,9 +18,8 @@
 import React, { Fragment, PureComponent, ReactNode } from "react"
 import moment from "moment"
 import { HotKeys, KeyMap } from "react-hotkeys"
-import { fromJS, List } from "immutable"
+import { fromJS } from "immutable"
 import classNames from "classnames"
-import { ThemeProvider } from "baseui"
 // Other local imports.
 import ReportView from "components/core/ReportView/"
 import StatusWidget from "components/core/StatusWidget"
@@ -35,26 +34,18 @@ import { WidgetStateManager } from "lib/WidgetStateManager"
 import { ConnectionState } from "lib/ConnectionState"
 import { ReportRunState } from "lib/ReportRunState"
 import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
-import { mainWidgetTheme } from "lib/widgetTheme"
-import {
-  applyDelta,
-  BlockElement,
-  Elements,
-  ReportElement,
-  SimpleElement,
-} from "lib/DeltaParser"
 import {
   setCookie,
-  flattenElements,
   hashString,
   isEmbeddedInIFrame,
-  makeElementWithInfoText,
+  notUndefined,
+  getElementWidgetID,
 } from "lib/utils"
 import {
   BackMsg,
   Delta,
   ForwardMsg,
-  IForwardMsgMetadata,
+  ForwardMsgMetadata,
   ISessionState,
   Initialize,
   NewReport,
@@ -71,21 +62,23 @@ import { MetricsManager } from "lib/MetricsManager"
 import { FileUploadClient } from "lib/FileUploadClient"
 
 import { logError, logMessage } from "lib/log"
-// WARNING: order matters
-import "assets/css/theme.scss"
-import "./App.scss"
-import "assets/css/header.scss"
 import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
+import { ReportRoot } from "./lib/ReportNode"
 import { ComponentRegistry } from "./components/widgets/CustomComponent"
 import { handleFavicon } from "./components/elements/Favicon"
+
+import withS4ACommunication, {
+  S4ACommunicationHOC,
+} from "./hocs/withS4ACommunication/withS4ACommunication"
 
 import withScreencast, {
   ScreenCastHOC,
 } from "./hocs/withScreencast/withScreencast"
 
-import withS4ACommunication, {
-  S4ACommunicationHOC,
-} from "./hocs/withS4ACommunication/withS4ACommunication"
+// WARNING: order matters
+import "assets/css/theme.scss"
+import "./App.scss"
+import "assets/css/header.scss"
 
 export interface Props {
   screenCast: ScreenCastHOC
@@ -94,7 +87,7 @@ export interface Props {
 
 interface State {
   connectionState: ConnectionState
-  elements: Elements
+  elements: ReportRoot
   reportId: string
   reportName: string
   reportHash: string | null
@@ -129,9 +122,18 @@ export class App extends PureComponent<Props, State> {
 
   private readonly uploadClient: FileUploadClient
 
-  private elementListBuffer: Elements | null
+  /**
+   * When new Deltas are received, they are applied to `pendingElementsBuffer`
+   * rather than directly to `this.state.elements`. We assign
+   * `pendingElementsBuffer` to `this.state` on a timer, in order to
+   * decouple Delta updates from React re-renders, for performance reasons.
+   *
+   * (If `pendingElementsBuffer === this.state.elements` - the default state -
+   * then we have no pending elements.)
+   */
+  private pendingElementsBuffer: ReportRoot
 
-  private elementListBufferTimerIsSet: boolean
+  private pendingElementsTimerRunning: boolean
 
   private readonly componentRegistry: ComponentRegistry
 
@@ -140,16 +142,7 @@ export class App extends PureComponent<Props, State> {
 
     this.state = {
       connectionState: ConnectionState.INITIAL,
-      elements: {
-        main: fromJS([
-          {
-            element: makeElementWithInfoText("Please wait..."),
-            metadata: {},
-            reportId: "no report",
-          },
-        ]),
-        sidebar: fromJS([]),
-      },
+      elements: ReportRoot.empty("Please wait..."),
       reportName: "",
       reportId: "<null>",
       reportHash: null,
@@ -178,8 +171,8 @@ export class App extends PureComponent<Props, State> {
         ? this.connectionManager.getBaseUriParts()
         : undefined
     })
-    this.elementListBufferTimerIsSet = false
-    this.elementListBuffer = null
+    this.pendingElementsTimerRunning = false
+    this.pendingElementsBuffer = this.state.elements
 
     window.streamlitDebug = {}
     window.streamlitDebug.closeConnection = this.closeConnection.bind(this)
@@ -303,7 +296,10 @@ export class App extends PureComponent<Props, State> {
         newReport: (newReportMsg: NewReport) =>
           this.handleNewReport(newReportMsg),
         delta: (deltaMsg: Delta) =>
-          this.handleDeltaMsg(deltaMsg, msgProto.metadata),
+          this.handleDeltaMsg(
+            deltaMsg,
+            msgProto.metadata as ForwardMsgMetadata
+          ),
         pageConfigChanged: (pageConfig: PageConfig) =>
           this.handlePageConfigChanged(pageConfig),
         pageInfoChanged: (pageInfo: PageInfo) =>
@@ -575,29 +571,24 @@ export class App extends PureComponent<Props, State> {
       // (We don't do this if our script had a compilation error and didn't
       // finish successfully.)
       this.setState(
-        ({ elements, reportId }) => ({
-          elements: {
-            main: this.clearOldElements(elements.main, reportId),
-            sidebar: this.clearOldElements(elements.sidebar, reportId),
-          },
+        ({ reportId }) => ({
+          // Apply any pending elements that haven't been applied.
+          elements: this.pendingElementsBuffer.clearStaleNodes(reportId),
         }),
         () => {
-          this.elementListBuffer = this.state.elements
+          // We now have no pending elements.
+          this.pendingElementsBuffer = this.state.elements
         }
       )
 
-      // This step removes from the WidgetManager the state of those widgets
-      // that are not shown on the page.
-      if (this.elementListBuffer) {
-        const activeWidgetIds = flattenElements(this.elementListBuffer.main)
-          .union(flattenElements(this.elementListBuffer.sidebar))
-          .map((e: SimpleElement) => {
-            const type = e.get("type")
-            return e.get(type).get("id") as string
-          })
-          .filter(id => id != null)
-        this.widgetMgr.clean(activeWidgetIds)
-      }
+      // Tell the WidgetManager which widgets still exist. It will remove
+      // widget state for widgets that have been removed.
+      const activeWidgetIds = new Set(
+        Array.from(this.state.elements.getElements())
+          .map(element => getElementWidgetID(element))
+          .filter(notUndefined)
+      )
+      this.widgetMgr.clean(activeWidgetIds)
 
       // Tell the ConnectionManager to increment the message cache run
       // count. This will result in expired ForwardMsgs being removed from
@@ -608,34 +599,6 @@ export class App extends PureComponent<Props, State> {
         )
       }
     }
-  }
-
-  /**
-   * Returns a copy without old elements. The term old is defined as:
-   *  - element or container whose reportId is from a previous rerun
-   *  - empty container
-   */
-  clearOldElements = (elements: any, reportId: string): BlockElement => {
-    return elements
-      .map((reportElement: ReportElement) => {
-        if (reportElement.get("reportId") !== reportId) return null
-
-        const simpleElement = reportElement.get("element")
-        if (simpleElement instanceof List) {
-          // Recursively clear old elements
-          const clearedElements = this.clearOldElements(
-            simpleElement,
-            reportId
-          )
-          return clearedElements.size > 0 ||
-            // Allow empty columns, so that they space out other columns.
-            reportElement.getIn(["deltaBlock", "allowEmpty"])
-            ? reportElement.set("element", clearedElements)
-            : null
-        }
-        return reportElement
-      })
-      .filter((reportElement: any) => reportElement !== null)
   }
 
   /*
@@ -653,13 +616,10 @@ export class App extends PureComponent<Props, State> {
         reportName,
         reportHash,
         deployParams,
-        elements: {
-          main: fromJS([]),
-          sidebar: fromJS([]),
-        },
+        elements: ReportRoot.empty(),
       },
       () => {
-        this.elementListBuffer = this.state.elements
+        this.pendingElementsBuffer = this.state.elements
         this.widgetMgr.clean(fromJS([]))
       }
     )
@@ -696,24 +656,22 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Updates elementListBuffer with the given delta, and sets up a timer to
-   * update the elementList in the state as well. This buffer allows us to
-   * receive deltas extremely quickly without spamming React with lots of
-   * render() calls.
+   * Update pendingElementsBuffer with the given Delta and set up a timer to
+   * update state.elements. This buffer allows us to process Deltas quickly
+   * without spamming React with too many of render() calls.
    */
   handleDeltaMsg = (
     deltaMsg: Delta,
-    metadataMsg: IForwardMsgMetadata | undefined | null
+    metadataMsg: ForwardMsgMetadata
   ): void => {
-    this.elementListBuffer = applyDelta(
-      this.state.elements,
+    this.pendingElementsBuffer = this.pendingElementsBuffer.applyDelta(
       this.state.reportId,
       deltaMsg,
       metadataMsg
     )
 
-    if (!this.elementListBufferTimerIsSet) {
-      this.elementListBufferTimerIsSet = true
+    if (!this.pendingElementsTimerRunning) {
+      this.pendingElementsTimerRunning = true
 
       // (BUG #685) When user presses stop, stop adding elements to
       // report immediately to avoid race condition.
@@ -726,16 +684,9 @@ export class App extends PureComponent<Props, State> {
         this.state.reportRunState === ReportRunState.RUNNING
 
       setTimeout(() => {
-        this.elementListBufferTimerIsSet = false
+        this.pendingElementsTimerRunning = false
         if (isStaticConnection || reportIsRunning) {
-          // Create brand new `elements` instance, so components that depend on
-          // this for re-rendering catch the change.
-          if (this.elementListBuffer) {
-            const elements: Elements = {
-              ...this.elementListBuffer,
-            }
-            this.setState({ elements })
-          }
+          this.setState({ elements: this.pendingElementsBuffer })
         }
       }, ELEMENT_LIST_BUFFER_TIMEOUT_MS)
     }
@@ -1026,7 +977,7 @@ export class App extends PureComponent<Props, State> {
             uploadClient={this.uploadClient}
             componentRegistry={this.componentRegistry}
           />
-          <ThemeProvider theme={mainWidgetTheme}>{dialog}</ThemeProvider>
+          {dialog}
         </div>
       </HotKeys>
     )

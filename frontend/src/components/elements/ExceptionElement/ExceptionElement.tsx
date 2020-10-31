@@ -16,14 +16,18 @@
  */
 
 import React, { ReactElement } from "react"
-import { Map as ImmutableMap } from "immutable"
 import AlertContainer, { Kind } from "components/shared/AlertContainer"
 import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
-import "./ExceptionElement.scss"
+import { Exception as ExceptionProto } from "autogen/proto"
+import {
+  StyledMessageType,
+  StyledStackTraceRow,
+  StyledStackTraceTitle,
+} from "./styled-components"
 
 export interface ExceptionElementProps {
   width: number
-  element: ImmutableMap<string, any>
+  element: ExceptionProto
 }
 
 interface ExceptionMessageProps {
@@ -34,6 +38,13 @@ interface ExceptionMessageProps {
 
 interface StackTraceProps {
   stackTrace: string[]
+}
+
+/**
+ * Return true if the string is non-null and non-empty.
+ */
+function isNonEmptyString(value: string | null | undefined): boolean {
+  return value != null && value !== ""
 }
 
 function ExceptionMessage({
@@ -55,8 +66,8 @@ function ExceptionMessage({
   }
   return (
     <>
-      <span className="type">{type}</span>
-      {message != null ? `: ${message}` : null}
+      <StyledMessageType>{type}</StyledMessageType>
+      {isNonEmptyString(message) ? `: ${message}` : null}
     </>
   )
 }
@@ -65,13 +76,11 @@ function StackTrace({ stackTrace }: StackTraceProps): ReactElement {
   // Build the stack trace display, if we got a stack trace.
   return (
     <>
-      <div className="stack-trace-title">Traceback:</div>
+      <StyledStackTraceTitle>Traceback:</StyledStackTraceTitle>
       <pre className="stack-trace">
         <code>
           {stackTrace.map((row: string, index: number) => (
-            <div className="stack-trace-row" key={index}>
-              {row}
-            </div>
+            <StyledStackTraceRow key={index}>{row}</StyledStackTraceRow>
           ))}
         </code>
       </pre>
@@ -86,26 +95,21 @@ export default function ExceptionElement({
   element,
   width,
 }: ExceptionElementProps): ReactElement {
-  const stackTrace = element.get("stackTrace")
-  const isWarning = element.get("isWarning")
-  const type: string = element.get("type")
-  const message: string = element.get("message")
-  const messageIsMarkdown: boolean = element.get("messageIsMarkdown")
   return (
     <div className="stException">
       <AlertContainer
-        kind={isWarning ? Kind.WARNING : Kind.ERROR}
+        kind={element.isWarning ? Kind.WARNING : Kind.ERROR}
         width={width}
       >
         <div className="message">
           <ExceptionMessage
-            type={type}
-            message={message}
-            messageIsMarkdown={messageIsMarkdown}
+            type={element.type}
+            message={element.message}
+            messageIsMarkdown={element.messageIsMarkdown}
           />
         </div>
-        {stackTrace && stackTrace.size > 0 ? (
-          <StackTrace stackTrace={stackTrace} />
+        {element.stackTrace && element.stackTrace.length > 0 ? (
+          <StackTrace stackTrace={element.stackTrace} />
         ) : null}
       </AlertContainer>
     </div>

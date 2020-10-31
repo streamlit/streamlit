@@ -16,12 +16,12 @@
  */
 
 import React from "react"
-import { Map as ImmutableMap } from "immutable"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
+import { Json as JsonProto } from "autogen/proto"
 import Json, { JsonProps } from "./Json"
 
-const getProps = (elementProps: Record<string, unknown> = {}): JsonProps => ({
-  element: ImmutableMap({
+const getProps = (elementProps: Partial<JsonProto> = {}): JsonProps => ({
+  element: JsonProto.create({
     body:
       '{ "proper": [1,2,3],' +
       '  "nested": { "thing1": "cat", "thing2": "hat" },' +
@@ -45,5 +45,17 @@ describe("JSON element", () => {
     expect(() => {
       shallow(<Json {...props} />)
     }).toThrow(SyntaxError)
+  })
+
+  it("renders json with NaN and infinity values", () => {
+    const props = getProps({
+      body: `{
+      "numbers":[ -1e27, NaN, Infinity, -Infinity, 2.2822022,-2.2702775],
+    }`,
+    })
+    const wrapper = shallow(<Json {...props} />)
+    expect(wrapper).toBeDefined()
+    const elem = wrapper.get(0)
+    expect(elem.props.className.includes("stJson")).toBeTruthy()
   })
 })

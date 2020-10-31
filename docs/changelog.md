@@ -16,6 +16,17 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.70.0
+
+_Release date: October 28, 2020_
+
+**Notable Changes**
+
+- 🧪 [`st.set_page_config`](https://docs.streamlit.io/en/0.70.0/api.html#streamlit.set_page_config) and [`st.color_picker`](https://docs.streamlit.io/en/0.70.0/api.html#streamlit.color_picker) have now been moved into the
+  Streamlit namespace. These will be removed from beta January 28th, 2021. Learn
+  more about our beta process [here](https://docs.streamlit.io/en/0.70.0/api.html#beta-and-experimental-features).
+- 📊 Improve display of bar charts for discrete values.
+
 ## Version 0.69.0
 
 _Release date: October 15, 2020_
@@ -191,7 +202,7 @@ _Release date: May 05, 2020_
 **Highlights:**
 
 - 🎨 New color-picker widget! Use it with
-  [`st.beta_color_picker()`](https://docs.streamlit.io/en/latest/api.html#streamlit.beta_color_picker)
+  [`st.beta_color_picker()`](https://docs.streamlit.io/en/0.69.0/api.html#streamlit.beta_color_picker)
 - 🧪 Introducing `st.beta_*` and `st.experimental_*` function prefixes, for faster
   Streamlit feature releases. See
   [docs](https://docs.streamlit.io/en/latest/api.html#pre-release-features) for more info.

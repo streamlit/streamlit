@@ -16,14 +16,13 @@
  */
 
 import React from "react"
-import { mount } from "enzyme"
-import { fromJS } from "immutable"
+import { mount } from "lib/test_util"
 import { Video as VideoProto } from "autogen/proto"
 
 import Video, { VideoProps } from "./Video"
 
 const getProps = (elementProps: Partial<VideoProto> = {}): VideoProps => ({
-  element: fromJS({
+  element: VideoProto.create({
     url: "https://www.w3schools.com/html/mov_bbb.mp4",
     type: VideoProto.Type.UNUSED,
     startTime: 0,

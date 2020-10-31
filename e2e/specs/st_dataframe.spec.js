@@ -46,8 +46,4 @@ describe("st.dataframe", () => {
       .first()
       .should("have.css", "background-color", "rgb(255, 255, 0)");
   });
-
-  it("looks the same", () => {
-    // (HK) TODO: diff screenshots
-  });
 });

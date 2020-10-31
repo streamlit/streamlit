@@ -15,19 +15,19 @@
  * limitations under the License.
  */
 
-import { shallow, ShallowWrapper } from "enzyme"
-import { fromJS } from "immutable"
+import React from "react"
+import { ShallowWrapper } from "enzyme"
+import { shallow } from "lib/test_util"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   getIFrameSandboxPolicy,
 } from "lib/IFrameUtil"
-import React from "react"
+
+import { IFrame as IFrameProto } from "autogen/proto"
 import IFrame, { IFrameProps } from "./IFrame"
 
-const getProps = (
-  elementProps: Record<string, unknown> = {}
-): IFrameProps => ({
-  element: fromJS({
+const getProps = (elementProps: Partial<IFrameProto> = {}): IFrameProps => ({
+  element: IFrameProto.create({
     ...elementProps,
   }),
   width: 100,
@@ -54,7 +54,7 @@ describe("st.iframe", () => {
     beforeAll(() => {
       const props = getProps({
         src: "foo",
-        srcDoc: "bar",
+        srcdoc: "bar",
       })
       wrapper = shallow(<IFrame {...props} />)
     })

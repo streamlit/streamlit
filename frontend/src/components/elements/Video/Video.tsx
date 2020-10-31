@@ -16,13 +16,12 @@
  */
 
 import React, { ReactElement, useEffect, useRef } from "react"
-import { Map as ImmutableMap } from "immutable"
 import { Video as VideoProto } from "autogen/proto"
 import { buildMediaUri } from "lib/UriUtil"
 
 export interface VideoProps {
   width: number
-  element: ImmutableMap<string, any>
+  element: VideoProto
 }
 
 export default function Video({ element, width }: VideoProps): ReactElement {
@@ -30,15 +29,14 @@ export default function Video({ element, width }: VideoProps): ReactElement {
 
   /* Element may contain "url" or "data" property. */
 
-  const type = element.get("type")
-  const url = element.get("url")
+  const { type, url } = element
 
   useEffect(() => {
     const videoNode = videoRef.current
 
     const setStartTime: () => void = () => {
       if (videoNode) {
-        videoNode.currentTime = element.get("startTime")
+        videoNode.currentTime = element.startTime
       }
     }
 
@@ -54,7 +52,7 @@ export default function Video({ element, width }: VideoProps): ReactElement {
   }, [element])
 
   const getYoutubeSrc = (url: string): string => {
-    const startTime = element.get("startTime")
+    const { startTime } = element
     if (startTime) {
       return `${url}?start=${startTime}`
     }
@@ -84,7 +82,7 @@ export default function Video({ element, width }: VideoProps): ReactElement {
     <video
       ref={videoRef}
       controls
-      src={buildMediaUri(element.get("url"))}
+      src={buildMediaUri(url)}
       className="stVideo"
       style={{ width }}
     />

@@ -31,7 +31,7 @@ import "prismjs/components/prism-yaml"
 import "prismjs/components/prism-css"
 import "prismjs/components/prism-c"
 import CopyButton from "./CopyButton"
-import "./CodeBlock.scss"
+import { StyledPre, StyledCodeBlock } from "./styled-components"
 
 export interface CodeBlockProps {
   width: number
@@ -49,12 +49,12 @@ export default function CodeBlock({
 }: CodeBlockProps): ReactElement {
   if (language == null) {
     return (
-      <div className="stCodeBlock">
+      <StyledCodeBlock className="stCodeBlock">
         <CopyButton text={value} />
-        <pre>
+        <StyledPre>
           <code>{value}</code>
-        </pre>
-      </div>
+        </StyledPre>
+      </StyledCodeBlock>
     )
   }
 
@@ -71,14 +71,14 @@ export default function CodeBlock({
   const safeHtml = value ? Prism.highlight(value, lang, "") : ""
 
   return (
-    <div className="stCodeBlock">
+    <StyledCodeBlock className="stCodeBlock">
       <CopyButton text={value} />
-      <pre>
+      <StyledPre>
         <code
           className={languageClassName}
           dangerouslySetInnerHTML={{ __html: safeHtml }}
         />
-      </pre>
-    </div>
+      </StyledPre>
+    </StyledCodeBlock>
   )
 }

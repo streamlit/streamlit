@@ -18,7 +18,6 @@
 import React from "react"
 import moment from "moment"
 import { shallow } from "enzyme"
-import { fromJS } from "immutable"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { TimeInput as TimeInputProto } from "autogen/proto"
 
@@ -29,8 +28,8 @@ jest.mock("lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
 const getProps = (elementProps: Partial<TimeInputProto> = {}): Props => ({
-  element: fromJS({
-    id: 123,
+  element: TimeInputProto.create({
+    id: "123",
     label: "Label",
     default: "12:45",
     ...elementProps,
@@ -49,15 +48,13 @@ describe("TextInput widget", () => {
   })
 
   it("should show a label", () => {
-    expect(wrapper.find("label").text()).toBe(props.element.get("label"))
+    expect(wrapper.find("label").text()).toBe(props.element.label)
   })
 
   it("should set widget value on did mount", () => {
-    expect(
-      props.widgetMgr.setStringValue
-    ).toHaveBeenCalledWith(
-      props.element.get("id"),
-      props.element.get("default"),
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element.id,
+      props.element.default,
       { fromUi: false }
     )
   })
@@ -104,8 +101,10 @@ describe("TextInput widget", () => {
     wrapper.find(UITimePicker).prop("onChange")(date)
 
     expect(wrapper.state("value")).toBe("12:08")
-    expect(
-      props.widgetMgr.setStringValue
-    ).toHaveBeenCalledWith(props.element.get("id"), "12:08", { fromUi: true })
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element.id,
+      "12:08",
+      { fromUi: true }
+    )
   })
 })

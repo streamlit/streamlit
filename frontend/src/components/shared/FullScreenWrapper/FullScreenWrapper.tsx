@@ -51,10 +51,15 @@ interface State {
 class FullScreenWrapper extends PureComponent<Props, State> {
   static isFullScreen = false
 
-  public state: State = { expanded: false, fullWidth: 0, fullHeight: 0 }
+  public constructor(props: Props) {
+    super(props)
+    this.state = {
+      expanded: false,
+      ...this.getWindowDimensions(),
+    }
+  }
 
   componentDidMount(): void {
-    this.updateWindowDimensions()
     window.addEventListener("resize", this.updateWindowDimensions)
     document.addEventListener("keydown", this.controlKeys, false)
   }
@@ -93,17 +98,22 @@ class FullScreenWrapper extends PureComponent<Props, State> {
     )
   }
 
-  updateWindowDimensions = (): void => {
+  getWindowDimensions = (): Pick<State, "fullWidth" | "fullHeight"> => {
     const padding = this.convertScssRemValueToPixels(
       SCSS_VARS["$fullscreen-padding"]
     )
     const paddingTop = this.convertScssRemValueToPixels(
       SCSS_VARS["$fullscreen-padding-top"]
     )
-    this.setState({
+
+    return {
       fullWidth: window.innerWidth - padding * 2, // Left and right
       fullHeight: window.innerHeight - (padding + paddingTop), // Bottom and Top
-    })
+    }
+  }
+
+  updateWindowDimensions = (): void => {
+    this.setState(this.getWindowDimensions())
   }
 
   public render(): JSX.Element {

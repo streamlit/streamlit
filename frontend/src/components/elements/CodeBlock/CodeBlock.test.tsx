@@ -16,15 +16,16 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 import { logWarning } from "lib/log"
 import CodeBlock, { CodeBlockProps } from "./CodeBlock"
 
 jest.mock("lib/log", () => ({
   logWarning: jest.fn(),
+  logMessage: jest.fn(),
 }))
 
-const getProps = (props: Record<string, unknown> = {}): CodeBlockProps => ({
+const getProps = (props: Partial<CodeBlockProps> = {}): CodeBlockProps => ({
   width: 0,
   value: `
     import streamlit as st
@@ -39,7 +40,7 @@ describe("CodeBlock Element", () => {
     const props = getProps()
     const wrapper = shallow(<CodeBlock {...props} />)
 
-    expect(wrapper.find("div.stCodeBlock").length).toBe(1)
+    expect(wrapper.find("StyledCodeBlock").length).toBe(1)
   })
 
   it("should render with language", () => {
@@ -48,7 +49,7 @@ describe("CodeBlock Element", () => {
     })
     const wrapper = shallow(<CodeBlock {...props} />)
 
-    expect(wrapper.find("div.stCodeBlock").length).toBe(1)
+    expect(wrapper.find("StyledCodeBlock").length).toBe(1)
     expect(wrapper.find("code").prop("className")).toBe("language-python")
   })
 

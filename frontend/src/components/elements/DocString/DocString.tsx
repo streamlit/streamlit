@@ -16,12 +16,18 @@
  */
 
 import React, { ReactElement } from "react"
-import { Map as ImmutableMap } from "immutable"
-import "./DocString.scss"
+import { DocString as DocStringProto } from "autogen/proto"
+import {
+  StyledDocContainer,
+  StyledDocHeader,
+  StyledDocModule,
+  StyledDocName,
+  StyledDocString,
+} from "./styled-components"
 
 export interface DocStringProps {
   width: number
-  element: ImmutableMap<string, any>
+  element: DocStringProto
 }
 
 /**
@@ -31,22 +37,10 @@ export default function DocString({
   width,
   element,
 }: DocStringProps): ReactElement {
-  const name = element.get("name")
-  const module = element.get("module")
-  const docString = element.get("docString")
-  const type = element.get("type")
-  const signature = element.get("signature")
+  const { name, module, docString, type, signature } = element
 
-  const moduleHtml = (
-    <span className="doc-module" key="module">
-      {module}.
-    </span>
-  )
-  const nameHtml = (
-    <span className="doc-name" key="name">
-      {name}
-    </span>
-  )
+  const moduleHtml = <StyledDocModule key="module">{module}.</StyledDocModule>
+  const nameHtml = <StyledDocName key="name">{name}</StyledDocName>
   const signatureHtml = (
     <span className="doc-signature" key="signature">
       {signature}
@@ -60,8 +54,8 @@ export default function DocString({
 
   // Put it all together into a nice little html view.
   return (
-    <div className="doc-containter" style={{ width }}>
-      <div className="doc-header">
+    <StyledDocContainer width={width}>
+      <StyledDocHeader>
         {name
           ? [
               module ? moduleHtml : "",
@@ -69,8 +63,8 @@ export default function DocString({
               signature ? signatureHtml : "",
             ]
           : [typeHtml]}
-      </div>
-      <div className="doc-string">{docString}</div>
-    </div>
+      </StyledDocHeader>
+      <StyledDocString>{docString}</StyledDocString>
+    </StyledDocContainer>
   )
 }

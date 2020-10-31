@@ -16,15 +16,15 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
-import { fromJS } from "immutable"
+import { shallow } from "lib/test_util"
 
+import { Progress as ProgressProto } from "autogen/proto"
 import Progress, { ProgressProps } from "./Progress"
 
 const getProps = (
-  propOverrides: Record<string, unknown> = {}
+  propOverrides: Partial<ProgressProps> = {}
 ): ProgressProps => ({
-  element: fromJS({
+  element: ProgressProto.create({
     value: 50,
   }),
   width: 0,
