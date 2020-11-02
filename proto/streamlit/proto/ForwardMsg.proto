@@ -80,6 +80,11 @@ message ForwardMsg {
   // Next: 14
 }
 
+// ForwardMsgMetadata contains all data that does _not_ get hashed (or cached)
+// in our ForwardMsgCache. (That is, when we cache a ForwardMsg, we clear its
+// metadata field first.) This allows us to, e.g., have a large unchanging
+// dataframe appear in different places across multiple reruns - or even appear
+// multiple times in a single run - and only send its dataframe bytes once.
 message ForwardMsgMetadata {
   // If this is set, the server will have cached this message,
   // and a client that receives it should do the same.
