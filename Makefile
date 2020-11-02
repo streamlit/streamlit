@@ -51,7 +51,9 @@ frontend: react-build
 
 .PHONY: setup
 setup:
-	pip install pip-tools pipenv black ;
+	pip install pip-tools black ; \
+	# 2020.11.2: Install the latest (as of today) unreleased version of Pipenv.
+	pip install git+git://github.com/pypa/pipenv.git@d0a6bea0d99a3894aad8022160e1f73e4e2d4d0a
 
 .PHONY: pipenv-install
 pipenv-install: pipenv-dev-install pipenv-test-install
