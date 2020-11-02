@@ -25,7 +25,7 @@ import DataFrameCell, { DataFrameCellProps } from "./DataFrameCell"
 const getProps = (
   props: Partial<DataFrameCellProps> = {}
 ): DataFrameCellProps => ({
-  as: StyledDataFrameCornerCell,
+  CellType: StyledDataFrameCornerCell,
   columnIndex: 0,
   rowIndex: 0,
   style: { height: 25, left: 0, position: "absolute", top: 0, width: 32 },

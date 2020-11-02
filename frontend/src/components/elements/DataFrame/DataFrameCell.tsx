@@ -28,7 +28,7 @@ export interface DataFrameCellProps {
   rowIndex: number
 
   /** The cell's component to render */
-  as: ComponentType
+  CellType: ComponentType
 
   /** Additional css styling for the cell */
   style: Record<string, unknown>
@@ -71,7 +71,7 @@ const SortArrowIcon = styled(Icon)(({ theme }) => ({
 }))
 
 export default function DataFrameCell({
-  as,
+  CellType,
   columnIndex,
   contents,
   rowIndex,
@@ -102,24 +102,23 @@ export default function DataFrameCell({
   // The sort icon is only drawn in the top row
   const sortIcon =
     rowIndex === 0 ? drawSortIcon(columnSortDirection) : undefined
-  const Component = as
 
   return (
     // (ESLint erroneously believes we're not assigning a role to our clickable div)
     // eslint-disable-next-line
 
-    <Component
+    <CellType
       // @ts-ignore
       style={style}
       onClick={onClick}
       role={role}
       tabIndex={tabIndex}
       title={title}
-      data-testid={Component.displayName}
+      data-testid={CellType.displayName}
     >
       {sortedByUser ? sortIcon : ""}
       {contents}
-    </Component>
+    </CellType>
   )
 }
 

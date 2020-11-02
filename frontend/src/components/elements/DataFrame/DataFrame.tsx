@@ -130,7 +130,7 @@ export function DataFrame({
       return (
         <DataFrameCell
           key={key}
-          as={Component}
+          CellType={Component}
           columnIndex={columnIndex}
           rowIndex={rowIndex}
           style={styles}
