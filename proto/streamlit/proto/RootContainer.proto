@@ -16,16 +16,12 @@
 
 syntax = "proto3";
 
-message BlockPath {
-  enum Container {
-    UNUSED = 0;
-    MAIN = 1;
-    SIDEBAR = 2;
-  }
-
-  // Top level container of the block.
-  Container container = 1;
-
-  // A list with the indices of all ancestors of the block.
-  repeated uint32 path = 2;
+// Constants for our two "RootContainers" - the top-level containers
+// that `st.foo` and `st.sidebar.foo` write to. Each value corresponds
+// to the first index in any `delta_path` that uses these containers.
+// (This enum is not used in any protobuf messages; we declare it here so
+// that the values remain synced between Python and the frontend.)
+enum RootContainer {
+  MAIN = 0;
+  SIDEBAR = 1;
 }

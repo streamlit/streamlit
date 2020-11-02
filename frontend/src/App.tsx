@@ -46,7 +46,6 @@ import {
   Delta,
   ForwardMsg,
   ForwardMsgMetadata,
-  ISessionState,
   Initialize,
   NewReport,
   IDeployParams,
@@ -54,6 +53,7 @@ import {
   PageInfo,
   SessionEvent,
   WidgetStates,
+  SessionState,
 } from "autogen/proto"
 
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
@@ -289,7 +289,7 @@ export class App extends PureComponent<Props, State> {
       dispatchProto(msgProto, "type", {
         initialize: (initializeMsg: Initialize) =>
           this.handleInitialize(initializeMsg),
-        sessionStateChanged: (msg: ISessionState) =>
+        sessionStateChanged: (msg: SessionState) =>
           this.handleSessionStateChanged(msg),
         sessionEvent: (evtMsg: SessionEvent) =>
           this.handleSessionEvent(evtMsg),
@@ -440,7 +440,7 @@ export class App extends PureComponent<Props, State> {
    * Handler for ForwardMsg.sessionStateChanged messages
    * @param stateChangeProto a SessionState protobuf
    */
-  handleSessionStateChanged = (stateChangeProto: ISessionState): void => {
+  handleSessionStateChanged = (stateChangeProto: SessionState): void => {
     this.setState((prevState: State) => {
       // Determine our new ReportRunState
       let { reportRunState } = prevState

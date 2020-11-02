@@ -17,7 +17,6 @@ from typing import Dict, Optional, List
 
 from streamlit.logger import get_logger
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.BlockPath_pb2 import BlockPath
 
 LOGGER = get_logger(__name__)
 
@@ -51,9 +50,7 @@ class ReportContext(object):
             The manager for files uploaded by all users.
 
         """
-        self.cursors = (
-            {}
-        )  # type: Dict[BlockPath.ContainerValue, "streamlit.cursor.Cursor"]
+        self.cursors = {}  # type: Dict[int, "streamlit.cursor.RunningCursor"]
         self.session_id = session_id
         self._enqueue = enqueue
         self.query_string = query_string
