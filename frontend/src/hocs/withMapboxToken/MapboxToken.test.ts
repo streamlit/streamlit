@@ -104,7 +104,7 @@ describe("MapboxToken", () => {
 
   xit("Errors if not localhost and missing token", async () => {
     delete window.location
-    window.location = { hostname: "http://streamlit.io" } as Location
+    window.location = { hostname: "https://streamlit.io" } as Location
     setSessionInfo("")
 
     await expect(MapboxToken.get()).rejects.toThrow("No Mapbox token provided")
