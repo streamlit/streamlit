@@ -29,12 +29,9 @@ export const StyledFirstColumn = styled.div(({ theme }) => ({
 export const StyledSecondColumn = styled.div(({ theme }) => ({
   flex: 1,
   paddingRight: theme.spacing.lg,
-}))
-
-export const StyledThirdColumn = styled.div(({ theme }) => ({
-  width: "6em",
+  marginRight: "6em",
   [`@media (max-width: ${theme.breakpoints.sm})`]: {
-    width: 0,
+    marginRight: theme.spacing.none,
   },
 }))
 

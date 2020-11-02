@@ -23,7 +23,6 @@ import {
   StyledRow,
   StyledFirstColumn,
   StyledSecondColumn,
-  StyledThirdColumn,
   StyledVideo,
   StyledVideoFormatInstructions,
   StyledDownloadButtonContainer,
@@ -74,7 +73,6 @@ const VideoRecordedDialog: FunctionComponent<Props> = ({
               <p>Preview your video below:</p>
               <StyledVideo src={videoSource} controls />
             </StyledSecondColumn>
-            <StyledThirdColumn />
           </StyledRow>
 
           <StyledRow>
@@ -92,7 +90,6 @@ const VideoRecordedDialog: FunctionComponent<Props> = ({
                 by dragging the file directly into your browser.
               </StyledVideoFormatInstructions>
             </StyledSecondColumn>
-            <StyledThirdColumn />
           </StyledRow>
 
           <StyledRow>
@@ -104,7 +101,6 @@ const VideoRecordedDialog: FunctionComponent<Props> = ({
                 😀
               </span>
             </StyledSecondColumn>
-            <StyledThirdColumn />
           </StyledRow>
         </StyledDialogContainer>
       </ModalBody>
