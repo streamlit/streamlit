@@ -48,7 +48,7 @@ function withExpandable(
     }, [initialExpanded])
 
     const toggle = (): void => toggleExpanded(!expanded)
-    const { colors } = useTheme<Theme>()
+    const { colors, fontWeights, spacing } = useTheme<Theme>()
 
     return (
       <StyledExpandableContainer>
@@ -65,44 +65,44 @@ function withExpandable(
                 borderBottomColor: $expanded
                   ? colors.lightGray
                   : colors.transparent,
-                marginLeft: "0",
-                marginRight: "0",
-                marginTop: "0",
-                marginBottom: "0",
-                paddingLeft: "0",
-                paddingRight: "0",
+                marginLeft: spacing.none,
+                marginRight: spacing.none,
+                marginTop: spacing.none,
+                marginBottom: spacing.none,
+                paddingLeft: spacing.none,
+                paddingRight: spacing.none,
                 paddingTop: $expanded ? "1em" : 0,
-                paddingBottom: 0,
+                paddingBottom: spacing.none,
               }),
               props: { className: "streamlit-expanderContent" },
             },
             PanelContainer: {
               style: {
-                marginLeft: "0 !important",
-                marginRight: "0 !important",
-                marginTop: "0 !important",
-                marginBottom: "0 !important",
-                paddingLeft: "0 !important",
-                paddingRight: "0 !important",
-                paddingTop: "0 !important",
-                paddingBottom: "0 !important",
+                marginLeft: `${spacing.none} !important`,
+                marginRight: `${spacing.none} !important`,
+                marginTop: `${spacing.none} !important`,
+                marginBottom: `${spacing.none} !important`,
+                paddingLeft: `${spacing.none} !important`,
+                paddingRight: `${spacing.none} !important`,
+                paddingTop: `${spacing.none} !important`,
+                paddingBottom: `${spacing.none} !important`,
               },
             },
             Header: {
               style: ({ $disabled }) => ({
-                marginBottom: "0",
-                marginLeft: "0",
-                marginRight: "0",
-                marginTop: "0",
-                paddingLeft: "0",
+                marginBottom: spacing.none,
+                marginLeft: spacing.none,
+                marginRight: spacing.none,
+                marginTop: spacing.none,
+                paddingLeft: spacing.none,
                 backgroundColor: colors.transparent,
                 borderBottomColor: colors.lightGray,
                 color: $disabled ? colors.disabled : colors.black,
                 borderTopStyle: "none",
                 paddingBottom: "0.5em",
-                paddingRight: "0",
+                paddingRight: spacing.none,
                 paddingTop: "0.5em",
-                fontWeight: 500,
+                fontWeight: fontWeights.medium,
                 ":hover": {
                   borderBottomColor: colors.primary,
                 },
@@ -111,7 +111,7 @@ function withExpandable(
             },
             ToggleIcon: {
               style: ({ $disabled }) => ({
-                marginRight: ".5rem",
+                marginRight: spacing.sm,
                 color: $disabled ? colors.disabled : colors.black,
               }),
             },
