@@ -77,7 +77,7 @@ function withExpandable(
               props: { className: "streamlit-expanderContent" },
             },
             PanelContainer: {
-              style: {
+              style: () => ({
                 marginLeft: `${spacing.none} !important`,
                 marginRight: `${spacing.none} !important`,
                 marginTop: `${spacing.none} !important`,
@@ -86,7 +86,7 @@ function withExpandable(
                 paddingRight: `${spacing.none} !important`,
                 paddingTop: `${spacing.none} !important`,
                 paddingBottom: `${spacing.none} !important`,
-              },
+              }),
             },
             Header: {
               style: ({ $disabled }) => ({
