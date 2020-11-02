@@ -44,8 +44,4 @@ describe("st.table", () => {
       return cy.wrap($element).should("contain", index);
     });
   });
-
-  it("looks the same", () => {
-    // (HK) TODO: diff screenshots
-  });
 });

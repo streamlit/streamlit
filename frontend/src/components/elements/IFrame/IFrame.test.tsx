@@ -16,7 +16,8 @@
  */
 
 import React from "react"
-import { shallow, ShallowWrapper } from "enzyme"
+import { ShallowWrapper } from "enzyme"
+import { shallow } from "lib/test_util"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   getIFrameSandboxPolicy,
