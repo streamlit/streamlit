@@ -416,7 +416,7 @@ export class App extends PureComponent<Props, State> {
       userMapboxToken: config.mapboxToken,
     })
 
-    if (SessionInfo.current != null) {
+    if (SessionInfo.isSet()) {
       // Every NewReport message contains an Initialize message containing
       // the same data. If we've already handled the message once, we do a
       // sanity check to make sure the data hasn't unexpectedly changed.
