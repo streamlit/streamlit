@@ -12,7 +12,7 @@ mysqlclient
 # for our Docker Linux version. A full compile takes ages - long enough that
 # CircleCI times out - so we're pinning to a lower version. Please remove this
 # version pin in the future!
-opencv-python==4.4.0.44
+opencv-python==4.4.0.46
 plotly
 prometheus-client
 psycopg2-binary
