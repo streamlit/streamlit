@@ -285,7 +285,7 @@ class Block extends PureComponent<Props> {
     const element = this.renderElement(node, index, width)
 
     const elementType = node.element.type
-    const isHidden = elementType === "empty"
+    const isHidden = elementType === "empty" || elementType === "balloons"
     const enable = this.shouldComponentBeEnabled(isHidden)
     const isStale = this.isComponentStale(enable, node)
     const className = Block.getClassNames(isStale, isHidden)

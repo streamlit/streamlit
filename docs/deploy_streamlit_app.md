@@ -1,12 +1,12 @@
 # Deploy an app
 
-Now that you've created your app, you're ready to share it! Use **Streamlit sharing** to share it with the world completely for free. Streamlit sharing is the perfect solution if your app is hosted in a public GitHub repo and you'd like anyone in the world to be able to access it. If that doesn't sound like your app, then check out [Streamlit for Teams](http://streamlit.io/for-teams) for more information on how to get secure, private sharing for your apps.
+Now that you've created your app, you're ready to share it! Use **Streamlit sharing** to share it with the world completely for free. Streamlit sharing is the perfect solution if your app is hosted in a public GitHub repo and you'd like anyone in the world to be able to access it. If that doesn't sound like your app, then check out [Streamlit for Teams](https://streamlit.io/for-teams) for more information on how to get secure, private sharing for your apps.
 
 Of course, if you want to host your app using another hosting provider, go for it! Streamlit apps work anywhere a Python app works. You can find guides for other hosting providers on our [community-supported deployment wiki](https://discuss.streamlit.io/t/streamlit-deployment-guide-wiki/5099).
 
 ## Get a Streamlit sharing account
 
-To get started, first request an invite at [streamlit.io/sharing](http://streamlit.io/sharing). Streamlit sharing is currently available by invitation only while we ramp things up. We promise to get you one very quickly ❤️
+To get started, first request an invite at [streamlit.io/sharing](https://streamlit.io/sharing). Streamlit sharing is currently available by invitation only while we ramp things up. We promise to get you one very quickly ❤️
 
 Once you have your invite you're ready to deploy! It's really straightforward, just follow the next few steps.
 
@@ -80,7 +80,7 @@ Every deployed app has its Github source code linked in the "☰" menu on the to
 
 ## App access and usage
 
-Streamlit sharing is completely free and is meant to get you started with sharing your Streamlit apps. If you need a solution with access controls, ability to deploy from private repos, ability to customize resources, and much more, please check out [Streamlit for Teams](http://streamlit.io/for-teams).
+Streamlit sharing is completely free and is meant to get you started with sharing your Streamlit apps. If you need a solution with access controls, ability to deploy from private repos, ability to customize resources, and much more, please check out [Streamlit for Teams](https://streamlit.io/for-teams).
 
 ### Access
 
