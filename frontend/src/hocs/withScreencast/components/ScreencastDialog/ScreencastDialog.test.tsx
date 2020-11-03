@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 
 import ScreencastDialog, { Props } from "./ScreencastDialog"
 
@@ -48,7 +48,7 @@ describe("ScreencastDialog", () => {
       const props = getProps()
       const wrapper = shallow(<ScreencastDialog {...props} />)
 
-      const labelWrapper = wrapper.find("p label")
+      const labelWrapper = wrapper.find("StyledRecordAudioLabel")
 
       labelWrapper.find("input").simulate("change", {
         target: {
@@ -65,12 +65,9 @@ describe("ScreencastDialog", () => {
       const props = getProps()
       const wrapper = shallow(<ScreencastDialog {...props} />)
 
-      expect(
-        wrapper
-          .find("p")
-          .last()
-          .text()
-      ).toBe("Press Esc any time to stop recording.")
+      expect(wrapper.find("StyledInstruction").text()).toBe(
+        "Press Esc any time to stop recording."
+      )
     })
   })
 
