@@ -103,7 +103,7 @@ export class SessionInfo {
     )
   }
 
-  constructor({
+  public constructor({
     sessionId,
     streamlitVersion,
     pythonVersion,

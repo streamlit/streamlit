@@ -253,7 +253,7 @@ export class App extends PureComponent<Props, State> {
   /**
    * Called by ConnectionManager when our connection state changes
    */
-  handleConnectionStateChanged = (newState: ConnectionState): void => {
+  private handleConnectionStateChanged = (newState: ConnectionState): void => {
     logMessage(
       `Connection state changed from ${this.state.connectionState} to ${newState}`
     )
@@ -274,7 +274,7 @@ export class App extends PureComponent<Props, State> {
   /**
    * Callback when we get a message from the server.
    */
-  handleMessage = (msgProto: ForwardMsg): void => {
+  private handleMessage = (msgProto: ForwardMsg): void => {
     // We don't have an immutableProto here, so we can't use
     // the dispatchOneOf helper
     const dispatchProto = (obj: any, name: string, funcs: any): any => {
@@ -287,14 +287,12 @@ export class App extends PureComponent<Props, State> {
 
     try {
       dispatchProto(msgProto, "type", {
-        initialize: (initializeMsg: Initialize) =>
-          this.handleInitialize(initializeMsg),
+        newReport: (newReportMsg: NewReport) =>
+          this.handleNewReport(newReportMsg),
         sessionStateChanged: (msg: SessionState) =>
           this.handleSessionStateChanged(msg),
         sessionEvent: (evtMsg: SessionEvent) =>
           this.handleSessionEvent(evtMsg),
-        newReport: (newReportMsg: NewReport) =>
-          this.handleNewReport(newReportMsg),
         delta: (deltaMsg: Delta) =>
           this.handleDeltaMsg(
             deltaMsg,
@@ -316,7 +314,7 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
-  handleUploadReportProgress = (progress: number): void => {
+  private handleUploadReportProgress = (progress: number): void => {
     const newDialog: DialogProps = {
       type: DialogType.UPLOAD_PROGRESS,
       progress,
@@ -325,7 +323,7 @@ export class App extends PureComponent<Props, State> {
     this.openDialog(newDialog)
   }
 
-  handleReportUploaded = (url: string): void => {
+  private handleReportUploaded = (url: string): void => {
     const newDialog: DialogProps = {
       type: DialogType.UPLOADED,
       url,
@@ -334,7 +332,7 @@ export class App extends PureComponent<Props, State> {
     this.openDialog(newDialog)
   }
 
-  handlePageConfigChanged = (pageConfig: PageConfig): void => {
+  private handlePageConfigChanged = (pageConfig: PageConfig): void => {
     const { title, favicon, layout, initialSidebarState } = pageConfig
 
     if (title) {
@@ -368,7 +366,7 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
-  handlePageInfoChanged = (pageInfo: PageInfo): void => {
+  private handlePageInfoChanged = (pageInfo: PageInfo): void => {
     const { queryString } = pageInfo
     window.history.pushState({}, "", queryString ? `?${queryString}` : "/")
 
@@ -379,10 +377,9 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Handler for ForwardMsg.initialize messages
-   * @param initializeMsg an Initialize protobuf
+   * Handler for ForwardMsg.initialize messages.
    */
-  handleInitialize = (initializeMsg: Initialize): void => {
+  private handleInitialize = (initializeMsg: Initialize): void => {
     const {
       sessionId,
       environmentInfo,
@@ -406,7 +403,7 @@ export class App extends PureComponent<Props, State> {
       return
     }
 
-    SessionInfo.current = new SessionInfo({
+    const sessionInfo = new SessionInfo({
       sessionId,
       streamlitVersion: environmentInfo.streamlitVersion,
       pythonVersion: environmentInfo.pythonVersion,
@@ -419,6 +416,18 @@ export class App extends PureComponent<Props, State> {
       userMapboxToken: config.mapboxToken,
     })
 
+    if (SessionInfo.current != null) {
+      // Every NewReport message contains an Initialize message containing
+      // the same data. If we've already handled the message once, we do a
+      // sanity check to make sure the data hasn't unexpectedly changed.
+      if (!SessionInfo.current.equals(sessionInfo)) {
+        throw new Error("Received mismatched SessionInfo")
+      }
+      return
+    }
+
+    SessionInfo.current = sessionInfo
+
     MetricsManager.current.initialize({
       gatherUsageStats: Boolean(config.gatherUsageStats),
     })
@@ -428,8 +437,8 @@ export class App extends PureComponent<Props, State> {
     })
 
     this.setState({
-      sharingEnabled: Boolean(config.sharingEnabled),
-      allowRunOnSave: Boolean(config.allowRunOnSave),
+      sharingEnabled: config.sharingEnabled === true,
+      allowRunOnSave: config.allowRunOnSave === true,
     })
 
     this.props.s4aCommunication.connect()
@@ -529,10 +538,12 @@ export class App extends PureComponent<Props, State> {
    * Handler for ForwardMsg.newReport messages
    * @param newReportProto a NewReport protobuf
    */
-  handleNewReport = (newReportProto: NewReport): void => {
+  private handleNewReport = (newReportProto: NewReport): void => {
+    this.handleInitialize(newReportProto.initialize as Initialize)
+
     const { reportHash } = this.state
     const {
-      id: reportId,
+      reportId,
       name: reportName,
       scriptPath,
       deployParams,

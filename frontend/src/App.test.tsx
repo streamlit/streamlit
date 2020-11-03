@@ -17,7 +17,7 @@
 
 import React from "react"
 import { shallow, mount, ReactWrapper } from "enzyme"
-import { ForwardMsg } from "autogen/proto"
+import { ForwardMsg, NewReport } from "autogen/proto"
 import { IMenuItem } from "hocs/withS4ACommunication/types"
 import { MetricsManager } from "./lib/MetricsManager"
 import { getMetricsManagerForTest } from "./lib/MetricsManagerTestUtils"
@@ -95,14 +95,16 @@ describe("App", () => {
 
     const fwMessage = new ForwardMsg()
 
-    fwMessage.initialize = {
-      environmentInfo: {
-        streamlitVersion: "svv",
+    fwMessage.newReport = {
+      initialize: {
+        environmentInfo: {
+          streamlitVersion: "svv",
+        },
+        sessionId: "sessionId",
+        userInfo: {},
+        config: {},
+        sessionState: {},
       },
-      sessionId: "sessionId",
-      userInfo: {},
-      config: {},
-      sessionState: {},
     }
 
     // @ts-ignore
