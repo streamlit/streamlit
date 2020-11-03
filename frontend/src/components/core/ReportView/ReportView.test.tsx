@@ -17,7 +17,11 @@
 
 import React from "react"
 import { shallow } from "enzyme"
-import { Block, ForwardMsgMetadata, PageConfig } from "autogen/proto"
+import {
+  Block as BlockProto,
+  ForwardMsgMetadata,
+  PageConfig,
+} from "autogen/proto"
 import { ReportRunState } from "lib/ReportRunState"
 import { BlockNode, ElementNode, ReportRoot } from "lib/ReportNode"
 import { FileUploadClient } from "lib/FileUploadClient"
@@ -66,13 +70,13 @@ describe("ReportView element", () => {
 
     const sidebar = new BlockNode(
       [sidebarElement],
-      Block.create({ allowEmpty: true })
+      new BlockProto({ allowEmpty: true })
     )
 
-    const main = new BlockNode([], Block.create({ allowEmpty: true }))
+    const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
 
     const props = getProps({
-      elements: new ReportRoot(main, sidebar),
+      elements: new ReportRoot(new BlockNode([main, sidebar])),
     })
     const wrapper = shallow(<ReportView {...props} />)
 

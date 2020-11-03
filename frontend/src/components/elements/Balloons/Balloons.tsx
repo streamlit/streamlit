@@ -52,7 +52,7 @@ function Balloons({ reportId }: Props): ReactElement {
   // Keys should be unique each time, so React replaces the images in the DOM and their animations
   // actually rerun.
   return (
-    <div className="balloons">
+    <div className="balloons stHidden">
       {range(NUM_BALLOONS).map(i => {
         const randNum = Math.floor(Math.random() * BALLOON_TYPES)
 

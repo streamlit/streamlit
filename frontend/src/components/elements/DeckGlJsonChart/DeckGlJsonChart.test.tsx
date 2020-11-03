@@ -17,7 +17,7 @@
 
 import React from "react"
 import DeckGL from "deck.gl"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "autogen/proto"
 import { DeckGlJsonChart, PropsWithHeight } from "./DeckGlJsonChart"

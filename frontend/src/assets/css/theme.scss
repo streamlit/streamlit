@@ -74,3 +74,8 @@ pre {
 .disabled {
   color: $disabled;
 }
+
+// VegaLite Specific CSS information
+#vg-tooltip-element td {
+  border: none;
+}

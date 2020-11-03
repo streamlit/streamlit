@@ -30,9 +30,11 @@ describe("handles empty charts", () => {
 
   it("gracefully handles no data", () => {
     // vega-lite
-    cy.get(".element-container .stVegaLiteChart").each((el, i) => {
-      return cy.wrap(el).matchImageSnapshot(`stVegaLiteChart-${i}`);
-    });
+    cy.get(".element-container [data-testid='stVegaLiteChart']").each(
+      (el, i) => {
+        return cy.wrap(el).matchImageSnapshot(`stVegaLiteChart-${i}`);
+      }
+    );
 
     // pyplot
     cy.get("[data-testid='stImage'] > img").should("have.attr", "src");

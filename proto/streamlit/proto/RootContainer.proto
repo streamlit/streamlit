@@ -12,25 +12,16 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+*/
 
-@import "src/assets/css/variables";
+syntax = "proto3";
 
-.reportview-container .stException {
-  .message .type {
-    font-weight: bold;
-  }
-
-  .stack-trace-row {
-    margin-top: 0.5rem;
-  }
-
-  .stack-trace-row:first-child {
-    margin-top: 0;
-  }
-
-  .stack-trace-title {
-    margin-top: 0.5rem;
-    margin-bottom: 0.5rem;
-  }
+// Constants for our two "RootContainers" - the top-level containers
+// that `st.foo` and `st.sidebar.foo` write to. Each value corresponds
+// to the first index in any `delta_path` that uses these containers.
+// (This enum is not used in any protobuf messages; we declare it here so
+// that the values remain synced between Python and the frontend.)
+enum RootContainer {
+  MAIN = 0;
+  SIDEBAR = 1;
 }
