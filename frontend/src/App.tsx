@@ -254,7 +254,7 @@ export class App extends PureComponent<Props, State> {
   /**
    * Called by ConnectionManager when our connection state changes
    */
-  private handleConnectionStateChanged = (newState: ConnectionState): void => {
+  handleConnectionStateChanged = (newState: ConnectionState): void => {
     logMessage(
       `Connection state changed from ${this.state.connectionState} to ${newState}`
     )
@@ -275,7 +275,7 @@ export class App extends PureComponent<Props, State> {
   /**
    * Callback when we get a message from the server.
    */
-  private handleMessage = (msgProto: ForwardMsg): void => {
+  handleMessage = (msgProto: ForwardMsg): void => {
     // We don't have an immutableProto here, so we can't use
     // the dispatchOneOf helper
     const dispatchProto = (obj: any, name: string, funcs: any): any => {
@@ -315,7 +315,7 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
-  private handleUploadReportProgress = (progress: number): void => {
+  handleUploadReportProgress = (progress: number): void => {
     const newDialog: DialogProps = {
       type: DialogType.UPLOAD_PROGRESS,
       progress,
@@ -324,7 +324,7 @@ export class App extends PureComponent<Props, State> {
     this.openDialog(newDialog)
   }
 
-  private handleReportUploaded = (url: string): void => {
+  handleReportUploaded = (url: string): void => {
     const newDialog: DialogProps = {
       type: DialogType.UPLOADED,
       url,
@@ -333,7 +333,7 @@ export class App extends PureComponent<Props, State> {
     this.openDialog(newDialog)
   }
 
-  private handlePageConfigChanged = (pageConfig: PageConfig): void => {
+  handlePageConfigChanged = (pageConfig: PageConfig): void => {
     const { title, favicon, layout, initialSidebarState } = pageConfig
 
     if (title) {
@@ -367,7 +367,7 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
-  private handlePageInfoChanged = (pageInfo: PageInfo): void => {
+  handlePageInfoChanged = (pageInfo: PageInfo): void => {
     const { queryString } = pageInfo
     window.history.pushState({}, "", queryString ? `?${queryString}` : "/")
 
@@ -381,9 +381,7 @@ export class App extends PureComponent<Props, State> {
    * Handler for ForwardMsg.sessionStateChanged messages
    * @param stateChangeProto a SessionState protobuf
    */
-  private handleSessionStateChanged = (
-    stateChangeProto: SessionState
-  ): void => {
+  handleSessionStateChanged = (stateChangeProto: SessionState): void => {
     this.setState((prevState: State) => {
       // Determine our new ReportRunState
       let { reportRunState } = prevState
