@@ -138,7 +138,7 @@ class Sidebar extends PureComponent<Props, State> {
 
     // The tabindex is required to support scrolling by arrow keys.
     return (
-      <StyledSidebar ref={this.sidebarRef}>
+      <StyledSidebar data-testid="stSidebar" ref={this.sidebarRef}>
         <StyledSidebarContent isCollapsed={collapsedSidebar}>
           <StyledSidebarCloseButton>
             <Button kind={Kind.ICON} onClick={this.toggleCollapse}>
