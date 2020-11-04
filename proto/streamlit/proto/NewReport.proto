@@ -20,6 +20,10 @@ import "streamlit/proto/SessionState.proto";
 
 // This is the first message that is sent when a new report is run.
 message NewReport {
+  // Initialization data. This data does *not* change from rerun to rerun,
+  // but we send it every time so that we don't have to track whether the
+  // client has already received it. The client is responsible for
+  // performing initialization logic only once.
   Initialize initialize = 1;
 
   // The report ID
@@ -35,12 +39,8 @@ message NewReport {
   DeployParams deploy_params = 5;
 }
 
-// This is the first message that is sent when the connection is opened,
-// and also whenever a report is being rerun. It contains Streamlit
-// configuration data, and the session state that existed at the time of
-// connection. (This data does *not* change from rerun to rerun, but we
-// send it every time so that we don't have to hold state that indicates
-// whether it's already been successfully sent.)
+// Contains Streamlit configuration data, and the session state that existed
+// at the time the user connected.
 message Initialize {
   UserInfo user_info = 1;
   Config config = 2;

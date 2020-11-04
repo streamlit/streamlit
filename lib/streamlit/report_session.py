@@ -375,7 +375,9 @@ class ReportSession(object):
             msg.new_report.deploy_params.module = module
 
         # Immutable session data. We send this every time a new report is
-        # started, though it does not change from run to run.
+        # started, to avoid having to track whether the client has already
+        # received it. It does not change from run to run; it's up to the
+        # to perform one-time initialization only once.
         imsg = msg.new_report.initialize
         imsg.config.sharing_enabled = config.get_option("global.sharingMode") != "off"
 
