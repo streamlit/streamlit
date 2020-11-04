@@ -17,6 +17,11 @@
 
 import React, { PureComponent, ReactNode } from "react"
 import Modal, { ModalHeader, ModalBody } from "components/shared/Modal"
+import {
+  StyledScreenCastWarningDialog,
+  StyledUnsupportedScreenCastExplanation,
+  StyledUnsupportedScreenCastIcon,
+} from "./styled-components"
 
 export interface Props {
   /** Callback to close the dialog */
@@ -31,18 +36,18 @@ class UnsupportedBrowserDialog extends PureComponent<Props> {
       <Modal isOpen onClose={onClose}>
         <ModalHeader>Record a screencast</ModalHeader>
         <ModalBody>
-          <div className="screenCastWarningDialog">
-            <div className="unsupportedScreenCastIcon">
+          <StyledScreenCastWarningDialog>
+            <StyledUnsupportedScreenCastIcon>
               <span role="img" aria-label="Alien Monster">
                 👾
               </span>
-            </div>
-            <p>
+            </StyledUnsupportedScreenCastIcon>
+            <StyledUnsupportedScreenCastExplanation>
               Due to limitations with some browsers, this feature is only
               supported on recent desktop versions of Chrome, Firefox, and
               Edge.
-            </p>
-          </div>
+            </StyledUnsupportedScreenCastExplanation>
+          </StyledScreenCastWarningDialog>
         </ModalBody>
       </Modal>
     )

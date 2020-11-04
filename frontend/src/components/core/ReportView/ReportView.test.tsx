@@ -58,7 +58,7 @@ describe("ReportView element", () => {
     const props = getProps()
     const wrapper = shallow(<ReportView {...props} />)
 
-    expect(wrapper.find("Sidebar").exists()).toBe(false)
+    expect(wrapper.find("WithTheme(Sidebar)").exists()).toBe(false)
   })
 
   it("renders a sidebar when there are elements", () => {
@@ -80,7 +80,7 @@ describe("ReportView element", () => {
     })
     const wrapper = shallow(<ReportView {...props} />)
 
-    expect(wrapper.find("Sidebar").exists()).toBe(true)
+    expect(wrapper.find("WithTheme(Sidebar)").exists()).toBe(true)
   })
 
   it("does not render the wide class", () => {

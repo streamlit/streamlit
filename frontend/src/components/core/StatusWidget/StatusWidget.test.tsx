@@ -40,7 +40,7 @@ describe("Tooltip element", () => {
   it("renders a Tooltip", () => {
     const wrapper = shallow(<StatusWidget {...getProps()} />)
 
-    expect(wrapper.find("#ReportStatus").exists()).toBeTruthy()
+    expect(wrapper.find("StyledReportStatus").exists()).toBeTruthy()
   })
 
   it("renders its tooltip when disconnected", () => {

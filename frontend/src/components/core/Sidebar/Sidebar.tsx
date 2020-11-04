@@ -16,28 +16,32 @@
  */
 
 import React, { PureComponent, ReactElement } from "react"
-import classNames from "classnames"
 import Icon from "components/shared/Icon"
 import Button, { Kind } from "components/shared/Button"
 import { PageConfig } from "autogen/proto"
-
-import "./Sidebar.scss"
+import { withTheme } from "emotion-theming"
+import { Theme } from "theme"
+import {
+  StyledSidebar,
+  StyledSidebarCloseButton,
+  StyledSidebarCollapsedControl,
+  StyledSidebarContent,
+} from "./styled-components"
 
 interface Props {
   children?: ReactElement
   initialSidebarState?: PageConfig.SidebarState
   onChange: (collapsedSidebar: boolean) => void
+  theme: Theme
 }
 
 interface State {
   collapsedSidebar: boolean
 }
 
-// This variable originated from Bootstrap medium breakpoint.
-// See https://getbootstrap.com/docs/4.3/layout/overview/.
-const MEDIUM_BREAKPOINT_PX = 991.98
-
 class Sidebar extends PureComponent<Props, State> {
+  private mediumBreakpointPx: number
+
   public static defaultProps: Partial<Props> = {
     onChange: () => {},
   }
@@ -46,17 +50,27 @@ class Sidebar extends PureComponent<Props, State> {
 
   constructor(props: Props) {
     super(props)
-    this.state = { collapsedSidebar: Sidebar.shouldCollapse(props) }
-  }
-
-  componentDidUpdate(prevProps: any): void {
-    // Immediately expand/collapse sidebar when initialSidebarState changes.
-    if (this.props.initialSidebarState !== prevProps.initialSidebarState) {
-      this.setState({ collapsedSidebar: Sidebar.shouldCollapse(this.props) })
+    this.mediumBreakpointPx = parseInt(props.theme.breakpoints.md, 10) - 0.02
+    this.state = {
+      collapsedSidebar: Sidebar.shouldCollapse(props, this.mediumBreakpointPx),
     }
   }
 
-  static shouldCollapse(props: Props): boolean {
+  componentDidUpdate(prevProps: any): void {
+    this.mediumBreakpointPx =
+      parseInt(this.props.theme.breakpoints.md, 10) - 0.02
+    // Immediately expand/collapse sidebar when initialSidebarState changes.
+    if (this.props.initialSidebarState !== prevProps.initialSidebarState) {
+      this.setState({
+        collapsedSidebar: Sidebar.shouldCollapse(
+          this.props,
+          this.mediumBreakpointPx
+        ),
+      })
+    }
+  }
+
+  static shouldCollapse(props: Props, mediumBreakpointPx: number): boolean {
     switch (props.initialSidebarState) {
       case PageConfig.SidebarState.EXPANDED:
         return false
@@ -66,7 +80,7 @@ class Sidebar extends PureComponent<Props, State> {
       default: {
         // Expand sidebar only if browser width > MEDIUM_BREAKPOINT_PX
         const { innerWidth } = window || {}
-        return innerWidth ? innerWidth <= MEDIUM_BREAKPOINT_PX : false
+        return innerWidth ? innerWidth <= mediumBreakpointPx : false
       }
     }
   }
@@ -89,7 +103,7 @@ class Sidebar extends PureComponent<Props, State> {
       if (
         current &&
         !current.contains(event.target) &&
-        innerWidth <= MEDIUM_BREAKPOINT_PX
+        innerWidth <= this.mediumBreakpointPx
       ) {
         this.setState({ collapsedSidebar: true })
       }
@@ -101,7 +115,7 @@ class Sidebar extends PureComponent<Props, State> {
 
     const { innerWidth } = window
 
-    if (innerWidth <= MEDIUM_BREAKPOINT_PX)
+    if (innerWidth <= this.mediumBreakpointPx)
       this.setState({ collapsedSidebar: true })
 
     return true
@@ -122,30 +136,25 @@ class Sidebar extends PureComponent<Props, State> {
     const { collapsedSidebar } = this.state
     const { children } = this.props
 
-    const sectionClassName = classNames("sidebar", {
-      "--collapsed": collapsedSidebar,
-    })
-
     // The tabindex is required to support scrolling by arrow keys.
     return (
-      <section className={sectionClassName} ref={this.sidebarRef}>
-        <div className="sidebar-content">
-          <div className="sidebar-close">
+      <StyledSidebar ref={this.sidebarRef}>
+        <StyledSidebarContent isCollapsed={collapsedSidebar}>
+          <StyledSidebarCloseButton>
             <Button kind={Kind.ICON} onClick={this.toggleCollapse}>
               <Icon type="x" />
             </Button>
-          </div>
-
+          </StyledSidebarCloseButton>
           {children}
-        </div>
-        <div className="sidebar-collapse-control">
+        </StyledSidebarContent>
+        <StyledSidebarCollapsedControl isCollapsed={collapsedSidebar}>
           <Button kind={Kind.ICON} onClick={this.toggleCollapse}>
             <Icon type="chevron-right" />
           </Button>
-        </div>
-      </section>
+        </StyledSidebarCollapsedControl>
+      </StyledSidebar>
     )
   }
 }
 
-export default Sidebar
+export default withTheme(Sidebar)

@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow, mount, ReactWrapper } from "enzyme"
+import { shallow, mount, ReactWrapper } from "lib/test_util"
 import { ForwardMsg } from "autogen/proto"
 import { IMenuItem } from "hocs/withS4ACommunication/types"
 import { MetricsManager } from "./lib/MetricsManager"

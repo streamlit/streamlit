@@ -20,8 +20,6 @@ import React, { ReactElement, ReactNode } from "react"
 import { SCSS_VARS } from "autogen/scssVariables"
 import { Notification, KIND } from "baseui/notification"
 
-import "assets/css/write.scss"
-
 export enum Kind {
   ERROR = "error",
   INFO = "info",
