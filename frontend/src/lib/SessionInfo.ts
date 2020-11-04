@@ -14,6 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import {
+  Config,
+  EnvironmentInfo,
+  Initialize,
+  UserInfo,
+} from "../autogen/proto"
 
 export interface Args {
   sessionId: string
@@ -84,6 +90,27 @@ export class SessionInfo {
     return this.current.commandLine === "streamlit hello"
   }
 
+  /** Create a SessionInfo from the relevant bits of an initialize message. */
+  public static fromInitializeMessage(initialize: Initialize): SessionInfo {
+    const environmentInfo = initialize.environmentInfo as EnvironmentInfo
+    const userInfo = initialize.userInfo as UserInfo
+    const config = initialize.config as Config
+
+    return new SessionInfo({
+      sessionId: initialize.sessionId,
+      streamlitVersion: environmentInfo.streamlitVersion,
+      pythonVersion: environmentInfo.pythonVersion,
+      installationId: userInfo.installationId,
+      installationIdV1: userInfo.installationIdV1,
+      installationIdV2: userInfo.installationIdV2,
+      authorEmail: userInfo.email,
+      maxCachedMessageAge: config.maxCachedMessageAge,
+      commandLine: initialize.commandLine,
+      userMapboxToken: config.mapboxToken,
+    })
+  }
+
+  /** Memberwise compare two SessionInfo instances for equality. */
   public equals(other: SessionInfo): boolean {
     if (this === other) {
       return true

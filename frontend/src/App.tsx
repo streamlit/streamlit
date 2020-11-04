@@ -54,6 +54,7 @@ import {
   SessionEvent,
   WidgetStates,
   SessionState,
+  Config,
 } from "autogen/proto"
 
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
@@ -377,59 +378,13 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Handler for ForwardMsg.initialize messages.
+   * Performs one-time initialization. This is called from `handleNewReport`.
    */
-  private handleInitialize = (initializeMsg: Initialize): void => {
-    const {
-      sessionId,
-      environmentInfo,
-      userInfo,
-      config,
-      sessionState,
-    } = initializeMsg
-
-    if (
-      sessionId == null ||
-      !environmentInfo ||
-      !userInfo ||
-      !config ||
-      !sessionState
-    ) {
-      throw new Error("InitializeMsg is missing a required field")
-    }
-
-    if (App.hasStreamlitVersionChanged(initializeMsg)) {
-      window.location.reload()
-      return
-    }
-
-    const sessionInfo = new SessionInfo({
-      sessionId,
-      streamlitVersion: environmentInfo.streamlitVersion,
-      pythonVersion: environmentInfo.pythonVersion,
-      installationId: userInfo.installationId,
-      installationIdV1: userInfo.installationIdV1,
-      installationIdV2: userInfo.installationIdV2,
-      authorEmail: userInfo.email,
-      maxCachedMessageAge: config.maxCachedMessageAge,
-      commandLine: initializeMsg.commandLine,
-      userMapboxToken: config.mapboxToken,
-    })
-
-    if (SessionInfo.isSet()) {
-      // Every NewReport message contains an Initialize message containing
-      // the same data. If we've already handled the message once, we do a
-      // sanity check to make sure the data hasn't unexpectedly changed.
-      if (!SessionInfo.current.equals(sessionInfo)) {
-        throw new Error("Received mismatched SessionInfo")
-      }
-      return
-    }
-
-    SessionInfo.current = sessionInfo
+  handleOneTimeInitialization = (initialize: Initialize): void => {
+    const config = initialize.config as Config
 
     MetricsManager.current.initialize({
-      gatherUsageStats: Boolean(config.gatherUsageStats),
+      gatherUsageStats: config.gatherUsageStats,
     })
 
     MetricsManager.current.enqueue("createReport", {
@@ -437,12 +392,12 @@ export class App extends PureComponent<Props, State> {
     })
 
     this.setState({
-      sharingEnabled: config.sharingEnabled === true,
-      allowRunOnSave: config.allowRunOnSave === true,
+      sharingEnabled: config.sharingEnabled,
+      allowRunOnSave: config.allowRunOnSave,
     })
 
     this.props.s4aCommunication.connect()
-    this.handleSessionStateChanged(sessionState)
+    this.handleSessionStateChanged(initialize.sessionState)
   }
 
   /**
@@ -539,7 +494,28 @@ export class App extends PureComponent<Props, State> {
    * @param newReportProto a NewReport protobuf
    */
   private handleNewReport = (newReportProto: NewReport): void => {
-    this.handleInitialize(newReportProto.initialize as Initialize)
+    const initialize = newReportProto.initialize as Initialize
+
+    if (App.hasStreamlitVersionChanged(initialize)) {
+      window.location.reload()
+      return
+    }
+
+    // First, handle initialization logic. Each NewReport message has
+    // initialization data. If this is the _first_ time we're receiving
+    // the NewReport message, we perform some one-time initialization.
+    // Otherwise, we do a sanity check to make sure the initialization data
+    // hasn't unexpectedly changed.
+    const sessionInfo = SessionInfo.fromInitializeMessage(initialize)
+    if (!SessionInfo.isSet()) {
+      // We're not initialized. Perform one-time initialization.
+      SessionInfo.current = sessionInfo
+      this.handleOneTimeInitialization(initialize)
+    } else if (!SessionInfo.current.equals(sessionInfo)) {
+      // Sanity check. Our SessionInfo shouldn't change from one
+      // NewReport message to another.
+      throw new Error("Received mismatched SessionInfo")
+    }
 
     const { reportHash } = this.state
     const {
