@@ -378,33 +378,12 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Performs one-time initialization. This is called from `handleNewReport`.
-   */
-  handleOneTimeInitialization = (initialize: Initialize): void => {
-    const config = initialize.config as Config
-
-    MetricsManager.current.initialize({
-      gatherUsageStats: config.gatherUsageStats,
-    })
-
-    MetricsManager.current.enqueue("createReport", {
-      pythonVersion: SessionInfo.current.pythonVersion,
-    })
-
-    this.setState({
-      sharingEnabled: config.sharingEnabled,
-      allowRunOnSave: config.allowRunOnSave,
-    })
-
-    this.props.s4aCommunication.connect()
-    this.handleSessionStateChanged(initialize.sessionState)
-  }
-
-  /**
    * Handler for ForwardMsg.sessionStateChanged messages
    * @param stateChangeProto a SessionState protobuf
    */
-  handleSessionStateChanged = (stateChangeProto: SessionState): void => {
+  private handleSessionStateChanged = (
+    stateChangeProto: SessionState
+  ): void => {
     this.setState((prevState: State) => {
       // Determine our new ReportRunState
       let { reportRunState } = prevState
@@ -493,7 +472,7 @@ export class App extends PureComponent<Props, State> {
    * Handler for ForwardMsg.newReport messages
    * @param newReportProto a NewReport protobuf
    */
-  private handleNewReport = (newReportProto: NewReport): void => {
+  handleNewReport = (newReportProto: NewReport): void => {
     const initialize = newReportProto.initialize as Initialize
 
     if (App.hasStreamlitVersionChanged(initialize)) {
@@ -506,12 +485,14 @@ export class App extends PureComponent<Props, State> {
     // the NewReport message, we perform some one-time initialization.
     // Otherwise, we do a sanity check to make sure the initialization data
     // hasn't unexpectedly changed.
-    const sessionInfo = SessionInfo.fromInitializeMessage(initialize)
     if (!SessionInfo.isSet()) {
       // We're not initialized. Perform one-time initialization.
-      SessionInfo.current = sessionInfo
       this.handleOneTimeInitialization(initialize)
-    } else if (!SessionInfo.current.equals(sessionInfo)) {
+    } else if (
+      !SessionInfo.current.equals(
+        SessionInfo.fromInitializeMessage(initialize)
+      )
+    ) {
       // Sanity check. Our SessionInfo shouldn't change from one
       // NewReport message to another.
       throw new Error("Received mismatched SessionInfo")
@@ -546,6 +527,31 @@ export class App extends PureComponent<Props, State> {
     } else {
       this.clearAppState(newReportHash, reportId, reportName, deployParams)
     }
+  }
+
+  /**
+   * Performs one-time initialization. This is called from `handleNewReport`.
+   */
+  handleOneTimeInitialization = (initialize: Initialize): void => {
+    SessionInfo.current = SessionInfo.fromInitializeMessage(initialize)
+
+    const config = initialize.config as Config
+
+    MetricsManager.current.initialize({
+      gatherUsageStats: config.gatherUsageStats,
+    })
+
+    MetricsManager.current.enqueue("createReport", {
+      pythonVersion: SessionInfo.current.pythonVersion,
+    })
+
+    this.setState({
+      sharingEnabled: config.sharingEnabled,
+      allowRunOnSave: config.allowRunOnSave,
+    })
+
+    this.props.s4aCommunication.connect()
+    this.handleSessionStateChanged(initialize.sessionState)
   }
 
   /**
