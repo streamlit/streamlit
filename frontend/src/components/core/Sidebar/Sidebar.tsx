@@ -28,7 +28,7 @@ import {
   StyledSidebarContent,
 } from "./styled-components"
 
-interface Props {
+export interface SidebarProps {
   children?: ReactElement
   initialSidebarState?: PageConfig.SidebarState
   onChange: (collapsedSidebar: boolean) => void
@@ -39,16 +39,16 @@ interface State {
   collapsedSidebar: boolean
 }
 
-class Sidebar extends PureComponent<Props, State> {
+class Sidebar extends PureComponent<SidebarProps, State> {
   private mediumBreakpointPx: number
 
-  public static defaultProps: Partial<Props> = {
+  public static defaultProps: Partial<SidebarProps> = {
     onChange: () => {},
   }
 
   private sidebarRef = React.createRef<HTMLDivElement>()
 
-  constructor(props: Props) {
+  constructor(props: SidebarProps) {
     super(props)
     this.mediumBreakpointPx = parseInt(props.theme.breakpoints.md, 10) - 0.02
     this.state = {
@@ -70,7 +70,10 @@ class Sidebar extends PureComponent<Props, State> {
     }
   }
 
-  static shouldCollapse(props: Props, mediumBreakpointPx: number): boolean {
+  static shouldCollapse(
+    props: SidebarProps,
+    mediumBreakpointPx: number
+  ): boolean {
     switch (props.initialSidebarState) {
       case PageConfig.SidebarState.EXPANDED:
         return false

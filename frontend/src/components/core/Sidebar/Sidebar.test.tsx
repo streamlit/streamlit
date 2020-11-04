@@ -16,12 +16,13 @@
  */
 
 import React from "react"
+import { ShallowWrapper } from "enzyme"
 import { shallow } from "lib/test_util"
 import { PageConfig } from "autogen/proto"
 
-import Sidebar from "./Sidebar"
+import Sidebar, { SidebarProps } from "./Sidebar"
 
-function renderSideBar(props) {
+function renderSideBar(props: Partial<SidebarProps>): ShallowWrapper {
   // Diving twice to render the WithTheme
   return shallow(<Sidebar {...props} />)
     .dive()
