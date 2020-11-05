@@ -17,7 +17,7 @@
 
 import { NumberInput as NumberInputProto } from "autogen/proto"
 import React from "react"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 import { Input as UIInput } from "baseui/input"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 

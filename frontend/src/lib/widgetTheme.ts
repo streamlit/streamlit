@@ -16,6 +16,7 @@
  */
 
 import { createTheme, lightThemePrimitives } from "baseui"
+import { mainTheme } from "theme"
 import { PLACEMENT as POPOVER_PLACEMENT } from "baseui/popover"
 import { StyleObject } from "styletron-react"
 import { logMessage } from "lib/log"
@@ -74,7 +75,7 @@ export const colors = {
   primaryA50: SCSS_VARS["$primary-a50"],
 
   secondary: SCSS_VARS.$secondary,
-  danger: SCSS_VARS.$danger,
+  danger: mainTheme.colors.danger,
   disabledBg: SCSS_VARS.$disabled,
   disabledColor: SCSS_VARS.$gray,
 }
@@ -490,17 +491,17 @@ export const themeOverrides = {
     calendarDayBackgroundSelectedHighlighted: colors.primary,
     calendarDayForegroundSelected: colors.white,
     calendarDayForegroundSelectedHighlighted: colors.white,
-    notificationInfoBackground: SCSS_VARS["$alert-info-background-color"],
-    notificationInfoText: SCSS_VARS["$alert-info-text-color"],
+    notificationInfoBackground: mainTheme.colors.alertInfoBackgroundColor,
+    notificationInfoText: mainTheme.colors.alertInfoTextColor,
     notificationPositiveBackground:
-      SCSS_VARS["$alert-success-background-color"],
-    notificationPositiveText: SCSS_VARS["$alert-success-text-color"],
+      mainTheme.colors.alertSuccessBackgroundColor,
+    notificationPositiveText: mainTheme.colors.alertSuccessTextColor,
     notificationWarningBackground:
-      SCSS_VARS["$alert-warning-background-color"],
-    notificationWarningText: SCSS_VARS["$alert-warning-text-color"],
-    notificationNegativeBackground: SCSS_VARS["$alert-error-background-color"],
-    notificationNegativeText: SCSS_VARS["$alert-error-text-color"],
-    progressbarTrackFill: colors.grayLightest,
+      mainTheme.colors.alertWarningBackgroundColor,
+    notificationWarningText: mainTheme.colors.alertWarningTextColor,
+    notificationNegativeBackground: mainTheme.colors.alertErrorBackgroundColor,
+    notificationNegativeText: mainTheme.colors.alertErrorTextColor,
+    progressbarTrackFill: mainTheme.colors.gray20,
   },
 }
 
@@ -540,7 +541,7 @@ export const sidebarWidgetTheme = createTheme(mainThemePrimitives, {
     sliderHandleInnerFill: colors.grayLight,
     sliderHandleInnerFillDisabled: colors.grayLight,
 
-    progressbarTrackFill: colors.grayLight,
+    progressbarTrackFill: mainTheme.colors.lightGray,
   },
 })
 

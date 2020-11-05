@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ColorPicker as ColorPickerProto } from "autogen/proto"
 import { WidgetStateManager } from "lib/WidgetStateManager"

@@ -17,7 +17,7 @@
 
 import React from "react"
 import moment from "moment"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { TimeInput as TimeInputProto } from "autogen/proto"
 

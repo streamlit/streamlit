@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 import { multiSelectOverrides } from "lib/widgetTheme"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 

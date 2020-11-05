@@ -2,8 +2,7 @@ import React, { ReactElement } from "react"
 import { StyledDropdownListItem } from "baseui/select"
 import { StyledList, StyledEmptyState, OptionListProps } from "baseui/menu"
 import { FixedSizeList } from "react-window"
-
-import "./VirtualDropdown.scss"
+import styled from "@emotion/styled"
 
 const LIST_ITEM_HEIGHT = 40
 const EMPTY_LIST_HEIGHT = 90
@@ -14,25 +13,39 @@ const MAX_LIST_HEIGHT = 300
  * options at a time. Overall, the dropdown improves performance for
  * [Multi]Select components to display a practically large number of options.
  */
-interface FixedSizeListeItemProps {
+interface FixedSizeListItemProps {
   data: { props: OptionListProps }[]
   index: number
   style: React.CSSProperties
 }
 
-function FixedSizeListItem(props: FixedSizeListeItemProps): ReactElement {
+const TruncateText = styled.span({
+  overflow: "hidden",
+  whiteSpace: "nowrap",
+  textOverflow: "ellipsis",
+})
+
+const ThemedStyledDropdownListItem = styled(StyledDropdownListItem)(
+  ({ theme }) => ({
+    display: "flex",
+    alignItems: "center",
+    paddingTop: theme.spacing.none,
+    paddingBottom: theme.spacing.none,
+  })
+)
+
+function FixedSizeListItem(props: FixedSizeListItemProps): ReactElement {
   const { data, index, style } = props
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { item, overrides, ...restChildProps } = data[index].props
   return (
-    <StyledDropdownListItem
+    <ThemedStyledDropdownListItem
       key={item.value}
-      className="dropdownListItem"
       style={style}
       {...restChildProps}
     >
-      <span className="noTextOverflow">{item.label}</span>
-    </StyledDropdownListItem>
+      <TruncateText>{item.label}</TruncateText>
+    </ThemedStyledDropdownListItem>
   )
 }
 
