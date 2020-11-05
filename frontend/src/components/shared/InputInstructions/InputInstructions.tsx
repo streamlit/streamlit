@@ -16,6 +16,7 @@
  */
 
 import React, { ReactElement } from "react"
+import classNames from "classnames"
 import { isFromMac } from "lib/utils"
 import { StyledMessage } from "./styled-components"
 
