@@ -34,6 +34,7 @@ const InputInstructions = ({
   className,
   type = "single",
 }: Props): ReactElement => {
+  const containerClassName = classNames("instructions", className)
   const messages: ReactElement[] = []
   const addMessage = (text: string, shouldBlink = false): void => {
     messages.push(
@@ -66,7 +67,7 @@ const InputInstructions = ({
     )
   }
 
-  return <div className={className}>{messages}</div>
+  return <div className={containerClassName}>{messages}</div>
 }
 
 export default InputInstructions
