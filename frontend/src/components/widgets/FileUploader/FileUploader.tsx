@@ -29,13 +29,12 @@ import {
 } from "lib/FileHelper"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-
+import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 import AlertContainer, {
   Kind as AlertKind,
 } from "components/shared/AlertContainer"
 import FileDropzone from "./FileDropzone"
 import UploadedFiles from "./UploadedFiles"
-import "./FileUploader.scss"
 
 export interface Props {
   disabled: boolean
@@ -299,8 +298,8 @@ class FileUploader extends React.PureComponent<Props, State> {
     const acceptedExtensions = element.type
 
     return (
-      <div className="Widget stFileUploader">
-        <label>{element.label}</label>
+      <div className="stFileUploader">
+        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
         {errorMessage ? (
           <AlertContainer kind={AlertKind.ERROR}>
             {errorMessage}

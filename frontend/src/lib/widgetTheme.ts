@@ -33,7 +33,7 @@ const lineHeightTight = SCSS_VARS["$line-height-tight"]
 
 const smallTextMargin = SCSS_VARS["$m2-3-font-size-sm"]
 const textMargin = SCSS_VARS["$font-size-sm"]
-const tinyTextMargin = SCSS_VARS["$m1-2-font-size-sm"]
+const tinyTextMargin = `${0.5 * parseFloat(textMargin)}rem`
 const spacer = SCSS_VARS.$spacer
 const gutter = SCSS_VARS.$gutter
 
@@ -378,6 +378,11 @@ export const radioOverrides = {
 
 export const checkboxOverrides = {
   ...radioOverrides,
+  Label: {
+    style: {
+      marginBottom: tinyTextMargin,
+    },
+  },
   Checkmark: {
     style: ({
       $isFocusVisible,
@@ -386,7 +391,10 @@ export const checkboxOverrides = {
       $isFocusVisible: boolean
       $checked: boolean
     }) => ({
-      borderWidth: "2px",
+      borderLeftWidth: "2px",
+      borderRightWidth: "2px",
+      borderTopWidth: "2px",
+      borderBottomWidth: "2px",
       outline: 0,
       boxShadow:
         $isFocusVisible && $checked ? `0 0 0 0.2rem ${colors.primaryA50}` : "",

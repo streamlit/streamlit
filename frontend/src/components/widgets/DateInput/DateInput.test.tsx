@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { DateInput as DateInputProto } from "autogen/proto"
 
@@ -49,7 +49,7 @@ describe("DateInput widget", () => {
   })
 
   it("should render a label", () => {
-    expect(wrapper.find("label").text()).toBe(props.element.label)
+    expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
   })
 
   it("should set widget value on did mount", () => {
@@ -67,7 +67,6 @@ describe("DateInput widget", () => {
     // @ts-ignore
     const splittedClassName = className.split(" ")
 
-    expect(splittedClassName).toContain("Widget")
     expect(splittedClassName).toContain("stDateInput")
 
     // @ts-ignore

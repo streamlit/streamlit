@@ -21,6 +21,7 @@ import { Selectbox as SelectboxProto } from "autogen/proto"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { logWarning } from "lib/log"
 import VirtualDropdown from "components/shared/VirtualDropdown"
+import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 
 export interface Props {
   disabled: boolean
@@ -120,8 +121,8 @@ class Selectbox extends React.PureComponent<Props, State> {
     )
 
     return (
-      <div className="Widget row-widget stSelectbox" style={style}>
-        <label>{this.props.element.label}</label>
+      <div className="row-widget stSelectbox" style={style}>
+        <StyledWidgetLabel>{this.props.element.label}</StyledWidgetLabel>
         <UISelect
           clearable={false}
           disabled={disabled}

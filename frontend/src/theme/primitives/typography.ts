@@ -5,6 +5,7 @@ export const fonts = {
 
 export const fontSizes = {
   twoXS: "0.375rem",
+  halfSmDefault: "0.4rem",
   xs: "0.5rem",
   sm: "0.75rem",
   smDefault: "0.8rem",
