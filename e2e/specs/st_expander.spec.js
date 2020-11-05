@@ -23,23 +23,23 @@ describe("st.expander", () => {
   });
 
   it("displays expander + regular containers properly", () => {
-    cy.get(".main .stBlock")
+    cy.get(".main [data-testid='stBlock']")
       .first()
       .within(() => {
         cy.get(expanderHeaderIdentifier).should("not.exist");
       });
-    cy.get(".main .stBlock")
+    cy.get(".main [data-testid='stBlock']")
       .eq(1)
       .within(() => {
         cy.get(expanderHeaderIdentifier).should("exist");
       });
-    cy.get(".main .stBlock")
+    cy.get(".main [data-testid='stBlock']")
       .eq(2)
       .within(() => {
         cy.get(expanderHeaderIdentifier).should("exist");
       });
 
-    cy.get(".sidebar .stBlock")
+    cy.get(".sidebar [data-testid='stBlock']")
       .eq(0)
       .within(() => {
         cy.get(expanderHeaderIdentifier).should("exist");
@@ -53,7 +53,7 @@ describe("st.expander", () => {
 
   it("collapses + expands", () => {
     // Starts expanded
-    cy.get(".main .stBlock")
+    cy.get(".main [data-testid='stBlock']")
       .eq(1)
       .within(() => {
         const expanderHeader = cy.get(expanderHeaderIdentifier);
@@ -68,7 +68,7 @@ describe("st.expander", () => {
       });
 
     // Starts collapsed
-    cy.get(".main .stBlock")
+    cy.get(".main [data-testid='stBlock']")
       .eq(2)
       .within(() => {
         let expanderHeader = cy.get(expanderHeaderIdentifier);

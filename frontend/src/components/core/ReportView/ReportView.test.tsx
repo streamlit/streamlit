@@ -17,11 +17,7 @@
 
 import React from "react"
 import { shallow } from "enzyme"
-import {
-  Block as BlockProto,
-  ForwardMsgMetadata,
-  PageConfig,
-} from "autogen/proto"
+import { Block as BlockProto, ForwardMsgMetadata } from "autogen/proto"
 import { ReportRunState } from "lib/ReportRunState"
 import { BlockNode, ElementNode, ReportRoot } from "lib/ReportNode"
 import { FileUploadClient } from "lib/FileUploadClient"
@@ -40,8 +36,6 @@ const getProps = (
   widgetMgr: new WidgetStateManager(() => {}),
   uploadClient: new FileUploadClient(() => undefined, true),
   widgetsDisabled: true,
-  wide: false,
-  initialSidebarState: PageConfig.SidebarState.AUTO,
   componentRegistry: new ComponentRegistry(() => undefined),
   ...propOverrides,
 })
@@ -84,27 +78,24 @@ describe("ReportView element", () => {
   })
 
   it("does not render the wide class", () => {
-    const props = getProps()
-    const wrapper = shallow(<ReportView {...props} />)
+    jest
+      .spyOn(React, "useContext")
+      .mockImplementation(() => ({ wideMode: false, embedded: false }))
+    const wrapper = shallow(<ReportView {...getProps()} />)
 
     expect(
-      wrapper
-        .find("div")
-        .first()
-        .hasClass("--wide")
+      wrapper.find("StyledReportViewBlockContainer").prop("isWideMode")
     ).toBe(false)
   })
 
   it("does render the wide class when specified", () => {
-    const props = getProps({
-      wide: true,
-    })
-    const wrapper = shallow(<ReportView {...props} />)
+    jest
+      .spyOn(React, "useContext")
+      .mockImplementation(() => ({ wideMode: true, embedded: false }))
+    const wrapper = shallow(<ReportView {...getProps()} />)
+
     expect(
-      wrapper
-        .find("div")
-        .first()
-        .hasClass("--wide")
+      wrapper.find("StyledReportViewBlockContainer").prop("isWideMode")
     ).toBe(true)
   })
 })

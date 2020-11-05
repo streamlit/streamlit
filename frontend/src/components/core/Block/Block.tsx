@@ -49,21 +49,18 @@ import {
 
 import React, { PureComponent, ReactNode, Suspense } from "react"
 import { AutoSizer } from "react-virtualized"
-import { styled, StyletronComponent } from "styletron-react"
 // @ts-ignore
 import debounceRender from "react-debounce-render"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { getElementWidgetID, makeElementWithInfoText } from "lib/utils"
 import { FileUploadClient } from "lib/FileUploadClient"
-import { variables as stylingVariables } from "lib/widgetTheme"
 import { BlockNode, ReportNode, ElementNode } from "lib/ReportNode"
 
 // Load (non-lazy) elements.
 import Alert from "components/elements/Alert/"
 import DocString from "components/elements/DocString/"
 import ErrorBoundary from "components/shared/ErrorBoundary/"
-import FullScreenWrapper from "components/shared/FullScreenWrapper/"
 import ExceptionElement from "components/elements/ExceptionElement/"
 import Json from "components/elements/Json/"
 import Markdown from "components/elements/Markdown/"
@@ -77,7 +74,11 @@ import {
 import Maybe from "components/core/Maybe/"
 import withExpandable from "hocs/withExpandable"
 
-import "./Block.scss"
+import {
+  StyledColumn,
+  StyledElementContainer,
+  StyledHorizontalBlock,
+} from "./styled-components"
 
 // Lazy-load elements.
 const Audio = React.lazy(() => import("components/elements/Audio/"))
@@ -134,38 +135,6 @@ interface Props {
   widgetsDisabled: boolean
   componentRegistry: ComponentRegistry
 }
-
-interface StyledColumnProps {
-  weight: number
-  width: number
-  className: string
-}
-
-const StyledColumn: StyletronComponent<StyledColumnProps> = styled(
-  "div",
-  ({ weight, width }) => {
-    // The minimal viewport width used to determine the minimal
-    // fixed column width while accounting for column proportions.
-    // Randomly selected based on visual experimentation.
-    const minViewportForColumns = 640
-
-    // When working with columns, width is driven by what percentage of space
-    // the column takes in relation to the total number of columns
-    const columnPercentage = weight / width
-
-    return {
-      // Flex determines how much space is allocated to this column.
-      flex: weight,
-      width,
-      [`@media (max-width: ${minViewportForColumns}px)`]: {
-        minWidth: `${columnPercentage > 0.5 ? "min" : "max"}(
-      ${columnPercentage * 100}% - ${stylingVariables.gutter},
-      ${columnPercentage * minViewportForColumns}px
-    )`,
-      },
-    }
-  }
-)
 
 class Block extends PureComponent<Props> {
   private static readonly WithExpandableBlock = withExpandable(Block)
@@ -239,7 +208,7 @@ class Block extends PureComponent<Props> {
       return (
         <StyledColumn
           key={index}
-          className="stBlock"
+          data-testid="stBlock"
           weight={node.deltaBlock.column.weight}
           width={width}
         >
@@ -253,17 +222,6 @@ class Block extends PureComponent<Props> {
         {child}
       </div>
     )
-  }
-
-  private static getClassNames(isStale: boolean, isHidden: boolean): string {
-    const classNames = ["element-container"]
-    if (isStale && !FullScreenWrapper.isFullScreen) {
-      classNames.push("stale-element")
-    }
-    if (isHidden) {
-      classNames.push("stHidden")
-    }
-    return classNames.join(" ")
   }
 
   private shouldComponentBeEnabled(isHidden: boolean): boolean {
@@ -288,12 +246,16 @@ class Block extends PureComponent<Props> {
     const isHidden = elementType === "empty" || elementType === "balloons"
     const enable = this.shouldComponentBeEnabled(isHidden)
     const isStale = this.isComponentStale(enable, node)
-    const className = Block.getClassNames(isStale, isHidden)
     const key = getElementWidgetID(node.element) || index
 
     return (
       <Maybe enable={enable} key={key}>
-        <div className={className} style={{ width }}>
+        <StyledElementContainer
+          isStale={isStale}
+          isHidden={isHidden}
+          className="element-container"
+          style={{ width }}
+        >
           <ErrorBoundary width={width}>
             <Suspense
               fallback={
@@ -308,7 +270,7 @@ class Block extends PureComponent<Props> {
               {element}
             </Suspense>
           </ErrorBoundary>
-        </div>
+        </StyledElementContainer>
       </Maybe>
     )
   }
@@ -654,11 +616,11 @@ class Block extends PureComponent<Props> {
       // For now, all children are column blocks. For columns, `width` is
       // driven by the total number of columns available.
       return (
-        <div className="stBlock-horiz">
+        <StyledHorizontalBlock>
           {this.renderElements(
             this.props.node.deltaBlock.horizontal.totalWeight || 0
           )}
-        </div>
+        </StyledHorizontalBlock>
       )
     }
 

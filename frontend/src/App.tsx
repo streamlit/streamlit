@@ -21,9 +21,10 @@ import { HotKeys, KeyMap } from "react-hotkeys"
 import { fromJS } from "immutable"
 import classNames from "classnames"
 // Other local imports.
-import ReportView from "components/core/ReportView/"
+import PageLayoutContext from "components/core/PageLayoutContext"
+import ReportView from "components/core/ReportView"
 import StatusWidget from "components/core/StatusWidget"
-import MainMenu from "components/core/MainMenu/"
+import MainMenu from "components/core/MainMenu"
 import {
   DialogProps,
   DialogType,
@@ -88,6 +89,7 @@ export interface Props {
 interface State {
   connectionState: ConnectionState
   elements: ReportRoot
+  isFullScreen: boolean
   reportId: string
   reportName: string
   reportHash: string | null
@@ -143,6 +145,7 @@ export class App extends PureComponent<Props, State> {
     this.state = {
       connectionState: ConnectionState.INITIAL,
       elements: ReportRoot.empty("Please wait..."),
+      isFullScreen: false,
       reportName: "",
       reportId: "<null>",
       reportHash: null,
@@ -904,82 +907,105 @@ export class App extends PureComponent<Props, State> {
     startRecording(`streamlit-${reportName}-${date}`)
   }
 
+  handleFullScreen = (isFullScreen: boolean): void => {
+    this.setState({ isFullScreen })
+  }
+
   render(): JSX.Element {
+    const {
+      allowRunOnSave,
+      connectionState,
+      deployParams,
+      dialog,
+      elements,
+      initialSidebarState,
+      isFullScreen,
+      layout,
+      reportId,
+      reportRunState,
+      sharingEnabled,
+      userSettings,
+    } = this.state
     const outerDivClass = classNames("stApp", {
       "streamlit-embedded": isEmbeddedInIFrame(),
-      "streamlit-wide": this.state.userSettings.wideMode,
+      "streamlit-wide": userSettings.wideMode,
     })
 
-    let dialog: React.ReactNode = null
-    if (this.state.dialog) {
-      const dialogProps: DialogProps = {
-        ...this.state.dialog,
-        onClose: this.closeDialog,
-      }
-      dialog = StreamlitDialog(dialogProps)
-    }
+    const renderedDialog: React.ReactNode = dialog
+      ? StreamlitDialog({
+          ...dialog,
+          onClose: this.closeDialog,
+        })
+      : null
 
     // Attach and focused props provide a way to handle Global Hot Keys
     // https://github.com/greena13/react-hotkeys/issues/41
     // attach: DOM element the keyboard listeners should attach to
     // focused: A way to force focus behaviour
     return (
-      <HotKeys
-        keyMap={this.keyMap}
-        handlers={this.keyHandlers}
-        attach={window}
-        focused={true}
+      <PageLayoutContext.Provider
+        value={{
+          initialSidebarState,
+          layout,
+          wideMode: userSettings.wideMode,
+          embedded: isEmbeddedInIFrame(),
+          isFullScreen,
+          setFullScreen: this.handleFullScreen,
+        }}
       >
-        <div className={outerDivClass}>
-          {/* The tabindex below is required for testing. */}
-          <header tabIndex={-1}>
-            <div className="decoration" />
-            <div className="toolbar">
-              <StatusWidget
-                ref={this.statusWidgetRef}
-                connectionState={this.state.connectionState}
-                sessionEventDispatcher={this.sessionEventDispatcher}
-                reportRunState={this.state.reportRunState}
-                rerunReport={this.rerunScript}
-                stopReport={this.stopReport}
-                allowRunOnSave={this.state.allowRunOnSave}
-              />
-              <MainMenu
-                sharingEnabled={this.state.sharingEnabled === true}
-                isServerConnected={this.isServerConnected()}
-                shareCallback={this.shareReport}
-                quickRerunCallback={this.rerunScript}
-                clearCacheCallback={this.openClearCacheDialog}
-                settingsCallback={this.settingsCallback}
-                aboutCallback={this.aboutCallback}
-                screencastCallback={this.screencastCallback}
-                screenCastState={this.props.screenCast.currentState}
-                s4aMenuItems={this.props.s4aCommunication.currentState.items}
-                sendS4AMessage={this.props.s4aCommunication.sendMessage}
-                deployParams={this.state.deployParams}
-              />
-            </div>
-          </header>
+        <HotKeys
+          keyMap={this.keyMap}
+          handlers={this.keyHandlers}
+          attach={window}
+          focused={true}
+        >
+          <div className={outerDivClass}>
+            {/* The tabindex below is required for testing. */}
+            <header tabIndex={-1}>
+              <div className="decoration" />
+              <div className="toolbar">
+                <StatusWidget
+                  ref={this.statusWidgetRef}
+                  connectionState={connectionState}
+                  sessionEventDispatcher={this.sessionEventDispatcher}
+                  reportRunState={reportRunState}
+                  rerunReport={this.rerunScript}
+                  stopReport={this.stopReport}
+                  allowRunOnSave={allowRunOnSave}
+                />
+                <MainMenu
+                  sharingEnabled={sharingEnabled === true}
+                  isServerConnected={this.isServerConnected()}
+                  shareCallback={this.shareReport}
+                  quickRerunCallback={this.rerunScript}
+                  clearCacheCallback={this.openClearCacheDialog}
+                  settingsCallback={this.settingsCallback}
+                  aboutCallback={this.aboutCallback}
+                  screencastCallback={this.screencastCallback}
+                  screenCastState={this.props.screenCast.currentState}
+                  s4aMenuItems={this.props.s4aCommunication.currentState.items}
+                  sendS4AMessage={this.props.s4aCommunication.sendMessage}
+                  deployParams={deployParams}
+                />
+              </div>
+            </header>
 
-          <ReportView
-            wide={this.state.userSettings.wideMode}
-            initialSidebarState={this.state.initialSidebarState}
-            elements={this.state.elements}
-            reportId={this.state.reportId}
-            reportRunState={this.state.reportRunState}
-            showStaleElementIndicator={
-              this.state.connectionState !== ConnectionState.STATIC
-            }
-            widgetMgr={this.widgetMgr}
-            widgetsDisabled={
-              this.state.connectionState !== ConnectionState.CONNECTED
-            }
-            uploadClient={this.uploadClient}
-            componentRegistry={this.componentRegistry}
-          />
-          {dialog}
-        </div>
-      </HotKeys>
+            <ReportView
+              elements={elements}
+              reportId={reportId}
+              reportRunState={reportRunState}
+              showStaleElementIndicator={
+                connectionState !== ConnectionState.STATIC
+              }
+              widgetMgr={this.widgetMgr}
+              widgetsDisabled={connectionState !== ConnectionState.CONNECTED}
+              uploadClient={this.uploadClient}
+              componentRegistry={this.componentRegistry}
+            />
+            {renderedDialog}
+          </div>
+        </HotKeys>
+      </PageLayoutContext.Provider>
     )
   }
 }
