@@ -218,7 +218,7 @@ class Block extends PureComponent<Props> {
     }
 
     return (
-      <div key={index} className="stBlock" style={{ width }}>
+      <div key={index} data-testid="stBlock" style={{ width }}>
         {child}
       </div>
     )
@@ -616,7 +616,7 @@ class Block extends PureComponent<Props> {
       // For now, all children are column blocks. For columns, `width` is
       // driven by the total number of columns available.
       return (
-        <StyledHorizontalBlock>
+        <StyledHorizontalBlock data-testid="stHorizontalBlock">
           {this.renderElements(
             this.props.node.deltaBlock.horizontal.totalWeight || 0
           )}

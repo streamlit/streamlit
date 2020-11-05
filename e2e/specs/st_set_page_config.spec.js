@@ -29,12 +29,4 @@ describe("st.set_page_config", () => {
   it("sets the page title", () => {
     cy.title().should("eq", "Heya, world? · Streamlit");
   });
-
-  it("collapses the sidebar", () => {
-    cy.get(".sidebar").should("have.class", "--collapsed");
-  });
-
-  it("sets the page in wide mode", () => {
-    cy.get(".reportview-container").should("have.class", "--wide");
-  });
 });

@@ -84,6 +84,7 @@ function ReportView(props: ReportViewProps): ReactElement {
   )
   const renderBlock = (node: BlockNode): ReactElement => (
     <StyledReportViewBlockContainer
+      className="block-container"
       isWideMode={wideMode}
       isEmbedded={embedded}
     >
