@@ -241,24 +241,4 @@ describe("App.handleNewReport", () => {
     expect(oneTimeInitialization).toHaveBeenCalledTimes(1)
     expect(SessionInfo.isSet()).toBe(true)
   })
-
-  it("throws an error if SessionInfo changes", () => {
-    const wrapper = shallow(<App {...getProps()} />)
-    const app = wrapper.instance()
-
-    expect(SessionInfo.isSet()).toBe(false)
-
-    // @ts-ignore
-    app.handleNewReport(NEW_REPORT)
-
-    const modified = NewReport.toObject(NEW_REPORT)
-    modified.initialize.userInfo.installationId = "modified"
-
-    const modifiedMessage = NewReport.fromObject(modified)
-
-    // @ts-ignore
-    expect(() => app.handleNewReport(modifiedMessage)).toThrow(
-      "Received mismatched SessionInfo"
-    )
-  })
 })

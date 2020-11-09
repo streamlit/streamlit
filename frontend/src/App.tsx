@@ -481,19 +481,9 @@ export class App extends PureComponent<Props, State> {
     // First, handle initialization logic. Each NewReport message has
     // initialization data. If this is the _first_ time we're receiving
     // the NewReport message, we perform some one-time initialization.
-    // Otherwise, we do a sanity check to make sure the initialization data
-    // hasn't unexpectedly changed.
     if (!SessionInfo.isSet()) {
       // We're not initialized. Perform one-time initialization.
       this.handleOneTimeInitialization(initialize)
-    } else if (
-      !SessionInfo.current.equals(
-        SessionInfo.fromInitializeMessage(initialize)
-      )
-    ) {
-      // Sanity check. Our SessionInfo shouldn't change from one
-      // NewReport message to another.
-      throw new Error("Received mismatched SessionInfo")
     }
 
     const { reportHash } = this.state
