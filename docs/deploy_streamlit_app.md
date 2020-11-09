@@ -12,7 +12,7 @@ Once you have your invite you're ready to deploy! It's really straightforward, j
 
 ## Put your Streamlit app on GitHub
 
-Make sure it's in a public folder and that you have a [requirements.txt file](https://pip.pypa.io/en/stable/reference/pip_install/#requirements-file-format)
+Make sure your app is in a public GitHub repo and that you have a [requirements.txt file](https://pip.pypa.io/en/stable/reference/pip_install/#requirements-file-format)
 
 - If you need to generate a requirements file, try using `pipreqs`
 
@@ -22,7 +22,7 @@ pipreqs /home/project/location
 ```
 
 ```eval_rst
-.. note:: You should only include packages in requirements.txt that are not distributed with a standard Python installation (i.e. only packages that need to be installed with pip or conda). If you `include any of these modules from base Python <https://docs.python.org/3/py-modindex.html>`_ in your requirements.txt file, you will get an error when you try to deploy.
+.. note:: Only include packages in requirements.txt that are not distributed with a standard Python installation (i.e. only packages that need to be installed with pip or conda). If `any of the modules from base Python <https://docs.python.org/3/py-modindex.html>`_ are included in the requirements.txt file, you will get an error when you try to deploy. Additionally, use versions **0.69.2+** of Streamlit to ensure full functionality.
 ```
 
 - If you have requirements for apt-get, add them to `packages.txt`, one package name per line. See our streamlit-apps demo repo for an [example packages.txt file](https://github.com/streamlit-apps/ml-projects/blob/master/packages.txt).
