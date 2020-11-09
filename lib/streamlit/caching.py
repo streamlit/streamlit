@@ -487,7 +487,7 @@ def cache(
     update_hash(
         (func.__module__, func.__qualname__, func),
         hasher=func_hasher,
-        hash_funcs=hash_funcs,
+        hash_funcs=None,  # hash_funcs are only used for value_key, below
         hash_reason=HashReason.CACHING_FUNC_BODY,
         hash_source=func,
     )
