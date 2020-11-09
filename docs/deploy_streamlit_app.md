@@ -22,7 +22,7 @@ pipreqs /home/project/location
 ```
 
 ```eval_rst
-.. note:: Only include packages in requirements.txt that are not distributed with a standard Python installation (i.e. only packages that need to be installed with pip or conda). If `any of the modules from base Python <https://docs.python.org/3/py-modindex.html>`_ are included in the requirements.txt file, you will get an error when you try to deploy. Additionally, use versions **0.69.2+** of Streamlit to ensure full functionality.
+.. note:: Only include packages in requirements.txt that are not distributed with a standard Python installation (i.e. only packages that need to be installed with pip or conda). If `any of the modules from base Python <https://docs.python.org/3/py-modindex.html>`_ are included in the requirements.txt file, you will get an error when you try to deploy. Additionally, use versions **0.69.2+** of Streamlit to ensure full sharing functionality.
 ```
 
 - If you have requirements for apt-get, add them to `packages.txt`, one package name per line. See our streamlit-apps demo repo for an [example packages.txt file](https://github.com/streamlit-apps/ml-projects/blob/master/packages.txt).
