@@ -198,9 +198,7 @@ class Block extends PureComponent<Props> {
       return true
     }
     if (this.props.reportRunState === ReportRunState.RUNNING) {
-      return (
-        node instanceof ElementNode && node.reportId !== this.props.reportId
-      )
+      return node.reportId !== this.props.reportId
     }
     return false
   }
@@ -213,10 +211,13 @@ class Block extends PureComponent<Props> {
     const BlockType = node.deltaBlock.expandable
       ? Block.WithExpandableBlock
       : Block
+    const enable = this.shouldComponentBeEnabled(false)
+    const isStale = this.isComponentStale(enable, node)
 
     const optionalProps = node.deltaBlock.expandable
       ? {
           empty: node.isEmpty,
+          isStale,
           ...node.deltaBlock.expandable,
         }
       : {}
