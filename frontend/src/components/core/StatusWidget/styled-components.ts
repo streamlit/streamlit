@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import styled from "@emotion/styled"
+import styled, { CSSObject } from "@emotion/styled"
+import { Theme } from "theme"
 
 /*
   "ConnectionStatus" styles are used for displaying
@@ -61,47 +62,33 @@ export const StyledConnectionStatusLabel = styled.label<
   etc.
 */
 
-export interface StyledReportStatusProps {
-  isMinimized: boolean
-}
+export const StyledReportStatus = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  borderRadius: theme.radii.md,
+  margin: `0 ${theme.spacing.sm} 0 0`,
+  paddingLeft: theme.spacing.sm,
+  backgroundColor: "#fffd",
+  height: "1.6rem",
+  ".icon-sm": {
+    color: theme.colors.darkGray,
+    display: "inline-flex",
+    fontSize: theme.fontSizes.md,
+    width: theme.fontSizes.md,
+    height: theme.fontSizes.md,
+    marginRight: theme.spacing.sm,
+  },
+}))
 
-export const StyledReportStatus = styled.div<StyledReportStatusProps>(
-  ({ isMinimized, theme }) => ({
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: theme.radii.md,
-    margin: `0 ${theme.spacing.sm} 0 0`,
-    paddingLeft: theme.spacing.sm,
-    backgroundColor: "#fffd",
-    height: "1.6rem",
-    ".icon-sm": {
-      color: theme.colors.darkGray,
-      display: "inline-flex",
-      fontSize: theme.fontSizes.md,
-      width: theme.fontSizes.md,
-      height: theme.fontSizes.md,
-      marginRight: theme.spacing.sm,
-    },
-
-    "button, button *": {
-      transition: `opacity 200ms ease-out 0s,
-      clip 200ms ease-out 0s, min-width 200ms ease-out 0s,
-      max-width 200ms ease-out 0s, padding 200ms ease-out 0s,
-      visibility 0s ease-out 200ms`, // Hide at end of the transition
-      ...(isMinimized
-        ? {
-            opacity: 0,
-            visibility: "hidden",
-            padding: 0,
-            maxWidth: 0,
-            minWidth: 0,
-            border: 0,
-          }
-        : {}),
-    },
-  })
-)
+const minimizedStyles = (theme: Theme): CSSObject => ({
+  opacity: 0,
+  padding: theme.spacing.none,
+  margin: theme.spacing.none,
+  maxWidth: 0,
+  minWidth: 0,
+  border: 0,
+})
 
 export interface StyledReportStatusLabelProps {
   isPrompt: boolean
@@ -119,26 +106,26 @@ export const StyledReportStatusLabel = styled.label<
   maxWidth: "20rem",
   height: "1rem",
   borderRadius: isPrompt ? theme.radii.md : undefined,
-  ...(isMinimized
-    ? {
-        opacity: 0,
-        visibility: "hidden",
-        padding: 0,
-        maxWidth: 0,
-        minWidth: 0,
-        border: 0,
-        transition: `opacity 200ms ease-out 0s,
-      clip 200ms ease-out 0s, min-width 200ms ease-out 0s,
-      max-width 200ms ease-out 0s, padding 200ms ease-out 0s,
-      visibility 0s ease-out 200ms`, // Hide at end of the transition
-      }
-    : {}),
+  transition: `opacity 200ms ease-out 0s,
+  clip 200ms ease-out 0s, min-width 200ms ease-out 0s,
+  max-width 200ms ease-out 0s, padding 200ms ease-out 0s`, // Hide at end of the transition
+  ...(isMinimized ? minimizedStyles(theme) : {}),
 }))
 
-export const StyledReportButtonContainer = styled.span(({ theme }) => ({
+export interface StyledReportButtonContainerProps {
+  isMinimized: boolean
+}
+
+export const StyledReportButtonContainer = styled.span<
+  StyledReportButtonContainerProps
+>(({ isMinimized, theme }) => ({
   minWidth: "4rem",
   marginLeft: theme.spacing.sm,
   whiteSpace: "nowrap",
+  transition: `opacity 200ms ease-out 0s,
+  clip 200ms ease-out 0s, min-width 200ms ease-out 0s,
+  max-width 200ms ease-out 0s, padding 200ms ease-out 0s`, // Hide at end of the transition
+  ...(isMinimized ? minimizedStyles(theme) : {}),
 }))
 
 export const StyledReportRunningIcon = styled.img(({ theme }) => ({

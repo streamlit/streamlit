@@ -19,6 +19,8 @@ import styled from "@emotion/styled"
 export const StyledSidebar = styled.section(({ theme }) => ({
   [`@media (max-width: ${theme.breakpoints.md})`]: {
     marginLeft: theme.spacing.none,
+    // Instead of 100% width and height, we want to make sure
+    // the sidebar takes all available space when viewports change
     position: "absolute",
     top: 0,
     left: 0,
@@ -26,6 +28,7 @@ export const StyledSidebar = styled.section(({ theme }) => ({
     bottom: 0,
   },
 
+  // Scrollbars can look ugly, so we try to style them to look better
   [`::-webkit-scrollbar-thumb:vertical,
   ::-webkit-scrollbar-thumb:horizontal,
   ::-webkit-scrollbar-thumb:vertical:active,

@@ -295,12 +295,14 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
 
   /** "Running... [Stop]" */
   private renderReportIsRunning(): ReactNode {
+    const minimized = this.state.statusMinimized
     const stopRequested =
       this.props.reportRunState === ReportRunState.STOP_REQUESTED
     const stopButton = StatusWidget.promptButton(
       stopRequested ? "Stopping..." : "Stop",
       stopRequested,
-      this.handleStopReportClick
+      this.handleStopReportClick,
+      minimized
     )
 
     const runningIcon = (
@@ -308,8 +310,8 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     )
 
     return (
-      <StyledReportStatus isMinimized={this.state.statusMinimized}>
-        {this.state.statusMinimized ? (
+      <StyledReportStatus>
+        {minimized ? (
           <Tooltip
             placement={Placement.BOTTOM}
             content={() => <div>This script is currently running</div>}
@@ -347,7 +349,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
           onMouseEnter={this.onReportPromptHover}
           onMouseLeave={this.onReportPromptUnhover}
         >
-          <StyledReportStatus isMinimized={minimized}>
+          <StyledReportStatus>
             <Icon className="icon-sm" type="info" />
             <StyledReportStatusLabel isMinimized={minimized} isPrompt>
               Source file changed.
@@ -356,14 +358,16 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
             {StatusWidget.promptButton(
               <div className="underlineFirstLetter">Rerun</div>,
               rerunRequested,
-              this.handleRerunClick
+              this.handleRerunClick,
+              minimized
             )}
 
             {this.props.allowRunOnSave &&
               StatusWidget.promptButton(
                 <div className="underlineFirstLetter">Always rerun</div>,
                 rerunRequested,
-                this.handleAlwaysRerunClick
+                this.handleAlwaysRerunClick,
+                minimized
               )}
           </StyledReportStatus>
         </div>
@@ -397,10 +401,11 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
   private static promptButton(
     title: ReactNode,
     disabled: boolean,
-    onClick: () => void
+    onClick: () => void,
+    isMinimized: boolean
   ): ReactNode {
     return (
-      <StyledReportButtonContainer>
+      <StyledReportButtonContainer isMinimized={isMinimized}>
         <Button
           kind={Kind.PRIMARY}
           size={Size.XSMALL}

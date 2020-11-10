@@ -58,7 +58,7 @@ describe("ReportView element", () => {
     const props = getProps()
     const wrapper = shallow(<ReportView {...props} />)
 
-    expect(wrapper.find("WithTheme(Sidebar)").exists()).toBe(false)
+    expect(wrapper.find("[data-testid='stSidebar']").exists()).toBe(false)
   })
 
   it("renders a sidebar when there are elements", () => {

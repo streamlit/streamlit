@@ -42,6 +42,11 @@ interface State {
 class Sidebar extends PureComponent<SidebarProps, State> {
   private mediumBreakpointPx: number
 
+  public static calculateMaxBreakpoint(value: string): number {
+    // We subtract a margin of 0.02 to use as a max-width
+    return parseInt(value, 10) - 0.02
+  }
+
   public static defaultProps: Partial<SidebarProps> = {
     onChange: () => {},
   }
@@ -50,15 +55,18 @@ class Sidebar extends PureComponent<SidebarProps, State> {
 
   constructor(props: SidebarProps) {
     super(props)
-    this.mediumBreakpointPx = parseInt(props.theme.breakpoints.md, 10) - 0.02
+    this.mediumBreakpointPx = Sidebar.calculateMaxBreakpoint(
+      props.theme.breakpoints.md
+    )
     this.state = {
       collapsedSidebar: Sidebar.shouldCollapse(props, this.mediumBreakpointPx),
     }
   }
 
   componentDidUpdate(prevProps: any): void {
-    this.mediumBreakpointPx =
-      parseInt(this.props.theme.breakpoints.md, 10) - 0.02
+    this.mediumBreakpointPx = Sidebar.calculateMaxBreakpoint(
+      this.props.theme.breakpoints.md
+    )
     // Immediately expand/collapse sidebar when initialSidebarState changes.
     if (this.props.initialSidebarState !== prevProps.initialSidebarState) {
       this.setState({
