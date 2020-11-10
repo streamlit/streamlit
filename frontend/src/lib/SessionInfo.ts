@@ -18,15 +18,15 @@ import { Config, EnvironmentInfo, Initialize, UserInfo } from "autogen/proto"
 
 export interface Args {
   sessionId: string
-  streamlitVersion?: string | null
-  pythonVersion?: string | null
-  installationId?: string | null
-  installationIdV1?: string | null
-  installationIdV2?: string | null
-  authorEmail?: string | null
-  maxCachedMessageAge?: number | null
-  commandLine?: string | null
-  userMapboxToken?: string | null
+  streamlitVersion: string
+  pythonVersion: string
+  installationId: string
+  installationIdV1: string
+  installationIdV2: string
+  authorEmail: string
+  maxCachedMessageAge: number
+  commandLine: string
+  userMapboxToken: string
 }
 
 export class SessionInfo {
