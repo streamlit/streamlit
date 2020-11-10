@@ -480,12 +480,25 @@ def cache(
 
     func_hasher = hashlib.new("md5")
 
-    # Include the function's module and qualified name in the hash.
+    # Include the function's __module__ and __qualname__ strings in the hash.
     # This means that two identical functions in different modules
     # will not share a hash; it also means that two identical *nested*
     # functions in the same module will not share a hash.
+    # We do not pass `hash_funcs` here, because we don't want our function's
+    # name to get an unexpected hash.
     update_hash(
-        (func.__module__, func.__qualname__, func),
+        (func.__module__, func.__qualname__),
+        hasher=func_hasher,
+        hash_funcs=None,
+        hash_reason=HashReason.CACHING_FUNC_BODY,
+        hash_source=func,
+    )
+
+    # Include the function's body in the hash. We *do* pass hash_funcs here,
+    # because this step will be hashing any objects referenced in the function
+    # body.
+    update_hash(
+        func,
         hasher=func_hasher,
         hash_funcs=hash_funcs,
         hash_reason=HashReason.CACHING_FUNC_BODY,

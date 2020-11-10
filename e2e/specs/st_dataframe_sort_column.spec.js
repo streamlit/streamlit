@@ -23,7 +23,7 @@ describe("st.dataframe - sort by column", () => {
   it("resets sort column index if the sorted column was removed", () => {
     // Sort the dataframe by the last column.
     cy.get(".element-container .stDataFrame")
-      .find(".dataframe.row-header")
+      .find("[data-testid='StyledDataFrameRowHeaderCell']")
       .last()
       .click();
 

@@ -16,7 +16,47 @@
  */
 
 import { SessionInfo } from "lib/SessionInfo"
+import { Initialize } from "autogen/proto"
 
 test("Throws an error when used before initialization", () => {
   expect(() => SessionInfo.current).toThrow()
+})
+
+test("Can be initialized from a protobuf", () => {
+  const MESSAGE = new Initialize({
+    userInfo: {
+      installationId: "installationId",
+      installationIdV1: "installationIdV1",
+      installationIdV2: "installationIdV2",
+      email: "email",
+    },
+    config: {
+      sharingEnabled: false,
+      gatherUsageStats: false,
+      maxCachedMessageAge: 31,
+      mapboxToken: "mapboxToken",
+      allowRunOnSave: false,
+    },
+    environmentInfo: {
+      streamlitVersion: "streamlitVersion",
+      pythonVersion: "pythonVersion",
+    },
+    sessionState: {
+      runOnSave: false,
+      reportIsRunning: false,
+    },
+    sessionId: "sessionId",
+    commandLine: "commandLine",
+  })
+
+  const si = SessionInfo.fromInitializeMessage(MESSAGE)
+  expect(si.sessionId).toEqual("sessionId")
+  expect(si.streamlitVersion).toEqual("streamlitVersion")
+  expect(si.pythonVersion).toEqual("pythonVersion")
+  expect(si.installationId).toEqual("installationId")
+  expect(si.installationIdV1).toEqual("installationIdV1")
+  expect(si.installationIdV2).toEqual("installationIdV2")
+  expect(si.authorEmail).toEqual("email")
+  expect(si.maxCachedMessageAge).toEqual(31)
+  expect(si.commandLine).toEqual("commandLine")
 })

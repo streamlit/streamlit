@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 import { Text as TextProto } from "autogen/proto"
 import Text, { TextProps } from "./Text"
 

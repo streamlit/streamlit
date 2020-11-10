@@ -1,5 +1,8 @@
 .stBlock-horiz {
   display: flex;
-  gap: 8px;
   flex-wrap: wrap;
+
+  .stBlock:not(:first-child) {
+    padding-left: 8px;
+  }
 }
