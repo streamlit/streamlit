@@ -34,9 +34,10 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
 export interface StyledColumnProps {
   weight: number
   width: number
+  withLeftPadding: boolean
 }
 export const StyledColumn = styled.div<StyledColumnProps>(
-  ({ weight, width, theme }) => {
+  ({ weight, width, withLeftPadding, theme }) => {
     // The minimal viewport width used to determine the minimal
     // fixed column width while accounting for column proportions.
     // Randomly selected based on visual experimentation.
@@ -49,6 +50,7 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       // Flex determines how much space is allocated to this column.
       flex: weight,
       width,
+      paddingLeft: withLeftPadding ? theme.spacing.sm : theme.spacing.none,
       [`@media (max-width: ${theme.breakpoints.columns})`]: {
         minWidth: `${columnPercentage > 0.5 ? "min" : "max"}(
           ${columnPercentage * 100}% - ${theme.spacing.twoXL},

@@ -211,6 +211,7 @@ class Block extends PureComponent<Props> {
           data-testid="stBlock"
           weight={node.deltaBlock.column.weight}
           width={width}
+          withLeftPadding={index > 0}
         >
           {child}
         </StyledColumn>
