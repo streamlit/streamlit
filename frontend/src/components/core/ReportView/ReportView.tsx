@@ -101,9 +101,14 @@ function ReportView(props: ReportViewProps): ReactElement {
     </StyledReportViewBlockContainer>
   )
 
+  const layout = wideMode ? "wide" : "narrow"
   // The tabindex is required to support scrolling by arrow keys.
   return (
-    <StyledReportViewContainer className="reportview-container">
+    <StyledReportViewContainer
+      className="reportview-container"
+      data-testid="stReportViewContainer"
+      data-layout={layout}
+    >
       {!elements.sidebar.isEmpty && (
         <Sidebar initialSidebarState={initialSidebarState}>
           <ThemeProvider theme={sidebarTheme} baseuiTheme={sidebarWidgetTheme}>

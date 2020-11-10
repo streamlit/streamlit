@@ -29,4 +29,20 @@ describe("st.set_page_config", () => {
   it("sets the page title", () => {
     cy.title().should("eq", "Heya, world? · Streamlit");
   });
+
+  it("collapses the sidebar", () => {
+    cy.get("[data-testid='stSidebar']").should(
+      "have.attr",
+      "aria-expanded",
+      "false"
+    );
+  });
+
+  it("sets the page in wide mode", () => {
+    cy.get("[data-testid='stReportViewContainer']").should(
+      "have.attr",
+      "data-layout",
+      "wide"
+    );
+  });
 });
