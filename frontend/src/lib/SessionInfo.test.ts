@@ -16,7 +16,7 @@
  */
 
 import { SessionInfo } from "lib/SessionInfo"
-import { Initialize } from "../autogen/proto"
+import { Initialize } from "autogen/proto"
 
 test("Throws an error when used before initialization", () => {
   expect(() => SessionInfo.current).toThrow()
