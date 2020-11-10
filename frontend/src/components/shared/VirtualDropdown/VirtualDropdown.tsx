@@ -1,8 +1,10 @@
 import React, { ReactElement } from "react"
-import { StyledDropdownListItem } from "baseui/select"
 import { StyledList, StyledEmptyState, OptionListProps } from "baseui/menu"
 import { FixedSizeList } from "react-window"
-import styled from "@emotion/styled"
+import {
+  ThemedStyledDropdownListItem,
+  StyledTruncateText,
+} from "./styled-components"
 
 const LIST_ITEM_HEIGHT = 40
 const EMPTY_LIST_HEIGHT = 90
@@ -19,21 +21,6 @@ interface FixedSizeListItemProps {
   style: React.CSSProperties
 }
 
-const TruncateText = styled.span({
-  overflow: "hidden",
-  whiteSpace: "nowrap",
-  textOverflow: "ellipsis",
-})
-
-const ThemedStyledDropdownListItem = styled(StyledDropdownListItem)(
-  ({ theme }) => ({
-    display: "flex",
-    alignItems: "center",
-    paddingTop: theme.spacing.none,
-    paddingBottom: theme.spacing.none,
-  })
-)
-
 function FixedSizeListItem(props: FixedSizeListItemProps): ReactElement {
   const { data, index, style } = props
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -44,7 +31,7 @@ function FixedSizeListItem(props: FixedSizeListItemProps): ReactElement {
       style={style}
       {...restChildProps}
     >
-      <TruncateText>{item.label}</TruncateText>
+      <StyledTruncateText>{item.label}</StyledTruncateText>
     </ThemedStyledDropdownListItem>
   )
 }

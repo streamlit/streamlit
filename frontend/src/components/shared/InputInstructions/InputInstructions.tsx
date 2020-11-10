@@ -41,7 +41,7 @@ const InputInstructions = ({
     messages.push(
       <StyledMessage
         key={messages.length}
-        includeDot={messages.length === 0}
+        includeDot={messages.length > 0}
         shouldBlink={shouldBlink}
       >
         {text}

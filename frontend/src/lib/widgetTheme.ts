@@ -501,7 +501,7 @@ export const themeOverrides = {
     notificationWarningText: mainTheme.colors.alertWarningTextColor,
     notificationNegativeBackground: mainTheme.colors.alertErrorBackgroundColor,
     notificationNegativeText: mainTheme.colors.alertErrorTextColor,
-    progressbarTrackFill: mainTheme.colors.gray20,
+    progressbarTrackFill: mainTheme.colors.lightestGray,
   },
 }
 
@@ -541,7 +541,7 @@ export const sidebarWidgetTheme = createTheme(mainThemePrimitives, {
     sliderHandleInnerFill: colors.grayLight,
     sliderHandleInnerFillDisabled: colors.grayLight,
 
-    progressbarTrackFill: mainTheme.colors.lightGray,
+    progressbarTrackFill: mainTheme.colors.gray40,
   },
 })
 

@@ -28,7 +28,7 @@ interface TextProps {
 
 export const Small = styled.small<TextProps>(({ kind, theme }) => {
   const secondaryColor = kind === Kind.SECONDARY && theme.colors.secondary
-  const dangerColor = kind === Kind.SECONDARY && theme.colors.danger
+  const dangerColor = kind === Kind.DANGER && theme.colors.danger
 
   return {
     color: dangerColor || secondaryColor || theme.colors.darkGray,
