@@ -18,7 +18,7 @@ export const StyledMessage = styled.span<StyledMessageProps>(
       ? {
           "&::before": {
             opacity: 1,
-            content: "•",
+            content: '"•"',
             animation: "none",
             color: theme.colors.gray,
             margin: "0 5px",
