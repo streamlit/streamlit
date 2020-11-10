@@ -1,8 +1,18 @@
-import { dataFrameGet, dataFrameGetDimensions } from "lib/dataFrameProto"
+import {
+  DataFrameCellType,
+  dataFrameGet,
+  dataFrameGetDimensions,
+} from "lib/dataFrameProto"
 import { toFormattedString } from "lib/format"
 import { logWarning } from "lib/log"
-import React, { ReactElement } from "react"
+import React, { ReactElement, ComponentType } from "react"
 import { Map as ImmutableMap } from "immutable"
+import {
+  StyledDataFrameRowHeaderCell,
+  StyledDataFrameDataCell,
+  StyledDataFrameColHeaderCell,
+  StyledDataFrameCornerCell,
+} from "./styled-components"
 
 /**
  * Size of the optional sort icon displayed in column headers
@@ -25,7 +35,7 @@ const MAX_CELL_WIDTH_PX = 200
 const MAX_LONELY_CELL_WIDTH_PX = 400
 
 export interface CellContents {
-  classes: string
+  Component: ComponentType
   styles: Record<string, unknown>
   contents: string
 }
@@ -123,6 +133,13 @@ export const getDimensions = (
   }
 }
 
+const typeToStyledComponent: Record<DataFrameCellType, ComponentType> = {
+  corner: StyledDataFrameCornerCell,
+  "col-header": StyledDataFrameColHeaderCell,
+  "row-header": StyledDataFrameRowHeaderCell,
+  data: StyledDataFrameDataCell,
+}
+
 /**
  * Returns a function which can access individual cell data in a DataFrame.
  *
@@ -169,13 +186,13 @@ export function getCellContentsGetter({
     )
 
     // All table elements have class 'dataframe'.
-    const classes = `dataframe ${type}`
+    const Component = typeToStyledComponent[type]
 
     // Format floating point numbers nicely.
     const fsContents = toFormattedString(contents)
 
     // Put it all together
-    return { classes, styles, contents: fsContents }
+    return { Component, styles, contents: fsContents }
   }
 }
 

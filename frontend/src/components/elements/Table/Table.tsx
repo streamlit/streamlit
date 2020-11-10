@@ -21,7 +21,13 @@ import { range } from "lodash"
 import { toFormattedString } from "lib/format"
 import { dataFrameGet, dataFrameGetDimensions } from "lib/dataFrameProto"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
-import "./Table.scss"
+import {
+  StyledTable,
+  StyledEmptyTableCell,
+  StyledTableCell,
+  StyledTableCellHeader,
+  StyledTableContainer,
+} from "./styled-components"
 
 type DataFrame = ImmutableMap<string, any>
 
@@ -45,21 +51,21 @@ function generateTableCell(
       return <td key={colIdx}>&nbsp;</td>
     case "row-header":
       return (
-        <th key={colIdx} scope="row">
+        <StyledTableCellHeader key={colIdx} scope="row">
           {formattedContents}
-        </th>
+        </StyledTableCellHeader>
       )
     case "col-header":
       return (
-        <th scope="column" key={colIdx}>
+        <StyledTableCellHeader scope="column" key={colIdx}>
           {formattedContents}
-        </th>
+        </StyledTableCellHeader>
       )
     case "data":
       return (
-        <td key={colIdx} style={styles}>
+        <StyledTableCell key={colIdx} style={styles}>
           {formattedContents}
-        </td>
+        </StyledTableCell>
       )
     default:
       throw new Error(`Cannot parse type "${type}".`)
@@ -85,8 +91,8 @@ export function Table({ element }: TableProps): ReactElement {
   const dataRows = allRows.slice(headerRows)
 
   return (
-    <div className="stTable">
-      <table>
+    <StyledTableContainer data-testid="stTable">
+      <StyledTable>
         {columnHeaders.length > 0 && (
           <thead>
             {columnHeaders.map(rowIdx =>
@@ -98,14 +104,14 @@ export function Table({ element }: TableProps): ReactElement {
           {dataRows.map(rowIdx => generateTableRow(element, rowIdx, cols))}
           {dataRows.length === 0 && (
             <tr>
-              <td colSpan={cols || 1} className="empty">
+              <StyledEmptyTableCell colSpan={cols || 1}>
                 empty
-              </td>
+              </StyledEmptyTableCell>
             </tr>
           )}
         </tbody>
-      </table>
-    </div>
+      </StyledTable>
+    </StyledTableContainer>
   )
 }
 

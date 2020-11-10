@@ -17,7 +17,7 @@
 
 import React, { ComponentType } from "react"
 import { fromJS } from "immutable"
-import { shallow, mount } from "enzyme"
+import { shallow, mount } from "lib/test_util"
 
 import FullScreenWrapper from "components/shared/FullScreenWrapper"
 import withFullScreenWrapper, {

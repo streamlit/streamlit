@@ -20,7 +20,6 @@ import moment from "moment"
 import { HotKeys, KeyMap } from "react-hotkeys"
 import { fromJS } from "immutable"
 import classNames from "classnames"
-import { ThemeProvider } from "baseui"
 // Other local imports.
 import ReportView from "components/core/ReportView/"
 import StatusWidget from "components/core/StatusWidget"
@@ -35,7 +34,6 @@ import { WidgetStateManager } from "lib/WidgetStateManager"
 import { ConnectionState } from "lib/ConnectionState"
 import { ReportRunState } from "lib/ReportRunState"
 import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
-import { mainWidgetTheme } from "lib/widgetTheme"
 import {
   setCookie,
   hashString,
@@ -48,7 +46,6 @@ import {
   Delta,
   ForwardMsg,
   ForwardMsgMetadata,
-  ISessionState,
   Initialize,
   NewReport,
   IDeployParams,
@@ -56,6 +53,8 @@ import {
   PageInfo,
   SessionEvent,
   WidgetStates,
+  SessionState,
+  Config,
 } from "autogen/proto"
 
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
@@ -289,14 +288,12 @@ export class App extends PureComponent<Props, State> {
 
     try {
       dispatchProto(msgProto, "type", {
-        initialize: (initializeMsg: Initialize) =>
-          this.handleInitialize(initializeMsg),
-        sessionStateChanged: (msg: ISessionState) =>
+        newReport: (newReportMsg: NewReport) =>
+          this.handleNewReport(newReportMsg),
+        sessionStateChanged: (msg: SessionState) =>
           this.handleSessionStateChanged(msg),
         sessionEvent: (evtMsg: SessionEvent) =>
           this.handleSessionEvent(evtMsg),
-        newReport: (newReportMsg: NewReport) =>
-          this.handleNewReport(newReportMsg),
         delta: (deltaMsg: Delta) =>
           this.handleDeltaMsg(
             deltaMsg,
@@ -381,68 +378,10 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Handler for ForwardMsg.initialize messages
-   * @param initializeMsg an Initialize protobuf
-   */
-  handleInitialize = (initializeMsg: Initialize): void => {
-    const {
-      sessionId,
-      environmentInfo,
-      userInfo,
-      config,
-      sessionState,
-    } = initializeMsg
-
-    if (
-      sessionId == null ||
-      !environmentInfo ||
-      !userInfo ||
-      !config ||
-      !sessionState
-    ) {
-      throw new Error("InitializeMsg is missing a required field")
-    }
-
-    if (App.hasStreamlitVersionChanged(initializeMsg)) {
-      window.location.reload()
-      return
-    }
-
-    SessionInfo.current = new SessionInfo({
-      sessionId,
-      streamlitVersion: environmentInfo.streamlitVersion,
-      pythonVersion: environmentInfo.pythonVersion,
-      installationId: userInfo.installationId,
-      installationIdV1: userInfo.installationIdV1,
-      installationIdV2: userInfo.installationIdV2,
-      authorEmail: userInfo.email,
-      maxCachedMessageAge: config.maxCachedMessageAge,
-      commandLine: initializeMsg.commandLine,
-      userMapboxToken: config.mapboxToken,
-    })
-
-    MetricsManager.current.initialize({
-      gatherUsageStats: Boolean(config.gatherUsageStats),
-    })
-
-    MetricsManager.current.enqueue("createReport", {
-      pythonVersion: SessionInfo.current.pythonVersion,
-    })
-
-    this.setState({
-      sharingEnabled: Boolean(config.sharingEnabled),
-      allowRunOnSave: Boolean(config.allowRunOnSave),
-    })
-
-    this.props.s4aCommunication.connect()
-    this.handleSessionStateChanged(sessionState)
-  }
-
-  /**
    * Handler for ForwardMsg.sessionStateChanged messages
    * @param stateChangeProto a SessionState protobuf
    */
-  handleSessionStateChanged = (stateChangeProto: ISessionState): void => {
+  handleSessionStateChanged = (stateChangeProto: SessionState): void => {
     this.setState((prevState: State) => {
       // Determine our new ReportRunState
       let { reportRunState } = prevState
@@ -532,9 +471,24 @@ export class App extends PureComponent<Props, State> {
    * @param newReportProto a NewReport protobuf
    */
   handleNewReport = (newReportProto: NewReport): void => {
+    const initialize = newReportProto.initialize as Initialize
+
+    if (App.hasStreamlitVersionChanged(initialize)) {
+      window.location.reload()
+      return
+    }
+
+    // First, handle initialization logic. Each NewReport message has
+    // initialization data. If this is the _first_ time we're receiving
+    // the NewReport message, we perform some one-time initialization.
+    if (!SessionInfo.isSet()) {
+      // We're not initialized. Perform one-time initialization.
+      this.handleOneTimeInitialization(initialize)
+    }
+
     const { reportHash } = this.state
     const {
-      id: reportId,
+      reportId,
       name: reportName,
       scriptPath,
       deployParams,
@@ -561,6 +515,31 @@ export class App extends PureComponent<Props, State> {
     } else {
       this.clearAppState(newReportHash, reportId, reportName, deployParams)
     }
+  }
+
+  /**
+   * Performs one-time initialization. This is called from `handleNewReport`.
+   */
+  handleOneTimeInitialization = (initialize: Initialize): void => {
+    SessionInfo.current = SessionInfo.fromInitializeMessage(initialize)
+
+    const config = initialize.config as Config
+
+    MetricsManager.current.initialize({
+      gatherUsageStats: config.gatherUsageStats,
+    })
+
+    MetricsManager.current.enqueue("createReport", {
+      pythonVersion: SessionInfo.current.pythonVersion,
+    })
+
+    this.setState({
+      sharingEnabled: config.sharingEnabled,
+      allowRunOnSave: config.allowRunOnSave,
+    })
+
+    this.props.s4aCommunication.connect()
+    this.handleSessionStateChanged(initialize.sessionState)
   }
 
   /**
@@ -979,7 +958,7 @@ export class App extends PureComponent<Props, State> {
             uploadClient={this.uploadClient}
             componentRegistry={this.componentRegistry}
           />
-          <ThemeProvider theme={mainWidgetTheme}>{dialog}</ThemeProvider>
+          {dialog}
         </div>
       </HotKeys>
     )

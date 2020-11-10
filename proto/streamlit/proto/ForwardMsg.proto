@@ -16,9 +16,7 @@
 
 syntax = "proto3";
 
-import "streamlit/proto/BlockPath.proto";
 import "streamlit/proto/Delta.proto";
-import "streamlit/proto/Initialize.proto";
 import "streamlit/proto/NewReport.proto";
 import "streamlit/proto/PageConfig.proto";
 import "streamlit/proto/PageInfo.proto";
@@ -46,7 +44,6 @@ message ForwardMsg {
   oneof type {
     // Report lifecycle messages.
 
-    Initialize initialize = 3;
     NewReport new_report = 4;
     Delta delta = 5;
     PageInfo page_info_changed = 12;
@@ -81,18 +78,21 @@ message ForwardMsg {
   // Next: 14
 }
 
+// ForwardMsgMetadata contains all data that does _not_ get hashed (or cached)
+// in our ForwardMsgCache. (That is, when we cache a ForwardMsg, we clear its
+// metadata field first.) This allows us to, e.g., have a large unchanging
+// dataframe appear in different places across multiple reruns - or even appear
+// multiple times in a single run - and only send its dataframe bytes once.
 message ForwardMsgMetadata {
   // If this is set, the server will have cached this message,
   // and a client that receives it should do the same.
   bool cacheable = 1;
 
-  // Each delta applies to a particular ID. Only set for Delta messages.
-  uint32 delta_id = 2;
+  // The path that identifies a delta's location in the report tree.
+  // Only set for Delta messages.
+  repeated uint32 delta_path = 2;
 
-  // Path to parent block. Only set for Delta messages.
-  BlockPath parent_block = 3;
-
-  ElementDimensionSpec element_dimension_spec = 4;
+  ElementDimensionSpec element_dimension_spec = 3;
 }
 
 // Specifies the dimensions for the element

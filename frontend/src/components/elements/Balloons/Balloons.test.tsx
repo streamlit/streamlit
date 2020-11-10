@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { mount } from "enzyme"
+import { mount } from "lib/test_util"
 
 import Balloons, { Props, NUM_BALLOONS } from "./Balloons"
 
@@ -37,12 +37,17 @@ describe("Balloons element", () => {
     const wrapper = mount(<Balloons {...props} />)
 
     expect(wrapper).toBeDefined()
-    expect(wrapper.find(".balloons img").length).toBe(NUM_BALLOONS)
+    expect(wrapper.find("StyledBalloon").length).toBe(NUM_BALLOONS)
 
-    wrapper.find(".balloons img").forEach(node => {
+    wrapper.find("StyledBalloon").forEach(node => {
       expect(node.prop("src")).toBeTruthy()
-      expect(node.prop("style")).toHaveProperty("left")
-      expect(node.prop("style")).toHaveProperty("animationDelay")
     })
+  })
+
+  it("renders as hidden element", () => {
+    const props = getProps()
+    const wrapper = mount(<Balloons {...props} />)
+
+    expect(wrapper.find("div").prop("className")).toContain("stHidden")
   })
 })

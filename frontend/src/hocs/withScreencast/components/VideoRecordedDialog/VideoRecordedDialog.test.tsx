@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 
 import VideoRecordedDialog, { Props } from "./VideoRecordedDialog"
 
@@ -47,7 +47,7 @@ describe("VideoRecordedDialog", () => {
     const wrapper = shallow(<VideoRecordedDialog {...getProps()} />)
     const bodyWrapper = wrapper.find("ModalBody")
 
-    expect(bodyWrapper.find("video").length).toBe(1)
+    expect(bodyWrapper.find("StyledVideo").length).toBe(1)
     expect(URL.createObjectURL).toBeCalled()
   })
 

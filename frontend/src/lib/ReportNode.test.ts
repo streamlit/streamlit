@@ -17,7 +17,6 @@
 
 import {
   Block as BlockProto,
-  BlockPath,
   Delta as DeltaProto,
   Element,
   ForwardMsgMetadata,
@@ -39,7 +38,7 @@ const BLOCK = block([
   ]),
 ])
 
-const ROOT = new ReportRoot(BLOCK, BlockNode.empty())
+const ROOT = new ReportRoot(new BlockNode([BLOCK, new BlockNode()]))
 
 describe("ReportNode.getIn", () => {
   it("handles shallow paths", () => {
@@ -128,7 +127,7 @@ describe("ReportRoot.applyDelta", () => {
     const newRoot = ROOT.applyDelta(
       "new_report_id",
       delta,
-      forwardMsgMetadata(BlockPath.Container.MAIN, [1, 1])
+      forwardMsgMetadata([0, 1, 1])
     )
 
     const newNode = newRoot.main.getIn([1, 1]) as ElementNode
@@ -148,7 +147,7 @@ describe("ReportRoot.applyDelta", () => {
     const newRoot = ROOT.applyDelta(
       "new_report_id",
       delta,
-      forwardMsgMetadata(BlockPath.Container.MAIN, [1, 1])
+      forwardMsgMetadata([0, 1, 1])
     )
 
     const newNode = newRoot.main.getIn([1, 1]) as BlockNode
@@ -171,14 +170,14 @@ describe("ReportRoot.applyDelta", () => {
       makeProto(DeltaProto, {
         newElement: { [elementType]: mockDataFrameData },
       }),
-      forwardMsgMetadata(BlockPath.Container.MAIN, [0])
+      forwardMsgMetadata([0, 0])
     )
 
     // Add rows
     const newRoot = root.applyDelta(
       "postAddRows",
       makeProto(DeltaProto, { addRows: { data: mockDataFrameData } }),
-      forwardMsgMetadata(BlockPath.Container.MAIN, [0])
+      forwardMsgMetadata([0, 0])
     )
 
     // Our new element should look like the result of calling `addRows`
@@ -209,7 +208,7 @@ describe("ReportRoot.clearStaleNodes", () => {
     const newRoot = ROOT.applyDelta(
       "new_report_id",
       delta,
-      forwardMsgMetadata(BlockPath.Container.MAIN, [1, 1])
+      forwardMsgMetadata([0, 1, 1])
     ).clearStaleNodes("new_report_id")
 
     // We should now only have a single element, inside a single block
@@ -224,12 +223,12 @@ describe("ReportRoot.clearStaleNodes", () => {
       .applyDelta(
         "new_report_id",
         makeProto(DeltaProto, { addBlock: { allowEmpty: true } }),
-        forwardMsgMetadata(BlockPath.Container.MAIN, [0])
+        forwardMsgMetadata([0, 0])
       )
       .applyDelta(
         "new_report_id",
         makeProto(DeltaProto, { addBlock: { allowEmpty: false } }),
-        forwardMsgMetadata(BlockPath.Container.MAIN, [1])
+        forwardMsgMetadata([0, 1])
       )
 
     expect(newRoot.main.getIn([0])).toBeInstanceOf(BlockNode)
@@ -269,14 +268,9 @@ function block(
 }
 
 /** Create a ForwardMsgMetadata with the given container and path */
-function forwardMsgMetadata(
-  container: BlockPath.Container,
-  path: number[]
-): ForwardMsgMetadata {
-  return makeProto(ForwardMsgMetadata, {
-    deltaId: path[path.length - 1],
-    parentBlock: { container, path: path.slice(1) },
-  })
+function forwardMsgMetadata(deltaPath: number[]): ForwardMsgMetadata {
+  expect(deltaPath.length).toBeGreaterThanOrEqual(2)
+  return makeProto(ForwardMsgMetadata, { deltaPath })
 }
 
 /**

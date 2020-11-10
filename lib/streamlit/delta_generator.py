@@ -19,13 +19,12 @@ from streamlit import caching
 from streamlit import cursor
 from streamlit import type_util
 from streamlit.cursor import Cursor
-from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.report_thread import get_report_ctx
 from streamlit.errors import StreamlitAPIException
 from streamlit.errors import NoSessionContext
 from streamlit.proto import Block_pb2
-from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
+from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.logger import get_logger
 
 from streamlit.elements.utils import NoValue
@@ -116,7 +115,7 @@ class DeltaGenerator(
 
     Parameters
     ----------
-    container: BlockPath_pb2.BlockPath.ContainerValue or None
+    root_container: BlockPath_pb2.BlockPath.ContainerValue or None
       The root container for this DeltaGenerator. If None, this is a null
       DeltaGenerator which doesn't print to the app at all (useful for
       testing).
@@ -145,7 +144,7 @@ class DeltaGenerator(
     # those, see above.
     def __init__(
         self,
-        container: Optional["BlockPath.ContainerValue"] = BlockPath.MAIN,
+        root_container: Optional[int] = RootContainer.MAIN,
         cursor: Optional[Cursor] = None,
         parent: Optional["DeltaGenerator"] = None,
         block_type: Optional[str] = None,
@@ -164,9 +163,20 @@ class DeltaGenerator(
         an element `foo` inside the sidebar.
 
         """
+        # Sanity check our Container + Cursor, to ensure that our Cursor
+        # is using the same Container that we are.
+        if (
+            root_container is not None
+            and cursor is not None
+            and root_container != cursor.root_container
+        ):
+            raise RuntimeError(
+                "DeltaGenerator root_container and cursor.root_container must be the same"
+            )
+
         # Whether this DeltaGenerator is nested in the main area or sidebar.
         # No relation to `st.beta_container()`.
-        self._container = container
+        self._root_container = root_container
 
         # NOTE: You should never use this directly! Instead, use self._cursor,
         # which is a computed property that fetches the right cursor.
@@ -232,7 +242,7 @@ class DeltaGenerator(
 
         def wrapper(*args, **kwargs):
             if name in streamlit_methods:
-                if self._container == BlockPath_pb2.BlockPath.SIDEBAR:
+                if self._root_container == RootContainer.SIDEBAR:
                     message = (
                         "Method `%(name)s()` does not exist for "
                         "`st.sidebar`. Did you mean `st.%(name)s()`?" % {"name": name}
@@ -270,7 +280,7 @@ class DeltaGenerator(
         Streamlit.
         """
         if self._provided_cursor is None:
-            return cursor.get_container_cursor(self._container)
+            return cursor.get_container_cursor(self._root_container)
         else:
             return self._provided_cursor
 
@@ -278,10 +288,10 @@ class DeltaGenerator(
     def _is_top_level(self) -> bool:
         return self._provided_cursor is None
 
-    def _get_coordinates(self) -> str:
-        """Returns the element's 4-component location as string like "M.(1,2).3".
+    def _get_delta_path_str(self) -> str:
+        """Returns the element's delta path as a string like "[0, 2, 3, 1]".
 
-        This function uniquely identifies the element's position in the front-end,
+        This uniquely identifies the element's position in the front-end,
         which allows (among other potential uses) the MediaFileManager to maintain
         session-specific maps of MediaFile objects placed with their "coordinates".
 
@@ -290,17 +300,7 @@ class DeltaGenerator(
         """
         # Switch to the active DeltaGenerator, in case we're in a `with` block.
         self = self._active_dg
-        container = self._container  # Proto index of container (e.g. MAIN=1)
-
-        if self._cursor:
-            path_str = str(self._cursor.path)
-            index_str = str(self._cursor.index)  # index - element's own position
-        else:
-            # Case in which we have started up in headless mode.
-            path_str = "(,)"
-            index_str = ""
-
-        return f"{container}.{path_str}.{index_str}"
+        return str(self._cursor.delta_path) if self._cursor is not None else "[]"
 
     def _enqueue(
         self,
@@ -353,10 +353,8 @@ class DeltaGenerator(
 
         # Only enqueue message and fill in metadata if there's a container.
         msg_was_enqueued = False
-        if self._container and self._cursor:
-            msg.metadata.parent_block.container = self._container
-            msg.metadata.parent_block.path[:] = self._cursor.path
-            msg.metadata.delta_id = self._cursor.index
+        if self._root_container is not None and self._cursor is not None:
+            msg.metadata.delta_path[:] = self._cursor.delta_path
 
             if element_width is not None:
                 msg.metadata.element_dimension_spec.width = element_width
@@ -378,7 +376,7 @@ class DeltaGenerator(
             )
 
             output_dg = DeltaGenerator(
-                container=self._container,
+                root_container=self._root_container,
                 cursor=new_cursor,
                 parent=self,
             )
@@ -551,23 +549,22 @@ class DeltaGenerator(
                 "Expanders may not be nested inside other expanders."
             )
 
-        if self._container is None or self._cursor is None:
+        if self._root_container is None or self._cursor is None:
             return self
 
         msg = ForwardMsg_pb2.ForwardMsg()
-        msg.metadata.parent_block.container = self._container
-        msg.metadata.parent_block.path[:] = self._cursor.path
-        msg.metadata.delta_id = self._cursor.index
+        msg.metadata.delta_path[:] = self._cursor.delta_path
         msg.delta.add_block.CopyFrom(block_proto)
 
         # Normally we'd return a new DeltaGenerator that uses the locked cursor
         # below. But in this case we want to return a DeltaGenerator that uses
         # a brand new cursor for this new block we're creating.
         block_cursor = cursor.RunningCursor(
-            path=self._cursor.path + (self._cursor.index,)
+            root_container=self._root_container,
+            parent_path=self._cursor.parent_path + (self._cursor.index,),
         )
         block_dg = DeltaGenerator(
-            container=self._container,
+            root_container=self._root_container,
             cursor=block_cursor,
             parent=self,
             block_type=block_type,
@@ -610,7 +607,7 @@ class DeltaGenerator(
         ...         The chart above shows some numbers I picked for you.
         ...         I rolled actual dice for these, so they're *guaranteed* to
         ...         be random.
-        ...     \"\"\").
+        ...     \"\"\")
         ...     st.image("https://static.streamlit.io/examples/dice.jpg")
 
         .. output ::
@@ -683,7 +680,7 @@ class DeltaGenerator(
         >>> my_chart.add_rows(some_fancy_name=df2)  # <-- name used as keyword
 
         """
-        if self._container is None or self._cursor is None:
+        if self._root_container is None or self._cursor is None:
             return self
 
         if not self._cursor.is_locked:
@@ -721,9 +718,7 @@ class DeltaGenerator(
         )
 
         msg = ForwardMsg_pb2.ForwardMsg()
-        msg.metadata.parent_block.container = self._container
-        msg.metadata.parent_block.path[:] = self._cursor.path
-        msg.metadata.delta_id = self._cursor.index
+        msg.metadata.delta_path[:] = self._cursor.delta_path
 
         import streamlit.elements.data_frame_proto as data_frame_proto
 

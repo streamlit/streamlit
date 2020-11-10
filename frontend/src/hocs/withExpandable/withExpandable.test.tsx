@@ -16,7 +16,7 @@
  */
 
 import React, { ComponentType } from "react"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 import { StatelessAccordion } from "baseui/accordion"
 import withExpandable, { Props } from "./withExpandable"
 
@@ -36,8 +36,7 @@ describe("withExpandable HOC", () => {
     const WithHoc = withExpandable(testComponent)
     // @ts-ignore
     const wrapper = shallow(<WithHoc {...props} />)
-
-    expect(wrapper.html()).not.toBeNull()
+    expect(wrapper.find(StatelessAccordion).exists()).toBe(true)
   })
 
   it("should render a expanded component", () => {

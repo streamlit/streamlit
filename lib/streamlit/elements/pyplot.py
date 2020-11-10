@@ -89,7 +89,7 @@ class PyplotMixin:
             dg.exception(PyplotGlobalUseWarning())  # type: ignore
 
         image_list_proto = ImageListProto()
-        marshall(dg._get_coordinates(), image_list_proto, fig, clear_figure, **kwargs)  # type: ignore
+        marshall(dg._get_delta_path_str(), image_list_proto, fig, clear_figure, **kwargs)  # type: ignore
         return dg._enqueue("imgs", image_list_proto)  # type: ignore
 
 

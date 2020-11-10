@@ -34,9 +34,9 @@ import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import withMapboxToken from "hocs/withMapboxToken"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "autogen/proto"
+import { StyledDeckGlChart } from "./styled-components"
 
 import "mapbox-gl/dist/mapbox-gl.css"
-import "./DeckGlJsonChart.scss"
 
 interface PickingInfo {
   object: {
@@ -198,12 +198,10 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     const { viewState } = this.state
 
     return (
-      <div
+      <StyledDeckGlChart
         className="stDeckGlJsonChart"
-        style={{
-          height: deck.initialViewState.height,
-          width: deck.initialViewState.width,
-        }}
+        width={deck.initialViewState.width}
+        height={deck.initialViewState.height}
       >
         <DeckGL
           viewState={viewState}
@@ -226,7 +224,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
             mapboxApiAccessToken={this.props.mapboxToken}
           />
         </DeckGL>
-      </div>
+      </StyledDeckGlChart>
     )
   }
 }

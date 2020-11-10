@@ -15,9 +15,8 @@
  * limitations under the License.
  */
 
-import {
+import Protobuf, {
   Block as BlockProto,
-  BlockPath,
   Delta,
   Element,
   ForwardMsgMetadata,
@@ -194,21 +193,14 @@ export class BlockNode implements ReportNode {
 
   public readonly reportId: string
 
-  /**
-   * Create an empty BlockNode.
-   */
-  public static empty(): BlockNode {
-    return new BlockNode([], BlockProto.create({}), NO_REPORT_ID)
-  }
-
   public constructor(
-    children: ReportNode[],
-    deltaBlock: BlockProto,
-    reportId: string
+    children?: ReportNode[],
+    deltaBlock?: BlockProto,
+    reportId?: string
   ) {
-    this.children = children
-    this.deltaBlock = deltaBlock
-    this.reportId = reportId
+    this.children = children ?? []
+    this.deltaBlock = deltaBlock ?? new BlockProto({})
+    this.reportId = reportId ?? NO_REPORT_ID
   }
 
   /** True if this Block has no children. */
@@ -294,15 +286,10 @@ export class BlockNode implements ReportNode {
 }
 
 /**
- * The top-level node container. It contains pointers to the app's two
- * top-level BlockNodes.
- *
- * TODO: it would be really nice if this was just another BlockNode!
+ * The root of our data tree. It contains the app's top-level BlockNodes.
  */
 export class ReportRoot {
-  public readonly main: BlockNode
-
-  public readonly sidebar: BlockNode
+  private readonly root: BlockNode
 
   /**
    * Create an empty ReportRoot with an optional placeholder element.
@@ -320,19 +307,41 @@ export class ReportRoot {
       mainNodes = []
     }
 
-    return new ReportRoot(
-      new BlockNode(
-        mainNodes,
-        BlockProto.create({ allowEmpty: true }),
-        NO_REPORT_ID
-      ),
-      BlockNode.empty()
+    const main = new BlockNode(
+      mainNodes,
+      new BlockProto({ allowEmpty: true }),
+      NO_REPORT_ID
     )
+
+    const sidebar = new BlockNode(
+      [],
+      new BlockProto({ allowEmpty: true }),
+      NO_REPORT_ID
+    )
+
+    return new ReportRoot(new BlockNode([main, sidebar]))
   }
 
-  public constructor(main: BlockNode, sidebar: BlockNode) {
-    this.main = main
-    this.sidebar = sidebar
+  public constructor(root: BlockNode) {
+    this.root = root
+
+    // Verify that our root node has exactly 2 children: a 'main' block and
+    // a 'sidebar' block.
+    if (
+      this.root.children.length !== 2 ||
+      this.main == null ||
+      this.sidebar == null
+    ) {
+      throw new Error(`Invalid root node children! ${root}`)
+    }
+  }
+
+  public get main(): BlockNode {
+    return this.root.children[Protobuf.RootContainer.MAIN] as BlockNode
+  }
+
+  public get sidebar(): BlockNode {
+    return this.root.children[Protobuf.RootContainer.SIDEBAR] as BlockNode
   }
 
   public applyDelta(
@@ -340,17 +349,14 @@ export class ReportRoot {
     delta: Delta,
     metadata: ForwardMsgMetadata
   ): ReportRoot {
-    const parentBlock = metadata.parentBlock as BlockPath
-    const parentBlockPath = parentBlock.path
-    const containerId = parentBlock.container
-    const { deltaId } = metadata
-
-    // Update Metrics
-    MetricsManager.current.incrementDeltaCounter(getContainerName(containerId))
-
     // The full path to the ReportNode within the element tree.
     // Used to find and update the element node specified by this Delta.
-    const deltaPath: number[] = [...parentBlockPath, deltaId]
+    const { deltaPath } = metadata
+
+    // Update Metrics
+    MetricsManager.current.incrementDeltaCounter(
+      getRootContainerName(deltaPath)
+    )
 
     switch (delta.type) {
       case "newElement": {
@@ -369,33 +375,17 @@ export class ReportRoot {
           }
         }
 
-        return this.addElement(
-          containerId,
-          deltaPath,
-          reportId,
-          element,
-          metadata
-        )
+        return this.addElement(deltaPath, reportId, element, metadata)
       }
 
       case "addBlock": {
         MetricsManager.current.incrementDeltaCounter("new block")
-        return this.addBlock(
-          containerId,
-          deltaPath,
-          delta.addBlock as BlockProto,
-          reportId
-        )
+        return this.addBlock(deltaPath, delta.addBlock as BlockProto, reportId)
       }
 
       case "addRows": {
         MetricsManager.current.incrementDeltaCounter("add rows")
-        return this.addRows(
-          containerId,
-          deltaPath,
-          delta.addRows as NamedDataSet,
-          reportId
-        )
+        return this.addRows(deltaPath, delta.addRows as NamedDataSet, reportId)
       }
 
       default:
@@ -404,12 +394,17 @@ export class ReportRoot {
   }
 
   public clearStaleNodes(currentReportId: string): ReportRoot {
-    const main =
-      this.main.clearStaleNodes(currentReportId) || BlockNode.empty()
+    const main = this.main.clearStaleNodes(currentReportId) || new BlockNode()
     const sidebar =
-      this.sidebar.clearStaleNodes(currentReportId) || BlockNode.empty()
+      this.sidebar.clearStaleNodes(currentReportId) || new BlockNode()
 
-    return new ReportRoot(main, sidebar)
+    return new ReportRoot(
+      new BlockNode(
+        [main, sidebar],
+        new BlockProto({ allowEmpty: true }),
+        currentReportId
+      )
+    )
   }
 
   /** Return a Set containing all Elements in the tree. */
@@ -421,29 +416,21 @@ export class ReportRoot {
   }
 
   private addElement(
-    containerId: number,
     deltaPath: number[],
     reportId: string,
     element: Element,
     metadata: ForwardMsgMetadata
   ): ReportRoot {
-    const newNode = new ElementNode(element, metadata, reportId)
-    const newContainer = this.getContainer(containerId).setIn(
-      deltaPath,
-      newNode,
-      reportId
-    )
-    return this.setContainer(containerId, newContainer)
+    const elementNode = new ElementNode(element, metadata, reportId)
+    return new ReportRoot(this.root.setIn(deltaPath, elementNode, reportId))
   }
 
   private addBlock(
-    containerId: number,
     deltaPath: number[],
     block: BlockProto,
     reportId: string
   ): ReportRoot {
-    const existingContainer = this.getContainer(containerId)
-    const existingNode = existingContainer.getIn(deltaPath)
+    const existingNode = this.root.getIn(deltaPath)
 
     // If we're replacing an existing Block, this new Block inherits
     // the existing Block's children. This prevents existing widgets from
@@ -451,61 +438,36 @@ export class ReportRoot {
     const children: ReportNode[] =
       existingNode instanceof BlockNode ? existingNode.children : []
 
-    const newNode = new BlockNode(children, block, reportId)
-    const newContainer = existingContainer.setIn(deltaPath, newNode, reportId)
-    return this.setContainer(containerId, newContainer)
+    const blockNode = new BlockNode(children, block, reportId)
+    return new ReportRoot(this.root.setIn(deltaPath, blockNode, reportId))
   }
 
   private addRows(
-    containerId: number,
     deltaPath: number[],
     namedDataSet: NamedDataSet,
     reportId: string
   ): ReportRoot {
-    const existingContainer = this.getContainer(containerId)
-    const existingNode = existingContainer.getIn(deltaPath) as ElementNode
+    const existingNode = this.root.getIn(deltaPath) as ElementNode
     if (existingNode == null) {
       throw new Error(`Can't addRows: invalid deltaPath: ${deltaPath}`)
     }
 
-    const newNode = existingNode.addRows(namedDataSet, reportId)
-    const newContainer = existingContainer.setIn(deltaPath, newNode, reportId)
-    return this.setContainer(containerId, newContainer)
-  }
-
-  private setContainer(
-    id: BlockPath.Container,
-    container: BlockNode
-  ): ReportRoot {
-    switch (id) {
-      case BlockPath.Container.MAIN:
-        return new ReportRoot(container, this.sidebar)
-      case BlockPath.Container.SIDEBAR:
-        return new ReportRoot(this.main, container)
-      default:
-        throw new Error(`Unrecognized BlockPathContainer ID: ${id}`)
-    }
-  }
-
-  private getContainer(id: BlockPath.Container): BlockNode {
-    switch (id) {
-      case BlockPath.Container.MAIN:
-        return this.main
-      case BlockPath.Container.SIDEBAR:
-        return this.sidebar
-      default:
-        throw new Error(`Unrecognized BlockPathContainer ID: ${id}`)
-    }
+    const elementNode = existingNode.addRows(namedDataSet, reportId)
+    return new ReportRoot(this.root.setIn(deltaPath, elementNode, reportId))
   }
 }
 
-function getContainerName(id: BlockPath.Container): string {
-  switch (id) {
-    case BlockPath.Container.MAIN:
-      return "main"
-    case BlockPath.Container.SIDEBAR:
-      return "sidebar"
-    default:
-      throw new Error(`Unrecognized BlockPathContainer ID: ${id}`)
+function getRootContainerName(deltaPath: number[]): string {
+  if (deltaPath.length > 0) {
+    switch (deltaPath[0]) {
+      case Protobuf.RootContainer.MAIN:
+        return "main"
+      case Protobuf.RootContainer.SIDEBAR:
+        return "sidebar"
+      default:
+        break
+    }
   }
+
+  throw new Error(`Unrecognized RootContainer in deltaPath: ${deltaPath}`)
 }
