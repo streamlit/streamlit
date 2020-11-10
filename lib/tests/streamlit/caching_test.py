@@ -362,22 +362,45 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
         id_bar = id(bar())
         self.assertNotEqual(id_foo, id_bar)
 
-    def test_function_cache_does_not_use_hashfuncs(self):
+    def test_function_body_uses_hashfuncs(self):
+        hash_func = Mock(return_value=None)
+
+        # This is an external object that's referenced by our
+        # function. It cannot be hashed (without a custom hashfunc).
+        dict_gen = {1: (x for x in range(1))}
+
+        @st.cache(hash_funcs={"builtins.generator": hash_func})
+        def foo(arg):
+            # Reference the generator object. It will be hashed when we
+            # hash the function body to generate foo's cache_key.
+            print(dict_gen)
+            return []
+
+        foo(1)
+        foo(2)
+        hash_func.assert_called_once()
+
+    def test_function_name_does_not_use_hashfuncs(self):
         """Hash funcs should only be used on arguments to a function,
         and not when computing the key for a function's unique MemCache.
         """
 
-        mock_hash_func = Mock(return_value=None)
+        # This is an external object that's referenced by our
+        # function. It cannot be hashed (without a custom hashfunc).
+        dict_gen = {1: (x for x in range(1))}
 
-        @st.cache(hash_funcs={str: mock_hash_func})
+        str_hash_func = Mock(return_value=None)
+
+        @st.cache(hash_funcs={str: str_hash_func, "builtins.generator": lambda x: None})
         def foo(string_arg):
+            reference_external_object = dict_gen
             return []
 
-        # If our hash_func is called multiple times, it's probably because
+        # If our str hash_func is called multiple times, it's probably because
         # it's being used to compute the function's cache_key (as opposed to
         # the value_key). It should only be used to compute the value_key!
         foo("ahoy")
-        mock_hash_func.assert_called_once_with("ahoy")
+        str_hash_func.assert_called_once_with("ahoy")
 
 
 # Temporarily turn off these tests since there's no Cache object in __init__
