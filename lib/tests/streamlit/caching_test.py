@@ -385,15 +385,10 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
         and not when computing the key for a function's unique MemCache.
         """
 
-        # This is an external object that's referenced by our
-        # function. It cannot be hashed (without a custom hashfunc).
-        dict_gen = {1: (x for x in range(1))}
-
         str_hash_func = Mock(return_value=None)
 
-        @st.cache(hash_funcs={str: str_hash_func, "builtins.generator": lambda x: None})
+        @st.cache(hash_funcs={str: str_hash_func})
         def foo(string_arg):
-            reference_external_object = dict_gen
             return []
 
         # If our str hash_func is called multiple times, it's probably because
