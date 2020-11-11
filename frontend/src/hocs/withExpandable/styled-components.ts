@@ -14,7 +14,7 @@ export const StyledExpandableContainer = styled.div(({ theme }) => ({
       paddingTop: theme.spacing.lg,
 
       "&:before": {
-        content: "empty",
+        content: '"empty"',
       },
     },
   },
