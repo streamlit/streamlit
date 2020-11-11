@@ -16,7 +16,6 @@
  */
 
 import React, { ReactElement, memo, forwardRef, MouseEvent } from "react"
-import classNames from "classnames"
 import { StatefulPopover, PLACEMENT } from "baseui/popover"
 import { StatefulMenu } from "baseui/menu"
 import Button, { Kind } from "components/shared/Button"
@@ -27,8 +26,14 @@ import {
   IGuestToHostMessage,
 } from "hocs/withS4ACommunication/types"
 
-import "./MainMenu.scss"
 import { IDeployParams } from "autogen/proto"
+import {
+  StyledMenuItem,
+  StyledMenuDivider,
+  StyledMenuItemLabel,
+  StyledMenuItemShortcut,
+  StyledRecordingIndicator,
+} from "./styled-components"
 
 const DEPLOY_URL = "https://share.streamlit.io/deploy"
 const STREAMLIT_SHARE_URL = "https://streamlit.io/sharing"
@@ -140,12 +145,11 @@ const MenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
     ref
   ) => {
     const { label, shortcut, hasDividerAbove } = item
-    const className = classNames({
-      "menu-item": true,
-      "menu-item-highlighted": $isHighlighted,
-      "menu-item-disabled": $disabled,
-      "menu-item-stop-recording": Boolean(item.stopRecordingIndicator),
-    })
+    const menuItemProps = {
+      isDisabled: $disabled,
+      isHighlighted: $isHighlighted,
+      isRecording: Boolean(item.stopRecordingIndicator),
+    }
     const interactiveProps = $disabled
       ? {}
       : {
@@ -155,18 +159,22 @@ const MenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
 
     return (
       <>
-        {hasDividerAbove && <div className="menu-divider" />}
-        <li
+        {hasDividerAbove && <StyledMenuDivider />}
+        <StyledMenuItem
           ref={ref}
           role="option"
-          className={className}
           aria-selected={ariaSelected}
           aria-disabled={$disabled}
+          {...menuItemProps}
           {...interactiveProps}
         >
-          <span className="menu-item-label">{label}</span>
-          {shortcut && <span className="menu-item-shortcut">{shortcut}</span>}
-        </li>
+          <StyledMenuItemLabel {...menuItemProps}>{label}</StyledMenuItemLabel>
+          {shortcut && (
+            <StyledMenuItemShortcut {...menuItemProps}>
+              {shortcut}
+            </StyledMenuItemShortcut>
+          )}
+        </StyledMenuItem>
       </>
     )
   }
@@ -321,9 +329,7 @@ function MainMenu(props: Props): ReactElement {
         <Button kind={Kind.ICON}>
           <Icon type="menu" />
         </Button>
-        {props.screenCastState === "RECORDING" && (
-          <span className="recording-indicator" />
-        )}
+        {props.screenCastState === "RECORDING" && <StyledRecordingIndicator />}
       </span>
     </StatefulPopover>
   )
