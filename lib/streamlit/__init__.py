@@ -59,7 +59,7 @@ from typing import List
 
 # This used to be pkg_resources.require('streamlit') but it would cause
 # pex files to fail. See #394 for more details.
-__version__ = _pkg_resources.get_distribution("streamlit").version
+__version__ = _pkg_resources.get_distribution("streamlit-nightly").version
 
 import contextlib as _contextlib
 import re as _re
