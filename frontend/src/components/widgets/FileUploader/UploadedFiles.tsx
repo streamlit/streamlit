@@ -15,47 +15,41 @@
  * limitations under the License.
  */
 import React, { ReactElement } from "react"
-import { styled } from "styletron-react"
 
 import withPagination, { PaginationProps } from "hocs/withPagination"
 import { ExtendedFile } from "lib/FileHelper"
-import { fontStyles, spacing } from "lib/widgetTheme"
 import UploadedFile from "./UploadedFile"
+import {
+  StyledUploadedFiles,
+  StyledUploadedFilesList,
+  StyledUploadedFilesListItem,
+} from "./styled-components"
 
 export interface Props {
   items: ExtendedFile[]
   onDelete: (id: string) => void
 }
 
-const StyledUploadedFiles = styled("div", {
-  left: 0,
-  right: 0,
-  lineHeight: fontStyles.lineHeightTight,
-  paddingTop: spacing.md,
-  paddingLeft: spacing.lg,
-  paddingRight: spacing.lg,
-})
-
 const UploadedFileList = ({ items, onDelete }: Props): ReactElement => {
   return (
-    <ul>
+    <StyledUploadedFilesList>
       {items.map(file => (
-        <li key={file.id}>
+        <StyledUploadedFilesListItem key={file.id}>
           <UploadedFile
             file={file}
             progress={file.progress}
             onDelete={onDelete}
           />
-        </li>
+        </StyledUploadedFilesListItem>
       ))}
-    </ul>
+    </StyledUploadedFilesList>
   )
 }
 
 export const PaginatedFiles = withPagination(UploadedFileList)
 
 const UploadedFiles = (props: Props & PaginationProps): ReactElement => (
-  <StyledUploadedFiles className="uploadedFiles">
+  <StyledUploadedFiles>
     <PaginatedFiles {...props} />
   </StyledUploadedFiles>
 )

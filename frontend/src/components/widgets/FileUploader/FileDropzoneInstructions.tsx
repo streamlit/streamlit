@@ -17,12 +17,16 @@
 
 import React from "react"
 import { MaterialIcon } from "components/shared/Icon"
-import { styled } from "styletron-react"
-
 import { FileSizes, getSizeDisplay } from "lib/FileHelper"
-import { colors, Sizes, spacing } from "lib/widgetTheme"
-
 import { Small } from "components/shared/TextElements"
+import { Sizes } from "lib/widgetTheme"
+
+import {
+  StyledFileDropzoneInstructions,
+  StyledFileDropzoneInstructionsFileUploaderIcon,
+  StyledFileDropzoneInstructionsStyledSpan,
+  StyledFileDropzoneInstructionsColumn,
+} from "./styled-components"
 
 export interface Props {
   multiple: boolean
@@ -30,40 +34,24 @@ export interface Props {
   maxSizeBytes: number
 }
 
-const StyledInstructions = styled("div", {
-  marginRight: "auto",
-  alignItems: "center",
-  display: "flex",
-})
-
-const FileUploaderIcon = styled(MaterialIcon, {
-  color: colors.secondary,
-  marginRight: spacing.lg,
-})
-
-const StyledSpan = styled("span", {
-  marginBottom: spacing.xxs,
-})
-
-const FlexColumn = styled("div", {
-  display: "flex",
-  flexDirection: "column",
-})
-
 const FileDropzoneInstructions = ({
   multiple,
   acceptedExtensions,
   maxSizeBytes,
 }: Props): React.ReactElement => (
-  <StyledInstructions>
-    <FileUploaderIcon
-      icon="cloud_upload"
-      type="outlined"
-      size={Sizes.LARGE}
-      className="fileUploaderIcon"
-    />
-    <FlexColumn>
-      <StyledSpan>Drag and drop file{multiple ? "s" : ""} here</StyledSpan>
+  <StyledFileDropzoneInstructions>
+    <StyledFileDropzoneInstructionsFileUploaderIcon>
+      <MaterialIcon
+        icon="cloud_upload"
+        type="outlined"
+        size={Sizes.LARGE}
+        className="fileUploaderIcon"
+      />
+    </StyledFileDropzoneInstructionsFileUploaderIcon>
+    <StyledFileDropzoneInstructionsColumn>
+      <StyledFileDropzoneInstructionsStyledSpan>
+        Drag and drop file{multiple ? "s" : ""} here
+      </StyledFileDropzoneInstructionsStyledSpan>
       <Small>
         {`Limit ${getSizeDisplay(maxSizeBytes, FileSizes.Byte, 0)} per file`}
         {acceptedExtensions.length
@@ -73,8 +61,8 @@ const FileDropzoneInstructions = ({
               .toUpperCase()}`
           : null}
       </Small>
-    </FlexColumn>
-  </StyledInstructions>
+    </StyledFileDropzoneInstructionsColumn>
+  </StyledFileDropzoneInstructions>
 )
 
 export default FileDropzoneInstructions

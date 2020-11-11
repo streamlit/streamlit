@@ -64,7 +64,7 @@ describe("st.file_uploader", () => {
     const fileName = "example.json";
 
     cy.fixture(fileName).then(fileContent => {
-      cy.get(".fileUploadDropzone")
+      cy.get("[data-testid='stFileUploadDropzone']")
         .first()
         .attachFile(
           { fileContent, fileName, mimeType: "application/json" },
@@ -80,7 +80,7 @@ describe("st.file_uploader", () => {
           }
         );
 
-      cy.get(".fileError span")
+      cy.get("[data-testid='stUploadedFileErrorMessage']")
         .first()
         .should("have.text", "application/json files are not allowed.");
 
@@ -104,7 +104,7 @@ describe("st.file_uploader", () => {
           { fileContent: file2, fileName: fileName2, mimeType: "text/plain" }
         ];
 
-        cy.get(".fileUploadDropzone")
+        cy.get("[data-testid='stFileUploadDropzone']")
           .eq(0)
           .attachFile(files[0], {
             force: true,
@@ -124,7 +124,7 @@ describe("st.file_uploader", () => {
           .first()
           .matchImageSnapshot("single_file_uploader-uploaded");
 
-        cy.get(".fileUploadDropzone")
+        cy.get("[data-testid='stFileUploadDropzone']")
           .eq(0)
           .attachFile(files[1], {
             force: true,
@@ -164,7 +164,7 @@ describe("st.file_uploader", () => {
           { fileContent: file2, fileName: fileName2, mimeType: "text/plain" }
         ];
 
-        cy.get(".fileUploadDropzone")
+        cy.get("[data-testid='stFileUploadDropzone']")
           .eq(1)
           .attachFile(files[0], {
             force: true,

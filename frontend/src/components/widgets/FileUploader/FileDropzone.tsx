@@ -17,12 +17,13 @@
 
 import React from "react"
 import Dropzone, { FileRejection } from "react-dropzone"
-import { styled } from "styletron-react"
-
 import Button, { Kind, Size } from "components/shared/Button"
 import { ExtendedFile } from "lib/FileHelper"
-import { colors, spacing, variables } from "lib/widgetTheme"
 
+import {
+  StyledFileDropzoneButtonContainer,
+  StyledFileDropzoneSection,
+} from "./styled-components"
 import FileDropzoneInstructions from "./FileDropzoneInstructions"
 
 export interface Props {
@@ -35,18 +36,6 @@ export interface Props {
   acceptedExtensions: string[]
   maxSizeBytes: number
 }
-
-const StyledDropzoneSection = styled("section", {
-  ":focus": {
-    outline: "none",
-    boxShadow: `0 0 0 1px ${colors.primary}`,
-  },
-  padding: spacing.lg,
-  backgroundColor: colors.grayLightest,
-  borderRadius: variables.borderRadius,
-  alignItems: "center",
-  display: "flex",
-})
 
 const FileDropzone = ({
   onDrop,
@@ -63,9 +52,10 @@ const FileDropzone = ({
     disabled={disabled}
   >
     {({ getRootProps, getInputProps }) => (
-      <StyledDropzoneSection
+      <StyledFileDropzoneSection
         {...getRootProps()}
-        className={`fileUploadDropzone ${disabled ? "disabled" : ""}`}
+        data-testid="stFileUploadDropzone"
+        isDisabled={disabled}
       >
         <input {...getInputProps()} />
         <FileDropzoneInstructions
@@ -73,10 +63,12 @@ const FileDropzone = ({
           acceptedExtensions={acceptedExtensions}
           maxSizeBytes={maxSizeBytes}
         />
-        <Button kind={Kind.PRIMARY} disabled={disabled} size={Size.SMALL}>
-          Browse files
-        </Button>
-      </StyledDropzoneSection>
+        <StyledFileDropzoneButtonContainer>
+          <Button kind={Kind.PRIMARY} disabled={disabled} size={Size.SMALL}>
+            Browse files
+          </Button>
+        </StyledFileDropzoneButtonContainer>
+      </StyledFileDropzoneSection>
     )}
   </Dropzone>
 )
