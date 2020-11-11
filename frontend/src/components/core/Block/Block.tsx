@@ -54,13 +54,15 @@ import { styled, StyletronComponent } from "styletron-react"
 import debounceRender from "react-debounce-render"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import { getElementWidgetID, makeElementWithInfoText } from "lib/utils"
+import { getElementWidgetID } from "lib/utils"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { variables as stylingVariables } from "lib/widgetTheme"
 import { BlockNode, ReportNode, ElementNode } from "lib/ReportNode"
 
 // Load (non-lazy) elements.
 import Alert from "components/elements/Alert/"
+import { getAlertKind } from "components/elements/Alert/Alert"
+import { Kind } from "components/shared/AlertContainer"
 import DocString from "components/elements/DocString/"
 import ErrorBoundary from "components/shared/ErrorBoundary/"
 import FullScreenWrapper from "components/shared/FullScreenWrapper/"
@@ -298,12 +300,7 @@ class Block extends PureComponent<Props> {
           <ErrorBoundary width={width}>
             <Suspense
               fallback={
-                <Alert
-                  element={
-                    makeElementWithInfoText("Loading...").alert as AlertProto
-                  }
-                  width={width}
-                />
+                <Alert body="Loading..." kind={Kind.INFO} width={width} />
               }
             >
               {element}
@@ -347,10 +344,16 @@ class Block extends PureComponent<Props> {
     }
 
     switch (node.element.type) {
-      case "alert":
+      case "alert": {
+        const alertProto = node.element.alert as AlertProto
         return (
-          <Alert width={width} element={node.element.alert as AlertProto} />
+          <Alert
+            width={width}
+            body={alertProto.body}
+            kind={getAlertKind(alertProto.format)}
+          />
         )
+      }
 
       case "audio":
         return (
