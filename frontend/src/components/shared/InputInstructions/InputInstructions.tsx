@@ -16,10 +16,9 @@
  */
 
 import React, { ReactElement } from "react"
-import classNames from "classnames"
 import { isFromMac } from "lib/utils"
-import { StyledMessage } from "./styled-components"
 import { StyledWidgetInstructions } from "components/widgets/BaseWidget"
+import { StyledMessage } from "./styled-components"
 
 export interface Props {
   dirty: boolean
@@ -36,7 +35,6 @@ const InputInstructions = ({
   className,
   type = "single",
 }: Props): ReactElement => {
-  const containerClassName = classNames("instructions", className)
   const messages: ReactElement[] = []
   const addMessage = (text: string, shouldBlink = false): void => {
     messages.push(
