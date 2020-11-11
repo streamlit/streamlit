@@ -13,15 +13,13 @@
 # limitations under the License.
 
 """st.caching unit tests."""
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 import threading
 import unittest
-import pytest
 import types
 
 from streamlit import caching
 from streamlit import hashing
-from streamlit.hashing import UserHashError
 from streamlit.elements import exception_proto
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 from tests import testutil
@@ -346,6 +344,58 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
         bar(0), bar(1), bar(2)
         self.assertEqual([0, 1, 2, 0, 1, 2], foo_vals)
         self.assertEqual([0, 1, 2, 0, 1, 2], bar_vals)
+
+    def test_unique_function_caches(self):
+        """Each function should have its own cache, even if it has an
+        identical body and arguments to another cached function.
+        """
+
+        @st.cache
+        def foo():
+            return []
+
+        @st.cache
+        def bar():
+            return []
+
+        id_foo = id(foo())
+        id_bar = id(bar())
+        self.assertNotEqual(id_foo, id_bar)
+
+    def test_function_body_uses_hashfuncs(self):
+        hash_func = Mock(return_value=None)
+
+        # This is an external object that's referenced by our
+        # function. It cannot be hashed (without a custom hashfunc).
+        dict_gen = {1: (x for x in range(1))}
+
+        @st.cache(hash_funcs={"builtins.generator": hash_func})
+        def foo(arg):
+            # Reference the generator object. It will be hashed when we
+            # hash the function body to generate foo's cache_key.
+            print(dict_gen)
+            return []
+
+        foo(1)
+        foo(2)
+        hash_func.assert_called_once()
+
+    def test_function_name_does_not_use_hashfuncs(self):
+        """Hash funcs should only be used on arguments to a function,
+        and not when computing the key for a function's unique MemCache.
+        """
+
+        str_hash_func = Mock(return_value=None)
+
+        @st.cache(hash_funcs={str: str_hash_func})
+        def foo(string_arg):
+            return []
+
+        # If our str hash_func is called multiple times, it's probably because
+        # it's being used to compute the function's cache_key (as opposed to
+        # the value_key). It should only be used to compute the value_key!
+        foo("ahoy")
+        str_hash_func.assert_called_once_with("ahoy")
 
 
 # Temporarily turn off these tests since there's no Cache object in __init__

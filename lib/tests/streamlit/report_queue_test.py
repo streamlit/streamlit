@@ -27,9 +27,9 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 # For the messages below, we don't really care about their contents so much as
 # their general type.
 
-INIT_MSG = ForwardMsg()
-INIT_MSG.initialize.config.sharing_enabled = True
-INIT_MSG.initialize.config.allow_run_on_save = True
+NEW_REPORT_MSG = ForwardMsg()
+NEW_REPORT_MSG.new_report.initialize.config.sharing_enabled = True
+NEW_REPORT_MSG.new_report.initialize.config.allow_run_on_save = True
 
 TEXT_DELTA_MSG1 = ForwardMsg()
 TEXT_DELTA_MSG1.delta.new_element.text.body = "text1"
@@ -57,20 +57,20 @@ class ReportQueueTest(unittest.TestCase):
         rq = ReportQueue()
         self.assertTrue(rq.is_empty())
 
-        rq.enqueue(INIT_MSG)
+        rq.enqueue(NEW_REPORT_MSG)
 
         self.assertFalse(rq.is_empty())
         queue = rq.flush()
         self.assertTrue(rq.is_empty())
         self.assertEqual(len(queue), 1)
-        self.assertTrue(queue[0].initialize.config.sharing_enabled)
-        self.assertTrue(queue[0].initialize.config.allow_run_on_save)
+        self.assertTrue(queue[0].new_report.initialize.config.sharing_enabled)
+        self.assertTrue(queue[0].new_report.initialize.config.allow_run_on_save)
 
     def test_enqueue_two(self):
         rq = ReportQueue()
         self.assertTrue(rq.is_empty())
 
-        rq.enqueue(INIT_MSG)
+        rq.enqueue(NEW_REPORT_MSG)
 
         TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(
             RootContainer.MAIN, (), 0
@@ -79,7 +79,7 @@ class ReportQueueTest(unittest.TestCase):
 
         queue = rq.flush()
         self.assertEqual(len(queue), 2)
-        self.assertTrue(queue[0].initialize.config.sharing_enabled)
+        self.assertTrue(queue[0].new_report.initialize.config.sharing_enabled)
         self.assertEqual(
             make_delta_path(RootContainer.MAIN, (), 0), queue[1].metadata.delta_path
         )
@@ -89,7 +89,7 @@ class ReportQueueTest(unittest.TestCase):
         rq = ReportQueue()
         self.assertTrue(rq.is_empty())
 
-        rq.enqueue(INIT_MSG)
+        rq.enqueue(NEW_REPORT_MSG)
 
         TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(
             RootContainer.MAIN, (), 0
@@ -103,7 +103,7 @@ class ReportQueueTest(unittest.TestCase):
 
         queue = rq.flush()
         self.assertEqual(len(queue), 3)
-        self.assertTrue(queue[0].initialize.config.sharing_enabled)
+        self.assertTrue(queue[0].new_report.initialize.config.sharing_enabled)
         self.assertEqual(
             make_delta_path(RootContainer.MAIN, (), 0), queue[1].metadata.delta_path
         )
@@ -117,7 +117,7 @@ class ReportQueueTest(unittest.TestCase):
         rq = ReportQueue()
         self.assertTrue(rq.is_empty())
 
-        rq.enqueue(INIT_MSG)
+        rq.enqueue(NEW_REPORT_MSG)
 
         TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(
             RootContainer.MAIN, (), 0
@@ -131,7 +131,7 @@ class ReportQueueTest(unittest.TestCase):
 
         queue = rq.flush()
         self.assertEqual(len(queue), 2)
-        self.assertTrue(queue[0].initialize.config.sharing_enabled)
+        self.assertTrue(queue[0].new_report.initialize.config.sharing_enabled)
         self.assertEqual(
             make_delta_path(RootContainer.MAIN, (), 0), queue[1].metadata.delta_path
         )
@@ -141,7 +141,7 @@ class ReportQueueTest(unittest.TestCase):
         rq = ReportQueue()
         self.assertTrue(rq.is_empty())
 
-        rq.enqueue(INIT_MSG)
+        rq.enqueue(NEW_REPORT_MSG)
 
         TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(
             RootContainer.MAIN, (), 0
@@ -156,7 +156,7 @@ class ReportQueueTest(unittest.TestCase):
 
         queue = rq.flush()
         self.assertEqual(len(queue), 3)
-        self.assertTrue(queue[0].initialize.config.sharing_enabled)
+        self.assertTrue(queue[0].new_report.initialize.config.sharing_enabled)
         self.assertEqual(
             make_delta_path(RootContainer.MAIN, (), 0), queue[1].metadata.delta_path
         )
@@ -173,7 +173,7 @@ class ReportQueueTest(unittest.TestCase):
         rq = ReportQueue()
         self.assertTrue(rq.is_empty())
 
-        rq.enqueue(INIT_MSG)
+        rq.enqueue(NEW_REPORT_MSG)
 
         # Simulate rerun
         for i in range(2):
@@ -194,7 +194,7 @@ class ReportQueueTest(unittest.TestCase):
 
         queue = rq.flush()
         self.assertEqual(len(queue), 3)
-        self.assertTrue(queue[0].initialize.config.sharing_enabled)
+        self.assertTrue(queue[0].new_report.initialize.config.sharing_enabled)
         self.assertEqual(
             make_delta_path(RootContainer.MAIN, (), 0), queue[1].metadata.delta_path
         )
@@ -212,7 +212,7 @@ class ReportQueueTest(unittest.TestCase):
         rq = ReportQueue()
         self.assertTrue(rq.is_empty())
 
-        rq.enqueue(INIT_MSG)
+        rq.enqueue(NEW_REPORT_MSG)
 
         def enqueue_deltas(container: RootContainer, path: Tuple[int, ...]):
             # We deep-copy the protos because we mutate each one
@@ -248,7 +248,7 @@ class ReportQueueTest(unittest.TestCase):
 
         queue = rq.flush()
         self.assertEqual(5, len(queue))
-        self.assertTrue(queue[0].initialize.config.sharing_enabled)
+        self.assertTrue(queue[0].new_report.initialize.config.sharing_enabled)
 
         assert_deltas(RootContainer.MAIN, (), 1)
         assert_deltas(RootContainer.SIDEBAR, (0, 0, 1), 3)
