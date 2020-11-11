@@ -30,7 +30,19 @@ describe("st.set_page_config", () => {
     cy.title().should("eq", "Heya, world? · Streamlit");
   });
 
+  it("collapses the sidebar", () => {
+    cy.get("[data-testid='stSidebar']").should(
+      "have.attr",
+      "aria-expanded",
+      "false"
+    );
+  });
+
   it("sets the page in wide mode", () => {
-    cy.get(".reportview-container").should("have.class", "--wide");
+    cy.get("[data-testid='stReportViewContainer']").should(
+      "have.attr",
+      "data-layout",
+      "wide"
+    );
   });
 });

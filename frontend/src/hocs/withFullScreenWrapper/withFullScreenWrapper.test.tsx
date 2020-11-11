@@ -44,7 +44,7 @@ describe("withFullScreenWrapper HOC", () => {
     // @ts-ignore
     const wrapper = shallow(<WithHoc {...props} />)
 
-    expect(wrapper.html()).not.toBeNull()
+    expect(wrapper.find("FullScreenWrapper").exists()).toBe(true)
   })
 
   it("should render a component wrapped with FullScreenWrapper", () => {
