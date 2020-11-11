@@ -21,6 +21,7 @@ import { Datepicker as UIDatePicker } from "baseui/datepicker"
 import { DateInput as DateInputProto } from "autogen/proto"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { datePickerOverrides } from "lib/widgetTheme"
+import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 
 export interface Props {
   disabled: boolean
@@ -100,8 +101,8 @@ class DateInput extends React.PureComponent<Props, State> {
     const maxDate = this.getMaxDate()
 
     return (
-      <div className="Widget stDateInput" style={style}>
-        <label>{element.label}</label>
+      <div className="stDateInput" style={style}>
+        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
         <UIDatePicker
           formatString="yyyy/MM/dd"
           disabled={disabled}

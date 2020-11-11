@@ -23,6 +23,7 @@ import { Slider as SliderProto } from "autogen/proto"
 import { sliderOverrides } from "lib/widgetTheme"
 import { debounce } from "lib/utils"
 import moment from "moment"
+import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 
 const DEBOUNCE_TIME_MS = 200
 
@@ -214,8 +215,8 @@ class Slider extends React.PureComponent<Props, State> {
     const style = { width: this.props.width }
 
     return (
-      <div ref={this.sliderRef} className="Widget stSlider" style={style}>
-        <label>{this.props.element.label}</label>
+      <div ref={this.sliderRef} className="stSlider" style={style}>
+        <StyledWidgetLabel>{this.props.element.label}</StyledWidgetLabel>
         <UISlider
           min={this.props.element.min}
           max={this.props.element.max}

@@ -18,6 +18,7 @@
 import React, { ReactElement } from "react"
 import { isFromMac } from "lib/utils"
 import classNames from "classnames"
+import { StyledWidgetInstructions } from "components/widgets/BaseWidget"
 
 import "./style.scss"
 
@@ -36,7 +37,6 @@ const InputInstructions = ({
   className,
   type = "single",
 }: Props): ReactElement => {
-  const containerClassName = classNames("instructions", className)
   const messages = []
 
   if (dirty) {
@@ -76,7 +76,11 @@ const InputInstructions = ({
     )
   }
 
-  return <div className={containerClassName}>{messages}</div>
+  return (
+    <StyledWidgetInstructions className={className}>
+      {messages}
+    </StyledWidgetInstructions>
+  )
 }
 
 export default InputInstructions

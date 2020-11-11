@@ -20,7 +20,8 @@ import {
   SpecialArg,
 } from "autogen/proto"
 import ErrorElement from "components/shared/ErrorElement"
-import { mount, ReactWrapper } from "enzyme"
+import { ReactWrapper } from "enzyme"
+import { mount } from "lib/test_util"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,

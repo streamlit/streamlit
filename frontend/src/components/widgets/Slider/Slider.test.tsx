@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { mount, shallow } from "enzyme"
+import { mount, shallow } from "lib/test_util"
 import { sliderOverrides } from "lib/widgetTheme"
 import { Slider as SliderProto } from "autogen/proto"
 import { Slider as UISlider } from "baseui/slider"
@@ -57,7 +57,7 @@ describe("Slider widget", () => {
     const props = getProps()
     const wrapper = shallow(<Slider {...props} />)
 
-    expect(wrapper.find("label").text()).toBe("Label")
+    expect(wrapper.find("StyledWidgetLabel").text()).toBe("Label")
   })
 
   it("should send the value to the backend when did mount", async () => {
