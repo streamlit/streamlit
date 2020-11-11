@@ -29,6 +29,7 @@
   api
   streamlit_configuration
   develop_streamlit_components
+  API Cheat Sheet <https://share.streamlit.io/daniellewisdl/streamlit-cheat-sheet/app.py>
 
 .. toctree::
   :caption: Support
