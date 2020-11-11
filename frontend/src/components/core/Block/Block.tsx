@@ -53,12 +53,14 @@ import { AutoSizer } from "react-virtualized"
 import debounceRender from "react-debounce-render"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import { getElementWidgetID, makeElementWithInfoText } from "lib/utils"
+import { getElementWidgetID } from "lib/utils"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { BlockNode, ReportNode, ElementNode } from "lib/ReportNode"
 
 // Load (non-lazy) elements.
 import Alert from "components/elements/Alert/"
+import { getAlertKind } from "components/elements/Alert/Alert"
+import { Kind } from "components/shared/AlertContainer"
 import DocString from "components/elements/DocString/"
 import ErrorBoundary from "components/shared/ErrorBoundary/"
 import ExceptionElement from "components/elements/ExceptionElement/"
@@ -167,9 +169,7 @@ class Block extends PureComponent<Props> {
       return true
     }
     if (this.props.reportRunState === ReportRunState.RUNNING) {
-      return (
-        node instanceof ElementNode && node.reportId !== this.props.reportId
-      )
+      return node.reportId !== this.props.reportId
     }
     return false
   }
@@ -182,10 +182,13 @@ class Block extends PureComponent<Props> {
     const BlockType = node.deltaBlock.expandable
       ? Block.WithExpandableBlock
       : Block
+    const enable = this.shouldComponentBeEnabled(false)
+    const isStale = this.isComponentStale(enable, node)
 
     const optionalProps = node.deltaBlock.expandable
       ? {
           empty: node.isEmpty,
+          isStale,
           ...node.deltaBlock.expandable,
         }
       : {}
@@ -260,12 +263,7 @@ class Block extends PureComponent<Props> {
           <ErrorBoundary width={width}>
             <Suspense
               fallback={
-                <Alert
-                  element={
-                    makeElementWithInfoText("Loading...").alert as AlertProto
-                  }
-                  width={width}
-                />
+                <Alert body="Loading..." kind={Kind.INFO} width={width} />
               }
             >
               {element}
@@ -309,10 +307,16 @@ class Block extends PureComponent<Props> {
     }
 
     switch (node.element.type) {
-      case "alert":
+      case "alert": {
+        const alertProto = node.element.alert as AlertProto
         return (
-          <Alert width={width} element={node.element.alert as AlertProto} />
+          <Alert
+            width={width}
+            body={alertProto.body}
+            kind={getAlertKind(alertProto.format)}
+          />
         )
+      }
 
       case "audio":
         return (

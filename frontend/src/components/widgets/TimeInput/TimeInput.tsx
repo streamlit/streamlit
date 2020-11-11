@@ -19,6 +19,7 @@ import React, { PureComponent, ReactNode } from "react"
 import { TimeInput as TimeInputProto } from "autogen/proto"
 import { TimePicker as UITimePicker } from "baseui/timepicker"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
+import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 
 export interface Props {
   disabled: boolean
@@ -98,8 +99,8 @@ class TimeInput extends PureComponent<Props, State> {
     }
 
     return (
-      <div className="Widget stTimeInput" style={style}>
-        <label>{element.label}</label>
+      <div className="stTimeInput" style={style}>
+        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
         <UITimePicker
           format="24"
           value={this.stringToDate(this.state.value)}

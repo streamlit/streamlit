@@ -60,4 +60,18 @@ describe("withExpandable HOC", () => {
 
     expect(accordion.prop("expanded").length).toBe(0)
   })
+
+  it("should become stale", () => {
+    const props = getProps({
+      isStale: true,
+    })
+    const WithHoc = withExpandable(testComponent)
+    // @ts-ignore
+    const wrapper = shallow(<WithHoc {...props} />)
+    const accordion = wrapper.find(StatelessAccordion)
+    const overrides = accordion.prop("overrides")
+
+    // @ts-ignore
+    expect(overrides.Header.props.className).toContain("stale-element")
+  })
 })

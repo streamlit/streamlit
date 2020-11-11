@@ -39,7 +39,7 @@ describe("st.expander", () => {
         cy.get(expanderHeaderIdentifier).should("exist");
       });
 
-    cy.get(".sidebar [data-testid='stBlock']")
+    cy.get("[data-testid='stSidebar'] [data-testid='stBlock']")
       .eq(0)
       .within(() => {
         cy.get(expanderHeaderIdentifier).should("exist");
@@ -48,7 +48,9 @@ describe("st.expander", () => {
 
   it("displays correctly", () => {
     cy.get(".main").matchImageSnapshot("expanders-in-main");
-    cy.get(".sidebar").matchImageSnapshot("expanders-in-sidebar");
+    cy.get("[data-testid='stSidebar']").matchImageSnapshot(
+      "expanders-in-sidebar"
+    );
   });
 
   it("collapses + expands", () => {

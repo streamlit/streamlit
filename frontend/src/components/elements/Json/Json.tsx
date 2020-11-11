@@ -20,8 +20,6 @@ import ReactJson from "react-json-view"
 import JSON5 from "json5"
 import { Json as JsonProto } from "autogen/proto"
 
-import "assets/css/write.scss"
-
 export interface JsonProps {
   width: number
   element: JsonProto

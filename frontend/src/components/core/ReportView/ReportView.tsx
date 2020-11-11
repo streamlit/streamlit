@@ -29,7 +29,6 @@ import { sidebarWidgetTheme } from "lib/widgetTheme"
 import { sidebarTheme } from "theme"
 import { BlockNode, ReportRoot } from "lib/ReportNode"
 
-import "./Widget.scss"
 import {
   StyledReportViewBlockContainer,
   StyledReportViewContainer,

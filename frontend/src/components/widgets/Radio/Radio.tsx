@@ -20,6 +20,7 @@ import { Radio as UIRadio, RadioGroup } from "baseui/radio"
 import { Radio as RadioProto } from "autogen/proto"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { radioOverrides } from "lib/widgetTheme"
+import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 
 export interface Props {
   disabled: boolean
@@ -74,8 +75,8 @@ class Radio extends React.PureComponent<Props, State> {
     }
 
     return (
-      <div className="Widget row-widget stRadio" style={style}>
-        <label>{this.props.element.label}</label>
+      <div className="row-widget stRadio" style={style}>
+        <StyledWidgetLabel>{this.props.element.label}</StyledWidgetLabel>
         <RadioGroup
           onChange={this.onChange}
           value={this.state.value.toString()}
