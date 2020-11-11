@@ -28,10 +28,7 @@ exports[`App renders without crashing 1`] = `
     id="MainMenu"
   >
     <Button
-      disabled={false}
-      fluidWidth={false}
       kind="icon"
-      size="medium"
     >
       <Icon
         type="menu"

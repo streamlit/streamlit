@@ -46,7 +46,7 @@ export interface Props {
  * Wraps the <ReactMarkdown> component to include our standard
  * renderers and AST plugins (for syntax highlighting, HTML support, etc).
  */
-export class StreamlitMarkdown extends PureComponent<Props> {
+class StreamlitMarkdown extends PureComponent<Props> {
   public componentDidCatch = (): void => {
     const { source } = this.props
 
@@ -126,3 +126,5 @@ export function linkReferenceHasParens(
     </a>
   )
 }
+
+export default StreamlitMarkdown

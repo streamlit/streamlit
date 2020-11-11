@@ -17,7 +17,8 @@
 
 import React, { ReactElement, ReactNode } from "react"
 
-import { SCSS_VARS } from "autogen/scssVariables"
+import { useTheme } from "emotion-theming"
+import { Theme } from "theme"
 import { Notification, KIND } from "baseui/notification"
 
 export enum Kind {
@@ -27,18 +28,18 @@ export enum Kind {
   WARNING = "warning",
 }
 
-function getAlertBorder(kind: Kind): string {
+function getAlertBorder(kind: Kind, theme: Theme): string {
   const borderStyle = "1px solid "
 
   switch (kind) {
     case Kind.ERROR:
-      return borderStyle + SCSS_VARS["$alert-error-border-color"]
+      return borderStyle + theme.colors.alertErrorBorderColor
     case Kind.INFO:
-      return borderStyle + SCSS_VARS["$alert-info-border-color"]
+      return borderStyle + theme.colors.alertInfoBorderColor
     case Kind.SUCCESS:
-      return borderStyle + SCSS_VARS["$alert-success-border-color"]
+      return borderStyle + theme.colors.alertSuccessBorderColor
     case Kind.WARNING:
-      return borderStyle + SCSS_VARS["$alert-warning-border-color"]
+      return borderStyle + theme.colors.alertWarningBorderColor
     default:
       throw new Error(`Unexpected alert type: ${kind}`)
   }
@@ -80,6 +81,7 @@ export default function AlertContainer({
   width,
   children,
 }: AlertContainerProps): ReactElement {
+  const theme: Theme = useTheme()
   return (
     <Notification
       kind={getNotificationKind(kind)}
@@ -89,7 +91,7 @@ export default function AlertContainer({
             marginTop: 0,
             marginBottom: 0,
             width,
-            border: getAlertBorder(kind),
+            border: getAlertBorder(kind, theme),
           },
         },
         InnerContainer: {
