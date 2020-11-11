@@ -41,7 +41,9 @@ describe("UnsupportedBrowserDialog", () => {
     expect(bodyWrapper.find("span[aria-label='Alien Monster']").text()).toBe(
       "👾"
     )
-    expect(bodyWrapper.find("p").text()).toBe(
+    expect(
+      bodyWrapper.find("StyledUnsupportedScreenCastExplanation").text()
+    ).toBe(
       "Due to limitations with some browsers, this feature is only supported on recent desktop versions of Chrome, Firefox, and Edge."
     )
   })

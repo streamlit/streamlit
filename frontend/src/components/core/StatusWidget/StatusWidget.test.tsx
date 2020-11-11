@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 import { ConnectionState } from "lib/ConnectionState"
 import { ReportRunState } from "lib/ReportRunState"
 import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
@@ -40,7 +40,7 @@ describe("Tooltip element", () => {
   it("renders a Tooltip", () => {
     const wrapper = shallow(<StatusWidget {...getProps()} />)
 
-    expect(wrapper.find("#ReportStatus").exists()).toBeTruthy()
+    expect(wrapper.find("StyledReportStatus").exists()).toBeTruthy()
   })
 
   it("renders its tooltip when disconnected", () => {

@@ -28,7 +28,7 @@ describe("st.dataframe - sort by column", () => {
       .click();
 
     // Remove the last column.
-    cy.get(".control.step-down").click();
+    cy.get(".step-down").click();
 
     cy.get(".element-container .stDataFrame .sort-arrow-icon").should(
       "not.exist"

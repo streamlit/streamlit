@@ -24,8 +24,13 @@ import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import Icon from "components/shared/Icon"
 import { Input as UIInput } from "baseui/input"
 import InputInstructions from "components/shared/InputInstructions/InputInstructions"
-
-import "./NumberInput.scss"
+import { StyledWidgetLabel } from "components/widgets/BaseWidget"
+import {
+  StyledInputContainer,
+  StyledInputControl,
+  StyledInputControls,
+  StyledInstructionsContainer,
+} from "./styled-components"
 
 export interface Props {
   disabled: boolean
@@ -241,9 +246,9 @@ class NumberInput extends React.PureComponent<Props, State> {
     const style = { width }
 
     return (
-      <div className="Widget row-widget stNumberInput" style={style}>
-        <label>{element.label}</label>
-        <div className="input-container">
+      <div className="stNumberInput" style={style}>
+        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
+        <StyledInputContainer>
           <UIInput
             type="number"
             inputRef={this.inputRef}
@@ -269,26 +274,28 @@ class NumberInput extends React.PureComponent<Props, State> {
               },
             }}
           />
-          <div className="controls">
-            <button
-              className="control step-down"
+          <StyledInputControls>
+            <StyledInputControl
+              className="step-down"
               onClick={this.modifyValueUsingStep("decrement")}
             >
               <Icon type="minus" />
-            </button>
-            <button
-              className="control step-up"
+            </StyledInputControl>
+            <StyledInputControl
+              className="step-up"
               onClick={this.modifyValueUsingStep("increment")}
             >
               <Icon type="plus" />
-            </button>
-          </div>
-        </div>
-        <InputInstructions
-          dirty={dirty}
-          value={formattedValue}
-          className="input-instructions"
-        />
+            </StyledInputControl>
+          </StyledInputControls>
+        </StyledInputContainer>
+        <StyledInstructionsContainer>
+          <InputInstructions
+            dirty={dirty}
+            value={formattedValue}
+            className="input-instructions"
+          />
+        </StyledInstructionsContainer>
       </div>
     )
   }

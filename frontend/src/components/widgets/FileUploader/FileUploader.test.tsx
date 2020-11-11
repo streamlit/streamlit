@@ -17,7 +17,7 @@
 
 import React from "react"
 import { FileError } from "react-dropzone"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 
 import { ExtendedFile } from "lib/FileHelper"
 
@@ -72,7 +72,7 @@ describe("FileUploader widget", () => {
     const props = getProps({ label: "Test label" })
     const wrapper = shallow(<FileUploader {...props} />)
 
-    expect(wrapper.find("label").text()).toBe(props.element.label)
+    expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
   })
 
   it("should upload files", () => {

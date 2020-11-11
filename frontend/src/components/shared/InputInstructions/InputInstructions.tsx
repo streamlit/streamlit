@@ -19,6 +19,7 @@ import React, { ReactElement } from "react"
 import classNames from "classnames"
 import { isFromMac } from "lib/utils"
 import { StyledMessage } from "./styled-components"
+import { StyledWidgetInstructions } from "components/widgets/BaseWidget"
 
 export interface Props {
   dirty: boolean
@@ -68,7 +69,11 @@ const InputInstructions = ({
     )
   }
 
-  return <div className={containerClassName}>{messages}</div>
+  return (
+    <StyledWidgetInstructions className={className}>
+      {messages}
+    </StyledWidgetInstructions>
+  )
 }
 
 export default InputInstructions

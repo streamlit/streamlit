@@ -24,18 +24,21 @@ describe("st.sidebar", () => {
   });
 
   it("handles z-index of date input popover", () => {
-    cy.get(".sidebar .stDateInput").should("have.length", 2);
+    cy.get("[data-testid='stSidebar'] .stDateInput").should("have.length", 2);
 
-    cy.get(".sidebar .stDateInput")
+    cy.get("[data-testid='stSidebar'] .stDateInput")
       .first()
       .click();
 
-    cy.get(".sidebar").matchImageSnapshot("date-popover-sidebar", {
-      force: true
-    });
+    cy.get("[data-testid='stSidebar']").matchImageSnapshot(
+      "date-popover-sidebar",
+      {
+        force: true
+      }
+    );
   });
 
   it("handles overwriting elements", () => {
-    cy.get(".sidebar .stText").contains("overwritten");
+    cy.get("[data-testid='stSidebar'] .stText").contains("overwritten");
   });
 });

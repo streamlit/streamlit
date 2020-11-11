@@ -35,7 +35,12 @@ import { IException } from "autogen/proto"
 import { SessionInfo } from "lib/SessionInfo"
 import { Props as SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
 
-import "./StreamlitDialog.scss"
+import {
+  StyledUploadFirstLine,
+  StyledRerunHeader,
+  StyledCommandLine,
+  StyledUploadUrl,
+} from "./styled-components"
 
 type PlainEventHandler = () => void
 
@@ -208,9 +213,9 @@ function rerunScriptDialog(props: RerunScriptProps): ReactElement {
     <HotKeys handlers={keyHandlers} attach={window}>
       <Modal isOpen onClose={props.onClose}>
         <ModalBody>
-          <div className="rerun-header">Command line:</div>
+          <StyledRerunHeader>Command line:</StyledRerunHeader>
           <div>
-            <textarea
+            <StyledCommandLine
               autoFocus
               className="command-line"
               value={props.getCommandLine()}
@@ -284,9 +289,7 @@ function uploadProgressDialog(props: UploadProgressProps): ReactElement {
   return (
     <Modal isOpen onClose={props.onClose}>
       <ModalBody>
-        <div className="streamlit-upload-first-line">
-          Saving app snapshot...
-        </div>
+        <StyledUploadFirstLine>Saving app snapshot...</StyledUploadFirstLine>
         <div>
           <ProgressBar value={props.progress || 0} />
         </div>
@@ -316,11 +319,12 @@ function uploadedDialog(props: UploadedProps): ReactElement {
         <div className="streamlit-upload-first-line">
           App snapshot saved to:
         </div>
-        <pre id="streamlit-upload-url">
+        {/* We make this an id instead of a class to enable clipboard copy */}
+        <StyledUploadUrl id="streamlit-upload-url">
           <a href={props.url} target="_blank" rel="noopener noreferrer">
             {props.url}
           </a>
-        </pre>
+        </StyledUploadUrl>
       </ModalBody>
       <ModalFooter>
         <ModalButton kind={Kind.SECONDARY} onClick={handleClick}>

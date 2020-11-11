@@ -24,7 +24,7 @@ describe("main menu", () => {
   });
 
   it("displays menu dropdown", () => {
-    cy.get("#ConnectionStatus").should("not.exist");
+    cy.get("[data-testid='stConnectionStatus']").should("not.exist");
 
     // Main menu renders visually as we expect
     cy.get("#MainMenu > button").click();

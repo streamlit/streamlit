@@ -21,8 +21,6 @@ import { useTheme } from "emotion-theming"
 import { Theme } from "theme"
 import { Notification, KIND } from "baseui/notification"
 
-import "assets/css/write.scss"
-
 export enum Kind {
   ERROR = "error",
   INFO = "info",

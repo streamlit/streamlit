@@ -28,6 +28,7 @@ export interface Props {
   expanded: boolean
   empty: boolean
   widgetsDisabled: boolean
+  isStale: boolean
 }
 
 function withExpandable(
@@ -39,6 +40,7 @@ function withExpandable(
       expanded: initialExpanded,
       empty,
       widgetsDisabled,
+      isStale,
       ...componentProps
     } = props
 
@@ -107,7 +109,11 @@ function withExpandable(
                   borderBottomColor: colors.primary,
                 },
               }),
-              props: { className: "streamlit-expanderHeader" },
+              props: {
+                className: classNames("streamlit-expanderHeader", {
+                  "stale-element": isStale,
+                }),
+              },
             },
             ToggleIcon: {
               style: ({ $disabled }) => ({

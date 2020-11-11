@@ -22,6 +22,7 @@ import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { MultiSelect as MultiSelectProto } from "autogen/proto"
 import { TYPE, Select as UISelect, OnChangeParams } from "baseui/select"
 import VirtualDropdown from "components/shared/VirtualDropdown"
+import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 
 export interface Props {
   disabled: boolean
@@ -115,8 +116,8 @@ class Multiselect extends React.PureComponent<Props, State> {
     )
 
     return (
-      <div className="Widget row-widget stMultiSelect" style={style}>
-        <label>{element.label}</label>
+      <div className="row-widget stMultiSelect" style={style}>
+        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
         <UISelect
           options={selectOptions}
           labelKey="label"

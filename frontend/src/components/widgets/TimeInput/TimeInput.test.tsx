@@ -48,7 +48,7 @@ describe("TextInput widget", () => {
   })
 
   it("should show a label", () => {
-    expect(wrapper.find("label").text()).toBe(props.element.label)
+    expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
   })
 
   it("should set widget value on did mount", () => {
@@ -66,7 +66,6 @@ describe("TextInput widget", () => {
     // @ts-ignore
     const splittedClassName = className.split(" ")
 
-    expect(splittedClassName).toContain("Widget")
     expect(splittedClassName).toContain("stTimeInput")
 
     // @ts-ignore

@@ -56,8 +56,6 @@ describe("Button widget", () => {
     // @ts-ignore
     const splittedClassName = className.split(" ")
 
-    expect(splittedClassName).toContain("Widget")
-    expect(splittedClassName).toContain("row-widget")
     expect(splittedClassName).toContain("stButton")
 
     // @ts-ignore

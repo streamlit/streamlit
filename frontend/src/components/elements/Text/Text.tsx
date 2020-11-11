@@ -19,8 +19,6 @@ import React, { ReactElement } from "react"
 import classNames from "classnames"
 import { Text as TextProto } from "autogen/proto"
 
-import "assets/css/write.scss"
-
 export interface TextProps {
   width: number
   element: TextProto

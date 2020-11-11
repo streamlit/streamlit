@@ -32,7 +32,6 @@ import { PageConfig } from "autogen/proto"
 import { BlockNode, ReportRoot } from "lib/ReportNode"
 
 import "./ReportView.scss"
-import "./Widget.scss"
 
 export interface ReportViewProps {
   elements: ReportRoot
