@@ -17,7 +17,6 @@
 syntax = "proto3";
 
 import "streamlit/proto/Delta.proto";
-import "streamlit/proto/Initialize.proto";
 import "streamlit/proto/NewReport.proto";
 import "streamlit/proto/PageConfig.proto";
 import "streamlit/proto/PageInfo.proto";
@@ -45,7 +44,6 @@ message ForwardMsg {
   oneof type {
     // Report lifecycle messages.
 
-    Initialize initialize = 3;
     NewReport new_report = 4;
     Delta delta = 5;
     PageInfo page_info_changed = 12;
