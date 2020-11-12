@@ -299,7 +299,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     const acceptedExtensions = element.type
 
     return (
-      <StyledFileUploader className="stFileUploader">
+      <StyledFileUploader data-testid="stFileUploader">
         <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
         {errorMessage ? (
           <AlertContainer kind={AlertKind.ERROR}>
@@ -317,7 +317,6 @@ class FileUploader extends React.PureComponent<Props, State> {
           items={[...files]}
           pageSize={3}
           onDelete={this.delete}
-          className="ml-5 pl-1"
           resetOnAdd
         />
       </StyledFileUploader>

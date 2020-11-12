@@ -22,8 +22,6 @@ export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
   })
 )
 
-export const StyledFileDropzoneButtonContainer = styled.span({})
-
 export const StyledFileDropzoneInstructions = styled.div(({ theme }) => ({
   marginRight: "auto",
   alignItems: "center",
@@ -117,8 +115,8 @@ const compactFileUploader = (theme: Theme): CSSObject => ({
     flexDirection: "column",
     alignItems: "flex-start",
   },
-  [StyledFileDropzoneButtonContainer as any]: {
-    marginTop: theme.spacing.lg,
+  [StyledFileDropzoneInstructions as any]: {
+    marginBottom: theme.spacing.lg,
   },
   [StyledFileDropzoneInstructionsFileUploaderIcon as any]: {
     display: "none",

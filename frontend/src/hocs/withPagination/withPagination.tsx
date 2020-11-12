@@ -22,7 +22,6 @@ import Pagination from "hocs/withPagination/Pagination"
 import { usePrevious } from "lib/Hooks"
 
 export interface Props {
-  className: string
   items: any[]
   pageSize: number
   resetOnAdd: boolean

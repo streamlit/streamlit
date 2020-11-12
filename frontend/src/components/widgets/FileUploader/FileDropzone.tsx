@@ -20,10 +20,7 @@ import Dropzone, { FileRejection } from "react-dropzone"
 import Button, { Kind, Size } from "components/shared/Button"
 import { ExtendedFile } from "lib/FileHelper"
 
-import {
-  StyledFileDropzoneButtonContainer,
-  StyledFileDropzoneSection,
-} from "./styled-components"
+import { StyledFileDropzoneSection } from "./styled-components"
 import FileDropzoneInstructions from "./FileDropzoneInstructions"
 
 export interface Props {
@@ -63,11 +60,9 @@ const FileDropzone = ({
           acceptedExtensions={acceptedExtensions}
           maxSizeBytes={maxSizeBytes}
         />
-        <StyledFileDropzoneButtonContainer>
-          <Button kind={Kind.PRIMARY} disabled={disabled} size={Size.SMALL}>
-            Browse files
-          </Button>
-        </StyledFileDropzoneButtonContainer>
+        <Button kind={Kind.PRIMARY} disabled={disabled} size={Size.SMALL}>
+          Browse files
+        </Button>
       </StyledFileDropzoneSection>
     )}
   </Dropzone>
