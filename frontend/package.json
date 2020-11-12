@@ -35,7 +35,11 @@
   },
   "dependencies": {
     "@bokeh/bokehjs": "2.0.0",
+    "@emotion-icons/emotion-icon": "^2.0.3",
+    "@emotion-icons/material-outlined": "^2.10.0",
+    "@emotion-icons/open-iconic": "^2.10.0",
     "@emotion/core": "^10.0.35",
+    "@emotion/is-prop-valid": "^1.0.0",
     "@emotion/serialize": "^0.11.16",
     "@emotion/styled": "^10.0.27",
     "@loaders.gl/core": "^2.2.8",

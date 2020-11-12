@@ -27,11 +27,7 @@ export const StyledConnectionStatus = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  ".icon-xs": {
-    color: theme.colors.gray,
-    // Make up for 1px spacing that open-iconic adds.
-    marginTop: `-${theme.spacing.px}`,
-  },
+  color: theme.colors.gray,
 }))
 
 export interface StyledConnectionStatusLabelProps {
@@ -71,14 +67,6 @@ export const StyledReportStatus = styled.div(({ theme }) => ({
   paddingLeft: theme.spacing.sm,
   backgroundColor: "#fffd",
   height: "1.6rem",
-  ".icon-sm": {
-    color: theme.colors.darkGray,
-    display: "inline-flex",
-    fontSize: theme.fontSizes.md,
-    width: theme.fontSizes.md,
-    height: theme.fontSizes.md,
-    marginRight: theme.spacing.sm,
-  },
 }))
 
 const minimizedStyles = (theme: Theme): CSSObject => ({

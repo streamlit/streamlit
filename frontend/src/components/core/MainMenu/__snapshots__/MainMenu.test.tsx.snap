@@ -31,7 +31,13 @@ exports[`App renders without crashing 1`] = `
       kind="icon"
     >
       <Icon
-        type="menu"
+        content={
+          Object {
+            "$$typeof": Symbol(react.forward_ref),
+            "displayName": "Menu",
+            "render": [Function],
+          }
+        }
       />
     </Button>
   </span>

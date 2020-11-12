@@ -16,6 +16,7 @@
  */
 
 import React from "react"
+import { Plus, Minus } from "@emotion-icons/open-iconic"
 import { sprintf } from "sprintf-js"
 import { logWarning } from "lib/log"
 import { NumberInput as NumberInputProto } from "autogen/proto"
@@ -279,13 +280,13 @@ class NumberInput extends React.PureComponent<Props, State> {
               className="step-down"
               onClick={this.modifyValueUsingStep("decrement")}
             >
-              <Icon type="minus" />
+              <Icon content={Minus} size="xs" />
             </StyledInputControl>
             <StyledInputControl
               className="step-up"
               onClick={this.modifyValueUsingStep("increment")}
             >
-              <Icon type="plus" />
+              <Icon content={Plus} size="xs" />
             </StyledInputControl>
           </StyledInputControls>
         </StyledInputContainer>
