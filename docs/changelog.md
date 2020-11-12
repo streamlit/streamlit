@@ -16,6 +16,16 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.71.0
+
+_Release date: November 11, 2020_
+
+**Notable Changes**
+
+- 📁 Updated [`st.file_uploader`](https://docs.streamlit.io/en/0.71.0/api.html#streamlit.file_uploader)
+  to automatically reset buffer on app reruns.
+- 📊 Optimize the default rendering of charts and reduce issues with the initial render.
+
 ## Version 0.70.0
 
 _Release date: October 28, 2020_
