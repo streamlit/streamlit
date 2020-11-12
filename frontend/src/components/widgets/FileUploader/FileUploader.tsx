@@ -35,6 +35,7 @@ import AlertContainer, {
 } from "components/shared/AlertContainer"
 import FileDropzone from "./FileDropzone"
 import UploadedFiles from "./UploadedFiles"
+import { StyledFileUploader } from "./styled-components"
 
 export interface Props {
   disabled: boolean
@@ -298,7 +299,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     const acceptedExtensions = element.type
 
     return (
-      <div className="stFileUploader">
+      <StyledFileUploader data-testid="stFileUploader">
         <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
         {errorMessage ? (
           <AlertContainer kind={AlertKind.ERROR}>
@@ -316,10 +317,9 @@ class FileUploader extends React.PureComponent<Props, State> {
           items={[...files]}
           pageSize={3}
           onDelete={this.delete}
-          className="ml-5 pl-1"
           resetOnAdd
         />
-      </div>
+      </StyledFileUploader>
     )
   }
 }

@@ -10,10 +10,10 @@ import {
   spacing,
   zIndices,
 } from "../primitives"
-import colors from "./mainColors"
+import colors from "./sidebarColors"
 
 export default {
-  inSidebar: false,
+  inSidebar: true,
   breakpoints,
   colors,
   fonts,
