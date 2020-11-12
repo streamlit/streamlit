@@ -37,6 +37,7 @@ export interface SidebarProps {
 
 interface State {
   collapsedSidebar: boolean
+  lastInnerWidth: Number
 }
 
 class Sidebar extends PureComponent<SidebarProps, State> {
@@ -60,6 +61,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     )
     this.state = {
       collapsedSidebar: Sidebar.shouldCollapse(props, this.mediumBreakpointPx),
+      lastInnerWidth: window ? window.innerWidth : Infinity,
     }
   }
 
@@ -126,8 +128,14 @@ class Sidebar extends PureComponent<SidebarProps, State> {
 
     const { innerWidth } = window
 
-    if (innerWidth <= this.mediumBreakpointPx)
+    // Collapse the sidebar if the window was narrowed and is now mobile-sized
+    if (
+      innerWidth < this.state.lastInnerWidth &&
+      innerWidth <= this.mediumBreakpointPx
+    ) {
       this.setState({ collapsedSidebar: true })
+    }
+    this.setState({ lastInnerWidth: innerWidth })
 
     return true
   }

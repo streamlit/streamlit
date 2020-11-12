@@ -41,4 +41,36 @@ describe("st.sidebar", () => {
   it("handles overwriting elements", () => {
     cy.get("[data-testid='stSidebar'] .stText").contains("overwritten");
   });
+
+  it("collapses the sidebar on mobile resize", () => {
+    cy.viewport(800, 400);
+    cy.get("[data-testid='stSidebar']").should(
+      "have.attr",
+      "aria-expanded",
+      "true"
+    );
+
+    cy.viewport(400, 800);
+    cy.get("[data-testid='stSidebar']").should(
+      "have.attr",
+      "aria-expanded",
+      "false"
+    );
+  });
+
+  it("does not collapse on text input on mobile", () => {
+    cy.viewport(400, 800);
+    // Expand the sidebar on mobile, with a manual click
+    cy.get("[data-testid='stSidebar'] button")
+      .eq(1)
+      .click();
+
+    cy.get("[data-testid='stSidebar'] .stTextInput input").click();
+
+    cy.get("[data-testid='stSidebar']").should(
+      "have.attr",
+      "aria-expanded",
+      "true"
+    );
+  });
 });
