@@ -17,10 +17,8 @@
 
 import React, { ReactElement } from "react"
 import { isFromMac } from "lib/utils"
-import classNames from "classnames"
 import { StyledWidgetInstructions } from "components/widgets/BaseWidget"
-
-import "./style.scss"
+import { StyledMessage } from "./styled-components"
 
 export interface Props {
   dirty: boolean
@@ -37,42 +35,35 @@ const InputInstructions = ({
   className,
   type = "single",
 }: Props): ReactElement => {
-  const messages = []
+  const messages: ReactElement[] = []
+  const addMessage = (text: string, shouldBlink = false): void => {
+    messages.push(
+      <StyledMessage
+        key={messages.length}
+        includeDot={messages.length > 0}
+        shouldBlink={shouldBlink}
+      >
+        {text}
+      </StyledMessage>
+    )
+  }
 
   if (dirty) {
     if (type === "multiline") {
       if (isFromMac()) {
-        messages.push(
-          <span key={0} className="message">
-            Press ⌘+Enter to apply
-          </span>
-        )
+        addMessage("Press ⌘+Enter to apply")
       } else {
-        messages.push(
-          <span key={0} className="message">
-            Press Ctrl+Enter to apply
-          </span>
-        )
+        addMessage("Press Ctrl+Enter to apply")
       }
     } else {
-      messages.push(
-        <span key={0} className="message">
-          Press Enter to apply
-        </span>
-      )
+      addMessage("Press Enter to apply")
     }
   }
 
   if (maxLength) {
-    messages.push(
-      <span
-        key={1}
-        className={classNames("message", "counter", {
-          blink: dirty && value.length >= maxLength,
-        })}
-      >
-        {value.length}/{maxLength}
-      </span>
+    addMessage(
+      `${value.length}/${maxLength}`,
+      dirty && value.length >= maxLength
     )
   }
 
