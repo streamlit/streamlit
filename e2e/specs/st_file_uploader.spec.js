@@ -28,24 +28,24 @@ describe("st.file_uploader", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stFileUploader")
+    cy.get("[data-testid='stFileUploader']")
       .first()
       .should("exist");
-    cy.get(".stFileUploader label")
+    cy.get("[data-testid='stFileUploader'] label")
       .first()
       .should("have.text", "Drop a file:");
 
-    cy.get(".stFileUploader")
+    cy.get("[data-testid='stFileUploader']")
       .first()
       .matchImageSnapshot("single_file_uploader");
 
-    cy.get(".stFileUploader")
+    cy.get("[data-testid='stFileUploader']")
       .last()
       .matchImageSnapshot("multi_file_uploader");
   });
 
   it("shows deprecation warning", () => {
-    cy.get(".stFileUploader")
+    cy.get("[data-testid='stFileUploader']")
       .first()
       .parent()
       .prev()
@@ -53,7 +53,7 @@ describe("st.file_uploader", () => {
   });
 
   it("hides deprecation warning", () => {
-    cy.get(".stFileUploader")
+    cy.get("[data-testid='stFileUploader']")
       .last()
       .parent()
       .prev()
@@ -84,7 +84,7 @@ describe("st.file_uploader", () => {
         .first()
         .should("have.text", "application/json files are not allowed.");
 
-      cy.get(".stFileUploader")
+      cy.get("[data-testid='stFileUploader']")
         .first()
         .matchImageSnapshot("file_uploader-error");
     });
@@ -120,7 +120,7 @@ describe("st.file_uploader", () => {
           .first()
           .should("contain.text", file1);
 
-        cy.get(".stFileUploader")
+        cy.get("[data-testid='stFileUploader']")
           .first()
           .matchImageSnapshot("single_file_uploader-uploaded");
 
@@ -192,7 +192,7 @@ describe("st.file_uploader", () => {
           .last()
           .should("have.text", content);
 
-        cy.get(".stFileUploader")
+        cy.get("[data-testid='stFileUploader']")
           .last()
           .matchImageSnapshot("multi_file_uploader-uploaded");
       });
