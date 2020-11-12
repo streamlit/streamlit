@@ -37,7 +37,7 @@ export interface SidebarProps {
 
 interface State {
   collapsedSidebar: boolean
-  lastInnerWidth: Number
+  lastInnerWidth: number
 }
 
 class Sidebar extends PureComponent<SidebarProps, State> {
