@@ -47,13 +47,6 @@ export const StyledInputControl = styled.button(({ theme }) => ({
     borderTopRightRadius: theme.radii.md,
     borderBottomRightRadius: theme.radii.md,
   },
-
-  ".openIconic": {
-    fontSize: theme.fontSizes.sm,
-    svg: {
-      fill: theme.colors.gray,
-    },
-  },
 }))
 
 export const StyledInstructionsContainer = styled.div(({ theme }) => ({

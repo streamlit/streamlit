@@ -1,4 +1,5 @@
 import styled, { CSSObject } from "@emotion/styled"
+import { transparentize } from "color2k"
 import { Theme } from "theme"
 
 export interface StyledDataFrameContainerProps {
@@ -96,4 +97,9 @@ export const StyledEmptyDataframe = styled.div(({ theme }) => ({
   fontStyle: "italic",
   fontSize: theme.fontSizes.smDefault,
   textAlign: "center",
+}))
+
+export const StyledSortIcon = styled.span(({ theme }) => ({
+  color: transparentize(theme.colors.darkGray, 0.7),
+  verticalAlign: "top",
 }))

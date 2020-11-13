@@ -15,6 +15,7 @@
  */
 
 import styled from "@emotion/styled"
+import { transparentize } from "color2k"
 
 export const StyledSidebar = styled.section(({ theme }) => ({
   [`@media (max-width: ${theme.breakpoints.md})`]: {
@@ -110,11 +111,7 @@ export const StyledSidebarCloseButton = styled.div(({ theme }) => ({
   top: theme.spacing.sm,
   right: theme.spacing.sm,
   zIndex: 1,
-
-  ".open-iconic": {
-    fill: theme.colors.bodyText,
-    opacity: 0.25,
-  },
+  color: transparentize(theme.colors.bodyText, 0.75),
 }))
 
 export interface StyledSidebarCollapsedControlProps {
@@ -131,22 +128,14 @@ export const StyledSidebarCollapsedControl = styled.div<
   transition: "left 300ms",
   transitionDelay: "left 300ms",
 
-  ".open-iconic": {
-    fill: theme.colors.bodyText,
-    opacity: 0.25,
+  color: transparentize(theme.colors.bodyText, 0.75),
 
-    [`@media (max-width: ${theme.breakpoints.md})`]: {
-      opacity: 1,
-    },
+  [`@media (max-width: ${theme.breakpoints.md})`]: {
+    color: theme.colors.bodyText,
   },
 
   "&:hover": {
     color: theme.colors.white,
-    backgroundColor: theme.colors.lightestGray,
     borderColor: "#1d2124",
-
-    ".open-iconic": {
-      opacity: 1,
-    },
   },
 }))

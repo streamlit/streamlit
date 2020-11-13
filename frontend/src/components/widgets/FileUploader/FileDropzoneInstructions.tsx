@@ -16,10 +16,10 @@
  */
 
 import React from "react"
-import { MaterialIcon } from "components/shared/Icon"
+import { CloudUpload } from "@emotion-icons/material-outlined"
+import Icon from "components/shared/Icon"
 import { FileSizes, getSizeDisplay } from "lib/FileHelper"
 import { Small } from "components/shared/TextElements"
-import { Sizes } from "lib/widgetTheme"
 
 import {
   StyledFileDropzoneInstructions,
@@ -41,12 +41,7 @@ const FileDropzoneInstructions = ({
 }: Props): React.ReactElement => (
   <StyledFileDropzoneInstructions>
     <StyledFileDropzoneInstructionsFileUploaderIcon>
-      <MaterialIcon
-        icon="cloud_upload"
-        type="outlined"
-        size={Sizes.LARGE}
-        className="fileUploaderIcon"
-      />
+      <Icon content={CloudUpload} size="threeXL" />
     </StyledFileDropzoneInstructionsFileUploaderIcon>
     <StyledFileDropzoneInstructionsColumn>
       <StyledFileDropzoneInstructionsStyledSpan>

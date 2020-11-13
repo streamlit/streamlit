@@ -16,9 +16,13 @@
  */
 
 import React from "react"
-
+import {
+  Clear,
+  Error,
+  InsertDriveFile,
+} from "@emotion-icons/material-outlined"
 import Button, { Kind } from "components/shared/Button"
-import { MaterialIcon } from "components/shared/Icon"
+import Icon from "components/shared/Icon"
 import ProgressBar from "components/shared/ProgressBar"
 import { Small, Kind as TextKind } from "components/shared/TextElements"
 import {
@@ -77,7 +81,7 @@ export const FileStatus = ({
           {file.errorMessage || "error"}
         </StyledErrorMessage>
         <StyledFileErrorIcon>
-          <MaterialIcon icon="error" />
+          <Icon content={Error} size="lg" />
         </StyledFileErrorIcon>
       </StyledFileError>
     )
@@ -106,11 +110,7 @@ const UploadedFile = ({
   return (
     <StyledUploadedFile className="uploadedFile">
       <StyledFileIcon>
-        <MaterialIcon
-          type="outlined"
-          icon="insert_drive_file"
-          size={Sizes.MEDIUM}
-        />
+        <Icon content={InsertDriveFile} size="twoXL" />
       </StyledFileIcon>
       <StyledUploadedFileData className="uploadedFileData">
         <StyledUploadedFileName className="uploadedFileName" title={file.name}>
@@ -119,7 +119,7 @@ const UploadedFile = ({
         <FileStatus file={file} progress={progress} />
       </StyledUploadedFileData>
       <Button onClick={() => onDelete(file.id || "")} kind={Kind.MINIMAL}>
-        <MaterialIcon icon="clear" />
+        <Icon content={Clear} size="lg" />
       </Button>
     </StyledUploadedFile>
   )

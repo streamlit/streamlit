@@ -13,9 +13,4 @@ export const StyledPaginators = styled.div(({ theme }) => ({
   alignItems: "center",
   justifyContent: "center",
   color: theme.colors.secondary,
-  i: {
-    fontSize: theme.fontSizes.xl,
-    width: theme.fontSizes.xl,
-    height: theme.fontSizes.xl,
-  },
 }))

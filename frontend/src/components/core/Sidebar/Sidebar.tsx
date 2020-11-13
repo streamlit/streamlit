@@ -16,6 +16,7 @@
  */
 
 import React, { PureComponent, ReactElement } from "react"
+import { ChevronRight, X } from "@emotion-icons/open-iconic"
 import Icon from "components/shared/Icon"
 import Button, { Kind } from "components/shared/Button"
 import { PageConfig } from "autogen/proto"
@@ -165,14 +166,14 @@ class Sidebar extends PureComponent<SidebarProps, State> {
         <StyledSidebarContent isCollapsed={collapsedSidebar}>
           <StyledSidebarCloseButton>
             <Button kind={Kind.ICON} onClick={this.toggleCollapse}>
-              <Icon type="x" />
+              <Icon content={X} />
             </Button>
           </StyledSidebarCloseButton>
           {children}
         </StyledSidebarContent>
         <StyledSidebarCollapsedControl isCollapsed={collapsedSidebar}>
           <Button kind={Kind.ICON} onClick={this.toggleCollapse}>
-            <Icon type="chevron-right" />
+            <Icon content={ChevronRight} />
           </Button>
         </StyledSidebarCollapsedControl>
       </StyledSidebar>
