@@ -116,7 +116,7 @@ describe("st.file_uploader", () => {
         // into an st.text. (This tests that the upload actually went
         // through.)
         cy.get(".uploadedFileName").should("have.text", fileName1);
-        cy.get(".fixed-width.stText")
+        cy.get("[data-testid='stText']")
           .first()
           .should("contain.text", file1);
 
@@ -135,7 +135,7 @@ describe("st.file_uploader", () => {
         cy.get(".uploadedFileName")
           .should("have.text", fileName2)
           .should("not.have.text", fileName1);
-        cy.get(".fixed-width.stText")
+        cy.get("[data-testid='stText']")
           .first()
           .should("contain.text", file2)
           .should("not.contain.text", file1);
@@ -143,7 +143,7 @@ describe("st.file_uploader", () => {
         // On rerun, make sure file is still returned
         cy.get("body").type("r");
         cy.wait(1000);
-        cy.get(".fixed-width.stText")
+        cy.get("[data-testid='stText']")
           .first()
           .should("contain.text", file2);
       });
@@ -188,7 +188,7 @@ describe("st.file_uploader", () => {
         // into an st.text. (This tests that the upload actually went
         // through.)
         const content = [file1, file2].sort().join("\n");
-        cy.get(".fixed-width.stText")
+        cy.get("[data-testid='stText']")
           .last()
           .should("have.text", content);
 
