@@ -28,7 +28,7 @@ describe("st calls within cached functions", () => {
     cy.get(".element-container > .stButton").should("have.length", 1);
 
     // And two texts
-    cy.get(".element-container > .markdown-text-container").should(
+    cy.get(".element-container > [data-testid='stMarkdownContainer']").should(
       "have.length",
       3
     );

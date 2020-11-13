@@ -20,32 +20,31 @@ describe("st.error and friends", () => {
     cy.visit("http://localhost:3000/");
 
     // Wait for the "Please, wait" alert to disappear.
-    cy.get(".element-container .stAlert .markdown-text-container").should(
-      "have.length",
-      4
-    );
+    cy.get(
+      ".element-container .stAlert [data-testid='stMarkdownContainer']"
+    ).should("have.length", 4);
   });
 
   it("displays an error message correctly", () => {
-    cy.get(".element-container .stAlert .markdown-text-container")
+    cy.get(".element-container .stAlert [data-testid='stMarkdownContainer']")
       .eq(0)
       .contains("This is an error");
   });
 
   it("displays a warning message correctly", () => {
-    cy.get(".element-container .stAlert .markdown-text-container")
+    cy.get(".element-container .stAlert [data-testid='stMarkdownContainer']")
       .eq(1)
       .contains("This is a warning");
   });
 
   it("displays an info message correctly", () => {
-    cy.get(".element-container .stAlert .markdown-text-container")
+    cy.get(".element-container .stAlert [data-testid='stMarkdownContainer']")
       .eq(2)
       .contains("This is an info message");
   });
 
   it("displays a success message correctly", () => {
-    cy.get(".element-container .stAlert .markdown-text-container")
+    cy.get(".element-container .stAlert [data-testid='stMarkdownContainer']")
       .eq(3)
       .contains("This is a success message");
   });
