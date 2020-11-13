@@ -16,7 +16,6 @@
 
 @import "variables";
 @import "fonts";
-@import "src/assets/css/mixins";
 @import "scrollbars";
 @import "reboot";
 
@@ -48,8 +47,7 @@ code {
 }
 
 pre {
-  @include element-margin-bottom;
-
+  margin: 0 0 1rem 0;
   background: $gray-faint;
   border-radius: $border-radius;
   padding: 1rem;
