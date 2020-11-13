@@ -4,6 +4,8 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+boto3 = "*"
+botocore = ">=1.13.44"
 flake8 = "*"
 mypy = "==0.761"
 mypy-protobuf = ">=1.17"
@@ -31,8 +33,6 @@ altair = ">=3.2.0"
 astor = "*"
 base58 = "*"
 blinker = "*"
-boto3 = "*"
-botocore = ">=1.13.44"
 cachetools = ">=4.0"
 click = ">=7.0"
 enum-compat = "*"
