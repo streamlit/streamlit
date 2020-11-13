@@ -26,6 +26,7 @@ import RemarkMathPlugin from "remark-math"
 // @ts-ignore
 import RemarkEmoji from "remark-emoji"
 import CodeBlock from "components/elements/CodeBlock/"
+import { StyledStreamlitMarkdown } from "./styled-components"
 
 import "katex/dist/katex.min.css"
 
@@ -76,13 +77,15 @@ class StreamlitMarkdown extends PureComponent<Props> {
     const astPlugins = allowHTML ? [htmlParser()] : []
 
     return (
-      <ReactMarkdown
-        source={source}
-        escapeHtml={!allowHTML}
-        astPlugins={astPlugins}
-        plugins={plugins}
-        renderers={renderers}
-      />
+      <StyledStreamlitMarkdown>
+        <ReactMarkdown
+          source={source}
+          escapeHtml={!allowHTML}
+          astPlugins={astPlugins}
+          plugins={plugins}
+          renderers={renderers}
+        />
+      </StyledStreamlitMarkdown>
     )
   }
 }

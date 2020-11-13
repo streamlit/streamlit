@@ -19,6 +19,8 @@ import React, { ReactElement } from "react"
 import ReactJson from "react-json-view"
 import JSON5 from "json5"
 import { Json as JsonProto } from "autogen/proto"
+import { useTheme } from "emotion-theming"
+import { Theme } from "theme"
 
 export interface JsonProps {
   width: number
@@ -30,6 +32,7 @@ export interface JsonProps {
  */
 export default function Json({ width, element }: JsonProps): ReactElement {
   const styleProp = { width }
+  const theme: Theme = useTheme()
 
   let bodyObject
   try {
@@ -46,13 +49,16 @@ export default function Json({ width, element }: JsonProps): ReactElement {
     }
   }
   return (
-    <div className="json-text-container stJson" style={styleProp}>
+    <div data-testid="stJson" style={styleProp}>
       <ReactJson
         src={bodyObject}
         displayDataTypes={false}
         displayObjectSize={false}
         name={false}
-        style={{ font: "" }} // Unset so we can style via a CSS file.
+        style={{
+          fontFamily: theme.fonts.mono,
+          fontSize: theme.fontSizes.smDefault,
+        }} // Unset so we can style via a CSS file.
       />
     </div>
   )

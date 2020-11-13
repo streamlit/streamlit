@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "lib/test_util"
+import { mount } from "lib/test_util"
 import { Json as JsonProto } from "autogen/proto"
 import Json, { JsonProps } from "./Json"
 
@@ -34,16 +34,14 @@ const getProps = (elementProps: Partial<JsonProto> = {}): JsonProps => ({
 describe("JSON element", () => {
   it("renders json as expected", () => {
     const props = getProps()
-    const wrapper = shallow(<Json {...props} />)
+    const wrapper = mount(<Json {...props} />)
     expect(wrapper).toBeDefined()
-    const elem = wrapper.get(0)
-    expect(elem.props.className.includes("stJson")).toBeTruthy()
   })
 
   it("should raise an exception with invalid JSON", () => {
     const props = getProps({ body: "invalid JSON" })
     expect(() => {
-      shallow(<Json {...props} />)
+      mount(<Json {...props} />)
     }).toThrow(SyntaxError)
   })
 
@@ -53,9 +51,7 @@ describe("JSON element", () => {
       "numbers":[ -1e27, NaN, Infinity, -Infinity, 2.2822022,-2.2702775],
     }`,
     })
-    const wrapper = shallow(<Json {...props} />)
+    const wrapper = mount(<Json {...props} />)
     expect(wrapper).toBeDefined()
-    const elem = wrapper.get(0)
-    expect(elem.props.className.includes("stJson")).toBeTruthy()
   })
 })
