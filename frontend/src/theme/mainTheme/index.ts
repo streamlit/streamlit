@@ -13,6 +13,7 @@ import {
 import colors from "./mainColors"
 
 export default {
+  inSidebar: false,
   breakpoints,
   colors,
   fonts,

@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 
 import Button, { Size, Kind, ButtonProps } from "./Button"
 
@@ -37,7 +37,13 @@ describe("Button element", () => {
     it(`renders ${kind} buttons correctly`, () => {
       const wrapper = shallow(<Button {...getProps({ kind })}>Hello</Button>)
 
-      expect(wrapper.find(`.${kind}-button`).exists()).toBeTruthy()
+      expect(
+        wrapper
+          .find(
+            `Styled${kind.charAt(0).toUpperCase()}${kind.substring(1)}Button`
+          )
+          .exists()
+      ).toBeTruthy()
     })
   })
 
@@ -47,7 +53,7 @@ describe("Button element", () => {
     it(`renders ${size} buttons correctly`, () => {
       const wrapper = shallow(<Button {...getProps({ size })}>Hello</Button>)
 
-      expect(wrapper.find(`.${size}-button`).exists()).toBeTruthy()
+      expect(wrapper.find("StyledPrimaryButton").prop("size")).toBe(size)
     })
   })
 
@@ -56,7 +62,7 @@ describe("Button element", () => {
       <Button {...getProps({ fluidWidth: true })}>Hello</Button>
     )
 
-    expect(wrapper.find(".button-fluid-width").exists()).toBeTruthy()
+    expect(wrapper.find("StyledPrimaryButton").prop("fluidWidth")).toBe(true)
   })
 
   it("renders disabled buttons correctly", () => {
@@ -64,13 +70,13 @@ describe("Button element", () => {
       <Button {...getProps({ disabled: true })}>Hello</Button>
     )
 
-    expect(wrapper.find("button").prop("disabled")).toEqual(true)
+    expect(wrapper.find("StyledPrimaryButton").prop("disabled")).toBe(true)
   })
 
   it("calls onClick when button is clicked", () => {
     const onClick = jest.fn()
     const wrapper = shallow(<Button {...getProps({ onClick })}>Hello</Button>)
-    wrapper.simulate("click")
+    wrapper.find("StyledPrimaryButton").simulate("click")
 
     expect(onClick).toBeCalled()
   })

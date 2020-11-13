@@ -20,6 +20,7 @@ import { Input as UIInput } from "baseui/input"
 import { TextInput as TextInputProto } from "autogen/proto"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import InputInstructions from "components/shared/InputInstructions/InputInstructions"
+import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 
 export interface Props {
   disabled: boolean
@@ -102,8 +103,8 @@ class TextInput extends React.PureComponent<Props, State> {
     const style = { width }
 
     return (
-      <div className="Widget row-widget stTextInput" style={style}>
-        <label>{element.label}</label>
+      <div className="row-widget stTextInput" style={style}>
+        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
         <UIInput
           value={value}
           onBlur={this.onBlur}

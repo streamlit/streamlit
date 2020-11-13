@@ -16,13 +16,11 @@
  */
 
 import React, { ComponentType, ReactElement, useEffect, useState } from "react"
-import classNames from "classnames"
 import hoistNonReactStatics from "hoist-non-react-statics"
 import Pagination from "hocs/withPagination/Pagination"
 import { usePrevious } from "lib/Hooks"
 
 export interface Props {
-  className: string
   items: any[]
   pageSize: number
   resetOnAdd: boolean
@@ -38,7 +36,6 @@ const withPagination = (
     pageSize,
     items,
     resetOnAdd,
-    className,
     ...props
   }: Props): ReactElement => {
     const [currentPage, updateCurrentPage] = useState<number>(0)
@@ -78,7 +75,7 @@ const withPagination = (
         <WrappedComponent items={paginatedItems} {...props} />
         {items.length > pageSize ? (
           <Pagination
-            className={classNames(className, "streamlit-paginator")}
+            className="streamlit-paginator"
             pageSize={pageSize}
             totalPages={totalPages}
             currentPage={currentPage + 1}

@@ -20,8 +20,8 @@ import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ColorPicker as ColorPickerProto } from "autogen/proto"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { ChromePicker, ColorResult } from "react-color"
-
-import "./ColorPicker.scss"
+import { StyledWidgetLabel } from "components/widgets/BaseWidget"
+import { StyledColorPicker, StyledColorPreview } from "./styled-components"
 
 export interface Props {
   disabled: boolean
@@ -77,8 +77,8 @@ class ColorPicker extends React.PureComponent<Props, State> {
       boxShadow: `${value} 0px 0px 4px`,
     }
     return (
-      <div className="Widget stColorPicker" style={style}>
-        <label>{element.label}</label>
+      <StyledColorPicker data-testid="stColorPicker" style={style}>
+        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
         <UIPopover
           onClose={this.onColorClose}
           content={() => (
@@ -89,9 +89,9 @@ class ColorPicker extends React.PureComponent<Props, State> {
             />
           )}
         >
-          <div className="color-preview" style={previewStyle}></div>
+          <StyledColorPreview style={previewStyle}></StyledColorPreview>
         </UIPopover>
-      </div>
+      </StyledColorPicker>
     )
   }
 }

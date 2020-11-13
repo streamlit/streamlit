@@ -28,24 +28,24 @@ describe("st.file_uploader", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stFileUploader")
+    cy.get("[data-testid='stFileUploader']")
       .first()
       .should("exist");
-    cy.get(".stFileUploader label")
+    cy.get("[data-testid='stFileUploader'] label")
       .first()
       .should("have.text", "Drop a file:");
 
-    cy.get(".stFileUploader")
+    cy.get("[data-testid='stFileUploader']")
       .first()
       .matchImageSnapshot("single_file_uploader");
 
-    cy.get(".stFileUploader")
+    cy.get("[data-testid='stFileUploader']")
       .last()
       .matchImageSnapshot("multi_file_uploader");
   });
 
   it("shows deprecation warning", () => {
-    cy.get(".stFileUploader")
+    cy.get("[data-testid='stFileUploader']")
       .first()
       .parent()
       .prev()
@@ -53,7 +53,7 @@ describe("st.file_uploader", () => {
   });
 
   it("hides deprecation warning", () => {
-    cy.get(".stFileUploader")
+    cy.get("[data-testid='stFileUploader']")
       .last()
       .parent()
       .prev()
@@ -64,7 +64,7 @@ describe("st.file_uploader", () => {
     const fileName = "example.json";
 
     cy.fixture(fileName).then(fileContent => {
-      cy.get(".fileUploadDropzone")
+      cy.get("[data-testid='stFileUploadDropzone']")
         .first()
         .attachFile(
           { fileContent, fileName, mimeType: "application/json" },
@@ -80,11 +80,11 @@ describe("st.file_uploader", () => {
           }
         );
 
-      cy.get(".fileError span")
+      cy.get("[data-testid='stUploadedFileErrorMessage']")
         .first()
         .should("have.text", "application/json files are not allowed.");
 
-      cy.get(".stFileUploader")
+      cy.get("[data-testid='stFileUploader']")
         .first()
         .matchImageSnapshot("file_uploader-error");
     });
@@ -104,7 +104,7 @@ describe("st.file_uploader", () => {
           { fileContent: file2, fileName: fileName2, mimeType: "text/plain" }
         ];
 
-        cy.get(".fileUploadDropzone")
+        cy.get("[data-testid='stFileUploadDropzone']")
           .eq(0)
           .attachFile(files[0], {
             force: true,
@@ -120,11 +120,11 @@ describe("st.file_uploader", () => {
           .first()
           .should("contain.text", file1);
 
-        cy.get(".stFileUploader")
+        cy.get("[data-testid='stFileUploader']")
           .first()
           .matchImageSnapshot("single_file_uploader-uploaded");
 
-        cy.get(".fileUploadDropzone")
+        cy.get("[data-testid='stFileUploadDropzone']")
           .eq(0)
           .attachFile(files[1], {
             force: true,
@@ -164,7 +164,7 @@ describe("st.file_uploader", () => {
           { fileContent: file2, fileName: fileName2, mimeType: "text/plain" }
         ];
 
-        cy.get(".fileUploadDropzone")
+        cy.get("[data-testid='stFileUploadDropzone']")
           .eq(1)
           .attachFile(files[0], {
             force: true,
@@ -192,7 +192,7 @@ describe("st.file_uploader", () => {
           .last()
           .should("have.text", content);
 
-        cy.get(".stFileUploader")
+        cy.get("[data-testid='stFileUploader']")
           .last()
           .matchImageSnapshot("multi_file_uploader-uploaded");
       });

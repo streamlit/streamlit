@@ -16,6 +16,7 @@
  */
 
 import { createTheme, lightThemePrimitives } from "baseui"
+import { mainTheme } from "theme"
 import { PLACEMENT as POPOVER_PLACEMENT } from "baseui/popover"
 import { StyleObject } from "styletron-react"
 import { logMessage } from "lib/log"
@@ -33,7 +34,7 @@ const lineHeightTight = SCSS_VARS["$line-height-tight"]
 
 const smallTextMargin = SCSS_VARS["$m2-3-font-size-sm"]
 const textMargin = SCSS_VARS["$font-size-sm"]
-const tinyTextMargin = SCSS_VARS["$m1-2-font-size-sm"]
+const tinyTextMargin = `${0.5 * parseFloat(textMargin)}rem`
 const spacer = SCSS_VARS.$spacer
 const gutter = SCSS_VARS.$gutter
 
@@ -74,7 +75,7 @@ export const colors = {
   primaryA50: SCSS_VARS["$primary-a50"],
 
   secondary: SCSS_VARS.$secondary,
-  danger: SCSS_VARS.$danger,
+  danger: mainTheme.colors.danger,
   disabledBg: SCSS_VARS.$disabled,
   disabledColor: SCSS_VARS.$gray,
 }
@@ -378,6 +379,11 @@ export const radioOverrides = {
 
 export const checkboxOverrides = {
   ...radioOverrides,
+  Label: {
+    style: {
+      marginBottom: tinyTextMargin,
+    },
+  },
   Checkmark: {
     style: ({
       $isFocusVisible,
@@ -386,7 +392,10 @@ export const checkboxOverrides = {
       $isFocusVisible: boolean
       $checked: boolean
     }) => ({
-      borderWidth: "2px",
+      borderLeftWidth: "2px",
+      borderRightWidth: "2px",
+      borderTopWidth: "2px",
+      borderBottomWidth: "2px",
       outline: 0,
       boxShadow:
         $isFocusVisible && $checked ? `0 0 0 0.2rem ${colors.primaryA50}` : "",
@@ -490,17 +499,17 @@ export const themeOverrides = {
     calendarDayBackgroundSelectedHighlighted: colors.primary,
     calendarDayForegroundSelected: colors.white,
     calendarDayForegroundSelectedHighlighted: colors.white,
-    notificationInfoBackground: SCSS_VARS["$alert-info-background-color"],
-    notificationInfoText: SCSS_VARS["$alert-info-text-color"],
+    notificationInfoBackground: mainTheme.colors.alertInfoBackgroundColor,
+    notificationInfoText: mainTheme.colors.alertInfoTextColor,
     notificationPositiveBackground:
-      SCSS_VARS["$alert-success-background-color"],
-    notificationPositiveText: SCSS_VARS["$alert-success-text-color"],
+      mainTheme.colors.alertSuccessBackgroundColor,
+    notificationPositiveText: mainTheme.colors.alertSuccessTextColor,
     notificationWarningBackground:
-      SCSS_VARS["$alert-warning-background-color"],
-    notificationWarningText: SCSS_VARS["$alert-warning-text-color"],
-    notificationNegativeBackground: SCSS_VARS["$alert-error-background-color"],
-    notificationNegativeText: SCSS_VARS["$alert-error-text-color"],
-    progressbarTrackFill: colors.grayLightest,
+      mainTheme.colors.alertWarningBackgroundColor,
+    notificationWarningText: mainTheme.colors.alertWarningTextColor,
+    notificationNegativeBackground: mainTheme.colors.alertErrorBackgroundColor,
+    notificationNegativeText: mainTheme.colors.alertErrorTextColor,
+    progressbarTrackFill: mainTheme.colors.lightestGray,
   },
 }
 
@@ -540,7 +549,7 @@ export const sidebarWidgetTheme = createTheme(mainThemePrimitives, {
     sliderHandleInnerFill: colors.grayLight,
     sliderHandleInnerFillDisabled: colors.grayLight,
 
-    progressbarTrackFill: colors.grayLight,
+    progressbarTrackFill: mainTheme.colors.gray40,
   },
 })
 

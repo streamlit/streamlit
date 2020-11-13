@@ -17,8 +17,12 @@
 
 import React, { PureComponent } from "react"
 import { SCSS_VARS } from "autogen/scssVariables"
-import Icon from "../Icon"
-import "./FullScreenWrapper.scss"
+import Icon from "components/shared/Icon"
+import PageLayoutContext from "components/core/PageLayoutContext"
+import {
+  StyledFullScreenFrame,
+  StyledFullScreenButton,
+} from "./styled-components"
 
 export type Size = {
   width: number
@@ -49,6 +53,8 @@ interface State {
  * to fixed and cover all screen, updating wrapped element height and width
  */
 class FullScreenWrapper extends PureComponent<Props, State> {
+  static contextType = PageLayoutContext
+
   static isFullScreen = false
 
   public constructor(props: Props) {
@@ -80,13 +86,13 @@ class FullScreenWrapper extends PureComponent<Props, State> {
 
   zoomIn = (): void => {
     document.body.style.overflow = "hidden"
-    FullScreenWrapper.isFullScreen = true
+    this.context.setFullScreen(true)
     this.setState({ expanded: true })
   }
 
   zoomOut = (): void => {
     document.body.style.overflow = "unset"
-    FullScreenWrapper.isFullScreen = false
+    this.context.setFullScreen(false)
     this.setState({ expanded: false })
   }
 
@@ -120,31 +126,29 @@ class FullScreenWrapper extends PureComponent<Props, State> {
     const { expanded, fullWidth, fullHeight } = this.state
     const { children, width, height } = this.props
 
-    let buttonClassName = "overlayBtn stButton-enter"
     let buttonImage = "fullscreen-enter"
     let buttonOnClick = this.zoomIn
     let buttonTitle = "View fullscreen"
 
     if (expanded) {
-      buttonClassName = "overlayBtn stButton-exit"
       buttonImage = "fullscreen-exit"
       buttonOnClick = this.zoomOut
       buttonTitle = "Exit fullscreen"
     }
 
     return (
-      <div className={`fullScreenFrame${expanded ? "--expanded" : ""}`}>
-        <button
-          className={buttonClassName}
+      <StyledFullScreenFrame isExpanded={expanded}>
+        <StyledFullScreenButton
           onClick={buttonOnClick}
           title={buttonTitle}
+          isExpanded={expanded}
         >
           <Icon type={buttonImage} />
-        </button>
+        </StyledFullScreenButton>
         {expanded
           ? children({ width: fullWidth, height: fullHeight, expanded })
           : children({ width, height, expanded })}
-      </div>
+      </StyledFullScreenFrame>
     )
   }
 }

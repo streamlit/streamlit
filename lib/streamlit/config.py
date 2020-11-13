@@ -157,11 +157,9 @@ def _create_option(
         replaced_by=replaced_by,
         type_=type_,
     )
-    assert (
-        option.section in _section_descriptions
-    ), 'Section "%s" must be one of %s.' % (
-        option.section,
-        ", ".join(_section_descriptions.keys()),
+    assert option.section in _section_descriptions, (
+        'Section "%s" must be one of %s.'
+        % (option.section, ", ".join(_section_descriptions.keys()),)
     )
     assert key not in _config_options, 'Cannot define option "%s" twice.' % key
     _config_options[key] = option
@@ -199,6 +197,7 @@ _create_option(
 
 _create_option(
     "global.sharingMode",
+    visibility="hidden",
     description="""
         Configure the ability to share apps to the cloud.
 

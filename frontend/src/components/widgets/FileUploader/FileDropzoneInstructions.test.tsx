@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { mount, shallow } from "enzyme"
+import { mount, shallow } from "lib/test_util"
 
 import { Small } from "components/shared/TextElements"
 import FileDropzoneInstructions, { Props } from "./FileDropzoneInstructions"

@@ -1,6 +1,6 @@
 {
   "name": "streamlit-browser",
-  "version": "0.70.0",
+  "version": "0.71.0",
   "private": true,
   "homepage": "./",
   "scripts": {
@@ -36,6 +36,7 @@
   "dependencies": {
     "@bokeh/bokehjs": "2.0.0",
     "@emotion/core": "^10.0.35",
+    "@emotion/serialize": "^0.11.16",
     "@emotion/styled": "^10.0.27",
     "@loaders.gl/core": "^2.2.8",
     "@loaders.gl/csv": "^2.2.8",
