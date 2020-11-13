@@ -77,7 +77,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
     const astPlugins = allowHTML ? [htmlParser()] : []
 
     return (
-      <StyledStreamlitMarkdown>
+      <StyledStreamlitMarkdown data-testid="stMarkdownContainer">
         <ReactMarkdown
           source={source}
           escapeHtml={!allowHTML}
