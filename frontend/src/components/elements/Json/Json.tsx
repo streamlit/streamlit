@@ -58,7 +58,7 @@ export default function Json({ width, element }: JsonProps): ReactElement {
         style={{
           fontFamily: theme.fonts.mono,
           fontSize: theme.fontSizes.smDefault,
-        }} // Unset so we can style via a CSS file.
+        }}
       />
     </div>
   )

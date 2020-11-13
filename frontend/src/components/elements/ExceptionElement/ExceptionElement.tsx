@@ -21,6 +21,7 @@ import StreamlitMarkdown from "components/shared/StreamlitMarkdown"
 import { Exception as ExceptionProto } from "autogen/proto"
 import {
   StyledMessageType,
+  StyledStackTrace,
   StyledStackTraceRow,
   StyledStackTraceTitle,
 } from "./styled-components"
@@ -77,13 +78,13 @@ function StackTrace({ stackTrace }: StackTraceProps): ReactElement {
   return (
     <>
       <StyledStackTraceTitle>Traceback:</StyledStackTraceTitle>
-      <pre className="stack-trace">
+      <StyledStackTrace>
         <code>
           {stackTrace.map((row: string, index: number) => (
             <StyledStackTraceRow key={index}>{row}</StyledStackTraceRow>
           ))}
         </code>
-      </pre>
+      </StyledStackTrace>
     </>
   )
 }

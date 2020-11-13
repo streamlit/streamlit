@@ -1,5 +1,4 @@
 import styled from "@emotion/styled"
-import { transparentize } from "color2k"
 
 export const StyledStreamlitMarkdown = styled.div(({ theme }) => ({
   fontFamily: theme.fonts.sansSerif,
@@ -12,9 +11,15 @@ export const StyledStreamlitMarkdown = styled.div(({ theme }) => ({
     paddingLeft: theme.spacing.lg,
   },
 
-  "pre, code": {
-    // Default color for syntax hilighting.
-    backgroundColor: transparentize(theme.colors.white, 0.5),
+  code: {
+    // Default color for syntax highlighting.
+    backgroundColor: theme.colors.transparent,
+    color: "inherit",
+  },
+
+  "pre code": {
+    // Default color for syntax highlighting.
+    backgroundColor: "#ffffff44",
     color: "inherit",
   },
 
