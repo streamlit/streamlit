@@ -81,7 +81,6 @@ import withScreencast, {
 import "assets/css/theme.scss"
 import "./App.scss"
 import "assets/css/header.scss"
-import "assets/css/write.scss"
 
 export interface Props {
   screenCast: ScreenCastHOC

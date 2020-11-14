@@ -56,7 +56,7 @@ describe("Component template", () => {
       return cy.wrap(el).matchImageSnapshot("iframe" + idx);
     });
 
-    cy.get(".element-container > .stMarkdown > p").each(el => {
+    cy.get(".element-container > .stMarkdown p").each(el => {
       expect(el.text()).to.eq("You've clicked 0 times!");
     });
   });
@@ -66,7 +66,7 @@ describe("Component template", () => {
       .find("button")
       .click();
 
-    cy.get(".element-container > .stMarkdown > p")
+    cy.get(".element-container > .stMarkdown p")
       .eq(0)
       .should("have.text", "You've clicked 1 times!");
   });

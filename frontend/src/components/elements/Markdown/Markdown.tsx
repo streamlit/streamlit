@@ -33,7 +33,7 @@ export default function Markdown({
 }: MarkdownProps): ReactElement {
   const styleProp = { width }
   return (
-    <div className="markdown-text-container stMarkdown" style={styleProp}>
+    <div className="stMarkdown" style={styleProp}>
       <StreamlitMarkdown source={element.body} allowHTML={element.allowHtml} />
     </div>
   )

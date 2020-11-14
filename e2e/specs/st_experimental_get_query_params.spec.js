@@ -26,7 +26,7 @@ describe("st.experimental_get_query_string", () => {
   });
 
   it("shows query string correctly", () => {
-    cy.get(".element-container .markdown-text-container").should(
+    cy.get(".element-container [data-testid='stMarkdownContainer']").should(
       "have.length",
       1
     );
