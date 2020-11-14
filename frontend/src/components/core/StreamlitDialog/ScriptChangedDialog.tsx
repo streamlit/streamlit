@@ -24,6 +24,7 @@ import Modal, {
   ModalButton,
 } from "components/shared/Modal"
 import { Kind } from "components/shared/Button"
+import { StyledShortcutLabel } from "./styled-components"
 
 export interface Props {
   /** Called to close the dialog without rerunning the report. */
@@ -66,11 +67,11 @@ export class ScriptChangedDialog extends PureComponent<Props> {
           <ModalFooter>
             {this.props.allowRunOnSave ? (
               <ModalButton kind={Kind.SECONDARY} onClick={this.alwaysRerun}>
-                <span className="underlineFirstLetter">Always rerun</span>
+                <StyledShortcutLabel>Always rerun</StyledShortcutLabel>
               </ModalButton>
             ) : null}
             <ModalButton kind={Kind.PRIMARY} onClick={this.rerun}>
-              <span className="underlineFirstLetter">Rerun</span>
+              <StyledShortcutLabel>Rerun</StyledShortcutLabel>
             </ModalButton>
           </ModalFooter>
         </Modal>

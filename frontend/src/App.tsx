@@ -68,6 +68,7 @@ import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
 import { ReportRoot } from "./lib/ReportNode"
 import { ComponentRegistry } from "./components/widgets/CustomComponent"
 import { handleFavicon } from "./components/elements/Favicon"
+import { StyledApp } from "./styled-components"
 
 import withS4ACommunication, {
   S4ACommunicationHOC,
@@ -79,7 +80,6 @@ import withScreencast, {
 
 // WARNING: order matters
 import "assets/css/theme.scss"
-import "./App.scss"
 import "assets/css/header.scss"
 
 export interface Props {
@@ -940,7 +940,7 @@ export class App extends PureComponent<Props, State> {
           attach={window}
           focused={true}
         >
-          <div className={outerDivClass}>
+          <StyledApp className={outerDivClass}>
             {/* The tabindex below is required for testing. */}
             <header tabIndex={-1}>
               <div className="decoration" />
@@ -984,7 +984,7 @@ export class App extends PureComponent<Props, State> {
               componentRegistry={this.componentRegistry}
             />
             {renderedDialog}
-          </div>
+          </StyledApp>
         </HotKeys>
       </PageLayoutContext.Provider>
     )

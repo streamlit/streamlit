@@ -26,9 +26,15 @@ const styleHeaderFunction = (theme: Theme): CSSObject => ({
 export const StyledTableCell = styled.td(({ theme }) =>
   styleHeaderFunction(theme)
 )
-export const StyledTableCellHeader = styled.th(({ theme }) =>
-  styleHeaderFunction(theme)
-)
+export const StyledTableCellHeader = styled.th(({ theme }) => ({
+  ...styleHeaderFunction(theme),
+  "@media print": {
+    // Firefox prints a double blurred table header. Normal font weight fixes it
+    "@-moz-document url-prefix()": {
+      fontWeight: "normal",
+    },
+  },
+}))
 
 export const StyledEmptyTableCell = styled(StyledTableCell)(({ theme }) => ({
   color: theme.colors.darkGray,
