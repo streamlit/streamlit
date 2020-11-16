@@ -1,3 +1,4 @@
+import isPropValid from "@emotion/is-prop-valid"
 import styled from "@emotion/styled"
 import { StyledDropdownListItem } from "baseui/select"
 
@@ -7,11 +8,11 @@ export const StyledTruncateText = styled.span({
   textOverflow: "ellipsis",
 })
 
-export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem)(
-  ({ theme }) => ({
-    display: "flex",
-    alignItems: "center",
-    paddingTop: theme.spacing.none,
-    paddingBottom: theme.spacing.none,
-  })
-)
+export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
+  shouldForwardProp: isPropValid,
+})(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  paddingTop: theme.spacing.none,
+  paddingBottom: theme.spacing.none,
+}))

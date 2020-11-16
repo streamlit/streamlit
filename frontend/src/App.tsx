@@ -25,6 +25,7 @@ import PageLayoutContext from "components/core/PageLayoutContext"
 import ReportView from "components/core/ReportView"
 import StatusWidget from "components/core/StatusWidget"
 import MainMenu from "components/core/MainMenu"
+import Header from "components/core/Header"
 import {
   DialogProps,
   DialogType,
@@ -80,7 +81,6 @@ import withScreencast, {
 // WARNING: order matters
 import "assets/css/theme.scss"
 import "./App.scss"
-import "assets/css/header.scss"
 
 export interface Props {
   screenCast: ScreenCastHOC
@@ -941,35 +941,31 @@ export class App extends PureComponent<Props, State> {
           focused={true}
         >
           <div className={outerDivClass}>
-            {/* The tabindex below is required for testing. */}
-            <header tabIndex={-1}>
-              <div className="decoration" />
-              <div className="toolbar">
-                <StatusWidget
-                  ref={this.statusWidgetRef}
-                  connectionState={connectionState}
-                  sessionEventDispatcher={this.sessionEventDispatcher}
-                  reportRunState={reportRunState}
-                  rerunReport={this.rerunScript}
-                  stopReport={this.stopReport}
-                  allowRunOnSave={allowRunOnSave}
-                />
-                <MainMenu
-                  sharingEnabled={sharingEnabled === true}
-                  isServerConnected={this.isServerConnected()}
-                  shareCallback={this.shareReport}
-                  quickRerunCallback={this.rerunScript}
-                  clearCacheCallback={this.openClearCacheDialog}
-                  settingsCallback={this.settingsCallback}
-                  aboutCallback={this.aboutCallback}
-                  screencastCallback={this.screencastCallback}
-                  screenCastState={this.props.screenCast.currentState}
-                  s4aMenuItems={this.props.s4aCommunication.currentState.items}
-                  sendS4AMessage={this.props.s4aCommunication.sendMessage}
-                  deployParams={deployParams}
-                />
-              </div>
-            </header>
+            <Header>
+              <StatusWidget
+                ref={this.statusWidgetRef}
+                connectionState={connectionState}
+                sessionEventDispatcher={this.sessionEventDispatcher}
+                reportRunState={reportRunState}
+                rerunReport={this.rerunScript}
+                stopReport={this.stopReport}
+                allowRunOnSave={allowRunOnSave}
+              />
+              <MainMenu
+                sharingEnabled={sharingEnabled === true}
+                isServerConnected={this.isServerConnected()}
+                shareCallback={this.shareReport}
+                quickRerunCallback={this.rerunScript}
+                clearCacheCallback={this.openClearCacheDialog}
+                settingsCallback={this.settingsCallback}
+                aboutCallback={this.aboutCallback}
+                screencastCallback={this.screencastCallback}
+                screenCastState={this.props.screenCast.currentState}
+                s4aMenuItems={this.props.s4aCommunication.currentState.items}
+                sendS4AMessage={this.props.s4aCommunication.sendMessage}
+                deployParams={deployParams}
+              />
+            </Header>
 
             <ReportView
               elements={elements}
