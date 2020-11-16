@@ -9,17 +9,11 @@ export interface StyledHeaderProps {
 export const StyledHeader = styled.header<StyledHeaderProps>(
   ({ isEmbedded, isWideMode, theme }) => ({
     position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
+    top: theme.spacing.none,
+    left: theme.spacing.none,
+    right: theme.spacing.none,
     height: 0,
     zIndex: theme.zIndices.header,
-    backgroundImage: isWideMode
-      ? `linear-gradient(180deg, ${theme.colors.white} 25%, ${transparentize(
-          theme.colors.white,
-          0.5
-        )} 75%, ${theme.colors.transparent})`
-      : undefined,
     display: isEmbedded ? "none" : "block",
     "@media print": {
       display: "none",
