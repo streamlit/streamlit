@@ -485,8 +485,10 @@ export class WebsocketConnection {
 }
 
 const StyledBashCode = styled.code({
-  content: '"$"',
-  marginRight: "1ex",
+  "&::before": {
+    content: '"$"',
+    marginRight: "1ex",
+  },
 })
 
 /**
