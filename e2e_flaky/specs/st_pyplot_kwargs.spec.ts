@@ -27,7 +27,7 @@ describe("st.pyplot with kwargs", () => {
     });
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
+    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
   });
 
   it("draws long text strings correctly", () => {

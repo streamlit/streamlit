@@ -25,7 +25,7 @@ describe("st.vega_lite_chart", () => {
     cy.get(".stApp > header").invoke("css", "position", "absolute");
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
+    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
   });
 
   it("displays charts on the DOM", () => {
