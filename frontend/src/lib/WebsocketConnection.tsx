@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+import styled from "@emotion/styled"
 import { BackMsg, ForwardMsg, IBackMsg } from "autogen/proto"
 
 import axios from "axios"
@@ -483,6 +484,13 @@ export class WebsocketConnection {
   }
 }
 
+const StyledBashCode = styled.code({
+  "&::before": {
+    content: '"$"',
+    marginRight: "1ex",
+  },
+})
+
 /**
  * Attempts to connect to the URIs in uriList (in round-robin fashion) and
  * retries forever until one of the URIs responds with 'ok'.
@@ -536,7 +544,7 @@ function doHealthPing(
             just restart it in your terminal:
           </p>
           <pre>
-            <code className="bash">{commandLine}</code>
+            <StyledBashCode>{commandLine}</StyledBashCode>
           </pre>
         </Fragment>
       )

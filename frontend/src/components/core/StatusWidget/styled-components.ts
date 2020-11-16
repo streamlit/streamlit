@@ -151,3 +151,9 @@ export const StyledStatusWidget = styled.div(({ theme }) => ({
     transition: "opacity 200ms ease-out",
   },
 }))
+
+export const StyledShortcutLabel = styled.div(({ theme }) => ({
+  "&::first-letter": {
+    textDecoration: "underline",
+  },
+}))

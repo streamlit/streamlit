@@ -28,6 +28,13 @@ export const StyledReportViewContainer = styled.div(({ theme }) => ({
   right: 0,
   bottom: 0,
   overflow: "hidden",
+  "@media print": {
+    display: "block",
+    float: "none",
+    height: theme.sizes.full,
+    position: "static",
+    overflow: "visible",
+  },
 }))
 
 export interface StyledReportViewMainProps {
@@ -43,6 +50,12 @@ export const StyledReportViewMain = styled.section<StyledReportViewMainProps>(
     alignItems: "center",
     "&:focus": {
       outline: "none",
+    },
+    "@media print": {
+      "@-moz-document url-prefix()": {
+        display: "block",
+      },
+      overflow: "visible",
     },
   })
 )

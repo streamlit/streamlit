@@ -69,6 +69,7 @@ import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
 import { ReportRoot } from "./lib/ReportNode"
 import { ComponentRegistry } from "./components/widgets/CustomComponent"
 import { handleFavicon } from "./components/elements/Favicon"
+import { StyledApp } from "./styled-components"
 
 import withS4ACommunication, {
   S4ACommunicationHOC,
@@ -80,7 +81,6 @@ import withScreencast, {
 
 // WARNING: order matters
 import "assets/css/theme.scss"
-import "./App.scss"
 
 export interface Props {
   screenCast: ScreenCastHOC
@@ -940,7 +940,8 @@ export class App extends PureComponent<Props, State> {
           attach={window}
           focused={true}
         >
-          <div className={outerDivClass}>
+          <StyledApp className={outerDivClass}>
+            {/* The tabindex below is required for testing. */}
             <Header>
               <StatusWidget
                 ref={this.statusWidgetRef}
@@ -980,7 +981,7 @@ export class App extends PureComponent<Props, State> {
               componentRegistry={this.componentRegistry}
             />
             {renderedDialog}
-          </div>
+          </StyledApp>
         </HotKeys>
       </PageLayoutContext.Provider>
     )

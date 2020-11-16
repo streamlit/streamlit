@@ -21,3 +21,9 @@ export const StyledUploadUrl = styled.pre(({ theme }) => ({
   whiteSpace: "normal",
   wordWrap: "break-word",
 }))
+
+export const StyledShortcutLabel = styled.span(({ theme }) => ({
+  "&::first-letter": {
+    textDecoration: "underline",
+  },
+}))

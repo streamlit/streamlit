@@ -22,6 +22,13 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
     marginRight: 0,
     marginBottom: isHidden ? 0 : theme.spacing.lg,
     marginLeft: 0,
+    "@media print": {
+      "@-moz-document url-prefix()": {
+        display: "block",
+      },
+      overflow: "visible",
+    },
+
     ...(isStale
       ? {
           opacity: 0.33,
