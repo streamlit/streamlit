@@ -8,7 +8,7 @@ import styled from "@emotion/styled"
 */
 export const StyledPre = styled.pre(({ theme }) => ({
   margin: 0,
-  paddingRight: "2.5rem",
+  paddingRight: "2.75rem",
 
   ".token.comment, .token.prolog, .token.doctype, .token.cdata": {
     color: "slategray",
@@ -62,6 +62,7 @@ export const StyledPre = styled.pre(({ theme }) => ({
 export const StyledCopyButton = styled.button(({ theme }) => ({
   opacity: 0,
   height: "2.5rem",
+  padding: 0,
   width: "2.5rem",
   transition: "opacity 300ms",
   border: "none",
@@ -75,22 +76,19 @@ export const StyledCopyButton = styled.button(({ theme }) => ({
   },
 }))
 
-export const StyledCopyButtonContainer = styled.div(({ theme }) => {
-  const fontSize = parseFloat(theme.fontSizes.smDefault)
-
-  return {
-    padding: `${fontSize / 4}rem ${fontSize / 2}rem`,
-    position: "absolute",
-    right: 0,
-    top: 0,
-    width: "2.5rem",
-    height: "100%",
-    backgroundColor: theme.colors.gray10,
-    zIndex: theme.zIndices.sidebar + 1,
-  }
-})
+export const StyledCopyButtonContainer = styled.div(({ theme }) => ({
+  padding: `${theme.spacing.sm} ${theme.spacing.sm} 0 0`,
+  top: 0,
+  right: 0,
+  position: "absolute",
+  width: "2.75rem",
+  height: "100%",
+  backgroundColor: theme.colors.transparent,
+  zIndex: theme.zIndices.sidebar + 1,
+}))
 
 export const StyledCodeBlock = styled.div(({ theme }) => ({
+  position: "relative",
   marginLeft: theme.spacing.none,
   marginRight: theme.spacing.none,
   marginTop: theme.spacing.none,

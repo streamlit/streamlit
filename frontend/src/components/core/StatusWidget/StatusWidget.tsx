@@ -14,7 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+import { EmotionIcon } from "@emotion-icons/emotion-icon"
+import { Ellipses, Info, Warning } from "@emotion-icons/open-iconic"
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
 import React, { PureComponent, ReactNode } from "react"
 import { HotKeys } from "react-hotkeys"
@@ -99,7 +100,7 @@ interface State {
 }
 
 interface ConnectionStateUI {
-  icon: string
+  icon: EmotionIcon
   label: string
   tooltip: string
 }
@@ -282,7 +283,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
         placement={Placement.BOTTOM}
       >
         <StyledConnectionStatus data-testid="stConnectionStatus">
-          <Icon className="icon-xs" type={ui.icon} />
+          <Icon size="sm" content={ui.icon} />
           <StyledConnectionStatusLabel
             isMinimized={this.state.statusMinimized}
           >
@@ -350,7 +351,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
           onMouseLeave={this.onReportPromptUnhover}
         >
           <StyledReportStatus>
-            <Icon className="icon-sm" type="info" />
+            <Icon content={Info} margin="0 sm 0 0" color="darkGray" />
             <StyledReportStatusLabel isMinimized={minimized} isPrompt>
               Source file changed.
             </StyledReportStatusLabel>
@@ -427,7 +428,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
       case ConnectionState.PINGING_SERVER:
       case ConnectionState.CONNECTING:
         return {
-          icon: "ellipses",
+          icon: Ellipses,
           label: "Connecting",
           tooltip: "Connecting to Streamlit server",
         }
@@ -439,7 +440,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
       case ConnectionState.DISCONNECTED_FOREVER:
       default:
         return {
-          icon: "warning",
+          icon: Warning,
           label: "Error",
           tooltip: "Unable to connect to Streamlit server",
         }

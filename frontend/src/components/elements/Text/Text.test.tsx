@@ -33,8 +33,6 @@ describe("Text element", () => {
     const props = getProps()
     const wrap = shallow(<Text {...props} />)
     expect(wrap).toBeDefined()
-    const elem = wrap.get(0)
     expect(wrap.text()).toBe("some plain text")
-    expect(elem.props.className.includes("stText")).toBeTruthy()
   })
 })

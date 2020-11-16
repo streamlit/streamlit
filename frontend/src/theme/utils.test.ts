@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,5 +15,18 @@
  * limitations under the License.
  */
 
-@import "src/assets/css/icons.scss";
-@import "src/assets/css/material-icons.scss";
+import { computeSpacingStyle } from "./utils"
+import mainTheme from "./mainTheme"
+
+describe("Styling utils", () => {
+  describe("computeSpacingStyle", () => {
+    test("pulls correct theme values", async () => {
+      expect(computeSpacingStyle("sm md lg none", mainTheme)).toEqual(
+        "0.5rem 0.75rem 1rem 0"
+      )
+      expect(computeSpacingStyle("xs  0  px  lg", mainTheme)).toEqual(
+        "0.375rem 0 1px 1rem"
+      )
+    })
+  })
+})

@@ -20,7 +20,7 @@ describe("st.multiselect", () => {
     cy.visit("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
+    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
   });
 
   describe("when first loaded", () => {
@@ -33,7 +33,7 @@ describe("st.multiselect", () => {
     });
 
     it("should show the correct text", () => {
-      cy.get(".stText")
+      cy.get("[data-testid='stText']")
         .should("have.length", 5)
         .should(
           "have.text",
@@ -121,7 +121,7 @@ describe("st.multiselect", () => {
     });
 
     it("outputs the correct value", () => {
-      cy.get(".stText")
+      cy.get("[data-testid='stText']")
         .should("have.length", 5)
         .should(
           "have.text",
@@ -133,7 +133,7 @@ describe("st.multiselect", () => {
       beforeEach(() => selectOption(0));
 
       it("outputs the correct value", () => {
-        cy.get(".stText")
+        cy.get("[data-testid='stText']")
           .should("have.length", 5)
           .should(
             "have.text",
@@ -149,7 +149,7 @@ describe("st.multiselect", () => {
             .click();
         });
         it("outputs the correct value", () => {
-          cy.get(".stText")
+          cy.get("[data-testid='stText']")
             .should("have.length", 5)
             .should(
               "have.text",
@@ -165,7 +165,7 @@ describe("st.multiselect", () => {
             .click();
         });
         it("outputs the correct value", () => {
-          cy.get(".stText")
+          cy.get("[data-testid='stText']")
             .should("have.length", 5)
             .should(
               "have.text",

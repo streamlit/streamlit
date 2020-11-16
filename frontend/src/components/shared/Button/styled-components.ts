@@ -1,7 +1,7 @@
 import { MouseEvent, ReactNode } from "react"
 import styled, { CSSObject } from "@emotion/styled"
-import { Theme } from "theme"
 import { transparentize } from "color2k"
+import { Theme } from "theme"
 
 export enum Kind {
   PRIMARY = "primary",
@@ -61,7 +61,7 @@ export const StyledBaseButton = styled.button<RequiredButtonProps>(
     borderRadius: theme.radii.md,
     margin: 0,
     lineHeight: theme.lineHeights.base,
-    color: theme.colors.bodyText,
+    color: "inherit",
     width: fluidWidth ? "100%" : "auto",
     "&:focus": {
       boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
@@ -171,24 +171,11 @@ export const StyledIconButton = styled(StyledBaseButton)<RequiredButtonProps>(
       "&:hover": {
         borderColor: theme.colors.primary,
         color: theme.colors.primary,
-        // I don't like this, but this is a result of the icon being on a side bar
-        ".open-iconic": {
-          opacity: 1,
-        },
       },
       "&:active": {
         backgroundColor: theme.colors.primary,
         borderColor: theme.colors.primary,
         color: theme.colors.white,
-        // I don't like this, but this is a result of the icon being on a side bar
-        ".open-iconic": {
-          opacity: 1,
-        },
-      },
-      "&:focus": {
-        ".open-iconic": {
-          opacity: 1,
-        },
       },
       "&:focus:not(:active)": {
         borderColor: theme.colors.primary,

@@ -22,11 +22,11 @@ describe("st.experimental_get_query_string", () => {
         "show_map=True&number_of_countries=2&selected=asia&selected=america"
     );
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
+    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
   });
 
   it("shows query string correctly", () => {
-    cy.get(".element-container .markdown-text-container").should(
+    cy.get(".element-container [data-testid='stMarkdownContainer']").should(
       "have.length",
       1
     );

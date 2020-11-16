@@ -53,9 +53,7 @@ export default function Alert({
   return (
     <div className="stAlert">
       <AlertContainer width={width} kind={kind}>
-        <div className="markdown-text-container">
-          <StreamlitMarkdown source={body} allowHTML={false} />
-        </div>
+        <StreamlitMarkdown source={body} allowHTML={false} />
       </AlertContainer>
     </div>
   )

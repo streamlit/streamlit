@@ -23,7 +23,7 @@ describe("st.add_rows", () => {
     cy.visit("http://localhost:3000/");
 
     // Rerun the script because we want to test that JS-side coalescing works.
-    cy.get(".stApp .decoration").trigger("keypress", {
+    cy.get(".stApp [data-testid='stDecoration']").trigger("keypress", {
       keyCode: 82, // "r"
       which: 82 // "r"
     });
@@ -32,7 +32,7 @@ describe("st.add_rows", () => {
     cy.get(".element-container").should("not.have.class", "stale-element");
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
+    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
   });
 
   beforeEach(() => {

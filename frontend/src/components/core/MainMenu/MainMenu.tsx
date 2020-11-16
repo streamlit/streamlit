@@ -19,6 +19,7 @@ import React, { ReactElement, memo, forwardRef, MouseEvent } from "react"
 import { StatefulPopover, PLACEMENT } from "baseui/popover"
 import { StatefulMenu } from "baseui/menu"
 import Button, { Kind } from "components/shared/Button"
+import { Menu } from "@emotion-icons/open-iconic"
 
 import Icon from "components/shared/Icon"
 import {
@@ -327,7 +328,7 @@ function MainMenu(props: Props): ReactElement {
     >
       <span id="MainMenu">
         <Button kind={Kind.ICON}>
-          <Icon type="menu" />
+          <Icon content={Menu} />
         </Button>
         {props.screenCastState === "RECORDING" && <StyledRecordingIndicator />}
       </span>

@@ -17,6 +17,7 @@
 
 import React from "react"
 import { shallow } from "enzyme"
+import { ChevronTop, ChevronBottom } from "@emotion-icons/open-iconic"
 import { SortDirection } from "./SortDirection"
 
 import { StyledDataFrameCornerCell } from "./styled-components"
@@ -51,7 +52,7 @@ describe("DataFrameCell Element", () => {
       })
       const wrapper = shallow(<DataFrameCell {...props} />)
 
-      expect(wrapper.find("SortArrowIcon").prop("type")).toBe("chevron-top")
+      expect(wrapper.find("Icon").prop("content")).toBe(ChevronTop)
     })
 
     it("should render descending icon", () => {
@@ -61,7 +62,7 @@ describe("DataFrameCell Element", () => {
       })
       const wrapper = shallow(<DataFrameCell {...props} />)
 
-      expect(wrapper.find("SortArrowIcon").prop("type")).toBe("chevron-bottom")
+      expect(wrapper.find("Icon").prop("content")).toBe(ChevronBottom)
     })
 
     it("should only render sort icon in the top row", () => {
@@ -72,7 +73,7 @@ describe("DataFrameCell Element", () => {
       })
       const wrapper = shallow(<DataFrameCell {...props} />)
 
-      expect(wrapper.find("SortArrowIcon").length).toBeFalsy()
+      expect(wrapper.find("Icon").length).toBeFalsy()
     })
 
     it("should not render if it's undefined", () => {
@@ -82,7 +83,7 @@ describe("DataFrameCell Element", () => {
       })
       const wrapper = shallow(<DataFrameCell {...props} />)
 
-      expect(wrapper.find("SortArrowIcon").length).toBeFalsy()
+      expect(wrapper.find("Icon").length).toBeFalsy()
     })
   })
 

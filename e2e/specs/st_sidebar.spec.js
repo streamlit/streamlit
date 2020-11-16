@@ -20,7 +20,7 @@ describe("st.sidebar", () => {
     cy.visit("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
+    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
   });
 
   it("handles z-index of date input popover", () => {
@@ -39,7 +39,9 @@ describe("st.sidebar", () => {
   });
 
   it("handles overwriting elements", () => {
-    cy.get("[data-testid='stSidebar'] .stText").contains("overwritten");
+    cy.get("[data-testid='stSidebar'] [data-testid='stText']").contains(
+      "overwritten"
+    );
   });
 
   it("collapses the sidebar on mobile resize", () => {

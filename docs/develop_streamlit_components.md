@@ -196,7 +196,7 @@ This template has much more code than its React sibling, in that all the mechani
 
 - Towards the bottom of the source file, the template calls `Streamlit.setComponentReady()` to tell Streamlit it's ready to start receiving data. (You'll generally want to do this after creating and loading everything that the Component relies on.)
 - It subscribes to `Streamlit.RENDER_EVENT` to be notified of when to redraw. (This event won't be fired until `setComponentReady` is called)
-- Within its `onRender` event handler, it accesses the arguments passed in the Python script via `event.details.args`
+- Within its `onRender` event handler, it accesses the arguments passed in the Python script via `event.detail.args`
 - It sends data back to the Python script in the same way that the React template does - clicking on the "Click Me!" button calls `Streamlit.setComponentValue()`
 - It informs Streamlit when its height may have changed via `Streamlit.setFrameHeight()`
 

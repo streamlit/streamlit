@@ -16,6 +16,7 @@
  */
 
 import React, { PureComponent } from "react"
+import { FullscreenEnter, FullscreenExit } from "@emotion-icons/open-iconic"
 import { SCSS_VARS } from "autogen/scssVariables"
 import Icon from "components/shared/Icon"
 import PageLayoutContext from "components/core/PageLayoutContext"
@@ -126,12 +127,12 @@ class FullScreenWrapper extends PureComponent<Props, State> {
     const { expanded, fullWidth, fullHeight } = this.state
     const { children, width, height } = this.props
 
-    let buttonImage = "fullscreen-enter"
+    let buttonImage = FullscreenEnter
     let buttonOnClick = this.zoomIn
     let buttonTitle = "View fullscreen"
 
     if (expanded) {
-      buttonImage = "fullscreen-exit"
+      buttonImage = FullscreenExit
       buttonOnClick = this.zoomOut
       buttonTitle = "Exit fullscreen"
     }
@@ -143,7 +144,7 @@ class FullScreenWrapper extends PureComponent<Props, State> {
           title={buttonTitle}
           isExpanded={expanded}
         >
-          <Icon type={buttonImage} />
+          <Icon content={buttonImage} />
         </StyledFullScreenButton>
         {expanded
           ? children({ width: fullWidth, height: fullHeight, expanded })

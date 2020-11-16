@@ -54,7 +54,9 @@ export default function CodeBlock({
   if (language == null) {
     return (
       <StyledCodeBlock className="stCodeBlock">
-        <CopyButton text={value} />
+        <StyledCopyButtonContainer>
+          <CopyButton text={value} />
+        </StyledCopyButtonContainer>
         <StyledPre>
           <code>{value}</code>
         </StyledPre>

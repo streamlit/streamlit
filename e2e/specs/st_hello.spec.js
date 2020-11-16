@@ -72,7 +72,7 @@ describe("hello", () => {
             );
 
             // Wait for the animation to end.
-            cy.get(".stText").contains("100% Complete");
+            cy.get("[data-testid='stText']").contains("100% Complete");
 
             cy.get(".element-container [data-testid='stVegaLiteChart']")
               .find("canvas")

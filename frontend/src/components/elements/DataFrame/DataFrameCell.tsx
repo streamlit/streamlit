@@ -16,9 +16,10 @@
  */
 
 import React, { ComponentType, ReactElement } from "react"
-import styled from "@emotion/styled"
+import { ChevronTop, ChevronBottom } from "@emotion-icons/open-iconic"
 import Icon from "components/shared/Icon"
 import { SortDirection } from "./SortDirection"
+import { StyledSortIcon } from "./styled-components"
 
 export interface DataFrameCellProps {
   /** The cell's column index in the DataFrame */
@@ -62,13 +63,6 @@ export interface DataFrameCellProps {
    */
   headerClickedCallback?: (columnIndex: number) => void
 }
-
-const SortArrowIcon = styled(Icon)(({ theme }) => ({
-  fontSize: theme.fontSizes.xs,
-  marginRight: theme.spacing.twoXS,
-  opacity: 0.3,
-  verticalAlign: "top",
-}))
 
 export default function DataFrameCell({
   CellType,
@@ -127,10 +121,18 @@ function drawSortIcon(sortDirection?: SortDirection): React.ReactNode {
   // to ensure proper column width padding
   switch (sortDirection) {
     case SortDirection.ASCENDING:
-      return <SortArrowIcon type="chevron-top" />
+      return (
+        <StyledSortIcon>
+          <Icon content={ChevronTop} size="xs" margin="0 twoXS 0 0" />
+        </StyledSortIcon>
+      )
 
     case SortDirection.DESCENDING:
-      return <SortArrowIcon type="chevron-bottom" />
+      return (
+        <StyledSortIcon>
+          <Icon content={ChevronBottom} size="xs" margin="0 twoXS 0 0" />
+        </StyledSortIcon>
+      )
 
     case undefined:
     default:
