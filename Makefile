@@ -147,6 +147,11 @@ mypy:
 integration-tests:
 	python scripts/run_bare_integration_tests.py
 
+.PHONY: cli-smoke-tests
+# Verify that CLI boots as expected when called with `python -m streamlit`
+cli-smoke-tests:
+	python scripts/cli_smoke_tests.py
+
 .PHONY: install
 # Install Streamlit into your Python environment.
 install:
