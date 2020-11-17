@@ -17,6 +17,8 @@ import pathlib
 import subprocess
 import json
 
+import click
+
 HERE = pathlib.Path(__file__).parent.resolve()
 SCRIPT_PATH = HERE.joinpath("test_data", "print_command_line.py")
 
@@ -27,14 +29,50 @@ def main():
         standard_cli_command
     )
 
-    assert " ".join(standard_cli_command) == command_line_seen_for_standard
+    _test_agrees_with_expected_with_click_feedback(
+        provided=standard_cli_command,
+        seen=command_line_seen_for_standard,
+        expected=standard_cli_command,
+    )
 
     command_via_module = ["python", "-m", "streamlit", "run", str(SCRIPT_PATH)]
     command_expected_to_be_seen = ["__main__.py", "run", str(SCRIPT_PATH)]
 
     command_line_seen_for_module = _get_command_line_seen_by_server(command_via_module)
 
-    assert " ".join(command_expected_to_be_seen) == command_line_seen_for_module
+    _test_agrees_with_expected_with_click_feedback(
+        provided=command_via_module,
+        seen=command_line_seen_for_module,
+        expected=command_expected_to_be_seen,
+    )
+
+    click.secho("CLI smoke tests succeeded!", fg="green", bold=True)
+
+
+def _test_agrees_with_expected_with_click_feedback(provided, seen, expected):
+    provided_as_string = " ".join(provided)
+    expected_as_string = " ".join(expected)
+
+    feedback_string = (
+        f"\nWhen the following was called:\n\n    {provided_as_string}\n\n"
+        f"The Streamlit server saw:\n\n    {seen}\n\n"
+        "Which {agreement} with what was expected:\n\n"
+        f"    {expected_as_string}\n\n"
+    )
+
+    if expected_as_string == seen:
+        click.secho(
+            feedback_string.format(agreement="agrees"),
+            fg="green",
+            bold=True,
+        )
+    else:
+        click.secho(
+            feedback_string.format(agreement="disagrees"),
+            fg="red",
+            bold=True,
+        )
+        raise AssertionError("Unexpected command line seen")
 
 
 def _get_command_line_seen_by_server(command):
