@@ -27,7 +27,7 @@ def main():
     standard = ["streamlit", "run", str(SCRIPT_PATH)]
     _run_cli_smoke_tests(provided=standard, expected=standard)
 
-    # When calling from module click parses prog/argv[0] as __main__.py
+    # When calling from module the called prog/argv[0] is __main__.py
     _run_cli_smoke_tests(
         provided=["python", "-m", "streamlit", "run", str(SCRIPT_PATH)],
         expected=["__main__.py", "run", str(SCRIPT_PATH)],
