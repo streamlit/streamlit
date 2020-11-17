@@ -43,11 +43,13 @@ def _get_command_line_seen_by_server(command):
 
     key = "server._command_line"
 
-    command_line_json = [
+    all_command_line_json_found = [
         item.decode()
         for item in result.stdout.readlines()
         if item.decode().startswith(f'{{"{key}": ')
-    ][0]
+    ]
+    assert len(all_command_line_json_found) == 1
+    command_line_json = all_command_line_json_found[0]
 
     command_line = json.loads(command_line_json)[key]
     return command_line
