@@ -15,7 +15,6 @@
 
 import pathlib
 import subprocess
-import time
 import json
 
 HERE = pathlib.Path(__file__).parent.resolve()
