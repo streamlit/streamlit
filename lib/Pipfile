@@ -19,7 +19,7 @@ testfixtures = "*"
 twine = "*"
 wheel = "*"
 # Doc builder packages:
-Sphinx = "==3.3.0"
+Sphinx = "==3.3.1"
 recommonmark = "*"
 sphinx-markdown-tables = "*"
 sphinx-rtd-theme = "*"
