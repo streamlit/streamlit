@@ -46,6 +46,23 @@ def _run_cli_smoke_tests(provided, expected):
     )
 
 
+def _get_command_line_seen_by_server(command):
+    result = subprocess.Popen(command, stdout=subprocess.PIPE)
+
+    key = "server._command_line"
+
+    all_command_line_json_found = [
+        item.decode()
+        for item in result.stdout.readlines()
+        if item.decode().startswith(f'{{"{key}": ')
+    ]
+    assert len(all_command_line_json_found) == 1
+    command_line_json = all_command_line_json_found[0]
+
+    command_line = json.loads(command_line_json)[key]
+    return command_line
+
+
 def _test_agrees_with_expected_with_click_feedback(provided, seen, expected):
     provided_as_string = " ".join(provided)
     expected_as_string = " ".join(expected)
@@ -70,23 +87,6 @@ def _test_agrees_with_expected_with_click_feedback(provided, seen, expected):
             bold=True,
         )
         raise AssertionError("Unexpected command line seen")
-
-
-def _get_command_line_seen_by_server(command):
-    result = subprocess.Popen(command, stdout=subprocess.PIPE)
-
-    key = "server._command_line"
-
-    all_command_line_json_found = [
-        item.decode()
-        for item in result.stdout.readlines()
-        if item.decode().startswith(f'{{"{key}": ')
-    ]
-    assert len(all_command_line_json_found) == 1
-    command_line_json = all_command_line_json_found[0]
-
-    command_line = json.loads(command_line_json)[key]
-    return command_line
 
 
 if __name__ == "__main__":
