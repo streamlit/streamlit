@@ -20,12 +20,15 @@ import { ReactWrapper } from "enzyme"
 import { shallow, mount } from "lib/test_util"
 import { ForwardMsg, NewReport } from "autogen/proto"
 import { IMenuItem } from "hocs/withS4ACommunication/types"
+import { ConnectionState } from "lib/ConnectionState"
 import { MetricsManager } from "./lib/MetricsManager"
 import { getMetricsManagerForTest } from "./lib/MetricsManagerTestUtils"
 import { SessionInfo, Args as SessionInfoArgs } from "./lib/SessionInfo"
 
 import { App, Props } from "./App"
 import MainMenu from "./components/core/MainMenu"
+
+jest.mock("lib/ConnectionManager")
 
 const getProps = (extend?: Partial<Props>): Props => ({
   screenCast: {
@@ -91,7 +94,6 @@ describe("App", () => {
   it("reloads when streamlit server version changes", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
-
     window.location.reload = jest.fn()
 
     const fwMessage = new ForwardMsg()
@@ -240,6 +242,35 @@ describe("App.handleNewReport", () => {
     // Multiple NEW_REPORT messages should not result in one-time
     // initialization being performed more than once.
     expect(oneTimeInitialization).toHaveBeenCalledTimes(1)
+    expect(SessionInfo.isSet()).toBe(true)
+  })
+
+  it("performs one-time initialization after a new session is received", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    const app = wrapper.instance()
+
+    const oneTimeInitialization = jest.spyOn(
+      app,
+      // @ts-ignore
+      "handleOneTimeInitialization"
+    )
+
+    expect(SessionInfo.isSet()).toBe(false)
+
+    // @ts-ignore
+    app.handleNewReport(NEW_REPORT)
+    expect(oneTimeInitialization).toHaveBeenCalledTimes(1)
+
+    // @ts-ignore
+    app.handleConnectionStateChanged(ConnectionState.PINGING_SERVER)
+    expect(SessionInfo.isSet()).toBe(false)
+
+    // @ts-ignore
+    app.handleConnectionStateChanged(ConnectionState.CONNECTED)
+    // @ts-ignore
+    app.handleNewReport(NEW_REPORT)
+
+    expect(oneTimeInitialization).toHaveBeenCalledTimes(2)
     expect(SessionInfo.isSet()).toBe(true)
   })
 })
