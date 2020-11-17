@@ -12,8 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import sys
 from streamlit.cli import main
 
 if __name__ == "__main__":
+    # So that the Streamlit server sees the same command line string
+    # whether streamlit is called directly or via `python -m streamlit`.
+    sys.argv[0] = "streamlit"
+
     main()

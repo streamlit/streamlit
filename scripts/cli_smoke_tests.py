@@ -24,13 +24,15 @@ SCRIPT_PATH = HERE.joinpath("test_data", "print_command_line.py")
 
 
 def main():
-    standard = ["streamlit", "run", str(SCRIPT_PATH)]
-    _run_cli_smoke_tests(provided=standard, expected=standard)
+    standard_cli = ["streamlit", "run", str(SCRIPT_PATH)]
+    _run_cli_smoke_tests(provided=standard_cli, expected=standard_cli)
 
-    # When calling from module the called prog/argv[0] is __main__.py
+    # When calling from module the called argv[0] is updated by
+    # __main__.py to be "streamlit" instead of "__main__.py"
+    module_cli = ["python", "-m", "streamlit", "run", str(SCRIPT_PATH)]
     _run_cli_smoke_tests(
-        provided=["python", "-m", "streamlit", "run", str(SCRIPT_PATH)],
-        expected=["__main__.py", "run", str(SCRIPT_PATH)],
+        provided=module_cli,
+        expected=standard_cli,
     )
 
     click.secho("CLI smoke tests succeeded!", fg="green", bold=True)
