@@ -24,29 +24,26 @@ SCRIPT_PATH = HERE.joinpath("test_data", "print_command_line.py")
 
 
 def main():
-    standard_cli_command = ["streamlit", "run", str(SCRIPT_PATH)]
-    command_line_seen_for_standard = _get_command_line_seen_by_server(
-        standard_cli_command
-    )
+    standard = ["streamlit", "run", str(SCRIPT_PATH)]
+    _run_cli_smoke_tests(provided=standard, expected=standard)
 
-    _test_agrees_with_expected_with_click_feedback(
-        provided=standard_cli_command,
-        seen=command_line_seen_for_standard,
-        expected=standard_cli_command,
-    )
-
-    command_via_module = ["python", "-m", "streamlit", "run", str(SCRIPT_PATH)]
-    command_expected_to_be_seen = ["__main__.py", "run", str(SCRIPT_PATH)]
-
-    command_line_seen_for_module = _get_command_line_seen_by_server(command_via_module)
-
-    _test_agrees_with_expected_with_click_feedback(
-        provided=command_via_module,
-        seen=command_line_seen_for_module,
-        expected=command_expected_to_be_seen,
+    # When calling from module click parses prog/argv[0] as __main__.py
+    _run_cli_smoke_tests(
+        provided=["python", "-m", "streamlit", "run", str(SCRIPT_PATH)],
+        expected=["__main__.py", "run", str(SCRIPT_PATH)],
     )
 
     click.secho("CLI smoke tests succeeded!", fg="green", bold=True)
+
+
+def _run_cli_smoke_tests(provided, expected):
+    seen = _get_command_line_seen_by_server(provided)
+
+    _test_agrees_with_expected_with_click_feedback(
+        provided=provided,
+        seen=seen,
+        expected=expected,
+    )
 
 
 def _test_agrees_with_expected_with_click_feedback(provided, seen, expected):
