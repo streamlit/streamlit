@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { mount, shallow } from "lib/test_util"
+import { mount } from "lib/test_util"
 import { Slider as SliderProto } from "autogen/proto"
 import { Slider as UISlider } from "baseui/slider"
 import TimezoneMock from "timezone-mock"
