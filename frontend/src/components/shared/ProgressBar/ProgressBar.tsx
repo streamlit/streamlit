@@ -24,7 +24,13 @@ import {
 } from "baseui/progress-bar"
 import { mergeOverrides } from "baseui"
 import { Overrides } from "baseui/overrides"
-import { Sizes } from "lib/widgetTheme"
+
+export enum Sizes {
+  SMALL = "sm",
+  MEDIUM = "md",
+  LARGE = "lg",
+  EXTRALARGE = "xl",
+}
 
 export interface ProgressBarProps {
   width?: number

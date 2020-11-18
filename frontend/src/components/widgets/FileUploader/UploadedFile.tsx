@@ -31,7 +31,6 @@ import {
   FileStatuses,
   getSizeDisplay,
 } from "lib/FileHelper"
-import { Sizes } from "lib/widgetTheme"
 import {
   StyledUploadedFile,
   StyledFileErrorIcon,
@@ -41,6 +40,13 @@ import {
   StyledUploadedFileData,
   StyledUploadedFileName,
 } from "./styled-components"
+
+export enum Sizes {
+  SMALL = "sm",
+  MEDIUM = "md",
+  LARGE = "lg",
+  EXTRALARGE = "xl",
+}
 
 export interface Props {
   file: ExtendedFile

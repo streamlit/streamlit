@@ -18,14 +18,18 @@ import React from "react"
 import { ThemeProvider as BaseUIThemeProvider } from "baseui"
 import { ThemeProvider as EmotionThemeProvider } from "emotion-theming"
 import { shallow } from "lib/test_util"
-import { mainWidgetTheme, sidebarWidgetTheme } from "lib/widgetTheme"
-import { mainTheme, sidebarTheme } from "theme"
+import {
+  mainTheme,
+  sidebarTheme,
+  mainBaseUITheme,
+  sidebarBaseUITheme,
+} from "theme"
 import ThemeProvider from "./ThemeProvider"
 
 describe("ThemeProvider component", () => {
   it("renders both theme providers without an error", () => {
     const wrapper = shallow(
-      <ThemeProvider theme={mainTheme} baseuiTheme={mainWidgetTheme}>
+      <ThemeProvider theme={mainTheme} baseuiTheme={mainBaseUITheme}>
         null
       </ThemeProvider>
     )
@@ -35,22 +39,22 @@ describe("ThemeProvider component", () => {
 
   it("sets the correct themes", () => {
     let wrapper = shallow(
-      <ThemeProvider theme={mainTheme} baseuiTheme={mainWidgetTheme}>
+      <ThemeProvider theme={mainTheme} baseuiTheme={mainBaseUITheme}>
         null
       </ThemeProvider>
     )
     expect(wrapper.find(BaseUIThemeProvider).prop("theme")).toEqual(
-      mainWidgetTheme
+      mainBaseUITheme
     )
     expect(wrapper.find(EmotionThemeProvider).prop("theme")).toEqual(mainTheme)
 
     wrapper = shallow(
-      <ThemeProvider theme={sidebarTheme} baseuiTheme={sidebarWidgetTheme}>
+      <ThemeProvider theme={sidebarTheme} baseuiTheme={sidebarBaseUITheme}>
         null
       </ThemeProvider>
     )
     expect(wrapper.find(BaseUIThemeProvider).prop("theme")).toEqual(
-      sidebarWidgetTheme
+      sidebarBaseUITheme
     )
     expect(wrapper.find(EmotionThemeProvider).prop("theme")).toEqual(
       sidebarTheme
@@ -62,7 +66,7 @@ describe("ThemeProvider component", () => {
       <ThemeProvider theme={mainTheme}>null</ThemeProvider>
     )
     expect(wrapper.find(BaseUIThemeProvider).prop("theme")).toEqual(
-      mainWidgetTheme
+      mainBaseUITheme
     )
     expect(wrapper.find(EmotionThemeProvider).prop("theme")).toEqual(mainTheme)
   })

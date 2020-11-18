@@ -22,8 +22,7 @@ import { Client as Styletron } from "styletron-engine-atomic"
 import { LightTheme, BaseProvider } from "baseui"
 import { Provider as StyletronProvider } from "styletron-react"
 import ThemeProvider from "components/core/ThemeProvider"
-import { mainWidgetTheme } from "lib/widgetTheme"
-import { mainTheme } from "theme"
+import { mainTheme, mainBaseUITheme } from "theme"
 import AppWithScreencast from "./App"
 
 const engine = new Styletron({ prefix: "st-" })
@@ -35,7 +34,7 @@ ReactDOM.render(
       actually does. See: https://baseweb.design/components/base-provider/
       // @ts-ignore */}
     <BaseProvider theme={LightTheme} zIndex={mainTheme.zIndices.popupMenu}>
-      <ThemeProvider theme={mainTheme} baseuiTheme={mainWidgetTheme}>
+      <ThemeProvider theme={mainTheme} baseuiTheme={mainBaseUITheme}>
         <AppWithScreencast />
       </ThemeProvider>
     </BaseProvider>

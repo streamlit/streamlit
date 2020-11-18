@@ -17,19 +17,22 @@
 
 import React from "react"
 import { Slider as UISlider } from "baseui/slider"
+import { withTheme } from "emotion-theming"
 import { sprintf } from "sprintf-js"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { Slider as SliderProto } from "autogen/proto"
-import { sliderOverrides } from "lib/widgetTheme"
 import { debounce } from "lib/utils"
 import moment from "moment"
 import { StyledWidgetLabel } from "components/widgets/BaseWidget"
+import { transparentize } from "color2k"
+import { Theme } from "theme"
 
 const DEBOUNCE_TIME_MS = 200
 
 export interface Props {
   disabled: boolean
   element: SliderProto
+  theme: Theme
   widgetMgr: WidgetStateManager
   width: number
 }
@@ -183,12 +186,23 @@ class Slider extends React.PureComponent<Props, State> {
     $thumbIndex: number
     $value: any
   }): JSX.Element => {
-    const thumbValueStyle = sliderOverrides.ThumbValue.style({
-      $disabled: this.props.disabled,
-    }) as React.CSSProperties
+    const { disabled, theme } = this.props
+    const { colors, fonts, fontSizes, lineHeights } = theme
+    const thumbValueStyle: React.CSSProperties = {
+      fontFamily: fonts.mono,
+      fontSize: fontSizes.smDefault,
+      paddingBottom: fontSizes.twoThirdSmDefault,
+      color: disabled ? colors.gray : colors.primary,
+      top: "-22px",
+      position: "absolute",
+      whiteSpace: "nowrap",
+      backgroundColor: colors.transparent,
+      lineHeight: lineHeights.base,
+      fontWeight: "normal",
+    }
 
     return (
-      <div style={thumbValueStyle}>
+      <div style={thumbValueStyle} data-testid="stThumbValue">
         {this.formatValue(data.$value[data.$thumbIndex])}
       </div>
     )
@@ -196,11 +210,28 @@ class Slider extends React.PureComponent<Props, State> {
 
   private renderTickBar = (): JSX.Element => {
     const { max, min } = this.props.element
-    const tickBarItemStyle = sliderOverrides.TickBarItem
-      .style as React.CSSProperties
+    const { fonts, fontSizes, lineHeights, spacing } = this.props.theme
+    const tickBarItemStyle: React.CSSProperties = {
+      lineHeight: lineHeights.base,
+      fontWeight: "normal",
+      fontSize: fontSizes.smDefault,
+      fontFamily: fonts.mono,
+    }
 
     return (
-      <div className="sliderTickBar" style={sliderOverrides.TickBar.style}>
+      <div
+        className="sliderTickBar"
+        data-testid="stTickBar"
+        style={{
+          paddingBottom: spacing.none,
+          paddingLeft: spacing.none,
+          paddingRight: spacing.none,
+          paddingTop: fontSizes.twoThirdSmDefault,
+          justifyContent: "space-between",
+          alignItems: "center",
+          display: "flex",
+        }}
+      >
         <div className="tickBarMin" style={tickBarItemStyle}>
           {this.formatValue(min)}
         </div>
@@ -212,20 +243,69 @@ class Slider extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const style = { width: this.props.width }
+    const { disabled, element, theme, width } = this.props
+    const { colors, fonts, fontSizes, radii } = theme
+    const style = { width }
 
     return (
       <div ref={this.sliderRef} className="stSlider" style={style}>
-        <StyledWidgetLabel>{this.props.element.label}</StyledWidgetLabel>
+        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
         <UISlider
-          min={this.props.element.min}
-          max={this.props.element.max}
-          step={this.props.element.step}
+          min={element.min}
+          max={element.max}
+          step={element.step}
           value={this.value}
           onChange={this.handleChange}
-          disabled={this.props.disabled}
+          disabled={disabled}
           overrides={{
-            ...sliderOverrides,
+            Root: {
+              style: {
+                paddingTop: fontSizes.twoThirdSmDefault,
+              },
+            },
+            Thumb: {
+              style: ({ $disabled }: { $disabled: boolean }) => ({
+                backgroundColor: $disabled ? colors.gray : colors.primary,
+                borderTopLeftRadius: "100%",
+                borderTopRightRadius: "100%",
+                borderBottomLeftRadius: "100%",
+                borderBottomRightRadius: "100%",
+                borderStyle: "none",
+                boxShadow: "none",
+                height: radii.xl,
+                width: radii.xl,
+                ":focus": {
+                  boxShadow: `0 0 0 0.2rem ${transparentize(
+                    colors.primary,
+                    0.5
+                  )}`,
+                  outline: "none",
+                },
+              }),
+            },
+            InnerThumb: {
+              style: {
+                display: "none",
+              },
+            },
+            Tick: {
+              style: {
+                fontFamily: fonts.mono,
+                fontSize: fontSizes.smDefault,
+              },
+            },
+            Track: {
+              style: {
+                paddingBottom: 0,
+                paddingLeft: 0,
+                paddingRight: 0,
+                paddingTop: fontSizes.twoThirdSmDefault,
+              },
+            },
+            InnerTrack: {
+              style: ({ $disabled }: { $disabled: boolean }) =>
+                $disabled ? { background: colors.lightGray } : {},
+            },
             ThumbValue: this.renderThumbValue,
             TickBar: this.renderTickBar,
           }}
@@ -235,4 +315,4 @@ class Slider extends React.PureComponent<Props, State> {
   }
 }
 
-export default Slider
+export default withTheme(Slider)
