@@ -616,6 +616,7 @@ class ReportSession(object):
             sharing_mode = config.get_option("global.sharingMode")
             if sharing_mode == "s3":
                 from streamlit.storage.s3_storage import S3Storage
+
                 self._storage = S3Storage()
             elif sharing_mode == "file":
                 self._storage = FileStorage()
