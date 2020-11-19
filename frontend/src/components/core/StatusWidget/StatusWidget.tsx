@@ -43,6 +43,7 @@ import {
   StyledReportButtonContainer,
   StyledReportRunningIcon,
   StyledReportStatusLabel,
+  StyledShortcutLabel,
   StyledStatusWidget,
 } from "./styled-components"
 
@@ -357,7 +358,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
             </StyledReportStatusLabel>
 
             {StatusWidget.promptButton(
-              <div className="underlineFirstLetter">Rerun</div>,
+              <StyledShortcutLabel>Rerun</StyledShortcutLabel>,
               rerunRequested,
               this.handleRerunClick,
               minimized
@@ -365,7 +366,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
 
             {this.props.allowRunOnSave &&
               StatusWidget.promptButton(
-                <div className="underlineFirstLetter">Always rerun</div>,
+                <StyledShortcutLabel>Always rerun</StyledShortcutLabel>,
                 rerunRequested,
                 this.handleAlwaysRerunClick,
                 minimized

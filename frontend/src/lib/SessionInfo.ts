@@ -85,6 +85,10 @@ export class SessionInfo {
     return this.current.commandLine === "streamlit hello"
   }
 
+  public static clearSession(): void {
+    SessionInfo.singleton = undefined
+  }
+
   /** Create a SessionInfo from the relevant bits of an initialize message. */
   public static fromInitializeMessage(initialize: Initialize): SessionInfo {
     const environmentInfo = initialize.environmentInfo as EnvironmentInfo

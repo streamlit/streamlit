@@ -76,3 +76,12 @@ pre {
 #vg-tooltip-element td {
   border: none;
 }
+
+// Embedded Overflow Management
+body.embedded {
+  overflow: hidden;
+}
+
+body.embedded:hover {
+  overflow: auto;
+}
