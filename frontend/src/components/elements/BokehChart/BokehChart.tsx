@@ -67,7 +67,7 @@ export function BokehChart({
     }
   }
 
-  const updateChart = (data: any): void => {
+  const updateChart = (data: any) => {
     const chart = document.getElementById(chartId)
 
     /**
@@ -101,7 +101,7 @@ export function BokehChart({
 
   useEffect(() => {
     updateChart(getChartData())
-  }, [width, height, element, index])
+  }, [])
 
   return <div id={chartId} className="stBokehChart" />
 }
