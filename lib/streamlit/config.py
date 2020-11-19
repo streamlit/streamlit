@@ -451,7 +451,7 @@ def _server_headless():
     )
 
 
-@_create_option("server.liveSave", type_=bool)
+@_create_option("server.liveSave", type_=bool, visibility="hidden")
 def _server_live_save():
     """Immediately share the app in such a way that enables live
     monitoring, and post-run analysis.
