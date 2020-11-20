@@ -91,11 +91,6 @@ class Checkbox extends React.PureComponent<Props, State> {
                 borderBottomRightRadius: radii.md,
               }),
             },
-            Label: {
-              style: {
-                marginBottom: fontSizes.halfSmDefault,
-              },
-            },
             Checkmark: {
               style: ({
                 $isFocusVisible,
