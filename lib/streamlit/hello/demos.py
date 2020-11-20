@@ -108,7 +108,6 @@ def mapping_demo():
 
             Connection error: %s
         """ % e.reason)
-        return
 
     st.sidebar.markdown('### Map Layers')
     selected_layers = [
@@ -237,14 +236,12 @@ def data_frame_demo():
         """
             % e.reason
         )
-        return
 
     countries = st.multiselect(
         "Choose countries", list(df.index), ["China", "United States of America"]
     )
     if not countries:
         st.error("Please select at least one country.")
-        return
 
     data = df.loc[countries]
     data /= 1000000.0
