@@ -224,7 +224,23 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
-  showError(title: string, errorNode: ReactNode): void {
+  showDeployError = (
+    title: string,
+    errorNode: ReactNode,
+    onContinue?: () => void
+  ): void => {
+    logError(errorNode)
+    const newDialog: DialogProps = {
+      type: DialogType.DEPLOY_ERROR,
+      title,
+      msg: errorNode,
+      onContinue,
+      onClose: () => {},
+    }
+    this.openDialog(newDialog)
+  }
+
+  showError = (title: string, errorNode: ReactNode): void => {
     logError(errorNode)
     const newDialog: DialogProps = {
       type: DialogType.WARNING,
@@ -965,6 +981,7 @@ export class App extends PureComponent<Props, State> {
                 s4aMenuItems={this.props.s4aCommunication.currentState.items}
                 sendS4AMessage={this.props.s4aCommunication.sendMessage}
                 deployParams={deployParams}
+                showDeployError={this.showDeployError}
               />
             </Header>
 

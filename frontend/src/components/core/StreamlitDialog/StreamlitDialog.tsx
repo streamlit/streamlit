@@ -40,6 +40,7 @@ import {
   StyledRerunHeader,
   StyledCommandLine,
   StyledUploadUrl,
+  StyledDeployErrorContent,
 } from "./styled-components"
 
 type PlainEventHandler = () => void
@@ -62,6 +63,7 @@ export type DialogProps =
   | UploadProgressProps
   | UploadedProps
   | WarningProps
+  | DeployErrorProps
 
 export enum DialogType {
   ABOUT = "about",
@@ -73,6 +75,7 @@ export enum DialogType {
   UPLOAD_PROGRESS = "uploadProgress",
   UPLOADED = "uploaded",
   WARNING = "warning",
+  DEPLOY_ERROR = "deployError",
 }
 
 export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
@@ -95,6 +98,8 @@ export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
       return uploadedDialog(dialogProps)
     case DialogType.WARNING:
       return warningDialog(dialogProps)
+    case DialogType.DEPLOY_ERROR:
+      return deployErrorDialog(dialogProps)
     case undefined:
       return noDialog(dialogProps)
     default:
@@ -365,6 +370,46 @@ function warningDialog(props: WarningProps): ReactElement {
       <ModalFooter>
         <ModalButton kind={Kind.PRIMARY} onClick={props.onClose}>
           Done
+        </ModalButton>
+      </ModalFooter>
+    </Modal>
+  )
+}
+
+interface DeployErrorProps {
+  type: DialogType.DEPLOY_ERROR
+  title: string
+  msg: ReactNode
+  onClose: PlainEventHandler
+  onContinue?: PlainEventHandler
+}
+
+/**
+ * Modal used to show deployment errors
+ */
+function deployErrorDialog({
+  title,
+  msg,
+  onClose,
+  onContinue,
+}: DeployErrorProps): ReactElement {
+  const handlePrimaryButton = (): void => {
+    onClose()
+
+    if (onContinue) {
+      onContinue()
+    }
+  }
+
+  return (
+    <Modal isOpen onClose={onClose}>
+      <ModalHeader>{title}</ModalHeader>
+      <ModalBody>
+        <StyledDeployErrorContent>{msg}</StyledDeployErrorContent>
+      </ModalBody>
+      <ModalFooter>
+        <ModalButton kind={Kind.PRIMARY} onClick={handlePrimaryButton}>
+          {onContinue ? "Continue anyway" : "Close"}
         </ModalButton>
       </ModalFooter>
     </Modal>

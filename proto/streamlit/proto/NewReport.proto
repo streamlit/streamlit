@@ -99,4 +99,7 @@ message DeployParams {
   string repository = 1;
   string branch = 2;
   string module = 3;
+  bool is_head_detached = 4;
+  repeated string untracked_files = 5;
+  repeated string uncommitted_files = 6;
 }

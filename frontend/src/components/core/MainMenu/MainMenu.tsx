@@ -15,7 +15,13 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, memo, forwardRef, MouseEvent } from "react"
+import React, {
+  ReactElement,
+  memo,
+  forwardRef,
+  MouseEvent,
+  ReactNode,
+} from "react"
 import { StatefulPopover, PLACEMENT } from "baseui/popover"
 import { StatefulMenu } from "baseui/menu"
 import Button, { Kind } from "components/shared/Button"
@@ -80,6 +86,12 @@ export interface Props {
   sendS4AMessage: (message: IGuestToHostMessage) => void
 
   deployParams?: IDeployParams | null
+
+  showDeployError: (
+    title: string,
+    errorNode: ReactNode,
+    onContinue?: () => void
+  ) => void
 }
 
 const getOpenInWindowCallback = (url: string) => (): void => {
@@ -184,6 +196,103 @@ const MenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
 function MainMenu(props: Props): ReactElement {
   const isServerDisconnected = !props.isServerConnected
 
+  console.log("=== deployParams", props.deployParams)
+
+  const onClickDeployApp = (): void => {
+    const { deployParams, showDeployError } = props
+
+    if (
+      !deployParams ||
+      !deployParams.repository ||
+      !deployParams.branch ||
+      !deployParams.module
+    ) {
+      showDeployError(
+        "Error deploying app",
+        <>
+          <p>No Github repository detected.</p>
+          <p>How Streamlit sharing works:</p>
+          <ul>
+            <li>
+              To deploy a public app, you must first put it in a public Github
+              repo. See our documentation for more details.
+            </li>
+            <li>
+              If you'd like to deploy a private app, sign up for Streamlit for
+              Teams.
+            </li>
+          </ul>
+        </>
+      )
+
+      return
+    }
+
+    if (deployParams.isHeadDetached) {
+      showDeployError(
+        "Error deploying app",
+        <>
+          <p>This Git tree is in a detached HEAD state.</p>
+          <p>
+            Please commit the latest changes and push to Github to continue.
+          </p>
+        </>
+      )
+
+      return
+    }
+
+    if (!deployParams?.untrackedFiles?.includes(deployParams.module)) {
+      showDeployError(
+        "Error deploying app",
+        <>
+          <p>
+            The file <strong>{deployParams.module}</strong> has not been added
+            to the repo.
+          </p>
+          <p>Please add it and push to Github to continue.</p>
+        </>
+      )
+
+      return
+    }
+
+    if (deployParams?.uncommittedFiles?.length) {
+      showDeployError(
+        "Error deploying app",
+        <>
+          <p>
+            The file <strong>{deployParams.module}</strong> has uncommitted
+            changes.
+          </p>
+          <p>
+            Please commit the latest changes and push to Github to continue.
+          </p>
+        </>
+      )
+
+      return
+    }
+
+    if (deployParams?.untrackedFiles?.length) {
+      showDeployError(
+        "Error deploying app",
+        <>
+          <p>
+            This Git repo has untracked files. You may want to commit them
+            before continuing.
+          </p>
+          <p>
+            Alternatively, you can either delete the files (if they're not
+            needed) or add them to your <strong>.gitignore</strong>.
+          </p>
+        </>
+      )
+    }
+
+    getDeployAppUrl(deployParams)
+  }
+
   const coreMenuOptions = {
     DIVIDER: { isDivider: true },
     rerun: {
@@ -205,7 +314,7 @@ function MainMenu(props: Props): ReactElement {
       stopRecordingIndicator: Boolean(SCREENCAST_LABEL[props.screenCastState]),
     },
     deployApp: {
-      onClick: getDeployAppUrl(props.deployParams),
+      onClick: onClickDeployApp,
       label: "Deploy this app",
     },
     saveSnapshot: {

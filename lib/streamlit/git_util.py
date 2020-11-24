@@ -27,6 +27,14 @@ class GitRepo:
     def tracking_branch(self):
         return self.repo.active_branch.tracking_branch()
 
+    @property
+    def untracked_files(self):
+        return self.repo.untracked_files
+
+    @property
+    def is_head_detached(self):
+        return self.repo.head.is_detached
+
     def get_tracking_branch_remote(self):
         tracking_branch = self.tracking_branch
         if tracking_branch is None:
@@ -82,3 +90,9 @@ class GitRepo:
             return None
 
         return repo, branch, self.module
+
+    def get_uncommitted_files(self):
+        if not self.is_valid():
+            return None
+
+        return [item.a_path for item in self.repo.index.diff(None)]

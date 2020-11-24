@@ -351,7 +351,13 @@ class ReportSession(object):
             from streamlit.git_util import GitRepo
 
             self._repo = GitRepo(self._report.script_path)
-            return self._repo.get_repo_info()
+
+            return {
+                "info": self._repo.get_repo_info(),
+                "is_head_detached": self._repo.is_head_detached,
+                "untracked_files": self._repo.untracked_files,
+                "uncommitted_files": self._repo.get_uncommitted_files(),
+            }
         except:
             # Issues can arise based on the git structure
             # (e.g. if branch is in DETACHED HEAD state,
@@ -368,11 +374,18 @@ class ReportSession(object):
 
         # git deploy params
         deploy_params = self.get_deploy_params()
-        if deploy_params is not None:
-            repo, branch, module = deploy_params
+
+        print('==== deploy params')
+        print(deploy_params)
+        if deploy_params['info'] is not None:
+            repo, branch, module = deploy_params['info']
+
             msg.new_report.deploy_params.repository = repo
             msg.new_report.deploy_params.branch = branch
             msg.new_report.deploy_params.module = module
+            msg.new_report.deploy_params.is_head_detached = deploy_params['is_head_detached']
+            msg.new_report.deploy_params.untracked_files[:] = deploy_params['untracked_files']
+            msg.new_report.deploy_params.uncommitted_files[:] = deploy_params['uncommitted_files']
 
         # Immutable session data. We send this every time a new report is
         # started, to avoid having to track whether the client has already
