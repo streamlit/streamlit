@@ -323,7 +323,7 @@ describe("ComponentInstance", () => {
       )
     })
 
-    it("warns if not COMPONENT_READY hasn't been received after a timeout", () => {
+    it("warns if COMPONENT_READY hasn't been received after a timeout", () => {
       // Create a component, but don't send COMPONENT_READY
       const mock = new MockComponent()
       expect(mock.instance.state.readyTimeout).toBe(false)
