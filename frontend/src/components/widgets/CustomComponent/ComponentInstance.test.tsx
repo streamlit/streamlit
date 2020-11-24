@@ -19,18 +19,20 @@ import {
   ComponentInstance as ComponentInstanceProto,
   SpecialArg,
 } from "autogen/proto"
+import Alert from "components/elements/Alert"
 import ErrorElement from "components/shared/ErrorElement"
 import { ReactWrapper } from "enzyme"
-import { mount } from "lib/test_util"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
 } from "lib/IFrameUtil"
 import { logWarning } from "lib/log"
+import { mount } from "lib/test_util"
 import { buildHttpUri } from "lib/UriUtil"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import React from "react"
 import {
+  COMPONENT_READY_WARNING_TIME_MS,
   ComponentInstance,
   CUSTOM_COMPONENT_API_VERSION,
   Props,
@@ -41,6 +43,9 @@ import { ComponentMessageType, StreamlitMessageType } from "./enums"
 
 // Mock log functions.
 jest.mock("lib/log")
+
+// We have some timeouts that we want to use fake timers for.
+jest.useFakeTimers()
 
 // Mock uri utils.
 jest.mock("lib/UriUtil")
@@ -94,6 +99,7 @@ class MockComponent {
 
     // Create and mount our ComponentInstance. We need to mount it to an
     // existing DOM element - otherwise, iframe contentWindow is not available.
+    // @ts-ignore
     this.wrapper = mount(
       <ComponentInstance
         element={createElementProp(initialJSONArgs, initialSpecialArgs)}
@@ -159,19 +165,19 @@ describe("ComponentInstance", () => {
     mockLog.mockClear()
   })
 
-  it("should register a message listener on mount", () => {
+  it("registers a message listener on mount", () => {
     const mc = new MockComponent()
     expect(mc.registry.registerListener).toHaveBeenCalled()
     expect(mc.registry.deregisterListener).not.toHaveBeenCalled()
   })
 
-  it("should deregister its message listener on unmount", () => {
+  it("deregisters its message listener on unmount", () => {
     const mc = new MockComponent()
     mc.wrapper.unmount()
     expect(mc.registry.deregisterListener).toHaveBeenCalled()
   })
 
-  it("should render its iframe correctly", () => {
+  it("renders its iframe correctly", () => {
     // This is not an exhaustive check of rendering props - instead, it's
     // the props whose values are functionally important.
     const mc = new MockComponent()
@@ -182,7 +188,7 @@ describe("ComponentInstance", () => {
     expect(iframe.prop("sandbox")).toEqual(DEFAULT_IFRAME_SANDBOX_POLICY)
   })
 
-  it("should send JSON args to iframe", () => {
+  it("sends JSON args to iframe", () => {
     const mc = new MockComponent()
 
     // We should receive an initial RENDER message with no arguments
@@ -206,7 +212,7 @@ describe("ComponentInstance", () => {
     )
   })
 
-  it("should send bytes args to iframe", () => {
+  it("sends bytes args to iframe", () => {
     const mc = new MockComponent()
 
     // We should receive an initial RENDER message with no arguments
@@ -238,12 +244,12 @@ describe("ComponentInstance", () => {
     )
   })
 
-  it("should send dataframe args to iframe", () => {
+  it("sends dataframe args to iframe", () => {
     // TODO for Henrikh
   })
 
   describe("COMPONENT_READY handler", () => {
-    it("should post a RENDER message to the iframe", () => {
+    it("posts a RENDER message to the iframe", () => {
       // When the component iframe sends the COMPONENT_READY message,
       // ComponentInstance should respond with a RENDER message with the
       // most recent args.
@@ -303,7 +309,7 @@ describe("ComponentInstance", () => {
       }
     })
 
-    it("should error on unrecognized API version", () => {
+    it("errors on unrecognized API version", () => {
       const badAPIVersion = CUSTOM_COMPONENT_API_VERSION + 1
       const mock = new MockComponent()
       mock.sendBackMsg(ComponentMessageType.COMPONENT_READY, {
@@ -315,6 +321,29 @@ describe("ComponentInstance", () => {
       expect(child.prop("message")).toEqual(
         `Unrecognized component API version: '${badAPIVersion}'`
       )
+    })
+
+    it("warns if COMPONENT_READY hasn't been received after a timeout", () => {
+      // Create a component, but don't send COMPONENT_READY
+      const mock = new MockComponent()
+      expect(mock.instance.state.readyTimeout).toBe(false)
+
+      // Advance past our warning timeout, and force a re-render.
+      jest.advanceTimersByTime(COMPONENT_READY_WARNING_TIME_MS)
+      expect(mock.instance.state.readyTimeout).toBe(true)
+      mock.wrapper.setProps({}) // (re-render)
+
+      const child = mock.wrapper.childAt(0)
+      expect(child.type()).toEqual(Alert)
+      expect(child.prop("body")).toContain(
+        "The app is attempting to load the component from"
+      )
+
+      // Belatedly send the COMPONENT_READY message
+      mock.sendBackMsg(ComponentMessageType.COMPONENT_READY, { apiVersion: 1 })
+
+      // Ensure we're now displaying our iframe, and not the warning.
+      expect(mock.wrapper.childAt(0).type()).toEqual("iframe")
     })
   })
 
