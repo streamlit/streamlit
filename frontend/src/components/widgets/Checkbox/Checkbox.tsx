@@ -16,14 +16,17 @@
  */
 
 import React from "react"
+import { withTheme } from "emotion-theming"
 import { Checkbox as UICheckbox } from "baseui/checkbox"
 import { Checkbox as CheckboxProto } from "autogen/proto"
+import { transparentize } from "color2k"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
-import { checkboxOverrides } from "lib/widgetTheme"
+import { Theme } from "theme"
 
 export interface Props {
   disabled: boolean
   element: CheckboxProto
+  theme: Theme
   widgetMgr: WidgetStateManager
   width: number
 }
@@ -64,7 +67,9 @@ class Checkbox extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const style = { width: this.props.width }
+    const { theme, width } = this.props
+    const { colors, fontSizes, radii } = theme
+    const style = { width }
 
     // TODO Check the Widget usage
     return (
@@ -73,7 +78,44 @@ class Checkbox extends React.PureComponent<Props, State> {
           checked={this.state.value}
           disabled={this.props.disabled}
           onChange={this.onChange}
-          overrides={checkboxOverrides}
+          overrides={{
+            Root: {
+              style: ({ $isFocused }: { $isFocused: boolean }) => ({
+                marginBottom: 0,
+                marginTop: 0,
+                paddingRight: fontSizes.twoThirdSmDefault,
+                backgroundColor: $isFocused ? colors.lightestGray : "",
+                borderTopLeftRadius: radii.md,
+                borderTopRightRadius: radii.md,
+                borderBottomLeftRadius: radii.md,
+                borderBottomRightRadius: radii.md,
+              }),
+            },
+            Checkmark: {
+              style: ({
+                $isFocusVisible,
+                $checked,
+              }: {
+                $isFocusVisible: boolean
+                $checked: boolean
+              }) => ({
+                borderLeftWidth: "2px",
+                borderRightWidth: "2px",
+                borderTopWidth: "2px",
+                borderBottomWidth: "2px",
+                outline: 0,
+                boxShadow:
+                  $isFocusVisible && $checked
+                    ? `0 0 0 0.2rem ${transparentize(colors.primary, 0.5)}`
+                    : "",
+              }),
+            },
+            Label: {
+              style: {
+                color: colors.bodyText,
+              },
+            },
+          }}
         >
           {this.props.element.label}
         </UICheckbox>
@@ -82,4 +124,4 @@ class Checkbox extends React.PureComponent<Props, State> {
   }
 }
 
-export default Checkbox
+export default withTheme(Checkbox)

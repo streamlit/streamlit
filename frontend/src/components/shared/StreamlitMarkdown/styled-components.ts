@@ -17,12 +17,6 @@ export const StyledStreamlitMarkdown = styled.div(({ theme }) => ({
     fontSize: theme.fontSizes.md,
   },
 
-  code: {
-    // Default color for syntax highlighting.
-    backgroundColor: theme.colors.transparent,
-    color: "inherit",
-  },
-
   "pre code": {
     // Default color for syntax highlighting.
     backgroundColor: "#ffffff44",
