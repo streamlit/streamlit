@@ -375,17 +375,23 @@ class ReportSession(object):
         # git deploy params
         deploy_params = self.get_deploy_params()
 
-        print('==== deploy params')
+        print("==== deploy params")
         print(deploy_params)
-        if deploy_params['info'] is not None:
-            repo, branch, module = deploy_params['info']
+        if deploy_params["info"] is not None:
+            repo, branch, module = deploy_params["info"]
 
             msg.new_report.deploy_params.repository = repo
             msg.new_report.deploy_params.branch = branch
             msg.new_report.deploy_params.module = module
-            msg.new_report.deploy_params.is_head_detached = deploy_params['is_head_detached']
-            msg.new_report.deploy_params.untracked_files[:] = deploy_params['untracked_files']
-            msg.new_report.deploy_params.uncommitted_files[:] = deploy_params['uncommitted_files']
+            msg.new_report.deploy_params.is_head_detached = deploy_params[
+                "is_head_detached"
+            ]
+            msg.new_report.deploy_params.untracked_files[:] = deploy_params[
+                "untracked_files"
+            ]
+            msg.new_report.deploy_params.uncommitted_files[:] = deploy_params[
+                "uncommitted_files"
+            ]
 
         # Immutable session data. We send this every time a new report is
         # started, to avoid having to track whether the client has already
