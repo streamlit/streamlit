@@ -289,8 +289,8 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       `Your app is having trouble loading the **${this.props.element.componentName}** component. ` +
       `\n\n(The app is attempting to load the component from **${this.props.element.url}**, and hasn't ` +
       `received its **"${ComponentMessageType.COMPONENT_READY}"** message.)` +
-      "\n- If this is a development build, have you started the dev server? (`npm run start`)" +
-      "\n- If this is a release build, have you compiled the frontend? (`npm build`)" +
+      "\n- If this is a development build, have you started the dev server?" +
+      "\n- If this is a release build, have you compiled the frontend?" +
       `\n\nFor more troubleshooting help, please see the [Streamlit Component docs](${COMPONENT_DEVELOPER_URL}) ` +
       `or visit our [forums](${COMMUNITY_URL}).`
 
