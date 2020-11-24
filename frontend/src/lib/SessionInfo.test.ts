@@ -22,6 +22,25 @@ test("Throws an error when used before initialization", () => {
   expect(() => SessionInfo.current).toThrow()
 })
 
+test("Clears session info", () => {
+  SessionInfo.current = new SessionInfo({
+    sessionId: "sessionId",
+    streamlitVersion: "sv",
+    pythonVersion: "pv",
+    installationId: "iid",
+    installationIdV1: "iid1",
+    installationIdV2: "iid2",
+    authorEmail: "ae",
+    maxCachedMessageAge: 2,
+    commandLine: "command line",
+    userMapboxToken: "mpt",
+  })
+  expect(SessionInfo.isSet()).toBe(true)
+
+  SessionInfo.clearSession()
+  expect(SessionInfo.isSet()).toBe(false)
+})
+
 test("Can be initialized from a protobuf", () => {
   const MESSAGE = new Initialize({
     userInfo: {

@@ -172,7 +172,7 @@ hr {
   margin: 2em 0;
   padding: 0;
   color: $hr-color; // 1
-  background-color: currentColor;
+  background-color: transparent;
   border: none;
   border-bottom: 1px solid $gray-light;
   opacity: $hr-opacity;
