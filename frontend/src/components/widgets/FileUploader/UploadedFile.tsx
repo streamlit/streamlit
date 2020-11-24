@@ -23,7 +23,7 @@ import {
 } from "@emotion-icons/material-outlined"
 import Button, { Kind } from "components/shared/Button"
 import Icon from "components/shared/Icon"
-import ProgressBar from "components/shared/ProgressBar"
+import ProgressBar, { Sizes } from "components/shared/ProgressBar"
 import { Small, Kind as TextKind } from "components/shared/TextElements"
 import {
   ExtendedFile,
@@ -40,13 +40,6 @@ import {
   StyledUploadedFileData,
   StyledUploadedFileName,
 } from "./styled-components"
-
-export enum Sizes {
-  SMALL = "sm",
-  MEDIUM = "md",
-  LARGE = "lg",
-  EXTRALARGE = "xl",
-}
 
 export interface Props {
   file: ExtendedFile

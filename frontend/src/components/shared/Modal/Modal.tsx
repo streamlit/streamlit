@@ -10,6 +10,7 @@ import {
 import Button, { ButtonProps } from "components/shared/Button"
 import { Theme } from "theme"
 import { transparentize } from "color2k"
+import { StyledModalButton } from "./styled-components"
 
 export interface ModalHeaderProps {
   children: ReactNode
@@ -96,15 +97,11 @@ function ModalFooter({ children }: ModalFooterProps): ReactElement {
   )
 }
 
-const ModalButton: FunctionComponent<ButtonProps> = buttonProps => {
-  const { spacing }: Theme = useTheme()
-
-  return (
-    <span style={{ marginRight: spacing.twoXS }}>
-      <Button {...buttonProps} />
-    </span>
-  )
-}
+const ModalButton: FunctionComponent<ButtonProps> = buttonProps => (
+  <StyledModalButton>
+    <Button {...buttonProps} />
+  </StyledModalButton>
+)
 
 function Modal(props: ModalProps): ReactElement {
   const { colors, spacing }: Theme = useTheme()

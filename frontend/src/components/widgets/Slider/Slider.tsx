@@ -26,6 +26,11 @@ import moment from "moment"
 import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 import { transparentize } from "color2k"
 import { Theme } from "theme"
+import {
+  StyledThumbValue,
+  StyledTickBar,
+  StyledTickBarItem,
+} from "./styled-components"
 
 const DEBOUNCE_TIME_MS = 200
 
@@ -185,60 +190,27 @@ class Slider extends React.PureComponent<Props, State> {
   private renderThumbValue = (data: {
     $thumbIndex: number
     $value: any
-  }): JSX.Element => {
-    const { disabled, theme } = this.props
-    const { colors, fonts, fontSizes, lineHeights } = theme
-    const thumbValueStyle: React.CSSProperties = {
-      fontFamily: fonts.mono,
-      fontSize: fontSizes.smDefault,
-      paddingBottom: fontSizes.twoThirdSmDefault,
-      color: disabled ? colors.gray : colors.primary,
-      top: "-22px",
-      position: "absolute",
-      whiteSpace: "nowrap",
-      backgroundColor: colors.transparent,
-      lineHeight: lineHeights.base,
-      fontWeight: "normal",
-    }
-
-    return (
-      <div style={thumbValueStyle} data-testid="stThumbValue">
-        {this.formatValue(data.$value[data.$thumbIndex])}
-      </div>
-    )
-  }
+  }): JSX.Element => (
+    <StyledThumbValue
+      data-testid="stThumbValue"
+      isDisabled={this.props.disabled}
+    >
+      {this.formatValue(data.$value[data.$thumbIndex])}
+    </StyledThumbValue>
+  )
 
   private renderTickBar = (): JSX.Element => {
     const { max, min } = this.props.element
-    const { fonts, fontSizes, lineHeights, spacing } = this.props.theme
-    const tickBarItemStyle: React.CSSProperties = {
-      lineHeight: lineHeights.base,
-      fontWeight: "normal",
-      fontSize: fontSizes.smDefault,
-      fontFamily: fonts.mono,
-    }
 
     return (
-      <div
-        className="sliderTickBar"
-        data-testid="stTickBar"
-        style={{
-          paddingBottom: spacing.none,
-          paddingLeft: spacing.none,
-          paddingRight: spacing.none,
-          paddingTop: fontSizes.twoThirdSmDefault,
-          justifyContent: "space-between",
-          alignItems: "center",
-          display: "flex",
-        }}
-      >
-        <div className="tickBarMin" style={tickBarItemStyle}>
+      <StyledTickBar data-testid="stTickBar">
+        <StyledTickBarItem data-testid="stTickBarMin">
           {this.formatValue(min)}
-        </div>
-        <div className="tickBarMax" style={tickBarItemStyle}>
+        </StyledTickBarItem>
+        <StyledTickBarItem data-testid="stTickBarMax">
           {this.formatValue(max)}
-        </div>
-      </div>
+        </StyledTickBarItem>
+      </StyledTickBar>
     )
   }
 

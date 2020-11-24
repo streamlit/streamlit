@@ -156,7 +156,7 @@ export const sidebarBaseUITheme = createTheme(mainThemePrimitives, {
     sliderHandleInnerFill: colors.gray40,
     sliderHandleInnerFillDisabled: colors.gray40,
 
-    progressbarTrackFill: mainTheme.colors.gray40,
+    progressbarTrackFill: colors.gray40,
   },
 })
 

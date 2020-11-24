@@ -110,6 +110,11 @@ class Checkbox extends React.PureComponent<Props, State> {
                     : "",
               }),
             },
+            Label: {
+              style: {
+                color: colors.bodyText,
+              },
+            },
           }}
         >
           {this.props.element.label}

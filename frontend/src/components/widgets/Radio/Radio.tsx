@@ -109,6 +109,11 @@ class Radio extends React.PureComponent<Props, State> {
                     width: $checked ? "6px" : "16px",
                   }),
                 },
+                Label: {
+                  style: {
+                    color: colors.bodyText,
+                  },
+                },
               }}
             >
               {option}

@@ -20,6 +20,7 @@ import React, { ReactElement, ReactNode } from "react"
 import { useTheme } from "emotion-theming"
 import { Theme } from "theme"
 import { Notification, KIND } from "baseui/notification"
+import { StyledAlertContent } from "./styled-components"
 
 export enum Kind {
   ERROR = "error",
@@ -101,7 +102,7 @@ export default function AlertContainer({
         },
       }}
     >
-      {children}
+      <StyledAlertContent>{children}</StyledAlertContent>
     </Notification>
   )
 }

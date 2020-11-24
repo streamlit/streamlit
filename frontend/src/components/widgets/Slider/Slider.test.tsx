@@ -86,12 +86,18 @@ describe("Slider widget", () => {
         value: [1],
       })
 
-      expect(wrapper.find("[data-testid='stThumbValue']").text()).toBe("1")
+      expect(
+        wrapper.find("StyledThumbValue[data-testid='stThumbValue']").text()
+      ).toBe("1")
     })
 
     it("should render tick bar with min and max", () => {
-      expect(wrapper.find(".tickBarMin").text()).toBe("0")
-      expect(wrapper.find(".tickBarMax").text()).toBe("10")
+      expect(
+        wrapper.find("StyledTickBarItem[data-testid='stTickBarMin']").text()
+      ).toBe("0")
+      expect(
+        wrapper.find("StyledTickBarItem[data-testid='stTickBarMax']").text()
+      ).toBe("10")
     })
   })
 
@@ -268,14 +274,18 @@ describe("Slider widget", () => {
       wrapper.find(UISlider).prop("onChange")({
         value: [2 * WEEK_IN_MICROS],
       })
-      expect(wrapper.find("[data-testid='stThumbValue']").text()).toBe(
-        "1970-01-15"
-      )
+      expect(
+        wrapper.find("StyledThumbValue[data-testid='stThumbValue']").text()
+      ).toBe("1970-01-15")
     })
 
     it("should format min and max as dates", () => {
-      expect(wrapper.find(".tickBarMin").text()).toBe("1970-01-01")
-      expect(wrapper.find(".tickBarMax").text()).toBe("1970-01-29")
+      expect(
+        wrapper.find("StyledTickBarItem[data-testid='stTickBarMin']").text()
+      ).toBe("1970-01-01")
+      expect(
+        wrapper.find("StyledTickBarItem[data-testid='stTickBarMax']").text()
+      ).toBe("1970-01-29")
     })
   })
 
