@@ -242,7 +242,7 @@ function MainMenu(props: Props): ReactElement {
       return
     }
 
-    if (!deployParams?.untrackedFiles?.includes(deployParams.module)) {
+    if (deployParams?.untrackedFiles?.includes(deployParams.module)) {
       showDeployError(
         "Error deploying app",
         <>
