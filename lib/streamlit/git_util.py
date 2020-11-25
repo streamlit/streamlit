@@ -103,5 +103,8 @@ class GitRepo:
 
         remote, branch_name = self.get_tracking_branch_remote()
 
-        return list(self.repo.iter_commits('/'.join([remote.name, branch_name]) + '..' + branch_name))
-
+        return list(
+            self.repo.iter_commits(
+                "/".join([remote.name, branch_name]) + ".." + branch_name
+            )
+        )

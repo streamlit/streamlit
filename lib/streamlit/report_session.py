@@ -357,7 +357,7 @@ class ReportSession(object):
                 "is_head_detached": self._repo.is_head_detached,
                 "untracked_files": self._repo.untracked_files,
                 "uncommitted_files": self._repo.get_uncommitted_files(),
-                "is_ahead": len(self._repo.get_ahead_commits()) > 0
+                "is_ahead": len(self._repo.get_ahead_commits()) > 0,
             }
         except:
             # Issues can arise based on the git structure
