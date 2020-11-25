@@ -102,4 +102,5 @@ message DeployParams {
   bool is_head_detached = 4;
   repeated string untracked_files = 5;
   repeated string uncommitted_files = 6;
+  bool is_ahead = 7;
 }

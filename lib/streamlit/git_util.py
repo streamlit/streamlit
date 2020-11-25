@@ -96,3 +96,12 @@ class GitRepo:
             return None
 
         return [item.a_path for item in self.repo.index.diff(None)]
+
+    def get_ahead_commits(self):
+        if not self.is_valid():
+            return None
+
+        remote, branch_name = self.get_tracking_branch_remote()
+
+        return list(self.repo.iter_commits('/'.join([remote.name, branch_name]) + '..' + branch_name))
+

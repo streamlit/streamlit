@@ -22,10 +22,10 @@ import React, {
   MouseEvent,
   ReactNode,
 } from "react"
-import { StatefulPopover, PLACEMENT } from "baseui/popover"
 import { StatefulMenu } from "baseui/menu"
-import Button, { Kind } from "components/shared/Button"
 import { Menu } from "@emotion-icons/open-iconic"
+import Button, { Kind } from "components/shared/Button"
+import { StatefulPopover, PLACEMENT } from "baseui/popover"
 
 import Icon from "components/shared/Icon"
 import {
@@ -196,8 +196,6 @@ const MenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
 function MainMenu(props: Props): ReactElement {
   const isServerDisconnected = !props.isServerConnected
 
-  console.log("=== deployParams", props.deployParams)
-
   const onClickDeployApp = (): void => {
     const { deployParams, showDeployError } = props
 
@@ -215,7 +213,15 @@ function MainMenu(props: Props): ReactElement {
           <ul>
             <li>
               To deploy a public app, you must first put it in a public Github
-              repo. See our documentation for more details.
+              repo. See{" "}
+              <a
+                href={ONLINE_DOCS_URL}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                our documentation
+              </a>{" "}
+              for more details.
             </li>
             <li>
               If you'd like to deploy a private app, sign up for Streamlit for
@@ -274,6 +280,21 @@ function MainMenu(props: Props): ReactElement {
       return
     }
 
+    if (deployParams?.isAhead) {
+      showDeployError(
+        "Error deploying app",
+        <>
+          <p>
+            This Git repo has uncommitted changes. You may want to commit them
+            before continuing.
+          </p>
+        </>,
+        getDeployAppUrl(deployParams)
+      )
+
+      return
+    }
+
     if (deployParams?.untrackedFiles?.length) {
       showDeployError(
         "Error deploying app",
@@ -286,7 +307,8 @@ function MainMenu(props: Props): ReactElement {
             Alternatively, you can either delete the files (if they're not
             needed) or add them to your <strong>.gitignore</strong>.
           </p>
-        </>
+        </>,
+        getDeployAppUrl(deployParams)
       )
     }
 

@@ -229,15 +229,13 @@ export class App extends PureComponent<Props, State> {
     errorNode: ReactNode,
     onContinue?: () => void
   ): void => {
-    logError(errorNode)
-    const newDialog: DialogProps = {
+    this.openDialog({
       type: DialogType.DEPLOY_ERROR,
       title,
       msg: errorNode,
       onContinue,
       onClose: () => {},
-    }
-    this.openDialog(newDialog)
+    })
   }
 
   showError = (title: string, errorNode: ReactNode): void => {
