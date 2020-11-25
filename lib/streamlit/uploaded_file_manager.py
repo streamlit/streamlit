@@ -105,7 +105,7 @@ class UploadedFileManager(object):
         self._add_files(session_id, widget_id, files)
         self._on_files_updated(session_id, widget_id)
 
-    def get_files(self, session_id, widget_id):
+    def get_files(self, session_id: str, widget_id: str):
         """Return the file list with the given ID, or None if the ID doesn't exist.
 
         Parameters
@@ -124,15 +124,8 @@ class UploadedFileManager(object):
             file_list = self._files_by_id.get(files_by_widget, None)
         return file_list
 
-    def remove_file(self, session_id, widget_id, file_id):
-        """Remove the file list with the given ID, if it exists.
-        Parameters
-        ----------
-        session_id : str
-            The session ID of the report that owns the file.
-        widget_id : str
-            The widget ID of the FileUploader that created the file.
-        """
+    def remove_file(self, session_id: str, widget_id: str, file_id: str):
+        """Remove the file list with the given ID, if it exists."""
         files_by_widget = session_id, widget_id
         with self._files_lock:
             file_list = self._files_by_id[files_by_widget]
@@ -142,7 +135,7 @@ class UploadedFileManager(object):
             if len(file_list) != len(self._files_by_id[files_by_widget]):
                 self._on_files_updated(session_id, widget_id)
 
-    def _remove_files(self, session_id, widget_id):
+    def _remove_files(self, session_id: str, widget_id: str):
         """Remove the file list for the provided widget in the
         provided session, if it exists.
 
@@ -153,7 +146,7 @@ class UploadedFileManager(object):
         with self._files_lock:
             self._files_by_id.pop(files_by_widget, None)
 
-    def remove_files(self, session_id, widget_id):
+    def remove_files(self, session_id: str, widget_id: str):
         """Remove the file list for the provided widget in the
         provided session, if it exists.
 
@@ -167,7 +160,7 @@ class UploadedFileManager(object):
         self._remove_files(session_id, widget_id)
         self._on_files_updated(session_id, widget_id)
 
-    def remove_session_files(self, session_id):
+    def remove_session_files(self, session_id: str):
         """Remove all files that belong to the given report.
 
         Parameters
@@ -184,7 +177,12 @@ class UploadedFileManager(object):
             if files_id[0] == session_id:
                 self.remove_files(*files_id)
 
-    def replace_files(self, session_id, widget_id, files):
+    def replace_files(
+        self,
+        session_id: str,
+        widget_id: str,
+        files: List[UploadedFile],
+    ):
         """Removes the file list for the provided widget in the
         provided session, if it exists and add the provided files
         to the widget in the session
@@ -202,7 +200,12 @@ class UploadedFileManager(object):
         self._add_files(session_id, widget_id, files)
         self._on_files_updated(session_id, widget_id)
 
-    def update_file_count(self, session_id, widget_id, file_count):
+    def update_file_count(
+        self,
+        session_id: str,
+        widget_id: str,
+        file_count: int,
+    ):
         files_by_widget = session_id, widget_id
         self._file_counts_by_id[files_by_widget] = file_count
         self._on_files_updated(session_id, widget_id)

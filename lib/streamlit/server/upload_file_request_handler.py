@@ -153,7 +153,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
 
         self.set_status(200)
 
-    def put(self, session_id, widget_id, **kwargs):
+    def put(self, session_id: str, widget_id: str, **kwargs):
         if self.request.body:
             data = tornado.escape.json_decode(self.request.body)
             if "totalFiles" in data.keys():
