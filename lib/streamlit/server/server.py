@@ -211,16 +211,10 @@ class Server(object):
 
         return Server._singleton
 
-    def __init__(self, ioloop, script_path, command_line):
-        """Create the server. It won't be started yet.
-
-        Parameters
-        ----------
-        ioloop : tornado.ioloop.IOLoop
-        script_path : str
-        command_line : str
-
-        """
+    def __init__(
+        self, ioloop: tornado.ioloop.IOLoop, script_path: str, command_line: str
+    ):
+        """Create the server. It won't be started yet."""
         if Server._singleton is not None:
             raise RuntimeError("Server already initialized. Use .get_current() instead")
 
@@ -243,6 +237,10 @@ class Server(object):
         self._uploaded_file_mgr.on_files_updated.connect(self.on_files_updated)
         self._report = None  # type: Optional[Report]
         self._preheated_session_id = None  # type: Optional[str]
+
+    @property
+    def script_path(self) -> str:
+        return self._script_path
 
     def on_files_updated(self, session_id):
         """Event handler for UploadedFileManager.on_file_added.
