@@ -3,15 +3,15 @@ import { ThemeProvider as BaseUIThemeProvider } from "baseui"
 import { ThemeProvider as EmotionThemeProvider } from "emotion-theming"
 
 import {
-  mainWidgetTheme,
-  MainWidgetTheme,
-  SidebarWidgetTheme,
-} from "lib/widgetTheme"
-import { Theme } from "theme"
+  Theme,
+  mainBaseUITheme,
+  MainBaseUITheme,
+  SidebarBaseUITheme,
+} from "theme"
 
 export interface ThemeProviderProps {
   theme: Theme
-  baseuiTheme?: MainWidgetTheme | SidebarWidgetTheme
+  baseuiTheme?: MainBaseUITheme | SidebarBaseUITheme
   children: ReactNode
 }
 
@@ -21,7 +21,7 @@ function ThemeProvider({
   children,
 }: ThemeProviderProps): ReactElement {
   return (
-    <BaseUIThemeProvider theme={baseuiTheme || mainWidgetTheme}>
+    <BaseUIThemeProvider theme={baseuiTheme || mainBaseUITheme}>
       <EmotionThemeProvider theme={theme}>{children}</EmotionThemeProvider>
     </BaseUIThemeProvider>
   )

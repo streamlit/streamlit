@@ -17,16 +17,18 @@
 
 import React from "react"
 import without from "lodash/without"
-import { multiSelectOverrides } from "lib/widgetTheme"
+import { withTheme } from "emotion-theming"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { MultiSelect as MultiSelectProto } from "autogen/proto"
 import { TYPE, Select as UISelect, OnChangeParams } from "baseui/select"
 import VirtualDropdown from "components/shared/VirtualDropdown"
 import { StyledWidgetLabel } from "components/widgets/BaseWidget"
+import { Theme } from "theme"
 
 export interface Props {
   disabled: boolean
   element: MultiSelectProto
+  theme: Theme
   widgetMgr: WidgetStateManager
   width: number
 }
@@ -100,7 +102,7 @@ class Multiselect extends React.PureComponent<Props, State> {
   }
 
   public render(): React.ReactNode {
-    const { element, width } = this.props
+    const { element, theme, width } = this.props
     const style = { width }
     const { options } = element
     const disabled = options.length === 0 ? true : this.props.disabled
@@ -130,7 +132,41 @@ class Multiselect extends React.PureComponent<Props, State> {
           disabled={disabled}
           size={"compact"}
           overrides={{
-            ...multiSelectOverrides,
+            ValueContainer: {
+              style: () => ({
+                /*
+                  This minHeight is needed to fix a bug from BaseWeb in which the
+                  div that contains the options changes their height from 40px to 44px.
+          
+                  You could check this behavior in their documentation as well:
+                  https://v8-17-1.baseweb.design/components/select/#select-as-multi-pick-search
+          
+                  Issue related: https://github.com/streamlit/streamlit/issues/590
+                 */
+                minHeight: "44px",
+              }),
+            },
+            ClearIcon: {
+              style: {
+                color: theme.colors.darkGray,
+              },
+            },
+            SearchIcon: {
+              style: {
+                color: theme.colors.darkGray,
+              },
+            },
+            MultiValue: {
+              props: {
+                overrides: {
+                  Root: {
+                    style: {
+                      fontSize: theme.fontSizes.sm,
+                    },
+                  },
+                },
+              },
+            },
             Dropdown: { component: VirtualDropdown },
           }}
         />
@@ -139,4 +175,4 @@ class Multiselect extends React.PureComponent<Props, State> {
   }
 }
 
-export default Multiselect
+export default withTheme(Multiselect)

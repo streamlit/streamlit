@@ -38,7 +38,6 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.server.server_util import serialize_forward_msg
 from streamlit.storage.file_storage import FileStorage
-from streamlit.storage.s3_storage import S3Storage
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 import streamlit.elements.exception_proto as exception_proto
 
@@ -616,6 +615,8 @@ class ReportSession(object):
         if self._storage is None:
             sharing_mode = config.get_option("global.sharingMode")
             if sharing_mode == "s3":
+                from streamlit.storage.s3_storage import S3Storage
+
                 self._storage = S3Storage()
             elif sharing_mode == "file":
                 self._storage = FileStorage()

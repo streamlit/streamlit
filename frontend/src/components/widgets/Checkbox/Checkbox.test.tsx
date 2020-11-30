@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "lib/test_util"
+import { mount } from "lib/test_util"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import { Checkbox as UICheckbox } from "baseui/checkbox"
@@ -41,7 +41,7 @@ const getProps = (elementProps: Partial<CheckboxProto> = {}): Props => ({
 
 describe("Checkbox widget", () => {
   const props = getProps()
-  const wrapper = shallow(<Checkbox {...props} />)
+  const wrapper = mount(<Checkbox {...props} />)
 
   it("renders without crashing", () => {
     expect(wrapper.find(UICheckbox).length).toBe(1)
@@ -90,12 +90,13 @@ describe("Checkbox widget", () => {
         checked: true,
       },
     } as EventTarget)
+    wrapper.update()
 
     expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
       props.element.id,
       true,
       { fromUi: true }
     )
-    expect(wrapper.state("value")).toBeTruthy()
+    expect(wrapper.find(UICheckbox).prop("checked")).toBeTruthy()
   })
 })

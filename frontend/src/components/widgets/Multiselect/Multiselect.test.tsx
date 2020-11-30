@@ -16,8 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "lib/test_util"
-import { multiSelectOverrides } from "lib/widgetTheme"
+import { mount } from "lib/test_util"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import { Select as UISelect, TYPE } from "baseui/select"
@@ -43,7 +42,7 @@ const getProps = (elementProps: Partial<MultiSelectProto> = {}): Props => ({
 
 describe("Multiselect widget", () => {
   const props = getProps()
-  const wrapper = shallow(<Multiselect {...props} />)
+  const wrapper = mount(<Multiselect {...props} />)
 
   it("renders without crashing", () => {
     expect(wrapper.find(UISelect).length).toBeTruthy()
@@ -86,7 +85,7 @@ describe("Multiselect widget", () => {
       const props = getProps({
         options: [],
       })
-      const wrapper = shallow(<Multiselect {...props} />)
+      const wrapper = mount(<Multiselect {...props} />)
 
       expect(wrapper.find(UISelect).prop("placeholder")).toBe(
         "No options to select."
@@ -127,6 +126,7 @@ describe("Multiselect widget", () => {
         value: 1,
       },
     })
+    wrapper.update()
 
     expect(wrapper.find(UISelect).prop("value")).toStrictEqual([
       { label: "a", value: "0" },
@@ -142,6 +142,7 @@ describe("Multiselect widget", () => {
         value: 1,
       },
     })
+    wrapper.update()
 
     expect(wrapper.find(UISelect).prop("value")).toStrictEqual([
       { label: "a", value: "0" },
@@ -153,13 +154,8 @@ describe("Multiselect widget", () => {
     wrapper.find(UISelect).prop("onChange")({
       type: "clear",
     })
+    wrapper.update()
 
     expect(wrapper.find(UISelect).prop("value")).toStrictEqual([])
-  })
-
-  it("should have our theme overrides", () => {
-    expect(wrapper.find(UISelect).prop("overrides")).toMatchObject(
-      multiSelectOverrides
-    )
   })
 })

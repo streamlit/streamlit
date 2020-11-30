@@ -29,19 +29,20 @@ import {
 
 import { IDeployParams } from "autogen/proto"
 import {
+  BUG_URL,
+  COMMUNITY_URL,
+  DEPLOY_URL,
+  ONLINE_DOCS_URL,
+  STREAMLIT_SHARE_URL,
+  TEAMS_URL,
+} from "urls"
+import {
   StyledMenuItem,
   StyledMenuDivider,
   StyledMenuItemLabel,
   StyledMenuItemShortcut,
   StyledRecordingIndicator,
 } from "./styled-components"
-
-const DEPLOY_URL = "https://share.streamlit.io/deploy"
-const STREAMLIT_SHARE_URL = "https://streamlit.io/sharing"
-const ONLINE_DOCS_URL = "https://docs.streamlit.io"
-const COMMUNITY_URL = "https://discuss.streamlit.io"
-const TEAMS_URL = "https://streamlit.io/forteams"
-const BUG_URL = "https://github.com/streamlit/streamlit/issues/new/choose"
 
 const SCREENCAST_LABEL: { [s: string]: string } = {
   COUNTDOWN: "Cancel screencast",
