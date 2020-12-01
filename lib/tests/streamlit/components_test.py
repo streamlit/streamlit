@@ -213,6 +213,17 @@ class ComponentRegistryTest(unittest.TestCase):
 class InvokeComponentTest(DeltaGeneratorTestCase):
     """Test invocation of a custom component object."""
 
+    def assertJSONEqual(self, a, b):
+        """Asserts that two JSON objects (strings or dicts) are equal."""
+        # Ensure both arguments are strings
+        str_a = a if isinstance(a, str) else json.dumps(a)
+        str_b = b if isinstance(b, str) else json.dumps(b)
+
+        # Convert string -> dict -> back to string, but with sorted keys
+        sorted_a = json.dumps(json.loads(str_a), sort_keys=True)
+        sorted_b = json.dumps(json.loads(str_b), sort_keys=True)
+        self.assertEqual(sorted_a, sorted_b)
+
     def setUp(self):
         super().setUp()
         self.test_component = components.declare_component("test", url=URL)
@@ -223,7 +234,9 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.component_instance
 
         self.assertEqual(self.test_component.name, proto.component_name)
-        self.assertEqual(json.dumps({"foo": "bar"}), proto.json_args)
+        self.assertJSONEqual(
+            {"foo": "bar", "key": None, "default": None}, proto.json_args
+        )
         self.assertEqual("[]", str(proto.special_args))
 
     def test_only_df_args(self):
@@ -238,7 +251,7 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.component_instance
 
         self.assertEqual(self.test_component.name, proto.component_name)
-        self.assertEqual("{}", proto.json_args)
+        self.assertJSONEqual({"key": None, "default": None}, proto.json_args)
         self.assertEqual(1, len(proto.special_args))
         self.assertEqual(_serialize_dataframe_arg("df", df), proto.special_args[0])
 
@@ -246,7 +259,10 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         """Test that component with only list args is marshalled correctly."""
         self.test_component(data=["foo", "bar", "baz"])
         proto = self.get_delta_from_queue().new_element.component_instance
-        self.assertEqual(json.dumps({"data": ["foo", "bar", "baz"]}), proto.json_args)
+        self.assertJSONEqual(
+            {"data": ["foo", "bar", "baz"], "key": None, "default": None},
+            proto.json_args,
+        )
         self.assertEqual("[]", str(proto.special_args))
 
     def test_no_args(self):
@@ -255,13 +271,13 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.component_instance
 
         self.assertEqual(self.test_component.name, proto.component_name)
-        self.assertEqual("{}", proto.json_args)
+        self.assertJSONEqual({"key": None, "default": None}, proto.json_args)
         self.assertEqual("[]", str(proto.special_args))
 
     def test_bytes_args(self):
         self.test_component(foo=b"foo", bar=bytearray(b"bar"))
         proto = self.get_delta_from_queue().new_element.component_instance
-        self.assertEqual(json.dumps({}), proto.json_args)
+        self.assertJSONEqual({"key": None, "default": None}, proto.json_args)
         self.assertEqual(2, len(proto.special_args))
         self.assertEqual(_serialize_bytes_arg("foo", b"foo"), proto.special_args[0])
         self.assertEqual(
@@ -282,7 +298,10 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.component_instance
 
         self.assertEqual(self.test_component.name, proto.component_name)
-        self.assertEqual(json.dumps({"string_arg": "string"}), proto.json_args)
+        self.assertJSONEqual(
+            {"string_arg": "string", "key": None, "default": None},
+            proto.json_args,
+        )
         self.assertEqual(2, len(proto.special_args))
         self.assertEqual(_serialize_dataframe_arg("df_arg", df), proto.special_args[0])
         self.assertEqual(
@@ -296,9 +315,24 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         with self.assertRaises(DuplicateWidgetID):
             self.test_component(key="baz")
 
+    def test_key_sent_to_frontend(self):
+        """We send the 'key' param to the frontend (even if it's None)."""
+        self.test_component(key="baz")
+        proto = self.get_delta_from_queue().new_element.component_instance
+        self.assertJSONEqual({"key": "baz", "default": None}, proto.json_args)
+
+        self.test_component()
+        proto = self.get_delta_from_queue().new_element.component_instance
+        self.assertJSONEqual({"key": None, "default": None}, proto.json_args)
+
     def test_default(self):
         """Test the 'default' param."""
         return_value = self.test_component(foo="bar", default="baz")
+        proto = self.get_delta_from_queue().new_element.component_instance
+        self.assertJSONEqual(
+            {"foo": "bar", "key": None, "default": "baz"},
+            proto.json_args,
+        )
         self.assertEqual("baz", return_value)
 
 
