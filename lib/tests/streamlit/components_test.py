@@ -214,15 +214,12 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
     """Test invocation of a custom component object."""
 
     def assertJSONEqual(self, a, b):
-        """Asserts that two JSON objects (strings or dicts) are equal."""
-        # Ensure both arguments are strings
-        str_a = a if isinstance(a, str) else json.dumps(a)
-        str_b = b if isinstance(b, str) else json.dumps(b)
-
-        # Convert string -> dict -> back to string, but with sorted keys
-        sorted_a = json.dumps(json.loads(str_a), sort_keys=True)
-        sorted_b = json.dumps(json.loads(str_b), sort_keys=True)
-        self.assertEqual(sorted_a, sorted_b)
+        """Asserts that two JSON objects are equal. If either arg is a
+        string, it will be first converted to"""
+        # Ensure both objects are dicts.
+        dict_a = a if isinstance(a, dict) else json.loads(a)
+        dict_b = b if isinstance(b, dict) else json.loads(b)
+        self.assertEqual(dict_a, dict_b)
 
     def setUp(self):
         super().setUp()
