@@ -64,7 +64,7 @@ class GitUtilTest(unittest.TestCase):
         with patch("git.repo.base.Repo.GitCommandWrapperType") as git_mock, patch(
             "streamlit.git_util.os"
         ):
-            git_mock.return_value.version_info = (1, 6, 4)
+            git_mock.return_value.version_info = (1, 6, 4)  # An old git version
             repo = GitRepo(".")
             self.assertFalse(repo.is_valid())
             self.assertEqual((1, 6, 4), repo.git_version)
@@ -76,3 +76,4 @@ class GitUtilTest(unittest.TestCase):
             git_mock.return_value.version_info = (2, 20, 3)  # A recent git version
             repo = GitRepo(".")
             self.assertTrue(repo.is_valid())
+            self.assertEqual((2, 20, 3), repo.git_version)

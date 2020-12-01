@@ -133,7 +133,7 @@ def _fix_sys_argv(script_path, args):
 
 
 def _on_server_start(server):
-    _check_git_version(server.script_path)
+    _maybe_print_old_git_warning(server.script_path)
     _print_url(server.is_running_hello)
 
     def maybe_open_browser():
@@ -227,7 +227,7 @@ def _print_url(is_running_hello):
         click.secho("")
 
 
-def _check_git_version(script_path: str) -> None:
+def _maybe_print_old_git_warning(script_path: str) -> None:
     """If our script is running in a Git repo, and we're running a very old
     Git version, print a warning that Git integration will be unavailable.
     """
