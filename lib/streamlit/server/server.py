@@ -227,7 +227,7 @@ class Server(object):
         self._command_line = command_line
 
         # Mapping of ReportSession.id -> SessionInfo.
-        self._session_info_by_id = {}
+        self._session_info_by_id = {}  # type: Dict[str, SessionInfo]
 
         self._must_stop = threading.Event()
         self._state = None
