@@ -44,14 +44,14 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         self._file_mgr = file_mgr
 
     def set_default_headers(self):
-        self.set_header("Access-Control-Allow-Methods", "POST, DELETE")
+        self.set_header("Access-Control-Allow-Methods", "POST, PUT, DELETE")
         self.set_header("Access-Control-Allow-Headers", "Content-Type")
         if config.get_option("server.enableXsrfProtection"):
-            self.set_header("Access-Control-Allow-Headers", "X-Xsrftoken, Content-Type")
             self.set_header(
                 "Access-Control-Allow-Origin",
                 Report.get_url(config.get_option("browser.serverAddress")),
             )
+            self.set_header("Access-Control-Allow-Headers", "X-Xsrftoken, Content-Type")
             self.set_header("Vary", "Origin")
             self.set_header("Access-Control-Allow-Credentials", "true")
         elif routes.allow_cross_origin_requests():
@@ -96,7 +96,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         # Convert bytes to string
         return arg[0].decode("utf-8")
 
-    def post(self):
+    def post(self, **kwargs):
         args = {}  # type: Dict[str, List[bytes]]
         files = {}  # type: Dict[str, List[Any]]
 
@@ -114,7 +114,9 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             self.send_error(400, reason=str(e))
             return
 
-        LOGGER.debug(f"{len(files)} file(s) received for session {session_id} widget {widget_id}")
+        LOGGER.debug(
+            f"{len(files)} file(s) received for session {session_id} widget {widget_id}"
+        )
 
         # Create an UploadedFile object for each file.
         uploaded_files = []
@@ -132,11 +134,12 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         if len(uploaded_files) == 0:
             self.send_error(400, reason="Expected at least 1 file, but got 0")
             return
-
         replace = self.get_argument("replace", "false")
 
         update_files = (
-            self._file_mgr.replace_files if replace == "true" else self._file_mgr.add_files
+            self._file_mgr.replace_files
+            if replace == "true"
+            else self._file_mgr.add_files
         )
         update_files(
             session_id=session_id,
@@ -144,9 +147,25 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             files=uploaded_files,
         )
 
-        LOGGER.debug(f"{len(files)} file(s) uploaded for session {session_id} widget {widget_id}. replace {replace}")
+        LOGGER.debug(
+            f"{len(files)} file(s) uploaded for session {session_id} widget {widget_id}. replace {replace}"
+        )
 
         self.set_status(200)
+
+    def put(self, session_id: str, widget_id: str, **kwargs):
+        if self.request.body:
+            data = tornado.escape.json_decode(self.request.body)
+            if "totalFiles" in data.keys():
+                self._file_mgr.update_file_count(
+                    session_id=session_id,
+                    widget_id=widget_id,
+                    file_count=data["totalFiles"],
+                )
+                self.set_status(200)
+                return
+
+        self.send_error(400, reason="Nothing to update")
 
     def delete(self, session_id, widget_id, file_id):
         if session_id is None or widget_id is None or file_id is None:

@@ -336,17 +336,10 @@ class Server(object):
                 dict(cache=self._message_cache),
             ),
             (
-                # Tornado doesn't allow body in DELETE requests.
-                # Passing lookup values in URL
                 make_url_path_regex(
                     base,
-                    "/upload_file/(?P<session_id>.*)/(?P<widget_id>.*)/(?P<file_id>[0-9]*)?",
+                    "/upload_file/?(?P<session_id>[^/]*)?/?(?P<widget_id>[^/]*)?/?(?P<file_id>[0-9]*)?",
                 ),
-                UploadFileRequestHandler,
-                dict(file_mgr=self._uploaded_file_mgr),
-            ),
-            (
-                make_url_path_regex(base, "upload_file"),
                 UploadFileRequestHandler,
                 dict(file_mgr=self._uploaded_file_mgr),
             ),
