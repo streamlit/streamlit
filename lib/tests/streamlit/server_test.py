@@ -29,7 +29,7 @@ import streamlit.server.server
 from streamlit import config, RootContainer
 from streamlit.cursor import make_delta_path
 from streamlit.report_session import ReportSession
-from streamlit.uploaded_file_manager import UploadedFile
+from streamlit.uploaded_file_manager import UploadedFileRec
 from streamlit.server.server import MAX_PORT_SEARCH_RETRIES
 from streamlit.forward_msg_cache import ForwardMsgCache
 from streamlit.forward_msg_cache import populate_hash_if_needed
@@ -326,7 +326,7 @@ class ServerTest(ServerTestCase):
             session_info1 = list(self.server._session_info_by_id.values())[0]
             session_info2 = list(self.server._session_info_by_id.values())[1]
 
-            file = UploadedFile("id", "file.txt", "type", b"123")
+            file = UploadedFileRec("id", "file.txt", "type", b"123")
 
             # "Upload a file" for Session1
             self.server._uploaded_file_mgr.update_file_count(
@@ -364,7 +364,7 @@ class ServerTest(ServerTestCase):
             session_info1 = list(self.server._session_info_by_id.values())[0]
             session_info2 = list(self.server._session_info_by_id.values())[1]
 
-            file = UploadedFile("id", "file.txt", "type", b"123")
+            file = UploadedFileRec("id", "file.txt", "type", b"123")
 
             # "Upload 2 files" for Session1
             self.server._uploaded_file_mgr.update_file_count(
@@ -401,7 +401,7 @@ class ServerTest(ServerTestCase):
             self.server._uploaded_file_mgr.add_files(
                 session_id="no_such_session",
                 widget_id="widget_id",
-                files=[UploadedFile("id", "file.txt", "type", b"123")],
+                files=[UploadedFileRec("id", "file.txt", "type", b"123")],
             )
 
             self.assertIsNone(

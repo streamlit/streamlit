@@ -1,10 +1,10 @@
 from streamlit import config
 
+from streamlit.errors import StreamlitDeprecationWarning
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.report_thread import get_report_ctx
-from streamlit.file_util import get_encoded_file_data
-from streamlit.errors import StreamlitDeprecationWarning
 from .utils import NoValue, _set_widget_id
+from ..uploaded_file_manager import UploadedFile
 
 
 class FileUploaderMixin:
@@ -108,19 +108,17 @@ class FileUploaderMixin:
         file_uploader_proto.multiple_files = accept_multiple_files
         _set_widget_id("file_uploader", file_uploader_proto, user_key=key)
 
-        files = None
+        file_recs = None
         ctx = get_report_ctx()
         if ctx is not None:
-            files = ctx.uploaded_file_mgr.get_files(
+            file_recs = ctx.uploaded_file_mgr.get_files(
                 session_id=ctx.session_id, widget_id=file_uploader_proto.id
             )
 
-        if files is None or len(files) == 0:
+        if file_recs is None or len(file_recs) == 0:
             return_value = [] if accept_multiple_files else NoValue
         else:
-            for file in files:
-                if file.tell() > 0:
-                    file.seek(0)
+            files = [UploadedFile(rec) for rec in file_recs]
             return_value = files if accept_multiple_files else files[0]
 
         return dg._enqueue("file_uploader", file_uploader_proto, return_value)  # type: ignore

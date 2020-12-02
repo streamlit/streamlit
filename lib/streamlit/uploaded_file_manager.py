@@ -14,20 +14,32 @@
 
 import io
 import threading
-from typing import Dict
-from typing import List
-from typing import NamedTuple
-from typing import Tuple
+from typing import Dict, NamedTuple, Optional, List, Tuple
 from blinker import Signal
 
 
+class UploadedFileRec(NamedTuple):
+    """Metadata and raw bytes for an uploaded file. Immutable."""
+
+    id: str
+    name: str
+    type: str
+    data: bytes
+
+
 class UploadedFile(io.BytesIO):
-    def __init__(self, id, name, type, data, **kwargs):
-        super(UploadedFile, self).__init__(data)
-        self.id = id
-        self.name = name
-        self.type = type
-        self.size = self.getbuffer().nbytes
+    """A mutable uploaded file.
+
+    This class extends BytesIO, which has copy-on-write semantics and does
+    not copy the underlying bytes until there's a mutation.
+    """
+
+    def __init__(self, record: UploadedFileRec):
+        super(UploadedFile, self).__init__(record.data)
+        self.id = record.id
+        self.name = record.name
+        self.type = record.type
+        self.size = len(record.data)
 
 
 class UploadedFileManager(object):
@@ -36,7 +48,7 @@ class UploadedFileManager(object):
     """
 
     def __init__(self):
-        self._files_by_id = {}  # type: Dict[Tuple[str, str], List[UploadedFile] ]
+        self._files_by_id: Dict[Tuple[str, str], List[UploadedFileRec]] = {}
         self._file_counts_by_id: Dict[Tuple[str, str], int] = {}
         # Prevents concurrent access to the _files_by_id dict.
         # In remove_session_files(), we iterate over the dict's keys. It's
@@ -47,8 +59,8 @@ class UploadedFileManager(object):
 
             Parameters
             ----------
-            files : UploadedFileList
-                The file list that was added or updated.
+            session_id : str
+                The session_id for the session whose files were updated.
             """
         )
 
@@ -70,7 +82,7 @@ class UploadedFileManager(object):
         self,
         session_id: str,
         widget_id: str,
-        files: List[UploadedFile],
+        files: List[UploadedFileRec],
     ):
         """
         Add a list of files to the FileManager. Does not emit any signals
@@ -86,8 +98,8 @@ class UploadedFileManager(object):
         self,
         session_id: str,
         widget_id: str,
-        files: List[UploadedFile],
-    ):
+        files: List[UploadedFileRec],
+    ) -> None:
         """Add a list of files to the FileManager.
 
         The "on_file_added" Signal will be emitted after the list is added.
@@ -98,14 +110,16 @@ class UploadedFileManager(object):
             The session ID of the report that owns the files.
         widget_id : str
             The widget ID of the FileUploader that created the files.
-        files : List[UploadedFile]
-            The files to add.
+        files : List[UploadedFileRec]
+            The file records to add.
         """
 
         self._add_files(session_id, widget_id, files)
         self._on_files_updated(session_id, widget_id)
 
-    def get_files(self, session_id: str, widget_id: str):
+    def get_files(
+        self, session_id: str, widget_id: str
+    ) -> Optional[List[UploadedFileRec]]:
         """Return the file list with the given ID, or None if the ID doesn't exist.
 
         Parameters
@@ -117,14 +131,13 @@ class UploadedFileManager(object):
 
         Returns
         -------
-        list of UploadedFile or None
+        list of UploadedFileRec or None
         """
         files_by_widget = session_id, widget_id
         with self._files_lock:
-            file_list = self._files_by_id.get(files_by_widget, None)
-        return file_list
+            return self._files_by_id.get(files_by_widget, None)
 
-    def remove_file(self, session_id: str, widget_id: str, file_id: str):
+    def remove_file(self, session_id: str, widget_id: str, file_id: str) -> None:
         """Remove the file list with the given ID, if it exists."""
         files_by_widget = session_id, widget_id
         with self._files_lock:
@@ -135,7 +148,7 @@ class UploadedFileManager(object):
             if len(file_list) != len(self._files_by_id[files_by_widget]):
                 self._on_files_updated(session_id, widget_id)
 
-    def _remove_files(self, session_id: str, widget_id: str):
+    def _remove_files(self, session_id: str, widget_id: str) -> None:
         """Remove the file list for the provided widget in the
         provided session, if it exists.
 
@@ -146,7 +159,7 @@ class UploadedFileManager(object):
         with self._files_lock:
             self._files_by_id.pop(files_by_widget, None)
 
-    def remove_files(self, session_id: str, widget_id: str):
+    def remove_files(self, session_id: str, widget_id: str) -> None:
         """Remove the file list for the provided widget in the
         provided session, if it exists.
 
@@ -160,7 +173,7 @@ class UploadedFileManager(object):
         self._remove_files(session_id, widget_id)
         self._on_files_updated(session_id, widget_id)
 
-    def remove_session_files(self, session_id: str):
+    def remove_session_files(self, session_id: str) -> None:
         """Remove all files that belong to the given report.
 
         Parameters
@@ -181,8 +194,8 @@ class UploadedFileManager(object):
         self,
         session_id: str,
         widget_id: str,
-        files: List[UploadedFile],
-    ):
+        files: List[UploadedFileRec],
+    ) -> None:
         """Removes the file list for the provided widget in the
         provided session, if it exists and add the provided files
         to the widget in the session
@@ -193,7 +206,7 @@ class UploadedFileManager(object):
             The session ID of the report that owns the file.
         widget_id : str
             The widget ID of the FileUploader that created the file.
-        files : List[UploadedFile]
+        files : List[UploadedFileRec]
             The files to add.
         """
         self._remove_files(session_id, widget_id)
@@ -205,7 +218,7 @@ class UploadedFileManager(object):
         session_id: str,
         widget_id: str,
         file_count: int,
-    ):
+    ) -> None:
         files_by_widget = session_id, widget_id
         self._file_counts_by_id[files_by_widget] = file_count
         self._on_files_updated(session_id, widget_id)

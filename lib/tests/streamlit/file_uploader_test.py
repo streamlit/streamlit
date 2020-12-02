@@ -18,8 +18,7 @@ from unittest.mock import patch
 
 import streamlit as st
 from streamlit import config
-from streamlit.uploaded_file_manager import UploadedFile
-from streamlit.file_util import get_encoded_file_data
+from streamlit.uploaded_file_manager import UploadedFileRec, UploadedFile
 from tests import testutil
 
 
@@ -48,12 +47,12 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
     @patch("streamlit.uploaded_file_manager.UploadedFileManager.get_files")
     def test_multiple_files(self, get_files_patch):
         """Test the accept_multiple_files flag"""
-        files = [
-            UploadedFile("id1", "file1", "type", b"123"),
-            UploadedFile("id2", "file2", "type", b"456"),
+        file_recs = [
+            UploadedFileRec("id1", "file1", "type", b"123"),
+            UploadedFileRec("id2", "file2", "type", b"456"),
         ]
 
-        get_files_patch.return_value = files
+        get_files_patch.return_value = file_recs
 
         for accept_multiple in [True, False]:
             return_val = st.file_uploader(
@@ -62,12 +61,28 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
             c = self.get_delta_from_queue().new_element.file_uploader
             self.assertEqual(accept_multiple, c.multiple_files)
 
-            # If "accept_multiple_files" is True, then we should get a list of values
-            # back. Otherwise, we should just get a single value.
+            # If "accept_multiple_files" is True, then we should get a list of
+            # values back. Otherwise, we should just get a single value.
+
+            # Because file_uploader returns unique UploadedFile instances
+            # each time it's called, we convert the return value back
+            # from UploadedFile -> UploadedFileRec (which implements
+            # equality) to do the assertion.
+
             if accept_multiple:
-                self.assertEqual(files, return_val)
+                results = [
+                    UploadedFileRec(file.id, file.name, file.type, file.getvalue())
+                    for file in return_val
+                ]
+                self.assertEqual(file_recs, results)
             else:
-                self.assertEqual(files[0], return_val)
+                results = UploadedFileRec(
+                    return_val.id,
+                    return_val.name,
+                    return_val.type,
+                    return_val.getvalue(),
+                )
+                self.assertEqual(file_recs[0], results)
 
     def test_max_upload_size_mb(self):
         """Test that the max upload size is the configuration value."""
@@ -77,3 +92,27 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(
             c.max_upload_size_mb, config.get_option("server.maxUploadSize")
         )
+
+    @patch("streamlit.uploaded_file_manager.UploadedFileManager.get_files")
+    def test_unique_uploaded_file_instance(self, get_files_patch):
+        """We should get a unique UploadedFile instance each time we access
+        the file_uploader widget."""
+        file_recs = [
+            UploadedFileRec("id1", "file1", "type", b"123"),
+            UploadedFileRec("id2", "file2", "type", b"456"),
+        ]
+
+        get_files_patch.return_value = file_recs
+
+        # These have different labels so they don't share a key, but because
+        # we're patching the get_files function, they'll both refer to the
+        # same files.
+        file1: UploadedFile = st.file_uploader("a", accept_multiple_files=False)
+        file2: UploadedFile = st.file_uploader("b", accept_multiple_files=False)
+
+        self.assertNotEqual(file1, file2)
+
+        # Seeking in one instance should not impact the position in the other.
+        file1.seek(2)
+        self.assertEqual(b"3", file1.read())
+        self.assertEqual(b"123", file2.read())

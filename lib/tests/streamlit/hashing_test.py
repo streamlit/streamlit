@@ -23,7 +23,6 @@ import socket
 import tempfile
 import time
 import types
-import torch
 import torchvision
 import unittest
 import urllib
@@ -34,7 +33,6 @@ from unittest.mock import patch, MagicMock
 import altair.vegalite.v3
 import numpy as np
 import pandas as pd
-import pytest
 import sqlalchemy as db
 import torch
 from parameterized import parameterized
@@ -56,7 +54,7 @@ from streamlit.hashing import _CodeHasher
 from streamlit.hashing import _NP_SIZE_LARGE
 from streamlit.hashing import _PANDAS_ROWS_LARGE
 from streamlit.type_util import is_type, get_fqn_type
-from streamlit.uploaded_file_manager import UploadedFile
+from streamlit.uploaded_file_manager import UploadedFile, UploadedFileRec
 import streamlit as st
 
 from tests import testutil
@@ -319,20 +317,20 @@ class HashTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            (BytesIO, {b"123"}, {b"456"}, {b"123"}),
-            (StringIO, {"123"}, {"456"}, {"123"}),
+            (BytesIO, b"123", b"456", b"123"),
+            (StringIO, "123", "456", "123"),
             (
                 UploadedFile,
-                ["id", "name", "type", b"123"],
-                ["id", "name", "type", b"456"],
-                ["id", "name", "type", b"123"],
+                UploadedFileRec("id", "name", "type", b"123"),
+                UploadedFileRec("id", "name", "type", b"456"),
+                UploadedFileRec("id", "name", "type", b"123"),
             ),
         ]
     )
     def test_io(self, io_type, io_data1, io_data2, io_data3):
-        io1 = io_type(*io_data1)
-        io2 = io_type(*io_data2)
-        io3 = io_type(*io_data3)
+        io1 = io_type(io_data1)
+        io2 = io_type(io_data2)
+        io3 = io_type(io_data3)
 
         self.assertEqual(get_hash(io1), get_hash(io3))
         self.assertNotEqual(get_hash(io1), get_hash(io2))
