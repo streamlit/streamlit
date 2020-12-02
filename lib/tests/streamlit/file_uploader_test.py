@@ -67,7 +67,7 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
             # Because file_uploader returns unique UploadedFile instances
             # each time it's called, we convert the return value back
             # from UploadedFile -> UploadedFileRec (which implements
-            # equality) to do the assertion.
+            # equals()) to test equality.
 
             if accept_multiple:
                 results = [
@@ -104,9 +104,9 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
 
         get_files_patch.return_value = file_recs
 
-        # These have different labels so they don't share a key, but because
-        # we're patching the get_files function, they'll both refer to the
-        # same files.
+        # These file_uploaders have different labels so that we don't cause
+        # a DuplicateKey  error - but because we're patching the get_files
+        # function, both file_uploaders will refer to the same files.
         file1: UploadedFile = st.file_uploader("a", accept_multiple_files=False)
         file2: UploadedFile = st.file_uploader("b", accept_multiple_files=False)
 
