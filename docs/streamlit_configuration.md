@@ -93,11 +93,6 @@ values:
 # Default: false
 disableWatchdogWarning = false
 
-# Configure the ability to share apps to the cloud.
-# Should be set to one of these values: - "off" : turn off sharing. - "s3" : share to S3, based on the settings under the [s3] section of this config file. - "file" : share to a directory on the local machine. This is meaningful only for debugging Streamlit itself, and shouldn't be used for production.
-# Default: "off"
-sharingMode = "off"
-
 # If True, will show a warning when you run a Streamlit-enabled script via "python my_script.py".
 # Default: true
 showWarningOnDirectExecution = true
@@ -169,10 +164,6 @@ cookieSecret = "909a66338a19aad71fc0381e2b126f95ec2db3d19094e3c4ad51f866d3bda991
 # If false, will attempt to open a browser window on start.
 # Default: false unless (1) we are on a Linux box where DISPLAY is unset, or (2) server.liveSave is set.
 headless = false
-
-# Immediately share the app in such a way that enables live monitoring, and post-run analysis.
-# Default: false
-liveSave = false
 
 # Automatically rerun script when the file is modified on disk.
 # Default: false
