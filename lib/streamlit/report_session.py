@@ -366,7 +366,7 @@ class ReportSession(object):
             # In this case, catch any errors
             return None
 
-    def _enqueue_new_report_message(self, generate_new_id = True):
+    def _enqueue_new_report_message(self, generate_new_id=True):
         if generate_new_id:
             self._report.generate_new_id()
 
@@ -446,7 +446,7 @@ class ReportSession(object):
         self.enqueue(msg)
 
     def handle_reload_report_message(self):
-        LOGGER.debug('Reloading report message without rerun')
+        LOGGER.debug("Reloading report message without rerun")
         self._enqueue_new_report_message(generate_new_id=False)
 
     def handle_rerun_script_request(self, client_state=None, is_preheat=False):
