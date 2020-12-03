@@ -21,11 +21,20 @@ import React, {
   forwardRef,
   MouseEvent,
   ReactNode,
+  useEffect,
 } from "react"
 import { StatefulMenu } from "baseui/menu"
 import { Menu } from "@emotion-icons/open-iconic"
 import Button, { Kind } from "components/shared/Button"
 import { StatefulPopover, PLACEMENT } from "baseui/popover"
+import {
+  NoRepositoryDetected,
+  DetachedHead,
+  RepoIsAhead,
+  ModuleIsNotAdded,
+  UncommittedChanges,
+  UntrackedFiles,
+} from "components/core/StreamlitDialog/DeployErrorDialogs"
 
 import Icon from "components/shared/Icon"
 import {
@@ -42,12 +51,13 @@ import {
   StyledRecordingIndicator,
 } from "./styled-components"
 
-const DEPLOY_URL = "https://share.streamlit.io/deploy"
-const STREAMLIT_SHARE_URL = "https://streamlit.io/sharing"
-const ONLINE_DOCS_URL = "https://docs.streamlit.io"
-const COMMUNITY_URL = "https://discuss.streamlit.io"
-const TEAMS_URL = "https://streamlit.io/forteams"
-const BUG_URL = "https://github.com/streamlit/streamlit/issues/new/choose"
+export const DEPLOY_URL = "https://share.streamlit.io/deploy"
+export const STREAMLIT_SHARE_URL = "https://streamlit.io/sharing"
+export const ONLINE_DOCS_URL = "https://docs.streamlit.io"
+export const COMMUNITY_URL = "https://discuss.streamlit.io"
+export const TEAMS_URL = "https://streamlit.io/forteams"
+export const BUG_URL =
+  "https://github.com/streamlit/streamlit/issues/new/choose"
 
 const SCREENCAST_LABEL: { [s: string]: string } = {
   COUNTDOWN: "Cancel screencast",
@@ -63,6 +73,9 @@ export interface Props {
 
   /** Rerun the report. */
   quickRerunCallback: () => void
+
+  /** Reload report message */
+  reloadReportMessage: () => void
 
   /** Clear the cache. */
   clearCacheCallback: () => void
@@ -92,6 +105,8 @@ export interface Props {
     errorNode: ReactNode,
     onContinue?: () => void
   ) => void
+
+  isDeployErrorModalOpen: boolean
 }
 
 const getOpenInWindowCallback = (url: string) => (): void => {
@@ -205,115 +220,61 @@ function MainMenu(props: Props): ReactElement {
       !deployParams.branch ||
       !deployParams.module
     ) {
-      showDeployError(
-        "Error deploying app",
-        <>
-          <p>No Github repository detected.</p>
-          <p>How Streamlit sharing works:</p>
-          <ul>
-            <li>
-              To deploy a public app, you must first put it in a public Github
-              repo. See{" "}
-              <a
-                href={ONLINE_DOCS_URL}
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                our documentation
-              </a>{" "}
-              for more details.
-            </li>
-            <li>
-              If you'd like to deploy a private app, sign up for Streamlit for
-              Teams.
-            </li>
-          </ul>
-        </>
-      )
+      const dialog = NoRepositoryDetected()
+
+      showDeployError(dialog.title, dialog.body)
 
       return
     }
 
     if (deployParams.isHeadDetached) {
-      showDeployError(
-        "Error deploying app",
-        <>
-          <p>This Git tree is in a detached HEAD state.</p>
-          <p>
-            Please commit the latest changes and push to Github to continue.
-          </p>
-        </>
-      )
+      const dialog = DetachedHead()
+
+      showDeployError(dialog.title, dialog.body)
 
       return
     }
 
     if (deployParams?.untrackedFiles?.includes(deployParams.module)) {
-      showDeployError(
-        "Error deploying app",
-        <>
-          <p>
-            The file <strong>{deployParams.module}</strong> has not been added
-            to the repo.
-          </p>
-          <p>Please add it and push to Github to continue.</p>
-        </>
-      )
+      const dialog = ModuleIsNotAdded(deployParams.module)
+
+      showDeployError(dialog.title, dialog.body)
 
       return
     }
 
     if (deployParams?.uncommittedFiles?.length) {
-      showDeployError(
-        "Error deploying app",
-        <>
-          <p>
-            The file <strong>{deployParams.module}</strong> has uncommitted
-            changes.
-          </p>
-          <p>
-            Please commit the latest changes and push to Github to continue.
-          </p>
-        </>
-      )
+      const dialog = UncommittedChanges(deployParams.module)
+
+      showDeployError(dialog.title, dialog.body)
 
       return
     }
 
     if (deployParams?.isAhead) {
-      showDeployError(
-        "Error deploying app",
-        <>
-          <p>
-            This Git repo has uncommitted changes. You may want to commit them
-            before continuing.
-          </p>
-        </>,
-        getDeployAppUrl(deployParams)
-      )
+      const dialog = RepoIsAhead()
+
+      showDeployError(dialog.title, dialog.body, getDeployAppUrl(deployParams))
 
       return
     }
 
     if (deployParams?.untrackedFiles?.length) {
-      showDeployError(
-        "Error deploying app",
-        <>
-          <p>
-            This Git repo has untracked files. You may want to commit them
-            before continuing.
-          </p>
-          <p>
-            Alternatively, you can either delete the files (if they're not
-            needed) or add them to your <strong>.gitignore</strong>.
-          </p>
-        </>,
-        getDeployAppUrl(deployParams)
-      )
+      const dialog = UntrackedFiles()
+
+      showDeployError(dialog.title, dialog.body, getDeployAppUrl(deployParams))
+
+      return
     }
 
     getDeployAppUrl(deployParams)
   }
+
+  useEffect(() => {
+    if (!props.deployParams || !props.isDeployErrorModalOpen) return
+
+    onClickDeployApp()
+  }, [props.deployParams, props.isDeployErrorModalOpen])
 
   const coreMenuOptions = {
     DIVIDER: { isDivider: true },

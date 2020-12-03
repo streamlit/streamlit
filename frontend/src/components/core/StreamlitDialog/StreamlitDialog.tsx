@@ -31,7 +31,7 @@ import {
   ScriptChangedDialog,
   Props as ScriptChangedDialogProps,
 } from "components/core/StreamlitDialog/ScriptChangedDialog"
-import { IException } from "autogen/proto"
+import { IDeployParams, IException } from "autogen/proto"
 import { SessionInfo } from "lib/SessionInfo"
 import { Props as SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
 
@@ -382,6 +382,8 @@ interface DeployErrorProps {
   msg: ReactNode
   onClose: PlainEventHandler
   onContinue?: PlainEventHandler
+  onTryAgain: PlainEventHandler
+  deployParams?: IDeployParams | null
 }
 
 /**
@@ -392,6 +394,8 @@ function deployErrorDialog({
   msg,
   onClose,
   onContinue,
+  onTryAgain,
+  deployParams,
 }: DeployErrorProps): ReactElement {
   const handlePrimaryButton = (): void => {
     onClose()
@@ -408,6 +412,9 @@ function deployErrorDialog({
         <StyledDeployErrorContent>{msg}</StyledDeployErrorContent>
       </ModalBody>
       <ModalFooter>
+        <ModalButton kind={Kind.SECONDARY} onClick={onTryAgain}>
+          Try Again
+        </ModalButton>
         <ModalButton kind={Kind.PRIMARY} onClick={handlePrimaryButton}>
           {onContinue ? "Continue anyway" : "Close"}
         </ModalButton>

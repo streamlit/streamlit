@@ -37,26 +37,26 @@ import { ConnectionState } from "lib/ConnectionState"
 import { ReportRunState } from "lib/ReportRunState"
 import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
 import {
-  setCookie,
+  getElementWidgetID,
   hashString,
   isEmbeddedInIFrame,
   notUndefined,
-  getElementWidgetID,
+  setCookie,
 } from "lib/utils"
 import {
   BackMsg,
+  Config,
   Delta,
   ForwardMsg,
   ForwardMsgMetadata,
+  IDeployParams,
   Initialize,
   NewReport,
-  IDeployParams,
   PageConfig,
   PageInfo,
   SessionEvent,
-  WidgetStates,
   SessionState,
-  Config,
+  WidgetStates,
 } from "autogen/proto"
 
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
@@ -235,6 +235,7 @@ export class App extends PureComponent<Props, State> {
       msg: errorNode,
       onContinue,
       onClose: () => {},
+      onTryAgain: this.reloadReportMessage,
     })
   }
 
@@ -773,6 +774,26 @@ export class App extends PureComponent<Props, State> {
     this.widgetMgr.sendUpdateWidgetsMessage()
   }
 
+  reloadReportMessage = (): void => {
+    if (!this.isServerConnected()) {
+      logError("Cannot rerun script when disconnected from server.")
+      return
+    }
+
+    if (
+      this.state.reportRunState === ReportRunState.RUNNING ||
+      this.state.reportRunState === ReportRunState.RERUN_REQUESTED
+    ) {
+      return
+    }
+
+    this.sendBackMsg(
+      new BackMsg({
+        reloadReportMessage: true,
+      })
+    )
+  }
+
   sendRerunBackMsg = (widgetStates?: WidgetStates | undefined): void => {
     const { queryParams } = this.props.s4aCommunication.currentState
 
@@ -971,6 +992,7 @@ export class App extends PureComponent<Props, State> {
                 isServerConnected={this.isServerConnected()}
                 shareCallback={this.shareReport}
                 quickRerunCallback={this.rerunScript}
+                reloadReportMessage={this.reloadReportMessage}
                 clearCacheCallback={this.openClearCacheDialog}
                 settingsCallback={this.settingsCallback}
                 aboutCallback={this.aboutCallback}
@@ -980,6 +1002,9 @@ export class App extends PureComponent<Props, State> {
                 sendS4AMessage={this.props.s4aCommunication.sendMessage}
                 deployParams={deployParams}
                 showDeployError={this.showDeployError}
+                isDeployErrorModalOpen={
+                  this.state.dialog?.type === DialogType.DEPLOY_ERROR
+                }
               />
             </Header>
 
