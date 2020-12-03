@@ -248,9 +248,10 @@ def _maybe_print_old_git_warning(script_path: str) -> None:
             fg="yellow",
         )
         click.secho(
-            "  To use Streamlit's Git integration, please update Git.",
+            "  Git is used by Streamlit Sharing (https://streamlit.io/sharing).",
             fg="yellow",
         )
+        click.secho("  To enable this feature, please update Git.", fg="yellow")
 
 
 def run(script_path, command_line, args):
