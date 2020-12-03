@@ -46,8 +46,7 @@ class FileUploaderMixin:
 
             The UploadedFile class is a subclass of BytesIO, and therefore
             it is "file-like". This means you can pass them anywhere where
-            a file is expected. As a subclass of BytesIO, make sure to
-            reset the buffer after reading it with `UploadedFile.seek(0)`.
+            a file is expected.
 
         Examples
         --------
