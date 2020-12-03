@@ -43,7 +43,7 @@ mini-init: setup pipenv-dev-install react-init autogen
 
 .PHONY: autogen
 # Generates files for frontend dev
-autogen: scssvars protobuf
+autogen: protobuf
 
 .PHONY: frontend
 # Build frontend into static files.
@@ -195,7 +195,6 @@ clean: clean-docs
 	rm -rf frontend/node_modules
 	rm -f frontend/src/autogen/proto.js
 	rm -f frontend/src/autogen/proto.d.ts
-	rm -f frontend/src/autogen/scssVariables.ts
 	rm -rf frontend/public/reports
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true
 	cd lib; rm -rf .coverage .coverage\.*
@@ -261,15 +260,6 @@ react-build:
 	# If you're debugging sharing, you may want to comment this out so that
 	# sourcemaps exist.
 	find lib/streamlit/static -type 'f' -iname '*.map' | xargs rm -fv
-
-.PHONY: scssvars
-# Generate frontend/src/autogen/scssVariables.ts, which has SCSS variables that we can use in TS.
-scssvars: react-init
-	mkdir -p frontend/src/autogen
-	cd frontend ; ( \
-		echo "export const SCSS_VARS:Record<string, string> = " ; \
-		yarn run --silent scss-to-json src/assets/css/variables.scss \
-	) > src/autogen/scssVariables.ts
 
 .PHONY: jslint
 # Lint the JS code. Saves results to test-reports/eslint/eslint.xml.
