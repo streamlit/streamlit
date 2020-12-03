@@ -56,7 +56,10 @@ function ProgressBar({
     Bar: {
       style: ({ $theme }: { $theme: any }) => ({
         width,
-        margin: theme.spacing.none,
+        marginTop: theme.spacing.none,
+        marginBottom: theme.spacing.none,
+        marginRight: theme.spacing.none,
+        marginLeft: theme.spacing.none,
         height: heightMap[size],
         backgroundColor: $theme.colors.progressbarTrackFill,
       }),
