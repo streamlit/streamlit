@@ -62,4 +62,17 @@ export class FileUploadClient extends HttpClient {
       { method: "DELETE" }
     )
   }
+
+  public async updateFileCount(
+    widgetId: string,
+    fileCount: number
+  ): Promise<void> {
+    await this.request(
+      `upload_file/${SessionInfo.current.sessionId}/${widgetId}`,
+      {
+        method: "PUT",
+        data: { totalFiles: fileCount },
+      }
+    )
+  }
 }

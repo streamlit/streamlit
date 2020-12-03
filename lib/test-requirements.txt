@@ -8,11 +8,7 @@ graphviz
 keras
 matplotlib
 mysqlclient
-# 2020.11.2: opencv-python 4.4.0.46 (the latest) doesn't have pre-built wheels
-# for our Docker Linux version. A full compile takes ages - long enough that
-# CircleCI times out - so we're pinning to a lower version. Please remove this
-# version pin in the future!
-opencv-python==4.4.0.44
+opencv-python
 plotly
 prometheus-client
 psycopg2-binary
