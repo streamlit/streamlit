@@ -16,10 +16,11 @@
  */
 
 import React, { PureComponent } from "react"
+import { withTheme } from "emotion-theming"
 import { FullscreenEnter, FullscreenExit } from "@emotion-icons/open-iconic"
-import { SCSS_VARS } from "autogen/scssVariables"
 import Icon from "components/shared/Icon"
 import PageLayoutContext from "components/core/PageLayoutContext"
+import { Theme } from "theme"
 import {
   StyledFullScreenFrame,
   StyledFullScreenButton,
@@ -40,6 +41,7 @@ interface Props {
   children: (props: Size) => React.ReactNode
   width: number
   height?: number
+  theme: Theme
 }
 
 interface State {
@@ -107,10 +109,10 @@ class FullScreenWrapper extends PureComponent<Props, State> {
 
   getWindowDimensions = (): Pick<State, "fullWidth" | "fullHeight"> => {
     const padding = this.convertScssRemValueToPixels(
-      SCSS_VARS["$fullscreen-padding"]
+      this.props.theme.spacing.md
     )
     const paddingTop = this.convertScssRemValueToPixels(
-      SCSS_VARS["$fullscreen-padding-top"]
+      this.props.theme.sizes.headerHeight
     )
 
     return {
@@ -154,4 +156,4 @@ class FullScreenWrapper extends PureComponent<Props, State> {
   }
 }
 
-export default FullScreenWrapper
+export default withTheme(FullScreenWrapper)

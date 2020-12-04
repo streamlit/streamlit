@@ -43,7 +43,7 @@ code {
   margin: 0;
   border-radius: $border-radius;
   background: $gray-faint;
-  color: $green;
+  color: $code-color;
 }
 
 pre {
@@ -64,7 +64,7 @@ pre {
     word-break: normal;
     word-wrap: normal;
     overflow-x: auto;
-    color: $green;
+    color: $code-color;
   }
 }
 

@@ -7,14 +7,14 @@ export const StyledStreamlitMarkdown = styled.div(({ theme }) => ({
     color: theme.colors.blue,
   },
 
-  ul: {
+  "ul, ol": {
     paddingLeft: theme.spacing.lg,
   },
 
-  code: {
-    // Default color for syntax highlighting.
-    backgroundColor: theme.colors.transparent,
-    color: "inherit",
+  li: {
+    margin: "0.2em 0 0.2em 1.2em",
+    padding: "0 0 0 0.6em",
+    fontSize: theme.fontSizes.md,
   },
 
   "pre code": {

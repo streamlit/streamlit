@@ -16,7 +16,8 @@
  */
 
 import React from "react"
-import { shallow } from "lib/test_util"
+import { mount } from "lib/test_util"
+import { ModalHeader, ModalBody } from "components/shared/Modal"
 
 import VideoRecordedDialog, { Props } from "./VideoRecordedDialog"
 
@@ -31,21 +32,21 @@ const getProps = (props: Partial<Props> = {}): Props => ({
 
 describe("VideoRecordedDialog", () => {
   it("renders without crashing", () => {
-    const wrapper = shallow(<VideoRecordedDialog {...getProps()} />)
+    const wrapper = mount(<VideoRecordedDialog {...getProps()} />)
 
     expect(wrapper.html()).not.toBeNull()
   })
 
   it("should render a header", () => {
     const props = getProps()
-    const wrapper = shallow(<VideoRecordedDialog {...props} />)
-    const headerWrapper = wrapper.find("ModalHeader")
+    const wrapper = mount(<VideoRecordedDialog {...props} />)
+    const headerWrapper = wrapper.find(ModalHeader)
     expect(headerWrapper.props().children).toBe("Next steps")
   })
 
   it("should render a video", () => {
-    const wrapper = shallow(<VideoRecordedDialog {...getProps()} />)
-    const bodyWrapper = wrapper.find("ModalBody")
+    const wrapper = mount(<VideoRecordedDialog {...getProps()} />)
+    const bodyWrapper = wrapper.find(ModalBody)
 
     expect(bodyWrapper.find("StyledVideo").length).toBe(1)
     expect(URL.createObjectURL).toBeCalled()
@@ -53,8 +54,8 @@ describe("VideoRecordedDialog", () => {
 
   it("should render a download button", () => {
     const props = getProps()
-    const wrapper = shallow(<VideoRecordedDialog {...props} />)
-    const buttonWrapper = wrapper.find("ModalBody").find("Button")
+    const wrapper = mount(<VideoRecordedDialog {...props} />)
+    const buttonWrapper = wrapper.find(ModalBody).find("Button")
 
     buttonWrapper.simulate("click")
 

@@ -1,5 +1,5 @@
 import React from "react"
-import { ONLINE_DOCS_URL } from "components/core/MainMenu/MainMenu"
+import { ONLINE_DOCS_URL } from "urls"
 import { IDeployErrorDialog } from "./types"
 
 function NoRepositoryDetected(): IDeployErrorDialog {

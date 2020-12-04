@@ -287,6 +287,10 @@ export class App extends PureComponent<Props, State> {
       this.setState({ dialog: null })
     } else {
       setCookie("_xsrf", "")
+
+      if (SessionInfo.isSet()) {
+        SessionInfo.clearSession()
+      }
     }
   }
 
@@ -485,7 +489,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Handler for ForwardMsg.newReport messages
+   * Handler for ForwardMsg.newReport messages. This runs on each rerun
    * @param newReportProto a NewReport protobuf
    */
   handleNewReport = (newReportProto: NewReport): void => {
@@ -540,7 +544,6 @@ export class App extends PureComponent<Props, State> {
    */
   handleOneTimeInitialization = (initialize: Initialize): void => {
     SessionInfo.current = SessionInfo.fromInitializeMessage(initialize)
-
     const config = initialize.config as Config
 
     MetricsManager.current.initialize({

@@ -25,8 +25,7 @@ import { ComponentRegistry } from "components/widgets/CustomComponent"
 
 import ThemeProvider from "components/core/ThemeProvider"
 import PageLayoutContext from "components/core/PageLayoutContext"
-import { sidebarWidgetTheme } from "lib/widgetTheme"
-import { sidebarTheme } from "theme"
+import { sidebarTheme, sidebarBaseUITheme } from "theme"
 import { BlockNode, ReportRoot } from "lib/ReportNode"
 
 import {
@@ -110,7 +109,7 @@ function ReportView(props: ReportViewProps): ReactElement {
     >
       {!elements.sidebar.isEmpty && (
         <Sidebar initialSidebarState={initialSidebarState}>
-          <ThemeProvider theme={sidebarTheme} baseuiTheme={sidebarWidgetTheme}>
+          <ThemeProvider theme={sidebarTheme} baseuiTheme={sidebarBaseUITheme}>
             {renderBlock(elements.sidebar)}
           </ThemeProvider>
         </Sidebar>

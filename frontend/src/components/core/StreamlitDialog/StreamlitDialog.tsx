@@ -33,6 +33,7 @@ import {
 } from "components/core/StreamlitDialog/ScriptChangedDialog"
 import { IDeployParams, IException } from "autogen/proto"
 import { SessionInfo } from "lib/SessionInfo"
+import { STREAMLIT_HOME_URL } from "urls"
 import { Props as SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
 
 import {
@@ -123,7 +124,7 @@ function aboutDialog(props: AboutProps): ReactElement {
         <div>
           Streamlit v{SessionInfo.current.streamlitVersion}
           <br />
-          <a href="https://streamlit.io">https://streamlit.io</a>
+          <a href={STREAMLIT_HOME_URL}>{STREAMLIT_HOME_URL}</a>
           <br />
           Copyright 2020 Streamlit Inc. All rights reserved.
         </div>

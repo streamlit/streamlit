@@ -16,15 +16,17 @@
  */
 
 import React from "react"
+import { withTheme } from "emotion-theming"
 import { Radio as UIRadio, RadioGroup } from "baseui/radio"
 import { Radio as RadioProto } from "autogen/proto"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
-import { radioOverrides } from "lib/widgetTheme"
 import { StyledWidgetLabel } from "components/widgets/BaseWidget"
+import { Theme } from "theme"
 
 export interface Props {
   disabled: boolean
   element: RadioProto
+  theme: Theme
   widgetMgr: WidgetStateManager
   width: number
 }
@@ -65,13 +67,15 @@ class Radio extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const style = { width: this.props.width }
-    let { options } = this.props.element
-    let { disabled } = this.props
+    const { disabled, element, theme, width } = this.props
+    const { colors, fontSizes, radii } = theme
+    const style = { width }
+    let { options } = element
+    let isDisabled = disabled
 
     if (options.length === 0) {
       options = ["No options to select."]
-      disabled = true
+      isDisabled = true
     }
 
     return (
@@ -80,13 +84,37 @@ class Radio extends React.PureComponent<Props, State> {
         <RadioGroup
           onChange={this.onChange}
           value={this.state.value.toString()}
-          disabled={disabled}
+          disabled={isDisabled}
         >
           {options.map((option: string, index: number) => (
             <UIRadio
               key={index}
               value={index.toString()}
-              overrides={radioOverrides}
+              overrides={{
+                Root: {
+                  style: ({ $isFocused }: { $isFocused: boolean }) => ({
+                    marginBottom: 0,
+                    marginTop: 0,
+                    paddingRight: fontSizes.twoThirdSmDefault,
+                    backgroundColor: $isFocused ? colors.lightestGray : "",
+                    borderTopLeftRadius: radii.md,
+                    borderTopRightRadius: radii.md,
+                    borderBottomLeftRadius: radii.md,
+                    borderBottomRightRadius: radii.md,
+                  }),
+                },
+                RadioMarkInner: {
+                  style: ({ $checked }: { $checked: boolean }) => ({
+                    height: $checked ? "6px" : "16px",
+                    width: $checked ? "6px" : "16px",
+                  }),
+                },
+                Label: {
+                  style: {
+                    color: colors.bodyText,
+                  },
+                },
+              }}
             >
               {option}
             </UIRadio>
@@ -97,4 +125,4 @@ class Radio extends React.PureComponent<Props, State> {
   }
 }
 
-export default Radio
+export default withTheme(Radio)

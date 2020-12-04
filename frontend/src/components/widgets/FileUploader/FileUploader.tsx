@@ -114,6 +114,11 @@ class FileUploader extends React.PureComponent<Props, State> {
       this.removeFile(this.state.files[0].id || "")
     }
 
+    this.props.uploadClient.updateFileCount(
+      this.props.element.id,
+      multipleFiles ? this.state.files.length + acceptedFiles.length : 1
+    )
+
     // Too many files were uploaded. Upload the first eligible file
     // and reject the rest
     if (rejectedFiles.length > 1 && !multipleFiles) {
@@ -178,18 +183,9 @@ class FileUploader extends React.PureComponent<Props, State> {
         })
       })
       .catch(err => {
-        if (axios.isCancel(err)) {
-          // If this was a cancel error, we don't show the user an error -
-          // the cancellation was in response to an action they took
-          this.setState(state => ({
-            files: state.files.map(existingFile => {
-              if (file.id === existingFile.id) {
-                return file
-              }
-              return existingFile
-            }),
-          }))
-        } else {
+        // If this was a cancel error, we don't show the user an error -
+        // the cancellation was in response to an action they took.
+        if (!axios.isCancel(err)) {
           this.setState({
             status: "ERROR",
             errorMessage: err ? err.toString() : "Unknown error",
@@ -240,14 +236,17 @@ class FileUploader extends React.PureComponent<Props, State> {
       const files = [...state.files]
       const file = files.find(file => file.id === fileId)
       if (fileId && file) {
-        if (file.cancelToken) {
-          // The file hasn't been uploaded. Let's cancel the request
-          file.cancelToken.cancel()
-        }
         file.status = FileStatuses.DELETING
-        if (file.errorMessage || file.cancelToken) {
+        if (file.errorMessage) {
           this.removeFile(fileId)
           return null
+        }
+
+        if (file.cancelToken) {
+          // The file hasn't been uploaded. Let's cancel the request
+          // However, it may have been received by the server so let's
+          // send out a request to delete in case it has
+          file.cancelToken.cancel()
         }
 
         this.props.uploadClient
@@ -264,16 +263,23 @@ class FileUploader extends React.PureComponent<Props, State> {
   }
 
   private removeFile = (fileId: string): void => {
-    this.setState(state => {
-      const filteredFiles = state.files.filter(file => file.id !== fileId)
-      return {
-        status: filteredFiles.length
-          ? FileStatuses.UPLOADED
-          : FileStatuses.READY,
-        errorMessage: undefined,
-        files: filteredFiles,
-      }
-    })
+    this.setState(
+      state => {
+        const filteredFiles = state.files.filter(file => file.id !== fileId)
+        return {
+          status: filteredFiles.length
+            ? FileStatuses.UPLOADED
+            : FileStatuses.READY,
+          errorMessage: undefined,
+          files: filteredFiles,
+        }
+      },
+      () =>
+        this.props.uploadClient.updateFileCount(
+          this.props.element.id,
+          this.state.files.length
+        )
+    )
   }
 
   private onUploadProgress = (
