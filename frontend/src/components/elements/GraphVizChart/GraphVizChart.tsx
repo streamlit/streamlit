@@ -16,15 +16,12 @@
  */
 
 import React, { ReactElement, useEffect } from "react"
-
 import { select } from "d3"
 import { graphviz } from "d3-graphviz"
 import { logError } from "lib/log"
-
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import { GraphVizChart as GraphVizChartProto } from "autogen/proto"
-
-import "./GraphVizChart.scss"
+import { StyledGraphVizChart } from "./styled-components"
 
 export interface GraphVizChartProps {
   width: number
@@ -116,7 +113,7 @@ export function GraphVizChart({
     : propHeight
 
   return (
-    <div
+    <StyledGraphVizChart
       className="graphviz stGraphVizChart"
       id={chartId}
       style={{ width, height }}

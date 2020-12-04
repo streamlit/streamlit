@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 import { Text as TextProto } from "autogen/proto"
 import Text, { TextProps } from "./Text"
 
@@ -33,8 +33,6 @@ describe("Text element", () => {
     const props = getProps()
     const wrap = shallow(<Text {...props} />)
     expect(wrap).toBeDefined()
-    const elem = wrap.get(0)
     expect(wrap.text()).toBe("some plain text")
-    expect(elem.props.className.includes("stText")).toBeTruthy()
   })
 })

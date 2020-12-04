@@ -223,7 +223,9 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.component_instance
 
         self.assertEqual(self.test_component.name, proto.component_name)
-        self.assertEqual(json.dumps({"foo": "bar"}), proto.json_args)
+        self.assertJSONEqual(
+            {"foo": "bar", "key": None, "default": None}, proto.json_args
+        )
         self.assertEqual("[]", str(proto.special_args))
 
     def test_only_df_args(self):
@@ -238,7 +240,7 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.component_instance
 
         self.assertEqual(self.test_component.name, proto.component_name)
-        self.assertEqual("{}", proto.json_args)
+        self.assertJSONEqual({"key": None, "default": None}, proto.json_args)
         self.assertEqual(1, len(proto.special_args))
         self.assertEqual(_serialize_dataframe_arg("df", df), proto.special_args[0])
 
@@ -246,7 +248,10 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         """Test that component with only list args is marshalled correctly."""
         self.test_component(data=["foo", "bar", "baz"])
         proto = self.get_delta_from_queue().new_element.component_instance
-        self.assertEqual(json.dumps({"data": ["foo", "bar", "baz"]}), proto.json_args)
+        self.assertJSONEqual(
+            {"data": ["foo", "bar", "baz"], "key": None, "default": None},
+            proto.json_args,
+        )
         self.assertEqual("[]", str(proto.special_args))
 
     def test_no_args(self):
@@ -255,17 +260,21 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.component_instance
 
         self.assertEqual(self.test_component.name, proto.component_name)
-        self.assertEqual("{}", proto.json_args)
+        self.assertJSONEqual({"key": None, "default": None}, proto.json_args)
         self.assertEqual("[]", str(proto.special_args))
 
     def test_bytes_args(self):
-        self.test_component(foo=b"foo", bar=bytearray(b"bar"))
+        self.test_component(foo=b"foo", bar=b"bar")
         proto = self.get_delta_from_queue().new_element.component_instance
-        self.assertEqual(json.dumps({}), proto.json_args)
+        self.assertJSONEqual({"key": None, "default": None}, proto.json_args)
         self.assertEqual(2, len(proto.special_args))
-        self.assertEqual(_serialize_bytes_arg("foo", b"foo"), proto.special_args[0])
         self.assertEqual(
-            _serialize_bytes_arg("bar", bytearray(b"bar")), proto.special_args[1]
+            _serialize_bytes_arg("foo", b"foo"),
+            proto.special_args[0],
+        )
+        self.assertEqual(
+            _serialize_bytes_arg("bar", b"bar"),
+            proto.special_args[1],
         )
 
     def test_mixed_args(self):
@@ -282,7 +291,10 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.component_instance
 
         self.assertEqual(self.test_component.name, proto.component_name)
-        self.assertEqual(json.dumps({"string_arg": "string"}), proto.json_args)
+        self.assertJSONEqual(
+            {"string_arg": "string", "key": None, "default": None},
+            proto.json_args,
+        )
         self.assertEqual(2, len(proto.special_args))
         self.assertEqual(_serialize_dataframe_arg("df_arg", df), proto.special_args[0])
         self.assertEqual(
@@ -296,10 +308,65 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         with self.assertRaises(DuplicateWidgetID):
             self.test_component(key="baz")
 
-    def test_default(self):
-        """Test the 'default' param."""
-        return_value = self.test_component(foo="bar", default="baz")
+    def test_key_sent_to_frontend(self):
+        """We send the 'key' param to the frontend (even if it's None)."""
+        # Test a string key
+        self.test_component(key="baz")
+        proto = self.get_delta_from_queue().new_element.component_instance
+        self.assertJSONEqual({"key": "baz", "default": None}, proto.json_args)
+
+        # Test an empty key
+        self.test_component()
+        proto = self.get_delta_from_queue().new_element.component_instance
+        self.assertJSONEqual({"key": None, "default": None}, proto.json_args)
+
+    def test_simple_default(self):
+        """Test the 'default' param with a JSON value."""
+        return_value = self.test_component(default="baz")
         self.assertEqual("baz", return_value)
+
+        proto = self.get_delta_from_queue().new_element.component_instance
+        self.assertJSONEqual({"key": None, "default": "baz"}, proto.json_args)
+
+    def test_bytes_default(self):
+        """Test the 'default' param with a bytes value."""
+        return_value = self.test_component(default=b"bytes")
+        self.assertEqual(b"bytes", return_value)
+
+        proto = self.get_delta_from_queue().new_element.component_instance
+        self.assertJSONEqual({"key": None}, proto.json_args)
+        self.assertEqual(
+            _serialize_bytes_arg("default", b"bytes"),
+            proto.special_args[0],
+        )
+
+    def test_df_default(self):
+        """Test the 'default' param with a DataFrame value."""
+        df = pd.DataFrame(
+            {
+                "First Name": ["Jason", "Molly"],
+                "Last Name": ["Miller", "Jacobson"],
+                "Age": [42, 52],
+            },
+            columns=["First Name", "Last Name", "Age"],
+        )
+        return_value = self.test_component(default=df)
+        self.assertTrue(df.equals(return_value), "df != return_value")
+
+        proto = self.get_delta_from_queue().new_element.component_instance
+        self.assertJSONEqual({"key": None}, proto.json_args)
+        self.assertEqual(
+            _serialize_dataframe_arg("default", df),
+            proto.special_args[0],
+        )
+
+    def assertJSONEqual(self, a, b):
+        """Asserts that two JSON dicts are equal. If either arg is a string,
+        it will be first converted to a dict with json.loads()."""
+        # Ensure both objects are dicts.
+        dict_a = a if isinstance(a, dict) else json.loads(a)
+        dict_b = b if isinstance(b, dict) else json.loads(b)
+        self.assertEqual(dict_a, dict_b)
 
 
 class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):

@@ -1,57 +1,47 @@
-import React, { ReactNode, FunctionComponent, MouseEvent } from "react"
-import "./Button.scss"
+import React, { ReactElement } from "react"
+import {
+  ButtonProps as ButtonPropsT,
+  Kind,
+  Size,
+  StyledPrimaryButton,
+  StyledSecondaryButton,
+  StyledMinimalButton,
+  StyledLinkButton,
+  StyledIconButton,
+} from "./styled-components"
 
-export enum Kind {
-  PRIMARY = "primary",
-  SECONDARY = "secondary",
-  LINK = "link",
-  ICON = "icon",
-  MINIMAL = "minimal",
-}
-
-export enum Size {
-  XSMALL = "xsmall",
-  SMALL = "small",
-  MEDIUM = "medium",
-  LARGE = "large",
-}
-
-export interface ButtonProps {
-  id?: string
-  kind: Kind
-  size?: Size
-  onClick?: (event: MouseEvent<HTMLButtonElement>) => any
-  disabled?: boolean
-  fluidWidth?: boolean
-  children: ReactNode
-}
-
-const Button: FunctionComponent<ButtonProps> = ({
-  id,
+function Button({
   kind,
   size,
   disabled,
   onClick,
   fluidWidth,
   children,
-}) => {
-  const fluidWidthClass = fluidWidth ? "button-fluid-width" : ""
+}: ButtonPropsT): ReactElement {
+  let ComponentType = StyledPrimaryButton
+
+  if (kind === Kind.SECONDARY) {
+    ComponentType = StyledSecondaryButton
+  } else if (kind === Kind.LINK) {
+    ComponentType = StyledLinkButton
+  } else if (kind === Kind.ICON) {
+    ComponentType = StyledIconButton
+  } else if (kind === Kind.MINIMAL) {
+    ComponentType = StyledMinimalButton
+  }
+
   return (
-    <button
-      id={id}
-      className={`streamlit-button ${size}-button ${kind}-button ${fluidWidthClass}`}
-      disabled={disabled}
-      onClick={onClick}
+    <ComponentType
+      kind={kind}
+      size={size || Size.MEDIUM}
+      fluidWidth={fluidWidth || false}
+      disabled={disabled || false}
+      onClick={onClick || (() => {})}
     >
       {children}
-    </button>
+    </ComponentType>
   )
 }
-
-Button.defaultProps = {
-  size: Size.MEDIUM,
-  fluidWidth: false,
-  disabled: false,
-}
-
+export type ButtonProps = ButtonPropsT
+export { Kind, Size }
 export default Button

@@ -15,15 +15,15 @@
  * limitations under the License.
  */
 
-describe("st.beta_color_picker", () => {
+describe("st.color_picker", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
   });
 
   it("shows the widget correctly", () => {
-    cy.get(".stColorPicker").should("have.length", 2);
+    cy.get("[data-testid='stColorPicker']").should("have.length", 2);
 
-    cy.get(".stColorPicker").each((el, idx) => {
+    cy.get("[data-testid='stColorPicker']").each((el, idx) => {
       return cy.wrap(el).matchImageSnapshot("colorpicker" + idx);
     });
   });

@@ -16,9 +16,15 @@
  */
 
 import React, { PureComponent } from "react"
-import { SCSS_VARS } from "autogen/scssVariables"
-import Icon from "../Icon"
-import "./FullScreenWrapper.scss"
+import { withTheme } from "emotion-theming"
+import { FullscreenEnter, FullscreenExit } from "@emotion-icons/open-iconic"
+import Icon from "components/shared/Icon"
+import PageLayoutContext from "components/core/PageLayoutContext"
+import { Theme } from "theme"
+import {
+  StyledFullScreenFrame,
+  StyledFullScreenButton,
+} from "./styled-components"
 
 export type Size = {
   width: number
@@ -35,6 +41,7 @@ interface Props {
   children: (props: Size) => React.ReactNode
   width: number
   height?: number
+  theme: Theme
 }
 
 interface State {
@@ -49,12 +56,19 @@ interface State {
  * to fixed and cover all screen, updating wrapped element height and width
  */
 class FullScreenWrapper extends PureComponent<Props, State> {
+  static contextType = PageLayoutContext
+
   static isFullScreen = false
 
-  public state: State = { expanded: false, fullWidth: 0, fullHeight: 0 }
+  public constructor(props: Props) {
+    super(props)
+    this.state = {
+      expanded: false,
+      ...this.getWindowDimensions(),
+    }
+  }
 
   componentDidMount(): void {
-    this.updateWindowDimensions()
     window.addEventListener("resize", this.updateWindowDimensions)
     document.addEventListener("keydown", this.controlKeys, false)
   }
@@ -75,13 +89,13 @@ class FullScreenWrapper extends PureComponent<Props, State> {
 
   zoomIn = (): void => {
     document.body.style.overflow = "hidden"
-    FullScreenWrapper.isFullScreen = true
+    this.context.setFullScreen(true)
     this.setState({ expanded: true })
   }
 
   zoomOut = (): void => {
     document.body.style.overflow = "unset"
-    FullScreenWrapper.isFullScreen = false
+    this.context.setFullScreen(false)
     this.setState({ expanded: false })
   }
 
@@ -93,50 +107,53 @@ class FullScreenWrapper extends PureComponent<Props, State> {
     )
   }
 
-  updateWindowDimensions = (): void => {
+  getWindowDimensions = (): Pick<State, "fullWidth" | "fullHeight"> => {
     const padding = this.convertScssRemValueToPixels(
-      SCSS_VARS["$fullscreen-padding"]
+      this.props.theme.spacing.md
     )
     const paddingTop = this.convertScssRemValueToPixels(
-      SCSS_VARS["$fullscreen-padding-top"]
+      this.props.theme.sizes.headerHeight
     )
-    this.setState({
+
+    return {
       fullWidth: window.innerWidth - padding * 2, // Left and right
       fullHeight: window.innerHeight - (padding + paddingTop), // Bottom and Top
-    })
+    }
+  }
+
+  updateWindowDimensions = (): void => {
+    this.setState(this.getWindowDimensions())
   }
 
   public render(): JSX.Element {
     const { expanded, fullWidth, fullHeight } = this.state
     const { children, width, height } = this.props
 
-    let buttonClassName = "overlayBtn stButton-enter"
-    let buttonImage = "fullscreen-enter"
+    let buttonImage = FullscreenEnter
     let buttonOnClick = this.zoomIn
     let buttonTitle = "View fullscreen"
 
     if (expanded) {
-      buttonClassName = "overlayBtn stButton-exit"
-      buttonImage = "fullscreen-exit"
+      buttonImage = FullscreenExit
       buttonOnClick = this.zoomOut
       buttonTitle = "Exit fullscreen"
     }
 
     return (
-      <div className={`fullScreenFrame${expanded ? "--expanded" : ""}`}>
-        <button
-          className={buttonClassName}
+      <StyledFullScreenFrame isExpanded={expanded}>
+        <StyledFullScreenButton
           onClick={buttonOnClick}
           title={buttonTitle}
+          isExpanded={expanded}
         >
-          <Icon type={buttonImage} />
-        </button>
+          <Icon content={buttonImage} />
+        </StyledFullScreenButton>
         {expanded
           ? children({ width: fullWidth, height: fullHeight, expanded })
           : children({ width, height, expanded })}
-      </div>
+      </StyledFullScreenFrame>
     )
   }
 }
 
-export default FullScreenWrapper
+export default withTheme(FullScreenWrapper)

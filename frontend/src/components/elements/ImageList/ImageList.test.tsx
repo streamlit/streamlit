@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 
 import { ImageList as ImageListProto } from "autogen/proto"
 import { ImageList, ImageListProps } from "./ImageList"
@@ -49,7 +49,7 @@ describe("ImageList Element", () => {
     const props = getProps()
     const wrapper = shallow(<ImageList {...props} />)
 
-    expect(wrapper.find(".stImage").length).toBe(2)
+    expect(wrapper.find("StyledImageContainer").length).toBe(2)
   })
 
   it("should overwrite the image width from props", () => {
@@ -60,8 +60,8 @@ describe("ImageList Element", () => {
       width: 200,
     }
     const wrapper = shallow(<ImageList {...props} />)
-
-    wrapper.find(".stImage").forEach(imageWrapper => {
+    expect(wrapper.find("StyledImageContainer").length).toEqual(2)
+    wrapper.find("StyledImageContainer").forEach(imageWrapper => {
       // @ts-ignore
       expect(imageWrapper.prop("style").width).toBe(200)
     })
@@ -75,8 +75,8 @@ describe("ImageList Element", () => {
       width: 1,
     }
     const wrapper = shallow(<ImageList {...props} />)
-
-    wrapper.find(".stImage").forEach(imageWrapper => {
+    expect(wrapper.find("StyledImageContainer").length).toEqual(2)
+    wrapper.find("StyledImageContainer").forEach(imageWrapper => {
       // @ts-ignore
       expect(imageWrapper.prop("style").width).toBe(300)
     })
@@ -87,10 +87,16 @@ describe("ImageList Element", () => {
     const wrapper = shallow(<ImageList {...props} />)
 
     const { imgs } = props.element
-    wrapper.find(".stImage img").forEach((imgWrapper, id) => {
-      // @ts-ignore
-      expect(imgWrapper.prop("src")).toBe(`http://localhost:80${imgs[id].url}`)
-    })
+    expect(wrapper.find("StyledImageContainer").length).toEqual(2)
+    wrapper
+      .find("StyledImageContainer")
+      .find("img")
+      .forEach((imgWrapper, id) => {
+        // @ts-ignore
+        expect(imgWrapper.prop("src")).toBe(
+          `http://localhost:80${imgs[id].url}`
+        )
+      })
   })
 
   it("should have a caption", () => {
@@ -98,7 +104,8 @@ describe("ImageList Element", () => {
     const wrapper = shallow(<ImageList {...props} />)
 
     const { imgs } = props.element
-    wrapper.find(".stImage .caption").forEach((captionWrapper, id) => {
+    expect(wrapper.find("StyledCaption").length).toEqual(2)
+    wrapper.find("StyledCaption").forEach((captionWrapper, id) => {
       // @ts-ignore
       expect(captionWrapper.text()).toBe(` ${imgs[id].caption} `)
     })
@@ -116,10 +123,14 @@ describe("ImageList Element", () => {
     const wrapper = shallow(<ImageList {...props} />)
 
     const { imgs } = props.element
-    wrapper.find(".stImage img").forEach((imgWrapper, id) => {
-      // @ts-ignore
-      expect(imgWrapper.prop("src")).toBe(imgs[id].url)
-    })
+    expect(wrapper.find("StyledImageContainer").length).toEqual(1)
+    wrapper
+      .find("StyledImageContainer")
+      .find("img")
+      .forEach((imgWrapper, id) => {
+        // @ts-ignore
+        expect(imgWrapper.prop("src")).toBe(imgs[id].url)
+      })
   })
 
   describe("fullScreen", () => {
@@ -127,15 +138,19 @@ describe("ImageList Element", () => {
     const wrapper = shallow(<ImageList {...props} />)
 
     it("should not have a caption", () => {
-      expect(wrapper.find(".stImage .caption").length).toBe(0)
+      expect(wrapper.find("StyledCaption").length).toBe(0)
     })
 
     it("should have the proper style", () => {
       const fullScreenAppearance = { height: 100, "object-fit": "contain" }
 
-      wrapper.find(".stImage img").forEach(imgWrapper => {
-        expect(imgWrapper.prop("style")).toStrictEqual(fullScreenAppearance)
-      })
+      expect(wrapper.find("StyledImageContainer").length).toEqual(2)
+      wrapper
+        .find("StyledImageContainer")
+        .find("img")
+        .forEach(imgWrapper => {
+          expect(imgWrapper.prop("style")).toStrictEqual(fullScreenAppearance)
+        })
     })
   })
 })

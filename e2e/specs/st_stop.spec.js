@@ -21,10 +21,10 @@ describe("st.stop", () => {
   });
 
   it("displays only one piece of text", () => {
-    cy.get(".element-container .stText").should("have.length", 1);
+    cy.get("[data-testid='stText']").should("have.length", 1);
   });
 
   it("displays text before stop", () => {
-    cy.get(".element-container .stText").should("contain", "Text before stop");
+    cy.get("[data-testid='stText']").should("contain", "Text before stop");
   });
 });

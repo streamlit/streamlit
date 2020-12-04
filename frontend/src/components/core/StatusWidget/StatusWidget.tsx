@@ -14,7 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+import { EmotionIcon } from "@emotion-icons/emotion-icon"
+import { Ellipses, Info, Warning } from "@emotion-icons/open-iconic"
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
 import React, { PureComponent, ReactNode } from "react"
 import { HotKeys } from "react-hotkeys"
@@ -35,8 +36,16 @@ import Icon from "components/shared/Icon"
  * from a subpath.
  */
 import iconRunning from "assets/img/icon_running.gif"
-
-import "./StatusWidget.scss"
+import {
+  StyledConnectionStatus,
+  StyledConnectionStatusLabel,
+  StyledReportStatus,
+  StyledReportButtonContainer,
+  StyledReportRunningIcon,
+  StyledReportStatusLabel,
+  StyledShortcutLabel,
+  StyledStatusWidget,
+} from "./styled-components"
 
 /** Component props */
 export interface StatusWidgetProps {
@@ -92,7 +101,7 @@ interface State {
 }
 
 interface ConnectionStateUI {
-  icon: string
+  icon: EmotionIcon
   label: string
   tooltip: string
 }
@@ -234,7 +243,9 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
         unmountOnExit={true}
         classNames="StatusWidget"
       >
-        <div key="StatusWidget">{renderView}</div>
+        <StyledStatusWidget key="StatusWidget">
+          {renderView}
+        </StyledStatusWidget>
       </CSSTransition>
     )
   }
@@ -272,39 +283,37 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
         content={() => <div>{ui.tooltip}</div>}
         placement={Placement.BOTTOM}
       >
-        <div
-          id="ConnectionStatus"
-          className={this.state.statusMinimized ? "minimized" : ""}
-        >
-          <Icon className="icon-xs" type={ui.icon} />
-          <label>{ui.label}</label>
-        </div>
+        <StyledConnectionStatus data-testid="stConnectionStatus">
+          <Icon size="sm" content={ui.icon} />
+          <StyledConnectionStatusLabel
+            isMinimized={this.state.statusMinimized}
+          >
+            {ui.label}
+          </StyledConnectionStatusLabel>
+        </StyledConnectionStatus>
       </Tooltip>
     )
   }
 
   /** "Running... [Stop]" */
   private renderReportIsRunning(): ReactNode {
+    const minimized = this.state.statusMinimized
     const stopRequested =
       this.props.reportRunState === ReportRunState.STOP_REQUESTED
     const stopButton = StatusWidget.promptButton(
       stopRequested ? "Stopping..." : "Stop",
       stopRequested,
-      this.handleStopReportClick
+      this.handleStopReportClick,
+      minimized
     )
 
     const runningIcon = (
-      <img className="ReportRunningIcon" src={iconRunning} alt="Running..." />
+      <StyledReportRunningIcon src={iconRunning} alt="Running..." />
     )
 
     return (
-      <div
-        id="ReportStatus"
-        className={
-          this.state.statusMinimized ? "report-is-running-minimized" : ""
-        }
-      >
-        {this.state.statusMinimized ? (
+      <StyledReportStatus>
+        {minimized ? (
           <Tooltip
             placement={Placement.BOTTOM}
             content={() => <div>This script is currently running</div>}
@@ -314,9 +323,14 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
         ) : (
           runningIcon
         )}
-        <label>Running...</label>
+        <StyledReportStatusLabel
+          isMinimized={this.state.statusMinimized}
+          isPrompt={false}
+        >
+          Running...
+        </StyledReportStatusLabel>
         {stopButton}
-      </div>
+      </StyledReportStatus>
     )
   }
 
@@ -337,26 +351,27 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
           onMouseEnter={this.onReportPromptHover}
           onMouseLeave={this.onReportPromptUnhover}
         >
-          <div
-            id="ReportStatus"
-            className={minimized ? "rerun-prompt-minimized" : ""}
-          >
-            <Icon className="icon-sm" type="info" />
-            <label className="prompt">Source file changed.</label>
+          <StyledReportStatus>
+            <Icon content={Info} margin="0 sm 0 0" color="darkGray" />
+            <StyledReportStatusLabel isMinimized={minimized} isPrompt>
+              Source file changed.
+            </StyledReportStatusLabel>
 
             {StatusWidget.promptButton(
-              <div className="underlineFirstLetter">Rerun</div>,
+              <StyledShortcutLabel>Rerun</StyledShortcutLabel>,
               rerunRequested,
-              this.handleRerunClick
+              this.handleRerunClick,
+              minimized
             )}
 
             {this.props.allowRunOnSave &&
               StatusWidget.promptButton(
-                <div className="underlineFirstLetter">Always rerun</div>,
+                <StyledShortcutLabel>Always rerun</StyledShortcutLabel>,
                 rerunRequested,
-                this.handleAlwaysRerunClick
+                this.handleAlwaysRerunClick,
+                minimized
               )}
-          </div>
+          </StyledReportStatus>
         </div>
       </HotKeys>
     )
@@ -388,10 +403,11 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
   private static promptButton(
     title: ReactNode,
     disabled: boolean,
-    onClick: () => void
+    onClick: () => void,
+    isMinimized: boolean
   ): ReactNode {
     return (
-      <span className="button-container">
+      <StyledReportButtonContainer isMinimized={isMinimized}>
         <Button
           kind={Kind.PRIMARY}
           size={Size.XSMALL}
@@ -401,7 +417,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
         >
           {title}
         </Button>
-      </span>
+      </StyledReportButtonContainer>
     )
   }
 
@@ -413,7 +429,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
       case ConnectionState.PINGING_SERVER:
       case ConnectionState.CONNECTING:
         return {
-          icon: "ellipses",
+          icon: Ellipses,
           label: "Connecting",
           tooltip: "Connecting to Streamlit server",
         }
@@ -425,7 +441,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
       case ConnectionState.DISCONNECTED_FOREVER:
       default:
         return {
-          icon: "warning",
+          icon: Warning,
           label: "Error",
           tooltip: "Unable to connect to Streamlit server",
         }

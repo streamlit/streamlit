@@ -16,11 +16,14 @@
  */
 
 import React from "react"
-import { styled, withStyleDeep } from "styletron-react"
-
+import {
+  Clear,
+  Error,
+  InsertDriveFile,
+} from "@emotion-icons/material-outlined"
 import Button, { Kind } from "components/shared/Button"
-import { MaterialIcon } from "components/shared/Icon"
-import ProgressBar from "components/shared/ProgressBar"
+import Icon from "components/shared/Icon"
+import ProgressBar, { Sizes } from "components/shared/ProgressBar"
 import { Small, Kind as TextKind } from "components/shared/TextElements"
 import {
   ExtendedFile,
@@ -28,9 +31,15 @@ import {
   FileStatuses,
   getSizeDisplay,
 } from "lib/FileHelper"
-import { colors, Sizes, utilityClasses, spacing } from "lib/widgetTheme"
-
-import "./FileUploader.scss"
+import {
+  StyledUploadedFile,
+  StyledFileErrorIcon,
+  StyledErrorMessage,
+  StyledFileError,
+  StyledFileIcon,
+  StyledUploadedFileData,
+  StyledUploadedFileName,
+} from "./styled-components"
 
 export interface Props {
   file: ExtendedFile
@@ -42,38 +51,6 @@ export interface FileStatusProps {
   file: ExtendedFile
   progress?: number
 }
-
-const UploadedFileData = styled("div", {
-  display: "flex",
-  alignItems: "baseline",
-  flex: 1,
-  paddingLeft: spacing.lg,
-  overflow: "hidden",
-})
-
-const UploadedFileName = withStyleDeep(
-  styled("div", {
-    marginRight: spacing.sm,
-    marginBottom: spacing.xxs,
-  }),
-  utilityClasses.ellipsis
-)
-
-const StyledUploadedFile = styled("div", {
-  display: "flex",
-  alignItems: "center",
-  marginBottom: spacing.xxs,
-})
-
-export const ErrorMessage = styled("span", {
-  marginRight: spacing.xxs,
-})
-
-export const FileIcon = styled("div", {
-  display: "flex",
-  padding: spacing.xxs,
-  color: colors.secondary,
-})
 
 export const FileStatus = ({
   file,
@@ -98,10 +75,14 @@ export const FileStatus = ({
 
   if (file.status === FileStatuses.ERROR) {
     return (
-      <Small className="fileError" kind={TextKind.DANGER}>
-        <ErrorMessage>{file.errorMessage || "error"}</ErrorMessage>
-        <MaterialIcon icon="error" />
-      </Small>
+      <StyledFileError>
+        <StyledErrorMessage data-testid="stUploadedFileErrorMessage">
+          {file.errorMessage || "error"}
+        </StyledErrorMessage>
+        <StyledFileErrorIcon>
+          <Icon content={Error} size="lg" />
+        </StyledFileErrorIcon>
+      </StyledFileError>
     )
   }
 
@@ -127,21 +108,17 @@ const UploadedFile = ({
 }: Props): React.ReactElement => {
   return (
     <StyledUploadedFile className="uploadedFile">
-      <FileIcon>
-        <MaterialIcon
-          type="outlined"
-          icon="insert_drive_file"
-          size={Sizes.MEDIUM}
-        />
-      </FileIcon>
-      <UploadedFileData className="uploadedFileData">
-        <UploadedFileName className="uploadedFileName" title={file.name}>
+      <StyledFileIcon>
+        <Icon content={InsertDriveFile} size="twoXL" />
+      </StyledFileIcon>
+      <StyledUploadedFileData className="uploadedFileData">
+        <StyledUploadedFileName className="uploadedFileName" title={file.name}>
           {file.name}
-        </UploadedFileName>
+        </StyledUploadedFileName>
         <FileStatus file={file} progress={progress} />
-      </UploadedFileData>
+      </StyledUploadedFileData>
       <Button onClick={() => onDelete(file.id || "")} kind={Kind.MINIMAL}>
-        <MaterialIcon icon="clear" />
+        <Icon content={Clear} size="lg" />
       </Button>
     </StyledUploadedFile>
   )

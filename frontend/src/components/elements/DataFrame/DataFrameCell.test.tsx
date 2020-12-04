@@ -17,17 +17,18 @@
 
 import React from "react"
 import { shallow } from "enzyme"
-import Icon from "components/shared/Icon"
+import { ChevronTop, ChevronBottom } from "@emotion-icons/open-iconic"
 import { SortDirection } from "./SortDirection"
 
+import { StyledDataFrameCornerCell } from "./styled-components"
 import DataFrameCell, { DataFrameCellProps } from "./DataFrameCell"
 
 const getProps = (
   props: Partial<DataFrameCellProps> = {}
 ): DataFrameCellProps => ({
+  CellType: StyledDataFrameCornerCell,
   columnIndex: 0,
   rowIndex: 0,
-  className: "dataframe corner",
   style: { height: 25, left: 0, position: "absolute", top: 0, width: 32 },
   contents: "",
   sortedByUser: false,
@@ -40,7 +41,7 @@ describe("DataFrameCell Element", () => {
     const props = getProps()
     const wrapper = shallow(<DataFrameCell {...props} />)
 
-    expect(wrapper.find("div").length).toBe(1)
+    expect(wrapper.find(StyledDataFrameCornerCell).length).toBe(1)
     expect(wrapper.prop("children")).toStrictEqual(["", ""])
   })
 
@@ -51,7 +52,7 @@ describe("DataFrameCell Element", () => {
       })
       const wrapper = shallow(<DataFrameCell {...props} />)
 
-      expect(wrapper.find(Icon).prop("type")).toBe("chevron-top")
+      expect(wrapper.find("Icon").prop("content")).toBe(ChevronTop)
     })
 
     it("should render descending icon", () => {
@@ -61,7 +62,7 @@ describe("DataFrameCell Element", () => {
       })
       const wrapper = shallow(<DataFrameCell {...props} />)
 
-      expect(wrapper.find(Icon).prop("type")).toBe("chevron-bottom")
+      expect(wrapper.find("Icon").prop("content")).toBe(ChevronBottom)
     })
 
     it("should only render sort icon in the top row", () => {
@@ -72,7 +73,7 @@ describe("DataFrameCell Element", () => {
       })
       const wrapper = shallow(<DataFrameCell {...props} />)
 
-      expect(wrapper.find(Icon).length).toBeFalsy()
+      expect(wrapper.find("Icon").length).toBeFalsy()
     })
 
     it("should not render if it's undefined", () => {
@@ -82,7 +83,7 @@ describe("DataFrameCell Element", () => {
       })
       const wrapper = shallow(<DataFrameCell {...props} />)
 
-      expect(wrapper.find(Icon).length).toBeFalsy()
+      expect(wrapper.find("Icon").length).toBeFalsy()
     })
   })
 
@@ -93,7 +94,7 @@ describe("DataFrameCell Element", () => {
     const wrapper = shallow(<DataFrameCell {...props} />)
 
     // @ts-ignore
-    const result = wrapper.find("div").prop("onClick")()
+    const result = wrapper.find(StyledDataFrameCornerCell).prop("onClick")()
 
     expect(props.headerClickedCallback).toHaveBeenCalledWith(0)
     expect(result).toBe(1)
@@ -106,7 +107,7 @@ describe("DataFrameCell Element", () => {
       })
       const wrapper = shallow(<DataFrameCell {...props} />)
 
-      expect(wrapper.find("div").prop("title")).toBe(
+      expect(wrapper.find(StyledDataFrameCornerCell).prop("title")).toBe(
         'Sorted by column "" (ascending)'
       )
     })
@@ -118,7 +119,7 @@ describe("DataFrameCell Element", () => {
       })
       const wrapper = shallow(<DataFrameCell {...props} />)
 
-      expect(wrapper.find("div").prop("title")).toBe(
+      expect(wrapper.find(StyledDataFrameCornerCell).prop("title")).toBe(
         'Sorted by column "" (descending)'
       )
     })
@@ -131,7 +132,7 @@ describe("DataFrameCell Element", () => {
       })
       const wrapper = shallow(<DataFrameCell {...props} />)
 
-      expect(wrapper.find("div").prop("title")).toBe(
+      expect(wrapper.find(StyledDataFrameCornerCell).prop("title")).toBe(
         'Sort by column "contenido"'
       )
     })

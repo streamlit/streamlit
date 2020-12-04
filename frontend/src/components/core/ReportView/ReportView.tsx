@@ -16,23 +16,25 @@
  */
 
 import React, { ReactElement } from "react"
-import classNames from "classnames"
-
-import Block from "components/core/Block/"
+import Block from "components/core/Block"
 import Sidebar from "components/core/Sidebar"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { ComponentRegistry } from "components/widgets/CustomComponent"
 
-import { ThemeProvider } from "baseui"
-import { Theme } from "baseui/theme"
-import { mainWidgetTheme, sidebarWidgetTheme } from "lib/widgetTheme"
-import { PageConfig } from "autogen/proto"
+import ThemeProvider from "components/core/ThemeProvider"
+import PageLayoutContext from "components/core/PageLayoutContext"
+import { sidebarTheme, sidebarBaseUITheme } from "theme"
 import { BlockNode, ReportRoot } from "lib/ReportNode"
 
-import "./ReportView.scss"
-import "./Widget.scss"
+import {
+  StyledReportViewBlockContainer,
+  StyledReportViewContainer,
+  StyledReportViewFooter,
+  StyledReportViewFooterLink,
+  StyledReportViewMain,
+} from "./styled-components"
 
 export interface ReportViewProps {
   elements: ReportRoot
@@ -57,12 +59,6 @@ export interface ReportViewProps {
   // Disable the widgets when not connected to the server.
   widgetsDisabled: boolean
 
-  // Wide mode
-  wide: boolean
-
-  // Whether the sidebar should start expanded
-  initialSidebarState: PageConfig.SidebarState
-
   componentRegistry: ComponentRegistry
 }
 
@@ -71,9 +67,7 @@ export interface ReportViewProps {
  */
 function ReportView(props: ReportViewProps): ReactElement {
   const {
-    wide,
     elements,
-    initialSidebarState,
     reportId,
     reportRunState,
     showStaleElementIndicator,
@@ -83,42 +77,57 @@ function ReportView(props: ReportViewProps): ReactElement {
     componentRegistry,
   } = props
 
-  const renderBlock = (theme: Theme, node: BlockNode): ReactElement => (
-    <div className="block-container">
-      <ThemeProvider theme={theme}>
-        <Block
-          node={node}
-          reportId={reportId}
-          reportRunState={reportRunState}
-          showStaleElementIndicator={showStaleElementIndicator}
-          widgetMgr={widgetMgr}
-          widgetsDisabled={widgetsDisabled}
-          uploadClient={uploadClient}
-          componentRegistry={componentRegistry}
-        />
-      </ThemeProvider>
-    </div>
+  const { wideMode, initialSidebarState, embedded } = React.useContext(
+    PageLayoutContext
+  )
+  const renderBlock = (node: BlockNode): ReactElement => (
+    <StyledReportViewBlockContainer
+      className="block-container"
+      isWideMode={wideMode}
+      isEmbedded={embedded}
+    >
+      <Block
+        node={node}
+        reportId={reportId}
+        reportRunState={reportRunState}
+        showStaleElementIndicator={showStaleElementIndicator}
+        widgetMgr={widgetMgr}
+        widgetsDisabled={widgetsDisabled}
+        uploadClient={uploadClient}
+        componentRegistry={componentRegistry}
+      />
+    </StyledReportViewBlockContainer>
   )
 
-  const reportViewClassName = classNames("reportview-container", {
-    "--wide": wide,
-  })
-
+  const layout = wideMode ? "wide" : "narrow"
   // The tabindex is required to support scrolling by arrow keys.
   return (
-    <div className={reportViewClassName}>
+    <StyledReportViewContainer
+      className="reportview-container"
+      data-testid="stReportViewContainer"
+      data-layout={layout}
+    >
       {!elements.sidebar.isEmpty && (
         <Sidebar initialSidebarState={initialSidebarState}>
-          {renderBlock(sidebarWidgetTheme, elements.sidebar)}
+          <ThemeProvider theme={sidebarTheme} baseuiTheme={sidebarBaseUITheme}>
+            {renderBlock(elements.sidebar)}
+          </ThemeProvider>
         </Sidebar>
       )}
-      <section className="main" tabIndex={0}>
-        {renderBlock(mainWidgetTheme, elements.main)}
-        <footer>
-          Made with <a href="//streamlit.io">Streamlit</a>
-        </footer>
-      </section>
-    </div>
+      <StyledReportViewMain
+        tabIndex={0}
+        isEmbedded={embedded}
+        className="main"
+      >
+        {renderBlock(elements.main)}
+        <StyledReportViewFooter isEmbedded={embedded}>
+          Made with{" "}
+          <StyledReportViewFooterLink href="//streamlit.io">
+            Streamlit
+          </StyledReportViewFooterLink>
+        </StyledReportViewFooter>
+      </StyledReportViewMain>
+    </StyledReportViewContainer>
   )
 }
 

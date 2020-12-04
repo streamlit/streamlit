@@ -21,7 +21,7 @@ describe("st.dataframe", () => {
 
     cy.get(".element-container .stDataFrame")
       .find(".ReactVirtualized__Grid__innerScrollContainer")
-      .find(".dataframe.data")
+      .find("[data-testid='StyledDataFrameDataCell']")
       .as("cells");
   });
 
@@ -45,9 +45,5 @@ describe("st.dataframe", () => {
     cy.get("@cells")
       .first()
       .should("have.css", "background-color", "rgb(255, 255, 0)");
-  });
-
-  it("looks the same", () => {
-    // (HK) TODO: diff screenshots
   });
 });

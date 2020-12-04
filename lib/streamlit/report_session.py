@@ -38,7 +38,6 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.server.server_util import serialize_forward_msg
 from streamlit.storage.file_storage import FileStorage
-from streamlit.storage.s3_storage import S3Storage
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 import streamlit.elements.exception_proto as exception_proto
 
@@ -96,7 +95,6 @@ class ReportSession(object):
         self._local_sources_watcher = LocalSourcesWatcher(
             self._report, self._on_source_file_changed
         )
-        self._sent_initialize_message = False
         self._storage = None
         self._maybe_reuse_previous_run = False
         self._run_on_save = config.get_option("server.runOnSave")
@@ -195,7 +193,6 @@ class ReportSession(object):
         self._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
 
         msg = ForwardMsg()
-        msg.metadata.delta_id = 0
         exception_proto.marshall(msg.delta.new_element.exception, e)
 
         self.enqueue(msg)
@@ -265,7 +262,6 @@ class ReportSession(object):
                 self._ioloop.spawn_callback(self._save_running_report)
 
             self._clear_queue()
-            self._maybe_enqueue_initialize_message()
             self._enqueue_new_report_message()
 
         elif (
@@ -349,15 +345,39 @@ class ReportSession(object):
         msg.session_event.report_changed_on_disk = True
         self.enqueue(msg)
 
-    def _maybe_enqueue_initialize_message(self):
-        if self._sent_initialize_message:
-            return
+    def get_deploy_params(self):
+        try:
+            from streamlit.git_util import GitRepo
 
-        self._sent_initialize_message = True
+            self._repo = GitRepo(self._report.script_path)
+            return self._repo.get_repo_info()
+        except:
+            # Issues can arise based on the git structure
+            # (e.g. if branch is in DETACHED HEAD state,
+            # git is not installed, etc)
+            # In this case, catch any errors
+            return None
 
+    def _enqueue_new_report_message(self):
+        self._report.generate_new_id()
         msg = ForwardMsg()
-        imsg = msg.initialize
+        msg.new_report.report_id = self._report.report_id
+        msg.new_report.name = self._report.name
+        msg.new_report.script_path = self._report.script_path
 
+        # git deploy params
+        deploy_params = self.get_deploy_params()
+        if deploy_params is not None:
+            repo, branch, module = deploy_params
+            msg.new_report.deploy_params.repository = repo
+            msg.new_report.deploy_params.branch = branch
+            msg.new_report.deploy_params.module = module
+
+        # Immutable session data. We send this every time a new report is
+        # started, to avoid having to track whether the client has already
+        # received it. It does not change from run to run; it's up to the
+        # to perform one-time initialization only once.
+        imsg = msg.new_report.initialize
         imsg.config.sharing_enabled = config.get_option("global.sharingMode") != "off"
 
         imsg.config.gather_usage_stats = config.get_option("browser.gatherUsageStats")
@@ -369,16 +389,6 @@ class ReportSession(object):
         imsg.config.mapbox_token = config.get_option("mapbox.token")
 
         imsg.config.allow_run_on_save = config.get_option("server.allowRunOnSave")
-
-        LOGGER.debug(
-            "New browser connection: "
-            "gather_usage_stats=%s, "
-            "sharing_enabled=%s, "
-            "max_cached_message_age=%s",
-            imsg.config.gather_usage_stats,
-            imsg.config.sharing_enabled,
-            imsg.config.max_cached_message_age,
-        )
 
         imsg.environment_info.streamlit_version = __version__
         imsg.environment_info.python_version = ".".join(map(str, sys.version_info))
@@ -399,34 +409,6 @@ class ReportSession(object):
         imsg.command_line = self._report.command_line
         imsg.session_id = self.id
 
-        self.enqueue(msg)
-
-    def get_deploy_params(self):
-        try:
-            from streamlit.git_util import GitRepo
-
-            self._repo = GitRepo(self._report.script_path)
-            return self._repo.get_repo_info()
-        except:
-            # Issues can arise based on the git structure
-            # (e.g. if branch is in DETACHED HEAD state,
-            # git is not installed, etc)
-            # In this case, catch any errors
-            return None
-
-    def _enqueue_new_report_message(self):
-        self._report.generate_new_id()
-        msg = ForwardMsg()
-        msg.new_report.id = self._report.report_id
-        msg.new_report.name = self._report.name
-        msg.new_report.script_path = self._report.script_path
-
-        deploy_params = self.get_deploy_params()
-        if deploy_params is not None:
-            repo, branch, module = deploy_params
-            msg.new_report.deploy_params.repository = repo
-            msg.new_report.deploy_params.branch = branch
-            msg.new_report.deploy_params.module = module
         self.enqueue(msg)
 
     def _enqueue_report_finished_message(self, status):
@@ -633,6 +615,8 @@ class ReportSession(object):
         if self._storage is None:
             sharing_mode = config.get_option("global.sharingMode")
             if sharing_mode == "s3":
+                from streamlit.storage.s3_storage import S3Storage
+
                 self._storage = S3Storage()
             elif sharing_mode == "file":
                 self._storage = FileStorage()

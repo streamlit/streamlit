@@ -24,3 +24,5 @@ st.write("Value 2:", w2)
 
 x = st.sidebar.text("overwrite me")
 x.text("overwritten")
+
+y = st.sidebar.text_input("type here")

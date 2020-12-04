@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 
 import { Progress as ProgressProto } from "autogen/proto"
 import Progress, { ProgressProps } from "./Progress"

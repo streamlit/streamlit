@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow, mount } from "enzyme"
+import { shallow, mount } from "lib/test_util"
 import { BokehChart as BokehChartProto } from "autogen/proto"
 
 import Figure from "./mock"
@@ -75,20 +75,21 @@ expect.extend({
 
 describe("BokehChart element", () => {
   // Avoid Warning: render(): Rendering components directly into document.body is discouraged.
-  beforeAll(() => {
-    const div = document.createElement("div")
-    window.domNode = div
+  let div: HTMLDivElement
+  beforeEach(() => {
+    div = document.createElement("div")
     document.body.appendChild(div)
   })
 
-  beforeEach(() => {
+  afterEach(() => {
     mockBokehEmbed.embed.embed_item.mockClear()
+    document.body.removeChild(div)
   })
 
   it("renders without crashing", () => {
     const props = getProps()
     const wrapper = shallow(<BokehChart {...props} />, {
-      attachTo: window.domNode,
+      attachTo: div,
     })
 
     expect(wrapper.find("div").length).toBe(1)
@@ -98,7 +99,7 @@ describe("BokehChart element", () => {
     it("should use height if not useContainerWidth", () => {
       const props = getProps()
       mount(<BokehChart {...props} />, {
-        attachTo: window.domNode,
+        attachTo: div,
       })
 
       expect(mockBokehEmbed.embed.embed_item).toHaveBeenCalledWith(
@@ -116,7 +117,7 @@ describe("BokehChart element", () => {
       }
 
       mount(<BokehChart {...props} />, {
-        attachTo: window.domNode,
+        attachTo: div,
       })
 
       expect(mockBokehEmbed.embed.embed_item).toHaveBeenCalledWith(
@@ -129,7 +130,9 @@ describe("BokehChart element", () => {
   it("should re-render the chart when the component updates", () => {
     const props = getProps()
     // shallow does not work with useEffect hooks
-    const wrapper = mount(<BokehChart {...props} />)
+    const wrapper = mount(<BokehChart {...props} />, {
+      attachTo: div,
+    })
     wrapper.setProps({
       width: 500,
       height: 500,

@@ -16,8 +16,8 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
-import { SCSS_VARS } from "autogen/scssVariables"
+import { mount } from "lib/test_util"
+import { mainTheme } from "theme"
 
 import AlertContainer, { AlertContainerProps, Kind } from "./AlertContainer"
 
@@ -32,13 +32,13 @@ const getProps = (
 
 describe("AlertContainer element", () => {
   it("renders a Notification", () => {
-    const wrapper = shallow(<AlertContainer {...getProps()}></AlertContainer>)
+    const wrapper = mount(<AlertContainer {...getProps()}></AlertContainer>)
 
     expect(wrapper.find("Notification").exists()).toBeTruthy()
   })
 
   it("renders its children", () => {
-    const wrapper = shallow(
+    const wrapper = mount(
       <AlertContainer {...getProps()}>
         <div className="foo" />
       </AlertContainer>
@@ -48,7 +48,7 @@ describe("AlertContainer element", () => {
   })
 
   it("sets its width", () => {
-    const wrapper = shallow(<AlertContainer {...getProps()} />)
+    const wrapper = mount(<AlertContainer {...getProps()} />)
 
     const overrides = wrapper.find("Notification").prop("overrides")
 
@@ -57,18 +57,18 @@ describe("AlertContainer element", () => {
   })
 
   it("sets border color correctly for info", () => {
-    const wrapper = shallow(<AlertContainer {...getProps()} />)
+    const wrapper = mount(<AlertContainer {...getProps()} />)
 
     const overrides = wrapper.find("Notification").prop("overrides")
 
     // @ts-ignore
     expect(overrides.Body.style.border).toContain(
-      SCSS_VARS["$alert-info-border-color"]
+      mainTheme.colors.alertInfoBorderColor
     )
   })
 
   it("sets border color correctly for positive", () => {
-    const wrapper = shallow(
+    const wrapper = mount(
       <AlertContainer {...getProps({ kind: Kind.SUCCESS })} />
     )
 
@@ -76,12 +76,12 @@ describe("AlertContainer element", () => {
 
     // @ts-ignore
     expect(overrides.Body.style.border).toContain(
-      SCSS_VARS["$alert-success-border-color"]
+      mainTheme.colors.alertSuccessBorderColor
     )
   })
 
   it("sets border color correctly for warning", () => {
-    const wrapper = shallow(
+    const wrapper = mount(
       <AlertContainer {...getProps({ kind: Kind.WARNING })} />
     )
 
@@ -89,12 +89,12 @@ describe("AlertContainer element", () => {
 
     // @ts-ignore
     expect(overrides.Body.style.border).toContain(
-      SCSS_VARS["$alert-warning-border-color"]
+      mainTheme.colors.alertWarningBorderColor
     )
   })
 
   it("sets border color correctly for negative", () => {
-    const wrapper = shallow(
+    const wrapper = mount(
       <AlertContainer {...getProps({ kind: Kind.ERROR })} />
     )
 
@@ -102,7 +102,7 @@ describe("AlertContainer element", () => {
 
     // @ts-ignore
     expect(overrides.Body.style.border).toContain(
-      SCSS_VARS["$alert-error-border-color"]
+      mainTheme.colors.alertErrorBorderColor
     )
   })
 })

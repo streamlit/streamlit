@@ -15,38 +15,45 @@
  * limitations under the License.
  */
 
-describe("Dataframes", () => {
-  const DF_SELECTOR = ".stDataFrame";
-  const TABLE_SELECTOR = ".stTable > table";
-
+describe("Dataframes and Tables snapshots", () => {
   before(() => {
+    // Increasing timeout since we're waiting for
+    // dataframes and tables to be rendered.
+    Cypress.config("defaultCommandTimeout", 30000);
+
     cy.visit("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
+    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
+
+    // HACK: Add `overflow: auto` to all tables to prevent Cypress
+    // from throwing [RangeError: The value of "offset" is out of range.]
+    cy.get("[data-testid='stTable']").each($element => {
+      cy.wrap($element).invoke("css", "overflow", "auto");
+    });
   });
 
   it("show a tooltip for each cell", () => {
     // Each cell's title should be equal to its text content.
     // (We just check the first dataframe, rather than every single one.)
-    cy.get(DF_SELECTOR)
+    cy.get(".stDataFrame")
       .first()
       .within(() => {
-        cy.get(`div.data`).each(el => {
-          expect(el.text()).to.eq(el.attr("title"));
+        cy.get("[data-testid='StyledDataFrameDataCell']").each($element => {
+          expect($element.text()).to.eq($element.attr("title"));
         });
       });
   });
 
   it("have consistent st.dataframe visuals", () => {
-    cy.get(DF_SELECTOR).each((el, idx) => {
-      return cy.wrap(el).matchImageSnapshot("dataframe-visuals" + idx);
+    cy.get(".stDataFrame").each(($element, index) => {
+      return cy.wrap($element).matchImageSnapshot("dataframe-visuals" + index);
     });
   });
 
   it("have consistent st.table visuals", () => {
-    cy.get(TABLE_SELECTOR).each((el, idx) => {
-      return cy.wrap(el).matchImageSnapshot("table-visuals" + idx);
+    cy.get("[data-testid='stTable']").each(($element, index) => {
+      return cy.wrap($element).matchImageSnapshot("table-visuals" + index);
     });
   });
 });

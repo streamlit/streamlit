@@ -19,7 +19,7 @@ single_file = st.file_uploader("Drop a file:", type=["txt"], encoding="encoding"
 if single_file is None:
     st.text("No upload")
 else:
-    st.text(single_file.getvalue())
+    st.text(single_file.read())
 
 st.set_option("deprecation.showfileUploaderEncoding", False)
 multiple_files = st.file_uploader(
@@ -28,5 +28,5 @@ multiple_files = st.file_uploader(
 if multiple_files is None:
     st.text("No upload")
 else:
-    files = [file.getvalue().decode() for file in multiple_files]
+    files = [file.read().decode() for file in multiple_files]
     st.text("\n".join(files))

@@ -121,7 +121,7 @@ class ImageMixin:
 
         image_list_proto = ImageListProto()
         marshall_images(
-            dg._get_coordinates(),  # type: ignore
+            dg._get_delta_path_str(),  # type: ignore
             image,
             caption,
             width,

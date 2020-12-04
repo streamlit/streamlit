@@ -17,10 +17,14 @@
 
 import React, { ReactElement } from "react"
 import AlertContainer, { Kind } from "components/shared/AlertContainer"
-import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
+import StreamlitMarkdown from "components/shared/StreamlitMarkdown"
 import { Exception as ExceptionProto } from "autogen/proto"
-
-import "./ExceptionElement.scss"
+import {
+  StyledMessageType,
+  StyledStackTrace,
+  StyledStackTraceRow,
+  StyledStackTraceTitle,
+} from "./styled-components"
 
 export interface ExceptionElementProps {
   width: number
@@ -63,7 +67,7 @@ function ExceptionMessage({
   }
   return (
     <>
-      <span className="type">{type}</span>
+      <StyledMessageType>{type}</StyledMessageType>
       {isNonEmptyString(message) ? `: ${message}` : null}
     </>
   )
@@ -73,16 +77,14 @@ function StackTrace({ stackTrace }: StackTraceProps): ReactElement {
   // Build the stack trace display, if we got a stack trace.
   return (
     <>
-      <div className="stack-trace-title">Traceback:</div>
-      <pre className="stack-trace">
+      <StyledStackTraceTitle>Traceback:</StyledStackTraceTitle>
+      <StyledStackTrace>
         <code>
           {stackTrace.map((row: string, index: number) => (
-            <div className="stack-trace-row" key={index}>
-              {row}
-            </div>
+            <StyledStackTraceRow key={index}>{row}</StyledStackTraceRow>
           ))}
         </code>
-      </pre>
+      </StyledStackTrace>
     </>
   )
 }

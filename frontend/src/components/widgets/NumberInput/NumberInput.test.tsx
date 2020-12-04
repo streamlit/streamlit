@@ -17,7 +17,7 @@
 
 import { NumberInput as NumberInputProto } from "autogen/proto"
 import React from "react"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 import { Input as UIInput } from "baseui/input"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
@@ -85,7 +85,7 @@ describe("NumberInput widget", () => {
     const props = getIntProps()
     const wrapper = shallow(<NumberInput {...props} />)
 
-    expect(wrapper.find("label").text()).toBe(props.element.label)
+    expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
   })
 
   it("should set min/max defaults", () => {
@@ -238,7 +238,7 @@ describe("NumberInput widget", () => {
         step: 1,
       })
       const wrapper = shallow(<NumberInput {...props} />)
-      const enhancer = wrapper.find(".controls .step-down")
+      const enhancer = wrapper.find("StyledInputControl").first()
 
       enhancer.simulate("click")
 
@@ -254,7 +254,7 @@ describe("NumberInput widget", () => {
         step: 1,
       })
       const wrapper = shallow(<NumberInput {...props} />)
-      const enhancer = wrapper.find(".controls .step-up")
+      const enhancer = wrapper.find("StyledInputControl").at(1)
 
       enhancer.simulate("click")
 

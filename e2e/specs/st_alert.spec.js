@@ -18,24 +18,38 @@
 describe("st.error and friends", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
+
+    // Wait for the "Please, wait" alert to disappear.
+    cy.get(
+      ".element-container .stAlert [data-testid='stMarkdownContainer']"
+    ).should("have.length", 4);
   });
 
-  it("displays correctly", () => {
-    cy.get(".element-container .stAlert .markdown-text-container")
+  it("displays an error message correctly", () => {
+    cy.get(".element-container .stAlert [data-testid='stMarkdownContainer']")
       .eq(0)
       .contains("This is an error");
-    cy.get(".element-container .stAlert .markdown-text-container")
+  });
+
+  it("displays a warning message correctly", () => {
+    cy.get(".element-container .stAlert [data-testid='stMarkdownContainer']")
       .eq(1)
       .contains("This is a warning");
-    cy.get(".element-container .stAlert .markdown-text-container")
+  });
+
+  it("displays an info message correctly", () => {
+    cy.get(".element-container .stAlert [data-testid='stMarkdownContainer']")
       .eq(2)
       .contains("This is an info message");
-    cy.get(".element-container .stAlert .markdown-text-container")
+  });
+
+  it("displays a success message correctly", () => {
+    cy.get(".element-container .stAlert [data-testid='stMarkdownContainer']")
       .eq(3)
       .contains("This is a success message");
   });
 
-  it("displays correctly", () => {
+  it("matches the snapshot", () => {
     cy.get(".main > .block-container").matchImageSnapshot("alerts");
   });
 });

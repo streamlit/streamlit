@@ -13,21 +13,16 @@
 # limitations under the License.
 
 """Utility functions to use in our tests."""
-import functools
-import sys
 import threading
 import unittest
 
 from streamlit import config
-from streamlit.delta_generator import DeltaGenerator
 from streamlit.report_queue import ReportQueue
-from streamlit.report_thread import REPORT_CONTEXT_ATTR_NAME
 from streamlit.report_thread import ReportContext
 from streamlit.report_thread import add_report_ctx
 from streamlit.report_thread import get_report_ctx
 from streamlit.report_thread import _WidgetIDSet
 from streamlit.widgets import Widgets
-from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 

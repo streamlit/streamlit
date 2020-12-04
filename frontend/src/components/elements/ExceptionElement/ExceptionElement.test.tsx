@@ -16,9 +16,9 @@
  */
 
 import React from "react"
-import { mount } from "enzyme"
+import { mount } from "lib/test_util"
 
-import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
+import StreamlitMarkdown from "components/shared/StreamlitMarkdown"
 import { Exception as ExceptionProto } from "autogen/proto"
 import ExceptionElement, { ExceptionElementProps } from "./ExceptionElement"
 
@@ -44,8 +44,8 @@ describe("ExceptionElement Element", () => {
   })
 
   it("should render the complete stack", () => {
-    expect(wrapper.find(".stack-trace-title").text()).toBe("Traceback:")
-    const traceRows = wrapper.find("code .stack-trace-row")
+    expect(wrapper.find("StyledStackTraceTitle").text()).toBe("Traceback:")
+    const traceRows = wrapper.find("StyledStackTraceRow")
     expect(traceRows.length).toBe(3)
 
     traceRows.forEach((val, id) => {

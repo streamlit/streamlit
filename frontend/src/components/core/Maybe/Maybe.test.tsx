@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { mount, ReactWrapper } from "enzyme"
+import { mount, ReactWrapper } from "lib/test_util"
 import Maybe from "./Maybe"
 
 interface OuterProps {

@@ -20,22 +20,59 @@ describe("st.sidebar", () => {
     cy.visit("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
+    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
   });
 
   it("handles z-index of date input popover", () => {
-    cy.get(".sidebar .stDateInput").should("have.length", 2);
+    cy.get("[data-testid='stSidebar'] .stDateInput").should("have.length", 2);
 
-    cy.get(".sidebar .stDateInput")
+    cy.get("[data-testid='stSidebar'] .stDateInput")
       .first()
       .click();
 
-    cy.get(".sidebar").matchImageSnapshot("date-popover-sidebar", {
-      force: true
-    });
+    cy.get("[data-testid='stSidebar']").matchImageSnapshot(
+      "date-popover-sidebar",
+      {
+        force: true
+      }
+    );
   });
 
   it("handles overwriting elements", () => {
-    cy.get(".sidebar .stText").contains("overwritten");
+    cy.get("[data-testid='stSidebar'] [data-testid='stText']").contains(
+      "overwritten"
+    );
+  });
+
+  it("collapses the sidebar on mobile resize", () => {
+    cy.viewport(800, 400);
+    cy.get("[data-testid='stSidebar']").should(
+      "have.attr",
+      "aria-expanded",
+      "true"
+    );
+
+    cy.viewport(400, 800);
+    cy.get("[data-testid='stSidebar']").should(
+      "have.attr",
+      "aria-expanded",
+      "false"
+    );
+  });
+
+  it("does not collapse on text input on mobile", () => {
+    cy.viewport(400, 800);
+    // Expand the sidebar on mobile, with a manual click
+    cy.get("[data-testid='stSidebar'] button")
+      .eq(1)
+      .click();
+
+    cy.get("[data-testid='stSidebar'] .stTextInput input").click();
+
+    cy.get("[data-testid='stSidebar']").should(
+      "have.attr",
+      "aria-expanded",
+      "true"
+    );
   });
 });

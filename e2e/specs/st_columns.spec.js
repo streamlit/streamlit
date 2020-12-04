@@ -21,28 +21,28 @@ describe("st.column", () => {
   });
 
   it("creates 3 equal-width columns", () => {
-    cy.get(".stBlock-horiz .stBlock")
+    cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
       .eq(0)
       .should("have.css", "flex", "1 1 0%");
-    cy.get(".stBlock-horiz .stBlock")
+    cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
       .eq(1)
       .should("have.css", "flex", "1 1 0%");
-    cy.get(".stBlock-horiz .stBlock")
+    cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
       .eq(2)
       .should("have.css", "flex", "1 1 0%");
   });
 
   it("creates 4 variable-width columns", () => {
-    cy.get(".stBlock-horiz .stBlock")
+    cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
       .eq(3)
       .should("have.css", "flex", "1 1 0%");
-    cy.get(".stBlock-horiz .stBlock")
+    cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
       .eq(4)
       .should("have.css", "flex", "2 1 0%");
-    cy.get(".stBlock-horiz .stBlock")
+    cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
       .eq(5)
       .should("have.css", "flex", "4 1 0%");
-    cy.get(".stBlock-horiz .stBlock")
+    cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
       .eq(6)
       .should("have.css", "flex", "8 1 0%");
   });
@@ -52,7 +52,7 @@ describe("st.column", () => {
     cy.get(".stMarkdown").should("have.text", "Pressed!");
 
     // When layout was shifting, there was an old "flex: 8" block here.
-    cy.get(".stBlock-horiz .stBlock")
+    cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
       .eq(3)
       .should("have.css", "flex", "1 1 0%");
   });

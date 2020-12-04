@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { mount } from "lib/test_util"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { DateInput as DateInputProto } from "autogen/proto"
 
@@ -40,16 +40,16 @@ const getProps = (elementProps: Partial<DateInputProto> = {}): Props => ({
   widgetMgr: new WidgetStateManager(sendBackMsg),
 })
 
-describe("DateInput widget", () => {
+describe.only("DateInput widget", () => {
   const props = getProps()
-  const wrapper = shallow(<DateInput {...props} />)
+  const wrapper = mount(<DateInput {...props} />)
 
   it("renders without crashing", () => {
     expect(wrapper.find(UIDatePicker).length).toBe(1)
   })
 
   it("should render a label", () => {
-    expect(wrapper.find("label").text()).toBe(props.element.label)
+    expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
   })
 
   it("should set widget value on did mount", () => {
@@ -67,7 +67,6 @@ describe("DateInput widget", () => {
     // @ts-ignore
     const splittedClassName = className.split(" ")
 
-    expect(splittedClassName).toContain("Widget")
     expect(splittedClassName).toContain("stDateInput")
 
     // @ts-ignore
@@ -95,6 +94,7 @@ describe("DateInput widget", () => {
     wrapper.find(UIDatePicker).prop("onChange")({
       date: newDate,
     })
+    wrapper.update()
 
     expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual([newDate])
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
@@ -117,7 +117,7 @@ describe("DateInput widget", () => {
     const props = getProps({
       max: "2030/02/06",
     })
-    const wrapper = shallow(<DateInput {...props} />)
+    const wrapper = mount(<DateInput {...props} />)
 
     expect(wrapper.find(UIDatePicker).prop("maxDate")).toStrictEqual(
       new Date("2030/02/06")
@@ -128,7 +128,7 @@ describe("DateInput widget", () => {
     const props = getProps({
       min: "0001/01/01",
     })
-    const wrapper = shallow(<DateInput {...props} />)
+    const wrapper = mount(<DateInput {...props} />)
 
     expect(wrapper.find(UIDatePicker).prop("minDate")).toStrictEqual(
       new Date("0001-01-01T00:00:00")
@@ -139,7 +139,7 @@ describe("DateInput widget", () => {
     const props = getProps({
       max: "0001/01/01",
     })
-    const wrapper = shallow(<DateInput {...props} />)
+    const wrapper = mount(<DateInput {...props} />)
 
     expect(wrapper.find(UIDatePicker).prop("maxDate")).toStrictEqual(
       new Date("0001-01-01T00:00:00")

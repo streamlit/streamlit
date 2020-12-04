@@ -16,24 +16,23 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+
+import { shallow } from "lib/test_util"
 import { Kind } from "components/shared/AlertContainer"
 import { Alert as AlertProto } from "autogen/proto"
-import Alert, { AlertProps } from "./Alert"
+import Alert, { AlertProps, getAlertKind } from "./Alert"
 
-const getProps = (elementProps: Partial<AlertProto> = {}): AlertProps => ({
-  element: AlertProto.create({
-    body: "Something happened!",
-    ...elementProps,
-  }),
+const getProps = (elementProps: Partial<AlertProps> = {}): AlertProps => ({
+  body: "Something happened!",
+  kind: Kind.INFO,
   width: 100,
+  ...elementProps,
 })
 
 describe("Alert element", () => {
   it("renders an ERROR box as expected", () => {
-    const format = AlertProto.Format.ERROR
     const props = getProps({
-      format,
+      kind: getAlertKind(AlertProto.Format.ERROR),
       body: "#what in the world?",
     })
     const wrap = shallow(<Alert {...props} />)
@@ -46,9 +45,8 @@ describe("Alert element", () => {
   })
 
   it("renders a WARNING box as expected", () => {
-    const format = AlertProto.Format.WARNING
     const props = getProps({
-      format,
+      kind: getAlertKind(AlertProto.Format.WARNING),
       body: "Are you *sure*?",
     })
     const wrap = shallow(<Alert {...props} />)
@@ -61,9 +59,8 @@ describe("Alert element", () => {
   })
 
   it("renders a SUCCESS box as expected", () => {
-    const format = AlertProto.Format.SUCCESS
     const props = getProps({
-      format,
+      kind: getAlertKind(AlertProto.Format.SUCCESS),
       body: "But our princess was in another castle!",
     })
     const wrap = shallow(<Alert {...props} />)
@@ -76,9 +73,8 @@ describe("Alert element", () => {
   })
 
   it("renders an INFO box as expected", () => {
-    const format = AlertProto.Format.INFO
     const props = getProps({
-      format,
+      kind: getAlertKind(AlertProto.Format.INFO),
       body: "It's dangerous to go alone.",
     })
     const wrap = shallow(<Alert {...props} />)
@@ -89,15 +85,10 @@ describe("Alert element", () => {
       "It's dangerous to go alone."
     )
   })
+})
 
-  it("should throw an error when the format is invalid", () => {
-    const props = getProps({
-      format: ("test" as unknown) as AlertProto.Format,
-      body: "It's dangerous to go alone.",
-    })
-
-    expect(() => {
-      shallow(<Alert {...props} />)
-    }).toThrow("Unexpected alert type: test")
-  })
+test("getAlertKind throws an error on invalid format", () => {
+  expect(() => getAlertKind(AlertProto.Format.UNUSED)).toThrow(
+    `Unexpected alert type: ${AlertProto.Format.UNUSED}`
+  )
 })

@@ -23,8 +23,7 @@ import {
   Image as ImageProto,
   ImageList as ImageListProto,
 } from "autogen/proto"
-
-import "./ImageList.scss"
+import { StyledCaption, StyledImageContainer } from "./styled-components"
 
 export interface ImageListProps {
   width: number
@@ -80,9 +79,9 @@ export function ImageList({
         (iimage: IImage, idx: number): ReactElement => {
           const image = iimage as ImageProto
           return (
-            <div
-              className="image-container stImage"
+            <StyledImageContainer
               key={idx}
+              data-testid="stImage"
               style={{ width: containerWidth }}
             >
               <img
@@ -91,9 +90,11 @@ export function ImageList({
                 alt={idx.toString()}
               />
               {!isFullScreen && (
-                <div className="caption"> {image.caption} </div>
+                <StyledCaption data-testid="caption">
+                  {` ${image.caption} `}
+                </StyledCaption>
               )}
-            </div>
+            </StyledImageContainer>
           )
         }
       )}

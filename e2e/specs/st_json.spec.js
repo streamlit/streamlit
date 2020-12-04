@@ -21,7 +21,7 @@ describe("st.json", () => {
   });
 
   it("displays a json", () => {
-    cy.get(".element-container .stJson")
+    cy.get("[data-testid='stJson']")
       .should("contain", "foo")
       .and("contain", "bar");
   });

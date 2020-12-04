@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 import { IMenuItem } from "hocs/withS4ACommunication/types"
 
 import MainMenu, { Props } from "./MainMenu"

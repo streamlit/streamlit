@@ -16,14 +16,14 @@
  */
 
 import React from "react"
-import { mount, shallow } from "enzyme"
+import { mount, shallow } from "lib/test_util"
 
 import { Small } from "components/shared/TextElements"
 import ProgressBar from "components/shared/ProgressBar"
 import Button from "components/shared/Button"
 import { FileStatuses } from "lib/FileHelper"
 
-import UploadedFile, { Props, FileStatus, ErrorMessage } from "./UploadedFile"
+import UploadedFile, { Props, FileStatus } from "./UploadedFile"
 
 const blobFile = new File(["Text in a file!"], "filename.txt", {
   type: "text/plain",
@@ -58,7 +58,7 @@ describe("FileStatus widget", () => {
       file: { status: FileStatuses.ERROR, ...blobFile },
     })
     const wrapper = shallow(<FileStatus {...props} />)
-    const errorMessageWrapper = wrapper.find(ErrorMessage)
+    const errorMessageWrapper = wrapper.find("StyledErrorMessage")
     expect(errorMessageWrapper.length).toBe(1)
   })
 

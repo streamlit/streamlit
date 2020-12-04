@@ -72,7 +72,7 @@ describe("st.slider", () => {
       .type("{leftarrow}", { force: true });
 
     // Rerun the script.
-    cy.get(".stApp .decoration").trigger("keypress", {
+    cy.get(".stApp [data-testid='stDecoration']").trigger("keypress", {
       keyCode: 82, // "r"
       which: 82 // "r"
     });

@@ -75,6 +75,7 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             file.name: file,
             "sessionId": (None, "fooReport"),
             "widgetId": (None, "barWidget"),
+            "totalFiles": (None, "1"),
         }
         response = self._upload_files(params)
         self.assertEqual(200, response.code)
@@ -97,6 +98,7 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             file3.name: file3,
             "sessionId": (None, "fooReport"),
             "widgetId": (None, "barWidget"),
+            "totalFiles": (None, "1"),
         }
         response = self._upload_files(params)
         self.assertEqual(200, response.code)
@@ -116,6 +118,7 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             "image.png": ("image.png", b"1234"),
             "sessionId": (None, "fooReport"),
             # "widgetId": (None, 'barWidget'),
+            "totalFiles": (None, "1"),
         }
 
         response = self._upload_files(params)
@@ -128,6 +131,7 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             # "image.png": ("image.png", b"1234"),
             "sessionId": (None, "fooReport"),
             "widgetId": (None, "barWidget"),
+            "totalFiles": (None, "1"),
         }
         response = self._upload_files(params)
         self.assertEqual(400, response.code)

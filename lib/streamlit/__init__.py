@@ -49,12 +49,13 @@ For more detailed info, see https://docs.streamlit.io.
 # Must be at the top, to avoid circular dependency.
 from streamlit import logger as _logger
 from streamlit import config as _config
+from streamlit.proto.RootContainer_pb2 import RootContainer
 
 _LOGGER = _logger.get_logger("root")
 
 # Give the package a version.
 import pkg_resources as _pkg_resources
-from typing import Any, List, Tuple, Type
+from typing import List
 
 # This used to be pkg_resources.require('streamlit') but it would cause
 # pex files to fail. See #394 for more details.
@@ -79,7 +80,6 @@ from streamlit.script_runner import StopException
 from streamlit.script_runner import RerunException as _RerunException
 from streamlit.script_request_queue import RerunData as _RerunData
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto import BlockPath_pb2 as _BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
 
 # Modules that the user should have access to. These are imported with "as"
@@ -104,8 +104,8 @@ def _update_logger():
 _config.on_config_parsed(_update_logger, True)
 
 
-_main = _DeltaGenerator(container=_BlockPath_pb2.BlockPath.MAIN)
-sidebar = _DeltaGenerator(container=_BlockPath_pb2.BlockPath.SIDEBAR, parent=_main)
+_main = _DeltaGenerator(root_container=RootContainer.MAIN)
+sidebar = _DeltaGenerator(root_container=RootContainer.SIDEBAR, parent=_main)
 
 # DeltaGenerator methods:
 
@@ -156,10 +156,7 @@ vega_lite_chart = _main.vega_lite_chart  # noqa: E221
 video = _main.video  # noqa: E221
 warning = _main.warning  # noqa: E221
 write = _main.write  # noqa: E221
-beta_color_picker = _main.beta_color_picker  # noqa: E221
-beta_container = _main.beta_container  # noqa: E221
-beta_expander = _main.beta_expander  # noqa: E221
-beta_columns = _main.beta_columns  # noqa: E221
+color_picker = _main.color_picker  # noqa: E221
 
 # Config
 
@@ -201,6 +198,10 @@ def _beta_warning(func, date):
 
 
 beta_set_page_config = _beta_warning(set_page_config, "2021-01-06")
+beta_color_picker = _beta_warning(_main.color_picker, "January 28, 2021")
+beta_container = _main.beta_container  # noqa: E221
+beta_expander = _main.beta_expander  # noqa: E221
+beta_columns = _main.beta_columns  # noqa: E221
 
 
 def set_option(key, value):

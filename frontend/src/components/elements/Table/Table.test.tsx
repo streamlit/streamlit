@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { mount } from "enzyme"
+import { mount } from "lib/test_util"
 import { fromJS } from "immutable"
 
 import { table, emptyTable } from "./mock"
@@ -31,17 +31,17 @@ describe("Table Element", () => {
     const props = getProps(table)
     const wrapper = mount(<Table {...props} />)
 
-    expect(wrapper.find("table").length).toBe(1)
-    expect(wrapper.find(".stTable").length).toBe(1)
-    expect(wrapper.find(".empty").exists()).toBeFalsy()
+    expect(wrapper.find("StyledTable").length).toBe(1)
+    expect(wrapper.find("StyledTableContainer").length).toBe(1)
+    expect(wrapper.find("StyledEmptyTableCell").exists()).toBeFalsy()
   })
 
   it("renders an empty row", () => {
     const props = getProps(emptyTable)
     const wrapper = mount(<Table {...props} />)
 
-    expect(wrapper.find("table").length).toBe(1)
-    expect(wrapper.find(".stTable").length).toBe(1)
-    expect(wrapper.find(".empty").exists()).toBeTruthy()
+    expect(wrapper.find("StyledTable").length).toBe(1)
+    expect(wrapper.find("StyledTableContainer").length).toBe(1)
+    expect(wrapper.find("StyledEmptyTableCell").exists()).toBeTruthy()
   })
 })

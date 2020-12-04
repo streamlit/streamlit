@@ -16,7 +16,8 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { mount } from "lib/test_util"
+import { ModalHeader, ModalFooter } from "components/shared/Modal"
 
 import ScreencastDialog, { Props } from "./ScreencastDialog"
 
@@ -28,33 +29,34 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   ...props,
 })
 
-describe("ScreencastDialog", () => {
+describe.only("ScreencastDialog", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<ScreencastDialog {...props} />)
+    const wrapper = mount(<ScreencastDialog {...props} />)
 
     expect(wrapper.html()).not.toBeNull()
   })
 
   it("should render a header", () => {
     const props = getProps()
-    const wrapper = shallow(<ScreencastDialog {...props} />)
-    const headerWrapper = wrapper.find("ModalHeader")
+    const wrapper = mount(<ScreencastDialog {...props} />)
+    const headerWrapper = wrapper.find(ModalHeader)
     expect(headerWrapper.props().children).toBe("Record a screencast")
   })
 
   describe("Modal body", () => {
     it("should have a record audio option to be selected", () => {
       const props = getProps()
-      const wrapper = shallow(<ScreencastDialog {...props} />)
+      const wrapper = mount(<ScreencastDialog {...props} />)
 
-      const labelWrapper = wrapper.find("p label")
+      const labelWrapper = wrapper.find("StyledRecordAudioLabel")
 
       labelWrapper.find("input").simulate("change", {
         target: {
           checked: true,
         },
       })
+      wrapper.update()
 
       expect(labelWrapper.text()).toBe(" Also record audio")
       expect(wrapper.find("input").props().checked).toBeTruthy()
@@ -63,22 +65,19 @@ describe("ScreencastDialog", () => {
 
     it("should have the stop recording explanation message", () => {
       const props = getProps()
-      const wrapper = shallow(<ScreencastDialog {...props} />)
+      const wrapper = mount(<ScreencastDialog {...props} />)
 
-      expect(
-        wrapper
-          .find("p")
-          .last()
-          .text()
-      ).toBe("Press Esc any time to stop recording.")
+      expect(wrapper.find("StyledInstruction").text()).toBe(
+        "Press Esc any time to stop recording."
+      )
     })
   })
 
   describe("Modal footer", () => {
     it("should have an start button", () => {
       const props = getProps()
-      const wrapper = shallow(<ScreencastDialog {...props} />)
-      const buttonWrapper = wrapper.find("ModalFooter").find("ModalButton")
+      const wrapper = mount(<ScreencastDialog {...props} />)
+      const buttonWrapper = wrapper.find(ModalFooter).find("button")
 
       buttonWrapper.simulate("click")
 

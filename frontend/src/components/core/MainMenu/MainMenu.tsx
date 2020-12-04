@@ -16,10 +16,10 @@
  */
 
 import React, { ReactElement, memo, forwardRef, MouseEvent } from "react"
-import classNames from "classnames"
 import { StatefulPopover, PLACEMENT } from "baseui/popover"
 import { StatefulMenu } from "baseui/menu"
 import Button, { Kind } from "components/shared/Button"
+import { Menu } from "@emotion-icons/open-iconic"
 
 import Icon from "components/shared/Icon"
 import {
@@ -27,15 +27,22 @@ import {
   IGuestToHostMessage,
 } from "hocs/withS4ACommunication/types"
 
-import "./MainMenu.scss"
 import { IDeployParams } from "autogen/proto"
-
-const DEPLOY_URL = "https://share.streamlit.io/deploy"
-const STREAMLIT_SHARE_URL = "https://streamlit.io/sharing"
-const ONLINE_DOCS_URL = "https://docs.streamlit.io"
-const COMMUNITY_URL = "https://discuss.streamlit.io"
-const TEAMS_URL = "https://streamlit.io/forteams"
-const BUG_URL = "https://github.com/streamlit/streamlit/issues/new/choose"
+import {
+  BUG_URL,
+  COMMUNITY_URL,
+  DEPLOY_URL,
+  ONLINE_DOCS_URL,
+  STREAMLIT_SHARE_URL,
+  TEAMS_URL,
+} from "urls"
+import {
+  StyledMenuItem,
+  StyledMenuDivider,
+  StyledMenuItemLabel,
+  StyledMenuItemShortcut,
+  StyledRecordingIndicator,
+} from "./styled-components"
 
 const SCREENCAST_LABEL: { [s: string]: string } = {
   COUNTDOWN: "Cancel screencast",
@@ -140,12 +147,11 @@ const MenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
     ref
   ) => {
     const { label, shortcut, hasDividerAbove } = item
-    const className = classNames({
-      "menu-item": true,
-      "menu-item-highlighted": $isHighlighted,
-      "menu-item-disabled": $disabled,
-      "menu-item-stop-recording": Boolean(item.stopRecordingIndicator),
-    })
+    const menuItemProps = {
+      isDisabled: $disabled,
+      isHighlighted: $isHighlighted,
+      isRecording: Boolean(item.stopRecordingIndicator),
+    }
     const interactiveProps = $disabled
       ? {}
       : {
@@ -155,18 +161,22 @@ const MenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
 
     return (
       <>
-        {hasDividerAbove && <div className="menu-divider" />}
-        <li
+        {hasDividerAbove && <StyledMenuDivider />}
+        <StyledMenuItem
           ref={ref}
           role="option"
-          className={className}
           aria-selected={ariaSelected}
           aria-disabled={$disabled}
+          {...menuItemProps}
           {...interactiveProps}
         >
-          <span className="menu-item-label">{label}</span>
-          {shortcut && <span className="menu-item-shortcut">{shortcut}</span>}
-        </li>
+          <StyledMenuItemLabel {...menuItemProps}>{label}</StyledMenuItemLabel>
+          {shortcut && (
+            <StyledMenuItemShortcut {...menuItemProps}>
+              {shortcut}
+            </StyledMenuItemShortcut>
+          )}
+        </StyledMenuItem>
       </>
     )
   }
@@ -298,7 +308,7 @@ function MainMenu(props: Props): ReactElement {
             Option: MenuListItem,
             List: {
               props: {
-                "data-test": "main-menu-list",
+                "data-testid": "main-menu-list",
               },
               style: {
                 ":focus": {
@@ -312,18 +322,16 @@ function MainMenu(props: Props): ReactElement {
       overrides={{
         Body: {
           props: {
-            "data-test": "main-menu-popover",
+            "data-testid": "main-menu-popover",
           },
         },
       }}
     >
       <span id="MainMenu">
         <Button kind={Kind.ICON}>
-          <Icon type="menu" />
+          <Icon content={Menu} />
         </Button>
-        {props.screenCastState === "RECORDING" && (
-          <span className="recording-indicator" />
-        )}
+        {props.screenCastState === "RECORDING" && <StyledRecordingIndicator />}
       </span>
     </StatefulPopover>
   )

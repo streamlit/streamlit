@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 import { Markdown as MarkdownProto } from "autogen/proto"
 import Markdown, { MarkdownProps } from "./Markdown"
 

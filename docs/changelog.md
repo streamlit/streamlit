@@ -16,13 +16,44 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.72.0
+
+_Release date: December 2, 2020_
+
+**Notable Changes**
+
+- 🌈 Establish a framework for theming and migrate existing components.
+- 📱 Improve the sidebar experience for mobile devices.
+- 🧰 Update [`st.file_uploader`](https://docs.streamlit.io/en/0.71.0/api.html#streamlit.file_uploader) to reduce reruns.
+
+## Version 0.71.0
+
+_Release date: November 11, 2020_
+
+**Notable Changes**
+
+- 📁 Updated [`st.file_uploader`](https://docs.streamlit.io/en/0.71.0/api.html#streamlit.file_uploader)
+  to automatically reset buffer on app reruns.
+- 📊 Optimize the default rendering of charts and reduce issues with the initial render.
+
+## Version 0.70.0
+
+_Release date: October 28, 2020_
+
+**Notable Changes**
+
+- 🧪 [`st.set_page_config`](https://docs.streamlit.io/en/0.70.0/api.html#streamlit.set_page_config) and [`st.color_picker`](https://docs.streamlit.io/en/0.70.0/api.html#streamlit.color_picker) have now been moved into the
+  Streamlit namespace. These will be removed from beta January 28th, 2021. Learn
+  more about our beta process [here](https://docs.streamlit.io/en/0.70.0/api.html#beta-and-experimental-features).
+- 📊 Improve display of bar charts for discrete values.
+
 ## Version 0.69.0
 
 _Release date: October 15, 2020_
 
 **Highlights:**
 
-- 🎁 Introducing Streamlit sharing, the best way to deploy, manage, and share your public Streamlit apps - for free. Read more about it on our [blog post](http://blog.streamlit.io/introducing-streamlit-sharing/) or sign up [here](http://streamlit.io/sharing)!
+- 🎁 Introducing Streamlit sharing, the best way to deploy, manage, and share your public Streamlit apps - for free. Read more about it on our [blog post](http://blog.streamlit.io/introducing-streamlit-sharing/) or sign up [here](https://streamlit.io/sharing)!
 - Added `st.experimental_rerun` to programatically re-run your app. Thanks [SimonBiggs](https://github.com/SimonBiggs)!
 
 **Notable Changes**
@@ -191,7 +222,7 @@ _Release date: May 05, 2020_
 **Highlights:**
 
 - 🎨 New color-picker widget! Use it with
-  [`st.beta_color_picker()`](https://docs.streamlit.io/en/latest/api.html#streamlit.beta_color_picker)
+  [`st.beta_color_picker()`](https://docs.streamlit.io/en/0.69.0/api.html#streamlit.beta_color_picker)
 - 🧪 Introducing `st.beta_*` and `st.experimental_*` function prefixes, for faster
   Streamlit feature releases. See
   [docs](https://docs.streamlit.io/en/latest/api.html#pre-release-features) for more info.

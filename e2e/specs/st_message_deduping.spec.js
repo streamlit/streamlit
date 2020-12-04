@@ -25,9 +25,6 @@ describe("message_deduping", () => {
     // (This waits for 2 suspense placeholders and 1 st.write() to show)
     cy.get(".element-container .stMarkdown").should("have.text", "hello!");
 
-    cy.get(".element-container > .fullScreenFrame > .stDataFrame").should(
-      "have.length",
-      2
-    );
+    cy.get(".element-container .stDataFrame").should("have.length", 2);
   });
 });

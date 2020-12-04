@@ -18,34 +18,34 @@
 describe("st.file_uploader", () => {
   beforeEach(() => {
     Cypress.Cookies.defaults({
-      whitelist: ["_xsrf"]
+      preserve: ["_xsrf"]
     });
 
     cy.visit("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
+    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stFileUploader")
+    cy.get("[data-testid='stFileUploader']")
       .first()
       .should("exist");
-    cy.get(".stFileUploader label")
+    cy.get("[data-testid='stFileUploader'] label")
       .first()
       .should("have.text", "Drop a file:");
 
-    cy.get(".stFileUploader")
+    cy.get("[data-testid='stFileUploader']")
       .first()
       .matchImageSnapshot("single_file_uploader");
 
-    cy.get(".stFileUploader")
+    cy.get("[data-testid='stFileUploader']")
       .last()
       .matchImageSnapshot("multi_file_uploader");
   });
 
   it("shows deprecation warning", () => {
-    cy.get(".stFileUploader")
+    cy.get("[data-testid='stFileUploader']")
       .first()
       .parent()
       .prev()
@@ -53,7 +53,7 @@ describe("st.file_uploader", () => {
   });
 
   it("hides deprecation warning", () => {
-    cy.get(".stFileUploader")
+    cy.get("[data-testid='stFileUploader']")
       .last()
       .parent()
       .prev()
@@ -64,9 +64,9 @@ describe("st.file_uploader", () => {
     const fileName = "example.json";
 
     cy.fixture(fileName).then(fileContent => {
-      cy.get(".fileUploadDropzone")
+      cy.get("[data-testid='stFileUploadDropzone']")
         .first()
-        .upload(
+        .attachFile(
           { fileContent, fileName, mimeType: "application/json" },
           {
             force: true,
@@ -80,11 +80,11 @@ describe("st.file_uploader", () => {
           }
         );
 
-      cy.get(".fileError span")
+      cy.get("[data-testid='stUploadedFileErrorMessage']")
         .first()
         .should("have.text", "application/json files are not allowed.");
 
-      cy.get(".stFileUploader")
+      cy.get("[data-testid='stFileUploader']")
         .first()
         .matchImageSnapshot("file_uploader-error");
     });
@@ -104,9 +104,9 @@ describe("st.file_uploader", () => {
           { fileContent: file2, fileName: fileName2, mimeType: "text/plain" }
         ];
 
-        cy.get(".fileUploadDropzone")
+        cy.get("[data-testid='stFileUploadDropzone']")
           .eq(0)
-          .upload(files[0], {
+          .attachFile(files[0], {
             force: true,
             subjectType: "drag-n-drop",
             events: ["dragenter", "drop"]
@@ -116,17 +116,17 @@ describe("st.file_uploader", () => {
         // into an st.text. (This tests that the upload actually went
         // through.)
         cy.get(".uploadedFileName").should("have.text", fileName1);
-        cy.get(".fixed-width.stText")
+        cy.get("[data-testid='stText']")
           .first()
           .should("contain.text", file1);
 
-        cy.get(".stFileUploader")
+        cy.get("[data-testid='stFileUploader']")
           .first()
           .matchImageSnapshot("single_file_uploader-uploaded");
 
-        cy.get(".fileUploadDropzone")
+        cy.get("[data-testid='stFileUploadDropzone']")
           .eq(0)
-          .upload(files[1], {
+          .attachFile(files[1], {
             force: true,
             subjectType: "drag-n-drop",
             events: ["dragenter", "drop"]
@@ -135,10 +135,17 @@ describe("st.file_uploader", () => {
         cy.get(".uploadedFileName")
           .should("have.text", fileName2)
           .should("not.have.text", fileName1);
-        cy.get(".fixed-width.stText")
+        cy.get("[data-testid='stText']")
           .first()
           .should("contain.text", file2)
           .should("not.contain.text", file1);
+
+        // On rerun, make sure file is still returned
+        cy.get("body").type("r");
+        cy.wait(1000);
+        cy.get("[data-testid='stText']")
+          .first()
+          .should("contain.text", file2);
       });
     });
   });
@@ -157,9 +164,14 @@ describe("st.file_uploader", () => {
           { fileContent: file2, fileName: fileName2, mimeType: "text/plain" }
         ];
 
-        cy.get(".fileUploadDropzone")
+        cy.get("[data-testid='stFileUploadDropzone']")
           .eq(1)
-          .upload(files, {
+          .attachFile(files[0], {
+            force: true,
+            subjectType: "drag-n-drop",
+            events: ["dragenter", "drop"]
+          })
+          .attachFile(files[1], {
             force: true,
             subjectType: "drag-n-drop",
             events: ["dragenter", "drop"]
@@ -176,11 +188,11 @@ describe("st.file_uploader", () => {
         // into an st.text. (This tests that the upload actually went
         // through.)
         const content = [file1, file2].sort().join("\n");
-        cy.get(".fixed-width.stText")
+        cy.get("[data-testid='stText']")
           .last()
           .should("have.text", content);
 
-        cy.get(".stFileUploader")
+        cy.get("[data-testid='stFileUploader']")
           .last()
           .matchImageSnapshot("multi_file_uploader-uploaded");
       });

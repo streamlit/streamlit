@@ -29,12 +29,9 @@ import Balloon3 from "assets/img/balloons/balloon-3.png"
 import Balloon4 from "assets/img/balloons/balloon-4.png"
 import Balloon5 from "assets/img/balloons/balloon-5.png"
 
-import "./Balloons.scss"
+import { StyledBalloon } from "./styled-components"
 
 export const NUM_BALLOONS = 30
-const POS_MIN_VW = 20
-const POS_MAX_VW = 80
-export const DELAY_MAX_MS = 1000
 
 const BALLOON_IMAGES: string[] = [
   Balloon0,
@@ -51,30 +48,18 @@ export interface Props {
   reportId: string
 }
 
-function Balloon(): ReactElement {
-  const randNum = Math.floor(Math.random() * BALLOON_TYPES)
-
-  return (
-    <img
-      src={BALLOON_IMAGES[randNum]}
-      className="balloon"
-      alt=""
-      style={{
-        left: `${Math.random() * (POS_MAX_VW - POS_MIN_VW) + POS_MIN_VW}vw`,
-        animationDelay: `${Math.random() * DELAY_MAX_MS}ms`,
-      }}
-    />
-  )
-}
-
 function Balloons({ reportId }: Props): ReactElement {
   // Keys should be unique each time, so React replaces the images in the DOM and their animations
   // actually rerun.
   return (
-    <div className="balloons">
-      {range(NUM_BALLOONS).map(i => (
-        <Balloon key={reportId + i} />
-      ))}
+    <div className="balloons stHidden">
+      {range(NUM_BALLOONS).map(i => {
+        const randNum = Math.floor(Math.random() * BALLOON_TYPES)
+
+        return (
+          <StyledBalloon key={reportId + i} src={BALLOON_IMAGES[randNum]} />
+        )
+      })}
     </div>
   )
 }

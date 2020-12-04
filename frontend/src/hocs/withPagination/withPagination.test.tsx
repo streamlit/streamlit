@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow, mount } from "enzyme"
+import { shallow, mount } from "lib/test_util"
 import Pagination from "./Pagination"
 
 import withPagination, { Props as HocProps } from "./withPagination"

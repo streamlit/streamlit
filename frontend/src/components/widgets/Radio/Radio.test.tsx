@@ -16,8 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
-import { radioOverrides } from "lib/widgetTheme"
+import { mount } from "lib/test_util"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import { Radio as UIRadio, RadioGroup } from "baseui/radio"
@@ -41,9 +40,9 @@ const getProps = (elementProps: Partial<RadioProto> = {}): Props => ({
   widgetMgr: new WidgetStateManager(sendBackMsg),
 })
 
-describe("Checkbox widget", () => {
+describe("Radio widget", () => {
   const props = getProps()
-  const wrapper = shallow(<Radio {...props} />)
+  const wrapper = mount(<Radio {...props} />)
 
   it("renders without crashing", () => {
     expect(wrapper.find(RadioGroup).length).toBe(1)
@@ -65,7 +64,6 @@ describe("Checkbox widget", () => {
     // @ts-ignore
     const splittedClassName = className.split(" ")
 
-    expect(splittedClassName).toContain("Widget")
     expect(splittedClassName).toContain("row-widget")
     expect(splittedClassName).toContain("stRadio")
 
@@ -74,7 +72,7 @@ describe("Checkbox widget", () => {
   })
 
   it("should render a label", () => {
-    expect(wrapper.find("label").text()).toBe(props.element.label)
+    expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
   })
 
   it("should have a default value", () => {
@@ -93,7 +91,6 @@ describe("Checkbox widget", () => {
     options.forEach((option, index) => {
       expect(option.prop("value")).toBe(index.toString())
       expect(option.prop("children")).toBe(props.element.options[index])
-      expect(option.prop("overrides")).toBe(radioOverrides)
     })
   })
 
@@ -101,7 +98,7 @@ describe("Checkbox widget", () => {
     const props = getProps({
       options: [],
     })
-    const wrapper = shallow(<Radio {...props} />)
+    const wrapper = mount(<Radio {...props} />)
 
     expect(wrapper.find(UIRadio).length).toBe(1)
     expect(wrapper.find(UIRadio).prop("children")).toBe(
@@ -116,6 +113,7 @@ describe("Checkbox widget", () => {
         value: "1",
       },
     } as React.ChangeEvent<HTMLInputElement>)
+    wrapper.update()
 
     expect(wrapper.find(RadioGroup).prop("value")).toBe("1")
     expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(

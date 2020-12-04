@@ -21,7 +21,7 @@ describe("st.text", () => {
   });
 
   it("displays a text", () => {
-    cy.get(".element-container .stText").should(
+    cy.get("[data-testid='stText']").should(
       "contain",
       "This text is awesome!"
     );

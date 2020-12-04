@@ -20,11 +20,11 @@ describe("st.area, bar, and line charts", () => {
     cy.visit("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
+    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
   });
 
   it("display times in UTC", () => {
-    cy.get(".element-container .stVegaLiteChart")
+    cy.get(".element-container [data-testid='stVegaLiteChart']")
       .find("canvas")
       .each((el, i) => {
         return cy.get(el).matchImageSnapshot(`chartUTCTime-${i}`);

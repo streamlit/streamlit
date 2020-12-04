@@ -2,6 +2,17 @@
 
 If you're having problems running your Streamlit app, here are a few things to try out.
 
+## Check #0: Are you using a Streamlit-supported version of Python?
+
+Streamlit will maintain backwards-compatibility with earlier Python versions as practical,
+guaranteeing compatibility with _at least_ the last three minor versions of Python 3.
+
+As new versions of Python are released, we will try to be compatible with the new version as soon
+as possible, though frequently we are at the mercy of other Python packages to support these new versions as well.
+
+Streamlit currently supports versions 3.6, 3.7 and 3.8 of Python. Python 3.9 support is currently on-hold as we
+wait for [pyarrow to support Python 3.9](https://arrow.apache.org/docs/python/install.html#python-compatibility).
+
 ## Check #1: Is Streamlit running?
 
 On a Mac or Linux machine, type this on the terminal:
@@ -24,7 +35,7 @@ pip install --upgrade streamlit
 streamlit version
 ```
 
-...and then verify that the version number printed is `0.69.2`.
+...and then verify that the version number printed is `0.72.0`.
 
 **Try reproducing the issue now.** If not fixed, keep reading on.
 

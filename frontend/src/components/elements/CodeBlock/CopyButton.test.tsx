@@ -17,7 +17,7 @@
 
 import React from "react"
 import Clipboard from "clipboard"
-import { shallow, mount } from "enzyme"
+import { shallow, mount } from "lib/test_util"
 
 import CopyButton from "./CopyButton"
 
@@ -31,16 +31,20 @@ describe("CopyButton Element", () => {
   const wrapper = shallow(<CopyButton text="test" />)
 
   it("renders without crashing", () => {
-    expect(wrapper.find("button").length).toBe(1)
+    expect(wrapper.find("StyledCopyButton").length).toBe(1)
   })
 
   describe("attributes", () => {
     it("should have title", () => {
-      expect(wrapper.find("button").prop("title")).toBe("Copy to clipboard")
+      expect(wrapper.find("StyledCopyButton").prop("title")).toBe(
+        "Copy to clipboard"
+      )
     })
 
     it("should have clipboard text", () => {
-      expect(wrapper.find("button").prop("data-clipboard-text")).toBe("test")
+      expect(
+        wrapper.find("StyledCopyButton").prop("data-clipboard-text")
+      ).toBe("test")
     })
   })
 

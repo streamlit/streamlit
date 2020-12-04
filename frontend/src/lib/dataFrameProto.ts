@@ -185,6 +185,13 @@ export function dataFrameToArrayOfDicts(df: any): { [key: string]: any } {
   return dataArr
 }
 
+export type DataFrameCellType = "corner" | "col-header" | "row-header" | "data"
+export interface DataFrameCell {
+  contents: any
+  styles: any
+  type: DataFrameCellType
+}
+
 /**
  * Return the (i, j)th element of the DataFrame viewed as a big table including
  * header columns and rows. Returns a dict of
@@ -194,7 +201,7 @@ export function dataFrameToArrayOfDicts(df: any): { [key: string]: any } {
  *  type: 'corner' | 'row-header' | 'col-header' | 'data'
  * }
  */
-export function dataFrameGet(df: any, col: any, row: any): any {
+export function dataFrameGet(df: any, col: any, row: any): DataFrameCell {
   const { headerRows, headerCols } = dataFrameGetDimensions(df)
   if (col < headerCols) {
     if (row < headerRows) {
