@@ -13393,10 +13393,10 @@ plist@^3.0.1:
     xmlbuilder "^9.0.7"
     xmldom "0.1.x"
 
-plotly.js@^1.58.0:
-  version "1.58.0"
-  resolved "https://registry.yarnpkg.com/plotly.js/-/plotly.js-1.58.0.tgz#670bbd3a0b432717a18a3e84f47cc9e13fc77832"
-  integrity sha512-w1Z/eaAUZolh2aZZud/6Gb0SLHRVtGOAzCZIrzMGjKJ9eq7dfpYUdfSWj2W7+AQieU+Lc8OpgxknhCYwbT216A==
+plotly.js@^1.58.1:
+  version "1.58.1"
+  resolved "https://registry.yarnpkg.com/plotly.js/-/plotly.js-1.58.1.tgz#07bfa39ffe25e0cfc966ef0a64caf39ec4d3f380"
+  integrity sha512-EzVx3Aipr7WyefMDHJFRtIkJKSI9fTTipGu5fQ17l5M5FzsDq+bdywhJ3Gy645el5QBPx5uzrY80JJbZTjYSQQ==
   dependencies:
     "@plotly/d3-sankey" "0.7.2"
     "@plotly/d3-sankey-circular" "0.33.1"
