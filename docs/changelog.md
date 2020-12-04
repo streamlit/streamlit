@@ -16,6 +16,16 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.72.0
+
+_Release date: December 2, 2020_
+
+**Notable Changes**
+
+- 🌈 Establish a framework for theming and migrate existing components.
+- 📱 Improve the sidebar experience for mobile devices.
+- 🧰 Update [`st.file_uploader`](https://docs.streamlit.io/en/0.71.0/api.html#streamlit.file_uploader) to reduce reruns.
+
 ## Version 0.71.0
 
 _Release date: November 11, 2020_

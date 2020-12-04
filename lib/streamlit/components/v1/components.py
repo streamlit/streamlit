@@ -109,9 +109,14 @@ class CustomComponent:
         if len(args) > 0:
             raise MarshallComponentException(f"Argument '{args[0]}' needs a label")
 
+        # In addition to the custom kwargs passed to the component, we also
+        # send the special 'default' and 'key' params to the component
+        # frontend.
+        all_args = dict(kwargs, **{"default": default, "key": key})
+
         json_args = {}
         special_args = []
-        for arg_name, arg_val in kwargs.items():
+        for arg_name, arg_val in all_args.items():
             if type_util.is_bytes_like(arg_val):
                 bytes_arg = SpecialArg()
                 bytes_arg.key = arg_name
