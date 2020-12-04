@@ -1,0 +1,19 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`DeployErrorDialog - RepoIsAhead Should render without crashing 1`] = `
+Object {
+  "body": <React.Fragment>
+    <p>
+      The file 
+      <strong>
+        module
+      </strong>
+       has uncommitted changes.
+    </p>
+    <p>
+      Please commit the latest changes and push to Github to continue.
+    </p>
+  </React.Fragment>,
+  "title": "Error deploying app",
+}
+`;

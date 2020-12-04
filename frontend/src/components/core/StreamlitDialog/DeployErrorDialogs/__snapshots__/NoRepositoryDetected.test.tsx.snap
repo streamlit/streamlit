@@ -1,0 +1,33 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`DeployErrorDialog - NoRepositoryDetected Should render without crashing 1`] = `
+Object {
+  "body": <React.Fragment>
+    <p>
+      No Github repository detected.
+    </p>
+    <p>
+      How Streamlit sharing works:
+    </p>
+    <ul>
+      <li>
+        To deploy a public app, you must first put it in a public Github repo. See
+         
+        <a
+          href="https://docs.streamlit.io"
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          our documentation
+        </a>
+         
+        for more details.
+      </li>
+      <li>
+        If you'd like to deploy a private app, sign up for Streamlit for Teams.
+      </li>
+    </ul>
+  </React.Fragment>,
+  "title": "Error deploying app",
+}
+`;
