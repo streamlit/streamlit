@@ -128,7 +128,7 @@ commands:
             if [ ! -d frontend/node_modules ] ; then
               source "$HOME/.nvm/nvm.sh"
             fi
-            make react-init scssvars
+            make react-init
             echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
             echo 'source "$NVM_DIR/nvm.sh"' >> $BASH_ENV
 
@@ -394,11 +394,6 @@ jobs:
       - pre-make
       - make-init
 
-      - run: &make_scss_vars
-          name: Make SCSS vars
-          command: |
-            make scssvars
-
       - run:
           <<: *make_develop
 
@@ -448,9 +443,6 @@ jobs:
       - restore-from-cache
       - pre-make
       - make-init
-
-      - run:
-          <<: *make_scss_vars
 
       - run:
           name: verify git tag vs. version
@@ -506,9 +498,6 @@ jobs:
       - restore-from-cache
       - pre-make
       - make-init
-
-      - run:
-          <<: *make_scss_vars
 
       - run:
           name: Create wheel file
@@ -596,9 +585,6 @@ jobs:
       - restore-from-cache
       - pre-make
       - make-init
-
-      - run:
-          <<: *make_scss_vars
 
       - run:
           <<: *make_develop
