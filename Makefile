@@ -35,15 +35,11 @@ mini-devel: mini-init develop
 
 .PHONY: init
 # Install all Python and JS dependencies.
-init: setup pipenv-install react-init autogen
+init: setup pipenv-install react-init protobuf
 
 .PHONY: mini-init
 # Install minimal Python and JS dependencies for development.
-mini-init: setup pipenv-dev-install react-init autogen
-
-.PHONY: autogen
-# Generates files for frontend dev
-autogen: protobuf
+mini-init: setup pipenv-dev-install react-init protobuf
 
 .PHONY: frontend
 # Build frontend into static files.
