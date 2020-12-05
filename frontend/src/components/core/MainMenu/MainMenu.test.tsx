@@ -171,7 +171,7 @@ describe("App", () => {
     function testDeployErrorModal(
       deployParams: Partial<IDeployParams>,
       dialogComponent: (module: string) => IDeployErrorDialog
-    ) {
+    ): void {
       const props = getProps({
         deployParams,
       })
