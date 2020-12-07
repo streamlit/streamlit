@@ -377,7 +377,7 @@ class ReportSession(object):
         # git deploy params
         deploy_params = self.get_deploy_params()
 
-        if deploy_params["info"] is not None:
+        if deploy_params is not None and deploy_params["info"] is not None:
             repo, branch, module = deploy_params["info"]
 
             msg.new_report.deploy_params.repository = repo
