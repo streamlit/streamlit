@@ -15,7 +15,7 @@ except:
     )
     sys.exit(exit_msg)
 
-VERSION = "0.71.0"  # PEP-440
+VERSION = "0.72.0"  # PEP-440
 
 NAME = "streamlit"
 
@@ -81,5 +81,7 @@ setuptools.setup(
     # - streamlit version
     # - streamlit hello
     scripts=["bin/streamlit.cmd"],
-    cmdclass={"verify": VerifyVersionCommand,},
+    cmdclass={
+        "verify": VerifyVersionCommand,
+    },
 )

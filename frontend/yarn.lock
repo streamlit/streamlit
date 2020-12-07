@@ -8658,10 +8658,10 @@ gl-plot2d@^1.4.5:
     glslify "^7.0.0"
     text-cache "^4.2.2"
 
-gl-plot3d@^2.4.6:
-  version "2.4.6"
-  resolved "https://registry.yarnpkg.com/gl-plot3d/-/gl-plot3d-2.4.6.tgz#69518759c473e3a8c1c76974472836f6500daf50"
-  integrity sha512-CkrNvDKu0p74Di2g2Oc9kU+s1Oe+wi4cIfHzXABp8DvfoRl0/bayqJ9q8EcRAqMeQQxQZYGvJkk4hlBwI758Jw==
+gl-plot3d@^2.4.7:
+  version "2.4.7"
+  resolved "https://registry.yarnpkg.com/gl-plot3d/-/gl-plot3d-2.4.7.tgz#b66e18c5affdd664f42c884acf7b82c60b41ee78"
+  integrity sha512-mLDVWrl4Dj0O0druWyHUK5l7cBQrRIJRn2oROEgrRuOgbbrLAzsREKefwMO0bA0YqkiZMFMnV5VvPA9j57X5Xg==
   dependencies:
     "3d-view" "^2.0.0"
     a-big-triangle "^1.0.3"
@@ -13393,10 +13393,10 @@ plist@^3.0.1:
     xmlbuilder "^9.0.7"
     xmldom "0.1.x"
 
-plotly.js@^1.57.1:
-  version "1.57.1"
-  resolved "https://registry.yarnpkg.com/plotly.js/-/plotly.js-1.57.1.tgz#95754814ad57bf9b4ddbc9acc58337582e3bdf6a"
-  integrity sha512-23GlzClmOGT1lE86Ys0DLuxBM/fgRNzJqH9y7ZylO4VPwstPAlQd12DklXsuqOgCNSxnnWUaP+J7BaUOFplsUg==
+plotly.js@^1.58.0:
+  version "1.58.0"
+  resolved "https://registry.yarnpkg.com/plotly.js/-/plotly.js-1.58.0.tgz#670bbd3a0b432717a18a3e84f47cc9e13fc77832"
+  integrity sha512-w1Z/eaAUZolh2aZZud/6Gb0SLHRVtGOAzCZIrzMGjKJ9eq7dfpYUdfSWj2W7+AQieU+Lc8OpgxknhCYwbT216A==
   dependencies:
     "@plotly/d3-sankey" "0.7.2"
     "@plotly/d3-sankey-circular" "0.33.1"
@@ -13428,7 +13428,7 @@ plotly.js@^1.57.1:
     gl-mat4 "^1.2.0"
     gl-mesh3d "^2.3.1"
     gl-plot2d "^1.4.5"
-    gl-plot3d "^2.4.6"
+    gl-plot3d "^2.4.7"
     gl-pointcloud2d "^1.0.3"
     gl-scatter3d "^1.2.3"
     gl-select-box "^1.0.4"

@@ -1,6 +1,6 @@
 {
   "name": "streamlit-browser",
-  "version": "0.71.0",
+  "version": "0.72.0",
   "private": true,
   "homepage": "./",
   "scripts": {
@@ -68,7 +68,7 @@
     "node-emoji": "^1.10.0",
     "node-sass": "^4.14.1",
     "numbro": "^2.3.1",
-    "plotly.js": "^1.57.1",
+    "plotly.js": "^1.58.0",
     "prismjs": "^1.21.0",
     "protobufjs": "^6.10.1",
     "query-string": "^6.13.1",
