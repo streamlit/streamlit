@@ -287,7 +287,7 @@ function MainMenu(props: Props): ReactElement {
     if (!props.deployParams || !props.isDeployErrorModalOpen) return
 
     onClickDeployApp()
-  }, [props.deployParams, props.isDeployErrorModalOpen])
+  }, [props.deployParams, props.isDeployErrorModalOpen, onClickDeployApp])
 
   const coreMenuOptions = {
     DIVIDER: { isDivider: true },
