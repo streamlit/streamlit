@@ -220,7 +220,12 @@ function MainMenu(props: Props): ReactElement {
   console.log("== deployParams", props.deployParams)
 
   const onClickDeployApp = (): void => {
-    const { deployParams, showDeployError, closeDialog } = props
+    const {
+      deployParams,
+      showDeployError,
+      closeDialog,
+      isDeployErrorModalOpen,
+    } = props
 
     console.log("== deployParams clicked", deployParams)
 
@@ -279,7 +284,8 @@ function MainMenu(props: Props): ReactElement {
 
     console.log("== acaa")
 
-    closeDialog()
+    if (isDeployErrorModalOpen) closeDialog()
+
     getDeployAppUrl(deployParams)
   }
 
