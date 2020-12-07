@@ -121,12 +121,16 @@ const getDeployAppUrl = (
   if (deployParams) {
     const deployUrl = new URL(DEPLOY_URL)
 
+    console.log("== getDeployAppUrl", deployUrl)
+
     deployUrl.searchParams.set("repository", deployParams.repository || "")
     deployUrl.searchParams.set("branch", deployParams.branch || "")
     deployUrl.searchParams.set("mainModule", deployParams.module || "")
 
     return getOpenInWindowCallback(deployUrl.toString())
   }
+
+  console.log("== getDeployAppUrl share")
 
   // Otherwise, just direct them to the Streamlit Share page.
   return getOpenInWindowCallback(STREAMLIT_SHARE_URL)
@@ -211,8 +215,12 @@ const MenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
 function MainMenu(props: Props): ReactElement {
   const isServerDisconnected = !props.isServerConnected
 
+  console.log("== deployParams", props.deployParams)
+
   const onClickDeployApp = (): void => {
     const { deployParams, showDeployError } = props
+
+    console.log("== deployParams clicked", deployParams)
 
     if (
       !deployParams ||
@@ -266,6 +274,8 @@ function MainMenu(props: Props): ReactElement {
 
       return
     }
+
+    console.log("== acaa")
 
     getDeployAppUrl(deployParams)
   }
