@@ -356,7 +356,7 @@ class ReportSession(object):
                 "is_head_detached": self._repo.is_head_detached,
                 "untracked_files": self._repo.untracked_files,
                 "uncommitted_files": self._repo.get_uncommitted_files(),
-                "is_ahead": len(self._repo.get_ahead_commits()) > 0,
+                "is_ahead": not self._repo.is_head_detached and len(self._repo.get_ahead_commits()) > 0,
             }
         except:
             # Issues can arise based on the git structure
@@ -377,12 +377,14 @@ class ReportSession(object):
         # git deploy params
         deploy_params = self.get_deploy_params()
 
-        if deploy_params is not None and deploy_params["info"] is not None:
-            repo, branch, module = deploy_params["info"]
+        if deploy_params is not None:
+            if deploy_params["info"] is not None:
+                repo, branch, module = deploy_params["info"]
 
-            msg.new_report.deploy_params.repository = repo
-            msg.new_report.deploy_params.branch = branch
-            msg.new_report.deploy_params.module = module
+                msg.new_report.deploy_params.repository = repo
+                msg.new_report.deploy_params.branch = branch
+                msg.new_report.deploy_params.module = module
+
             msg.new_report.deploy_params.is_head_detached = deploy_params[
                 "is_head_detached"
             ]

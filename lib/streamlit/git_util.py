@@ -46,6 +46,10 @@ class GitRepo:
     def tracking_branch(self):
         if not self.is_valid():
             return None
+
+        if self.is_head_detached:
+            return None
+
         return self.repo.active_branch.tracking_branch()
 
     @property
@@ -61,6 +65,7 @@ class GitRepo:
             return None
 
         tracking_branch = self.tracking_branch
+
         if tracking_branch is None:
             return None
 
