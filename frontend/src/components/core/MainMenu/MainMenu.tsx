@@ -280,7 +280,7 @@ function MainMenu(props: Props): ReactElement {
 
     if (isDeployErrorModalOpen) closeDialog()
 
-    getDeployAppUrl(deployParams)
+    getDeployAppUrl(deployParams)()
   }
 
   useEffect(() => {
