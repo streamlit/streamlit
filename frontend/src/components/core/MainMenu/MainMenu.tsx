@@ -129,6 +129,8 @@ const getDeployAppUrl = (
     deployUrl.searchParams.set("branch", deployParams.branch || "")
     deployUrl.searchParams.set("mainModule", deployParams.module || "")
 
+    console.log("== url to be called", deployUrl.toString())
+
     return getOpenInWindowCallback(deployUrl.toString())
   }
 
