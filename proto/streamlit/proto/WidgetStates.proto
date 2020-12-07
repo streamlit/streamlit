@@ -16,6 +16,7 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/Common.proto";
 import "streamlit/proto/ArrowTable.proto";
 import "streamlit/proto/DataFrame.proto";
 
@@ -39,22 +40,14 @@ message WidgetState {
     bool trigger_value = 2;
 
     bool bool_value = 3;
-    double float_value = 4;
+    double double_value = 4;
     sint64 int_value = 5;
     string string_value = 6;
-    FloatArray float_array_value = 7;
-    IntArray int_array_value = 8;
+    DoubleArray double_array_value = 7;
+    SInt64Array int_array_value = 8;
     StringArray string_array_value = 9;
     string json_value = 10;
     ArrowTable arrow_value = 11;
     bytes bytes_value = 12;
   }
-}
-
-message FloatArray {
-  repeated double value = 1;
-}
-
-message IntArray {
-  repeated sint64 value = 1;
 }

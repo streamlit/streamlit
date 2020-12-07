@@ -16,9 +16,9 @@
  */
 
 import {
-  FloatArray,
+  DoubleArray,
   IArrowTable,
-  IntArray,
+  SInt64Array,
   StringArray,
   WidgetState,
   WidgetStates,
@@ -118,17 +118,21 @@ export class WidgetStateManager {
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
-  public getFloatValue(widgetId: string): number | undefined {
+  public getDoubleValue(widgetId: string): number | undefined {
     const state = this.getWidgetStateProto(widgetId)
-    if (state != null && state.value === "floatValue") {
-      return state.floatValue
+    if (state != null && state.value === "doubleValue") {
+      return state.doubleValue
     }
 
     return undefined
   }
 
-  public setFloatValue(widgetId: string, value: number, source: Source): void {
-    this.createWidgetStateProto(widgetId).floatValue = value
+  public setDoubleValue(
+    widgetId: string,
+    value: number,
+    source: Source
+  ): void {
+    this.createWidgetStateProto(widgetId).doubleValue = value
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
@@ -155,9 +159,9 @@ export class WidgetStateManager {
     value: string[],
     source: Source
   ): void {
-    this.createWidgetStateProto(
-      widgetId
-    ).stringArrayValue = StringArray.fromObject({ data: value })
+    this.createWidgetStateProto(widgetId).stringArrayValue = new StringArray({
+      data: value,
+    })
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
@@ -175,28 +179,28 @@ export class WidgetStateManager {
     return undefined
   }
 
-  public getFloatArrayValue(widgetId: string): number[] | undefined {
+  public getDoubleArrayValue(widgetId: string): number[] | undefined {
     const state = this.getWidgetStateProto(widgetId)
     if (
       state != null &&
-      state.value === "floatArrayValue" &&
-      state.floatArrayValue != null &&
-      state.floatArrayValue.value != null
+      state.value === "doubleArrayValue" &&
+      state.doubleArrayValue != null &&
+      state.doubleArrayValue.data != null
     ) {
-      return state.floatArrayValue.value
+      return state.doubleArrayValue.data
     }
 
     return undefined
   }
 
-  public setFloatArrayValue(
+  public setDoubleArrayValue(
     widgetId: string,
     value: number[],
     source: Source
   ): void {
-    this.createWidgetStateProto(
-      widgetId
-    ).floatArrayValue = FloatArray.fromObject({ value })
+    this.createWidgetStateProto(widgetId).doubleArrayValue = new DoubleArray({
+      data: value,
+    })
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
@@ -206,9 +210,9 @@ export class WidgetStateManager {
       state != null &&
       state.value === "intArrayValue" &&
       state.intArrayValue != null &&
-      state.intArrayValue.value != null
+      state.intArrayValue.data != null
     ) {
-      return state.intArrayValue.value.map(requireNumberInt)
+      return state.intArrayValue.data.map(requireNumberInt)
     }
 
     return undefined
@@ -219,8 +223,8 @@ export class WidgetStateManager {
     value: number[],
     source: Source
   ): void {
-    this.createWidgetStateProto(widgetId).intArrayValue = IntArray.fromObject({
-      value,
+    this.createWidgetStateProto(widgetId).intArrayValue = new SInt64Array({
+      data: value,
     })
     this.maybeSendUpdateWidgetsMessage(source)
   }
