@@ -22,6 +22,7 @@ import React, {
   MouseEvent,
   ReactNode,
   useEffect,
+  useCallback,
 } from "react"
 import { StatefulMenu } from "baseui/menu"
 import { Menu } from "@emotion-icons/open-iconic"
@@ -213,7 +214,7 @@ const MenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
 function MainMenu(props: Props): ReactElement {
   const isServerDisconnected = !props.isServerConnected
 
-  const onClickDeployApp = (): void => {
+  const onClickDeployApp = useCallback((): void => {
     const {
       deployParams,
       showDeployError,
@@ -281,7 +282,7 @@ function MainMenu(props: Props): ReactElement {
     if (isDeployErrorModalOpen) closeDialog()
 
     getDeployAppUrl(deployParams)()
-  }
+  }, [props])
 
   useEffect(() => {
     if (!props.deployParams || !props.isDeployErrorModalOpen) return
