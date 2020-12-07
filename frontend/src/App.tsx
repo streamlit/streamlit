@@ -1005,6 +1005,7 @@ export class App extends PureComponent<Props, State> {
                 sendS4AMessage={this.props.s4aCommunication.sendMessage}
                 deployParams={deployParams}
                 showDeployError={this.showDeployError}
+                closeDialog={this.closeDialog}
                 isDeployErrorModalOpen={
                   this.state.dialog?.type === DialogType.DEPLOY_ERROR
                 }

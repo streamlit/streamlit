@@ -106,6 +106,8 @@ export interface Props {
     onContinue?: () => void
   ) => void
 
+  closeDialog: () => void
+
   isDeployErrorModalOpen: boolean
 }
 
@@ -218,7 +220,7 @@ function MainMenu(props: Props): ReactElement {
   console.log("== deployParams", props.deployParams)
 
   const onClickDeployApp = (): void => {
-    const { deployParams, showDeployError } = props
+    const { deployParams, showDeployError, closeDialog } = props
 
     console.log("== deployParams clicked", deployParams)
 
@@ -277,6 +279,7 @@ function MainMenu(props: Props): ReactElement {
 
     console.log("== acaa")
 
+    closeDialog()
     getDeployAppUrl(deployParams)
   }
 
