@@ -23,10 +23,10 @@ const MOCK_DATA = {
   stringValue: "NOT_A_REAL_STRING_VALUE",
   booleanValue: true,
   intValue: 10,
-  floatValue: 0.1,
+  doubleValue: 0.1,
   stringArray: ["foo", "bar", "baz"],
   intArray: [1, 25, 50],
-  floatArray: [0.1, 0.25, 5],
+  doubleArray: [0.1, 0.25, 5],
   jsonValue: {
     foo: "bar",
     baz: "qux",
@@ -70,11 +70,11 @@ describe("Widget State Manager", () => {
   })
 
   it("sets float value correctly", () => {
-    widgetMgr.setFloatValue(MOCK_DATA.widgetId, MOCK_DATA.floatValue, {
+    widgetMgr.setDoubleValue(MOCK_DATA.widgetId, MOCK_DATA.doubleValue, {
       fromUi: true,
     })
-    expect(widgetMgr.getFloatValue(MOCK_DATA.widgetId)).toBe(
-      MOCK_DATA.floatValue
+    expect(widgetMgr.getDoubleValue(MOCK_DATA.widgetId)).toBe(
+      MOCK_DATA.doubleValue
     )
   })
 
@@ -103,11 +103,11 @@ describe("Widget State Manager", () => {
   })
 
   it("sets float array value correctly", () => {
-    widgetMgr.setFloatArrayValue(MOCK_DATA.widgetId, MOCK_DATA.floatArray, {
+    widgetMgr.setDoubleArrayValue(MOCK_DATA.widgetId, MOCK_DATA.doubleArray, {
       fromUi: true,
     })
-    expect(widgetMgr.getFloatArrayValue(MOCK_DATA.widgetId)).toEqual(
-      MOCK_DATA.floatArray
+    expect(widgetMgr.getDoubleArrayValue(MOCK_DATA.widgetId)).toEqual(
+      MOCK_DATA.doubleArray
     )
   })
 
@@ -158,11 +158,11 @@ describe("Widget State Manager", () => {
     })
 
     it("sets float value as JSON correctly", () => {
-      widgetMgr.setJsonValue(MOCK_DATA.widgetId, MOCK_DATA.floatValue, {
+      widgetMgr.setJsonValue(MOCK_DATA.widgetId, MOCK_DATA.doubleValue, {
         fromUi: true,
       })
       expect(widgetMgr.getJsonValue(MOCK_DATA.widgetId)).toBe(
-        JSON.stringify(MOCK_DATA.floatValue)
+        JSON.stringify(MOCK_DATA.doubleValue)
       )
     })
 
@@ -194,11 +194,11 @@ describe("Widget State Manager", () => {
     })
 
     it("sets float array value as JSON correctly", () => {
-      widgetMgr.setJsonValue(MOCK_DATA.widgetId, MOCK_DATA.floatArray, {
+      widgetMgr.setJsonValue(MOCK_DATA.widgetId, MOCK_DATA.doubleArray, {
         fromUi: true,
       })
       expect(widgetMgr.getJsonValue(MOCK_DATA.widgetId)).toBe(
-        JSON.stringify(MOCK_DATA.floatArray)
+        JSON.stringify(MOCK_DATA.doubleArray)
       )
     })
 
