@@ -68,7 +68,7 @@ class Slider extends React.PureComponent<Props, State> {
 
   get initialValue(): number[] {
     const widgetId = this.props.element.id
-    const storedValue = this.props.widgetMgr.getFloatArrayValue(widgetId)
+    const storedValue = this.props.widgetMgr.getDoubleArrayValue(widgetId)
     return storedValue !== undefined ? storedValue : this.props.element.default
   }
 
@@ -96,7 +96,11 @@ class Slider extends React.PureComponent<Props, State> {
 
   private setWidgetValueImmediately = (source: Source): void => {
     const widgetId = this.props.element.id
-    this.props.widgetMgr.setFloatArrayValue(widgetId, this.state.value, source)
+    this.props.widgetMgr.setDoubleArrayValue(
+      widgetId,
+      this.state.value,
+      source
+    )
   }
 
   private getAllSliderRoles = (): Element[] => {

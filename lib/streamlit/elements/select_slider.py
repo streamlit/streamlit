@@ -106,7 +106,7 @@ class SelectSliderMixin:
 
         ui_value = _get_widget_ui_value("slider", slider_proto, user_key=key)
         if ui_value:
-            current_value = getattr(ui_value, "value")
+            current_value = getattr(ui_value, "data")
         else:
             # Widget has not been used; fallback to the original value,
             current_value = slider_value
