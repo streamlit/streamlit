@@ -87,6 +87,6 @@ class MultiSelectMixin:
         multiselect_proto.options[:] = [str(format_func(option)) for option in options]
 
         ui_value = _get_widget_ui_value("multiselect", multiselect_proto, user_key=key)
-        current_value = ui_value.value if ui_value is not None else default_value
+        current_value = ui_value.data if ui_value is not None else default_value
         return_value = [options[i] for i in current_value]
         return dg._enqueue("multiselect", multiselect_proto, return_value)  # type: ignore

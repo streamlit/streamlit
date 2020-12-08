@@ -144,23 +144,25 @@ class FileUploader extends React.PureComponent<Props, State> {
     acceptedFiles.map(this.uploadFile)
   }
 
-  private handleFile = (file: ExtendedFile, index: number): void => {
+  private handleFile = (file: ExtendedFile, index: number): ExtendedFile => {
     // Add an unique ID to each file for server and client to sync on
     file.id = `${index}${new Date().getTime()}`
     // Add a cancel token to cancel file upload
     file.cancelToken = axios.CancelToken.source()
     this.setState(state => ({ files: [file, ...state.files] }))
+    return file
   }
 
   private uploadFile = (file: ExtendedFile, index: number): void => {
     file.progress = 1
     file.status = FileStatuses.UPLOADING
-    this.handleFile(file, index)
+    const updatedFile = this.handleFile(file, index)
     this.props.uploadClient
       .uploadFiles(
         this.props.element.id,
         [file],
-        e => this.onUploadProgress(e, file),
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        e => this.onUploadProgress(e, updatedFile.id!),
         file.cancelToken
           ? file.cancelToken.token
           : axios.CancelToken.source().token,
@@ -284,19 +286,23 @@ class FileUploader extends React.PureComponent<Props, State> {
 
   private onUploadProgress = (
     progressEvent: ProgressEvent,
-    file: ExtendedFile
+    fileId: string
   ): void => {
-    file.progress = Math.round(
+    const latestProgress = Math.round(
       (progressEvent.loaded * 100) / progressEvent.total
     )
+    const latestFile = this.state.files.find(file => file.id === fileId)
+    if (latestFile && latestFile.progress !== latestProgress) {
+      latestFile.progress = latestProgress
 
-    this.setState(state => {
-      const files = state.files.map(uploadingFile =>
-        uploadingFile.id === file.id ? file : uploadingFile
-      )
+      this.setState(state => {
+        const files = state.files.map(uploadingFile =>
+          uploadingFile.id === fileId ? latestFile : uploadingFile
+        )
 
-      return { files }
-    })
+        return { files }
+      })
+    }
   }
 
   public render = (): React.ReactNode => {

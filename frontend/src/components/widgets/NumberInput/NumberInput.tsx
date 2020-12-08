@@ -142,7 +142,7 @@ class NumberInput extends React.PureComponent<Props, State> {
       if (this.isIntData()) {
         widgetMgr.setIntValue(widgetId, valueToBeSaved, source)
       } else {
-        widgetMgr.setFloatValue(widgetId, valueToBeSaved, source)
+        widgetMgr.setDoubleValue(widgetId, valueToBeSaved, source)
       }
 
       this.setState({

@@ -16,6 +16,8 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/Common.proto";
+
 // Represents a pandas DataFrame.
 message DataFrame {
   // The data in the array.
@@ -105,26 +107,6 @@ message Int64Index {
 // https://pandas.pydata.org/pandas-docs/stable/generated/pandas.Int64Index.html
 message Float64Index {
   DoubleArray data = 1;
-}
-
-message StringArray {
-  repeated string data = 1;
-}
-
-message DoubleArray {
-  repeated double data = 1;
-}
-
-message Int32Array {
-  repeated int32 data = 1;
-}
-
-message Int64Array {
-  repeated int64 data = 1;
-}
-
-message UInt32Array {
-  repeated uint32 data = 1;
 }
 
 message CSSStyle {

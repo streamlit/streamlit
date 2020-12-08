@@ -24,13 +24,13 @@ import pytest
 import streamlit.elements.data_frame_proto as data_frame_proto
 
 from google.protobuf import json_format
+
+from streamlit.proto.Common_pb2 import Int32Array
 from streamlit.proto.DataFrame_pb2 import AnyArray
 from streamlit.proto.DataFrame_pb2 import CSSStyle
 from streamlit.proto.DataFrame_pb2 import CellStyle
 from streamlit.proto.DataFrame_pb2 import CellStyleArray
-from streamlit.proto.DataFrame_pb2 import DataFrame
 from streamlit.proto.DataFrame_pb2 import Index
-from streamlit.proto.DataFrame_pb2 import Int32Array
 from streamlit.proto.DataFrame_pb2 import Table
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart
