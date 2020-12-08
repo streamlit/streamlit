@@ -26,7 +26,7 @@ message Block {
   bool allow_empty = 5;
 
   message Vertical {
-    // Protos need to have some content in them
+    // Protos cannot be empty, so we set a dummy field
     bool unused = 1;
   }
 
