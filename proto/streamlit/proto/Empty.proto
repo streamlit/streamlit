@@ -18,5 +18,6 @@ syntax = "proto3";
 
 // A python empty.
 message Empty {
+  // Protos cannot be empty, so we set a dummy field
   bool unused = 1;
 }
