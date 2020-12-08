@@ -26,6 +26,7 @@ message Block {
   bool allow_empty = 5;
 
   message Vertical {
+    // Protos need to have some content in them
     bool unused = 1;
   }
 
