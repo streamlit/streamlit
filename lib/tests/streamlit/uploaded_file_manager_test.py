@@ -16,11 +16,11 @@
 
 import unittest
 
-from streamlit.uploaded_file_manager import UploadedFile
 from streamlit.uploaded_file_manager import UploadedFileManager
+from streamlit.uploaded_file_manager import UploadedFileRec
 
-file1 = UploadedFile(id="id1", name="file1", type="type", data=b"file1")
-file2 = UploadedFile(id="id2", name="file2", type="type", data=b"file2")
+file1 = UploadedFileRec(id="id1", name="file1", type="type", data=b"file1")
+file2 = UploadedFileRec(id="id2", name="file2", type="type", data=b"file2")
 
 
 class UploadedFileManagerTest(unittest.TestCase):

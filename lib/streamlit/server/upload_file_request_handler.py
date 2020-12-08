@@ -18,7 +18,7 @@ from typing import List
 import tornado.httputil
 import tornado.web
 
-from streamlit.uploaded_file_manager import UploadedFile
+from streamlit.uploaded_file_manager import UploadedFileRec
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.report import Report
@@ -97,8 +97,8 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         return arg[0].decode("utf-8")
 
     def post(self, **kwargs):
-        args = {}  # type: Dict[str, List[bytes]]
-        files = {}  # type: Dict[str, List[Any]]
+        args: Dict[str, List[bytes]] = {}
+        files: Dict[str, List[Any]] = {}
 
         tornado.httputil.parse_body_arguments(
             content_type=self.request.headers["Content-Type"],
@@ -119,11 +119,11 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         )
 
         # Create an UploadedFile object for each file.
-        uploaded_files = []
+        uploaded_files: List[UploadedFileRec] = []
         for id, flist in files.items():
             for file in flist:
                 uploaded_files.append(
-                    UploadedFile(
+                    UploadedFileRec(
                         id=id,
                         name=file["filename"],
                         type=file["content_type"],
