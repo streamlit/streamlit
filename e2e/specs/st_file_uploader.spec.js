@@ -97,6 +97,9 @@ describe("st.file_uploader", () => {
     // Yes, this actually is the recommended way to load multiple fixtures
     // in Cypress (!!) using Cypress.Promise.all is buggy. See:
     // https://github.com/cypress-io/cypress-example-recipes/blob/master/examples/fundamentals__fixtures/cypress/integration/multiple-fixtures-spec.js
+    // Why can’t I use async / await?
+    // If you’re a modern JS programmer you might hear “asynchronous” and think: why can’t I just use async/await instead of learning some proprietary API?
+    // https://docs.cypress.io/guides/core-concepts/introduction-to-cypress.html#Commands-Are-Asynchronous
     cy.fixture(fileName1).then(file1 => {
       cy.fixture(fileName2).then(file2 => {
         const files = [
@@ -154,9 +157,12 @@ describe("st.file_uploader", () => {
     const fileName1 = "file1.txt";
     const fileName2 = "file2.txt";
 
-    // Yes, this actually is the recommended way to load multiple fixtures
+    // Yes, this is the recommended way to load multiple fixtures
     // in Cypress (!!) using Cypress.Promise.all is buggy. See:
     // https://github.com/cypress-io/cypress-example-recipes/blob/master/examples/fundamentals__fixtures/cypress/integration/multiple-fixtures-spec.js
+    // Why can’t I use async / await?
+    // If you’re a modern JS programmer you might hear “asynchronous” and think: why can’t I just use async/await instead of learning some proprietary API?
+    // https://docs.cypress.io/guides/core-concepts/introduction-to-cypress.html#Commands-Are-Asynchronous
     cy.fixture(fileName1).then(file1 => {
       cy.fixture(fileName2).then(file2 => {
         const files = [
@@ -170,7 +176,12 @@ describe("st.file_uploader", () => {
             force: true,
             subjectType: "drag-n-drop",
             events: ["dragenter", "drop"]
-          })
+          });
+        // Give some time for the first file to upload
+        cy.wait(500);
+
+        cy.get("[data-testid='stFileUploadDropzone']")
+          .eq(1)
           .attachFile(files[1], {
             force: true,
             subjectType: "drag-n-drop",
