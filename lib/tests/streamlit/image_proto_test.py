@@ -94,22 +94,10 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (
-                IMAGES["img_32_32_3_rgb"]["np"],
-                "png",
-            ),
-            (
-                IMAGES["img_32_32_3_bgr"]["np"],
-                "png",
-            ),
-            (
-                IMAGES["img_64_64_rgb"]["np"],
-                "jpeg",
-            ),
-            (
-                IMAGES["img_32_32_3_rgba"]["np"],
-                "jpeg",
-            ),
+            (IMAGES["img_32_32_3_rgb"]["np"], "png",),
+            (IMAGES["img_32_32_3_bgr"]["np"], "png",),
+            (IMAGES["img_64_64_rgb"]["np"], "jpeg",),
+            (IMAGES["img_32_32_3_rgba"]["np"], "jpeg",),
         ]
     )
     def test_marshall_images(self, data_in, format):
@@ -143,38 +131,14 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (
-                IMAGES["img_32_32_3_rgb"]["np"],
-                "jpeg",
-            ),
-            (
-                IMAGES["img_32_32_3_bgr"]["np"],
-                "jpeg",
-            ),
-            (
-                IMAGES["img_64_64_rgb"]["np"],
-                "jpeg",
-            ),
-            (
-                IMAGES["img_32_32_3_rgba"]["np"],
-                "png",
-            ),
-            (
-                IMAGES["img_32_32_3_rgb"]["pil"],
-                "jpeg",
-            ),
-            (
-                IMAGES["img_32_32_3_bgr"]["pil"],
-                "jpeg",
-            ),
-            (
-                IMAGES["img_64_64_rgb"]["pil"],
-                "jpeg",
-            ),
-            (
-                IMAGES["img_32_32_3_rgba"]["pil"],
-                "png",
-            ),
+            (IMAGES["img_32_32_3_rgb"]["np"], "jpeg",),
+            (IMAGES["img_32_32_3_bgr"]["np"], "jpeg",),
+            (IMAGES["img_64_64_rgb"]["np"], "jpeg",),
+            (IMAGES["img_32_32_3_rgba"]["np"], "png",),
+            (IMAGES["img_32_32_3_rgb"]["pil"], "jpeg",),
+            (IMAGES["img_32_32_3_bgr"]["pil"], "jpeg",),
+            (IMAGES["img_64_64_rgb"]["pil"], "jpeg",),
+            (IMAGES["img_32_32_3_rgba"]["pil"], "png",),
         ]
     )
     def test_marshall_images_with_auto_output_format(self, data_in, expected_format):
@@ -189,30 +153,12 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (
-                IMAGES["img_32_32_3_rgb"]["np"],
-                "/media/",
-            ),
-            (
-                "https://streamlit.io/test.png",
-                "https://streamlit.io/test.png",
-            ),
-            (
-                "<svg fake></svg>",
-                "data:image/svg+xml,<svg fake></svg>",
-            ),
-            (
-                "\n<svg fake></svg>",
-                "data:image/svg+xml,\n<svg fake></svg>",
-            ),
-            (
-                "🦈",
-                "🦈",
-            ),
-            (
-                ":shark:",
-                ":shark:",
-            ),
+            (IMAGES["img_32_32_3_rgb"]["np"], "/media/",),
+            ("https://streamlit.io/test.png", "https://streamlit.io/test.png",),
+            ("<svg fake></svg>", "data:image/svg+xml,<svg fake></svg>",),
+            ("\n<svg fake></svg>", "data:image/svg+xml,\n<svg fake></svg>",),
+            ("🦈", "🦈",),
+            (":shark:", ":shark:",),
         ]
     )
     def test_image_to_url(self, image, expected_prefix):

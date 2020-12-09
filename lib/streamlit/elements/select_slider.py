@@ -6,12 +6,7 @@ from .utils import _get_widget_ui_value
 
 class SelectSliderMixin:
     def select_slider(
-        dg,
-        label,
-        options=[],
-        value=None,
-        format_func=str,
-        key=None,
+        dg, label, options=[], value=None, format_func=str, key=None,
     ):
         """
         Display a slider widget to select items from a list.

@@ -54,9 +54,7 @@ if len(files) == 0:
 
 else:
     filename = st.selectbox(
-        "Select a video file from your home directory (%s) to play" % avdir,
-        files,
-        0,
+        "Select a video file from your home directory (%s) to play" % avdir, files, 0,
     )
 
     st.video(os.path.join(avdir, filename))

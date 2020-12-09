@@ -265,10 +265,7 @@ Offending object:
 ```py
 %(object)s
 ```"""
-            % {
-                "type": type(df),
-                "object": df,
-            }
+            % {"type": type(df), "object": df,}
         )
 
 

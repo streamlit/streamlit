@@ -45,10 +45,7 @@ class CustomComponent:
     """A Custom Component declaration."""
 
     def __init__(
-        self,
-        name: str,
-        path: Optional[str] = None,
-        url: Optional[str] = None,
+        self, name: str, path: Optional[str] = None, url: Optional[str] = None,
     ):
         if (path is None and url is None) or (path is not None and url is not None):
             raise StreamlitAPIException(
@@ -67,21 +64,13 @@ class CustomComponent:
         return os.path.abspath(self.path)
 
     def __call__(
-        self,
-        *args,
-        default: Any = None,
-        key: Optional[str] = None,
-        **kwargs,
+        self, *args, default: Any = None, key: Optional[str] = None, **kwargs,
     ) -> Any:
         """An alias for create_instance."""
         return self.create_instance(*args, default=default, key=key, **kwargs)
 
     def create_instance(
-        self,
-        *args,
-        default: Any = None,
-        key: Optional[str] = None,
-        **kwargs,
+        self, *args, default: Any = None, key: Optional[str] = None, **kwargs,
     ) -> Any:
         """Create a new instance of the component.
 
@@ -215,9 +204,7 @@ class CustomComponent:
 
 
 def declare_component(
-    name: str,
-    path: Optional[str] = None,
-    url: Optional[str] = None,
+    name: str, path: Optional[str] = None, url: Optional[str] = None,
 ) -> CustomComponent:
     """Create and register a custom component.
 
@@ -393,9 +380,7 @@ class ComponentRegistry:
 
         if existing is not None and component != existing:
             LOGGER.warning(
-                "%s overriding previously-registered %s",
-                component,
-                existing,
+                "%s overriding previously-registered %s", component, existing,
             )
 
         LOGGER.debug("Registered component %s", component)

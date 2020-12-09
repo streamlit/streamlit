@@ -375,8 +375,7 @@ class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
             st.markdown("Level 1 with")
             msg = self.get_message_from_queue()
             self.assertEqual(
-                make_delta_path(RootContainer.MAIN, (0,), 1),
-                msg.metadata.delta_path,
+                make_delta_path(RootContainer.MAIN, (0,), 1), msg.metadata.delta_path,
             )
 
 

@@ -18,11 +18,7 @@ from typing import Optional
 
 class IframeMixin:
     def _iframe(
-        dg,
-        src,
-        width=None,
-        height=None,
-        scrolling=False,
+        dg, src, width=None, height=None, scrolling=False,
     ):
         """Load a remote URL in an iframe.
 
@@ -42,20 +38,12 @@ class IframeMixin:
         """
         iframe_proto = IFrameProto()
         marshall(
-            iframe_proto,
-            src=src,
-            width=width,
-            height=height,
-            scrolling=scrolling,
+            iframe_proto, src=src, width=width, height=height, scrolling=scrolling,
         )
         return dg._enqueue("iframe", iframe_proto)  # type: ignore
 
     def _html(
-        dg,
-        html,
-        width=None,
-        height=None,
-        scrolling=False,
+        dg, html, width=None, height=None, scrolling=False,
     ):
         """Display an HTML string in an iframe.
 
@@ -75,11 +63,7 @@ class IframeMixin:
         """
         iframe_proto = IFrameProto()
         marshall(
-            iframe_proto,
-            srcdoc=html,
-            width=width,
-            height=height,
-            scrolling=scrolling,
+            iframe_proto, srcdoc=html, width=width, height=height, scrolling=scrolling,
         )
         return dg._enqueue("iframe", iframe_proto)  # type: ignore
 

@@ -520,10 +520,8 @@ def require_widgets_deltas(
 
     # If we get here, at least 1 runner hasn't yet completed before our
     # timeout. Create an error string for debugging.
-    err_string = (
-        "require_widgets_deltas() timed out after {}s ({}/{} runners complete)".format(
-            timeout, num_complete, len(runners)
-        )
+    err_string = "require_widgets_deltas() timed out after {}s ({}/{} runners complete)".format(
+        timeout, num_complete, len(runners)
     )
     for runner in runners:
         if len(runner.deltas()) < NUM_DELTAS:

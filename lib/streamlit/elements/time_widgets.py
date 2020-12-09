@@ -61,12 +61,7 @@ class TimeWidgetsMixin:
         return dg._enqueue("time_input", time_input_proto, current_value)  # type: ignore
 
     def date_input(
-        dg,
-        label,
-        value=None,
-        min_value=None,
-        max_value=None,
-        key=None,
+        dg, label, value=None, min_value=None, max_value=None, key=None,
     ):
         """Display a date input widget.
 

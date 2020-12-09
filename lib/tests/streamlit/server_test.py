@@ -132,8 +132,7 @@ class ServerTest(ServerTestCase):
             session_infos = list(self.server._session_info_by_id.values())
             self.assertEqual(2, len(session_infos))
             self.assertNotEqual(
-                session_infos[0].session.id,
-                session_infos[1].session.id,
+                session_infos[0].session.id, session_infos[1].session.id,
             )
 
             # Close the first

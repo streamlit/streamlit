@@ -70,16 +70,14 @@ class DeclareComponentTest(unittest.TestCase):
         from component_test_data import component as init_component
 
         self.assertEqual(
-            "component_test_data.foo",
-            init_component.name,
+            "component_test_data.foo", init_component.name,
         )
 
         # Test a component defined in a module within a package
         from component_test_data.outer_module import component as outer_module_component
 
         self.assertEqual(
-            "component_test_data.outer_module.foo",
-            outer_module_component.name,
+            "component_test_data.outer_module.foo", outer_module_component.name,
         )
 
         # Test a component defined in module within a nested package
@@ -88,8 +86,7 @@ class DeclareComponentTest(unittest.TestCase):
         )
 
         self.assertEqual(
-            "component_test_data.nested.inner_module.foo",
-            inner_module_component.name,
+            "component_test_data.nested.inner_module.foo", inner_module_component.name,
         )
 
     def test_only_path(self):
@@ -269,12 +266,10 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         self.assertJSONEqual({"key": None, "default": None}, proto.json_args)
         self.assertEqual(2, len(proto.special_args))
         self.assertEqual(
-            _serialize_bytes_arg("foo", b"foo"),
-            proto.special_args[0],
+            _serialize_bytes_arg("foo", b"foo"), proto.special_args[0],
         )
         self.assertEqual(
-            _serialize_bytes_arg("bar", b"bar"),
-            proto.special_args[1],
+            _serialize_bytes_arg("bar", b"bar"), proto.special_args[1],
         )
 
     def test_mixed_args(self):
@@ -292,8 +287,7 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
 
         self.assertEqual(self.test_component.name, proto.component_name)
         self.assertJSONEqual(
-            {"string_arg": "string", "key": None, "default": None},
-            proto.json_args,
+            {"string_arg": "string", "key": None, "default": None}, proto.json_args,
         )
         self.assertEqual(2, len(proto.special_args))
         self.assertEqual(_serialize_dataframe_arg("df_arg", df), proto.special_args[0])
@@ -336,8 +330,7 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.component_instance
         self.assertJSONEqual({"key": None}, proto.json_args)
         self.assertEqual(
-            _serialize_bytes_arg("default", b"bytes"),
-            proto.special_args[0],
+            _serialize_bytes_arg("default", b"bytes"), proto.special_args[0],
         )
 
     def test_df_default(self):
@@ -356,8 +349,7 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.component_instance
         self.assertJSONEqual({"key": None}, proto.json_args)
         self.assertEqual(
-            _serialize_dataframe_arg("default", df),
-            proto.special_args[0],
+            _serialize_dataframe_arg("default", df), proto.special_args[0],
         )
 
     def assertJSONEqual(self, a, b):
@@ -425,8 +417,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         self.assertEqual(404, response.code)
         self.assertEqual(
-            b"components_test.test read error: Invalid content",
-            response.body,
+            b"components_test.test read error: Invalid content", response.body,
         )
 
 
