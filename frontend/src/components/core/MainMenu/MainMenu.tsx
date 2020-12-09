@@ -222,12 +222,21 @@ function MainMenu(props: Props): ReactElement {
       isDeployErrorModalOpen,
     } = props
 
+    if (!deployParams) return
+
+    const {
+      repository,
+      branch,
+      module,
+      isHeadDetached,
+      untrackedFiles,
+      uncommittedFiles,
+      isAhead,
+    } = deployParams
+
     if (
-      (!deployParams ||
-        !deployParams.repository ||
-        !deployParams.branch ||
-        !deployParams.module) &&
-      !deployParams?.isHeadDetached
+      (!deployParams || !repository || !branch || !module) &&
+      !isHeadDetached
     ) {
       const dialog = NoRepositoryDetected()
 
@@ -236,7 +245,7 @@ function MainMenu(props: Props): ReactElement {
       return
     }
 
-    if (deployParams?.isHeadDetached) {
+    if (isHeadDetached) {
       const dialog = DetachedHead()
 
       showDeployError(dialog.title, dialog.body)
@@ -244,26 +253,23 @@ function MainMenu(props: Props): ReactElement {
       return
     }
 
-    if (
-      deployParams?.module &&
-      deployParams?.untrackedFiles?.includes(deployParams.module)
-    ) {
-      const dialog = ModuleIsNotAdded(deployParams.module)
+    if (module && untrackedFiles?.includes(module)) {
+      const dialog = ModuleIsNotAdded(module)
 
       showDeployError(dialog.title, dialog.body)
 
       return
     }
 
-    if (deployParams?.module && deployParams?.uncommittedFiles?.length) {
-      const dialog = UncommittedChanges(deployParams.module)
+    if (module && uncommittedFiles?.length) {
+      const dialog = UncommittedChanges(module)
 
       showDeployError(dialog.title, dialog.body)
 
       return
     }
 
-    if (deployParams?.isAhead) {
+    if (isAhead) {
       const dialog = RepoIsAhead()
 
       showDeployError(dialog.title, dialog.body, getDeployAppUrl(deployParams))
@@ -271,7 +277,7 @@ function MainMenu(props: Props): ReactElement {
       return
     }
 
-    if (deployParams?.untrackedFiles?.length) {
+    if (untrackedFiles?.length) {
       const dialog = UntrackedFiles()
 
       showDeployError(dialog.title, dialog.body, getDeployAppUrl(deployParams))
