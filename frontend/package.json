@@ -102,7 +102,7 @@
     "xxhashjs": "^0.2.2"
   },
   "devDependencies": {
-    "@craco/craco": "^5.6.4",
+    "@craco/craco": "^5.9.0",
     "@deck.gl/json": "^8.2.5",
     "@types/classnames": "^2.2.10",
     "@types/clipboard": "^2.0.1",
