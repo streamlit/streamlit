@@ -166,7 +166,7 @@
     "pretty-quick": "^1.11.1",
     "react-scripts": "3.4.0",
     "scss-to-json": "^2.0.0",
-    "source-map-explorer": "^2.4.2",
+    "source-map-explorer": "^2.5.1",
     "start-server-and-test": "^1.11.2",
     "timezone-mock": "^1.1.1",
     "typescript": "^3.9.5"
