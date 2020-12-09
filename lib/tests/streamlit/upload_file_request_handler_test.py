@@ -14,20 +14,26 @@
 
 """UploadFileHandler.py unit tests"""
 
+from typing import NamedTuple
+
 import requests
 import tornado.gen
 import tornado.testing
 import tornado.web
 import tornado.websocket
-
 from parameterized import parameterized
 
-from streamlit.uploaded_file_manager import UploadedFile
-from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.logger import get_logger
 from streamlit.server.upload_file_request_handler import UploadFileRequestHandler
+from streamlit.uploaded_file_manager import UploadedFileManager
+from streamlit.uploaded_file_manager import UploadedFileRec
 
 LOGGER = get_logger(__name__)
+
+
+class MockFile(NamedTuple):
+    name: str
+    data: bytes
 
 
 def _get_filename(file):
@@ -70,9 +76,9 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
     def test_upload_one_file(self):
         """Uploading a file should populate our file_mgr."""
-        file = UploadedFile("id", "image.png", "type", b"123")
+        file = MockFile("filename", b"123")
         params = {
-            file.name: file,
+            file.name: file.data,
             "sessionId": (None, "fooReport"),
             "widgetId": (None, "barWidget"),
             "totalFiles": (None, "1"),
@@ -80,22 +86,22 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         response = self._upload_files(params)
         self.assertEqual(200, response.code)
         self.assertEqual(
-            [file.getvalue()],
+            [(file.name, file.data)],
             [
-                file.getvalue()
-                for file in self.file_mgr.get_files("fooReport", "barWidget")
+                (rec.name, rec.data)
+                for rec in self.file_mgr.get_files("fooReport", "barWidget")
             ],
         )
 
     def test_upload_multiple_files(self):
-        file1 = UploadedFile("id1", "image1.png", "type", b"123")
-        file2 = UploadedFile("id2", "image2.png", "type", b"456")
-        file3 = UploadedFile("id3", "image3.png", "type", b"789")
+        file_1 = MockFile("file1", b"123")
+        file_2 = MockFile("file2", b"456")
+        file_3 = MockFile("file3", b"789")
 
         params = {
-            file1.name: file1,
-            file2.name: file2,
-            file3.name: file3,
+            file_1.name: file_1.data,
+            file_2.name: file_2.data,
+            file_3.name: file_3.data,
             "sessionId": (None, "fooReport"),
             "widgetId": (None, "barWidget"),
             "totalFiles": (None, "1"),
@@ -103,11 +109,11 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         response = self._upload_files(params)
         self.assertEqual(200, response.code)
         self.assertEqual(
-            sorted([file1.name, file2.name, file3.name]),
+            sorted([file_1, file_2, file_3]),
             sorted(
                 [
-                    file.name
-                    for file in self.file_mgr.get_files("fooReport", "barWidget")
+                    (rec.name, rec.data)
+                    for rec in self.file_mgr.get_files("fooReport", "barWidget")
                 ]
             ),
         )
@@ -139,8 +145,8 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
     def test_delete_file(self):
         """File should be able to be deleted successfully"""
-        file1 = UploadedFile("1234", "name", "type", b"1234")
-        file2 = UploadedFile("4567", "name", "type", b"1234")
+        file1 = UploadedFileRec("1234", "name", "type", b"1234")
+        file2 = UploadedFileRec("4567", "name", "type", b"1234")
 
         self.file_mgr.add_files("session1", "widget1", [file1])
         self.file_mgr.add_files("session2", "widget2", [file2])
@@ -152,8 +158,8 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
     def test_delete_file_across_sessions(self):
         """Deleting file param mismatch should fail with 404 status."""
-        file1 = UploadedFile("1234", "name", "type", b"1234")
-        file2 = UploadedFile("4567", "name", "type", b"1234")
+        file1 = UploadedFileRec("1234", "name", "type", b"1234")
+        file2 = UploadedFileRec("4567", "name", "type", b"1234")
 
         self.file_mgr.add_files("session1", "widget1", [file1])
         self.file_mgr.add_files("session2", "widget2", [file2])

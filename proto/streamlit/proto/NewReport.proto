@@ -88,6 +88,12 @@ message UserInfo {
 
 // Data that identifies the Streamlit app's environment.
 // Does not change over the app lifetime.
+//
+// NB: unlike most of our protobuf data, the EnvironmentInfo message (and all
+// its ancestors' IDs) *must* maintain backward- and forward-compatibility.
+// When a Streamlit instance is updated to a new version, all connected clients
+// will be outdated. Those clients need to be able to read the
+// `streamlit_version` property so they can auto-update to the new version.
 message EnvironmentInfo {
   string streamlit_version = 1;
   string python_version = 2;

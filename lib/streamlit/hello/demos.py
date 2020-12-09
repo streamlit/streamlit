@@ -102,31 +102,32 @@ def mapping_demo():
                 width_max_pixels=30,
             ),
         }
+        st.sidebar.markdown('### Map Layers')
+        selected_layers = [
+            layer for layer_name, layer in ALL_LAYERS.items()
+            if st.sidebar.checkbox(layer_name, True)]
+        if selected_layers:
+            st.pydeck_chart(pdk.Deck(
+                map_style="mapbox://styles/mapbox/light-v9",
+                initial_view_state={"latitude": 37.76,
+                                    "longitude": -122.4, "zoom": 11, "pitch": 50},
+                layers=selected_layers,
+            ))
+        else:
+            st.error("Please choose at least one layer above.")
     except urllib.error.URLError as e:
         st.error("""
             **This demo requires internet access.**
 
             Connection error: %s
         """ % e.reason)
-        return
-
-    st.sidebar.markdown('### Map Layers')
-    selected_layers = [
-        layer for layer_name, layer in ALL_LAYERS.items()
-        if st.sidebar.checkbox(layer_name, True)]
-    if selected_layers:
-        st.pydeck_chart(pdk.Deck(
-            map_style="mapbox://styles/mapbox/light-v9",
-            initial_view_state={"latitude": 37.76, "longitude": -122.4, "zoom": 11, "pitch": 50},
-            layers=selected_layers,
-        ))
-    else:
-        st.error("Please choose at least one layer above.")
 # fmt: on
 
 # Turn off black formatting for this function to present the user with more
 # compact code.
 # fmt: off
+
+
 def fractal_demo():
     import streamlit as st
     import numpy as np
@@ -228,6 +229,30 @@ def data_frame_demo():
 
     try:
         df = get_UN_data()
+        countries = st.multiselect(
+            "Choose countries", list(df.index), ["China", "United States of America"]
+        )
+        if not countries:
+            st.error("Please select at least one country.")
+        else:
+            data = df.loc[countries]
+            data /= 1000000.0
+            st.write("### Gross Agricultural Production ($B)", data.sort_index())
+
+            data = data.T.reset_index()
+            data = pd.melt(data, id_vars=["index"]).rename(
+                columns={"index": "year", "value": "Gross Agricultural Product ($B)"}
+            )
+            chart = (
+                alt.Chart(data)
+                .mark_area(opacity=0.3)
+                .encode(
+                    x="year:T",
+                    y=alt.Y("Gross Agricultural Product ($B):Q", stack=None),
+                    color="Region:N",
+                )
+            )
+            st.altair_chart(chart, use_container_width=True)
     except urllib.error.URLError as e:
         st.error(
             """
@@ -237,33 +262,6 @@ def data_frame_demo():
         """
             % e.reason
         )
-        return
-
-    countries = st.multiselect(
-        "Choose countries", list(df.index), ["China", "United States of America"]
-    )
-    if not countries:
-        st.error("Please select at least one country.")
-        return
-
-    data = df.loc[countries]
-    data /= 1000000.0
-    st.write("### Gross Agricultural Production ($B)", data.sort_index())
-
-    data = data.T.reset_index()
-    data = pd.melt(data, id_vars=["index"]).rename(
-        columns={"index": "year", "value": "Gross Agricultural Product ($B)"}
-    )
-    chart = (
-        alt.Chart(data)
-        .mark_area(opacity=0.3)
-        .encode(
-            x="year:T",
-            y=alt.Y("Gross Agricultural Product ($B):Q", stack=None),
-            color="Region:N",
-        )
-    )
-    st.altair_chart(chart, use_container_width=True)
 
 
 # fmt: on

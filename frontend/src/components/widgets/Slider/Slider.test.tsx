@@ -68,7 +68,7 @@ describe("Slider widget", () => {
     jest.runAllTimers()
     wrapper.update()
 
-    expect(props.widgetMgr.setFloatArrayValue).toHaveBeenCalledWith(
+    expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
       props.element.id,
       [5],
       { fromUi: false }
@@ -132,7 +132,7 @@ describe("Slider widget", () => {
       jest.runAllTimers()
       wrapper.update()
 
-      expect(props.widgetMgr.setFloatArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
         props.element.id,
         [10],
         { fromUi: true }
@@ -240,7 +240,7 @@ describe("Slider widget", () => {
       jest.runAllTimers()
       wrapper.update()
 
-      expect(props.widgetMgr.setFloatArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
         props.element.id,
         [1, 10],
         {
