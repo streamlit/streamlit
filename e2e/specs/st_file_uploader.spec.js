@@ -20,6 +20,8 @@ describe("st.file_uploader", () => {
     Cypress.Cookies.defaults({
       preserve: ["_xsrf"]
     });
+    cy.server();
+    cy.route("POST", "**/upload_file").as("uploadFile");
 
     cy.visit("http://localhost:3000/");
 
@@ -177,8 +179,10 @@ describe("st.file_uploader", () => {
             subjectType: "drag-n-drop",
             events: ["dragenter", "drop"]
           });
-        // Give some time for the first file to upload
-        cy.wait(500);
+
+        cy.get(".uploadedFileName").each(uploadedFileName => {
+          cy.get(uploadedFileName).should("have.text", fileName1);
+        });
 
         cy.get("[data-testid='stFileUploadDropzone']")
           .eq(1)
@@ -187,6 +191,8 @@ describe("st.file_uploader", () => {
             subjectType: "drag-n-drop",
             events: ["dragenter", "drop"]
           });
+
+        cy.wait("@uploadFile");
 
         // The widget should show the names of the uploaded files in reverse
         // order
@@ -198,7 +204,7 @@ describe("st.file_uploader", () => {
         // The script should have printed the contents of the two files
         // into an st.text. (This tests that the upload actually went
         // through.)
-        const content = [file1, file2].sort().join("\n");
+        const content = [file1, file2].join("\n");
         cy.get("[data-testid='stText']")
           .last()
           .should("have.text", content);
