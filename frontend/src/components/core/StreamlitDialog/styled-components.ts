@@ -30,6 +30,6 @@ export const StyledShortcutLabel = styled.span(({ theme }) => ({
 
 export const StyledDeployErrorContent = styled.div(({ theme }) => ({
   "& > ul": {
-    paddingLeft: "1rem",
+    paddingLeft: "1.4rem",
   },
 }))
