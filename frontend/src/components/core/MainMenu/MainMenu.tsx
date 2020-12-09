@@ -279,6 +279,7 @@ function MainMenu(props: Props): ReactElement {
       return
     }
 
+    // We should close the modal when we try again and everything goes fine
     if (isDeployErrorModalOpen) closeDialog()
 
     getDeployAppUrl(deployParams)()

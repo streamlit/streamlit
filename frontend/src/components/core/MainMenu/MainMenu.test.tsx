@@ -28,7 +28,7 @@ import {
   UncommittedChanges,
   RepoIsAhead,
   UntrackedFiles,
-} from "../StreamlitDialog/DeployErrorDialogs"
+} from "components/core/StreamlitDialog/DeployErrorDialogs"
 
 import MainMenu, { Props } from "./MainMenu"
 
@@ -47,6 +47,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
   isDeployErrorModalOpen: false,
   showDeployError: jest.fn(),
   reloadReportMessage: jest.fn(),
+  closeDialog: jest.fn(),
   ...extend,
 })
 

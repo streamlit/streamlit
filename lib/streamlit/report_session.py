@@ -361,8 +361,6 @@ class ReportSession(object):
             }
         except:
             # Issues can arise based on the git structure
-            # (e.g. if branch is in DETACHED HEAD state,
-            # git is not installed, etc)
             # In this case, catch any errors
             return None
 
