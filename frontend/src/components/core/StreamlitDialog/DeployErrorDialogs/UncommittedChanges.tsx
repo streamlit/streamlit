@@ -7,7 +7,7 @@ function UncommittedChanges(module: string): IDeployErrorDialog {
     body: (
       <>
         <p>
-          The file <strong>{module}</strong> has uncommitted changes.
+          The file <code>{module}</code> has uncommitted changes.
         </p>
         <p>Please commit the latest changes and push to Github to continue.</p>
       </>

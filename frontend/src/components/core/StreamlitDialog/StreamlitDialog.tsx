@@ -414,7 +414,7 @@ function deployErrorDialog({
       </ModalBody>
       <ModalFooter>
         <ModalButton kind={Kind.SECONDARY} onClick={onTryAgain}>
-          Try Again
+          Try again
         </ModalButton>
         <ModalButton kind={Kind.PRIMARY} onClick={handlePrimaryButton}>
           {onContinue ? "Continue anyway" : "Close"}

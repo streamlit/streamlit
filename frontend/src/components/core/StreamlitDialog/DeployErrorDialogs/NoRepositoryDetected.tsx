@@ -1,5 +1,5 @@
 import React from "react"
-import { ONLINE_DOCS_URL } from "urls"
+import { ONLINE_DOCS_URL, TEAMS_URL } from "urls"
 import { IDeployErrorDialog } from "./types"
 
 function NoRepositoryDetected(): IDeployErrorDialog {
@@ -23,8 +23,11 @@ function NoRepositoryDetected(): IDeployErrorDialog {
             for more details.
           </li>
           <li>
-            If you'd like to deploy a private app, sign up for Streamlit for
-            Teams.
+            If you'd like to deploy a private app,{" "}
+            <a href={TEAMS_URL} target="_blank" rel="noopener noreferrer">
+              sign up for Streamlit for Teams
+            </a>
+            .
           </li>
         </ul>
       </>

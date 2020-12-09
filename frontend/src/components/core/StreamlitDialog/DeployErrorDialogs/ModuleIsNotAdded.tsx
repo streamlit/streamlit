@@ -7,7 +7,7 @@ function ModuleIsNotAdded(module: string): IDeployErrorDialog {
     body: (
       <>
         <p>
-          The file <strong>{module}</strong> has not been added to the repo.
+          The file <code>{module}</code> has not been added to the repo.
         </p>
         <p>Please add it and push to Github to continue.</p>
       </>

@@ -5,9 +5,9 @@ Object {
   "body": <React.Fragment>
     <p>
       The file 
-      <strong>
+      <code>
         module
-      </strong>
+      </code>
        has uncommitted changes.
     </p>
     <p>
