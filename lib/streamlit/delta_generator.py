@@ -376,7 +376,9 @@ class DeltaGenerator(
             )
 
             output_dg = DeltaGenerator(
-                root_container=self._root_container, cursor=new_cursor, parent=self,
+                root_container=self._root_container,
+                cursor=new_cursor,
+                parent=self,
             )
         else:
             # If the message was not enqueued, just return self since it's a

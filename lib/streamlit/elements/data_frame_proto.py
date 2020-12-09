@@ -82,7 +82,10 @@ class DataFrameMixin:
         marshall_data_frame(data, data_frame_proto)
 
         return dg._enqueue(  # type: ignore
-            "data_frame", data_frame_proto, element_width=width, element_height=height,
+            "data_frame",
+            data_frame_proto,
+            element_width=width,
+            element_height=height,
         )
 
     def table(dg, data=None):

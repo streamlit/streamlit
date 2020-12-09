@@ -142,7 +142,9 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             else self._file_mgr.add_files
         )
         update_files(
-            session_id=session_id, widget_id=widget_id, files=uploaded_files,
+            session_id=session_id,
+            widget_id=widget_id,
+            files=uploaded_files,
         )
 
         LOGGER.debug(
@@ -172,7 +174,9 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
 
         try:
             self._file_mgr.remove_file(
-                session_id=session_id, widget_id=widget_id, file_id=file_id,
+                session_id=session_id,
+                widget_id=widget_id,
+                file_id=file_id,
             )
         except KeyError:
             self.send_error(404)

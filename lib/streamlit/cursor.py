@@ -26,7 +26,9 @@ def make_delta_path(
     return delta_path
 
 
-def get_container_cursor(root_container: Optional[int],) -> Optional["RunningCursor"]:
+def get_container_cursor(
+    root_container: Optional[int],
+) -> Optional["RunningCursor"]:
     """Return the top-level RunningCursor for the given container.
     This is the cursor that is used when user code calls something like
     `st.foo` (which uses the main container) or `st.sidebar.foo` (which uses

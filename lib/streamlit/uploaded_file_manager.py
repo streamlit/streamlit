@@ -83,7 +83,10 @@ class UploadedFileManager(object):
             self.on_files_updated.send(session_id)
 
     def _add_files(
-        self, session_id: str, widget_id: str, files: List[UploadedFileRec],
+        self,
+        session_id: str,
+        widget_id: str,
+        files: List[UploadedFileRec],
     ):
         """
         Add a list of files to the FileManager. Does not emit any signals
@@ -96,7 +99,10 @@ class UploadedFileManager(object):
             self._files_by_id[files_by_widget] = files
 
     def add_files(
-        self, session_id: str, widget_id: str, files: List[UploadedFileRec],
+        self,
+        session_id: str,
+        widget_id: str,
+        files: List[UploadedFileRec],
     ) -> None:
         """Add a list of files to the FileManager.
 
@@ -189,7 +195,10 @@ class UploadedFileManager(object):
                 self.remove_files(*files_id)
 
     def replace_files(
-        self, session_id: str, widget_id: str, files: List[UploadedFileRec],
+        self,
+        session_id: str,
+        widget_id: str,
+        files: List[UploadedFileRec],
     ) -> None:
         """Removes the file list for the provided widget in the
         provided session, if it exists and add the provided files
@@ -209,7 +218,10 @@ class UploadedFileManager(object):
         self._on_files_updated(session_id, widget_id)
 
     def update_file_count(
-        self, session_id: str, widget_id: str, file_count: int,
+        self,
+        session_id: str,
+        widget_id: str,
+        file_count: int,
     ) -> None:
         files_by_widget = session_id, widget_id
         self._file_counts_by_id[files_by_widget] = file_count

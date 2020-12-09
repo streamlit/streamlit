@@ -397,7 +397,9 @@ class HashTest(unittest.TestCase):
         tempdir = tempfile.TemporaryDirectory()
 
         model = tf.keras.models.Sequential(
-            [tf.keras.layers.Dense(512, activation="relu", input_shape=(784,)),]
+            [
+                tf.keras.layers.Dense(512, activation="relu", input_shape=(784,)),
+            ]
         )
         model.save(tempdir.name)
 
@@ -472,7 +474,8 @@ class HashTest(unittest.TestCase):
         id_hash_func = {types.GeneratorType: id}
 
         self.assertEqual(
-            get_hash(g, hash_funcs=id_hash_func), get_hash(g, hash_funcs=id_hash_func),
+            get_hash(g, hash_funcs=id_hash_func),
+            get_hash(g, hash_funcs=id_hash_func),
         )
 
         unique_hash_func = {types.GeneratorType: lambda x: time.time()}
@@ -567,7 +570,8 @@ class HashTest(unittest.TestCase):
         )
 
         self.assertEqual(
-            hash_engine(auth_url), hash_engine("%s=%s" % (url, params_foo)),
+            hash_engine(auth_url),
+            hash_engine("%s=%s" % (url, params_foo)),
         )
         self.assertNotEqual(
             hash_engine("%s=%s" % (url, params_foo)),

@@ -27,7 +27,11 @@ LOGGER = get_logger(__name__)
 
 class VegaLiteMixin:
     def vega_lite_chart(
-        dg, data=None, spec=None, use_container_width=False, **kwargs,
+        dg,
+        data=None,
+        spec=None,
+        use_container_width=False,
+        **kwargs,
     ):
         """Display a chart using the Vega-Lite library.
 
