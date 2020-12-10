@@ -25,6 +25,7 @@ import React, {
   useCallback,
 } from "react"
 import { StatefulMenu } from "baseui/menu"
+import { SessionInfo } from "lib/SessionInfo"
 import { Menu } from "@emotion-icons/open-iconic"
 import Button, { Kind } from "components/shared/Button"
 import { StatefulPopover, PLACEMENT } from "baseui/popover"
@@ -222,7 +223,13 @@ function MainMenu(props: Props): ReactElement {
       isDeployErrorModalOpen,
     } = props
 
-    if (!deployParams) return
+    if (!deployParams) {
+      const dialog = NoRepositoryDetected()
+
+      showDeployError(dialog.title, dialog.body)
+
+      return
+    }
 
     const {
       repository,
@@ -234,10 +241,7 @@ function MainMenu(props: Props): ReactElement {
       isAhead,
     } = deployParams
 
-    if (
-      (!deployParams || !repository || !branch || !module) &&
-      !isHeadDetached
-    ) {
+    if ((!repository || !branch || !module) && !isHeadDetached) {
       const dialog = NoRepositoryDetected()
 
       showDeployError(dialog.title, dialog.body)
@@ -317,10 +321,11 @@ function MainMenu(props: Props): ReactElement {
       shortcut: SCREENCAST_LABEL[props.screenCastState] ? "esc" : "",
       stopRecordingIndicator: Boolean(SCREENCAST_LABEL[props.screenCastState]),
     },
-    deployApp: {
-      onClick: onClickDeployApp,
-      label: "Deploy this app",
-    },
+    deployApp: SessionInfo.isSet() &&
+      !SessionInfo.isHello && {
+        onClick: onClickDeployApp,
+        label: "Deploy this app",
+      },
     saveSnapshot: {
       disabled: isServerDisconnected,
       onClick: props.shareCallback,

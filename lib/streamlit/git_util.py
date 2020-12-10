@@ -23,10 +23,10 @@ class GitRepo:
         try:
             self.repo = git.Repo(path, search_parent_directories=True)
             self.git_version = self.repo.git.version_info
+
             if self.git_version >= MIN_GIT_VERSION:
                 git_root = self.repo.git.rev_parse("--show-toplevel")
                 self.module = os.path.relpath(path, git_root)
-
         except:
             # The git repo must be invalid for the following reasons:
             #  * No .git folder
@@ -130,10 +130,13 @@ class GitRepo:
         if not self.is_valid():
             return None
 
-        remote, branch_name = self.get_tracking_branch_remote()
+        try:
+            remote, branch_name = self.get_tracking_branch_remote()
 
-        return list(
-            self.repo.iter_commits(
-                "/".join([remote.name, branch_name]) + ".." + branch_name
+            return list(
+                self.repo.iter_commits(
+                    "/".join([remote.name, branch_name]) + ".." + branch_name
+                )
             )
-        )
+        except:
+            return list()
