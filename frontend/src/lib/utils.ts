@@ -118,6 +118,13 @@ export function isFromMac(): boolean {
 }
 
 /**
+ * Tests if the app is running from a Windows
+ */
+export function isFromWindows(): boolean {
+  return /^Win/i.test(navigator.platform)
+}
+
+/**
  * Returns cookie value
  */
 export function getCookie(name: string): string | undefined {
