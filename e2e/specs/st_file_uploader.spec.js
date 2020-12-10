@@ -192,6 +192,7 @@ describe("st.file_uploader", () => {
             events: ["dragenter", "drop"]
           });
 
+        // Wait for the HTTP request to complete
         cy.wait("@uploadFile");
 
         // The widget should show the names of the uploaded files in reverse
