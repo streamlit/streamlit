@@ -18,6 +18,8 @@
 import React, { ComponentType, useState, useEffect, ReactElement } from "react"
 import hoistNonReactStatics from "hoist-non-react-statics"
 
+import { CLOUD_COMM_WHITELIST } from "urls"
+
 import {
   IMenuItem,
   IHostToGuestMessage,
@@ -58,10 +60,19 @@ function withS4ACommunication(
     useEffect(() => {
       function receiveMessage(event: MessageEvent): void {
         const message: VersionedMessage<IHostToGuestMessage> = event.data
+        const origin = new URL(event.origin)
 
-        if (message.stCommVersion !== S4A_COMM_VERSION) return
+        if (
+          message.stCommVersion !== S4A_COMM_VERSION ||
+          !CLOUD_COMM_WHITELIST.includes(origin.hostname)
+        ) {
+          return
+        }
+
+        console.log("== CORE receiveMessage", message)
 
         if (message.type === "SET_MENU_ITEMS") {
+          console.log("== CORE setting items")
           setItems(message.items)
         }
 
