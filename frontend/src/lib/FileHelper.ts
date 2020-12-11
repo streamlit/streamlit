@@ -1,4 +1,5 @@
 import { CancelTokenSource } from "axios"
+import { isFromWindows } from "lib/utils"
 
 export interface ExtendedFile extends File {
   id?: string
@@ -23,7 +24,10 @@ export enum FileSizes {
   Byte = "b",
 }
 
-export const BYTE_CONVERSION_SIZE = 1024
+// There is a shift towards displaying storage in base 10 vs base 2
+// but Windows is still displaying things in base 2. This does not handle
+// all cases but for simplicity general rule is to use base 2 for Windows.
+export const BYTE_CONVERSION_SIZE = isFromWindows() ? 1024 : 1000
 const sizeUnitSequence = [
   FileSizes.GigaByte,
   FileSizes.MegaByte,
