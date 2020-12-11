@@ -69,10 +69,7 @@ function withS4ACommunication(
           return
         }
 
-        console.log("== CORE receiveMessage", message)
-
         if (message.type === "SET_MENU_ITEMS") {
-          console.log("== CORE setting items")
           setItems(message.items)
         }
 
