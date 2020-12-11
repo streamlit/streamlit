@@ -63,6 +63,7 @@ function withS4ACommunication(
         const origin = new URL(event.origin)
 
         if (
+          !origin ||
           message.stCommVersion !== S4A_COMM_VERSION ||
           !CLOUD_COMM_WHITELIST.includes(origin.hostname)
         ) {
