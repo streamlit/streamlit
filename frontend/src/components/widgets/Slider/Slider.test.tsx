@@ -81,16 +81,6 @@ describe("Slider widget", () => {
     const props = getProps()
     const wrapper = mount(<Slider {...props} />)
 
-    it("should render thumb value", () => {
-      wrapper.find(UISlider).prop("onChange")({
-        value: [1],
-      })
-
-      expect(
-        wrapper.find("StyledThumbValue[data-testid='stThumbValue']").text()
-      ).toBe("1")
-    })
-
     it("should render tick bar with min and max", () => {
       expect(
         wrapper.find("StyledTickBarItem[data-testid='stTickBarMin']").text()
@@ -269,15 +259,6 @@ describe("Slider widget", () => {
       dataType: SliderProto.DataType.DATETIME,
     })
     const wrapper = mount(<Slider {...props} />)
-
-    it("should format the value as a date", () => {
-      wrapper.find(UISlider).prop("onChange")({
-        value: [2 * WEEK_IN_MICROS],
-      })
-      expect(
-        wrapper.find("StyledThumbValue[data-testid='stThumbValue']").text()
-      ).toBe("1970-01-15")
-    })
 
     it("should format min and max as dates", () => {
       expect(
