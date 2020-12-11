@@ -59,11 +59,7 @@ function withS4ACommunication(
       function receiveMessage(event: MessageEvent): void {
         const message: VersionedMessage<IHostToGuestMessage> = event.data
 
-        if (
-          event.origin !== window.location.origin ||
-          message.stCommVersion !== S4A_COMM_VERSION
-        )
-          return
+        if (message.stCommVersion !== S4A_COMM_VERSION) return
 
         if (message.type === "SET_MENU_ITEMS") {
           setItems(message.items)
