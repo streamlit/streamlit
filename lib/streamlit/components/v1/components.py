@@ -109,6 +109,32 @@ class CustomComponent:
         if len(args) > 0:
             raise MarshallComponentException(f"Argument '{args[0]}' needs a label")
 
+        try:
+            import pyarrow
+        except ImportError:
+            import sys
+
+            if sys.version_info >= (3, 9):
+                raise ImportError(
+                    """To use Custom Components in Streamlit, you need to install
+PyArrow. Unfortunately, PyArrow does not yet support Python 3.9.
+
+You can either switch to Python 3.8 with an environment manager like PyEnv, or
+[install Streamlit with conda](https://discuss.streamlit.io/t/note-installation-issues-with-python-3-9-and-streamlit/6946/7):
+
+`conda install -c conda-forge streamlit`
+"""
+                )
+            else:
+                raise ImportError(
+                    """To use Custom Components in Streamlit, you need to install
+PyArrow. To do so locally:
+
+`pip install pyarrow`
+
+And if you're using Streamlit Sharing, add "pyarrow" to your requirements.txt."""
+                )
+
         # In addition to the custom kwargs passed to the component, we also
         # send the special 'default' and 'key' params to the component
         # frontend.
