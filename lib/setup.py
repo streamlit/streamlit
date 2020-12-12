@@ -61,7 +61,7 @@ class VerifyVersionCommand(install):
             sys.exit(info)
 
 
-PYTHON_REQUIRES = ">=3.6"
+PYTHON_REQUIRES = ">=3.6,<3.9"
 
 target_py39 = "py39" in sys.argv
 if target_py39:
