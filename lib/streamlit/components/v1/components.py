@@ -115,7 +115,7 @@ class CustomComponent:
             import sys
 
             if sys.version_info >= (3, 9):
-                raise ImportError(
+                raise StreamlitAPIException(
                     """To use Custom Components in Streamlit, you need to install
 PyArrow. Unfortunately, PyArrow does not yet support Python 3.9.
 
@@ -126,7 +126,7 @@ You can either switch to Python 3.8 with an environment manager like PyEnv, or
 """
                 )
             else:
-                raise ImportError(
+                raise StreamlitAPIException(
                     """To use Custom Components in Streamlit, you need to install
 PyArrow. To do so locally:
 
