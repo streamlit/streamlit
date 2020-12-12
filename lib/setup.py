@@ -45,16 +45,6 @@ if platform.system() == "Darwin":
         except ValueError:
             pass
 
-# pyarrow does not yet support Python 3.9. Since pyarrow is only needed for
-# Custom Components, remove it as a dependency. We'll show an error if they
-# then try to add a Custom Component.
-# See: https://discuss.streamlit.io/t/note-installation-issues-with-python-3-9-and-streamlit/6946/7
-if sys.version_info >= (3, 9):
-    try:
-        requirements.remove("pyarrow")
-    except ValueError:
-        pass
-
 
 class VerifyVersionCommand(install):
     """Custom command to verify that the git tag matches our version"""
@@ -71,6 +61,17 @@ class VerifyVersionCommand(install):
             sys.exit(info)
 
 
+PYTHON_REQUIRES = ">=3.6"
+
+target_py39 = "py39" in sys.argv
+if target_py39:
+    # pyarrow does not yet support Python 3.9. Since pyarrow is only needed for
+    # Custom Components, remove it as a dependency. We'll show an error if they
+    # then try to add a Custom Component.
+    # See: https://discuss.streamlit.io/t/note-installation-issues-with-python-3-9-and-streamlit/6946/7
+    requirements.remove("pyarrow")
+    PYTHON_REQUIRES = ">=3.9"
+
 setuptools.setup(
     name=NAME,
     version=VERSION,
@@ -79,7 +80,7 @@ setuptools.setup(
     url="https://streamlit.io",
     author="Streamlit Inc",
     author_email="hello@streamlit.io",
-    python_requires=">=3.6",
+    python_requires=PYTHON_REQUIRES,
     license="Apache 2",
     packages=setuptools.find_packages(exclude=["tests", "tests.*"]),
     # Requirements
