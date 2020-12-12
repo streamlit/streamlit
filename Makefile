@@ -164,7 +164,7 @@ distribution:
 	# Get rid of the old build folder to make sure that we delete old js and css.
 	rm -rfv lib/build
 	cd lib ; python setup.py bdist_wheel --universal sdist
-	cd lib ; python setup.py bdist_wheel --python-tag py39 --universal sdist
+	cd lib ; python setup.py bdist_wheel --python-tag py39
 
 .PHONY: clean-package
 # Removes existing packages and creates distribution files in dist/.
