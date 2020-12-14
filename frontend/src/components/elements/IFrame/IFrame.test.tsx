@@ -20,7 +20,7 @@ import { ShallowWrapper } from "enzyme"
 import { shallow } from "lib/test_util"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
-  getIFrameSandboxPolicy,
+  DEFAULT_IFRAME_SANDBOX_POLICY,
 } from "lib/IFrameUtil"
 
 import { IFrame as IFrameProto } from "autogen/proto"
@@ -73,9 +73,9 @@ describe("st.iframe", () => {
       )
     })
 
-    it("should add `allow-same-origin` parameter to iframe sandbox", () => {
+    it("should use our default sandbox policy", () => {
       expect(wrapper.find("iframe").prop("sandbox")).toBe(
-        getIFrameSandboxPolicy(true)
+        DEFAULT_IFRAME_SANDBOX_POLICY
       )
     })
   })
@@ -100,9 +100,9 @@ describe("st.iframe", () => {
       )
     })
 
-    it("should not add `allow-same-origin` parameter to iframe sandbox", () => {
+    it("should use our default sandbox policy", () => {
       expect(wrapper.find("iframe").prop("sandbox")).toBe(
-        getIFrameSandboxPolicy(false)
+        DEFAULT_IFRAME_SANDBOX_POLICY
       )
     })
   })
