@@ -32,6 +32,11 @@ pipfile = Project(chdir=False).parsed_pipfile
 
 packages = pipfile["packages"].copy()
 requirements = convert_deps_to_pip(packages, r=False)
+requirements.remove("pyarrow")
+
+extras_require = {
+    ':python_version<"3.9"': ["pyarrow"]
+}
 
 # Check whether xcode tools are available before making watchdog a
 # dependency (only if the current system is a Mac).
@@ -84,4 +89,5 @@ setuptools.setup(
     cmdclass={
         "verify": VerifyVersionCommand,
     },
+    extras_require=extras_require,
 )
