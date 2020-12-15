@@ -64,6 +64,7 @@ function withS4ACommunication(
 
         try {
           const url = new URL(event.origin)
+
           origin = url.hostname
         } catch (e) {
           origin = event.origin
