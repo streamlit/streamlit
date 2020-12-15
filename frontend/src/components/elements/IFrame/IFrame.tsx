@@ -18,7 +18,7 @@
 import { IFrame as IFrameProto } from "autogen/proto"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
-  getIFrameSandboxPolicy,
+  DEFAULT_IFRAME_SANDBOX_POLICY,
 } from "lib/IFrameUtil"
 import React, { CSSProperties, ReactElement } from "react"
 
@@ -47,22 +47,9 @@ export default function IFrame({
   }
 
   // Either 'src' or 'srcDoc' will be set in our element. If 'src'
-  // is set, we're loading a remote URL in the iframe, and we can
-  // safely use the `allow-same-origin` sandbox parameter. But if
-  // 'srcDoc' is set instead, we're displaying a literal string as HTML,
-  // and our iframe will have the same origin as we do, and therefore
-  // we cannot safely use `allow-same-origin` because doing so would
-  // let the iframe'd content escape its sandbox.
+  // is set, we're loading a remote URL in the iframe.
   const src = getNonEmptyString(element.src)
-  let srcDoc: string | undefined
-  let allowSameOrigin: boolean
-  if (src != null) {
-    srcDoc = undefined
-    allowSameOrigin = true
-  } else {
-    srcDoc = getNonEmptyString(element.srcdoc)
-    allowSameOrigin = false
-  }
+  const srcDoc = src != null ? undefined : getNonEmptyString(element.srcdoc)
 
   return (
     <iframe
@@ -73,7 +60,7 @@ export default function IFrame({
       width={width}
       height={element.height}
       scrolling={scrolling}
-      sandbox={getIFrameSandboxPolicy(allowSameOrigin)}
+      sandbox={DEFAULT_IFRAME_SANDBOX_POLICY}
       title="st.iframe"
     />
   )
