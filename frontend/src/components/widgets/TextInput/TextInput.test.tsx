@@ -54,7 +54,7 @@ describe("TextInput widget", () => {
     const defaultProps = getProps({ type: TextInputProto.Type.DEFAULT })
     let textInput = shallow(<TextInput {...defaultProps} />)
     let uiInput = textInput.find(UIInput)
-    expect(uiInput.props().type).toBeUndefined()
+    expect(uiInput.props().type).toBe("text")
 
     const passwordProps = getProps({ type: TextInputProto.Type.PASSWORD })
     textInput = shallow(<TextInput {...passwordProps} />)

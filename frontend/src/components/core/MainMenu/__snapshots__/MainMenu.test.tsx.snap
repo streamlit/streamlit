@@ -20,6 +20,7 @@ exports[`App renders without crashing 1`] = `
     }
   }
   placement="bottomRight"
+  popoverMargin={8}
   showArrow={false}
   stateReducer={[Function]}
   triggerType="click"
