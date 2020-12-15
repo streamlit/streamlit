@@ -27,3 +27,9 @@ export const BUG_URL =
 /** The URL we direct people to for troubleshooting components. */
 export const COMPONENT_DEVELOPER_URL =
   "https://docs.streamlit.io/en/stable/develop_streamlit_components.html"
+export const CLOUD_COMM_WHITELIST = [
+  "devel.streamlit.test",
+  "share.streamlit.io",
+  "share-head.streamlit.io",
+  "share-staging.streamlit.io",
+]
