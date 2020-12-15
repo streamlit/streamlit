@@ -59,13 +59,20 @@ function withS4ACommunication(
 
     useEffect(() => {
       function receiveMessage(event: MessageEvent): void {
-        const message: VersionedMessage<IHostToGuestMessage> = event.data
-        const origin = new URL(event.origin)
+        let origin
+        const message: VersionedMessage<IHostToGuestMessage> | any = event.data
+
+        try {
+          const url = new URL(event.origin)
+          origin = url.hostname
+        } catch (e) {
+          origin = event.origin
+        }
 
         if (
           !origin ||
           message.stCommVersion !== S4A_COMM_VERSION ||
-          !CLOUD_COMM_WHITELIST.includes(origin.hostname)
+          !CLOUD_COMM_WHITELIST.includes(origin)
         ) {
           return
         }

@@ -28,13 +28,8 @@ export const BUG_URL =
 export const COMPONENT_DEVELOPER_URL =
   "https://docs.streamlit.io/en/stable/develop_streamlit_components.html"
 export const CLOUD_COMM_WHITELIST = [
-  "localhost",
   "devel.streamlit.test",
-  "apps-devel.streamlitusercontent.test",
   "share.streamlit.io",
   "share-head.streamlit.io",
   "share-staging.streamlit.io",
-  "apps.streamlitusercontent.com",
-  "apps-head.streamlitusercontent.com",
-  "apps-staging.streamlitusercontent.com",
 ]
