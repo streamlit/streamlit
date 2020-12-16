@@ -94,7 +94,7 @@ class TextInput extends React.PureComponent<Props, State> {
   private getTypeString(): string | undefined {
     return this.props.element.type === TextInputProto.Type.PASSWORD
       ? "password"
-      : undefined
+      : "text"
   }
 
   public render = (): React.ReactNode => {

@@ -40,7 +40,7 @@ const getProps = (elementProps: Partial<DateInputProto> = {}): Props => ({
   widgetMgr: new WidgetStateManager(sendBackMsg),
 })
 
-describe.only("DateInput widget", () => {
+describe("DateInput widget", () => {
   const props = getProps()
   const wrapper = mount(<DateInput {...props} />)
 
