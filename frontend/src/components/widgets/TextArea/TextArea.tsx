@@ -52,8 +52,7 @@ class TextArea extends React.PureComponent<Props, State> {
   get initialValue(): string {
     // If WidgetStateManager knew a value for this widget, initialize to that.
     // Otherwise, use the default value from the widget protobuf.
-    const widgetId: string = this.props.element.id
-    const storedValue = this.props.widgetMgr.getStringValue(widgetId)
+    const storedValue = this.props.widgetMgr.getStringValue(this.props.element)
     return storedValue !== undefined ? storedValue : this.props.element.default
   }
 
@@ -62,8 +61,11 @@ class TextArea extends React.PureComponent<Props, State> {
   }
 
   private setWidgetValue = (source: Source): void => {
-    const widgetId = this.props.element.id
-    this.props.widgetMgr.setStringValue(widgetId, this.state.value, source)
+    this.props.widgetMgr.setStringValue(
+      this.props.element,
+      this.state.value,
+      source
+    )
     this.setState({ dirty: false })
   }
 

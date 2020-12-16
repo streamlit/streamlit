@@ -53,8 +53,9 @@ class Multiselect extends React.PureComponent<Props, State> {
   get initialValue(): number[] {
     // If WidgetStateManager knew a value for this widget, initialize to that.
     // Otherwise, use the default value from the widget protobuf.
-    const widgetId = this.props.element.id
-    const storedValue = this.props.widgetMgr.getIntArrayValue(widgetId)
+    const storedValue = this.props.widgetMgr.getIntArrayValue(
+      this.props.element
+    )
     return storedValue !== undefined ? storedValue : this.props.element.default
   }
 
@@ -63,8 +64,11 @@ class Multiselect extends React.PureComponent<Props, State> {
   }
 
   private setWidgetValue = (source: Source): void => {
-    const widgetId = this.props.element.id
-    this.props.widgetMgr.setIntArrayValue(widgetId, this.state.value, source)
+    this.props.widgetMgr.setIntArrayValue(
+      this.props.element,
+      this.state.value,
+      source
+    )
   }
 
   private get valueFromState(): MultiselectOption[] {
@@ -137,10 +141,10 @@ class Multiselect extends React.PureComponent<Props, State> {
                 /*
                   This minHeight is needed to fix a bug from BaseWeb in which the
                   div that contains the options changes their height from 40px to 44px.
-          
+
                   You could check this behavior in their documentation as well:
                   https://v8-17-1.baseweb.design/components/select/#select-as-multi-pick-search
-          
+
                   Issue related: https://github.com/streamlit/streamlit/issues/590
                  */
                 minHeight: "44px",

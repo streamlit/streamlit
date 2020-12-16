@@ -32,8 +32,7 @@ function Button(props: ButtonProps): ReactElement {
   const style = { width }
 
   const handleClick = (): void => {
-    const widgetId = element.id
-    widgetMgr.setTriggerValue(widgetId, { fromUi: true })
+    widgetMgr.setTriggerValue(element, { fromUi: true })
   }
 
   return (

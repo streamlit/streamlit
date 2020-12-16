@@ -49,7 +49,7 @@ describe("TextArea widget", () => {
 
   it("should set widget value on did mount", () => {
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element.id,
+      props.element,
       props.element.default,
       { fromUi: false }
     )
@@ -95,7 +95,7 @@ describe("TextArea widget", () => {
     wrapper.find(UITextArea).prop("onBlur")()
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element.id,
+      props.element,
       "testing",
       {
         fromUi: true,
@@ -122,7 +122,7 @@ describe("TextArea widget", () => {
     })
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element.id,
+      props.element,
       "testing",
       {
         fromUi: true,
@@ -195,7 +195,7 @@ describe("TextArea widget", () => {
       })
 
       expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-        props.element.id,
+        props.element,
         "testing",
         {
           fromUi: true,

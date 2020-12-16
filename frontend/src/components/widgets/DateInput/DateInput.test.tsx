@@ -54,9 +54,11 @@ describe("DateInput widget", () => {
 
   it("should set widget value on did mount", () => {
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element.id,
+      props.element,
       props.element.default,
-      { fromUi: false }
+      {
+        fromUi: false,
+      }
     )
   })
 
@@ -98,7 +100,7 @@ describe("DateInput widget", () => {
 
     expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual([newDate])
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element.id,
+      props.element,
       ["2020/02/06"],
       {
         fromUi: true,

@@ -64,7 +64,7 @@ describe("TextInput widget", () => {
 
   it("should set widget value on did mount", () => {
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element.id,
+      props.element,
       props.element.default,
       { fromUi: false }
     )
@@ -102,7 +102,7 @@ describe("TextInput widget", () => {
     wrapper.find(UIInput).prop("onBlur")()
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element.id,
+      props.element,
       "testing",
       {
         fromUi: true,
@@ -128,7 +128,7 @@ describe("TextInput widget", () => {
     })
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element.id,
+      props.element,
       "testing",
       {
         fromUi: true,

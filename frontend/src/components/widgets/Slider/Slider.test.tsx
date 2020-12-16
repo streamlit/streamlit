@@ -68,11 +68,9 @@ describe("Slider widget", () => {
     jest.runAllTimers()
     wrapper.update()
 
-    expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
-      props.element.id,
-      [5],
-      { fromUi: false }
-    )
+    expect(
+      props.widgetMgr.setDoubleArrayValue
+    ).toHaveBeenCalledWith(props.element, [5], { fromUi: false })
 
     wrapper.unmount()
   })
@@ -122,11 +120,9 @@ describe("Slider widget", () => {
       jest.runAllTimers()
       wrapper.update()
 
-      expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
-        props.element.id,
-        [10],
-        { fromUi: true }
-      )
+      expect(
+        props.widgetMgr.setDoubleArrayValue
+      ).toHaveBeenCalledWith(props.element, [10], { fromUi: true })
 
       expect(wrapper.find(UISlider).prop("value")).toStrictEqual([10])
     })
@@ -231,7 +227,7 @@ describe("Slider widget", () => {
       wrapper.update()
 
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
-        props.element.id,
+        props.element,
         [1, 10],
         {
           fromUi: true,

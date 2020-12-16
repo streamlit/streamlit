@@ -29,6 +29,11 @@ export interface Source {
   fromUi: boolean
 }
 
+/** Common widget protobuf fields that are used by the WidgetStateManager. */
+export interface WidgetInfo {
+  id: string
+}
+
 /**
  * Coerce a `number | Long` to a `number`.
  *
@@ -84,14 +89,14 @@ export class WidgetStateManager {
    * Sets the trigger value for the given widget ID to true, sends a rerunScript message
    * to the server, and then immediately unsets the trigger value.
    */
-  public setTriggerValue(widgetId: string, source: Source): void {
-    this.createWidgetStateProto(widgetId).triggerValue = true
+  public setTriggerValue(widget: WidgetInfo, source: Source): void {
+    this.createWidgetStateProto(widget.id).triggerValue = true
     this.maybeSendUpdateWidgetsMessage(source)
-    this.deleteWidgetStateProto(widgetId)
+    this.deleteWidgetStateProto(widget.id)
   }
 
-  public getBoolValue(widgetId: string): boolean | undefined {
-    const state = this.getWidgetStateProto(widgetId)
+  public getBoolValue(widget: WidgetInfo): boolean | undefined {
+    const state = this.getWidgetStateProto(widget.id)
     if (state != null && state.value === "boolValue") {
       return state.boolValue
     }
@@ -99,13 +104,17 @@ export class WidgetStateManager {
     return undefined
   }
 
-  public setBoolValue(widgetId: string, value: boolean, source: Source): void {
-    this.createWidgetStateProto(widgetId).boolValue = value
+  public setBoolValue(
+    widget: WidgetInfo,
+    value: boolean,
+    source: Source
+  ): void {
+    this.createWidgetStateProto(widget.id).boolValue = value
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
-  public getIntValue(widgetId: string): number | undefined {
-    const state = this.getWidgetStateProto(widgetId)
+  public getIntValue(widget: WidgetInfo): number | undefined {
+    const state = this.getWidgetStateProto(widget.id)
     if (state != null && state.value === "intValue") {
       return requireNumberInt(state.intValue)
     }
@@ -113,13 +122,13 @@ export class WidgetStateManager {
     return undefined
   }
 
-  public setIntValue(widgetId: string, value: number, source: Source): void {
-    this.createWidgetStateProto(widgetId).intValue = value
+  public setIntValue(widget: WidgetInfo, value: number, source: Source): void {
+    this.createWidgetStateProto(widget.id).intValue = value
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
-  public getDoubleValue(widgetId: string): number | undefined {
-    const state = this.getWidgetStateProto(widgetId)
+  public getDoubleValue(widget: WidgetInfo): number | undefined {
+    const state = this.getWidgetStateProto(widget.id)
     if (state != null && state.value === "doubleValue") {
       return state.doubleValue
     }
@@ -128,16 +137,16 @@ export class WidgetStateManager {
   }
 
   public setDoubleValue(
-    widgetId: string,
+    widget: WidgetInfo,
     value: number,
     source: Source
   ): void {
-    this.createWidgetStateProto(widgetId).doubleValue = value
+    this.createWidgetStateProto(widget.id).doubleValue = value
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
-  public getStringValue(widgetId: string): string | undefined {
-    const state = this.getWidgetStateProto(widgetId)
+  public getStringValue(widget: WidgetInfo): string | undefined {
+    const state = this.getWidgetStateProto(widget.id)
     if (state != null && state.value === "stringValue") {
       return state.stringValue
     }
@@ -146,27 +155,27 @@ export class WidgetStateManager {
   }
 
   public setStringValue(
-    widgetId: string,
+    widget: WidgetInfo,
     value: string,
     source: Source
   ): void {
-    this.createWidgetStateProto(widgetId).stringValue = value
+    this.createWidgetStateProto(widget.id).stringValue = value
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
   public setStringArrayValue(
-    widgetId: string,
+    widget: WidgetInfo,
     value: string[],
     source: Source
   ): void {
-    this.createWidgetStateProto(widgetId).stringArrayValue = new StringArray({
+    this.createWidgetStateProto(widget.id).stringArrayValue = new StringArray({
       data: value,
     })
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
-  public getStringArrayValue(widgetId: string): string[] | undefined {
-    const state = this.getWidgetStateProto(widgetId)
+  public getStringArrayValue(widget: WidgetInfo): string[] | undefined {
+    const state = this.getWidgetStateProto(widget.id)
     if (
       state != null &&
       state.value === "stringArrayValue" &&
@@ -179,8 +188,8 @@ export class WidgetStateManager {
     return undefined
   }
 
-  public getDoubleArrayValue(widgetId: string): number[] | undefined {
-    const state = this.getWidgetStateProto(widgetId)
+  public getDoubleArrayValue(widget: WidgetInfo): number[] | undefined {
+    const state = this.getWidgetStateProto(widget.id)
     if (
       state != null &&
       state.value === "doubleArrayValue" &&
@@ -194,18 +203,18 @@ export class WidgetStateManager {
   }
 
   public setDoubleArrayValue(
-    widgetId: string,
+    widget: WidgetInfo,
     value: number[],
     source: Source
   ): void {
-    this.createWidgetStateProto(widgetId).doubleArrayValue = new DoubleArray({
+    this.createWidgetStateProto(widget.id).doubleArrayValue = new DoubleArray({
       data: value,
     })
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
-  public getIntArrayValue(widgetId: string): number[] | undefined {
-    const state = this.getWidgetStateProto(widgetId)
+  public getIntArrayValue(widget: WidgetInfo): number[] | undefined {
+    const state = this.getWidgetStateProto(widget.id)
     if (
       state != null &&
       state.value === "intArrayValue" &&
@@ -219,18 +228,18 @@ export class WidgetStateManager {
   }
 
   public setIntArrayValue(
-    widgetId: string,
+    widget: WidgetInfo,
     value: number[],
     source: Source
   ): void {
-    this.createWidgetStateProto(widgetId).intArrayValue = new SInt64Array({
+    this.createWidgetStateProto(widget.id).intArrayValue = new SInt64Array({
       data: value,
     })
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
-  public getJsonValue(widgetId: string): string | undefined {
-    const state = this.getWidgetStateProto(widgetId)
+  public getJsonValue(widget: WidgetInfo): string | undefined {
+    const state = this.getWidgetStateProto(widget.id)
     if (state != null && state.value === "jsonValue") {
       return state.jsonValue
     }
@@ -238,22 +247,22 @@ export class WidgetStateManager {
     return undefined
   }
 
-  public setJsonValue(widgetId: string, value: any, source: Source): void {
-    this.createWidgetStateProto(widgetId).jsonValue = JSON.stringify(value)
+  public setJsonValue(widget: WidgetInfo, value: any, source: Source): void {
+    this.createWidgetStateProto(widget.id).jsonValue = JSON.stringify(value)
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
   public setArrowValue(
-    widgetId: string,
+    widget: WidgetInfo,
     value: IArrowTable,
     source: Source
   ): void {
-    this.createWidgetStateProto(widgetId).arrowValue = value
+    this.createWidgetStateProto(widget.id).arrowValue = value
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
-  public getArrowValue(widgetId: string): IArrowTable | undefined {
-    const state = this.getWidgetStateProto(widgetId)
+  public getArrowValue(widget: WidgetInfo): IArrowTable | undefined {
+    const state = this.getWidgetStateProto(widget.id)
     if (
       state != null &&
       state.value === "arrowValue" &&
@@ -266,16 +275,16 @@ export class WidgetStateManager {
   }
 
   public setBytesValue(
-    widgetId: string,
+    widget: WidgetInfo,
     value: Uint8Array,
     source: Source
   ): void {
-    this.createWidgetStateProto(widgetId).bytesValue = value
+    this.createWidgetStateProto(widget.id).bytesValue = value
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
-  public getBytesValue(widgetId: string): Uint8Array | undefined {
-    const state = this.getWidgetStateProto(widgetId)
+  public getBytesValue(widget: WidgetInfo): Uint8Array | undefined {
+    const state = this.getWidgetStateProto(widget.id)
     if (state != null && state.value === "bytesValue") {
       return state.bytesValue
     }
