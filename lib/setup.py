@@ -91,4 +91,5 @@ setuptools.setup(
     cmdclass={
         "verify": VerifyVersionCommand,
     },
+    extras_require=extras_require,
 )
