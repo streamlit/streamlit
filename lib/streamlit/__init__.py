@@ -202,6 +202,7 @@ beta_color_picker = _beta_warning(_main.color_picker, "January 28, 2021")
 beta_container = _main.beta_container  # noqa: E221
 beta_expander = _main.beta_expander  # noqa: E221
 beta_columns = _main.beta_columns  # noqa: E221
+beta_form = _main.beta_form  # noqa: E221
 
 
 def set_option(key, value):

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """Allows us to create and absorb changes (aka Deltas) to elements."""
-from typing import Optional, Iterable, List
+from typing import Optional, Iterable, List, NamedTuple
 
 from streamlit import caching
 from streamlit import cursor
@@ -73,6 +73,13 @@ MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
 # List of Streamlit commands that perform a Pandas "melt" operation on
 # input dataframes.
 DELTAS_TYPES_THAT_MELT_DATAFRAMES = ("line_chart", "area_chart", "bar_chart")
+
+
+class FormData(NamedTuple):
+    """`st.form` DeltaGenerators store additional data."""
+
+    submit_button_label: str
+    submit_button_key: Optional[str]
 
 
 class DeltaGenerator(
@@ -185,6 +192,9 @@ class DeltaGenerator(
         self._parent = parent
         self._block_type = block_type
 
+        # If this an `st.form` block, this will get filled in.
+        self._form_data: Optional[FormData] = None
+
         # Change the module of all mixin'ed functions to be st.delta_generator,
         # instead of the original module (e.g. st.elements.markdown)
         for mixin in self.__class__.__bases__:
@@ -203,6 +213,15 @@ class DeltaGenerator(
         ctx = get_report_ctx()
         if ctx:
             ctx.dg_stack.pop()
+
+        if self._form_data is not None:
+            # We're exiting an `st.form` block. Create the form's Submit
+            # button.
+            self._button(
+                label=self._form_data.submit_button_label,
+                key=self._form_data.submit_button_key,
+                is_form_submitter=True,
+            )
 
         # Re-raise any exceptions
         return False
@@ -298,9 +317,11 @@ class DeltaGenerator(
         This way, users can (say) use st.image with a stream of different images,
         and Streamlit will expire the older images and replace them in place.
         """
-        # Switch to the active DeltaGenerator, in case we're in a `with` block.
-        self = self._active_dg
-        return str(self._cursor.delta_path) if self._cursor is not None else "[]"
+        # Operate on the active DeltaGenerator, in case we're in a `with` block.
+        active_dg = self._active_dg
+        return (
+            str(active_dg._cursor.delta_path) if active_dg._cursor is not None else "[]"
+        )
 
     def _enqueue(
         self,
@@ -530,6 +551,15 @@ class DeltaGenerator(
         horiz_proto.horizontal.total_weight = sum(weights)
         row = self._block(horiz_proto)
         return [row._block(column_proto(w)) for w in weights]
+
+    def beta_form(self, submit_label="Submit", key=None) -> "DeltaGenerator":
+        block_proto = Block_pb2.Block()
+        block_dg = self._block(block_proto)
+        # Attach the form's button info to the newly-created block's
+        # delta generator. The block will create its submit button when it
+        # exits.
+        block_dg._form_data = FormData(submit_label, key)
+        return block_dg
 
     # Internal block element, to hide the 'layout' param from our users.
     def _block(self, block_proto=Block_pb2.Block()) -> "DeltaGenerator":
