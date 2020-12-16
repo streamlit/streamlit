@@ -1,5 +1,21 @@
-from streamlit import config
+# Copyright 2018-2020 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
+from typing import cast
+
+import streamlit
+from streamlit import config
 from streamlit.errors import StreamlitDeprecationWarning
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.report_thread import get_report_ctx
@@ -9,7 +25,7 @@ from ..uploaded_file_manager import UploadedFile
 
 class FileUploaderMixin:
     def file_uploader(
-        dg, label, type=None, accept_multiple_files=False, key=None, **kwargs
+        self, label, type=None, accept_multiple_files=False, key=None, **kwargs
     ):
         """Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure
@@ -96,7 +112,7 @@ class FileUploaderMixin:
         )
 
         if show_deprecation_warning and has_encoding:
-            dg.exception(FileUploaderEncodingWarning())  # type: ignore
+            self.dg.exception(FileUploaderEncodingWarning())
 
         file_uploader_proto = FileUploaderProto()
         file_uploader_proto.label = label
@@ -120,7 +136,12 @@ class FileUploaderMixin:
             files = [UploadedFile(rec) for rec in file_recs]
             return_value = files if accept_multiple_files else files[0]
 
-        return dg._enqueue("file_uploader", file_uploader_proto, return_value)  # type: ignore
+        return self.dg._enqueue("file_uploader", file_uploader_proto, return_value)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
 class FileUploaderEncodingWarning(StreamlitDeprecationWarning):

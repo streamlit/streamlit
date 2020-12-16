@@ -1,11 +1,28 @@
-from streamlit.proto.Radio_pb2 import Radio as RadioProto
+# Copyright 2018-2020 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from typing import cast
+
+import streamlit
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Radio_pb2 import Radio as RadioProto
 from streamlit.type_util import ensure_iterable
 from .utils import _get_widget_ui_value, NoValue
 
 
 class RadioMixin:
-    def radio(dg, label, options, index=0, format_func=str, key=None):
+    def radio(self, label, options, index=0, format_func=str, key=None):
         """Display a radio button widget.
 
         Parameters
@@ -70,4 +87,9 @@ class RadioMixin:
             if len(options) > 0 and options[current_value] is not None
             else NoValue
         )
-        return dg._enqueue("radio", radio_proto, return_value)  # type: ignore
+        return self.dg._enqueue("radio", radio_proto, return_value)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)

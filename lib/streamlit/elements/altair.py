@@ -17,7 +17,9 @@ Altair is a Python visualization library based on Vega-Lite,
 a nice JSON schema for expressing graphs and charts."""
 
 from datetime import date
+from typing import cast
 
+import streamlit
 from streamlit import type_util
 from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
 import streamlit.elements.vega_lite as vega_lite
@@ -28,7 +30,7 @@ from .utils import last_index_for_melted_dataframes
 
 
 class AltairMixin:
-    def line_chart(dg, data=None, width=0, height=0, use_container_width=True):
+    def line_chart(self, data=None, width=0, height=0, use_container_width=True):
         """Display a line chart.
 
         This is syntax-sugar around st.altair_chart. The main difference
@@ -74,9 +76,11 @@ class AltairMixin:
         marshall(vega_lite_chart_proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        return dg._enqueue("line_chart", vega_lite_chart_proto, last_index=last_index)  # type: ignore
+        return self.dg._enqueue(
+            "line_chart", vega_lite_chart_proto, last_index=last_index
+        )
 
-    def area_chart(dg, data=None, width=0, height=0, use_container_width=True):
+    def area_chart(self, data=None, width=0, height=0, use_container_width=True):
         """Display an area chart.
 
         This is just syntax-sugar around st.altair_chart. The main difference
@@ -121,9 +125,11 @@ class AltairMixin:
         marshall(vega_lite_chart_proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        return dg._enqueue("area_chart", vega_lite_chart_proto, last_index=last_index)  # type: ignore
+        return self.dg._enqueue(
+            "area_chart", vega_lite_chart_proto, last_index=last_index
+        )
 
-    def bar_chart(dg, data=None, width=0, height=0, use_container_width=True):
+    def bar_chart(self, data=None, width=0, height=0, use_container_width=True):
         """Display a bar chart.
 
         This is just syntax-sugar around st.altair_chart. The main difference
@@ -168,9 +174,11 @@ class AltairMixin:
         marshall(vega_lite_chart_proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        return dg._enqueue("bar_chart", vega_lite_chart_proto, last_index=last_index)  # type: ignore
+        return self.dg._enqueue(
+            "bar_chart", vega_lite_chart_proto, last_index=last_index
+        )
 
-    def altair_chart(dg, altair_chart, use_container_width=False):
+    def altair_chart(self, altair_chart, use_container_width=False):
         """Display a chart using the Altair library.
 
         Parameters
@@ -213,7 +221,12 @@ class AltairMixin:
             altair_chart,
             use_container_width=use_container_width,
         )
-        return dg._enqueue("vega_lite_chart", vega_lite_chart_proto)  # type: ignore
+        return self.dg._enqueue("vega_lite_chart", vega_lite_chart_proto)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
 def _is_date_column(df, name):

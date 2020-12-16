@@ -17,16 +17,18 @@
 import copy
 import json
 from typing import Any, Dict
+from typing import cast
 
 import pandas as pd
 
-from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as DeckGlJsonChartProto
+import streamlit
 import streamlit.elements.deck_gl_json_chart as deck_gl_json_chart
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as DeckGlJsonChartProto
 
 
 class MapMixin:
-    def map(dg, data=None, zoom=None, use_container_width=True):
+    def map(self, data=None, zoom=None, use_container_width=True):
         """Display a map with points on it.
 
         This is a wrapper around st.pydeck_chart to quickly create scatterplot
@@ -70,7 +72,12 @@ class MapMixin:
         map_proto = DeckGlJsonChartProto()
         map_proto.json = to_deckgl_json(data, zoom)
         map_proto.use_container_width = use_container_width
-        return dg._enqueue("deck_gl_json_chart", map_proto)  # type: ignore
+        return self.dg._enqueue("deck_gl_json_chart", map_proto)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
 # Map used as the basis for st.map.
