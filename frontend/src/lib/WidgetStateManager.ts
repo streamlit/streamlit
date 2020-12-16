@@ -32,6 +32,7 @@ export interface Source {
 /** Common widget protobuf fields that are used by the WidgetStateManager. */
 export interface WidgetInfo {
   id: string
+  formId: string
 }
 
 /**

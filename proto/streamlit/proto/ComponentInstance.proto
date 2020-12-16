@@ -36,6 +36,8 @@ message ComponentInstance {
   // but while testing, a user can e.g. point this to a local node server
   // that they're developing their component in.
   string url = 5;
+
+  string form_id = 6;
 }
 
 message SpecialArg {
