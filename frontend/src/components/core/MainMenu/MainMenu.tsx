@@ -321,11 +321,10 @@ function MainMenu(props: Props): ReactElement {
       shortcut: SCREENCAST_LABEL[props.screenCastState] ? "esc" : "",
       stopRecordingIndicator: Boolean(SCREENCAST_LABEL[props.screenCastState]),
     },
-    deployApp: SessionInfo.isSet() &&
-      !SessionInfo.isHello && {
-        onClick: onClickDeployApp,
-        label: "Deploy this app",
-      },
+    deployApp: {
+      onClick: onClickDeployApp,
+      label: "Deploy this app",
+    },
     saveSnapshot: {
       disabled: isServerDisconnected,
       onClick: props.shareCallback,
@@ -368,7 +367,11 @@ function MainMenu(props: Props): ReactElement {
 
   const shouldShowS4AMenu = !!S4AMenuOptions.length
 
-  const showDeploy = isLocalhost() && !shouldShowS4AMenu
+  const showDeploy =
+    isLocalhost() &&
+    !shouldShowS4AMenu &&
+    SessionInfo.isSet() &&
+    !SessionInfo.isHello
   const showSnapshot = !shouldShowS4AMenu && props.sharingEnabled
   const showClearCache = !shouldShowS4AMenu
   const preferredMenuOrder: any[] = [

@@ -3,7 +3,7 @@ import { IDeployErrorDialog } from "./types"
 
 function UncommittedChanges(module: string): IDeployErrorDialog {
   return {
-    title: "Error deploying app",
+    title: "Unable to deploying app",
     body: (
       <>
         <p>

@@ -4,10 +4,10 @@ import { IDeployErrorDialog } from "./types"
 
 function NoRepositoryDetected(): IDeployErrorDialog {
   return {
-    title: "Error deploying app",
+    title: "Unable to deploying app",
     body: (
       <>
-        <p>No Github repository detected.</p>
+        <p>Could not find a remote repository hosted on Github.</p>
         <p>How Streamlit sharing works:</p>
         <ul>
           <li>

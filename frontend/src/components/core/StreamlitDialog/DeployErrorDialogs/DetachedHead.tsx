@@ -3,7 +3,7 @@ import { IDeployErrorDialog } from "./types"
 
 function DetachedHead(): IDeployErrorDialog {
   return {
-    title: "Error deploying app",
+    title: "Unable to deploying app",
     body: (
       <>
         <p>This Git tree is in a detached HEAD state.</p>

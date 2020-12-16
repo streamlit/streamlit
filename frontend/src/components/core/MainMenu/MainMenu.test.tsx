@@ -18,6 +18,7 @@
 import React from "react"
 import { shallow } from "lib/test_util"
 import { IMenuItem } from "hocs/withS4ACommunication/types"
+import { SessionInfo, Args as SessionInfoArgs } from "lib/SessionInfo"
 
 import { IDeployParams } from "autogen/proto"
 import { IDeployErrorDialog } from "components/core/StreamlitDialog/DeployErrorDialogs/types"
@@ -52,6 +53,21 @@ const getProps = (extend?: Partial<Props>): Props => ({
 })
 
 describe("App", () => {
+  beforeAll(() => {
+    SessionInfo.current = new SessionInfo({
+      sessionId: "sessionId",
+      streamlitVersion: "sv",
+      pythonVersion: "pv",
+      installationId: "iid",
+      installationIdV1: "iid1",
+      installationIdV2: "iid2",
+      authorEmail: "ae",
+      maxCachedMessageAge: 2,
+      commandLine: "command line",
+      userMapboxToken: "mpt",
+    } as SessionInfoArgs)
+  })
+
   it("renders without crashing", () => {
     const props = getProps()
     const wrapper = shallow(<MainMenu {...props} />)

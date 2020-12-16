@@ -4,7 +4,7 @@ exports[`DeployErrorDialog - NoRepositoryDetected Should render without crashing
 Object {
   "body": <React.Fragment>
     <p>
-      No Github repository detected.
+      Could not find a remote repository hosted on Github.
     </p>
     <p>
       How Streamlit sharing works:
@@ -37,6 +37,6 @@ Object {
       </li>
     </ul>
   </React.Fragment>,
-  "title": "Error deploying app",
+  "title": "Unable to deploying app",
 }
 `;
