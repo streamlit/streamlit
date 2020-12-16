@@ -50,5 +50,7 @@ toml = "*"
 tornado = ">=5.0"
 tzlocal = "*"
 validators = "*"
-watchdog = "*"
+# watchdog will not install on MacOS without xcode tools, so don't require it.
+# Without it, we fall back to our polling file watcher to detect when apps are changed.
+watchdog = {version = "*", platform_system = "Darwin"}
 gitpython = "*"
