@@ -123,6 +123,7 @@ You can either switch to Python 3.8 with an environment manager like PyEnv, or
 [install Streamlit with conda](https://discuss.streamlit.io/t/note-installation-issues-with-python-3-9-and-streamlit/6946/7):
 
 `conda install -c conda-forge streamlit`
+
 """
                 )
             else:
