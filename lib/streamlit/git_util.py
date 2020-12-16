@@ -132,11 +132,10 @@ class GitRepo:
 
         try:
             remote, branch_name = self.get_tracking_branch_remote()
+            remote_branch = "/".join([remote.name, branch_name])
 
             return list(
-                self.repo.iter_commits(
-                    "/".join([remote.name, branch_name]) + ".." + branch_name
-                )
+                self.repo.iter_commits(f'{remote_branch}..{branch_name}')
             )
         except:
             return list()
