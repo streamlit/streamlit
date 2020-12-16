@@ -32,6 +32,13 @@ pipfile = Project(chdir=False).parsed_pipfile
 
 packages = pipfile["packages"].copy()
 requirements = convert_deps_to_pip(packages, r=False)
+# pyarrow does not yet support Python 3.9. Since pyarrow is only needed for
+# Custom Components, make it an extra dependency for Python <3.9.
+# We'll show an error if the user then tries to add a Custom Component.
+# See: https://discuss.streamlit.io/t/note-installation-issues-with-python-3-9-and-streamlit/6946
+requirements.remove("pyarrow")
+
+extras_require = {':python_version<"3.9"': ["pyarrow"]}
 
 # Check whether xcode tools are available before making watchdog a
 # dependency (only if the current system is a Mac).
@@ -61,17 +68,6 @@ class VerifyVersionCommand(install):
             sys.exit(info)
 
 
-PYTHON_REQUIRES = ">=3.6,<3.9"
-
-target_py39 = "py39" in sys.argv
-if target_py39:
-    # pyarrow does not yet support Python 3.9. Since pyarrow is only needed for
-    # Custom Components, remove it as a dependency. We'll show an error if they
-    # then try to add a Custom Component.
-    # See: https://discuss.streamlit.io/t/note-installation-issues-with-python-3-9-and-streamlit/6946/7
-    requirements.remove("pyarrow")
-    PYTHON_REQUIRES = ">=3.9"
-
 setuptools.setup(
     name=NAME,
     version=VERSION,
@@ -80,7 +76,7 @@ setuptools.setup(
     url="https://streamlit.io",
     author="Streamlit Inc",
     author_email="hello@streamlit.io",
-    python_requires=PYTHON_REQUIRES,
+    python_requires=">=3.6",
     license="Apache 2",
     packages=setuptools.find_packages(exclude=["tests", "tests.*"]),
     # Requirements
