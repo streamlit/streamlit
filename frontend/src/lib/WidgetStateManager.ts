@@ -63,16 +63,66 @@ function requireNumberInt(value: number | Long): number {
 }
 
 /**
+ * A Dictionary that maps widgetID -> WidgetState, and provides some utility
+ * functions.
+ */
+class WidgetStateDict {
+  private readonly widgetStates: Map<string, WidgetState> = new Map<
+    string,
+    WidgetState
+  >()
+
+  /**
+   * Create a new WidgetState proto for the widget with the given ID,
+   * overwriting any that currently exists.
+   */
+  public createWidgetStateProto(widgetId: string): WidgetState {
+    const state = new WidgetState({ id: widgetId })
+    this.widgetStates.set(widgetId, state)
+    return state
+  }
+
+  /** Return the WidgetState for the given widgetID if it exists. */
+  public getWidgetStateProto(widgetId: string): WidgetState | undefined {
+    return this.widgetStates.get(widgetId)
+  }
+
+  /** Remove the WidgetState proto with the given id, if it exists. */
+  public deleteWidgetStateProto(widgetId: string): void {
+    this.widgetStates.delete(widgetId)
+  }
+
+  /**
+   * Remove the state of widgets that are not contained in `activeIds`.
+   */
+  public clean(activeIds: Set<string>): void {
+    this.widgetStates.forEach((value, key) => {
+      if (!activeIds.has(key)) {
+        this.widgetStates.delete(key)
+      }
+    })
+  }
+
+  public get isEmpty(): boolean {
+    return this.widgetStates.size === 0
+  }
+
+  public createWidgetStatesMsg(): WidgetStates {
+    const msg = new WidgetStates()
+    this.widgetStates.forEach(value => msg.widgets.push(value))
+    return msg
+  }
+}
+
+/**
  * Manages widget values, and sends widget update messages back to the server.
  */
 export class WidgetStateManager {
   // Called to deliver a message to the server
   private readonly sendRerunBackMsg: (widgetStates: WidgetStates) => void
 
-  private readonly widgetStates: Map<string, WidgetState> = new Map<
-    string,
-    WidgetState
-  >()
+  // Top-level widget state dictionary.
+  private readonly widgetStates: WidgetStateDict = new WidgetStateDict()
 
   constructor(sendRerunBackMsg: (widgetStates: WidgetStates) => void) {
     this.sendRerunBackMsg = sendRerunBackMsg
@@ -83,7 +133,7 @@ export class WidgetStateManager {
    * initially connects to the server for the first time.
    */
   public get isEmpty(): boolean {
-    return this.widgetStates.size === 0
+    return this.widgetStates.isEmpty
   }
 
   /**
@@ -91,7 +141,7 @@ export class WidgetStateManager {
    * to the server, and then immediately unsets the trigger value.
    */
   public setTriggerValue(widget: WidgetInfo, source: Source): void {
-    this.createWidgetStateProto(widget.id).triggerValue = true
+    this.createWidgetStateProto(widget).triggerValue = true
     this.maybeSendUpdateWidgetsMessage(source)
     this.deleteWidgetStateProto(widget.id)
   }
@@ -110,7 +160,7 @@ export class WidgetStateManager {
     value: boolean,
     source: Source
   ): void {
-    this.createWidgetStateProto(widget.id).boolValue = value
+    this.createWidgetStateProto(widget).boolValue = value
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
@@ -124,7 +174,7 @@ export class WidgetStateManager {
   }
 
   public setIntValue(widget: WidgetInfo, value: number, source: Source): void {
-    this.createWidgetStateProto(widget.id).intValue = value
+    this.createWidgetStateProto(widget).intValue = value
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
@@ -142,7 +192,7 @@ export class WidgetStateManager {
     value: number,
     source: Source
   ): void {
-    this.createWidgetStateProto(widget.id).doubleValue = value
+    this.createWidgetStateProto(widget).doubleValue = value
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
@@ -160,7 +210,7 @@ export class WidgetStateManager {
     value: string,
     source: Source
   ): void {
-    this.createWidgetStateProto(widget.id).stringValue = value
+    this.createWidgetStateProto(widget).stringValue = value
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
@@ -169,7 +219,7 @@ export class WidgetStateManager {
     value: string[],
     source: Source
   ): void {
-    this.createWidgetStateProto(widget.id).stringArrayValue = new StringArray({
+    this.createWidgetStateProto(widget).stringArrayValue = new StringArray({
       data: value,
     })
     this.maybeSendUpdateWidgetsMessage(source)
@@ -208,7 +258,7 @@ export class WidgetStateManager {
     value: number[],
     source: Source
   ): void {
-    this.createWidgetStateProto(widget.id).doubleArrayValue = new DoubleArray({
+    this.createWidgetStateProto(widget).doubleArrayValue = new DoubleArray({
       data: value,
     })
     this.maybeSendUpdateWidgetsMessage(source)
@@ -233,7 +283,7 @@ export class WidgetStateManager {
     value: number[],
     source: Source
   ): void {
-    this.createWidgetStateProto(widget.id).intArrayValue = new SInt64Array({
+    this.createWidgetStateProto(widget).intArrayValue = new SInt64Array({
       data: value,
     })
     this.maybeSendUpdateWidgetsMessage(source)
@@ -249,7 +299,7 @@ export class WidgetStateManager {
   }
 
   public setJsonValue(widget: WidgetInfo, value: any, source: Source): void {
-    this.createWidgetStateProto(widget.id).jsonValue = JSON.stringify(value)
+    this.createWidgetStateProto(widget).jsonValue = JSON.stringify(value)
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
@@ -258,7 +308,7 @@ export class WidgetStateManager {
     value: IArrowTable,
     source: Source
   ): void {
-    this.createWidgetStateProto(widget.id).arrowValue = value
+    this.createWidgetStateProto(widget).arrowValue = value
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
@@ -280,7 +330,7 @@ export class WidgetStateManager {
     value: Uint8Array,
     source: Source
   ): void {
-    this.createWidgetStateProto(widget.id).bytesValue = value
+    this.createWidgetStateProto(widget).bytesValue = value
     this.maybeSendUpdateWidgetsMessage(source)
   }
 
@@ -300,44 +350,32 @@ export class WidgetStateManager {
   }
 
   public sendUpdateWidgetsMessage(): void {
-    this.sendRerunBackMsg(this.createWidgetStatesMsg())
+    this.sendRerunBackMsg(this.widgetStates.createWidgetStatesMsg())
   }
 
   /**
    * Remove the state of widgets that are not contained in `activeIds`.
    */
   public clean(activeIds: Set<string>): void {
-    this.widgetStates.forEach((value, key) => {
-      if (!activeIds.has(key)) {
-        this.deleteWidgetStateProto(key)
-      }
-    })
-  }
-
-  private createWidgetStatesMsg(): WidgetStates {
-    const msg = new WidgetStates()
-    this.widgetStates.forEach(value => msg.widgets.push(value))
-    return msg
+    this.widgetStates.clean(activeIds)
   }
 
   /**
    * Create a new WidgetState proto for the widget with the given ID,
    * overwriting any that currently exists.
    */
-  private createWidgetStateProto(id: string): WidgetState {
-    const state = new WidgetState({ id })
-    this.widgetStates.set(id, state)
-    return state
+  private createWidgetStateProto(widget: WidgetInfo): WidgetState {
+    return this.widgetStates.createWidgetStateProto(widget.id)
   }
 
   /**
    * Removes the WidgetState proto with the given id, if it exists
    */
-  private deleteWidgetStateProto(id: string): void {
-    this.widgetStates.delete(id)
+  private deleteWidgetStateProto(widgetId: string): void {
+    this.widgetStates.deleteWidgetStateProto(widgetId)
   }
 
-  private getWidgetStateProto(id: string): WidgetState | undefined {
-    return this.widgetStates.get(id)
+  private getWidgetStateProto(widgetId: string): WidgetState | undefined {
+    return this.widgetStates.getWidgetStateProto(widgetId)
   }
 }
