@@ -1,9 +1,12 @@
+from typing import cast
+
+import streamlit
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from .utils import _get_widget_ui_value
 
 
 class CheckboxMixin:
-    def checkbox(dg, label, value=False, key=None):
+    def checkbox(self, label, value=False, key=None):
         """Display a checkbox widget.
 
         Parameters
@@ -32,9 +35,13 @@ class CheckboxMixin:
         ...     st.write('Great!')
 
         """
+
+        dg = cast("streamlit.delta_generator.DeltaGenerator", self)
+
         checkbox_proto = CheckboxProto()
         checkbox_proto.label = label
         checkbox_proto.default = bool(value)
+        checkbox_proto.form_id = dg._form_data.form_id
 
         ui_value = _get_widget_ui_value("checkbox", checkbox_proto, user_key=key)
         current_value = ui_value if ui_value is not None else value

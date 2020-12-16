@@ -14,6 +14,7 @@
 
 from typing import Optional
 
+import streamlit
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from .utils import _get_widget_ui_value
 
@@ -49,7 +50,7 @@ class ButtonMixin:
 
     def _button(
         dg, label: str, key: Optional[str], is_form_submitter: bool
-    ) -> "DeltaGenerator":
+    ) -> "streamlit.delta_generator.DeltaGenerator":
         button_proto = ButtonProto()
 
         button_proto.label = label
