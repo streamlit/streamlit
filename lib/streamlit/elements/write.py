@@ -1,9 +1,10 @@
-import types
 import json as json
-import numpy as np
-
+import types
 from typing import cast, Any, List, Tuple, Type
 
+import numpy as np
+
+import streamlit
 from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
 
@@ -131,18 +132,13 @@ class WriteMixin:
             height: 200px
 
         """
-        # Import dynamically, to resolve circular dependency
-        from streamlit.delta_generator import DeltaGenerator
-
-        # Cast self to DeltaGenerator, to resolve mypy type issues
-        dg = cast(DeltaGenerator, self)
         string_buffer = []  # type: List[str]
         unsafe_allow_html = kwargs.get("unsafe_allow_html", False)
 
         # This bans some valid cases like: e = st.empty(); e.write("a", "b").
         # BUT: 1) such cases are rare, 2) this rule is easy to understand,
         # and 3) this rule should be removed once we have st.container()
-        if not dg._is_top_level and len(args) > 1:
+        if not self.dg._is_top_level and len(args) > 1:
             raise StreamlitAPIException(
                 "Cannot replace a single element with multiple elements.\n\n"
                 "The `write()` method only supports multiple elements when "
@@ -152,8 +148,9 @@ class WriteMixin:
 
         def flush_buffer():
             if string_buffer:
-                dg.markdown(
-                    " ".join(string_buffer), unsafe_allow_html=unsafe_allow_html,
+                self.dg.markdown(
+                    " ".join(string_buffer),
+                    unsafe_allow_html=unsafe_allow_html,
                 )
                 string_buffer[:] = []
 
@@ -164,49 +161,54 @@ class WriteMixin:
             elif type_util.is_dataframe_like(arg):
                 flush_buffer()
                 if len(np.shape(arg)) > 2:
-                    dg.text(arg)
+                    self.dg.text(arg)
                 else:
-                    dg.dataframe(arg)
+                    self.dg.dataframe(arg)
             elif isinstance(arg, Exception):
                 flush_buffer()
-                dg.exception(arg)
+                self.dg.exception(arg)
             elif isinstance(arg, HELP_TYPES):
                 flush_buffer()
-                dg.help(arg)
+                self.dg.help(arg)
             elif type_util.is_altair_chart(arg):
                 flush_buffer()
-                dg.altair_chart(arg)
+                self.dg.altair_chart(arg)
             elif type_util.is_type(arg, "matplotlib.figure.Figure"):
                 flush_buffer()
-                dg.pyplot(arg)
+                self.dg.pyplot(arg)
             elif type_util.is_plotly_chart(arg):
                 flush_buffer()
-                dg.plotly_chart(arg)
+                self.dg.plotly_chart(arg)
             elif type_util.is_type(arg, "bokeh.plotting.figure.Figure"):
                 flush_buffer()
-                dg.bokeh_chart(arg)
+                self.dg.bokeh_chart(arg)
             elif type_util.is_graphviz_chart(arg):
                 flush_buffer()
-                dg.graphviz_chart(arg)
+                self.dg.graphviz_chart(arg)
             elif type_util.is_sympy_expession(arg):
                 flush_buffer()
-                dg.latex(arg)
+                self.dg.latex(arg)
             elif type_util.is_keras_model(arg):
                 from tensorflow.python.keras.utils import vis_utils
 
                 flush_buffer()
                 dot = vis_utils.model_to_dot(arg)
-                dg.graphviz_chart(dot.to_string())
+                self.dg.graphviz_chart(dot.to_string())
             elif isinstance(arg, (dict, list)):
                 flush_buffer()
-                dg.json(arg)
+                self.dg.json(arg)
             elif type_util.is_namedtuple(arg):
                 flush_buffer()
-                dg.json(json.dumps(arg._asdict()))
+                self.dg.json(json.dumps(arg._asdict()))
             elif type_util.is_pydeck(arg):
                 flush_buffer()
-                dg.pydeck_chart(arg)
+                self.dg.pydeck_chart(arg)
             else:
                 string_buffer.append("`%s`" % str(arg).replace("`", "\\`"))
 
         flush_buffer()
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)

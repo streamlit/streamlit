@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
 import traceback
-from typing import Optional
+from typing import Optional, cast
 
+import streamlit
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 from streamlit.error_util import get_nonstreamlit_traceback
 from streamlit.errors import MarkdownFormattedException
@@ -28,7 +28,7 @@ LOGGER = get_logger(__name__)
 
 
 class ExceptionMixin:
-    def exception(dg, exception):
+    def exception(self, exception):
         """Display an exception.
 
         Parameters
@@ -44,7 +44,12 @@ class ExceptionMixin:
         """
         exception_proto = ExceptionProto()
         marshall(exception_proto, exception)
-        return dg._enqueue("exception", exception_proto)  # type: ignore
+        return self.dg._enqueue("exception", exception_proto)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
 def marshall(exception_proto, exception):

@@ -1,14 +1,16 @@
 import numbers
+from typing import cast
 
-from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
+import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber, JSNumberBoundsException
+from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
 from .utils import _get_widget_ui_value, NoValue
 
 
 class NumberInputMixin:
     def number_input(
-        dg,
+        self,
         label,
         min_value=None,
         max_value=None,
@@ -199,4 +201,9 @@ class NumberInputMixin:
         )
 
         return_value = ui_value if ui_value is not None else value
-        return dg._enqueue("number_input", number_input_proto, return_value)  # type: ignore
+        return self.dg._enqueue("number_input", number_input_proto, return_value)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)

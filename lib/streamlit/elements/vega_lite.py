@@ -15,19 +15,24 @@
 """A Python wrapper around Vega-Lite."""
 
 import json
+from typing import cast
 
-import streamlit.elements.lib.dicttools as dicttools
+import streamlit
 import streamlit.elements.data_frame_proto as data_frame_proto
-
-from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
+import streamlit.elements.lib.dicttools as dicttools
 from streamlit.logger import get_logger
+from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
 
 LOGGER = get_logger(__name__)
 
 
 class VegaLiteMixin:
     def vega_lite_chart(
-        dg, data=None, spec=None, use_container_width=False, **kwargs,
+        self,
+        data=None,
+        spec=None,
+        use_container_width=False,
+        **kwargs,
     ):
         """Display a chart using the Vega-Lite library.
 
@@ -87,7 +92,12 @@ class VegaLiteMixin:
             use_container_width=use_container_width,
             **kwargs,
         )
-        return dg._enqueue("vega_lite_chart", vega_lite_chart_proto)  # type: ignore
+        return self.dg._enqueue("vega_lite_chart", vega_lite_chart_proto)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
 def marshall(proto, data=None, spec=None, use_container_width=False, **kwargs):

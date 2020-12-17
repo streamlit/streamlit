@@ -1,9 +1,12 @@
+from typing import cast
+
+import streamlit
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from .utils import _clean_text
 
 
 class AlertMixin:
-    def error(dg, body):
+    def error(self, body):
         """Display error message.
 
         Parameters
@@ -19,9 +22,9 @@ class AlertMixin:
         alert_proto = AlertProto()
         alert_proto.body = _clean_text(body)
         alert_proto.format = AlertProto.ERROR
-        return dg._enqueue("alert", alert_proto)  # type: ignore
+        return self.dg._enqueue("alert", alert_proto)
 
-    def warning(dg, body):
+    def warning(self, body):
         """Display warning message.
 
         Parameters
@@ -37,9 +40,9 @@ class AlertMixin:
         alert_proto = AlertProto()
         alert_proto.body = _clean_text(body)
         alert_proto.format = AlertProto.WARNING
-        return dg._enqueue("alert", alert_proto)  # type: ignore
+        return self.dg._enqueue("alert", alert_proto)
 
-    def info(dg, body):
+    def info(self, body):
         """Display an informational message.
 
         Parameters
@@ -55,9 +58,9 @@ class AlertMixin:
         alert_proto = AlertProto()
         alert_proto.body = _clean_text(body)
         alert_proto.format = AlertProto.INFO
-        return dg._enqueue("alert", alert_proto)  # type: ignore
+        return self.dg._enqueue("alert", alert_proto)
 
-    def success(dg, body):
+    def success(self, body):
         """Display a success message.
 
         Parameters
@@ -73,4 +76,9 @@ class AlertMixin:
         alert_proto = AlertProto()
         alert_proto.body = _clean_text(body)
         alert_proto.format = AlertProto.SUCCESS
-        return dg._enqueue("alert", alert_proto)  # type: ignore
+        return self.dg._enqueue("alert", alert_proto)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)

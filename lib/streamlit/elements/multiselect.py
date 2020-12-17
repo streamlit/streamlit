@@ -1,11 +1,14 @@
-from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
+from typing import cast
+
+import streamlit
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.type_util import is_type, ensure_iterable
-from .utils import _get_widget_ui_value, NoValue
+from .utils import _get_widget_ui_value
 
 
 class MultiSelectMixin:
-    def multiselect(dg, label, options, default=None, format_func=str, key=None):
+    def multiselect(self, label, options, default=None, format_func=str, key=None):
         """Display a multiselect widget.
         The multiselect widget starts as empty.
 
@@ -89,4 +92,9 @@ class MultiSelectMixin:
         ui_value = _get_widget_ui_value("multiselect", multiselect_proto, user_key=key)
         current_value = ui_value.data if ui_value is not None else default_value
         return_value = [options[i] for i in current_value]
-        return dg._enqueue("multiselect", multiselect_proto, return_value)  # type: ignore
+        return self.dg._enqueue("multiselect", multiselect_proto, return_value)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)

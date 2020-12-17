@@ -1,15 +1,17 @@
 from datetime import date, time, datetime, timedelta, timezone
+from typing import cast
 
-from streamlit.proto.Slider_pb2 import Slider as SliderProto
+import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber
 from streamlit.js_number import JSNumberBoundsException
+from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from .utils import _get_widget_ui_value
 
 
 class SliderMixin:
     def slider(
-        dg,
+        self,
         label,
         min_value=None,
         max_value=None,
@@ -372,4 +374,9 @@ class SliderMixin:
             ]
         # If the original value was a list/tuple, so will be the output (and vice versa)
         return_value = current_value[0] if single_value else tuple(current_value)
-        return dg._enqueue("slider", slider_proto, return_value)  # type: ignore
+        return self.dg._enqueue("slider", slider_proto, return_value)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)

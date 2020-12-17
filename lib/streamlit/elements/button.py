@@ -1,9 +1,12 @@
+from typing import cast
+
+import streamlit
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from .utils import _get_widget_ui_value
 
 
 class ButtonMixin:
-    def button(dg, label, key=None):
+    def button(self, label, key=None):
         """Display a button widget.
 
         Parameters
@@ -37,4 +40,9 @@ class ButtonMixin:
         ui_value = _get_widget_ui_value("button", button_proto, user_key=key)
         current_value = ui_value if ui_value is not None else False
 
-        return dg._enqueue("button", button_proto, current_value)  # type: ignore
+        return self.dg._enqueue("button", button_proto, current_value)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)
