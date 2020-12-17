@@ -119,8 +119,8 @@ class CustomComponent:
                     """To use Custom Components in Streamlit, you need to install
 PyArrow. Unfortunately, PyArrow does not yet support Python 3.9.
 
-You can either switch to Python 3.8 with an environment manager like PyEnv, or
-[install Streamlit with conda](https://discuss.streamlit.io/t/note-installation-issues-with-python-3-9-and-streamlit/6946/7):
+You can either switch to Python 3.8 with an environment manager like PyEnv, or stay on 3.9 by
+[installing Streamlit with conda](https://discuss.streamlit.io/t/note-installation-issues-with-python-3-9-and-streamlit/6946):
 
 `conda install -c conda-forge streamlit`
 
