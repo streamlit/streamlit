@@ -1,9 +1,12 @@
+from typing import cast
+
+import streamlit
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from .utils import _get_widget_ui_value
 
 
 class CheckboxMixin:
-    def checkbox(dg, label, value=False, key=None):
+    def checkbox(self, label, value=False, key=None):
         """Display a checkbox widget.
 
         Parameters
@@ -38,4 +41,9 @@ class CheckboxMixin:
 
         ui_value = _get_widget_ui_value("checkbox", checkbox_proto, user_key=key)
         current_value = ui_value if ui_value is not None else value
-        return dg._enqueue("checkbox", checkbox_proto, bool(current_value))  # type: ignore
+        return self.dg._enqueue("checkbox", checkbox_proto, bool(current_value))
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)

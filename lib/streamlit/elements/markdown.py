@@ -1,10 +1,13 @@
-from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
+from typing import cast
+
+import streamlit
 from streamlit import type_util
+from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from .utils import _clean_text
 
 
 class MarkdownMixin:
-    def markdown(dg, body, unsafe_allow_html=False):
+    def markdown(self, body, unsafe_allow_html=False):
         """Display string formatted as Markdown.
 
         Parameters
@@ -59,9 +62,9 @@ class MarkdownMixin:
         markdown_proto.body = _clean_text(body)
         markdown_proto.allow_html = unsafe_allow_html
 
-        return dg._enqueue("markdown", markdown_proto)  # type: ignore
+        return self.dg._enqueue("markdown", markdown_proto)
 
-    def header(dg, body):
+    def header(self, body):
         """Display text in header formatting.
 
         Parameters
@@ -80,9 +83,9 @@ class MarkdownMixin:
         """
         header_proto = MarkdownProto()
         header_proto.body = "## %s" % _clean_text(body)
-        return dg._enqueue("markdown", header_proto)  # type: ignore
+        return self.dg._enqueue("markdown", header_proto)
 
-    def subheader(dg, body):
+    def subheader(self, body):
         """Display text in subheader formatting.
 
         Parameters
@@ -101,9 +104,9 @@ class MarkdownMixin:
         """
         subheader_proto = MarkdownProto()
         subheader_proto.body = "### %s" % _clean_text(body)
-        return dg._enqueue("markdown", subheader_proto)  # type: ignore
+        return self.dg._enqueue("markdown", subheader_proto)
 
-    def code(dg, body, language="python"):
+    def code(self, body, language="python"):
         """Display a code block with optional syntax highlighting.
 
         (This is a convenience wrapper around `st.markdown()`)
@@ -134,9 +137,9 @@ class MarkdownMixin:
             "body": body,
         }
         code_proto.body = _clean_text(markdown)
-        return dg._enqueue("markdown", code_proto)  # type: ignore
+        return self.dg._enqueue("markdown", code_proto)
 
-    def title(dg, body):
+    def title(self, body):
         """Display text in title formatting.
 
         Each document should have a single `st.title()`, although this is not
@@ -158,9 +161,9 @@ class MarkdownMixin:
         """
         title_proto = MarkdownProto()
         title_proto.body = "# %s" % _clean_text(body)
-        return dg._enqueue("markdown", title_proto)  # type: ignore
+        return self.dg._enqueue("markdown", title_proto)
 
-    def latex(dg, body):
+    def latex(self, body):
         # This docstring needs to be "raw" because of the backslashes in the
         # example below.
         r"""Display mathematical expressions formatted as LaTeX.
@@ -196,4 +199,9 @@ class MarkdownMixin:
 
         latex_proto = MarkdownProto()
         latex_proto.body = "$$\n%s\n$$" % _clean_text(body)
-        return dg._enqueue("markdown", latex_proto)  # type: ignore
+        return self.dg._enqueue("markdown", latex_proto)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)

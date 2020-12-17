@@ -15,10 +15,12 @@
 """Helper functions to marshall a pandas.DataFrame into a proto.Dataframe."""
 
 import re
+from collections import namedtuple
+from typing import cast
+
 import tzlocal
 
-from collections import namedtuple
-
+import streamlit
 from streamlit import type_util
 from streamlit.logger import get_logger
 from streamlit.proto.DataFrame_pb2 import DataFrame as DataFrameProto
@@ -29,7 +31,7 @@ CSSStyle = namedtuple("CSSStyle", ["property", "value"])
 
 
 class DataFrameMixin:
-    def dataframe(dg, data=None, width=None, height=None):
+    def dataframe(self, data=None, width=None, height=None):
         """Display a dataframe as an interactive table.
 
         Parameters
@@ -81,14 +83,14 @@ class DataFrameMixin:
         data_frame_proto = DataFrameProto()
         marshall_data_frame(data, data_frame_proto)
 
-        return dg._enqueue(  # type: ignore
+        return self.dg._enqueue(
             "data_frame",
             data_frame_proto,
             element_width=width,
             element_height=height,
         )
 
-    def table(dg, data=None):
+    def table(self, data=None):
         """Display a static table.
 
         This differs from `st.dataframe` in that the table in this case is
@@ -115,7 +117,12 @@ class DataFrameMixin:
         """
         table_proto = DataFrameProto()
         marshall_data_frame(data, table_proto)
-        return dg._enqueue("table", table_proto)  # type: ignore
+        return self.dg._enqueue("table", table_proto)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
 def marshall_data_frame(data, proto_df):
@@ -133,9 +140,6 @@ def marshall_data_frame(data, proto_df):
 
     # Convert df into an iterable of columns (each of type Series).
     df_data = (df.iloc[:, col] for col in range(len(df.columns)))
-
-    import numpy as np
-    import pandas as pd
 
     _marshall_table(df_data, proto_df.data)
     _marshall_index(df.columns, proto_df.columns)

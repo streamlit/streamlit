@@ -1,9 +1,12 @@
-from streamlit.proto.Progress_pb2 import Progress as ProgressProto
+from typing import cast
+
+import streamlit
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Progress_pb2 import Progress as ProgressProto
 
 
 class ProgressMixin:
-    def progress(dg, value):
+    def progress(self, value):
         """Display a progress bar.
 
         Parameters
@@ -49,4 +52,9 @@ class ProgressMixin:
                 "Progress Value has invalid type: %s" % type(value).__name__
             )
 
-        return dg._enqueue("progress", progress_proto)  # type: ignore
+        return self.dg._enqueue("progress", progress_proto)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)

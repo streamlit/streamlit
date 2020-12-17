@@ -1,8 +1,11 @@
+from typing import cast
+
+import streamlit
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 
 
 class EmptyMixin:
-    def empty(dg):
+    def empty(self):
         """Insert a single-element container.
 
         Inserts a container into your app that can be used to hold a single element.
@@ -48,4 +51,9 @@ class EmptyMixin:
         empty_proto = EmptyProto()
         # The protobuf needs something to be set
         empty_proto.unused = True
-        return dg._enqueue("empty", empty_proto)  # type: ignore
+        return self.dg._enqueue("empty", empty_proto)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)

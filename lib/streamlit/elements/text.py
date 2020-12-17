@@ -1,9 +1,12 @@
+from typing import cast
+
+import streamlit
 from streamlit.proto.Text_pb2 import Text as TextProto
 from .utils import _clean_text
 
 
 class TextMixin:
-    def text(dg, body):
+    def text(self, body):
         """Write fixed-width and preformatted text.
 
         Parameters
@@ -22,4 +25,9 @@ class TextMixin:
         """
         text_proto = TextProto()
         text_proto.body = _clean_text(body)
-        return dg._enqueue("text", text_proto)  # type: ignore
+        return self.dg._enqueue("text", text_proto)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)

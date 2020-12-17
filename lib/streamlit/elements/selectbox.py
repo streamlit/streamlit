@@ -1,11 +1,14 @@
-from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
+from typing import cast
+
+import streamlit
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
 from streamlit.type_util import ensure_iterable
 from .utils import _get_widget_ui_value, NoValue
 
 
 class SelectboxMixin:
-    def selectbox(dg, label, options, index=0, format_func=str, key=None):
+    def selectbox(self, label, options, index=0, format_func=str, key=None):
         """Display a select widget.
 
         Parameters
@@ -65,4 +68,9 @@ class SelectboxMixin:
             if len(options) > 0 and options[current_value] is not None
             else NoValue
         )
-        return dg._enqueue("selectbox", selectbox_proto, return_value)  # type: ignore
+        return self.dg._enqueue("selectbox", selectbox_proto, return_value)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)

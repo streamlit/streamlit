@@ -16,32 +16,31 @@
 
 import json
 import urllib.parse
+from typing import cast
 
+import streamlit
 from streamlit import caching
 from streamlit import type_util
-
 from streamlit.logger import get_logger
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 
 LOGGER = get_logger(__name__)
 
-SHARING_MODES = set(
-    [
-        # This means the plot will be sent to the Streamlit app rather than to
-        # Plotly.
-        "streamlit",
-        # The three modes below are for plots that should be hosted in Plotly.
-        # These are the names Plotly uses for them.
-        "private",
-        "public",
-        "secret",
-    ]
-)
+SHARING_MODES = {
+    # This means the plot will be sent to the Streamlit app rather than to
+    # Plotly.
+    "streamlit",
+    # The three modes below are for plots that should be hosted in Plotly.
+    # These are the names Plotly uses for them.
+    "private",
+    "public",
+    "secret",
+}
 
 
 class PlotlyMixin:
     def plotly_chart(
-        dg,
+        self,
         figure_or_data,
         use_container_width=False,
         sharing="streamlit",
@@ -112,13 +111,17 @@ class PlotlyMixin:
         # NOTE: "figure_or_data" is the name used in Plotly's .plot() method
         # for their main parameter. I don't like the name, but it's best to
         # keep it in sync with what Plotly calls it.
-        import streamlit.elements.plotly_chart as plotly_chart
 
         plotly_chart_proto = PlotlyChartProto()
         marshall(
             plotly_chart_proto, figure_or_data, use_container_width, sharing, **kwargs
         )
-        return dg._enqueue("plotly_chart", plotly_chart_proto)  # type: ignore
+        return self.dg._enqueue("plotly_chart", plotly_chart_proto)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
 def marshall(proto, figure_or_data, use_container_width, sharing, **kwargs):

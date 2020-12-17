@@ -29,7 +29,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   ...props,
 })
 
-describe.only("ScreencastDialog", () => {
+describe("ScreencastDialog", () => {
   it("renders without crashing", () => {
     const props = getProps()
     const wrapper = mount(<ScreencastDialog {...props} />)
