@@ -26,16 +26,18 @@ from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 
 LOGGER = get_logger(__name__)
 
-SHARING_MODES = {
-    # This means the plot will be sent to the Streamlit app rather than to
-    # Plotly.
-    "streamlit",
-    # The three modes below are for plots that should be hosted in Plotly.
-    # These are the names Plotly uses for them.
-    "private",
-    "public",
-    "secret",
-}
+SHARING_MODES = set(
+    [
+        # This means the plot will be sent to the Streamlit app rather than to
+        # Plotly.
+        "streamlit",
+        # The three modes below are for plots that should be hosted in Plotly.
+        # These are the names Plotly uses for them.
+        "private",
+        "public",
+        "secret",
+    ]
+)
 
 
 class PlotlyMixin:
