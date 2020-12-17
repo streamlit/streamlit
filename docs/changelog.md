@@ -16,6 +16,20 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.73.0
+
+_Release date: December 17, 2020_
+
+**Notable Changes**
+
+- 🐍 Streamlit can now be installed on Python 3.9. Streamlit components are not
+  yet compatible with Python 3.9 and must use version 3.8 or earlier.
+- 🧱 Streamlit Components now allows same origin, enabling features provided by
+  the browser such as a webcam component.
+- 🐙 Fix Streamlit Share deploy experience for users running on Git versions
+  2.7.0 or earlier.
+- 🧰 Handle unexpected closing of uploaded files for [`st.file_uploader`](https://docs.streamlit.io/en/0.72.0/api.html#streamlit.file_uploader).
+
 ## Version 0.72.0
 
 _Release date: December 2, 2020_
