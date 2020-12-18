@@ -176,13 +176,6 @@ def _is_magicmock(obj):
     )
 
 
-class _CellDelete:
-    pass
-
-
-_cell_delete_obj = _CellDelete()
-
-
 class _Cells:
     """
     This is basically a dict that allows us to push/pop frames of data.
@@ -202,6 +195,8 @@ class _Cells:
     save each code object's vars, hash it, and then restore the original vars.
     """
 
+    _cell_delete_obj = object()
+
     def __init__(self, func=None):
         self.values = {}
         self.stack = []
@@ -218,7 +213,7 @@ class _Cells:
         """
 
         # save the old value (or mark that it didn't exist)
-        self.stack.append((key, self.values.get(key, _cell_delete_obj)))
+        self.stack.append((key, self.values.get(key, self._cell_delete_obj)))
 
         # write the new value
         self.values[key] = value
@@ -228,7 +223,7 @@ class _Cells:
 
         idx = self.frames.pop()
         for key, val in self.stack[idx:]:
-            if val is _cell_delete_obj:
+            if val is self._cell_delete_obj:
                 del self.values[key]
             else:
                 self.values[key] = val
