@@ -107,7 +107,7 @@
     "@types/classnames": "^2.2.10",
     "@types/clipboard": "^2.0.1",
     "@types/d3": "^5.7.2",
-    "@types/d3-graphviz": "^2.6.3",
+    "@types/d3-graphviz": "^2.6.6",
     "@types/dom-mediacapture-record": "^1.0.7",
     "@types/dompurify": "^2.0.3",
     "@types/enzyme": "^3.10.8",
