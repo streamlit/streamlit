@@ -176,27 +176,90 @@ def _is_magicmock(obj):
     )
 
 
+class _CellDelete:
+    pass
+
+
+_cell_delete_obj = _CellDelete()
+
+
+class _Cells:
+    """
+    This is basically a dict that allows us to push/pop frames of data.
+
+    Python code objects are nested. In the following function:
+
+        @st.cache()
+        def func():
+            production = [[x + y for x in range(3)] for y in range(5)]
+            return production
+
+    func.__code__ is a code object, and contains (inside
+    func.__code__.co_consts) additional code objects for the list
+    comprehensions. Those objects have their own co_freevars and co_cellvars.
+
+    What we need to do as we're traversing this "tree" of code objects is to
+    save each code object's vars, hash it, and then restore the original vars.
+    """
+
+    def __init__(self, func=None):
+        self.values = {}
+        self.stack = []
+        self.frames = []
+
+        if func is not None:
+            self.push(func.__code__, func)
+
+    def _set(self, key, value):
+        """
+        Sets a value and saves the old value so it can be restored when
+        we pop the frame. A sentinel object, _cell_delete_obj, indicates that
+        the key was previously empty and should just be deleted.
+        """
+
+        # save the old value (or mark that it didn't exist)
+        self.stack.append((key, self.values.get(key, _cell_delete_obj)))
+
+        # write the new value
+        self.values[key] = value
+
+    def pop(self):
+        """Pop off the last frame we created, and restore all the old values."""
+
+        idx = self.frames.pop()
+        for key, val in self.stack[idx:]:
+            if val is _cell_delete_obj:
+                del self.values[key]
+            else:
+                self.values[key] = val
+        self.stack = self.stack[:idx]
+
+    def push(self, code, func=None):
+        """Create a new frame, and save all of `code`'s vars into it."""
+
+        self.frames.append(len(self.stack))
+
+        for var in code.co_cellvars:
+            self._set(var, var)
+
+        if code.co_freevars:
+            if func is not None:
+                assert len(code.co_freevars) == len(func.__closure__)
+                for var, cell in zip(code.co_freevars, func.__closure__):
+                    self._set(var, cell.cell_contents)
+            else:
+                # List comprehension code objects also have freevars, but they
+                # don't have a surrouding closure. In these cases we just use the name.
+                for var in code.co_freevars:
+                    self._set(var, var)
+
+
 def _get_context(func) -> Context:
-    code = func.__code__  # type: types.CodeType
-
-    # Mapping from variable name to the value if we can resolve it.
-    # Otherwise map to the name.
-    cells = {}
-
-    for var in code.co_cellvars:
-        cells[var] = var  # Instead of value, we use the name.
-
-    if code.co_freevars:
-        assert len(code.co_freevars) == len(func.__closure__)
-        cells.update(
-            zip(code.co_freevars, map(lambda c: c.cell_contents, func.__closure__))  # type: ignore[no-any-return]
-        )
-
     varnames = {}
     if inspect.ismethod(func):
         varnames = {"self": func.__self__}
 
-    return Context(globals=func.__globals__, cells=cells, varnames=varnames)
+    return Context(globals=func.__globals__, cells=_Cells(func), varnames=varnames)
 
 
 def _int_to_bytes(i):
@@ -611,8 +674,10 @@ class _CodeHasher:
         ]
         self.update(h, consts, context)
 
+        context.cells.push(code)
         for ref in get_referenced_objects(code, context):
             self.update(h, ref, context)
+        context.cells.pop()
 
         return h.digest()
 
@@ -662,7 +727,7 @@ def get_referenced_objects(code, context):
                 else:
                     set_tos(op.argval)
             elif op.opname in ["LOAD_DEREF", "LOAD_CLOSURE"]:
-                set_tos(context.cells[op.argval])
+                set_tos(context.cells.values[op.argval])
             elif op.opname == "IMPORT_NAME":
                 try:
                     set_tos(importlib.import_module(op.argval))
