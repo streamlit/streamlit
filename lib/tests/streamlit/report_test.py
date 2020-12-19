@@ -25,6 +25,7 @@ from streamlit.cursor import make_delta_path
 from streamlit.report import Report
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
+from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from tests import testutil
 
 NEW_REPORT_MSG = ForwardMsg()
@@ -36,6 +37,7 @@ TEXT_DELTA_MSG.delta.new_element.text.body = "text1"
 TEXT_DELTA_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
 EMPTY_DELTA_MSG = ForwardMsg()
+EMPTY_DELTA_MSG.delta.new_element.empty.CopyFrom(EmptyProto())
 EMPTY_DELTA_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
 
