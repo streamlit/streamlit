@@ -18,7 +18,7 @@ import streamlit
 
 
 class LayoutsMixin:
-    def beta_container(self) -> "DeltaGenerator":
+    def beta_container(self):
         """Insert a multi-element container.
 
         Inserts an invisible container into your app that can be used to hold
@@ -61,7 +61,7 @@ class LayoutsMixin:
         return self.dg._block()
 
     # TODO: Enforce that columns are not nested or in Sidebar
-    def beta_columns(self, spec) -> List["DeltaGenerator"]:
+    def beta_columns(self, spec):
         """Insert containers laid out as side-by-side columns.
 
         Inserts a number of multi-element containers laid out side-by-side and
@@ -162,7 +162,7 @@ class LayoutsMixin:
         row = self.dg._block(horiz_proto)
         return [row._block(column_proto(w)) for w in weights]
 
-    def beta_expander(self, label=None, expanded=False) -> "DeltaGenerator":
+    def beta_expander(self, label=None, expanded=False):
         """Insert a multi-element container that can be expanded/collapsed.
 
         Inserts a container into your app that can be used to hold multiple elements
