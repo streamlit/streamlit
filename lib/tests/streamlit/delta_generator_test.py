@@ -447,7 +447,7 @@ class DeltaGeneratorWriteTest(testutil.DeltaGeneratorTestCase):
         st.empty()
 
         element = self.get_delta_from_queue().new_element
-        self.assertEqual(True, element.empty.unused)
+        self.assertEqual(element.empty, EmptyProto())
 
 
 class DeltaGeneratorProgressTest(testutil.DeltaGeneratorTestCase):

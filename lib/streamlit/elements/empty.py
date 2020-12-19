@@ -63,8 +63,6 @@ class EmptyMixin:
 
         """
         empty_proto = EmptyProto()
-        # The protobuf needs something to be set
-        empty_proto.unused = True
         return self.dg._enqueue("empty", empty_proto)
 
     @property
