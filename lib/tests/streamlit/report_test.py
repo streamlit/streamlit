@@ -36,7 +36,6 @@ TEXT_DELTA_MSG.delta.new_element.text.body = "text1"
 TEXT_DELTA_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
 EMPTY_DELTA_MSG = ForwardMsg()
-EMPTY_DELTA_MSG.delta.new_element.empty.unused = True
 EMPTY_DELTA_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
 
