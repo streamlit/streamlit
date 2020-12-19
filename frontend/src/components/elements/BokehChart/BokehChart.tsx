@@ -15,60 +15,52 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect } from "react"
+import React, { PureComponent, ReactNode } from "react"
 import { embed as BokehEmbed } from "@bokeh/bokehjs"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import { BokehChart as BokehChartProto } from "autogen/proto"
 
-export interface BokehChartProps {
+interface Props {
   width: number
   element: BokehChartProto
   index: number
-  height?: number
+}
+
+export interface PropsWithHeight extends Props {
+  height: number | undefined
 }
 
 interface Dimensions {
-  chartWidth: number
-  chartHeight: number
+  width: number
+  height: number
 }
 
-export function BokehChart({
-  width,
-  element,
-  index,
-  height,
-}: BokehChartProps): ReactElement {
-  const chartId = `bokeh-chart-${index}`
+export class BokehChart extends PureComponent<PropsWithHeight> {
+  private chartId = `bokeh-chart-${this.props.index}`
 
-  const getChartData = (): any => {
-    return JSON.parse(element.figure)
+  private getChartData = (): any => {
+    return JSON.parse(this.props.element.figure)
   }
 
-  const getChartDimensions = (plot: any): Dimensions => {
+  public getChartDimensions = (plot: any): Dimensions => {
     // Default values
-    let chartWidth: number = plot.attributes.plot_width
-    let chartHeight: number = plot.attributes.plot_height
+    let width = plot.attributes.plot_width
+    let height = plot.attributes.plot_height
 
     // if is not fullscreen and useContainerWidth==false, we should use default values
-    if (height) {
+    if (this.props.height) {
       // fullscreen
-      chartWidth = width
-      chartHeight = height
-    } else if (element.useContainerWidth) {
-      chartWidth = width
+      width = this.props.width
+      height = this.props.height
+    } else if (this.props.element.useContainerWidth) {
+      width = this.props.width
     }
 
-    return { chartWidth, chartHeight }
+    return { width, height }
   }
 
-  const removeAllChildNodes = (element: Node): void => {
-    while (element.lastChild) {
-      element.lastChild.remove()
-    }
-  }
-
-  const updateChart = (data: any): void => {
-    const chart = document.getElementById(chartId)
+  private updateChart = (data: any): void => {
+    const chart = document.getElementById(this.chartId)
 
     /**
      * When you create a bokeh chart in your python script, you can specify
@@ -83,27 +75,41 @@ export function BokehChart({
         : undefined
 
     if (plot) {
-      const { chartWidth, chartHeight } = getChartDimensions(plot)
+      const { width, height } = this.getChartDimensions(plot)
 
-      if (chartWidth > 0) {
-        plot.attributes.plot_width = chartWidth
+      if (width > 0) {
+        plot.attributes.plot_width = width
       }
-      if (chartHeight > 0) {
-        plot.attributes.plot_height = chartHeight
+      if (height > 0) {
+        plot.attributes.plot_height = height
       }
     }
 
     if (chart !== null) {
-      removeAllChildNodes(chart)
-      BokehEmbed.embed_item(data, chartId)
+      this.removeAllChildNodes(chart)
+      BokehEmbed.embed_item(data, this.chartId)
     }
   }
 
-  useEffect(() => {
-    updateChart(getChartData())
-  })
+  private removeAllChildNodes = (element: Node): void => {
+    while (element.lastChild) {
+      element.lastChild.remove()
+    }
+  }
 
-  return <div id={chartId} className="stBokehChart" />
+  public componentDidMount = (): void => {
+    const data = this.getChartData()
+    this.updateChart(data)
+  }
+
+  public componentDidUpdate = (): void => {
+    const data = this.getChartData()
+    this.updateChart(data)
+  }
+
+  public render = (): ReactNode => (
+    <div id={this.chartId} className="stBokehChart" />
+  )
 }
 
 export default withFullScreenWrapper(BokehChart)
