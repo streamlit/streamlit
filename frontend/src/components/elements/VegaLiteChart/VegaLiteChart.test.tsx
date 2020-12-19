@@ -16,15 +16,12 @@
  */
 
 import React from "react"
-import { shallow } from "lib/test_util"
+import { mount } from "lib/test_util"
 import { fromJS } from "immutable"
 import { VegaLiteChart as VegaLiteChartProto } from "autogen/proto"
 
 import mock from "./mock"
-import { PropsWithHeight } from "./VegaLiteChart"
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { VegaLiteChart } = require("./VegaLiteChart")
+import { PropsWithHeight, VegaLiteChart } from "./VegaLiteChart"
 
 const getProps = (
   elementProps: Partial<VegaLiteChartProto> = {}
@@ -40,7 +37,7 @@ const getProps = (
 describe("VegaLiteChart Element", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<VegaLiteChart {...props} />)
+    const wrapper = mount(<VegaLiteChart {...props} />)
 
     expect(wrapper.find("StyledVegaLiteChartContainer").length).toBe(1)
   })
