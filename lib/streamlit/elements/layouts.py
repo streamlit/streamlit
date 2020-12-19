@@ -13,6 +13,9 @@
 # limitations under the License.
 
 from typing import cast, List
+from streamlit.errors import StreamlitAPIException
+
+from streamlit.proto.Block_pb2 import Block as BlockProto
 
 import streamlit
 
@@ -152,12 +155,12 @@ class LayoutsMixin:
             raise weights_exception
 
         def column_proto(weight):
-            col_proto = Block_pb2.Block()
+            col_proto = BlockProto()
             col_proto.column.weight = weight
             col_proto.allow_empty = True
             return col_proto
 
-        horiz_proto = Block_pb2.Block()
+        horiz_proto = BlockProto()
         horiz_proto.horizontal.total_weight = sum(weights)
         row = self.dg._block(horiz_proto)
         return [row._block(column_proto(w)) for w in weights]
@@ -204,11 +207,11 @@ class LayoutsMixin:
         if label is None:
             raise StreamlitAPIException("A label is required for an expander")
 
-        expandable_proto = Block_pb2.Block.Expandable()
+        expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = expanded
         expandable_proto.label = label
 
-        block_proto = Block_pb2.Block()
+        block_proto = BlockProto()
         block_proto.allow_empty = True
         block_proto.expandable.CopyFrom(expandable_proto)
 
