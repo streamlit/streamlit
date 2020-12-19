@@ -101,7 +101,7 @@ export function BokehChart({
 
   useEffect(() => {
     updateChart(getChartData())
-  }, [width, height, element, index])
+  }, [width, height, element, index, getChartData, updateChart])
 
   return <div id={chartId} className="stBokehChart" />
 }
