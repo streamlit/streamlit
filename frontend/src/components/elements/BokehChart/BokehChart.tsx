@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect } from "react"
+import React, { ReactElement, useEffect, useCallback } from "react"
 import { embed as BokehEmbed } from "@bokeh/bokehjs"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import { BokehChart as BokehChartProto } from "autogen/proto"
@@ -40,9 +40,9 @@ export function BokehChart({
 }: BokehChartProps): ReactElement {
   const chartId = `bokeh-chart-${index}`
 
-  const getChartData = (): any => {
+  const getChartData = useCallback(() => {
     return JSON.parse(element.figure)
-  }
+  }, [element])
 
   const getChartDimensions = (plot: any): Dimensions => {
     // Default values
@@ -67,37 +67,40 @@ export function BokehChart({
     }
   }
 
-  const updateChart = (data: any): void => {
-    const chart = document.getElementById(chartId)
+  const updateChart = useCallback(
+    (data: any): void => {
+      const chart = document.getElementById(chartId)
 
-    /**
-     * When you create a bokeh chart in your python script, you can specify
-     * the width: p = figure(title="simple line example", x_axis_label="x", y_axis_label="y", plot_width=200);
-     * In that case, the json object will contains an attribute called
-     * plot_width (or plot_heigth) inside the plot reference.
-     * If that values are missing, we can set that values to make the chart responsive.
-     */
-    const plot =
-      data && data.doc && data.doc.roots && data.doc.roots.references
-        ? data.doc.roots.references.find((e: any) => e.type === "Plot")
-        : undefined
+      /**
+       * When you create a bokeh chart in your python script, you can specify
+       * the width: p = figure(title="simple line example", x_axis_label="x", y_axis_label="y", plot_width=200);
+       * In that case, the json object will contains an attribute called
+       * plot_width (or plot_heigth) inside the plot reference.
+       * If that values are missing, we can set that values to make the chart responsive.
+       */
+      const plot =
+        data && data.doc && data.doc.roots && data.doc.roots.references
+          ? data.doc.roots.references.find((e: any) => e.type === "Plot")
+          : undefined
 
-    if (plot) {
-      const { chartWidth, chartHeight } = getChartDimensions(plot)
+      if (plot) {
+        const { chartWidth, chartHeight } = getChartDimensions(plot)
 
-      if (chartWidth > 0) {
-        plot.attributes.plot_width = chartWidth
+        if (chartWidth > 0) {
+          plot.attributes.plot_width = chartWidth
+        }
+        if (chartHeight > 0) {
+          plot.attributes.plot_height = chartHeight
+        }
       }
-      if (chartHeight > 0) {
-        plot.attributes.plot_height = chartHeight
-      }
-    }
 
-    if (chart !== null) {
-      removeAllChildNodes(chart)
-      BokehEmbed.embed_item(data, chartId)
-    }
-  }
+      if (chart !== null) {
+        removeAllChildNodes(chart)
+        BokehEmbed.embed_item(data, chartId)
+      }
+    },
+    [width, height, element, index]
+  )
 
   useEffect(() => {
     updateChart(getChartData())
