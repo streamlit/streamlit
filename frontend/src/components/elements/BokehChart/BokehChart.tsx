@@ -99,7 +99,7 @@ export function BokehChart({
     }
   }
 
-  const updateChartCallback = useCallback(updateChart, [
+  const memoizedUpdateChart = useCallback(updateChart, [
     width,
     height,
     element,
@@ -107,8 +107,8 @@ export function BokehChart({
   ])
 
   useEffect(() => {
-    updateChartCallback(getChartData())
-  }, [width, height, element, index, getChartData, updateChart])
+    memoizedUpdateChart(getChartData())
+  }, [width, height, element, index, getChartData, memoizedUpdateChart])
 
   return <div id={chartId} className="stBokehChart" />
 }
