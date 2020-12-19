@@ -206,15 +206,16 @@ workflows:
               only: /^([0-9]+\.){3}dev[0-9]+/
             branches:
               ignore: /.*/
-      - cypress-flaky-approval:
-          type: approval
-          requires:
-            - python-3-8
-      - cypress: # Flaky Cypress tests
-          name: cypress-flaky
-          flaky: true
-          requires:
-            - cypress-flaky-approval
+      # Uncomment to get a button that runs flaky tests on CircleCI:
+      # - cypress-flaky-approval:
+      #     type: approval
+      #     requires:
+      #       - python-3-8
+      # - cypress: # Flaky Cypress tests
+      #     name: cypress-flaky
+      #     flaky: true
+      #     requires:
+      #       - cypress-flaky-approval
 
   create-nightly-tag:
     triggers:
