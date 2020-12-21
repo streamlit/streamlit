@@ -1,5 +1,7 @@
 import streamlit as st
 
+st.checkbox("outside")
+
 with st.beta_form():
     st.checkbox("checkbox")
     st.text_input("text_input")

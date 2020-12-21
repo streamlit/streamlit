@@ -18,21 +18,50 @@ import streamlit
 from streamlit.proto import Block_pb2
 
 
+def current_form_id(dg: "streamlit.delta_generator.DeltaGenerator") -> str:
+    """Return the form_id for the current form, or the empty string if  we're
+    not inside an `st.form` block.
+
+    (We return the empty string, instead of None, because this value is
+    assigned to protobuf message fields, and None is not valid.)
+    """
+    form_data = dg._active_dg._form_data
+    if form_data is None:
+        return ""
+    return form_data.form_id
+
+
 class FormData(NamedTuple):
     """Form data stored on a DeltaGenerator."""
 
+    # The form's unique ID.
+    form_id: str
+    # The label for the submit button that's automatically created for a form.
     submit_button_label: str
+    # The optional key for the submit button.
     submit_button_key: Optional[str]
 
 
 class FormMixin:
-    def beta_form(self, submit_label="Submit", key=None) -> "DeltaGenerator":
+    def beta_form(self, submit_label="Submit", key=None):
+        """TODO
+
+        Parameters
+        ----------
+        submit_label
+        key
+
+        Returns
+        -------
+
+        """
         block_proto = Block_pb2.Block()
         block_dg = self.dg._block(block_proto)
         # Attach the form's button info to the newly-created block's
-        # delta generator. The block will create its submit button when it
+        # DeltaGenerator. The block will create its submit button when it
         # exits.
-        block_dg._form_data = FormData(submit_label, key)
+        form_id = "todo_form_id"
+        block_dg._form_data = FormData(form_id, submit_label, key)
         return block_dg
 
     @property
