@@ -64,7 +64,7 @@ def _build_duplicate_widget_message(
     return message.strip("\n").format(widget_type=widget_func_name, user_key=user_key)
 
 
-def get_widget_id(
+def _get_widget_id(
     element_type: str, element_proto: Any, user_key: Optional[str] = None
 ) -> str:
     """Generate the widget id for the given widget.
@@ -113,7 +113,7 @@ def register_widget(
         doesn't exist, None will be returned.
 
     """
-    widget_id = get_widget_id(element_type, element_proto, user_key)
+    widget_id = _get_widget_id(element_type, element_proto, user_key)
     element_proto.id = widget_id
 
     ctx = get_report_ctx()
