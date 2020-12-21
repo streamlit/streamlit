@@ -339,7 +339,10 @@ class Server(object):
                     "/upload_file/?(?P<session_id>[^/]*)?/?(?P<widget_id>[^/]*)?/?(?P<file_id>[0-9]*)?",
                 ),
                 UploadFileRequestHandler,
-                dict(file_mgr=self._uploaded_file_mgr),
+                dict(
+                    file_mgr=self._uploaded_file_mgr,
+                    get_session_info=self._get_session_info,
+                ),
             ),
             (
                 make_url_path_regex(base, "assets/(.*)"),

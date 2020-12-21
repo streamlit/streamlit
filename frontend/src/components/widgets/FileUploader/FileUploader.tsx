@@ -188,10 +188,7 @@ class FileUploader extends React.PureComponent<Props, State> {
         // If this was a cancel error, we don't show the user an error -
         // the cancellation was in response to an action they took.
         if (!axios.isCancel(err)) {
-          this.setState({
-            status: "ERROR",
-            errorMessage: err ? err.toString() : "Unknown error",
-          })
+          this.setError(err ? err.toString() : "Unknown error")
         }
       })
   }
@@ -231,37 +228,40 @@ class FileUploader extends React.PureComponent<Props, State> {
     }
   }
 
-  private delete = (fileId: string): void => {
-    // TODO resolve typing issues
-    // @ts-ignore
-    this.setState(state => {
-      const files = [...state.files]
-      const file = files.find(file => file.id === fileId)
-      if (fileId && file) {
-        file.status = FileStatuses.DELETING
-        if (file.errorMessage) {
-          this.removeFile(fileId)
-          return null
-        }
-
-        if (file.cancelToken) {
-          // The file hasn't been uploaded. Let's cancel the request
-          // However, it may have been received by the server so let's
-          // send out a request to delete in case it has
-          file.cancelToken.cancel()
-        }
-
-        this.props.uploadClient
-          .delete(this.props.element.id, fileId)
-          .then(() => this.removeFile(fileId))
-        return { files: state.files }
-      }
-      const errorMessage = "File not found. Please try again."
-      return {
-        status: FileStatuses.ERROR,
-        errorMessage,
-      }
+  private setError = (errorMessage: string) => {
+    this.setState({
+      status: FileStatuses.ERROR,
+      errorMessage,
     })
+  }
+
+  private delete = (fileId: string): void => {
+    const file = this.state.files.find(file => file.id === fileId)
+    if (fileId && file) {
+      file.status = FileStatuses.DELETING
+      if (file.errorMessage) {
+        this.removeFile(fileId)
+      }
+
+      if (file.cancelToken) {
+        // The file hasn't been uploaded. Let's cancel the request
+        // However, it may have been received by the server so let's
+        // send out a request to delete in case it has
+        file.cancelToken.cancel()
+      }
+
+      this.props.uploadClient.delete(this.props.element.id, fileId).then(
+        () => this.removeFile(fileId),
+        error => {
+          if (error.response.status === 404) {
+            this.removeFile(fileId)
+          }
+        }
+      )
+      this.setState({ files: this.state.files })
+    } else {
+      this.setError("File not found. Please try again.")
+    }
   }
 
   private removeFile = (fileId: string): void => {
