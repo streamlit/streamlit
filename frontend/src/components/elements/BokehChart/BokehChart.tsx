@@ -40,7 +40,7 @@ export function BokehChart({
 }: BokehChartProps): ReactElement {
   const chartId = `bokeh-chart-${index}`
 
-  const getChartData = useCallback(() => {
+  const memoizedGetChartData = useCallback(() => {
     return JSON.parse(element.figure)
   }, [element])
 
@@ -95,6 +95,9 @@ export function BokehChart({
 
     if (chart !== null) {
       removeAllChildNodes(chart)
+      // embed_item is actually an async function call, so a race condition
+      // can occur if updateChart is called twice, leading to two Bokeh charts
+      // to be embedded at the same time.
       BokehEmbed.embed_item(data, chartId)
     }
   }
@@ -106,9 +109,19 @@ export function BokehChart({
     index,
   ])
 
+  // We only want useEffect to run once per prop update, because of the embed_item
+  // race condition mentioned per run. Thus we pass in all props and methods
+  // into the useEffect dependency array.
   useEffect(() => {
-    memoizedUpdateChart(getChartData())
-  }, [width, height, element, index, getChartData, memoizedUpdateChart])
+    memoizedUpdateChart(memoizedGetChartData())
+  }, [
+    width,
+    height,
+    element,
+    index,
+    memoizedGetChartData,
+    memoizedUpdateChart,
+  ])
 
   return <div id={chartId} className="stBokehChart" />
 }
