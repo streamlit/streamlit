@@ -32,7 +32,15 @@ function Button(props: ButtonProps): ReactElement {
   const style = { width }
 
   const handleClick = (): void => {
-    widgetMgr.setTriggerValue(element, { fromUi: true })
+    // If this is the "Submit" button for a form, clicking it submits
+    // its form and does *not* set a triggerValue. (Submit buttons are
+    // not created by user script, so there's no ui_value to return to
+    // the Streamlit app.)
+    if (element.isFormSubmitter) {
+      widgetMgr.submitForm(element.formId)
+    } else {
+      widgetMgr.setTriggerValue(element, { fromUi: true })
+    }
   }
 
   return (
