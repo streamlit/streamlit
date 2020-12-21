@@ -18,7 +18,7 @@ import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
 from streamlit.type_util import ensure_iterable
-from .utils import _get_widget_ui_value, NoValue
+from .utils import register_widget, NoValue
 
 
 class SelectboxMixin:
@@ -74,7 +74,7 @@ class SelectboxMixin:
         selectbox_proto.default = index
         selectbox_proto.options[:] = [str(format_func(option)) for option in options]
 
-        ui_value = _get_widget_ui_value("selectbox", selectbox_proto, user_key=key)
+        ui_value = register_widget("selectbox", selectbox_proto, user_key=key)
         current_value = ui_value if ui_value is not None else index
 
         return_value = (
