@@ -61,8 +61,9 @@ class FormMixin:
 
         # To generate an ID for the form, we fake up our Submit button -
         # which is not yet created - and use its ID. (We know that this ID
-        # will be unique, because widget IDs are unique - and this widget ID
-        # will be registered when the Submit button is created.)
+        # will be unique among all forms, because widget IDs are among all
+        # widgets, and this widget ID will be registered when the form's
+        # Submit button is created.)
         button_proto = Button_pb2.Button()
         button_proto.label = submit_label
         button_proto.default = False
