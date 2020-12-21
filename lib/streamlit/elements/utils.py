@@ -29,7 +29,8 @@ class NoValue(object):
     pass
 
 
-def _clean_text(text):
+def clean_text(text: Any) -> str:
+    """Convert an object to text, dedent it, and strip whitespace."""
     return textwrap.dedent(str(text)).strip()
 
 
