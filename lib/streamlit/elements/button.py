@@ -12,15 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
-
 import streamlit
+from typing import Optional, cast
+
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from .utils import _get_widget_ui_value
 
 
 class ButtonMixin:
-    def button(dg, label, key=None):
+    def button(self, label, key=None):
         """Display a button widget.
 
         Parameters
@@ -46,10 +46,10 @@ class ButtonMixin:
         ...     st.write('Goodbye')
 
         """
-        return dg._button(label, key, is_form_submitter=False)
+        return self.dg._button(label, key, is_form_submitter=False)
 
     def _button(
-        dg, label: str, key: Optional[str], is_form_submitter: bool
+        self, label: str, key: Optional[str], is_form_submitter: bool
     ) -> "streamlit.delta_generator.DeltaGenerator":
         button_proto = ButtonProto()
 
@@ -60,4 +60,9 @@ class ButtonMixin:
         ui_value = _get_widget_ui_value("button", button_proto, user_key=key)
         current_value = ui_value if ui_value is not None else False
 
-        return dg._enqueue("button", button_proto, current_value)  # type: ignore
+        return self.dg._enqueue("button", button_proto, current_value)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)

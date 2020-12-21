@@ -14,12 +14,15 @@
 
 """A Python wrapper around Bokeh."""
 
-from streamlit.proto.BokehChart_pb2 import BokehChart as BokehChartProto
 import json
+from typing import cast
+
+import streamlit
+from streamlit.proto.BokehChart_pb2 import BokehChart as BokehChartProto
 
 
 class BokehMixin:
-    def bokeh_chart(dg, figure, use_container_width=False):
+    def bokeh_chart(self, figure, use_container_width=False):
         """Display an interactive Bokeh chart.
 
         Bokeh is a charting library for Python. The arguments to this function
@@ -62,7 +65,12 @@ class BokehMixin:
         """
         bokeh_chart_proto = BokehChartProto()
         marshall(bokeh_chart_proto, figure, use_container_width)
-        return dg._enqueue("bokeh_chart", bokeh_chart_proto)  # type: ignore
+        return self.dg._enqueue("bokeh_chart", bokeh_chart_proto)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
 def marshall(proto, figure, use_container_width):

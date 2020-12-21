@@ -12,12 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import cast, Any, Dict
+
+import streamlit
 import json
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
 
 
 class PydeckMixin:
-    def pydeck_chart(dg, pydeck_obj=None, use_container_width=False):
+    def pydeck_chart(self, pydeck_obj=None, use_container_width=False):
         """Draw a chart using the PyDeck library.
 
         This supports 3D maps, point clouds, and more! More info about PyDeck
@@ -87,11 +90,18 @@ class PydeckMixin:
         """
         pydeck_proto = PydeckProto()
         marshall(pydeck_proto, pydeck_obj, use_container_width)
-        return dg._enqueue("deck_gl_json_chart", pydeck_proto)  # type: ignore
+        return self.dg._enqueue("deck_gl_json_chart", pydeck_proto)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
 # Map used when no data is passed.
-EMPTY_MAP = {"initialViewState": {"latitude": 0, "longitude": 0, "pitch": 0, "zoom": 1}}
+EMPTY_MAP: Dict[str, Any] = {
+    "initialViewState": {"latitude": 0, "longitude": 0, "pitch": 0, "zoom": 1}
+}
 
 
 def marshall(pydeck_proto, pydeck_obj, use_container_width):

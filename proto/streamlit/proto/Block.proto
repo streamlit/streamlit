@@ -31,7 +31,6 @@ message Block {
   string form_id = 6;
 
   message Vertical {
-    bool unused = 1;
   }
 
   message Horizontal {

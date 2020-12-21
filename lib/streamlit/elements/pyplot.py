@@ -15,20 +15,20 @@
 """Streamlit support for Matplotlib PyPlot charts."""
 
 import io
+from typing import cast
 
+import streamlit
+import streamlit.elements.image_proto as image_proto
 from streamlit import config
-from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.errors import StreamlitDeprecationWarning
 from streamlit.logger import get_logger
-
-import streamlit.elements.image_proto as image_proto
-
+from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 
 LOGGER = get_logger(__name__)
 
 
 class PyplotMixin:
-    def pyplot(dg, fig=None, clear_figure=None, **kwargs):
+    def pyplot(self, fig=None, clear_figure=None, **kwargs):
         """Display a matplotlib.pyplot figure.
 
         Parameters
@@ -86,11 +86,18 @@ class PyplotMixin:
         """
 
         if not fig and config.get_option("deprecation.showPyplotGlobalUse"):
-            dg.exception(PyplotGlobalUseWarning())  # type: ignore
+            self.dg.exception(PyplotGlobalUseWarning())
 
         image_list_proto = ImageListProto()
-        marshall(dg._get_delta_path_str(), image_list_proto, fig, clear_figure, **kwargs)  # type: ignore
-        return dg._enqueue("imgs", image_list_proto)  # type: ignore
+        marshall(
+            self.dg._get_delta_path_str(), image_list_proto, fig, clear_figure, **kwargs
+        )
+        return self.dg._enqueue("imgs", image_list_proto)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
 def marshall(coordinates, image_list_proto, fig=None, clear_figure=True, **kwargs):
