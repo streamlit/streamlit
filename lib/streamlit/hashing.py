@@ -197,13 +197,10 @@ class _Cells:
 
     _cell_delete_obj = object()
 
-    def __init__(self, func=None):
+    def __init__(self):
         self.values = {}
         self.stack = []
         self.frames = []
-
-        if func is not None:
-            self.push(func.__code__, func)
 
     def _set(self, key, value):
         """
@@ -254,7 +251,7 @@ def _get_context(func) -> Context:
     if inspect.ismethod(func):
         varnames = {"self": func.__self__}
 
-    return Context(globals=func.__globals__, cells=_Cells(func), varnames=varnames)
+    return Context(globals=func.__globals__, cells=_Cells(), varnames=varnames)
 
 
 def _int_to_bytes(i):
@@ -604,7 +601,7 @@ class _CodeHasher:
                 context = _get_context(obj)
                 if obj.__defaults__:
                     self.update(h, obj.__defaults__, context)
-                h.update(self._code_to_bytes(obj.__code__, context))
+                h.update(self._code_to_bytes(obj.__code__, context, func=obj))
             else:
                 # Don't hash code that is not in the current working directory.
                 self.update(h, obj.__module__)
@@ -655,7 +652,7 @@ class _CodeHasher:
                 self.update(h, item, context)
             return h.digest()
 
-    def _code_to_bytes(self, code, context):
+    def _code_to_bytes(self, code, context, func=None):
         h = hashlib.new("md5")
 
         # Hash the bytecode.
@@ -669,7 +666,7 @@ class _CodeHasher:
         ]
         self.update(h, consts, context)
 
-        context.cells.push(code)
+        context.cells.push(code, func=func)
         for ref in get_referenced_objects(code, context):
             self.update(h, ref, context)
         context.cells.pop()
