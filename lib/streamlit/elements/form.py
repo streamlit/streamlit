@@ -15,7 +15,7 @@
 from typing import cast, Optional, NamedTuple
 
 import streamlit
-from streamlit.elements.utils import get_widget_id
+from streamlit.elements.utils import _get_widget_id
 from streamlit.proto import Block_pb2, Button_pb2
 
 
@@ -67,7 +67,7 @@ class FormMixin:
         button_proto.label = submit_label
         button_proto.default = False
         button_proto.is_form_submitter = True
-        form_id = get_widget_id("button", button_proto, user_key=key)
+        form_id = _get_widget_id("button", button_proto, user_key=key)
 
         # Attach the form's button info to the newly-created block's
         # DeltaGenerator. The block will create its submit button when it

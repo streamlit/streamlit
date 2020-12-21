@@ -315,10 +315,8 @@ class DeltaGenerator(
         and Streamlit will expire the older images and replace them in place.
         """
         # Operate on the active DeltaGenerator, in case we're in a `with` block.
-        active_dg = self._active_dg
-        return (
-            str(active_dg._cursor.delta_path) if active_dg._cursor is not None else "[]"
-        )
+        dg = self._active_dg
+        return str(dg._cursor.delta_path) if dg._cursor is not None else "[]"
 
     def _enqueue(
         self,
@@ -351,10 +349,10 @@ class DeltaGenerator(
             element.
 
         """
-        # Switch to the active DeltaGenerator, in case we're in a `with` block.
-        self = self._active_dg
+        # Operate on the active DeltaGenerator, in case we're in a `with` block.
+        dg = self._active_dg
         # Warn if we're called from within an @st.cache function
-        caching.maybe_show_cached_st_function_warning(self, delta_type)
+        caching.maybe_show_cached_st_function_warning(dg, delta_type)
 
         # Some elements have a method.__name__ != delta_type in proto.
         # This really matters for line_chart, bar_chart & area_chart,
@@ -371,8 +369,8 @@ class DeltaGenerator(
 
         # Only enqueue message and fill in metadata if there's a container.
         msg_was_enqueued = False
-        if self._root_container is not None and self._cursor is not None:
-            msg.metadata.delta_path[:] = self._cursor.delta_path
+        if dg._root_container is not None and dg._cursor is not None:
+            msg.metadata.delta_path[:] = dg._cursor.delta_path
 
             if element_width is not None:
                 msg.metadata.element_dimension_spec.width = element_width
@@ -386,33 +384,33 @@ class DeltaGenerator(
             # Get a DeltaGenerator that is locked to the current element
             # position.
             new_cursor = (
-                self._cursor.get_locked_cursor(
+                dg._cursor.get_locked_cursor(
                     delta_type=delta_type, last_index=last_index
                 )
-                if self._cursor is not None
+                if dg._cursor is not None
                 else None
             )
 
             output_dg = DeltaGenerator(
-                root_container=self._root_container,
+                root_container=dg._root_container,
                 cursor=new_cursor,
-                parent=self,
+                parent=dg,
             )
         else:
             # If the message was not enqueued, just return self since it's a
             # no-op from the point of view of the app.
-            output_dg = self
+            output_dg = dg
 
         return _value_or_dg(return_value, output_dg)
 
     def _block(self, block_proto=Block_pb2.Block()) -> "DeltaGenerator":
-        # Switch to the active DeltaGenerator, in case we're in a `with` block.
-        self = self._active_dg
+        # Operate on the active DeltaGenerator, in case we're in a `with` block.
+        dg = self._active_dg
 
         # Prevent nested columns & expanders by checking all parents.
         block_type = block_proto.WhichOneof("type")
         # Convert the generator to a list, so we can use it multiple times.
-        parent_block_types = frozenset(self._parent_block_types)
+        parent_block_types = frozenset(dg._parent_block_types)
         if block_type == "column" and block_type in parent_block_types:
             raise StreamlitAPIException(
                 "Columns may not be nested inside other columns."
@@ -422,29 +420,29 @@ class DeltaGenerator(
                 "Expanders may not be nested inside other expanders."
             )
 
-        if self._root_container is None or self._cursor is None:
-            return self
+        if dg._root_container is None or dg._cursor is None:
+            return dg
 
         msg = ForwardMsg_pb2.ForwardMsg()
-        msg.metadata.delta_path[:] = self._cursor.delta_path
+        msg.metadata.delta_path[:] = dg._cursor.delta_path
         msg.delta.add_block.CopyFrom(block_proto)
 
         # Normally we'd return a new DeltaGenerator that uses the locked cursor
         # below. But in this case we want to return a DeltaGenerator that uses
         # a brand new cursor for this new block we're creating.
         block_cursor = cursor.RunningCursor(
-            root_container=self._root_container,
-            parent_path=self._cursor.parent_path + (self._cursor.index,),
+            root_container=dg._root_container,
+            parent_path=dg._cursor.parent_path + (dg._cursor.index,),
         )
         block_dg = DeltaGenerator(
-            root_container=self._root_container,
+            root_container=dg._root_container,
             cursor=block_cursor,
-            parent=self,
+            parent=dg,
             block_type=block_type,
         )
 
         # Must be called to increment this cursor's index.
-        self._cursor.get_locked_cursor(last_index=None)
+        dg._cursor.get_locked_cursor(last_index=None)
         _enqueue_message(msg)
 
         return block_dg

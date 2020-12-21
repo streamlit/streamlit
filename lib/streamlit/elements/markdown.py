@@ -17,7 +17,7 @@ from typing import cast
 import streamlit
 from streamlit import type_util
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
-from .utils import _clean_text
+from .utils import clean_text
 
 
 class MarkdownMixin:
@@ -73,7 +73,7 @@ class MarkdownMixin:
         """
         markdown_proto = MarkdownProto()
 
-        markdown_proto.body = _clean_text(body)
+        markdown_proto.body = clean_text(body)
         markdown_proto.allow_html = unsafe_allow_html
 
         return self.dg._enqueue("markdown", markdown_proto)
@@ -96,7 +96,7 @@ class MarkdownMixin:
 
         """
         header_proto = MarkdownProto()
-        header_proto.body = "## %s" % _clean_text(body)
+        header_proto.body = "## %s" % clean_text(body)
         return self.dg._enqueue("markdown", header_proto)
 
     def subheader(self, body):
@@ -117,7 +117,7 @@ class MarkdownMixin:
 
         """
         subheader_proto = MarkdownProto()
-        subheader_proto.body = "### %s" % _clean_text(body)
+        subheader_proto.body = "### %s" % clean_text(body)
         return self.dg._enqueue("markdown", subheader_proto)
 
     def code(self, body, language="python"):
@@ -150,7 +150,7 @@ class MarkdownMixin:
             "language": language or "",
             "body": body,
         }
-        code_proto.body = _clean_text(markdown)
+        code_proto.body = clean_text(markdown)
         return self.dg._enqueue("markdown", code_proto)
 
     def title(self, body):
@@ -174,7 +174,7 @@ class MarkdownMixin:
 
         """
         title_proto = MarkdownProto()
-        title_proto.body = "# %s" % _clean_text(body)
+        title_proto.body = "# %s" % clean_text(body)
         return self.dg._enqueue("markdown", title_proto)
 
     def latex(self, body):
@@ -212,7 +212,7 @@ class MarkdownMixin:
             body = sympy.latex(body)
 
         latex_proto = MarkdownProto()
-        latex_proto.body = "$$\n%s\n$$" % _clean_text(body)
+        latex_proto.body = "$$\n%s\n$$" % clean_text(body)
         return self.dg._enqueue("markdown", latex_proto)
 
     @property

@@ -16,7 +16,7 @@ from typing import cast
 
 import streamlit
 from streamlit.proto.Text_pb2 import Text as TextProto
-from .utils import _clean_text
+from .utils import clean_text
 
 
 class TextMixin:
@@ -38,7 +38,7 @@ class TextMixin:
 
         """
         text_proto = TextProto()
-        text_proto.body = _clean_text(body)
+        text_proto.body = clean_text(body)
         return self.dg._enqueue("text", text_proto)
 
     @property
