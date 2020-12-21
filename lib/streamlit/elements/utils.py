@@ -65,34 +65,13 @@ def _build_duplicate_widget_message(
     return message.strip("\n").format(widget_type=widget_func_name, user_key=user_key)
 
 
-def set_widget_id(
-    element_type: str,
-    element_proto: Any,
-    user_key: Optional[str] = None,
-    widget_func_name: Optional[str] = None,
-) -> None:
-    """Set the widget id.
+def get_widget_id(
+    element_type: str, element_proto: Any, user_key: Optional[str] = None
+) -> str:
+    """Generate the widget id for the given widget.
 
-    Parameters
-    ----------
-    element_type : str
-        The type of the element as stored in proto.
-    element_proto : proto
-        The proto of the specified type (e.g. Button/Multiselect/Slider proto)
-    user_key : str or None
-        Optional user-specified key to use for the widget ID.
-        If this is None, we'll generate an ID by hashing the element.
-    widget_func_name : str or None
-        The widget's DeltaGenerator function name, if it's different from
-        its element_type. Custom components are a special case: they all have
-        the element_type "component_instance", but are instantiated with
-        dynamically-named functions.
-
+    Does not mutate the element_proto object.
     """
-
-    if widget_func_name is None:
-        widget_func_name = element_type
-
     # Identify the widget with a hash of type + contents
     element_hash = hash((element_type, element_proto.SerializeToString()))
     if user_key is not None:
@@ -100,23 +79,16 @@ def set_widget_id(
     else:
         widget_id = "%s" % element_hash
 
-    ctx = get_report_ctx()
-    if ctx is not None:
-        added = ctx.widget_ids_this_run.add(widget_id)
-        if not added:
-            raise DuplicateWidgetID(
-                _build_duplicate_widget_message(widget_func_name, user_key)
-            )
-    element_proto.id = widget_id
+    return widget_id
 
 
-def get_widget_ui_value(
+def register_widget(
     element_type: str,
     element_proto: Any,
     user_key: Optional[str] = None,
     widget_func_name: Optional[str] = None,
 ) -> Any:
-    """Get the widget ui_value from the report context.
+    """Register a widget with Streamlit, and return its current ui_value.
     NOTE: This function should be called after the proto has been filled.
 
     Parameters
@@ -142,10 +114,29 @@ def get_widget_ui_value(
         doesn't exist, None will be returned.
 
     """
-    set_widget_id(element_type, element_proto, user_key, widget_func_name)
+    widget_id = get_widget_id(element_type, element_proto, user_key)
+    element_proto.id = widget_id
+
     ctx = get_report_ctx()
-    ui_value = ctx.widgets.get_widget_value(element_proto.id) if ctx else None
-    return ui_value
+    if ctx is None:
+        # Early-out if we're not running inside a ReportThread (which
+        # probably means we're running as a "bare" Python script, and
+        # not via `streamlit run`).
+        return None
+
+    # Register the widget, and ensure another widget with the same id hasn't
+    # already been registered.
+    added = ctx.widget_ids_this_run.add(widget_id)
+    if not added:
+        raise DuplicateWidgetID(
+            _build_duplicate_widget_message(
+                widget_func_name if widget_func_name is not None else element_type,
+                user_key,
+            )
+        )
+
+    # Return the widget's current value.
+    return ctx.widgets.get_widget_value(widget_id)
 
 
 def last_index_for_melted_dataframes(data):

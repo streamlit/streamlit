@@ -19,7 +19,7 @@ import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
-from .utils import get_widget_ui_value
+from .utils import register_widget
 
 
 class TimeWidgetsMixin:
@@ -68,7 +68,7 @@ class TimeWidgetsMixin:
         time_input_proto.label = label
         time_input_proto.default = time.strftime(value, "%H:%M")
 
-        ui_value = get_widget_ui_value("time_input", time_input_proto, user_key=key)
+        ui_value = register_widget("time_input", time_input_proto, user_key=key)
         current_value = (
             datetime.strptime(ui_value, "%H:%M").time()
             if ui_value is not None
@@ -157,7 +157,7 @@ class TimeWidgetsMixin:
 
         date_input_proto.max = date.strftime(max_value, "%Y/%m/%d")
 
-        ui_value = get_widget_ui_value("date_input", date_input_proto, user_key=key)
+        ui_value = register_widget("date_input", date_input_proto, user_key=key)
 
         if ui_value is not None:
             value = getattr(ui_value, "data")

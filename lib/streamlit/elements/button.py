@@ -16,7 +16,7 @@ from typing import cast
 
 import streamlit
 from streamlit.proto.Button_pb2 import Button as ButtonProto
-from .utils import get_widget_ui_value
+from .utils import register_widget
 
 
 class ButtonMixin:
@@ -51,7 +51,7 @@ class ButtonMixin:
         button_proto.label = label
         button_proto.default = False
 
-        ui_value = get_widget_ui_value("button", button_proto, user_key=key)
+        ui_value = register_widget("button", button_proto, user_key=key)
         current_value = ui_value if ui_value is not None else False
 
         return self.dg._enqueue("button", button_proto, current_value)

@@ -19,7 +19,7 @@ import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber, JSNumberBoundsException
 from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
-from .utils import get_widget_ui_value, NoValue
+from .utils import register_widget, NoValue
 
 
 class NumberInputMixin:
@@ -210,7 +210,7 @@ class NumberInputMixin:
         if format is not None:
             number_input_proto.format = format
 
-        ui_value = get_widget_ui_value("number_input", number_input_proto, user_key=key)
+        ui_value = register_widget("number_input", number_input_proto, user_key=key)
 
         return_value = ui_value if ui_value is not None else value
         return self.dg._enqueue("number_input", number_input_proto, return_value)
