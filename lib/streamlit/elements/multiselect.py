@@ -18,6 +18,7 @@ import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.type_util import is_type, ensure_iterable
+from .form import current_form_id
 from .utils import register_widget
 
 
@@ -102,6 +103,7 @@ class MultiSelectMixin:
         default_value = [] if indices is None else indices
         multiselect_proto.default[:] = default_value
         multiselect_proto.options[:] = [str(format_func(option)) for option in options]
+        multiselect_proto.form_id = current_form_id(self.dg)
 
         ui_value = register_widget("multiselect", multiselect_proto, user_key=key)
         current_value = ui_value.data if ui_value is not None else default_value

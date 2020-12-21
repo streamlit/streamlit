@@ -19,6 +19,7 @@ from streamlit import config
 from streamlit.errors import StreamlitDeprecationWarning
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.report_thread import get_report_ctx
+from .form import current_form_id
 from .utils import NoValue, register_widget
 from ..uploaded_file_manager import UploadedFile
 
@@ -121,6 +122,7 @@ class FileUploaderMixin:
             "server.maxUploadSize"
         )
         file_uploader_proto.multiple_files = accept_multiple_files
+        file_uploader_proto.form_id = current_form_id(self.dg)
         register_widget("file_uploader", file_uploader_proto, user_key=key)
 
         file_recs = None

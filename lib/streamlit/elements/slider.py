@@ -20,6 +20,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber
 from streamlit.js_number import JSNumberBoundsException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
+from .form import current_form_id
 from .utils import register_widget
 
 
@@ -367,6 +368,7 @@ class SliderMixin:
         slider_proto.step = step
         slider_proto.data_type = data_type
         slider_proto.options[:] = []
+        slider_proto.form_id = current_form_id(self.dg)
 
         ui_value = register_widget("slider", slider_proto, user_key=key)
         if ui_value:

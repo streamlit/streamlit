@@ -18,6 +18,7 @@ import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
 from streamlit.type_util import ensure_iterable
+from .form import current_form_id
 from .utils import register_widget, NoValue
 
 
@@ -78,6 +79,7 @@ class RadioMixin:
         radio_proto.label = label
         radio_proto.default = index
         radio_proto.options[:] = [str(format_func(option)) for option in options]
+        radio_proto.form_id = current_form_id(self.dg)
 
         ui_value = register_widget("radio", radio_proto, user_key=key)
         current_value = ui_value if ui_value is not None else index

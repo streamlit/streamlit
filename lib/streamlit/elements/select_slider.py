@@ -18,6 +18,7 @@ import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.type_util import ensure_iterable
+from .form import current_form_id
 from .utils import register_widget
 
 
@@ -120,6 +121,7 @@ class SelectSliderMixin:
         slider_proto.step = 1  # default for index changes
         slider_proto.data_type = SliderProto.INT
         slider_proto.options[:] = [str(format_func(option)) for option in options]
+        slider_proto.form_id = current_form_id(self.dg)
 
         ui_value = register_widget("slider", slider_proto, user_key=key)
         if ui_value:

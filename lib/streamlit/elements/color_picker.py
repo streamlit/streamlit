@@ -18,6 +18,7 @@ from typing import cast
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
+from .form import current_form_id
 from .utils import register_widget
 
 
@@ -82,6 +83,7 @@ class ColorPickerMixin:
         color_picker_proto = ColorPickerProto()
         color_picker_proto.label = label
         color_picker_proto.default = str(value)
+        color_picker_proto.form_id = current_form_id(self.dg)
 
         ui_value = register_widget("color_picker", color_picker_proto, user_key=key)
         current_value = ui_value if ui_value is not None else value

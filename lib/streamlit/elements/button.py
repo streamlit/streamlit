@@ -16,6 +16,7 @@ import streamlit
 from typing import Optional, cast
 
 from streamlit.proto.Button_pb2 import Button as ButtonProto
+from .form import current_form_id
 from .utils import register_widget
 
 
@@ -53,9 +54,12 @@ class ButtonMixin:
     ) -> "streamlit.delta_generator.DeltaGenerator":
         button_proto = ButtonProto()
 
+        # TODO: if we're inside a form, and we're _not_ a form submitter,
+        #  should we warn that a button doesn't make sense?
         button_proto.label = label
         button_proto.default = False
         button_proto.is_form_submitter = is_form_submitter
+        button_proto.form_id = current_form_id(self.dg)
 
         ui_value = register_widget("button", button_proto, user_key=key)
         current_value = ui_value if ui_value is not None else False

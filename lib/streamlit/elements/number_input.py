@@ -19,6 +19,7 @@ import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber, JSNumberBoundsException
 from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
+from .form import current_form_id
 from .utils import register_widget, NoValue
 
 
@@ -195,6 +196,7 @@ class NumberInputMixin:
         )
         number_input_proto.label = label
         number_input_proto.default = value
+        number_input_proto.form_id = current_form_id(self.dg)
 
         if min_value is not None:
             number_input_proto.min = min_value

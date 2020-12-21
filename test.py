@@ -3,8 +3,10 @@ import streamlit as st
 st.checkbox("outside")
 
 with st.beta_form():
-    st.checkbox("checkbox")
-    st.text_input("text_input")
+    checkbox_val = st.checkbox("checkbox")
+    text_val = st.text_input("text_input")
+
+st.write("checkbox:", checkbox_val, "text:", text_val)
 
 # with st.beta_expander("st.expander"):
 #     st.code("Inside beta_exapnder")
