@@ -16,7 +16,7 @@ from typing import cast
 
 import streamlit
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
-from .utils import _clean_text
+from .utils import clean_text
 
 
 class AlertMixin:
@@ -34,7 +34,7 @@ class AlertMixin:
 
         """
         alert_proto = AlertProto()
-        alert_proto.body = _clean_text(body)
+        alert_proto.body = clean_text(body)
         alert_proto.format = AlertProto.ERROR
         return self.dg._enqueue("alert", alert_proto)
 
@@ -52,7 +52,7 @@ class AlertMixin:
 
         """
         alert_proto = AlertProto()
-        alert_proto.body = _clean_text(body)
+        alert_proto.body = clean_text(body)
         alert_proto.format = AlertProto.WARNING
         return self.dg._enqueue("alert", alert_proto)
 
@@ -70,7 +70,7 @@ class AlertMixin:
 
         """
         alert_proto = AlertProto()
-        alert_proto.body = _clean_text(body)
+        alert_proto.body = clean_text(body)
         alert_proto.format = AlertProto.INFO
         return self.dg._enqueue("alert", alert_proto)
 
@@ -88,7 +88,7 @@ class AlertMixin:
 
         """
         alert_proto = AlertProto()
-        alert_proto.body = _clean_text(body)
+        alert_proto.body = clean_text(body)
         alert_proto.format = AlertProto.SUCCESS
         return self.dg._enqueue("alert", alert_proto)
 

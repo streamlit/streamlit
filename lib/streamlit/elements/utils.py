@@ -20,7 +20,7 @@ from streamlit.errors import DuplicateWidgetID
 from typing import Optional, Any
 
 
-class NoValue(object):
+class NoValue:
     """Return this from DeltaGenerator.foo_widget() when you want the st.foo_widget()
     call to return None. This is needed because `DeltaGenerator._enqueue`
     replaces `None` with a `DeltaGenerator` (for use in non-widget elements).
@@ -29,7 +29,8 @@ class NoValue(object):
     pass
 
 
-def _clean_text(text):
+def clean_text(text: Any) -> str:
+    """Convert an object to text, dedent it, and strip whitespace."""
     return textwrap.dedent(str(text)).strip()
 
 
@@ -64,7 +65,7 @@ def _build_duplicate_widget_message(
     return message.strip("\n").format(widget_type=widget_func_name, user_key=user_key)
 
 
-def _set_widget_id(
+def set_widget_id(
     element_type: str,
     element_proto: Any,
     user_key: Optional[str] = None,
@@ -109,7 +110,7 @@ def _set_widget_id(
     element_proto.id = widget_id
 
 
-def _get_widget_ui_value(
+def get_widget_ui_value(
     element_type: str,
     element_proto: Any,
     user_key: Optional[str] = None,
@@ -122,7 +123,7 @@ def _get_widget_ui_value(
     ----------
     element_type : str
         The type of the element as stored in proto.
-    element : proto
+    element_proto : proto
         The proto of the specified type (e.g. Button/Multiselect/Slider proto)
     user_key : str
         Optional user-specified string to use as the widget ID.
@@ -141,7 +142,7 @@ def _get_widget_ui_value(
         doesn't exist, None will be returned.
 
     """
-    _set_widget_id(element_type, element_proto, user_key, widget_func_name)
+    set_widget_id(element_type, element_proto, user_key, widget_func_name)
     ctx = get_report_ctx()
     ui_value = ctx.widgets.get_widget_value(element_proto.id) if ctx else None
     return ui_value

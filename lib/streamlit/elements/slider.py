@@ -20,7 +20,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber
 from streamlit.js_number import JSNumberBoundsException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
-from .utils import _get_widget_ui_value
+from .utils import get_widget_ui_value
 
 
 class SliderMixin:
@@ -368,7 +368,7 @@ class SliderMixin:
         slider_proto.data_type = data_type
         slider_proto.options[:] = []
 
-        ui_value = _get_widget_ui_value("slider", slider_proto, user_key=key)
+        ui_value = get_widget_ui_value("slider", slider_proto, user_key=key)
         if ui_value:
             current_value = getattr(ui_value, "data")
         else:

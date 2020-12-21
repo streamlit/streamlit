@@ -18,7 +18,7 @@ import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.type_util import is_type, ensure_iterable
-from .utils import _get_widget_ui_value
+from .utils import get_widget_ui_value
 
 
 class MultiSelectMixin:
@@ -103,7 +103,7 @@ class MultiSelectMixin:
         multiselect_proto.default[:] = default_value
         multiselect_proto.options[:] = [str(format_func(option)) for option in options]
 
-        ui_value = _get_widget_ui_value("multiselect", multiselect_proto, user_key=key)
+        ui_value = get_widget_ui_value("multiselect", multiselect_proto, user_key=key)
         current_value = ui_value.data if ui_value is not None else default_value
         return_value = [options[i] for i in current_value]
         return self.dg._enqueue("multiselect", multiselect_proto, return_value)

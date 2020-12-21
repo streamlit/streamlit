@@ -16,7 +16,7 @@ from typing import cast
 
 import streamlit
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
-from .utils import _get_widget_ui_value
+from .utils import get_widget_ui_value
 
 
 class CheckboxMixin:
@@ -53,7 +53,7 @@ class CheckboxMixin:
         checkbox_proto.label = label
         checkbox_proto.default = bool(value)
 
-        ui_value = _get_widget_ui_value("checkbox", checkbox_proto, user_key=key)
+        ui_value = get_widget_ui_value("checkbox", checkbox_proto, user_key=key)
         current_value = ui_value if ui_value is not None else value
         return self.dg._enqueue("checkbox", checkbox_proto, bool(current_value))
 

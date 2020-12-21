@@ -19,7 +19,7 @@ from streamlit import config
 from streamlit.errors import StreamlitDeprecationWarning
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.report_thread import get_report_ctx
-from .utils import NoValue, _set_widget_id
+from .utils import NoValue, set_widget_id
 from ..uploaded_file_manager import UploadedFile
 
 
@@ -121,7 +121,7 @@ class FileUploaderMixin:
             "server.maxUploadSize"
         )
         file_uploader_proto.multiple_files = accept_multiple_files
-        _set_widget_id("file_uploader", file_uploader_proto, user_key=key)
+        set_widget_id("file_uploader", file_uploader_proto, user_key=key)
 
         file_recs = None
         ctx = get_report_ctx()
