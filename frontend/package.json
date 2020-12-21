@@ -26,7 +26,8 @@
     "coverageReporters": [
       "text",
       "html"
-    ]
+    ],
+    "resetMocks": false
   },
   "husky": {
     "hooks": {
@@ -102,7 +103,7 @@
     "xxhashjs": "^0.2.2"
   },
   "devDependencies": {
-    "@craco/craco": "^5.6.4",
+    "@craco/craco": "^6.0.0",
     "@deck.gl/json": "^8.2.5",
     "@types/classnames": "^2.2.10",
     "@types/clipboard": "^2.0.1",
@@ -164,7 +165,7 @@
     "mochawesome-report-generator": "^4.0.1",
     "prettier": "^1.18.2",
     "pretty-quick": "^1.11.1",
-    "react-scripts": "3.4.0",
+    "react-scripts": "4.0.1",
     "scss-to-json": "^2.0.0",
     "source-map-explorer": "^2.4.2",
     "start-server-and-test": "^1.11.2",
