@@ -13,12 +13,13 @@
 # limitations under the License.
 
 """Allows us to create and absorb changes (aka Deltas) to elements."""
-from typing import Optional, Iterable, List, NamedTuple
+from typing import Optional, Iterable
 
 from streamlit import caching
 from streamlit import cursor
 from streamlit import type_util
 from streamlit.cursor import Cursor
+from streamlit.elements.form import FormMixin, FormData
 from streamlit.report_thread import get_report_ctx
 from streamlit.errors import StreamlitAPIException
 from streamlit.errors import NoSessionContext
@@ -76,13 +77,6 @@ MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
 DELTAS_TYPES_THAT_MELT_DATAFRAMES = ("line_chart", "area_chart", "bar_chart")
 
 
-class FormData(NamedTuple):
-    """`st.form` DeltaGenerators store additional data."""
-
-    submit_button_label: str
-    submit_button_key: Optional[str]
-
-
 class DeltaGenerator(
     AlertMixin,
     AltairMixin,
@@ -95,6 +89,7 @@ class DeltaGenerator(
     EmptyMixin,
     ExceptionMixin,
     FileUploaderMixin,
+    FormMixin,
     GraphvizMixin,
     HelpMixin,
     IframeMixin,
@@ -409,15 +404,6 @@ class DeltaGenerator(
             output_dg = self
 
         return _value_or_dg(return_value, output_dg)
-
-    def beta_form(self, submit_label="Submit", key=None) -> "DeltaGenerator":
-        block_proto = Block_pb2.Block()
-        block_dg = self._block(block_proto)
-        # Attach the form's button info to the newly-created block's
-        # delta generator. The block will create its submit button when it
-        # exits.
-        block_dg._form_data = FormData(submit_label, key)
-        return block_dg
 
     def _block(self, block_proto=Block_pb2.Block()) -> "DeltaGenerator":
         # Switch to the active DeltaGenerator, in case we're in a `with` block.
