@@ -228,7 +228,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     }
   }
 
-  private setError = (errorMessage: string) => {
+  private setError = (errorMessage: string): void => {
     this.setState({
       status: FileStatuses.ERROR,
       errorMessage,
