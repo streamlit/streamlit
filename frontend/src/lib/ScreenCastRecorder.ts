@@ -113,6 +113,7 @@ class ScreenCastRecorder {
     let resolver: () => void
 
     const promise = new Promise(r => {
+      // @ts-ignore
       resolver = r
     })
 

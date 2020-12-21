@@ -31,7 +31,9 @@ export default class Resolver<T> {
     this.reject = () => {}
 
     this.promise = new Promise<T>((resFn, rejFn) => {
+      // @ts-ignore
       this.resolve = resFn
+      // @ts-ignore
       this.reject = rejFn
     })
   }
