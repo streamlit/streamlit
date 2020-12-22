@@ -91,7 +91,7 @@
     "react-virtualized": "^9.21.2",
     "react-window": "^1.8.5",
     "remark-emoji": "^2.1.0",
-    "remark-math": "^2.0.1",
+    "remark-math": "^4.0.0",
     "sprintf-js": "^1.1.2",
     "styletron-engine-atomic": "^1.4.6",
     "styletron-react": "^5.2.6",
