@@ -23,7 +23,7 @@ import ProgressBar from "components/shared/ProgressBar"
 import Button from "components/shared/Button"
 import { FileStatus } from "lib/FileHelper"
 
-import UploadedFile, { Props, FileStatus } from "./UploadedFile"
+import UploadedFile, { Props, UploadedFileStatus } from "./UploadedFile"
 
 const blobFile = new File(["Text in a file!"], "filename.txt", {
   type: "text/plain",
@@ -40,14 +40,14 @@ const getProps = (props: Partial<Props> = {}): Props => ({
 describe("FileStatus widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<FileStatus {...props} />)
+    const wrapper = shallow(<UploadedFileStatus {...props} />)
 
     expect(wrapper).toBeDefined()
   })
 
   it("should show progress bar", () => {
     const props = getProps({ progress: 40 })
-    const wrapper = shallow(<FileStatus {...props} />)
+    const wrapper = shallow(<UploadedFileStatus {...props} />)
     const progressBarWrapper = wrapper.find(ProgressBar)
 
     expect(progressBarWrapper.length).toBe(1)
@@ -57,7 +57,7 @@ describe("FileStatus widget", () => {
     const props = getProps({
       file: { status: FileStatus.ERROR, ...blobFile },
     })
-    const wrapper = shallow(<FileStatus {...props} />)
+    const wrapper = shallow(<UploadedFileStatus {...props} />)
     const errorMessageWrapper = wrapper.find("StyledErrorMessage")
     expect(errorMessageWrapper.length).toBe(1)
   })
@@ -66,7 +66,7 @@ describe("FileStatus widget", () => {
     const props = getProps({
       file: { status: FileStatus.DELETING, ...blobFile },
     })
-    const wrapper = shallow(<FileStatus {...props} />)
+    const wrapper = shallow(<UploadedFileStatus {...props} />)
     const statusWrapper = wrapper.find(Small)
     expect(statusWrapper.text()).toBe("Removing file")
   })
@@ -74,13 +74,13 @@ describe("FileStatus widget", () => {
   it("should show size", () => {
     const props = getProps({
       file: {
+        ...blobFile,
         size: 2000,
         status: FileStatus.UPLOADED,
-        ...blobFile,
       },
     })
 
-    const wrapper = shallow(<FileStatus {...props} />)
+    const wrapper = shallow(<UploadedFileStatus {...props} />)
     const statusWrapper = wrapper.find(Small)
     expect(statusWrapper.text()).toBe("2.0KB")
   })
