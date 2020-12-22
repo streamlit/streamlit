@@ -43,7 +43,7 @@ export interface Props {
   allowHTML: boolean
 }
 
-function createAnchorFromText(text: string | null) {
+function createAnchorFromText(text: string | null): string {
   const newAnchor = text
     ?.toLowerCase()
     .split(/[^A-Za-z0-9]/)
@@ -52,7 +52,11 @@ function createAnchorFromText(text: string | null) {
   return newAnchor || ""
 }
 
-function HeadingWithAnchor({ tag, anchor: propsAnchor, children }: any) {
+function HeadingWithAnchor({
+  tag,
+  anchor: propsAnchor,
+  children,
+}: any): ReactElement {
   const [anchor, setAnchor] = React.useState<string | null>(null)
   const ref = React.useRef<HTMLInputElement>(null)
 
@@ -62,7 +66,7 @@ function HeadingWithAnchor({ tag, anchor: propsAnchor, children }: any) {
       if (propsAnchor !== null) {
         newAnchor = propsAnchor
       } else {
-        newAnchor = createAnchorFromText(ref.current!.textContent)
+        newAnchor = createAnchorFromText(ref.current.textContent)
       }
 
       if (newAnchor) {
@@ -74,23 +78,22 @@ function HeadingWithAnchor({ tag, anchor: propsAnchor, children }: any) {
     }
   }, [ref.current])
 
-  return React.createElement(tag, {
-    children: (
-      <>
-        {anchor && <a data-anchor={anchor} />}
-        {children}
-      </>
-    ),
-    ref,
-  })
+  return React.createElement(
+    tag,
+    { ref },
+    <>
+      {anchor && <a data-anchor={anchor} />}
+      {children}
+    </>
+  )
 }
 
-function CustomHeading(props: any) {
+function CustomHeading(props: any): ReactElement {
   const { level, children } = props
   return <HeadingWithAnchor tag={`h${level}`}>{children}</HeadingWithAnchor>
 }
 
-function CustomParsedHtml(props: any) {
+function CustomParsedHtml(props: any): ReactElement {
   const { element } = props
 
   const headingElements = ["h1", "h2", "h3", "h4", "h5", "h6"]
