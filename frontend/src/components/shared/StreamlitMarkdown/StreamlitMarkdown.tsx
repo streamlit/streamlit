@@ -26,7 +26,6 @@ import RemarkMathPlugin from "remark-math"
 // @ts-ignore
 import RemarkEmoji from "remark-emoji"
 import CodeBlock from "components/elements/CodeBlock/"
-import AnchoredHeader from "components/elements/AnchoredHeader/"
 import { StyledStreamlitMarkdown } from "./styled-components"
 
 import "katex/dist/katex.min.css"
@@ -42,6 +41,76 @@ export interface Props {
    * any HTML will be escaped in the output.
    */
   allowHTML: boolean
+}
+
+function createAnchorFromText(text: string | null) {
+  const newAnchor = text
+    ?.toLowerCase()
+    .split(/[^A-Za-z0-9]/)
+    .filter(Boolean)
+    .join("-")
+  return newAnchor || ""
+}
+
+function HeadingWithAnchor({ tag, anchor: propsAnchor, children }: any) {
+  const [anchor, setAnchor] = React.useState<string | null>(null)
+
+  React.useEffect(() => {}, [propsAnchor])
+
+  const ref = React.useRef<HTMLInputElement>(null)
+
+  React.useEffect(() => {
+    if (anchor === null && ref.current !== null) {
+      let newAnchor = null
+      if (propsAnchor !== null) {
+        newAnchor = propsAnchor
+      } else {
+        newAnchor = createAnchorFromText(ref.current!.textContent)
+      }
+
+      if (newAnchor) {
+        setAnchor(newAnchor)
+        if (window.location.hash.slice(1) === newAnchor) {
+          ref.current.scrollIntoView(true)
+        }
+      }
+    }
+  }, [ref.current])
+
+  return React.createElement(tag, {
+    children: (
+      <>
+        {anchor && <a data-anchor={anchor} />}
+        {children}
+      </>
+    ),
+    ref,
+  })
+}
+
+function CustomHeading(props: any) {
+  // console.log("anchoredheading", props)
+  const { level, children } = props
+  return <HeadingWithAnchor tag={`h${level}`}>{children}</HeadingWithAnchor>
+}
+
+function CustomParsedHtml(props: any) {
+  // console.log("parsedhtml", props)
+  const { element } = props
+
+  const headingElements = ["h1", "h2", "h3", "h4", "h5", "h6"]
+  if (!headingElements.includes(element.type)) {
+    return (ReactMarkdown.renderers.parsedHtml as any)(props)
+  }
+
+  return (
+    <HeadingWithAnchor
+      tag={element.type}
+      anchor={element.props["data-anchor"]}
+    >
+      {element.props.children}
+    </HeadingWithAnchor>
+  )
 }
 
 /**
@@ -66,13 +135,14 @@ class StreamlitMarkdown extends PureComponent<Props> {
       code: CodeBlock,
       link: linkWithTargetBlank,
       linkReference: linkReferenceHasParens,
-      h1: AnchoredHeader,
       inlineMath: (props: { value: string }): ReactElement => (
         <InlineMath>{props.value}</InlineMath>
       ),
       math: (props: { value: string }): ReactElement => (
         <BlockMath>{props.value}</BlockMath>
       ),
+      heading: CustomHeading,
+      parsedHtml: CustomParsedHtml,
     }
 
     const plugins = [RemarkMathPlugin, RemarkEmoji]

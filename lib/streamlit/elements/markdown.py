@@ -78,7 +78,7 @@ class MarkdownMixin:
 
         return self.dg._enqueue("markdown", markdown_proto)
 
-    def header(self, body):
+    def header(self, body, anchor=None):
         """Display text in header formatting.
 
         Parameters
@@ -96,10 +96,14 @@ class MarkdownMixin:
 
         """
         header_proto = MarkdownProto()
-        header_proto.body = "## %s" % clean_text(body)
+        if anchor is None:
+            header_proto.body = '### %s' % clean_text(body)
+        else:
+            header_proto.body = '<h3 data-anchor="%s"><span>blah</span> %s <span>aslkdfh</span></h3>' % (anchor, clean_text(body))
+            header_proto.allow_html = True
         return self.dg._enqueue("markdown", header_proto)
 
-    def subheader(self, body):
+    def subheader(self, body, anchor=None):
         """Display text in subheader formatting.
 
         Parameters
@@ -117,7 +121,12 @@ class MarkdownMixin:
 
         """
         subheader_proto = MarkdownProto()
-        subheader_proto.body = "### %s" % clean_text(body)
+        if anchor is None:
+            subheader_proto.body = '### %s' % clean_text(body)
+        else:
+            subheader_proto.body = '<h3 data-anchor="%s">%s</h3>' % (anchor, clean_text(body))
+            subheader_proto.allow_html = True
+
         return self.dg._enqueue("markdown", subheader_proto)
 
     def code(self, body, language="python"):
@@ -153,7 +162,7 @@ class MarkdownMixin:
         code_proto.body = clean_text(markdown)
         return self.dg._enqueue("markdown", code_proto)
 
-    def title(self, body):
+    def title(self, body, anchor=None):
         """Display text in title formatting.
 
         Each document should have a single `st.title()`, although this is not
@@ -173,10 +182,12 @@ class MarkdownMixin:
            height: 100px
 
         """
-        # ... figure out the anchor shit
         title_proto = MarkdownProto()
-        title_proto.body = "<h1 data-anchor= %s" % clean_text(body)
-        title_proto.allow_html = True
+        if anchor is None:
+            title_proto.body = '# %s' % clean_text(body)
+        else:
+            title_proto.body = '<h1 data-anchor="%s">%s</h1>' % (anchor, clean_text(body))
+            title_proto.allow_html = True
         return self.dg._enqueue("markdown", title_proto)
 
     def latex(self, body):
