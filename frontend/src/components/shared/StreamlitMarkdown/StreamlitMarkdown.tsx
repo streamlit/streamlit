@@ -26,6 +26,7 @@ import RemarkMathPlugin from "remark-math"
 // @ts-ignore
 import RemarkEmoji from "remark-emoji"
 import CodeBlock from "components/elements/CodeBlock/"
+import AnchoredHeader from "components/elements/AnchoredHeader/"
 import { StyledStreamlitMarkdown } from "./styled-components"
 
 import "katex/dist/katex.min.css"
@@ -65,6 +66,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
       code: CodeBlock,
       link: linkWithTargetBlank,
       linkReference: linkReferenceHasParens,
+      h1: AnchoredHeader,
       inlineMath: (props: { value: string }): ReactElement => (
         <InlineMath>{props.value}</InlineMath>
       ),

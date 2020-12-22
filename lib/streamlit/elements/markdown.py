@@ -173,8 +173,10 @@ class MarkdownMixin:
            height: 100px
 
         """
+        # ... figure out the anchor shit
         title_proto = MarkdownProto()
-        title_proto.body = "# %s" % clean_text(body)
+        title_proto.body = "<h1 data-anchor= %s" % clean_text(body)
+        title_proto.allow_html = True
         return self.dg._enqueue("markdown", title_proto)
 
     def latex(self, body):
