@@ -92,6 +92,7 @@ class UploadedFileManager(object):
         Add a list of files to the FileManager. Does not emit any signals
         """
         files_by_widget = session_id, widget_id
+
         with self._files_lock:
             file_list = self._files_by_id.get(files_by_widget, None)
             if file_list:
