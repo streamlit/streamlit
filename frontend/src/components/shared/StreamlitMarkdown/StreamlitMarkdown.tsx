@@ -54,9 +54,6 @@ function createAnchorFromText(text: string | null) {
 
 function HeadingWithAnchor({ tag, anchor: propsAnchor, children }: any) {
   const [anchor, setAnchor] = React.useState<string | null>(null)
-
-  React.useEffect(() => {}, [propsAnchor])
-
   const ref = React.useRef<HTMLInputElement>(null)
 
   React.useEffect(() => {
@@ -89,13 +86,11 @@ function HeadingWithAnchor({ tag, anchor: propsAnchor, children }: any) {
 }
 
 function CustomHeading(props: any) {
-  // console.log("anchoredheading", props)
   const { level, children } = props
   return <HeadingWithAnchor tag={`h${level}`}>{children}</HeadingWithAnchor>
 }
 
 function CustomParsedHtml(props: any) {
-  // console.log("parsedhtml", props)
   const { element } = props
 
   const headingElements = ["h1", "h2", "h3", "h4", "h5", "h6"]
