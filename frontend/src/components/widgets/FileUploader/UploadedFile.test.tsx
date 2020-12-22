@@ -21,7 +21,7 @@ import { mount, shallow } from "lib/test_util"
 import { Small } from "components/shared/TextElements"
 import ProgressBar from "components/shared/ProgressBar"
 import Button from "components/shared/Button"
-import { FileStatuses } from "lib/FileHelper"
+import { FileStatus } from "lib/FileHelper"
 
 import UploadedFile, { Props, FileStatus } from "./UploadedFile"
 
@@ -55,7 +55,7 @@ describe("FileStatus widget", () => {
 
   it("should show error", () => {
     const props = getProps({
-      file: { status: FileStatuses.ERROR, ...blobFile },
+      file: { status: FileStatus.ERROR, ...blobFile },
     })
     const wrapper = shallow(<FileStatus {...props} />)
     const errorMessageWrapper = wrapper.find("StyledErrorMessage")
@@ -64,7 +64,7 @@ describe("FileStatus widget", () => {
 
   it("should show deleting", () => {
     const props = getProps({
-      file: { status: FileStatuses.DELETING, ...blobFile },
+      file: { status: FileStatus.DELETING, ...blobFile },
     })
     const wrapper = shallow(<FileStatus {...props} />)
     const statusWrapper = wrapper.find(Small)
@@ -75,7 +75,7 @@ describe("FileStatus widget", () => {
     const props = getProps({
       file: {
         size: 2000,
-        status: FileStatuses.UPLOADED,
+        status: FileStatus.UPLOADED,
         ...blobFile,
       },
     })

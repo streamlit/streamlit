@@ -24,7 +24,10 @@ import tornado.websocket
 from parameterized import parameterized
 
 from streamlit.logger import get_logger
-from streamlit.server.upload_file_request_handler import UploadFileRequestHandler
+from streamlit.server.upload_file_request_handler import (
+    UploadFileRequestHandler,
+    UPLOAD_FILE_ROUTE,
+)
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.uploaded_file_manager import UploadedFileRec
 
@@ -50,7 +53,7 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         return tornado.web.Application(
             [
                 (
-                    "/upload_file/?(?P<session_id>[^/]*)?/?(?P<widget_id>[^/]*)?/?(?P<file_id>[0-9]*)?",
+                    UPLOAD_FILE_ROUTE,
                     UploadFileRequestHandler,
                     dict(
                         file_mgr=self.file_mgr,
@@ -193,7 +196,7 @@ class UploadFileRequestHandlerInvalidSessionTest(tornado.testing.AsyncHTTPTestCa
         return tornado.web.Application(
             [
                 (
-                    "/upload_file/?(?P<session_id>[^/]*)?/?(?P<widget_id>[^/]*)?/?(?P<file_id>[0-9]*)?",
+                    UPLOAD_FILE_ROUTE,
                     UploadFileRequestHandler,
                     dict(
                         file_mgr=self.file_mgr,

@@ -18,7 +18,7 @@
 import React from "react"
 import { CloudUpload } from "@emotion-icons/material-outlined"
 import Icon from "components/shared/Icon"
-import { FileSizes, getSizeDisplay } from "lib/FileHelper"
+import { FileSize, getSizeDisplay } from "lib/FileHelper"
 import { Small } from "components/shared/TextElements"
 
 import {
@@ -48,7 +48,7 @@ const FileDropzoneInstructions = ({
         Drag and drop file{multiple ? "s" : ""} here
       </StyledFileDropzoneInstructionsStyledSpan>
       <Small>
-        {`Limit ${getSizeDisplay(maxSizeBytes, FileSizes.Byte, 0)} per file`}
+        {`Limit ${getSizeDisplay(maxSizeBytes, FileSize.Byte, 0)} per file`}
         {acceptedExtensions.length
           ? ` • ${acceptedExtensions
               .join(", ")

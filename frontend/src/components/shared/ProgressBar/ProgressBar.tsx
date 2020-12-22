@@ -25,7 +25,7 @@ import {
 import { mergeOverrides } from "baseui"
 import { Overrides } from "baseui/overrides"
 
-export enum Sizes {
+export enum Size {
   SMALL = "sm",
   MEDIUM = "md",
   LARGE = "lg",
@@ -36,13 +36,13 @@ export interface ProgressBarProps {
   width?: number
   value: number
   overrides?: Overrides<any>
-  size?: Sizes
+  size?: Size
 }
 
 function ProgressBar({
   value,
   width,
-  size = Sizes.MEDIUM,
+  size = Size.MEDIUM,
   overrides,
 }: ProgressBarProps): ReactElement {
   const theme: Theme = useTheme()

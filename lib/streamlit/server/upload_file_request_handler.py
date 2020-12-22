@@ -12,19 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, Any
-from typing import List
+from typing import Any, Callable, Dict, List
 
 import tornado.httputil
 import tornado.web
 
-from streamlit.uploaded_file_manager import UploadedFileRec
+from streamlit.uploaded_file_manager import UploadedFileRec, UploadedFileManager
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.report import Report
 from streamlit.server import routes
 
 
+# /upload_file/(optional session id)/(optional widget id)/(optional file_id of digits)
+UPLOAD_FILE_ROUTE = (
+    "/upload_file/?(?P<session_id>[^/]*)?/?(?P<widget_id>[^/]*)?/?(?P<file_id>[0-9]*)?"
+)
 LOGGER = get_logger(__name__)
 
 
@@ -33,7 +36,9 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
     Implements the POST and DELETE /upload_file endpoint.
     """
 
-    def initialize(self, file_mgr, get_session_info):
+    def initialize(
+        self, file_mgr: UploadedFileManager, get_session_info: Callable[[str], bool]
+    ):
         """
         Parameters
         ----------
@@ -41,15 +46,12 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             The server's singleton UploadedFileManager. All file uploads
             go here.
         get_session_info: Server.get_session_info. Used to validate session IDs
-
         """
         self._file_mgr = file_mgr
         self._get_session_info = get_session_info
 
     def _validate_request(self, session_id: str):
-        if self._get_session_info(session_id) is None:
-            return False
-        return True
+        return self._get_session_info(session_id) is not None
 
     def set_default_headers(self):
         self.set_header("Access-Control-Allow-Methods", "POST, PUT, DELETE")
