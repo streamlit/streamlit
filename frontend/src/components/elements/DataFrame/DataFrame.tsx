@@ -85,16 +85,16 @@ export function DataFrame({
    * Changes the sort order of the table.
    */
   const toggleSortOrder = (columnIndex: number): void => {
-    let sortDirection = SortDirection.ASCENDING
+    let newSortDirection = SortDirection.ASCENDING
     if (sortColumn === columnIndex) {
       // Clicking the same header toggles between ascending and descending.
-      sortDirection =
-        sortDirection !== SortDirection.ASCENDING
-          ? SortDirection.ASCENDING
-          : SortDirection.DESCENDING
+      newSortDirection =
+        sortDirection === SortDirection.ASCENDING
+          ? SortDirection.DESCENDING
+          : SortDirection.ASCENDING
     }
     setSortColumn(columnIndex)
-    setSortDirection(sortDirection)
+    setSortDirection(newSortDirection)
     setSortedByUser(true)
   }
 
