@@ -218,6 +218,11 @@ class SliderMixin:
         if format is None:
             format = DEFAULTS[data_type]["format"]
 
+        if step == 0:
+            raise StreamlitAPIException(
+                "Slider components cannot be passed a `step` of 0."
+            )
+
         # Ensure that all arguments are of the same type.
         args = [min_value, max_value, step]
         int_args = all(map(lambda a: isinstance(a, int), args))

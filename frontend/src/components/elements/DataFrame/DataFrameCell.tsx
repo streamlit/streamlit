@@ -122,14 +122,14 @@ function drawSortIcon(sortDirection?: SortDirection): React.ReactNode {
   switch (sortDirection) {
     case SortDirection.ASCENDING:
       return (
-        <StyledSortIcon>
+        <StyledSortIcon data-testid="sortIcon">
           <Icon content={ChevronTop} size="xs" margin="0 twoXS 0 0" />
         </StyledSortIcon>
       )
 
     case SortDirection.DESCENDING:
       return (
-        <StyledSortIcon>
+        <StyledSortIcon data-testid="sortIcon">
           <Icon content={ChevronBottom} size="xs" margin="0 twoXS 0 0" />
         </StyledSortIcon>
       )
