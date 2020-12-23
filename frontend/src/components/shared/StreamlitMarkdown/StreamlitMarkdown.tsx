@@ -52,38 +52,47 @@ function createAnchorFromText(text: string | null): string {
   return newAnchor || ""
 }
 
-function HeadingWithAnchor({ tag, anchor, children }: any): ReactElement {
-  const ref = React.useCallback(node => {
-    if (node !== null) {
-      const hash = window.location.hash.slice(1)
-      if (hash === (anchor || createAnchorFromText(node.textContent))) {
-        node.scrollIntoView(true)
-      }
-    }
-  }, [])
-
-  return React.createElement(tag, { ref }, children)
+function createHeadingWithAnchor() {
+  let alreadyScrolled = false
+  return function({ tag, anchor, children }: any): ReactElement {
+    const ref = React.useCallback(
+      node => {
+        if (node !== null && !alreadyScrolled) {
+          const hash = window.location.hash.slice(1)
+          if (hash === (anchor || createAnchorFromText(node.textContent))) {
+            node.scrollIntoView(true)
+            alreadyScrolled = true
+          }
+        }
+      },
+      [anchor]
+    )
+    return React.createElement(tag, { ref }, children)
+  }
 }
 
-function CustomHeading(props: any): ReactElement {
-  const { level, children } = props
+const HeadingWithAnchor = createHeadingWithAnchor()
+
+function CustomHeading({ level, children }: any): ReactElement {
   return <HeadingWithAnchor tag={`h${level}`}>{children}</HeadingWithAnchor>
 }
 
 function CustomParsedHtml(props: any): ReactElement {
-  const { element } = props
+  const {
+    element: {
+      type,
+      props: { "data-anchor": anchor, children },
+    },
+  } = props
 
   const headingElements = ["h1", "h2", "h3", "h4", "h5", "h6"]
-  if (!headingElements.includes(element.type)) {
+  if (!headingElements.includes(type)) {
     return (ReactMarkdown.renderers.parsedHtml as any)(props)
   }
 
   return (
-    <HeadingWithAnchor
-      tag={element.type}
-      anchor={element.props["data-anchor"]}
-    >
-      {element.props.children}
+    <HeadingWithAnchor tag={type} anchor={anchor}>
+      {children}
     </HeadingWithAnchor>
   )
 }
