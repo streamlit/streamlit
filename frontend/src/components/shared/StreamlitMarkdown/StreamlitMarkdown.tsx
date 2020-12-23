@@ -62,13 +62,8 @@ function HeadingWithAnchor({
 
   React.useEffect(() => {
     if (anchor === null && ref.current !== null) {
-      let newAnchor = null
-      if (propsAnchor !== null) {
-        newAnchor = propsAnchor
-      } else {
-        newAnchor = createAnchorFromText(ref.current.textContent)
-      }
-
+      const newAnchor =
+        propsAnchor || createAnchorFromText(ref.current.textContent)
       if (newAnchor) {
         setAnchor(newAnchor)
         if (window.location.hash.slice(1) === newAnchor) {
