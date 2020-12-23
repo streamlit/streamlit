@@ -58,7 +58,7 @@ function HeadingWithAnchor({
   children,
 }: any): ReactElement {
   const [anchor, setAnchor] = React.useState<string | null>(null)
-  const ref = React.useRef<HTMLInputElement>(null)
+  const ref = React.useRef<HTMLElement>(null)
 
   React.useEffect(() => {
     if (anchor === null && ref.current !== null) {
