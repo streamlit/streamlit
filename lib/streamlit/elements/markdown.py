@@ -99,7 +99,7 @@ class MarkdownMixin:
         if anchor is None:
             header_proto.body = '### %s' % clean_text(body)
         else:
-            header_proto.body = '<h3 data-anchor="%s"><span>blah</span> %s <span>aslkdfh</span></h3>' % (anchor, clean_text(body))
+            header_proto.body = '<h3 data-anchor="%s">%s</h3>' % (anchor, clean_text(body))
             header_proto.allow_html = True
         return self.dg._enqueue("markdown", header_proto)
 
