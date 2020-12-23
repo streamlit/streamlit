@@ -52,35 +52,17 @@ function createAnchorFromText(text: string | null): string {
   return newAnchor || ""
 }
 
-function HeadingWithAnchor({
-  tag,
-  anchor: propsAnchor,
-  children,
-}: any): ReactElement {
-  const [anchor, setAnchor] = React.useState<string | null>(null)
-  const ref = React.useRef<HTMLElement>(null)
-
-  React.useEffect(() => {
-    if (anchor === null && ref.current !== null) {
-      const newAnchor =
-        propsAnchor || createAnchorFromText(ref.current.textContent)
-      if (newAnchor) {
-        setAnchor(newAnchor)
-        if (window.location.hash.slice(1) === newAnchor) {
-          ref.current.scrollIntoView(true)
-        }
+function HeadingWithAnchor({ tag, anchor, children }: any): ReactElement {
+  const ref = React.useCallback(node => {
+    if (node !== null) {
+      const hash = window.location.hash.slice(1)
+      if (hash === (anchor || createAnchorFromText(node.textContent))) {
+        node.scrollIntoView(true)
       }
     }
-  }, [ref.current])
+  }, [])
 
-  return React.createElement(
-    tag,
-    { ref },
-    <>
-      {anchor && <a data-anchor={anchor} />}
-      {children}
-    </>
-  )
+  return React.createElement(tag, { ref }, children)
 }
 
 function CustomHeading(props: any): ReactElement {
