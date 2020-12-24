@@ -19,9 +19,14 @@ import React from "react"
 import { mount } from "lib/test_util"
 
 import Modal from "./Modal"
+import { BaseProvider, LightTheme } from "baseui"
 
 describe("Modal component", () => {
   it("renders without crashing", () => {
-    mount(<Modal isOpen />)
+    mount(
+      <BaseProvider theme={LightTheme}>
+        <Modal isOpen />
+      </BaseProvider>
+    )
   })
 })

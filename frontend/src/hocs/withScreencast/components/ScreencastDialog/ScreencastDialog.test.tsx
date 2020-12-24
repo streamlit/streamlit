@@ -20,6 +20,8 @@ import { mount } from "lib/test_util"
 import { ModalHeader, ModalFooter } from "components/shared/Modal"
 
 import ScreencastDialog, { Props } from "./ScreencastDialog"
+import { ReactWrapper } from "enzyme"
+import { BaseProvider, LightTheme } from "baseui"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
   onClose: jest.fn(),
@@ -30,25 +32,32 @@ const getProps = (props: Partial<Props> = {}): Props => ({
 })
 
 describe("ScreencastDialog", () => {
-  it("renders without crashing", () => {
-    const props = getProps()
-    const wrapper = mount(<ScreencastDialog {...props} />)
+  const props = getProps()
+  let wrapper: ReactWrapper
 
+  beforeEach(() => {
+    wrapper = mount(
+      <BaseProvider theme={LightTheme}>
+        <ScreencastDialog {...props} />
+      </BaseProvider>
+    )
+  })
+
+  afterEach(() => {
+    wrapper.unmount()
+  })
+
+  it("renders without crashing", () => {
     expect(wrapper.html()).not.toBeNull()
   })
 
   it("should render a header", () => {
-    const props = getProps()
-    const wrapper = mount(<ScreencastDialog {...props} />)
     const headerWrapper = wrapper.find(ModalHeader)
     expect(headerWrapper.props().children).toBe("Record a screencast")
   })
 
   describe("Modal body", () => {
     it("should have a record audio option to be selected", () => {
-      const props = getProps()
-      const wrapper = mount(<ScreencastDialog {...props} />)
-
       const labelWrapper = wrapper.find("StyledRecordAudioLabel")
 
       labelWrapper.find("input").simulate("change", {
@@ -64,9 +73,6 @@ describe("ScreencastDialog", () => {
     })
 
     it("should have the stop recording explanation message", () => {
-      const props = getProps()
-      const wrapper = mount(<ScreencastDialog {...props} />)
-
       expect(wrapper.find("StyledInstruction").text()).toBe(
         "Press Esc any time to stop recording."
       )
@@ -75,8 +81,6 @@ describe("ScreencastDialog", () => {
 
   describe("Modal footer", () => {
     it("should have an start button", () => {
-      const props = getProps()
-      const wrapper = mount(<ScreencastDialog {...props} />)
       const buttonWrapper = wrapper.find(ModalFooter).find("button")
 
       buttonWrapper.simulate("click")

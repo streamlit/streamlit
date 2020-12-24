@@ -23,6 +23,7 @@ import TimezoneMock from "timezone-mock"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import Slider, { Props } from "./Slider"
+import { mainTheme } from "theme"
 
 jest.mock("lib/WidgetStateManager")
 
@@ -42,6 +43,7 @@ const getProps = (elementProps: Partial<SliderProto> = {}): Props => ({
   width: 0,
   disabled: false,
   widgetMgr: new WidgetStateManager(sendBackMsg),
+  theme: mainTheme,
 })
 
 describe("Slider widget", () => {
@@ -250,11 +252,16 @@ describe("Slider widget", () => {
       expect(new Date().getTimezoneOffset() === 0).toBeTruthy()
     })
 
-    const WEEK_IN_MICROS = 7 * 24 * 60 * 60 * 1000 * 1000
+    const DAYS_IN_MICROS = 24 * 60 * 60 * 1000 * 1000
+    const WEEK_IN_MICROS = 7 * DAYS_IN_MICROS
+
     const props = getProps({
+      // The default value should be divisible by step.
+      // Otherwise, we get a warning from `react-range`.
+      default: [0],
       min: 0,
       max: 4 * WEEK_IN_MICROS,
-      step: 24 * 60 * 60 * 1000 * 1000,
+      step: DAYS_IN_MICROS,
       format: "YYYY-MM-DD",
       dataType: SliderProto.DataType.DATETIME,
     })

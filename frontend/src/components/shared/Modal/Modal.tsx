@@ -109,6 +109,7 @@ function Modal(props: ModalProps): ReactElement {
   return (
     <UIModal
       {...props}
+      unstable_ModalBackdropScroll={true}
       overrides={{
         ...props.overrides,
         DialogContainer: {
