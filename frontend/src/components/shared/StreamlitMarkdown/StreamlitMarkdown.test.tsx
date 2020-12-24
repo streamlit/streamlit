@@ -77,11 +77,9 @@ describe("linkReference", () => {
     const body = "Don't convert to a link if only [text] and missing (href)"
     const wrapper = mount(getMarkdownElement(body))
 
-    expect(
-      wrapper.contains(
-        "Don't convert to a link if only [text] and missing (href)"
-      )
-    ).toBe(true)
+    expect(wrapper.text()).toEqual(
+      "Don't convert to a link if only [text] and missing (href)"
+    )
     expect(wrapper.find("a").exists()).toBe(false)
   })
 })
