@@ -25,7 +25,7 @@ import {
 } from "./StreamlitMarkdown"
 
 // Fixture Generator
-const getMarkdownElement = (body: any): ReactElement => {
+const getMarkdownElement = (body: string): ReactElement => {
   const renderers = {
     link: linkWithTargetBlank,
     linkReference: linkReferenceHasParens,
