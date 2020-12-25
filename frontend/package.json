@@ -84,7 +84,7 @@
     "react-json-view": "^1.19.1",
     "react-katex": "^2.0.2",
     "react-map-gl": "^5.2.7",
-    "react-markdown": "^4.3.1",
+    "react-markdown": "^5.0.3",
     "react-plotly.js": "^2.4.0",
     "react-transition-group": "^4.4.1",
     "react-virtualized": "^9.21.2",
