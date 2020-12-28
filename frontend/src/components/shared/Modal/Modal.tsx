@@ -109,6 +109,10 @@ function Modal(props: ModalProps): ReactElement {
   return (
     <UIModal
       {...props}
+      // From https://baseweb.design/components/modal:
+      // Makes modal scrollable while cursor is over the modal's backdrop.
+      // Will be removed and implemented as the default behavior in the
+      // next major version.
       unstable_ModalBackdropScroll={true}
       overrides={{
         ...props.overrides,
