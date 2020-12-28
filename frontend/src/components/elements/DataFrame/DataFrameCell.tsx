@@ -134,7 +134,6 @@ function drawSortIcon(sortDirection?: SortDirection): React.ReactNode {
         </StyledSortIcon>
       )
 
-    case undefined:
     default:
       return null
   }
