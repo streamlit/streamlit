@@ -16,11 +16,11 @@
  */
 
 import React from "react"
-import { mount } from "lib/test_util"
-import { ModalHeader, ModalBody } from "components/shared/Modal"
-
-import UnsupportedBrowserDialog from "./UnsupportedBrowserDialog"
 import { BaseProvider, LightTheme } from "baseui"
+
+import { ModalHeader, ModalBody } from "components/shared/Modal"
+import { mount } from "lib/test_util"
+import UnsupportedBrowserDialog from "./UnsupportedBrowserDialog"
 
 describe("UnsupportedBrowserDialog", () => {
   it("renders without crashing", () => {

@@ -16,12 +16,12 @@
  */
 
 import React from "react"
-import { mount } from "lib/test_util"
-import { ModalHeader, ModalFooter } from "components/shared/Modal"
-
-import ScreencastDialog, { Props } from "./ScreencastDialog"
-import { ReactWrapper } from "enzyme"
 import { BaseProvider, LightTheme } from "baseui"
+import { ReactWrapper } from "enzyme"
+
+import { ModalHeader, ModalFooter } from "components/shared/Modal"
+import { mount } from "lib/test_util"
+import ScreencastDialog, { Props } from "./ScreencastDialog"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
   onClose: jest.fn(),

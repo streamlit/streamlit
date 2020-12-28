@@ -16,10 +16,10 @@
  */
 
 import React from "react"
-import { mount } from "lib/test_util"
-
-import Modal from "./Modal"
 import { BaseProvider, LightTheme } from "baseui"
+
+import { mount } from "lib/test_util"
+import Modal from "./Modal"
 
 describe("Modal component", () => {
   it("renders without crashing", () => {

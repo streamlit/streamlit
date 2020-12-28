@@ -16,14 +16,14 @@
  */
 
 import React from "react"
-import { mount } from "lib/test_util"
-import { Slider as SliderProto } from "autogen/proto"
 import { Slider as UISlider } from "baseui/slider"
 import TimezoneMock from "timezone-mock"
-import { WidgetStateManager } from "lib/WidgetStateManager"
 
-import Slider, { Props } from "./Slider"
+import { Slider as SliderProto } from "autogen/proto"
+import { mount } from "lib/test_util"
+import { WidgetStateManager } from "lib/WidgetStateManager"
 import { mainTheme } from "theme"
+import Slider, { Props } from "./Slider"
 
 jest.mock("lib/WidgetStateManager")
 

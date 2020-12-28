@@ -16,12 +16,12 @@
  */
 
 import React from "react"
-import { mount } from "lib/test_util"
-import { ModalHeader, ModalBody } from "components/shared/Modal"
-
-import VideoRecordedDialog, { Props } from "./VideoRecordedDialog"
-import { ReactWrapper } from "enzyme"
 import { BaseProvider, LightTheme } from "baseui"
+import { ReactWrapper } from "enzyme"
+
+import { ModalHeader, ModalBody } from "components/shared/Modal"
+import { mount } from "lib/test_util"
+import VideoRecordedDialog, { Props } from "./VideoRecordedDialog"
 
 URL.createObjectURL = jest.fn()
 
