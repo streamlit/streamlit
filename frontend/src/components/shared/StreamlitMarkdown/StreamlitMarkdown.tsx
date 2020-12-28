@@ -54,29 +54,34 @@ function createAnchorFromText(text: string | null): string {
 
 let alreadyScrolled = false
 
+function scrollNodeIntoView(node: HTMLElement) {
+  if (!alreadyScrolled) {
+    node.scrollIntoView(true)
+    alreadyScrolled = true
+  }
+}
+
 function HeadingWithAnchor({
   tag,
   anchor: propsAnchor,
   children,
 }: any): ReactElement {
-  const [elemId, setElemId] = React.useState(propsAnchor)
+  const [elementId, setElementId] = React.useState(propsAnchor)
 
   const ref = React.useCallback(
     node => {
-      if (node !== null && !alreadyScrolled) {
-        const anchor = propsAnchor || createAnchorFromText(node.textContent)
-        setElemId(anchor)
+      if (node === null) return
 
-        if (window.location.hash.slice(1) === anchor) {
-          node.scrollIntoView(true)
-          alreadyScrolled = true
-        }
+      const anchor = propsAnchor || createAnchorFromText(node.textContent)
+      setElementId(anchor)
+      if (window.location.hash.slice(1) === anchor) {
+        scrollNodeIntoView(node)
       }
     },
     [propsAnchor]
   )
 
-  return React.createElement(tag, { ref, id: elemId }, children)
+  return React.createElement(tag, { ref, id: elementId }, children)
 }
 
 function CustomHeading({ level, children }: any): ReactElement {
