@@ -56,7 +56,7 @@ import {
   SessionEvent,
   SessionState,
   WidgetStates,
-  GitInfo,
+  IGitInfo,
 } from "autogen/proto"
 
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
@@ -101,7 +101,7 @@ interface State {
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
   allowRunOnSave: boolean
-  gitInfo?: GitInfo | null
+  gitInfo?: IGitInfo | null
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -330,7 +330,7 @@ export class App extends PureComponent<Props, State> {
         uploadReportProgress: (progress: number) =>
           this.handleUploadReportProgress(progress),
         reportUploaded: (url: string) => this.handleReportUploaded(url),
-        gitInfo: (gitInfo: GitInfo) => this.handleGitInfo(gitInfo),
+        gitInfo: (gitInfo: IGitInfo) => this.handleGitInfo(gitInfo),
       })
     } catch (err) {
       logError(err)
@@ -356,7 +356,7 @@ export class App extends PureComponent<Props, State> {
     this.openDialog(newDialog)
   }
 
-  handleGitInfo = (gitInfo: GitInfo): void => {
+  handleGitInfo = (gitInfo: IGitInfo): void => {
     this.setState({
       gitInfo,
     })

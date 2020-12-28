@@ -44,7 +44,7 @@ import {
   IGuestToHostMessage,
 } from "hocs/withS4ACommunication/types"
 
-import { GitInfo } from "autogen/proto"
+import { IGitInfo } from "autogen/proto"
 import {
   BUG_URL,
   COMMUNITY_URL,
@@ -100,7 +100,7 @@ export interface Props {
 
   sendS4AMessage: (message: IGuestToHostMessage) => void
 
-  gitInfo?: GitInfo | null
+  gitInfo?: IGitInfo | null
 
   showDeployError: (
     title: string,
@@ -117,7 +117,7 @@ const getOpenInWindowCallback = (url: string) => (): void => {
   window.open(url, "_blank")
 }
 
-const getDeployAppUrl = (gitInfo?: GitInfo | null): (() => void) => {
+const getDeployAppUrl = (gitInfo?: IGitInfo | null): (() => void) => {
   // If the app was run inside a GitHub repo, autofill for a one-click deploy.
   // E.g.: https://share.streamlit.io/deploy?repository=melon&branch=develop&mainModule=streamlit_app.py
   if (gitInfo) {

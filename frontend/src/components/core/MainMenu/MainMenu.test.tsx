@@ -20,7 +20,7 @@ import { shallow } from "lib/test_util"
 import { IMenuItem } from "hocs/withS4ACommunication/types"
 import { SessionInfo, Args as SessionInfoArgs } from "lib/SessionInfo"
 
-import { GitInfo, IDeployParams } from "autogen/proto"
+import { IGitInfo } from "autogen/proto"
 import { IDeployErrorDialog } from "components/core/StreamlitDialog/DeployErrorDialogs/types"
 import {
   NoRepositoryDetected,
@@ -186,7 +186,7 @@ describe("App", () => {
 
   describe("Onclick deploy button", () => {
     function testDeployErrorModal(
-      gitInfo: Partial<GitInfo>,
+      gitInfo: Partial<IGitInfo>,
       dialogComponent: (module: string) => IDeployErrorDialog
     ): void {
       const props = getProps({
@@ -270,7 +270,7 @@ describe("App", () => {
     })
 
     it("changes not pushed to Github", () => {
-      const deployParams: IDeployParams = {
+      const deployParams: IGitInfo = {
         repository: "repo",
         branch: "branch",
         module: "module.py",
