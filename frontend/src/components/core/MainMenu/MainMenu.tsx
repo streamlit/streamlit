@@ -44,7 +44,7 @@ import {
   IGuestToHostMessage,
 } from "hocs/withS4ACommunication/types"
 
-import { IDeployParams } from "autogen/proto"
+import { GitInfo } from "autogen/proto"
 import {
   BUG_URL,
   COMMUNITY_URL,
@@ -77,7 +77,7 @@ export interface Props {
   quickRerunCallback: () => void
 
   /** Reload report message */
-  reloadReportMessage: () => void
+  loadGitInfo: () => void
 
   /** Clear the cache. */
   clearCacheCallback: () => void
@@ -100,7 +100,7 @@ export interface Props {
 
   sendS4AMessage: (message: IGuestToHostMessage) => void
 
-  deployParams?: IDeployParams | null
+  gitInfo?: GitInfo | null
 
   showDeployError: (
     title: string,
@@ -117,17 +117,15 @@ const getOpenInWindowCallback = (url: string) => (): void => {
   window.open(url, "_blank")
 }
 
-const getDeployAppUrl = (
-  deployParams: IDeployParams | null | undefined
-): (() => void) => {
+const getDeployAppUrl = (gitInfo?: GitInfo | null): (() => void) => {
   // If the app was run inside a GitHub repo, autofill for a one-click deploy.
   // E.g.: https://share.streamlit.io/deploy?repository=melon&branch=develop&mainModule=streamlit_app.py
-  if (deployParams) {
+  if (gitInfo) {
     const deployUrl = new URL(DEPLOY_URL)
 
-    deployUrl.searchParams.set("repository", deployParams.repository || "")
-    deployUrl.searchParams.set("branch", deployParams.branch || "")
-    deployUrl.searchParams.set("mainModule", deployParams.module || "")
+    deployUrl.searchParams.set("repository", gitInfo.repository || "")
+    deployUrl.searchParams.set("branch", gitInfo.branch || "")
+    deployUrl.searchParams.set("mainModule", gitInfo.module || "")
 
     return getOpenInWindowCallback(deployUrl.toString())
   }
@@ -217,13 +215,13 @@ function MainMenu(props: Props): ReactElement {
 
   const onClickDeployApp = useCallback((): void => {
     const {
-      deployParams,
       showDeployError,
       closeDialog,
       isDeployErrorModalOpen,
+      gitInfo,
     } = props
 
-    if (!deployParams) {
+    if (!gitInfo) {
       const dialog = NoRepositoryDetected()
 
       showDeployError(dialog.title, dialog.body)
@@ -239,7 +237,7 @@ function MainMenu(props: Props): ReactElement {
       untrackedFiles,
       uncommittedFiles,
       isAhead,
-    } = deployParams
+    } = gitInfo
 
     if ((!repository || !branch || !module) && !isHeadDetached) {
       const dialog = NoRepositoryDetected()
@@ -276,7 +274,7 @@ function MainMenu(props: Props): ReactElement {
     if (isAhead) {
       const dialog = RepoIsAhead()
 
-      showDeployError(dialog.title, dialog.body, getDeployAppUrl(deployParams))
+      showDeployError(dialog.title, dialog.body, getDeployAppUrl(gitInfo))
 
       return
     }
@@ -284,7 +282,7 @@ function MainMenu(props: Props): ReactElement {
     if (untrackedFiles?.length) {
       const dialog = UntrackedFiles()
 
-      showDeployError(dialog.title, dialog.body, getDeployAppUrl(deployParams))
+      showDeployError(dialog.title, dialog.body, getDeployAppUrl(gitInfo))
 
       return
     }
@@ -292,16 +290,20 @@ function MainMenu(props: Props): ReactElement {
     // We should close the modal when we try again and everything goes fine
     if (isDeployErrorModalOpen) closeDialog()
 
-    getDeployAppUrl(deployParams)()
+    getDeployAppUrl(gitInfo)()
   }, [props])
 
   useEffect(() => {
-    if (!props.deployParams || !props.isDeployErrorModalOpen) return
+    if (!props.gitInfo || !props.isDeployErrorModalOpen) return
 
     onClickDeployApp()
-  }, [props.deployParams, props.isDeployErrorModalOpen, onClickDeployApp])
+  }, [props.gitInfo, props.isDeployErrorModalOpen, onClickDeployApp])
 
   const coreMenuOptions = {
+    reloadMessage: {
+      onClick: props.loadGitInfo,
+      label: "reload it",
+    },
     DIVIDER: { isDivider: true },
     rerun: {
       disabled: isServerDisconnected,
@@ -375,6 +377,7 @@ function MainMenu(props: Props): ReactElement {
   const showSnapshot = !shouldShowS4AMenu && props.sharingEnabled
   const showClearCache = !shouldShowS4AMenu
   const preferredMenuOrder: any[] = [
+    coreMenuOptions.reloadMessage,
     coreMenuOptions.rerun,
     showClearCache && coreMenuOptions.clearCache,
     shouldShowS4AMenu && coreMenuOptions.settings,
@@ -416,6 +419,9 @@ function MainMenu(props: Props): ReactElement {
   return (
     <StatefulPopover
       focusLock
+      onOpen={() => {
+        props.loadGitInfo()
+      }}
       placement={PLACEMENT.bottomRight}
       content={({ close }) => (
         <StatefulMenu
@@ -447,7 +453,12 @@ function MainMenu(props: Props): ReactElement {
         },
       }}
     >
-      <span id="MainMenu">
+      <span
+        id="MainMenu"
+        onClick={() => {
+          console.log("aodfkasodkfpaskdfpok")
+        }}
+      >
         <Button kind={Kind.ICON}>
           <Icon content={Menu} />
         </Button>

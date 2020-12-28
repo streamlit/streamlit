@@ -47,7 +47,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
   sharingEnabled: false,
   isDeployErrorModalOpen: false,
   showDeployError: jest.fn(),
-  reloadReportMessage: jest.fn(),
+  loadGitInfo: jest.fn(),
   closeDialog: jest.fn(),
   ...extend,
 })

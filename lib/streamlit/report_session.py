@@ -345,55 +345,13 @@ class ReportSession(object):
         msg.session_event.report_changed_on_disk = True
         self.enqueue(msg)
 
-    def get_deploy_params(self):
-        try:
-            from streamlit.git_util import GitRepo
-
-            self._repo = GitRepo(self._report.script_path)
-
-            return {
-                "info": self._repo.get_repo_info(),
-                "is_head_detached": self._repo.is_head_detached,
-                "untracked_files": self._repo.untracked_files,
-                "uncommitted_files": self._repo.get_uncommitted_files(),
-                "is_ahead": not self._repo.is_head_detached
-                and len(self._repo.get_ahead_commits()) > 0,
-            }
-        except:
-            # Issues can arise based on the git structure
-            # In this case, catch any errors
-            return None
-
-    def _enqueue_new_report_message(self, generate_new_id=True):
-        if generate_new_id:
-            self._report.generate_new_id()
+    def _enqueue_new_report_message(self):
+        self._report.generate_new_id()
 
         msg = ForwardMsg()
         msg.new_report.report_id = self._report.report_id
         msg.new_report.name = self._report.name
         msg.new_report.script_path = self._report.script_path
-
-        # git deploy params
-        deploy_params = self.get_deploy_params()
-
-        if deploy_params is not None:
-            if deploy_params["info"] is not None:
-                repo, branch, module = deploy_params["info"]
-
-                msg.new_report.deploy_params.repository = repo
-                msg.new_report.deploy_params.branch = branch
-                msg.new_report.deploy_params.module = module
-
-            msg.new_report.deploy_params.is_head_detached = deploy_params[
-                "is_head_detached"
-            ]
-            msg.new_report.deploy_params.untracked_files[:] = deploy_params[
-                "untracked_files"
-            ]
-            msg.new_report.deploy_params.uncommitted_files[:] = deploy_params[
-                "uncommitted_files"
-            ]
-            msg.new_report.deploy_params.is_ahead = deploy_params["is_ahead"]
 
         # Immutable session data. We send this every time a new report is
         # started, to avoid having to track whether the client has already
@@ -445,9 +403,28 @@ class ReportSession(object):
         msg.report_finished = status
         self.enqueue(msg)
 
-    def handle_reload_report_message(self):
-        LOGGER.debug("Reloading report message without rerun")
-        self._enqueue_new_report_message(generate_new_id=False)
+    def handle_git_information(self):
+        msg = ForwardMsg()
+
+        try:
+            from streamlit.git_util import GitRepo
+
+            self._repo = GitRepo(self._report.script_path)
+
+            repo, branch, module = self._repo.get_repo_info()
+
+            msg.git_info.repository = repo
+            msg.git_info.branch = branch
+            msg.git_info.module = module
+
+            msg.git_info.is_head_detached = self._repo.is_head_detached
+            msg.git_info.untracked_files[:] = self._repo.untracked_files
+            msg.git_info.uncommitted_files[:] = self._repo.get_uncommitted_files()
+            msg.git_info.is_ahead = not self._repo.is_head_detached and len(self._repo.get_ahead_commits()) > 0
+        except:
+            pass
+
+        self.enqueue(msg)
 
     def handle_rerun_script_request(self, client_state=None, is_preheat=False):
         """Tell the ScriptRunner to re-run its report.

@@ -55,6 +55,8 @@ message BackMsg {
     ClientState rerun_script = 11;
 
     bool reload_report_message = 12;
+
+    bool load_git_info = 13;
   }
 
   reserved 1, 3, 4, 8, 9;
