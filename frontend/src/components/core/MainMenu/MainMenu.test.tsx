@@ -20,7 +20,7 @@ import { shallow } from "lib/test_util"
 import { IMenuItem } from "hocs/withS4ACommunication/types"
 import { SessionInfo, Args as SessionInfoArgs } from "lib/SessionInfo"
 
-import { IDeployParams } from "autogen/proto"
+import { IGitInfo } from "autogen/proto"
 import { IDeployErrorDialog } from "components/core/StreamlitDialog/DeployErrorDialogs/types"
 import {
   NoRepositoryDetected,
@@ -47,7 +47,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
   sharingEnabled: false,
   isDeployErrorModalOpen: false,
   showDeployError: jest.fn(),
-  reloadReportMessage: jest.fn(),
+  loadGitInfo: jest.fn(),
   closeDialog: jest.fn(),
   ...extend,
 })
@@ -158,7 +158,7 @@ describe("App", () => {
   })
 
   it("should render deploy app menu item", () => {
-    const props = getProps({ deployParams: {} })
+    const props = getProps({ gitInfo: {} })
     const wrapper = shallow(<MainMenu {...props} />)
     const popoverContent = wrapper.find("StatefulPopover").prop("content")
     // @ts-ignore
@@ -186,11 +186,11 @@ describe("App", () => {
 
   describe("Onclick deploy button", () => {
     function testDeployErrorModal(
-      deployParams: Partial<IDeployParams>,
+      gitInfo: Partial<IGitInfo>,
       dialogComponent: (module: string) => IDeployErrorDialog
     ): void {
       const props = getProps({
-        deployParams,
+        gitInfo,
       })
       const wrapper = shallow(<MainMenu {...props} />)
       const popoverContent = wrapper.find("StatefulPopover").prop("content")
@@ -207,7 +207,7 @@ describe("App", () => {
       deployOption.onClick()
 
       // @ts-ignore
-      const dialog = dialogComponent(props.deployParams.module)
+      const dialog = dialogComponent(props.gitInfo.module)
 
       expect(props.showDeployError.mock.calls[0][0]).toStrictEqual(
         dialog.title
@@ -270,7 +270,7 @@ describe("App", () => {
     })
 
     it("changes not pushed to Github", () => {
-      const deployParams: IDeployParams = {
+      const deployParams: IGitInfo = {
         repository: "repo",
         branch: "branch",
         module: "module.py",

@@ -49,7 +49,6 @@ import {
   Delta,
   ForwardMsg,
   ForwardMsgMetadata,
-  IDeployParams,
   Initialize,
   NewReport,
   PageConfig,
@@ -57,6 +56,7 @@ import {
   SessionEvent,
   SessionState,
   WidgetStates,
+  IGitInfo,
 } from "autogen/proto"
 
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
@@ -101,7 +101,7 @@ interface State {
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
   allowRunOnSave: boolean
-  deployParams?: IDeployParams | null
+  gitInfo?: IGitInfo | null
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -158,7 +158,7 @@ export class App extends PureComponent<Props, State> {
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
       allowRunOnSave: true,
-      deployParams: null,
+      gitInfo: null,
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -235,7 +235,7 @@ export class App extends PureComponent<Props, State> {
       msg: errorNode,
       onContinue,
       onClose: () => {},
-      onTryAgain: this.reloadReportMessage,
+      onTryAgain: this.loadGitInformation,
     })
   }
 
@@ -330,6 +330,7 @@ export class App extends PureComponent<Props, State> {
         uploadReportProgress: (progress: number) =>
           this.handleUploadReportProgress(progress),
         reportUploaded: (url: string) => this.handleReportUploaded(url),
+        gitInfo: (gitInfo: IGitInfo) => this.handleGitInfo(gitInfo),
       })
     } catch (err) {
       logError(err)
@@ -353,6 +354,12 @@ export class App extends PureComponent<Props, State> {
       onClose: () => {},
     }
     this.openDialog(newDialog)
+  }
+
+  handleGitInfo = (gitInfo: IGitInfo): void => {
+    this.setState({
+      gitInfo,
+    })
   }
 
   handlePageConfigChanged = (pageConfig: PageConfig): void => {
@@ -509,12 +516,7 @@ export class App extends PureComponent<Props, State> {
     }
 
     const { reportHash } = this.state
-    const {
-      reportId,
-      name: reportName,
-      scriptPath,
-      deployParams,
-    } = newReportProto
+    const { reportId, name: reportName, scriptPath } = newReportProto
 
     const newReportHash = hashString(
       SessionInfo.current.installationId + scriptPath
@@ -532,10 +534,9 @@ export class App extends PureComponent<Props, State> {
     if (reportHash === newReportHash) {
       this.setState({
         reportId,
-        deployParams,
       })
     } else {
-      this.clearAppState(newReportHash, reportId, reportName, deployParams)
+      this.clearAppState(newReportHash, reportId, reportName)
     }
   }
 
@@ -609,15 +610,13 @@ export class App extends PureComponent<Props, State> {
   clearAppState(
     reportHash: string,
     reportId: string,
-    reportName: string,
-    deployParams?: IDeployParams | null
+    reportName: string
   ): void {
     this.setState(
       {
         reportId,
         reportName,
         reportHash,
-        deployParams,
         elements: ReportRoot.empty(),
       },
       () => {
@@ -797,6 +796,19 @@ export class App extends PureComponent<Props, State> {
     )
   }
 
+  loadGitInformation = (): void => {
+    if (!this.isServerConnected()) {
+      logError("Cannot rerun script when disconnected from server.")
+      return
+    }
+
+    this.sendBackMsg(
+      new BackMsg({
+        loadGitInfo: true,
+      })
+    )
+  }
+
   sendRerunBackMsg = (widgetStates?: WidgetStates | undefined): void => {
     const { queryParams } = this.props.s4aCommunication.currentState
 
@@ -934,7 +946,6 @@ export class App extends PureComponent<Props, State> {
     const {
       allowRunOnSave,
       connectionState,
-      deployParams,
       dialog,
       elements,
       initialSidebarState,
@@ -944,6 +955,7 @@ export class App extends PureComponent<Props, State> {
       reportRunState,
       sharingEnabled,
       userSettings,
+      gitInfo,
     } = this.state
     const outerDivClass = classNames("stApp", {
       "streamlit-embedded": isEmbeddedInIFrame(),
@@ -995,7 +1007,7 @@ export class App extends PureComponent<Props, State> {
                 isServerConnected={this.isServerConnected()}
                 shareCallback={this.shareReport}
                 quickRerunCallback={this.rerunScript}
-                reloadReportMessage={this.reloadReportMessage}
+                loadGitInfo={this.loadGitInformation}
                 clearCacheCallback={this.openClearCacheDialog}
                 settingsCallback={this.settingsCallback}
                 aboutCallback={this.aboutCallback}
@@ -1003,7 +1015,7 @@ export class App extends PureComponent<Props, State> {
                 screenCastState={this.props.screenCast.currentState}
                 s4aMenuItems={this.props.s4aCommunication.currentState.items}
                 sendS4AMessage={this.props.s4aCommunication.sendMessage}
-                deployParams={deployParams}
+                gitInfo={gitInfo}
                 showDeployError={this.showDeployError}
                 closeDialog={this.closeDialog}
                 isDeployErrorModalOpen={
