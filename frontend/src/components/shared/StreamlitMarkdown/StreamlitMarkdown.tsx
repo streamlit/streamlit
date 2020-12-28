@@ -54,7 +54,7 @@ function createAnchorFromText(text: string | null): string {
 
 let alreadyScrolled = false
 
-function scrollNodeIntoView(node: HTMLElement) {
+function scrollNodeIntoView(node: HTMLElement): void {
   if (!alreadyScrolled) {
     node.scrollIntoView(true)
     alreadyScrolled = true
