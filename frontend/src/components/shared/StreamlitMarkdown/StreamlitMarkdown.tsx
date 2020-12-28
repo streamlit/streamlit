@@ -167,8 +167,8 @@ interface LinkReferenceProps {
 export function linkWithTargetBlank(props: LinkProps): ReactElement {
   // if it's a #hash link, don't open in new tab
   if (props.href.startsWith("#")) {
-    // eslint-disable-next-line jsx-a11y/anchor-has-content
-    return <a {...props} />
+    const { children, ...rest } = props
+    return <a {...rest}>{children}</a>
   }
 
   return (
