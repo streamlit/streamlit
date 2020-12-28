@@ -357,8 +357,6 @@ export class App extends PureComponent<Props, State> {
   }
 
   handleGitInfo = (gitInfo: GitInfo): void => {
-    console.log("=== git info", gitInfo)
-
     this.setState({
       gitInfo,
     })

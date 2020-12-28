@@ -420,7 +420,10 @@ class ReportSession(object):
             msg.git_info.is_head_detached = self._repo.is_head_detached
             msg.git_info.untracked_files[:] = self._repo.untracked_files
             msg.git_info.uncommitted_files[:] = self._repo.get_uncommitted_files()
-            msg.git_info.is_ahead = not self._repo.is_head_detached and len(self._repo.get_ahead_commits()) > 0
+            msg.git_info.is_ahead = (
+                not self._repo.is_head_detached
+                and len(self._repo.get_ahead_commits()) > 0
+            )
         except:
             pass
 

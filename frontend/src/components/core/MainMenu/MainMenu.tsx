@@ -300,10 +300,6 @@ function MainMenu(props: Props): ReactElement {
   }, [props.gitInfo, props.isDeployErrorModalOpen, onClickDeployApp])
 
   const coreMenuOptions = {
-    reloadMessage: {
-      onClick: props.loadGitInfo,
-      label: "reload it",
-    },
     DIVIDER: { isDivider: true },
     rerun: {
       disabled: isServerDisconnected,
@@ -377,7 +373,6 @@ function MainMenu(props: Props): ReactElement {
   const showSnapshot = !shouldShowS4AMenu && props.sharingEnabled
   const showClearCache = !shouldShowS4AMenu
   const preferredMenuOrder: any[] = [
-    coreMenuOptions.reloadMessage,
     coreMenuOptions.rerun,
     showClearCache && coreMenuOptions.clearCache,
     shouldShowS4AMenu && coreMenuOptions.settings,
