@@ -118,7 +118,7 @@
     "@types/lodash": "^4.14.159",
     "@types/mocha": "^5.2.7",
     "@types/moment-duration-format": "^2.2.2",
-    "@types/node": "^12.7.4",
+    "@types/node": "^14.14.16",
     "@types/node-emoji": "^1.8.1",
     "@types/numeral": "^0.0.26",
     "@types/plotly.js": "^1.50.16",
