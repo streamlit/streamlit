@@ -52,26 +52,32 @@ function createAnchorFromText(text: string | null): string {
   return newAnchor || ""
 }
 
-function createHeadingWithAnchor() {
-  let alreadyScrolled = false
-  return function({ tag, anchor, children }: any): ReactElement {
-    const ref = React.useCallback(
-      node => {
-        if (node !== null && !alreadyScrolled) {
-          const hash = window.location.hash.slice(1)
-          if (hash === (anchor || createAnchorFromText(node.textContent))) {
-            node.scrollIntoView(true)
-            alreadyScrolled = true
-          }
-        }
-      },
-      [anchor]
-    )
-    return React.createElement(tag, { ref }, children)
-  }
-}
+let alreadyScrolled = false
 
-const HeadingWithAnchor = createHeadingWithAnchor()
+function HeadingWithAnchor({
+  tag,
+  anchor: propsAnchor,
+  children,
+}: any): ReactElement {
+  const [elemId, setElemId] = React.useState(propsAnchor)
+
+  const ref = React.useCallback(
+    node => {
+      if (node !== null && !alreadyScrolled) {
+        const anchor = propsAnchor || createAnchorFromText(node.textContent)
+        setElemId(anchor)
+
+        if (window.location.hash.slice(1) === anchor) {
+          node.scrollIntoView(true)
+          alreadyScrolled = true
+        }
+      }
+    },
+    [propsAnchor]
+  )
+
+  return React.createElement(tag, { ref, id: elemId }, children)
+}
 
 function CustomHeading({ level, children }: any): ReactElement {
   return <HeadingWithAnchor tag={`h${level}`}>{children}</HeadingWithAnchor>
@@ -159,6 +165,12 @@ interface LinkReferenceProps {
 // Using target="_blank" without rel="noopener noreferrer" is a security risk:
 // see https://mathiasbynens.github.io/rel-noopener
 export function linkWithTargetBlank(props: LinkProps): ReactElement {
+  // if it's a #hash link, don't open in new tab
+  if (props.href.startsWith("#")) {
+    // eslint-disable-next-line jsx-a11y/anchor-has-content
+    return <a {...props} />
+  }
+
   return (
     <a href={props.href} target="_blank" rel="noopener noreferrer">
       {props.children}
