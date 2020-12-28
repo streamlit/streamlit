@@ -21,8 +21,7 @@ describe("st.echo", () => {
   });
 
   it("echos a code", () => {
-    cy.get(".element-container .stMarkdown").should(
-      "have.text",
+    cy.get(".element-container .stMarkdown").contains(
       `print("This code is awesome!")`
     );
   });
