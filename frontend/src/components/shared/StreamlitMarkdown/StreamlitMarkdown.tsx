@@ -90,10 +90,7 @@ function CustomHeading({ level, children }: any): ReactElement {
 
 function CustomParsedHtml(props: any): ReactElement {
   const {
-    element: {
-      type,
-      props: { "data-anchor": anchor, children },
-    },
+    element: { type, props: elementProps },
   } = props
 
   const headingElements = ["h1", "h2", "h3", "h4", "h5", "h6"]
@@ -101,6 +98,7 @@ function CustomParsedHtml(props: any): ReactElement {
     return (ReactMarkdown.renderers.parsedHtml as any)(props)
   }
 
+  const { "data-anchor": anchor, children } = elementProps
   return (
     <HeadingWithAnchor tag={type} anchor={anchor}>
       {children}
