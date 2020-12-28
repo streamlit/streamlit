@@ -155,11 +155,13 @@ class StreamlitMarkdown extends PureComponent<Props> {
 interface LinkProps {
   children: ReactElement
   href: string
+  title?: string
 }
 
 interface LinkReferenceProps {
   children: [ReactElement]
   href: string
+  title?: string
 }
 
 // Using target="_blank" without rel="noopener noreferrer" is a security risk:
@@ -171,9 +173,10 @@ export function linkWithTargetBlank(props: LinkProps): ReactElement {
     return <a {...rest}>{children}</a>
   }
 
+  const { href, title, children } = props
   return (
-    <a href={props.href} target="_blank" rel="noopener noreferrer">
-      {props.children}
+    <a href={href} title={title} target="_blank" rel="noopener noreferrer">
+      {children}
     </a>
   )
 }
@@ -183,7 +186,7 @@ export function linkWithTargetBlank(props: LinkProps): ReactElement {
 export function linkReferenceHasParens(
   props: LinkReferenceProps
 ): ReactElement | null {
-  const { href, children } = props
+  const { href, title, children } = props
 
   if (!href) {
     return children.length ? (
@@ -192,7 +195,7 @@ export function linkReferenceHasParens(
   }
 
   return (
-    <a href={href} target="_blank" rel="noopener noreferrer">
+    <a href={href} title={title} target="_blank" rel="noopener noreferrer">
       {children}
     </a>
   )

@@ -17,15 +17,15 @@
 
 import React, { ReactElement } from "react"
 import ReactMarkdown from "react-markdown"
+import { mount } from "enzyme"
 
-import { create } from "react-test-renderer"
 import {
   linkWithTargetBlank,
   linkReferenceHasParens,
 } from "./StreamlitMarkdown"
 
 // Fixture Generator
-const getMarkdownElement = (body): ReactElement => {
+const getMarkdownElement = (body: string): ReactElement => {
   const renderers = {
     link: linkWithTargetBlank,
     linkReference: linkReferenceHasParens,
@@ -35,52 +35,51 @@ const getMarkdownElement = (body): ReactElement => {
 
 describe("linkReference", () => {
   it("renders a link with _blank target", () => {
-    const body =
-      'Some random URL like [Streamlit](https://streamlit.io" target="_blank")'
-    const component = create(getMarkdownElement(body))
-    const instance = component.root
-    expect(instance.findByType(linkWithTargetBlank).props.href).toBe(
-      "https://streamlit.io"
-    )
+    const body = "Some random URL like [Streamlit](https://streamlit.io/)"
+    const wrapper = mount(getMarkdownElement(body))
+
+    expect(wrapper.find("a").prop("href")).toEqual("https://streamlit.io/")
+    expect(wrapper.find("a").prop("target")).toEqual("_blank")
   })
+
   it("renders a link without title", () => {
     const body =
       "Everybody loves [The Internet Archive](https://archive.org/)."
-    const component = create(getMarkdownElement(body))
-    const instance = component.root
-    expect(instance.findByType(linkWithTargetBlank).props.href).toBe(
-      "https://archive.org/"
-    )
+    const wrapper = mount(getMarkdownElement(body))
+
+    expect(wrapper.find("a").prop("href")).toEqual("https://archive.org/")
+    expect(wrapper.find("a").prop("title")).toBeUndefined()
   })
+
   it("renders a link containing a title", () => {
     const body =
       "My favorite search engine is " +
-      "[Duck Duck Go](https://duckduckgo.com " +
-      '"The best search engine for privacy").'
-    const component = create(getMarkdownElement(body))
-    const instance = component.root
-    expect(instance.findByType(linkWithTargetBlank).props.href).toBe(
-      "https://duckduckgo.com"
+      '[Duck Duck Go](https://duckduckgo.com/ "The best search engine for privacy").'
+    const wrapper = mount(getMarkdownElement(body))
+
+    expect(wrapper.find("a").prop("href")).toEqual("https://duckduckgo.com/")
+    expect(wrapper.find("a").prop("title")).toBe(
+      "The best search engine for privacy"
     )
   })
+
   it("renders a link containing parentheses", () => {
     const body =
       "Here's a link containing parentheses [Yikes](http://msdn.microsoft.com/en-us/library/aa752574(VS.85).aspx)"
-    const component = create(getMarkdownElement(body))
-    const instance = component.root
-    const hrefobj = instance.findByType(linkWithTargetBlank)
-    expect(hrefobj.props.href).toBe(
+    const wrapper = mount(getMarkdownElement(body))
+
+    expect(wrapper.find("a").prop("href")).toEqual(
       "http://msdn.microsoft.com/en-us/library/aa752574(VS.85).aspx"
     )
   })
+
   it("does not render a link if only [text] and no (href)", () => {
     const body = "Don't convert to a link if only [text] and missing (href)"
-    const component = create(getMarkdownElement(body))
-    const instance = component.root
-    // should be no link object
-    expect(() => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      instance.findByType(linkWithTargetBlank).props.href
-    }).toThrow()
+    const wrapper = mount(getMarkdownElement(body))
+
+    expect(wrapper.text()).toEqual(
+      "Don't convert to a link if only [text] and missing (href)"
+    )
+    expect(wrapper.find("a").exists()).toBe(false)
   })
 })
