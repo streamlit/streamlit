@@ -112,6 +112,17 @@ class TextInput extends React.PureComponent<Props, State> {
           onKeyPress={this.onKeyPress}
           disabled={disabled}
           type={this.getTypeString()}
+          overrides={{
+            Input: {
+              style: {
+                // Issue: https://github.com/streamlit/streamlit/issues/2495
+                // The input won't shrink in Firefox,
+                // unless the line below is provided.
+                // See https://stackoverflow.com/a/33811151
+                minWidth: 0,
+              },
+            },
+          }}
         />
         <InputInstructions
           dirty={dirty}
