@@ -176,9 +176,11 @@ class ReportSession(object):
 
     def enqueue_exception(self, e):
         """Enqueue an Exception message.
+
         Parameters
         ----------
         e : BaseException
+
         """
         # This does a few things:
         # 1) Clears the current report in the browser.
@@ -196,13 +198,16 @@ class ReportSession(object):
 
     def request_rerun(self, client_state=None):
         """Signal that we're interested in running the script.
+
         If the script is not already running, it will be started immediately.
         Otherwise, a rerun will be requested.
+
         Parameters
         ----------
         client_state : streamlit.proto.ClientState_pb2.ClientState | None
             The ClientState protobuf to run the script with, or None
             to use previous client state.
+
         """
         if client_state:
             rerun_data = RerunData(
@@ -226,16 +231,21 @@ class ReportSession(object):
 
     def _on_scriptrunner_event(self, event, exception=None, client_state=None):
         """Called when our ScriptRunner emits an event.
+
         This is *not* called on the main thread.
+
         Parameters
         ----------
         event : ScriptRunnerEvent
+
         exception : BaseException | None
             An exception thrown during compilation. Set only for the
             SCRIPT_STOPPED_WITH_COMPILE_ERROR event.
+
         client_state : streamlit.proto.ClientState_pb2.ClientState | None
             The ScriptRunner's final ClientState. Set only for the
             SHUTDOWN event.
+
         """
         LOGGER.debug("OnScriptRunnerEvent: %s", event)
 
@@ -382,9 +392,11 @@ class ReportSession(object):
 
     def _enqueue_report_finished_message(self, status):
         """Enqueue a report_finished ForwardMsg.
+
         Parameters
         ----------
         status : ReportFinishedStatus
+
         """
         msg = ForwardMsg()
         msg.report_finished = status
@@ -418,15 +430,18 @@ class ReportSession(object):
 
     def handle_rerun_script_request(self, client_state=None, is_preheat=False):
         """Tell the ScriptRunner to re-run its report.
+
         Parameters
         ----------
         client_state : streamlit.proto.ClientState_pb2.ClientState | None
             The ClientState protobuf to run the script with, or None
             to use previous client state.
+
         is_preheat: boolean
             True if this ReportSession should run the script immediately, and
             then ignore the next rerun request if it matches the already-ran
             widget state.
+
         """
         if is_preheat:
             self._maybe_reuse_previous_run = True  # For next time.
@@ -458,7 +473,9 @@ class ReportSession(object):
 
     def handle_clear_cache_request(self):
         """Clear this report's cache.
+
         Because this cache is global, it will be cleared for all users.
+
         """
         # Setting verbose=True causes clear_cache to print to stdout.
         # Since this command was initiated from the browser, the user
@@ -468,25 +485,32 @@ class ReportSession(object):
 
     def handle_set_run_on_save_request(self, new_value):
         """Change our run_on_save flag to the given value.
+
         The browser will be notified of the change.
+
         Parameters
         ----------
         new_value : bool
             New run_on_save value
+
         """
         self._run_on_save = new_value
         self._enqueue_session_state_changed_message()
 
     def _enqueue_script_request(self, request, data=None):
         """Enqueue a ScriptEvent into our ScriptEventQueue.
+
         If a script thread is not already running, one will be created
         to handle the event.
+
         Parameters
         ----------
         request : ScriptRequest
             The type of request.
+
         data : Any
             Data associated with the request, if any.
+
         """
         if self._state == ReportSessionState.SHUTDOWN_REQUESTED:
             LOGGER.warning("Discarding %s request after shutdown" % request)
@@ -497,10 +521,13 @@ class ReportSession(object):
 
     def _maybe_create_scriptrunner(self):
         """Create a new ScriptRunner if we have unprocessed script requests.
+
         This is called every time a ScriptRequest is enqueued, and also
         after a ScriptRunner shuts down, in case new requests were enqueued
         during its termination.
+
         This function should only be called on the main thread.
+
         """
         if (
             self._state == ReportSessionState.SHUTDOWN_REQUESTED
@@ -524,14 +551,17 @@ class ReportSession(object):
     @tornado.gen.coroutine
     def handle_save_request(self, ws):
         """Save serialized version of report deltas to the cloud.
+
         "Progress" ForwardMsgs will be sent to the client during the upload.
         These messages are sent "out of band" - that is, they don't get
         enqueued into the ReportQueue (because they're not part of the report).
         Instead, they're written directly to the report's WebSocket.
+
         Parameters
         ----------
         ws : _BrowserWebSocketHandler
             The report's websocket handler.
+
         """
 
         @tornado.gen.coroutine
