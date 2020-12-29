@@ -29,6 +29,7 @@ class GitRepo:
                 self.module = os.path.relpath(path, git_root)
         except:
             # The git repo must be invalid for the following reasons:
+            #  * git binary or GitPython not installed
             #  * No .git folder
             #  * Corrupted .git folder
             #  * Path is invalid
