@@ -448,12 +448,7 @@ function MainMenu(props: Props): ReactElement {
         },
       }}
     >
-      <span
-        id="MainMenu"
-        onClick={() => {
-          console.log("aodfkasodkfpaskdfpok")
-        }}
-      >
+      <span id="MainMenu">
         <Button kind={Kind.ICON}>
           <Icon content={Menu} />
         </Button>
