@@ -54,8 +54,10 @@ class ReportSession(object):
     """
     Contains session data for a single "user" of an active report
     (that is, a connected browser tab).
+
     Each ReportSession has its own Report, root DeltaGenerator, ScriptRunner,
     and widget state.
+
     A ReportSession is attached to each thread involved in running its Report.
 
     """
