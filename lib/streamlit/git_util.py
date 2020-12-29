@@ -2,8 +2,6 @@ import os
 import re
 from typing import Optional, Tuple
 
-import git  # type: ignore[import]
-
 # Github has two URLs, one that is https and one that is ssh
 GITHUB_HTTP_URL = r"^https://(www\.)?github.com/(.+)/(.+).git$"
 GITHUB_SSH_URL = r"^git@github.com:(.+)/(.+).git$"
@@ -21,6 +19,8 @@ class GitRepo:
         self.git_version = None  # type: Optional[Tuple[int, ...]]
 
         try:
+            import git  # type: ignore[import]
+
             self.repo = git.Repo(path, search_parent_directories=True)
             self.git_version = self.repo.git.version_info
 
