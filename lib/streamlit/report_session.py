@@ -57,20 +57,26 @@ class ReportSession(object):
     Each ReportSession has its own Report, root DeltaGenerator, ScriptRunner,
     and widget state.
     A ReportSession is attached to each thread involved in running its Report.
+
     """
 
     def __init__(self, ioloop, script_path, command_line, uploaded_file_manager):
         """Initialize the ReportSession.
+
         Parameters
         ----------
         ioloop : tornado.ioloop.IOLoop
             The Tornado IOLoop that we're running within.
+
         script_path : str
             Path of the Python file from which this report is generated.
+
         command_line : str
             Command line as input by the user.
+
         uploaded_file_manager : UploadedFileManager
             The server's UploadedFileManager.
+
         """
         # Each ReportSession has a unique string ID.
         self.id = str(uuid.uuid4())
@@ -102,19 +108,24 @@ class ReportSession(object):
 
     def flush_browser_queue(self):
         """Clear the report queue and return the messages it contained.
+
         The Server calls this periodically to deliver new messages
         to the browser connected to this report.
+
         Returns
         -------
         list[ForwardMsg]
             The messages that were removed from the queue and should
             be delivered to the browser.
+
         """
         return self._report.flush_browser_queue()
 
     def shutdown(self):
         """Shut down the ReportSession.
+
         It's an error to use a ReportSession after it's been shut down.
+
         """
         if self._state != ReportSessionState.SHUTDOWN_REQUESTED:
             LOGGER.debug("Shutting down (id=%s)", self.id)
@@ -135,12 +146,15 @@ class ReportSession(object):
 
     def enqueue(self, msg):
         """Enqueue a new ForwardMsg to our browser queue.
+
         This can be called on both the main thread and a ScriptRunner
         run thread.
+
         Parameters
         ----------
         msg : ForwardMsg
             The message to enqueue
+
         """
         if not config.get_option("client.displayEnabled"):
             return
