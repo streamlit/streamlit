@@ -404,7 +404,7 @@ class ReportSession(object):
         msg.report_finished = status
         self.enqueue(msg)
 
-    def handle_git_information(self):
+    def handle_git_information_request(self):
         msg = ForwardMsg()
 
         try:
