@@ -16,27 +16,40 @@
  */
 
 import React from "react"
-import { mount } from "lib/test_util"
-import { ModalHeader, ModalBody } from "components/shared/Modal"
+import { BaseProvider, LightTheme } from "baseui"
 
+import { ModalHeader, ModalBody } from "components/shared/Modal"
+import { mount } from "lib/test_util"
 import UnsupportedBrowserDialog from "./UnsupportedBrowserDialog"
 
 describe("UnsupportedBrowserDialog", () => {
   it("renders without crashing", () => {
-    const wrapper = mount(<UnsupportedBrowserDialog onClose={() => {}} />)
+    const wrapper = mount(
+      <BaseProvider theme={LightTheme}>
+        <UnsupportedBrowserDialog onClose={() => {}} />
+      </BaseProvider>
+    )
 
     expect(wrapper.html()).not.toBeNull()
   })
 
   it("should render a header", () => {
     const onClose = jest.fn()
-    const wrapper = mount(<UnsupportedBrowserDialog onClose={onClose} />)
+    const wrapper = mount(
+      <BaseProvider theme={LightTheme}>
+        <UnsupportedBrowserDialog onClose={onClose} />
+      </BaseProvider>
+    )
     const headerWrapper = wrapper.find(ModalHeader)
     expect(headerWrapper.props().children).toBe("Record a screencast")
   })
 
   it("should render a body with the correct message", () => {
-    const wrapper = mount(<UnsupportedBrowserDialog onClose={() => {}} />)
+    const wrapper = mount(
+      <BaseProvider theme={LightTheme}>
+        <UnsupportedBrowserDialog onClose={() => {}} />
+      </BaseProvider>
+    )
     const bodyWrapper = wrapper.find(ModalBody)
 
     expect(bodyWrapper.find("span[aria-label='Alien Monster']").text()).toBe(
