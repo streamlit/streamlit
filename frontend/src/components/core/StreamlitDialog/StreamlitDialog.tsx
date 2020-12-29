@@ -31,7 +31,7 @@ import {
   ScriptChangedDialog,
   Props as ScriptChangedDialogProps,
 } from "components/core/StreamlitDialog/ScriptChangedDialog"
-import { IDeployParams, IException } from "autogen/proto"
+import { IException } from "autogen/proto"
 import { SessionInfo } from "lib/SessionInfo"
 import { STREAMLIT_HOME_URL } from "urls"
 import { Props as SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
@@ -384,7 +384,6 @@ interface DeployErrorProps {
   onClose: PlainEventHandler
   onContinue?: PlainEventHandler
   onTryAgain: PlainEventHandler
-  deployParams?: IDeployParams | null
 }
 
 /**
@@ -396,7 +395,6 @@ function deployErrorDialog({
   onClose,
   onContinue,
   onTryAgain,
-  deployParams,
 }: DeployErrorProps): ReactElement {
   const handlePrimaryButton = (): void => {
     onClose()
