@@ -36,7 +36,10 @@ message NewReport {
   // "/foo/bar/foo.py"
   string script_path = 4;
 
-  DeployParams deploy_params = 5;
+  // DEPRECATED. Moving this to a separate GitInfo message
+  // DeployParams deploy_params = 5;
+
+  reserved 5;
 }
 
 // Contains Streamlit configuration data, and the session state that existed
@@ -97,12 +100,4 @@ message UserInfo {
 message EnvironmentInfo {
   string streamlit_version = 1;
   string python_version = 2;
-}
-
-// Data about the git repository this app is deployed from (if any).
-// Does not change over the app's lifetime.
-message DeployParams {
-  string repository = 1;
-  string branch = 2;
-  string module = 3;
 }
