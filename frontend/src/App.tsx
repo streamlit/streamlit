@@ -776,26 +776,6 @@ export class App extends PureComponent<Props, State> {
     this.widgetMgr.sendUpdateWidgetsMessage()
   }
 
-  reloadReportMessage = (): void => {
-    if (!this.isServerConnected()) {
-      logError("Cannot rerun script when disconnected from server.")
-      return
-    }
-
-    if (
-      this.state.reportRunState === ReportRunState.RUNNING ||
-      this.state.reportRunState === ReportRunState.RERUN_REQUESTED
-    ) {
-      return
-    }
-
-    this.sendBackMsg(
-      new BackMsg({
-        reloadReportMessage: true,
-      })
-    )
-  }
-
   loadGitInformation = (): void => {
     if (!this.isServerConnected()) {
       logError("Cannot rerun script when disconnected from server.")
