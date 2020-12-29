@@ -303,7 +303,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             el.doc_string.doc_string.startswith("Display text in header formatting.")
         )
         self.assertEqual(el.doc_string.type, "<class 'method'>")
-        self.assertEqual(el.doc_string.signature, "(body)")
+        self.assertEqual(el.doc_string.signature, "(body, anchor=None)")
 
     def test_st_image_PIL_image(self):
         """Test st.image with PIL image."""
