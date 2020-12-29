@@ -27,6 +27,7 @@ import RemarkMathPlugin from "remark-math"
 import RemarkEmoji from "remark-emoji"
 import CodeBlock from "components/elements/CodeBlock/"
 import { StyledStreamlitMarkdown } from "./styled-components"
+import { once } from "lodash"
 
 import "katex/dist/katex.min.css"
 
@@ -52,14 +53,10 @@ function createAnchorFromText(text: string | null): string {
   return newAnchor || ""
 }
 
-let alreadyScrolled = false
-
-function scrollNodeIntoView(node: HTMLElement): void {
-  if (!alreadyScrolled) {
-    node.scrollIntoView(true)
-    alreadyScrolled = true
-  }
-}
+// wrapping in `once` ensures we only scroll once
+const scrollNodeIntoView = once((node: HTMLElement): void => {
+  node.scrollIntoView(true)
+})
 
 function HeadingWithAnchor({
   tag,
