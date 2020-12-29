@@ -50,7 +50,7 @@ message ForwardMsg {
     PageInfo page_info_changed = 12;
     PageConfig page_config_changed = 13;
     ReportFinishedStatus report_finished = 6;
-    GitInfo git_info = 14;
+    GitInfo git_info_changed = 14;
 
     // Upload progress messages.
 

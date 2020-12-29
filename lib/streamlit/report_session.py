@@ -414,14 +414,14 @@ class ReportSession(object):
 
             repo, branch, module = self._repo.get_repo_info()
 
-            msg.git_info.repository = repo
-            msg.git_info.branch = branch
-            msg.git_info.module = module
+            msg.git_info_changed.repository = repo
+            msg.git_info_changed.branch = branch
+            msg.git_info_changed.module = module
 
-            msg.git_info.is_head_detached = self._repo.is_head_detached
-            msg.git_info.untracked_files[:] = self._repo.untracked_files
-            msg.git_info.uncommitted_files[:] = self._repo.get_uncommitted_files()
-            msg.git_info.is_ahead = (
+            msg.git_info_changed.is_head_detached = self._repo.is_head_detached
+            msg.git_info_changed.untracked_files[:] = self._repo.untracked_files
+            msg.git_info_changed.uncommitted_files[:] = self._repo.get_uncommitted_files()
+            msg.git_info_changed.is_ahead = (
                 not self._repo.is_head_detached
                 and len(self._repo.get_ahead_commits()) > 0
             )
