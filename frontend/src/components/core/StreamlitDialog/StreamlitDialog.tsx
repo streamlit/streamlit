@@ -25,13 +25,13 @@ import Modal, {
   ModalFooter,
   ModalButton,
 } from "components/shared/Modal"
-import { HotKeys } from "react-hotkeys"
+import { GlobalHotKeys } from "react-hotkeys"
 
 import {
   ScriptChangedDialog,
   Props as ScriptChangedDialogProps,
 } from "components/core/StreamlitDialog/ScriptChangedDialog"
-import { IDeployParams, IException } from "autogen/proto"
+import { IException } from "autogen/proto"
 import { SessionInfo } from "lib/SessionInfo"
 import { STREAMLIT_HOME_URL } from "urls"
 import { Props as SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
@@ -41,7 +41,6 @@ import {
   StyledRerunHeader,
   StyledCommandLine,
   StyledUploadUrl,
-  StyledDeployErrorContent,
 } from "./styled-components"
 
 type PlainEventHandler = () => void
@@ -64,7 +63,6 @@ export type DialogProps =
   | UploadProgressProps
   | UploadedProps
   | WarningProps
-  | DeployErrorProps
 
 export enum DialogType {
   ABOUT = "about",
@@ -76,7 +74,6 @@ export enum DialogType {
   UPLOAD_PROGRESS = "uploadProgress",
   UPLOADED = "uploaded",
   WARNING = "warning",
-  DEPLOY_ERROR = "deployError",
 }
 
 export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
@@ -99,8 +96,6 @@ export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
       return uploadedDialog(dialogProps)
     case DialogType.WARNING:
       return warningDialog(dialogProps)
-    case DialogType.DEPLOY_ERROR:
-      return deployErrorDialog(dialogProps)
     case undefined:
       return noDialog(dialogProps)
     default:
@@ -161,10 +156,8 @@ function clearCacheDialog(props: ClearCacheProps): ReactElement {
     enter: () => props.defaultAction(),
   }
 
-  // Not sure exactly why attach is necessary on the HotKeys
-  // component here but it's not working without it
   return (
-    <HotKeys handlers={keyHandlers} attach={window}>
+    <GlobalHotKeys handlers={keyHandlers}>
       <Modal isOpen onClose={props.onClose}>
         <ModalHeader>Clear Cache</ModalHeader>
         <ModalBody>
@@ -182,7 +175,7 @@ function clearCacheDialog(props: ClearCacheProps): ReactElement {
           </ModalButton>
         </ModalFooter>
       </Modal>
-    </HotKeys>
+    </GlobalHotKeys>
   )
 }
 
@@ -213,10 +206,8 @@ function rerunScriptDialog(props: RerunScriptProps): ReactElement {
     enter: () => props.defaultAction(),
   }
 
-  // Not sure exactly why attach is necessary on the HotKeys
-  // component here but it's not working without it
   return (
-    <HotKeys handlers={keyHandlers} attach={window}>
+    <GlobalHotKeys handlers={keyHandlers}>
       <Modal isOpen onClose={props.onClose}>
         <ModalBody>
           <StyledRerunHeader>Command line:</StyledRerunHeader>
@@ -241,7 +232,7 @@ function rerunScriptDialog(props: RerunScriptProps): ReactElement {
           </ModalButton>
         </ModalFooter>
       </Modal>
-    </HotKeys>
+    </GlobalHotKeys>
   )
 }
 
@@ -371,53 +362,6 @@ function warningDialog(props: WarningProps): ReactElement {
       <ModalFooter>
         <ModalButton kind={Kind.PRIMARY} onClick={props.onClose}>
           Done
-        </ModalButton>
-      </ModalFooter>
-    </Modal>
-  )
-}
-
-interface DeployErrorProps {
-  type: DialogType.DEPLOY_ERROR
-  title: string
-  msg: ReactNode
-  onClose: PlainEventHandler
-  onContinue?: PlainEventHandler
-  onTryAgain: PlainEventHandler
-  deployParams?: IDeployParams | null
-}
-
-/**
- * Modal used to show deployment errors
- */
-function deployErrorDialog({
-  title,
-  msg,
-  onClose,
-  onContinue,
-  onTryAgain,
-  deployParams,
-}: DeployErrorProps): ReactElement {
-  const handlePrimaryButton = (): void => {
-    onClose()
-
-    if (onContinue) {
-      onContinue()
-    }
-  }
-
-  return (
-    <Modal isOpen onClose={onClose}>
-      <ModalHeader>{title}</ModalHeader>
-      <ModalBody>
-        <StyledDeployErrorContent>{msg}</StyledDeployErrorContent>
-      </ModalBody>
-      <ModalFooter>
-        <ModalButton kind={Kind.SECONDARY} onClick={onTryAgain}>
-          Try again
-        </ModalButton>
-        <ModalButton kind={Kind.PRIMARY} onClick={handlePrimaryButton}>
-          {onContinue ? "Continue anyway" : "Close"}
         </ModalButton>
       </ModalFooter>
     </Modal>
