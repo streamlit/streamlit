@@ -420,9 +420,7 @@ class ReportSession(object):
             msg.git_info_changed.module = module
 
             msg.git_info_changed.untracked_files[:] = self._repo.untracked_files
-            msg.git_info_changed.uncommitted_files[
-                :
-            ] = self._repo.uncommitted_files
+            msg.git_info_changed.uncommitted_files[:] = self._repo.uncommitted_files
 
             if self._repo.is_head_detached:
                 msg.git_info_changed.state = GitInfo.GitStates.HEAD_DETACHED
