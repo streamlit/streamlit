@@ -61,6 +61,26 @@ class GitRepo:
     def is_head_detached(self):
         return self.repo.head.is_detached
 
+    @property
+    def uncommitted_files(self):
+        if not self.is_valid():
+            return None
+
+        return [item.a_path for item in self.repo.index.diff(None)]
+
+    @property
+    def ahead_commits(self):
+        if not self.is_valid():
+            return None
+
+        try:
+            remote, branch_name = self.get_tracking_branch_remote()
+            remote_branch = "/".join([remote.name, branch_name])
+
+            return list(self.repo.iter_commits(f"{remote_branch}..{branch_name}"))
+        except:
+            return list()
+
     def get_tracking_branch_remote(self):
         if not self.is_valid():
             return None
@@ -120,21 +140,3 @@ class GitRepo:
             return None
 
         return repo, branch, self.module
-
-    def get_uncommitted_files(self):
-        if not self.is_valid():
-            return None
-
-        return [item.a_path for item in self.repo.index.diff(None)]
-
-    def get_ahead_commits(self):
-        if not self.is_valid():
-            return None
-
-        try:
-            remote, branch_name = self.get_tracking_branch_remote()
-            remote_branch = "/".join([remote.name, branch_name])
-
-            return list(self.repo.iter_commits(f"{remote_branch}..{branch_name}"))
-        except:
-            return list()
