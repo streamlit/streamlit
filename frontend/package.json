@@ -95,7 +95,7 @@
     "styletron-engine-atomic": "^1.4.6",
     "styletron-react": "^5.2.6",
     "typed-signals": "^1.0.5",
-    "vega": "^5.13.0",
+    "vega": "^5.17.3",
     "vega-embed": "^6.10.0",
     "vega-lite": "^4.14.1",
     "which-browser": "^0.5.1",
