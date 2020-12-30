@@ -17,6 +17,7 @@
 
 import React, { ReactElement, ReactNode, Fragment, PureComponent } from "react"
 import ReactMarkdown from "react-markdown"
+import { once } from "lodash"
 // @ts-ignore
 import htmlParser from "react-markdown/plugins/html-parser"
 // @ts-ignore
@@ -27,7 +28,6 @@ import RemarkMathPlugin from "remark-math"
 import RemarkEmoji from "remark-emoji"
 import CodeBlock from "components/elements/CodeBlock/"
 import { StyledStreamlitMarkdown } from "./styled-components"
-import { once } from "lodash"
 
 import "katex/dist/katex.min.css"
 
