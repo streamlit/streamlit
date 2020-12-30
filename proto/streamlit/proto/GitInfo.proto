@@ -21,8 +21,14 @@ message GitInfo {
   string repository = 1;
   string branch = 2;
   string module = 3;
-  bool is_head_detached = 4;
-  repeated string untracked_files = 5;
-  repeated string uncommitted_files = 6;
-  bool is_ahead = 7;
+  repeated string untracked_files = 4;
+  repeated string uncommitted_files = 5;
+
+  enum GitStates {
+    DEFAULT = 0;
+    HEAD_DETACHED = 1;
+    AHEAD_OF_REMOTE = 2;
+  }
+
+  GitStates state = 6;
 }

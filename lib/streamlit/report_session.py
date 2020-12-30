@@ -36,6 +36,7 @@ from streamlit.credentials import Credentials
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.ClientState_pb2 import ClientState
+from streamlit.proto.GitInfo_pb2 import GitInfo
 from streamlit.server.server_util import serialize_forward_msg
 from streamlit.storage.file_storage import FileStorage
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
@@ -418,13 +419,17 @@ class ReportSession(object):
             msg.git_info_changed.branch = branch
             msg.git_info_changed.module = module
 
-            msg.git_info_changed.is_head_detached = self._repo.is_head_detached
             msg.git_info_changed.untracked_files[:] = self._repo.untracked_files
-            msg.git_info_changed.uncommitted_files[:] = self._repo.get_uncommitted_files()
-            msg.git_info_changed.is_ahead = (
-                not self._repo.is_head_detached
-                and len(self._repo.get_ahead_commits()) > 0
-            )
+            msg.git_info_changed.uncommitted_files[
+                :
+            ] = self._repo.get_uncommitted_files()
+
+            if self._repo.is_head_detached:
+                msg.git_info_changed.state = GitInfo.GitStates.HEAD_DETACHED
+            elif len(self._repo.get_ahead_commits()) > 0:
+                msg.git_info_changed.state = GitInfo.GitStates.AHEAD_OF_REMOTE
+            else:
+                msg.git_info_changed.state = GitInfo.GitStates.DEFAULT
         except:
             pass
 
