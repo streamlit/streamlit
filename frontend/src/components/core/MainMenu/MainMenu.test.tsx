@@ -18,20 +18,22 @@
 import React from "react"
 import { shallow } from "lib/test_util"
 import { IMenuItem } from "hocs/withS4ACommunication/types"
-import { SessionInfo, Args as SessionInfoArgs } from "lib/SessionInfo"
+import { Args as SessionInfoArgs, SessionInfo } from "lib/SessionInfo"
 
-import { IGitInfo } from "autogen/proto"
+import { GitInfo, IGitInfo } from "autogen/proto"
 import { IDeployErrorDialog } from "components/core/StreamlitDialog/DeployErrorDialogs/types"
 import {
-  NoRepositoryDetected,
   DetachedHead,
   ModuleIsNotAdded,
-  UncommittedChanges,
+  NoRepositoryDetected,
   RepoIsAhead,
+  UncommittedChanges,
   UntrackedFiles,
 } from "components/core/StreamlitDialog/DeployErrorDialogs"
 
 import MainMenu, { Props } from "./MainMenu"
+
+const { GitStates } = GitInfo
 
 const getProps = (extend?: Partial<Props>): Props => ({
   aboutCallback: jest.fn(),
@@ -216,7 +218,12 @@ describe("App", () => {
     }
 
     it("no repo or remote", () => {
-      testDeployErrorModal({}, NoRepositoryDetected)
+      testDeployErrorModal(
+        {
+          state: GitStates.DEFAULT,
+        },
+        NoRepositoryDetected
+      )
     })
 
     it("empty repo", () => {
@@ -225,6 +232,7 @@ describe("App", () => {
           repository: "",
           branch: "",
           module: "",
+          state: GitStates.DEFAULT,
         },
         NoRepositoryDetected
       )
@@ -236,7 +244,7 @@ describe("App", () => {
           repository: "repo",
           branch: "branch",
           module: "module",
-          isHeadDetached: true,
+          state: GitStates.HEAD_DETACHED,
         },
         DetachedHead
       )
@@ -274,10 +282,9 @@ describe("App", () => {
         repository: "repo",
         branch: "branch",
         module: "module.py",
-        isHeadDetached: false,
-        isAhead: true,
         uncommittedFiles: [],
         untrackedFiles: [],
+        state: GitStates.AHEAD_OF_REMOTE,
       }
       testDeployErrorModal(deployParams, RepoIsAhead)
     })
