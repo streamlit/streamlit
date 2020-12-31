@@ -16,35 +16,35 @@
  */
 
 import React, {
-  ReactElement,
-  memo,
   forwardRef,
+  memo,
   MouseEvent,
+  ReactElement,
   ReactNode,
-  useEffect,
   useCallback,
+  useEffect,
 } from "react"
 import { StatefulMenu } from "baseui/menu"
 import { SessionInfo } from "lib/SessionInfo"
 import { Menu } from "@emotion-icons/open-iconic"
 import Button, { Kind } from "components/shared/Button"
-import { StatefulPopover, PLACEMENT } from "baseui/popover"
+import { PLACEMENT, StatefulPopover } from "baseui/popover"
 import {
-  NoRepositoryDetected,
   DetachedHead,
-  RepoIsAhead,
   ModuleIsNotAdded,
+  NoRepositoryDetected,
+  RepoIsAhead,
   UncommittedChanges,
   UntrackedFiles,
 } from "components/core/StreamlitDialog/DeployErrorDialogs"
 
 import Icon from "components/shared/Icon"
 import {
-  IMenuItem,
   IGuestToHostMessage,
+  IMenuItem,
 } from "hocs/withS4ACommunication/types"
 
-import { IGitInfo } from "autogen/proto"
+import { GitInfo, IGitInfo } from "autogen/proto"
 import {
   BUG_URL,
   COMMUNITY_URL,
@@ -54,12 +54,14 @@ import {
   TEAMS_URL,
 } from "urls"
 import {
-  StyledMenuItem,
   StyledMenuDivider,
+  StyledMenuItem,
   StyledMenuItemLabel,
   StyledMenuItemShortcut,
   StyledRecordingIndicator,
 } from "./styled-components"
+
+const { GitStates } = GitInfo
 
 const SCREENCAST_LABEL: { [s: string]: string } = {
   COUNTDOWN: "Cancel screencast",
@@ -76,7 +78,7 @@ export interface Props {
   /** Rerun the report. */
   quickRerunCallback: () => void
 
-  /** Reload report message */
+  /** Reload git information message */
   loadGitInfo: () => void
 
   /** Clear the cache. */
@@ -233,13 +235,15 @@ function MainMenu(props: Props): ReactElement {
       repository,
       branch,
       module,
-      isHeadDetached,
       untrackedFiles,
       uncommittedFiles,
-      isAhead,
+      state: gitState,
     } = gitInfo
 
-    if ((!repository || !branch || !module) && !isHeadDetached) {
+    if (
+      (!repository || !branch || !module) &&
+      gitState === GitStates.DEFAULT
+    ) {
       const dialog = NoRepositoryDetected()
 
       showDeployError(dialog.title, dialog.body)
@@ -247,7 +251,7 @@ function MainMenu(props: Props): ReactElement {
       return
     }
 
-    if (isHeadDetached) {
+    if (gitState === GitStates.HEAD_DETACHED) {
       const dialog = DetachedHead()
 
       showDeployError(dialog.title, dialog.body)
@@ -271,7 +275,7 @@ function MainMenu(props: Props): ReactElement {
       return
     }
 
-    if (isAhead) {
+    if (gitState === GitStates.AHEAD_OF_REMOTE) {
       const dialog = RepoIsAhead()
 
       showDeployError(dialog.title, dialog.body, getDeployAppUrl(gitInfo))

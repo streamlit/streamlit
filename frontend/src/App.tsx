@@ -247,7 +247,7 @@ export class App extends PureComponent<Props, State> {
       msg: errorNode,
       onContinue,
       onClose: () => {},
-      onTryAgain: this.loadGitInformation,
+      onTryAgain: this.sendLoadGitInfoBackMsg,
     })
   }
 
@@ -993,6 +993,7 @@ export class App extends PureComponent<Props, State> {
                 isDeployErrorModalOpen={
                   this.state.dialog?.type === DialogType.DEPLOY_ERROR
                 }
+                loadGitInfo={this.sendLoadGitInfoBackMsg}
               />
             </Header>
 
