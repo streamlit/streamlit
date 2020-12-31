@@ -38,6 +38,7 @@ def set_page_config(
         The page favicon.
         Besides the types supported by `st.image` (like URLs or numpy arrays),
         you can pass in an emoji as a string ("🦈") or a shortcode (":shark:").
+        If you're feeling lucky, try "random" for a random emoji!
         Emoji icons are courtesy of Twemoji and loaded from MaxCDN.
     layout: "centered" or "wide"
         How the page content should be laid out. Defaults to "centered",
@@ -64,6 +65,9 @@ def set_page_config(
         msg.page_config_changed.title = page_title
 
     if page_icon:
+        if page_icon == "random":
+            page_icon = get_random_emoji()
+
         msg.page_config_changed.favicon = image_proto.image_to_url(
             page_icon,
             width=-1,  # Always use full width for favicons
@@ -102,3 +106,38 @@ def set_page_config(
     if ctx is None:
         return
     ctx.enqueue(msg)
+
+
+def get_random_emoji():
+    import random
+
+    # Emojis recommended by https://share.streamlit.io/rensdimmendaal/emoji-recommender/main/app/streamlit.py
+    # for the term "streamlit". Watch out for zero-width joiners,
+    # as they won't parse correctly in the list() call!
+    RANDOM_EMOJIS = list(
+        "🔥™🎉🚀🌌💣✨🌙🎆🎇💥🤩🤙🌛🤘⬆💡🤪🥂⚡💨🌠🎊🍿😛🔮🤟🌃🍃🍾💫🥵▪🌴🎈🎬🌀🎄😝☔⛽🍂💃😎🍸🎨🥳☀😍🅱🌞😻🌟😜💦💅🦄😋😉👻🍁🤤😩👯🌻‼🌈👌🎃💛😚🔫🙌👽🍬🌅☁🍷👭☕🌚💁👅🥰🍜😌🎥🕺❕🧡☄💕🍻✅🌸🚬🤓🍹®☺💪😙☘🙅🤠✊🤗🍵🤞😂💯😏📻🎂💗💜🌊❣🌝😘💆🤑🌿🦋😈⛄🚿😊🌹🥴😽💋😭🖤🙆👐⚪💟☃🙈🍭💻🥀🚗🤧🍝💎💓🤝💄💖🔞⁉😫⏰🕊🎧☠♥🌳🏾🙉⭐💊🍳🌎🙊💸❤🔪😆🌾✈📚💀🏠✌🏃🌵🚨💂🤫🤭😗😄🍒👏🙃🖖💞😤😅🎅🍄🆓👉💩🔊🤷🤯⌚👸😇🚮💏👳🏽💘💿💉👠🎼🎶🎤👗❄🔐🎵🤒🍰👓🏄🌲🎮🙂📈🚙📍😵🗣❗🌺🙄👄🚘🥺🌍🏡♦💍🌱👑👙☑👾🍩🥶📣😓🏼🤣☯👵🍫➡🎀😃✋😬🍞🙇😹🙏👼🐝⚫🎁🍪🔨🌼👆👀😳🌏📖👃🎸👧😢💇🔒💙😞⛅🏻🍴😼😣🗿🍗♠🦁✔🤖😪☮🐢👎🐎💤😀🍺😁😴📺☹😲😖👍🎭💚🍆🍋🔵😥🏁🔴🔔😰🧐🤢👰☎🏆🤡🐠😒📲🙋📌🐬✍🔑📱💰🤕🐱🤦💧🎓🍕👟😷🐣👫🍑😸🍦👁🆗😦🎯📢😧🚶🦅🐧💢🏀😕🚫💑🐟🌽🏊🍟😱😔💝🙀🤥🤨😮💲🐍🍥😐🐸☝♣👊😯⚓❌🐯😶🏿🏈📰🌧👿🐳💷🐺📞🆒🍀🤐🤮😟🚲🍔👹🙍🌷🙎🐥💵🔝📸⚠❓🎩✂🍼😑⬇⚾🍎💔🐔⚽💭🏌🐷🍍✖🍇📝🍊🐙😨👋🤔🥊🙁🗽🐑🐘🐰😠💐🐴♀🐦🍓✏👂🏴👇🆘😡🏉👩💌😺✝🐼🤬😿😾🐒🐶👺🖕👬🍉🐻🐾⬅⏬▶👮🍌♂🔸👶🐮👪⛳🐐🎾🐕👴🐨🐊🔹©🎣👦👣👨👈💬⭕📹📷"
+    )
+
+    # Also pick out some vanity emojis.
+    ENG_EMOJIS = [
+        "🤓",  # Abhi
+        "🏈",  # Amey
+        "🚲",  # Thiago
+        "🐧",  # Matteo
+        "🦒",  # Ken
+        "🐳",  # Karrie
+        "🕹️",  # Jonathan
+        "🇦🇲",  # Henrikh
+        "🎸",  # Guido
+        "🦈",  # Austin
+        "💎",  # Emiliano
+        "👩‍🎤",  # Naomi
+        "🧙‍♂️",  # Jon
+        "🐻",  # Brandon
+        "🎎",  # James
+        # TODO: Solicit emojis from the rest of Streamlit
+    ]
+
+    # Weigh our emojis 10x, cuz we're awesome!
+    # TODO: fix the random seed with a hash of the user's app code, for stability?
+    return random.choice(RANDOM_EMOJIS + 10 * ENG_EMOJIS)
