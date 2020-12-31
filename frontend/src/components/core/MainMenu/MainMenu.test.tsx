@@ -18,6 +18,18 @@
 import React from "react"
 import { shallow } from "lib/test_util"
 import { IMenuItem } from "hocs/withS4ACommunication/types"
+import { SessionInfo, Args as SessionInfoArgs } from "lib/SessionInfo"
+
+import { IGitInfo } from "autogen/proto"
+import { IDeployErrorDialog } from "components/core/StreamlitDialog/DeployErrorDialogs/types"
+import {
+  NoRepositoryDetected,
+  DetachedHead,
+  ModuleIsNotAdded,
+  UncommittedChanges,
+  RepoIsAhead,
+  UntrackedFiles,
+} from "components/core/StreamlitDialog/DeployErrorDialogs"
 
 import MainMenu, { Props } from "./MainMenu"
 
@@ -33,10 +45,29 @@ const getProps = (extend?: Partial<Props>): Props => ({
   settingsCallback: jest.fn(),
   shareCallback: jest.fn(),
   sharingEnabled: false,
+  isDeployErrorModalOpen: false,
+  showDeployError: jest.fn(),
+  loadGitInfo: jest.fn(),
+  closeDialog: jest.fn(),
   ...extend,
 })
 
 describe("App", () => {
+  beforeAll(() => {
+    SessionInfo.current = new SessionInfo({
+      sessionId: "sessionId",
+      streamlitVersion: "sv",
+      pythonVersion: "pv",
+      installationId: "iid",
+      installationIdV1: "iid1",
+      installationIdV2: "iid2",
+      authorEmail: "ae",
+      maxCachedMessageAge: 2,
+      commandLine: "command line",
+      userMapboxToken: "mpt",
+    } as SessionInfoArgs)
+  })
+
   it("renders without crashing", () => {
     const props = getProps()
     const wrapper = shallow(<MainMenu {...props} />)
@@ -127,7 +158,7 @@ describe("App", () => {
   })
 
   it("should render deploy app menu item", () => {
-    const props = getProps({ deployParams: {} })
+    const props = getProps({ gitInfo: {} })
     const wrapper = shallow(<MainMenu {...props} />)
     const popoverContent = wrapper.find("StatefulPopover").prop("content")
     // @ts-ignore
@@ -151,5 +182,117 @@ describe("App", () => {
       "Settings",
       "About",
     ])
+  })
+
+  describe("Onclick deploy button", () => {
+    function testDeployErrorModal(
+      gitInfo: Partial<IGitInfo>,
+      dialogComponent: (module: string) => IDeployErrorDialog
+    ): void {
+      const props = getProps({
+        gitInfo,
+      })
+      const wrapper = shallow(<MainMenu {...props} />)
+      const popoverContent = wrapper.find("StatefulPopover").prop("content")
+      // @ts-ignore
+      const menuWrapper = shallow(popoverContent(() => {})).dive()
+
+      const items: any = menuWrapper.prop("items")
+
+      const deployOption = items.find(
+        // @ts-ignore
+        ({ label }) => label === "Deploy this app"
+      )
+
+      deployOption.onClick()
+
+      // @ts-ignore
+      const dialog = dialogComponent(props.gitInfo.module)
+
+      expect(props.showDeployError.mock.calls[0][0]).toStrictEqual(
+        dialog.title
+      )
+      expect(props.showDeployError.mock.calls[0][1]).toStrictEqual(dialog.body)
+    }
+
+    it("no repo or remote", () => {
+      testDeployErrorModal({}, NoRepositoryDetected)
+    })
+
+    it("empty repo", () => {
+      testDeployErrorModal(
+        {
+          repository: "",
+          branch: "",
+          module: "",
+        },
+        NoRepositoryDetected
+      )
+    })
+
+    it("repo is detached", () => {
+      testDeployErrorModal(
+        {
+          repository: "repo",
+          branch: "branch",
+          module: "module",
+          isHeadDetached: true,
+        },
+        DetachedHead
+      )
+    })
+
+    it("script was not added to the repo", () => {
+      testDeployErrorModal(
+        {
+          repository: "repo",
+          branch: "branch",
+          module: "module.py",
+          isHeadDetached: false,
+          untrackedFiles: ["module.py"],
+        },
+        ModuleIsNotAdded
+      )
+    })
+
+    it("uncommitted changes", () => {
+      testDeployErrorModal(
+        {
+          repository: "repo",
+          branch: "branch",
+          module: "module.py",
+          isHeadDetached: false,
+          uncommittedFiles: ["module.py"],
+          untrackedFiles: [],
+        },
+        UncommittedChanges
+      )
+    })
+
+    it("changes not pushed to Github", () => {
+      const deployParams: IGitInfo = {
+        repository: "repo",
+        branch: "branch",
+        module: "module.py",
+        isHeadDetached: false,
+        isAhead: true,
+        uncommittedFiles: [],
+        untrackedFiles: [],
+      }
+      testDeployErrorModal(deployParams, RepoIsAhead)
+    })
+
+    it("untracked files", () => {
+      testDeployErrorModal(
+        {
+          repository: "repo",
+          branch: "branch",
+          module: "module.py",
+          isHeadDetached: false,
+          untrackedFiles: ["another-file.py"],
+        },
+        UntrackedFiles
+      )
+    })
   })
 })
