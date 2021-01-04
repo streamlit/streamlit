@@ -24,9 +24,7 @@ from ..uploaded_file_manager import UploadedFile
 
 
 class FileUploaderMixin:
-    def file_uploader(
-        self, label, type=None, accept_multiple_files=False, key=None, **kwargs
-    ):
+    def file_uploader(self, label, type=None, accept_multiple_files=False, key=None):
         """Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure
         this using the `server.maxUploadSize` config option.
@@ -106,14 +104,6 @@ class FileUploaderMixin:
                 for file_type in type
             ]
 
-        has_encoding = "encoding" in kwargs
-        show_deprecation_warning = config.get_option(
-            "deprecation.showfileUploaderEncoding"
-        )
-
-        if show_deprecation_warning and has_encoding:
-            self.dg.exception(FileUploaderEncodingWarning())
-
         file_uploader_proto = FileUploaderProto()
         file_uploader_proto.label = label
         file_uploader_proto.type[:] = type if type is not None else []
@@ -142,25 +132,3 @@ class FileUploaderMixin:
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
         """Get our DeltaGenerator."""
         return cast("streamlit.delta_generator.DeltaGenerator", self)
-
-
-class FileUploaderEncodingWarning(StreamlitDeprecationWarning):
-    def __init__(self):
-        msg = self._get_message()
-        config_option = "deprecation.showfileUploaderEncoding"
-        super(FileUploaderEncodingWarning, self).__init__(
-            msg=msg, config_option=config_option
-        )
-
-    def _get_message(self):
-        return """
-The behavior of `st.file_uploader` no longer autodetects the file's encoding.
-This means that _all files_ will be returned as binary buffers. If you need to
-work with a string buffer, you can convert to a StringIO by decoding the binary
-buffer as shown below:
-
-```
-file_buffer = st.file_uploader(...)
-string_io = file_buffer.decode()
-```
-            """
