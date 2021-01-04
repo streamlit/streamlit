@@ -4,4 +4,9 @@
 
 # Owners of any files in the `/docs` directory in the root of
 # the repo.
-/docs/ @randyzwitch 
+/docs/ @randyzwitch @mesmith027
+
+# But grant @streamlit/core access to this one file, which gets
+# updated on every patch.
+# Eg see https://github.com/streamlit/streamlit/pull/2500
+/docs/troubleshooting/sanity-checks.md @streamlit/core

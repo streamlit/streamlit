@@ -276,7 +276,7 @@ def image_to_url(
     # BytesIO
     # Note: This doesn't support SVG. We could convert to png (cairosvg.svg2png)
     # or just decode BytesIO to string and handle that way.
-    elif type(image) is io.BytesIO:
+    elif isinstance(image, io.BytesIO):
         data = _BytesIO_to_bytes(image)
 
     # Numpy Arrays (ie opencv)

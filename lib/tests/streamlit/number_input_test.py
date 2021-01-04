@@ -35,6 +35,11 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
         st.number_input("Label", value=0.5)
         c = self.get_delta_from_queue().new_element.number_input
         self.assertEqual(NumberInput.FLOAT, c.data_type)
+        
+    def test_min_value_zero_sets_default_value(self):
+        st.number_input("Label", 0, 10)
+        c = self.get_delta_from_queue().new_element.number_input
+        self.assertEqual(c.default, 0)  # the 0 we provided, not 0.0!
 
     def test_just_label(self):
         """Test that it can be called with no value."""

@@ -9,7 +9,7 @@ export interface ExtendedFile extends File {
   progress?: number
 }
 
-export enum FileStatuses {
+export enum FileStatus {
   ERROR = "ERROR",
   DELETING = "DELETING",
   READY = "READY",
@@ -17,7 +17,7 @@ export enum FileStatuses {
   UPLOADED = "UPLOADED",
 }
 
-export enum FileSizes {
+export enum FileSize {
   GigaByte = "gb",
   KiloByte = "kb",
   MegaByte = "mb",
@@ -29,19 +29,19 @@ export enum FileSizes {
 // all cases but for simplicity general rule is to use base 2 for Windows.
 export const BYTE_CONVERSION_SIZE = isFromWindows() ? 1024 : 1000
 const sizeUnitSequence = [
-  FileSizes.GigaByte,
-  FileSizes.MegaByte,
-  FileSizes.KiloByte,
-  FileSizes.Byte,
+  FileSize.GigaByte,
+  FileSize.MegaByte,
+  FileSize.KiloByte,
+  FileSize.Byte,
 ]
 
 export const getSizeDisplay = (
   size: number,
-  unit: FileSizes,
+  unit: FileSize,
   rounding = 1
 ): string => {
   if (!unit) {
-    unit = FileSizes.Byte
+    unit = FileSize.Byte
   }
 
   if (rounding < 0) {
@@ -66,8 +66,8 @@ export const getSizeDisplay = (
 
 export const sizeConverter = (
   size: number,
-  inputUnit: FileSizes,
-  outputUnit: FileSizes
+  inputUnit: FileSize,
+  outputUnit: FileSize
 ): number => {
   if (size < 0) {
     throw Error("Size must be 0 or greater")

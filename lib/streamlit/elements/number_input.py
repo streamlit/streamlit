@@ -76,7 +76,7 @@ class NumberInputMixin:
         """
 
         if isinstance(value, NoValue):
-            if min_value:
+            if min_value is not None:
                 value = min_value
             else:
                 value = 0.0  # We set a float as default
