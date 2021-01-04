@@ -23,7 +23,7 @@ import tornado.web
 
 import streamlit.server.routes
 from streamlit import type_util
-from streamlit.elements.utils import _get_widget_ui_value, NoValue
+from streamlit.elements.utils import register_widget, NoValue
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ArrowTable_pb2 import ArrowTable as ArrowTableProto
@@ -119,8 +119,8 @@ class CustomComponent:
                     """To use Custom Components in Streamlit, you need to install
 PyArrow. Unfortunately, PyArrow does not yet support Python 3.9.
 
-You can either switch to Python 3.8 with an environment manager like PyEnv, or
-[install Streamlit with conda](https://discuss.streamlit.io/t/note-installation-issues-with-python-3-9-and-streamlit/6946/7):
+You can either switch to Python 3.8 with an environment manager like PyEnv, or stay on 3.9 by
+[installing Streamlit with conda](https://discuss.streamlit.io/t/note-installation-issues-with-python-3-9-and-streamlit/6946):
 
 `conda install -c conda-forge streamlit`
 
@@ -194,7 +194,7 @@ And if you're using Streamlit Sharing, add "pyarrow" to your requirements.txt.""
             if key is None:
                 marshall_element_args()
 
-            widget_value = _get_widget_ui_value(
+            widget_value = register_widget(
                 element_type="component_instance",
                 element_proto=element.component_instance,
                 user_key=key,

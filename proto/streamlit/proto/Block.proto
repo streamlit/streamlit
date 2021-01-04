@@ -26,7 +26,6 @@ message Block {
   bool allow_empty = 5;
 
   message Vertical {
-    bool unused = 1;
   }
 
   message Horizontal {

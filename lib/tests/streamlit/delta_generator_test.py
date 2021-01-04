@@ -26,7 +26,7 @@ from parameterized import parameterized
 import pandas as pd
 
 from streamlit.delta_generator import DeltaGenerator
-from streamlit.elements.utils import _build_duplicate_widget_message
+from streamlit.elements.utils import _build_duplicate_widget_message, register_widget
 from streamlit.cursor import LockedCursor, make_delta_path
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException
@@ -37,7 +37,6 @@ from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.Text_pb2 import Text as TextProto
-from streamlit.elements.utils import _set_widget_id
 from tests import testutil
 import streamlit as st
 
@@ -447,7 +446,7 @@ class DeltaGeneratorWriteTest(testutil.DeltaGeneratorTestCase):
         st.empty()
 
         element = self.get_delta_from_queue().new_element
-        self.assertEqual(True, element.empty.unused)
+        self.assertEqual(element.empty, EmptyProto())
 
 
 class DeltaGeneratorProgressTest(testutil.DeltaGeneratorTestCase):
@@ -561,10 +560,10 @@ class WidgetIdText(testutil.DeltaGeneratorTestCase):
         element2 = Element()
         element2.text_input.CopyFrom(text_input2)
 
-        _set_widget_id("text_input", element1.text_input)
+        register_widget("text_input", element1.text_input)
 
         with self.assertRaises(DuplicateWidgetID):
-            _set_widget_id("text_input", element2.text_input)
+            register_widget("text_input", element2.text_input)
 
     def test_ids_are_diff_when_labels_are_diff(self):
         text_input1 = TextInput()
@@ -581,8 +580,8 @@ class WidgetIdText(testutil.DeltaGeneratorTestCase):
         element2 = Element()
         element2.text_input.CopyFrom(text_input2)
 
-        _set_widget_id("text_input", element1.text_input)
-        _set_widget_id("text_input", element2.text_input)
+        register_widget("text_input", element1.text_input)
+        register_widget("text_input", element2.text_input)
 
         self.assertNotEqual(element1.text_input.id, element2.text_input.id)
 
@@ -601,8 +600,8 @@ class WidgetIdText(testutil.DeltaGeneratorTestCase):
         element2 = Element()
         element2.text_area.CopyFrom(text_area2)
 
-        _set_widget_id("text_input", element1.text_input)
-        _set_widget_id("text_input", element2.text_input)
+        register_widget("text_input", element1.text_input)
+        register_widget("text_input", element2.text_input)
 
         self.assertNotEqual(element1.text_input.id, element2.text_area.id)
 
@@ -621,10 +620,10 @@ class WidgetIdText(testutil.DeltaGeneratorTestCase):
         element2 = Element()
         element2.text_input.CopyFrom(text_input2)
 
-        _set_widget_id("text_input", element1.text_input, user_key="some_key")
+        register_widget("text_input", element1.text_input, user_key="some_key")
 
         with self.assertRaises(DuplicateWidgetID):
-            _set_widget_id("text_input", element2.text_input, user_key="some_key")
+            register_widget("text_input", element2.text_input, user_key="some_key")
 
     def test_ids_are_diff_when_keys_are_diff(self):
         text_input1 = TextInput()
@@ -641,8 +640,8 @@ class WidgetIdText(testutil.DeltaGeneratorTestCase):
         element2 = Element()
         element2.text_input.CopyFrom(text_input2)
 
-        _set_widget_id("text_input", element1.text_input, user_key="some_key1")
-        _set_widget_id("text_input", element2.text_input, user_key="some_key2")
+        register_widget("text_input", element1.text_input, user_key="some_key1")
+        register_widget("text_input", element2.text_input, user_key="some_key2")
 
         self.assertNotEqual(element1.text_input.id, element2.text_input.id)
 
@@ -661,8 +660,8 @@ class WidgetIdText(testutil.DeltaGeneratorTestCase):
         element2 = Element()
         element2.text_input.CopyFrom(text_input2)
 
-        _set_widget_id("text_input", element1.text_input, user_key="some_key1")
-        _set_widget_id("text_input", element2.text_input, user_key="some_key1")
+        register_widget("text_input", element1.text_input, user_key="some_key1")
+        register_widget("text_input", element2.text_input, user_key="some_key1")
 
         self.assertNotEqual(element1.text_input.id, element2.text_input.id)
 

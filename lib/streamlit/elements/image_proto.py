@@ -14,22 +14,21 @@
 
 """Image marshalling."""
 
-import io
 import imghdr
+import io
 import mimetypes
-
-import numpy as np
-
-from PIL import Image, ImageFile
-
-from streamlit import config
-from streamlit.proto.Image_pb2 import ImageList as ImageListProto
-from streamlit.errors import StreamlitAPIException, StreamlitDeprecationWarning
-from streamlit.logger import get_logger
-from urllib.parse import quote
+from typing import cast
 from urllib.parse import urlparse
 
+import numpy as np
+from PIL import Image, ImageFile
+
+import streamlit
+from streamlit import config
+from streamlit.errors import StreamlitAPIException, StreamlitDeprecationWarning
+from streamlit.logger import get_logger
 from streamlit.media_file_manager import media_file_manager
+from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 
 LOGGER = get_logger(__name__)
 
@@ -42,7 +41,7 @@ MAXIMUM_CONTENT_WIDTH = 2 * 730
 
 class ImageMixin:
     def image(
-        dg,
+        self,
         image,
         caption=None,
         width=None,
@@ -110,7 +109,7 @@ class ImageMixin:
             output_format = format
 
             if config.get_option("deprecation.showImageFormat"):
-                dg.exception(ImageFormatWarning(format))  # type: ignore
+                self.dg.exception(ImageFormatWarning(format))
 
         if use_column_width:
             width = -2
@@ -121,7 +120,7 @@ class ImageMixin:
 
         image_list_proto = ImageListProto()
         marshall_images(
-            dg._get_delta_path_str(),  # type: ignore
+            self.dg._get_delta_path_str(),
             image,
             caption,
             width,
@@ -130,7 +129,12 @@ class ImageMixin:
             channels,
             output_format,
         )
-        return dg._enqueue("imgs", image_list_proto)  # type: ignore
+        return self.dg._enqueue("imgs", image_list_proto)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
 class ImageFormatWarning(StreamlitDeprecationWarning):
@@ -272,7 +276,7 @@ def image_to_url(
     # BytesIO
     # Note: This doesn't support SVG. We could convert to png (cairosvg.svg2png)
     # or just decode BytesIO to string and handle that way.
-    elif type(image) is io.BytesIO:
+    elif isinstance(image, io.BytesIO):
         data = _BytesIO_to_bytes(image)
 
     # Numpy Arrays (ie opencv)

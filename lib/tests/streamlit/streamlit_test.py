@@ -34,7 +34,7 @@ from streamlit import __version__
 from streamlit.errors import StreamlitAPIException
 from streamlit.elements.pyplot import PyplotGlobalUseWarning
 from streamlit.proto.Balloons_pb2 import Balloons
-
+from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.proto.Alert_pb2 import Alert
 
 from streamlit.media_file_manager import media_file_manager
@@ -263,7 +263,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         st.empty()
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.empty.unused, True)
+        self.assertEqual(el.empty, EmptyProto())
 
     def test_st_error(self):
         """Test st.error."""

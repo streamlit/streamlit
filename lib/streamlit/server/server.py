@@ -43,7 +43,10 @@ from streamlit.components.v1.components import ComponentRegistry
 from streamlit.components.v1.components import ComponentRequestHandler
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.server.upload_file_request_handler import UploadFileRequestHandler
+from streamlit.server.upload_file_request_handler import (
+    UploadFileRequestHandler,
+    UPLOAD_FILE_ROUTE,
+)
 from streamlit.server.routes import AddSlashHandler
 from streamlit.server.routes import AssetsFileHandler
 from streamlit.server.routes import DebugHandler
@@ -336,10 +339,13 @@ class Server(object):
             (
                 make_url_path_regex(
                     base,
-                    "/upload_file/?(?P<session_id>[^/]*)?/?(?P<widget_id>[^/]*)?/?(?P<file_id>[0-9]*)?",
+                    UPLOAD_FILE_ROUTE,
                 ),
                 UploadFileRequestHandler,
-                dict(file_mgr=self._uploaded_file_mgr),
+                dict(
+                    file_mgr=self._uploaded_file_mgr,
+                    get_session_info=self._get_session_info,
+                ),
             ),
             (
                 make_url_path_regex(base, "assets/(.*)"),

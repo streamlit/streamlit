@@ -39,7 +39,7 @@ const getProps = (elementProps: Partial<TimeInputProto> = {}): Props => ({
   widgetMgr: new WidgetStateManager(sendBackMsg),
 })
 
-describe("TextInput widget", () => {
+describe("TimeInput widget", () => {
   const props = getProps()
   const wrapper = shallow(<TimeInput {...props} />)
 

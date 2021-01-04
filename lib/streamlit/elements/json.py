@@ -1,10 +1,26 @@
-import json
+# Copyright 2018-2020 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
+import json
+from typing import cast
+
+import streamlit
 from streamlit.proto.Json_pb2 import Json as JsonProto
 
 
 class JsonMixin:
-    def json(dg, body):
+    def json(self, body):
         """Display object or string as a pretty-printed JSON string.
 
         Parameters
@@ -46,4 +62,9 @@ class JsonMixin:
 
         json_proto = JsonProto()
         json_proto.body = body
-        return dg._enqueue("json", json_proto)  # type: ignore
+        return self.dg._enqueue("json", json_proto)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)

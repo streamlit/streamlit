@@ -23,12 +23,12 @@ import {
 } from "@emotion-icons/material-outlined"
 import Button, { Kind } from "components/shared/Button"
 import Icon from "components/shared/Icon"
-import ProgressBar, { Sizes } from "components/shared/ProgressBar"
+import ProgressBar, { Size } from "components/shared/ProgressBar"
 import { Small, Kind as TextKind } from "components/shared/TextElements"
 import {
   ExtendedFile,
-  FileSizes,
-  FileStatuses,
+  FileSize,
+  FileStatus,
   getSizeDisplay,
 } from "lib/FileHelper"
 import {
@@ -47,20 +47,20 @@ export interface Props {
   onDelete: (id: string) => void
 }
 
-export interface FileStatusProps {
+export interface UploadedFileStatusProps {
   file: ExtendedFile
   progress?: number
 }
 
-export const FileStatus = ({
+export const UploadedFileStatus = ({
   file,
   progress,
-}: FileStatusProps): React.ReactElement | null => {
+}: UploadedFileStatusProps): React.ReactElement | null => {
   if (progress) {
     return (
       <ProgressBar
         value={progress}
-        size={Sizes.SMALL}
+        size={Size.SMALL}
         overrides={{
           Bar: {
             style: {
@@ -73,7 +73,7 @@ export const FileStatus = ({
     )
   }
 
-  if (file.status === FileStatuses.ERROR) {
+  if (file.status === FileStatus.ERROR) {
     return (
       <StyledFileError>
         <StyledErrorMessage data-testid="stUploadedFileErrorMessage">
@@ -86,15 +86,15 @@ export const FileStatus = ({
     )
   }
 
-  if (file.status === FileStatuses.UPLOADED) {
+  if (file.status === FileStatus.UPLOADED) {
     return (
       <Small kind={TextKind.SECONDARY}>
-        {getSizeDisplay(file.size, FileSizes.Byte)}
+        {getSizeDisplay(file.size, FileSize.Byte)}
       </Small>
     )
   }
 
-  if (file.status === FileStatuses.DELETING) {
+  if (file.status === FileStatus.DELETING) {
     return <Small kind={TextKind.SECONDARY}>Removing file</Small>
   }
 
@@ -115,7 +115,7 @@ const UploadedFile = ({
         <StyledUploadedFileName className="uploadedFileName" title={file.name}>
           {file.name}
         </StyledUploadedFileName>
-        <FileStatus file={file} progress={progress} />
+        <UploadedFileStatus file={file} progress={progress} />
       </StyledUploadedFileData>
       <Button onClick={() => onDelete(file.id || "")} kind={Kind.MINIMAL}>
         <Icon content={Clear} size="lg" />

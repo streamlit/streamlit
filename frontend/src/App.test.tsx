@@ -94,10 +94,17 @@ describe("App", () => {
   it("reloads when streamlit server version changes", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
-    window.location.reload = jest.fn()
+
+    // A HACK to mock `window.location.reload`.
+    // NOTE: The mocking must be done after mounting,
+    // but before `handleMessage` is called.
+    const { location } = window
+    // @ts-ignore
+    delete window.location
+    // @ts-ignore
+    window.location = { reload: jest.fn() }
 
     const fwMessage = new ForwardMsg()
-
     fwMessage.newReport = {
       initialize: {
         environmentInfo: {
@@ -114,6 +121,9 @@ describe("App", () => {
     wrapper.instance().handleMessage(fwMessage)
 
     expect(window.location.reload).toHaveBeenCalled()
+
+    // Restore `window.location`.
+    window.location = location
   })
 
   it("starts screencast recording when the MainMenu is clicked", () => {

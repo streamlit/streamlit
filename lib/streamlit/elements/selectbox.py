@@ -1,11 +1,28 @@
-from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
+# Copyright 2018-2020 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from typing import cast
+
+import streamlit
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
 from streamlit.type_util import ensure_iterable
-from .utils import _get_widget_ui_value, NoValue
+from .utils import register_widget, NoValue
 
 
 class SelectboxMixin:
-    def selectbox(dg, label, options, index=0, format_func=str, key=None):
+    def selectbox(self, label, options, index=0, format_func=str, key=None):
         """Display a select widget.
 
         Parameters
@@ -57,7 +74,7 @@ class SelectboxMixin:
         selectbox_proto.default = index
         selectbox_proto.options[:] = [str(format_func(option)) for option in options]
 
-        ui_value = _get_widget_ui_value("selectbox", selectbox_proto, user_key=key)
+        ui_value = register_widget("selectbox", selectbox_proto, user_key=key)
         current_value = ui_value if ui_value is not None else index
 
         return_value = (
@@ -65,4 +82,9 @@ class SelectboxMixin:
             if len(options) > 0 and options[current_value] is not None
             else NoValue
         )
-        return dg._enqueue("selectbox", selectbox_proto, return_value)  # type: ignore
+        return self.dg._enqueue("selectbox", selectbox_proto, return_value)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)

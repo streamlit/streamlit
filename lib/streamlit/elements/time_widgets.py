@@ -1,13 +1,29 @@
-from datetime import datetime, date, time
+# Copyright 2018-2020 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
-from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
+from datetime import datetime, date, time
+from typing import cast
+
+import streamlit
 from streamlit.errors import StreamlitAPIException
-from .utils import _get_widget_ui_value
+from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
+from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
+from .utils import register_widget
 
 
 class TimeWidgetsMixin:
-    def time_input(dg, label, value=None, key=None):
+    def time_input(self, label, value=None, key=None):
         """Display a time input widget.
 
         Parameters
@@ -52,16 +68,21 @@ class TimeWidgetsMixin:
         time_input_proto.label = label
         time_input_proto.default = time.strftime(value, "%H:%M")
 
-        ui_value = _get_widget_ui_value("time_input", time_input_proto, user_key=key)
+        ui_value = register_widget("time_input", time_input_proto, user_key=key)
         current_value = (
             datetime.strptime(ui_value, "%H:%M").time()
             if ui_value is not None
             else value
         )
-        return dg._enqueue("time_input", time_input_proto, current_value)  # type: ignore
+        return self.dg._enqueue("time_input", time_input_proto, current_value)
 
     def date_input(
-        dg, label, value=None, min_value=None, max_value=None, key=None,
+        self,
+        label,
+        value=None,
+        min_value=None,
+        max_value=None,
+        key=None,
     ):
         """Display a date input widget.
 
@@ -136,11 +157,16 @@ class TimeWidgetsMixin:
 
         date_input_proto.max = date.strftime(max_value, "%Y/%m/%d")
 
-        ui_value = _get_widget_ui_value("date_input", date_input_proto, user_key=key)
+        ui_value = register_widget("date_input", date_input_proto, user_key=key)
 
         if ui_value is not None:
             value = getattr(ui_value, "data")
             value = [datetime.strptime(v, "%Y/%m/%d").date() for v in value]
 
         return_value = value[0] if single_value else tuple(value)
-        return dg._enqueue("date_input", date_input_proto, return_value)  # type: ignore
+        return self.dg._enqueue("date_input", date_input_proto, return_value)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)

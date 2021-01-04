@@ -18,7 +18,7 @@ import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Ellipses, Info, Warning } from "@emotion-icons/open-iconic"
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
 import React, { PureComponent, ReactNode } from "react"
-import { HotKeys } from "react-hotkeys"
+import { GlobalHotKeys } from "react-hotkeys"
 import { CSSTransition } from "react-transition-group"
 import Button, { Kind, Size } from "components/shared/Button"
 import Tooltip, { Placement } from "components/shared/Tooltip"
@@ -343,10 +343,8 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
       this.props.reportRunState === ReportRunState.RERUN_REQUESTED
     const minimized = this.state.promptMinimized && !this.state.promptHovered
 
-    // Not sure exactly why attach and focused are necessary on the
-    // HotKeys component here but its not working without them
     return (
-      <HotKeys handlers={this.keyHandlers} attach={window} focused={true}>
+      <GlobalHotKeys handlers={this.keyHandlers}>
         <div
           onMouseEnter={this.onReportPromptHover}
           onMouseLeave={this.onReportPromptUnhover}
@@ -373,7 +371,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
               )}
           </StyledReportStatus>
         </div>
-      </HotKeys>
+      </GlobalHotKeys>
     )
   }
 
