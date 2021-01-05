@@ -62,18 +62,17 @@ export const StyledReportViewMain = styled.section<StyledReportViewMainProps>(
 
 export interface StyledReportViewBlockContainerProps {
   isWideMode: boolean
-  isEmbedded: boolean
 }
 
 export const StyledReportViewBlockContainer = styled.div<
   StyledReportViewBlockContainerProps
->(({ isEmbedded, isWideMode, theme }) => ({
+>(({ isWideMode, theme }) => ({
   flex: 1,
   width: theme.sizes.full,
-  paddingLeft: isEmbedded ? theme.spacing.none : theme.spacing.lg,
-  paddingRight: isEmbedded ? theme.spacing.none : theme.spacing.lg,
-  paddingTop: isEmbedded ? theme.spacing.none : "5rem",
-  paddingBottom: isEmbedded ? theme.spacing.none : "10rem",
+  paddingLeft: theme.inSidebar ? theme.spacing.none : theme.spacing.lg,
+  paddingRight: theme.inSidebar ? theme.spacing.none : theme.spacing.lg,
+  paddingTop: theme.inSidebar ? theme.spacing.none : "5rem",
+  paddingBottom: theme.inSidebar ? theme.spacing.none : "10rem",
   minWidth: isWideMode ? "auto" : undefined,
   maxWidth: isWideMode ? "initial" : theme.sizes.contentMaxWidth,
 }))
