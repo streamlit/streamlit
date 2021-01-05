@@ -273,6 +273,12 @@ class NumberInput extends React.PureComponent<Props, State> {
                   borderBottomRightRadius: 0,
                 }),
               },
+              Root: {
+                style: () => ({
+                  borderTopRightRadius: 0,
+                  borderBottomRightRadius: 0,
+                }),
+              },
             }}
           />
           <StyledInputControls>
