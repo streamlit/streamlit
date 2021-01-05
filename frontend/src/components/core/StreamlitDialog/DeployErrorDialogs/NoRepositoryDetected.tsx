@@ -4,7 +4,7 @@ import { IDeployErrorDialog } from "./types"
 
 function NoRepositoryDetected(): IDeployErrorDialog {
   return {
-    title: "Unable to deploying app",
+    title: "Unable to deploy app",
     body: (
       <>
         <p>Could not find a remote repository hosted on Github.</p>
