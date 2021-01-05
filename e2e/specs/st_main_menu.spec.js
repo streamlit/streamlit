@@ -33,7 +33,7 @@ describe("main menu", () => {
     cy.get('[data-testid="main-menu-popover"]').invoke(
       "attr",
       "style",
-      "transform: translate3d(20px, 20px, 0px)"
+      "transform: translate3d(20px, 20px, 0px);z-index:99999;"
     );
     cy.get('[data-testid="main-menu-list"]').matchImageSnapshot("main_menu");
 
