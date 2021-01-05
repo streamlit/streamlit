@@ -84,7 +84,7 @@ Shows all config options available for Streamlit, including their current
 values:
 
 ```bash
-# last updated 2020-12-03
+# last updated 2021-01-04
 
 [global]
 
@@ -225,10 +225,6 @@ token = ""
 
 
 [deprecation]
-
-# Set to false to disable the deprecation warning for the file uploader encoding.
-# Default: "True"
-showfileUploaderEncoding = "True"
 
 # Set to false to disable the deprecation warning for the image format parameter.
 # Default: "True"
