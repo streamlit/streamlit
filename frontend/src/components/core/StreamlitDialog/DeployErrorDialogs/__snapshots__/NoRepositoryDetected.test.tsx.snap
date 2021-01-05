@@ -37,6 +37,6 @@ Object {
       </li>
     </ul>
   </React.Fragment>,
-  "title": "Unable to deploying app",
+  "title": "Unable to deploy app",
 }
 `;
