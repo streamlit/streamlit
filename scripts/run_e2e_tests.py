@@ -353,11 +353,18 @@ def run_component_template_e2e_test(ctx: Context, template_dir: str) -> bool:
     is_flag=True,
     help="Run tests in 'e2e_flaky' instead of 'e2e'.",
 )
+@click.option(
+    "-t",
+    "--test",
+    help="Run a specific test, e.g. '--test st_markdown'",
+    type=str,
+)
 def run_e2e_tests(
     always_continue: bool,
     record_results: bool,
     update_snapshots: bool,
     flaky_tests: bool,
+    test: str,
 ):
     """Run e2e tests. If any fail, exit with non-zero status."""
     kill_streamlits()
@@ -377,7 +384,7 @@ def run_e2e_tests(
         # First, test "streamlit hello" in different combinations. We skip
         # `no_credentials=True` for the `--server.headless=false` test, because
         # it'll give a credentials prompt.
-        if not flaky_tests:
+        if (not flaky_tests) and (not test):
             hello_spec = join(ROOT_DIR, "e2e/specs/st_hello.spec.js")
             run_test(
                 ctx,
@@ -394,7 +401,8 @@ def run_e2e_tests(
 
         # Test core streamlit elements
         p = pathlib.Path(join(ROOT_DIR, ctx.tests_dir_name, "scripts")).resolve()
-        for test_path in sorted(p.glob("*.py")):
+        paths = [p / f"{test}.py"] if test else sorted(p.glob("*.py"))
+        for test_path in paths:
             test_name, _ = splitext(basename(test_path.as_posix()))
             specpath = join(ctx.tests_dir, "specs", f"{test_name}.spec.js")
             run_test(ctx, specpath, ["streamlit", "run", test_path.as_posix()])
