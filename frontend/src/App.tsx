@@ -557,7 +557,7 @@ export class App extends PureComponent<Props, State> {
    */
   handleReportFinished(status: ForwardMsg.ReportFinishedStatus): void {
     if (status === ForwardMsg.ReportFinishedStatus.FINISHED_SUCCESSFULLY) {
-      // Notify any subscibers of this event (and do it next event loop)
+      // Notify any subscribers of this event (and do it next event loop)
       window.setTimeout(() => {
         this.state.reportFinishedHandlers.map(handler => handler())
       }, 0)
