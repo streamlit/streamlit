@@ -74,6 +74,7 @@ class SelectboxMixin:
         selectbox_proto = SelectboxProto()
         selectbox_proto.label = label
         selectbox_proto.default = index
+        selectbox_proto.help = help
         selectbox_proto.options[:] = [str(format_func(option)) for option in options]
 
         ui_value = register_widget("selectbox", selectbox_proto, user_key=key)

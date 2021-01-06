@@ -69,6 +69,9 @@ class WriteMixin:
             - write(bokeh_fig)  : Displays a Bokeh figure.
             - write(sympy_expr) : Prints SymPy expression using LaTeX.
 
+        help : str
+            A tooltip that gets displayed next to whatever is written.
+
         unsafe_allow_html : bool
             This is a keyword-only argument that defaults to False.
 
