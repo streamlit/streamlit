@@ -194,7 +194,7 @@ class MarkdownMixin:
         title_proto.help = help
         return self.dg._enqueue("markdown", title_proto)
 
-    def latex(self, body):
+    def latex(self, body, help=None):
         # This docstring needs to be "raw" because of the backslashes in the
         # example below.
         r"""Display mathematical expressions formatted as LaTeX.
@@ -208,7 +208,8 @@ class MarkdownMixin:
             The string or SymPy expression to display as LaTeX. If str, it's
             a good idea to use raw Python strings since LaTeX uses backslashes
             a lot.
-
+        help : str
+            A tooltip that gets displayed next to the text.
 
         Example
         -------
@@ -230,6 +231,7 @@ class MarkdownMixin:
 
         latex_proto = MarkdownProto()
         latex_proto.body = "$$\n%s\n$$" % clean_text(body)
+        latex_proto.help = help
         return self.dg._enqueue("markdown", latex_proto)
 
     @property

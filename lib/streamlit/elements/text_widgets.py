@@ -22,7 +22,9 @@ from .utils import register_widget
 
 
 class TextWidgetsMixin:
-    def text_input(self, label, value="", max_chars=None, key=None, type="default", help=None):
+    def text_input(
+        self, label, value="", max_chars=None, key=None, type="default", help=None
+    ):
         """Display a single-line text input widget.
 
         Parameters
