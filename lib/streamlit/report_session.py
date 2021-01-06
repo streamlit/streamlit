@@ -428,10 +428,10 @@ class ReportSession(object):
                 msg.git_info_changed.state = GitInfo.GitStates.AHEAD_OF_REMOTE
             else:
                 msg.git_info_changed.state = GitInfo.GitStates.DEFAULT
+
+            self.enqueue(msg)
         except:
             pass
-
-        self.enqueue(msg)
 
     def handle_rerun_script_request(self, client_state=None, is_preheat=False):
         """Tell the ScriptRunner to re-run its report.
