@@ -22,7 +22,7 @@ from .utils import register_widget, NoValue
 
 
 class RadioMixin:
-    def radio(self, label, options, index=0, format_func=str, key=None):
+    def radio(self, label, options, index=0, format_func=str, key=None, help=None):
         """Display a radio button widget.
 
         Parameters
@@ -44,6 +44,8 @@ class RadioMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+        help : str
+            A tooltip that gets displayed next to the radio.
 
         Returns
         -------
@@ -76,6 +78,7 @@ class RadioMixin:
 
         radio_proto = RadioProto()
         radio_proto.label = label
+        radio_proto.help = help
         radio_proto.default = index
         radio_proto.options[:] = [str(format_func(option)) for option in options]
 
