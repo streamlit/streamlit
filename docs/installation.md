@@ -69,7 +69,7 @@ Streamlit.
    .. tip::
       Did you know you can also pass a URL to `streamlit run`? This is great when combined with Github Gists. For example:
 
-      `$ streamlit run https://raw.githubusercontent.com/streamlit/demo-uber-nyc-pickups/master/app.py`
+      `$ streamlit run https://raw.githubusercontent.com/streamlit/demo-uber-nyc-pickups/master/streamlit_app.py`
    ```
 
 4. You can kill the app at any time by typing **Ctrl+c** in the terminal.
