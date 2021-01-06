@@ -58,6 +58,7 @@ import {
   SessionState,
   Config,
 } from "autogen/proto"
+import { without, concat } from "lodash"
 
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
 import { SessionInfo } from "lib/SessionInfo"
@@ -102,6 +103,7 @@ interface State {
   initialSidebarState: PageConfig.SidebarState
   allowRunOnSave: boolean
   deployParams?: IDeployParams | null
+  reportFinishedHandlers: (() => void)[]
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -159,6 +161,7 @@ export class App extends PureComponent<Props, State> {
       initialSidebarState: PageConfig.SidebarState.AUTO,
       allowRunOnSave: true,
       deployParams: null,
+      reportFinishedHandlers: [],
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -554,6 +557,11 @@ export class App extends PureComponent<Props, State> {
    */
   handleReportFinished(status: ForwardMsg.ReportFinishedStatus): void {
     if (status === ForwardMsg.ReportFinishedStatus.FINISHED_SUCCESSFULLY) {
+      // Notify any subscibers of this event (and do it next event loop)
+      window.setTimeout(() => {
+        this.state.reportFinishedHandlers.map(handler => handler())
+      }, 0)
+
       // Clear any stale elements left over from the previous run.
       // (We don't do this if our script had a compilation error and didn't
       // finish successfully.)
@@ -895,6 +903,18 @@ export class App extends PureComponent<Props, State> {
     this.setState({ isFullScreen })
   }
 
+  addReportFinshedHandler = (func: () => void): void => {
+    this.setState({
+      reportFinishedHandlers: concat(this.state.reportFinishedHandlers, func),
+    })
+  }
+
+  removeReportFinshedHandler = (func: () => void): void => {
+    this.setState({
+      reportFinishedHandlers: without(this.state.reportFinishedHandlers, func),
+    })
+  }
+
   render(): JSX.Element {
     const {
       allowRunOnSave,
@@ -931,6 +951,8 @@ export class App extends PureComponent<Props, State> {
           embedded: isEmbeddedInIFrame(),
           isFullScreen,
           setFullScreen: this.handleFullScreen,
+          addReportFinshedHandler: this.addReportFinshedHandler,
+          removeReportFinshedHandler: this.removeReportFinshedHandler,
         }}
       >
         <GlobalHotKeys keyMap={this.keyMap} handlers={this.keyHandlers}>

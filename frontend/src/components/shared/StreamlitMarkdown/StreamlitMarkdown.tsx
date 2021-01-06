@@ -26,6 +26,7 @@ import { BlockMath, InlineMath } from "react-katex"
 import RemarkMathPlugin from "remark-math"
 // @ts-ignore
 import RemarkEmoji from "remark-emoji"
+import PageLayoutContext from "components/core/PageLayoutContext"
 import CodeBlock from "components/elements/CodeBlock/"
 import { StyledStreamlitMarkdown } from "./styled-components"
 
@@ -64,6 +65,28 @@ function HeadingWithAnchor({
   children,
 }: any): ReactElement {
   const [elementId, setElementId] = React.useState(propsAnchor)
+  const [target, setTarget] = React.useState<HTMLElement | null>(null)
+
+  const {
+    addReportFinshedHandler,
+    removeReportFinshedHandler,
+  } = React.useContext(PageLayoutContext)
+
+  const onReportFinished = React.useCallback(() => {
+    if (target !== null) {
+      // wait a bit for everything on page to finish loading
+      window.setTimeout(() => {
+        scrollNodeIntoView(target)
+      }, 300)
+    }
+  }, [target])
+
+  React.useEffect(() => {
+    addReportFinshedHandler(onReportFinished)
+    return () => {
+      removeReportFinshedHandler(onReportFinished)
+    }
+  }, [addReportFinshedHandler, removeReportFinshedHandler, onReportFinished])
 
   const ref = React.useCallback(
     node => {
@@ -72,7 +95,7 @@ function HeadingWithAnchor({
       const anchor = propsAnchor || createAnchorFromText(node.textContent)
       setElementId(anchor)
       if (window.location.hash.slice(1) === anchor) {
-        scrollNodeIntoView(node)
+        setTarget(node)
       }
     },
     [propsAnchor]
