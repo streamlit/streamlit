@@ -17,7 +17,7 @@
 
 import React, { Fragment, PureComponent, ReactNode } from "react"
 import moment from "moment"
-import { GlobalHotKeys, KeyMap } from "react-hotkeys"
+import { HotKeys, KeyMap } from "react-hotkeys"
 import { fromJS } from "immutable"
 import classNames from "classnames"
 // Other local imports.
@@ -922,6 +922,10 @@ export class App extends PureComponent<Props, State> {
         })
       : null
 
+    // Attach and focused props provide a way to handle Global Hot Keys
+    // https://github.com/greena13/react-hotkeys/issues/41
+    // attach: DOM element the keyboard listeners should attach to
+    // focused: A way to force focus behaviour
     return (
       <PageLayoutContext.Provider
         value={{
@@ -933,7 +937,12 @@ export class App extends PureComponent<Props, State> {
           setFullScreen: this.handleFullScreen,
         }}
       >
-        <GlobalHotKeys keyMap={this.keyMap} handlers={this.keyHandlers}>
+        <HotKeys
+          keyMap={this.keyMap}
+          handlers={this.keyHandlers}
+          attach={window}
+          focused={true}
+        >
           <StyledApp className={outerDivClass}>
             {/* The tabindex below is required for testing. */}
             <Header>
@@ -976,7 +985,7 @@ export class App extends PureComponent<Props, State> {
             />
             {renderedDialog}
           </StyledApp>
-        </GlobalHotKeys>
+        </HotKeys>
       </PageLayoutContext.Provider>
     )
   }
