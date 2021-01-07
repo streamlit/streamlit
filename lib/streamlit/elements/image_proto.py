@@ -49,6 +49,7 @@ class ImageMixin:
         clamp=False,
         channels="RGB",
         output_format="auto",
+        help=None,
         **kwargs,
     ):
         """Display an image or list of images.
@@ -88,6 +89,8 @@ class ImageMixin:
             while diagrams should use the PNG format for lossless compression.
             Defaults to 'auto' which identifies the compression type based
             on the type and format of the image argument.
+        help : str
+            A tooltip that gets displayed next to the images.
 
         Example
         -------
@@ -119,6 +122,7 @@ class ImageMixin:
             raise StreamlitAPIException("Image width must be positive.")
 
         image_list_proto = ImageListProto()
+        image_list_proto.help = help
         marshall_images(
             self.dg._get_delta_path_str(),
             image,
