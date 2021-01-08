@@ -25,7 +25,7 @@ import Modal, {
   ModalFooter,
   ModalButton,
 } from "components/shared/Modal"
-import { GlobalHotKeys } from "react-hotkeys"
+import { HotKeys } from "react-hotkeys"
 
 import {
   ScriptChangedDialog,
@@ -161,8 +161,10 @@ function clearCacheDialog(props: ClearCacheProps): ReactElement {
     enter: () => props.defaultAction(),
   }
 
+  // Not sure exactly why attach is necessary on the HotKeys
+  // component here but it's not working without it
   return (
-    <GlobalHotKeys handlers={keyHandlers}>
+    <HotKeys handlers={keyHandlers} attach={window}>
       <Modal isOpen onClose={props.onClose}>
         <ModalHeader>Clear Cache</ModalHeader>
         <ModalBody>
@@ -180,7 +182,7 @@ function clearCacheDialog(props: ClearCacheProps): ReactElement {
           </ModalButton>
         </ModalFooter>
       </Modal>
-    </GlobalHotKeys>
+    </HotKeys>
   )
 }
 
@@ -211,8 +213,10 @@ function rerunScriptDialog(props: RerunScriptProps): ReactElement {
     enter: () => props.defaultAction(),
   }
 
+  // Not sure exactly why attach is necessary on the HotKeys
+  // component here but it's not working without it
   return (
-    <GlobalHotKeys handlers={keyHandlers}>
+    <HotKeys handlers={keyHandlers} attach={window}>
       <Modal isOpen onClose={props.onClose}>
         <ModalBody>
           <StyledRerunHeader>Command line:</StyledRerunHeader>
@@ -237,7 +241,7 @@ function rerunScriptDialog(props: RerunScriptProps): ReactElement {
           </ModalButton>
         </ModalFooter>
       </Modal>
-    </GlobalHotKeys>
+    </HotKeys>
   )
 }
 
