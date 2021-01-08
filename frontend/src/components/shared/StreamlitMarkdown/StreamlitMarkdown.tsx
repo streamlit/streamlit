@@ -16,7 +16,7 @@
  */
 
 import React, { ReactElement, ReactNode, Fragment, PureComponent } from "react"
-import ReactMarkdown, { Renderer } from "react-markdown"
+import ReactMarkdown from "react-markdown"
 import { once } from "lodash"
 // @ts-ignore
 import htmlParser from "react-markdown/plugins/html-parser"
