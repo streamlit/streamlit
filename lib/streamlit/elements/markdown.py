@@ -101,7 +101,7 @@ class MarkdownMixin:
         """
         header_proto = MarkdownProto()
         if anchor is None:
-            header_proto.body = f'## {clean_text(body)}'
+            header_proto.body = f"## {clean_text(body)}"
         else:
             header_proto.body = f'<h2 data-anchor="{anchor}">{clean_text(body)}</h2>'
             header_proto.allow_html = True
@@ -130,7 +130,7 @@ class MarkdownMixin:
         """
         subheader_proto = MarkdownProto()
         if anchor is None:
-            subheader_proto.body = f'### {clean_text(body)}'
+            subheader_proto.body = f"### {clean_text(body)}"
         else:
             subheader_proto.body = f'<h3 data-anchor="{anchor}">{clean_text(body)}</h3>'
             subheader_proto.allow_html = True
@@ -196,7 +196,7 @@ class MarkdownMixin:
         """
         title_proto = MarkdownProto()
         if anchor is None:
-            title_proto.body = f'# {clean_text(body)}'
+            title_proto.body = f"# {clean_text(body)}"
         else:
             title_proto.body = f'<h1 data-anchor="{anchor}">{clean_text(body)}</h1>'
             title_proto.allow_html = True

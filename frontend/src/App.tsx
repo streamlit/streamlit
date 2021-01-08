@@ -932,13 +932,13 @@ export class App extends PureComponent<Props, State> {
     this.setState({ isFullScreen })
   }
 
-  addReportFinshedHandler = (func: () => void): void => {
+  addReportFinishedHandler = (func: () => void): void => {
     this.setState({
       reportFinishedHandlers: concat(this.state.reportFinishedHandlers, func),
     })
   }
 
-  removeReportFinshedHandler = (func: () => void): void => {
+  removeReportFinishedHandler = (func: () => void): void => {
     this.setState({
       reportFinishedHandlers: without(this.state.reportFinishedHandlers, func),
     })
@@ -980,8 +980,8 @@ export class App extends PureComponent<Props, State> {
           embedded: isEmbeddedInIFrame(),
           isFullScreen,
           setFullScreen: this.handleFullScreen,
-          addReportFinshedHandler: this.addReportFinshedHandler,
-          removeReportFinshedHandler: this.removeReportFinshedHandler,
+          addReportFinishedHandler: this.addReportFinishedHandler,
+          removeReportFinishedHandler: this.removeReportFinishedHandler,
         }}
       >
         <GlobalHotKeys keyMap={this.keyMap} handlers={this.keyHandlers}>

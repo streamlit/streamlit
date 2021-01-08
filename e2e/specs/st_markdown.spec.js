@@ -43,7 +43,12 @@ describe("st.markdown", () => {
       cy.wrap(els[4])
         .find("a")
         .should("have.attr", "href");
+    });
+  });
 
+  it("displays headers with anchors", () => {
+    cy.get(".element-container .stMarkdown").should("have.length", 11);
+    cy.get(".element-container .stMarkdown").then(els => {
       cy.wrap(els[8])
         .find("h1")
         .should("have.attr", "id", "some-header-1");

@@ -15,8 +15,14 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ReactNode, Fragment, PureComponent } from "react"
-import ReactMarkdown from "react-markdown"
+import React, {
+  ReactElement,
+  ElementType,
+  ReactNode,
+  Fragment,
+  PureComponent,
+} from "react"
+import ReactMarkdown, { Renderer } from "react-markdown"
 import { once } from "lodash"
 // @ts-ignore
 import htmlParser from "react-markdown/plugins/html-parser"
@@ -45,7 +51,11 @@ export interface Props {
   allowHTML: boolean
 }
 
-function createAnchorFromText(text: string | null): string {
+/**
+ * Creates a slug suitable for use as an anchor given a string.
+ * Splits the string on non-alphanumeric characters, and joins with a dash.
+ */
+export function createAnchorFromText(text: string | null): string {
   const newAnchor = text
     ?.toLowerCase()
     .split(/[^A-Za-z0-9]/)
@@ -59,17 +69,39 @@ const scrollNodeIntoView = once((node: HTMLElement): void => {
   node.scrollIntoView(true)
 })
 
+interface HeadingWithAnchorProps {
+  tag: string
+  anchor?: string
+  children: [ReactElement]
+}
+
+interface CustomHeadingProps {
+  level: string | number
+  children: [ReactElement]
+}
+
+interface CustomParsedHtmlProps {
+  type: ReactElement
+  element: {
+    type: string
+    props: {
+      "data-anchor": string
+      children: [ReactElement]
+    }
+  }
+}
+
 function HeadingWithAnchor({
   tag,
   anchor: propsAnchor,
   children,
-}: any): ReactElement {
+}: HeadingWithAnchorProps): ReactElement {
   const [elementId, setElementId] = React.useState(propsAnchor)
   const [target, setTarget] = React.useState<HTMLElement | null>(null)
 
   const {
-    addReportFinshedHandler,
-    removeReportFinshedHandler,
+    addReportFinishedHandler,
+    removeReportFinishedHandler,
   } = React.useContext(PageLayoutContext)
 
   const onReportFinished = React.useCallback(() => {
@@ -82,15 +114,17 @@ function HeadingWithAnchor({
   }, [target])
 
   React.useEffect(() => {
-    addReportFinshedHandler(onReportFinished)
+    addReportFinishedHandler(onReportFinished)
     return () => {
-      removeReportFinshedHandler(onReportFinished)
+      removeReportFinishedHandler(onReportFinished)
     }
-  }, [addReportFinshedHandler, removeReportFinshedHandler, onReportFinished])
+  }, [addReportFinishedHandler, removeReportFinishedHandler, onReportFinished])
 
   const ref = React.useCallback(
     node => {
-      if (node === null) return
+      if (node === null) {
+        return
+      }
 
       const anchor = propsAnchor || createAnchorFromText(node.textContent)
       setElementId(anchor)
@@ -104,17 +138,19 @@ function HeadingWithAnchor({
   return React.createElement(tag, { ref, id: elementId }, children)
 }
 
-function CustomHeading({ level, children }: any): ReactElement {
+function CustomHeading({ level, children }: CustomHeadingProps): ReactElement {
   return <HeadingWithAnchor tag={`h${level}`}>{children}</HeadingWithAnchor>
 }
 
-function CustomParsedHtml(props: any): ReactElement {
+function CustomParsedHtml(props: CustomParsedHtmlProps): ReactElement {
   const {
     element: { type, props: elementProps },
   } = props
 
   const headingElements = ["h1", "h2", "h3", "h4", "h5", "h6"]
   if (!headingElements.includes(type)) {
+    // casting to any because ReactMarkdown's types are funky
+    // but this just means "call the original renderer provided by ReactMarkdown"
     return (ReactMarkdown.renderers.parsedHtml as any)(props)
   }
 
