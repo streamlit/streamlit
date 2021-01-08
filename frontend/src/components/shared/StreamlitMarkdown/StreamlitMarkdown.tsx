@@ -20,6 +20,8 @@ import ReactMarkdown from "react-markdown"
 // @ts-ignore
 import htmlParser from "react-markdown/plugins/html-parser"
 // @ts-ignore
+import remarkGfm from "remark-gfm"
+// @ts-ignore
 import { BlockMath, InlineMath } from "react-katex"
 // @ts-ignore
 import RemarkMathPlugin from "remark-math"
@@ -73,9 +75,8 @@ class StreamlitMarkdown extends PureComponent<Props> {
       ),
     }
 
-    const plugins = [RemarkMathPlugin, RemarkEmoji]
+    const plugins = [RemarkMathPlugin, RemarkEmoji, remarkGfm]
     const astPlugins = allowHTML ? [htmlParser()] : []
-
     return (
       <StyledStreamlitMarkdown data-testid="stMarkdownContainer">
         <ReactMarkdown

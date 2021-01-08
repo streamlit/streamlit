@@ -17,6 +17,7 @@
 
 import React, { ReactElement } from "react"
 import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 import { mount } from "enzyme"
 
 import {
@@ -24,15 +25,31 @@ import {
   linkReferenceHasParens,
 } from "./StreamlitMarkdown"
 
+const plugins = [remarkGfm]
 // Fixture Generator
 const getMarkdownElement = (body: string): ReactElement => {
   const renderers = {
     link: linkWithTargetBlank,
     linkReference: linkReferenceHasParens,
   }
-  return <ReactMarkdown source={body} renderers={renderers} />
+  return (
+    <ReactMarkdown source={body} renderers={renderers} plugins={plugins} />
+  )
 }
+describe("GFMplugin", () => {
+  it("renders a link ", () => {
+    const body = "Some random URL like https://www.streamlit.io/"
+    const wrapper = mount(getMarkdownElement(body))
 
+    expect(wrapper.find("a").prop("href")).toEqual("https://www.streamlit.io/")
+  })
+  it("renders a table ", () => {
+    const body = "|head 1| head 2|\n|----|----|\n|cell1 | cell2| \n"
+    const wrapper = mount(getMarkdownElement(body))
+
+    expect(wrapper.find("table"))
+  })
+})
 describe("linkReference", () => {
   it("renders a link with _blank target", () => {
     const body = "Some random URL like [Streamlit](https://streamlit.io/)"
