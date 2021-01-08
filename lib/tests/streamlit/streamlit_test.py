@@ -297,7 +297,9 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         st.header("some header", anchor="some-anchor")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.markdown.body, '<h2 data-anchor="some-anchor">some header</h2>')
+        self.assertEqual(
+            el.markdown.body, '<h2 data-anchor="some-anchor">some header</h2>'
+        )
 
     def test_st_help(self):
         """Test st.help."""
@@ -594,7 +596,9 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         st.subheader("some subheader", anchor="some-anchor")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.markdown.body, '<h3 data-anchor="some-anchor">some subheader</h3>')
+        self.assertEqual(
+            el.markdown.body, '<h3 data-anchor="some-anchor">some subheader</h3>'
+        )
 
     def test_st_success(self):
         """Test st.success."""
@@ -636,7 +640,9 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         st.title("some title", anchor="some-anchor")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.markdown.body, '<h1 data-anchor="some-anchor">some title</h1>')
+        self.assertEqual(
+            el.markdown.body, '<h1 data-anchor="some-anchor">some title</h1>'
+        )
 
     def test_st_vega_lite_chart(self):
         """Test st.vega_lite_chart."""
