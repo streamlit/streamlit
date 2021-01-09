@@ -20,8 +20,11 @@ describe("st.markdown", () => {
     cy.visit("http://localhost:3000/");
   });
 
-  it("displays markdown", () => {
+  it("displays correct number of elements", () => {
     cy.get(".element-container .stMarkdown").should("have.length", 11);
+  });
+
+  it("displays markdown", () => {
     cy.get(".element-container .stMarkdown").then(els => {
       expect(els[0].textContent).to.eq("This markdown is awesome! 😎");
       expect(els[1].textContent).to.eq("This <b>HTML tag</b> is escaped!");
@@ -47,7 +50,6 @@ describe("st.markdown", () => {
   });
 
   it("displays headers with anchors", () => {
-    cy.get(".element-container .stMarkdown").should("have.length", 11);
     cy.get(".element-container .stMarkdown").then(els => {
       cy.wrap(els[8])
         .find("h1")
