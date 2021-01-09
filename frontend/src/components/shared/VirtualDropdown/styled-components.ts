@@ -15,4 +15,7 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
   alignItems: "center",
   paddingTop: theme.spacing.none,
   paddingBottom: theme.spacing.none,
+  "&:hover, &:active, &:focus": {
+    background: theme.colors.lightestGray,
+  },
 }))
