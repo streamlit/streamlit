@@ -20,7 +20,37 @@ describe("tooltips on widgets", () => {
     cy.visit("http://localhost:3000/");
   });
 
-  it("display tooltips on all supported widgets", () => {
-    // TODO
-  });
+  it("displays tooltip on button", () => {});
+
+  it("displays tooltip on checkbox", () => {});
+
+  it("displays tooltip on number_input", () => {});
+
+  it("displays tooltip on radio", () => {});
+
+  it("displays tooltip on selectbox", () => {});
+
+  it("displays tooltip on text_input", () => {});
+
+  it("displays tooltip on time_input", () => {});
+
+  it("displays tooltip on date_input", () => {});
+
+  it("displays tooltip on write", () => {});
+
+  it("displays tooltip on markdown", () => {});
+
+  it("displays tooltip on header", () => {});
+
+  it("displays tooltip on subheader", () => {});
+
+  it("displays tooltip on code", () => {});
+
+  it("displays tooltip on latex", () => {});
+
+  it("displays tooltip on image", () => {});
+
+  it("displays tooltip on line_chart", () => {});
+
+  it("displays tooltip on plotly_chart", () => {});
 });

@@ -21,6 +21,7 @@ import { TextInput as TextInputProto } from "autogen/proto"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import InputInstructions from "components/shared/InputInstructions/InputInstructions"
 import { StyledWidgetLabel } from "components/widgets/BaseWidget"
+import TooltipIcon from "components/shared/TooltipIcon"
 
 export interface Props {
   disabled: boolean
@@ -100,10 +101,16 @@ class TextInput extends React.PureComponent<Props, State> {
   public render = (): React.ReactNode => {
     const { dirty, value } = this.state
     const { element, width, disabled } = this.props
-    const style = { width }
 
     return (
-      <div className="row-widget stTextInput" style={style}>
+      <div
+        className="row-widget stTextInput"
+        style={{
+          width,
+          position: "relative",
+        }}
+      >
+        {element.help && <TooltipIcon content={element.help} />}
         <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
         <UIInput
           value={value}

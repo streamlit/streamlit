@@ -22,34 +22,31 @@ import pandas as pd
 
 
 def get_plotly_chart():
-    # Add histogram data
-    x1 = randn(200) - 2
-    x2 = randn(200)
-    x3 = randn(200) + 2
-
-    # Group data together
-    hist_data = [x1, x2, x3]
-    group_labels = ["Group 1", "Group 2", "Group 3"]
-    bin_size = [0.1, 0.25, 0.5]
-
-    # Create distribution plot with custom bin_size
-    return figure_factory.create_distplot(hist_data, group_labels, bin_size)
+    x1, x2, x3 = randn(200) - 2, randn(200), randn(200) + 2
+    return figure_factory.create_distplot(
+        [x1, x2, x3], ["a", "b", "c"], [0.1, 0.25, 0.5]
+    )
 
 
-st.button("some button", help="tooltip")
-st.checkbox("some checkbox", help="tooltip")
-st.number_input("number input", value=1, help="tooltip")
-st.radio("some radio", ("a", "b", "c"), 0, help="tooltip")
-st.selectbox("selectbox", ("a", "b", "c"), 0, help="tooltip")
+# form inputs
+# st.button("some button", help="tooltip")
+# st.checkbox("some checkbox", help="tooltip")
+# st.number_input("number input", value=1, help="tooltip")
+# st.radio("some radio", ("a", "b", "c"), 0, help="tooltip")
+# st.selectbox("selectbox", ("a", "b", "c"), 0, help="tooltip")
 st.text_input("some input text", "default text", help="tooltip")
-st.time_input("time", datetime(2019, 7, 6, 21, 15), help="tooltip")
-st.date_input("date", datetime(2019, 7, 6, 21, 15), help="tooltip")
-st.write("here is some text", help="tooltip")
-st.markdown("here is some text", help="tooltip")
-st.header("some header", help="tooltip")
-st.subheader("some subheader", help="tooltip")
-st.code("import streamlit as st", language="python", help="tooltip")
-st.latex(r"\LaTeX", help="tooltip")
-st.image(np.repeat(0, 10000).reshape(100, 100), help="tooltip")
-st.line_chart(pd.DataFrame(randn(20, 3), columns=["a", "b", "c"]), help="tooltip")
-st.plotly_chart(get_plotly_chart())
+# st.time_input("time", datetime(2019, 7, 6, 21, 15), help="tooltip")
+# st.date_input("date", datetime(2019, 7, 6, 21, 15), help="tooltip")
+
+# text
+# st.write("here is some text", help="tooltip")
+# st.markdown("here is some text", help="tooltip")
+# st.header("some header", help="tooltip")
+# st.subheader("some subheader", help="tooltip")
+# st.code("import streamlit as st", language="python", help="tooltip")
+# st.latex(r"\LaTeX", help="tooltip")
+
+# graphics
+# st.image(np.repeat(0, 10000).reshape(100, 100), help="tooltip")
+# st.line_chart(pd.DataFrame(randn(20, 3), columns=["a", "b", "c"]), help="tooltip")
+# st.plotly_chart(get_plotly_chart())
