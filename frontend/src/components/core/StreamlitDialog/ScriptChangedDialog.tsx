@@ -16,7 +16,7 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
-import { GlobalHotKeys } from "react-hotkeys"
+import { HotKeys } from "react-hotkeys"
 import Modal, {
   ModalHeader,
   ModalBody,
@@ -55,8 +55,10 @@ export class ScriptChangedDialog extends PureComponent<Props> {
   }
 
   public render(): ReactNode {
+    // Not sure exactly why attach and focused are necessary on the
+    // HotKeys component here but its not working without them
     return (
-      <GlobalHotKeys handlers={this.keyHandlers}>
+      <HotKeys handlers={this.keyHandlers} attach={window} focused={true}>
         <Modal isOpen onClose={this.props.onClose}>
           <ModalHeader>App changed</ModalHeader>
           <ModalBody>
@@ -73,7 +75,7 @@ export class ScriptChangedDialog extends PureComponent<Props> {
             </ModalButton>
           </ModalFooter>
         </Modal>
-      </GlobalHotKeys>
+      </HotKeys>
     )
   }
 
