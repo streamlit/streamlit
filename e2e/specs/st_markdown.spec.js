@@ -28,7 +28,7 @@ describe("st.markdown", () => {
       expect(els[2].textContent).to.eq("This HTML tag is not escaped!");
       expect(els[3].textContent).to.eq("[text]");
       expect(els[4].textContent).to.eq("link");
-      expect(els[5].textContent).to.eq("[][]");
+      expect(els[5].textContent).to.eq("");
       expect(els[6].textContent).to.eq("Inline math with KATXE\\KaTeXKATE​X");
       expect(els[7].textContent).to.eq(
         "ax2+bx+c=0ax^2 + bx + c = 0ax2+bx+c=0"

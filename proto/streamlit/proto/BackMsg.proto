@@ -53,6 +53,8 @@ message BackMsg {
     bool close_connection = 10;
 
     ClientState rerun_script = 11;
+
+    bool load_git_info = 12;
   }
 
   reserved 1, 3, 4, 8, 9;

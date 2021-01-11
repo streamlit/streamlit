@@ -70,14 +70,6 @@ class ReportSessionTest(unittest.TestCase):
         # Expect func to be called only once, inside enqueue().
         func.assert_called_once()
 
-    @patch("streamlit.report_session.LocalSourcesWatcher")
-    @pytest.mark.usefixtures("del_path")
-    def test_get_deploy_params_with_no_git(self, _1):
-        """Make sure we try to handle execution control requests."""
-        rs = ReportSession(None, report_session.__file__, "", UploadedFileManager())
-
-        self.assertIsNone(rs.get_deploy_params())
-
     @patch("streamlit.report_session.config")
     @patch("streamlit.report_session.Report")
     @patch("streamlit.report_session.LocalSourcesWatcher")

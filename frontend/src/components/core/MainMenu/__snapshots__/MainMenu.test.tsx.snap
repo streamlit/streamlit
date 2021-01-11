@@ -10,6 +10,7 @@ exports[`App renders without crashing 1`] = `
   ignoreBoundary={false}
   onMouseEnterDelay={200}
   onMouseLeaveDelay={200}
+  onOpen={[Function]}
   overrides={
     Object {
       "Body": Object {

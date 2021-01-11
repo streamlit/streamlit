@@ -50,6 +50,8 @@ export const StyledInputControl = styled.button(({ theme }) => ({
 }))
 
 export const StyledInstructionsContainer = styled.div(({ theme }) => ({
-  marginRight: theme.spacing.xs,
+  position: "absolute",
+  marginRight: theme.spacing.twoXS,
+  left: 0,
   right: `${CONTROLS_WIDTH * 2}px`,
 }))

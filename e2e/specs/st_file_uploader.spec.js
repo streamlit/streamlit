@@ -46,22 +46,6 @@ describe("st.file_uploader", () => {
       .matchImageSnapshot("multi_file_uploader");
   });
 
-  it("shows deprecation warning", () => {
-    cy.get("[data-testid='stFileUploader']")
-      .first()
-      .parent()
-      .prev()
-      .should("contain", "FileUploaderEncodingWarning");
-  });
-
-  it("hides deprecation warning", () => {
-    cy.get("[data-testid='stFileUploader']")
-      .last()
-      .parent()
-      .prev()
-      .should("not.contain", "FileUploaderEncodingWarning");
-  });
-
   it("shows error message for not allowed files", () => {
     const fileName = "example.json";
 

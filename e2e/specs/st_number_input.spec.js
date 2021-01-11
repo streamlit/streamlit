@@ -39,6 +39,17 @@ describe("st.number_input", () => {
     );
   });
 
+  it("displays instructions correctly on change", () => {
+    cy.get(".stNumberInput input")
+      .first()
+      .clear()
+      .type("10");
+
+    cy.get(".stNumberInput")
+      .first()
+      .matchImageSnapshot("number_input_change");
+  });
+
   it("sets value correctly on enter keypress", () => {
     cy.get(".stNumberInput input")
       .first()

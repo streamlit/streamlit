@@ -16,6 +16,17 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.74.0
+
+_Release date: January 6, 2021_
+
+**Notable Changes**
+
+- 💾 [`st.file_uploader`](https://docs.streamlit.io/en/0.74.0/api.html#streamlit.file_uploader). has been stabilized and the deprecation warning
+  and associated configuration option (`deprecation.showfileUploaderEncoding`) has been removed.
+- 📊 [`st.bokeh_chart`](https://docs.streamlit.io/en/0.74.0/api.html#streamlit.bokeh_chart) is no longer duplicated when the page loads.
+- 🎈 Fixed page icon to support emojis with variants (i.e. 🤦‍♀️ vs 🤦🏼‍♀️) or dashes (i.e 🌙 - crescent-moon).
+
 ## Version 0.73.0
 
 _Release date: December 17, 2020_
@@ -26,7 +37,7 @@ _Release date: December 17, 2020_
   yet compatible with Python 3.9 and must use version 3.8 or earlier.
 - 🧱 Streamlit Components now allows same origin, enabling features provided by
   the browser such as a webcam component.
-- 🐙 Fix Streamlit Share deploy experience for users running on Git versions
+- 🐙 Fix Streamlit sharing deploy experience for users running on Git versions
   2.7.0 or earlier.
 - 🧰 Handle unexpected closing of uploaded files for [`st.file_uploader`](https://docs.streamlit.io/en/0.72.0/api.html#streamlit.file_uploader).
 
