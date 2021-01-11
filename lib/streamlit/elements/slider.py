@@ -33,6 +33,7 @@ class SliderMixin:
         step=None,
         format=None,
         key=None,
+        help=None,
     ):
         """Display a slider widget.
 
@@ -80,6 +81,8 @@ class SliderMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+        help : str
+            A tooltip that gets displayed next to the slider.
 
         Returns
         -------
@@ -372,6 +375,8 @@ class SliderMixin:
         slider_proto.step = step
         slider_proto.data_type = data_type
         slider_proto.options[:] = []
+        if help is not None:
+            slider_proto.help = help
 
         ui_value = register_widget("slider", slider_proto, user_key=key)
         if ui_value:

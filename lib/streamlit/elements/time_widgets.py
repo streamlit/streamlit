@@ -23,7 +23,7 @@ from .utils import register_widget
 
 
 class TimeWidgetsMixin:
-    def time_input(self, label, value=None, key=None):
+    def time_input(self, label, value=None, key=None, help=None):
         """Display a time input widget.
 
         Parameters
@@ -38,6 +38,8 @@ class TimeWidgetsMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+        help : str
+            A tooltip that gets displayed next to the input.
 
         Returns
         -------
@@ -67,6 +69,8 @@ class TimeWidgetsMixin:
         time_input_proto = TimeInputProto()
         time_input_proto.label = label
         time_input_proto.default = time.strftime(value, "%H:%M")
+        if help is not None:
+            time_input_proto.help = help
 
         ui_value = register_widget("time_input", time_input_proto, user_key=key)
         current_value = (
@@ -83,6 +87,7 @@ class TimeWidgetsMixin:
         min_value=None,
         max_value=None,
         key=None,
+        help=None,
     ):
         """Display a date input widget.
 
@@ -103,6 +108,8 @@ class TimeWidgetsMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+        help : str
+            A tooltip that gets displayed next to the input.
 
         Returns
         -------
@@ -134,6 +141,8 @@ class TimeWidgetsMixin:
 
         date_input_proto = DateInputProto()
         date_input_proto.is_range = range_value
+        if help is not None:
+            date_input_proto.help = help
 
         value = [v.date() if isinstance(v, datetime) else v for v in value]
 

@@ -20,7 +20,7 @@ from .utils import register_widget
 
 
 class ButtonMixin:
-    def button(self, label, key=None):
+    def button(self, label, help=None, key=None):
         """Display a button widget.
 
         Parameters
@@ -32,6 +32,8 @@ class ButtonMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+        help : str
+            A tooltip that gets displayed when the button is hovered over.
 
         Returns
         -------
@@ -50,6 +52,8 @@ class ButtonMixin:
 
         button_proto.label = label
         button_proto.default = False
+        if help is not None:
+            button_proto.help = help
 
         ui_value = register_widget("button", button_proto, user_key=key)
         current_value = ui_value if ui_value is not None else False

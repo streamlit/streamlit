@@ -24,6 +24,7 @@ message Block {
     Expandable expandable = 4;
   }
   bool allow_empty = 5;
+  string help = 6;
 
   message Vertical {
   }

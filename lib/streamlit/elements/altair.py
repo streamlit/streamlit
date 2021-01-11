@@ -30,7 +30,9 @@ from .utils import last_index_for_melted_dataframes
 
 
 class AltairMixin:
-    def line_chart(self, data=None, width=0, height=0, use_container_width=True):
+    def line_chart(
+        self, data=None, width=0, height=0, use_container_width=True, help=None
+    ):
         """Display a line chart.
 
         This is syntax-sugar around st.altair_chart. The main difference
@@ -57,6 +59,9 @@ class AltairMixin:
             If True, set the chart width to the column width. This takes
             precedence over the width argument.
 
+        help : str
+            A tooltip that gets displayed next to the chart.
+
         Example
         -------
         >>> chart_data = pd.DataFrame(
@@ -75,6 +80,9 @@ class AltairMixin:
         chart = generate_chart("line", data, width, height)
         marshall(vega_lite_chart_proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
+
+        if help is not None:
+            vega_lite_chart_proto.help = help
 
         return self.dg._enqueue(
             "line_chart", vega_lite_chart_proto, last_index=last_index
