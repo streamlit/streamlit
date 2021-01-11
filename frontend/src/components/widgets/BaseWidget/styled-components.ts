@@ -1,6 +1,9 @@
 import styled from "@emotion/styled"
 
 export const StyledWidgetLabel = styled.label(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
   fontSize: theme.fontSizes.smDefault,
   color: theme.colors.bodyText,
   marginBottom: theme.fontSizes.halfSmDefault,
