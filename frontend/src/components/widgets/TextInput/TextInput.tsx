@@ -22,7 +22,6 @@ import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import InputInstructions from "components/shared/InputInstructions/InputInstructions"
 import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 import TooltipIcon, { Placement } from "components/shared/TooltipIcon"
-import { StyledTooltipContainer } from "./styled-components"
 
 export interface Props {
   disabled: boolean
@@ -114,12 +113,12 @@ class TextInput extends React.PureComponent<Props, State> {
         <StyledWidgetLabel>
           {element.label}
           {element.help && (
-            <StyledTooltipContainer>
+            <div>
               <TooltipIcon
                 content={element.help}
                 placement={Placement.TOP_RIGHT}
               />
-            </StyledTooltipContainer>
+            </div>
           )}
         </StyledWidgetLabel>
         <UIInput
