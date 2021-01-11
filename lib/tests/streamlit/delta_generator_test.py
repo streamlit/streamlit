@@ -146,13 +146,13 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
                 st.empty().markdown,
                 "streamlit.delta_generator",
                 "markdown",
-                "(body, unsafe_allow_html=False)",
+                "(body, unsafe_allow_html=False, help=None)",
             ),
             (
                 st.empty().checkbox,
                 "streamlit.delta_generator",
                 "checkbox",
-                "(label, value=False, key=None)",
+                "(label, value=False, key=None, help=None)",
             ),
             (
                 st.empty().dataframe,
