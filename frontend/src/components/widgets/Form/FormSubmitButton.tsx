@@ -15,29 +15,34 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
 import UIButton, { Kind, Size } from "components/shared/Button"
-import { Button as ButtonProto } from "autogen/proto"
 import { WidgetStateManager } from "lib/WidgetStateManager"
+import React, { ReactElement } from "react"
+import { Button as ButtonProto } from "autogen/proto"
 
-export interface ButtonProps {
+export interface Props {
   disabled: boolean
   element: ButtonProto
+  hasPendingChanges: boolean
   widgetMgr: WidgetStateManager
   width: number
 }
 
-function Button(props: ButtonProps): ReactElement {
-  const { disabled, element, widgetMgr, width } = props
+function FormSubmitButton(props: Props): ReactElement {
+  const { element, hasPendingChanges, disabled, widgetMgr, width } = props
   const style = { width }
 
   return (
     <div className="row-widget stButton" style={style}>
       <UIButton
-        kind={Kind.PRIMARY}
+        kind={
+          hasPendingChanges
+            ? Kind.FORM_SUBMIT_HAS_PENDING_CHANGES
+            : Kind.FORM_SUBMIT_NO_PENDING_CHANGES
+        }
         size={Size.SMALL}
         disabled={disabled}
-        onClick={() => widgetMgr.setTriggerValue(element, { fromUi: true })}
+        onClick={() => widgetMgr.submitForm(element.formId)}
       >
         {element.label}
       </UIButton>
@@ -45,4 +50,4 @@ function Button(props: ButtonProps): ReactElement {
   )
 }
 
-export default Button
+export default FormSubmitButton

@@ -60,6 +60,8 @@ export interface ReportViewProps {
   widgetsDisabled: boolean
 
   componentRegistry: ComponentRegistry
+
+  pendingFormIds: Set<string>
 }
 
 /**
@@ -75,6 +77,7 @@ function ReportView(props: ReportViewProps): ReactElement {
     widgetsDisabled,
     uploadClient,
     componentRegistry,
+    pendingFormIds,
   } = props
 
   const { wideMode, initialSidebarState, embedded } = React.useContext(
@@ -94,6 +97,7 @@ function ReportView(props: ReportViewProps): ReactElement {
         widgetsDisabled={widgetsDisabled}
         uploadClient={uploadClient}
         componentRegistry={componentRegistry}
+        pendingFormIds={pendingFormIds}
       />
     </StyledReportViewBlockContainer>
   )

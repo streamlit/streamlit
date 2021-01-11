@@ -114,6 +114,7 @@ const Button = React.lazy(() => import("components/widgets/Button/"))
 const Checkbox = React.lazy(() => import("components/widgets/Checkbox/"))
 const ColorPicker = React.lazy(() => import("components/widgets/ColorPicker"))
 const DateInput = React.lazy(() => import("components/widgets/DateInput/"))
+const FormSubmitButton = React.lazy(() => import("components/widgets/Form"))
 const Multiselect = React.lazy(() => import("components/widgets/Multiselect/"))
 const Progress = React.lazy(() => import("components/elements/Progress/"))
 const Radio = React.lazy(() => import("components/widgets/Radio/"))
@@ -136,6 +137,7 @@ interface Props {
   uploadClient: FileUploadClient
   widgetsDisabled: boolean
   componentRegistry: ComponentRegistry
+  pendingFormIds: Set<string>
 }
 
 class Block extends PureComponent<Props> {
@@ -203,6 +205,7 @@ class Block extends PureComponent<Props> {
         uploadClient={this.props.uploadClient}
         widgetsDisabled={this.props.widgetsDisabled}
         componentRegistry={this.props.componentRegistry}
+        pendingFormIds={this.props.pendingFormIds}
         {...optionalProps}
       />
     )
@@ -444,14 +447,22 @@ class Block extends PureComponent<Props> {
 
       // Widgets
 
-      case "button":
-        return (
-          <Button
-            element={node.element.button as ButtonProto}
-            width={width}
-            {...widgetProps}
-          />
-        )
+      case "button": {
+        const buttonProto = node.element.button as ButtonProto
+        if (buttonProto.isFormSubmitter) {
+          return (
+            <FormSubmitButton
+              element={buttonProto}
+              width={width}
+              hasPendingChanges={this.props.pendingFormIds.has(
+                buttonProto.formId
+              )}
+              {...widgetProps}
+            />
+          )
+        }
+        return <Button element={buttonProto} width={width} {...widgetProps} />
+      }
 
       case "checkbox": {
         const checkboxProto = node.element.checkbox as CheckboxProto

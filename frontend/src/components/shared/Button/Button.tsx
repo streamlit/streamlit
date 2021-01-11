@@ -3,11 +3,13 @@ import {
   ButtonProps as ButtonPropsT,
   Kind,
   Size,
+  StyledIconButton,
+  StyledLinkButton,
+  StyledMinimalButton,
   StyledPrimaryButton,
   StyledSecondaryButton,
-  StyledMinimalButton,
-  StyledLinkButton,
-  StyledIconButton,
+  StyledFormSubmitHasPendingChangesButton,
+  StyledFormSubmitNoPendingChangesButton,
 } from "./styled-components"
 
 function Button({
@@ -28,6 +30,10 @@ function Button({
     ComponentType = StyledIconButton
   } else if (kind === Kind.MINIMAL) {
     ComponentType = StyledMinimalButton
+  } else if (kind === Kind.FORM_SUBMIT_HAS_PENDING_CHANGES) {
+    ComponentType = StyledFormSubmitHasPendingChangesButton
+  } else if (kind === Kind.FORM_SUBMIT_NO_PENDING_CHANGES) {
+    ComponentType = StyledFormSubmitNoPendingChangesButton
   }
 
   return (

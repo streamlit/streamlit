@@ -103,6 +103,7 @@ interface State {
   initialSidebarState: PageConfig.SidebarState
   allowRunOnSave: boolean
   gitInfo?: IGitInfo | null
+  pendingFormIds: Set<string>
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -160,22 +161,30 @@ export class App extends PureComponent<Props, State> {
       initialSidebarState: PageConfig.SidebarState.AUTO,
       allowRunOnSave: true,
       gitInfo: null,
+      pendingFormIds: new Set<string>(),
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
     this.statusWidgetRef = React.createRef<StatusWidget>()
     this.connectionManager = null
-    this.widgetMgr = new WidgetStateManager(this.sendRerunBackMsg)
+
+    this.widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg: this.sendRerunBackMsg,
+      pendingFormsChanged: pendingFormIds => this.setState({ pendingFormIds }),
+    })
+
     this.uploadClient = new FileUploadClient(() => {
       return this.connectionManager
         ? this.connectionManager.getBaseUriParts()
         : undefined
     }, true)
+
     this.componentRegistry = new ComponentRegistry(() => {
       return this.connectionManager
         ? this.connectionManager.getBaseUriParts()
         : undefined
     })
+
     this.pendingElementsTimerRunning = false
     this.pendingElementsBuffer = this.state.elements
 
@@ -938,6 +947,7 @@ export class App extends PureComponent<Props, State> {
       sharingEnabled,
       userSettings,
       gitInfo,
+      pendingFormIds,
     } = this.state
     const outerDivClass = classNames("stApp", {
       "streamlit-embedded": isEmbeddedInIFrame(),
@@ -1017,6 +1027,7 @@ export class App extends PureComponent<Props, State> {
               widgetsDisabled={connectionState !== ConnectionState.CONNECTED}
               uploadClient={this.uploadClient}
               componentRegistry={this.componentRegistry}
+              pendingFormIds={pendingFormIds}
             />
             {renderedDialog}
           </StyledApp>

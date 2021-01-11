@@ -126,12 +126,19 @@ class WidgetStateDict {
   }
 }
 
+interface Props {
+  /** Callback to delivers a message to the server */
+  sendRerunBackMsg: (widgetStates: WidgetStates) => void
+
+  /** Callback invoked when the set of "forms with pending changes" changes */
+  pendingFormsChanged: (pendingFormIds: Set<string>) => void
+}
+
 /**
  * Manages widget values, and sends widget update messages back to the server.
  */
 export class WidgetStateManager {
-  // Called to deliver a message to the server
-  private readonly sendRerunBackMsg: (widgetStates: WidgetStates) => void
+  private readonly props: Props
 
   // Top-level widget state dictionary.
   private readonly widgetStates = new WidgetStateDict()
@@ -140,8 +147,19 @@ export class WidgetStateManager {
   // we copy its WidgetStateDict into the main widgetStates object.
   private readonly pendingForms = new Map<string, WidgetStateDict>()
 
-  constructor(sendRerunBackMsg: (widgetStates: WidgetStates) => void) {
-    this.sendRerunBackMsg = sendRerunBackMsg
+  constructor(props: Props) {
+    this.props = props
+  }
+
+  /** Return the IDs of all forms that have pending changes. */
+  private getPendingFormIds(): Set<string> {
+    const ids = new Set<string>()
+    this.pendingForms.forEach((form, formId) => {
+      if (!form.isEmpty) {
+        ids.add(formId)
+      }
+    })
+    return ids
   }
 
   /**
@@ -165,6 +183,8 @@ export class WidgetStateManager {
     this.widgetStates.copyFrom(form)
     this.pendingForms.delete(formId)
     this.sendUpdateWidgetsMessage()
+
+    this.props.pendingFormsChanged(this.getPendingFormIds())
   }
 
   /**
@@ -172,8 +192,8 @@ export class WidgetStateManager {
    * to the server, and then immediately unsets the trigger value.
    */
   public setTriggerValue(widget: WidgetInfo, source: Source): void {
-    this.createWidgetState(widget).triggerValue = true
-    this.maybeSendUpdateWidgetsMessage(widget.formId, source)
+    this.createWidgetState(widget, source).triggerValue = true
+    this.onValueChanged(widget.formId, source)
     this.deleteWidgetState(widget.id)
   }
 
@@ -191,8 +211,8 @@ export class WidgetStateManager {
     value: boolean,
     source: Source
   ): void {
-    this.createWidgetState(widget).boolValue = value
-    this.maybeSendUpdateWidgetsMessage(widget.formId, source)
+    this.createWidgetState(widget, source).boolValue = value
+    this.onValueChanged(widget.formId, source)
   }
 
   public getIntValue(widget: WidgetInfo): number | undefined {
@@ -205,8 +225,8 @@ export class WidgetStateManager {
   }
 
   public setIntValue(widget: WidgetInfo, value: number, source: Source): void {
-    this.createWidgetState(widget).intValue = value
-    this.maybeSendUpdateWidgetsMessage(widget.formId, source)
+    this.createWidgetState(widget, source).intValue = value
+    this.onValueChanged(widget.formId, source)
   }
 
   public getDoubleValue(widget: WidgetInfo): number | undefined {
@@ -223,8 +243,8 @@ export class WidgetStateManager {
     value: number,
     source: Source
   ): void {
-    this.createWidgetState(widget).doubleValue = value
-    this.maybeSendUpdateWidgetsMessage(widget.formId, source)
+    this.createWidgetState(widget, source).doubleValue = value
+    this.onValueChanged(widget.formId, source)
   }
 
   public getStringValue(widget: WidgetInfo): string | undefined {
@@ -241,8 +261,8 @@ export class WidgetStateManager {
     value: string,
     source: Source
   ): void {
-    this.createWidgetState(widget).stringValue = value
-    this.maybeSendUpdateWidgetsMessage(widget.formId, source)
+    this.createWidgetState(widget, source).stringValue = value
+    this.onValueChanged(widget.formId, source)
   }
 
   public setStringArrayValue(
@@ -250,10 +270,10 @@ export class WidgetStateManager {
     value: string[],
     source: Source
   ): void {
-    this.createWidgetState(widget).stringArrayValue = new StringArray({
+    this.createWidgetState(widget, source).stringArrayValue = new StringArray({
       data: value,
     })
-    this.maybeSendUpdateWidgetsMessage(widget.formId, source)
+    this.onValueChanged(widget.formId, source)
   }
 
   public getStringArrayValue(widget: WidgetInfo): string[] | undefined {
@@ -289,10 +309,10 @@ export class WidgetStateManager {
     value: number[],
     source: Source
   ): void {
-    this.createWidgetState(widget).doubleArrayValue = new DoubleArray({
+    this.createWidgetState(widget, source).doubleArrayValue = new DoubleArray({
       data: value,
     })
-    this.maybeSendUpdateWidgetsMessage(widget.formId, source)
+    this.onValueChanged(widget.formId, source)
   }
 
   public getIntArrayValue(widget: WidgetInfo): number[] | undefined {
@@ -314,10 +334,10 @@ export class WidgetStateManager {
     value: number[],
     source: Source
   ): void {
-    this.createWidgetState(widget).intArrayValue = new SInt64Array({
+    this.createWidgetState(widget, source).intArrayValue = new SInt64Array({
       data: value,
     })
-    this.maybeSendUpdateWidgetsMessage(widget.formId, source)
+    this.onValueChanged(widget.formId, source)
   }
 
   public getJsonValue(widget: WidgetInfo): string | undefined {
@@ -330,8 +350,8 @@ export class WidgetStateManager {
   }
 
   public setJsonValue(widget: WidgetInfo, value: any, source: Source): void {
-    this.createWidgetState(widget).jsonValue = JSON.stringify(value)
-    this.maybeSendUpdateWidgetsMessage(widget.formId, source)
+    this.createWidgetState(widget, source).jsonValue = JSON.stringify(value)
+    this.onValueChanged(widget.formId, source)
   }
 
   public setArrowValue(
@@ -339,8 +359,8 @@ export class WidgetStateManager {
     value: IArrowTable,
     source: Source
   ): void {
-    this.createWidgetState(widget).arrowValue = value
-    this.maybeSendUpdateWidgetsMessage(widget.formId, source)
+    this.createWidgetState(widget, source).arrowValue = value
+    this.onValueChanged(widget.formId, source)
   }
 
   public getArrowValue(widget: WidgetInfo): IArrowTable | undefined {
@@ -361,8 +381,8 @@ export class WidgetStateManager {
     value: Uint8Array,
     source: Source
   ): void {
-    this.createWidgetState(widget).bytesValue = value
-    this.maybeSendUpdateWidgetsMessage(widget.formId, source)
+    this.createWidgetState(widget, source).bytesValue = value
+    this.onValueChanged(widget.formId, source)
   }
 
   public getBytesValue(widget: WidgetInfo): Uint8Array | undefined {
@@ -375,22 +395,24 @@ export class WidgetStateManager {
   }
 
   /**
-   * Send the updateWidgets message - but only if the widget does not belong to
-   * a form, and the value update came from a user action.
+   * Perform housekeeping every time a widget value changes.
+   * - If the widget does not belong to a form, and the value update came from
+   *   a user action, send the "updateWidgets" message
+   * - If the widget belong to a form, dispatch the "pendingFormsChanged"
+   *   callback if needed.
    *
    * Called by every "setValue" function.
    */
-  private maybeSendUpdateWidgetsMessage(
-    formId: string | undefined,
-    source: Source
-  ): void {
-    if (!isValidFormId(formId) && source.fromUi) {
+  private onValueChanged(formId: string | undefined, source: Source): void {
+    if (isValidFormId(formId)) {
+      this.props.pendingFormsChanged(this.getPendingFormIds())
+    } else if (source.fromUi) {
       this.sendUpdateWidgetsMessage()
     }
   }
 
   public sendUpdateWidgetsMessage(): void {
-    this.sendRerunBackMsg(this.widgetStates.createWidgetStatesMsg())
+    this.props.sendRerunBackMsg(this.widgetStates.createWidgetStatesMsg())
   }
 
   /**
@@ -406,8 +428,9 @@ export class WidgetStateManager {
    * overwriting any that currently exists. If the widget belongs to a form,
    * the WidgetState will be created inside the form's WidgetStateDict.
    */
-  private createWidgetState(widget: WidgetInfo): WidgetState {
-    const widgetStateDict = isValidFormId(widget.formId)
+  private createWidgetState(widget: WidgetInfo, source: Source): WidgetState {
+    const addToForm = isValidFormId(widget.formId) && source.fromUi
+    const widgetStateDict = addToForm
       ? this.getOrCreateForm(widget.formId)
       : this.widgetStates
 
