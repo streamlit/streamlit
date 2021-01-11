@@ -71,7 +71,7 @@ Below are some selected questions we've received about Streamlit Components. If 
    with st.sidebar:
        my_component(greeting="hello')
    ```
-   In fact, you can add your component to _any_ [layout container](./api#lay-out-your-app) (eg st.beta_column, st.beta_expander),  using the `with` syntax!
+   In fact, you can add your component to _any_ [layout container](./api.html#lay-out-your-app) (eg st.beta_column, st.beta_expander),  using the `with` syntax!
 
 4. **My Component seems to be blinking/stuttering...how do I fix that?**
 
