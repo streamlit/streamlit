@@ -24,11 +24,16 @@ import htmlParser from "react-markdown/plugins/html-parser"
 import { BlockMath, InlineMath } from "react-katex"
 // @ts-ignore
 import RemarkMathPlugin from "remark-math"
+import { Link as LinkIcon } from "react-feather"
 // @ts-ignore
 import RemarkEmoji from "remark-emoji"
 import PageLayoutContext from "components/core/PageLayoutContext"
 import CodeBlock from "components/elements/CodeBlock/"
-import { StyledStreamlitMarkdown } from "./styled-components"
+import {
+  StyledStreamlitMarkdown,
+  StyledLinkIconContainer,
+  StyledLinkIcon,
+} from "./styled-components"
 
 import "katex/dist/katex.min.css"
 
@@ -129,7 +134,18 @@ function HeadingWithAnchor({
     [propsAnchor]
   )
 
-  return React.createElement(tag, { ref, id: elementId }, children)
+  return React.createElement(
+    tag,
+    { ref, id: elementId },
+    <StyledLinkIconContainer>
+      {elementId && (
+        <StyledLinkIcon href={`#${elementId}`}>
+          <LinkIcon size="20" color="#ccc" />
+        </StyledLinkIcon>
+      )}
+      {children}
+    </StyledLinkIconContainer>
+  )
 }
 
 function CustomHeading({ level, children }: CustomHeadingProps): ReactElement {
