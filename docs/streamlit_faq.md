@@ -64,9 +64,14 @@ Below are some selected questions we've received about Streamlit Components. If 
    - **Can't modify CSS**: A Component can’t modify the CSS that the rest of the Streamlit app uses, so you can't create something like `dark_mode`
    - **Can't add/remove elements**: A Component can’t add or remove other elements of a Streamlit app, so you couldn't make something like `remove_streamlit_hamburger_menu`
 
-3. **How do I build a Component that can be displayed in the sidebar?**
+3. **How do I add a Component to the sidebar?**
 
-   Currently, it is not possible to create a component in the sidebar, but we’re hoping to release that functionality in a future release.
+   You can add a component to st.sidebar using the `with` syntax. For example:
+   ```
+   with st.sidebar:
+       my_component(greeting="hello')
+   ```
+   In fact, you can add your component to _any_ [layout container](./api#lay-out-your-app) (eg st.beta_column, st.beta_expander),  using the `with` syntax!
 
 4. **My Component seems to be blinking/stuttering...how do I fix that?**
 
