@@ -79,6 +79,9 @@ class AltairMixin:
         marshall(vega_lite_chart_proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
+        if help is not None:
+            vega_lite_chart_proto.help = help
+
         return self.dg._enqueue(
             "line_chart", vega_lite_chart_proto, last_index=last_index
         )

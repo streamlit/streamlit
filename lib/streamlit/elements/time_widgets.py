@@ -69,7 +69,8 @@ class TimeWidgetsMixin:
         time_input_proto = TimeInputProto()
         time_input_proto.label = label
         time_input_proto.default = time.strftime(value, "%H:%M")
-        time_input_proto.help = help
+        if help is not None:
+            time_input_proto.help = help
 
         ui_value = register_widget("time_input", time_input_proto, user_key=key)
         current_value = (
@@ -140,7 +141,8 @@ class TimeWidgetsMixin:
 
         date_input_proto = DateInputProto()
         date_input_proto.is_range = range_value
-        date_input_proto.help = help
+        if help is not None:
+            date_input_proto.help = help
 
         value = [v.date() if isinstance(v, datetime) else v for v in value]
 

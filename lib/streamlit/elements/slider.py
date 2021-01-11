@@ -375,7 +375,8 @@ class SliderMixin:
         slider_proto.step = step
         slider_proto.data_type = data_type
         slider_proto.options[:] = []
-        slider_proto.help = help
+        if help is not None:
+            slider_proto.help = help
 
         ui_value = register_widget("slider", slider_proto, user_key=key)
         if ui_value:

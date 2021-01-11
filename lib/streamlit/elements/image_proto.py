@@ -122,7 +122,8 @@ class ImageMixin:
             raise StreamlitAPIException("Image width must be positive.")
 
         image_list_proto = ImageListProto()
-        image_list_proto.help = help
+        if help is not None:
+            image_list_proto.help = help
         marshall_images(
             self.dg._get_delta_path_str(),
             image,

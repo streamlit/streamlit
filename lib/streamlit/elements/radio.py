@@ -78,9 +78,10 @@ class RadioMixin:
 
         radio_proto = RadioProto()
         radio_proto.label = label
-        radio_proto.help = help
         radio_proto.default = index
         radio_proto.options[:] = [str(format_func(option)) for option in options]
+        if help is not None:
+            radio_proto.help = help
 
         ui_value = register_widget("radio", radio_proto, user_key=key)
         current_value = ui_value if ui_value is not None else index

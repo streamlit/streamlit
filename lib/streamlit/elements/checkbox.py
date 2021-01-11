@@ -54,7 +54,8 @@ class CheckboxMixin:
         checkbox_proto = CheckboxProto()
         checkbox_proto.label = label
         checkbox_proto.default = bool(value)
-        checkbox_proto.help = help
+        if help is not None:
+            checkbox_proto.help = help
 
         ui_value = register_widget("checkbox", checkbox_proto, user_key=key)
         current_value = ui_value if ui_value is not None else value

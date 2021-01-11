@@ -120,6 +120,8 @@ class PlotlyMixin:
         marshall(
             plotly_chart_proto, figure_or_data, use_container_width, sharing, **kwargs
         )
+        if help is not None:
+            plotly_chart_proto.help = help
         return self.dg._enqueue("plotly_chart", plotly_chart_proto)
 
     @property

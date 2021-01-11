@@ -52,7 +52,8 @@ class ButtonMixin:
 
         button_proto.label = label
         button_proto.default = False
-        button_proto.help = help
+        if help is not None:
+            button_proto.help = help
 
         ui_value = register_widget("button", button_proto, user_key=key)
         current_value = ui_value if ui_value is not None else False

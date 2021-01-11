@@ -62,7 +62,8 @@ class TextWidgetsMixin:
         text_input_proto = TextInputProto()
         text_input_proto.label = label
         text_input_proto.default = str(value)
-        text_input_proto.help = help
+        if help is not None:
+            text_input_proto.help = help
 
         if max_chars is not None:
             text_input_proto.max_chars = max_chars

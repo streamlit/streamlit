@@ -198,7 +198,8 @@ class NumberInputMixin:
         )
         number_input_proto.label = label
         number_input_proto.default = value
-        number_input_proto.help = help
+        if help is not None:
+            number_input_proto.help = help
 
         if min_value is not None:
             number_input_proto.min = min_value

@@ -163,7 +163,8 @@ class MarkdownMixin:
             "body": body,
         }
         code_proto.body = clean_text(markdown)
-        code_proto.help = help
+        if help is not None:
+            code_proto.help = help
         return self.dg._enqueue("markdown", code_proto)
 
     def title(self, body, help=None):
@@ -191,7 +192,8 @@ class MarkdownMixin:
         """
         title_proto = MarkdownProto()
         title_proto.body = "# %s" % clean_text(body)
-        title_proto.help = help
+        if help is not None:
+            title_proto.help = help
         return self.dg._enqueue("markdown", title_proto)
 
     def latex(self, body, help=None):
@@ -231,7 +233,8 @@ class MarkdownMixin:
 
         latex_proto = MarkdownProto()
         latex_proto.body = "$$\n%s\n$$" % clean_text(body)
-        latex_proto.help = help
+        if help is not None:
+            latex_proto.help = help
         return self.dg._enqueue("markdown", latex_proto)
 
     @property
