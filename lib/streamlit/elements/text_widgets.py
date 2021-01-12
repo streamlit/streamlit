@@ -22,7 +22,9 @@ from .utils import register_widget
 
 
 class TextWidgetsMixin:
-    def text_input(self, label, value="", max_chars=None, key=None, type="default"):
+    def text_input(
+        self, label, value="", max_chars=None, key=None, type="default", help=None
+    ):
         """Display a single-line text input widget.
 
         Parameters
@@ -43,6 +45,8 @@ class TextWidgetsMixin:
             The type of the text input. This can be either "default" (for
             a regular text input), or "password" (for a text input that
             masks the user's typed value). Defaults to "default".
+        help : str
+            A tooltip that gets displayed next to the input.
 
         Returns
         -------
@@ -58,6 +62,8 @@ class TextWidgetsMixin:
         text_input_proto = TextInputProto()
         text_input_proto.label = label
         text_input_proto.default = str(value)
+        if help is not None:
+            text_input_proto.help = help
 
         if max_chars is not None:
             text_input_proto.max_chars = max_chars

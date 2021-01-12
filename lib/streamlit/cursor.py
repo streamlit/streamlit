@@ -138,7 +138,7 @@ class RunningCursor(Cursor):
             root_container=self._root_container,
             parent_path=self._parent_path,
             index=self._index,
-            **props
+            **props,
         )
 
         self._index += 1
@@ -152,7 +152,7 @@ class LockedCursor(Cursor):
         root_container: int,
         parent_path: Tuple[int, ...] = (),
         index: int = 0,
-        **props
+        **props,
     ):
         """A locked pointer to a location in the app.
 

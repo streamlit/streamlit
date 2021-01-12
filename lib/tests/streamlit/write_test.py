@@ -48,7 +48,9 @@ class StreamlitWriteTest(unittest.TestCase):
         with patch("streamlit.delta_generator.DeltaGenerator.markdown") as p:
             st.write("more", "strings", "to", "pass")
 
-            p.assert_called_once_with("more strings to pass", unsafe_allow_html=False)
+            p.assert_called_once_with(
+                "more strings to pass", unsafe_allow_html=False, help=None
+            )
 
     def test_dataframe(self):
         """Test st.write with dataframe."""
@@ -163,9 +165,9 @@ class StreamlitWriteTest(unittest.TestCase):
         st.write("here is a dict", {"a": 1, "b": 2}, " and that is all")
 
         expected_calls = [
-            call.markdown("here is a dict", unsafe_allow_html=False),
+            call.markdown("here is a dict", unsafe_allow_html=False, help=None),
             call.json({"a": 1, "b": 2}),
-            call.markdown(" and that is all", unsafe_allow_html=False),
+            call.markdown(" and that is all", unsafe_allow_html=False, help=None),
         ]
         self.assertEqual(manager.mock_calls, expected_calls)
 
@@ -180,7 +182,7 @@ class StreamlitWriteTest(unittest.TestCase):
             st.write(SomeObject())
 
             p.assert_called_once_with(
-                "`1 * 2 - 3 = 4 \\`ok\\` !`", unsafe_allow_html=False
+                "`1 * 2 - 3 = 4 \\`ok\\` !`", unsafe_allow_html=False, help=None
             )
 
     def test_exception(self):

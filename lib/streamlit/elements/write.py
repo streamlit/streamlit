@@ -69,6 +69,9 @@ class WriteMixin:
             - write(bokeh_fig)  : Displays a Bokeh figure.
             - write(sympy_expr) : Prints SymPy expression using LaTeX.
 
+        help : str
+            A tooltip that gets displayed next to whatever is written.
+
         unsafe_allow_html : bool
             This is a keyword-only argument that defaults to False.
 
@@ -148,6 +151,7 @@ class WriteMixin:
         """
         string_buffer = []  # type: List[str]
         unsafe_allow_html = kwargs.get("unsafe_allow_html", False)
+        help = kwargs.get("help", None)
 
         # This bans some valid cases like: e = st.empty(); e.write("a", "b").
         # BUT: 1) such cases are rare, 2) this rule is easy to understand,
@@ -165,6 +169,7 @@ class WriteMixin:
                 self.dg.markdown(
                     " ".join(string_buffer),
                     unsafe_allow_html=unsafe_allow_html,
+                    help=help,
                 )
                 string_buffer[:] = []
 

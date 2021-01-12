@@ -34,5 +34,6 @@ message ImageList {
   // -1 means use the image width
   // -2 means use the column width
   int32 width = 2;
+  string help = 3;
 }
 
