@@ -14,7 +14,10 @@
 
 import streamlit as st
 
-st.text_input("some input text", "default text", help="tooltip")
+st.text_input("some input text", "default text", help="this is a text input")
+st.number_input("number input", value=1, help="tooltip")
+st.checkbox("some checkbox", help="this is a checkbox")
+st.radio("best animal", ("tiger", "giraffe", "bear"), 0, help="select the best animal")
 
 
 def future_tests():
@@ -26,9 +29,6 @@ def future_tests():
     import pandas as pd
 
     st.button("some button", help="tooltip")
-    st.checkbox("some checkbox", help="tooltip")
-    st.number_input("number input", value=1, help="tooltip")
-    st.radio("some radio", ("a", "b", "c"), 0, help="tooltip")
 
     st.selectbox("selectbox", ("a", "b", "c"), 0, help="tooltip")
     st.time_input("time", datetime(2019, 7, 6, 21, 15), help="tooltip")

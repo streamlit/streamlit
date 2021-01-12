@@ -21,6 +21,7 @@ import { sprintf } from "sprintf-js"
 import { logWarning } from "lib/log"
 import { NumberInput as NumberInputProto } from "autogen/proto"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
+import TooltipIcon, { Placement } from "components/shared/TooltipIcon"
 
 import Icon from "components/shared/Icon"
 import { Input as UIInput } from "baseui/input"
@@ -248,7 +249,17 @@ class NumberInput extends React.PureComponent<Props, State> {
 
     return (
       <div className="stNumberInput" style={style}>
-        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
+        <StyledWidgetLabel>
+          {element.label}
+          {element.help && (
+            <div>
+              <TooltipIcon
+                content={element.help}
+                placement={Placement.TOP_RIGHT}
+              />
+            </div>
+          )}
+        </StyledWidgetLabel>
         <StyledInputContainer>
           <UIInput
             type="number"

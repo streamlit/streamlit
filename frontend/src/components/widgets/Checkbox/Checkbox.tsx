@@ -22,6 +22,8 @@ import { Checkbox as CheckboxProto } from "autogen/proto"
 import { transparentize } from "color2k"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { Theme } from "theme"
+import { StyledTooltipContainer } from "./styled-components"
+import TooltipIcon, { Placement } from "components/shared/TooltipIcon"
 
 export interface Props {
   disabled: boolean
@@ -67,7 +69,7 @@ class Checkbox extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const { theme, width } = this.props
+    const { theme, width, element, disabled } = this.props
     const { colors, fontSizes, radii } = theme
     const style = { width }
 
@@ -76,7 +78,7 @@ class Checkbox extends React.PureComponent<Props, State> {
       <div className="row-widget stCheckbox" style={style}>
         <UICheckbox
           checked={this.state.value}
-          disabled={this.props.disabled}
+          disabled={disabled}
           onChange={this.onChange}
           overrides={{
             Root: {
@@ -118,7 +120,15 @@ class Checkbox extends React.PureComponent<Props, State> {
             },
           }}
         >
-          {this.props.element.label}
+          {element.label}
+          {element.help && (
+            <StyledTooltipContainer>
+              <TooltipIcon
+                content={element.help}
+                placement={Placement.RIGHT}
+              />
+            </StyledTooltipContainer>
+          )}
         </UICheckbox>
       </div>
     )
