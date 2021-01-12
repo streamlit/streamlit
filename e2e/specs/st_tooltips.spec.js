@@ -21,7 +21,8 @@ describe("tooltips on widgets", () => {
   });
 
   it("displays tooltip on text_input", () => {
-    // TODO
+    cy.get(".stTextInput").should("have.length", 1);
+    cy.get(".stTextInput .stTooltipIcon").should("have.length", 1);
   });
 
   /*

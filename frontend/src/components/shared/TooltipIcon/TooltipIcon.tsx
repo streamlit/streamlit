@@ -15,12 +15,14 @@ function TooltipIcon({
   content,
 }: TooltipIconProps): ReactElement {
   return (
-    <Tooltip
-      content={<StreamlitMarkdown source={content} allowHTML />}
-      placement={placement}
-    >
-      <HelpCircleIcon size={iconSize} />
-    </Tooltip>
+    <div className="stTooltipIcon">
+      <Tooltip
+        content={<StreamlitMarkdown source={content} allowHTML />}
+        placement={placement}
+      >
+        <HelpCircleIcon size={iconSize} />
+      </Tooltip>
+    </div>
   )
 }
 
