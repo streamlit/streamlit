@@ -151,3 +151,8 @@ export function setCookie(
 export function getElementWidgetID(element: Element): string | undefined {
   return _.get(element as any, [requireNonNull(element.type), "id"])
 }
+
+/** True if the given form ID is non-null and non-empty. */
+export function isValidFormId(formId?: string): formId is string {
+  return formId != null && formId.length > 0
+}

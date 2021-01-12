@@ -25,6 +25,7 @@ import {
 } from "autogen/proto"
 import _ from "lodash"
 import { Long, util } from "protobufjs"
+import { isValidFormId } from "./utils"
 
 export interface Source {
   fromUi: boolean
@@ -61,11 +62,6 @@ function requireNumberInt(value: number | Long): number {
   throw new Error(
     `value ${value} cannot be converted to number without a loss of precision!`
   )
-}
-
-/** True if the given form ID is non-null and non-empty. */
-function isValidFormId(formId?: string): formId is string {
-  return formId != null && formId.length > 0
 }
 
 /**
