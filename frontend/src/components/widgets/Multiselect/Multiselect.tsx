@@ -160,6 +160,27 @@ class Multiselect extends React.PureComponent<Props, State> {
                 color: theme.colors.darkGray,
               },
             },
+            Tag: {
+              props: {
+                overrides: {
+                  Root: {
+                    style: {
+                      borderTopLeftRadius: theme.radii.md,
+                      borderTopRightRadius: theme.radii.md,
+                      borderBottomRightRadius: theme.radii.md,
+                      borderBottomLeftRadius: theme.radii.md,
+                      fontSize: theme.fontSizes.sm,
+                      paddingLeft: theme.spacing.md,
+                    },
+                  },
+                  Action: {
+                    style: {
+                      paddingLeft: theme.spacing.sm,
+                    },
+                  },
+                },
+              },
+            },
             MultiValue: {
               props: {
                 overrides: {
