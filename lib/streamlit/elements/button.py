@@ -20,7 +20,7 @@ from .utils import register_widget
 
 
 class ButtonMixin:
-    def button(self, label, help=None, key=None):
+    def button(self, label, key=None, help=None):
         """Display a button widget.
 
         Parameters
