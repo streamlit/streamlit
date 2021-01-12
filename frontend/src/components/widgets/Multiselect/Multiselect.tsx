@@ -137,10 +137,10 @@ class Multiselect extends React.PureComponent<Props, State> {
                 /*
                   This minHeight is needed to fix a bug from BaseWeb in which the
                   div that contains the options changes their height from 40px to 44px.
-          
+
                   You could check this behavior in their documentation as well:
                   https://v8-17-1.baseweb.design/components/select/#select-as-multi-pick-search
-          
+
                   Issue related: https://github.com/streamlit/streamlit/issues/590
                  */
                 minHeight: "44px",
@@ -154,6 +154,27 @@ class Multiselect extends React.PureComponent<Props, State> {
             SearchIcon: {
               style: {
                 color: theme.colors.darkGray,
+              },
+            },
+            Tag: {
+              props: {
+                overrides: {
+                  Root: {
+                    style: {
+                      borderTopLeftRadius: theme.radii.md,
+                      borderTopRightRadius: theme.radii.md,
+                      borderBottomRightRadius: theme.radii.md,
+                      borderBottomLeftRadius: theme.radii.md,
+                      fontSize: theme.fontSizes.sm,
+                      paddingLeft: theme.spacing.md,
+                    },
+                  },
+                  Action: {
+                    style: {
+                      paddingLeft: theme.spacing.sm,
+                    },
+                  },
+                },
               },
             },
             MultiValue: {
