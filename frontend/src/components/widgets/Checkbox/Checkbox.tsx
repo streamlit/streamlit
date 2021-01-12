@@ -22,8 +22,8 @@ import { Checkbox as CheckboxProto } from "autogen/proto"
 import { transparentize } from "color2k"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { Theme } from "theme"
-import { StyledTooltipContainer } from "./styled-components"
 import TooltipIcon, { Placement } from "components/shared/TooltipIcon"
+import { StyledTooltipContainer } from "./styled-components"
 
 export interface Props {
   disabled: boolean
