@@ -42,7 +42,7 @@ function ButtonTooltip(props: ButtonTooltipProps): ReactElement {
   return (
     <div className="stTooltipIcon">
       <Tooltip
-        // style={{ display: "inline-block" }}
+        inline
         content={<StreamlitMarkdown source={help} allowHTML />}
         placement={Placement.RIGHT}
       >
