@@ -116,7 +116,7 @@ class TextInput extends React.PureComponent<Props, State> {
             <div>
               <TooltipIcon
                 content={element.help}
-                placement={Placement.TOP_RIGHT}
+                placement={Placement.BOTTOM_RIGHT}
               />
             </div>
           )}

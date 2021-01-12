@@ -42,6 +42,7 @@ function Button({
     </ComponentType>
   )
 }
+
 export type ButtonProps = ButtonPropsT
 export { Kind, Size }
 export default Button

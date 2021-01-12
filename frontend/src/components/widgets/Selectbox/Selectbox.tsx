@@ -22,6 +22,7 @@ import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { logWarning } from "lib/log"
 import VirtualDropdown from "components/shared/VirtualDropdown"
 import { StyledWidgetLabel } from "components/widgets/BaseWidget"
+import TooltipIcon, { Placement } from "components/shared/TooltipIcon"
 
 export interface Props {
   disabled: boolean
@@ -93,9 +94,9 @@ class Selectbox extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const style = { width: this.props.width }
-    let { options } = this.props.element
     let { disabled } = this.props
+    const { width, element } = this.props
+    let { options } = element
 
     const value = [
       {
@@ -121,8 +122,18 @@ class Selectbox extends React.PureComponent<Props, State> {
     )
 
     return (
-      <div className="row-widget stSelectbox" style={style}>
-        <StyledWidgetLabel>{this.props.element.label}</StyledWidgetLabel>
+      <div className="row-widget stSelectbox" style={{ width }}>
+        <StyledWidgetLabel>
+          {element.label}
+          {element.help && (
+            <div>
+              <TooltipIcon
+                content={element.help}
+                placement={Placement.BOTTOM_RIGHT}
+              />
+            </div>
+          )}
+        </StyledWidgetLabel>
         <UISelect
           clearable={false}
           disabled={disabled}
