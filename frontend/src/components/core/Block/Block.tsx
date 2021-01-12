@@ -53,7 +53,7 @@ import { AutoSizer } from "react-virtualized"
 import debounceRender from "react-debounce-render"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import { getElementWidgetID } from "lib/utils"
+import { getElementWidgetID, isValidFormId } from "lib/utils"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { BlockNode, ReportNode, ElementNode } from "lib/ReportNode"
 
@@ -80,6 +80,7 @@ import {
   StyledColumn,
   StyledElementContainer,
   StyledHorizontalBlock,
+  StyledForm,
 } from "./styled-components"
 
 // Lazy-load elements.
@@ -209,6 +210,14 @@ class Block extends PureComponent<Props> {
         {...optionalProps}
       />
     )
+
+    if (isValidFormId(node.deltaBlock.formId)) {
+      return (
+        <StyledForm key={index} data-testid="stForm" width={width}>
+          {child}
+        </StyledForm>
+      )
+    }
 
     if (node.deltaBlock.column && node.deltaBlock.column.weight) {
       return (

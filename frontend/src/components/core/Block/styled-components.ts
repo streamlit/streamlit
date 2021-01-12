@@ -66,3 +66,13 @@ export const StyledColumn = styled.div<StyledColumnProps>(
     }
   }
 )
+
+export interface StyledFormProps {
+  width: number
+}
+
+export const StyledForm = styled.div<StyledFormProps>(({ width }) => ({
+  outline: "1px solid",
+  padding: "1em",
+  width,
+}))

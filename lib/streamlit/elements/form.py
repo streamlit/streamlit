@@ -32,6 +32,27 @@ def current_form_id(dg: "streamlit.delta_generator.DeltaGenerator") -> str:
     return form_data.form_id
 
 
+def _create_form_id(submit_label: str, key: Optional[str]) -> str:
+    """Create an ID for a form.
+
+    A form's ID is equal to its Submit button's widget ID. To make it,
+    we fake up our Submit button - which need not have been created yet.
+    We know that this ID will be unique across all forms, because widget IDs
+    are unique across widgets, and this widget ID will be registered when the
+    form's Submit button is created.
+    """
+    # To generate an ID for the form, we fake up our Submit button -
+    # which is not yet created - and use its ID. (We know that this ID
+    # will be unique among all forms, because widget IDs are among all
+    # widgets, and this widget ID will be registered when the form's
+    # Submit button is created.)
+    button_proto = Button_pb2.Button()
+    button_proto.label = submit_label
+    button_proto.default = False
+    button_proto.is_form_submitter = True
+    return _get_widget_id("button", button_proto, user_key=key)
+
+
 class FormData(NamedTuple):
     """Form data stored on a DeltaGenerator."""
 
@@ -56,19 +77,12 @@ class FormMixin:
         -------
 
         """
-        block_proto = Block_pb2.Block()
-        block_dg = self.dg._block(block_proto)
 
-        # To generate an ID for the form, we fake up our Submit button -
-        # which is not yet created - and use its ID. (We know that this ID
-        # will be unique among all forms, because widget IDs are among all
-        # widgets, and this widget ID will be registered when the form's
-        # Submit button is created.)
-        button_proto = Button_pb2.Button()
-        button_proto.label = submit_label
-        button_proto.default = False
-        button_proto.is_form_submitter = True
-        form_id = _get_widget_id("button", button_proto, user_key=key)
+        form_id = _create_form_id(submit_label, key)
+
+        block_proto = Block_pb2.Block()
+        block_proto.form_id = form_id
+        block_dg = self.dg._block(block_proto)
 
         # Attach the form's button info to the newly-created block's
         # DeltaGenerator. The block will create its submit button when it
