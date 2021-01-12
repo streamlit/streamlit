@@ -23,6 +23,7 @@ import {
   WidgetState,
   WidgetStates,
 } from "autogen/proto"
+import _ from "lodash"
 import { Long, util } from "protobufjs"
 
 export interface Source {
@@ -147,19 +148,13 @@ export class WidgetStateManager {
   // we copy its WidgetStateDict into the main widgetStates object.
   private readonly pendingForms = new Map<string, WidgetStateDict>()
 
+  // The last set of pendingFormIds we delivered to the
+  // pendingFormsChanged function. We track this so that we can avoid
+  // calling the `pendingFormsChanged` callback superfluously.
+  private lastPendingFormIds = new Set<string>()
+
   constructor(props: Props) {
     this.props = props
-  }
-
-  /** Return the IDs of all forms that have pending changes. */
-  private getPendingFormIds(): Set<string> {
-    const ids = new Set<string>()
-    this.pendingForms.forEach((form, formId) => {
-      if (!form.isEmpty) {
-        ids.add(formId)
-      }
-    })
-    return ids
   }
 
   /**
@@ -183,8 +178,7 @@ export class WidgetStateManager {
     this.widgetStates.copyFrom(form)
     this.pendingForms.delete(formId)
     this.sendUpdateWidgetsMessage()
-
-    this.props.pendingFormsChanged(this.getPendingFormIds())
+    this.maybeCallPendingFormsChanged()
   }
 
   /**
@@ -405,10 +399,35 @@ export class WidgetStateManager {
    */
   private onValueChanged(formId: string | undefined, source: Source): void {
     if (isValidFormId(formId)) {
-      this.props.pendingFormsChanged(this.getPendingFormIds())
+      this.maybeCallPendingFormsChanged()
     } else if (source.fromUi) {
       this.sendUpdateWidgetsMessage()
     }
+  }
+
+  /**
+   * Call the `pendingFormsChanged` callback if our pendingFormIds has changed
+   * since it was last called.
+   */
+  private maybeCallPendingFormsChanged(): void {
+    const pendingFormIds = this.getPendingFormIds()
+    if (_.isEqual(pendingFormIds, this.lastPendingFormIds)) {
+      return
+    }
+
+    this.lastPendingFormIds = pendingFormIds
+    this.props.pendingFormsChanged(new Set<string>(pendingFormIds))
+  }
+
+  /** Return the IDs of all forms that have pending changes. */
+  private getPendingFormIds(): Set<string> {
+    const ids = new Set<string>()
+    this.pendingForms.forEach((form, formId) => {
+      if (!form.isEmpty) {
+        ids.add(formId)
+      }
+    })
+    return ids
   }
 
   public sendUpdateWidgetsMessage(): void {
