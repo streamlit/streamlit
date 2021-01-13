@@ -25,6 +25,7 @@ from streamlit.report_thread import ReportContext
 from streamlit.report_thread import add_report_ctx
 from streamlit.report_thread import get_report_ctx
 from streamlit.script_runner import ScriptRunner
+from streamlit.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
@@ -135,6 +136,21 @@ class ReportSessionTest(unittest.TestCase):
         rs1 = ReportSession(None, "", "", file_mgr)
         rs2 = ReportSession(None, "", "", file_mgr)
         self.assertNotEqual(rs1.id, rs2.id)
+
+    @patch("streamlit.report_session.LocalSourcesWatcher")
+    def test_init_session_state(self, _1):
+        """Each ReportSession should have a unique session state"""
+        rs = ReportSession(None, "", "", UploadedFileManager())
+        state = SessionState(foo=5)
+
+        self.assertEqual(rs.get_session_state(), None)
+
+        rs.initialize_session_state(state)
+        self.assertEqual(rs.get_session_state(), state)
+
+        with pytest.raises(RuntimeError) as e:
+            rs.initialize_session_state(state)
+            self.assertEqual(str(e.value), "Session State has already been initialized")
 
 
 def _create_mock_websocket():

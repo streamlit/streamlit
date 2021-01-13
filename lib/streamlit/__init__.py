@@ -163,6 +163,11 @@ color_picker = _main.color_picker  # noqa: E221
 get_option = _config.get_option
 from streamlit.commands.page_config import set_page_config
 
+# Session State
+from streamlit.session_state import get_session_state
+
+session_state = get_session_state
+
 
 def _beta_warning(func, date):
     """Wrapper for functions that are no longer in beta.
