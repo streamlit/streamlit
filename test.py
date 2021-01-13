@@ -1,4 +1,5 @@
 import streamlit as st
+from webcam import webcam
 
 st.title("st.form")
 
@@ -36,7 +37,17 @@ with st.beta_form(key="columns-in-forms"):
         slider_val1 = st.slider("slider", key="slider.column-in-form1")
     with col2:
         slider_val2 = st.slider("slider", key="slider.column-in-form2")
-    st.write("sliders:", slider_val1, slider_val2)
+st.write("sliders:", slider_val1, slider_val2)
+
+"---"
+"## Custom Component"
+with st.beta_form(key="custom_component"):
+    captured_image = webcam()
+if captured_image is None:
+    st.write("Waiting for capture...")
+else:
+    st.image(captured_image)
+
 
 
 # st.markdown("---")
