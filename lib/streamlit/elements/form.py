@@ -17,19 +17,42 @@ from typing import cast, Optional, NamedTuple
 import streamlit
 from streamlit.elements.utils import _get_widget_id
 from streamlit.proto import Block_pb2, Button_pb2
+from streamlit.report_thread import get_report_ctx
 
 
-def current_form_id(dg: "streamlit.delta_generator.DeltaGenerator") -> str:
-    """Return the form_id for the current form, or the empty string if  we're
-    not inside an `st.form` block.
+class FormData(NamedTuple):
+    """Form data stored on a DeltaGenerator."""
 
-    (We return the empty string, instead of None, because this value is
-    assigned to protobuf message fields, and None is not valid.)
+    # The form's unique ID.
+    form_id: str
+    # The label for the submit button that's automatically created for a form.
+    submit_button_label: str
+    # The optional key for the submit button.
+    submit_button_key: Optional[str]
+
+
+def _current_form(this_dg: "streamlit.delta_generator.DeltaGenerator") -> FormData:
+    """Find the FormData for the given DeltaGenerator.
+
+    Forms are blocks, and can have other blocks nested inside them.
+    To find the current form, we walk up the dg_stack until we find
+    a DeltaGenerator that has FormData.
     """
-    form_data = dg._active_dg._form_data
-    if form_data is None:
-        return ""
-    return form_data.form_id
+    if this_dg != this_dg._main_dg:
+        # We're being invoked via an `st.sidebar.foo` pattern - ignore the
+        # current `with` dg.
+        return this_dg._form_data
+
+    ctx = get_report_ctx()
+    if ctx is None or len(ctx.dg_stack) == 0:
+        return this_dg._form_data
+
+    # We're being invoked via an `st.foo` pattern
+    for dg in reversed(ctx.dg_stack):
+        if dg._form_data is not None:
+            return dg._form_data
+
+    return this_dg._form_data
 
 
 def _create_form_id(submit_label: str, key: Optional[str]) -> str:
@@ -53,15 +76,17 @@ def _create_form_id(submit_label: str, key: Optional[str]) -> str:
     return _get_widget_id("button", button_proto, user_key=key)
 
 
-class FormData(NamedTuple):
-    """Form data stored on a DeltaGenerator."""
+def current_form_id(dg: "streamlit.delta_generator.DeltaGenerator") -> str:
+    """Return the form_id for the current form, or the empty string if  we're
+    not inside an `st.form` block.
 
-    # The form's unique ID.
-    form_id: str
-    # The label for the submit button that's automatically created for a form.
-    submit_button_label: str
-    # The optional key for the submit button.
-    submit_button_key: Optional[str]
+    (We return the empty string, instead of None, because this value is
+    assigned to protobuf message fields, and None is not valid.)
+    """
+    form_data = _current_form(dg)
+    if form_data is None:
+        return ""
+    return form_data.form_id
 
 
 class FormMixin:

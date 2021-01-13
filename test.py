@@ -17,7 +17,6 @@ with st.beta_form():
 st.write("slider:", slider_val)
 
 "---"
-
 "## Forms-in-columns"
 col1, col2 = st.beta_columns(2)
 with col1:
@@ -30,7 +29,6 @@ with col2:
     st.write("slider:", slider_val)
 
 "---"
-
 "## Columns-in-forms"
 with st.beta_form(key="columns-in-forms"):
     col1, col2 = st.beta_columns(2)
