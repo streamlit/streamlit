@@ -16,6 +16,9 @@ import io
 import threading
 from typing import Dict, NamedTuple, Optional, List, Tuple
 from blinker import Signal
+from streamlit.logger import get_logger
+
+LOGGER = get_logger(__name__)
 
 
 class UploadedFileRec(NamedTuple):
@@ -79,7 +82,11 @@ class UploadedFileManager(object):
             )
             if expected_file_count == actual_file_count:
                 self.on_files_updated.send(session_id)
+                LOGGER.debug(
+                    f"Files for {files_by_widget} updated and ready to be rerun."
+                )
         else:
+            LOGGER.debug(f"Files updated, {files_by_widget} not in list. Cleaning up")
             self.on_files_updated.send(session_id)
 
     def _add_files(
@@ -160,7 +167,6 @@ class UploadedFileManager(object):
         Does not emit any signals.
         """
         files_by_widget = session_id, widget_id
-        self.update_file_count(session_id, widget_id, 0)
         with self._files_lock:
             self._files_by_id.pop(files_by_widget, None)
 
@@ -175,6 +181,7 @@ class UploadedFileManager(object):
         widget_id : str
             The widget ID of the FileUploader that created the file.
         """
+        self.update_file_count(session_id, widget_id, 0)
         self._remove_files(session_id, widget_id)
         self._on_files_updated(session_id, widget_id)
 
@@ -226,4 +233,3 @@ class UploadedFileManager(object):
     ) -> None:
         files_by_widget = session_id, widget_id
         self._file_counts_by_id[files_by_widget] = file_count
-        self._on_files_updated(session_id, widget_id)

@@ -160,11 +160,11 @@ class FileUploader extends React.PureComponent<Props, State> {
     this.props.uploadClient
       .uploadFiles(
         this.props.element.id,
-        [file],
+        [updatedFile],
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         e => this.onUploadProgress(e, updatedFile.id!),
-        file.cancelToken
-          ? file.cancelToken.token
+        updatedFile.cancelToken
+          ? updatedFile.cancelToken.token
           : axios.CancelToken.source().token,
         !this.props.element.multipleFiles
       )
@@ -264,23 +264,18 @@ class FileUploader extends React.PureComponent<Props, State> {
   }
 
   private removeFile = (fileId: string): void => {
-    this.setState(
-      state => {
-        const filteredFiles = state.files.filter(file => file.id !== fileId)
-        return {
-          status: filteredFiles.length
-            ? FileStatus.UPLOADED
-            : FileStatus.READY,
-          errorMessage: undefined,
-          files: filteredFiles,
-        }
-      },
-      () =>
-        this.props.uploadClient.updateFileCount(
-          this.props.element.id,
-          this.state.files.length
-        )
-    )
+    this.setState(state => {
+      const filteredFiles = state.files.filter(file => file.id !== fileId)
+      this.props.uploadClient.updateFileCount(
+        this.props.element.id,
+        filteredFiles.length
+      )
+      return {
+        status: filteredFiles.length ? FileStatus.UPLOADED : FileStatus.READY,
+        errorMessage: undefined,
+        files: filteredFiles,
+      }
+    })
   }
 
   private onUploadProgress = (
