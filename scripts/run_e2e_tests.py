@@ -16,7 +16,7 @@
 
 import time
 import os
-import pathlib
+from pathlib import Path
 import shutil
 import signal
 import subprocess
@@ -28,9 +28,6 @@ from typing import List
 import requests
 
 import click
-
-# cd to wherever this script is, up one level
-os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 ROOT_DIR = dirname(dirname(abspath(__file__)))  # streamlit root directory
 FRONTEND_DIR = join(ROOT_DIR, "frontend")
@@ -447,13 +444,9 @@ def run_e2e_tests(
         """
 
         # Test core streamlit elements
-        p = pathlib.Path(join(ROOT_DIR, ctx.tests_dir_name, "scripts")).resolve()
-        if tests:
-            tests = [pathlib.Path(t).resolve() for t in tests]
-        else:
-            tests = sorted(p.glob("*.py"))
-
-        for test_path in tests:
+        p = Path(join(ROOT_DIR, ctx.tests_dir_name, "scripts")).resolve()
+        paths = [Path(t).resolve() for t in tests] if tests else sorted(p.glob("*.py"))
+        for test_path in paths:
             test_name, _ = splitext(basename(test_path.as_posix()))
             specpath = join(ctx.tests_dir, "specs", f"{test_name}.spec.js")
             run_test(ctx, specpath, ["streamlit", "run", test_path.as_posix()])
