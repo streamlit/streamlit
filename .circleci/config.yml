@@ -132,16 +132,6 @@ commands:
             echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
             echo 'source "$NVM_DIR/nvm.sh"' >> $BASH_ENV
 
-      - run:
-          name: Install pyodbc dependencies
-          command: |
-            ${SUDO} apt-get install -y unixodbc-dev
-
-      - run:
-          name: Install graphviz dependencies
-          command: |
-            ${SUDO} apt-get install -y libgvc6
-
       - run: &activate_virtualenv
           name: Create virtualenv
           command: |
@@ -152,7 +142,6 @@ commands:
               source venv/bin/activate
               pip install --upgrade pip
               make setup
-              make pipenv-install
               deactivate
             else
               # The virtualenv WAS restored from cache. Don't create a new one.
@@ -174,8 +163,17 @@ commands:
             ${SUDO} apt-get update -y
             ${SUDO} apt-get install -y protobuf-compiler
 
-            # Generate protobufs
-            make protobuf
+  make-test-init:
+    steps:
+      - run:
+          name: Install pyodbc dependencies
+          command: |
+            ${SUDO} apt-get install -y unixodbc-dev
+
+      - run:
+          name: Install graphviz dependencies
+          command: |
+            ${SUDO} apt-get install -y libgvc6
 
 workflows:
   circleci:
@@ -273,6 +271,7 @@ jobs:
       # Run 'make init'
       #################################################################
       - make-init
+      - make-test-init
 
       - run: &make_develop
           name: Run make develop
@@ -394,6 +393,7 @@ jobs:
       - restore-from-cache
       - pre-make
       - make-init
+      - make-test-init
 
       - run:
           <<: *make_develop
@@ -444,6 +444,7 @@ jobs:
       - restore-from-cache
       - pre-make
       - make-init
+      - make-test-init
 
       - run:
           name: verify git tag vs. version
@@ -499,6 +500,7 @@ jobs:
       - restore-from-cache
       - pre-make
       - make-init
+      - make-test-init
 
       - run:
           name: Create wheel file
@@ -584,16 +586,34 @@ jobs:
 
       - pre-cache
       - restore-from-cache
-      - pre-make
       - make-init
 
       - run:
-          <<: *make_develop
+          name: mini-install
+          command: |
+            make mini-init
 
       - run:
           name: Install Cypress dependencies
           command: |
             ${SUDO} apt-get install -y xvfb libgtk2.0-0 libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2 jq curl
+
+      - run:
+          name: Uninstall things added from strech vs slim images
+          command: |
+            packagesToRemove="ca-certificates netbase gnupg dirmngr git mercurial openssh-client
+            subversion procps autoconf automake bzip2 file g++imagemagick libcurl4-openssl-dev
+            libdb-dev libevent-dev libglib2.0-dev libgmp-dev libjpeg-dev libkrb5-dev
+            libmagickcore-dev libmagickwand-dev libmaxminddb-dev libncurses5-dev libpng-dev
+            libpq-dev libtool libwebp-dev libxml2-dev libxslt-dev libyaml-dev patch unzip"
+            pkgToRemoveList=""
+            for pkgToRemove in $(echo $packagesToRemove); do
+              $(dpkg --status $pkgToRemove &> /dev/null)
+              if [[ $? -eq 0 ]]; then
+                pkgToRemoveList="$pkgToRemoveList $pkgToRemove"
+              fi
+            done
+            apt-get --yes --purge remove $pkgToRemoveList
 
       - run:
           name: Init config
