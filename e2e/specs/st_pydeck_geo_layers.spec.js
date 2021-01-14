@@ -17,7 +17,7 @@
 
 describe("st.pydeck_chart geo layers", () => {
   before(() => {
-    cy.visit(`http://localhost:${Cypress.env("APP_PORT") || 3000}/`);
+    cy.visit("http://localhost:3000/");
   });
 
   it("displays H3 hexagon layer", () => {

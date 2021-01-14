@@ -17,7 +17,7 @@
 
 describe("st.table", () => {
   beforeEach(() => {
-    cy.visit(`http://localhost:${Cypress.env("APP_PORT") || 3000}/`);
+    cy.visit("http://localhost:3000/");
 
     cy.get(".element-container [data-testid='stTable'] tbody tr").as("rows");
     cy.get(".element-container [data-testid='stTable'] tbody td").as("cells");

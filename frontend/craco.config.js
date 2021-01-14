@@ -21,7 +21,7 @@ module.exports = {
     configure: webpackConfig => {
       webpackConfig.resolve.mainFields = ["main", "module"]
 
-      if (!process.env.CIRCLECI) {
+      if (!process.env.DISABLE_HARDSOURCE_CACHING) {
         // HardSourceWebpackPlugin adds aggressive build caching
         // to speed up our slow builds.
         // https://github.com/mzgoddard/hard-source-webpack-plugin
@@ -37,7 +37,7 @@ module.exports = {
       // explicitly number of CPUs to avoid Error: Call retries were exceeded
       // Ran into issues setting number of CPUs so disabling parallel in the
       // meantime. Issue #1720 created to optimize this.
-      const runParallel = process.env.CIRCLECI ? 7 : true
+      const runParallel = process.env.CIRCLECI ? false : true
       webpackConfig.optimization.minimizer[
         minimizerIndex
       ].options.parallel = runParallel

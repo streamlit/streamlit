@@ -565,6 +565,7 @@ jobs:
   cypress:
     docker:
       - image: circleci/python:3.7.4-stretch
+    parallelism: 4
 
     resource_class: xlarge
 
@@ -616,7 +617,7 @@ jobs:
                 name: Cypress
                 command: |
                   cd frontend
-                  yarn run cy:serve-and-run-all-flaky
+                  yarn run cy:run-all-flaky
 
       - unless:
           condition: << parameters.flaky >>
@@ -624,8 +625,9 @@ jobs:
             - run:
                 name: Cypress
                 command: |
+                  TEST=$(circleci tests glob e2e/scripts/*.py | circleci tests split)
                   cd frontend
-                  yarn run cy:serve-and-run-all
+                  yarn run cy:run-all $TEST
 
       - store_test_results: &store_results
           path: frontend/test-reports

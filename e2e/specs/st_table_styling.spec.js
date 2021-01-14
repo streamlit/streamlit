@@ -17,7 +17,7 @@
 
 describe("st.table styling", () => {
   before(() => {
-    cy.visit(`http://localhost:${Cypress.env("APP_PORT") || 3000}/`);
+    cy.visit("http://localhost:3000/");
 
     cy.get("[data-testid='stTable']").should("have.length", 4);
 

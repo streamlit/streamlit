@@ -17,7 +17,7 @@
 
 describe("st.pyplot with kwargs", () => {
   before(() => {
-    cy.visit(`http://localhost:${Cypress.env("APP_PORT") || 3000}/`);
+    cy.visit("http://localhost:3000/");
 
     // Wait for the site to be fully loaded
     cy.contains("Done!", { timeout: 100000 }).should($els => {

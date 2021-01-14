@@ -14,9 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
 import time
-import functools
 import os
 import pathlib
 import shutil
@@ -73,10 +71,6 @@ class AsyncSubprocess:
 
         return stdout
 
-    def poll(self):
-        if self._proc is not None:
-            return self._proc.poll()
-
     def __enter__(self):
         self.start()
         return self
@@ -105,15 +99,6 @@ class AsyncSubprocess:
             self._stdout_file = None
 
 
-def generate_cypress_flags(ctx):
-    flags = ["--config", f"integrationFolder={ctx.tests_dir}/specs"]
-    if ctx.record_results:
-        flags.append("--record")
-    if ctx.update_snapshots:
-        flags.extend(["--env", "updateSnapshots=true"])
-    return flags
-
-
 class Context:
     def __init__(self):
         # Whether to prompt to continue on failure or run all
@@ -128,7 +113,6 @@ class Context:
         self.tests_dir_name = "e2e"
         # Set to True if any test fails.
         self.any_failed = False
-        self.parallel = False
 
     @property
     def tests_dir(self) -> str:
@@ -137,7 +121,12 @@ class Context:
     @property
     def cypress_flags(self) -> List[str]:
         """Flags to pass to Cypress"""
-        return generate_cypress_flags(self)
+        flags = ["--config", f"integrationFolder={self.tests_dir}/specs"]
+        if self.record_results:
+            flags.append("--record")
+        if self.update_snapshots:
+            flags.extend(["--env", "updateSnapshots=true"])
+        return flags
 
 
 def remove_if_exists(path):
@@ -148,28 +137,19 @@ def remove_if_exists(path):
         shutil.rmtree(path)
 
 
-class MoveAsideFile:
-    """Move a file aside if it exists; restore it on completion"""
-
-    def __init__(self, path):
-        self.path = path
-        self.moved = False
-        if os.path.exists(path):
-            os.rename(path, f"{path}.bak")
-            self.moved = True
-
-    def restore(self):
-        if self.moved:
-            os.rename(f"{self.path}.bak", self.path)
-
-
 @contextmanager
 def move_aside_file(path):
-    f = MoveAsideFile(path)
+    """Move a file aside if it exists; restore it on completion"""
+    moved = False
+    if os.path.exists(path):
+        os.rename(path, f"{path}.bak")
+        moved = True
+
     try:
         yield None
     finally:
-        f.restore()
+        if moved:
+            os.rename(f"{path}.bak", path)
 
 
 def create_credentials_toml(contents):
@@ -179,14 +159,14 @@ def create_credentials_toml(contents):
         f.write(contents)
 
 
-def kill_by_pgrep(search_string):
-    """Kill any active `streamlit run` processes"""
+def kill_with_pgrep(search_string):
     result = subprocess.run(
         f"pgrep -f '{search_string}'",
         shell=True,
         universal_newlines=True,
         capture_output=True,
     )
+
     if result.returncode == 0:
         for pid in result.stdout.split():
             try:
@@ -196,11 +176,13 @@ def kill_by_pgrep(search_string):
 
 
 def kill_streamlits():
-    kill_by_pgrep("streamlit run")
+    """Kill any active `streamlit run` processes"""
+    kill_with_pgrep("streamlit run")
 
 
-def kill_previous_app_servers():
-    kill_by_pgrep("running-streamlit-e2e-test")
+def kill_app_servers():
+    """Kill any active app servers spawned by this script."""
+    kill_with_pgrep("running-streamlit-e2e-test")
 
 
 def generate_mochawesome_report():
@@ -364,185 +346,33 @@ def run_component_template_e2e_test(ctx: Context, template_dir: str) -> bool:
     return success
 
 
-class TestResult(Enum):
-    SUCCESS = 0
-    FAILURE = 1
-    PENDING = 2
+def run_app_server():
+    print("Starting React app server...")
 
+    env = {
+        "BROWSER": "none",  # don't open up chrome, streamlit does this for us
+        "DISABLE_HARDSOURCE_CACHING": "true",
+        "GENERATE_SOURCEMAP": "false",
+        "INLINE_RUNTIME_CHUNK": "false",
+    }
+    proc = AsyncSubprocess(
+        ["yarn", "start", "--running-streamlit-e2e-test"], cwd=FRONTEND_DIR, env=env
+    )
+    proc.start()
 
-class TestRunner:
-    def __init__(self, app_port: int, streamlit_port: int):
-        """
-        Basically a non-blocking version of run_test.
+    print("Waiting for React app server to come online...")
 
-        Parameters
-        ----------
-        streamlit_port : str
-            Port to run Streamlit server on.
-        app_port : str
-            Port specifying React app server to point Cypress tests toward.
-        """
-
-        self.ready = True
-        self.streamlit_port = str(streamlit_port)
-        self.app_port = str(app_port)
-        self.maf = None
-
-        self.streamlit_proc = None
-        self.cypress_proc = None
-
-    def start(
-        self, specpath: str, streamlit_command: List[str], cypress_flags: List[str]
-    ):
-        """
-        Starts a test, leaves it running in the background, returns.
-
-        Parameters
-        ----------
-        specpath : str
-            The path of the Cypress spec file to run.
-        streamlit_command : list of str
-            The Streamlit command to run.
-        cypress_flags : list of str
-            A list of flags to pass to Cypress.
-        """
-
-        self.maf = MoveAsideFile(CREDENTIALS_FILE)
-        create_credentials_toml('[general]\nemail="test@streamlit.io"')
-
-        streamlit_command.extend(["--server.port", self.streamlit_port])
-        streamlit_command.extend(["--global.testMode", "true"])
-
-        cypress_command = ["yarn", "cy:run", "--spec", specpath]
-        cypress_command.extend(["--env", f"APP_PORT={self.app_port}"])
-        cypress_command.extend(cypress_flags)
-
-        click.echo(
-            f"{click.style('Running test:', fg='yellow', bold=True)}"
-            f"\n{click.style(' '.join(streamlit_command), fg='yellow')}"
-            f"\n{click.style(' '.join(cypress_command), fg='yellow')}"
-        )
-
-        self.streamlit_proc = AsyncSubprocess(streamlit_command, cwd=FRONTEND_DIR)
-        self.cypress_proc = AsyncSubprocess(cypress_command, cwd=FRONTEND_DIR)
-        self.streamlit_proc.start()
-        self.cypress_proc.start()
-        self.ready = False
-
-    def terminate(self):
-        if self.streamlit_proc:
-            self.streamlit_proc.terminate()
-        if self.cypress_proc:
-            self.cypress_proc.terminate()
-
-    def check_finished(self) -> TestResult:
-        returncode = self.cypress_proc.poll()
-        if returncode is None:
-            return TestResult.PENDING
-
-        streamlit_stdout = self.streamlit_proc.terminate()
-        cypress_stdout = self.cypress_proc.terminate()
-
-        self.streamlit_proc = None
-        self.cypress_proc = None
-
-        ret = TestResult.FAILURE
-        if returncode == 0:
-            ret = TestResult.SUCCESS
-            click.echo(click.style("Success!\n", fg="green", bold=True))
-        else:
-            click.echo(
-                f"{click.style('Failure!', fg='red', bold=True)}"
-                f"\n\n{click.style('Streamlit output:', fg='yellow', bold=True)}"
-                f"\n{streamlit_stdout}"
-                f"\n\n{click.style('Cypress output:', fg='yellow', bold=True)}"
-                f"\n{cypress_result.stdout}"
-                f"\n"
-            )
-
-        self.maf.restore()
-        self.ready = True
-        return ret
-
-
-def check_url_online(url):
-    try:
-        r = requests.get(url, timeout=5)
-        return r.status_code == 200
-    except:
-        pass
-
-
-class ParallelRunner:
-    def __init__(self):
-        self.node_servers = []
-        self.runners = []
-
-    def run(self, tests, count):
+    while True:
         try:
-            return self.actually_run(tests, count)
-        finally:
-            for proc in self.node_servers:
-                proc.terminate()
-            for runner in self.runners:
-                runner.terminate()
+            r = requests.get("http://localhost:3000/", timeout=5)
+            if r.status_code == 200:
+                break
+        except:
+            pass
+        time.sleep(5)
 
-    def actually_run(self, tests, count):
-        app_ports = range(3000, 3000 + count)
-        st_ports = range(8501, 8501 + count)
-
-        # spawn app servers
-        for app_port, streamlit_port in zip(app_ports, st_ports):
-            env = {
-                "PORT": str(app_port),
-                "REACT_APP_WEBSOCKET_PORT": str(streamlit_port),
-                "BROWSER": "none",  # don't open up chrome, streamlit does this for us
-            }
-            proc = AsyncSubprocess(
-                ["yarn", "start", "--running-streamlit-e2e-test"],
-                cwd=FRONTEND_DIR,
-                env=env,
-            )
-            proc.start()
-            self.node_servers.append(proc)
-
-        # wait for app servers to be running
-        print("Waiting for React app servers...")
-        ports_remaining = set(app_ports)
-        while ports_remaining:
-            try:
-                for port in list(ports_remaining):
-                    if check_url_online(f"http://localhost:{port}/"):
-                        print(f"Port {port} is alive!")
-                        ports_remaining.remove(port)
-                time.sleep(2)
-            except KeyboardInterrupt:
-                print("Ctrl-C pressed.")
-                return
-        print("React app servers all alive.")
-
-        # run our tests
-        self.runners = [TestRunner(n, st) for n, st in zip(app_ports, st_ports)]
-
-        def is_runner_ready(runner):
-            if runner.ready:
-                return True
-            if runner.check_finished() != TestResult.PENDING:
-                return True
-
-        def find_available_runner():
-            while True:
-                for runner in self.runners:
-                    if is_runner_ready(runner):
-                        return runner
-                time.sleep(5)
-
-        for args in tests:
-            find_available_runner().start(*args)
-
-        # wait for last round of runners to finish
-        while not all(is_runner_ready(it) for it in self.runners):
-            time.sleep(5)
+    print("React app server is alive!")
+    return proc
 
 
 @click.command()
@@ -568,30 +398,18 @@ class ParallelRunner:
     is_flag=True,
     help="Run tests in 'e2e_flaky' instead of 'e2e'.",
 )
-@click.option(
-    "-t",
-    "--test",
-    help="Run a specific test, e.g. '--test st_markdown'",
-    type=str,
-)
-@click.option(
-    "-p",
-    "--parallel",
-    help="Specifies a number of parallel test instances to run. "
-    "This flag also causes the test runner to spin up its own Node servers.",
-    type=int,
-    default=0,
-)
+@click.argument("tests", nargs=-1)
 def run_e2e_tests(
     always_continue: bool,
     record_results: bool,
     update_snapshots: bool,
     flaky_tests: bool,
-    test: str,
-    parallel: int,
+    tests: List[str],
 ):
     """Run e2e tests. If any fail, exit with non-zero status."""
     kill_streamlits()
+    kill_app_servers()
+    app_server = run_app_server()
 
     # Clear reports from previous runs
     remove_if_exists("frontend/cypress/mochawesome")
@@ -626,31 +444,21 @@ def run_e2e_tests(
         """
 
         # Test core streamlit elements
-
-        def generate_test_calls():
-            p = pathlib.Path(join(ROOT_DIR, ctx.tests_dir_name, "scripts")).resolve()
-            paths = [p / f"{test}.py"] if test else sorted(p.glob("*.py"))
-            for test_path in paths:
-                test_name, _ = splitext(basename(test_path.as_posix()))
-                specpath = join(ctx.tests_dir, "specs", f"{test_name}.spec.js")
-                yield ctx, specpath, ["streamlit", "run", test_path.as_posix()]
-
-        def generate_parallel_test_calls():
-            for ctx, specpath, streamlit_command in generate_test_calls():
-                cypress_flags = generate_cypress_flags(ctx)
-                yield specpath, streamlit_command, cypress_flags
-
-        if parallel > 0:
-            kill_previous_app_servers()
-            ParallelRunner().run(generate_parallel_test_calls(), parallel)
+        p = pathlib.Path(join(ROOT_DIR, ctx.tests_dir_name, "scripts")).resolve()
+        if tests:
+            tests = [pathlib.Path(t).resolve() for t in tests]
         else:
-            for args in generate_test_calls():
-                run_test(*args)
+            tests = sorted(p.glob("*.py"))
 
+        for test_path in tests:
+            test_name, _ = splitext(basename(test_path.as_posix()))
+            specpath = join(ctx.tests_dir, "specs", f"{test_name}.spec.js")
+            run_test(ctx, specpath, ["streamlit", "run", test_path.as_posix()])
     except QuitException:
         # Swallow the exception we raise if the user chooses to exit early.
         pass
     finally:
+        app_server.terminate()
         generate_mochawesome_report()
 
     if ctx.any_failed:

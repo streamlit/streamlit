@@ -17,7 +17,7 @@
 
 describe("st.column", () => {
   before(() => {
-    cy.visit(`http://localhost:${Cypress.env("APP_PORT") || 3000}/`);
+    cy.visit("http://localhost:3000/");
   });
 
   it("creates 3 equal-width columns", () => {

@@ -17,7 +17,7 @@
 
 describe("st.subheader", () => {
   before(() => {
-    cy.visit(`http://localhost:${Cypress.env("APP_PORT") || 3000}/`);
+    cy.visit("http://localhost:3000/");
   });
 
   it("displays correct number of elements", () => {
