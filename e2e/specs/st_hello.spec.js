@@ -19,7 +19,7 @@ describe("hello", () => {
   before(() => {
     // Increasing timeout since we're waiting for the animation and map to load.
     Cypress.config("defaultCommandTimeout", 30000);
-    cy.visit("http://localhost:3000/");
+    cy.visit(`http://localhost:${Cypress.env("APP_PORT") || 3000}/`);
   });
 
   it("displays the welcome message", () => {

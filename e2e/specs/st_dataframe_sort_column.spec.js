@@ -17,7 +17,7 @@
 
 describe("st.dataframe - sort by column", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.visit(`http://localhost:${Cypress.env("APP_PORT") || 3000}/`);
 
     cy.get(".element-container .stDataFrame")
       .find("[data-testid='StyledDataFrameRowHeaderCell']")

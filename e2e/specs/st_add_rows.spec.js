@@ -18,7 +18,7 @@
 describe("st.add_rows", () => {
   // Doesn't have to run before each, since these tests are stateless.
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.visit(`http://localhost:${Cypress.env("APP_PORT") || 3000}/`);
 
     // Rerun the script because we want to test that JS-side coalescing works.
     cy.get(".stApp [data-testid='stDecoration']").trigger("keypress", {

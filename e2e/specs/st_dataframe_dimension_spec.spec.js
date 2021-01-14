@@ -25,7 +25,7 @@ describe("Dataframes with different sizes", () => {
   ];
 
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.visit(`http://localhost:${Cypress.env("APP_PORT") || 3000}/`);
   });
 
   it("should show as expected", () => {

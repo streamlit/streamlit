@@ -17,7 +17,7 @@
 
 describe("handles empty charts", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.visit(`http://localhost:${Cypress.env("APP_PORT") || 3000}/`);
 
     // Wait for the site to be fully loaded
     cy.get(".element-container").should($els => {

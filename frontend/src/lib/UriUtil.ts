@@ -40,7 +40,9 @@ export function getWindowBaseUriParts(): BaseUriParts {
   const host = window.location.hostname
 
   let port
-  if (IS_DEV_ENV) {
+  if (process.env.REACT_APP_WEBSOCKET_PORT) {
+    port = Number(process.env.REACT_APP_WEBSOCKET_PORT)
+  } else if (IS_DEV_ENV) {
     port = WEBSOCKET_PORT_DEV
   } else if (window.location.port) {
     port = Number(window.location.port)

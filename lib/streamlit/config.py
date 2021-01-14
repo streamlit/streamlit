@@ -224,6 +224,16 @@ _create_option(
     type_=bool,
 )
 
+_create_option(
+    "global.testMode",
+    description="""
+        If True, will allow setting --server.port and --browser.serverPort
+        whiel global.developmentMode is set.
+        """,
+    default_val=False,
+    type_=bool,
+)
+
 
 @_create_option("global.developmentMode", visibility="hidden", type_=bool)
 def _global_development_mode():
@@ -1024,13 +1034,15 @@ def _check_conflicts():
     LOGGER = get_logger(__name__)
 
     if get_option("global.developmentMode"):
-        assert _is_unset(
-            "server.port"
-        ), "server.port does not work when global.developmentMode is true."
+        if not get_option("global.testMode"):
+            assert _is_unset(
+                "server.port"
+            ), "server.port does not work when global.developmentMode is true."
 
-        assert _is_unset("browser.serverPort"), (
-            "browser.serverPort does not work when global.developmentMode is " "true."
-        )
+            assert _is_unset("browser.serverPort"), (
+                "browser.serverPort does not work when global.developmentMode is "
+                "true."
+            )
 
     # Sharing-related conflicts
 
