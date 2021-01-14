@@ -50,14 +50,13 @@ import {
   ForwardMsgMetadata,
   Initialize,
   NewReport,
+  IDeployParams,
   PageConfig,
   PageInfo,
   SessionEvent,
   WidgetStates,
   SessionState,
   Config,
-  IGitInfo,
-  GitInfo,
 } from "autogen/proto"
 import { without, concat } from "lodash"
 
@@ -104,7 +103,7 @@ interface State {
   initialSidebarState: PageConfig.SidebarState
   allowRunOnSave: boolean
   reportFinishedHandlers: (() => void)[]
-  gitInfo?: IGitInfo | null
+  deployParams?: IDeployParams | null
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -162,7 +161,7 @@ export class App extends PureComponent<Props, State> {
       initialSidebarState: PageConfig.SidebarState.AUTO,
       allowRunOnSave: true,
       reportFinishedHandlers: [],
-      gitInfo: null,
+      deployParams: null,
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -239,21 +238,6 @@ export class App extends PureComponent<Props, State> {
     this.openDialog(newDialog)
   }
 
-  showDeployError = (
-    title: string,
-    errorNode: ReactNode,
-    onContinue?: () => void
-  ): void => {
-    this.openDialog({
-      type: DialogType.DEPLOY_ERROR,
-      title,
-      msg: errorNode,
-      onContinue,
-      onClose: () => {},
-      onTryAgain: this.sendLoadGitInfoBackMsg,
-    })
-  }
-
   /**
    * Checks if the code version from the backend is different than the frontend
    */
@@ -298,12 +282,6 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
-  handleGitInfoChanged = (gitInfo: IGitInfo): void => {
-    this.setState({
-      gitInfo,
-    })
-  }
-
   /**
    * Callback when we get a message from the server.
    */
@@ -335,8 +313,6 @@ export class App extends PureComponent<Props, State> {
           this.handlePageConfigChanged(pageConfig),
         pageInfoChanged: (pageInfo: PageInfo) =>
           this.handlePageInfoChanged(pageInfo),
-        gitInfoChanged: (gitInfo: GitInfo) =>
-          this.handleGitInfoChanged(gitInfo),
         reportFinished: (status: ForwardMsg.ReportFinishedStatus) =>
           this.handleReportFinished(status),
         uploadReportProgress: (progress: number) =>
@@ -521,7 +497,12 @@ export class App extends PureComponent<Props, State> {
     }
 
     const { reportHash } = this.state
-    const { reportId, name: reportName, scriptPath } = newReportProto
+    const {
+      reportId,
+      name: reportName,
+      scriptPath,
+      deployParams,
+    } = newReportProto
 
     const newReportHash = hashString(
       SessionInfo.current.installationId + scriptPath
@@ -539,9 +520,10 @@ export class App extends PureComponent<Props, State> {
     if (reportHash === newReportHash) {
       this.setState({
         reportId,
+        deployParams,
       })
     } else {
-      this.clearAppState(newReportHash, reportId, reportName)
+      this.clearAppState(newReportHash, reportId, reportName, deployParams)
     }
   }
 
@@ -621,13 +603,15 @@ export class App extends PureComponent<Props, State> {
   clearAppState(
     reportHash: string,
     reportId: string,
-    reportName: string
+    reportName: string,
+    deployParams?: IDeployParams | null
   ): void {
     this.setState(
       {
         reportId,
         reportName,
         reportHash,
+        deployParams,
         elements: ReportRoot.empty(),
       },
       () => {
@@ -787,19 +771,6 @@ export class App extends PureComponent<Props, State> {
     this.widgetMgr.sendUpdateWidgetsMessage()
   }
 
-  sendLoadGitInfoBackMsg = (): void => {
-    if (!this.isServerConnected()) {
-      logError("Cannot load git information when disconnected from server.")
-      return
-    }
-
-    this.sendBackMsg(
-      new BackMsg({
-        loadGitInfo: true,
-      })
-    )
-  }
-
   sendRerunBackMsg = (widgetStates?: WidgetStates | undefined): void => {
     const { queryParams } = this.props.s4aCommunication.currentState
 
@@ -949,6 +920,7 @@ export class App extends PureComponent<Props, State> {
     const {
       allowRunOnSave,
       connectionState,
+      deployParams,
       dialog,
       elements,
       initialSidebarState,
@@ -958,7 +930,6 @@ export class App extends PureComponent<Props, State> {
       reportRunState,
       sharingEnabled,
       userSettings,
-      gitInfo,
     } = this.state
     const outerDivClass = classNames("stApp", {
       "streamlit-embedded": isEmbeddedInIFrame(),
@@ -1019,13 +990,7 @@ export class App extends PureComponent<Props, State> {
                 screenCastState={this.props.screenCast.currentState}
                 s4aMenuItems={this.props.s4aCommunication.currentState.items}
                 sendS4AMessage={this.props.s4aCommunication.sendMessage}
-                gitInfo={gitInfo}
-                showDeployError={this.showDeployError}
-                closeDialog={this.closeDialog}
-                isDeployErrorModalOpen={
-                  this.state.dialog?.type === DialogType.DEPLOY_ERROR
-                }
-                loadGitInfo={this.sendLoadGitInfoBackMsg}
+                deployParams={deployParams}
               />
             </Header>
 
