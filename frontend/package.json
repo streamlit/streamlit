@@ -12,7 +12,7 @@
     "cy:open": "unset NODE_OPTIONS && cypress open --env devicePixelRatio=1",
     "cy:run": "unset NODE_OPTIONS && cypress run",
     "cy:run-flaky": "yarn cy:run --config integrationFolder=../e2e_flaky/specs",
-    "cy:run-all": "../scripts/run_e2e_tests.py -p 10",
+    "cy:run-all": "../scripts/run_e2e_tests.py -p 5",
     "cy:run-all-flaky": "yarn cy:run-all -f",
     "_cy:serve-and-run": "NODE_OPTIONS=--max_old_space_size=8192 start-server-and-test start http://localhost:3000",
     "cy:serve-and-run-all": "yarn cy:run-all",
