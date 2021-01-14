@@ -12,8 +12,6 @@
     "cy:open": "unset NODE_OPTIONS && cypress open --env devicePixelRatio=1",
     "cy:run": "unset NODE_OPTIONS && cypress run",
     "cy:run-flaky": "yarn cy:run --config integrationFolder=../e2e_flaky/specs",
-    "cy:run-all": "../scripts/run_e2e_tests.py -a",
-    "cy:run-all-flaky": "../scripts/run_e2e_tests.py -a -f",
     "typecheck": "tsc --noEmit"
   },
   "jest": {

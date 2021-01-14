@@ -29,6 +29,9 @@ import requests
 
 import click
 
+# cd to wherever this script is, up one level
+os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 ROOT_DIR = dirname(dirname(abspath(__file__)))  # streamlit root directory
 FRONTEND_DIR = join(ROOT_DIR, "frontend")
 COMPONENT_TEMPLATE_DIRS = [

@@ -616,8 +616,8 @@ jobs:
             - run:
                 name: Cypress
                 command: |
-                  cd frontend
-                  yarn run cy:run-all-flaky
+                  TEST=$(circleci tests glob e2e/scripts/*.py | circleci tests split)
+                  scripts/run_e2e_tests.py -a -f $TEST
 
       - unless:
           condition: << parameters.flaky >>
@@ -626,8 +626,7 @@ jobs:
                 name: Cypress
                 command: |
                   TEST=$(circleci tests glob e2e/scripts/*.py | circleci tests split)
-                  cd frontend
-                  yarn run cy:run-all $TEST
+                  scripts/run_e2e_tests.py -a $TEST
 
       - store_test_results: &store_results
           path: frontend/test-reports
