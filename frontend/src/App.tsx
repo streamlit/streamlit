@@ -102,6 +102,7 @@ interface State {
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
   allowRunOnSave: boolean
+  reportFinishedHandlers: (() => void)[]
   deployParams?: IDeployParams | null
 }
 
@@ -159,6 +160,7 @@ export class App extends PureComponent<Props, State> {
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
       allowRunOnSave: true,
+      reportFinishedHandlers: [],
       deployParams: null,
     }
 
