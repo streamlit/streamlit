@@ -20,8 +20,12 @@ import { Input as UIInput } from "baseui/input"
 import { TextInput as TextInputProto } from "autogen/proto"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import InputInstructions from "components/shared/InputInstructions/InputInstructions"
-import { StyledWidgetLabel } from "components/widgets/BaseWidget"
-import TooltipIcon, { Placement } from "components/shared/TooltipIcon"
+import {
+  StyledWidgetLabel,
+  StyledWidgetLabelHelp,
+} from "components/widgets/BaseWidget"
+import TooltipIcon from "components/shared/TooltipIcon"
+import { Placement } from "components/shared/Tooltip"
 
 export interface Props {
   disabled: boolean
@@ -110,17 +114,15 @@ class TextInput extends React.PureComponent<Props, State> {
           position: "relative",
         }}
       >
-        <StyledWidgetLabel>
-          {element.label}
-          {element.help && (
-            <div>
-              <TooltipIcon
-                content={element.help}
-                placement={Placement.TOP_RIGHT}
-              />
-            </div>
-          )}
-        </StyledWidgetLabel>
+        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
+        {element.help && (
+          <StyledWidgetLabelHelp>
+            <TooltipIcon
+              content={element.help}
+              placement={Placement.TOP_RIGHT}
+            />
+          </StyledWidgetLabelHelp>
+        )}
         <UIInput
           value={value}
           onBlur={this.onBlur}
