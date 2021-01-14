@@ -17,7 +17,7 @@
 
 import React from "react"
 import { FileError } from "react-dropzone"
-import { shallow } from "lib/test_util"
+import { mount, shallow } from "lib/test_util"
 
 import { ExtendedFile } from "lib/FileHelper"
 
@@ -60,6 +60,7 @@ const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
   uploadClient: {
     uploadFiles: jest.fn().mockResolvedValue(undefined),
     updateFileCount: jest.fn().mockResolvedValue(undefined),
+    delete: jest.fn().mockResolvedValue(undefined),
   },
 })
 
@@ -107,6 +108,25 @@ describe("FileUploader widget", () => {
       props.element.id,
       1
     )
+  })
+
+  it("should replace file on single file uploader", () => {
+    const props = getProps({ multipleFiles: false })
+    const wrapper = mount(<FileUploader {...props} />)
+    const internalFileUploader = wrapper.find(FileDropzone)
+
+    internalFileUploader.props().onDrop([blobFile], [])
+    const firstUploadedFiles: ExtendedFile[] = wrapper.state("files")
+    expect(props.uploadClient.uploadFiles).toBeCalledTimes(1)
+    expect(props.uploadClient.updateFileCount).toBeCalledTimes(1)
+    expect(firstUploadedFiles.length).toBe(1)
+
+    internalFileUploader.props().onDrop([blobFile], [])
+    expect(props.uploadClient.uploadFiles).toBeCalledTimes(2)
+    expect(props.uploadClient.uploadFiles.mock.calls[1][4]).toBe(true)
+    expect(props.uploadClient.updateFileCount).toBeCalledTimes(3)
+    const secondUploadedFiles: ExtendedFile[] = wrapper.state("files")
+    expect(secondUploadedFiles.length).toBe(1)
   })
 
   it("should upload multiple files", () => {
@@ -175,5 +195,25 @@ describe("FileUploader widget", () => {
     const resetSpy = jest.spyOn(wrapper.instance(), "reset")
     wrapper.setProps({ disabled: true })
     expect(resetSpy).toBeCalled()
+  })
+
+  it("should updateFileCount on removeFile", () => {
+    const props = getProps({ multipleFiles: false })
+    const wrapper = mount(<FileUploader {...props} />)
+    const internalFileUploader = wrapper.instance() as FileUploader
+
+    wrapper.setState({
+      files: [{ id: "12345" }],
+    })
+
+    internalFileUploader.removeFile("12345")
+
+    expect(props.uploadClient.updateFileCount).toBeCalled()
+    expect(props.uploadClient.updateFileCount).toBeCalledWith(
+      props.element.id,
+      0
+    )
+    const files: ExtendedFile[] = wrapper.state("files")
+    expect(files.length).toBe(0)
   })
 })

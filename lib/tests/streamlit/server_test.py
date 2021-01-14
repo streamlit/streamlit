@@ -390,6 +390,48 @@ class ServerTest(ServerTestCase):
             session_info2.session.request_rerun.assert_not_called()
 
     @tornado.testing.gen_test
+    def test_replace_uploaded_file_triggers_one_rerun(self):
+        """Uploading a file should trigger a re-run in the associated
+        ReportSession."""
+        with self._patch_report_session():
+            yield self.start_server_loop()
+
+            # Connect twice and get associated ReportSessions
+            yield self.ws_connect()
+            yield self.ws_connect()
+            session_info = list(self.server._session_info_by_id.values())[0]
+
+            file1 = UploadedFileRec("id1", "file1.txt", "type", b"123")
+            file2 = UploadedFileRec("id2", "file2.txt", "type", b"456")
+
+            self.server._uploaded_file_mgr.update_file_count(
+                session_id=session_info.session.id,
+                widget_id="widget_id",
+                file_count=1,
+            )
+            self.server._uploaded_file_mgr.add_files(
+                session_id=session_info.session.id,
+                widget_id="widget_id",
+                files=[file1],
+            )
+
+            session_info.session.request_rerun.assert_called_once()
+
+            self.server._uploaded_file_mgr.replace_files(
+                session_id=session_info.session.id,
+                widget_id="widget_id",
+                files=[file2],
+            )
+
+            self.assertEqual(
+                self.server._uploaded_file_mgr.get_files(
+                    session_info.session.id, "widget_id"
+                ),
+                [file2],
+            )
+            self.assertEqual(session_info.session.request_rerun.call_count, 2)
+
+    @tornado.testing.gen_test
     def test_orphaned_upload_file_deletion(self):
         """An uploaded file with no associated ReportSession should be
         deleted."""

@@ -87,3 +87,10 @@ class UploadedFileManagerTest(unittest.TestCase):
         self.assertIsNone(self.mgr.get_files("session1", "widget1"))
         self.assertIsNone(self.mgr.get_files("session1", "widget2"))
         self.assertEqual([file1], self.mgr.get_files("session2", "widget"))
+
+    def test_replace_widget_files(self):
+        self.mgr.add_files("session1", "widget", [file1])
+        self.mgr.replace_files("session1", "widget", [file2])
+
+        self.assertEqual(len(self.mgr.get_files("session1", "widget")), 1)
+        self.assertEqual([file2], self.mgr.get_files("session1", "widget"))

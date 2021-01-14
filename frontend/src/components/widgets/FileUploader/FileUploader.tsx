@@ -263,9 +263,10 @@ class FileUploader extends React.PureComponent<Props, State> {
     }
   }
 
-  private removeFile = (fileId: string): void => {
+  public removeFile = (fileId: string): void => {
     this.setState(state => {
       const filteredFiles = state.files.filter(file => file.id !== fileId)
+
       this.props.uploadClient.updateFileCount(
         this.props.element.id,
         filteredFiles.length
