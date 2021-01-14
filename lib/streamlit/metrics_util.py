@@ -41,6 +41,34 @@ def _get_machine_id():
 
     return machine_id
 
+def _get_machine_id_v3() -> str:
+    """Get the machine ID
+
+    This is a unique identifier for a user for tracking metrics in Segment,
+    that is broken in different ways in some Linux distros and Docker images.
+    - at times just a hash of '', which means many machines map to the same ID
+    - at times a hash of the same string, when running in a Docker container
+
+    This is a replacement for _get_machine_id() that doesn't try to use `sudo`
+    when there is no machine-id file, because it isn't available in all enviroments
+    and is a bad break in the user flow even when it is usable.
+
+    We'll track multiple IDs in Segment for a few months after which
+    we'll drop the others. The goal is to determine a ratio between them
+    that we can use to normalize our metrics.
+
+    """
+
+    machine_id = str(uuid.getnode())
+    if os.path.isfile("/etc/machine-id"):
+        with open("/etc/machine-id", "r") as f:
+            machine_id = f.read()
+
+    elif os.path.isfile("/var/lib/dbus/machine-id"):
+        with open("/var/lib/dbus/machine-id", "r") as f:
+            machine_id = f.read()
+
+    return machine_id
 
 def _get_stable_random_id():
     """Get a stable random ID
@@ -86,6 +114,7 @@ class Installation:
         self.installation_id_v2 = str(
             uuid.uuid5(uuid.NAMESPACE_DNS, _get_stable_random_id())
         )
+        self.installation_id_v3 = str(uuid.uuid5(uuid.NAMESPACE_DNS, _get_machine_id_v3()))
 
     @property
     def installation_id(self):

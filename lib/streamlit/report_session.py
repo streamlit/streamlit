@@ -401,6 +401,7 @@ class ReportSession(object):
         imsg.user_info.installation_id = Installation.instance().installation_id
         imsg.user_info.installation_id_v1 = Installation.instance().installation_id_v1
         imsg.user_info.installation_id_v2 = Installation.instance().installation_id_v2
+        imsg.user_info.installation_id_v3 = Installation.instance().installation_id_v3
         if Credentials.get_current().activation:
             imsg.user_info.email = Credentials.get_current().activation.email
         else:
