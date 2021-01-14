@@ -26,6 +26,7 @@ import {
 } from "components/widgets/BaseWidget"
 import TooltipIcon from "components/shared/TooltipIcon"
 import { Placement } from "components/shared/Tooltip"
+import { StyledTextInput } from "./styled-components"
 
 export interface Props {
   disabled: boolean
@@ -107,13 +108,7 @@ class TextInput extends React.PureComponent<Props, State> {
     const { element, width, disabled } = this.props
 
     return (
-      <div
-        className="row-widget stTextInput"
-        style={{
-          width,
-          position: "relative",
-        }}
-      >
+      <StyledTextInput className="row-widget stTextInput" width={width}>
         <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
         {element.help && (
           <StyledWidgetLabelHelp>
@@ -147,7 +142,7 @@ class TextInput extends React.PureComponent<Props, State> {
           value={value}
           maxLength={element.maxChars}
         />
-      </div>
+      </StyledTextInput>
     )
   }
 }
