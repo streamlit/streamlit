@@ -41,6 +41,7 @@ def _get_machine_id():
 
     return machine_id
 
+
 def _get_machine_id_v3() -> str:
     """Get the machine ID
 
@@ -69,6 +70,7 @@ def _get_machine_id_v3() -> str:
             machine_id = f.read()
 
     return machine_id
+
 
 def _get_stable_random_id():
     """Get a stable random ID
@@ -114,7 +116,9 @@ class Installation:
         self.installation_id_v2 = str(
             uuid.uuid5(uuid.NAMESPACE_DNS, _get_stable_random_id())
         )
-        self.installation_id_v3 = str(uuid.uuid5(uuid.NAMESPACE_DNS, _get_machine_id_v3()))
+        self.installation_id_v3 = str(
+            uuid.uuid5(uuid.NAMESPACE_DNS, _get_machine_id_v3())
+        )
 
     @property
     def installation_id(self):
