@@ -26,5 +26,4 @@ function TooltipIcon({
   )
 }
 
-export { Placement }
 export default TooltipIcon
