@@ -14,9 +14,11 @@
 
 import streamlit as st
 
-state = st.session_state(count=0)
+# st.session_state() can only run in streamlit
+if st._is_running_with_streamlit:
+    state = st.session_state(count=0)
 
-if st.button("increment"):
-    state.count += 1
+    if st.button("increment"):
+        state.count += 1
 
-st.write("Count: " + str(state.count))
+    st.write("Count: " + str(state.count))
