@@ -28,8 +28,5 @@ describe("st.plotly_chart", () => {
     cy.get(".element-container .stPlotlyChart")
       .find(".modebar-btn--logo")
       .should("have.attr", "data-title", "Produced with Plotly");
-
-    // intentionally fail test, see if screenshot gets generated
-    cy.get(".kldjasfhlkashas").should("have.length", 13098);
   });
 });
