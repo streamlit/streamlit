@@ -565,7 +565,7 @@ jobs:
   cypress:
     docker:
       - image: circleci/python:3.7.4-stretch
-    parallelism: 4
+    parallelism: 10
 
     resource_class: xlarge
 
