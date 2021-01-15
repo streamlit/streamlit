@@ -444,12 +444,10 @@ def run_e2e_tests(
         p = Path(join(ROOT_DIR, ctx.tests_dir_name, "specs")).resolve()
         paths = [Path(t).resolve() for t in tests] if tests else p.glob("*.spec.py")
         for spec_path in paths:
-            test_name, _ = splitext(basename(spec_path.as_posix()))
-            test_name, _ = splitext(test_name)
+            test_name = splitext(splitext(basename(spec_path))[0])[0]
             test_path = join(ctx.tests_dir, "scripts", f"{test_name}.py")
-            run_test(
-                ctx, str(spec_path), ["streamlit", "run", Path(test_path).as_posix()]
-            )
+            if os.path.exists(test_path):
+                run_test(ctx, str(spec_path), ["streamlit", "run", test_path])
 
     try:
         if should_run_pretests():
