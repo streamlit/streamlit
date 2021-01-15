@@ -14,7 +14,7 @@
 
 import streamlit as st
 
-st.text_input("some input text", "default text", help="this is a text input")
+st.text_input("some input text", "default text", help="tooltip")
 st.number_input("number input", value=1, help="tooltip")
 st.checkbox("some checkbox", help="this is a checkbox")
 st.radio("best animal", ("tiger", "giraffe", "bear"), 0, help="select the best animal")
