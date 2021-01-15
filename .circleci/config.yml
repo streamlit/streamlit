@@ -621,7 +621,7 @@ jobs:
                 command: |
                   cd frontend
                   TEST=$(circleci tests glob ../e2e/scripts/*.py | circleci tests split --split-by=timings)
-                  scripts/run_e2e_tests.py -a -f $TEST
+                  ../scripts/run_e2e_tests.py -a -f $TEST
 
       - unless:
           condition: << parameters.flaky >>
@@ -633,7 +633,7 @@ jobs:
                 command: |
                   cd frontend
                   TEST=$(circleci tests glob ../e2e/scripts/*.py | circleci tests split --total=9 --split-by=timings)
-                  scripts/run_e2e_tests.py -a $TEST
+                  ../scripts/run_e2e_tests.py -a $TEST
 
       - store_test_results: &store_results
           path: frontend/test_results/cypress
