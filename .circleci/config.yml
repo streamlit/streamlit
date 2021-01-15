@@ -127,8 +127,8 @@ commands:
             fi
             if [ ! -d frontend/node_modules ] ; then
               source "$HOME/.nvm/nvm.sh"
+              make react-init
             fi
-            make react-init
             echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
             echo 'source "$NVM_DIR/nvm.sh"' >> $BASH_ENV
 
@@ -363,6 +363,7 @@ jobs:
           paths:
             - ~/.nvm
             - ~/.cache
+            - frontend/node_modules
 
       - when:
           condition: <<pipeline.git.tag>>
@@ -646,6 +647,14 @@ jobs:
           key: v13-python-venv-{{ checksum "~/python_cache_key.md5" }}
           paths:
             - venv
+
+      - save_cache:
+          name: Save nvm and node_modules to cache
+          key: v13-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
+          paths:
+            - ~/.nvm
+            - ~/.cache
+            - frontend/node_modules
 
       - when:
           condition: <<pipeline.git.tag>>
