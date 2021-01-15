@@ -16,11 +16,11 @@
 
 import unittest
 
-from streamlit.uploaded_file_manager import UploadedFile
 from streamlit.uploaded_file_manager import UploadedFileManager
+from streamlit.uploaded_file_manager import UploadedFileRec
 
-file1 = UploadedFile(id="id1", name="file1", type="type", data=b"file1")
-file2 = UploadedFile(id="id2", name="file2", type="type", data=b"file2")
+file1 = UploadedFileRec(id="id1", name="file1", type="type", data=b"file1")
+file2 = UploadedFileRec(id="id2", name="file2", type="type", data=b"file2")
 
 
 class UploadedFileManagerTest(unittest.TestCase):
@@ -35,11 +35,13 @@ class UploadedFileManagerTest(unittest.TestCase):
     def test_add_file(self):
         self.assertIsNone(self.mgr.get_files("non-report", "non-widget"))
 
+        self.mgr.update_file_count("session", "widget", 1)
         self.mgr.add_files("session", "widget", [file1])
         self.assertEqual([file1], self.mgr.get_files("session", "widget"))
         self.assertEqual(len(self.filemgr_events), 1)
 
         # Add another file with the same ID
+        self.mgr.update_file_count("session", "widget", 2)
         self.mgr.add_files("session", "widget", [file2])
         self.assertEqual([file1, file2], self.mgr.get_files("session", "widget"))
         self.assertEqual(len(self.filemgr_events), 2)

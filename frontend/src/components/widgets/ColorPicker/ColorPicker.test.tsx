@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ColorPicker as ColorPickerProto } from "autogen/proto"
 import { WidgetStateManager } from "lib/WidgetStateManager"
@@ -50,8 +50,10 @@ describe("ColorPicker widget", () => {
   })
 
   it("should render a label in the title", () => {
-    const wrappedDiv = wrapper.find("div").first()
-    expect(wrappedDiv.find("label").text()).toBe(props.element.label)
+    const wrappedDiv = wrapper.find("StyledColorPicker")
+    expect(wrappedDiv.find("StyledWidgetLabel").text()).toBe(
+      props.element.label
+    )
   })
 
   it("should set widget value on did mount", () => {
@@ -62,14 +64,9 @@ describe("ColorPicker widget", () => {
     )
   })
 
-  it("should have correct className and style", () => {
-    const wrappedDiv = wrapper.find("div").first()
-    const { className, style } = wrappedDiv.props()
-    // @ts-ignore
-    const splittedClassName = className.split(" ")
-
-    expect(splittedClassName).toContain("Widget")
-    expect(splittedClassName).toContain("stColorPicker")
+  it("should have correct style", () => {
+    const wrappedDiv = wrapper.find("StyledColorPicker")
+    const { style } = wrappedDiv.props()
 
     // @ts-ignore
     expect(style.width).toBe(getProps().width)
@@ -79,7 +76,7 @@ describe("ColorPicker widget", () => {
     wrapper.find(UIPopover).simulate("click")
     const chromePickerWrapper = wrapper.find(UIPopover).renderProp("content")()
 
-    expect(wrapper.find(".color-preview").prop("style")).toEqual({
+    expect(wrapper.find("StyledColorPreview").prop("style")).toEqual({
       backgroundColor: "#000000",
       boxShadow: "#000000 0px 0px 4px",
     })

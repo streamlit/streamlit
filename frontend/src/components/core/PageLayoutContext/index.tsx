@@ -1,0 +1,13 @@
+import React from "react"
+import { PageConfig } from "autogen/proto"
+
+export default React.createContext({
+  wideMode: false,
+  layout: PageConfig.Layout.CENTERED,
+  initialSidebarState: PageConfig.SidebarState.AUTO,
+  embedded: false,
+  isFullScreen: false,
+  setFullScreen: (value: boolean) => {},
+  addReportFinishedHandler: (func: () => void) => {},
+  removeReportFinishedHandler: (func: () => void) => {},
+})

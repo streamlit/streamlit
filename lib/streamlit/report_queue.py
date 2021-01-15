@@ -72,13 +72,8 @@ class ReportQueue(object):
             if not msg.HasField("delta"):
                 self._queue.append(msg)
             else:
-                # Deltas are uniquely identified by the combination of their
-                # container and ID.
-                delta_path = (
-                    msg.metadata.parent_block.container,
-                    tuple(msg.metadata.parent_block.path),
-                )
-                delta_key = (delta_path, msg.metadata.delta_id)
+                # Deltas are uniquely identified by their delta_path.
+                delta_key = tuple(msg.metadata.delta_path)
 
                 if delta_key in self._delta_index_map:
                     # Combine the previous message into the new message.

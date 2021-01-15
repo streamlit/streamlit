@@ -5,6 +5,8 @@ export const fonts = {
 
 export const fontSizes = {
   twoXS: "0.375rem",
+  halfSmDefault: "0.4rem",
+  twoThirdSmDefault: "0.533333rem",
   xs: "0.5rem",
   sm: "0.75rem",
   smDefault: "0.8rem",
@@ -25,7 +27,9 @@ export const fontWeights = {
 export const lineHeights = {
   normal: "normal",
   none: "1",
+  dataframeCell: "0.75",
   tight: "1.25",
+  table: "1.3",
   base: "1.6",
 }
 

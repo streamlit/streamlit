@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import { Input as UIInput } from "baseui/input"
@@ -47,14 +47,14 @@ describe("TextInput widget", () => {
   })
 
   it("should show a label", () => {
-    expect(wrapper.find("label").text()).toBe(props.element.label)
+    expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
   })
 
   it("should handle TextInputProto.Type properly", () => {
     const defaultProps = getProps({ type: TextInputProto.Type.DEFAULT })
     let textInput = shallow(<TextInput {...defaultProps} />)
     let uiInput = textInput.find(UIInput)
-    expect(uiInput.props().type).toBeUndefined()
+    expect(uiInput.props().type).toBe("text")
 
     const passwordProps = getProps({ type: TextInputProto.Type.PASSWORD })
     textInput = shallow(<TextInput {...passwordProps} />)
@@ -77,7 +77,6 @@ describe("TextInput widget", () => {
     // @ts-ignore
     const splittedClassName = className.split(" ")
 
-    expect(splittedClassName).toContain("Widget")
     expect(splittedClassName).toContain("stTextInput")
 
     // @ts-ignore

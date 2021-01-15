@@ -20,6 +20,7 @@ import { Input as UIInput } from "baseui/input"
 import { TextInput as TextInputProto } from "autogen/proto"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import InputInstructions from "components/shared/InputInstructions/InputInstructions"
+import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 
 export interface Props {
   disabled: boolean
@@ -93,7 +94,7 @@ class TextInput extends React.PureComponent<Props, State> {
   private getTypeString(): string | undefined {
     return this.props.element.type === TextInputProto.Type.PASSWORD
       ? "password"
-      : undefined
+      : "text"
   }
 
   public render = (): React.ReactNode => {
@@ -102,8 +103,8 @@ class TextInput extends React.PureComponent<Props, State> {
     const style = { width }
 
     return (
-      <div className="Widget row-widget stTextInput" style={style}>
-        <label>{element.label}</label>
+      <div className="row-widget stTextInput" style={style}>
+        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
         <UIInput
           value={value}
           onBlur={this.onBlur}
@@ -111,6 +112,17 @@ class TextInput extends React.PureComponent<Props, State> {
           onKeyPress={this.onKeyPress}
           disabled={disabled}
           type={this.getTypeString()}
+          overrides={{
+            Input: {
+              style: {
+                // Issue: https://github.com/streamlit/streamlit/issues/2495
+                // The input won't shrink in Firefox,
+                // unless the line below is provided.
+                // See https://stackoverflow.com/a/33811151
+                minWidth: 0,
+              },
+            },
+          }}
         />
         <InputInstructions
           dirty={dirty}

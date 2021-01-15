@@ -14,18 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { Config, EnvironmentInfo, Initialize, UserInfo } from "autogen/proto"
 
 export interface Args {
   sessionId: string
-  streamlitVersion?: string | null
-  pythonVersion?: string | null
-  installationId?: string | null
-  installationIdV1?: string | null
-  installationIdV2?: string | null
-  authorEmail?: string | null
-  maxCachedMessageAge?: number | null
-  commandLine?: string | null
-  userMapboxToken?: string | null
+  streamlitVersion: string
+  pythonVersion: string
+  installationId: string
+  installationIdV1: string
+  installationIdV2: string
+  authorEmail: string
+  maxCachedMessageAge: number
+  commandLine: string
+  userMapboxToken: string
 }
 
 export class SessionInfo {
@@ -84,7 +85,31 @@ export class SessionInfo {
     return this.current.commandLine === "streamlit hello"
   }
 
-  constructor({
+  public static clearSession(): void {
+    SessionInfo.singleton = undefined
+  }
+
+  /** Create a SessionInfo from the relevant bits of an initialize message. */
+  public static fromInitializeMessage(initialize: Initialize): SessionInfo {
+    const environmentInfo = initialize.environmentInfo as EnvironmentInfo
+    const userInfo = initialize.userInfo as UserInfo
+    const config = initialize.config as Config
+
+    return new SessionInfo({
+      sessionId: initialize.sessionId,
+      streamlitVersion: environmentInfo.streamlitVersion,
+      pythonVersion: environmentInfo.pythonVersion,
+      installationId: userInfo.installationId,
+      installationIdV1: userInfo.installationIdV1,
+      installationIdV2: userInfo.installationIdV2,
+      authorEmail: userInfo.email,
+      maxCachedMessageAge: config.maxCachedMessageAge,
+      commandLine: initialize.commandLine,
+      userMapboxToken: config.mapboxToken,
+    })
+  }
+
+  public constructor({
     sessionId,
     streamlitVersion,
     pythonVersion,

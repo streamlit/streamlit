@@ -21,15 +21,19 @@ import {
   ISpecialArg,
   SpecialArg as SpecialArgProto,
 } from "autogen/proto"
+import Alert from "components/elements/Alert"
+import { Kind } from "components/shared/AlertContainer"
 import ErrorElement from "components/shared/ErrorElement"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
 } from "lib/IFrameUtil"
 import { logError, logWarning } from "lib/log"
+import { Timer } from "lib/Timer"
 import { Source, WidgetStateManager } from "lib/WidgetStateManager"
 import queryString from "query-string"
 import React, { createRef, ReactNode } from "react"
+import { COMMUNITY_URL, COMPONENT_DEVELOPER_URL } from "urls"
 import { ComponentRegistry } from "./ComponentRegistry"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
 
@@ -39,6 +43,13 @@ import { ComponentMessageType, StreamlitMessageType } from "./enums"
  * version in the COMPONENT_READY call.
  */
 export const CUSTOM_COMPONENT_API_VERSION = 1
+
+/**
+ * If we haven't received a COMPONENT_READY message this many seconds
+ * after the component has been created, explain to the user that there
+ * may be a problem with their component, and offer troubleshooting advice.
+ */
+export const COMPONENT_READY_WARNING_TIME_MS = 3000
 
 export interface Props {
   registry: ComponentRegistry
@@ -51,6 +62,10 @@ export interface Props {
 
 export interface State {
   componentError?: Error
+
+  // True if the component hasn't sent the READY message, and
+  // `COMPONENT_READY_WARNING_TIME_MS` has elapsed.
+  readyTimeout: boolean
 }
 
 interface DataframeArg {
@@ -73,9 +88,11 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
   // The most recent frame height we've received from the frontend.
   private frameHeight = 0
 
+  private readonly componentReadyWarningTimer: Timer = new Timer()
+
   public constructor(props: Props) {
     super(props)
-    this.state = {}
+    this.state = { componentError: undefined, readyTimeout: false }
   }
 
   public componentDidMount = (): void => {
@@ -98,6 +115,13 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     this.props.registry.registerListener(
       this.iframeRef.current.contentWindow,
       this.onBackMsg
+    )
+
+    // Start a timer. If we haven't gotten the COMPONENT_READY message
+    // after a short time, we'll display a warning to the user.
+    this.componentReadyWarningTimer.setTimeout(
+      () => this.setState({ readyTimeout: true }),
+      COMPONENT_READY_WARNING_TIME_MS
     )
   }
 
@@ -139,6 +163,11 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
           this.componentReady = true
           this.sendRenderMessage()
         }
+
+        // If our warning timer was running, cancel it. If we were showing
+        // the componentReadyTimeout warning, stop showing it.
+        this.componentReadyWarningTimer.cancel()
+        this.setState({ readyTimeout: false })
         break
       }
 
@@ -255,10 +284,31 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     return <ErrorElement name={error.name} message={error.message} />
   }
 
+  private renderComponentReadyTimeoutWarning = (): ReactNode => {
+    const message =
+      `Your app is having trouble loading the **${this.props.element.componentName}** component. ` +
+      `\n\n(The app is attempting to load the component from **${this.props.element.url}**, and hasn't ` +
+      `received its **"${ComponentMessageType.COMPONENT_READY}"** message.)` +
+      "\n- If this is a development build, have you started the dev server?" +
+      "\n- If this is a release build, have you compiled the frontend?" +
+      `\n\nFor more troubleshooting help, please see the [Streamlit Component docs](${COMPONENT_DEVELOPER_URL}) ` +
+      `or visit our [forums](${COMMUNITY_URL}).`
+
+    return (
+      <Alert width={this.props.width} body={message} kind={Kind.WARNING} />
+    )
+  }
+
   public render = (): ReactNode => {
+    // If we have an error, display it and bail.
     if (this.state.componentError != null) {
-      // If we have an error, display it and bail.
       return this.renderError(this.state.componentError)
+    }
+
+    // If we've timed out waiting for the READY message from the component,
+    // display a warning.
+    if (this.state.readyTimeout) {
+      return this.renderComponentReadyTimeoutWarning()
     }
 
     // Parse the component's arguments and src URL.

@@ -21,6 +21,7 @@ import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 
 import { Textarea as UITextArea } from "baseui/textarea"
 import InputInstructions from "components/shared/InputInstructions/InputInstructions"
+import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 
 export interface Props {
   disabled: boolean
@@ -114,8 +115,8 @@ class TextArea extends React.PureComponent<Props, State> {
     const { height } = element
 
     return (
-      <div className="Widget stTextArea" style={style}>
-        <label>{element.label}</label>
+      <div className="stTextArea" style={style}>
+        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
         <UITextArea
           value={value}
           onBlur={this.onBlur}

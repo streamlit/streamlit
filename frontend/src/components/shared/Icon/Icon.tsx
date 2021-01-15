@@ -16,20 +16,33 @@
  */
 
 import React, { ReactElement } from "react"
-import classNames from "classnames"
-import "./Icon.scss"
+import { EmotionIcon } from "@emotion-icons/emotion-icon"
+import { IconSize, ThemeColor } from "theme"
+import { StyledIcon } from "./styled-components"
 
-interface Props {
-  type: string
-  className?: string
+interface IconProps {
+  content: EmotionIcon
+  size?: IconSize
+  color?: ThemeColor
+  margin?: string
+  padding?: string
 }
-const Icon = ({ type, className }: Props): ReactElement => (
-  <span
-    className={classNames("open-iconic", className)}
-    data-glyph={type}
-    title={type}
+
+const Icon = ({
+  content,
+  color,
+  size,
+  margin,
+  padding,
+}: IconProps): ReactElement => (
+  <StyledIcon
+    as={content}
+    size={size || "md"}
+    color={color || "inherit"}
+    margin={margin || ""}
+    padding={padding || ""}
     aria-hidden="true"
-  ></span>
+  />
 )
 
 export default Icon

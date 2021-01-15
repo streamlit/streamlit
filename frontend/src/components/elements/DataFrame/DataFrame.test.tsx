@@ -18,7 +18,6 @@
 import React from "react"
 import { shallow } from "enzyme"
 import { fromJS } from "immutable"
-import { MultiGrid } from "react-virtualized"
 
 import mockDataFrame from "./mock"
 import { DataFrame, DataFrameProps } from "./DataFrame"
@@ -40,20 +39,17 @@ describe("DataFrame Element", () => {
   const wrapper = shallow(<DataFrame {...props} />)
 
   it("renders without crashing", () => {
-    expect(wrapper.find(MultiGrid).length).toBe(1)
+    expect(wrapper.find("MultiGrid").length).toBe(1)
   })
 
   it("should have correct className", () => {
     expect(
-      wrapper
-        .find("div")
-        .first()
-        .prop("className")
+      wrapper.find("StyledDataFrameContainer").prop("className")
     ).toContain("stDataFrame")
   })
 
   it("multigrid should be rendered correctly", () => {
-    const multiGridProps = wrapper.find(MultiGrid).props()
+    const multiGridProps = wrapper.find("MultiGrid").props()
 
     expect(multiGridProps.fixedColumnCount).toBe(1)
     expect(multiGridProps.fixedRowCount).toBe(1)
@@ -71,7 +67,7 @@ describe("DataFrame Element", () => {
       data: {},
     })
     const wrapper = shallow(<DataFrame {...props} />)
-    const multiGridProps = wrapper.find(MultiGrid).props()
+    const multiGridProps = wrapper.find("MultiGrid").props()
 
     expect(wrapper.text()).toBe("<MultiGrid />empty")
 

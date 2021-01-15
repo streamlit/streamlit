@@ -37,7 +37,7 @@ function Button(props: ButtonProps): ReactElement {
   }
 
   return (
-    <div className="Widget row-widget stButton" style={style}>
+    <div className="row-widget stButton" style={style}>
       <UIButton
         kind={Kind.PRIMARY}
         size={Size.SMALL}

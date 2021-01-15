@@ -16,47 +16,75 @@
  */
 
 import React, { PureComponent, ReactElement } from "react"
-import classNames from "classnames"
+import { ChevronRight, X } from "@emotion-icons/open-iconic"
 import Icon from "components/shared/Icon"
 import Button, { Kind } from "components/shared/Button"
 import { PageConfig } from "autogen/proto"
+import { withTheme } from "emotion-theming"
+import { Theme } from "theme"
+import {
+  StyledSidebar,
+  StyledSidebarCloseButton,
+  StyledSidebarCollapsedControl,
+  StyledSidebarContent,
+} from "./styled-components"
 
-import "./Sidebar.scss"
-
-interface Props {
+export interface SidebarProps {
   children?: ReactElement
   initialSidebarState?: PageConfig.SidebarState
   onChange: (collapsedSidebar: boolean) => void
+  theme: Theme
 }
 
 interface State {
   collapsedSidebar: boolean
+  lastInnerWidth: number
 }
 
-// This variable originated from Bootstrap medium breakpoint.
-// See https://getbootstrap.com/docs/4.3/layout/overview/.
-const MEDIUM_BREAKPOINT_PX = 991.98
+class Sidebar extends PureComponent<SidebarProps, State> {
+  private mediumBreakpointPx: number
 
-class Sidebar extends PureComponent<Props, State> {
-  public static defaultProps: Partial<Props> = {
+  public static calculateMaxBreakpoint(value: string): number {
+    // We subtract a margin of 0.02 to use as a max-width
+    return parseInt(value, 10) - 0.02
+  }
+
+  public static defaultProps: Partial<SidebarProps> = {
     onChange: () => {},
   }
 
   private sidebarRef = React.createRef<HTMLDivElement>()
 
-  constructor(props: Props) {
+  constructor(props: SidebarProps) {
     super(props)
-    this.state = { collapsedSidebar: Sidebar.shouldCollapse(props) }
-  }
-
-  componentDidUpdate(prevProps: any): void {
-    // Immediately expand/collapse sidebar when initialSidebarState changes.
-    if (this.props.initialSidebarState !== prevProps.initialSidebarState) {
-      this.setState({ collapsedSidebar: Sidebar.shouldCollapse(this.props) })
+    this.mediumBreakpointPx = Sidebar.calculateMaxBreakpoint(
+      props.theme.breakpoints.md
+    )
+    this.state = {
+      collapsedSidebar: Sidebar.shouldCollapse(props, this.mediumBreakpointPx),
+      lastInnerWidth: window ? window.innerWidth : Infinity,
     }
   }
 
-  static shouldCollapse(props: Props): boolean {
+  componentDidUpdate(prevProps: any): void {
+    this.mediumBreakpointPx = Sidebar.calculateMaxBreakpoint(
+      this.props.theme.breakpoints.md
+    )
+    // Immediately expand/collapse sidebar when initialSidebarState changes.
+    if (this.props.initialSidebarState !== prevProps.initialSidebarState) {
+      this.setState({
+        collapsedSidebar: Sidebar.shouldCollapse(
+          this.props,
+          this.mediumBreakpointPx
+        ),
+      })
+    }
+  }
+
+  static shouldCollapse(
+    props: SidebarProps,
+    mediumBreakpointPx: number
+  ): boolean {
     switch (props.initialSidebarState) {
       case PageConfig.SidebarState.EXPANDED:
         return false
@@ -66,7 +94,7 @@ class Sidebar extends PureComponent<Props, State> {
       default: {
         // Expand sidebar only if browser width > MEDIUM_BREAKPOINT_PX
         const { innerWidth } = window || {}
-        return innerWidth ? innerWidth <= MEDIUM_BREAKPOINT_PX : false
+        return innerWidth ? innerWidth <= mediumBreakpointPx : false
       }
     }
   }
@@ -89,7 +117,7 @@ class Sidebar extends PureComponent<Props, State> {
       if (
         current &&
         !current.contains(event.target) &&
-        innerWidth <= MEDIUM_BREAKPOINT_PX
+        innerWidth <= this.mediumBreakpointPx
       ) {
         this.setState({ collapsedSidebar: true })
       }
@@ -101,8 +129,14 @@ class Sidebar extends PureComponent<Props, State> {
 
     const { innerWidth } = window
 
-    if (innerWidth <= MEDIUM_BREAKPOINT_PX)
+    // Collapse the sidebar if the window was narrowed and is now mobile-sized
+    if (
+      innerWidth < this.state.lastInnerWidth &&
+      innerWidth <= this.mediumBreakpointPx
+    ) {
       this.setState({ collapsedSidebar: true })
+    }
+    this.setState({ lastInnerWidth: innerWidth })
 
     return true
   }
@@ -122,30 +156,29 @@ class Sidebar extends PureComponent<Props, State> {
     const { collapsedSidebar } = this.state
     const { children } = this.props
 
-    const sectionClassName = classNames("sidebar", {
-      "--collapsed": collapsedSidebar,
-    })
-
     // The tabindex is required to support scrolling by arrow keys.
     return (
-      <section className={sectionClassName} ref={this.sidebarRef}>
-        <div className="sidebar-content">
-          <div className="sidebar-close">
+      <StyledSidebar
+        data-testid="stSidebar"
+        aria-expanded={!collapsedSidebar}
+        ref={this.sidebarRef}
+      >
+        <StyledSidebarContent isCollapsed={collapsedSidebar}>
+          <StyledSidebarCloseButton>
             <Button kind={Kind.ICON} onClick={this.toggleCollapse}>
-              <Icon type="x" />
+              <Icon content={X} />
             </Button>
-          </div>
-
+          </StyledSidebarCloseButton>
           {children}
-        </div>
-        <div className="sidebar-collapse-control">
+        </StyledSidebarContent>
+        <StyledSidebarCollapsedControl isCollapsed={collapsedSidebar}>
           <Button kind={Kind.ICON} onClick={this.toggleCollapse}>
-            <Icon type="chevron-right" />
+            <Icon content={ChevronRight} />
           </Button>
-        </div>
-      </section>
+        </StyledSidebarCollapsedControl>
+      </StyledSidebar>
     )
   }
 }
 
-export default Sidebar
+export default withTheme(Sidebar)

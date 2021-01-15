@@ -18,8 +18,15 @@
 import React, { FunctionComponent } from "react"
 import Button, { Kind } from "components/shared/Button"
 import Modal, { ModalHeader, ModalBody } from "components/shared/Modal"
-
-import "./style.scss"
+import {
+  StyledDialogContainer,
+  StyledRow,
+  StyledFirstColumn,
+  StyledSecondColumn,
+  StyledVideo,
+  StyledVideoFormatInstructions,
+  StyledDownloadButtonContainer,
+} from "./styled-components"
 
 export interface Props {
   /** Callback to close the dialog */
@@ -59,38 +66,43 @@ const VideoRecordedDialog: FunctionComponent<Props> = ({
     >
       <ModalHeader>Next steps</ModalHeader>
       <ModalBody>
-        <div className="screencast-dialog">
-          <div className="first-column first-step">Step 1</div>
-          <div className="second-column first-step">
-            <p>Preview your video below:</p>
-            <video src={videoSource} controls />
-          </div>
-          <div className="third-column first-step" />
+        <StyledDialogContainer>
+          <StyledRow>
+            <StyledFirstColumn>Step 1</StyledFirstColumn>
+            <StyledSecondColumn>
+              <p>Preview your video below:</p>
+              <StyledVideo src={videoSource} controls />
+            </StyledSecondColumn>
+          </StyledRow>
 
-          <div className="first-column second-step">Step 2</div>
-          <div className="second-column second-step">
-            <Button kind={Kind.PRIMARY} onClick={handleDownloadClick}>
-              Save video to disk
-            </Button>
-            <p>
-              <small>
+          <StyledRow>
+            <StyledFirstColumn>Step 2</StyledFirstColumn>
+            <StyledSecondColumn>
+              <StyledDownloadButtonContainer>
+                <Button kind={Kind.PRIMARY} onClick={handleDownloadClick}>
+                  Save video to disk
+                </Button>
+              </StyledDownloadButtonContainer>
+              <StyledVideoFormatInstructions>
                 This video is encoded in the{" "}
                 <a href="https://www.webmproject.org/">WebM format</a>, which
                 is only supported by newer video players. You can also play it
                 by dragging the file directly into your browser.
-              </small>
-            </p>
-          </div>
+              </StyledVideoFormatInstructions>
+            </StyledSecondColumn>
+          </StyledRow>
 
-          <div className="first-column third-step">Step 3</div>
-          <div className="second-column third-step">
-            Share your video with the world on Twitter, LinkedIn, YouTube, or
-            just plain email!{" "}
-            <span role="img" aria-label="Happy">
-              😀
-            </span>
-          </div>
-        </div>
+          <StyledRow>
+            <StyledFirstColumn>Step 3</StyledFirstColumn>
+            <StyledSecondColumn>
+              Share your video with the world on Twitter, LinkedIn, YouTube, or
+              just plain email!{" "}
+              <span role="img" aria-label="Happy">
+                😀
+              </span>
+            </StyledSecondColumn>
+          </StyledRow>
+        </StyledDialogContainer>
       </ModalBody>
     </Modal>
   )

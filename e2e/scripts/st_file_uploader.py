@@ -14,14 +14,12 @@
 
 import streamlit as st
 
-st.set_option("deprecation.showfileUploaderEncoding", True)
-single_file = st.file_uploader("Drop a file:", type=["txt"], encoding="encoding")
+single_file = st.file_uploader("Drop a file:", type=["txt"])
 if single_file is None:
     st.text("No upload")
 else:
     st.text(single_file.read())
 
-st.set_option("deprecation.showfileUploaderEncoding", False)
 multiple_files = st.file_uploader(
     "Drop multiple files:", type=["txt"], accept_multiple_files=True
 )

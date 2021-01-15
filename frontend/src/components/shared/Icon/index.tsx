@@ -16,4 +16,4 @@
  */
 
 export { default } from "./Icon"
-export { default as MaterialIcon } from "./MaterialIcon"
+export { StyledIcon } from "./styled-components"

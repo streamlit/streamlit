@@ -18,7 +18,7 @@
 import React, { ReactElement } from "react"
 
 import { Alert as AlertProto } from "autogen/proto"
-import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
+import StreamlitMarkdown from "components/shared/StreamlitMarkdown"
 import AlertContainer, { Kind } from "components/shared/AlertContainer"
 
 export function getAlertKind(format: AlertProto.Format): Kind {
@@ -37,23 +37,23 @@ export function getAlertKind(format: AlertProto.Format): Kind {
 }
 
 export interface AlertProps {
+  body: string
+  kind: Kind
   width: number
-  element: AlertProto
 }
 
 /**
- * Functional element representing error/warning/info/success boxes
- * which may be formatted in Markdown.
+ * Display an (error|warning|info|success) box with a Markdown-formatted body.
  */
-export default function Alert({ element, width }: AlertProps): ReactElement {
-  const { body, format } = element
-
+export default function Alert({
+  body,
+  kind,
+  width,
+}: AlertProps): ReactElement {
   return (
     <div className="stAlert">
-      <AlertContainer width={width} kind={getAlertKind(format)}>
-        <div className="markdown-text-container">
-          <StreamlitMarkdown source={body} allowHTML={false} />
-        </div>
+      <AlertContainer width={width} kind={kind}>
+        <StreamlitMarkdown source={body} allowHTML={false} />
       </AlertContainer>
     </div>
   )

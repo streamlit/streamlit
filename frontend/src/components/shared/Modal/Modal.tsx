@@ -1,4 +1,5 @@
 import React, { ReactNode, ReactElement, FunctionComponent } from "react"
+import { useTheme } from "emotion-theming"
 import {
   Modal as UIModal,
   ModalHeader as UIModalHeader,
@@ -7,30 +8,32 @@ import {
   ModalProps,
 } from "baseui/modal"
 import Button, { ButtonProps } from "components/shared/Button"
-import { colors, fontStyles } from "lib/widgetTheme"
-
-const { black, grayLighter } = colors
+import { Theme } from "theme"
+import { transparentize } from "color2k"
+import { StyledModalButton } from "./styled-components"
 
 export interface ModalHeaderProps {
   children: ReactNode
 }
 
 function ModalHeader({ children }: ModalHeaderProps): ReactElement {
+  const { colors, fonts, fontSizes, spacing }: Theme = useTheme()
+
   return (
     <UIModalHeader
       style={{
-        marginTop: 0,
-        marginLeft: 0,
-        marginRight: 0,
-        marginBottom: 0,
-        paddingTop: "1rem",
-        paddingRight: "1rem",
-        paddingBottom: "1rem",
-        paddingLeft: "1rem",
-        borderBottom: `1px solid ${grayLighter}`,
-        fontFamily: fontStyles.fontFamily,
-        fontSize: "1.25rem",
-        margin: 0,
+        marginTop: spacing.none,
+        marginLeft: spacing.none,
+        marginRight: spacing.none,
+        marginBottom: spacing.none,
+        paddingTop: spacing.lg,
+        paddingRight: spacing.lg,
+        paddingBottom: spacing.lg,
+        paddingLeft: spacing.lg,
+        borderBottom: `1px solid ${colors.lightGray}`,
+        fontFamily: fonts.sansSerif,
+        fontSize: fontSizes.lg,
+        margin: spacing.none,
         fontWeight: 300,
         lineHeight: 1.5,
         textTransform: "none",
@@ -46,19 +49,21 @@ export interface ModalBodyProps {
 }
 
 function ModalBody({ children }: ModalBodyProps): ReactElement {
+  const { colors, fontSizes, spacing }: Theme = useTheme()
+
   return (
     <UIModalBody
       style={{
-        marginTop: 0,
-        marginLeft: 0,
-        marginRight: 0,
-        marginBottom: 0,
-        paddingTop: "1rem",
-        paddingRight: "1rem",
-        paddingBottom: "1rem",
-        paddingLeft: "1rem",
-        color: black,
-        fontSize: fontStyles.fontSize,
+        marginTop: spacing.none,
+        marginLeft: spacing.none,
+        marginRight: spacing.none,
+        marginBottom: spacing.none,
+        paddingTop: spacing.lg,
+        paddingRight: spacing.lg,
+        paddingBottom: spacing.lg,
+        paddingLeft: spacing.lg,
+        color: colors.bodyText,
+        fontSize: fontSizes.md,
       }}
     >
       {children}
@@ -71,18 +76,20 @@ export interface ModalFooterProps {
 }
 
 function ModalFooter({ children }: ModalFooterProps): ReactElement {
+  const { colors, spacing }: Theme = useTheme()
+
   return (
     <UIModalFooter
       style={{
-        marginTop: 0,
-        marginLeft: 0,
-        marginRight: 0,
-        marginBottom: 0,
-        paddingTop: "0.75rem",
-        paddingRight: "0.75rem",
-        paddingBottom: "0.75rem",
-        paddingLeft: "0.75rem",
-        borderTop: `1px solid ${grayLighter}`,
+        marginTop: spacing.none,
+        marginLeft: spacing.none,
+        marginRight: spacing.none,
+        marginBottom: spacing.none,
+        paddingTop: spacing.md,
+        paddingRight: spacing.md,
+        paddingBottom: spacing.md,
+        paddingLeft: spacing.md,
+        borderTop: `1px solid ${colors.lightGray}`,
       }}
     >
       <div className="ModalBody">{children}</div>
@@ -91,15 +98,22 @@ function ModalFooter({ children }: ModalFooterProps): ReactElement {
 }
 
 const ModalButton: FunctionComponent<ButtonProps> = buttonProps => (
-  <span style={{ marginRight: "0.25rem" }}>
+  <StyledModalButton>
     <Button {...buttonProps} />
-  </span>
+  </StyledModalButton>
 )
 
 function Modal(props: ModalProps): ReactElement {
+  const { colors, spacing }: Theme = useTheme()
+
   return (
     <UIModal
       {...props}
+      // From https://baseweb.design/components/modal:
+      // Makes modal scrollable while cursor is over the modal's backdrop.
+      // Will be removed and implemented as the default behavior in the
+      // next major version.
+      unstable_ModalBackdropScroll={true}
       overrides={{
         ...props.overrides,
         DialogContainer: {
@@ -110,9 +124,9 @@ function Modal(props: ModalProps): ReactElement {
         },
         Close: {
           style: {
-            top: "1rem",
-            right: "1rem",
-            color: "rgba(0, 0, 0, 0.5)",
+            top: spacing.lg,
+            right: spacing.lg,
+            color: transparentize(colors.black, 0.5),
           },
         },
       }}

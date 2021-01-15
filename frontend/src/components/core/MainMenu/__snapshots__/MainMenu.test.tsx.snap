@@ -20,6 +20,7 @@ exports[`App renders without crashing 1`] = `
     }
   }
   placement="bottomRight"
+  popoverMargin={8}
   showArrow={false}
   stateReducer={[Function]}
   triggerType="click"
@@ -28,13 +29,15 @@ exports[`App renders without crashing 1`] = `
     id="MainMenu"
   >
     <Button
-      disabled={false}
-      fluidWidth={false}
       kind="icon"
-      size="medium"
     >
       <Icon
-        type="menu"
+        content={
+          Object {
+            "$$typeof": Symbol(react.forward_ref),
+            "render": [Function],
+          }
+        }
       />
     </Button>
   </span>

@@ -1,10 +1,27 @@
-from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
+# Copyright 2018-2020 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from typing import cast
+
+import streamlit
 from streamlit import type_util
-from .utils import _clean_text
+from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
+from .utils import clean_text
 
 
 class MarkdownMixin:
-    def markdown(dg, body, unsafe_allow_html=False):
+    def markdown(self, body, unsafe_allow_html=False):
         """Display string formatted as Markdown.
 
         Parameters
@@ -56,18 +73,22 @@ class MarkdownMixin:
         """
         markdown_proto = MarkdownProto()
 
-        markdown_proto.body = _clean_text(body)
+        markdown_proto.body = clean_text(body)
         markdown_proto.allow_html = unsafe_allow_html
 
-        return dg._enqueue("markdown", markdown_proto)  # type: ignore
+        return self.dg._enqueue("markdown", markdown_proto)
 
-    def header(dg, body):
+    def header(self, body, anchor=None):
         """Display text in header formatting.
 
         Parameters
         ----------
         body : str
             The text to display.
+
+        anchor : str
+            The anchor name of the header that can be accessed with #anchor
+            in the URL. If omitted, it generates an anchor using the body.
 
         Example
         -------
@@ -79,16 +100,24 @@ class MarkdownMixin:
 
         """
         header_proto = MarkdownProto()
-        header_proto.body = "## %s" % _clean_text(body)
-        return dg._enqueue("markdown", header_proto)  # type: ignore
+        if anchor is None:
+            header_proto.body = f"## {clean_text(body)}"
+        else:
+            header_proto.body = f'<h2 data-anchor="{anchor}">{clean_text(body)}</h2>'
+            header_proto.allow_html = True
+        return self.dg._enqueue("markdown", header_proto)
 
-    def subheader(dg, body):
+    def subheader(self, body, anchor=None):
         """Display text in subheader formatting.
 
         Parameters
         ----------
         body : str
             The text to display.
+
+        anchor : str
+            The anchor name of the header that can be accessed with #anchor
+            in the URL. If omitted, it generates an anchor using the body.
 
         Example
         -------
@@ -100,10 +129,15 @@ class MarkdownMixin:
 
         """
         subheader_proto = MarkdownProto()
-        subheader_proto.body = "### %s" % _clean_text(body)
-        return dg._enqueue("markdown", subheader_proto)  # type: ignore
+        if anchor is None:
+            subheader_proto.body = f"### {clean_text(body)}"
+        else:
+            subheader_proto.body = f'<h3 data-anchor="{anchor}">{clean_text(body)}</h3>'
+            subheader_proto.allow_html = True
 
-    def code(dg, body, language="python"):
+        return self.dg._enqueue("markdown", subheader_proto)
+
+    def code(self, body, language="python"):
         """Display a code block with optional syntax highlighting.
 
         (This is a convenience wrapper around `st.markdown()`)
@@ -133,10 +167,10 @@ class MarkdownMixin:
             "language": language or "",
             "body": body,
         }
-        code_proto.body = _clean_text(markdown)
-        return dg._enqueue("markdown", code_proto)  # type: ignore
+        code_proto.body = clean_text(markdown)
+        return self.dg._enqueue("markdown", code_proto)
 
-    def title(dg, body):
+    def title(self, body, anchor=None):
         """Display text in title formatting.
 
         Each document should have a single `st.title()`, although this is not
@@ -146,6 +180,10 @@ class MarkdownMixin:
         ----------
         body : str
             The text to display.
+
+        anchor : str
+            The anchor name of the header that can be accessed with #anchor
+            in the URL. If omitted, it generates an anchor using the body.
 
         Example
         -------
@@ -157,10 +195,14 @@ class MarkdownMixin:
 
         """
         title_proto = MarkdownProto()
-        title_proto.body = "# %s" % _clean_text(body)
-        return dg._enqueue("markdown", title_proto)  # type: ignore
+        if anchor is None:
+            title_proto.body = f"# {clean_text(body)}"
+        else:
+            title_proto.body = f'<h1 data-anchor="{anchor}">{clean_text(body)}</h1>'
+            title_proto.allow_html = True
+        return self.dg._enqueue("markdown", title_proto)
 
-    def latex(dg, body):
+    def latex(self, body):
         # This docstring needs to be "raw" because of the backslashes in the
         # example below.
         r"""Display mathematical expressions formatted as LaTeX.
@@ -195,5 +237,10 @@ class MarkdownMixin:
             body = sympy.latex(body)
 
         latex_proto = MarkdownProto()
-        latex_proto.body = "$$\n%s\n$$" % _clean_text(body)
-        return dg._enqueue("markdown", latex_proto)  # type: ignore
+        latex_proto.body = "$$\n%s\n$$" % clean_text(body)
+        return self.dg._enqueue("markdown", latex_proto)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)

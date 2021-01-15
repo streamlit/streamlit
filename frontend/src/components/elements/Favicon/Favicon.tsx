@@ -17,7 +17,7 @@
 
 import nodeEmoji from "node-emoji"
 import { buildMediaUri } from "lib/UriUtil"
-import { toCodePoint } from "vendor/twemoji"
+import { grabTheRightIcon } from "vendor/twemoji"
 import { sendS4AMessage } from "hocs/withS4ACommunication/withS4ACommunication"
 
 /**
@@ -32,7 +32,7 @@ export function handleFavicon(favicon: string): void {
 
   if (emoji) {
     // Find the corresponding Twitter emoji on the CDN.
-    const codepoint = toCodePoint(emoji)
+    const codepoint = grabTheRightIcon(emoji)
     const emojiUrl = `https://twemoji.maxcdn.com/2/72x72/${codepoint}.png`
 
     imageUrl = emojiUrl
@@ -61,10 +61,11 @@ function overwriteFavicon(imageUrl: string): void {
 
 // Return the emoji if it exists, or empty string otherwise
 function extractEmoji(maybeEmoji: string): string {
-  if (nodeEmoji.hasEmoji(nodeEmoji.get(maybeEmoji))) {
+  const shortcode = maybeEmoji.replace("-", "_")
+  if (nodeEmoji.hasEmoji(nodeEmoji.get(shortcode))) {
     // Format: pizza or :pizza:
     // Since hasEmoji(':pizza:') == true, we must do this check first
-    return nodeEmoji.get(maybeEmoji)
+    return nodeEmoji.get(shortcode)
   }
   if (nodeEmoji.hasEmoji(maybeEmoji)) {
     // Format: 🍕

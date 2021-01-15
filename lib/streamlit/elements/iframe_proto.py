@@ -12,13 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.proto.IFrame_pb2 import IFrame as IFrameProto
 from typing import Optional
+from typing import cast
+
+import streamlit
+from streamlit.proto.IFrame_pb2 import IFrame as IFrameProto
 
 
 class IframeMixin:
     def _iframe(
-        dg,
+        self,
         src,
         width=None,
         height=None,
@@ -48,10 +51,10 @@ class IframeMixin:
             height=height,
             scrolling=scrolling,
         )
-        return dg._enqueue("iframe", iframe_proto)  # type: ignore
+        return self.dg._enqueue("iframe", iframe_proto)
 
     def _html(
-        dg,
+        self,
         html,
         width=None,
         height=None,
@@ -81,7 +84,12 @@ class IframeMixin:
             height=height,
             scrolling=scrolling,
         )
-        return dg._enqueue("iframe", iframe_proto)  # type: ignore
+        return self.dg._enqueue("iframe", iframe_proto)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
 def marshall(

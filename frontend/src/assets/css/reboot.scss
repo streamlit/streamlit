@@ -16,24 +16,12 @@ $font-weight-normal: 400 !default;
 $font-weight-bold: 700 !default;
 $font-weight-bolder: bolder !default;
 $font-weight-base: $font-weight-normal !default;
-$hr-margin-y: $spacer !default;
 $hr-color: inherit !default;
 $hr-height: $border-width !default;
 $hr-opacity: 0.25 !default;
-$headings-margin-bottom: $spacer / 2 !default;
 $headings-font-family: null !default;
 $headings-font-style: null !default;
-$headings-font-weight: 500 !default;
-$headings-line-height: 1.2 !default;
 $headings-color: null !default;
-$h1-font-size: $font-size-base * 2.5 !default;
-$h2-font-size: $font-size-base * 2 !default;
-$h3-font-size: $font-size-base * 1.75 !default;
-$h4-font-size: $font-size-base * 1.5 !default;
-$h5-font-size: $font-size-base * 1.25 !default;
-$h6-font-size: $font-size-base !default;
-$paragraph-margin-bottom: 1rem !default;
-$dt-font-weight: $font-weight-bold !default;
 $small-font-size: 0.875em !default;
 $mark-padding: 0.2em !default;
 $mark-bg: #fcf8e3 !default;
@@ -42,7 +30,6 @@ $link-color: $primary !default;
 $link-decoration: underline !default;
 $link-hover-color: darken($link-color, 15%) !default;
 $link-hover-decoration: null !default;
-$input-btn-padding-y: 0.375rem !default;
 $code-font-size: $small-font-size !default;
 $kbd-padding-y: 0.2rem !default;
 $kbd-padding-x: 0.4rem !default;
@@ -177,10 +164,12 @@ body {
 // 2. Set correct height and prevent the `size` attribute to make the `hr` look like an input field
 
 hr {
-  margin: $hr-margin-y 0;
+  margin: 2em 0;
+  padding: 0;
   color: $hr-color; // 1
-  background-color: currentColor;
-  border: 0;
+  background-color: transparent;
+  border: none;
+  border-bottom: 1px solid $gray-light;
   opacity: $hr-opacity;
 }
 
@@ -188,60 +177,100 @@ hr:not([size]) {
   height: $hr-height; // 2
 }
 
-// Typography
-//
-// 1. Remove top margins from headings
-//    By default, `<h1>`-`<h6>` all receive top and bottom margins. We nuke the top
-//    margin for easier control within type scales as it avoids margin collapsing.
-
-%heading {
-  margin-top: 0; // 1
-  margin-bottom: $headings-margin-bottom;
+h1 {
+  font-weight: 700;
   font-family: $headings-font-family;
   font-style: $headings-font-style;
-  font-weight: $headings-font-weight;
-  line-height: $headings-line-height;
+  font-weight: 700;
   color: $headings-color;
-}
 
-h1 {
-  @extend %heading;
-  @include font-size($h1-font-size);
+  // Use rem so we can remove it when first child, knowing that the
+  // element-container above always adds 1rem.
+  margin: 1.5rem 0 0.5rem 0;
+  // Set padding in em-units to give it some adjustment that is proportional
+  // to font size.
+  padding: 0.5em 0 0.25em;
+  // Set to 1 so it looks nice when wrapped.
+  line-height: 1;
+
+  @include font-size(2.25rem);
 }
 
 h2 {
-  @extend %heading;
-  @include font-size($h2-font-size);
+  font-family: $headings-font-family;
+  font-style: $headings-font-style;
+  font-weight: 400;
+  color: $headings-color;
+  // Use rem so we can remove it when first child, knowing that the
+  // element-container above always adds 1rem.
+  margin: 1.5rem 0 0.5rem 0;
+  // Set padding in em-units to give it some adjustment that is proportional
+  // to font size.
+  padding: 0.5em 0 0.25em;
+  // Set to 1 so it looks nice when wrapped.
+  line-height: 1;
+  @include font-size(1.75rem);
 }
 
 h3 {
-  @extend %heading;
-  @include font-size($h3-font-size);
+  font-family: $headings-font-family;
+  font-style: $headings-font-style;
+  font-weight: 500;
+  color: $headings-color;
+  @include font-size(1.25rem);
+  // Use rem so we can remove it when first child, knowing that the
+  // element-container above always adds 1rem.
+  margin: 1.5rem 0 0.5rem 0;
+  // Set padding in em-units to give it some adjustment that is proportional
+  // to font size.
+  padding: 0.5em 0 0.25em;
+  // Set to 1 so it looks nice when wrapped.
+  line-height: 1;
 }
 
 h4 {
-  @extend %heading;
-  @include font-size($h4-font-size);
+  font-family: $headings-font-family;
+  font-style: $headings-font-style;
+  font-weight: 600;
+  color: $headings-color;
+  @include font-size(1rem);
+  margin: 1rem 0 0 0;
+  padding: 0.5em 0 0.25em;
+  line-height: 1;
 }
 
 h5 {
-  @extend %heading;
-  @include font-size($h5-font-size);
+  font-family: $headings-font-family;
+  font-style: $headings-font-style;
+  font-weight: 900;
+  color: $headings-color;
+  @include font-size(0.8rem);
+  margin: 1rem 0 0 0;
+  padding: 0.5em 0 0.25em;
+  line-height: 1;
 }
 
 h6 {
-  @extend %heading;
-  @include font-size($h6-font-size);
+  font-family: $headings-font-family;
+  font-style: $headings-font-style;
+  font-weight: 300;
+  color: $headings-color;
+  @include font-size(0.8rem);
+  margin: 1rem 0 0 0;
+  padding: 0.5em 0 0.25em;
+  line-height: 1;
 }
 
-// Reset margins on paragraphs
-//
-// Similarly, the top margin on `<p>`s get reset. However, we also reset the
-// bottom margin to use `rem` units instead of `em`.
+h1:first-child,
+h2:first-child,
+h3:first-child {
+  margin-top: 0.5rem;
+}
 
-p {
+h4:first-child,
+h5:first-child,
+h6:first-child {
   margin-top: 0;
-  margin-bottom: $paragraph-margin-bottom;
 }
 
 // Abbreviations
@@ -269,17 +298,18 @@ address {
 }
 
 // Lists
-
-ol,
-ul {
-  padding-left: 2rem;
-}
-
+// Reset margins on paragraphs
+//
+// Similarly, the top margin on `<p>`s get reset. However, we also reset the
+// bottom margin to use `rem` units instead of `em`.
+p,
 ol,
 ul,
 dl {
-  margin-top: 0;
-  margin-bottom: 1rem;
+  margin: 0 0 1rem 0;
+  padding: 0;
+  font-size: 1rem;
+  font-weight: 400;
 }
 
 ol ol,
@@ -290,20 +320,17 @@ ul ol {
 }
 
 dt {
-  font-weight: $dt-font-weight;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 1em 0 0.2em 0;
+  padding: 0;
 }
 
 // 1. Undo browser default
 
 dd {
-  margin-bottom: 0.5rem;
-  margin-left: 0; // 1
-}
-
-// Blockquote
-
-blockquote {
-  margin: 0 0 1rem;
+  margin: 0 0 0.2em 1.2em;
+  font-size: 1rem;
 }
 
 // Strong
@@ -379,10 +406,22 @@ a:not([href]):not([class]) {
 
 pre,
 code,
-kbd,
-samp {
+kbd {
   font-family: $font-family-code;
   @include font-size(1em); // Correct the odd `em` font sizing in all browsers.
+}
+
+samp {
+  font-family: $font-family-code;
+}
+
+// Blockquote
+samp,
+blockquote {
+  margin: 1em 0 1em -1px;
+  padding: 0 0 0 1.2em;
+  font-size: 1rem;
+  border-left: 1px solid $gray-light;
 }
 
 // 1. Remove browser default top margin

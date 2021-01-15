@@ -18,12 +18,6 @@
 /**
  * Our default iframe sandbox options.
  * See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe#Attributes
- *
- * From that page:
- * "When the embedded document has the same origin as the embedding page, it is
- * strongly discouraged to use both allow-scripts and allow-same-origin, as
- * that lets the embedded document remove the sandbox attribute — making it no
- * more secure than not using the sandbox attribute at all."
  */
 export const DEFAULT_IFRAME_SANDBOX_POLICY = [
   // Allows for downloads to occur without a gesture from the user.
@@ -52,8 +46,19 @@ export const DEFAULT_IFRAME_SANDBOX_POLICY = [
   // "allow-presentation",
 
   // If this token is not used, the resource is treated as being from a special origin that always fails the same-origin policy.
-  // (This token is conditionally set - the element must opt into it.)
-  // "allow-same-origin",
+
+  // From MDN:
+  // "When the embedded document has the same origin as the embedding page, it is
+  // strongly discouraged to use both allow-scripts and allow-same-origin, as
+  // that lets the embedded document remove the sandbox attribute — making it no
+  // more secure than not using the sandbox attribute at all."
+  //
+  // As of December 2020, we've turned the allow-same-origin flag *on* despite
+  // the fact that it basically un-sandboxes us - this was a product decision
+  // after lots of back and forth: ultimately, it un-blocks a number of use-cases
+  // without making Streamlit Components any less secure than they actually were,
+  // since we don't sandbox a Component's Python code.
+  "allow-same-origin",
 
   // Lets the resource run scripts (but not create popup windows).
   "allow-scripts",
@@ -158,15 +163,3 @@ export const DEFAULT_IFRAME_FEATURE_POLICY = [
   // Controls whether or not the current document is allowed to use the WebXR Device API to interact with a WebXR session.
   "xr-spatial-tracking",
 ].join("; ")
-
-/**
- * Return an iFrame sandbox policy with the `allow-same-origin` token
- * optionally set.
- */
-export function getIFrameSandboxPolicy(allowSameOrigin: boolean): string {
-  let sandboxPolicy = DEFAULT_IFRAME_SANDBOX_POLICY
-  if (allowSameOrigin) {
-    sandboxPolicy += " allow-same-origin"
-  }
-  return sandboxPolicy
-}

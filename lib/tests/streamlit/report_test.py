@@ -20,25 +20,30 @@ import unittest
 
 from parameterized import parameterized
 
-from streamlit import config
+from streamlit import config, RootContainer
+from streamlit.cursor import make_delta_path
 from streamlit.report import Report
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
+from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from tests import testutil
 
-INIT_MSG = ForwardMsg()
-INIT_MSG.initialize.config.sharing_enabled = True
+NEW_REPORT_MSG = ForwardMsg()
+NEW_REPORT_MSG.new_report.initialize.config.sharing_enabled = True
+NEW_REPORT_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
 TEXT_DELTA_MSG = ForwardMsg()
 TEXT_DELTA_MSG.delta.new_element.text.body = "text1"
+TEXT_DELTA_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
 EMPTY_DELTA_MSG = ForwardMsg()
-EMPTY_DELTA_MSG.delta.new_element.empty.unused = True
+EMPTY_DELTA_MSG.delta.new_element.empty.CopyFrom(EmptyProto())
+EMPTY_DELTA_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
 
 def _enqueue(report, msg):
     msg = copy.deepcopy(msg)
-    msg.metadata.delta_id = len(list(report._master_queue))
+    msg.metadata.delta_path[-1] = len(list(report._master_queue))
     report.enqueue(msg)
 
 
@@ -52,7 +57,7 @@ def _parse_msg(msg_string):
 class ReportTest(unittest.TestCase):
     def test_serialize_final_report(self):
         report = Report("/not/a/script.py", "")
-        _enqueue(report, INIT_MSG)
+        _enqueue(report, NEW_REPORT_MSG)
         _enqueue(report, TEXT_DELTA_MSG)
         _enqueue(report, EMPTY_DELTA_MSG)
 
@@ -61,7 +66,7 @@ class ReportTest(unittest.TestCase):
         # Validate our messages.
         messages = [_parse_msg(msg_string) for _, msg_string in files[:-1]]
         self.assertEqual(3, len(messages))
-        self.assertEqual("initialize", messages[0].WhichOneof("type"))
+        self.assertEqual("new_report", messages[0].WhichOneof("type"))
         self.assertEqual("text1", messages[1].delta.new_element.text.body)
         self.assertEqual("empty", messages[2].delta.new_element.WhichOneof("type"))
 
@@ -78,7 +83,7 @@ class ReportTest(unittest.TestCase):
 
     def test_serialize_running_report(self):
         report = Report("/not/a/script.py", "")
-        _enqueue(report, INIT_MSG)
+        _enqueue(report, NEW_REPORT_MSG)
         _enqueue(report, EMPTY_DELTA_MSG)
         _enqueue(report, TEXT_DELTA_MSG)
         _enqueue(report, EMPTY_DELTA_MSG)

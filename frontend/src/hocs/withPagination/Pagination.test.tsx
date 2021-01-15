@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 import Button from "components/shared/Button"
 import { Small } from "components/shared/TextElements"
 import Pagination, { Props } from "./Pagination"

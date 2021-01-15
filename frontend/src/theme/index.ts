@@ -1,6 +1,9 @@
 import main from "./mainTheme"
+import sidebar from "./sidebarTheme"
+import { Theme } from "./types"
 
-export type Theme = typeof main
+export * from "./baseui"
+export * from "./types"
+export * from "./utils"
 export const mainTheme: Theme = main
-// TODO Update when components with sidebar differences use styled components
-export const sidebarTheme: Theme = main
+export const sidebarTheme: Theme = sidebar

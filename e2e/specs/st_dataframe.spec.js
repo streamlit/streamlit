@@ -21,7 +21,7 @@ describe("st.dataframe", () => {
 
     cy.get(".element-container .stDataFrame")
       .find(".ReactVirtualized__Grid__innerScrollContainer")
-      .find(".dataframe.data")
+      .find("[data-testid='StyledDataFrameDataCell']")
       .as("cells");
   });
 

@@ -5,7 +5,7 @@
 Before you get started, you're going to need a few things:
 
 - Your favorite IDE or text editor
-- [Python 3.6 or later](https://www.python.org/downloads/)
+- [Python 3.6 - 3.8](https://www.python.org/downloads/)
 - [PIP](https://pip.pypa.io/en/stable/installing/)
 
 If you haven't already, take a few minutes to read through [Main
@@ -69,7 +69,7 @@ Streamlit.
    .. tip::
       Did you know you can also pass a URL to `streamlit run`? This is great when combined with Github Gists. For example:
 
-      `$ streamlit run https://raw.githubusercontent.com/streamlit/demo-uber-nyc-pickups/master/app.py`
+      `$ streamlit run https://raw.githubusercontent.com/streamlit/demo-uber-nyc-pickups/master/streamlit_app.py`
    ```
 
 4. You can kill the app at any time by typing **Ctrl+c** in the terminal.

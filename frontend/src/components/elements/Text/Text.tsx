@@ -16,10 +16,8 @@
  */
 
 import React, { ReactElement } from "react"
-import classNames from "classnames"
 import { Text as TextProto } from "autogen/proto"
-
-import "assets/css/write.scss"
+import { StyledText } from "./styled-components"
 
 export interface TextProps {
   width: number
@@ -33,8 +31,8 @@ export default function Text({ width, element }: TextProps): ReactElement {
   const styleProp = { width }
 
   return (
-    <div className={classNames("fixed-width", "stText")} style={styleProp}>
+    <StyledText data-testid="stText" style={styleProp}>
       {element.body}
-    </div>
+    </StyledText>
   )
 }

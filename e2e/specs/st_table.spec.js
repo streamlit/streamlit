@@ -19,12 +19,12 @@ describe("st.table", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");
 
-    cy.get(".element-container .stTable tbody tr").as("rows");
-    cy.get(".element-container .stTable tbody td").as("cells");
+    cy.get(".element-container [data-testid='stTable'] tbody tr").as("rows");
+    cy.get(".element-container [data-testid='stTable'] tbody td").as("cells");
   });
 
   it("displays a table", () => {
-    cy.get(".element-container").find(".stTable");
+    cy.get(".element-container").find("[data-testid='stTable']");
   });
 
   it("checks number of rows", () => {

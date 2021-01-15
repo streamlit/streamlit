@@ -29,6 +29,7 @@
   api
   streamlit_configuration
   develop_streamlit_components
+  API cheat sheet <https://share.streamlit.io/daniellewisdl/streamlit-cheat-sheet/app.py>
 
 .. toctree::
   :caption: Support
@@ -47,7 +48,7 @@
 [Streamlit](https://streamlit.io/) is an open-source Python library that makes it easy to create and share beautiful, custom web apps for machine learning and data science.
 In just a few minutes you can build and deploy powerful data apps - so let's get started!
 
-1. Make sure that you have [Python 3.6](https://www.python.org/downloads/) or greater installed.
+1. Make sure that you have [Python 3.6 - Python 3.8](https://www.python.org/downloads/release/python-386/) installed.
 2. Install Streamlit using [PIP](https://pip.pypa.io/en/stable/installing/) and run the 'hello world' app:
 
    ```shell

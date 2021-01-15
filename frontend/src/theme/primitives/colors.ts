@@ -1,6 +1,7 @@
 export const colors = {
   transparent: "transparent",
   current: "currentColor",
+  inherit: "inherit",
   black: "#000000",
   white: "#FFFFFF",
 

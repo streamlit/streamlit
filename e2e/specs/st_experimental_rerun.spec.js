@@ -21,7 +21,7 @@ describe("st.experimental_rerun", () => {
   });
 
   it("restarts the session when invoked", () => {
-    cy.get(".element-container .stText").should(
+    cy.get("[data-testid='stText']").should(
       "contain",
       "Being able to rerun a session is awesome!"
     );

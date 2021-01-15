@@ -16,6 +16,9 @@
 
 import inspect
 
+from typing import cast
+
+import streamlit
 from streamlit.proto.DocString_pb2 import DocString as DocStringProto
 from streamlit.logger import get_logger
 
@@ -28,7 +31,7 @@ CONFUSING_STREAMLIT_SIG_PREFIXES = ("(element, ",)
 
 
 class HelpMixin:
-    def help(dg, obj):
+    def help(self, obj):
         """Display object's doc string, nicely formatted.
 
         Displays the doc string for this object.
@@ -54,7 +57,12 @@ class HelpMixin:
         """
         doc_string_proto = DocStringProto()
         _marshall(doc_string_proto, obj)
-        return dg._enqueue("doc_string", doc_string_proto)  # type: ignore
+        return self.dg._enqueue("doc_string", doc_string_proto)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
 def _marshall(doc_string_proto, obj):

@@ -43,7 +43,10 @@ from streamlit.components.v1.components import ComponentRegistry
 from streamlit.components.v1.components import ComponentRequestHandler
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.server.upload_file_request_handler import UploadFileRequestHandler
+from streamlit.server.upload_file_request_handler import (
+    UploadFileRequestHandler,
+    UPLOAD_FILE_ROUTE,
+)
 from streamlit.server.routes import AddSlashHandler
 from streamlit.server.routes import AssetsFileHandler
 from streamlit.server.routes import DebugHandler
@@ -211,16 +214,10 @@ class Server(object):
 
         return Server._singleton
 
-    def __init__(self, ioloop, script_path, command_line):
-        """Create the server. It won't be started yet.
-
-        Parameters
-        ----------
-        ioloop : tornado.ioloop.IOLoop
-        script_path : str
-        command_line : str
-
-        """
+    def __init__(
+        self, ioloop: tornado.ioloop.IOLoop, script_path: str, command_line: str
+    ):
+        """Create the server. It won't be started yet."""
         if Server._singleton is not None:
             raise RuntimeError("Server already initialized. Use .get_current() instead")
 
@@ -233,7 +230,7 @@ class Server(object):
         self._command_line = command_line
 
         # Mapping of ReportSession.id -> SessionInfo.
-        self._session_info_by_id = {}
+        self._session_info_by_id = {}  # type: Dict[str, SessionInfo]
 
         self._must_stop = threading.Event()
         self._state = None
@@ -243,6 +240,10 @@ class Server(object):
         self._uploaded_file_mgr.on_files_updated.connect(self.on_files_updated)
         self._report = None  # type: Optional[Report]
         self._preheated_session_id = None  # type: Optional[str]
+
+    @property
+    def script_path(self) -> str:
+        return self._script_path
 
     def on_files_updated(self, session_id):
         """Event handler for UploadedFileManager.on_file_added.
@@ -336,19 +337,15 @@ class Server(object):
                 dict(cache=self._message_cache),
             ),
             (
-                # Tornado doesn't allow body in DELETE requests.
-                # Passing lookup values in URL
                 make_url_path_regex(
                     base,
-                    "/upload_file/(?P<session_id>.*)/(?P<widget_id>.*)/(?P<file_id>[0-9]*)?",
+                    UPLOAD_FILE_ROUTE,
                 ),
                 UploadFileRequestHandler,
-                dict(file_mgr=self._uploaded_file_mgr),
-            ),
-            (
-                make_url_path_regex(base, "upload_file"),
-                UploadFileRequestHandler,
-                dict(file_mgr=self._uploaded_file_mgr),
+                dict(
+                    file_mgr=self._uploaded_file_mgr,
+                    get_session_info=self._get_session_info,
+                ),
             ),
             (
                 make_url_path_regex(base, "assets/(.*)"),

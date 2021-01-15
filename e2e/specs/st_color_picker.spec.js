@@ -21,9 +21,9 @@ describe("st.color_picker", () => {
   });
 
   it("shows the widget correctly", () => {
-    cy.get(".stColorPicker").should("have.length", 2);
+    cy.get("[data-testid='stColorPicker']").should("have.length", 2);
 
-    cy.get(".stColorPicker").each((el, idx) => {
+    cy.get("[data-testid='stColorPicker']").each((el, idx) => {
       return cy.wrap(el).matchImageSnapshot("colorpicker" + idx);
     });
   });

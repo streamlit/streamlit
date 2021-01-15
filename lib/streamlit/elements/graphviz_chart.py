@@ -14,6 +14,9 @@
 
 """Streamlit support for GraphViz charts."""
 
+from typing import cast
+
+import streamlit
 from streamlit import type_util
 from streamlit.logger import get_logger
 from streamlit.proto.GraphVizChart_pb2 import GraphVizChart as GraphVizChartProto
@@ -23,7 +26,7 @@ LOGGER = get_logger(__name__)
 
 
 class GraphvizMixin:
-    def graphviz_chart(dg, figure_or_dot, use_container_width=False):
+    def graphviz_chart(self, figure_or_dot, use_container_width=False):
         """Display a graph using the dagre-d3 library.
 
         Parameters
@@ -87,7 +90,12 @@ class GraphvizMixin:
         """
         graphviz_chart_proto = GraphVizChartProto()
         marshall(graphviz_chart_proto, figure_or_dot, use_container_width)
-        return dg._enqueue("graphviz_chart", graphviz_chart_proto)  # type: ignore
+        return self.dg._enqueue("graphviz_chart", graphviz_chart_proto)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
 def marshall(proto, figure_or_dot, use_container_width):

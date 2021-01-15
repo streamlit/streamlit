@@ -1,12 +1,29 @@
-from streamlit.proto.Slider_pb2 import Slider as SliderProto
+# Copyright 2018-2020 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from typing import cast
+
+import streamlit
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.type_util import ensure_iterable
-from .utils import _get_widget_ui_value
+from .utils import register_widget
 
 
 class SelectSliderMixin:
     def select_slider(
-        dg,
+        self,
         label,
         options=[],
         value=None,
@@ -104,9 +121,9 @@ class SelectSliderMixin:
         slider_proto.data_type = SliderProto.INT
         slider_proto.options[:] = [str(format_func(option)) for option in options]
 
-        ui_value = _get_widget_ui_value("slider", slider_proto, user_key=key)
+        ui_value = register_widget("slider", slider_proto, user_key=key)
         if ui_value:
-            current_value = getattr(ui_value, "value")
+            current_value = getattr(ui_value, "data")
         else:
             # Widget has not been used; fallback to the original value,
             current_value = slider_value
@@ -116,4 +133,9 @@ class SelectSliderMixin:
 
         # If the original value was a list/tuple, so will be the output (and vice versa)
         return_value = tuple(current_value) if is_range_value else current_value[0]
-        return dg._enqueue("slider", slider_proto, return_value)  # type: ignore
+        return self.dg._enqueue("slider", slider_proto, return_value)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)

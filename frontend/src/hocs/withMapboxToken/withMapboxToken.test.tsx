@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 import { SessionInfo } from "lib/SessionInfo"
 import { MapboxToken } from "./MapboxToken"
 
@@ -75,7 +75,7 @@ describe("withMapboxToken", () => {
     const WrappedComponent = withMapboxToken("st.test")(TestComponent)
     const wrapper = shallow(<WrappedComponent {...props} />)
 
-    expect(wrapper.html()).not.toBeNull()
+    expect(wrapper.find("Alert").exists()).toBe(true)
   })
 
   it("passes mapboxToken to wrapped component", async () => {

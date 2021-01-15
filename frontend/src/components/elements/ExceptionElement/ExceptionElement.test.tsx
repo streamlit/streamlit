@@ -18,7 +18,7 @@
 import React from "react"
 import { mount } from "lib/test_util"
 
-import { StreamlitMarkdown } from "components/shared/StreamlitMarkdown"
+import StreamlitMarkdown from "components/shared/StreamlitMarkdown"
 import { Exception as ExceptionProto } from "autogen/proto"
 import ExceptionElement, { ExceptionElementProps } from "./ExceptionElement"
 

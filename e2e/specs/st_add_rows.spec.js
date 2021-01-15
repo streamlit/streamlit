@@ -21,7 +21,7 @@ describe("st.add_rows", () => {
     cy.visit("http://localhost:3000/");
 
     // Rerun the script because we want to test that JS-side coalescing works.
-    cy.get(".stApp .decoration").trigger("keypress", {
+    cy.get(".stApp [data-testid='stDecoration']").trigger("keypress", {
       keyCode: 82, // "r"
       which: 82 // "r"
     });
@@ -30,7 +30,7 @@ describe("st.add_rows", () => {
     cy.get(".element-container").should("not.have.class", "stale-element");
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
+    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
   });
 
   beforeEach(() => {
@@ -39,7 +39,10 @@ describe("st.add_rows", () => {
   });
 
   it("works for all elements that support it", () => {
-    cy.get(".element-container .stTable").should("have.length", 3);
+    cy.get(".element-container [data-testid='stTable']").should(
+      "have.length",
+      3
+    );
     cy.get(".element-container .stDataFrame").should("have.length", 4);
     cy.get(".element-container [data-testid='stVegaLiteChart']").should(
       "have.length",
@@ -54,10 +57,12 @@ describe("st.add_rows", () => {
   });
 
   it("correctly adds rows to tables and dataframes", () => {
-    cy.get(".element-container .stTable tr").should("have.length", 10);
-    cy.get(".element-container .stDataFrame .col-header").should(
+    cy.get(".element-container [data-testid='stTable'] tr").should(
       "have.length",
-      7
+      10
     );
+    cy.get(
+      ".element-container .stDataFrame [data-testid='StyledDataFrameColHeaderCell']"
+    ).should("have.length", 7);
   });
 });

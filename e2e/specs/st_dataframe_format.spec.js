@@ -22,7 +22,7 @@ describe("Dataframe format", () => {
 
   beforeEach(() => {
     cy.get(".element-container .stDataFrame")
-      .find(".dataframe.data")
+      .find("[data-testid='StyledDataFrameDataCell']")
       .as("cells");
   });
 

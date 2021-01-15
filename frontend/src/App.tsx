@@ -21,9 +21,11 @@ import { HotKeys, KeyMap } from "react-hotkeys"
 import { fromJS } from "immutable"
 import classNames from "classnames"
 // Other local imports.
-import ReportView from "components/core/ReportView/"
+import PageLayoutContext from "components/core/PageLayoutContext"
+import ReportView from "components/core/ReportView"
 import StatusWidget from "components/core/StatusWidget"
-import MainMenu from "components/core/MainMenu/"
+import MainMenu from "components/core/MainMenu"
+import Header from "components/core/Header"
 import {
   DialogProps,
   DialogType,
@@ -46,7 +48,6 @@ import {
   Delta,
   ForwardMsg,
   ForwardMsgMetadata,
-  ISessionState,
   Initialize,
   NewReport,
   IDeployParams,
@@ -54,7 +55,10 @@ import {
   PageInfo,
   SessionEvent,
   WidgetStates,
+  SessionState,
+  Config,
 } from "autogen/proto"
+import { without, concat } from "lodash"
 
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
 import { SessionInfo } from "lib/SessionInfo"
@@ -66,6 +70,7 @@ import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
 import { ReportRoot } from "./lib/ReportNode"
 import { ComponentRegistry } from "./components/widgets/CustomComponent"
 import { handleFavicon } from "./components/elements/Favicon"
+import { StyledApp } from "./styled-components"
 
 import withS4ACommunication, {
   S4ACommunicationHOC,
@@ -77,8 +82,6 @@ import withScreencast, {
 
 // WARNING: order matters
 import "assets/css/theme.scss"
-import "./App.scss"
-import "assets/css/header.scss"
 
 export interface Props {
   screenCast: ScreenCastHOC
@@ -88,6 +91,7 @@ export interface Props {
 interface State {
   connectionState: ConnectionState
   elements: ReportRoot
+  isFullScreen: boolean
   reportId: string
   reportName: string
   reportHash: string | null
@@ -98,6 +102,7 @@ interface State {
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
   allowRunOnSave: boolean
+  reportFinishedHandlers: (() => void)[]
   deployParams?: IDeployParams | null
 }
 
@@ -143,6 +148,7 @@ export class App extends PureComponent<Props, State> {
     this.state = {
       connectionState: ConnectionState.INITIAL,
       elements: ReportRoot.empty("Please wait..."),
+      isFullScreen: false,
       reportName: "",
       reportId: "<null>",
       reportHash: null,
@@ -154,6 +160,7 @@ export class App extends PureComponent<Props, State> {
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
       allowRunOnSave: true,
+      reportFinishedHandlers: [],
       deployParams: null,
     }
 
@@ -268,6 +275,10 @@ export class App extends PureComponent<Props, State> {
       this.setState({ dialog: null })
     } else {
       setCookie("_xsrf", "")
+
+      if (SessionInfo.isSet()) {
+        SessionInfo.clearSession()
+      }
     }
   }
 
@@ -287,14 +298,12 @@ export class App extends PureComponent<Props, State> {
 
     try {
       dispatchProto(msgProto, "type", {
-        initialize: (initializeMsg: Initialize) =>
-          this.handleInitialize(initializeMsg),
-        sessionStateChanged: (msg: ISessionState) =>
+        newReport: (newReportMsg: NewReport) =>
+          this.handleNewReport(newReportMsg),
+        sessionStateChanged: (msg: SessionState) =>
           this.handleSessionStateChanged(msg),
         sessionEvent: (evtMsg: SessionEvent) =>
           this.handleSessionEvent(evtMsg),
-        newReport: (newReportMsg: NewReport) =>
-          this.handleNewReport(newReportMsg),
         delta: (deltaMsg: Delta) =>
           this.handleDeltaMsg(
             deltaMsg,
@@ -379,68 +388,10 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Handler for ForwardMsg.initialize messages
-   * @param initializeMsg an Initialize protobuf
-   */
-  handleInitialize = (initializeMsg: Initialize): void => {
-    const {
-      sessionId,
-      environmentInfo,
-      userInfo,
-      config,
-      sessionState,
-    } = initializeMsg
-
-    if (
-      sessionId == null ||
-      !environmentInfo ||
-      !userInfo ||
-      !config ||
-      !sessionState
-    ) {
-      throw new Error("InitializeMsg is missing a required field")
-    }
-
-    if (App.hasStreamlitVersionChanged(initializeMsg)) {
-      window.location.reload()
-      return
-    }
-
-    SessionInfo.current = new SessionInfo({
-      sessionId,
-      streamlitVersion: environmentInfo.streamlitVersion,
-      pythonVersion: environmentInfo.pythonVersion,
-      installationId: userInfo.installationId,
-      installationIdV1: userInfo.installationIdV1,
-      installationIdV2: userInfo.installationIdV2,
-      authorEmail: userInfo.email,
-      maxCachedMessageAge: config.maxCachedMessageAge,
-      commandLine: initializeMsg.commandLine,
-      userMapboxToken: config.mapboxToken,
-    })
-
-    MetricsManager.current.initialize({
-      gatherUsageStats: Boolean(config.gatherUsageStats),
-    })
-
-    MetricsManager.current.enqueue("createReport", {
-      pythonVersion: SessionInfo.current.pythonVersion,
-    })
-
-    this.setState({
-      sharingEnabled: Boolean(config.sharingEnabled),
-      allowRunOnSave: Boolean(config.allowRunOnSave),
-    })
-
-    this.props.s4aCommunication.connect()
-    this.handleSessionStateChanged(sessionState)
-  }
-
-  /**
    * Handler for ForwardMsg.sessionStateChanged messages
    * @param stateChangeProto a SessionState protobuf
    */
-  handleSessionStateChanged = (stateChangeProto: ISessionState): void => {
+  handleSessionStateChanged = (stateChangeProto: SessionState): void => {
     this.setState((prevState: State) => {
       // Determine our new ReportRunState
       let { reportRunState } = prevState
@@ -526,13 +477,28 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Handler for ForwardMsg.newReport messages
+   * Handler for ForwardMsg.newReport messages. This runs on each rerun
    * @param newReportProto a NewReport protobuf
    */
   handleNewReport = (newReportProto: NewReport): void => {
+    const initialize = newReportProto.initialize as Initialize
+
+    if (App.hasStreamlitVersionChanged(initialize)) {
+      window.location.reload()
+      return
+    }
+
+    // First, handle initialization logic. Each NewReport message has
+    // initialization data. If this is the _first_ time we're receiving
+    // the NewReport message, we perform some one-time initialization.
+    if (!SessionInfo.isSet()) {
+      // We're not initialized. Perform one-time initialization.
+      this.handleOneTimeInitialization(initialize)
+    }
+
     const { reportHash } = this.state
     const {
-      id: reportId,
+      reportId,
       name: reportName,
       scriptPath,
       deployParams,
@@ -562,11 +528,41 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
+   * Performs one-time initialization. This is called from `handleNewReport`.
+   */
+  handleOneTimeInitialization = (initialize: Initialize): void => {
+    SessionInfo.current = SessionInfo.fromInitializeMessage(initialize)
+    const config = initialize.config as Config
+
+    MetricsManager.current.initialize({
+      gatherUsageStats: config.gatherUsageStats,
+    })
+
+    MetricsManager.current.enqueue("createReport", {
+      pythonVersion: SessionInfo.current.pythonVersion,
+    })
+
+    this.setState({
+      sharingEnabled: config.sharingEnabled,
+      allowRunOnSave: config.allowRunOnSave,
+    })
+
+    this.props.s4aCommunication.connect()
+    this.handleSessionStateChanged(initialize.sessionState)
+  }
+
+  /**
    * Handler for ForwardMsg.reportFinished messages
    * @param status the ReportFinishedStatus that the report finished with
    */
   handleReportFinished(status: ForwardMsg.ReportFinishedStatus): void {
     if (status === ForwardMsg.ReportFinishedStatus.FINISHED_SUCCESSFULLY) {
+      // Notify any subscribers of this event (and do it on the next cycle of
+      // the event loop)
+      window.setTimeout(() => {
+        this.state.reportFinishedHandlers.map(handler => handler())
+      }, 0)
+
       // Clear any stale elements left over from the previous run.
       // (We don't do this if our script had a compilation error and didn't
       // finish successfully.)
@@ -904,48 +900,86 @@ export class App extends PureComponent<Props, State> {
     startRecording(`streamlit-${reportName}-${date}`)
   }
 
+  handleFullScreen = (isFullScreen: boolean): void => {
+    this.setState({ isFullScreen })
+  }
+
+  addReportFinishedHandler = (func: () => void): void => {
+    this.setState({
+      reportFinishedHandlers: concat(this.state.reportFinishedHandlers, func),
+    })
+  }
+
+  removeReportFinishedHandler = (func: () => void): void => {
+    this.setState({
+      reportFinishedHandlers: without(this.state.reportFinishedHandlers, func),
+    })
+  }
+
   render(): JSX.Element {
+    const {
+      allowRunOnSave,
+      connectionState,
+      deployParams,
+      dialog,
+      elements,
+      initialSidebarState,
+      isFullScreen,
+      layout,
+      reportId,
+      reportRunState,
+      sharingEnabled,
+      userSettings,
+    } = this.state
     const outerDivClass = classNames("stApp", {
       "streamlit-embedded": isEmbeddedInIFrame(),
-      "streamlit-wide": this.state.userSettings.wideMode,
+      "streamlit-wide": userSettings.wideMode,
     })
 
-    let dialog: React.ReactNode = null
-    if (this.state.dialog) {
-      const dialogProps: DialogProps = {
-        ...this.state.dialog,
-        onClose: this.closeDialog,
-      }
-      dialog = StreamlitDialog(dialogProps)
-    }
+    const renderedDialog: React.ReactNode = dialog
+      ? StreamlitDialog({
+          ...dialog,
+          onClose: this.closeDialog,
+        })
+      : null
 
     // Attach and focused props provide a way to handle Global Hot Keys
     // https://github.com/greena13/react-hotkeys/issues/41
     // attach: DOM element the keyboard listeners should attach to
     // focused: A way to force focus behaviour
     return (
-      <HotKeys
-        keyMap={this.keyMap}
-        handlers={this.keyHandlers}
-        attach={window}
-        focused={true}
+      <PageLayoutContext.Provider
+        value={{
+          initialSidebarState,
+          layout,
+          wideMode: userSettings.wideMode,
+          embedded: isEmbeddedInIFrame(),
+          isFullScreen,
+          setFullScreen: this.handleFullScreen,
+          addReportFinishedHandler: this.addReportFinishedHandler,
+          removeReportFinishedHandler: this.removeReportFinishedHandler,
+        }}
       >
-        <div className={outerDivClass}>
-          {/* The tabindex below is required for testing. */}
-          <header tabIndex={-1}>
-            <div className="decoration" />
-            <div className="toolbar">
+        <HotKeys
+          keyMap={this.keyMap}
+          handlers={this.keyHandlers}
+          attach={window}
+          focused={true}
+        >
+          <StyledApp className={outerDivClass}>
+            {/* The tabindex below is required for testing. */}
+            <Header>
               <StatusWidget
                 ref={this.statusWidgetRef}
-                connectionState={this.state.connectionState}
+                connectionState={connectionState}
                 sessionEventDispatcher={this.sessionEventDispatcher}
-                reportRunState={this.state.reportRunState}
+                reportRunState={reportRunState}
                 rerunReport={this.rerunScript}
                 stopReport={this.stopReport}
-                allowRunOnSave={this.state.allowRunOnSave}
+                allowRunOnSave={allowRunOnSave}
               />
               <MainMenu
-                sharingEnabled={this.state.sharingEnabled === true}
+                sharingEnabled={sharingEnabled === true}
                 isServerConnected={this.isServerConnected()}
                 shareCallback={this.shareReport}
                 quickRerunCallback={this.rerunScript}
@@ -956,30 +990,26 @@ export class App extends PureComponent<Props, State> {
                 screenCastState={this.props.screenCast.currentState}
                 s4aMenuItems={this.props.s4aCommunication.currentState.items}
                 sendS4AMessage={this.props.s4aCommunication.sendMessage}
-                deployParams={this.state.deployParams}
+                deployParams={deployParams}
               />
-            </div>
-          </header>
+            </Header>
 
-          <ReportView
-            wide={this.state.userSettings.wideMode}
-            initialSidebarState={this.state.initialSidebarState}
-            elements={this.state.elements}
-            reportId={this.state.reportId}
-            reportRunState={this.state.reportRunState}
-            showStaleElementIndicator={
-              this.state.connectionState !== ConnectionState.STATIC
-            }
-            widgetMgr={this.widgetMgr}
-            widgetsDisabled={
-              this.state.connectionState !== ConnectionState.CONNECTED
-            }
-            uploadClient={this.uploadClient}
-            componentRegistry={this.componentRegistry}
-          />
-          {dialog}
-        </div>
-      </HotKeys>
+            <ReportView
+              elements={elements}
+              reportId={reportId}
+              reportRunState={reportRunState}
+              showStaleElementIndicator={
+                connectionState !== ConnectionState.STATIC
+              }
+              widgetMgr={this.widgetMgr}
+              widgetsDisabled={connectionState !== ConnectionState.CONNECTED}
+              uploadClient={this.uploadClient}
+              componentRegistry={this.componentRegistry}
+            />
+            {renderedDialog}
+          </StyledApp>
+        </HotKeys>
+      </PageLayoutContext.Provider>
     )
   }
 }

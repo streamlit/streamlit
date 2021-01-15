@@ -19,13 +19,12 @@ from streamlit import caching
 from streamlit import cursor
 from streamlit import type_util
 from streamlit.cursor import Cursor
-from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.report_thread import get_report_ctx
 from streamlit.errors import StreamlitAPIException
 from streamlit.errors import NoSessionContext
 from streamlit.proto import Block_pb2
-from streamlit.proto import BlockPath_pb2
 from streamlit.proto import ForwardMsg_pb2
+from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.logger import get_logger
 
 from streamlit.elements.utils import NoValue
@@ -63,6 +62,7 @@ from streamlit.elements.slider import SliderMixin
 from streamlit.elements.image_proto import ImageMixin
 from streamlit.elements.pyplot import PyplotMixin
 from streamlit.elements.write import WriteMixin
+from streamlit.elements.layouts import LayoutsMixin
 
 LOGGER = get_logger(__name__)
 
@@ -92,6 +92,7 @@ class DeltaGenerator(
     HelpMixin,
     IframeMixin,
     ImageMixin,
+    LayoutsMixin,
     MarkdownMixin,
     MapMixin,
     MediaMixin,
@@ -116,7 +117,7 @@ class DeltaGenerator(
 
     Parameters
     ----------
-    container: BlockPath_pb2.BlockPath.ContainerValue or None
+    root_container: BlockPath_pb2.BlockPath.ContainerValue or None
       The root container for this DeltaGenerator. If None, this is a null
       DeltaGenerator which doesn't print to the app at all (useful for
       testing).
@@ -145,7 +146,7 @@ class DeltaGenerator(
     # those, see above.
     def __init__(
         self,
-        container: Optional["BlockPath.ContainerValue"] = BlockPath.MAIN,
+        root_container: Optional[int] = RootContainer.MAIN,
         cursor: Optional[Cursor] = None,
         parent: Optional["DeltaGenerator"] = None,
         block_type: Optional[str] = None,
@@ -164,9 +165,20 @@ class DeltaGenerator(
         an element `foo` inside the sidebar.
 
         """
+        # Sanity check our Container + Cursor, to ensure that our Cursor
+        # is using the same Container that we are.
+        if (
+            root_container is not None
+            and cursor is not None
+            and root_container != cursor.root_container
+        ):
+            raise RuntimeError(
+                "DeltaGenerator root_container and cursor.root_container must be the same"
+            )
+
         # Whether this DeltaGenerator is nested in the main area or sidebar.
         # No relation to `st.beta_container()`.
-        self._container = container
+        self._root_container = root_container
 
         # NOTE: You should never use this directly! Instead, use self._cursor,
         # which is a computed property that fetches the right cursor.
@@ -232,7 +244,7 @@ class DeltaGenerator(
 
         def wrapper(*args, **kwargs):
             if name in streamlit_methods:
-                if self._container == BlockPath_pb2.BlockPath.SIDEBAR:
+                if self._root_container == RootContainer.SIDEBAR:
                     message = (
                         "Method `%(name)s()` does not exist for "
                         "`st.sidebar`. Did you mean `st.%(name)s()`?" % {"name": name}
@@ -270,7 +282,7 @@ class DeltaGenerator(
         Streamlit.
         """
         if self._provided_cursor is None:
-            return cursor.get_container_cursor(self._container)
+            return cursor.get_container_cursor(self._root_container)
         else:
             return self._provided_cursor
 
@@ -278,29 +290,19 @@ class DeltaGenerator(
     def _is_top_level(self) -> bool:
         return self._provided_cursor is None
 
-    def _get_coordinates(self) -> str:
-        """Returns the element's 4-component location as string like "M.(1,2).3".
+    def _get_delta_path_str(self) -> str:
+        """Returns the element's delta path as a string like "[0, 2, 3, 1]".
 
-        This function uniquely identifies the element's position in the front-end,
+        This uniquely identifies the element's position in the front-end,
         which allows (among other potential uses) the MediaFileManager to maintain
         session-specific maps of MediaFile objects placed with their "coordinates".
 
         This way, users can (say) use st.image with a stream of different images,
         and Streamlit will expire the older images and replace them in place.
         """
-        # Switch to the active DeltaGenerator, in case we're in a `with` block.
-        self = self._active_dg
-        container = self._container  # Proto index of container (e.g. MAIN=1)
-
-        if self._cursor:
-            path_str = str(self._cursor.path)
-            index_str = str(self._cursor.index)  # index - element's own position
-        else:
-            # Case in which we have started up in headless mode.
-            path_str = "(,)"
-            index_str = ""
-
-        return f"{container}.{path_str}.{index_str}"
+        # Operate on the active DeltaGenerator, in case we're in a `with` block.
+        dg = self._active_dg
+        return str(dg._cursor.delta_path) if dg._cursor is not None else "[]"
 
     def _enqueue(
         self,
@@ -333,10 +335,10 @@ class DeltaGenerator(
             element.
 
         """
-        # Switch to the active DeltaGenerator, in case we're in a `with` block.
-        self = self._active_dg
+        # Operate on the active DeltaGenerator, in case we're in a `with` block.
+        dg = self._active_dg
         # Warn if we're called from within an @st.cache function
-        caching.maybe_show_cached_st_function_warning(self, delta_type)
+        caching.maybe_show_cached_st_function_warning(dg, delta_type)
 
         # Some elements have a method.__name__ != delta_type in proto.
         # This really matters for line_chart, bar_chart & area_chart,
@@ -353,10 +355,8 @@ class DeltaGenerator(
 
         # Only enqueue message and fill in metadata if there's a container.
         msg_was_enqueued = False
-        if self._container and self._cursor:
-            msg.metadata.parent_block.container = self._container
-            msg.metadata.parent_block.path[:] = self._cursor.path
-            msg.metadata.delta_id = self._cursor.index
+        if dg._root_container is not None and dg._cursor is not None:
+            msg.metadata.delta_path[:] = dg._cursor.delta_path
 
             if element_width is not None:
                 msg.metadata.element_dimension_spec.width = element_width
@@ -370,178 +370,34 @@ class DeltaGenerator(
             # Get a DeltaGenerator that is locked to the current element
             # position.
             new_cursor = (
-                self._cursor.get_locked_cursor(
+                dg._cursor.get_locked_cursor(
                     delta_type=delta_type, last_index=last_index
                 )
-                if self._cursor is not None
+                if dg._cursor is not None
                 else None
             )
 
             output_dg = DeltaGenerator(
-                container=self._container,
+                root_container=dg._root_container,
                 cursor=new_cursor,
-                parent=self,
+                parent=dg,
             )
         else:
             # If the message was not enqueued, just return self since it's a
             # no-op from the point of view of the app.
-            output_dg = self
+            output_dg = dg
 
         return _value_or_dg(return_value, output_dg)
 
-    def beta_container(self) -> "DeltaGenerator":
-        """Insert a multi-element container.
-
-        Inserts an invisible container into your app that can be used to hold
-        multiple elements. This allows you to, for example, insert multiple
-        elements into your app out of order.
-
-        To add elements to the returned container, you can use "with" notation
-        (preferred) or just call methods directly on the returned object. See
-        examples below.
-
-        Examples
-        --------
-
-        Inserting elements using "with" notation:
-
-        >>> with st.beta_container():
-        ...    st.write("This is inside the container")
-        ...
-        ...    # You can call any Streamlit command, including custom components:
-        ...    st.bar_chart(np.random.randn(50, 3))
-        ...
-        >>> st.write("This is outside the container")
-
-        .. output ::
-            https://static.streamlit.io/0.66.0-Wnid/index.html?id=Qj8PY3v3L8dgVjjQCreHux
-            height: 420px
-
-        Inserting elements out of order:
-
-        >>> container = st.beta_container()
-        >>> container.write("This is inside the container")
-        >>> st.write("This is outside the container")
-        >>>
-        >>> # Now insert some more in the container
-        >>> container.write("This is inside too")
-
-        .. output ::
-            https://static.streamlit.io/0.66.0-Wnid/index.html?id=GsFVF5QYT3Ljr6jQjErPqL
-        """
-        return self._block()
-
-    # TODO: Enforce that columns are not nested or in Sidebar
-    def beta_columns(self, spec) -> List["DeltaGenerator"]:
-        """Insert containers laid out as side-by-side columns.
-
-        Inserts a number of multi-element containers laid out side-by-side and
-        returns a list of container objects.
-
-        To add elements to the returned containers, you can use "with" notation
-        (preferred) or just call methods directly on the returned object. See
-        examples below.
-
-        .. warning::
-            Currently, you may not put columns inside another column.
-
-        Parameters
-        ----------
-        spec : int or list of numbers
-            If an int
-                Specifies the number of columns to insert, and all columns
-                have equal width.
-
-            If a list of numbers
-                Creates a column for each number, and each
-                column's width is proportional to the number provided. Numbers can
-                be ints or floats, but they must be positive.
-
-                For example, `st.beta_columns([3, 1, 2])` creates 3 columns where
-                the first column is 3 times the width of the second, and the last
-                column is 2 times that width.
-
-        Returns
-        -------
-        list of containers
-            A list of container objects.
-
-        Examples
-        --------
-
-        You can use `with` notation to insert any element into a column:
-
-        >>> col1, col2, col3 = st.beta_columns(3)
-        >>>
-        >>> with col1:
-        ...    st.header("A cat")
-        ...    st.image("https://static.streamlit.io/examples/cat.jpg", use_column_width=True)
-        ...
-        >>> with col2:
-        ...    st.header("A dog")
-        ...    st.image("https://static.streamlit.io/examples/dog.jpg", use_column_width=True)
-        ...
-        >>> with col3:
-        ...    st.header("An owl")
-        ...    st.image("https://static.streamlit.io/examples/owl.jpg", use_column_width=True)
-
-        .. output ::
-            https://static.streamlit.io/0.66.0-Wnid/index.html?id=VW45Va5XmSKed2ayzf7vYa
-            height: 550px
-
-        Or you can just call methods directly in the returned objects:
-
-        >>> col1, col2 = st.beta_columns([3, 1])
-        >>> data = np.random.randn(10, 1)
-        >>>
-        >>> col1.subheader("A wide column with a chart")
-        >>> col1.line_chart(data)
-        >>>
-        >>> col2.subheader("A narrow column with the data")
-        >>> col2.write(data)
-
-        .. output ::
-            https://static.streamlit.io/0.66.0-Wnid/index.html?id=XSQ6VkonfGcT2AyNYMZN83
-            height: 400px
-
-        """
-        weights = spec
-        weights_exception = StreamlitAPIException(
-            "The input argument to st.beta_columns must be either a "
-            + "positive integer or a list of positive numeric weights. "
-            + "See [documentation](https://docs.streamlit.io/en/stable/api.html#streamlit.beta_columns) "
-            + "for more information."
-        )
-
-        if isinstance(weights, int):
-            # If the user provided a single number, expand into equal weights.
-            # E.g. (1,) * 3 => (1, 1, 1)
-            # NOTE: A negative/zero spec will expand into an empty tuple.
-            weights = (1,) * weights
-
-        if len(weights) == 0 or any(weight <= 0 for weight in weights):
-            raise weights_exception
-
-        def column_proto(weight):
-            col_proto = Block_pb2.Block()
-            col_proto.column.weight = weight
-            col_proto.allow_empty = True
-            return col_proto
-
-        horiz_proto = Block_pb2.Block()
-        horiz_proto.horizontal.total_weight = sum(weights)
-        row = self._block(horiz_proto)
-        return [row._block(column_proto(w)) for w in weights]
-
-    # Internal block element, to hide the 'layout' param from our users.
+    # Internal block element, used for e.g. containers, expanders, columns
     def _block(self, block_proto=Block_pb2.Block()) -> "DeltaGenerator":
-        # Switch to the active DeltaGenerator, in case we're in a `with` block.
-        self = self._active_dg
+        # Operate on the active DeltaGenerator, in case we're in a `with` block.
+        dg = self._active_dg
 
         # Prevent nested columns & expanders by checking all parents.
         block_type = block_proto.WhichOneof("type")
         # Convert the generator to a list, so we can use it multiple times.
-        parent_block_types = frozenset(self._parent_block_types)
+        parent_block_types = frozenset(dg._parent_block_types)
         if block_type == "column" and block_type in parent_block_types:
             raise StreamlitAPIException(
                 "Columns may not be nested inside other columns."
@@ -551,85 +407,32 @@ class DeltaGenerator(
                 "Expanders may not be nested inside other expanders."
             )
 
-        if self._container is None or self._cursor is None:
-            return self
+        if dg._root_container is None or dg._cursor is None:
+            return dg
 
         msg = ForwardMsg_pb2.ForwardMsg()
-        msg.metadata.parent_block.container = self._container
-        msg.metadata.parent_block.path[:] = self._cursor.path
-        msg.metadata.delta_id = self._cursor.index
+        msg.metadata.delta_path[:] = dg._cursor.delta_path
         msg.delta.add_block.CopyFrom(block_proto)
 
         # Normally we'd return a new DeltaGenerator that uses the locked cursor
         # below. But in this case we want to return a DeltaGenerator that uses
         # a brand new cursor for this new block we're creating.
         block_cursor = cursor.RunningCursor(
-            path=self._cursor.path + (self._cursor.index,)
+            root_container=dg._root_container,
+            parent_path=dg._cursor.parent_path + (dg._cursor.index,),
         )
         block_dg = DeltaGenerator(
-            container=self._container,
+            root_container=dg._root_container,
             cursor=block_cursor,
-            parent=self,
+            parent=dg,
             block_type=block_type,
         )
 
         # Must be called to increment this cursor's index.
-        self._cursor.get_locked_cursor(last_index=None)
+        dg._cursor.get_locked_cursor(last_index=None)
         _enqueue_message(msg)
 
         return block_dg
-
-    def beta_expander(self, label=None, expanded=False) -> "DeltaGenerator":
-        """Insert a multi-element container that can be expanded/collapsed.
-
-        Inserts a container into your app that can be used to hold multiple elements
-        and can be expanded or collapsed by the user. When collapsed, all that is
-        visible is the provided label.
-
-        To add elements to the returned container, you can use "with" notation
-        (preferred) or just call methods directly on the returned object. See
-        examples below.
-
-        .. warning::
-            Currently, you may not put expanders inside another expander.
-
-        Parameters
-        ----------
-        label : str
-            A string to use as the header for the expander.
-        expanded : bool
-            If True, initializes the expander in "expanded" state. Defaults to
-            False (collapsed).
-
-        Examples
-        --------
-        >>> st.line_chart({"data": [1, 5, 2, 6, 2, 1]})
-        >>>
-        >>> with st.beta_expander("See explanation"):
-        ...     st.write(\"\"\"
-        ...         The chart above shows some numbers I picked for you.
-        ...         I rolled actual dice for these, so they're *guaranteed* to
-        ...         be random.
-        ...     \"\"\")
-        ...     st.image("https://static.streamlit.io/examples/dice.jpg")
-
-        .. output ::
-            https://static.streamlit.io/0.66.0-2BLtg/index.html?id=7v2tgefVbW278gemvYrRny
-            height: 750px
-
-        """
-        if label is None:
-            raise StreamlitAPIException("A label is required for an expander")
-
-        expandable_proto = Block_pb2.Block.Expandable()
-        expandable_proto.expanded = expanded
-        expandable_proto.label = label
-
-        block_proto = Block_pb2.Block()
-        block_proto.allow_empty = True
-        block_proto.expandable.CopyFrom(expandable_proto)
-
-        return self._block(block_proto=block_proto)
 
     def add_rows(self, data=None, **kwargs):
         """Concatenate a dataframe to the bottom of the current one.
@@ -683,7 +486,7 @@ class DeltaGenerator(
         >>> my_chart.add_rows(some_fancy_name=df2)  # <-- name used as keyword
 
         """
-        if self._container is None or self._cursor is None:
+        if self._root_container is None or self._cursor is None:
             return self
 
         if not self._cursor.is_locked:
@@ -721,9 +524,7 @@ class DeltaGenerator(
         )
 
         msg = ForwardMsg_pb2.ForwardMsg()
-        msg.metadata.parent_block.container = self._container
-        msg.metadata.parent_block.path[:] = self._cursor.path
-        msg.metadata.delta_id = self._cursor.index
+        msg.metadata.delta_path[:] = self._cursor.delta_path
 
         import streamlit.elements.data_frame_proto as data_frame_proto
 

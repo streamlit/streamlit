@@ -24,11 +24,11 @@ describe("Dataframes and Tables snapshots", () => {
     cy.visit("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
+    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
 
     // HACK: Add `overflow: auto` to all tables to prevent Cypress
     // from throwing [RangeError: The value of "offset" is out of range.]
-    cy.get(".stTable").each($element => {
+    cy.get("[data-testid='stTable']").each($element => {
       cy.wrap($element).invoke("css", "overflow", "auto");
     });
   });
@@ -39,7 +39,7 @@ describe("Dataframes and Tables snapshots", () => {
     cy.get(".stDataFrame")
       .first()
       .within(() => {
-        cy.get(`div.data`).each($element => {
+        cy.get("[data-testid='StyledDataFrameDataCell']").each($element => {
           expect($element.text()).to.eq($element.attr("title"));
         });
       });
@@ -52,7 +52,7 @@ describe("Dataframes and Tables snapshots", () => {
   });
 
   it("have consistent st.table visuals", () => {
-    cy.get(".stTable").each(($element, index) => {
+    cy.get("[data-testid='stTable']").each(($element, index) => {
       return cy.wrap($element).matchImageSnapshot("table-visuals" + index);
     });
   });

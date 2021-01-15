@@ -17,7 +17,7 @@
 
 import React from "react"
 import { FileError } from "react-dropzone"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 
 import { ExtendedFile } from "lib/FileHelper"
 
@@ -47,6 +47,7 @@ const FILE_TOO_LARGE: FileError = {
 
 const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
   element: FileUploaderProto.create({
+    id: "id",
     type: [],
     maxUploadSizeMb: 50,
     ...elementProps,
@@ -56,7 +57,10 @@ const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
   // @ts-ignore
   widgetStateManager: jest.fn(),
   // @ts-ignore
-  uploadClient: { uploadFiles: jest.fn().mockResolvedValue(undefined) },
+  uploadClient: {
+    uploadFiles: jest.fn().mockResolvedValue(undefined),
+    updateFileCount: jest.fn().mockResolvedValue(undefined),
+  },
 })
 
 describe("FileUploader widget", () => {
@@ -72,7 +76,7 @@ describe("FileUploader widget", () => {
     const props = getProps({ label: "Test label" })
     const wrapper = shallow(<FileUploader {...props} />)
 
-    expect(wrapper.find("label").text()).toBe(props.element.label)
+    expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
   })
 
   it("should upload files", () => {
@@ -98,6 +102,32 @@ describe("FileUploader widget", () => {
     )
 
     expect(props.uploadClient.uploadFiles.mock.calls.length).toBe(1)
+    expect(props.uploadClient.updateFileCount.mock.calls.length).toBe(1)
+    expect(props.uploadClient.updateFileCount).toBeCalledWith(
+      props.element.id,
+      1
+    )
+  })
+
+  it("should upload multiple files", () => {
+    const props = getProps({ multipleFiles: true })
+    const wrapper = shallow(<FileUploader {...props} />)
+    const internalFileUploader = wrapper.find(FileDropzone)
+    internalFileUploader.props().onDrop(
+      [blobFile, blobFile],
+      [
+        { file: blobFile, errors: [INVALID_TYPE_ERROR, TOO_MANY_FILES] },
+        { file: blobFile, errors: [TOO_MANY_FILES] },
+        { file: blobFile, errors: [TOO_MANY_FILES] },
+      ]
+    )
+
+    expect(props.uploadClient.uploadFiles.mock.calls.length).toBe(2)
+    expect(props.uploadClient.updateFileCount.mock.calls.length).toBe(1)
+    expect(props.uploadClient.updateFileCount).toBeCalledWith(
+      props.element.id,
+      2
+    )
   })
 
   it("should change status + add file attributes when dropping a File", () => {

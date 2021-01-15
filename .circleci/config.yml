@@ -121,14 +121,14 @@ commands:
               # install nodejs via nvm
               curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.35.2/install.sh | bash
               source "$HOME/.nvm/nvm.sh"
-              nvm install --lts=dubnium
+              nvm install --lts=fermium
               # install yarn
               npm install -g yarn
             fi
             if [ ! -d frontend/node_modules ] ; then
               source "$HOME/.nvm/nvm.sh"
             fi
-            make react-init scssvars
+            make react-init
             echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
             echo 'source "$NVM_DIR/nvm.sh"' >> $BASH_ENV
 
@@ -153,11 +153,6 @@ commands:
               pip install --upgrade pip
               make setup
               make pipenv-install
-              # Looks like the pinned setuptools is not being respected
-              # In the meantime, forcing a reinstall of setuptools to unblock
-              # TODO: Cleanup as part of GH #1963
-              pip install "setuptools<=49.6.0" --force-reinstall --no-cache-dir
-              pip show setuptools
               deactivate
             else
               # The virtualenv WAS restored from cache. Don't create a new one.
@@ -211,15 +206,16 @@ workflows:
               only: /^([0-9]+\.){3}dev[0-9]+/
             branches:
               ignore: /.*/
-      - cypress-flaky-approval:
-          type: approval
-          requires:
-            - python-3-8
-      - cypress: # Flaky Cypress tests
-          name: cypress-flaky
-          flaky: true
-          requires:
-            - cypress-flaky-approval
+      # Uncomment to get a button that runs flaky tests on CircleCI:
+      # - cypress-flaky-approval:
+      #     type: approval
+      #     requires:
+      #       - python-3-8
+      # - cypress: # Flaky Cypress tests
+      #     name: cypress-flaky
+      #     flaky: true
+      #     requires:
+      #       - cypress-flaky-approval
 
   create-nightly-tag:
     triggers:
@@ -333,6 +329,14 @@ jobs:
             make integration-tests
 
       #################################################################
+      # Run CLI smoke tests
+      #################################################################
+      - run:
+          name: CLI smoke tests
+          command: |
+            make cli-smoke-tests
+
+      #################################################################
       # Run frontend tests. (Only executed in one job.)
       #################################################################
       - run:
@@ -391,11 +395,6 @@ jobs:
       - pre-make
       - make-init
 
-      - run: &make_scss_vars
-          name: Make SCSS vars
-          command: |
-            make scssvars
-
       - run:
           <<: *make_develop
 
@@ -445,9 +444,6 @@ jobs:
       - restore-from-cache
       - pre-make
       - make-init
-
-      - run:
-          <<: *make_scss_vars
 
       - run:
           name: verify git tag vs. version
@@ -503,9 +499,6 @@ jobs:
       - restore-from-cache
       - pre-make
       - make-init
-
-      - run:
-          <<: *make_scss_vars
 
       - run:
           name: Create wheel file
@@ -593,9 +586,6 @@ jobs:
       - restore-from-cache
       - pre-make
       - make-init
-
-      - run:
-          <<: *make_scss_vars
 
       - run:
           <<: *make_develop

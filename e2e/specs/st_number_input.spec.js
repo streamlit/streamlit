@@ -20,7 +20,7 @@ describe("st.number_input", () => {
     cy.visit("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
+    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
   });
 
   it("shows widget correctly", () => {
@@ -37,6 +37,17 @@ describe("st.number_input", () => {
       "have.text",
       'value 1: " 0.0 "' + 'value 2: " 1 "' + 'value 3: " 1 "'
     );
+  });
+
+  it("displays instructions correctly on change", () => {
+    cy.get(".stNumberInput input")
+      .first()
+      .clear()
+      .type("10");
+
+    cy.get(".stNumberInput")
+      .first()
+      .matchImageSnapshot("number_input_change");
   });
 
   it("sets value correctly on enter keypress", () => {

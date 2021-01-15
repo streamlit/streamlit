@@ -20,11 +20,11 @@ describe("main menu", () => {
     cy.visit("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
+    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
   });
 
   it("displays menu dropdown", () => {
-    cy.get("#ConnectionStatus").should("not.exist");
+    cy.get("[data-testid='stConnectionStatus']").should("not.exist");
 
     // Main menu renders visually as we expect
     cy.get("#MainMenu > button").click();

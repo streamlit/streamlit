@@ -14,12 +14,9 @@
 
 """Provides global MediaFileManager object as `media_file_manager`."""
 
-from typing import Dict, DefaultDict, Set, Any
-from weakref import WeakValueDictionary
+from typing import Dict, DefaultDict, Set
 import collections
-import datetime as dt
 import hashlib
-import time
 
 from streamlit.report_thread import get_report_ctx
 from streamlit.logger import get_logger

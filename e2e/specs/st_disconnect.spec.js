@@ -20,20 +20,23 @@ describe("kill server", () => {
     cy.visit("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
+    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
   });
 
   it("disconnects the client", () => {
-    cy.get("#ConnectionStatus").should("not.exist");
+    cy.get("[data-testid='stConnectionStatus']").should("not.exist");
 
     cy.window().then(win => {
       win.streamlitDebug.closeConnection();
 
-      cy.get("#ConnectionStatus label").should("have.text", "Connecting");
+      cy.get("[data-testid='stConnectionStatus'] label").should(
+        "have.text",
+        "Connecting"
+      );
 
-      // Snapshot `toolbar` instead of `ConnectionStatus` so we have a larger
+      // Snapshot `stToolbar` instead of `ConnectionStatus` so we have a larger
       // bounding box and a lower percentage difference on the snapshot diff
-      cy.get(".toolbar").matchImageSnapshot("disconnected");
+      cy.get("[data-testid='stToolbar']").matchImageSnapshot("disconnected");
     });
   });
 });

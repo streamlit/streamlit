@@ -16,7 +16,6 @@
 
 @import "variables";
 @import "fonts";
-@import "src/assets/css/mixins";
 @import "scrollbars";
 @import "reboot";
 
@@ -44,12 +43,11 @@ code {
   margin: 0;
   border-radius: $border-radius;
   background: $gray-faint;
-  color: $green;
+  color: $code-color;
 }
 
 pre {
-  @include element-margin-bottom;
-
+  margin: 0 0 1rem 0;
   background: $gray-faint;
   border-radius: $border-radius;
   padding: 1rem;
@@ -61,13 +59,12 @@ pre {
     font-size: $font-size-sm;
     line-height: inherit;
     margin: 0;
-    max-width: auto;
     padding: 0;
     white-space: pre;
     word-break: normal;
     word-wrap: normal;
     overflow-x: auto;
-    color: $green;
+    color: $code-color;
   }
 }
 
@@ -78,4 +75,13 @@ pre {
 // VegaLite Specific CSS information
 #vg-tooltip-element td {
   border: none;
+}
+
+// Embedded Overflow Management
+body.embedded {
+  overflow: hidden;
+}
+
+body.embedded:hover {
+  overflow: auto;
 }

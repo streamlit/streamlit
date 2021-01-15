@@ -17,6 +17,7 @@
 
 import React, { ReactElement } from "react"
 import AlertContainer, { Kind } from "components/shared/AlertContainer"
+import { StyledPreError } from "./styled-components"
 
 export interface ErrorElementProps {
   name: string
@@ -45,9 +46,9 @@ function ErrorElement(props: ErrorElementProps): ReactElement {
       <strong>{name}: </strong>
       {message}
       {stack ? (
-        <pre className="error">
+        <StyledPreError>
           <code>{cleanedStack}</code>
-        </pre>
+        </StyledPreError>
       ) : null}
     </AlertContainer>
   )

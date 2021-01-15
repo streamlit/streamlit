@@ -12,21 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit import type_util
-
 import io
 import re
+from typing import cast
 
 from validators import url
 
+import streamlit
 from streamlit import type_util
+from streamlit.media_file_manager import media_file_manager
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
-from streamlit.media_file_manager import media_file_manager
 
 
 class MediaMixin:
-    def audio(dg, data, format="audio/wav", start_time=0):
+    def audio(self, data, format="audio/wav", start_time=0):
         """Display an audio player.
 
         Parameters
@@ -55,11 +55,11 @@ class MediaMixin:
 
         """
         audio_proto = AudioProto()
-        coordinates = dg._get_coordinates()  # type: ignore
+        coordinates = self.dg._get_delta_path_str()
         marshall_audio(coordinates, audio_proto, data, format, start_time)
-        return dg._enqueue("audio", audio_proto)  # type: ignore
+        return self.dg._enqueue("audio", audio_proto)
 
-    def video(dg, data, format="video/mp4", start_time=0):
+    def video(self, data, format="video/mp4", start_time=0):
         """Display a video player.
 
         Parameters
@@ -96,9 +96,14 @@ class MediaMixin:
 
         """
         video_proto = VideoProto()
-        coordinates = dg._get_coordinates()  # type: ignore
+        coordinates = self.dg._get_delta_path_str()
         marshall_video(coordinates, video_proto, data, format, start_time)
-        return dg._enqueue("video", video_proto)  # type: ignore
+        return self.dg._enqueue("video", video_proto)
+
+    @property
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
 # Regular expression explained at https://regexr.com/4n2l2 Covers any youtube

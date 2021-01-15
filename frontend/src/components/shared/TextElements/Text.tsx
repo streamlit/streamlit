@@ -15,8 +15,7 @@
  * limitations under the License.
  */
 
-import { styled } from "styletron-react"
-import { colors, fontStyles } from "lib/widgetTheme"
+import styled from "@emotion/styled"
 
 export enum Kind {
   SECONDARY = "secondary",
@@ -27,11 +26,16 @@ interface TextProps {
   kind?: Kind
 }
 
-export const Small = styled("small", ({ kind }: TextProps) => ({
-  color: kind ? colors[kind] : colors.grayDark,
-  fontSize: fontStyles.fontSizeSm,
-  height: fontStyles.fontSizeSm,
-  lineHeight: fontStyles.fontSizeSm,
-  display: "flex",
-  alignItems: "center",
-}))
+export const Small = styled.small<TextProps>(({ kind, theme }) => {
+  const secondaryColor = kind === Kind.SECONDARY && theme.colors.secondary
+  const dangerColor = kind === Kind.DANGER && theme.colors.danger
+
+  return {
+    color: dangerColor || secondaryColor || theme.colors.darkGray,
+    fontSize: theme.fontSizes.smDefault,
+    height: theme.fontSizes.smDefault,
+    lineHeight: theme.fontSizes.smDefault,
+    display: "flex",
+    alignItems: "center",
+  }
+})

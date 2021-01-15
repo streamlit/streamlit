@@ -26,14 +26,14 @@ import errno
 from tornado import gen
 
 import streamlit.server.server
-from streamlit import config
+from streamlit import config, RootContainer
+from streamlit.cursor import make_delta_path
 from streamlit.report_session import ReportSession
-from streamlit.uploaded_file_manager import UploadedFile
+from streamlit.uploaded_file_manager import UploadedFileRec
 from streamlit.server.server import MAX_PORT_SEARCH_RETRIES
 from streamlit.forward_msg_cache import ForwardMsgCache
 from streamlit.forward_msg_cache import populate_hash_if_needed
 from streamlit.elements import data_frame_proto
-from streamlit.proto.BlockPath_pb2 import BlockPath
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.server.server import State
 from streamlit.server.server import start_listening
@@ -52,15 +52,14 @@ from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 
-def _create_dataframe_msg(df, id=1):
+def _create_dataframe_msg(df, id=1) -> ForwardMsg:
     msg = ForwardMsg()
-    msg.metadata.delta_id = id
-    msg.metadata.parent_block.container = BlockPath.SIDEBAR
+    msg.metadata.delta_path[:] = make_delta_path(RootContainer.SIDEBAR, (), id)
     data_frame_proto.marshall_data_frame(df, msg.delta.new_element.data_frame)
     return msg
 
 
-def _create_report_finished_msg(status):
+def _create_report_finished_msg(status) -> ForwardMsg:
     msg = ForwardMsg()
     msg.report_finished = status
     return msg
@@ -327,9 +326,14 @@ class ServerTest(ServerTestCase):
             session_info1 = list(self.server._session_info_by_id.values())[0]
             session_info2 = list(self.server._session_info_by_id.values())[1]
 
-            file = UploadedFile("id", "file.txt", "type", b"123")
+            file = UploadedFileRec("id", "file.txt", "type", b"123")
 
             # "Upload a file" for Session1
+            self.server._uploaded_file_mgr.update_file_count(
+                session_id=session_info1.session.id,
+                widget_id="widget_id",
+                file_count=1,
+            )
             self.server._uploaded_file_mgr.add_files(
                 session_id=session_info1.session.id,
                 widget_id="widget_id",
@@ -348,6 +352,44 @@ class ServerTest(ServerTestCase):
             session_info2.session.request_rerun.assert_not_called()
 
     @tornado.testing.gen_test
+    def test_multiple_uploaded_file_triggers_one_rerun(self):
+        """Uploading a file should trigger a re-run in the associated
+        ReportSession."""
+        with self._patch_report_session():
+            yield self.start_server_loop()
+
+            # Connect twice and get associated ReportSessions
+            yield self.ws_connect()
+            yield self.ws_connect()
+            session_info1 = list(self.server._session_info_by_id.values())[0]
+            session_info2 = list(self.server._session_info_by_id.values())[1]
+
+            file = UploadedFileRec("id", "file.txt", "type", b"123")
+
+            # "Upload 2 files" for Session1
+            self.server._uploaded_file_mgr.update_file_count(
+                session_id=session_info1.session.id,
+                widget_id="widget_id",
+                file_count=2,
+            )
+            self.server._uploaded_file_mgr.add_files(
+                session_id=session_info1.session.id,
+                widget_id="widget_id",
+                files=[file, file],
+            )
+
+            self.assertEqual(
+                self.server._uploaded_file_mgr.get_files(
+                    session_info1.session.id, "widget_id"
+                ),
+                [file, file],
+            )
+
+            # Session1 should have a rerun request; Session2 should not
+            session_info1.session.request_rerun.assert_called_once()
+            session_info2.session.request_rerun.assert_not_called()
+
+    @tornado.testing.gen_test
     def test_orphaned_upload_file_deletion(self):
         """An uploaded file with no associated ReportSession should be
         deleted."""
@@ -359,7 +401,7 @@ class ServerTest(ServerTestCase):
             self.server._uploaded_file_mgr.add_files(
                 session_id="no_such_session",
                 widget_id="widget_id",
-                files=[UploadedFile("id", "file.txt", "type", b"123")],
+                files=[UploadedFileRec("id", "file.txt", "type", b"123")],
             )
 
             self.assertIsNone(

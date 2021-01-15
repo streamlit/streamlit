@@ -15,9 +15,11 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { ComponentType, ReactElement } from "react"
+import { ChevronTop, ChevronBottom } from "@emotion-icons/open-iconic"
 import Icon from "components/shared/Icon"
 import { SortDirection } from "./SortDirection"
+import { StyledSortIcon } from "./styled-components"
 
 export interface DataFrameCellProps {
   /** The cell's column index in the DataFrame */
@@ -26,8 +28,8 @@ export interface DataFrameCellProps {
   /** The cell's row index in the DataFrame */
   rowIndex: number
 
-  /** The cell's css class name */
-  className: string
+  /** The cell's component to render */
+  CellType: ComponentType
 
   /** Additional css styling for the cell */
   style: Record<string, unknown>
@@ -63,7 +65,7 @@ export interface DataFrameCellProps {
 }
 
 export default function DataFrameCell({
-  className,
+  CellType,
   columnIndex,
   contents,
   rowIndex,
@@ -98,17 +100,19 @@ export default function DataFrameCell({
   return (
     // (ESLint erroneously believes we're not assigning a role to our clickable div)
     // eslint-disable-next-line
-    <div
-      className={className}
+
+    <CellType
+      // @ts-ignore
       style={style}
       onClick={onClick}
       role={role}
       tabIndex={tabIndex}
       title={title}
+      data-testid={CellType.displayName}
     >
       {sortedByUser ? sortIcon : ""}
       {contents}
-    </div>
+    </CellType>
   )
 }
 
@@ -117,12 +121,19 @@ function drawSortIcon(sortDirection?: SortDirection): React.ReactNode {
   // to ensure proper column width padding
   switch (sortDirection) {
     case SortDirection.ASCENDING:
-      return <Icon className="sort-arrow-icon" type="chevron-top" />
+      return (
+        <StyledSortIcon data-testid="sortIcon">
+          <Icon content={ChevronTop} size="xs" margin="0 twoXS 0 0" />
+        </StyledSortIcon>
+      )
 
     case SortDirection.DESCENDING:
-      return <Icon className="sort-arrow-icon" type="chevron-bottom" />
+      return (
+        <StyledSortIcon data-testid="sortIcon">
+          <Icon content={ChevronBottom} size="xs" margin="0 twoXS 0 0" />
+        </StyledSortIcon>
+      )
 
-    case undefined:
     default:
       return null
   }

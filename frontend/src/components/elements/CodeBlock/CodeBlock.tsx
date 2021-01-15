@@ -31,7 +31,11 @@ import "prismjs/components/prism-yaml"
 import "prismjs/components/prism-css"
 import "prismjs/components/prism-c"
 import CopyButton from "./CopyButton"
-import { StyledPre, StyledCodeBlock } from "./styled-components"
+import {
+  StyledPre,
+  StyledCodeBlock,
+  StyledCopyButtonContainer,
+} from "./styled-components"
 
 export interface CodeBlockProps {
   width: number
@@ -50,7 +54,9 @@ export default function CodeBlock({
   if (language == null) {
     return (
       <StyledCodeBlock className="stCodeBlock">
-        <CopyButton text={value} />
+        <StyledCopyButtonContainer>
+          <CopyButton text={value} />
+        </StyledCopyButtonContainer>
         <StyledPre>
           <code>{value}</code>
         </StyledPre>
@@ -72,7 +78,9 @@ export default function CodeBlock({
 
   return (
     <StyledCodeBlock className="stCodeBlock">
-      <CopyButton text={value} />
+      <StyledCopyButtonContainer>
+        <CopyButton text={value} />
+      </StyledCopyButtonContainer>
       <StyledPre>
         <code
           className={languageClassName}

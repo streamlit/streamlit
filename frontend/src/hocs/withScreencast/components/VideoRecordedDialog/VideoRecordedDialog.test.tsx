@@ -16,8 +16,11 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { BaseProvider, LightTheme } from "baseui"
+import { ReactWrapper } from "enzyme"
 
+import { ModalHeader, ModalBody } from "components/shared/Modal"
+import { mount } from "lib/test_util"
 import VideoRecordedDialog, { Props } from "./VideoRecordedDialog"
 
 URL.createObjectURL = jest.fn()
@@ -30,31 +33,39 @@ const getProps = (props: Partial<Props> = {}): Props => ({
 })
 
 describe("VideoRecordedDialog", () => {
-  it("renders without crashing", () => {
-    const wrapper = shallow(<VideoRecordedDialog {...getProps()} />)
+  const props = getProps()
+  let wrapper: ReactWrapper
 
+  beforeEach(() => {
+    wrapper = mount(
+      <BaseProvider theme={LightTheme}>
+        <VideoRecordedDialog {...props} />
+      </BaseProvider>
+    )
+  })
+
+  afterEach(() => {
+    wrapper.unmount()
+  })
+
+  it("renders without crashing", () => {
     expect(wrapper.html()).not.toBeNull()
   })
 
   it("should render a header", () => {
-    const props = getProps()
-    const wrapper = shallow(<VideoRecordedDialog {...props} />)
-    const headerWrapper = wrapper.find("ModalHeader")
+    const headerWrapper = wrapper.find(ModalHeader)
     expect(headerWrapper.props().children).toBe("Next steps")
   })
 
   it("should render a video", () => {
-    const wrapper = shallow(<VideoRecordedDialog {...getProps()} />)
-    const bodyWrapper = wrapper.find("ModalBody")
+    const bodyWrapper = wrapper.find(ModalBody)
 
-    expect(bodyWrapper.find("video").length).toBe(1)
+    expect(bodyWrapper.find("StyledVideo").length).toBe(1)
     expect(URL.createObjectURL).toBeCalled()
   })
 
   it("should render a download button", () => {
-    const props = getProps()
-    const wrapper = shallow(<VideoRecordedDialog {...props} />)
-    const buttonWrapper = wrapper.find("ModalBody").find("Button")
+    const buttonWrapper = wrapper.find(ModalBody).find("Button")
 
     buttonWrapper.simulate("click")
 

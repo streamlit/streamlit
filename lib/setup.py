@@ -1,7 +1,5 @@
 import os
-import platform
 import setuptools
-import subprocess
 import sys
 
 from setuptools.command.install import install
@@ -15,7 +13,7 @@ except:
     )
     sys.exit(exit_msg)
 
-VERSION = "0.70.0"  # PEP-440
+VERSION = "0.74.1"  # PEP-440
 
 NAME = "streamlit"
 
@@ -32,18 +30,6 @@ pipfile = Project(chdir=False).parsed_pipfile
 
 packages = pipfile["packages"].copy()
 requirements = convert_deps_to_pip(packages, r=False)
-
-# Check whether xcode tools are available before making watchdog a
-# dependency (only if the current system is a Mac).
-if platform.system() == "Darwin":
-    has_xcode = subprocess.call(["xcode-select", "--version"], shell=False) == 0
-    has_gcc = subprocess.call(["gcc", "--version"], shell=False) == 0
-
-    if not (has_xcode and has_gcc):
-        try:
-            requirements.remove("watchdog")
-        except ValueError:
-            pass
 
 
 class VerifyVersionCommand(install):
@@ -81,5 +67,7 @@ setuptools.setup(
     # - streamlit version
     # - streamlit hello
     scripts=["bin/streamlit.cmd"],
-    cmdclass={"verify": VerifyVersionCommand,},
+    cmdclass={
+        "verify": VerifyVersionCommand,
+    },
 )

@@ -17,7 +17,7 @@
 
 describe("Dataframes", () => {
   const DF_SELECTOR = ".stDataFrame";
-  const TABLE_SELECTOR = ".stTable > table";
+  const TABLE_SELECTOR = "[data-testid='stTable'] > table";
 
   before(() => {
     // http://gs.statcounter.com/screen-resolution-stats/desktop/worldwide
@@ -26,7 +26,7 @@ describe("Dataframes", () => {
     // Make the decoration line disappear
     // This prevents us from occasionally getting the little multi-colored
     // ribbon at the top of our screenshots.
-    cy.get(".decoration").invoke("css", "display", "none");
+    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
 
     // Wait for the site to be fully loaded
     cy.get(".element-container").should($els => {

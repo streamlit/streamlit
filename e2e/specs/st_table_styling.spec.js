@@ -19,38 +19,38 @@ describe("st.table styling", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
 
-    cy.get(".stTable").should("have.length", 4);
+    cy.get("[data-testid='stTable']").should("have.length", 4);
 
     // Make the ribbon decoration line disappear
-    cy.get(".decoration").invoke("css", "display", "none");
+    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
   });
 
   it("displays unstyled table", () => {
-    cy.get(".stTable")
+    cy.get("[data-testid='stTable']")
       .eq(0)
       .find("table tbody tr td")
       .eq(0)
       .should("contain", "1");
 
-    cy.get(".stTable")
+    cy.get("[data-testid='stTable']")
       .eq(0)
       .matchImageSnapshot("table-unstyled");
   });
 
   it("displays table with custom formatted cells", () => {
-    cy.get(".stTable")
+    cy.get("[data-testid='stTable']")
       .eq(1)
       .find("table tbody tr td")
       .eq(0)
       .should("contain", "100.00%");
 
-    cy.get(".stTable")
+    cy.get("[data-testid='stTable']")
       .eq(1)
       .matchImageSnapshot("table-formatted-cells");
   });
 
   it("displays table with colored cells", () => {
-    cy.get(".stTable")
+    cy.get("[data-testid='stTable']")
       .eq(2)
       .find("table tbody tr")
       .eq(0)
@@ -63,18 +63,18 @@ describe("st.table styling", () => {
         }
       });
 
-    cy.get(".stTable")
+    cy.get("[data-testid='stTable']")
       .eq(2)
       .matchImageSnapshot("table-colored-cells");
   });
 
   it("displays table with differently styled rows", () => {
-    cy.get(".stTable")
+    cy.get("[data-testid='stTable']")
       .eq(3)
       .find("table tbody tr")
       .should("have.length", 10);
 
-    cy.get(".stTable")
+    cy.get("[data-testid='stTable']")
       .eq(3)
       .find("table tbody tr")
       .eq(0)
@@ -82,7 +82,7 @@ describe("st.table styling", () => {
       .eq(0)
       .should("have.css", "color", "rgb(124, 252, 0)");
 
-    cy.get(".stTable")
+    cy.get("[data-testid='stTable']")
       .eq(3)
       .find("table tbody tr")
       .eq(5)
@@ -90,7 +90,7 @@ describe("st.table styling", () => {
       .eq(0)
       .should("have.css", "color", "rgb(0, 0, 0)");
 
-    cy.get(".stTable")
+    cy.get("[data-testid='stTable']")
       .eq(3)
       .matchImageSnapshot("table-styled-rows");
   });

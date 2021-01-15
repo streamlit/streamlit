@@ -4,7 +4,7 @@
 
 **The fastest way to build and share data apps.**
 
-Streamlit lets you turn data scripts into sharable web apps in minutes, not weeks. It's all Python, open-source and free! And once you've created an app you can use our [free sharing platform](https://streamlit.io/sharing) to deploy, manage, and share your app with the world.
+Streamlit lets you turn data scripts into sharable web apps in minutes, not weeks. It's all Python, open-source, and free! And once you've created an app you can use our [free sharing platform](https://streamlit.io/sharing) to deploy, manage, and share your app with the world.
 
 ![Example of live coding an app in Streamlit|635x380](https://github.com/streamlit/streamlit/raw/develop/docs/_static/img/Streamlit_overview.gif)
 
@@ -15,7 +15,7 @@ pip install streamlit
 streamlit hello
 ```
 
-We also have suggestions for installing Streamlit in a virtual environment in [Windows](https://github.com/streamlit/streamlit/wiki/Installing-in-a-virtual-environment#on-windows), [Mac](https://github.com/streamlit/streamlit/wiki/Installing-in-a-virtual-environment#on-mac--linux), and [Linux](https://github.com/streamlit/streamlit/wiki/Installing-in-a-virtual-environment#on-mac--linux).
+Streamlit can also be installed in a virtual environment on [Windows](https://github.com/streamlit/streamlit/wiki/Installing-in-a-virtual-environment#on-windows), [Mac](https://github.com/streamlit/streamlit/wiki/Installing-in-a-virtual-environment#on-mac--linux), and [Linux](https://github.com/streamlit/streamlit/wiki/Installing-in-a-virtual-environment#on-mac--linux).
 
 ## A little example
 
@@ -32,7 +32,7 @@ st.write(x, 'squared is', x * x)
 
 ## A bigger example
 
-Streamlit's simple and focused API lets you build incredibly rich and powerful tools.  [This demo project](https://github.com/streamlit/demo-self-driving) lets you browse the entire [Udacity self-driving-car dataset](https://github.com/udacity/self-driving-car) and run inference in real time using the [YOLO object detection net](https://pjreddie.com/darknet/yolo).
+Streamlit's simple and focused API lets you build incredibly rich and powerful tools.  [This demo project](https://github.com/streamlit/demo-self-driving) lets you browse the entire [Udacity self-driving-car dataset](https://github.com/udacity/self-driving-car) and run inference in real-time using the [YOLO object detection net](https://pjreddie.com/darknet/yolo).
 
 ![Final App Animation](https://github.com/streamlit/streamlit/raw/develop/docs/_static/img/complex_app_example.gif "Final App Animation")
 
@@ -61,8 +61,8 @@ Once you deploy your app, you can embed this badge right into your GitHub readme
 
 ## Streamlit for Teams
 
-[Streamlit for Teams](https://streamlit.io/for-teams/) is our enterprise solution for deploying, managing, sharing, and collaborating on your Streamlit apps. Streamlit for Teams provides secure single-click deploy, authentication, web editing, versioning, and much more. It is currently in closed beta, and you can [join the waitlist here](https://streamlit.io/for-teams/).
+[Streamlit for Teams](https://streamlit.io/for-teams/) is our enterprise solution for deploying, managing, sharing, and collaborating on your Streamlit apps. Streamlit for Teams provides secure single-click deploy, authentication, web editing, versioning, and much more. It is currently in closed beta, and you can [join the wait-list here](https://streamlit.io/for-teams/).
 
 ## License
 
-Streamlit is completely free and open source and licensed under the [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) license.
+Streamlit is completely free and open-source and licensed under the [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) license.

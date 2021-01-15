@@ -38,6 +38,7 @@ Here are some frequently asked questions about Streamlit and Streamlit Component
    - [How to Deploy Streamlit to a Free Amazon EC2 instance](https://towardsdatascience.com/how-to-deploy-a-streamlit-app-using-an-amazon-free-ec2-instance-416a41f69dc3), by Rahul Agarwal
    - [Host Streamlit on Heroku](https://towardsdatascience.com/quickly-build-and-deploy-an-application-with-streamlit-988ca08c7e83), by Maarten Grootendorst
    - [Host Streamlit on Azure](https://towardsdatascience.com/deploying-a-streamlit-web-app-with-azure-app-service-1f09a2159743), by Richard Peterson
+   - [Host Streamlit on 21YunBox](https://www.21yunbox.com/docs/#/deploy-streamlit), by Toby Lei
 
 4. **Does Streamlit support the WSGI Protocol? (aka Can I deploy Streamlit with gunicorn?)**
 
@@ -63,9 +64,19 @@ Below are some selected questions we've received about Streamlit Components. If 
    - **Can't modify CSS**: A Component can’t modify the CSS that the rest of the Streamlit app uses, so you can't create something like `dark_mode`
    - **Can't add/remove elements**: A Component can’t add or remove other elements of a Streamlit app, so you couldn't make something like `remove_streamlit_hamburger_menu`
 
-3. **How do I build a Component that can be displayed in the sidebar?**
+3. **How do I add a Component to the sidebar?**
 
-   Currently, it is not possible to create a component in the sidebar, but we’re hoping to release that functionality in a future release.
+   You can add a component to st.sidebar using the `with` syntax. For example:
+   ```
+   with st.sidebar:
+       my_component(greeting="hello")
+   ```
+   In fact, you can add your component to _any_ [layout container](./api.html#lay-out-your-app) (eg st.beta_columns, st.beta_expander),  using the `with` syntax!
+   ```
+   col1, col2 = st.beta_columns(2)
+   with col2:
+       my_component(greeting="hello")
+   ```
 
 4. **My Component seems to be blinking/stuttering...how do I fix that?**
 

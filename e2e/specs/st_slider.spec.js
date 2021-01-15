@@ -20,6 +20,12 @@ describe("st.slider", () => {
     cy.visit("http://localhost:3000/");
   });
 
+  it("looks right", () => {
+    cy.get(".stSlider")
+      .first()
+      .matchImageSnapshot("slider");
+  });
+
   it("shows labels", () => {
     cy.get(".stSlider label").should("have.text", "Label 1" + "Label 2");
   });
@@ -72,7 +78,7 @@ describe("st.slider", () => {
       .type("{leftarrow}", { force: true });
 
     // Rerun the script.
-    cy.get(".stApp .decoration").trigger("keypress", {
+    cy.get(".stApp [data-testid='stDecoration']").trigger("keypress", {
       keyCode: 82, // "r"
       which: 82 // "r"
     });

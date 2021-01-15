@@ -3,6 +3,7 @@ import {
   fonts,
   fontSizes,
   fontWeights,
+  iconSizes,
   lineHeights,
   letterSpacings,
   radii,
@@ -13,11 +14,13 @@ import {
 import colors from "./mainColors"
 
 export default {
+  inSidebar: false,
   breakpoints,
   colors,
   fonts,
   fontSizes,
   fontWeights,
+  iconSizes,
   lineHeights,
   letterSpacings,
   radii,

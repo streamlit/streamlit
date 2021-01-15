@@ -16,40 +16,57 @@
  */
 
 import React, { ReactElement } from "react"
-import { SCSS_VARS } from "autogen/scssVariables"
+import { useTheme } from "emotion-theming"
+import { Theme } from "theme"
 import {
   ProgressBar as UIProgressBar,
   ProgressBarOverrides,
 } from "baseui/progress-bar"
 import { mergeOverrides } from "baseui"
 import { Overrides } from "baseui/overrides"
-import { Sizes } from "lib/widgetTheme"
+
+export enum Size {
+  SMALL = "sm",
+  MEDIUM = "md",
+  LARGE = "lg",
+  EXTRALARGE = "xl",
+}
 
 export interface ProgressBarProps {
   width?: number
   value: number
   overrides?: Overrides<any>
-  size?: Sizes
+  size?: Size
 }
 
 function ProgressBar({
   value,
   width,
-  size = Sizes.MEDIUM,
+  size = Size.MEDIUM,
   overrides,
 }: ProgressBarProps): ReactElement {
+  const theme: Theme = useTheme()
+  const heightMap = {
+    sm: theme.fontSizes.smDefault,
+    md: theme.spacing.lg,
+    lg: theme.spacing.xl,
+    xl: theme.spacing.twoXL,
+  }
   const defaultOverrides: Overrides<ProgressBarOverrides> = {
     Bar: {
       style: ({ $theme }: { $theme: any }) => ({
         width,
-        margin: SCSS_VARS["$progress-bar-margin"],
-        height: SCSS_VARS[`$progress-bar-height-${size}`],
+        marginTop: theme.spacing.none,
+        marginBottom: theme.spacing.none,
+        marginRight: theme.spacing.none,
+        marginLeft: theme.spacing.none,
+        height: heightMap[size],
         backgroundColor: $theme.colors.progressbarTrackFill,
       }),
     },
     BarProgress: {
       style: {
-        backgroundColor: SCSS_VARS.$blue,
+        backgroundColor: theme.colors.blue,
       },
     },
   }

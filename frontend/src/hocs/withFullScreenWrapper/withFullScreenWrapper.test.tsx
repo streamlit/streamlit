@@ -17,7 +17,7 @@
 
 import React, { ComponentType } from "react"
 import { fromJS } from "immutable"
-import { shallow, mount } from "enzyme"
+import { mount } from "lib/test_util"
 
 import FullScreenWrapper from "components/shared/FullScreenWrapper"
 import withFullScreenWrapper, {
@@ -42,9 +42,9 @@ describe("withFullScreenWrapper HOC", () => {
     const props = getProps()
     const WithHoc = withFullScreenWrapper(testComponent)
     // @ts-ignore
-    const wrapper = shallow(<WithHoc {...props} />)
+    const wrapper = mount(<WithHoc {...props} />)
 
-    expect(wrapper.html()).not.toBeNull()
+    expect(wrapper.find("FullScreenWrapper").exists()).toBe(true)
   })
 
   it("should render a component wrapped with FullScreenWrapper", () => {

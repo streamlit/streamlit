@@ -16,7 +16,7 @@
  */
 
 import React, { ComponentType } from "react"
-import { shallow } from "enzyme"
+import { shallow } from "lib/test_util"
 import { StatelessAccordion } from "baseui/accordion"
 import withExpandable, { Props } from "./withExpandable"
 
@@ -36,8 +36,7 @@ describe("withExpandable HOC", () => {
     const WithHoc = withExpandable(testComponent)
     // @ts-ignore
     const wrapper = shallow(<WithHoc {...props} />)
-
-    expect(wrapper.html()).not.toBeNull()
+    expect(wrapper.find(StatelessAccordion).exists()).toBe(true)
   })
 
   it("should render a expanded component", () => {
@@ -60,5 +59,19 @@ describe("withExpandable HOC", () => {
     const accordion = wrapper.find(StatelessAccordion)
 
     expect(accordion.prop("expanded").length).toBe(0)
+  })
+
+  it("should become stale", () => {
+    const props = getProps({
+      isStale: true,
+    })
+    const WithHoc = withExpandable(testComponent)
+    // @ts-ignore
+    const wrapper = shallow(<WithHoc {...props} />)
+    const accordion = wrapper.find(StatelessAccordion)
+    const overrides = accordion.prop("overrides")
+
+    // @ts-ignore
+    expect(overrides.Header.props.className).toContain("stale-element")
   })
 })

@@ -12,18 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, Any
-from typing import List
+from typing import Any, Callable, Dict, List
 
 import tornado.httputil
 import tornado.web
 
-from streamlit.uploaded_file_manager import UploadedFile
+from streamlit.uploaded_file_manager import UploadedFileRec, UploadedFileManager
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.report import Report
 from streamlit.server import routes
 
+
+# /upload_file/(optional session id)/(optional widget id)/(optional file_id of digits)
+UPLOAD_FILE_ROUTE = (
+    "/upload_file/?(?P<session_id>[^/]*)?/?(?P<widget_id>[^/]*)?/?(?P<file_id>[0-9]*)?"
+)
 LOGGER = get_logger(__name__)
 
 
@@ -32,26 +36,32 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
     Implements the POST and DELETE /upload_file endpoint.
     """
 
-    def initialize(self, file_mgr):
+    def initialize(
+        self, file_mgr: UploadedFileManager, get_session_info: Callable[[str], bool]
+    ):
         """
         Parameters
         ----------
         file_mgr : UploadedFileManager
             The server's singleton UploadedFileManager. All file uploads
             go here.
-
+        get_session_info: Server.get_session_info. Used to validate session IDs
         """
         self._file_mgr = file_mgr
+        self._get_session_info = get_session_info
+
+    def _validate_request(self, session_id: str):
+        return self._get_session_info(session_id) is not None
 
     def set_default_headers(self):
-        self.set_header("Access-Control-Allow-Methods", "POST, DELETE")
+        self.set_header("Access-Control-Allow-Methods", "POST, PUT, DELETE")
         self.set_header("Access-Control-Allow-Headers", "Content-Type")
         if config.get_option("server.enableXsrfProtection"):
-            self.set_header("Access-Control-Allow-Headers", "X-Xsrftoken, Content-Type")
             self.set_header(
                 "Access-Control-Allow-Origin",
                 Report.get_url(config.get_option("browser.serverAddress")),
             )
+            self.set_header("Access-Control-Allow-Headers", "X-Xsrftoken, Content-Type")
             self.set_header("Vary", "Origin")
             self.set_header("Access-Control-Allow-Credentials", "true")
         elif routes.allow_cross_origin_requests():
@@ -96,9 +106,9 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         # Convert bytes to string
         return arg[0].decode("utf-8")
 
-    def post(self):
-        args = {}  # type: Dict[str, List[bytes]]
-        files = {}  # type: Dict[str, List[Any]]
+    def post(self, **kwargs):
+        args: Dict[str, List[bytes]] = {}
+        files: Dict[str, List[Any]] = {}
 
         tornado.httputil.parse_body_arguments(
             content_type=self.request.headers["Content-Type"],
@@ -110,18 +120,23 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         try:
             session_id = self._require_arg(args, "sessionId")
             widget_id = self._require_arg(args, "widgetId")
+            if not self._validate_request(session_id):
+                raise Exception("Session '%s' invalid" % session_id)
+
         except Exception as e:
             self.send_error(400, reason=str(e))
             return
 
-        LOGGER.debug(f"{len(files)} file(s) received for session {session_id} widget {widget_id}")
+        LOGGER.debug(
+            f"{len(files)} file(s) received for session {session_id} widget {widget_id}"
+        )
 
         # Create an UploadedFile object for each file.
-        uploaded_files = []
+        uploaded_files: List[UploadedFileRec] = []
         for id, flist in files.items():
             for file in flist:
                 uploaded_files.append(
-                    UploadedFile(
+                    UploadedFileRec(
                         id=id,
                         name=file["filename"],
                         type=file["content_type"],
@@ -132,11 +147,12 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         if len(uploaded_files) == 0:
             self.send_error(400, reason="Expected at least 1 file, but got 0")
             return
-
         replace = self.get_argument("replace", "false")
 
         update_files = (
-            self._file_mgr.replace_files if replace == "true" else self._file_mgr.add_files
+            self._file_mgr.replace_files
+            if replace == "true"
+            else self._file_mgr.add_files
         )
         update_files(
             session_id=session_id,
@@ -144,12 +160,34 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             files=uploaded_files,
         )
 
-        LOGGER.debug(f"{len(files)} file(s) uploaded for session {session_id} widget {widget_id}. replace {replace}")
+        LOGGER.debug(
+            f"{len(files)} file(s) uploaded for session {session_id} widget {widget_id}. replace {replace}"
+        )
 
         self.set_status(200)
 
+    def put(self, session_id: str, widget_id: str, **kwargs):
+        if self._validate_request(session_id) is None:
+            self.send_error(404)
+            return
+
+        if self.request.body:
+            data = tornado.escape.json_decode(self.request.body)
+            if "totalFiles" in data.keys():
+                self._file_mgr.update_file_count(
+                    session_id=session_id,
+                    widget_id=widget_id,
+                    file_count=data["totalFiles"],
+                )
+                self.set_status(200)
+                return
+
+        self.send_error(400, reason="Nothing to update")
+
     def delete(self, session_id, widget_id, file_id):
-        if session_id is None or widget_id is None or file_id is None:
+        if not all(
+            [session_id, widget_id, file_id, self._validate_request(session_id)]
+        ):
             self.send_error(404)
             return
 

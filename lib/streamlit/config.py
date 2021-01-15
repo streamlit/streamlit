@@ -199,6 +199,7 @@ _create_option(
 
 _create_option(
     "global.sharingMode",
+    visibility="hidden",
     description="""
         Configure the ability to share apps to the cloud.
 
@@ -452,7 +453,7 @@ def _server_headless():
     )
 
 
-@_create_option("server.liveSave", type_=bool)
+@_create_option("server.liveSave", type_=bool, visibility="hidden")
 def _server_live_save():
     """Immediately share the app in such a way that enables live
     monitoring, and post-run analysis.
@@ -627,6 +628,7 @@ _create_option(
     default_val="True",
     scriptable="True",
     type_=bool,
+    expiration_date="2021-01-06",
 )
 
 _create_option(

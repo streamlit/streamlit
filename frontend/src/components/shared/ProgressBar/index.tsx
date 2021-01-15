@@ -15,4 +15,4 @@
  * limitations under the License.
  */
 
-export { default } from "./ProgressBar"
+export { default, Size } from "./ProgressBar"

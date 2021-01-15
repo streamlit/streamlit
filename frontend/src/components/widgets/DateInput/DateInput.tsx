@@ -17,14 +17,18 @@
 
 import React from "react"
 import moment from "moment"
+import { withTheme } from "emotion-theming"
 import { Datepicker as UIDatePicker } from "baseui/datepicker"
+import { PLACEMENT } from "baseui/popover"
 import { DateInput as DateInputProto } from "autogen/proto"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
-import { datePickerOverrides } from "lib/widgetTheme"
+import { StyledWidgetLabel } from "components/widgets/BaseWidget"
+import { Theme } from "theme"
 
 export interface Props {
   disabled: boolean
   element: DateInputProto
+  theme: Theme
   widgetMgr: WidgetStateManager
   width: number
 }
@@ -92,21 +96,96 @@ class DateInput extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const { width, element, disabled } = this.props
+    const { width, element, disabled, theme } = this.props
     const { values, isRange } = this.state
+    const { colors, fontSizes } = theme
 
     const style = { width }
     const minDate = moment(element.min, DATE_FORMAT).toDate()
     const maxDate = this.getMaxDate()
 
     return (
-      <div className="Widget stDateInput" style={style}>
-        <label>{element.label}</label>
+      <div className="stDateInput" style={style}>
+        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
         <UIDatePicker
           formatString="yyyy/MM/dd"
           disabled={disabled}
           onChange={this.handleChange}
-          overrides={datePickerOverrides}
+          overrides={{
+            Popover: {
+              props: {
+                placement: PLACEMENT.bottomLeft,
+              },
+            },
+            CalendarContainer: {
+              style: {
+                fontSize: fontSizes.smDefault,
+              },
+            },
+            CalendarHeader: {
+              style: {
+                // Make header look nicer.
+                backgroundColor: colors.gray,
+              },
+            },
+            MonthHeader: {
+              style: {
+                // Make header look nicer.
+                backgroundColor: colors.gray,
+              },
+            },
+            Week: {
+              style: {
+                fontSize: fontSizes.smDefault,
+              },
+            },
+            Day: {
+              style: ({ $selected }: { $selected: boolean }) => ({
+                "::after": {
+                  borderColor: $selected ? colors.transparent : "",
+                },
+              }),
+            },
+            PrevButton: {
+              style: () => ({
+                // Align icon to the center of the button.
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                // Remove primary-color click effect.
+                ":active": {
+                  backgroundColor: colors.transparent,
+                },
+                ":focus": {
+                  backgroundColor: colors.transparent,
+                  outline: 0,
+                },
+              }),
+            },
+            NextButton: {
+              style: {
+                // Align icon to the center of the button.
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                // Remove primary-color click effect.
+                ":active": {
+                  backgroundColor: colors.transparent,
+                },
+                ":focus": {
+                  backgroundColor: colors.transparent,
+                  outline: 0,
+                },
+              },
+            },
+            Input: {
+              props: {
+                // The default maskChar ` ` causes empty dates to display as ` / / `
+                // Clearing the maskChar so empty dates will not display
+                maskChar: null,
+              },
+            },
+          }}
           value={values}
           minDate={minDate}
           maxDate={maxDate}
@@ -117,4 +196,4 @@ class DateInput extends React.PureComponent<Props, State> {
   }
 }
 
-export default DateInput
+export default withTheme(DateInput)
