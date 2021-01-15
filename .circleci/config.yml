@@ -616,7 +616,7 @@ jobs:
             - run:
                 name: Cypress
                 command: |
-                  TEST=$(circleci tests glob e2e/scripts/*.py | circleci tests split)
+                  TEST=$(circleci tests glob e2e/scripts/*.py | circleci tests split --split-by=timings)
                   scripts/run_e2e_tests.py -a -f $TEST
 
       - unless:
@@ -625,7 +625,7 @@ jobs:
             - run:
                 name: Cypress
                 command: |
-                  TEST=$(circleci tests glob e2e/scripts/*.py | circleci tests split)
+                  TEST=$(circleci tests glob e2e/scripts/*.py | circleci tests split --total=9 --split-by=timings)
                   scripts/run_e2e_tests.py -a $TEST
 
       - store_test_results: &store_results
@@ -640,6 +640,12 @@ jobs:
 
       - store_artifacts: &store_snapshots
           path: frontend/cypress/snapshots
+
+      - save_cache:
+          name: Save virtualenv to cache
+          key: v13-python-venv-{{ checksum "~/python_cache_key.md5" }}
+          paths:
+            - venv
 
       - when:
           condition: <<pipeline.git.tag>>

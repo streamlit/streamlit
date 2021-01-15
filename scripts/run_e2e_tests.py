@@ -37,6 +37,7 @@ COMPONENT_TEMPLATE_DIRS = [
 ]
 
 CREDENTIALS_FILE = os.path.expanduser("~/.streamlit/credentials.toml")
+IS_CIRCLECI = os.getenv("CIRCLECI")
 
 
 class QuitException(BaseException):
@@ -422,27 +423,35 @@ def run_e2e_tests(
     ctx.update_snapshots = update_snapshots
     ctx.tests_dir_name = "e2e_flaky" if flaky_tests else "e2e"
 
-    try:
+    def should_run_pretests():
+        # If we're on CircleCI, we intentionally tell CircleCI to send
+        # test files to N-1 of our containers. The Nth container that
+        # doesn't receive anything should run the pretests.
+        if IS_CIRCLECI:
+            return not tests
+
+        # Don't run pretests if we're running flaky tests.
+        return (not flaky_tests) and (not tests)
+
+    def run_pretests():
         # First, test "streamlit hello" in different combinations. We skip
         # `no_credentials=True` for the `--server.headless=false` test, because
         # it'll give a credentials prompt.
-        """
-        if (not flaky_tests) and (not test):
-            hello_spec = join(ROOT_DIR, "e2e/specs/st_hello.spec.js")
-            run_test(
-                ctx,
-                hello_spec,
-                ["streamlit", "hello", "--server.headless=true"],
-                no_credentials=False,
-            )
-            run_test(ctx, hello_spec, ["streamlit", "hello", "--server.headless=false"])
-            run_test(ctx, hello_spec, ["streamlit", "hello", "--server.headless=true"])
+        hello_spec = join(ROOT_DIR, "e2e/specs/st_hello.spec.js")
+        run_test(
+            ctx,
+            hello_spec,
+            ["streamlit", "hello", "--server.headless=true"],
+            no_credentials=False,
+        )
+        run_test(ctx, hello_spec, ["streamlit", "hello", "--server.headless=false"])
+        run_test(ctx, hello_spec, ["streamlit", "hello", "--server.headless=true"])
 
-            # Next, run our component_template tests.
-            for template_dir in COMPONENT_TEMPLATE_DIRS:
-                run_component_template_e2e_test(ctx, template_dir)
-        """
+        # Next, run our component_template tests.
+        for template_dir in COMPONENT_TEMPLATE_DIRS:
+            run_component_template_e2e_test(ctx, template_dir)
 
+    def run_main_tests():
         # Test core streamlit elements
         p = Path(join(ROOT_DIR, ctx.tests_dir_name, "scripts")).resolve()
         paths = [Path(t).resolve() for t in tests] if tests else sorted(p.glob("*.py"))
@@ -450,9 +459,16 @@ def run_e2e_tests(
             test_name, _ = splitext(basename(test_path.as_posix()))
             specpath = join(ctx.tests_dir, "specs", f"{test_name}.spec.js")
             run_test(ctx, specpath, ["streamlit", "run", test_path.as_posix()])
+
+    try:
+        if should_run_pretests():
+            run_pretests()
+        # If we're on CircleCI and this is the pretests container, exit
+        if not (IS_CIRCLECI and should_run_pretests()):
+            run_main_tests()
     except QuitException:
-        # Swallow the exception we raise if the user chooses to exit early.
         pass
+        # Swallow the exception we raise if the user chooses to exit early.
     finally:
         app_server.terminate()
         generate_mochawesome_report()
