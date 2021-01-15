@@ -245,6 +245,12 @@ class Server(object):
     def script_path(self) -> str:
         return self._script_path
 
+    def get_session_by_id(self, id):
+        if id not in self._session_info_by_id:
+            return None
+
+        return self._session_info_by_id[id].session
+
     def on_files_updated(self, session_id):
         """Event handler for UploadedFileManager.on_file_added.
 

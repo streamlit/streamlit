@@ -15,6 +15,7 @@
 import sys
 import uuid
 from enum import Enum
+from typing import Optional, TYPE_CHECKING
 
 import tornado.gen
 import tornado.ioloop
@@ -43,6 +44,8 @@ from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 import streamlit.elements.exception_proto as exception_proto
 
 LOGGER = get_logger(__name__)
+if TYPE_CHECKING:
+    from streamlit.session_state import SessionState
 
 
 class ReportSessionState(Enum):
@@ -106,6 +109,9 @@ class ReportSession(object):
         self._script_request_queue = ScriptRequestQueue()
 
         self._scriptrunner = None
+
+        # Session State allows users to store information between reruns
+        self._session_state: Optional["SessionState"] = None
 
         LOGGER.debug("ReportSession initialized (id=%s)", self.id)
 
@@ -221,6 +227,15 @@ class ReportSession(object):
 
         self._enqueue_script_request(ScriptRequest.RERUN, rerun_data)
         self._set_page_config_allowed = True
+
+    def initialize_session_state(self, init_state: "SessionState") -> None:
+        if self._session_state is not None:
+            raise RuntimeError("Session State has already been initialized")
+
+        self._session_state = init_state
+
+    def get_session_state(self) -> Optional["SessionState"]:
+        return self._session_state
 
     def _on_source_file_changed(self):
         """One of our source files changed. Schedule a rerun if appropriate."""
