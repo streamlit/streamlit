@@ -24,7 +24,8 @@ import { DateInput as DateInputProto } from "autogen/proto"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 import { Theme } from "theme"
-import TooltipIcon, { Placement } from "components/shared/TooltipIcon"
+import TooltipIcon from "components/shared/TooltipIcon"
+import { Placement } from "components/shared/Tooltip"
 
 export interface Props {
   disabled: boolean

@@ -22,7 +22,8 @@ import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { logWarning } from "lib/log"
 import VirtualDropdown from "components/shared/VirtualDropdown"
 import { StyledWidgetLabel } from "components/widgets/BaseWidget"
-import TooltipIcon, { Placement } from "components/shared/TooltipIcon"
+import TooltipIcon from "components/shared/TooltipIcon"
+import { Placement } from "components/shared/Tooltip"
 
 export interface Props {
   disabled: boolean

@@ -20,7 +20,8 @@ import { TimeInput as TimeInputProto } from "autogen/proto"
 import { TimePicker as UITimePicker } from "baseui/timepicker"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { StyledWidgetLabel } from "components/widgets/BaseWidget"
-import TooltipIcon, { Placement } from "components/shared/TooltipIcon"
+import TooltipIcon from "components/shared/TooltipIcon"
+import { Placement } from "components/shared/Tooltip"
 
 export interface Props {
   disabled: boolean
