@@ -432,7 +432,6 @@ def run_e2e_tests(
 
         # Don't run pretests if we're running flaky tests.
         return (not flaky_tests) and (not tests)
-
     def run_pretests():
         # First, test "streamlit hello" in different combinations. We skip
         # `no_credentials=True` for the `--server.headless=false` test, because
@@ -467,8 +466,8 @@ def run_e2e_tests(
         if not (IS_CIRCLECI and should_run_pretests()):
             run_main_tests()
     except QuitException:
-        pass
         # Swallow the exception we raise if the user chooses to exit early.
+        pass
     finally:
         app_server.terminate()
         generate_mochawesome_report()
