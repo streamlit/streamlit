@@ -6,6 +6,12 @@ export const StyledWidgetLabel = styled.label(({ theme }) => ({
   marginBottom: theme.fontSizes.halfSmDefault,
 }))
 
+export const StyledWidgetLabelHelp = styled.div(() => ({
+  position: "absolute",
+  top: "1px",
+  right: 0,
+}))
+
 export const StyledWidgetInstructions = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.smDefault,
   color: theme.colors.gray,
