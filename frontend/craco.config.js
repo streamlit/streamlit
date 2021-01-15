@@ -21,6 +21,8 @@ module.exports = {
     configure: webpackConfig => {
       webpackConfig.resolve.mainFields = ["main", "module"]
 
+      // hardsource appears to make React app server start more slowly in our
+      // end-to-end tests, so adding an environment variable to disable it
       if (!process.env.DISABLE_HARDSOURCE_CACHING) {
         // HardSourceWebpackPlugin adds aggressive build caching
         // to speed up our slow builds.

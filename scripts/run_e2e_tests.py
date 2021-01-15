@@ -14,20 +14,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import time
 import os
-from pathlib import Path
 import shutil
 import signal
 import subprocess
 import sys
+import time
 from contextlib import contextmanager
-from os.path import dirname, abspath, basename, splitext, join
+from os.path import abspath, basename, dirname, join, splitext
+from pathlib import Path
 from tempfile import TemporaryFile
 from typing import List
-import requests
 
 import click
+import requests
 
 ROOT_DIR = dirname(dirname(abspath(__file__)))  # streamlit root directory
 FRONTEND_DIR = join(ROOT_DIR, "frontend")
@@ -359,8 +359,17 @@ def run_app_server():
     proc.start()
 
     print("Waiting for React app server to come online...")
+    start_time = time.time()
     while not is_app_server_alive():
         time.sleep(3)
+
+        # after 10 minutes, we have a problem, just exit
+        if time.time() - start > 60 * 10:
+            print(
+                "React app server seems to have had difficulty starting, exiting. Output:"
+            )
+            print(proc.terminate())
+            sys.exit(1)
 
     print("React app server is alive!")
     return proc
@@ -442,9 +451,10 @@ def run_e2e_tests(
     def run_main_tests():
         # Test core streamlit elements
         p = Path(join(ROOT_DIR, ctx.tests_dir_name, "specs")).resolve()
-        paths = [Path(t).resolve() for t in tests] if tests else p.glob("*.spec.py")
+        paths = [Path(t).resolve() for t in tests] if tests else p.glob("*.spec.js")
         for spec_path in paths:
-            test_name = splitext(splitext(basename(spec_path))[0])[0]
+            test_name, _ = splitext(basename(spec_path))
+            test_name, _ = splitext(test_name)
             test_path = join(ctx.tests_dir, "scripts", f"{test_name}.py")
             if os.path.exists(test_path):
                 run_test(ctx, str(spec_path), ["streamlit", "run", test_path])
