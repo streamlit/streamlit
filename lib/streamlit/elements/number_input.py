@@ -97,14 +97,14 @@ class NumberInputMixin:
 
                 st.warning(
                     "Warning: NumberInput value below has type float,"
-                    " but format {} displays as integer.".format(format)
+                    f" but format {format} displays as integer."
                 )
             elif format[-1] == "f" and int_value:
                 import streamlit as st
 
                 st.warning(
                     "Warning: NumberInput value below has type int so is"
-                    " displayed as int despite format string {}.".format(format)
+                    f" displayed as int despite format string {format}."
                 )
 
             if step is None:
