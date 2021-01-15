@@ -19,10 +19,7 @@ function TooltipIcon({
       <Tooltip
         content={<StreamlitMarkdown source={content} allowHTML />}
         placement={placement}
-<<<<<<< HEAD
         inline
-=======
->>>>>>> feat/tooltips
       >
         <HelpCircleIcon size={iconSize} />
       </Tooltip>
