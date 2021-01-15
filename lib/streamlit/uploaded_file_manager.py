@@ -73,6 +73,7 @@ class UploadedFileManager(object):
 
     def _on_files_updated(self, session_id: str, widget_id: str):
         files_by_widget = session_id, widget_id
+        LOGGER.debug(f"Files updated, checking for rerun for {files_by_widget}")
         if files_by_widget in self._file_counts_by_id:
             expected_file_count: int = self._file_counts_by_id[files_by_widget]
             actual_file_count: int = (
@@ -84,6 +85,10 @@ class UploadedFileManager(object):
                 self.on_files_updated.send(session_id)
                 LOGGER.debug(
                     f"Files for {files_by_widget} updated and ready to be rerun."
+                )
+            else:
+                LOGGER.debug(
+                    f"Files for {files_by_widget} updated but not ready to be rerun. {expected_file_count} {actual_file_count}"
                 )
         else:
             LOGGER.debug(f"Files updated, {files_by_widget} not in list. Cleaning up")
@@ -125,7 +130,6 @@ class UploadedFileManager(object):
         files : List[UploadedFileRec]
             The file records to add.
         """
-
         self._add_files(session_id, widget_id, files)
         self._on_files_updated(session_id, widget_id)
 
@@ -233,3 +237,12 @@ class UploadedFileManager(object):
     ) -> None:
         files_by_widget = session_id, widget_id
         self._file_counts_by_id[files_by_widget] = file_count
+
+    def decrement_file_count(
+        self,
+        session_id: str,
+        widget_id: str,
+        decrement_by: int,
+    ) -> None:
+        files_by_widget = session_id, widget_id
+        self._file_counts_by_id[files_by_widget] -= decrement_by

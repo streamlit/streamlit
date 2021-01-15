@@ -36,6 +36,7 @@ export class FileUploadClient extends HttpClient {
   public async uploadFiles(
     widgetId: string,
     files: ExtendedFile[],
+    totalFiles: number,
     onUploadProgress?: (progressEvent: any) => void,
     cancelToken?: CancelToken,
     replace?: boolean
@@ -43,6 +44,7 @@ export class FileUploadClient extends HttpClient {
     const form = new FormData()
     form.append("sessionId", SessionInfo.current.sessionId)
     form.append("widgetId", widgetId)
+    form.append("totalFiles", totalFiles.toString())
     if (replace) form.append("replace", "true")
     for (const file of files) {
       form.append(file.id || file.name, file, file.name)
@@ -60,19 +62,6 @@ export class FileUploadClient extends HttpClient {
     await this.request(
       `upload_file/${SessionInfo.current.sessionId}/${widgetId}/${fileId}`,
       { method: "DELETE" }
-    )
-  }
-
-  public async updateFileCount(
-    widgetId: string,
-    fileCount: number
-  ): Promise<void> {
-    await this.request(
-      `upload_file/${SessionInfo.current.sessionId}/${widgetId}`,
-      {
-        method: "PUT",
-        data: { totalFiles: fileCount },
-      }
     )
   }
 }

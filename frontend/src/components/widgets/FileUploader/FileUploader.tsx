@@ -50,6 +50,7 @@ interface State {
   errorMessage?: string
   files: ExtendedFile[]
   maxSizeBytes: number
+  validFiles: number
 }
 
 class FileUploader extends React.PureComponent<Props, State> {
@@ -62,6 +63,7 @@ class FileUploader extends React.PureComponent<Props, State> {
       errorMessage: undefined,
       files: [],
       maxSizeBytes: sizeConverter(maxMbs, FileSize.MegaByte, FileSize.Byte),
+      validFiles: 0,
     }
   }
 
@@ -109,15 +111,18 @@ class FileUploader extends React.PureComponent<Props, State> {
     const { element } = this.props
     const { multipleFiles } = element
 
-    if (!multipleFiles && this.state.files.length) {
-      // Only one file is allowed. Remove existing file
-      this.removeFile(this.state.files[0].id || "")
+    if (multipleFiles) {
+      this.setState(state => ({
+        validFiles: state.validFiles + acceptedFiles.length,
+      }))
+    } else {
+      if (this.state.files.length) {
+        // Only one file is allowed. Remove existing file
+        this.removeFile(this.state.files[0].id || "")
+      }
+      this.setState({ validFiles: 1 })
     }
-
-    this.props.uploadClient.updateFileCount(
-      this.props.element.id,
-      multipleFiles ? this.state.files.length + acceptedFiles.length : 1
-    )
+    acceptedFiles.map(this.uploadFile)
 
     // Too many files were uploaded. Upload the first eligible file
     // and reject the rest
@@ -129,6 +134,7 @@ class FileUploader extends React.PureComponent<Props, State> {
 
       if (firstFileIndex >= 0) {
         const firstFile: FileRejection = rejectedFiles[firstFileIndex]
+
         this.uploadFile(firstFile.file, acceptedFiles.length)
         this.rejectFiles([
           ...rejectedFiles.slice(0, firstFileIndex),
@@ -140,8 +146,6 @@ class FileUploader extends React.PureComponent<Props, State> {
     } else {
       this.rejectFiles(rejectedFiles)
     }
-
-    acceptedFiles.map(this.uploadFile)
   }
 
   private handleFile = (file: ExtendedFile, index: number): ExtendedFile => {
@@ -161,6 +165,7 @@ class FileUploader extends React.PureComponent<Props, State> {
       .uploadFiles(
         this.props.element.id,
         [updatedFile],
+        this.state.validFiles,
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         e => this.onUploadProgress(e, updatedFile.id!),
         updatedFile.cancelToken
@@ -250,14 +255,8 @@ class FileUploader extends React.PureComponent<Props, State> {
         file.cancelToken.cancel()
       }
 
-      this.props.uploadClient.delete(this.props.element.id, fileId).then(
-        () => this.removeFile(fileId),
-        error => {
-          if (error.response.status === 404) {
-            this.removeFile(fileId)
-          }
-        }
-      )
+      this.props.uploadClient.delete(this.props.element.id, fileId)
+      this.removeFile(fileId)
     } else {
       this.setError("File not found. Please try again.")
     }
@@ -267,10 +266,6 @@ class FileUploader extends React.PureComponent<Props, State> {
     this.setState(state => {
       const filteredFiles = state.files.filter(file => file.id !== fileId)
 
-      this.props.uploadClient.updateFileCount(
-        this.props.element.id,
-        filteredFiles.length
-      )
       return {
         status: filteredFiles.length ? FileStatus.UPLOADED : FileStatus.READY,
         errorMessage: undefined,
