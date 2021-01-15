@@ -639,9 +639,6 @@ jobs:
           path: frontend/test_results/cypress
           when: always
 
-      - store_artifacts: &store_report
-          path: frontend/mochawesome-report
-
       - store_artifacts: &store_videos
           path: frontend/cypress/videos
 
