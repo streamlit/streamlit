@@ -430,6 +430,7 @@ def run_e2e_tests(
 
         # Don't run pretests if we're running flaky tests.
         return (not flaky_tests) and (not tests)
+
     def run_pretests():
         # First, test "streamlit hello" in different combinations. We skip
         # `no_credentials=True` for the `--server.headless=false` test, because
