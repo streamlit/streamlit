@@ -55,7 +55,7 @@ class NumberInputMixin:
         format : str or None
             A printf-style format string controlling how the interface should
             display numbers. Output must be purely numeric. This does not impact
-            the return value. Valid formatters: %d %e %f %g %i
+            the return value. Valid formatters: %d %e %f %g %i %u
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
