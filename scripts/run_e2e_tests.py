@@ -348,21 +348,19 @@ def run_component_template_e2e_test(ctx: Context, template_dir: str) -> bool:
 
 
 def run_app_server():
-    print("Starting React app server...")
-
     env = {
         "BROWSER": "none",  # don't open up chrome, streamlit does this for us
         "DISABLE_HARDSOURCE_CACHING": "true",
         "GENERATE_SOURCEMAP": "false",
         "INLINE_RUNTIME_CHUNK": "false",
     }
-    proc = AsyncSubprocess(
-        ["yarn", "start", "--running-streamlit-e2e-test"], cwd=FRONTEND_DIR, env=env
-    )
+    command = ["yarn", "start", "--running-streamlit-e2e-test"]
+    proc = AsyncSubprocess(command, cwd=FRONTEND_DIR, env=env)
+
+    print("Starting React app server...")
     proc.start()
 
     print("Waiting for React app server to come online...")
-
     while True:
         try:
             r = requests.get("http://localhost:3000/", timeout=5)
