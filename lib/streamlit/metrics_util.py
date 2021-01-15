@@ -8,6 +8,9 @@ from typing import Optional
 
 from streamlit import file_util
 
+_ETC_MACHINE_ID_PATH = "/etc/machine-id"
+_DBUS_MACHINE_ID_PATH = "/var/lib/dbus/machine-id"
+
 
 def _get_machine_id():
     """Get the machine ID
@@ -25,18 +28,18 @@ def _get_machine_id():
     """
     if (
         platform.system() == "Linux"
-        and os.path.isfile("/etc/machine-id") == False
-        and os.path.isfile("/var/lib/dbus/machine-id") == False
+        and os.path.isfile(_ETC_MACHINE_ID_PATH) == False
+        and os.path.isfile(_DBUS_MACHINE_ID_PATH) == False
     ):
         subprocess.run(["sudo", "dbus-uuidgen", "--ensure"])
 
     machine_id = str(uuid.getnode())
-    if os.path.isfile("/etc/machine-id"):
-        with open("/etc/machine-id", "r") as f:
+    if os.path.isfile(_ETC_MACHINE_ID_PATH):
+        with open(_ETC_MACHINE_ID_PATH, "r") as f:
             machine_id = f.read()
 
-    elif os.path.isfile("/var/lib/dbus/machine-id"):
-        with open("/var/lib/dbus/machine-id", "r") as f:
+    elif os.path.isfile(_DBUS_MACHINE_ID_PATH):
+        with open(_DBUS_MACHINE_ID_PATH, "r") as f:
             machine_id = f.read()
 
     return machine_id
@@ -61,12 +64,12 @@ def _get_machine_id_v3() -> str:
     """
 
     machine_id = str(uuid.getnode())
-    if os.path.isfile("/etc/machine-id"):
-        with open("/etc/machine-id", "r") as f:
+    if os.path.isfile(_ETC_MACHINE_ID_PATH):
+        with open(_ETC_MACHINE_ID_PATH, "r") as f:
             machine_id = f.read()
 
-    elif os.path.isfile("/var/lib/dbus/machine-id"):
-        with open("/var/lib/dbus/machine-id", "r") as f:
+    elif os.path.isfile(_DBUS_MACHINE_ID_PATH):
+        with open(_DBUS_MACHINE_ID_PATH, "r") as f:
             machine_id = f.read()
 
     return machine_id
