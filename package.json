@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "cypress-circleci-reporter": "^0.1.2"
+  }
+}

@@ -630,7 +630,7 @@ jobs:
                   scripts/run_e2e_tests.py -a $TEST
 
       - store_test_results: &store_results
-          path: frontend/test-reports
+          path: frontend/test_results/cypress
           when: always
 
       - store_artifacts: &store_report

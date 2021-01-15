@@ -186,21 +186,6 @@ def kill_app_servers():
     kill_with_pgrep("running-streamlit-e2e-test")
 
 
-def generate_mochawesome_report():
-    """Generate the test report. This should be called right before exit."""
-    subprocess.run(
-        "npx -q mochawesome-merge --reportDir cypress/mochawesome > mochawesome.json",
-        cwd=FRONTEND_DIR,
-        shell=True,
-    )
-
-    subprocess.run(
-        "npx -q mochawesome-report-generator mochawesome.json",
-        cwd=FRONTEND_DIR,
-        shell=True,
-    )
-
-
 def run_test(
     ctx: Context,
     specpath: str,
@@ -248,6 +233,7 @@ def run_test(
         # Loop until the test succeeds or is skipped.
         while result not in (SUCCESS, SKIP, QUIT):
             cypress_command = ["yarn", "cy:run", "--spec", specpath]
+            cypress_command.extend(["--reporter", "cypress-circleci-reporter"]);
             cypress_command.extend(ctx.cypress_flags)
 
             click.echo(
@@ -411,9 +397,7 @@ def run_e2e_tests(
     app_server = run_app_server()
 
     # Clear reports from previous runs
-    remove_if_exists("frontend/cypress/mochawesome")
-    remove_if_exists("frontend/mochawesome-report")
-    remove_if_exists("frontend/mochawesome.json")
+    remove_if_exists("frontend/test_results/cypress");
 
     ctx = Context()
     ctx.always_continue = always_continue
@@ -469,7 +453,6 @@ def run_e2e_tests(
         pass
     finally:
         app_server.terminate()
-        generate_mochawesome_report()
 
     if ctx.any_failed:
         sys.exit(1)
