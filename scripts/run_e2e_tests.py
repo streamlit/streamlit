@@ -233,7 +233,7 @@ def run_test(
         # Loop until the test succeeds or is skipped.
         while result not in (SUCCESS, SKIP, QUIT):
             cypress_command = ["yarn", "cy:run", "--spec", specpath]
-            cypress_command.extend(["--reporter", "cypress-circleci-reporter"]);
+            cypress_command.extend(["--reporter", "cypress-circleci-reporter"])
             cypress_command.extend(ctx.cypress_flags)
 
             click.echo(
@@ -333,7 +333,19 @@ def run_component_template_e2e_test(ctx: Context, template_dir: str) -> bool:
     return success
 
 
+def is_app_server_alive():
+    try:
+        r = requests.get("http://localhost:3000/", timeout=3)
+        return r.status_code == requests.codes.ok
+    except:
+        return False
+
+
 def run_app_server():
+    if is_app_server_alive():
+        print("Detected React app server already running, won't spawn a new one.")
+        return
+
     env = {
         "BROWSER": "none",  # don't open up chrome, streamlit does this for us
         "DISABLE_HARDSOURCE_CACHING": "true",
@@ -347,14 +359,8 @@ def run_app_server():
     proc.start()
 
     print("Waiting for React app server to come online...")
-    while True:
-        try:
-            r = requests.get("http://localhost:3000/", timeout=5)
-            if r.status_code == 200:
-                break
-        except:
-            pass
-        time.sleep(5)
+    while not is_app_server_alive():
+        time.sleep(3)
 
     print("React app server is alive!")
     return proc
@@ -397,7 +403,7 @@ def run_e2e_tests(
     app_server = run_app_server()
 
     # Clear reports from previous runs
-    remove_if_exists("frontend/test_results/cypress");
+    remove_if_exists("frontend/test_results/cypress")
 
     ctx = Context()
     ctx.always_continue = always_continue
@@ -435,12 +441,15 @@ def run_e2e_tests(
 
     def run_main_tests():
         # Test core streamlit elements
-        p = Path(join(ROOT_DIR, ctx.tests_dir_name, "scripts")).resolve()
-        paths = [Path(t).resolve() for t in tests] if tests else sorted(p.glob("*.py"))
-        for test_path in paths:
-            test_name, _ = splitext(basename(test_path.as_posix()))
-            specpath = join(ctx.tests_dir, "specs", f"{test_name}.spec.js")
-            run_test(ctx, specpath, ["streamlit", "run", test_path.as_posix()])
+        p = Path(join(ROOT_DIR, ctx.tests_dir_name, "specs")).resolve()
+        paths = [Path(t).resolve() for t in tests] if tests else p.glob("*.spec.py")
+        for spec_path in paths:
+            test_name, _ = splitext(basename(spec_path.as_posix()))
+            test_name, _ = splitext(test_name)
+            test_path = join(ctx.tests_dir, "scripts", f"{test_name}.py")
+            run_test(
+                ctx, str(spec_path), ["streamlit", "run", Path(test_path).as_posix()]
+            )
 
     try:
         if should_run_pretests():
@@ -452,7 +461,8 @@ def run_e2e_tests(
         # Swallow the exception we raise if the user chooses to exit early.
         pass
     finally:
-        app_server.terminate()
+        if app_server:
+            app_server.terminate()
 
     if ctx.any_failed:
         sys.exit(1)

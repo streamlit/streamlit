@@ -95,6 +95,7 @@ cypress.env.json
 mochawesome-report
 mochawesome
 frontend/mochawesome.json
+frontend/test_results
 
 # Ignore screenshots that don't get used in CircleCI
 frontend/cypress/snapshots/darwin
