@@ -26,13 +26,18 @@ import TooltipIcon from "components/shared/TooltipIcon"
 import { Placement } from "components/shared/Tooltip"
 import { StyledTooltipContainer } from "./styled-components"
 
-export interface Props {
+export interface OwnProps {
   disabled: boolean
   element: CheckboxProto
-  theme: Theme
   widgetMgr: WidgetStateManager
   width: number
 }
+
+interface ThemeProps {
+  theme: Theme
+}
+
+export type Props = OwnProps & ThemeProps
 
 interface State {
   /**
