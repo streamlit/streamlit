@@ -364,7 +364,7 @@ def run_app_server():
         time.sleep(3)
 
         # after 10 minutes, we have a problem, just exit
-        if time.time() - start > 60 * 10:
+        if time.time() - start_time > 60 * 10:
             print(
                 "React app server seems to have had difficulty starting, exiting. Output:"
             )
