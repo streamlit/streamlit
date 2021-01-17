@@ -21,7 +21,7 @@ import { once } from "lodash"
 // @ts-ignore
 import htmlParser from "react-markdown/plugins/html-parser"
 // @ts-ignore
-import { BlockMath, InlineMath } from "react-katex"
+import Tex from "@matejmazur/react-katex"
 // @ts-ignore
 import RemarkMathPlugin from "remark-math"
 import { Link as LinkIcon } from "react-feather"
@@ -195,10 +195,10 @@ class StreamlitMarkdown extends PureComponent<Props> {
       link: linkWithTargetBlank,
       linkReference: linkReferenceHasParens,
       inlineMath: (props: { value: string }): ReactElement => (
-        <InlineMath>{props.value}</InlineMath>
+        <Tex>{props.value}</Tex>
       ),
       math: (props: { value: string }): ReactElement => (
-        <BlockMath>{props.value}</BlockMath>
+        <Tex block>{props.value}</Tex>
       ),
       heading: CustomHeading,
       parsedHtml: CustomParsedHtml,
