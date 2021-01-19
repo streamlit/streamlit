@@ -17,6 +17,7 @@
 
 import {
   Alert as AlertProto,
+  Arrow as ArrowProto,
   Audio as AudioProto,
   Block as BlockProto,
   BokehChart as BokehChartProto,
@@ -62,6 +63,7 @@ import { BlockNode, ReportNode, ElementNode } from "src/lib/ReportNode"
 import Alert from "src/components/elements/Alert/"
 import { getAlertKind } from "src/components/elements/Alert/Alert"
 import { Kind } from "src/components/shared/AlertContainer"
+import BetaTable from "src/components/elements/BetaTable/"
 import DocString from "src/components/elements/DocString/"
 import ErrorBoundary from "src/components/shared/ErrorBoundary/"
 import ExceptionElement from "src/components/elements/ExceptionElement/"
@@ -370,6 +372,9 @@ class Block extends PureComponent<Props> {
 
       case "balloons":
         return <Balloons reportId={this.props.reportId} />
+
+      case "betaTable":
+        return <BetaTable element={node.element.betaTable as ArrowProto} />
 
       case "bokehChart":
         return (

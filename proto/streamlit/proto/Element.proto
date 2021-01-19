@@ -17,6 +17,7 @@
 syntax = "proto3";
 
 import "streamlit/proto/Alert.proto";
+import "streamlit/proto/Arrow.proto";
 import "streamlit/proto/Audio.proto";
 import "streamlit/proto/Balloons.proto";
 import "streamlit/proto/BokehChart.proto";
@@ -57,6 +58,7 @@ message Element {
   // An element can be one of the following element types.
   oneof type {
     Alert alert = 30;
+    Arrow beta_table = 39;
     Audio audio = 13;
     Balloons balloons = 12;
     BokehChart bokeh_chart = 17;
@@ -92,7 +94,7 @@ message Element {
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
 
-    // Next ID: 39
+    // Next ID: 40
   }
 
   reserved 9;

@@ -29,6 +29,7 @@ from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.logger import get_logger
 
+from streamlit.elements.arrow import ArrowMixin
 from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.button import ButtonMixin
 from streamlit.elements.markdown import MarkdownMixin
@@ -82,6 +83,7 @@ DELTAS_TYPES_THAT_MELT_DATAFRAMES = ("line_chart", "area_chart", "bar_chart")
 class DeltaGenerator(
     AlertMixin,
     AltairMixin,
+    ArrowMixin,
     BalloonsMixin,
     BokehMixin,
     ButtonMixin,

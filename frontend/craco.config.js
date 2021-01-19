@@ -41,6 +41,18 @@ module.exports = {
     configure: webpackConfig => {
       webpackConfig.resolve.mainFields = ["main", "module"]
 
+      // Apache Arrow uses .mjs
+      webpackConfig.module.rules.push({
+        include: /node_modules/,
+        test: /\.mjs$/,
+        type: "javascript/auto",
+      })
+
+      // HardSourceWebpackPlugin adds aggressive build caching
+      // to speed up our slow builds.
+      // https://github.com/mzgoddard/hard-source-webpack-plugin
+      webpackConfig.plugins.unshift(new HardSourceWebpackPlugin())
+
       // find terser plugin
       const minimizerPlugins = webpackConfig.optimization.minimizer
       const terserPluginIndex = minimizerPlugins.findIndex(
