@@ -27,7 +27,10 @@ import { Placement } from "components/shared/Tooltip"
 import Icon from "components/shared/Icon"
 import { Input as UIInput } from "baseui/input"
 import InputInstructions from "components/shared/InputInstructions/InputInstructions"
-import { StyledWidgetLabel } from "components/widgets/BaseWidget"
+import {
+  StyledWidgetLabel,
+  StyledWidgetLabelHelp,
+} from "components/widgets/BaseWidget"
 import {
   StyledInputContainer,
   StyledInputControl,
@@ -250,17 +253,15 @@ class NumberInput extends React.PureComponent<Props, State> {
 
     return (
       <div className="stNumberInput" style={style}>
-        <StyledWidgetLabel>
-          {element.label}
-          {element.help && (
-            <div>
-              <TooltipIcon
-                content={element.help}
-                placement={Placement.TOP_RIGHT}
-              />
-            </div>
-          )}
-        </StyledWidgetLabel>
+        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
+        {element.help && (
+          <StyledWidgetLabelHelp>
+            <TooltipIcon
+              content={element.help}
+              placement={Placement.TOP_RIGHT}
+            />
+          </StyledWidgetLabelHelp>
+        )}
         <StyledInputContainer>
           <UIInput
             type="number"
