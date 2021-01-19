@@ -19,6 +19,7 @@ import pytest
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber
+from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.NumberInput_pb2 import NumberInput
 from tests import testutil
 
@@ -123,6 +124,26 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
             st.number_input("any label", format="%" + char)
             c = self.get_delta_from_queue().new_element.number_input
             self.assertEqual(c.format, "%" + char)
+
+    def test_warns_on_float_type_with_int_format(self):
+        st.number_input("the label", value=5.0, format="%d")
+
+        c = self.get_delta_from_queue(-2).new_element.alert
+        self.assertEqual(c.format, AlertProto.WARNING)
+        self.assertEqual(
+            c.body,
+            "Warning: NumberInput value below has type float, but format %d displays as integer.",
+        )
+
+    def test_warns_on_int_type_with_float_format(self):
+        st.number_input("the label", value=5, format="%0.2f")
+
+        c = self.get_delta_from_queue(-2).new_element.alert
+        self.assertEqual(c.format, AlertProto.WARNING)
+        self.assertEqual(
+            c.body,
+            "Warning: NumberInput value below has type int so is displayed as int despite format string %0.2f.",
+        )
 
     def test_error_on_unsupported_formatters(self):
         UNSUPPORTED = "pAn"
