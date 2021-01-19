@@ -117,13 +117,11 @@ const UploadedFile = ({
         </StyledUploadedFileName>
         <UploadedFileStatus file={file} progress={progress} />
       </StyledUploadedFileData>
-      <Button
-        data-testid="fileDeleteBtn"
-        onClick={() => onDelete(file.id || "")}
-        kind={Kind.MINIMAL}
-      >
-        <Icon content={Clear} size="lg" />
-      </Button>
+      <div data-testid="fileDeleteBtn">
+        <Button onClick={() => onDelete(file.id || "")} kind={Kind.MINIMAL}>
+          <Icon content={Clear} size="lg" />
+        </Button>
+      </div>
     </StyledUploadedFile>
   )
 }

@@ -116,7 +116,8 @@ describe("FileUploader widget", () => {
 
     internalFileUploader.props().onDrop([blobFile], [])
     expect(props.uploadClient.uploadFiles).toBeCalledTimes(2)
-    expect(props.uploadClient.uploadFiles.mock.calls[1][4]).toBe(true)
+    // Expect replace param to be true
+    expect(props.uploadClient.uploadFiles.mock.calls[1][5]).toBe(true)
     const secondUploadedFiles: ExtendedFile[] = wrapper.state("files")
     expect(secondUploadedFiles.length).toBe(1)
   })

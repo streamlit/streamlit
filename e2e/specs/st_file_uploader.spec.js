@@ -137,7 +137,7 @@ describe("st.file_uploader", () => {
           .should("contain.text", file2);
 
         // Can delete
-        cy.get("[data-testid='fileDeleteBtn']")
+        cy.get("[data-testid='fileDeleteBtn'] button")
           .first()
           .click();
         cy.get("[data-testid='stText']")
