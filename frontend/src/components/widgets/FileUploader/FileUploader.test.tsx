@@ -86,6 +86,7 @@ describe("FileUploader widget", () => {
     internalFileUploader.props().onDrop([blobFile], [])
 
     expect(props.uploadClient.uploadFiles.mock.calls.length).toBe(1)
+    expect(wrapper.state("validFiles")).toBe(1)
   })
 
   it("should upload single file only", () => {
@@ -102,6 +103,7 @@ describe("FileUploader widget", () => {
     )
 
     expect(props.uploadClient.uploadFiles.mock.calls.length).toBe(1)
+    expect(wrapper.state("validFiles")).toBe(1)
   })
 
   it("should replace file on single file uploader", () => {
@@ -120,6 +122,7 @@ describe("FileUploader widget", () => {
     expect(props.uploadClient.uploadFiles.mock.calls[1][5]).toBe(true)
     const secondUploadedFiles: ExtendedFile[] = wrapper.state("files")
     expect(secondUploadedFiles.length).toBe(1)
+    expect(wrapper.state("validFiles")).toBe(1)
   })
 
   it("should upload multiple files", () => {
@@ -136,6 +139,28 @@ describe("FileUploader widget", () => {
     )
 
     expect(props.uploadClient.uploadFiles.mock.calls.length).toBe(2)
+    expect(wrapper.state("validFiles")).toBe(2)
+  })
+
+  it("should delete file", () => {
+    const props = getProps({ multipleFiles: true })
+    const wrapper = mount(<FileUploader {...props} />)
+    const internalFileUploader = wrapper.find(FileDropzone)
+    internalFileUploader.props().onDrop(
+      [blobFile, blobFile],
+      [
+        { file: blobFile, errors: [INVALID_TYPE_ERROR, TOO_MANY_FILES] },
+        { file: blobFile, errors: [TOO_MANY_FILES] },
+        { file: blobFile, errors: [TOO_MANY_FILES] },
+      ]
+    )
+
+    expect(wrapper.state("validFiles")).toBe(2)
+
+    // @ts-ignore
+    wrapper.instance().removeFile(wrapper.state("files")[0].id)
+
+    expect(wrapper.state("validFiles")).toBe(1)
   })
 
   it("should change status + add file attributes when dropping a File", () => {

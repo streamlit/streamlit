@@ -270,6 +270,7 @@ class FileUploader extends React.PureComponent<Props, State> {
         status: filteredFiles.length ? FileStatus.UPLOADED : FileStatus.READY,
         errorMessage: undefined,
         files: filteredFiles,
+        validFiles: state.validFiles - 1,
       }
     })
   }
