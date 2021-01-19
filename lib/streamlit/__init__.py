@@ -158,6 +158,9 @@ warning = _main.warning  # noqa: E221
 write = _main.write  # noqa: E221
 color_picker = _main.color_picker  # noqa: E221
 
+# Apache Arrow
+beta_table = _main.beta_table
+
 # Config
 
 get_option = _config.get_option

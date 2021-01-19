@@ -63,6 +63,7 @@ from streamlit.elements.image_proto import ImageMixin
 from streamlit.elements.pyplot import PyplotMixin
 from streamlit.elements.write import WriteMixin
 from streamlit.elements.layouts import LayoutsMixin
+from streamlit.elements.arrow import ArrowMixin
 
 LOGGER = get_logger(__name__)
 
@@ -79,6 +80,7 @@ DELTAS_TYPES_THAT_MELT_DATAFRAMES = ("line_chart", "area_chart", "bar_chart")
 class DeltaGenerator(
     AlertMixin,
     AltairMixin,
+    ArrowMixin,
     BalloonsMixin,
     BokehMixin,
     ButtonMixin,

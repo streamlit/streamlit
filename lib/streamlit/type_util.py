@@ -15,7 +15,9 @@
 """A bunch of useful utilities for dealing with types."""
 
 import re
-from typing import Tuple, Any
+from typing import Any, Tuple, cast
+
+from pandas import DataFrame
 
 from streamlit import errors
 
@@ -303,3 +305,37 @@ def is_old_pandas_version():
     from packaging import version
 
     return version.parse(pd.__version__) < version.parse("1.1.0")
+
+
+def data_frame_to_bytes(df: DataFrame) -> bytes:
+    """Convert pandas.DataFrame to bytes.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        A dataframe to convert.
+
+    """
+    import pyarrow as pa
+
+    table = pa.Table.from_pandas(df)
+    sink = pa.BufferOutputStream()
+    writer = pa.RecordBatchStreamWriter(sink, table.schema)
+    writer.write_table(table)
+    writer.close()
+    return cast(bytes, sink.getvalue().to_pybytes())
+
+
+def bytes_to_data_frame(source: bytes) -> DataFrame:
+    """Convert bytes to pandas.DataFrame.
+
+    Parameters
+    ----------
+    source : bytes
+        A bytes object to convert.
+
+    """
+    import pyarrow as pa
+
+    reader = pa.RecordBatchStreamReader(source)
+    return reader.read_pandas()
