@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from collections import Iterable
-from typing import Any, Dict, List, Literal, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Union, cast
 
 from numpy import ndarray
 from pandas import DataFrame
