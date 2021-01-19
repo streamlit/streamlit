@@ -71,6 +71,7 @@ function withExpandable(
                 marginRight: spacing.none,
                 marginTop: spacing.none,
                 marginBottom: spacing.none,
+                overflow: "visible",
                 paddingLeft: spacing.none,
                 paddingRight: spacing.none,
                 paddingTop: $expanded ? "1em" : 0,
