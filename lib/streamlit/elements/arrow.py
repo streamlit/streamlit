@@ -210,7 +210,7 @@ def _trim_pandas_styles(styles: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 
 def _pandas_style_to_css(
-    style_type: Literal["table_styles", "cell_style"],
+    style_type: str,
     style: Dict[str, Any],
     uuid: str,
     separator: str = "",
