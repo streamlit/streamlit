@@ -4260,21 +4260,6 @@ autoprefixer@^9.6.1:
     postcss "^7.0.32"
     postcss-value-parser "^4.1.0"
 
-aws-sdk@^2.729.0:
-  version "2.828.0"
-  resolved "https://registry.yarnpkg.com/aws-sdk/-/aws-sdk-2.828.0.tgz#6aa599c3582f219568f41fb287eb65753e4a9234"
-  integrity sha512-JoDujGdncSIF9ka+XFZjop/7G+fNGucwPwYj7OHYMmFIOV5p7YmqomdbVmH/vIzd988YZz8oLOinWc4jM6vvhg==
-  dependencies:
-    buffer "4.9.2"
-    events "1.1.1"
-    ieee754 "1.1.13"
-    jmespath "0.15.0"
-    querystring "0.2.0"
-    sax "1.2.1"
-    url "0.10.3"
-    uuid "3.3.2"
-    xml2js "0.4.19"
-
 aws-sign2@~0.7.0:
   version "0.7.0"
   resolved "https://registry.yarnpkg.com/aws-sign2/-/aws-sign2-0.7.0.tgz#b46e890934a9591f2d2f6f86d7e6a9f1b3fe76a8"
@@ -4918,7 +4903,7 @@ buffer-xor@^1.0.3:
   resolved "https://registry.yarnpkg.com/buffer-xor/-/buffer-xor-1.0.3.tgz#26e61ed1422fb70dd42e6e36729ed51d855fe8d9"
   integrity sha1-JuYe0UIvtw3ULm42cp7VHYVf6Nk=
 
-buffer@4.9.2, buffer@^4.3.0:
+buffer@^4.3.0:
   version "4.9.2"
   resolved "https://registry.yarnpkg.com/buffer/-/buffer-4.9.2.tgz#230ead344002988644841ab0244af8c44bbe3ef8"
   integrity sha512-xq+q3SRMOxGivLhBNaUdC64hDTQwejJ+H0T/NB1XMtTVEwNTrfFF3gAxiyW0Bu/xWEGhjVKgUcMhCrUy2+uCWg==
@@ -5101,9 +5086,9 @@ canvas-fit@^1.5.0:
   dependencies:
     element-size "^1.1.1"
 
-"canvas2svg@git+https://github.com/bokeh/canvas2svg.git#c3db03e":
+"canvas2svg@https://github.com/bokeh/canvas2svg#c3db03e":
   version "1.0.21"
-  resolved "git+https://github.com/bokeh/canvas2svg.git#c3db03ee64178153286f5fcb76294ec97ddc001f"
+  resolved "https://github.com/bokeh/canvas2svg#c3db03ee64178153286f5fcb76294ec97ddc001f"
 
 capture-exit@^2.0.0:
   version "2.0.0"
@@ -8143,11 +8128,6 @@ eventemitter3@^4.0.0:
   resolved "https://registry.yarnpkg.com/eventemitter3/-/eventemitter3-4.0.7.tgz#2de9b68f6528d5644ef5c59526a1b4a07306169f"
   integrity sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw==
 
-events@1.1.1:
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/events/-/events-1.1.1.tgz#9ebdb7635ad099c70dcc4c2a1f5004288e8bd924"
-  integrity sha1-nr23Y1rQmccNzEwqH1AEKI6L2SQ=
-
 events@^3.0.0, events@^3.2.0:
   version "3.2.0"
   resolved "https://registry.yarnpkg.com/events/-/events-3.2.0.tgz#93b87c18f8efcd4202a461aec4dfc0556b639379"
@@ -9599,9 +9579,9 @@ globule@^1.0.0:
     lodash "~4.17.10"
     minimatch "~3.0.2"
 
-"gloo2@git+https://github.com/bokeh/gloo2.git#b41bd5d":
+"gloo2@https://github.com/bokeh/gloo2.git#b41bd5d":
   version "0.0.1"
-  resolved "git+https://github.com/bokeh/gloo2.git#b41bd5daa5eeaac83850cd2586ad7ae05929f027"
+  resolved "https://github.com/bokeh/gloo2.git#b41bd5daa5eeaac83850cd2586ad7ae05929f027"
 
 glsl-inject-defines@^1.0.1:
   version "1.0.3"
@@ -10264,11 +10244,6 @@ identity-obj-proxy@3.0.0:
   integrity sha1-lNK9qWCERT7zb7xarsN+D3nx/BQ=
   dependencies:
     harmony-reflect "^1.4.6"
-
-ieee754@1.1.13:
-  version "1.1.13"
-  resolved "https://registry.yarnpkg.com/ieee754/-/ieee754-1.1.13.tgz#ec168558e95aa181fd87d37f55c32bbcb6708b84"
-  integrity sha512-4vf7I2LYV/HaWerSo3XmlMkp5eZ83i+/CDluXi/IGTs/O1sejBNhTtnxzmRZfvOUqj7lZjqHkeTvpgSFDlWZTg==
 
 ieee754@^1.1.12, ieee754@^1.1.4:
   version "1.2.1"
@@ -11539,11 +11514,6 @@ jest@26.6.0:
     "@jest/core" "^26.6.0"
     import-local "^3.0.2"
     jest-cli "^26.6.0"
-
-jmespath@0.15.0:
-  version "0.15.0"
-  resolved "https://registry.yarnpkg.com/jmespath/-/jmespath-0.15.0.tgz#a3f222a9aae9f966f5d27c796510e28091764217"
-  integrity sha1-o/Iiqarp+Wb10nx5ZRDigJF2Qhc=
 
 joi@^17.3.0:
   version "17.3.0"
@@ -13319,9 +13289,9 @@ numbro@^2.3.1:
   dependencies:
     bignumber.js "^8.1.1"
 
-"numbro@git+https://github.com/bokeh/numbro.git#e1b6c52":
+"numbro@https://github.com/bokeh/numbro.git#e1b6c52":
   version "1.6.2"
-  resolved "git+https://github.com/bokeh/numbro.git#e1b6c52a220d0a1e05dca1bee35dbd1b761fd260"
+  resolved "https://github.com/bokeh/numbro.git#e1b6c52a220d0a1e05dca1bee35dbd1b761fd260"
 
 numeric@^1.2.6:
   version "1.2.6"
@@ -16583,12 +16553,7 @@ sass-loader@^10.0.5:
     schema-utils "^3.0.0"
     semver "^7.3.2"
 
-sax@1.2.1:
-  version "1.2.1"
-  resolved "https://registry.yarnpkg.com/sax/-/sax-1.2.1.tgz#7b8e656190b228e81a66aea748480d828cd2d37a"
-  integrity sha1-e45lYZCyKOgaZq6nSEgNgozS03o=
-
-sax@>=0.6.0, sax@~1.2.4:
+sax@~1.2.4:
   version "1.2.4"
   resolved "https://registry.yarnpkg.com/sax/-/sax-1.2.4.tgz#2816234e2378bddc4e5354fab5caa895df7100d9"
   integrity sha512-NqVDv9TpANUjFm0N8uM5GxL36UgKi9/atZw+x7YFnQ8ckwFGKrl4xX4yWtrey3UJm5nP1kUbnYgLopqWNSRhWw==
@@ -16938,9 +16903,9 @@ slice-ansi@^4.0.0:
     astral-regex "^2.0.0"
     is-fullwidth-code-point "^3.0.0"
 
-"slickgrid@git+https://github.com/bokeh/SlickGrid.git#8e993bf":
+"slickgrid@https://github.com/bokeh/SlickGrid.git#8e993bf":
   version "2.3.23"
-  resolved "git+https://github.com/bokeh/SlickGrid.git#8e993bfe1e4c16c6115bbad2ee1b4476d2136675"
+  resolved "https://github.com/bokeh/SlickGrid.git#8e993bfe1e4c16c6115bbad2ee1b4476d2136675"
   dependencies:
     "@types/slickgrid" "^2.1.27"
     jquery ">=3.4.0"
@@ -17926,9 +17891,9 @@ timezone-support@^2.0.2:
   dependencies:
     commander "2.20.0"
 
-"timezone@git+https://github.com/bokeh/timezone.git#7042749":
+"timezone@https://github.com/bokeh/timezone.git#7042749":
   version "1.0.22"
-  resolved "git+https://github.com/bokeh/timezone.git#704274988ae443c81d294de15d87f1909526b0bb"
+  resolved "https://github.com/bokeh/timezone.git#704274988ae443c81d294de15d87f1909526b0bb"
 
 timsort@^0.3.0:
   version "0.3.0"
@@ -18548,14 +18513,6 @@ url-parse@^1.4.3, url-parse@^1.4.4, url-parse@^1.4.7:
     querystringify "^2.1.1"
     requires-port "^1.0.0"
 
-url@0.10.3:
-  version "0.10.3"
-  resolved "https://registry.yarnpkg.com/url/-/url-0.10.3.tgz#021e4d9c7705f21bbf37d03ceb58767402774c64"
-  integrity sha1-Ah5NnHcF8hu/N9A861h2dAJ3TGQ=
-  dependencies:
-    punycode "1.3.2"
-    querystring "0.2.0"
-
 url@^0.11.0:
   version "0.11.0"
   resolved "https://registry.yarnpkg.com/url/-/url-0.11.0.tgz#3838e97cfc60521eb73c525a8e55bfdd9e2e28f1"
@@ -18667,11 +18624,6 @@ utils-regex-from-string@^1.0.0:
   dependencies:
     regex-regex "^1.0.0"
     validate.io-string-primitive "^1.0.0"
-
-uuid@3.3.2:
-  version "3.3.2"
-  resolved "https://registry.yarnpkg.com/uuid/-/uuid-3.3.2.tgz#1b4af4955eb3077c501c23872fc6513811587131"
-  integrity sha512-yXJmeNaw3DnnKAOKJE51sL/ZaYfWJRl1pK9dr19YFCu0ObS231AB1/LbqTKRAQ5kw8A90rA6fr4riOUpTZvQZA==
 
 uuid@^3.3.2, uuid@^3.4.0:
   version "3.4.0"
@@ -19802,14 +19754,6 @@ xml-name-validator@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/xml-name-validator/-/xml-name-validator-3.0.0.tgz#6ae73e06de4d8c6e47f9fb181f78d648ad457c6a"
   integrity sha512-A5CUptxDsvxKJEU3yO6DuWBSJz/qizqzJKOMIfUJHETbBw/sFaDxgd6fxm1ewUaM0jZ444Fc5vC5ROYurg/4Pw==
-
-xml2js@0.4.19:
-  version "0.4.19"
-  resolved "https://registry.yarnpkg.com/xml2js/-/xml2js-0.4.19.tgz#686c20f213209e94abf0d1bcf1efaa291c7827a7"
-  integrity sha512-esZnJZJOiJR9wWKMyuvSE1y6Dq5LCuJanqhxslH2bxM6duahNZ+HMpCLhBQGZkbX6xRf8x1Y2eJlgt2q3qo49Q==
-  dependencies:
-    sax ">=0.6.0"
-    xmlbuilder "~9.0.1"
 
 xml@^1.0.0:
   version "1.0.1"
