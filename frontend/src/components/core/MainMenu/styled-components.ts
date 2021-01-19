@@ -27,7 +27,7 @@ export const StyledRecordingIndicator = styled.div(({ theme }) => ({
 }))
 
 export const StyledMenuDivider = styled.div(({ theme }) => ({
-  borderTop: `1px solid ${theme.colors.lightGray}`,
+  borderTop: `1px solid ${theme.colors.lightestGray}`,
   margin: `${theme.spacing.sm} ${theme.spacing.none}`,
 }))
 
@@ -73,7 +73,7 @@ export const StyledMenuItem = styled.li<StyledMenuItemProps>(
         }
 
     const highlightedStyles = isHighlighted && {
-      backgroundColor: theme.colors.lightGray,
+      backgroundColor: theme.colors.lightestGray,
     }
 
     const recordingStyles = isRecording && {
