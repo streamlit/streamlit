@@ -17,6 +17,7 @@
 
 import {
   Alert as AlertProto,
+  Arrow as ArrowProto,
   Audio as AudioProto,
   Block as BlockProto,
   BokehChart as BokehChartProto,

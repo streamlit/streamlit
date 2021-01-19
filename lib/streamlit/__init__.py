@@ -166,6 +166,9 @@ color_picker = _main.color_picker
 # Apache Arrow
 beta_table = _main.beta_table
 
+# Apache Arrow
+beta_table = _main.beta_table
+
 # Config
 
 get_option = _config.get_option
