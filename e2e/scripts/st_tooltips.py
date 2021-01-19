@@ -22,13 +22,15 @@ st.text_input("some input text", "default text", help="tooltip")
 st.image(np.repeat(0, 10000).reshape(100, 100), help="tooltip")
 st.line_chart(pd.DataFrame(randn(20, 3), columns=["a", "b", "c"]), help="tooltip")
 
+
 def get_plotly_chart():
     x1, x2, x3 = randn(200) - 2, randn(200), randn(200) + 2
     return figure_factory.create_distplot(
         [x1, x2, x3], ["a", "b", "c"], [0.1, 0.25, 0.5]
     )
 
-st.plotly_chart(get_plotly_chart(), help='tooltip')
+
+st.plotly_chart(get_plotly_chart(), help="tooltip")
 
 
 def future_tests():
