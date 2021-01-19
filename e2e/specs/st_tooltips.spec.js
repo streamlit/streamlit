@@ -24,6 +24,18 @@ describe("tooltips on widgets", () => {
     cy.get(".stTextInput .stTooltipIcon").should("have.length", 1);
   });
 
+  it("displays tooltip on image", () => {
+    cy.get(".stImage .stTooltipIcon").should("have.length", 1);
+  });
+
+  it("displays tooltip on line_chart", () => {
+    cy.get(".stVegaLiteChart .stTooltipIcon").should("have.length", 1);
+  });
+
+  it("displays tooltip on plotly_chart", () => {
+    cy.get(".stPlotlyChartWrapper .stTooltipIcon").should("have.length", 1);
+  });
+
   /*
   it("displays tooltip on button", () => {});
   it("displays tooltip on checkbox", () => {});
@@ -38,8 +50,5 @@ describe("tooltips on widgets", () => {
   it("displays tooltip on subheader", () => {});
   it("displays tooltip on code", () => {});
   it("displays tooltip on latex", () => {});
-  it("displays tooltip on image", () => {});
-  it("displays tooltip on line_chart", () => {});
-  it("displays tooltip on plotly_chart", () => {});
   */
 });

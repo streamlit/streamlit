@@ -22,6 +22,9 @@ import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import { tableGetRowsAndCols, indexGet, tableGet } from "lib/dataFrameProto"
 import embed from "vega-embed"
 import * as vega from "vega"
+import { StyledWidgetLabelHelpTopLeft } from "components/widgets/BaseWidget"
+import TooltipIcon from "components/shared/TooltipIcon"
+import { Placement } from "components/shared/Tooltip"
 import { StyledVegaLiteChartContainer } from "./styled-components"
 
 const MagicFields = {
@@ -307,15 +310,23 @@ export class VegaLiteChart extends PureComponent<PropsWithHeight, State> {
       // eslint-disable-next-line @typescript-eslint/no-throw-literal
       throw this.state.error
     }
-
+    const { element } = this.props
+    const help = element.get("help")
     return (
-      // Create the container Vega draws inside.
-      <StyledVegaLiteChartContainer
-        data-testid="stVegaLiteChart"
-        ref={c => {
-          this.element = c
-        }}
-      />
+      <div className="stVegaLiteChart">
+        {help && (
+          <StyledWidgetLabelHelpTopLeft>
+            <TooltipIcon content={help} placement={Placement.BOTTOM_LEFT} />
+          </StyledWidgetLabelHelpTopLeft>
+        )}
+        {/* Create the container Vega draws inside. */}
+        <StyledVegaLiteChartContainer
+          data-testid="stVegaLiteChart"
+          ref={c => {
+            this.element = c
+          }}
+        />
+      </div>
     )
   }
 }
