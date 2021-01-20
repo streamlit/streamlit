@@ -92,6 +92,19 @@ class DeclareComponentTest(unittest.TestCase):
             inner_module_component.name,
         )
 
+    def test_name_default_encoding_not_utf8(self):
+        """Test component name generation when preferred encoding is non-UTF8"""
+        with mock.patch(
+            "locale.getdefaultlocale", return_value=['jp_JP', 'cp932']
+        ):
+            # Test a component defined in __init__.py
+            from component_test_data import component as init_component
+
+            self.assertEqual(
+                "component_test_data.foo",
+                init_component.name,
+            )
+
     def test_only_path(self):
         """Succeed when a path is provided."""
 
