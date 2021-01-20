@@ -23,11 +23,16 @@ from datetime import time
 st.text_input("some input text", "default text", help="tooltip")
 st.button("some button", help="tooltip")
 st.selectbox("selectbox", ("a", "b", "c"), 0, help="tooltip")
-
 st.time_input("time", datetime(2019, 7, 6, 21, 15), help="tooltip")
 st.date_input("date", datetime(2019, 7, 6, 21, 15), help="tooltip")
 st.image(np.repeat(0, 10000).reshape(100, 100), help="tooltip")
 st.line_chart(pd.DataFrame(randn(20, 3), columns=["a", "b", "c"]), help="tooltip")
+st.write("here is some text", help="tooltip")
+st.markdown("here is some text", help="tooltip")
+st.header("some header", help="tooltip")
+st.subheader("some subheader", help="tooltip")
+st.code("import streamlit as st", language="python", help="tooltip")
+st.latex(r"\LaTeX", help="tooltip")
 
 
 def get_plotly_chart():
@@ -44,10 +49,3 @@ def future_tests():
     st.checkbox("some checkbox", help="tooltip")
     st.number_input("number input", value=1, help="tooltip")
     st.radio("some radio", ("a", "b", "c"), 0, help="tooltip")
-
-    st.write("here is some text", help="tooltip")
-    st.markdown("here is some text", help="tooltip")
-    st.header("some header", help="tooltip")
-    st.subheader("some subheader", help="tooltip")
-    st.code("import streamlit as st", language="python", help="tooltip")
-    st.latex(r"\LaTeX", help="tooltip")
