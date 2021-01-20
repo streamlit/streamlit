@@ -8,4 +8,6 @@ export default React.createContext({
   embedded: false,
   isFullScreen: false,
   setFullScreen: (value: boolean) => {},
+  addReportFinishedHandler: (func: () => void) => {},
+  removeReportFinishedHandler: (func: () => void) => {},
 })

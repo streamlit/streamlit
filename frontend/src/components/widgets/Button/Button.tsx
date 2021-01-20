@@ -19,12 +19,36 @@ import React, { ReactElement } from "react"
 import UIButton, { Kind, Size } from "components/shared/Button"
 import { Button as ButtonProto } from "autogen/proto"
 import { WidgetStateManager } from "lib/WidgetStateManager"
+import Tooltip, { Placement } from "components/shared/Tooltip"
+import StreamlitMarkdown from "components/shared/StreamlitMarkdown"
 
 export interface ButtonProps {
   disabled: boolean
   element: ButtonProto
   widgetMgr: WidgetStateManager
   width: number
+}
+
+interface ButtonTooltipProps {
+  children: ReactElement
+  help?: string
+}
+
+function ButtonTooltip({ children, help }: ButtonTooltipProps): ReactElement {
+  if (!help) {
+    return children
+  }
+  return (
+    <div className="stTooltipIcon">
+      <Tooltip
+        inline
+        content={<StreamlitMarkdown source={help} allowHTML />}
+        placement={Placement.RIGHT}
+      >
+        {children}
+      </Tooltip>
+    </div>
+  )
 }
 
 function Button(props: ButtonProps): ReactElement {
@@ -38,14 +62,16 @@ function Button(props: ButtonProps): ReactElement {
 
   return (
     <div className="row-widget stButton" style={style}>
-      <UIButton
-        kind={Kind.PRIMARY}
-        size={Size.SMALL}
-        disabled={disabled}
-        onClick={handleClick}
-      >
-        {element.label}
-      </UIButton>
+      <ButtonTooltip help={element.help}>
+        <UIButton
+          kind={Kind.PRIMARY}
+          size={Size.SMALL}
+          disabled={disabled}
+          onClick={handleClick}
+        >
+          {element.label}
+        </UIButton>
+      </ButtonTooltip>
     </div>
   )
 }

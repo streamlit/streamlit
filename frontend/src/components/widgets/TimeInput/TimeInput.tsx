@@ -20,6 +20,8 @@ import { TimeInput as TimeInputProto } from "autogen/proto"
 import { TimePicker as UITimePicker } from "baseui/timepicker"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { StyledWidgetLabel } from "components/widgets/BaseWidget"
+import TooltipIcon from "components/shared/TooltipIcon"
+import { Placement } from "components/shared/Tooltip"
 
 export interface Props {
   disabled: boolean
@@ -100,7 +102,17 @@ class TimeInput extends PureComponent<Props, State> {
 
     return (
       <div className="stTimeInput" style={style}>
-        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
+        <StyledWidgetLabel>
+          {element.label}
+          {element.help && (
+            <div>
+              <TooltipIcon
+                content={element.help}
+                placement={Placement.BOTTOM_RIGHT}
+              />
+            </div>
+          )}
+        </StyledWidgetLabel>
         <UITimePicker
           format="24"
           value={this.stringToDate(this.state.value)}
