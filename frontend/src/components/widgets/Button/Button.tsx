@@ -34,8 +34,7 @@ interface ButtonTooltipProps {
   help?: string
 }
 
-function ButtonTooltip(props: ButtonTooltipProps): ReactElement {
-  const { children, help } = props
+function ButtonTooltip({ children, help }: ButtonTooltipProps): ReactElement {
   if (!help) {
     return children
   }
