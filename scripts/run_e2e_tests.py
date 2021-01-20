@@ -399,7 +399,6 @@ def run_e2e_tests(
             for template_dir in COMPONENT_TEMPLATE_DIRS:
                 run_component_template_e2e_test(ctx, template_dir)
 
-        # Test core streamlit elements
         p = pathlib.Path(join(ROOT_DIR, ctx.tests_dir_name, "scripts")).resolve()
         paths = [p / f"{test}.py"] if test else sorted(p.glob("*.py"))
         for test_path in paths:

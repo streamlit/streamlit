@@ -22,6 +22,9 @@ import { Radio as RadioProto } from "autogen/proto"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 import { Theme } from "theme"
+import TooltipIcon from "components/shared/TooltipIcon"
+import { Placement } from "components/shared/Tooltip"
+import { StyledTooltipContainer } from "./styled-components"
 
 export interface Props {
   disabled: boolean
@@ -80,7 +83,17 @@ class Radio extends React.PureComponent<Props, State> {
 
     return (
       <div className="row-widget stRadio" style={style}>
-        <StyledWidgetLabel>{this.props.element.label}</StyledWidgetLabel>
+        <StyledWidgetLabel style={{ justifyContent: "flex-start" }}>
+          {this.props.element.label}
+          {element.help && (
+            <StyledTooltipContainer>
+              <TooltipIcon
+                content={element.help}
+                placement={Placement.RIGHT}
+              />
+            </StyledTooltipContainer>
+          )}
+        </StyledWidgetLabel>
         <RadioGroup
           onChange={this.onChange}
           value={this.state.value.toString()}
