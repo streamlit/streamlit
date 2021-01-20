@@ -78,7 +78,7 @@ class MarkdownMixin:
 
         markdown_proto.body = clean_text(body)
         markdown_proto.allow_html = unsafe_allow_html
-        
+
         if help is not None:
             markdown_proto.help = help
 
