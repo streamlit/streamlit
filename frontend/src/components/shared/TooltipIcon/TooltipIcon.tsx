@@ -19,6 +19,7 @@ function TooltipIcon({
       <Tooltip
         content={<StreamlitMarkdown source={content} allowHTML />}
         placement={placement}
+        inline
       >
         <HelpCircleIcon size={iconSize} />
       </Tooltip>

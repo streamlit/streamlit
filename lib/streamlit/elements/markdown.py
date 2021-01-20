@@ -81,13 +81,17 @@ class MarkdownMixin:
 
         return self.dg._enqueue("markdown", markdown_proto)
 
-    def header(self, body, help=None):
+    def header(self, body, anchor=None, help=None):
         """Display text in header formatting.
 
         Parameters
         ----------
         body : str
             The text to display.
+
+        anchor : str
+            The anchor name of the header that can be accessed with #anchor
+            in the URL. If omitted, it generates an anchor using the body.
 
         help : str
             A tooltip that gets displayed next to the text.
@@ -102,16 +106,24 @@ class MarkdownMixin:
 
         """
         header_proto = MarkdownProto()
-        header_proto.body = "## %s" % clean_text(body)
+        if anchor is None:
+            header_proto.body = f"## {clean_text(body)}"
+        else:
+            header_proto.body = f'<h2 data-anchor="{anchor}">{clean_text(body)}</h2>'
+            header_proto.allow_html = True
         return self.dg._enqueue("markdown", header_proto)
 
-    def subheader(self, body, help=None):
+    def subheader(self, body, anchor=None, help=None):
         """Display text in subheader formatting.
 
         Parameters
         ----------
         body : str
             The text to display.
+
+        anchor : str
+            The anchor name of the header that can be accessed with #anchor
+            in the URL. If omitted, it generates an anchor using the body.
 
         help : str
             A tooltip that gets displayed next to the text.
@@ -126,7 +138,12 @@ class MarkdownMixin:
 
         """
         subheader_proto = MarkdownProto()
-        subheader_proto.body = "### %s" % clean_text(body)
+        if anchor is None:
+            subheader_proto.body = f"### {clean_text(body)}"
+        else:
+            subheader_proto.body = f'<h3 data-anchor="{anchor}">{clean_text(body)}</h3>'
+            subheader_proto.allow_html = True
+
         return self.dg._enqueue("markdown", subheader_proto)
 
     def code(self, body, language="python", help=None):
@@ -167,7 +184,7 @@ class MarkdownMixin:
             code_proto.help = help
         return self.dg._enqueue("markdown", code_proto)
 
-    def title(self, body, help=None):
+    def title(self, body, anchor=None, help=None):
         """Display text in title formatting.
 
         Each document should have a single `st.title()`, although this is not
@@ -177,6 +194,10 @@ class MarkdownMixin:
         ----------
         body : str
             The text to display.
+
+        anchor : str
+            The anchor name of the header that can be accessed with #anchor
+            in the URL. If omitted, it generates an anchor using the body.
 
         help : str
             A tooltip that gets displayed next to the text.
@@ -191,7 +212,11 @@ class MarkdownMixin:
 
         """
         title_proto = MarkdownProto()
-        title_proto.body = "# %s" % clean_text(body)
+        if anchor is None:
+            title_proto.body = f"# {clean_text(body)}"
+        else:
+            title_proto.body = f'<h1 data-anchor="{anchor}">{clean_text(body)}</h1>'
+            title_proto.allow_html = True
         if help is not None:
             title_proto.help = help
         return self.dg._enqueue("markdown", title_proto)

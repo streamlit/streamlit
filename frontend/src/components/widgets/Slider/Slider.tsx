@@ -284,7 +284,7 @@ class Slider extends React.PureComponent<Props, State> {
             InnerTrack: {
               style: ({ $disabled }: { $disabled: boolean }) => ({
                 height: "4px",
-                background: $disabled ? colors.lightGray : "initial",
+                ...($disabled ? { background: colors.lightGray } : {}),
               }),
             },
             ThumbValue: this.renderThumbValue,

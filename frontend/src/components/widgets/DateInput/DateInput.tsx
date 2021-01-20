@@ -24,6 +24,8 @@ import { DateInput as DateInputProto } from "autogen/proto"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 import { Theme } from "theme"
+import TooltipIcon from "components/shared/TooltipIcon"
+import { Placement } from "components/shared/Tooltip"
 
 export interface Props {
   disabled: boolean
@@ -106,7 +108,17 @@ class DateInput extends React.PureComponent<Props, State> {
 
     return (
       <div className="stDateInput" style={style}>
-        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
+        <StyledWidgetLabel>
+          {element.label}
+          {element.help && (
+            <div>
+              <TooltipIcon
+                content={element.help}
+                placement={Placement.BOTTOM_RIGHT}
+              />
+            </div>
+          )}
+        </StyledWidgetLabel>
         <UIDatePicker
           formatString="yyyy/MM/dd"
           disabled={disabled}

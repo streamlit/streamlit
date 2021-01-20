@@ -36,11 +36,23 @@ describe("tooltips on widgets", () => {
     cy.get(".stRadio .stTooltipIcon").should("have.length", 1);
   });
 
+  it("displays tooltip on button", () => {
+    cy.get(".stButton .stTooltipIcon").should("have.length", 1);
+  });
+
+  it("displays tooltip on selectbox", () => {
+    cy.get(".stSelectbox .stTooltipIcon").should("have.length", 1);
+  });
+
+  it("displays tooltip on time_input", () => {
+    cy.get(".stTimeInput .stTooltipIcon").should("have.length", 1);
+  });
+
+  it("displays tooltip on date_input", () => {
+    cy.get(".stDateInput .stTooltipIcon").should("have.length", 1);
+  });
+
   /*
-  it("displays tooltip on button", () => {});
-  it("displays tooltip on selectbox", () => {});
-  it("displays tooltip on time_input", () => {});
-  it("displays tooltip on date_input", () => {});
   it("displays tooltip on write", () => {});
   it("displays tooltip on markdown", () => {});
   it("displays tooltip on header", () => {});
