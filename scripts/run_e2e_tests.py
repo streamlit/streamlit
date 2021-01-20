@@ -375,7 +375,13 @@ def run_app_server():
     return proc
 
 
-@click.command()
+@click.command(
+    help=(
+        "Run Streamlit e2e tests. If specific tests are specified, only those "
+        "tests will be run. If you don't specify specific tests, all tests "
+        "will be run."
+    )
+)
 @click.option(
     "-a", "--always-continue", is_flag=True, help="Continue running on test failure."
 )
@@ -451,7 +457,10 @@ def run_e2e_tests(
     def run_main_tests():
         # Test core streamlit elements
         p = Path(join(ROOT_DIR, ctx.tests_dir_name, "specs")).resolve()
-        paths = [Path(t).resolve() for t in tests] if tests else p.glob("*.spec.js")
+        if tests:
+            paths = [Path(t).resolve() for t in tests]
+        else:
+            paths = sorted(p.glob("*.spec.js"))
         for spec_path in paths:
             test_name, _ = splitext(basename(spec_path))
             test_name, _ = splitext(test_name)

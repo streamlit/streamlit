@@ -616,8 +616,7 @@ jobs:
           steps:
             - run:
                 name: Cypress
-                # Need to run from frontend directory, because cypress-circleci-reporter
-                # reports paths relative to there
+                # See comment below, in the "unless << parameters.flaky >>".
                 command: |
                   cd frontend
                   TEST=$(circleci tests glob ../e2e/specs/*.spec.js | circleci tests split --split-by=timings)
@@ -628,8 +627,14 @@ jobs:
           steps:
             - run:
                 name: Cypress
-                # Need to run from frontend directory, because cypress-circleci-reporter
-                # reports paths relative to there
+                # Need to run from frontend directory, because
+                # cypress-circleci-reporter reports paths relative to there.
+                #
+                # `circleci tests split` splits our long-running Cypress e2e
+                # tests into N different parallel jobs, so that they finish
+                # much faster than if we run them in sequence. CircleCI makes
+                # sure each container that calls `circleci test split` receives
+                # its share of the test files.
                 command: |
                   cd frontend
                   TEST=$(circleci tests glob ../e2e/specs/*.spec.js | circleci tests split --total=9 --split-by=timings)
